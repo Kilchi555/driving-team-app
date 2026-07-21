@@ -322,125 +322,72 @@
         </div>
         
         <!-- Invoice Modal -->
-        <div 
-          v-if="showInvoiceModal"
-          class="fixed inset-0 z-50 overflow-y-auto"
-          @click="handleModalClick"
-        >
-          <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"/>
-            
-            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-full mx-4 max-h-[90vh] overflow-y-auto sm:mx-0 sm:my-8 sm:align-middle sm:max-w-5xl">
-              <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="flex flex-col sm:flex-row sm:items-start">
-                  <div class="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mx-auto sm:mx-0">
-                    <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        <Teleport to="body">
+          <div
+            v-if="showInvoiceModal"
+            class="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4"
+            style="padding-bottom: max(8px, env(safe-area-inset-bottom, 8px)); padding-top: max(8px, env(safe-area-inset-top, 8px));"
+            @click.self="closeInvoiceModal"
+          >
+            <div class="bg-white w-full sm:max-w-2xl max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden rounded-2xl shadow-2xl">
+
+              <div class="px-4 sm:px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" :style="{ background: primaryGradient }">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-                      Rechnung erstellen
-                    </h3>
-                    
-                    <div class="space-y-6">
-                      <!-- Rechnungsübersicht -->
-                      <div class="bg-gray-50 rounded-lg p-4">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-                          <h4 class="text-sm sm:text-base font-medium text-gray-900">Rechnungsübersicht</h4>
-                          <span class="text-base sm:text-lg font-semibold text-green-600">
-                            {{ formatCurrency(selectedAppointmentsTotal) }}
-                          </span>
+                  <div class="min-w-0">
+                    <h2 class="text-base font-bold text-gray-900 leading-tight">Rechnung erstellen</h2>
+                    <p class="text-xs text-gray-400 truncate">{{ selectedAppointments.length }} Termin{{ selectedAppointments.length > 1 ? 'e' : '' }} · {{ formatCurrency(selectedAppointmentsTotal) }}</p>
+                  </div>
+                </div>
+                <button type="button" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0" @click="closeInvoiceModal">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-4">
+                    <div class="space-y-4">
+                      <div class="rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                        <div class="px-4 py-3 flex items-center justify-between gap-3" :style="{ background: primaryGradient }">
+                          <p class="text-xs font-semibold uppercase tracking-wider text-white/80">Gesamtbetrag</p>
+                          <p class="text-xl font-black text-white">{{ formatCurrency(selectedAppointmentsTotal) }}</p>
                         </div>
-                        
-                        <div class="text-xs sm:text-sm text-gray-600 mb-3">
-                          {{ selectedAppointments.length }} Termin{{ selectedAppointments.length > 1 ? 'e' : '' }}
-                        </div>
-                        
-                        <!-- Verrechnete Lektionen mit detaillierter Preisaufschlüsselung -->
-                        <div class="max-h-64 overflow-y-auto">
-                          <div class="space-y-2">
-                            <div 
-                              v-for="appointmentId in selectedAppointments" 
-                              :key="appointmentId"
-                              class="bg-white border border-gray-200 rounded-md p-2 sm:p-3"
-                            >
-                              <div class="space-y-2">
-                                <!-- Haupttermin -->
-                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                                  <div class="flex-1 min-w-0">
-                                    <h5 class="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                                      {{ getAppointmentById(appointmentId)?.event_type_code ? getEventTypeLabel(getAppointmentById(appointmentId)?.event_type_code) : 'Lektion' }}
-                                    </h5>
-                                    <div class="text-xs text-gray-500 space-y-0.5">
-                                      <div class="truncate">Mit {{ getAppointmentById(appointmentId)?.staff?.first_name || 'Unknown' }} • {{ getAppointmentById(appointmentId)?.type || 'N/A' }}</div>
-                                      <div class="truncate">{{ formatDate(getAppointmentById(appointmentId)?.start_time) }} - {{ formatTime(getAppointmentById(appointmentId)?.start_time) }} • {{ getAppointmentById(appointmentId)?.duration_minutes }}min</div>
-                                    </div>
-                                  </div>
-                                  <div class="text-right whitespace-nowrap">
-                                    <div class="text-xs sm:text-sm font-semibold text-green-600">
-                                      {{ formatCurrency(calculateAppointmentAmount(getAppointmentById(appointmentId) || {} as Appointment)) }}
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                <!-- Detaillierte Preisaufschlüsselung -->
-                                <div class="border-t border-gray-100 pt-1 space-y-0.5 text-xs">
-                                  <!-- Lektion-Preis -->
-                                  <div
-v-if="(getAppointmentById(appointmentId)?.lesson_price || 0) > 0" 
-                                       class="flex justify-between">
-                                    <span class="text-gray-600">Lektion:</span>
-                                    <span class="text-gray-800">{{ formatCurrency(getAppointmentById(appointmentId)?.lesson_price || 0) }}</span>
-                                  </div>
-                                  
-                                  <!-- Admin-Fee -->
-                                  <div
-v-if="(getAppointmentById(appointmentId)?.admin_fee || 0) > 0" 
-                                       class="flex justify-between">
-                                    <span class="text-gray-600">Admin:</span>
-                                    <span class="text-gray-800">{{ formatCurrency(getAppointmentById(appointmentId)?.admin_fee || 0) }}</span>
-                                  </div>
-                                  
-                                  <!-- Einzelne Produkte auflisten -->
-                                  <div
-v-if="getAppointmentById(appointmentId)?.products && (getAppointmentById(appointmentId)?.products || []).length > 0" 
-                                       class="space-y-0.5">
-                                    <div
-v-for="product in (getAppointmentById(appointmentId)?.products || [])" :key="product?.name || 'unknown'" 
-                                         class="flex justify-between">
-                                      <span class="text-gray-600 truncate">{{ product?.name || 'Produkt' }}</span>
-                                      <span class="text-gray-800">{{ formatCurrency(product?.price || 0) }}</span>
-                                    </div>
-                                  </div>
-                                  
-                                  <!-- Rabatte -->
-                                  <div
-v-if="(getAppointmentById(appointmentId)?.discount_amount || 0) > 0" 
-                                       class="flex justify-between text-green-600">
-                                    <span>Rabatt:</span>
-                                    <span>-{{ formatCurrency(getAppointmentById(appointmentId)?.discount_amount || 0) }}</span>
-                                  </div>
-                                </div>
-                              </div>
+                        <div class="max-h-48 overflow-y-auto divide-y divide-gray-100">
+                          <div
+                            v-for="appointmentId in selectedAppointments"
+                            :key="appointmentId"
+                            class="px-4 py-3 flex items-start justify-between gap-3"
+                          >
+                            <div class="min-w-0 flex-1">
+                              <p class="text-sm font-medium text-gray-900 truncate">
+                                {{ getAppointmentById(appointmentId)?.event_type_code ? getEventTypeLabel(getAppointmentById(appointmentId)?.event_type_code) : 'Lektion' }}
+                              </p>
+                              <p class="text-xs text-gray-500 truncate">
+                                {{ formatDate(getAppointmentById(appointmentId)?.start_time) }} · {{ getAppointmentById(appointmentId)?.duration_minutes }} Min.
+                              </p>
                             </div>
+                            <p class="text-sm font-semibold text-gray-900 whitespace-nowrap">
+                              {{ formatCurrency(calculateAppointmentAmount(getAppointmentById(appointmentId) || {} as Appointment)) }}
+                            </p>
                           </div>
                         </div>
                       </div>
                       
-                      <!-- Rechnungsadresse Toggle -->
-                      <div class="bg-gray-50 rounded-lg p-3 sm:p-4">
-                        <div class="flex items-center justify-between mb-4">
-                          <h4 class="text-sm sm:text-base font-medium text-gray-900">Rechnungsadresse</h4>
-                          
-                          <!-- Toggle Switch -->
-                          <div class="flex items-center space-x-2">
-                            <span class="text-xs sm:text-sm font-medium" :class="useCustomBillingAddress ? 'text-gray-500' : 'text-gray-900'">Kundenadresse</span>
+                      <div class="rounded-xl border border-gray-200 p-4 space-y-3">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <p class="text-xs font-bold uppercase tracking-wider text-gray-400">Rechnungsadresse</p>
+                          <div class="flex items-center gap-2 self-start sm:self-auto">
+                            <span class="text-xs font-medium whitespace-nowrap" :class="useCustomBillingAddress ? 'text-gray-400' : 'text-gray-800'">Gespeichert</span>
                             <button
                               type="button"
                               @click="useCustomBillingAddress = !useCustomBillingAddress"
                               :class="[
-                                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                                'relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors',
                                 useCustomBillingAddress ? 'bg-blue-600' : 'bg-gray-300'
                               ]"
                             >
@@ -451,174 +398,97 @@ v-if="(getAppointmentById(appointmentId)?.discount_amount || 0) > 0"
                                 ]"
                               />
                             </button>
-                            <span class="text-xs sm:text-sm font-medium" :class="useCustomBillingAddress ? 'text-gray-900' : 'text-gray-500'">Rechnungsadresse</span>
+                            <span class="text-xs font-medium whitespace-nowrap" :class="useCustomBillingAddress ? 'text-gray-800' : 'text-gray-400'">Abweichend</span>
                           </div>
                         </div>
                         
-                        <!-- Kundenadresse View -->
-                        <div v-if="!useCustomBillingAddress" class="space-y-2">
-                          <div v-if="companyBillingAddress" class="grid grid-cols-1 gap-3 text-xs sm:text-sm">
-                            <div class="break-words">
-                              <span class="font-medium text-gray-600">{{ companyBillingAddress.company_name }}</span><br>
-                              <span class="text-gray-600">{{ companyBillingAddress.contact_person }}</span><br>
-                              <span class="text-gray-600">{{ companyBillingAddress.street }} {{ companyBillingAddress.street_number || '' }}</span><br>
-                              <span class="text-gray-600">{{ companyBillingAddress.zip }} {{ companyBillingAddress.city }}</span>
-                            </div>
-                            <div class="break-words">
-                              <span class="font-medium text-gray-600">E-Mail: </span>
-                              <span class="text-gray-600">{{ companyBillingAddress.email }}</span><br>
-                              <span v-if="companyBillingAddress.phone" class="font-medium text-gray-600">Telefon: </span>
-                              <a v-if="companyBillingAddress.phone" :href="`tel:${companyBillingAddress.phone}`" class="text-blue-600 hover:text-blue-800">{{ companyBillingAddress.phone }}</a><br>
-                              <span v-if="companyBillingAddress.vat_number" class="font-medium text-gray-600">MwSt: </span> 
-                              <span v-if="companyBillingAddress.vat_number" class="text-gray-600">{{ companyBillingAddress.vat_number }}</span>
-                            </div>
-                          </div>
-                          
-                          <div v-else class="text-xs sm:text-sm text-gray-600 break-words">
-                            <p class="mb-1">Keine Firmenrechnungsadresse hinterlegt.</p>
-                            <p>Die Rechnung wird an: <span class="font-medium">{{ displayEmail }}</span></p>
-                          </div>
+                        <div v-if="!useCustomBillingAddress" class="space-y-1 text-sm text-gray-700">
+                          <template v-if="companyBillingAddress">
+                            <p v-if="companyBillingAddress.company_name" class="font-semibold">{{ companyBillingAddress.company_name }}</p>
+                            <p>{{ companyBillingAddress.contact_person }}</p>
+                            <p>{{ companyBillingAddress.street }} {{ companyBillingAddress.street_number || '' }}</p>
+                            <p>{{ companyBillingAddress.zip }} {{ companyBillingAddress.city }}</p>
+                            <p class="text-xs break-all" :style="{ color: primaryColor }">{{ companyBillingAddress.email }}</p>
+                            <a v-if="companyBillingAddress.phone" :href="`tel:${companyBillingAddress.phone}`" class="text-xs" :style="{ color: primaryColor }">{{ companyBillingAddress.phone }}</a>
+                          </template>
+                          <template v-else>
+                            <p class="text-gray-500">Keine Firmenadresse hinterlegt.</p>
+                            <p class="text-xs text-gray-500">Rechnung geht an <span class="font-medium">{{ displayEmail }}</span></p>
+                          </template>
                         </div>
                         
-                        <!-- Custom Rechnungsadresse View -->
                         <div v-else class="space-y-3">
-                          <div>
-                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Firmenname (optional)</label>
-                            <input
-                              v-model="customBillingCompanyName"
-                              type="text"
-                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="Firmenname"
-                            >
-                          </div>
-                          
-                          <div>
-                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Kontaktperson *</label>
-                            <input
-                              v-model="customBillingContactPerson"
-                              type="text"
-                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="Vorname Nachname"
-                            >
-                          </div>
-                          
-                          <div>
-                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
-                            <input
-                              v-model="customBillingEmail"
-                              type="email"
-                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="email@beispiel.ch"
-                            >
-                          </div>
+                          <input v-model="customBillingCompanyName" type="text" placeholder="Firmenname (optional)" class="invoice-modal-input w-full" />
+                          <input v-model="customBillingContactPerson" type="text" placeholder="Kontaktperson *" class="invoice-modal-input w-full" />
+                          <input v-model="customBillingEmail" type="email" placeholder="E-Mail *" class="invoice-modal-input w-full" />
                         </div>
                       </div>
                       
-                      <!-- E-Mail-Versand -->
-                      <div class="bg-gray-50 rounded-lg p-3 sm:p-4">
-                        <h4 class="text-sm sm:text-base font-medium text-gray-900 mb-2">E-Mail-Versand</h4>
-                        
-                        <div class="space-y-2">
-                          <div>
-                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">E-Mail</label>
-                            <input
-                              v-model="invoiceEmail"
-                              type="email"
-                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              :placeholder="useCustomBillingAddress ? customBillingEmail || 'email@beispiel.ch' : (companyBillingAddress?.email || displayEmail)"
-                            >
-                          </div>
-                          
-                          <div>
-                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Betreff (optional)</label>
-                            <input
-                              v-model="invoiceSubject"
-                              type="text"
-                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="Rechnung für Fahrstunden"
-                            >
-                          </div>
-                          
-                          <div>
-                            <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Nachricht (optional)</label>
-                            <textarea
-                              v-model="invoiceMessage"
-                              rows="2"
-                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                              placeholder="Ihre Nachricht..."
-                            />
-                          </div>
+                      <div class="rounded-xl border border-gray-200 p-4 space-y-3">
+                        <p class="text-xs font-bold uppercase tracking-wider text-gray-400">E-Mail-Versand</p>
+                        <div>
+                          <label class="block text-xs font-medium text-gray-500 mb-1">Empfänger</label>
+                          <input
+                            v-model="invoiceEmail"
+                            type="email"
+                            class="invoice-modal-input w-full"
+                            :placeholder="resolvedInvoiceEmail || 'email@beispiel.ch'"
+                          >
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-gray-500 mb-1">Betreff (optional)</label>
+                          <input v-model="invoiceSubject" type="text" class="invoice-modal-input w-full" placeholder="Rechnung für Fahrstunden" />
+                        </div>
+                        <div>
+                          <label class="block text-xs font-medium text-gray-500 mb-1">Nachricht (optional)</label>
+                          <textarea v-model="invoiceMessage" rows="3" class="invoice-modal-input w-full resize-none" placeholder="Ihre Nachricht…" />
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
               </div>
-              
-              <div class="bg-gray-50 px-4 py-3 sm:px-6 flex flex-col gap-2 sm:flex-row-reverse sm:gap-0">
+
+              <div class="flex-none border-t border-gray-100 px-4 sm:px-5 py-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
                 <button
                   type="button"
+                  class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
                   :disabled="isCreatingInvoice"
-                  class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-3 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 sm:ml-3 transition-colors"
-                  @click="sendToAccounto"
-                >
-                  <svg v-if="isCreatingInvoice" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                  </svg>
-                  <span v-else>An Accounto</span>
-                </button>
-                
-                <button
-                  type="button"
-                  :disabled="isCreatingInvoice"
-                  class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-3 py-2 bg-green-600 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 sm:ml-3 transition-colors"
-                  @click="sendDirectEmail"
-                >
-                  <svg v-if="isCreatingInvoice" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                  </svg>
-                  <span v-else>Email</span>
-                </button>
-                
-                <button
-                  type="button"
-                  :disabled="isCreatingInvoice"
-                  class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-3 py-2 bg-purple-600 text-sm font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 sm:ml-3 transition-colors"
-                  @click="prepareForPrint"
-                >
-                  <svg v-if="isCreatingInvoice" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                  </svg>
-                  <span v-else>PDF</span>
-                </button>
-                
-                <button
-                  type="button"
-                  :disabled="isCreatingInvoice"
-                  class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-3 py-2 bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 sm:ml-3 transition-colors"
-                  @click="createInvoiceInDatabase"
-                >
-                  <svg v-if="isCreatingInvoice" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                  </svg>
-                  <span v-else>Speichern + PDF</span>
-                </button>
-                
-                <button
-                  type="button"
-                  class="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-3 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
-                  @click="showInvoiceModal = false"
+                  @click="closeInvoiceModal"
                 >
                   Abbrechen
+                </button>
+                <button
+                  type="button"
+                  class="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-xl border transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  :style="{ borderColor: primaryColor, color: primaryColor }"
+                  :disabled="isCreatingInvoice"
+                  @click="createInvoiceAndOpenPdf"
+                >
+                  <svg v-if="invoiceAction === 'pdf'" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  {{ invoiceAction === 'pdf' ? 'Erstellt PDF…' : 'PDF öffnen' }}
+                </button>
+                <button
+                  type="button"
+                  class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  :style="{ background: primaryGradient }"
+                  :disabled="isCreatingInvoice"
+                  @click="sendDirectEmail"
+                >
+                  <svg v-if="invoiceAction === 'email'" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                  {{ invoiceAction === 'email' ? 'Wird gesendet…' : 'Per E-Mail senden' }}
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </Teleport>
         
         <!-- Compact User Header -->
         <div class="bg-white shadow rounded-lg px-4 py-3">
@@ -1214,8 +1084,8 @@ v-if="(appointment.credit_used || 0) > 0"
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
-import { useAccounto } from '~/composables/useAccounto'
 import { useInvoices } from '~/composables/useInvoices'
+import { useTenant } from '~/composables/useTenant'
 import Toast from '~/components/Toast.vue'
 import { logger } from '~/utils/logger'
 import { useAuthStore } from '~/stores/auth'
@@ -1223,6 +1093,9 @@ import { getSupabase } from '~/utils/supabase'
 
 const authStore = useAuthStore()
 const supabase = getSupabase()
+const { tenantPrimaryColor } = useTenant()
+const primaryColor = tenantPrimaryColor
+const primaryGradient = computed(() => `linear-gradient(135deg, ${primaryColor.value}, ${primaryColor.value}dd)`)
 
 // Secure helper: all payment/appointment write operations go through server API
 const paymentOp = async (action: string, params: Record<string, any> = {}) => {
@@ -1233,9 +1106,6 @@ const paymentOp = async (action: string, params: Record<string, any> = {}) => {
   if (!response?.success) throw new Error(response?.statusMessage || 'Operation failed')
   return response
 }
-
-// Generisches Logo für PDFs - wird durch Tenant-Logo ersetzt
-const GENERIC_LOGO_BASE64 = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiByeD0iMTIiIGZpbGw9IiM2NDlFRkYiLz4KPHRleHQgeD0iNTAiIHk9IjYwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXdlaWdodD0iYm9sZCI+TG9nbzwvdGV4dD4KPC9zdmc+Cg=='
 
 // Types
 interface UserDetails {
@@ -1364,6 +1234,7 @@ const selectedAppointments = ref<string[]>([])
 const showSelectedAppointmentsDetails = ref(false)
 const showInvoiceModal = ref(false)
 const isCreatingInvoice = ref(false)
+const invoiceAction = ref<'email' | 'pdf' | null>(null)
 const eventTypes = ref<any[]>([])
 
 const invoiceEmail = ref('')
@@ -1398,6 +1269,13 @@ const displayName = computed(() => {
 
 const displayEmail = computed(() => {
   return userDetails.value?.email || 'Keine E-Mail'
+})
+
+const resolvedInvoiceEmail = computed(() => {
+  if (invoiceEmail.value) return invoiceEmail.value
+  if (useCustomBillingAddress.value && customBillingEmail.value) return customBillingEmail.value
+  if (companyBillingAddress.value?.email) return companyBillingAddress.value.email
+  return userDetails.value?.email || ''
 })
 
 const emailLink = computed(() => {
@@ -1549,11 +1427,14 @@ const closeInvoiceModal = () => {
   showInvoiceModal.value = false
 }
 
-const handleModalClick = (event: Event) => {
-  // Prüfe ob der Click auf den Hintergrund war
-  if (event.target === event.currentTarget) {
-    closeInvoiceModal()
-  }
+const resetInvoiceModalFields = () => {
+  useCustomBillingAddress.value = false
+  customBillingCompanyName.value = ''
+  customBillingContactPerson.value = ''
+  customBillingEmail.value = ''
+  invoiceEmail.value = ''
+  invoiceSubject.value = ''
+  invoiceMessage.value = ''
 }
 
 const loadUserDetails = async () => {
@@ -2888,350 +2769,183 @@ const invoiceSelectedAppointments = async () => {
   }
 }
 
-const sendToAccounto = async () => {
-  if (selectedAppointments.value.length === 0) return
-  
-  isCreatingInvoice.value = true
-  
-  try {
-    logger.debug('🏦 Sending invoice to Accounto...')
-    
-    // Sammle alle ausgewählten Termine
-    const selectedAppointmentData = selectedAppointments.value.map(appointmentId => {
-      const appointment = getAppointmentById(appointmentId)
-      if (!appointment) return null
-      
-      return {
-        id: appointment.id,
-        title: appointment.title,
-        start_time: appointment.start_time,
-        duration_minutes: appointment.duration_minutes,
-        amount: calculateAppointmentAmount(appointment)
-      }
-    }).filter((apt): apt is NonNullable<typeof apt> => apt !== null)
-    
-    if (selectedAppointmentData.length === 0) {
-      throw new Error('Keine gültigen Termine gefunden')
+type SelectedAppointmentRow = {
+  id: string
+  title: string
+  start_time: string
+  duration_minutes: number
+  amount: number
+}
+
+const getSelectedAppointmentRows = (): SelectedAppointmentRow[] => {
+  return selectedAppointments.value.map((appointmentId) => {
+    const appointment = getAppointmentById(appointmentId)
+    if (!appointment) return null
+    return {
+      id: appointment.id,
+      title: appointment.title,
+      start_time: appointment.start_time,
+      duration_minutes: appointment.duration_minutes,
+      amount: calculateAppointmentAmount(appointment),
     }
-    
-    // Kundendaten aus userDetails
-    const customerData = {
-      firstName: userDetails.value?.first_name || '',
-      lastName: userDetails.value?.last_name || '',
-      email: userDetails.value?.email || '',
-      phone: userDetails.value?.phone || ''
-    }
-    
-    // Rechnungsdaten vorbereiten
-    const invoiceRequest = {
-      appointments: selectedAppointmentData,
-      customerData,
-      billingAddress: companyBillingAddress.value ? {
-        company_name: companyBillingAddress.value.company_name,
-        contact_person: companyBillingAddress.value.contact_person,
-        street: companyBillingAddress.value.street,
-        street_number: companyBillingAddress.value.street_number || undefined,
-        zip: companyBillingAddress.value.zip,
-        city: companyBillingAddress.value.city,
-        vat_number: companyBillingAddress.value.vat_number || undefined,
-        email: companyBillingAddress.value.email,
-        phone: companyBillingAddress.value.phone || undefined
-      } : undefined,
-      emailData: {
-        email: invoiceEmail.value || companyBillingAddress.value?.email || userDetails.value?.email || '',
-        subject: invoiceSubject.value,
-        message: invoiceMessage.value
-      },
-      totalAmount: selectedAppointmentsTotal.value
-    }
-    
-    logger.debug('📋 Accounto invoice request prepared:', invoiceRequest)
-    
-    // Accounto API aufrufen
-    const { createInvoiceAndSend: accountoCreateInvoice } = useAccounto()
-    const result = await accountoCreateInvoice(invoiceRequest)
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Accounto Rechnungserstellung fehlgeschlagen')
-    }
-    
-    const totalAmount = formatCurrency(selectedAppointmentsTotal.value)
-    const appointmentCount = selectedAppointments.value.length
-    
-    showSuccessToast(
-      '✅ Rechnung erfolgreich gesendet',
-      `Rechnungsnummer: ${result.invoiceNumber}\nAnzahl Termine: ${appointmentCount}\nGesamtbetrag: ${totalAmount}\n\nDie Rechnung wurde in Accounto erstellt und ist dort verfügbar.`
-    )
-    
-    // Modal schließen und Auswahl aufheben
-    showInvoiceModal.value = false
-    selectedAppointments.value = []
-    
-    // E-Mail-Felder zurücksetzen
-    useCustomBillingAddress.value = false
-    customBillingCompanyName.value = ''
-    customBillingContactPerson.value = ''
-    customBillingEmail.value = ''
-    invoiceEmail.value = ''
-    invoiceSubject.value = ''
-    invoiceMessage.value = ''
-    
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    console.error('❌ Error sending to Accounto:', err)
-    showErrorToast('❌ Fehler aufgetreten', `Fehler beim Senden an Accounto: ${errorMessage}`)
-  } finally {
-    isCreatingInvoice.value = false
+  }).filter((apt): apt is SelectedAppointmentRow => apt !== null)
+}
+
+const buildInvoicePayload = (internalNotes: string) => {
+  const rows = getSelectedAppointmentRows()
+  if (rows.length === 0) throw new Error('Keine gültigen Termine gefunden')
+
+  const billingEmail = resolvedInvoiceEmail.value
+  if (!billingEmail) throw new Error('Keine E-Mail-Adresse für die Rechnung angegeben')
+
+  if (useCustomBillingAddress.value) {
+    if (!customBillingContactPerson.value.trim()) throw new Error('Kontaktperson ist erforderlich')
+    if (!customBillingEmail.value.trim() && !invoiceEmail.value.trim()) throw new Error('E-Mail-Adresse ist erforderlich')
   }
+
+  const useCompanyBilling = useCustomBillingAddress.value || !!companyBillingAddress.value
+  const invoiceFormData = {
+    user_id: userDetails.value?.id || '',
+    billing_type: (useCompanyBilling ? 'company' : 'individual') as 'company' | 'individual',
+    billing_company_name: useCustomBillingAddress.value
+      ? customBillingCompanyName.value || undefined
+      : companyBillingAddress.value?.company_name || undefined,
+    billing_contact_person: useCustomBillingAddress.value
+      ? customBillingContactPerson.value || undefined
+      : companyBillingAddress.value?.contact_person || undefined,
+    billing_email: billingEmail,
+    billing_street: companyBillingAddress.value?.street || undefined,
+    billing_street_number: companyBillingAddress.value?.street_number || undefined,
+    billing_zip: companyBillingAddress.value?.zip || undefined,
+    billing_city: companyBillingAddress.value?.city || undefined,
+    billing_country: 'CH',
+    billing_vat_number: companyBillingAddress.value?.vat_number || undefined,
+    subtotal_rappen: chfToRappen(selectedAppointmentsTotal.value),
+    vat_rate: 7.70,
+    discount_amount_rappen: 0,
+    notes: invoiceMessage.value || undefined,
+    internal_notes: internalNotes,
+  }
+
+  const invoiceItems = rows.map((appointment, index) => {
+    const unitPriceRappen = chfToRappen(appointment.amount || 0)
+    const vatAmount = Math.round(unitPriceRappen * 7.70 / 100)
+    return {
+      product_name: appointment.title || 'Fahrstunde',
+      product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
+      appointment_id: appointment.id,
+      appointment_title: appointment.title,
+      appointment_date: appointment.start_time,
+      appointment_duration_minutes: appointment.duration_minutes,
+      quantity: 1,
+      unit_price_rappen: unitPriceRappen,
+      total_price_rappen: unitPriceRappen,
+      vat_rate: 7.70,
+      vat_amount_rappen: vatAmount,
+      sort_order: index,
+      notes: `Termin: ${appointment.title}`,
+    }
+  })
+
+  return { invoiceFormData, invoiceItems }
+}
+
+const createInvoiceFromSelection = async (internalNotes: string) => {
+  const { invoiceFormData, invoiceItems } = buildInvoicePayload(internalNotes)
+  const { createInvoice } = useInvoices()
+  const result = await createInvoice(invoiceFormData, invoiceItems)
+  if (result.error || !result.data) throw new Error(result.error || 'Rechnung konnte nicht erstellt werden')
+  return result
+}
+
+const finalizeInvoiceModal = async () => {
+  showInvoiceModal.value = false
+  selectedAppointments.value = []
+  resetInvoiceModalFields()
+  await loadUserAppointments()
+  await refreshData()
 }
 
 const sendDirectEmail = async () => {
-  if (selectedAppointments.value.length === 0) return
-  
+  if (selectedAppointments.value.length === 0 || isCreatingInvoice.value) return
+
   isCreatingInvoice.value = true
-  
+  invoiceAction.value = 'email'
+
   try {
-    logger.debug('📧 Sending invoice via direct email...')
-    
-    // Sammle alle ausgewählten Termine
-    const selectedAppointmentData = selectedAppointments.value.map(appointmentId => {
-      const appointment = getAppointmentById(appointmentId)
-      if (!appointment) return null
-      
-      return {
-        id: appointment.id,
-        title: appointment.title,
-        start_time: appointment.start_time,
-        duration_minutes: appointment.duration_minutes,
-        amount: calculateAppointmentAmount(appointment)
-      }
-    }).filter((apt): apt is NonNullable<typeof apt> => apt !== null)
-    
-    if (selectedAppointmentData.length === 0) {
-      throw new Error('Keine gültigen Termine gefunden')
-    }
-    
-    // Rechnungsdaten für Datenbank vorbereiten
-    const invoiceFormData = {
-      user_id: userDetails.value?.id || '',
-      staff_id: undefined,
-      appointment_id: undefined,
-      billing_type: (companyBillingAddress.value ? 'company' : 'individual') as 'company' | 'individual',
-      billing_company_name: companyBillingAddress.value?.company_name || undefined,
-      billing_contact_person: companyBillingAddress.value?.contact_person || undefined,
-      billing_email: invoiceEmail.value || companyBillingAddress.value?.email || userDetails.value?.email || '',
-      billing_street: companyBillingAddress.value?.street || undefined,
-      billing_street_number: companyBillingAddress.value?.street_number || undefined,
-      billing_zip: companyBillingAddress.value?.zip || undefined,
-      billing_city: companyBillingAddress.value?.city || undefined,
-      billing_country: 'CH',
-      billing_vat_number: companyBillingAddress.value?.vat_number || undefined,
-      subtotal_rappen: chfToRappen(selectedAppointmentsTotal.value),
-      vat_rate: 7.70,
-      discount_amount_rappen: 0,
-      notes: invoiceMessage.value || undefined,
-      internal_notes: `Direkt verrechnet aus UserPaymentDetails für ${selectedAppointments.value.length} Termine`
-    }
-    
-    // Rechnungspositionen vorbereiten
-    const invoiceItems = selectedAppointmentData.map((appointment, index) => {
-      const unitPriceRappen = chfToRappen(appointment.amount || 0)
-      const vatAmount = Math.round(unitPriceRappen * 7.70 / 100)
-      return {
-        product_name: appointment.title || 'Fahrstunde',
-        product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
-        appointment_id: appointment.id,
-        appointment_title: appointment.title,
-        appointment_date: appointment.start_time,
-        appointment_duration_minutes: appointment.duration_minutes,
-        quantity: 1,
-        unit_price_rappen: unitPriceRappen,
-        total_price_rappen: unitPriceRappen,
-        vat_rate: 7.70,
-        vat_amount_rappen: vatAmount,
-        sort_order: index,
-        notes: `Termin: ${appointment.title}`
-      }
-    })
-    
-    logger.debug('📋 Invoice data prepared for database:', { invoiceFormData, invoiceItems })
-    
-    // Rechnung in Datenbank erstellen
-    const { createInvoice } = useInvoices()
-    const result = await createInvoice(invoiceFormData, invoiceItems)
-    
-    if (result.error) {
-      throw new Error(result.error)
-    }
-    
-    logger.debug('✅ Invoice created in database:', result.invoice_number)
-    
-    // Alle ausgewählten Termine auf "verrechnet" setzen und Settlement Email versenden
-    if (result.data) {
-      await updateAppointmentsToInvoiced(selectedAppointments.value, result.data.id, companyBillingAddress.value?.id)
-    }
-    
-    const totalAmount = formatCurrency(selectedAppointmentsTotal.value)
-    const appointmentCount = selectedAppointments.value.length
-    const email = invoiceEmail.value || companyBillingAddress.value?.email || userDetails.value?.email || ''
-    
-    showSuccessToast(
-      '✅ E-Mail erfolgreich versendet',
-      `Rechnungsnummer: ${result.invoice_number}\nAnzahl Termine: ${appointmentCount}\nGesamtbetrag: ${totalAmount}\n\nDie Rechnung wurde in der Datenbank gespeichert und per E-Mail an ${email} versendet.`
+    const result = await createInvoiceFromSelection(
+      `Per E-Mail versendet aus UserPaymentDetails für ${selectedAppointments.value.length} Termine`
     )
-    
-    // Modal schließen und Auswahl aufheben
-    showInvoiceModal.value = false
-    selectedAppointments.value = []
-    
-    // E-Mail-Felder zurücksetzen
-    useCustomBillingAddress.value = false
-    customBillingCompanyName.value = ''
-    customBillingContactPerson.value = ''
-    customBillingEmail.value = ''
-    invoiceEmail.value = ''
-    invoiceSubject.value = ''
-    invoiceMessage.value = ''
-    
-    // Reload appointments to refresh the status from database
-    await loadUserAppointments()
-    
-    // Daten aktualisieren
-    await refreshData()
-    
+
+    await updateAppointmentsToInvoiced(
+      selectedAppointments.value,
+      result.data!.id,
+      companyBillingAddress.value?.id
+    )
+
+    const resendResult = await $fetch<{ success: boolean; error?: string; sentTo?: string }>(
+      '/api/invoices/resend',
+      { method: 'POST', body: { invoiceId: result.data!.id } }
+    )
+    if (!resendResult.success) throw new Error(resendResult.error || 'E-Mail-Versand fehlgeschlagen')
+
+    showSuccessToast(
+      '✅ Rechnung gesendet',
+      `Rechnungsnummer: ${result.invoice_number}
+Anzahl Termine: ${selectedAppointments.value.length}
+Gesamtbetrag: ${formatCurrency(selectedAppointmentsTotal.value)}
+
+Die Rechnung wurde erstellt und an ${resendResult.sentTo || resolvedInvoiceEmail.value} gesendet.`
+    )
+
+    await finalizeInvoiceModal()
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    console.error('❌ Error sending direct email:', err)
-    showErrorToast('❌ Fehler aufgetreten', `Fehler beim direkten E-Mail-Versand: ${errorMessage}`)
+    console.error('❌ Error sending invoice email:', err)
+    showErrorToast('❌ Fehler aufgetreten', `Fehler beim E-Mail-Versand: ${errorMessage}`)
   } finally {
     isCreatingInvoice.value = false
+    invoiceAction.value = null
   }
 }
 
-// Neue Funktion: Rechnung in Datenbank speichern und PDF generieren
-const createInvoiceInDatabase = async () => {
-  if (selectedAppointments.value.length === 0) return
-  
+const createInvoiceAndOpenPdf = async () => {
+  if (selectedAppointments.value.length === 0 || isCreatingInvoice.value) return
+
   isCreatingInvoice.value = true
-  
+  invoiceAction.value = 'pdf'
+
   try {
-    logger.debug('💾 Creating invoice in database and generating PDF...')
-    
-    // Sammle alle ausgewählten Termine
-    const selectedAppointmentData = selectedAppointments.value.map(appointmentId => {
-      const appointment = getAppointmentById(appointmentId)
-      if (!appointment) return null
-      
-      return {
-        id: appointment.id,
-        title: appointment.title,
-        start_time: appointment.start_time,
-        duration_minutes: appointment.duration_minutes,
-        amount: calculateAppointmentAmount(appointment)
-      }
-    }).filter((apt): apt is NonNullable<typeof apt> => apt !== null)
-    
-    if (selectedAppointmentData.length === 0) {
-      throw new Error('Keine gültigen Termine gefunden')
-    }
-    
-    // Rechnungsdaten für Datenbank vorbereiten
-    const invoiceFormData = {
-      user_id: userDetails.value?.id || '',
-      staff_id: undefined, // Optional, wird nicht gesetzt wenn leer
-      appointment_id: undefined, // Optional, wird nicht gesetzt wenn leer
-      billing_type: (companyBillingAddress.value ? 'company' : 'individual') as 'company' | 'individual',
-      billing_company_name: companyBillingAddress.value?.company_name || undefined,
-      billing_contact_person: companyBillingAddress.value?.contact_person || undefined,
-      billing_email: invoiceEmail.value || companyBillingAddress.value?.email || userDetails.value?.email || '',
-      billing_street: companyBillingAddress.value?.street || undefined,
-      billing_street_number: companyBillingAddress.value?.street_number || undefined,
-      billing_zip: companyBillingAddress.value?.zip || undefined,
-      billing_city: companyBillingAddress.value?.city || undefined,
-      billing_country: 'CH',
-      billing_vat_number: companyBillingAddress.value?.vat_number || undefined,
-      subtotal_rappen: chfToRappen(selectedAppointmentsTotal.value),
-      vat_rate: 7.70,
-      discount_amount_rappen: 0,
-      notes: invoiceMessage.value || undefined,
-      internal_notes: `Erstellt aus UserPaymentDetails für ${selectedAppointments.value.length} Termine`
-    }
-    
-    // Rechnungspositionen vorbereiten
-    const invoiceItems = selectedAppointmentData.map((appointment, index) => {
-      const totalPriceRappen = chfToRappen(appointment.amount) // quantity is 1, so total = unit_price
-      const vatAmount = Math.round(totalPriceRappen * 7.70 / 100) // VAT calculation
-      return {
-        product_name: appointment.title || 'Fahrstunde',
-        product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
-        appointment_id: appointment.id,
-        appointment_title: appointment.title,
-        appointment_date: appointment.start_time,
-        appointment_duration_minutes: appointment.duration_minutes,
-        quantity: 1,
-        unit_price_rappen: totalPriceRappen,
-        total_price_rappen: totalPriceRappen,
-        vat_rate: 7.70,
-        vat_amount_rappen: vatAmount,
-        sort_order: index,
-        notes: `Termin: ${appointment.title}`
-      }
-    })
-    
-    logger.debug('📋 Invoice data prepared for database:', { invoiceFormData, invoiceItems })
-    
-    // Rechnung in Datenbank erstellen
-    const { createInvoice } = useInvoices()
-    const result = await createInvoice(invoiceFormData, invoiceItems)
-    
-    if (result.error) {
-      throw new Error(result.error)
-    }
-    
-    logger.debug('✅ Invoice created in database:', result.invoice_number)
-    
-    // Alle ausgewählten Termine auf "verrechnet" setzen
-    if (result.data) {
-      await updateAppointmentsToInvoiced(selectedAppointments.value, result.data.id, companyBillingAddress.value?.id)
-    }
-    
-    // PDF generieren und herunterladen
+    const result = await createInvoiceFromSelection(
+      `PDF erstellt aus UserPaymentDetails für ${selectedAppointments.value.length} Termine`
+    )
+
+    await updateAppointmentsToInvoiced(
+      selectedAppointments.value,
+      result.data!.id,
+      companyBillingAddress.value?.id
+    )
+
     const pdfResult = await generateInvoicePDF(result.data as InvoiceData)
-    
-    if (pdfResult.success) {
-      showSuccessToast(
-        '✅ Rechnung erfolgreich erstellt',
-        `Rechnungsnummer: ${result.invoice_number}\nAnzahl Termine: ${selectedAppointments.value.length}\nGesamtbetrag: ${formatCurrency(selectedAppointmentsTotal.value)}\n\nDie Rechnung wurde in der Datenbank gespeichert, als PDF heruntergeladen und alle Termine auf "verrechnet" gesetzt.`
-      )
-    } else {
-      showSuccessToast(
-        '✅ Rechnung erfolgreich erstellt',
-        `Rechnungsnummer: ${result.invoice_number}\nAnzahl Termine: ${selectedAppointments.value.length}\nGesamtbetrag: ${formatCurrency(selectedAppointmentsTotal.value)}\n\nDie Rechnung wurde in der Datenbank gespeichert und alle Termine auf "verrechnet" gesetzt. PDF-Generierung fehlgeschlagen: ${pdfResult.error}`
-      )
+    if (!pdfResult.success) {
+      throw new Error(pdfResult.error || 'PDF-Generierung fehlgeschlagen')
     }
-    
-    // Modal schließen und Auswahl aufheben
-    showInvoiceModal.value = false
-    selectedAppointments.value = []
-    
-    // E-Mail-Felder zurücksetzen
-    useCustomBillingAddress.value = false
-    customBillingCompanyName.value = ''
-    customBillingContactPerson.value = ''
-    customBillingEmail.value = ''
-    invoiceEmail.value = ''
-    invoiceSubject.value = ''
-    invoiceMessage.value = ''
-    
-    // Daten aktualisieren
-    await refreshData()
-    
+
+    showSuccessToast(
+      '✅ Rechnung erstellt',
+      `Rechnungsnummer: ${result.invoice_number}
+Anzahl Termine: ${selectedAppointments.value.length}
+Gesamtbetrag: ${formatCurrency(selectedAppointmentsTotal.value)}`
+    )
+
+    await finalizeInvoiceModal()
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    console.error('❌ Error creating invoice in database:', err)
+    console.error('❌ Error creating invoice PDF:', err)
     showErrorToast('❌ Fehler aufgetreten', `Fehler beim Erstellen der Rechnung: ${errorMessage}`)
   } finally {
     isCreatingInvoice.value = false
+    invoiceAction.value = null
   }
 }
 
@@ -3239,21 +2953,19 @@ const createInvoiceInDatabase = async () => {
 const generateInvoicePDF = async (invoiceData: InvoiceData): Promise<PDFResult> => {
   try {
     logger.debug('📄 Generating PDF for invoice:', invoiceData.id)
-    
-    // PDF-Generierung über API aufrufen
+
     const response = await $fetch('/api/invoices/download', {
       method: 'POST',
       body: { invoiceId: invoiceData.id }
     }) as { success: boolean; pdfUrl?: string; error?: string }
-    
+
     if (response.success && response.pdfUrl) {
       const { openPdf } = await import('~/utils/openPdf')
       await openPdf(response.pdfUrl, `rechnung-${invoiceData.invoice_number}.pdf`)
       return { success: true, pdfUrl: response.pdfUrl }
-    } else {
-      return { success: false, error: response.error || 'PDF-Generierung fehlgeschlagen' }
     }
-    
+
+    return { success: false, error: response.error || 'PDF-Generierung fehlgeschlagen' }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     console.error('❌ Error generating PDF:', error)
@@ -3261,12 +2973,11 @@ const generateInvoicePDF = async (invoiceData: InvoiceData): Promise<PDFResult> 
   }
 }
 
-// Hilfsfunktion: Termine auf "verrechnet" setzen und Email versenden
+// Hilfsfunktion: Termine auf "verrechnet" setzen
 const updateAppointmentsToInvoiced = async (appointmentIds: string[], invoiceNumber?: string, companyBillingAddressId?: string) => {
   try {
-    logger.debug('🔄 Settling appointments and sending emails:', appointmentIds)
-    
-    // Verwende neuen Endpoint der Emails versendet
+    logger.debug('🔄 Settling appointments:', appointmentIds)
+
     const result = await $fetch('/api/payments/settle-and-email', {
       method: 'POST',
       body: {
@@ -3275,273 +2986,13 @@ const updateAppointmentsToInvoiced = async (appointmentIds: string[], invoiceNum
         companyBillingAddressId
       }
     })
-    
-    logger.debug('✅ Appointments settled and emails sent:', result)
+
+    logger.debug('✅ Appointments settled:', result)
     return result
-    
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     console.error('❌ Error in updateAppointmentsToInvoiced:', errorMessage)
     throw error
-  }
-}
-
-const prepareForPrint = async () => {
-  if (selectedAppointments.value.length === 0) return
-  
-  isCreatingInvoice.value = true
-  
-  try {
-    logger.debug('🖨️ Preparing invoice for printing...')
-    
-    // Sammle alle ausgewählten Termine
-    const selectedAppointmentData = selectedAppointments.value.map(appointmentId => {
-      const appointment = getAppointmentById(appointmentId)
-      if (!appointment) return null
-      
-      return {
-        id: appointment.id,
-        title: appointment.title,
-        start_time: appointment.start_time,
-        duration_minutes: appointment.duration_minutes,
-        amount: calculateAppointmentAmount(appointment)
-      }
-    }).filter((apt): apt is NonNullable<typeof apt> => apt !== null)
-    
-    if (selectedAppointmentData.length === 0) {
-      throw new Error('Keine gültigen Termine gefunden')
-    }
-    
-    // Rechnungsdaten für Druck vorbereiten
-    const printData = {
-      appointments: selectedAppointmentData,
-      customerName: `${userDetails.value?.first_name || ''} ${userDetails.value?.last_name || ''}`.trim(),
-      totalAmount: selectedAppointmentsTotal.value,
-      billingAddress: companyBillingAddress.value,
-      printDate: new Date().toLocaleDateString('de-CH')
-    }
-    
-    logger.debug('📋 Print invoice data prepared:', printData)
-    
-        // PDF mit jsPDF generieren
-    const { jsPDF } = await import('jspdf')
-    const doc = new jsPDF()
-    
-    // Professionelles PDF-Design nach Vorlage
-    const pageWidth = doc.internal.pageSize.width
-    const _pageHeight = doc.internal.pageSize.height
-    const margin = 20
-    const contentWidth = pageWidth - (2 * margin)
-    
-    // Farben definieren (eure hellblaue Hauptfarbe)
-    const primaryColor: [number, number, number] = [100, 150, 255] // Hellblau
-    const _accentColor: [number, number, number] = [255, 193, 7]    // Gelb
-    const darkColor: [number, number, number] = [33, 37, 41]      // Dunkelgrau
-    const lightGray: [number, number, number] = [248, 249, 250]   // Hellgrau
-    
-    // Logo und Firmen Text oben
-    const centerX = pageWidth / 2
-    const logoY = 20
-    const _textY = 50
-    
-        // Logo einbetten (links vom Text)
-        try {
-      const logoWidth = 40  // Größer gemacht
-      const logoHeight = 40 // Größer gemacht
-      const logoX = centerX - 20 // Zentriert
-      
-      // SVG-Logo in jsPDF einbetten
-      doc.addImage(GENERIC_LOGO_BASE64, 'SVG', logoX, logoY, logoWidth, logoHeight)
-    } catch (error) {
-      console.warn('Logo konnte nicht geladen werden:', error)
-      // Fallback: Einfaches Rechteck als Logo-Ersatz
-      doc.setFillColor(...primaryColor)
-      doc.rect(centerX - 40, logoY, 80, 20, 'F')
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(14)
-      doc.setFont('helvetica', 'bold')
-      doc.text('Firma', centerX, logoY + 10, { align: 'center' })
-    }
-    
-    // TEXT ENTFERNT - nur noch Logo
-    
-    // Rechnungsdetails
-    let yPos = 70
-    
-    // "Rechnung an:" Sektion
-    doc.setTextColor(...darkColor)
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.text('Rechnungsübersicht von:', margin, yPos)
-    yPos += 8
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.text(printData.customerName.toUpperCase(), margin, yPos)
-    yPos += 8
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    const addressString = printData.billingAddress ? 
-      `${printData.billingAddress.street} ${printData.billingAddress.street_number || ''}, ${printData.billingAddress.zip} ${printData.billingAddress.city}` : 
-      'Keine Adresse angegeben'
-    doc.text(addressString, margin, yPos)
-    
-    // Rechnungsnummer und Datum rechts
-    yPos = 80
-    doc.text(`Erstellt am:`, pageWidth - margin - 60, yPos)
-    yPos += 8
-    doc.text(`${printData.printDate}`, pageWidth - margin - 60, yPos)
-    
-    yPos += 20
-    
-    // Einfache, saubere Termin-Auflistung
-    yPos += 20
-    
-    selectedAppointments.value.forEach((appointmentId, index) => {
-      const appointment = getAppointmentById(appointmentId)
-      if (!appointment) return
-      
-      const amount = calculateAppointmentAmount(appointment)
-      const mainDescription = appointment.type || 'Fahrstunde'
-      
-      // Abwechselnd grau/weiße Zeilen für den gesamten Termin-Bereich
-      const termStartY = yPos - 3
-      let termEndY = yPos + 12 // Mindesthöhe für Hauptzeile
-      
-      // Kostenaufschlüsselung vorberechnen um die Gesamthöhe zu ermitteln
-      let detailLines = 0
-      if (appointment.lesson_price && appointment.lesson_price > 0) detailLines++
-      if (appointment.admin_fee && appointment.admin_fee > 0) detailLines++
-      if (appointment.products && appointment.products.length > 0) {
-        appointment.products.forEach(product => {
-          if (product && product.name && product.price) detailLines++
-        })
-      }
-      if (appointment.discount_amount && appointment.discount_amount > 0) detailLines++
-      
-      // Gesamthöhe des Termins berechnen
-      termEndY += detailLines * 8
-      
-      // Hintergrund für den gesamten Termin-Bereich
-      if (index % 2 === 0) {
-        doc.setFillColor(...lightGray)
-        doc.rect(margin, termStartY, contentWidth, termEndY - termStartY, 'F')
-      }
-      
-      // 1. SPALTE: Nummer und Kategorie (ganz links)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(12)
-      doc.setTextColor(...darkColor)
-      doc.text(`${index + 1}. Kategorie: ${mainDescription}`, margin + 10, yPos)
-      
-      // 2. SPALTE: Zeit und Dauer (in der Mitte)
-      const appointmentDate = new Date(appointment.start_time)
-      const timeStr = appointmentDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
-      const dateStr = appointmentDate.toLocaleDateString('de-CH')
-      const centerX = margin + (contentWidth / 2)
-      
-      if (appointment.duration_minutes) {
-        const durationHours = Math.floor(appointment.duration_minutes / 60)
-        const durationMinutes = appointment.duration_minutes % 60
-        const durationStr = durationHours > 0 ? 
-          `${durationHours}h ${durationMinutes}min` : 
-          `${durationMinutes}min`
-        doc.text(`${dateStr} um ${timeStr} (${durationStr})`, centerX, yPos, { align: 'center' })
-      } else {
-        doc.text(`${dateStr} um ${timeStr}`, centerX, yPos, { align: 'center' })
-      }
-      
-      // 3. SPALTE: Preis (ganz rechts)
-      doc.text(formatCurrency(amount), pageWidth - margin - 10, yPos, { align: 'right' })
-      
-      yPos += 12 // Kleinere Zeilen
-      
-      // Kostenaufschlüsselung mit gleicher Hintergrundfarbe
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.setTextColor(100, 100, 100)
-      
-      if (appointment.lesson_price && appointment.lesson_price > 0) {
-        doc.text(`  Lektion: ${formatCurrency(appointment.lesson_price)}`, margin + 40, yPos)
-        yPos += 8 // Kleinere Zeilen
-      }
-      
-      if (appointment.admin_fee && appointment.admin_fee > 0) {
-        doc.text(`  Admin-Pauschale: ${formatCurrency(appointment.admin_fee)}`, margin + 40, yPos)
-        yPos += 8 // Kleinere Zeilen
-      }
-      
-      if (appointment.products && appointment.products.length > 0) {
-        appointment.products.forEach(product => {
-          if (product && product.name && product.price) {
-            doc.text(`  ${product.name}: ${formatCurrency(product.price)}`, margin + 40, yPos)
-            yPos += 8 // Kleinere Zeilen
-          }
-        })
-      }
-      
-      if (appointment.discount_amount && appointment.discount_amount > 0) {
-        doc.setTextColor(220, 53, 69)
-        doc.text(`  Rabatt: -${formatCurrency(appointment.discount_amount)}`, margin + 40, yPos)
-        doc.setTextColor(100, 100, 100)
-        yPos += 8 // Kleinere Zeilen
-      }
-      
-      yPos += 6 // Weniger Abstand zwischen Terminen
-    })
-    
-    yPos += 10
-    
-    // Zusammenfassung rechts
-    const summaryX = pageWidth - margin - 120
-    const summaryWidth = 120
-
-    
-    // TOTAL (blauer Hintergrund)
-    doc.setFillColor(...primaryColor)
-    doc.rect(summaryX, yPos, summaryWidth, 20, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(14)
-    doc.setFont('helvetica', 'bold')
-    doc.text('TOTAL', summaryX + 5, yPos + 13)
-    const total = selectedAppointmentsTotal.value
-    doc.text(formatCurrency(total), summaryX + summaryWidth - 5, yPos + 13, { align: 'right' })
-    
-    yPos += 30
-
-    
-  
-    
-    // PDF speichern
-    const fileName = `Rechnung_${printData.customerName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
-    doc.save(fileName)
-    
-    const totalAmount = formatCurrency(selectedAppointmentsTotal.value)
-    const appointmentCount = selectedAppointments.value.length
-    
-    showSuccessToast(
-      '📄 PDF erfolgreich erstellt',
-      `Die Rechnung für ${appointmentCount} Termine (${totalAmount}) wurde als PDF gespeichert.`
-    )
-    
-    // Modal schließen und Auswahl aufheben
-    showInvoiceModal.value = false
-    selectedAppointments.value = []
-    
-    // E-Mail-Felder zurücksetzen
-    useCustomBillingAddress.value = false
-    customBillingCompanyName.value = ''
-    customBillingContactPerson.value = ''
-    customBillingEmail.value = ''
-    invoiceEmail.value = ''
-    invoiceSubject.value = ''
-    invoiceMessage.value = ''
-    
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-    console.error('❌ Error preparing for print:', err)
-    showErrorToast('❌ Fehler aufgetreten', `Fehler bei der Druckvorbereitung: ${errorMessage}`)
-  } finally {
-    isCreatingInvoice.value = false
   }
 }
 
@@ -3624,8 +3075,6 @@ const executeHardDeleteAllSelected = async () => {
   }
 }
 
-// Diese Funktion wurde durch prepareForPrint ersetzt
-
 const markAllSelectedAsPaid = async () => {
   if (selectedAppointments.value.length === 0) return
   
@@ -3677,3 +3126,9 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.invoice-modal-input {
+  @apply w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300;
+}
+</style>

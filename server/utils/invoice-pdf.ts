@@ -135,11 +135,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     const mmToPt = (v: number) => v * 2.8346
     const slipH = data.qrCodeDataUrl ? mmToPt(105) : 0
     const slipY = H - slipH
-    // Unterste erlaubte Y-Position für Inhalt auf jeder Seite: entweder direkt
-    // über dem Zahlteil (falls vorhanden) oder über der Fusszeile am Seitenende.
-    // Wird von der Positionstabelle, der Total-Zeile und dem Zahlungsbedingungen-
-    // Block verwendet, um bei Bedarf rechtzeitig einen Seitenumbruch einzufügen.
-    const contentBottomLimit = (data.qrCodeDataUrl ? slipY : H - 40) - 16
+    // Unterste Y-Position wird pro Seite über getContentBottomLimit() bestimmt:
+    // QR-Platz nur reservieren, wenn der Zahlteil auf der aktuellen Seite landet.
 
     // ── Hero header strip ────────────────────────────────────────────────────
     doc.rect(0, 0, W, 100).fill(primary)
@@ -270,6 +267,46 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     const tableWidth = tableRight - margin  // 495
 
+    // Abschlussblock (Total + Zahlungsbedingungen + Grusstext) — Höhe vorab
+    // berechnen, damit Positionen nicht allein auf Seite 1 enden während Total
+    // auf Seite 2 rutscht (Witwen/ORphan-Problem beim QR-Zahlteil).
+    const rawPaymentText = data.paymentTerms ||
+      `Bitte überweise den Betrag bis ${formatDate(data.dueDate)} unter Angabe der Rechnungsnummer ${data.invoiceNumber}.`
+    const paymentText = rawPaymentText.replace(/\{due_date\}/g, formatDate(data.dueDate))
+    doc.fontSize(9).fillColor('#374151').font('Helvetica')
+    const paymentTextH = doc.heightOfString(paymentText, { width: tableWidth - 20 })
+    const paymentBlockH = Math.max(36, paymentTextH + 26)
+    const footerTextH = data.footerText ? doc.heightOfString(data.footerText, { width: W - margin * 2 }) : 0
+    const closingBlockH = 34 + 14 + paymentBlockH + (data.footerText ? footerTextH + 10 : 0)
+
+    const estimateItemRowHeight = (item: InvoicePdfData['items'][number]) => {
+      const formattedDate = formatAppointmentDateTime((item as any).appointment_start_time || item.appointment_date)
+      const durationStr = item.appointment_duration_minutes ? `${item.appointment_duration_minutes} Min.` : ''
+      const typeStr = item.product_description || ''
+      const metaLine = [formattedDate, typeStr, durationStr].filter(Boolean).join(' · ')
+      const hasDate = metaLine.length > 0
+      let breakdownCount = 0
+      if ((item.lesson_price_rappen || 0) > 0) breakdownCount++
+      if ((item.admin_fee_rappen || 0) > 0) breakdownCount++
+      if ((item.products_price_rappen || 0) > 0) {
+        breakdownCount += item.product_details?.length || 1
+      }
+      if ((item.discount_amount_rappen || 0) > 0) breakdownCount++
+      if ((item.voucher_discount_rappen || 0) > 0) breakdownCount++
+      if ((item.credit_used_rappen || 0) > 0) breakdownCount++
+      const rowH = hasDate ? 32 : 22
+      const breakdownH = breakdownCount > 0 ? breakdownCount * 14 + 4 : 0
+      return rowH + breakdownH
+    }
+
+    const itemsBodyHeight = data.items.reduce((sum, item) => sum + estimateItemRowHeight(item), 0)
+    const fitsOnSinglePage = tableTop + 24 + itemsBodyHeight + closingBlockH <= (data.qrCodeDataUrl ? slipY - 16 : H - 40 - 16)
+
+    // QR-Platz nur auf der Seite reservieren, auf der der Zahlteil tatsächlich
+    // gezeichnet wird (einseitige Rechnung: Seite 1; mehrseitig: letzte Seite).
+    let qrReservedOnCurrentPage = !!data.qrCodeDataUrl && fitsOnSinglePage
+    const getContentBottomLimit = () => (qrReservedOnCurrentPage ? slipY - 16 : H - 40 - 16)
+
     const headers = ['POSITION', 'ANZ.', 'EINZELPREIS', 'TOTAL']
     const headerAligns: Array<'left' | 'center' | 'right'> = ['left', 'center', 'right', 'right']
     const drawTableHeader = (y: number) => {
@@ -278,6 +315,13 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       headers.forEach((h, i) => {
         doc.text(h, colPos[i] + 8, y + 8, { width: colWidths[i], align: headerAligns[i], characterSpacing: 0.5 })
       })
+    }
+
+    const startTableContinuationPage = () => {
+      doc.addPage()
+      qrReservedOnCurrentPage = !!data.qrCodeDataUrl
+      drawTableHeader(margin)
+      return margin + 24
     }
 
     drawTableHeader(tableTop)
@@ -318,14 +362,10 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       const totalRowH = rowH + breakdownH
       const bg = idx % 2 === 0 ? 'white' : '#f8fafc'
 
-      // Passt die Zeile nicht mehr auf die aktuelle Seite (z.B. bei sehr
-      // vielen Positionen), auf eine neue Seite umbrechen und den
-      // Tabellenkopf dort wiederholen, statt die Zeile mit dem Zahlteil
-      // oder der Fusszeile zu überschneiden.
-      if (rowY + totalRowH > contentBottomLimit) {
-        doc.addPage()
-        drawTableHeader(margin)
-        rowY = margin + 24
+      // Zeile + Abschlussblock (Total, Zahlungsbedingungen) zusammenhalten —
+      // verhindert, dass nur der Gesamtbetrag auf der nächsten Seite landet.
+      if (rowY + totalRowH + closingBlockH > getContentBottomLimit()) {
+        rowY = startTableContinuationPage()
       }
 
       doc.rect(margin, rowY, tableWidth, totalRowH).fill(bg)
@@ -367,8 +407,9 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     })
 
     // Total row — komplett innerhalb der Tabelle
-    if (rowY + 34 > contentBottomLimit) {
+    if (rowY + closingBlockH > getContentBottomLimit()) {
       doc.addPage()
+      qrReservedOnCurrentPage = !!data.qrCodeDataUrl
       rowY = margin
     }
     doc.rect(margin, rowY, tableWidth, 34).fill(primary)
@@ -380,25 +421,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     rowY += 34
 
     // ── Zahlungsbedingungen ───────────────────────────────────────────────────
-    const rawPaymentText = data.paymentTerms ||
-      `Bitte überweise den Betrag bis ${formatDate(data.dueDate)} unter Angabe der Rechnungsnummer ${data.invoiceNumber}.`
-    const paymentText = rawPaymentText.replace(/\{due_date\}/g, formatDate(data.dueDate))
-
     rowY += 14
     doc.fontSize(9).fillColor('#374151').font('Helvetica')
-    const paymentTextH = doc.heightOfString(paymentText, { width: tableWidth - 20 })
-    const paymentBlockH = Math.max(36, paymentTextH + 26)
-    const footerTextH = data.footerText ? doc.heightOfString(data.footerText, { width: W - margin * 2 }) : 0
-    const remainingContentH = paymentBlockH + 10 + (data.footerText ? footerTextH + 10 : 0)
-
-    // Reicht der Platz bis zum (fix positionierten) Zahlteil bzw. der
-    // Seiten-Fusszeile nicht mehr aus — z.B. weil viele Positionen oder ein
-    // langer Mahntext den Inhalt weit nach unten verschoben haben — auf eine
-    // neue Seite umbrechen statt zu überlappen.
-    if (rowY + remainingContentH > contentBottomLimit) {
-      doc.addPage()
-      rowY = margin
-    }
 
     // Light tinted background
     doc.save().fillOpacity(0.07)
