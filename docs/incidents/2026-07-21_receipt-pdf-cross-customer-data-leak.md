@@ -203,6 +203,8 @@ Relevante Punkte für die weitere rechtliche Prüfung:
 
 **Empfehlung:** Diesen Bericht einer Datenschutz-/Rechtsberatung vorlegen, um verbindlich zu klären, ob und in welchem Umfang eine Meldung an den EDÖB sowie eine Information der betroffenen Kundschaft erforderlich ist.
 
+Eine ausführliche, dokumentierte Risikobewertung inkl. Argumenten für und gegen eine Meldepflicht sowie einem Entscheidungsprotokoll befindet sich in: [`2026-07-21_receipt-pdf-cross-customer-data-leak_risikobewertung.md`](./2026-07-21_receipt-pdf-cross-customer-data-leak_risikobewertung.md).
+
 ---
 
 ## 9. Offene Punkte / Empfehlungen
