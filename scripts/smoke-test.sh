@@ -18,18 +18,23 @@ cd "$(dirname "$0")/.."
 PORT="${SMOKE_TEST_PORT:-4173}"
 LOG_FILE="$(mktemp -t smoke-test-server.XXXXXX.log)"
 SERVER_PID=""
+# Isolated build dir: `nuxt build` writes into buildDir before emitting .output.
+# Using the default `.nuxt` here would collide with a concurrently running
+# `npm run dev` on the same checkout and crash it (ENOENT .../.nuxt/dev/*.map).
+SMOKE_BUILD_DIR=".nuxt-smoke-test"
 
 cleanup() {
   if [ -n "$SERVER_PID" ]; then
     kill "$SERVER_PID" >/dev/null 2>&1 || true
     wait "$SERVER_PID" 2>/dev/null || true
   fi
+  rm -rf "$SMOKE_BUILD_DIR"
 }
 trap cleanup EXIT
 
 echo "🔧 Building app (this mirrors production closely enough to catch bundling bugs)..."
-rm -rf .output
-npm run build
+rm -rf .output "$SMOKE_BUILD_DIR"
+NUXT_BUILD_DIR="$SMOKE_BUILD_DIR" npm run build
 
 echo "🚀 Booting built server on port $PORT..."
 PORT="$PORT" NODE_ENV=production node .output/server/index.mjs >"$LOG_FILE" 2>&1 &

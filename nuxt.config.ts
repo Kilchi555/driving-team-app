@@ -9,6 +9,13 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   ssr: false,
 
+  // Allow the smoke-test build (scripts/smoke-test.sh, runs on every `git push`)
+  // to use an isolated build directory instead of the default `.nuxt`. Without
+  // this, running `npm run build` while `npm run dev` is active on the same
+  // repo clobbers the dev server's live `.nuxt` output mid-build, crashing it
+  // with "ENOENT .../.nuxt/dev/index.mjs.map" — happened 2026-07-21.
+  buildDir: process.env.NUXT_BUILD_DIR || '.nuxt',
+
   // Tenant slug embedded at build time via CLIENT env var (e.g. CLIENT=driving-team)
   // Used by middleware/native-redirect.global.ts to land on the right login page
   appConfig: {
