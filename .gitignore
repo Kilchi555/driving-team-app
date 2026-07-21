@@ -7,6 +7,7 @@ debug-*.js
 .output
 .data
 .nuxt
+.nuxt-smoke-test
 .nitro
 .cache
 dist
