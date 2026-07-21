@@ -1830,6 +1830,9 @@ const calculateAppointmentAmount = (appointment: Appointment): number => {
   return total
 }
 
+/** UI-Beträge sind CHF; Rechnungs-API erwartet Rappen (Integer). */
+const chfToRappen = (chf: number): number => Math.round(chf * 100)
+
 const _sendPaymentReminder = async () => {
   if (!userDetails.value) return
 
@@ -3023,7 +3026,7 @@ const sendDirectEmail = async () => {
       billing_city: companyBillingAddress.value?.city || undefined,
       billing_country: 'CH',
       billing_vat_number: companyBillingAddress.value?.vat_number || undefined,
-      subtotal_rappen: selectedAppointmentsTotal.value,
+      subtotal_rappen: chfToRappen(selectedAppointmentsTotal.value),
       vat_rate: 7.70,
       discount_amount_rappen: 0,
       notes: invoiceMessage.value || undefined,
@@ -3032,8 +3035,8 @@ const sendDirectEmail = async () => {
     
     // Rechnungspositionen vorbereiten
     const invoiceItems = selectedAppointmentData.map((appointment, index) => {
-      const unitPrice = appointment.amount || 0
-      const vatAmount = Math.round(unitPrice * 7.70 / 100)
+      const unitPriceRappen = chfToRappen(appointment.amount || 0)
+      const vatAmount = Math.round(unitPriceRappen * 7.70 / 100)
       return {
         product_name: appointment.title || 'Fahrstunde',
         product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
@@ -3042,8 +3045,8 @@ const sendDirectEmail = async () => {
         appointment_date: appointment.start_time,
         appointment_duration_minutes: appointment.duration_minutes,
         quantity: 1,
-        unit_price_rappen: unitPrice,
-        total_price_rappen: unitPrice,
+        unit_price_rappen: unitPriceRappen,
+        total_price_rappen: unitPriceRappen,
         vat_rate: 7.70,
         vat_amount_rappen: vatAmount,
         sort_order: index,
@@ -3147,7 +3150,7 @@ const createInvoiceInDatabase = async () => {
       billing_city: companyBillingAddress.value?.city || undefined,
       billing_country: 'CH',
       billing_vat_number: companyBillingAddress.value?.vat_number || undefined,
-      subtotal_rappen: selectedAppointmentsTotal.value,
+      subtotal_rappen: chfToRappen(selectedAppointmentsTotal.value),
       vat_rate: 7.70,
       discount_amount_rappen: 0,
       notes: invoiceMessage.value || undefined,
@@ -3156,8 +3159,8 @@ const createInvoiceInDatabase = async () => {
     
     // Rechnungspositionen vorbereiten
     const invoiceItems = selectedAppointmentData.map((appointment, index) => {
-      const totalPrice = appointment.amount // quantity is 1, so total = unit_price
-      const vatAmount = Math.round(totalPrice * 7.70 / 100) // VAT calculation
+      const totalPriceRappen = chfToRappen(appointment.amount) // quantity is 1, so total = unit_price
+      const vatAmount = Math.round(totalPriceRappen * 7.70 / 100) // VAT calculation
       return {
         product_name: appointment.title || 'Fahrstunde',
         product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
@@ -3166,8 +3169,8 @@ const createInvoiceInDatabase = async () => {
         appointment_date: appointment.start_time,
         appointment_duration_minutes: appointment.duration_minutes,
         quantity: 1,
-        unit_price_rappen: appointment.amount,
-        total_price_rappen: totalPrice,
+        unit_price_rappen: totalPriceRappen,
+        total_price_rappen: totalPriceRappen,
         vat_rate: 7.70,
         vat_amount_rappen: vatAmount,
         sort_order: index,

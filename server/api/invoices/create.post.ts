@@ -51,10 +51,18 @@ export default defineEventHandler(async (event) => {
       .update({ next_invoice_number: nextNum + 1 })
       .eq('id', userProfile.tenant_id)
 
-    // Compute totals server-side
-    const subtotalRappen: number = items.reduce((sum: number, item: any) => sum + (item.total_price_rappen || 0), 0)
-    const vatRappen: number = items.reduce((sum: number, item: any) => sum + (item.vat_amount_rappen || 0), 0)
-    const discountRappen: number = invoiceData.discount_amount_rappen || 0
+    const toRappen = (value: unknown): number => {
+      const num = Number(value) || 0
+      if (!Number.isFinite(num)) return 0
+      // Some clients historically sent CHF decimals in *_rappen fields
+      if (!Number.isInteger(num)) return Math.round(num * 100)
+      return num
+    }
+
+    // Compute totals server-side (amounts must be integer rappen, not CHF decimals)
+    const subtotalRappen: number = items.reduce((sum: number, item: any) => sum + toRappen(item.total_price_rappen), 0)
+    const vatRappen: number = items.reduce((sum: number, item: any) => sum + toRappen(item.vat_amount_rappen), 0)
+    const discountRappen: number = toRappen(invoiceData.discount_amount_rappen)
     const totalRappen: number = subtotalRappen + vatRappen - discountRappen
 
     // Create invoice
@@ -130,6 +138,9 @@ export default defineEventHandler(async (event) => {
           tenant_id: userProfile.tenant_id,
           sort_order: item.sort_order ?? index,
           discount_percent: item.discount_percent || 0,
+          unit_price_rappen: toRappen(cleanItem.unit_price_rappen),
+          total_price_rappen: toRappen(cleanItem.total_price_rappen),
+          vat_amount_rappen: toRappen(cleanItem.vat_amount_rappen),
         }
       })
 
