@@ -303,7 +303,10 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
               <!-- Kommender Monat -->
               <div class="rounded-xl border border-orange-200 bg-orange-50/80 p-4 flex flex-col min-h-[140px]">
-                <div class="text-[11px] font-semibold uppercase tracking-wide text-orange-700/80 mb-1">{{ nextMonthName }}</div>
+                <div class="flex items-center justify-between mb-1">
+                  <div class="text-[11px] font-semibold uppercase tracking-wide text-orange-700/80">{{ nextMonthName }}</div>
+                  <div v-if="monthlyStats.nextMonth.targetHours > 0" class="text-[11px] text-orange-600/70 font-medium whitespace-nowrap">Soll {{ monthlyStats.nextMonth.targetHours.toFixed(0) }}h</div>
+                </div>
                 <div class="text-xs text-orange-700 mb-1">Geplant</div>
                 <div class="text-2xl font-bold text-orange-900 tabular-nums leading-none">
                   {{ monthlyStats.nextMonth.planned.toFixed(1) }}<span class="text-base font-semibold ml-0.5">h</span>
@@ -316,7 +319,10 @@
 
               <!-- Aktueller Monat -->
               <div class="rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-emerald-50 p-4 flex flex-col min-h-[140px] sm:col-span-2 xl:col-span-1">
-                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">{{ currentMonthName }}</div>
+                <div class="flex items-center justify-between mb-2">
+                  <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{{ currentMonthName }}</div>
+                  <div v-if="monthlyStats.currentMonth.targetHours > 0" class="text-[11px] text-gray-400 font-medium whitespace-nowrap">Soll {{ monthlyStats.currentMonth.targetHours.toFixed(0) }}h</div>
+                </div>
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <div class="text-xs text-blue-700 mb-0.5">Gearbeitet</div>
@@ -360,7 +366,10 @@
                 :key="card.key"
                 class="rounded-xl border border-gray-200 bg-gray-50/80 p-4 flex flex-col min-h-[140px]"
               >
-                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1">{{ card.name }}</div>
+                <div class="flex items-center justify-between mb-1">
+                  <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{{ card.name }}</div>
+                  <div v-if="card.targetHours > 0" class="text-[11px] text-gray-400 font-medium whitespace-nowrap">Soll {{ card.targetHours.toFixed(0) }}h</div>
+                </div>
                 <div class="text-2xl font-bold text-gray-900 tabular-nums leading-none">
                   {{ card.worked.toFixed(1) }}<span class="text-base font-semibold text-gray-600 ml-0.5">h</span>
                 </div>
@@ -1899,7 +1908,11 @@
                   <td class="px-2 py-2 font-medium text-gray-900">{{ shortMonthNames[m.month - 1] }}</td>
                   <td v-if="hoursTableExpanded" class="px-2 py-2 text-right text-gray-500">{{ m.working_days ?? '–' }}</td>
                   <td class="px-2 py-2 text-right text-gray-500">
-                    <span v-if="m.target_hours != null">{{ Math.round(m.target_hours) }}h</span>
+                    <span
+                      v-if="m.target_hours != null"
+                      :class="{ 'italic text-gray-400': m.is_projected }"
+                      :title="m.is_projected ? 'Geplant – Monat noch nicht abgeschlossen' : undefined"
+                    >{{ Math.round(m.target_hours) }}h{{ m.is_projected ? '*' : '' }}</span>
                     <span v-else class="text-gray-300">–</span>
                   </td>
                   <td class="px-2 py-2 text-right font-medium text-gray-900">
@@ -1929,6 +1942,9 @@
             </table>
             <p v-if="showVacationColumn" class="mt-2 text-[11px] text-gray-400">
               Diff und Saldo enthalten bezogene Ferien (Ist + Ferien − Soll).
+            </p>
+            <p v-if="monthlyHoursData.months?.some((m: any) => m.is_projected)" class="mt-1 text-[11px] text-gray-400">
+              * Soll geplant – Monat noch nicht abgeschlossen, Ist folgt automatisch.
             </p>
             </div>
           </div>
@@ -2471,11 +2487,11 @@ interface MonthCancellations {
 const emptyCancellations = (): MonthCancellations => ({ total: 0, charged: 0, chargedHours: 0 })
 
 const monthlyStats = ref({
-  currentMonth: { worked: 0, planned: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() },
-  nextMonth: { planned: 0, vacationHours: 0, vacationDays: 0 },
-  previousMonth: { worked: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() },
-  twoMonthsAgo: { worked: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() },
-  threeMonthsAgo: { worked: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() }
+  currentMonth: { worked: 0, planned: 0, targetHours: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() },
+  nextMonth: { planned: 0, targetHours: 0, vacationHours: 0, vacationDays: 0 },
+  previousMonth: { worked: 0, targetHours: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() },
+  twoMonthsAgo: { worked: 0, targetHours: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() },
+  threeMonthsAgo: { worked: 0, targetHours: 0, vacationHours: 0, vacationDays: 0, cancellations: emptyCancellations() }
 })
 
 // ── Monatliche Stundenübersicht (Monatslohn) ──────────────────────────────────
@@ -2966,6 +2982,7 @@ const pastWorkingHoursCards = computed(() => [
     key: 'previous',
     name: previousMonthName.value,
     worked: monthlyStats.value.previousMonth.worked,
+    targetHours: monthlyStats.value.previousMonth.targetHours ?? 0,
     vacationHours: monthlyStats.value.previousMonth.vacationHours ?? 0,
     vacationDays: monthlyStats.value.previousMonth.vacationDays ?? 0,
     cancellations: monthlyStats.value.previousMonth.cancellations,
@@ -2974,6 +2991,7 @@ const pastWorkingHoursCards = computed(() => [
     key: 'twoMonthsAgo',
     name: twoMonthsAgoName.value,
     worked: monthlyStats.value.twoMonthsAgo.worked,
+    targetHours: monthlyStats.value.twoMonthsAgo.targetHours ?? 0,
     vacationHours: monthlyStats.value.twoMonthsAgo.vacationHours ?? 0,
     vacationDays: monthlyStats.value.twoMonthsAgo.vacationDays ?? 0,
     cancellations: monthlyStats.value.twoMonthsAgo.cancellations,
@@ -2982,6 +3000,7 @@ const pastWorkingHoursCards = computed(() => [
     key: 'threeMonthsAgo',
     name: threeMonthsAgoName.value,
     worked: monthlyStats.value.threeMonthsAgo.worked,
+    targetHours: monthlyStats.value.threeMonthsAgo.targetHours ?? 0,
     vacationHours: monthlyStats.value.threeMonthsAgo.vacationHours ?? 0,
     vacationDays: monthlyStats.value.threeMonthsAgo.vacationDays ?? 0,
     cancellations: monthlyStats.value.threeMonthsAgo.cancellations,
@@ -3785,30 +3804,35 @@ const loadWorkingHoursData = async () => {
 
   try {
     const response = await $fetch<{
-      currentMonth: { worked: number; planned: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
-      nextMonth: { planned: number; vacationHours?: number; vacationDays?: number }
-      previousMonth: { worked: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
-      twoMonthsAgo: { worked: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
-      threeMonthsAgo: { worked: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
+      currentMonth: { worked: number; planned: number; targetHours?: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
+      nextMonth: { planned: number; targetHours?: number; vacationHours?: number; vacationDays?: number }
+      previousMonth: { worked: number; targetHours?: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
+      twoMonthsAgo: { worked: number; targetHours?: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
+      threeMonthsAgo: { worked: number; targetHours?: number; vacationHours?: number; vacationDays?: number; cancellations: MonthCancellations }
     }>('/api/staff/working-hours-stats')
 
     monthlyStats.value.currentMonth.worked = response.currentMonth.worked
     monthlyStats.value.currentMonth.planned = response.currentMonth.planned
+    monthlyStats.value.currentMonth.targetHours = response.currentMonth.targetHours ?? 0
     monthlyStats.value.currentMonth.vacationHours = response.currentMonth.vacationHours ?? 0
     monthlyStats.value.currentMonth.vacationDays = response.currentMonth.vacationDays ?? 0
     monthlyStats.value.currentMonth.cancellations = response.currentMonth.cancellations
     monthlyStats.value.nextMonth.planned = response.nextMonth.planned
+    monthlyStats.value.nextMonth.targetHours = response.nextMonth.targetHours ?? 0
     monthlyStats.value.nextMonth.vacationHours = response.nextMonth.vacationHours ?? 0
     monthlyStats.value.nextMonth.vacationDays = response.nextMonth.vacationDays ?? 0
     monthlyStats.value.previousMonth.worked = response.previousMonth.worked
+    monthlyStats.value.previousMonth.targetHours = response.previousMonth.targetHours ?? 0
     monthlyStats.value.previousMonth.vacationHours = response.previousMonth.vacationHours ?? 0
     monthlyStats.value.previousMonth.vacationDays = response.previousMonth.vacationDays ?? 0
     monthlyStats.value.previousMonth.cancellations = response.previousMonth.cancellations
     monthlyStats.value.twoMonthsAgo.worked = response.twoMonthsAgo.worked
+    monthlyStats.value.twoMonthsAgo.targetHours = response.twoMonthsAgo.targetHours ?? 0
     monthlyStats.value.twoMonthsAgo.vacationHours = response.twoMonthsAgo.vacationHours ?? 0
     monthlyStats.value.twoMonthsAgo.vacationDays = response.twoMonthsAgo.vacationDays ?? 0
     monthlyStats.value.twoMonthsAgo.cancellations = response.twoMonthsAgo.cancellations
     monthlyStats.value.threeMonthsAgo.worked = response.threeMonthsAgo.worked
+    monthlyStats.value.threeMonthsAgo.targetHours = response.threeMonthsAgo.targetHours ?? 0
     monthlyStats.value.threeMonthsAgo.vacationHours = response.threeMonthsAgo.vacationHours ?? 0
     monthlyStats.value.threeMonthsAgo.vacationDays = response.threeMonthsAgo.vacationDays ?? 0
     monthlyStats.value.threeMonthsAgo.cancellations = response.threeMonthsAgo.cancellations
