@@ -88,19 +88,38 @@ export default defineEventHandler(async (event) => {
     const recordsMap: Record<number, any> = {}
     ;(records || []).forEach((r: any) => { recordsMap[r.month] = r })
 
-    const months = yearBreakdown.map(({ month, workingDays }) => {
+    // Current/future months relative to "now" – the cron only creates records for
+    // completed months, but the projected Soll can already be shown since it only
+    // depends on weekly_contracted_hours + Swiss working days (both known upfront).
+    const nowForTarget = new Date()
+    const curYearForTarget = nowForTarget.getFullYear()
+    const curMonthForTarget = nowForTarget.getMonth() + 1
+    // Only project forward from the staff member's actual employment start – a
+    // month before their first-ever record must stay "–", not a projected Soll.
+    const employmentStartMonth = (records || []).length > 0
+      ? Math.min(...(records || []).map((r: any) => r.month))
+      : null
+
+    const months = yearBreakdown.map(({ month, workingDays, targetHours: projectedTargetHours }) => {
       const record = recordsMap[month]
       // Planned vacation from appointments (includes future months)
       const plannedVacDays = vacationDaysByMonth[month]?.size ?? 0
       const plannedVacHours = Math.round(plannedVacDays * dailyHours * 100) / 100
 
-      // Months without a record represent "not employed" – show "–" for hours,
-      // but show planned vacation if any exists.
+      // Months without a record either mean "not employed yet" (past gap) or
+      // "employed, but the cron hasn't processed this month yet" (current/future).
+      // For the latter we already know weekly_contracted_hours, so show the
+      // projected Soll instead of leaving it blank.
       if (!record) {
+        const isCurrentOrFuture = year > curYearForTarget || (year === curYearForTarget && month >= curMonthForTarget)
+        const isBeforeEmployment = employmentStartMonth !== null && month < employmentStartMonth
+        const projected = isCurrentOrFuture && !isBeforeEmployment && weeklyHours > 0
+          ? projectedTargetHours
+          : null
         return {
           month,
           working_days: workingDays,
-          target_hours: null as number | null,
+          target_hours: projected as number | null,
           actual_hours: null as number | null,
           vacation_hours: plannedVacHours > 0 ? plannedVacHours : null as number | null,
           sick_hours: null as number | null,
@@ -108,6 +127,7 @@ export default defineEventHandler(async (event) => {
           overtime_hours: null as number | null,
           _overtime_for_running: 0,
           has_record: false,
+          is_projected: projected != null,
         }
       }
       const actual_hours = parseFloat(record.actual_hours)
@@ -130,6 +150,7 @@ export default defineEventHandler(async (event) => {
         overtime_hours,
         _overtime_for_running: overtime_hours,
         has_record: true,
+        is_projected: false,
       }
     })
 
