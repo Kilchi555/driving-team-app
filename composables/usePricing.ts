@@ -26,6 +26,10 @@ interface PricingRule {
   // ✅ Theorie-Preisregel (rule_type='theory'), pro Kategorie vom Tenant aktivierbar
   theory_price_per_minute_rappen?: number
   theory_base_duration_minutes?: number
+  // Beratung (rule_type='consultation') — price may be 0 (free)
+  consultation_price_per_minute_rappen?: number
+  consultation_base_duration_minutes?: number | null
+  has_consultation_rule?: boolean
 }
 
 interface CalculatedPrice {
@@ -567,6 +571,52 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     
     return result
   }
+
+  // ✅ Beratung: Preis + Dauer aus rule_type='consultation' (kann CHF 0 sein)
+  if (appointmentType === 'consultation') {
+    const durationVal = Array.isArray(durationMinutes) ? durationMinutes[0] : durationMinutes
+
+    let consultationTenantId = tenantId
+    if (!consultationTenantId) {
+      try {
+        const authStore = useAuthStore()
+        consultationTenantId = authStore.userProfile?.tenant_id
+      } catch (err) {
+        console.warn('⚠️ Could not fetch tenant_id for consultation pricing:', err)
+      }
+    }
+
+    if (pricingRules.value.length === 0) {
+      await loadPricingRules(false, consultationTenantId)
+    }
+
+    const consultationRule = getPricingRule(categoryCode)
+    const hasRule = !!consultationRule?.has_consultation_rule
+    const pricePerMinuteRappen = consultationRule?.consultation_price_per_minute_rappen || 0
+    // Free consultation (0.-) is valid — only fall back when no rule exists at all
+    const scaledPriceRappen = hasRule
+      ? roundToNearestFranken(Math.round(pricePerMinuteRappen * durationVal))
+      : 0
+
+    if (!hasRule) {
+      logger.warn(`⚠️ Keine Beratungs-Preisregel für Kategorie "${categoryCode}" – Preis CHF 0.00`)
+    } else {
+      logger.debug(`💬 Beratung (Kategorie ${categoryCode}): ${durationVal}min → CHF ${(scaledPriceRappen / 100).toFixed(2)}`)
+    }
+
+    return {
+      base_price_rappen: scaledPriceRappen,
+      admin_fee_rappen: 0,
+      total_rappen: scaledPriceRappen,
+      base_price_chf: (scaledPriceRappen / 100).toFixed(2),
+      admin_fee_chf: '0.00',
+      total_chf: (scaledPriceRappen / 100).toFixed(2),
+      category_code: categoryCode,
+      duration_minutes: durationMinutes,
+      appointment_number: 1,
+      original_duration_minutes: consultationRule?.consultation_base_duration_minutes || durationVal
+    }
+  }
   
   // ✅ Prüfe dynamisch, ob categoryCode eine gültige Fahrkategorie ist (aus DB)
   let actualTenantId = tenantId
@@ -873,6 +923,15 @@ export const usePricing = (options: UsePricingOptions = {}) => {
       .filter(rule => (rule.theory_price_per_minute_rappen || 0) > 0)
       .map(rule => rule.category_code)
   )
+  // Beratung darf CHF 0 kosten — Presence-Flag statt price > 0
+  const hasConsultationPricing = computed(() =>
+    pricingRules.value.some(rule => !!rule.has_consultation_rule)
+  )
+  const consultationEnabledCategories = computed(() =>
+    pricingRules.value
+      .filter(rule => !!rule.has_consultation_rule)
+      .map(rule => rule.category_code)
+  )
 
   // ===== RETURN API =====
   return {
@@ -885,6 +944,8 @@ export const usePricing = (options: UsePricingOptions = {}) => {
     availableCategories,
     hasTheoryPricing,
     theoryEnabledCategories,
+    hasConsultationPricing,
+    consultationEnabledCategories,
     // True while pricingRules were populated from COMPLETE_FALLBACK_RULES instead of the tenant's real data.
     isFallbackActive,
 

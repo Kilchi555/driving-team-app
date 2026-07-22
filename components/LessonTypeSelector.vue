@@ -73,14 +73,17 @@ const eventTypes = ref<LessonType[]>([...fallbackTypes])
 
 const { loadEventTypes } = useEventTypes()
 
-// ✅ "Theorie" nur anzeigen, wenn der Tenant für mind. eine Kategorie eine
-// Theorie-Preisregel aktiviert hat (Kategorien-Verwaltung → Theorielektion)
-const { loadPricingRules, hasTheoryPricing } = usePricing()
+// ✅ "Theorie" / "Beratung" nur anzeigen, wenn der Tenant für mind. eine Kategorie
+// eine passende Preisregel aktiviert hat (Kategorien-Verwaltung / Tenant-Register)
+const { loadPricingRules, hasTheoryPricing, hasConsultationPricing } = usePricing()
 
 const paidEventTypes = computed(() =>
-  eventTypes.value.filter((et: any) =>
-    et.require_payment && (et.code !== 'theory' || hasTheoryPricing.value || et.code === selectedPaidCode.value)
-  )
+  eventTypes.value.filter((et: any) => {
+    if (!et.require_payment) return false
+    if (et.code === 'theory' && !hasTheoryPricing.value && et.code !== selectedPaidCode.value) return false
+    if (et.code === 'consultation' && !hasConsultationPricing.value && et.code !== selectedPaidCode.value) return false
+    return true
+  })
 )
 
 onMounted(() => {

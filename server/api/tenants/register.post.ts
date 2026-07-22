@@ -481,8 +481,10 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         const pricingItems = JSON.parse(data.pricing_json)
         if (Array.isArray(pricingItems) && pricingItems.length > 0) {
           const now = new Date().toISOString()
+          // price_chf may be 0 (e.g. free Beratung) — still persist the rule so
+          // duration + zero price show correctly in EventModal / booking.
           const pricingRows = pricingItems
-            .filter((p: any) => p.rule_type && p.price_chf > 0 && p.duration_minutes > 0)
+            .filter((p: any) => p.rule_type && p.duration_minutes > 0 && Number(p.price_chf) >= 0)
             .map((p: any) => ({
               tenant_id: tenantId,
               rule_type: p.rule_type,
