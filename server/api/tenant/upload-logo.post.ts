@@ -24,7 +24,8 @@ const MIME_TYPES: Record<string, string> = {
   'webp': 'image/webp',
   'gif': 'image/gif'
 }
-const STORAGE_BUCKET = 'tenant-assets'
+// Align with registration + migrate-logo-to-storage (Driving Team / Gemperli)
+const STORAGE_BUCKET = 'tenant-logos'
 
 // Magic bytes map for binary file type verification
 const MAGIC_BYTES: Record<string, number[][]> = {
@@ -129,7 +130,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Construct storage path
-    // Format: tenant-assets/{tenant_id}/{asset_type}.{ext}
+    // Format: {tenant_id}/{asset_type}.{ext} in tenant-logos bucket
     const storagePath = `${tenantId}/${assetType}.${ext}`
 
     logger.debug('Uploading logo to storage:', {
@@ -184,6 +185,32 @@ export default defineEventHandler(async (event) => {
     if (assetError) {
       logger.warn('Could not update tenant_assets table (storage upload succeeded):', assetError)
       // This is not critical - the file is already in storage
+    }
+
+    // Keep tenants.* logo columns in sync (storage URL, never base64)
+    const tenantLogoColumn: Record<string, string> = {
+      logo: 'logo_url',
+      logo_square: 'logo_square_url',
+      logo_wide: 'logo_wide_url',
+      favicon: 'favicon_url',
+    }
+    const column = tenantLogoColumn[assetType]
+    if (column) {
+      const tenantUpdate: Record<string, any> = {
+        [column]: publicUrl,
+        updated_at: new Date().toISOString(),
+      }
+      // Prefer square as generic logo_url fallback when uploading square
+      if (assetType === 'logo_square') {
+        tenantUpdate.logo_url = publicUrl
+      }
+      const { error: tenantUpdateError } = await supabase
+        .from('tenants')
+        .update(tenantUpdate)
+        .eq('id', tenantId)
+      if (tenantUpdateError) {
+        logger.warn('Could not sync tenants logo column (storage upload succeeded):', tenantUpdateError)
+      }
     }
 
     logger.debug('Logo uploaded successfully:', {

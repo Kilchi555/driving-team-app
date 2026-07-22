@@ -1,49 +1,90 @@
 /**
  * POST /api/admin/migrate-logo-to-storage
- * One-time utility: reads the base64 logo_square_url from the tenant record,
- * uploads it to Supabase Storage, and saves the public https:// URL back.
+ * Migrates base64 data-URI logos on the tenant record to Supabase Storage
+ * and writes public https:// URLs back into tenants.*.
  *
- * Safe to call multiple times — skips if already an https:// URL.
+ * Safe to call multiple times — skips fields that are already https:// URLs.
+ *
+ * Body (optional):
+ *   { tenant_id?: string } — super_admin only; defaults to caller's tenant
  */
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
+const LOGO_FIELDS = [
+  'logo_url',
+  'logo_square_url',
+  'logo_wide_url',
+  'logo_dark_url',
+  'favicon_url',
+] as const
+
+const STORAGE_BUCKET = 'tenant-logos'
+
+type LogoField = (typeof LOGO_FIELDS)[number]
+
+function parseDataUri(value: string): { mimeType: string; ext: string; buffer: Buffer } | null {
+  if (!value.startsWith('data:image/')) return null
+  const comma = value.indexOf(',')
+  if (comma < 0) return null
+  const meta = value.slice(0, comma)
+  const base64 = value.slice(comma + 1)
+  const mimeMatch = meta.match(/data:([^;]+)/)
+  const mimeType = mimeMatch?.[1] || 'image/png'
+  // data:image/svg+xml;base64 → svg, image/webp → webp
+  let ext = mimeType.split('/')[1] || 'png'
+  if (ext.includes('+')) ext = ext.split('+')[0] // svg+xml → svg
+  if (ext === 'jpeg') ext = 'jpg'
+  return { mimeType, ext, buffer: Buffer.from(base64, 'base64') }
+}
+
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event)
-  const tenantId = profile.tenant_id
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'superadmin'])
   const supabase = getSupabaseAdmin()
+  const body = await readBody(event).catch(() => ({} as any))
+
+  let tenantId = profile.tenant_id
+  if (body?.tenant_id && body.tenant_id !== profile.tenant_id) {
+    if (!['super_admin', 'superadmin'].includes(profile.role)) {
+      throw createError({ statusCode: 403, statusMessage: 'Only super_admin can migrate another tenant' })
+    }
+    tenantId = body.tenant_id
+  }
 
   const { data: tenant, error } = await supabase
     .from('tenants')
-    .select('id, slug, logo_square_url, logo_url')
+    .select(`id, slug, ${LOGO_FIELDS.join(', ')}`)
     .eq('id', tenantId)
     .single()
 
   if (error || !tenant) throw createError({ statusCode: 404, statusMessage: 'Tenant not found' })
 
   const results: Record<string, string> = {}
+  const updates: Partial<Record<LogoField, string>> = {}
 
-  for (const field of ['logo_square_url', 'logo_url'] as const) {
+  for (const field of LOGO_FIELDS) {
     const value: string | null = (tenant as any)[field]
-    if (!value) { results[field] = 'empty'; continue }
-    if (value.startsWith('https://')) { results[field] = 'already_url'; continue }
-    if (!value.startsWith('data:image/')) { results[field] = 'unknown_format'; continue }
+    if (!value) {
+      results[field] = 'empty'
+      continue
+    }
+    if (value.startsWith('https://') || value.startsWith('http://')) {
+      results[field] = 'already_url'
+      continue
+    }
 
-    // Parse "data:image/png;base64,<data>"
-    const [meta, base64] = value.split(',')
-    const mimeMatch = meta.match(/data:([^;]+)/)
-    const mimeType = mimeMatch?.[1] || 'image/png'
-    const ext = mimeType.split('/')[1] || 'png'
+    const parsed = parseDataUri(value)
+    if (!parsed) {
+      results[field] = 'unknown_format'
+      continue
+    }
 
-    const buffer = Buffer.from(base64, 'base64')
-    const fileName = `${tenantId}/${field}.${ext}`
-    const bucket = 'tenant-logos'
+    const fileName = `${tenantId}/${field}.${parsed.ext}`
 
-    // Upload to storage (upsert)
     const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(fileName, buffer, {
-        contentType: mimeType,
+      .from(STORAGE_BUCKET)
+      .upload(fileName, parsed.buffer, {
+        contentType: parsed.mimeType,
         upsert: true,
       })
 
@@ -52,15 +93,34 @@ export default defineEventHandler(async (event) => {
       continue
     }
 
-    // Get public URL
-    const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(fileName)
+    const { data: publicUrlData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName)
     const publicUrl = publicUrlData.publicUrl
-
-    // Update tenant record
-    await supabase.from('tenants').update({ [field]: publicUrl }).eq('id', tenantId)
-
+    updates[field] = publicUrl
     results[field] = publicUrl
   }
 
-  return { success: true, results }
+  if (Object.keys(updates).length > 0) {
+    const { error: updateError } = await supabase
+      .from('tenants')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', tenantId)
+
+    if (updateError) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: `Storage upload ok, but tenants update failed: ${updateError.message}`,
+      })
+    }
+  }
+
+  // Also set logo_url from square/wide if still empty (common fallback column)
+  const effectiveSquare = updates.logo_square_url || (typeof tenant.logo_square_url === 'string' && tenant.logo_square_url.startsWith('http') ? tenant.logo_square_url : null)
+  const effectiveWide = updates.logo_wide_url || (typeof tenant.logo_wide_url === 'string' && tenant.logo_wide_url.startsWith('http') ? tenant.logo_wide_url : null)
+  if (!tenant.logo_url && !updates.logo_url && (effectiveSquare || effectiveWide)) {
+    const fallback = effectiveSquare || effectiveWide
+    await supabase.from('tenants').update({ logo_url: fallback }).eq('id', tenantId)
+    results.logo_url = `set_from_fallback: ${fallback}`
+  }
+
+  return { success: true, tenant_id: tenantId, results }
 })

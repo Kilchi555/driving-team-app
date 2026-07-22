@@ -1036,16 +1036,23 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Quadratisches Logo</label>
                 <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <div v-if="brandingForm.logos.square" class="mb-4">
+                  <div v-if="brandingForm.logos.square" class="mb-4 space-y-2">
                     <img :src="brandingForm.logos.square" class="w-16 h-16 mx-auto object-contain">
+                    <button
+                      type="button"
+                      class="text-xs text-red-600 hover:text-red-800 font-medium"
+                      @click="removeLogo('square')"
+                    >
+                      Entfernen
+                    </button>
                   </div>
                   <input 
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
                     @change="handleLogoUpload($event, 'square')"
                     class="tenant-file block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
                   >
-                  <p class="text-xs text-gray-500 mt-1">Empfohlen: 1:1 Format, max. 2MB</p>
+                  <p class="text-xs text-gray-500 mt-1">Empfohlen: 1:1 Format, max. 5MB · wird in Storage gespeichert</p>
                 </div>
               </div>
               
@@ -1053,16 +1060,23 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Breites Logo</label>
                 <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <div v-if="brandingForm.logos.wide" class="mb-4">
+                  <div v-if="brandingForm.logos.wide" class="mb-4 space-y-2">
                     <img :src="brandingForm.logos.wide" class="w-32 h-16 mx-auto object-contain">
+                    <button
+                      type="button"
+                      class="text-xs text-red-600 hover:text-red-800 font-medium"
+                      @click="removeLogo('wide')"
+                    >
+                      Entfernen
+                    </button>
                   </div>
                   <input 
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
                     @change="handleLogoUpload($event, 'wide')"
                     class="tenant-file block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
                   >
-                  <p class="text-xs text-gray-500 mt-1">Empfohlen: 3:1 oder 4:1 Format, max. 2MB</p>
+                  <p class="text-xs text-gray-500 mt-1">Empfohlen: 3:1 oder 4:1 Format, max. 5MB · wird in Storage gespeichert</p>
                 </div>
               </div>
             </div>
@@ -2044,7 +2058,7 @@
 import { ref, computed, onMounted, markRaw, watch, onUnmounted, h, nextTick } from 'vue'
 import { navigateTo, useRoute, useRouter } from '#app'
 import { logger } from '~/utils/logger'
-import { compressImage, validateImageFile, getFileSizeKB } from '~/utils/imageCompression'
+import { compressImage, validateImageFile } from '~/utils/imageCompression'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { usePrimaryColor } from '~/composables/usePrimaryColor'
 import { useUIStore } from '~/stores/ui'
@@ -3242,6 +3256,12 @@ const handleLogoUpload = async (event: Event, logoType: 'square' | 'wide') => {
   const file = input.files?.[0]
   
   if (!file) return
+
+  const tenantId = currentTenantBranding.value?.id
+  if (!tenantId) {
+    showError('Tenant nicht geladen')
+    return
+  }
   
   // Validate file
   const validation = validateImageFile(file, 5)
@@ -3251,48 +3271,83 @@ const handleLogoUpload = async (event: Event, logoType: 'square' | 'wide') => {
   }
   
   try {
-    logger.debug('🖼️ Starting logo upload:', { logoType, fileName: file.name, fileSize: file.size })
+    logger.debug('🖼️ Starting logo upload to storage:', { logoType, fileName: file.name, fileSize: file.size })
     
-    // Show loading state
     const wasLoading = isLoading.value
     isLoading.value = true
     
-    // Compress and resize image using global utility
+    // Compress to WebP, then upload via Storage API (never save base64 to DB)
     const compressedBase64 = await compressImage(file, logoType)
-    
-    // Update form with compressed image
+    const webpFile = base64ToFile(compressedBase64, `${logoType}-${Date.now()}.webp`)
+
+    const formData = new FormData()
+    formData.append('file', webpFile)
+    formData.append('assetType', logoType === 'wide' ? 'logo_wide' : 'logo_square')
+    formData.append('tenantId', tenantId)
+
+    const response = await $fetch<{ asset: { url: string } }>('/api/tenant/upload-logo', {
+      method: 'POST',
+      body: formData
+    })
+
+    const publicUrl = response.asset.url
     if (logoType === 'square') {
-      brandingForm.value.logos.square = compressedBase64
+      brandingForm.value.logos.square = publicUrl
     } else {
-      brandingForm.value.logos.wide = compressedBase64
+      brandingForm.value.logos.wide = publicUrl
     }
-    
-    // Auto-save to database
-    await autoSaveBranding()
-    
-    // Show success with size info
+
+    // upload-logo already wrote tenants.* — no base64 auto-save needed
     showSuccess(
-      `${logoType === 'square' ? 'Quadratisches' : 'Breites'} Logo gespeichert ` +
-      `(${getFileSizeKB(compressedBase64)})`
+      `${logoType === 'square' ? 'Quadratisches' : 'Breites'} Logo in Storage gespeichert`
     )
     
     isLoading.value = wasLoading
-    
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Logo upload error:', error)
-    showError('Fehler beim Hochladen des Logos')
+    showError(error?.data?.statusMessage || error?.message || 'Fehler beim Hochladen des Logos')
     isLoading.value = false
+  } finally {
+    if (input) input.value = ''
   }
 }
 
-const removeLogo = (logoType: 'square' | 'wide') => {
-  switch (logoType) {
-    case 'square':
+function base64ToFile(base64: string, filename: string): File {
+  const arr = base64.split(',')
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/webp'
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) u8arr[n] = bstr.charCodeAt(n)
+  return new File([u8arr], filename, { type: mime })
+}
+
+const removeLogo = async (logoType: 'square' | 'wide') => {
+  const tenantId = currentTenantBranding.value?.id
+  if (!tenantId) return
+  if (!confirm(`Möchten Sie das ${logoType === 'square' ? 'quadratische' : 'breite'} Logo wirklich entfernen?`)) return
+
+  try {
+    isLoading.value = true
+    await $fetch('/api/tenant/delete-asset', {
+      method: 'DELETE',
+      body: {
+        tenantId,
+        assetType: logoType === 'wide' ? 'logo_wide' : 'logo_square'
+      }
+    })
+
+    if (logoType === 'square') {
       brandingForm.value.logos.square = ''
-      break
-    case 'wide':
+    } else {
       brandingForm.value.logos.wide = ''
-      break
+    }
+    showSuccess('Logo entfernt')
+  } catch (error: any) {
+    console.error('❌ Logo removal failed:', error)
+    showError(error?.data?.statusMessage || error?.message || 'Fehler beim Entfernen')
+  } finally {
+    isLoading.value = false
   }
 }
 
