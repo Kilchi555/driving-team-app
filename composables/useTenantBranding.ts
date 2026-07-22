@@ -267,7 +267,7 @@ export const useTenantBranding = () => {
         allowThemeSwitch: data.allow_theme_switch ?? true,
         business_type: data.business_type,
         // Invoice settings
-        default_vat_rate: data.default_vat_rate != null ? parseFloat(data.default_vat_rate) : 7.70,
+        default_vat_rate: data.default_vat_rate != null ? parseFloat(data.default_vat_rate) : 0,
         invoice_intro_text: data.invoice_intro_text ?? null,
         invoice_payment_terms: data.invoice_payment_terms ?? null,
         invoice_footer_text: data.invoice_footer_text ?? null,
@@ -560,9 +560,11 @@ export const useTenantBranding = () => {
     accentColor: computed(() => currentTenantBranding.value?.colors?.accent || '#3B82F6'),
     defaultVatRate: computed(() => {
       const raw = (currentTenantBranding.value as any)?.default_vat_rate
-      if (raw == null) return 8.10
+      // Prefer explicit 0 from tenant settings; only fall back when branding not loaded yet.
+      // CH Fahrschulen are typically VAT-exempt — never invent 7.7/8.1 as default.
+      if (raw == null || raw === '') return 0
       const parsed = parseFloat(raw)
-      return !isNaN(parsed) && parsed >= 0 ? parsed : 8.10
+      return !isNaN(parsed) && parsed >= 0 ? parsed : 0
     }),
     invoiceIntroText: computed(() => (currentTenantBranding.value as any)?.invoice_intro_text ?? ''),
     invoicePaymentTerms: computed(() => (currentTenantBranding.value as any)?.invoice_payment_terms ?? ''),

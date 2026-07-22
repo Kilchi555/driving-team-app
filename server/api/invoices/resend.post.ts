@@ -253,6 +253,8 @@ export default defineEventHandler(async (event) => {
         })),
         subtotalRappen: invoiceSubtotalRappen,
         discountRappen: invoice.discount_amount_rappen || 0,
+        vatRate: Number(invoice.vat_rate) || 0,
+        vatAmountRappen: invoice.vat_amount_rappen || 0,
         totalRappen: invoiceTotalRappen,
         qrCodeDataUrl,
         qrIban,

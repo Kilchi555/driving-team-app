@@ -262,13 +262,13 @@ export const PAYMENT_ITEM_STATUS_LABELS: Record<PaymentItemStatus, string> = {
 export const DEFAULT_INVOICE_VALUES: Partial<InvoiceFormData> = {
   billing_type: 'individual',
   billing_country: 'CH',
-  vat_rate: 7.70,
+  vat_rate: 0,
   discount_amount_rappen: 0
 }
 
 export const DEFAULT_INVOICE_ITEM_VALUES: Partial<InvoiceItemFormData> = {
   quantity: 1,
-  vat_rate: 8.10,
+  vat_rate: 0,
   sort_order: 0,
   discount_percent: 0,
   total_price_rappen: 0,
