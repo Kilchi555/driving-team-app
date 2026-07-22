@@ -188,6 +188,20 @@ const handleCategorySelected = async (category: any) => {
             availableDurations.value = [examDuration, ...availableDurations.value].sort((a, b) => a - b)
           }
           logger.debug('🎯 Exam detected - using exam duration:', examDuration)
+        } else if (appointmentType === 'consultation') {
+          // Beratung duration lives on pricing_rules (rule_type='consultation'), not staff durations
+          try {
+            const { loadPricingRules, getPricingRule } = usePricing()
+            await loadPricingRules(true)
+            const rule = getPricingRule(category.code)
+            const consultationDuration = rule?.consultation_base_duration_minutes || 30
+            availableDurations.value = [consultationDuration]
+            formData.value.duration_minutes = consultationDuration
+            logger.debug('💬 Consultation duration applied on category change:', consultationDuration)
+          } catch (err) {
+            availableDurations.value = [30]
+            formData.value.duration_minutes = 30
+          }
         }
         // ✅ Auto-select first duration if current duration is not in the list (only in create mode)
         else if (!durations.includes(formData.value.duration_minutes) && formData.value._mode !== 'edit' && formData.value._mode !== 'view') {
@@ -239,6 +253,12 @@ const handleCategorySelected = async (category: any) => {
         formData.value.duration_minutes = 45
         availableDurations.value = [45]
         break
+
+      case 'consultation':
+        logger.debug('💬 Setting consultation duration: 30min (fallback; pricing rule overrides in EventModal)')
+        formData.value.duration_minutes = 30
+        availableDurations.value = [30]
+        break
         
       default:
         logger.debug('❓ Unknown lesson type, using default')
@@ -286,7 +306,7 @@ const handleCategorySelected = async (category: any) => {
   /**
    * Handles changes to available durations.
    */
-const handleDurationsChanged = (durations: number[]) => {
+  const handleDurationsChanged = (durations: number[]) => {
   logger.debug('⏱️ Durations changed:', durations)
   logger.debug('🔍 Current appointment_type:', formData.value.appointment_type)
   logger.debug('🔍 Current duration:', formData.value.duration_minutes)
@@ -316,6 +336,12 @@ const handleDurationsChanged = (durations: number[]) => {
     logger.debug('📝 OVERRIDE: Using exam duration:', examDuration, '(categoryExamDuration:', categoryExamDuration, ', received:', flatDurations, ')')
     availableDurations.value = [examDuration]
     formData.value.duration_minutes = examDuration
+  } else if (formData.value.appointment_type === 'consultation') {
+    // CategorySelector emits lesson durations (45/90/135) — never trust them for
+    // Beratung. Duration is owned by pricing_rules (applyConsultationDuration).
+    logger.debug('💬 Ignoring durations-changed for consultation (managed by pricing rule):', flatDurations)
+    calculateEndTime()
+    return
   } else {
     // Normale Fahrstunden-Logic
     availableDurations.value = flatDurations
@@ -564,6 +590,7 @@ const handleDurationsChanged = (durations: number[]) => {
       'lesson': 'Fahrstunde',
       'theory': 'Theoriestunde',
       'exam': 'Prüfung',
+      'consultation': 'Beratung',
       'staff_meeting': 'Team-Meeting'
     }
     return eventTypes[eventTypeCode] || eventTypeCode

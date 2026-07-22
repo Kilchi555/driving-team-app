@@ -163,8 +163,9 @@ async function syncPricingRules(supabase: any, tenantId: string, categoryCode: s
     })
   }
 
-  if (pricing.consultation_enabled && pricing.consultation_price_chf > 0) {
-    const consultationPricePerMinuteRappen = (pricing.consultation_price_chf / pricing.consultation_duration_minutes) * 100
+  // Allow CHF 0 (free consultation) — duration still needs to be stored.
+  if (pricing.consultation_enabled && pricing.consultation_duration_minutes > 0) {
+    const consultationPricePerMinuteRappen = (Number(pricing.consultation_price_chf || 0) / pricing.consultation_duration_minutes) * 100
     rules.push({
       rule_name: `Kategorie ${categoryCode} - Beratung`,
       rule_type: 'consultation',

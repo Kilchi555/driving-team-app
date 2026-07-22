@@ -2,7 +2,7 @@
   <Teleport to="body">
   <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 z-[200]">
     <!-- Modal Container - Ganzer verfügbarer Raum -->
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[calc(100svh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-16px)] flex flex-col overflow-hidden absolute top-[max(8px,env(safe-area-inset-top,0px))] left-1/2 transform -translate-x-1/2" @click.stop>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[calc(100svh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-16px)] h-[calc(100svh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-16px)] flex flex-col overflow-hidden absolute top-[max(8px,env(safe-area-inset-top,0px))] left-0 right-0 mx-auto sm:left-1/2 sm:right-auto sm:transform sm:-translate-x-1/2" @click.stop>
 
       <!-- ✅ FIXED HEADER (nur im Edit/View mode) -->
       <div v-if="props?.mode === 'edit' || props?.mode === 'view'" class="bg-white px-4 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
@@ -175,7 +175,7 @@
               v-if="formData.type || formData.appointment_type === 'theory'"
               v-model="formData.duration_minutes"
               :available-durations="Array.isArray(availableDurations) ? availableDurations : [45]"
-              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute || fallbackPricePerMinute)"
+              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute ?? fallbackPricePerMinute)"
               :disabled="props?.mode === 'edit' && isPastAppointment"
               :show-buttons="!(props?.mode === 'edit' && isPastAppointment)"
               :is-past-appointment="props?.mode === 'edit' && isPastAppointment"
@@ -467,7 +467,7 @@
             <PriceDisplay
               ref="priceDisplayRef"
               :duration-minutes="formData.duration_minutes || 45"
-              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute || fallbackPricePerMinute)"
+              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute ?? fallbackPricePerMinute)"
               :lesson-type="currentLessonTypeText"
               :discount="formData.discount || 0"
               :discount-reason="formData.discount_reason || ''"
@@ -515,7 +515,7 @@
       </div>
 
       <!-- ✅ FIXED FOOTER -->
-      <div class="bg-white px-4 py-3 border-t border-gray-100 flex justify-between items-center flex-shrink-0">
+      <div class="bg-white px-4 py-3 border-t border-gray-100 flex justify-between items-center flex-shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
         <!-- Links: Schüler Profil Button (nur im edit/view mode) -->
         <button
           v-if="selectedStudent && (props.mode === 'edit' || props.mode === 'view')"
@@ -1240,7 +1240,7 @@ watch(priceDisplayRef, (newRef) => {
 
 // Neue Dynamic Pricing Integration
 const dynamicPricing = ref({
-  pricePerMinute: 0,
+  pricePerMinute: null as number | null,
   adminFeeChf: 0,
   adminFeeRappen: 0, // ✅ NEU: Admin-Fee in Rappen
   adminFeeAppliesFrom: 999, // ✅ NEU: Ab welchem Termin die Admin-Fee gilt
@@ -1376,6 +1376,8 @@ const getLessonTypeText = (appointmentType: string): string => {
       return 'Prüfungsfahrt inkl. WarmUp und Rückfahrt'
     case 'theory':
       return 'Theorielektion'
+    case 'consultation':
+      return 'Beratung'
     case 'vku':
       return 'VKU'
     case 'nothelfer':
@@ -2259,7 +2261,7 @@ const handleCategorySelected = async (category: any) => {
         availableDurations.value.sort((a, b) => a - b)
         logger.debug('✅ Added original duration to available durations:', availableDurations.value)
       }
-    } else if (selectedStudent.value?.id) {
+    } else if (selectedStudent.value?.id && formData.value.appointment_type !== 'consultation' && formData.value.appointment_type !== 'exam') {
       try {
         const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
         if (lastDuration && lastDuration > 0 && availableDurations.value.includes(lastDuration)) {
@@ -2577,7 +2579,8 @@ const translateEventTypeCode = (code: string): string => {
   const translations: { [key: string]: string } = {
     'lesson': 'Fahrlektion',
     'theory': 'Theorielektion',
-    'exam': 'Prüfung'
+    'exam': 'Prüfung',
+    'consultation': 'Beratung'
   }
   return translations[code] || code || 'Termin'
 }
@@ -3093,6 +3096,23 @@ const getFallbackDuration = (categoryCode?: string): number => {
   return 45
 }
 
+// ✅ Beratung-Dauer aus pricing_rules (rule_type='consultation') — kann CHF 0 sein
+const applyConsultationDuration = async (categoryCode: string) => {
+  try {
+    const { loadPricingRules, getPricingRule } = usePricing()
+    await loadPricingRules(true, currentUser.value?.tenant_id)
+    const rule = getPricingRule(categoryCode)
+    const duration = rule?.consultation_base_duration_minutes || 30
+    availableDurations.value = [duration]
+    formData.value.duration_minutes = duration
+    logger.debug('💬 Consultation duration applied:', { categoryCode, duration, hasRule: !!rule?.has_consultation_rule })
+  } catch (err) {
+    console.error('❌ Error loading consultation duration:', err)
+    availableDurations.value = [30]
+    formData.value.duration_minutes = 30
+  }
+}
+
 // ✅ Load durations from categories table
 const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) => {
   if (!staffId || !categoryCode) {
@@ -3119,6 +3139,17 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
     if (categoryData && (categoryData.lesson_duration_minutes || categoryData.exam_duration_minutes)) {
       // ✅ Use exam_duration_minutes when appointment_type is 'exam'
       const isExam = formData.value.appointment_type === 'exam' || selectedLessonType.value === 'exam'
+      const isConsultation = formData.value.appointment_type === 'consultation' || selectedLessonType.value === 'consultation'
+      const isTheory = formData.value.appointment_type === 'theory' || selectedLessonType.value === 'theory'
+
+      if (isConsultation) {
+        await applyConsultationDuration(categoryCode)
+        return
+      }
+      if (isTheory) {
+        await loadTheoryDurations(categoryCode)
+        return
+      }
       
       let durations: number[] = []
       
@@ -3346,6 +3377,9 @@ const loadCategoriesForEventModal = async () => {
               ? selectedCategory.theory_durations.map((d: any) => parseInt(d.toString(), 10))
               : [parseInt(selectedCategory.theory_durations.toString(), 10)]
             availableDurations.value = [...theoryDurations] // ✅ Explizite Kopie
+          } else if (formData.value.appointment_type === 'consultation') {
+            await applyConsultationDuration(formData.value.type)
+            return
           } else if (selectedCategory.lesson_duration_minutes) {
             // Für normale Fahrstunden
             const lessonDurations = Array.isArray(selectedCategory.lesson_duration_minutes) 
@@ -3937,10 +3971,11 @@ const handleLessonTypeSelected = async (lessonType: any) => {
   formData.value.appointment_type = lessonType.code
 
   // Reset stale pricePerMinute immediately so getBasePrice doesn't show a wrong value
-  // while the new backend calculation is in flight
+  // while the new backend calculation is in flight. null (not 0) so free Beratung
+  // (pricePerMinute === 0) is distinguishable from "not yet calculated".
   dynamicPricing.value = {
     ...dynamicPricing.value,
-    pricePerMinute: 0,
+    pricePerMinute: null,
     totalPriceChf: '0.00',
     adminFeeChf: 0,
     isLoading: true
@@ -3959,6 +3994,9 @@ const handleLessonTypeSelected = async (lessonType: any) => {
         formData.value.duration_minutes = 45
         availableDurations.value = [45]
       }
+    } else if (lessonType.code === 'consultation') {
+      logger.debug('💬 Beratung erkannt: Lade consultation-Dauer aus Preisregel')
+      await applyConsultationDuration(formData.value.type)
     } else if (lessonType.code === 'exam') {
       logger.debug('📝 Prüfung erkannt: Verwende exam_duration_minutes')
       
@@ -4031,6 +4069,9 @@ const handleLessonTypeSelected = async (lessonType: any) => {
     if (lessonType.code === 'theory') {
       formData.value.duration_minutes = 45
       availableDurations.value = [45]
+    } else if (lessonType.code === 'consultation') {
+      formData.value.duration_minutes = 30
+      availableDurations.value = [30]
     } else if (lessonType.code === 'exam') {
       formData.value.duration_minutes = 135
       availableDurations.value = [135]
@@ -6822,7 +6863,7 @@ watch(() => formData.value.type, async (newType, oldType) => {
   logger.debug('🚨 formData.type CHANGED:', { from: oldType, to: newType })
   if (selectedStudent.value && newType && formData.value.eventType === 'lesson') {
     // Reset stale pricePerMinute so getBasePrice doesn't briefly show wrong values
-    dynamicPricing.value = { ...dynamicPricing.value, pricePerMinute: 0, totalPriceChf: '0.00', adminFeeChf: 0, isLoading: true }
+    dynamicPricing.value = { ...dynamicPricing.value, pricePerMinute: null, totalPriceChf: '0.00', adminFeeChf: 0, isLoading: true }
     await calculatePriceForCurrentData()
   }
 }, { immediate: false })

@@ -113,9 +113,58 @@ const selectedCategory = computed(() => {
 
 const getCorrectDuration = (category: Category): number => {
   if (props.appointmentType === 'exam') {
-    return category.exam_duration_minutes || 135
-  } else {
-    return category.lesson_duration_minutes || 45
+    return Number(category.exam_duration_minutes) || 135
+  }
+  if (props.appointmentType === 'theory') {
+    const td = category.theory_durations
+    if (Array.isArray(td) && td.length) return Number(td[0]) || 45
+    return 45
+  }
+  if (props.appointmentType === 'consultation') {
+    return consultationDurationByCategory.value[category.code] || 30
+  }
+  const lesson = category.lesson_duration_minutes
+  if (Array.isArray(lesson) && lesson.length) return Number(lesson[0]) || 45
+  return Number(lesson) || 45
+}
+
+const durationsForCategory = (cat: Category): number[] => {
+  if (props.appointmentType === 'exam') {
+    return [Number(cat.exam_duration_minutes) || 135]
+  }
+  if (props.appointmentType === 'theory') {
+    const td = cat.theory_durations
+    if (Array.isArray(td) && td.length) {
+      return td.map((d: any) => Number(d)).filter((n: number) => !isNaN(n) && n > 0)
+    }
+    return [45]
+  }
+  if (props.appointmentType === 'consultation') {
+    return [consultationDurationByCategory.value[cat.code] || 30]
+  }
+  if (Array.isArray(cat.lesson_duration_minutes)) {
+    return cat.lesson_duration_minutes.map((d: any) => Number(d)).filter((n: number) => !isNaN(n) && n > 0)
+  }
+  return [Number(cat.lesson_duration_minutes) || 45]
+}
+
+// Beratung-Dauern aus pricing_rules (rule_type='consultation'), keyed by category_code
+const consultationDurationByCategory = ref<Record<string, number>>({})
+
+const loadConsultationDurations = async () => {
+  try {
+    const { loadPricingRules, pricingRules } = usePricing()
+    await loadPricingRules(true)
+    const map: Record<string, number> = {}
+    for (const rule of pricingRules.value) {
+      if (rule.has_consultation_rule && rule.consultation_base_duration_minutes) {
+        map[rule.category_code] = rule.consultation_base_duration_minutes
+      }
+    }
+    consultationDurationByCategory.value = map
+    logger.debug('💬 CategorySelector consultation durations loaded:', map)
+  } catch (err) {
+    logger.debug('⚠️ Could not load consultation durations:', err)
   }
 }
 
@@ -148,7 +197,7 @@ const availableCategoriesForUser = computed(() => {
 
   const result: CategoryWithDurations[] = filtered.map(cat => ({
     ...cat,
-    availableDurations: [props.appointmentType === 'exam' ? (cat.exam_duration_minutes || 135) : (cat.lesson_duration_minutes?.[0] || 45)]
+    availableDurations: durationsForCategory(cat)
   }))
 
   const sortedResult = result.sort((a, b) => a.code.localeCompare(b.code))
@@ -672,8 +721,26 @@ watch([() => allCategories.value.length, () => props.modelValue], ([categoriesCo
 }, { immediate: false })  // ✅ KEIN immediate: true!
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
+  if (props.appointmentType === 'consultation') {
+    await loadConsultationDurations()
+  }
   loadCategories()
+})
+
+// When Terminart switches to Beratung/Theorie/Prüfung, re-emit the correct durations
+// so EventModal doesn't keep stale Fahrstunden-Dauern (45/90/135).
+watch(() => props.appointmentType, async (type, prev) => {
+  if (type === prev) return
+  if (type === 'consultation') {
+    await loadConsultationDurations()
+  }
+  if (!props.modelValue || isInitializing.value) return
+  const selected = availableCategoriesForUser.value.find(cat => cat.code === props.modelValue)
+  if (selected) {
+    logger.debug('🔄 appointmentType changed → emitting durations:', selected.availableDurations, 'for', type)
+    emit('durations-changed', selected.availableDurations)
+  }
 })
 </script>
 

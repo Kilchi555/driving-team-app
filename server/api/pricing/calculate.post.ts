@@ -167,7 +167,12 @@ export default defineEventHandler(async (event) => {
               // ✅ Theorie-Preisregel (rule_type='theory') separat mitführen, damit der Client
               // erkennen kann, ob der Tenant Theorielektionen für diese Kategorie aktiviert hat
               theory_price_per_minute_rappen: 0,
-              theory_base_duration_minutes: 45
+              theory_base_duration_minutes: 45,
+              // Beratung (rule_type='consultation') — price may be 0 (free), so we
+              // track presence via has_consultation_rule rather than price > 0.
+              consultation_price_per_minute_rappen: 0,
+              consultation_base_duration_minutes: null as number | null,
+              has_consultation_rule: false
             }
           }
 
@@ -216,6 +221,15 @@ export default defineEventHandler(async (event) => {
             }
             if (rule.base_duration_minutes) {
               acc[key].theory_base_duration_minutes = rule.base_duration_minutes
+            }
+          }
+
+          if (rule.rule_type === 'consultation') {
+            // price may be 0 (free Beratung) — always mark presence
+            acc[key].has_consultation_rule = true
+            acc[key].consultation_price_per_minute_rappen = Number(rule.price_per_minute_rappen) || 0
+            if (rule.base_duration_minutes) {
+              acc[key].consultation_base_duration_minutes = rule.base_duration_minutes
             }
           }
 
