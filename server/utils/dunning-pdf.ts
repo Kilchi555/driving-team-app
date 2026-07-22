@@ -126,6 +126,8 @@ export async function generateDunningPdf(data: DunningPdfData): Promise<Buffer> 
     scorRef: data.scorRef,
     creditorName: data.creditorName,
     primaryColor: data.primaryColor,
+    // Brief + Zahlteil nicht auf dieselbe Seite quetschen
+    qrOnSeparatePage: true,
   })
 }
 

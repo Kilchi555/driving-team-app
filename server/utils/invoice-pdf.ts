@@ -107,6 +107,11 @@ export interface InvoicePdfData {
   footerText?: string | null
   primaryColor?: string
   secondaryColor?: string
+  /**
+   * If true, the Swiss QR payment slip is always drawn on its own last page
+   * (used for Zahlungserinnerung / Mahnung so the letter is never cramped above the slip).
+   */
+  qrOnSeparatePage?: boolean
 }
 
 export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
@@ -300,11 +305,16 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     }
 
     const itemsBodyHeight = data.items.reduce((sum, item) => sum + estimateItemRowHeight(item), 0)
-    const fitsOnSinglePage = tableTop + 24 + itemsBodyHeight + closingBlockH <= (data.qrCodeDataUrl ? slipY - 16 : H - 40 - 16)
+    const forceQrSeparate = !!(data.qrCodeDataUrl && data.qrOnSeparatePage)
+    // Ohne forceQrSeparate: QR darf auf Seite 1, wenn Brief+Positionen+Abschluss
+    // noch über dem Zahlteil Platz haben. Mit forceQrSeparate (Mahnschreiben):
+    // Inhalt nutzt die volle Seitenhöhe, Zahlteil kommt immer auf die letzte Seite.
+    const fitsOnSinglePage = !forceQrSeparate
+      && tableTop + 24 + itemsBodyHeight + closingBlockH <= (data.qrCodeDataUrl ? slipY - 16 : H - 40 - 16)
 
     // QR-Platz nur auf der Seite reservieren, auf der der Zahlteil tatsächlich
-    // gezeichnet wird (einseitige Rechnung: Seite 1; mehrseitig: letzte Seite).
-    let qrReservedOnCurrentPage = !!data.qrCodeDataUrl && fitsOnSinglePage
+    // gezeichnet wird (einseitige Rechnung: Seite 1; mehrseitig / separate QR-Seite: letzte Seite).
+    let qrReservedOnCurrentPage = !!data.qrCodeDataUrl && fitsOnSinglePage && !forceQrSeparate
     const getContentBottomLimit = () => (qrReservedOnCurrentPage ? slipY - 16 : H - 40 - 16)
 
     const headers = ['POSITION', 'ANZ.', 'EINZELPREIS', 'TOTAL']
@@ -319,7 +329,9 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     const startTableContinuationPage = () => {
       doc.addPage()
-      qrReservedOnCurrentPage = !!data.qrCodeDataUrl
+      // Fortsetzungsseiten: QR nur reservieren, wenn er nicht explizit auf eine
+      // eigene Seite muss (dann bleibt der Platz für Positionen frei).
+      qrReservedOnCurrentPage = !!data.qrCodeDataUrl && !forceQrSeparate
       drawTableHeader(margin)
       return margin + 24
     }
@@ -409,7 +421,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     // Total row — komplett innerhalb der Tabelle
     if (rowY + closingBlockH > getContentBottomLimit()) {
       doc.addPage()
-      qrReservedOnCurrentPage = !!data.qrCodeDataUrl
+      qrReservedOnCurrentPage = !!data.qrCodeDataUrl && !forceQrSeparate
       rowY = margin
     }
     doc.rect(margin, rowY, tableWidth, 34).fill(primary)
@@ -446,10 +458,31 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       rowY += doc.heightOfString(data.footerText, { width: W - margin * 2 }) + 10
     }
 
+    const drawPageFooter = () => {
+      doc.rect(0, H - 40, W, 40).fill('#f8fafc')
+      doc.moveTo(0, H - 40).lineTo(W, H - 40).strokeColor('#e2e8f0').lineWidth(0.5).stroke()
+      doc.fontSize(8).fillColor('#94a3b8').font('Helvetica')
+        .text(`${data.tenantName} · ${data.invoiceNumber}`, 0, H - 30, { width: W, align: 'center' })
+      doc.fillOpacity(0.5).fontSize(7).fillColor('#94a3b8').font('Helvetica')
+        .text('powered by Simy.ch', 0, H - 18, { width: W, align: 'center' })
+      doc.fillOpacity(1)
+    }
+
     // ── Swiss QR-Rechnung – Standard Einzahlungsschein (SPS 2.2) ────────────
+    let qrDrawnOnCurrentPage = false
     if (data.qrCodeDataUrl) {
       const base64Match = data.qrCodeDataUrl.match(/^data:image\/\w+;base64,(.+)$/)
       if (base64Match) {
+        // Mahnschreiben / Zahlungserinnerung: Zahlteil immer auf eigener Seite.
+        // Auch wenn der Brief kurz ist — so bleibt das Schreiben lesbar und der
+        // Einzahlungsschein SPS-konform am unteren Seitenrand.
+        if (forceQrSeparate || !qrReservedOnCurrentPage) {
+          // Footer noch auf der Briefseite zeichnen, bevor der Zahlteil folgt
+          drawPageFooter()
+          doc.addPage()
+        }
+        qrDrawnOnCurrentPage = true
+
         const qrBuffer = Buffer.from(base64Match[1], 'base64')
 
         // Dimensionen nach SPS 2.2 (1mm = 2.8346pt). slipH/slipY wurden schon
@@ -572,14 +605,10 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       }
     }
 
-    // ── Footer ───────────────────────────────────────────────────────────────
-    doc.rect(0, H - 40, W, 40).fill('#f8fafc')
-    doc.moveTo(0, H - 40).lineTo(W, H - 40).strokeColor('#e2e8f0').lineWidth(0.5).stroke()
-    doc.fontSize(8).fillColor('#94a3b8').font('Helvetica')
-      .text(`${data.tenantName} · ${data.invoiceNumber}`, 0, H - 30, { width: W, align: 'center' })
-    doc.fillOpacity(0.5).fontSize(7).fillColor('#94a3b8').font('Helvetica')
-      .text('powered by Simy.ch', 0, H - 18, { width: W, align: 'center' })
-    doc.fillOpacity(1)
+    // ── Footer (nie über dem Swiss-QR-Zahlteil zeichnen) ─────────────────────
+    if (!qrDrawnOnCurrentPage) {
+      drawPageFooter()
+    }
 
     doc.end()
   })

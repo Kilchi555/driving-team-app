@@ -149,6 +149,21 @@
           </div>
         </div>
 
+        <!-- Nur mit Mahnung -->
+        <button
+          type="button"
+          @click="toggleHasDunningFilter"
+          :class="[
+            'inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors',
+            filters.has_dunning
+              ? 'border-amber-400 bg-amber-50 text-amber-800'
+              : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+          ]"
+          title="Nur Rechnungen mit Zahlungserinnerung oder Mahnung"
+        >
+          Mit Mahnung
+        </button>
+
         <!-- Apply + Reset -->
         <button @click="applyFilters"
           class="px-4 py-2 text-sm font-semibold rounded-xl text-white shadow-sm transition-colors hover:opacity-90"
@@ -404,7 +419,8 @@ const filters = ref<InvoiceFilters>({
   payment_status: [] as PaymentStatus[],
   date_from: '',
   date_to: '',
-  search: ''
+  search: '',
+  has_dunning: false
 })
 
 // Ensure arrays are always initialized
@@ -499,7 +515,8 @@ const clearFilters = async () => {
     payment_status: [] as PaymentStatus[],
     date_from: '',
     date_to: '',
-    search: ''
+    search: '',
+    has_dunning: false
   }
   
   // Ensure arrays are initialized
@@ -831,6 +848,11 @@ const togglePaymentStatusFilter = (status: string) => {
   }
   logger.debug('💳 Payment status filter toggled:', status, 'New payment status array:', filters.value.payment_status)
   // Apply filters immediately
+  applyFilters()
+}
+
+const toggleHasDunningFilter = () => {
+  filters.value.has_dunning = !filters.value.has_dunning
   applyFilters()
 }
 

@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   if (!userProfile) throw createError({ statusCode: 403, message: 'User profile not found' })
 
   const query = getQuery(event)
-  const { page = '1', limit = '20', status, payment_status, user_id, search } = query
+  const { page = '1', limit = '20', status, payment_status, user_id, search, has_dunning } = query
 
   const pageNum = parseInt(page as string) || 1
   const limitNum = Math.min(parseInt(limit as string) || 20, 100)
@@ -44,6 +44,10 @@ export default defineEventHandler(async (event) => {
 
     if (user_id) {
       q = q.eq('user_id', user_id as string)
+    }
+
+    if (has_dunning === '1' || has_dunning === 'true') {
+      q = q.gt('dunning_level', 0)
     }
 
     if (search) {

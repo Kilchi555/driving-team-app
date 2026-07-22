@@ -2,47 +2,18 @@
   <div class="min-h-screen bg-gray-50 py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <!-- Back Button & Header -->
-      <div class="mb-6 sm:mb-8">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-          <div class="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-            <NuxtLink 
-              to="/admin/payment-overview" 
-              class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700"
-            >
-              <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-              </svg>
-              <span class="hidden sm:inline">Zurück zur Übersicht</span>
-              <span class="sm:hidden">Zurück</span>
-            </NuxtLink>
-            
-            <div>
-              <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-                👤 {{ displayName }}
-              </h1>
-            </div>
-          </div>
-          
-          <!-- Action Buttons -->
-          <div class="flex space-x-2 sm:space-x-3">        
-            <button 
-              :disabled="isLoading"
-              class="inline-flex items-center px-3 py-2 sm:px-4 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-              @click="refreshData"
-            >
-              <svg v-if="isLoading" class="animate-spin -ml-1 mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-              </svg>
-              <svg v-else class="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-              </svg>
-              <span class="hidden sm:inline">{{ isLoading ? 'Laden...' : 'Aktualisieren' }}</span>
-              <span class="sm:hidden">{{ isLoading ? '...' : '↻' }}</span>
-            </button>
-          </div>
-        </div>
+      <!-- Back Button -->
+      <div class="mb-4 sm:mb-6">
+        <NuxtLink 
+          to="/admin/payment-overview" 
+          class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700"
+        >
+          <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+          <span class="hidden sm:inline">Zurück zur Übersicht</span>
+          <span class="sm:hidden">Zurück</span>
+        </NuxtLink>
       </div>
 
       <!-- Loading State -->
@@ -491,78 +462,71 @@
           </div>
         </Teleport>
         
-        <!-- Compact User Header -->
-        <div class="bg-white shadow rounded-lg px-4 py-3">
-          <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
-
-            <!-- Avatar + name + role -->
+        <!-- User Header -->
+        <div class="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
+          <div class="flex items-start justify-between gap-4 flex-wrap">
+            <!-- Avatar + name + role + contact -->
             <div class="flex items-center gap-3 min-w-0">
-              <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                   :class="roleClass.replace('text-','bg-').replace('-800','-500').replace('-100','') || 'bg-blue-500'">
+              <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0" :class="avatarBgClass">
                 {{ (displayName || '?').charAt(0).toUpperCase() }}
               </div>
               <div class="min-w-0">
-                <div class="font-semibold text-gray-900 text-sm leading-tight truncate">{{ displayName }}</div>
-                <span class="inline-flex items-center px-1.5 py-0 rounded text-xs font-medium" :class="roleClass">{{ roleLabel }}</span>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <p class="text-base font-semibold text-gray-900 truncate">{{ displayName }}</p>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0" :class="roleClass">{{ roleLabel }}</span>
+                </div>
+                <div class="mt-0.5 flex items-center gap-3 text-sm text-gray-500 flex-wrap">
+                  <a :href="emailLink" class="hover:text-blue-600 truncate max-w-[240px]">{{ displayEmail }}</a>
+                  <a v-if="userDetails?.phone" :href="phoneLink" class="hover:text-blue-600 flex-shrink-0">{{ userDetails.phone }}</a>
+                </div>
               </div>
             </div>
 
-            <!-- Contact -->
-            <div class="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
-              <a :href="emailLink" class="hover:text-blue-600 truncate max-w-[200px]">{{ displayEmail }}</a>
-              <a v-if="userDetails?.phone" :href="phoneLink" class="hover:text-blue-600">{{ userDetails.phone }}</a>
-            </div>
-
-            <!-- Divider -->
-            <div class="hidden sm:block w-px h-8 bg-gray-200 flex-shrink-0"/>
-
-            <!-- Stats inline -->
-            <div class="flex items-center gap-4 text-sm flex-wrap">
-              <span class="flex items-center gap-1 text-gray-500">
-                <span class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>
-                <span class="font-medium text-gray-700">{{ totalAppointments }}</span> Termine
-              </span>
-              <span class="flex items-center gap-1 text-gray-500">
-                <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
-                <span class="font-medium text-gray-700">{{ paidAppointments }}</span> bezahlt
-              </span>
-              <span class="flex items-center gap-1" :class="unpaidAppointments > 0 ? 'text-red-600' : 'text-gray-500'">
-                <span class="w-2 h-2 rounded-full inline-block" :class="unpaidAppointments > 0 ? 'bg-red-400' : 'bg-gray-300'"></span>
-                <span class="font-medium">{{ unpaidAppointments }}</span> offen
-              </span>
-              <span class="flex items-center gap-1" :class="totalUnpaidAmountRaw > 0 ? 'text-orange-600 font-semibold' : 'text-gray-500'">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.51-1.31c-.562-.649-1.413-1.076-2.353-1.253V5z" clip-rule="evenodd"/></svg>
-                {{ formattedTotalUnpaidAmount }}
-              </span>
-              <span v-if="creditBalance !== 0" class="flex items-center gap-1 text-purple-600 font-semibold">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
-                {{ formattedCreditBalance }} Guthaben
-              </span>
-            </div>
-
-            <!-- Divider -->
-            <div class="hidden sm:block w-px h-8 bg-gray-200 flex-shrink-0"/>
-
             <!-- Payment method + company billing -->
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium" :class="paymentMethodClass">
+            <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="paymentMethodClass">
                 {{ paymentMethodLabel }}
               </span>
-              <span v-if="hasCompanyBilling" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+              <span v-if="hasCompanyBilling" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/></svg>
                 Firmenrechnung
               </span>
             </div>
           </div>
 
-          <!-- Company billing address (collapsed by default, shown inline below) -->
-          <div v-if="companyBillingAddress" class="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-0.5">
-            <span class="font-medium text-gray-700">{{ companyBillingAddress.company_name }}</span>
-            <span>{{ companyBillingAddress.contact_person }}</span>
-            <span>{{ companyBillingAddress.street }} {{ companyBillingAddress.street_number || '' }}, {{ companyBillingAddress.zip }} {{ companyBillingAddress.city }}</span>
-            <a :href="`mailto:${companyBillingAddress.email}`" class="text-blue-600 hover:underline">{{ companyBillingAddress.email }}</a>
-            <a v-if="companyBillingAddress.phone" :href="`tel:${companyBillingAddress.phone}`" class="text-blue-600 hover:underline">{{ companyBillingAddress.phone }}</a>
-            <span v-if="companyBillingAddress.vat_number" class="text-gray-400">MwSt: {{ companyBillingAddress.vat_number }}</span>
+          <!-- Stats -->
+          <div class="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2 flex-wrap">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"/>
+              {{ totalAppointments }} Termine
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"/>
+              {{ paidAppointments }} bezahlt
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" :class="unpaidAppointments > 0 ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-500'">
+              <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="unpaidAppointments > 0 ? 'bg-red-400' : 'bg-gray-300'"/>
+              {{ unpaidAppointments }} offen
+            </span>
+            <span v-if="totalUnpaidAmountRaw > 0" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-50 text-orange-700">
+              {{ formattedTotalUnpaidAmount }} offen
+            </span>
+            <span v-if="creditBalance !== 0" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700">
+              {{ formattedCreditBalance }} Guthaben
+            </span>
+          </div>
+
+          <!-- Company billing address -->
+          <div v-if="companyBillingAddress" class="mt-4 pt-4 border-t border-gray-100">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Firmenrechnung</p>
+            <div class="text-sm text-gray-600 flex flex-wrap gap-x-4 gap-y-1">
+              <span class="font-medium text-gray-800">{{ companyBillingAddress.company_name }}</span>
+              <span>{{ companyBillingAddress.contact_person }}</span>
+              <span>{{ companyBillingAddress.street }} {{ companyBillingAddress.street_number || '' }}, {{ companyBillingAddress.zip }} {{ companyBillingAddress.city }}</span>
+              <a :href="`mailto:${companyBillingAddress.email}`" class="text-blue-600 hover:underline">{{ companyBillingAddress.email }}</a>
+              <a v-if="companyBillingAddress.phone" :href="`tel:${companyBillingAddress.phone}`" class="text-blue-600 hover:underline">{{ companyBillingAddress.phone }}</a>
+              <span v-if="companyBillingAddress.vat_number" class="text-gray-400">MwSt: {{ companyBillingAddress.vat_number }}</span>
+            </div>
           </div>
         </div>
         <!-- Appointments Table -->
@@ -1313,11 +1277,20 @@ const roleLabel = computed(() => {
 
 const roleClass = computed(() => {
   const classes: Record<string, string> = {
-    'client': 'bg-blue-100 text-blue-800',
-    'staff': 'bg-green-100 text-green-800',
-    'admin': 'bg-purple-100 text-purple-800'
+    'client': 'bg-blue-50 text-blue-700',
+    'staff': 'bg-emerald-50 text-emerald-700',
+    'admin': 'bg-purple-50 text-purple-700'
   }
-  return classes[userDetails.value?.role || ''] || 'bg-gray-100 text-gray-800'
+  return classes[userDetails.value?.role || ''] || 'bg-gray-100 text-gray-600'
+})
+
+const avatarBgClass = computed(() => {
+  const classes: Record<string, string> = {
+    'client': 'bg-blue-500',
+    'staff': 'bg-emerald-500',
+    'admin': 'bg-purple-500'
+  }
+  return classes[userDetails.value?.role || ''] || 'bg-gray-400'
 })
 
 const paymentMethodLabel = computed(() => {
@@ -1333,13 +1306,13 @@ const paymentMethodLabel = computed(() => {
 
 const paymentMethodClass = computed(() => {
   const classes: Record<string, string> = {
-    'cash': 'bg-yellow-100 text-yellow-800',
-    'invoice': 'bg-blue-100 text-blue-800',
-    'twint': 'bg-purple-100 text-purple-800',
-    'stripe_card': 'bg-green-100 text-green-800',
-    'debit_card': 'bg-gray-100 text-gray-800'
+    'cash': 'bg-amber-50 text-amber-700',
+    'invoice': 'bg-blue-50 text-blue-700',
+    'twint': 'bg-purple-50 text-purple-700',
+    'stripe_card': 'bg-emerald-50 text-emerald-700',
+    'debit_card': 'bg-gray-100 text-gray-600'
   }
-  return classes[userDetails.value?.preferred_payment_method || ''] || 'bg-gray-100 text-gray-800'
+  return classes[userDetails.value?.preferred_payment_method || ''] || 'bg-gray-100 text-gray-600'
 })
 
 // Statistics computed properties
@@ -1709,21 +1682,30 @@ const getPaymentMethodClass = (method: string): string => {
   return classes[method] || 'bg-gray-100 text-gray-800'
 }
 
+/**
+ * Berechnet den Betrag, der für einen Termin noch geschuldet ist bzw. verrechnet werden soll.
+ * WICHTIG: Bereits verwendetes Guthaben (credit_used) wird abgezogen, da dieser Anteil der
+ * Lektion bereits über das Kundenguthaben bezahlt wurde. Ohne diesen Abzug würde bei der
+ * Rechnungserstellung der volle Betrag verrechnet und der Kunde faktisch doppelt belastet
+ * (einmal via Guthaben, einmal via Rechnung).
+ */
 const calculateAppointmentAmount = (appointment: Appointment): number => {
-  // Verwende total_amount aus payments (bereits berechneter Gesamtbetrag)
+  const creditUsed = appointment.credit_used || 0
+
+  // Verwende total_amount aus payments (bereits berechneter Gesamtbetrag) als Basis
   if (appointment.total_amount !== undefined) {
-    return appointment.total_amount
+    return Math.max(0, appointment.total_amount - creditUsed)
   }
-  
+
   // Fallback: Berechne aus den einzelnen Komponenten
   const lessonPrice = appointment.lesson_price || 0
   const adminFee = appointment.admin_fee || 0
   const productsPrice = appointment.products_price || 0
   const discountAmount = appointment.discount_amount || 0
-  
+
   const subtotal = lessonPrice + adminFee + productsPrice
-  const total = Math.max(0, subtotal - discountAmount)
-  
+  const total = Math.max(0, subtotal - discountAmount - creditUsed)
+
   return total
 }
 

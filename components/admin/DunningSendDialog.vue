@@ -18,11 +18,6 @@
           </button>
         </div>
 
-        <!-- TEMP DEBUG (2026-07-21, zu entfernen sobald Mahnstufen-Bug gefunden ist) -->
-        <div class="flex-none bg-fuchsia-50 border-b border-fuchsia-200 px-5 py-1.5 text-[11px] font-mono text-fuchsia-800">
-          DEBUG currentLevel={{ JSON.stringify(currentLevel) }} ({{ typeof currentLevel }}) · suggestedStage={{ JSON.stringify(suggestedStage) }} · lastSentAt={{ JSON.stringify(lastSentAt) }}
-        </div>
-
         <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
 
           <!-- Hinweis: bereits versendete Stufe(n) -->

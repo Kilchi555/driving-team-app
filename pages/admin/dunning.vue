@@ -8,7 +8,12 @@
     <!-- ═══ PAGE HEADER ═══ -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-xl font-bold text-gray-900">Mahnwesen</h1>
+        <div class="flex items-center gap-2">
+          <NuxtLink to="/admin/invoices" class="text-gray-400 hover:text-gray-600" title="Zurück zu Rechnungen">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </NuxtLink>
+          <h1 class="text-xl font-bold text-gray-900">Mahnwesen</h1>
+        </div>
         <p class="text-sm text-gray-500 mt-0.5">Überfällige Rechnungen und deren nächste Mahnstufe</p>
       </div>
       <div class="flex items-center gap-2">
