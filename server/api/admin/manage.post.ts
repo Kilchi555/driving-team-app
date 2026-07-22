@@ -290,7 +290,7 @@ async function deleteEvaluationCategory(body: AdminRequest, userId: string) {
 }
 
 async function createEvaluationCriterion(body: AdminRequest, userId: string) {
-  const { tenant_id, name, description, max_points, category_id, is_theory } = body
+  const { tenant_id, name, description, category_id, driving_categories } = body
 
   // Verify admin
   const { data: userProfile } = await supabase
@@ -309,9 +309,8 @@ async function createEvaluationCriterion(body: AdminRequest, userId: string) {
       tenant_id,
       name,
       description,
-      max_points,
       category_id,
-      is_theory: is_theory || false,
+      driving_categories: driving_categories || [],
       is_active: true
     })
     .select()
@@ -326,7 +325,7 @@ async function createEvaluationCriterion(body: AdminRequest, userId: string) {
 }
 
 async function updateEvaluationCriterion(body: AdminRequest, userId: string) {
-  const { tenant_id, id, name, description, max_points } = body
+  const { tenant_id, id, name, description, driving_categories } = body
 
   // Verify admin
   const { data: userProfile } = await supabase
@@ -339,13 +338,12 @@ async function updateEvaluationCriterion(body: AdminRequest, userId: string) {
     throw new Error('Unauthorized')
   }
 
+  const payload: Record<string, unknown> = { name, description }
+  if (driving_categories !== undefined) payload.driving_categories = driving_categories
+
   const { data, error } = await supabase
     .from('evaluation_criteria')
-    .update({
-      name,
-      description,
-      max_points
-    })
+    .update(payload)
     .eq('id', id)
     .eq('tenant_id', tenant_id)
     .select()

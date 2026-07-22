@@ -1816,10 +1816,8 @@ const saveCriteria = async () => {
         id: editingCriteria.value?.id || undefined,
         name: criteriaForm.value.name,
         description: criteriaForm.value.description,
-        max_points: undefined,
         category_id: criteriaForm.value.category_id,
         display_order: criteriaForm.value.display_order,
-        is_theory: false,
         driving_categories: criteriaForm.value.driving_categories || [],
         always_visible: criteriaForm.value.always_visible ?? false
       }
