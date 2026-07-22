@@ -14,6 +14,9 @@ export default defineEventHandler(async (event) => {
     const rateLimitResult = await checkRateLimit(rateLimitKey, 20, 60 * 1000)
     if (!rateLimitResult.allowed) throw createError({ statusCode: 429, statusMessage: 'Too many requests' })
 
+    const tenantId = user.tenant_id
+    if (!tenantId) throw createError({ statusCode: 400, statusMessage: 'No tenant' })
+
     const body = await readBody(event)
     const { categoryId } = body
 
@@ -25,6 +28,7 @@ export default defineEventHandler(async (event) => {
       .from('course_categories')
       .delete()
       .eq('id', categoryId)
+      .eq('tenant_id', tenantId)
 
     if (err) throw err
 
@@ -32,7 +36,11 @@ export default defineEventHandler(async (event) => {
     return { success: true, data: null, error: null }
   } catch (error: any) {
     logger.error('❌ Error deleting category:', error)
-    return { success: false, data: null, error: error.statusMessage || 'Failed' }
+    if (error?.statusCode) throw error
+    throw createError({
+      statusCode: 500,
+      statusMessage: error?.message || error?.statusMessage || 'Failed to delete category',
+    })
   }
 })
 
