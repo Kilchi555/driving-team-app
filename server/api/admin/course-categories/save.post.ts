@@ -52,9 +52,13 @@ export default defineEventHandler(async (event) => {
       if (err) throw err
       result = data
     } else {
+      const createdBy = user.db_user_id || user.profile?.id
+      if (!createdBy) {
+        throw createError({ statusCode: 400, statusMessage: 'User profile not resolved' })
+      }
       const { data, error: err } = await supabase
         .from('course_categories')
-        .insert({ tenant_id: tenantId, created_by: user.id, ...fields })
+        .insert({ tenant_id: tenantId, created_by: createdBy, ...fields })
         .select()
         .single()
       if (err) throw err
@@ -65,7 +69,12 @@ export default defineEventHandler(async (event) => {
     return { success: true, data: result, error: null }
   } catch (error: any) {
     logger.error('❌ Error saving category:', error)
-    return { success: false, data: null, error: error.statusMessage || 'Failed' }
+    if (error?.statusCode) throw error
+    throw createError({
+      statusCode: 500,
+      statusMessage: error?.message || error?.statusMessage || 'Failed to save category',
+      data: error,
+    })
   }
 })
 
