@@ -38,7 +38,7 @@
         </div>
 
         <!-- Form -->
-        <form v-else @submit.prevent="submit">
+        <form v-else data-skip-ga-submit @submit.prevent="submit">
           <div class="flex flex-col sm:flex-row gap-3 mb-3">
             <div class="flex-1">
               <label for="lm-firstname" class="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Vorname</label>
@@ -209,6 +209,14 @@ async function submit() {
     })
     sentToEmail.value = email.value
     state.value = 'success'
+    // Soft top-of-funnel signal — not Lead (reserved for real inquiries)
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      ;(window as any).fbq('track', 'CompleteRegistration', {
+        content_name: props.category,
+        content_category: 'lead_magnet',
+        status: true,
+      })
+    }
   } catch (err: any) {
     state.value = 'error'
     errorMsg.value = err?.data?.statusMessage || 'Etwas ist schiefgelaufen. Bitte versuche es erneut.'

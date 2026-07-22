@@ -25,7 +25,7 @@
         </div>
 
         <!-- Form -->
-        <form v-else @submit.prevent="submit" class="space-y-4">
+        <form v-else data-skip-ga-submit @submit.prevent="submit" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Vorname *</label>
             <input
@@ -101,6 +101,12 @@ async function submit() {
       },
     })
     success.value = true
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      ;(window as any).fbq('track', 'Lead', {
+        content_name: props.categoryCode,
+        content_category: 'waitlist',
+      })
+    }
   } catch (err: any) {
     if (err?.statusCode === 409) {
       alreadyOnList.value = true
