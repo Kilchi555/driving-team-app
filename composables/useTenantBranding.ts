@@ -372,11 +372,25 @@ export const useTenantBranding = () => {
       }
 
       if (updates.logos) {
-        updateData.logo_url = updates.logos.standard
-        updateData.logo_square_url = updates.logos.square
-        updateData.logo_wide_url = updates.logos.wide
-        updateData.logo_dark_url = updates.logos.dark
-        updateData.favicon_url = updates.logos.favicon
+        // Never persist base64 data-URIs — logos must be Storage https:// URLs
+        const sanitizeLogo = (url: string | null | undefined) => {
+          if (!url) return url ?? null
+          if (typeof url === 'string' && url.startsWith('data:')) {
+            logger.warn('⚠️ Refusing to save base64 logo to tenants table — use /api/tenant/upload-logo')
+            return undefined // omit field so we don't overwrite a good URL with base64
+          }
+          return url
+        }
+        const logoUrl = sanitizeLogo(updates.logos.standard)
+        const square = sanitizeLogo(updates.logos.square)
+        const wide = sanitizeLogo(updates.logos.wide)
+        const dark = sanitizeLogo(updates.logos.dark)
+        const favicon = sanitizeLogo(updates.logos.favicon)
+        if (logoUrl !== undefined) updateData.logo_url = logoUrl
+        if (square !== undefined) updateData.logo_square_url = square
+        if (wide !== undefined) updateData.logo_wide_url = wide
+        if (dark !== undefined) updateData.logo_dark_url = dark
+        if (favicon !== undefined) updateData.favicon_url = favicon
       }
 
       if (updates.social) {

@@ -7,7 +7,7 @@ import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 
-const STORAGE_BUCKET = 'tenant-assets'
+const STORAGE_BUCKET = 'tenant-logos'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -95,6 +95,27 @@ export default defineEventHandler(async (event) => {
         statusCode: 500,
         statusMessage: 'Failed to delete asset'
       })
+    }
+
+    // Clear matching tenants.* logo column (never leave stale URLs)
+    const tenantLogoColumn: Record<string, string> = {
+      logo: 'logo_url',
+      logo_square: 'logo_square_url',
+      logo_wide: 'logo_wide_url',
+      favicon: 'favicon_url',
+    }
+    const column = tenantLogoColumn[assetType]
+    if (column) {
+      const tenantUpdate: Record<string, any> = {
+        [column]: null,
+        updated_at: new Date().toISOString(),
+      }
+      if (assetType === 'logo_square') {
+        // Keep logo_url only if it pointed at the same square asset — safest: clear if equal unknown;
+        // always clear logo_url when square is removed (it's our preferred fallback source).
+        tenantUpdate.logo_url = null
+      }
+      await supabase.from('tenants').update(tenantUpdate).eq('id', tenantId)
     }
 
     logger.debug('Asset deleted successfully:', { tenantId, assetType })
