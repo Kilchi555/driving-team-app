@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { releaseInvoicePayments } from '~/server/utils/release-invoice-payments'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -34,6 +35,19 @@ export default defineEventHandler(async (event) => {
 
   if (error || !invoice) {
     throw createError({ statusCode: 500, statusMessage: error?.message || 'Failed to update invoice' })
+  }
+
+  // Storno: Zahlungen und Quellen wieder als offen / nicht verrechnet freigeben
+  if (updates.status === 'cancelled') {
+    try {
+      await releaseInvoicePayments(supabase, invoice_id)
+    } catch (releaseError: any) {
+      console.error('[invoices/update] Failed to release payments after cancel:', releaseError?.message)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Rechnung storniert, aber Zahlungen konnten nicht freigegeben werden',
+      })
+    }
   }
 
   const { data: fullInvoice } = await supabase

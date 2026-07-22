@@ -1,5 +1,6 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { releaseInvoicePayments } from '~/server/utils/release-invoice-payments'
 
 export default defineEventHandler(async (event) => {
   // ✅ Auth check — Bearer header with HTTP-only-cookie fallback + token
@@ -86,6 +87,19 @@ export default defineEventHandler(async (event) => {
     if (updateError) {
       console.error('Error updating invoice status:', updateError)
       throw createError({ statusCode: 500, message: 'Failed to update invoice status' })
+    }
+
+    // Storno: Zahlungen wieder als offen / nicht verrechnet freigeben
+    if (action === 'cancelled') {
+      try {
+        await releaseInvoicePayments(supabase, invoice_id)
+      } catch (releaseError: any) {
+        console.error('[invoice-update-status] Failed to release payments after cancel:', releaseError?.message)
+        throw createError({
+          statusCode: 500,
+          message: 'Rechnung storniert, aber Zahlungen konnten nicht freigegeben werden',
+        })
+      }
     }
 
     return {
