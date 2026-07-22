@@ -242,23 +242,6 @@
             <p class="text-sm text-gray-600">Verwalten Sie die Bewertungsstufen und deren Labels</p>
           </div>
           <div class="flex flex-col sm:flex-row gap-2">
-            <!-- Load Standards Button: always available — server only fills in
-                 rating levels the tenant doesn't already have, so it's safe
-                 to click even with a partially customized scale. -->
-            <button
-              @click="loadStandardEvaluationScale"
-              :disabled="isLoadingStandards"
-              class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base"
-            >
-              <svg v-if="isLoadingStandards" class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-              </svg>
-              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-              </svg>
-              <span class="hidden sm:inline">{{ isLoadingStandards ? 'Lade Standards...' : 'Fehlende Standard-Stufen ergänzen' }}</span>
-              <span class="sm:hidden">{{ isLoadingStandards ? 'Lade...' : 'Standards' }}</span>
-            </button>
             <button
               @click="openAddScaleModal"
               class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
@@ -1343,29 +1326,6 @@ const loadData = async () => {
     }
   } catch (error) {
     console.error('Error loading data:', error)
-  }
-}
-
-// Load standard evaluation scale for tenant
-const loadStandardEvaluationScale = async () => {
-  isLoadingStandards.value = true
-  
-  try {
-    const response: any = await $fetch('/api/admin/evaluation-system', {
-      method: 'POST',
-      body: { action: 'copy-standard-scale' }
-    })
-    await loadData()
-    if (response?.copiedCount) {
-      uiStore.showSuccess('Standard-Skala ergänzt', `${response.copiedCount} fehlende Bewertungsstufe(n) wurden ergänzt.`)
-    } else {
-      uiStore.showSuccess('Standard-Skala vollständig', 'Es fehlten keine Bewertungsstufen.')
-    }
-  } catch (error: any) {
-    console.error('❌ Error loading standard evaluation scale:', error)
-    uiStore.showError('Fehler beim Laden', `Fehler beim Laden der Standard-Skala: ${error.message}`)
-  } finally {
-    isLoadingStandards.value = false
   }
 }
 

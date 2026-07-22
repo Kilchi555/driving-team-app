@@ -335,9 +335,11 @@ export default defineEventHandler(async (event) => {
     const { id } = body
     if (!id) throw createError({ statusCode: 400, statusMessage: 'Missing id' })
     const ownedId = await resolveTenantScaleId(supabase, tenantId, id)
+    // Hard-delete: soft-delete left inactive rows that still occupied
+    // UNIQUE(rating, tenant_id) and caused 500s when reusing that rating number.
     const { error } = await supabase
       .from('evaluation_scale')
-      .update({ is_active: false })
+      .delete()
       .eq('id', ownedId)
       .eq('tenant_id', tenantId)
     if (error) throw createError({ statusCode: 500, statusMessage: error.message })
@@ -345,6 +347,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // ─── delete-scale-hard ────────────────────────────────────────────────────
+  // Alias kept for older clients; same as delete-scale.
   if (action === 'delete-scale-hard') {
     const { id } = body
     if (!id) throw createError({ statusCode: 400, statusMessage: 'Missing id' })
