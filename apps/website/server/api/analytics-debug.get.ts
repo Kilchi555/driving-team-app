@@ -1,6 +1,5 @@
 import { createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient, getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
 
 export default defineEventHandler(async (event) => {
   // ✅ Security: disabled in production
@@ -10,18 +9,29 @@ export default defineEventHandler(async (event) => {
 
   const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
   const vercelEnv = process.env.VERCEL_ENV
+  const keyFormat = supabaseServiceKey?.startsWith('sb_secret_')
+    ? 'sb_secret'
+    : supabaseServiceKey?.startsWith('eyJ')
+      ? 'legacy_jwt'
+      : supabaseServiceKey
+        ? 'unknown'
+        : 'missing'
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return {
       ok: false,
       vercelEnv,
-      error: 'SUPABASE_URL oder SUPABASE_SERVICE_ROLE_KEY fehlen in den Umgebungsvariablen',
+      error: 'SUPABASE_URL oder SUPABASE_SECRET_KEY fehlen in den Umgebungsvariablen',
       supabaseUrl: supabaseUrl ? '✅ gesetzt' : '❌ fehlt',
       supabaseKey: supabaseServiceKey ? '✅ gesetzt' : '❌ fehlt',
+      keyFormat,
     }
   }
 
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  const supabase = createWebsiteSupabaseClient(event)
+  if (!supabase) {
+    return { ok: false, vercelEnv, error: 'Failed to create Supabase client', keyFormat }
+  }
 
   const { error: tableError } = await supabase
     .from('page_analytics')
@@ -41,6 +51,7 @@ export default defineEventHandler(async (event) => {
     vercelEnv,
     supabaseUrl: '✅ gesetzt',
     supabaseKey: '✅ gesetzt',
+    keyFormat,
     tableCheck: tableError ? `❌ ${tableError.message}` : '✅ page_analytics Tabelle erreichbar',
     rpcCheck: rpcError ? `❌ ${rpcError.message}` : '✅ increment_page_view RPC funktioniert',
   }

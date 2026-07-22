@@ -1,6 +1,5 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 
 const FW_VARIANTS = ['fw_anhaenger', 'fw_motorboot', 'fw_lastwagen'] as const
 const FW_VARIANT_SET = new Set<string>(FW_VARIANTS)
@@ -91,13 +90,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'tenant_id is required' })
   }
 
-  const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-
-  if (!supabaseUrl || !supabaseServiceKey) {
+  const supabase = createWebsiteSupabaseClient(event)
+  if (!supabase) {
     throw createError({ statusCode: 500, statusMessage: 'Database configuration missing' })
   }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
   const { data: categoryRow, error: catErr } = await supabase
     .from('course_categories')

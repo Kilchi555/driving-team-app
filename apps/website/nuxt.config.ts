@@ -36,8 +36,11 @@ export default defineNuxtConfig({
     // Server-only (nicht im Browser sichtbar)
     // Nutzt den bestehenden VITE_GOOGLE_MAPS_API_KEY – Places API muss aktiviert sein
     googlePlacesApiKey: process.env.VITE_GOOGLE_MAPS_API_KEY ?? process.env.GOOGLE_PLACES_API_KEY ?? '',
-    /** Öffentliche Website-APIs (Kurse, Tracking, Kontakt). Alternativ: NUXT_SUPABASE_URL / NUXT_SUPABASE_SERVICE_ROLE_KEY */
+    /** Öffentliche Website-APIs (Kurse, Tracking, Kontakt). Alternativ: NUXT_SUPABASE_URL / NUXT_SUPABASE_SECRET_KEY */
     supabaseUrl: process.env.SUPABASE_URL ?? '',
+    /** New-format secret key (sb_secret_…). Prefer this over the legacy service_role JWT. */
+    supabaseSecretKey: process.env.SUPABASE_SECRET_KEY ?? '',
+    /** Legacy fallback — disabled on the Driving Team Supabase project since 2026-06-30. */
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
     /** Shared secret for server-to-server calls to app.simy.ch (inquiry conversion upload). */
     internalApiSecret: process.env.NUXT_INTERNAL_API_SECRET ?? '',

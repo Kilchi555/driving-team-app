@@ -407,10 +407,10 @@
 
     <!-- Nächste Kursdaten -->
     <UpcomingCoursesSection
-      category="CZV Grundkurs"
+      category="CZV-G"
       title="Nächste Kursdaten — CZV Grundkurs"
       subtitle="5-tägiger Grundkurs für Berufschauffeure · Kategorien C1/C/CE und D1/D"
-      category-code="CZV Grundkurs"
+      category-code="CZV-G"
       category-label="CZV Grundkurs"
       course-name="CZV Grundkurs"
       page-url="https://drivingteam.ch/czv-grundkurs/"
@@ -431,7 +431,7 @@
 
     <!-- Waitlist -->
     <CategoryWaitlistForm
-      category-code="CZV Grundkurs"
+      category-code="CZV-G"
       category-label="CZV Grundkurs"
       tenant-id="64259d68-195a-4c68-8875-f1b44d962830"
     />

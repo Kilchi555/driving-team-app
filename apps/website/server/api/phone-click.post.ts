@@ -1,7 +1,6 @@
 import { defineEventHandler, readBody } from 'h3'
 import type { H3Event } from 'h3'
-import { createClient } from '@supabase/supabase-js'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import { getWebsiteTenantId } from '~/server/utils/website-tenant'
 
 interface PhoneClickPayload {
@@ -29,7 +28,7 @@ interface PhoneClickPayload {
  */
 async function uploadPhoneClickConversion(
   event: H3Event,
-  supabase: ReturnType<typeof createClient>,
+  supabase: NonNullable<ReturnType<typeof createWebsiteSupabaseClient>>,
   sessionId: string,
   directAttribution: PhoneClickPayload['marketing_attribution'],
 ): Promise<void> {
@@ -85,10 +84,8 @@ export default defineEventHandler(async (event) => {
 
     if (!process.env.VERCEL_ENV) return { ok: true }
 
-    const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-    if (!supabaseUrl || !supabaseServiceKey) return { ok: true }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = createWebsiteSupabaseClient(event)
+    if (!supabase) return { ok: true }
     const tenantId = await getWebsiteTenantId(event)
 
     // Reuse booking_redirects table with category 'phone_call' to keep schema minimal
