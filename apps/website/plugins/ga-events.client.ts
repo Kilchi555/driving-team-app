@@ -1,9 +1,11 @@
 // Tracks conversion events for Google Analytics 4, Meta Pixel, and first-party Supabase.
 // Uses event delegation so there's no per-component boilerplate needed.
 // Events tracked:
-//   booking_click  – clicks on simy.ch booking/customer links
-//   phone_click    – clicks on tel: links (GA4 + Meta + first-party DB)
-//   form_submit    – contact/lead form submissions
+//   ViewContent       – service/landing page views (Meta retargeting audiences)
+//   InitiateCheckout  – clicks on simy.ch booking/customer links (was incorrectly Lead)
+//   Contact           – tel: link clicks
+//   Lead              – only from successful inquiry forms (see GeneralInquiryForm)
+//   form_submit (GA4) – contact/lead form submissions
 
 // Maps page paths to driving category codes when the booking URL has no category param.
 // This fixes the "unknown" category problem for VKU, Taxi, Bus, Motorboot, etc.
@@ -19,6 +21,13 @@ function inferCategoryFromPath(pathname: string): string {
   if (p.includes('auto-fahrschule') || p.includes('auto-theorie') || p.includes('fahrstunden') || p.includes('kategorie-b')) return 'B'
   if (p.includes('nothelferkurs') || p.includes('nothelfer')) return 'Nothelfer'
   if (p.includes('wab') || p.includes('czv')) return 'WAB'
+  // Location / school pages still count as Auto (Kat. B) intent for retargeting
+  if (
+    p.includes('fahrschule-') ||
+    p.includes('fahrlehrer') ||
+    p === '/auto-fahrschule/' ||
+    p === '/auto-fahrschule'
+  ) return 'B'
   return 'unknown'
 }
 
@@ -26,6 +35,7 @@ export default defineNuxtPlugin(() => {
   if (process.server) return
   const { gtag } = useGtag()
   const config = useRuntimeConfig()
+  const router = useRouter()
 
   function fireMetaEvent(event: string, params?: Record<string, unknown>) {
     if (typeof window !== 'undefined' && (window as any).fbq) {
@@ -69,6 +79,33 @@ export default defineNuxtPlugin(() => {
     }
   }
 
+  // ── ViewContent: service pages → Meta content audiences for retargeting ──
+  let lastViewContentPath: string | null = null
+
+  function trackViewContent(pathname: string) {
+    const category = inferCategoryFromPath(pathname)
+    if (category === 'unknown') return
+    if (pathname === lastViewContentPath) return
+    lastViewContentPath = pathname
+
+    gtag('event', 'view_content', {
+      event_category: 'engagement',
+      event_label: category,
+      page_path: pathname,
+    })
+    fireMetaEvent('ViewContent', {
+      content_name: category,
+      content_category: 'service',
+      content_type: 'product',
+    })
+  }
+
+  // Initial page (plugin may load after first paint)
+  trackViewContent(window.location.pathname)
+  router.afterEach((to) => {
+    trackViewContent(to.path)
+  })
+
   document.addEventListener('click', (e: MouseEvent) => {
     const target = (e.target as HTMLElement).closest('a')
     if (!target) return
@@ -88,7 +125,12 @@ export default defineNuxtPlugin(() => {
         event_label: category,
         page_path: window.location.pathname,
       })
-      fireMetaEvent('Lead', { content_name: category, content_category: 'booking' })
+      // Hot funnel signal for Meta retargeting — do NOT use Lead (pollutes optimization)
+      fireMetaEvent('InitiateCheckout', {
+        content_name: category,
+        content_category: 'booking',
+        currency: 'CHF',
+      })
       fireGoogleAdsConversion()
 
       const sessionId = (window as any).__analyticsSessionId || 'unknown'
@@ -132,7 +174,8 @@ export default defineNuxtPlugin(() => {
     }
   }, { passive: true })
 
-  // Track form submissions (contact, lead magnet, etc.)
+  // GA4 only on generic form submit. Meta Lead must fire on *successful* inquiry
+  // only (GeneralInquiryForm / waitlist) — not on every form attempt or lead magnet.
   document.addEventListener('submit', (e: SubmitEvent) => {
     const form = e.target as HTMLFormElement
     if (form.dataset.skipGaSubmit !== undefined) return
@@ -142,6 +185,5 @@ export default defineNuxtPlugin(() => {
       event_label: formId,
       page_path: window.location.pathname,
     })
-    fireMetaEvent('Lead', { content_name: formId, content_category: 'form' })
   }, { passive: true })
 })
