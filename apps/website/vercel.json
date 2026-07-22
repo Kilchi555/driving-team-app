@@ -3064,6 +3064,16 @@
       "permanent": true
     },
     {
+      "source": "/fahrschule-altstetten",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-altstetten/",
+      "destination": "https://drivingteam.ch/",
+      "permanent": true
+    },
+    {
       "source": "/fahrschule-lachen",
       "destination": "https://drivingteam.ch/fahrschule-lachen/",
       "permanent": true

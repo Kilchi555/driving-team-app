@@ -39,7 +39,7 @@ const LOCATION_CONFIGS: Record<string, {
 }> = {
   zuerich: {
     label: 'Zürich',
-    landingPage: 'https://drivingteam.ch/fahrschule-zuerich/',
+    landingPage: 'https://drivingteam.ch/',
     geo: { lat: 47.3897, lng: 8.4883, radiusKm: 25 }, // Altstetten
     cities: ['zürich', 'altstetten', 'schlieren', 'dietikon', 'urdorf', 'spreitenbach'],
     keywords: {

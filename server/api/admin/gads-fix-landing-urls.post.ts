@@ -20,8 +20,8 @@ const ZUERICH_LOCATION_URLS: Record<string, string> = {
   'Fahrschule Schlieren': `${BASE}/fahrschule-schlieren/`,
   'Fahrschule Dietikon': `${BASE}/fahrschule-dietikon/`,
   'Fahrschule Birmensdorf': `${BASE}/fahrschule-birmensdorf/`,
-  'Fahrschule Altstetten': `${BASE}/fahrschule-altstetten/`,
-  'Fahrschule Urdorf': `${BASE}/fahrschule-altstetten/`,
+  'Fahrschule Altstetten': `${BASE}/`,
+  'Fahrschule Urdorf': `${BASE}/`,
   'Fahrschule Uitikon': `${BASE}/fahrschule-birmensdorf/`,
   'Fahrschule Spreitenbach': `${BASE}/fahrschule-spreitenbach/`,
 }

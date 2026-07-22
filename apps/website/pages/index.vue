@@ -1,15 +1,15 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Zürich | Auto, Motorrad, LKW & Anhänger | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Zürich mit 85% Prüfungserfolg – Auto, Motorrad, Anhänger, Lastwagen & Taxi. Ab CHF 95.-, dipl. Fahrlehrer in Altstetten. Jetzt Termin buchen!" />
-      <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Fahrstunden Zürich, Fahrlehrer Zürich, Motorrad Fahrschule Zürich, Anhänger Fahrschule Zürich, Lastwagen Fahrschule Zürich, Taxi Fahrschule Zürich, Fahrschule Zürich-Altstetten" />
+      <Title>Fahrschule Zürich | 4.9★ · 85% Prüfungserfolg | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Zürich-Altstetten mit 4.9★ (368 Reviews) und 85% Prüfungserfolg. Auto, Motorrad, Anhänger & mehr ab CHF 95.–. Treffpunkt Bahnhof Altstetten – jetzt online buchen!" />
+      <Meta name="keywords" content="Fahrschule Zürich, Fahrschule Altstetten, Fahrschule Zürich-Altstetten, Fahrstunden Zürich, Fahrlehrer Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule Zürich" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       
       <!-- Open Graph -->
-      <Meta property="og:title" content="Fahrschule Zürich | Driving Team – Auto, Motorrad, Anhänger & mehr" />
-      <Meta property="og:description" content="Professionelle Fahrschule in Zürich-Altstetten. Auto, Motorrad, Anhänger, Lastwagen, Taxi, Motorboot. 85% Erfolgsquote, flexible Zeiten, ab CHF 95.–." />
+      <Meta property="og:title" content="Fahrschule Zürich | 4.9★ · 85% Prüfungserfolg | Driving Team" />
+      <Meta property="og:description" content="Fahrschule Zürich-Altstetten mit 4.9★ und 85% Prüfungserfolg. Auto, Motorrad, Anhänger, Lastwagen, Taxi & Bus ab CHF 95.–. Treffpunkt Bahnhof Altstetten." />
       <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
@@ -23,8 +23,8 @@
       
       <!-- Twitter Card -->
       <Meta name="twitter:card" content="summary_large_image" />
-      <Meta name="twitter:title" content="Fahrschule Zürich | Driving Team – alle Kategorien" />
-      <Meta name="twitter:description" content="Auto, Motorrad, Taxi & Lastwagen Fahrschule in Zürich-Altstetten – professionelle Fahrausbildung, 85% Prüfungserfolg, ab CHF 95.–" />
+      <Meta name="twitter:title" content="Fahrschule Zürich | 4.9★ · 85% Prüfungserfolg" />
+      <Meta name="twitter:description" content="Fahrschule Zürich-Altstetten – 4.9★, 85% Prüfungserfolg, ab CHF 95.–. Auto, Motorrad, Anhänger & mehr. Jetzt online buchen." />
       
       <!-- Canonical & Language -->
       <Link rel="canonical" href="https://drivingteam.ch/" />
@@ -42,8 +42,11 @@
           <h1 class="text-3xl md:text-5xl font-black text-gray-900 leading-tight mb-3 mt-6">
             Fahrschule <span class="text-primary-600">Zürich</span>
           </h1>
-          <p class="text-sm md:text-base text-gray-500 font-medium mb-4">
-            Zürich-Altstetten · alle Kategorien · ab CHF 95.–
+          <p class="text-sm md:text-base text-gray-500 font-medium mb-2">
+            Zürich-Altstetten · Bahnhof · ab CHF 95.–
+          </p>
+          <p class="text-sm font-semibold text-primary-700 mb-4">
+            4.9★ · 368 Google-Reviews · 85% Prüfungserfolg
           </p>
         </div>
         <!-- Trust Bar + Booking CTA -->
@@ -73,7 +76,7 @@
           <h2 class="sr-only">Fahrschule Zürich – alle Führerschein-Kategorien</h2>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8 px-2 md:px-4">
             <!-- Auto -->
-            <a href="/auto-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
+            <a href="/auto-fahrschule-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
               <div class="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 group-hover:from-primary-600 group-hover:to-primary-800 transition-all duration-500"></div>
               <NuxtImg
                 src="/images/categories/auto-fahrschule.webp"
@@ -100,7 +103,7 @@
             </a>
 
             <!-- Motorrad -->
-            <a href="/motorrad-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.1s">
+            <a href="/motorrad-fahrschule-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.1s">
               <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-red-700 group-hover:from-red-600 group-hover:to-red-800 transition-all duration-500"></div>
               <NuxtImg src="/images/categories/motorrad-fahrschule.webp" width="360" height="238" sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw" format="webp" quality="75" alt="Motorrad Fahrschule Zürich - Kategorie A1, A35kW und A Fahrstunden mit erfahrenen Fahrlehrern" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="eager" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
@@ -116,7 +119,7 @@
             </a>
 
             <!-- Lastwagen -->
-            <a href="/lastwagen-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.2s">
+            <a href="/lastwagen-fahrschule-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.2s">
               <div class="absolute inset-0 bg-gradient-to-br from-yellow-500 to-yellow-700 group-hover:from-yellow-600 group-hover:to-yellow-800 transition-all duration-500"></div>
               <NuxtImg src="/images/categories/lastwagen-fahrschule.webp" width="360" height="235" sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw" format="webp" quality="70" alt="Lastwagen Fahrschule Zürich - Kategorie C1, C und CE mit professioneller Ausbildung" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
@@ -132,7 +135,7 @@
             </a>
 
             <!-- Taxi -->
-            <a href="/taxi-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.3s">
+            <a href="/taxi-fahrschule-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.3s">
               <div class="absolute inset-0 bg-gradient-to-br from-purple-500 to-purple-700 group-hover:from-purple-600 group-hover:to-purple-800 transition-all duration-500"></div>
               <NuxtImg src="/images/categories/taxi-fahrschule.webp" width="360" height="239" sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw" format="webp" quality="70" alt="Taxi Fahrschule Zürich - BPT 121 und 122 Ausbildung mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
@@ -148,7 +151,7 @@
             </a>
 
             <!-- Bus -->
-            <a href="/bus-fahrschule/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.4s">
+            <a href="/bus-fahrschule-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2" style="animation-delay: 0.4s">
               <div class="absolute inset-0 bg-gradient-to-br from-green-500 to-green-700 group-hover:from-green-600 group-hover:to-green-800 transition-all duration-500"></div>
               <NuxtImg src="/images/categories/bus-fahrschule.webp" width="360" height="202" sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw" format="webp" quality="70" alt="Bus Fahrschule Zürich - Kategorie D1 und D Fahrstunden und Ausbildung" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
@@ -229,12 +232,12 @@
           <!-- Stat Cards -->
           <div class="grid grid-cols-3 gap-2 mb-5">
             <div class="flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-md py-4 px-2">
-              <span class="text-2xl font-black text-white leading-none">85%</span>
-              <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">Prüfungs&shy;erfolg 1. Versuch</span>
+              <span class="text-2xl font-black text-white leading-none">4.9★</span>
+              <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">368 Google-Reviews</span>
             </div>
             <div class="flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-md py-4 px-2">
-              <span class="text-2xl font-black text-white leading-none">2</span>
-              <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">Standorte Zürich & Lachen</span>
+              <span class="text-2xl font-black text-white leading-none">85%</span>
+              <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">Prüfungs&shy;erfolg 1. Versuch</span>
             </div>
             <div class="flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-md py-4 px-2">
               <span class="text-2xl font-black text-white leading-none">95.–</span>
@@ -244,15 +247,15 @@
 
           <!-- Category Chips -->
           <div class="flex flex-wrap justify-center gap-2">
-            <a href="/auto-fahrschule/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+            <a href="/auto-fahrschule-zuerich/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
               <span class="text-sm">🚗</span>
               <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Auto</span>
             </a>
-            <a href="/motorrad-fahrschule/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+            <a href="/motorrad-fahrschule-zuerich/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
               <span class="text-sm">🏍️</span>
               <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Motorrad</span>
             </a>
-            <a href="/lastwagen-fahrschule/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+            <a href="/lastwagen-fahrschule-zuerich/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
               <span class="text-sm">🚛</span>
               <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Lastwagen</span>
             </a>
@@ -260,11 +263,11 @@
               <span class="text-sm">🚐</span>
               <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Anhänger</span>
             </a>
-            <a href="/vku-kurse/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+            <a href="/vku-kurs-zuerich/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
               <span class="text-sm">📋</span>
               <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">VKU</span>
             </a>
-            <a href="/nothelferkurs-buchen/driving-team" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
+            <a href="/nothelferkurs-zuerich/" class="group flex items-center gap-1.5 bg-white border border-gray-200 hover:border-primary-500 hover:bg-primary-50 rounded-full px-3.5 py-1.5 transition-all duration-200 shadow-sm">
               <span class="text-sm">🚑</span>
               <span class="text-xs font-semibold text-gray-600 group-hover:text-primary-700">Nothelfer</span>
             </a>
@@ -345,9 +348,10 @@
         
         <!-- Theorie & Grundkurse -->
         <div  id="kurse" class="mb-16">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <span class="text-3xl">📚</span> Theorie & Grundkurse
+          <h3 class="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+            <span class="text-3xl">📚</span> Kurse in Zürich
           </h3>
+          <p class="text-gray-500 mb-6 max-w-2xl">Nothelfer, VKU und Motorrad-Grundkurs am Standort Zürich-Altstetten – Termine online buchbar.</p>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 lg:gap-8">
             <!-- Auto Theorie -->
             <a href="/auto-theorie/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48">
@@ -365,22 +369,22 @@
             </a>
 
             <!-- Nothelferkurse -->
-            <a href="/nothelferkurs/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.1s">
+            <a href="/nothelferkurs-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.1s">
               <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-red-700 group-hover:from-red-600 group-hover:to-red-800 transition-all duration-500"></div>
-              <NuxtImg src="/images/courses/nothelfer.webp" width="360" height="239" sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw" format="webp" quality="70" alt="Nothelferkurse" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <NuxtImg src="/images/courses/nothelfer.webp" width="360" height="239" sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw" format="webp" quality="70" alt="Nothelferkurs Zürich" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
-                  <h4 class="font-black text-lg md:text-xl text-white">Nothelferkurse</h4>
+                  <h4 class="font-black text-lg md:text-xl text-white">Nothelferkurs Zürich</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Lebensrettende Nothelferkurse für den Führerausweis. Zertifiziert und praxisorientiert in Zürich & Lachen.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Nothelferkurs in Zürich-Altstetten – Pflicht für den Führerschein, praxisnah und zertifiziert.</p>
                 </div>
               </div>
             </a>
 
             <!-- Motorrad Grundkurs -->
-            <a href="/motorrad-grundkurs/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.2s">
+            <a href="/motorrad-grundkurs-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.2s">
               <div class="absolute inset-0 bg-gradient-to-br from-orange-500 to-orange-700 group-hover:from-orange-600 group-hover:to-orange-800 transition-all duration-500"></div>
               <NuxtImg
                 src="/images/courses/motorrad-grundkurs.webp"
@@ -389,32 +393,32 @@
                 sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw"
                 format="webp"
                 quality="70"
-                alt="Motorrad Grundkurs"
+                alt="Motorrad Grundkurs Zürich"
                 class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500"
                 loading="lazy"
               />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
-                  <h4 class="font-black text-lg md:text-xl text-white">Motorrad Grundkurs</h4>
+                  <h4 class="font-black text-lg md:text-xl text-white">Motorrad Grundkurs Zürich</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Fundierter Motorrad Grundkurs für A1, A35kW und A Kategorien. Sicher auf zwei Rädern in Zürich & Lachen.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Motorrad Grundkurs A1 / A35kW / A in Zürich – sicher auf zwei Rädern starten.</p>
                 </div>
               </div>
             </a>
 
             <!-- VKU Kurse -->
-            <a href="/vku-kurse/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.3s">
+            <a href="/vku-kurs-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.3s">
               <div class="absolute inset-0 bg-gradient-to-br from-green-500 to-green-700 group-hover:from-green-600 group-hover:to-green-800 transition-all duration-500"></div>
-              <NuxtImg src="/images/courses/vku.webp" width="360" height="239" sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw" format="webp" quality="70" alt="VKU Kurse" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <NuxtImg src="/images/courses/vku.webp" width="360" height="239" sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw" format="webp" quality="70" alt="VKU Kurs Zürich" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
-                  <h4 class="font-black text-lg md:text-xl text-white">VKU Kurse</h4>
+                  <h4 class="font-black text-lg md:text-xl text-white">VKU Kurs Zürich</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Verkehrskundeunterricht für sichere Fahrer:innen. Praxisorientierte VKU Kurse in Zürich und Lachen.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Verkehrskundeunterricht in Zürich-Altstetten – 8 Stunden, praxisnah, online buchbar.</p>
                 </div>
               </div>
             </a>
@@ -458,16 +462,16 @@
             </a>
 
             <!-- WAB Kurse -->
-            <a href="/wab-kurse/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.2s">
+            <a href="/wab-kurse-zuerich/" class="category-card group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 h-40 md:h-48" style="animation-delay: 0.2s">
               <div class="absolute inset-0 bg-gradient-to-br from-teal-500 to-teal-700 group-hover:from-teal-600 group-hover:to-teal-800 transition-all duration-500"></div>
-              <NuxtImg src="/images/wab-kurs.webp" width="360" height="300" sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw" format="webp" quality="70" alt="WAB Kurse" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
+              <NuxtImg src="/images/wab-kurs.webp" width="360" height="300" sizes="(min-width:1024px) 280px, (min-width:640px) 220px, 48vw" format="webp" quality="70" alt="WAB Kurs Zürich" class="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-all duration-500" loading="lazy" />
               <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-500"></div>
               <div class="relative p-6 h-full flex flex-col justify-center items-center z-10 text-center">
                 <div class="opacity-100 group-hover:opacity-0 transition-opacity duration-300">
-                  <h4 class="font-black text-lg md:text-xl text-white">WAB Kurse</h4>
+                  <h4 class="font-black text-lg md:text-xl text-white">WAB Kurs Zürich</h4>
                 </div>
                 <div class="absolute inset-0 p-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p class="text-white text-sm font-semibold leading-snug">Weiterausbildungskurs nach der Fahrprüfung (WAB). Von den Fahrexperten der Transportschule in Pfäffikon/ZH und Tuggen/SZ durchgeführt.</p>
+                  <p class="text-white text-sm font-semibold leading-snug">Neulenker Weiterbildung (WAB) im Zürich Oberland – Pflicht innerhalb 12 Monate nach der Prüfung.</p>
                 </div>
               </div>
             </a>
@@ -773,13 +777,12 @@
 <script setup lang="ts">
 import InstructorProfileSection from '~/components/InstructorProfileSection.vue'
 import { getInstructorsByLocation } from '~/instructor-data'
-import { BUSINESS, buildHomepageSchema, buildLocationSchema, LOCATION_ZUERICH } from '~/business.config'
+import { buildHomepageSchema } from '~/business.config'
 
 const instructors = getInstructorsByLocation('zuerich')
 
 const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML: JSON.stringify(buildHomepageSchema()) },
-  { type: 'application/ld+json', innerHTML: JSON.stringify(buildLocationSchema(LOCATION_ZUERICH)) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
     "@type": "FAQPage",

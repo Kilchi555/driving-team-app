@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Anhängerkurs Zürich | 3h Grundkurs BE | CHF 190.- | Driving Team</Title>
-      <Meta name="description" content="Anhängerkurs Zürich-Altstetten: 3h Grundkurs für eine solide BE-Basis. Anhänger gestellt, CHF 190.- inkl. Theorie & Praxis. Für Autofahrer. Jetzt buchen!" />
-      <Meta name="keywords" content="Anhängerkurs Zürich, Anhängerkurs, Anhänger Kurs Zürich, Anhänger Prüfung Vorbereitung, Kategorie BE Kurs, Anhänger Fahrkurs Zürich, BE Prüfung Zürich" />
-      <Meta property="og:title" content="Anhängerkurs Zürich | 1 Tag zur Prüfung | CHF 190.- | Driving Team" />
-      <Meta property="og:description" content="Anhängerkurs Zürich-Altstetten. 3h Grundkurs für solide BE-Basis. CHF 190.- inkl. Anhänger. Prüfungsrelevante Manöver, kleine Gruppen möglich." />
+      <Title>Anhängerkurs & Wohnwagenkurs Zürich | BE Basis | CHF 190.–</Title>
+      <Meta name="description" content="Anhängerkurs und Wohnwagenkurs in Zürich-Altstetten: 3h BE-Grundkurs, Anhänger gestellt, CHF 190.– inkl. Theorie & Praxis. Für Autofahrer und Wohnwagen. Jetzt buchen!" />
+      <Meta name="keywords" content="Anhängerkurs Zürich, Anhängerkurs und Wohnwagenkurs, Anhänger Kurs Zürich, Wohnwagenkurs, Kategorie BE Kurs, Anhänger Fahrkurs Zürich, BE Prüfung Zürich" />
+      <Meta property="og:title" content="Anhängerkurs & Wohnwagenkurs Zürich | BE Basis | CHF 190.–" />
+      <Meta property="og:description" content="Anhängerkurs und Wohnwagenkurs Zürich-Altstetten. 3h BE-Grundkurs, CHF 190.– inkl. Anhänger. Prüfungsrelevante Manöver, kleine Gruppen." />
       <Meta property="og:url" content="https://drivingteam.ch/anhaenger-kurs/" />
       <Link rel="canonical" href="https://drivingteam.ch/anhaenger-kurs/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/categories/anhaenger-fahrschule-hero.webp" />
@@ -27,7 +27,7 @@
             <span class="text-xl">🚐</span>
             <span class="text-sm font-semibold">Anhänger Kurs Zürich-Altstetten</span>
           </div>
-          <h1 class="heading-lg text-white mb-4">Anhängerkurs Basis Zürich</h1>
+          <h1 class="heading-lg text-white mb-4">Anhängerkurs & Wohnwagenkurs Zürich</h1>
           <div class="flex flex-wrap gap-2 mb-4">
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">💰 CHF 190.- / Person</span>
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">🕐 3 Stunden</span>

@@ -381,19 +381,26 @@ export const BUSINESS = {
   rating: LOCATION_ZUERICH.rating,
 }
 
-// ── Schema-Builder: Homepage (Hauptstandort) ─────────────────
+// ── Schema-Builder: Homepage (Hauptstandort Zürich – einzige kanonische Entity) ─
 export function buildHomepageSchema() {
   const loc = LOCATION_ZUERICH
   return {
     '@context': 'https://schema.org',
     '@type': ['DrivingSchool', 'LocalBusiness'],
     '@id': `${BRAND.website}/#drivingschool`,
-    name: BRAND.name,
-    alternateName: BRAND.shortName,
+    name: 'Fahrschule Driving Team Zürich',
+    alternateName: [
+      BRAND.name,
+      BRAND.shortName,
+      'Fahrschule Zürich',
+      'Fahrschule Zürich-Altstetten',
+      'Fahrschule Altstetten',
+      loc.gbpName,
+    ],
     url: BRAND.website,
     logo: { '@type': 'ImageObject', url: BRAND.logo },
     image: BRAND.ogImage,
-    description: `Professionelle Fahrschule in Zürich-Altstetten & Lachen SZ – Auto, Motorrad, Lastwagen, Bus, Taxi, Anhänger und Motorboot. Eidgenössisch diplomierte Fahrlehrer seit ${BRAND.foundingYear}.`,
+    description: `Fahrschule Zürich-Altstetten mit ${loc.rating.value}★ (${loc.rating.count} Google-Reviews) und 85% Prüfungserfolg. Auto, Motorrad, Lastwagen, Bus, Taxi, Anhänger und Motorboot. Treffpunkt Bahnhof Zürich-Altstetten. Seit ${BRAND.foundingYear}.`,
     foundingDate: String(BRAND.foundingYear),
     telephone: loc.phone,
     email: BRAND.email,
@@ -412,6 +419,7 @@ export function buildHomepageSchema() {
     openingHoursSpecification: buildOpeningHours(loc),
     areaServed: [
       { '@type': 'City', name: 'Zürich' },
+      { '@type': 'City', name: 'Zürich-Altstetten' },
       { '@type': 'City', name: 'Lachen' },
       { '@type': 'City', name: 'Uster' },
       { '@type': 'City', name: 'Pfäffikon SZ' },
@@ -422,10 +430,15 @@ export function buildHomepageSchema() {
     ],
     hasOfferCatalog: {
       '@type': 'OfferCatalog',
-      name: 'Fahrschule Driving Team',
+      name: 'Fahrschule Zürich – Driving Team',
       itemListElement: loc.services.map(s => ({
         '@type': 'Offer',
-        itemOffered: { '@type': 'Service', name: s.name, url: s.url },
+        itemOffered: {
+          '@type': 'Service',
+          name: s.name,
+          url: s.url,
+          provider: { '@id': `${BRAND.website}/#drivingschool` },
+        },
       })),
     },
     aggregateRating: buildRating(loc),
@@ -434,7 +447,8 @@ export function buildHomepageSchema() {
       contactType: 'Customer Service',
       telephone: loc.phone,
       email: BRAND.email,
-      availableLanguage: ['German', 'English'],
+      availableLanguage: ['German', 'English', 'Albanian'],
+      areaServed: 'CH',
       hoursAvailable: {
         '@type': 'OpeningHoursSpecification',
         dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],

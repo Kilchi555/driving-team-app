@@ -9,7 +9,7 @@
  *       "campaign_name": "Fahrschule Zürich – Auto Kat. B",
  *       "daily_budget_chf": 20,
  *       "geo_target_id": "20563",
- *       "final_url": "https://drivingteam.ch/fahrschule-zuerich/",
+ *       "final_url": "https://drivingteam.ch/",
  *       "keywords": [
  *         { "text": "fahrschule zürich", "match_type": "PHRASE", "max_cpc_chf": 3.0 }
  *       ],
