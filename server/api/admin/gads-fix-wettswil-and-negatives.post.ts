@@ -96,17 +96,22 @@ export default defineEventHandler(async (event) => {
 
   // ── 2. Find Wettswil ad group resource name ───────────────────────────────
   const wettswilAdGroupRows = await runQuery(customerId, headers, `
-    SELECT ad_group.resource_name, ad_group_criterion.keyword.text
+    SELECT ad_group.resource_name, ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type
     FROM ad_group_criterion
     WHERE ad_group.name = 'Fahrschule Wettswil'
       AND ad_group_criterion.type = 'KEYWORD'
       AND ad_group_criterion.status != 'REMOVED'
   `)
   const wettswilAdGroupResource = wettswilAdGroupRows[0]?.adGroup?.resourceName
-  const existingWettswilTexts = new Set(
-    wettswilAdGroupRows.map((r: any) => (r.adGroupCriterion?.keyword?.text ?? '').toLowerCase()),
+  // Key on (text, matchType) — Google Ads allows the same text under different
+  // match types as distinct criteria, so a text-only check would wrongly think
+  // the BROAD version already exists just because the EXACT version does.
+  const existingWettswilBroadTexts = new Set(
+    wettswilAdGroupRows
+      .filter((r: any) => r.adGroupCriterion?.keyword?.matchType === 'BROAD')
+      .map((r: any) => (r.adGroupCriterion?.keyword?.text ?? '').toLowerCase()),
   )
-  const broadToAdd = NEW_BROAD_KEYWORDS_WETTSWIL.filter(k => !existingWettswilTexts.has(k.toLowerCase()))
+  const broadToAdd = NEW_BROAD_KEYWORDS_WETTSWIL.filter(k => !existingWettswilBroadTexts.has(k.toLowerCase()))
 
   // ── 3. Find which new negatives already exist per campaign ───────────────
   const existingNegatives: Record<string, Set<string>> = {}
