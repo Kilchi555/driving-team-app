@@ -40,7 +40,7 @@ const HEADLINES = [
   'Autobahnauffahrt A3 üben',
   'Whiskeypass Vorbereitung',
   'Jetzt Fahrstunde buchen',
-  '5.0 ★ 414 Bewertungen',
+  '5.0 Sterne 414 Bewertungen',
   'Fahrlehrer Skender',
   'Fahrschule Bonstetten',
   'Fahrschule Stallikon',
@@ -78,8 +78,42 @@ export default defineEventHandler(async (event) => {
   const existsData = await existsRes.json() as any[]
   const existingAdGroup = (existsData ?? []).flatMap(b => b.results ?? [])[0]?.adGroup?.resourceName
 
-  if (existingAdGroup) {
-    return { ok: false, reason: 'ad_group_already_exists', resource_name: existingAdGroup }
+  if (existingAdGroup && !dryRun) {
+    // Ad group + keywords already created in a prior run — just (re)create the ad.
+    const adRes = await fetch(`https://googleads.googleapis.com/${GADS_VERSION}/customers/${customerId}/adGroupAds:mutate`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        operations: [{
+          create: {
+            adGroup: existingAdGroup,
+            status: 'ENABLED',
+            ad: {
+              finalUrls: [FINAL_URL],
+              responsiveSearchAd: {
+                headlines: HEADLINES.map(text => ({ text })),
+                descriptions: DESCRIPTIONS.map(text => ({ text })),
+              },
+            },
+          },
+        }],
+      }),
+    })
+    const adData = await adRes.json() as any
+    if (!adRes.ok) {
+      logger.warn('[gads-add-wettswil] Ad create error (existing ad group):', JSON.stringify(adData).slice(0, 500))
+    }
+    return {
+      ok: adRes.ok,
+      dry_run: false,
+      ad_group_resource_name: existingAdGroup,
+      ad_created: (adData.results ?? []).length > 0,
+      ad_errors: !adRes.ok ? adData : undefined,
+    }
+  }
+
+  if (existingAdGroup && dryRun) {
+    return { ok: true, reason: 'ad_group_already_exists', resource_name: existingAdGroup, note: 'Would (re)create the ad only.' }
   }
 
   if (dryRun) {
