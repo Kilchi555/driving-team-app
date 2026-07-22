@@ -1,18 +1,31 @@
 <template>
-  <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto min-h-[100svh] w-full z-[60] p-2 sm:p-4">
-    <div class="relative top-10 mx-auto p-5 border w-11/12 max-w-4xl max-h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] overflow-y-auto shadow-lg rounded-md bg-white admin-modal">
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-6">
-        <h3 class="text-lg font-medium text-gray-900">Neue Rechnung erstellen</h3>
-        <button
-          class="text-gray-400 hover:text-gray-600"
-          @click="$emit('close')"
-        >
-          <XMarkIcon class="h-6 w-6" />
-        </button>
+  <div class="fixed inset-0 z-[60] flex flex-col justify-end sm:justify-center sm:items-center sm:p-4" @click.self="$emit('close')">
+    <div class="fixed inset-0 bg-gray-900/60 transition-opacity" @click="$emit('close')" />
+
+    <!-- Full-width sheet on mobile, centered dialog on sm+ -->
+    <div class="admin-modal relative w-full min-w-0 bg-white shadow-xl transition-all
+                rounded-t-2xl max-h-[95dvh]
+                sm:rounded-2xl sm:max-w-4xl sm:max-h-[90dvh]
+                flex flex-col overflow-hidden">
+      <!-- Sticky Header -->
+      <div class="flex-none sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-gray-100">
+        <div class="flex justify-center pt-3 pb-1 sm:hidden">
+          <div class="w-10 h-1 bg-gray-300 rounded-full" />
+        </div>
+        <div class="flex items-center justify-between gap-3 px-4 py-3">
+          <h3 class="text-base font-semibold text-gray-900 truncate min-w-0">Neue Rechnung erstellen</h3>
+          <button
+            type="button"
+            class="flex-shrink-0 text-gray-400 hover:text-gray-600 p-1"
+            @click="$emit('close')"
+          >
+            <XMarkIcon class="h-6 w-6" />
+          </button>
+        </div>
       </div>
 
-      <form class="space-y-6" @submit.prevent="createInvoiceHandler">
+      <form class="flex flex-col flex-1 min-h-0 min-w-0" @submit.prevent="createInvoiceHandler">
+      <div class="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 sm:px-5 space-y-6">
         <!-- Kunde suchen -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Kunde *</label>
@@ -125,7 +138,7 @@
                   </span>
                 </div>
               </div>
-              <span class="text-sm font-semibold text-gray-700">CHF {{ (item.amount_rappen / 100).toFixed(2) }}</span>
+              <span class="text-sm font-semibold text-gray-700 shrink-0 tabular-nums">CHF {{ (item.amount_rappen / 100).toFixed(2) }}</span>
             </label>
           </div>
           <div v-if="selectedOpenItemIds.size > 0" class="mt-2 text-xs text-blue-700 font-medium">
@@ -201,36 +214,40 @@
             </div>
 
             <!-- Adresse -->
-            <div class="grid grid-cols-3 gap-3">
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Strasse</label>
-                <input v-model="formData.billing_street" type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+            <div class="space-y-3 min-w-0">
+              <div class="grid grid-cols-[minmax(0,1fr)_4.5rem] gap-3">
+                <div class="min-w-0">
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Strasse</label>
+                  <input v-model="formData.billing_street" type="text"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                </div>
+                <div class="min-w-0">
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Nr.</label>
+                  <input v-model="formData.billing_street_number" type="text"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                </div>
               </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">Nr.</label>
-                <input v-model="formData.billing_street_number" type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
-              </div>
-              <div>
-                <label class="block text-xs font-medium text-gray-700 mb-1">PLZ</label>
-                <input v-model="formData.billing_zip" type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
-              </div>
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Ort</label>
-                <input v-model="formData.billing_city" type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3">
+                <div class="min-w-0">
+                  <label class="block text-xs font-medium text-gray-700 mb-1">PLZ</label>
+                  <input v-model="formData.billing_zip" type="text"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                </div>
+                <div class="min-w-0">
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Ort</label>
+                  <input v-model="formData.billing_city" type="text"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Rechnungspositionen -->
-        <div class="border-t pt-6">
-          <div class="flex items-center justify-between mb-4">
+        <div class="border-t pt-6 min-w-0">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <h4 class="text-sm font-semibold text-gray-800">Rechnungspositionen</h4>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <!-- Vorlage-Button -->
               <div class="relative" ref="templateMenuRef">
                 <button
@@ -243,7 +260,7 @@
                 </button>
                 <div
                   v-if="showTemplateMenu"
-                  class="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-30 overflow-hidden"
+                  class="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 w-[min(18rem,calc(100vw-2rem))] bg-white border border-gray-200 rounded-xl shadow-xl z-30 overflow-hidden"
                 >
                   <div class="px-3 py-2 border-b border-gray-100">
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Produkte / Vorlagen</p>
@@ -255,13 +272,13 @@
                       :key="p.id"
                       type="button"
                       @click="addItemFromTemplate(p)"
-                      class="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0"
+                      class="w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0 min-w-0"
                     >
                       <div class="min-w-0">
                         <p class="text-sm font-medium text-gray-800 truncate">{{ p.name }}</p>
                         <p v-if="p.description" class="text-xs text-gray-400 truncate">{{ p.description }}</p>
                       </div>
-                      <span class="text-xs font-semibold text-gray-600 ml-2 shrink-0">CHF {{ (p.price_rappen / 100).toFixed(2) }}</span>
+                      <span class="text-xs font-semibold text-gray-600 shrink-0">CHF {{ (p.price_rappen / 100).toFixed(2) }}</span>
                     </button>
                   </div>
                 </div>
@@ -286,21 +303,21 @@
             <div
               v-for="(item, index) in invoiceItems"
               :key="index"
-              class="border border-gray-200 rounded-xl p-4 bg-gray-50"
+              class="border border-gray-200 rounded-xl p-3 sm:p-4 bg-gray-50 min-w-0"
             >
-              <!-- Row 1: Beschreibung + Menge + Preis + MwSt -->
-              <div class="grid grid-cols-12 gap-3 items-end">
-                <div class="col-span-12 md:col-span-5">
+              <!-- Row 1: Beschreibung full width, then qty fields in 2-col on mobile -->
+              <div class="grid grid-cols-2 sm:grid-cols-12 gap-3 items-end min-w-0">
+                <div class="col-span-2 sm:col-span-5 min-w-0">
                   <label class="block text-xs font-medium text-gray-500 mb-1">Beschreibung *</label>
                   <input
                     v-model="item.product_name"
                     type="text"
                     required
                     placeholder="z.B. Fahrstunde, Theorieunterricht"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
-                <div class="col-span-4 md:col-span-2">
+                <div class="min-w-0 sm:col-span-2">
                   <label class="block text-xs font-medium text-gray-500 mb-1">Menge</label>
                   <input
                     v-model.number="item.quantity"
@@ -309,11 +326,14 @@
                     step="0.01"
                     required
                     @input="calculateItemTotal(item)"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
-                <div class="col-span-4 md:col-span-2">
-                  <label class="block text-xs font-medium text-gray-500 mb-1">Einzelpreis (CHF)</label>
+                <div class="min-w-0 sm:col-span-2">
+                  <label class="block text-xs font-medium text-gray-500 mb-1">
+                    <span class="sm:hidden">Preis (CHF)</span>
+                    <span class="hidden sm:inline">Einzelpreis (CHF)</span>
+                  </label>
                   <input
                     :value="item.unit_price_rappen / 100"
                     @input="(e: any) => { item.unit_price_rappen = Math.round(parseFloat(e.target.value || 0) * 100); calculateItemTotal(item) }"
@@ -321,10 +341,10 @@
                     min="0"
                     step="0.05"
                     required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
-                <div class="col-span-4 md:col-span-1">
+                <div class="min-w-0 sm:col-span-1">
                   <label class="block text-xs font-medium text-gray-500 mb-1">MwSt (%)</label>
                   <input
                     v-model.number="item.vat_rate"
@@ -333,10 +353,10 @@
                     step="0.1"
                     required
                     @input="calculateItemTotal(item)"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
-                <div class="col-span-4 md:col-span-1">
+                <div class="min-w-0 sm:col-span-1">
                   <label class="block text-xs font-medium text-gray-500 mb-1">Rabatt (%)</label>
                   <input
                     v-model.number="item.discount_percent"
@@ -346,17 +366,17 @@
                     step="1"
                     placeholder="0"
                     @input="calculateItemTotal(item)"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                     :class="(item.discount_percent || 0) > 0 ? 'border-amber-400 bg-amber-50' : ''"
                   >
                 </div>
-                <div class="col-span-4 md:col-span-1 flex items-end justify-end gap-1 pb-0.5">
+                <div class="col-span-2 sm:col-span-1 flex items-center sm:items-end justify-end gap-1 sm:pb-0.5">
                   <!-- Move up/down -->
                   <button
                     v-if="index > 0"
                     type="button"
                     @click="moveInvoiceItem(index, -1)"
-                    class="text-gray-400 hover:text-gray-600 transition-colors"
+                    class="text-gray-400 hover:text-gray-600 transition-colors p-1"
                     title="Nach oben"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
@@ -365,14 +385,14 @@
                     v-if="index < invoiceItems.length - 1"
                     type="button"
                     @click="moveInvoiceItem(index, 1)"
-                    class="text-gray-400 hover:text-gray-600 transition-colors"
+                    class="text-gray-400 hover:text-gray-600 transition-colors p-1"
                     title="Nach unten"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                   </button>
                   <button
                     type="button"
-                    class="text-red-400 hover:text-red-600 transition-colors"
+                    class="text-red-400 hover:text-red-600 transition-colors p-1"
                     title="Position entfernen"
                     @click="removeInvoiceItem(index)"
                   >
@@ -499,12 +519,13 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Buttons -->
-        <div class="flex justify-end space-x-3 pt-6 border-t">
+        <!-- Buttons (sticky footer) -->
+        <div class="flex-none flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-4 py-3 sm:px-5 border-t bg-white pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
           <button
             type="button"
-            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            class="w-full sm:w-auto px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             @click="$emit('close')"
           >
             Abbrechen
@@ -513,7 +534,7 @@
           <button
             type="submit"
             :disabled="!canSubmit || isSubmitting"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ArrowPathIcon v-if="isSubmitting" class="animate-spin h-4 w-4 mr-2" />
             {{ isSubmitting ? 'Wird erstellt...' : 'Rechnung erstellen' }}
