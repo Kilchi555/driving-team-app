@@ -40,6 +40,20 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
+    // Reject foreign rooms as category default (service role bypasses RLS)
+    const defaultRoomId = fields.default_room_id
+    if (defaultRoomId) {
+      const { data: room, error: roomErr } = await supabase
+        .from('rooms')
+        .select('id, tenant_id')
+        .eq('id', defaultRoomId)
+        .maybeSingle()
+      if (roomErr) throw roomErr
+      if (!room || room.tenant_id !== tenantId) {
+        throw createError({ statusCode: 403, statusMessage: 'Room does not belong to this tenant' })
+      }
+    }
+
     let result
     if (categoryId) {
       const { data, error: err } = await supabase

@@ -46,8 +46,9 @@ export const useRoomReservations = () => {
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  // Load available rooms via the admin API (own + optionally public rooms from other tenants)
-  const loadRooms = async (_forceTenantId?: string, includePublic = true) => {
+  // Load available rooms via the admin API.
+  // Default: own-tenant only. Pass includePublic=true for marketplace/rental UIs.
+  const loadRooms = async (_forceTenantId?: string, includePublic = false) => {
     logger.debug('🔄 loadRooms called')
     isLoading.value = true
     error.value = null

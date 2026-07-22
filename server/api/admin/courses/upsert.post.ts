@@ -116,6 +116,29 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
+  // Reject foreign rooms (service role bypasses RLS; public marketplace rooms must not be course defaults)
+  const roomIdsToCheck = new Set<string>()
+  if (courseData.room_id) roomIdsToCheck.add(String(courseData.room_id))
+  for (const session of sessions || []) {
+    if (session?.room_id) roomIdsToCheck.add(String(session.room_id))
+  }
+  if (roomIdsToCheck.size > 0) {
+    const { data: ownedRooms, error: roomCheckErr } = await supabase
+      .from('rooms')
+      .select('id')
+      .eq('tenant_id', profile.tenant_id)
+      .in('id', [...roomIdsToCheck])
+    if (roomCheckErr) {
+      throw createError({ statusCode: 500, statusMessage: roomCheckErr.message })
+    }
+    const owned = new Set((ownedRooms || []).map((r: any) => r.id))
+    for (const id of roomIdsToCheck) {
+      if (!owned.has(id)) {
+        throw createError({ statusCode: 403, statusMessage: 'Room does not belong to this tenant' })
+      }
+    }
+  }
+
   // ── Load tenant settings ───────────────────────────────────────────────────
   const { data: tenant } = await supabase
     .from('tenants')

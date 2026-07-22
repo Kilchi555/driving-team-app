@@ -1249,17 +1249,9 @@
                 class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               >
                 <option value="">Raum wählen</option>
-                <optgroup label="Öffentliche Räume">
-                  <option v-for="room in availableRooms.filter(r => r.is_public)" :key="room.id" :value="room.id">
-                    {{ room.name }} - {{ room.location }} ({{ room.capacity }} Plätze)
-                    <span v-if="room.hourly_rate_rappen > 0"> - {{ (room.hourly_rate_rappen / 100).toFixed(2) }} CHF/h</span>
-                  </option>
-                </optgroup>
-                <optgroup v-if="availableRooms.filter(r => !r.is_public && r.tenant_id === currentUser?.tenant_id).length > 0" label="Eigene Räume">
-                  <option v-for="room in availableRooms.filter(r => !r.is_public && r.tenant_id === currentUser?.tenant_id)" :key="room.id" :value="room.id">
-                    {{ room.name }} - {{ room.location }} ({{ room.capacity }} Plätze)
-                  </option>
-                </optgroup>
+                <option v-for="room in availableRooms" :key="room.id" :value="room.id">
+                  {{ room.name }} - {{ room.location }} ({{ room.capacity }} Plätze)
+                </option>
               </select>
 
             </div>
@@ -1896,16 +1888,9 @@
                 class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
               >
                 <option value="">Kein Standard-Raum</option>
-                <optgroup label="Öffentliche Räume">
-                  <option v-for="room in availableRooms.filter(r => r.is_public)" :key="room.id" :value="room.id">
-                    {{ room.name }} - {{ room.location }} ({{ room.capacity }} Plätze)
-                  </option>
-                </optgroup>
-                <optgroup v-if="availableRooms.filter(r => !r.is_public && r.tenant_id === currentUser?.tenant_id).length > 0" label="Eigene Räume">
-                  <option v-for="room in availableRooms.filter(r => !r.is_public && r.tenant_id === currentUser?.tenant_id)" :key="room.id" :value="room.id">
-                    {{ room.name }} - {{ room.location }} ({{ room.capacity }} Plätze)
-                  </option>
-                </optgroup>
+                <option v-for="room in availableRooms" :key="room.id" :value="room.id">
+                  {{ room.name }} - {{ room.location }} ({{ room.capacity }} Plätze)
+                </option>
               </select>
             </div>
 
@@ -3650,16 +3635,9 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
             >
               <option value="">Kein Standard-Raum</option>
-              <optgroup v-if="availableRooms.filter(r => r.is_public).length > 0" label="Öffentliche Räume">
-                <option v-for="room in availableRooms.filter(r => r.is_public)" :key="room.id" :value="room.id">
-                  {{ room.name }}
-                </option>
-              </optgroup>
-              <optgroup v-if="availableRooms.filter(r => !r.is_public && r.tenant_id === currentUser?.tenant_id).length > 0" label="Eigene Räume">
-                <option v-for="room in availableRooms.filter(r => !r.is_public && r.tenant_id === currentUser?.tenant_id)" :key="room.id" :value="room.id">
-                  {{ room.name }}
-                </option>
-              </optgroup>
+              <option v-for="room in availableRooms" :key="room.id" :value="room.id">
+                {{ room.name }}
+              </option>
             </select>
           </div>
 
@@ -5571,7 +5549,7 @@ const createRoom = async () => {
     success.value = 'Raum erfolgreich erstellt!'
     showCreateRoomModal.value = false
     resetRoomForm()
-    await loadRooms(currentUser.value?.tenant_id)
+    await loadRooms(currentUser.value?.tenant_id, false)
 
   } catch (err: any) {
     console.error('Error creating room:', err)
@@ -5678,7 +5656,7 @@ const updateRoom = async () => {
     showEditRoomModal.value = false
     editingRoom.value = null
     resetRoomForm()
-    await loadRooms(currentUser.value?.tenant_id)
+    await loadRooms(currentUser.value?.tenant_id, false)
 
   } catch (err: any) {
     console.error('Error updating room:', err)
@@ -5728,7 +5706,7 @@ const deleteRoom = async (roomId: string) => {
     })
 
     success.value = 'Raum erfolgreich gelöscht!'
-    await loadRooms(currentUser.value?.tenant_id)
+    await loadRooms(currentUser.value?.tenant_id, false)
   } catch (err: any) {
     console.error('Error deleting room:', err)
     error.value = `Fehler beim Löschen: ${err.message}`
@@ -6213,7 +6191,7 @@ onMounted(async () => {
   await Promise.all([
     loadCourses(),
     loadStaff(),
-    currentUser.value?.tenant_id ? loadRooms(currentUser.value.tenant_id) : Promise.resolve(),
+    currentUser.value?.tenant_id ? loadRooms(currentUser.value.tenant_id, false) : Promise.resolve(),
     currentUser.value?.tenant_id ? loadVehicles(currentUser.value.tenant_id) : Promise.resolve(),
     loadGeneralResources(),
     fetchMissingInstructors(),
