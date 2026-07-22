@@ -136,6 +136,18 @@
       </div>
     </section>
 
+    <!-- Nächste Kursdaten -->
+    <UpcomingNothelferSection
+      location="altstetten"
+      title="Nächste Termine — Nothelferkurs Altstetten"
+      subtitle="10 Stunden in 2 Teilen · CHF 120.– inkl. Nothelferausweis · Nothelfer am Bahnhof Altstetten"
+      fetch-key="nothelfer-altstetten-upcoming"
+      booking-fallback-url="/nothelferkurs-buchen/nothelfer/"
+      course-name="Nothelferkurs Altstetten"
+      page-url="https://drivingteam.ch/nothelferkurs-altstetten/"
+      :schema-meta="nothelferAltstettenSchemaMeta"
+    />
+
     <!-- ====== BUCHUNG ====== -->
     <section class="py-16 bg-gray-50">
       <div class="section-container">
@@ -322,60 +334,23 @@
 </template>
 
 <script setup lang="ts">
+import { COURSE_SCHEMA_LOCATIONS } from '~/data/course-schema-locations'
+import type { CourseSchemaMeta } from '~/utils/build-course-schema'
+
 definePageMeta({ layout: 'default' })
 
+const nothelferAltstettenSchemaMeta: Omit<CourseSchemaMeta, 'name' | 'url'> = {
+  description: 'Obligatorischer Nothelferkurs für den Führerschein in Altstetten, direkt beim Bahnhof Zürich-Altstetten. 10 Stunden, CHF 120.-, Nothelferausweis inklusive. 6 Jahre gültig. Ab 14 Jahren.',
+  image: 'https://drivingteam.ch/images/courses/nothelfer-hero.webp',
+  courseWorkload: 'PT10H',
+  educationalLevel: 'Beginner',
+  category: 'Erste Hilfe Kurs',
+  offerPrice: '120',
+  offerUrl: 'https://drivingteam.ch/nothelferkurs-buchen/nothelfer/',
+  location: COURSE_SCHEMA_LOCATIONS.zuerichAltstetten,
+}
+
 const jsonLdScripts = [
-  {
-    type: 'application/ld+json',
-    innerHTML: JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "Course",
-      "name": "Nothelferkurs Altstetten",
-      "description": "Obligatorischer Nothelferkurs für den Führerschein in Altstetten, direkt beim Bahnhof Zürich-Altstetten. 10 Stunden, CHF 120.-, Nothelferausweis inklusive. 6 Jahre gültig. Ab 14 Jahren.",
-      "url": "https://drivingteam.ch/nothelferkurs-altstetten/",
-      "image": "https://drivingteam.ch/images/courses/nothelfer-hero.webp",
-      "provider": {
-        "@type": "Organization",
-        "name": "Driving Team Fahrschule",
-        "url": "https://drivingteam.ch",
-        "telephone": "+41444310033",
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": "Vulkanstrasse 130b",
-          "addressLocality": "Zürich",
-          "addressRegion": "Altstetten",
-          "postalCode": "8048",
-          "addressCountry": "CH"
-        }
-      },
-      "offers": {
-        "@type": "Offer",
-        "price": "120",
-        "priceCurrency": "CHF",
-        "availability": "https://schema.org/InStock",
-        "url": "https://drivingteam.ch/nothelferkurs-buchen/nothelfer/"
-      },
-      "educationalLevel": "Beginner",
-      "courseWorkload": "PT10H",
-      "category": "Erste Hilfe Kurs",
-      "hasCourseInstance": [{
-        "@type": "CourseInstance",
-        "courseMode": "onsite",
-        "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT10H" },
-        "location": {
-          "@type": "Place",
-          "name": "Nothelfer am Bahnhof Altstetten",
-          "address": {
-            "@type": "PostalAddress",
-            "addressLocality": "Zürich",
-            "addressRegion": "Altstetten",
-            "postalCode": "8048",
-            "addressCountry": "CH"
-          }
-        }
-      }]
-    })
-  },
   {
     type: 'application/ld+json',
     innerHTML: JSON.stringify({

@@ -89,6 +89,19 @@
       </div>
     </section>
 
+    <!-- Nächste Kursdaten -->
+    <UpcomingCoursesSection
+      category="PGS"
+      title="Nächste Motorrad Grundkurs Termine"
+      subtitle="Alle Standorte · 3 Kursteile à 4 Stunden · Max. 5 Teilnehmer"
+      category-code="PGS"
+      category-label="Motorrad Grundkurs"
+      course-name="Motorrad Grundkurs"
+      page-url="https://drivingteam.ch/motorrad-grundkurs/"
+      fetch-key="pgs-hub-upcoming"
+      :schema-meta="pgsHubSchemaMeta"
+    />
+
     <!-- Was ist Motorrad Grundkurs -->
     <section class="section-container py-16">
       <div class="max-w-4xl mx-auto">
@@ -376,8 +389,24 @@
 </template>
 
 <script setup lang="ts">
+import { COURSE_SCHEMA_LOCATIONS } from '~/data/course-schema-locations'
+
+const pgsHubSchemaMeta = {
+  description: 'Praxisorientierter Motorrad Grundkurs für alle Kategorien A1, A35kW und A. 3x4h Kursstruktur mit max. 5 Teilnehmern. Standorte in Zürich, Lachen, Zug und Einsiedeln.',
+  courseWorkload: 'PT12H',
+  educationalLevel: 'Beginner',
+  category: 'Motorrad Fahrausbildung',
+  offerPrice: '499',
+  offerUrl: 'https://app.simy.ch/customer/courses/driving-team/?category=PGS',
+  fallbackLocations: [
+    COURSE_SCHEMA_LOCATIONS.zuerichAltstetten,
+    COURSE_SCHEMA_LOCATIONS.lachen,
+    COURSE_SCHEMA_LOCATIONS.zug,
+    COURSE_SCHEMA_LOCATIONS.einsiedeln,
+  ],
+}
+
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs", "description": "Praxisorientierter Motorrad Grundkurs für alle Kategorien A1, A35kW und A. 3x4h Kursstruktur mit max. 5 Teilnehmern. Standorte in Zürich, Lachen, Zug und Einsiedeln.", "url": "https://drivingteam.ch/motorrad-grundkurs/", "courseWorkload": "PT12H", "educationalLevel": "Beginner", "category": "Motorrad Fahrausbildung", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "addressLocality": "Zürich", "postalCode": "8048", "addressRegion": "ZH", "addressCountry": "CH" } }, "offers": { "@type": "Offer", "price": "499", "priceCurrency": "CHF", "availability": "https://schema.org/InStock", "url": "https://app.simy.ch/customer/courses/driving-team/?category=PGS" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT4H" }, "location": { "@type": "Place", "name": "Zürich", "address": { "@type": "PostalAddress", "addressLocality": "Zürich", "addressRegion": "ZH", "addressCountry": "CH" } } }, { "@type": "CourseInstance", "courseMode": "onsite", "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT4H" }, "location": { "@type": "Place", "name": "Lachen SZ", "address": { "@type": "PostalAddress", "addressLocality": "Lachen", "addressRegion": "SZ", "addressCountry": "CH" } } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Zug", "address": { "@type": "PostalAddress", "addressLocality": "Zug", "addressRegion": "ZG", "addressCountry": "CH" } } }, { "@type": "CourseInstance", "courseMode": "onsite", "location": { "@type": "Place", "name": "Einsiedeln", "address": { "@type": "PostalAddress", "addressLocality": "Einsiedeln", "addressRegion": "SZ", "addressCountry": "CH" } } }] }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }] }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{ "@type": "Question", "name": "Muss ich den Motorrad Grundkurs vor der Prüfung absolvieren?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, der Motorrad Grundkurs ist gesetzlich innerhalb der ersten 4 Monaten vorgeschrieben. Ohne abgeschlossenen Grundkurs kannst du dich nicht zur praktischen Fahrprüfung anmelden." } }, { "@type": "Question", "name": "Brauche ich ein eigenes Motorrad für den Kurs?", "acceptedAnswer": { "@type": "Answer", "text": "Ja. Eigenes Motorrad ist notwendig und du benötigst deine Schutzausrüstung (Helm, Jacke, Handschuhe, Stiefel)." } }, { "@type": "Question", "name": "Wie viele Teilnehmer hat ein Motorrad Grundkurs?", "acceptedAnswer": { "@type": "Answer", "text": "Unsere Kurse haben maximal 5 Teilnehmer für eine intensive, persönliche Betreuung." } }, { "@type": "Question", "name": "Was kostet der Motorrad Grundkurs?", "acceptedAnswer": { "@type": "Answer", "text": "Der Motorrad Grundkurs kostet ab CHF 499.- für 3 Kurstage à 4 Stunden." } }] }) },
 ]
