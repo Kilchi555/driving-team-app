@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
       subtotal_rappen: subtotalRappen,
       vat_amount_rappen: vatRappen,
       total_amount_rappen: totalRappen,
-      status: 'draft',
+      status: 'pdf_created',
       payment_status: 'pending',
       notes: invoiceData.notes || null,
       payment_terms: invoiceData.payment_terms || null,

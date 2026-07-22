@@ -214,6 +214,8 @@ export interface InvoiceFilters {
   date_from?: string
   date_to?: string
   search?: string
+  /** Nur Rechnungen mit versendeter Zahlungserinnerung/Mahnung */
+  has_dunning?: boolean
 }
 
 export interface InvoiceSummary {
