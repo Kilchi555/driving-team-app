@@ -48,9 +48,12 @@ interface SimyCourse {
 export interface UpcomingPgsCourse {
   id: string
   status: string
+  city: string | null
   spotsRemaining: number
   maxParticipants: number
   priceChf: number | null
+  bookingUrl?: string
+  hasSpotCount?: boolean
   sessions: {
     date: string
     time: string
@@ -101,6 +104,7 @@ export default defineEventHandler(async (event) => {
       return {
         id: c.id,
         status: c.status,
+        city: c.city,
         spotsRemaining: spots,
         maxParticipants: c.max_participants,
         priceChf: c.price_per_participant_rappen

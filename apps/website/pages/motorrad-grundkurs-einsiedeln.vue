@@ -65,6 +65,7 @@
       course-name="Motorrad Grundkurs Einsiedeln"
       page-url="https://drivingteam.ch/motorrad-grundkurs-einsiedeln/"
       fetch-key="pgs-einsiedeln-upcoming"
+      :schema-meta="pgsEinsiedelnSchemaMeta"
     />
 
     <!-- Standort & Map -->
@@ -194,8 +195,19 @@
 </template>
 
 <script setup lang="ts">
+import { COURSE_SCHEMA_LOCATIONS } from '~/data/course-schema-locations'
+
+const pgsEinsiedelnSchemaMeta = {
+  description: 'Motorrad Grundkurs in Einsiedeln. 3x4h, max. 5 Teilnehmer. In Kooperation mit Fahrschule Bisig.',
+  courseWorkload: 'PT12H',
+  educationalLevel: 'Beginner',
+  category: 'Motorrad Fahrausbildung',
+  offerPrice: '600',
+  offerUrl: 'https://app.simy.ch/customer/courses/driving-team/?category=PGS&location=Einsiedeln',
+  location: COURSE_SCHEMA_LOCATIONS.einsiedeln,
+}
+
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Motorrad Grundkurs Einsiedeln", "description": "Motorrad Grundkurs in Einsiedeln. 3x4h, max. 5 Teilnehmer. In Kooperation mit Fahrschule Bisig.", "url": "https://drivingteam.ch/motorrad-grundkurs-einsiedeln/", "courseWorkload": "PT12H", "educationalLevel": "Beginner", "category": "Motorrad Fahrausbildung", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "addressLocality": "Zürich", "postalCode": "8048", "addressRegion": "ZH", "addressCountry": "CH" } }, "offers": { "@type": "Offer", "price": "600", "priceCurrency": "CHF", "availability": "https://schema.org/InStock", "url": "https://app.simy.ch/customer/courses/driving-team/?category=PGS&location=Einsiedeln" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT4H" }, "location": { "@type": "Place", "name": "Motorradschule Einsiedeln (Bennau)", "address": { "@type": "PostalAddress", "streetAddress": "Bennauerstrasse 48", "addressLocality": "Bennau", "postalCode": "8836", "addressRegion": "SZ", "addressCountry": "CH" } } }] }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "AggregateRating", "itemReviewed": { "@type": "Course", "name": "Motorrad Grundkurs Einsiedeln", "url": "https://drivingteam.ch/motorrad-grundkurs-einsiedeln/" }, "ratingValue": 5.0, "bestRating": 5, "worstRating": 1, "ratingCount": 7, "reviewCount": 7 }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Was ist ein Motorrad-Grundkurs?", "acceptedAnswer": {"@type": "Answer", "text": "Der Motorrad-Grundkurs vermittelt essenzielle Fahrkenntnisse und ist für die Kategorien A1 und A (beschränkt) gesetzlich vorgeschrieben."}}, {"@type": "Question", "name": "Wo findet der Motorrad-Grundkurs Einsiedeln statt?", "acceptedAnswer": {"@type": "Answer", "text": "Der Kurs findet in Kooperation mit Fahrschule Bisig in Bennau (Bennauerstrasse 48, 8836 Bennau/SZ) statt."}}, {"@type": "Question", "name": "Wie viel kostet der Motorrad-Grundkurs in Einsiedeln?", "acceptedAnswer": {"@type": "Answer", "text": "Der komplette Kurs kostet CHF 600.- (3 Teile)."}}, {"@type": "Question", "name": "Wie viele Stunden umfasst der Kurs?", "acceptedAnswer": {"@type": "Answer", "text": "Insgesamt 12 Stunden, aufgeteilt in 3 Kursteile à 4 Stunden. Max. 5 Teilnehmer."}}, {"@type": "Question", "name": "Was passiert bei schlechtem Wetter?", "acceptedAnswer": {"@type": "Answer", "text": "Bei Temperaturen unter 5 Grad oder starkem Regen kann der Kurs angepasst oder verschoben werden."}}, {"@type": "Question", "name": "Welche Themen werden behandelt?", "acceptedAnswer": {"@type": "Answer", "text": "Teil 1: Fahrzeugbeherrschung. Teil 2: Bremsmanöver. Teil 3: Kurvenfahren und Gruppenfahren."}}, {"@type": "Question", "name": "Muss ich ein eigenes Motorrad mitbringen?", "acceptedAnswer": {"@type": "Answer", "text": "In der Regel ja. Ein Mietfahrzeug ist auf Anfrage verfügbar."}}, {"@type": "Question", "name": "Welche Sprachen werden angeboten?", "acceptedAnswer": {"@type": "Answer", "text": "Der Kurs wird auf Deutsch durchgeführt."}}, {"@type": "Question", "name": "Wie erhalte ich die unlimitierte Kategorie A?", "acceptedAnswer": {"@type": "Answer", "text": "Nach 2 Jahren Fahrpraxis mit beschränkter A (35 kW) folgt eine weitere Prüfung für die unlimitierte Kategorie A."}}]}) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }, { "@type": "ListItem", "position": 3, "name": "Einsiedeln", "item": "https://drivingteam.ch/motorrad-grundkurs-einsiedeln/" }] }) },

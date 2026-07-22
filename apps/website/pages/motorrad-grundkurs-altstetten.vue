@@ -70,6 +70,7 @@
       course-name="Motorrad Grundkurs Altstetten"
       page-url="https://drivingteam.ch/motorrad-grundkurs-altstetten/"
       fetch-key="pgs-altstetten-upcoming"
+      :schema-meta="pgsAltstettenSchemaMeta"
     />
 
     <!-- Standort & Map -->
@@ -165,18 +166,19 @@
 </template>
 
 <script setup lang="ts">
+import { COURSE_SCHEMA_LOCATIONS } from '~/data/course-schema-locations'
+
+const pgsAltstettenSchemaMeta = {
+  description: 'Obligatorischer Motorrad Grundkurs (PGS) in Zürich-Altstetten. 12 Stunden in 3 Kursteilen. Für Kategorie A1, A35kW und A. CHF 499.- Komplettpreis.',
+  courseWorkload: 'PT12H',
+  educationalLevel: 'Beginner',
+  category: 'Motorrad Fahrausbildung',
+  offerPrice: '499',
+  offerUrl: 'https://app.simy.ch/customer/courses/driving-team/?category=PGS&location=Z%C3%BCrich',
+  location: COURSE_SCHEMA_LOCATIONS.zuerichAltstetten,
+}
+
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "Course",
-    "name": "Motorrad Grundkurs Altstetten",
-    "description": "Obligatorischer Motorrad Grundkurs (PGS) in Zürich-Altstetten. 12 Stunden in 3 Kursteilen. Für Kategorie A1, A35kW und A. CHF 499.- Komplettpreis.",
-    "url": "https://drivingteam.ch/motorrad-grundkurs-altstetten/",
-    "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "addressLocality": "Zürich", "postalCode": "8048", "addressRegion": "ZH", "addressCountry": "CH" } },
-    "offers": { "@type": "Offer", "price": "499", "priceCurrency": "CHF", "availability": "https://schema.org/InStock", "url": "https://app.simy.ch/customer/courses/driving-team/?category=PGS&location=Z%C3%BCrich" },
-    "courseWorkload": "PT12H", "educationalLevel": "Beginner", "category": "Motorrad Fahrausbildung",
-    "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT4H" }, "location": { "@type": "Place", "name": "Driving Team Zürich-Altstetten", "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "postalCode": "8048", "addressLocality": "Zürich", "addressRegion": "ZH", "addressCountry": "CH" } } }]
-  }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",

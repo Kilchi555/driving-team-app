@@ -69,6 +69,19 @@
       </div>
     </section>
 
+    <!-- Nächste Kursdaten -->
+    <UpcomingNothelferSection
+      location="all"
+      title="Nächste Termine — Nothelferkurs"
+      subtitle="Zürich-Altstetten ab CHF 120.– · Lachen ab CHF 99.– · 10 Stunden inkl. Nothelferausweis"
+      fetch-key="nothelfer-hub-upcoming"
+      booking-fallback-url="/nothelferkurs-buchen/nothelfer/"
+      course-name="Nothelferkurs Zürich & Lachen"
+      page-url="https://drivingteam.ch/nothelferkurs/"
+      :schema-meta="nothelferHubSchemaMeta"
+      show-location
+    />
+
     <!-- Inhalt -->
     <section class="bg-gray-50 py-16">
       <div class="section-container">
@@ -277,8 +290,21 @@
 </template>
 
 <script setup lang="ts">
+import { COURSE_SCHEMA_LOCATIONS } from '~/data/course-schema-locations'
+import type { CourseSchemaMeta } from '~/utils/build-course-schema'
+
+const nothelferHubSchemaMeta: Omit<CourseSchemaMeta, 'name' | 'url'> = {
+  description: 'Obligatorischer Nothelferkurs für den Führerschein in Zürich-Altstetten und Lachen. 10 Stunden, Nothelferausweis inklusive. 6 Jahre gültig.',
+  courseWorkload: 'PT10H',
+  educationalLevel: 'Beginner',
+  category: 'Erste Hilfe Kurs',
+  offerPrice: '99',
+  offerUrl: 'https://drivingteam.ch/nothelferkurs-buchen/nothelfer/',
+  location: COURSE_SCHEMA_LOCATIONS.zuerichAltstetten,
+  fallbackLocations: [COURSE_SCHEMA_LOCATIONS.lachen],
+}
+
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "Course", "name": "Nothelferkurs Zürich", "description": "Obligatorischer Nothelferkurs für den Führerschein in Zürich-Altstetten und Lachen. 10 Stunden, CHF 99.-, Nothelferausweis inklusive. 6 Jahre gültig.", "url": "https://drivingteam.ch/nothelferkurs/", "courseWorkload": "PT10H", "educationalLevel": "Beginner", "category": "Erste Hilfe Kurs", "provider": { "@type": "Organization", "name": "Driving Team Fahrschule", "url": "https://drivingteam.ch", "telephone": "+41444310033", "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "addressLocality": "Zürich", "postalCode": "8048", "addressRegion": "ZH", "addressCountry": "CH" } }, "offers": { "@type": "Offer", "price": "99", "priceCurrency": "CHF", "availability": "https://schema.org/InStock", "url": "https://drivingteam.ch/nothelferkurs-buchen/nothelfer/" }, "hasCourseInstance": [{ "@type": "CourseInstance", "courseMode": "onsite", "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT10H" }, "location": { "@type": "Place", "name": "Zürich-Altstetten", "address": { "@type": "PostalAddress", "streetAddress": "Vulkanstrasse 130b", "addressLocality": "Zürich", "postalCode": "8048", "addressRegion": "ZH", "addressCountry": "CH" } } }, { "@type": "CourseInstance", "courseMode": "onsite", "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT10H" }, "location": { "@type": "Place", "name": "Lachen/SZ", "address": { "@type": "PostalAddress", "streetAddress": "Herrengasse 17", "addressLocality": "Lachen", "postalCode": "8853", "addressRegion": "SZ", "addressCountry": "CH" } } }] }) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Nothelferkurs", "item": "https://drivingteam.ch/nothelferkurs/" }] }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Wie viele Stunden dauert der Nothelferkurs?", "acceptedAnswer": {"@type": "Answer", "text": "Der Nothelferkurs bei der Fahrschule Driving Team dauert total 10 Stunden. Normalerweise ist der Nothelferkurs in zwei Teile aufgeteilt. Der erste Teil findet in der Regel am Abend statt und dauert 3 Stunden. Der zweite Teil findet an einem anderen Tag statt und dauert 7 Stunden."}}, {"@type": "Question", "name": "Muss die Reihenfolge der Kursteile eingehalten werden?", "acceptedAnswer": {"@type": "Answer", "text": "Ja, dies ist gesetzlich so vorgeschrieben. Es dürfen keine Ausnahmen gemacht werden. Der Kurs ist auch von den Themen her logisch aufgebaut."}}, {"@type": "Question", "name": "Was passiert, wenn ich beim Teil 2 kurzfristig absagen muss?", "acceptedAnswer": {"@type": "Answer", "text": "Gegen eine Umtriebsentschädigung kannst du den Teil 2 an einem anderen Tag nachholen. Kontaktiere dafür bitte den Veranstalter Flying-Instructor: 043 543 98 98 oder info@flying-instructor.ch."}}, {"@type": "Question", "name": "Wie viel kostet der Nothelferkurs?", "acceptedAnswer": {"@type": "Answer", "text": "Der Nothelferkurs beim Driving Team wird durch die Leute vom Flying-Instructor durchgeführt und kostet CHF 99.- inkl. Nothelferausweis. Der Kurs ist bei Kursbeginn bar zu bezahlen."}}, {"@type": "Question", "name": "Wo finden die Nothelferkurse statt?", "acceptedAnswer": {"@type": "Answer", "text": "Die Nothelferkurse von der Fahrschule Driving Team finden in den Kurslokalen in Zürich-Altstetten und Lachen/SZ statt."}}, {"@type": "Question", "name": "Was sind die Voraussetzungen?", "acceptedAnswer": {"@type": "Answer", "text": "Grundsätzlich keine. Ab dem 11. Lebensjahr darf man am Nothelferkurs teilnehmen."}}, {"@type": "Question", "name": "In welcher Sprache werden die Kurse durchgeführt?", "acceptedAnswer": {"@type": "Answer", "text": "Grundsätzlich werden die Kurse in Deutsch durchgeführt. Verstehst du Hochdeutsch, dann reicht dies bereits für die Teilnahme. Falls nicht, dann darfst du auch einen Übersetzer an den Kurs mitbringen."}}, {"@type": "Question", "name": "Wie lange ist der Nothelferausweis gültig?", "acceptedAnswer": {"@type": "Answer", "text": "Der Nothelferausweis ist 6 Jahre gültig."}}, {"@type": "Question", "name": "Welche Themen werden im Nothelferkurs behandelt?", "acceptedAnswer": {"@type": "Answer", "text": "Im Nothelferkurs werden folgende wichtigen Themen behandelt: Das grundsätzliche Verhalten in einer Notsituation Sicherung der Unfallstelle, Bergung von verletzten Personen Was muss bei einer effizienten Alarmierung alles beachtet werden Erstellen einer Überlebensgrundlage bis zum Eintreffen der Rettungssanitäter Wundbehandlung, Verbrennungen/Verätzungen, Druckverband etc. Instruktion an Übungs-Defibrillator Herzmassage mit Beatmung an Übungspuppen"}}, {"@type": "Question", "name": "Was haben eure Kursleiter:innen für eine Ausbildung?", "acceptedAnswer": {"@type": "Answer", "text": "Unsere Kursleiter:innen sind anerkannte Nothelferkursleiter:innen und üben ihren Beruf mit viel Engagement und Freude aus. Sie bringen umfangreiche Erfahrung und Leidenschaft mit, um dir die lebensrettenden Massnahmen praxisnah beizubringen."}}, {"@type": "Question", "name": "Wie kann ich den Kurskosten bezahlen?", "acceptedAnswer": {"@type": "Answer", "text": "Der Nothelferkurs ist bei Kursbeginn bar zu bezahlen . Eine andere Bezahlungsmöglichkeit gibt es nicht. Bitte bring die CHF 99.- in bar zum ersten Kurstag mit."}}]}) },
 ]

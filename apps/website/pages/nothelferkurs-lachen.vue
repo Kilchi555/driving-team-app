@@ -62,7 +62,7 @@
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4">
-              <NuxtLink to="/nothelferkurs-buchen/nothelfer/" class="btn-primary bg-yellow-400 text-gray-900 hover:bg-yellow-300 text-lg font-bold">
+              <NuxtLink to="/nothelferkurs-buchen/flying/" class="btn-primary bg-yellow-400 text-gray-900 hover:bg-yellow-300 text-lg font-bold">
                 📅 Jetzt Termin buchen
               </NuxtLink>
               <a href="/nothelferkurs/" class="btn-primary bg-white/10 border border-white/30 text-white hover:bg-white/20 text-lg">
@@ -115,6 +115,18 @@
         </div>
       </div>
     </section>
+
+    <!-- Nächste Kursdaten -->
+    <UpcomingNothelferSection
+      location="lachen"
+      title="Nächste Termine — Nothelferkurs Lachen"
+      subtitle="10 Stunden in 2 Teilen · CHF 99.– inkl. Nothelferausweis · Flying-Instructor Lachen SZ"
+      fetch-key="nothelfer-lachen-upcoming"
+      booking-fallback-url="/nothelferkurs-buchen/flying/"
+      course-name="Nothelferkurs Lachen SZ"
+      page-url="https://drivingteam.ch/nothelferkurs-lachen/"
+      :schema-meta="nothelferLachenSchemaMeta"
+    />
 
     <!-- Warum in Lachen -->
     <section class="section-container py-16">
@@ -211,60 +223,23 @@
 </template>
 
 <script setup lang="ts">
+import { COURSE_SCHEMA_LOCATIONS } from '~/data/course-schema-locations'
+import type { CourseSchemaMeta } from '~/utils/build-course-schema'
+
 definePageMeta({ layout: 'default' })
 
+const nothelferLachenSchemaMeta: Omit<CourseSchemaMeta, 'name' | 'url'> = {
+  description: 'Obligatorischer Nothelferkurs für den Führerschein in Lachen SZ am Zürichsee. 10 Stunden, CHF 99.-, Nothelferausweis inklusive. 6 Jahre gültig.',
+  image: 'https://drivingteam.ch/images/courses/nothelfer-hero.webp',
+  courseWorkload: 'PT10H',
+  educationalLevel: 'Beginner',
+  category: 'Erste Hilfe Kurs',
+  offerPrice: '99',
+  offerUrl: 'https://drivingteam.ch/nothelferkurs-buchen/flying/',
+  location: COURSE_SCHEMA_LOCATIONS.lachen,
+}
+
 const jsonLdScripts = [
-  {
-    type: 'application/ld+json',
-    innerHTML: JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "Course",
-      "name": "Nothelferkurs Lachen SZ",
-      "description": "Obligatorischer Nothelferkurs für den Führerschein in Lachen SZ am Zürichsee. 10 Stunden, CHF 120.-, Nothelferausweis inklusive. 6 Jahre gültig.",
-      "url": "https://drivingteam.ch/nothelferkurs-lachen/",
-      "image": "https://drivingteam.ch/images/courses/nothelfer-hero.webp",
-      "provider": {
-        "@type": "Organization",
-        "name": "Driving Team Fahrschule",
-        "url": "https://drivingteam.ch",
-        "telephone": "+41444310033",
-        "address": {
-          "@type": "PostalAddress",
-          "addressLocality": "Lachen",
-          "addressRegion": "SZ",
-          "addressCountry": "CH"
-        }
-      },
-      "offers": {
-        "@type": "Offer",
-        "price": "120",
-        "priceCurrency": "CHF",
-        "availability": "https://schema.org/InStock",
-        "url": "https://drivingteam.ch/nothelferkurs-buchen/nothelfer/"
-      },
-      "educationalLevel": "Beginner",
-      "courseWorkload": "PT10H",
-      "category": "Erste Hilfe Kurs",
-      "hasCourseInstance": [
-        {
-          "@type": "CourseInstance",
-          "courseMode": "onsite",
-          "courseSchedule": { "@type": "Schedule", "repeatFrequency": "P1W", "duration": "PT10H" },
-          "location": {
-            "@type": "Place",
-            "name": "Lachen SZ",
-            "address": {
-              "@type": "PostalAddress",
-              "streetAddress": "Herrengasse 17",
-              "addressLocality": "Lachen",
-              "addressRegion": "SZ",
-              "addressCountry": "CH"
-            }
-          }
-        }
-      ]
-    })
-  },
   {
     type: 'application/ld+json',
     innerHTML: JSON.stringify({
