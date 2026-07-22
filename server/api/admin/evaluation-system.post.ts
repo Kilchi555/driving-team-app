@@ -216,12 +216,21 @@ export default defineEventHandler(async (event) => {
 
   // ─── save-criterion ───────────────────────────────────────────────────────
   if (action === 'save-criterion') {
-    const { id, name, description, max_points, category_id, display_order, is_theory, driving_categories, always_visible } = body
+    const { id, name, description, category_id, display_order, driving_categories, always_visible } = body
+    // is_theory / max_points are not columns on evaluation_criteria
+    const payload = {
+      name,
+      description,
+      category_id,
+      display_order,
+      driving_categories,
+      always_visible: Boolean(always_visible ?? false),
+    }
 
     if (id) {
       const { data, error } = await supabase
         .from('evaluation_criteria')
-        .update({ name, description, max_points, category_id, display_order, is_theory, driving_categories, always_visible: Boolean(always_visible ?? false) })
+        .update(payload)
         .eq('id', id)
         .eq('tenant_id', tenantId)
         .select()
@@ -231,7 +240,7 @@ export default defineEventHandler(async (event) => {
     } else {
       const { data, error } = await supabase
         .from('evaluation_criteria')
-        .insert({ tenant_id: tenantId, name, description, max_points, category_id, display_order, is_theory: is_theory || false, driving_categories, always_visible: Boolean(always_visible ?? false), is_active: true })
+        .insert({ tenant_id: tenantId, ...payload, is_active: true })
         .select()
         .single()
       if (error) throw createError({ statusCode: 500, statusMessage: error.message })
@@ -470,9 +479,8 @@ export default defineEventHandler(async (event) => {
             category_id: newCat.id,
             name: c.name,
             description: c.description,
-            max_points: c.max_points,
             display_order: c.display_order,
-            is_theory: c.is_theory || false,
+            driving_categories: c.driving_categories || [],
             always_visible: c.always_visible || false,
             is_active: true,
           })))
@@ -559,7 +567,7 @@ export default defineEventHandler(async (event) => {
     if (!catCheck) throw createError({ statusCode: 403, statusMessage: 'Category not found for this tenant' })
     const { data, error } = await supabase
       .from('evaluation_criteria')
-      .insert({ tenant_id: tenantId, category_id, name, description: description || '', driving_categories: driving_categories || [], display_order: display_order || 0, is_active: true, is_theory: false })
+      .insert({ tenant_id: tenantId, category_id, name, description: description || '', driving_categories: driving_categories || [], display_order: display_order || 0, is_active: true })
       .select()
       .single()
     if (error) throw createError({ statusCode: 500, statusMessage: error.message })
