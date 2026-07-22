@@ -123,6 +123,12 @@ export default defineEventHandler(async (event) => {
     const vatAmountRappen = computeVatAmountRappen(subtotalRappen, vatRate)
     const totalRappen = subtotalRappen + vatAmountRappen
 
+    const { data: tenantTexts } = await supabase
+      .from('tenants')
+      .select('invoice_intro_text, invoice_payment_terms, invoice_footer_text')
+      .eq('id', dbUser.tenant_id)
+      .maybeSingle()
+
     // Generate invoice number
     const invoiceCount = await supabase
       .from('invoices')
@@ -160,7 +166,10 @@ export default defineEventHandler(async (event) => {
         status: 'sent',
         payment_status: 'pending',
         payment_method: 'invoice',
-        notes: `Fahrzeugmiete ${month}`,
+        notes: (tenantTexts as any)?.invoice_intro_text || null,
+        payment_terms: (tenantTexts as any)?.invoice_payment_terms || null,
+        footer_text: (tenantTexts as any)?.invoice_footer_text || null,
+        internal_notes: `Fahrzeugmiete ${month}`,
       })
       .select('id')
       .single()

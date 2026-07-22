@@ -324,12 +324,16 @@ export default defineEventHandler(async (event) => {
         // Load tenant for branding (+ payment terms)
         const { data: tenant } = await supabase
           .from('tenants')
-          .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_payment_terms, invoice_due_days, default_vat_rate')
+          .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_due_days, default_vat_rate')
           .eq('id', profile.tenant_id)
           .single()
 
         const tenantData = tenant as any
         invoiceNumber = await allocateInvoiceNumber(supabase, profile.tenant_id)
+
+        const introText = tenantData?.invoice_intro_text || null
+        const paymentTerms = tenantData?.invoice_payment_terms || null
+        const footerText = tenantData?.invoice_footer_text || null
 
         const { data: invoiceRes } = await supabase
           .from('invoices')
@@ -358,6 +362,9 @@ export default defineEventHandler(async (event) => {
             payment_status: 'pending',
             payment_method: 'invoice',
             sent_at: new Date().toISOString(),
+            notes: introText,
+            payment_terms: paymentTerms,
+            footer_text: footerText,
           })
           .select('id, invoice_number')
           .single()
@@ -403,8 +410,9 @@ export default defineEventHandler(async (event) => {
                 tenantName: tenantData?.name || '',
                 staffName: `${profile.first_name} ${profile.last_name}`.trim(),
                 primaryColor: tenantData?.primary_color || null,
-                paymentTerms: (tenantData as any)?.invoice_payment_terms || null,
-                footerText: (tenantData as any)?.invoice_footer_text || null,
+                introText,
+                paymentTerms,
+                footerText,
               })
 
               // Generate PDF (non-fatal if it fails)
@@ -454,6 +462,9 @@ export default defineEventHandler(async (event) => {
                   creditorName: tenantData?.legal_company_name || tenantData?.name || '',
                   primaryColor: tenantData?.primary_color || '#1E40AF',
                   secondaryColor: tenantData?.secondary_color || '#64748B',
+                  introText,
+                  paymentTerms,
+                  footerText,
                 })
                 pdfAttachments = [{ filename: `Rechnung_${invoiceNumber}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
                 console.log(`✅ [block] PDF generiert: Rechnung_${invoiceNumber}.pdf`)

@@ -248,18 +248,21 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
     <!-- Zahlungshinweis / Zahlungsbedingungen -->
     <div style="margin:20px 0 0;background:${brandLight};border-left:4px solid ${brand};border-radius:0 8px 8px 0;padding:14px 16px;">
       <p style="margin:0 0 3px;font-weight:700;font-size:13px;color:#1e293b;">Zahlungsinformationen</p>
-      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">
-        Bitte überweise den Betrag bis zum <strong>${formatDateEmail(data.dueDate)}</strong> unter Angabe der Rechnungsnummer <strong style="font-family:monospace;">${data.invoiceNumber}</strong>.
+      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;white-space:pre-line;">
+        ${data.paymentTerms
+          ? data.paymentTerms.replace(/\{due_date\}/g, formatDateEmail(data.dueDate))
+          : `Bitte überweise den Betrag bis zum <strong>${formatDateEmail(data.dueDate)}</strong> unter Angabe der Rechnungsnummer <strong style="font-family:monospace;">${data.invoiceNumber}</strong>.`
+        }
       </p>
-      ${data.paymentTerms ? `<p style="margin:6px 0 0;font-size:13px;color:#475569;line-height:1.5;">${data.paymentTerms}</p>` : ''}
     </div>
-
-    ${qrSection}
 
     ${data.footerText
       ? `<p style="margin:20px 0 0;font-size:13px;color:#64748b;line-height:1.6;white-space:pre-line;">${data.footerText}</p>`
       : ''
     }
+
+    ${qrSection}
+
     <p style="margin:24px 0 0;font-size:13px;color:#94a3b8;">Freundliche Grüsse,<br><strong style="color:#475569;">${data.staffName}</strong><br>${data.tenantName}</p>
   </td></tr>
 

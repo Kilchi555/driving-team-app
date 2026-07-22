@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
     // Tenant-Daten laden
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, legal_company_name, contact_email, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url')
+      .select('name, legal_company_name, contact_email, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url, invoice_intro_text, invoice_payment_terms, invoice_footer_text')
       .eq('id', invoice.tenant_id)
       .single()
 
@@ -140,6 +140,10 @@ export default defineEventHandler(async (event) => {
     const billingEmail = invoice.billing_email
     if (!billingEmail) throw createError({ statusCode: 422, statusMessage: 'Keine E-Mail-Adresse für Rechnung hinterlegt' })
 
+    const introText = (invoice as any).notes || (tenant as any)?.invoice_intro_text || null
+    const paymentTerms = (invoice as any).payment_terms || (tenant as any)?.invoice_payment_terms || null
+    const footerText = (invoice as any).footer_text || (tenant as any)?.invoice_footer_text || null
+
     // QR-Code generieren
     let qrCodeDataUrl: string | null = null
     let scorRef: string | null = invoice.payment_reference || null
@@ -177,6 +181,8 @@ export default defineEventHandler(async (event) => {
       items: finalItems,
       subtotalRappen: invoiceSubtotalRappen,
       discountRappen: invoice.discount_amount_rappen || 0,
+      vatRate: Number(invoice.vat_rate) || 0,
+      vatRappen: invoice.vat_amount_rappen || 0,
       totalRappen: invoiceTotalRappen,
       tenantName,
       staffName,
@@ -185,9 +191,9 @@ export default defineEventHandler(async (event) => {
       qrIban,
       creditorName: (tenant as any)?.legal_company_name || tenantName,
       scorRef,
-      introText: (invoice as any).notes || (tenant as any).invoice_intro_text || null,
-      paymentTerms: (invoice as any).payment_terms || (tenant as any).invoice_payment_terms || null,
-      footerText: (invoice as any).footer_text || (tenant as any).invoice_footer_text || null,
+      introText,
+      paymentTerms,
+      footerText,
     })
 
     // PDF als Anhang generieren
@@ -262,6 +268,9 @@ export default defineEventHandler(async (event) => {
         creditorName: (tenant as any)?.legal_company_name || tenantName,
         primaryColor: (tenant as any)?.primary_color || '#1E40AF',
         secondaryColor: (tenant as any)?.secondary_color || '#64748B',
+        introText,
+        paymentTerms,
+        footerText,
       })
       pdfAttachments = [{ filename: `Rechnung_${invoice.invoice_number}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
     } catch (pdfErr: any) {
