@@ -1,5 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 
 interface CalculatorEventPayload {
   event_type: 'opened' | 'submitted'
@@ -15,14 +14,11 @@ export default defineEventHandler(async (event) => {
       return { ok: false, error: 'Missing fields' }
     }
 
-    const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-
-    if (!supabaseUrl || !supabaseServiceKey) {
+    const supabase = createWebsiteSupabaseClient(event)
+    if (!supabase) {
       console.warn('Supabase not configured for calculator events')
       return { ok: true } // Don't fail the request
     }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const { error } = await supabase.from('calculator_events').insert({
       event_type: body.event_type,

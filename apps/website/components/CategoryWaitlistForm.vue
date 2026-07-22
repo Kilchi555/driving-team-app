@@ -105,7 +105,11 @@ async function submit() {
     if (err?.statusCode === 409) {
       alreadyOnList.value = true
     } else {
-      errorMsg.value = err?.statusMessage || 'Eintragung fehlgeschlagen. Bitte versuche es erneut.'
+      errorMsg.value =
+        err?.data?.statusMessage ||
+        err?.statusMessage ||
+        err?.data?.message ||
+        'Eintragung fehlgeschlagen. Bitte versuche es erneut.'
     }
   } finally {
     loading.value = false

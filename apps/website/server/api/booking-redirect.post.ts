@@ -1,6 +1,5 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import { getWebsiteTenantId } from '~/server/utils/website-tenant'
 
 interface BookingRedirectPayload {
@@ -25,9 +24,8 @@ export default defineEventHandler(async (event) => {
       return { ok: false, error: 'Missing fields' }
     }
 
-    const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-
-    if (!supabaseUrl || !supabaseServiceKey) {
+    const supabase = createWebsiteSupabaseClient(event)
+    if (!supabase) {
       console.warn('Supabase not configured for booking redirect')
       return { ok: true }
     }
@@ -36,8 +34,6 @@ export default defineEventHandler(async (event) => {
     if (!process.env.VERCEL_ENV) {
       return { ok: true }
     }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const tenantId = await getWebsiteTenantId(event)
 
     // Track booking redirect

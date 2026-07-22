@@ -1,8 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import type { H3Event } from 'h3'
-import { createClient } from '@supabase/supabase-js'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 
 const TENANT_ID = '64259d68-195a-4c68-8875-f1b44d962830'
 const TEAM_EMAIL = 'info@drivingteam.ch'
@@ -87,12 +86,10 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Nachricht zu lang (max. 1000 Zeichen).' })
     }
 
-    const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-    if (!supabaseUrl || !supabaseServiceKey) {
+    const supabase = createWebsiteSupabaseClient(event)
+    if (!supabase) {
       throw createError({ statusCode: 500, statusMessage: 'Datenbankkonfiguration fehlt.' })
     }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Combine company + notes
     const fullNotes = company?.trim()

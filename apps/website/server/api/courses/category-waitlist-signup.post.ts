@@ -5,8 +5,7 @@
  */
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import { uploadInquiryConversionViaSimy, type WebsiteMarketingAttributionPayload } from '~/server/utils/google-ads-inquiry-upload'
 
 /** Waitlist signups are a soft, early-funnel signal — valued lower than a full inquiry/registration. */
@@ -25,12 +24,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Ungültige E-Mail-Adresse' })
   }
 
-  const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-  if (!supabaseUrl || !supabaseServiceKey) {
+  const supabase = createWebsiteSupabaseClient(event)
+  if (!supabase) {
     throw createError({ statusCode: 500, statusMessage: 'Supabase not configured' })
   }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
   // 1. Verify category exists and has waitlist enabled
   const { data: category, error: catError } = await supabase
@@ -40,7 +37,11 @@ export default defineEventHandler(async (event) => {
     .eq('tenant_id', tenant_id)
     .maybeSingle()
 
-  if (catError || !category) {
+  if (catError) {
+    console.error('[category-waitlist-signup] category lookup failed:', catError.message)
+    throw createError({ statusCode: 500, statusMessage: 'Eintragung vorübergehend nicht möglich' })
+  }
+  if (!category) {
     throw createError({ statusCode: 404, statusMessage: 'Kursart nicht gefunden' })
   }
 

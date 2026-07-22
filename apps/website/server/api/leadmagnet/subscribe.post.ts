@@ -2,9 +2,8 @@
 // Lead-Magnet subscription: sends a category-specific tips email and notifies the team.
 // Rate-limited to 5 submissions per IP per hour.
 
-import { createClient } from '@supabase/supabase-js'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import { uploadInquiryConversionViaSimy, type WebsiteMarketingAttributionPayload } from '~/server/utils/google-ads-inquiry-upload'
 
 const TENANT_ID = '64259d68-195a-4c68-8875-f1b44d962830'
@@ -450,9 +449,8 @@ export default defineEventHandler(async (event) => {
 
   // ─── Save lead to database (non-blocking — email still sends on DB error) ──
   try {
-    const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-    if (supabaseUrl && supabaseServiceKey) {
-      const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = createWebsiteSupabaseClient(event)
+    if (supabase) {
       const { data: leadRow, error: dbError } = await supabase.from('website_leads').insert({
         tenant_id: TENANT_ID,
         first_name: name,

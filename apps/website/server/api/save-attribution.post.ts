@@ -11,8 +11,7 @@
  *   - Cross-domain attribution to app.simy.ch bookings via session_id
  */
 
-import { createClient } from '@supabase/supabase-js'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import {
   mergeAttributionFields,
   hasAnyAttribution,
@@ -46,10 +45,8 @@ export default defineEventHandler(async (event) => {
   const attr = body?.attribution as AttributionFields
   if (!hasAnyAttribution(attr)) return { ok: true, reason: 'no_attribution_data' }
 
-  const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-  if (!supabaseUrl || !supabaseServiceKey) return { ok: false, reason: 'missing_supabase_config' }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  const supabase = createWebsiteSupabaseClient(event)
+  if (!supabase) return { ok: false, reason: 'missing_supabase_config' }
   const ipCountry = getHeader(event, 'x-vercel-ip-country') || null
 
   const { data: existingRow } = await supabase

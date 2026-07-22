@@ -1,6 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 
 const BOT_PATTERNS = /bot|crawl|spider|slurp|vercel|prerender|headless|lighthouse|pagespeed|chrome-lighthouse|googlebot|bingbot|yandex|baidu|facebot|ia_archiver|python-requests|curl|wget|axios|node-fetch/i
 
@@ -41,10 +40,8 @@ async function trackView(event: H3Event, data: {
   country: string
   sessionId: string
 }) {
-  const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-  if (!supabaseUrl || !supabaseServiceKey) return
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  const supabase = createWebsiteSupabaseClient(event)
+  if (!supabase) return
 
   await supabase.rpc('increment_page_view', {
     p_page: data.page,

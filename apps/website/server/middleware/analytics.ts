@@ -1,6 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 
 const SKIP_PATHS = ['/_nuxt/', '/api/', '/__nuxt/', '/favicon', '.webp', '.png', '.jpg', '.svg', '.css', '.js', '.xml', '.txt', '/.well-known/', '/assets/', '/wp-content/', '/test-debug', '/track-debug', '/admin', '/administrator', '/login', '/register', '/user/login', '/user/register', '/wp-admin', '/wp-login', '/__nuxt_error']
 
@@ -21,10 +20,8 @@ function getDeviceType(ua: string): string {
 }
 
 async function trackView(event: H3Event, page: string, referrer: string, ua: string, country: string) {
-  const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-  if (!supabaseUrl || !supabaseServiceKey) return
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  const supabase = createWebsiteSupabaseClient(event)
+  if (!supabase) return
 
   await supabase.rpc('increment_page_view', {
     p_page: page,

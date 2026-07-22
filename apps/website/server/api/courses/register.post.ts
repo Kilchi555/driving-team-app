@@ -1,7 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import { uploadInquiryConversionViaSimy, type WebsiteMarketingAttributionPayload } from '~/server/utils/google-ads-inquiry-upload'
 
 const COURSE_TYPE_LABELS: Record<string, string> = {
@@ -164,13 +164,10 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Invalid phone format' })
     }
 
-    const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-
-    if (!supabaseUrl || !supabaseServiceKey) {
+    const supabase = createWebsiteSupabaseClient(event)
+    if (!supabase) {
       throw createError({ statusCode: 500, statusMessage: 'Database configuration missing' })
     }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const rawIds = (body.course_ids || []).filter(id => typeof id === 'string' && UUID_RE.test(id.trim()))
     const uniqueIds = [...new Set(rawIds.map(id => id.trim()))]

@@ -6,8 +6,7 @@
  * Result is cached in-process (one DB lookup per cold start).
  */
 
-import { createClient } from '@supabase/supabase-js'
-import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import type { H3Event } from 'h3'
 import { getRequestHost } from 'h3'
 
@@ -23,13 +22,12 @@ export async function getWebsiteTenantId(event: H3Event): Promise<string | null>
   }
 
   try {
-    const { supabaseUrl, supabaseServiceKey } = getSupabaseServiceCredentials(event)
-    if (!supabaseUrl || !supabaseServiceKey) {
+    const supabase = createWebsiteSupabaseClient(event)
+    if (!supabase) {
       cachedTenantId = null
       return null
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const host = getRequestHost(event, { xForwardedHost: true })
 
     // Match against the `domain` column (stored as full URL like https://drivingteam.ch)
