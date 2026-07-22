@@ -42,11 +42,12 @@ export default defineEventHandler(async (event) => {
       dimensions: [{ name: 'date' }],
       metrics: [{ name: 'sessions' }],
       dateRanges: [{ startDate: '2026-01-01', endDate: 'today' }],
-      limit: 5,
+      orderBys: [{ dimension: { dimensionName: 'date' }, desc: true }],
+      limit: 400,
     })
     result.wide_report_ok = true
     result.wide_report_rows = response.rows?.length ?? 0
-    result.wide_report_sample = response.rows?.slice(0, 5).map(r => ({
+    result.wide_report_all_dates = response.rows?.map(r => ({
       date: r.dimensionValues?.[0]?.value,
       sessions: r.metricValues?.[0]?.value,
     }))
@@ -56,6 +57,21 @@ export default defineEventHandler(async (event) => {
     result.wide_report_ok = false
     result.wide_report_error = err?.details ?? err?.message ?? String(err)
     result.wide_report_error_code = err?.code
+  }
+
+  // 3. Realtime check — do sessions register RIGHT NOW (rules out a data-processing lag issue).
+  try {
+    const [rt] = await client.runRealtimeReport({
+      property: propertyId,
+      dimensions: [{ name: 'unifiedScreenName' }],
+      metrics: [{ name: 'activeUsers' }],
+    })
+    result.realtime_ok = true
+    result.realtime_active_users = rt.rows?.reduce((sum, r) => sum + Number(r.metricValues?.[0]?.value ?? 0), 0) ?? 0
+  }
+  catch (err: any) {
+    result.realtime_ok = false
+    result.realtime_error = err?.details ?? err?.message ?? String(err)
   }
 
   return result
