@@ -1,6 +1,7 @@
 // Temporary debug endpoint: checks GA4 Data API property access + metadata.
 // Protected by CRON_SECRET. Delete after diagnosing the stale-sync issue.
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
+import { AnalyticsAdminServiceClient } from '@google-analytics/admin'
 
 export default defineEventHandler(async (event) => {
   const authHeader = getHeader(event, 'authorization')
@@ -72,6 +73,24 @@ export default defineEventHandler(async (event) => {
   catch (err: any) {
     result.realtime_ok = false
     result.realtime_error = err?.details ?? err?.message ?? String(err)
+  }
+
+  // 4. List web data streams for this property — gives us the real Measurement ID (G-XXXXXXX).
+  try {
+    const adminClient = new AnalyticsAdminServiceClient({
+      credentials: { client_email: clientEmail, private_key: privateKey },
+    })
+    const [streams] = await adminClient.listDataStreams({ parent: propertyId })
+    result.data_streams = streams.map(s => ({
+      name: s.name,
+      displayName: s.displayName,
+      type: s.type,
+      measurementId: s.webStreamData?.measurementId,
+      defaultUri: s.webStreamData?.defaultUri,
+    }))
+  }
+  catch (err: any) {
+    result.data_streams_error = err?.details ?? err?.message ?? String(err)
   }
 
   return result
