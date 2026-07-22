@@ -11,6 +11,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
+import { computeInvoiceDueDate, getTenantInvoiceDueDays } from '~/server/utils/invoice-due-date'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -137,11 +138,10 @@ export default defineEventHandler(async (event) => {
         user_id: renter_user_id,
         invoice_number: invoiceNumber,
         invoice_date: new Date().toISOString().split('T')[0],
-        due_date: (() => {
-          const d = new Date()
-          d.setDate(d.getDate() + 30)
-          return d.toISOString().split('T')[0]
-        })(),
+        due_date: computeInvoiceDueDate(
+          new Date().toISOString().split('T')[0],
+          await getTenantInvoiceDueDays(supabase, dbUser.tenant_id)
+        ),
         billing_type: 'individual',
         billing_contact_person: renterName,
         billing_email: renter.email,

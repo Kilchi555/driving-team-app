@@ -24,6 +24,7 @@ import { sendTenantEmail, sendEmail } from '~/server/utils/email'
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
+import { computeInvoiceDueDate, getTenantInvoiceDueDays } from '~/server/utils/invoice-due-date'
 
 const INTERNAL_PURPOSES = ['internal', 'maintenance', 'meeting', 'event']
 const ALL_PURPOSES = [...INTERNAL_PURPOSES, 'external']
@@ -311,21 +312,20 @@ export default defineEventHandler(async (event) => {
       const resourceLabel = resource_type === 'room' ? 'Raum' : 'Fahrzeug'
       const costRappen = resource_type === 'room' ? (booking as any).room_cost_rappen : (booking as any).cost_rappen
       if (costRappen && costRappen > 0) {
-        // Load tenant for branding
+        const today = new Date()
+        const invoiceDateStr = today.toISOString().split('T')[0]
+        const dueDays = await getTenantInvoiceDueDays(supabase, profile.tenant_id)
+        const dueDateStr = computeInvoiceDueDate(invoiceDateStr, dueDays)
+
+        // Load tenant for branding (+ payment terms)
         const { data: tenant } = await supabase
           .from('tenants')
-          .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city')
+          .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_payment_terms, invoice_due_days')
           .eq('id', profile.tenant_id)
           .single()
 
         const tenantData = tenant as any
         invoiceNumber = await allocateInvoiceNumber(supabase, profile.tenant_id)
-
-        const today = new Date()
-        const dueDate = new Date(today)
-        dueDate.setDate(dueDate.getDate() + 30)
-        const invoiceDateStr = today.toISOString().split('T')[0]
-        const dueDateStr = dueDate.toISOString().split('T')[0]
 
         const { data: invoiceRes } = await supabase
           .from('invoices')
