@@ -94,6 +94,13 @@ export default defineEventHandler(async (event) => {
       { campaign_id: VKU_CAMPAIGN_ID, daily_budget_chf: Math.ceil(vkuCurrent * 1.5) },
       { campaign_id: ANHAENGER_LACHEN_CAMPAIGN_ID, daily_budget_chf: Math.max(5, Math.floor(anhLachenCurrent * 0.7)) },
     ]
+  } else if (preset === 'zuerich_motorrad') {
+    updates = [
+      { campaign_id: '24023050951', daily_budget_chf: 20 }, // Motorrad Grundkurs Zürich
+      { campaign_id: '24014870373', daily_budget_chf: 12 }, // Motorrad Fahrstunden Zürich
+      { campaign_id: '23868553846', daily_budget_chf: 28 }, // Fahrschule Zürich Umgebung
+      { campaign_id: '23865472770', daily_budget_chf: 28 }, // Fahrschule Lachen Umgebung
+    ]
   } else if (Array.isArray(body?.updates) && body.updates.length > 0) {
     updates = body.updates
   } else {
@@ -107,7 +114,7 @@ export default defineEventHandler(async (event) => {
         current_daily_budget_chf: b.current_chf,
         budget_resource_name: b.budget_resource_name,
       })),
-      available_presets: ['increase_vku', 'rebalance'],
+      available_presets: ['increase_vku', 'rebalance', 'zuerich_motorrad'],
       hint: 'Pass preset or updates array to apply changes.',
     }
   }

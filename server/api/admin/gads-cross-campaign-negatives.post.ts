@@ -84,7 +84,6 @@ const CROSS_CAMPAIGN_NEGATIVES: Array<{
   {
     campaign_name_contains: 'Motorrad Grundkurs Lachen',
     negatives: [
-      // Block non-motorrad queries
       { text: 'fahrschule lachen', match_type: 'EXACT' },
       { text: 'fahrstunden lachen', match_type: 'EXACT' },
       { text: 'vku kurs', match_type: 'PHRASE' },
@@ -93,6 +92,30 @@ const CROSS_CAMPAIGN_NEGATIVES: Array<{
       { text: 'lastwagen', match_type: 'PHRASE' },
     ],
     reason: 'Isolate Motorrad campaign from non-motorrad Fahrschule traffic',
+  },
+  {
+    campaign_name_contains: 'Fahrschule Zürich Umgebung',
+    negatives: [
+      { text: 'motorrad grundkurs', match_type: 'PHRASE' },
+      { text: 'motorrad grundkurs zürich', match_type: 'EXACT' },
+      { text: 'pgs kurs', match_type: 'PHRASE' },
+      { text: 'vku kurs', match_type: 'PHRASE' },
+      { text: 'motorradprüfung', match_type: 'PHRASE' },
+      { text: 'theorieprüfung anmelden', match_type: 'PHRASE' },
+    ],
+    reason: 'Prevent motorrad/VKU/PGS traffic from landing on auto Fahrschule ads',
+  },
+  {
+    campaign_name_contains: 'Motorrad Grundkurs Zürich',
+    negatives: [
+      { text: 'fahrschule schlieren', match_type: 'EXACT' },
+      { text: 'fahrschule dietikon', match_type: 'EXACT' },
+      { text: 'fahrschule birmensdorf', match_type: 'EXACT' },
+      { text: 'fahrschule altstetten', match_type: 'EXACT' },
+      { text: 'vku kurs', match_type: 'PHRASE' },
+      { text: 'anhänger', match_type: 'PHRASE' },
+    ],
+    reason: 'Isolate Motorrad Zürich from auto Fahrschule traffic',
   },
 ]
 

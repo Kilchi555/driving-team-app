@@ -14,6 +14,11 @@
 import { defineEventHandler, readBody, getHeader, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import {
+  mergeAttributionFields,
+  hasAnyAttribution,
+  type AttributionFields,
+} from '~/server/utils/marketing-attribution-merge'
 
 interface AttributionPayload {
   session_id: string
@@ -62,9 +67,8 @@ export default defineEventHandler(async (event) => {
     return { ok: false, reason: 'invalid_session_id' }
   }
 
-  const attr = body.attribution
-  const hasAny = !!(attr.gclid || attr.gbraid || attr.wbraid || attr.fbclid || attr.utm_source || attr.utm_medium || attr.utm_campaign)
-  if (!hasAny) {
+  const attr = body.attribution as AttributionFields
+  if (!hasAnyAttribution(attr)) {
     return { ok: true, reason: 'no_attribution_data' }
   }
 
@@ -73,23 +77,32 @@ export default defineEventHandler(async (event) => {
 
   try {
     const supabase = getSupabaseAdmin()
+
+    const { data: existingRow } = await supabase
+      .from('marketing_attributions')
+      .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, landing_page')
+      .eq('session_id', sessionId)
+      .maybeSingle()
+
+    const merged = mergeAttributionFields(existingRow as AttributionFields | null, attr)
+
     const { error } = await supabase
       .from('marketing_attributions')
       .upsert({
         session_id: sessionId,
         tenant_id: nullable(body.tenant_id) ?? null,
-        gclid: nullable(attr.gclid),
-        gbraid: nullable(attr.gbraid),
-        wbraid: nullable(attr.wbraid),
-        fbclid: nullable(attr.fbclid),
-        fbc: nullable(attr.fbc),
-        fbp: nullable(attr.fbp),
-        utm_source: nullable(attr.utm_source),
-        utm_medium: nullable(attr.utm_medium),
-        utm_campaign: nullable(attr.utm_campaign),
-        utm_content: nullable(attr.utm_content),
-        utm_term: nullable(attr.utm_term),
-        landing_page: nullable(attr.landing_page),
+        gclid: nullable(merged.gclid),
+        gbraid: nullable(merged.gbraid),
+        wbraid: nullable(merged.wbraid),
+        fbclid: nullable(merged.fbclid),
+        fbc: nullable(merged.fbc),
+        fbp: nullable(merged.fbp),
+        utm_source: nullable(merged.utm_source),
+        utm_medium: nullable(merged.utm_medium),
+        utm_campaign: nullable(merged.utm_campaign),
+        utm_content: nullable(merged.utm_content),
+        utm_term: nullable(merged.utm_term),
+        landing_page: nullable(merged.landing_page),
         user_agent: userAgent ? String(userAgent).slice(0, 512) : null,
         ip_country: ipCountry,
       }, { onConflict: 'session_id' })

@@ -42,6 +42,7 @@ import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 import { resolveRoomSettings, pickAvailableRoomId, type RoomServiceType } from '~/server/utils/room-availability'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
+import { mergeAttributionFields } from '~/server/utils/marketing-attribution-merge'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -503,16 +504,30 @@ export default defineEventHandler(async (event: H3Event) => {
       original_price_rappen: totalAmountRappen // Add default price
     })
     
-    // Marketing attribution: prefer payload from client, fall back to a DB
-    // lookup via marketing_session_id (the session_id used cross-domain).
+    // Marketing attribution: prefer payload from client, fall back to DB lookups.
     let marketingAttr: MarketingAttributionPayload | null = body.marketing_attribution ?? null
-    if (!marketingAttr && body.marketing_session_id) {
+    if (body.marketing_session_id) {
       const { data: attrRow } = await supabase
         .from('marketing_attributions')
         .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
         .eq('session_id', body.marketing_session_id)
         .maybeSingle()
-      if (attrRow) marketingAttr = attrRow as MarketingAttributionPayload
+      if (attrRow) {
+        marketingAttr = mergeAttributionFields(attrRow, marketingAttr) as MarketingAttributionPayload
+      }
+
+      if (!marketingAttr?.gclid && !marketingAttr?.gbraid && !marketingAttr?.wbraid) {
+        const { data: redirectRow } = await supabase
+          .from('booking_redirects')
+          .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
+          .eq('session_id', body.marketing_session_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (redirectRow) {
+          marketingAttr = mergeAttributionFields(marketingAttr, redirectRow) as MarketingAttributionPayload
+        }
+      }
     }
 
     // Auto-assign a room (never chosen by the customer) — pick the first free

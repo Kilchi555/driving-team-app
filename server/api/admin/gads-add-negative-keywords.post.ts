@@ -54,6 +54,12 @@ const COMPETITOR_NEGATIVES = [
   'roger marty',
   // Competitor instructors found in search terms (July 2026)
   'halide studer',
+  // Zürich-area competitors (July 2026 search term waste)
+  'team humm',
+  'max drive',
+  'drivelab',
+  'letzhgo',
+  'blink ag',
   // Competitor websites / apps
   'theorie24',
   'lkwtheorie',
@@ -191,6 +197,8 @@ const DRIVING_TEAM_CAMPAIGN_IDS = [
   '23893818404', // Anhänger Fahrschule Aargau
   '23898300631', // Lastwagen Fahrschule Lachen
   '23956180976', // VKU Kurs Lachen 2026
+  '24023050951', // Motorrad Grundkurs Zürich
+  '24014870373', // Motorrad Fahrstunden Zürich
 ]
 
 export default defineEventHandler(async (event) => {
