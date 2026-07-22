@@ -387,7 +387,7 @@
       <div class="max-w-4xl mx-auto">
         <h2 class="heading-md text-center mb-12">Unsere CZV Kurse Standorte</h2>
         <div class="grid md:grid-cols-2 gap-6">
-          <a href="/fahrschule-zuerich/" class="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg hover:border-primary-400 transition">
+          <a href="/" class="bg-white rounded-lg p-6 border border-gray-200 hover:shadow-lg hover:border-primary-400 transition">
             <p class="text-2xl mb-2">📍 Zürich</p>
             <p class="text-gray-600 text-sm">Fahrschule Zürich</p>
             <span class="text-primary-600 text-sm font-semibold mt-4 inline-block">Mehr erfahren →</span>

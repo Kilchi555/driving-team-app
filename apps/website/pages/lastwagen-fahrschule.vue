@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Lastwagenführerschein C1, C & CE | ab CHF 150.- | Driving Team</Title>
-      <Meta name="description" content="Lastwagenführerschein C1, C & CE in Zürich & Lachen – Prüfung Pfäffikon SZ & Albisgütli ZH, ab CHF 150.-/Lektion. Lieferwagen bis 7.5t oder 40t. Jetzt anmelden!" />
-      <Meta property="og:title" content="Lastwagenführerschein C1/C/CE Zürich | Driving Team" />
-      <Meta property="og:description" content="Lastwagenführerschein C1, C & CE in Zürich & Lachen. Prüfung Pfäffikon SZ & Albisgütli ZH. Erfahrene Fahrlehrer, ab CHF 150.-/Lektion." />
+      <Title>Lastwagen fahren lernen | C1, C & CE | ab CHF 150.– | Driving Team</Title>
+      <Meta name="description" content="Lastwagen fahren lernen: C1, C & CE in Zürich & Lachen – Prüfung Pfäffikon SZ & Albisgütli ZH, ab CHF 150.–/Lektion. Lieferwagen bis 7.5t oder 40t. Jetzt anmelden!" />
+      <Meta property="og:title" content="Lastwagen fahren lernen | C1/C/CE | ab CHF 150.– | Driving Team" />
+      <Meta property="og:description" content="Lastwagen fahren lernen – C1, C & CE in Zürich & Lachen. Prüfung Pfäffikon SZ & Albisgütli ZH. Erfahrene Fahrlehrer, ab CHF 150.–/Lektion." />
       <Meta property="og:url" content="https://drivingteam.ch/lastwagen-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/lastwagen-fahrschule/" />
       
@@ -21,7 +21,7 @@
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">LKW Fahrschule Kategorie C1 | C | CE</h1>
+          <h1 class="heading-lg text-white mb-6">Lastwagen fahren lernen – C1 | C | CE</h1>
           <p class="text-base xs:text-xl text-white mb-8">Du suchst eine professionelle LKW Fahrschule, die dich optimal auf deine Prüfung vorbereitet? Egal ob du den Führerschein C1 oder den Führerschein C anstrebst – bei uns bist du genau richtig! Unsere LKW Fahrschule in Zürich und Lachen/SZ bietet dir eine umfassende Ausbildung.</p>
           <a href="https://app.simy.ch/booking/availability/driving-team?category=C" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
@@ -409,7 +409,7 @@
         </div>
         <h3 class="font-bold text-xl mb-6 text-center">Unsere Gebiete</h3>
         <div class="flex flex-wrap justify-center gap-3">
-          <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Zürich</a>
+          <a href="/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Zürich</a>
           <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Lachen</a>
           <a href="/fahrschule-uster/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Uster</a>
           <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:border-primary-400 hover:text-primary-600 transition shadow-sm">Fahrschule Aargau</a>

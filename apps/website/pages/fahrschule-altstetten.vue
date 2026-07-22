@@ -6,8 +6,8 @@
       <Meta name="keywords" content="Fahrschule Altstetten, Fahrstunden Altstetten, Auto Fahrschule Altstetten, Fahrlehrer Altstetten, Fahrschule Zürich Altstetten" />
       <Meta property="og:title" content="Fahrschule Altstetten – Driving Team | Vulkanstrasse 130b" />
       <Meta property="og:description" content="Deine Fahrschule direkt in Zürich-Altstetten. Auto, Motorrad & Anhänger ab CHF 95.-. Buche jetzt flexibel online." />
-      <Meta property="og:url" content="https://drivingteam.ch/fahrschule-altstetten/" />
-      <Link rel="canonical" href="https://drivingteam.ch/fahrschule-altstetten/" />
+      <Meta property="og:url" content="https://drivingteam.ch/" />
+      <Link rel="canonical" href="https://drivingteam.ch/" />
       <Link rel="preload" as="image" href="/images/locations/zuerich-hero.webp" fetchpriority="high" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
       <Meta property="og:image:width" content="1200" />
@@ -15,7 +15,7 @@
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
-    <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Zürich', href: '/fahrschule-zuerich/' }, { label: 'Altstetten' }]" />
+    <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Zürich', href: '/' }, { label: 'Altstetten' }]" />
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
@@ -174,7 +174,7 @@
       <div class="section-container">
         <h2 class="text-lg font-bold text-gray-900 mb-5">Weitere Angebote ab Altstetten</h2>
         <div class="flex flex-wrap gap-3">
-          <a href="/fahrschule-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-primary-200 text-primary-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
+          <a href="/" class="inline-flex items-center gap-2 bg-white border-2 border-primary-200 text-primary-700 hover:border-primary-400 hover:bg-primary-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
             🗺️ Alle Angebote in Zürich
           </a>
           <a href="/auto-fahrschule-zuerich/" class="inline-flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-gray-50 font-semibold px-5 py-2.5 rounded-lg transition text-sm">
@@ -210,7 +210,7 @@ const jsonLdScripts = [
     "@type": ["DrivingSchool", "LocalBusiness"],
     "name": "Driving Team Fahrschule Altstetten",
     "description": "Fahrschule in Zürich-Altstetten an der Vulkanstrasse 130b. Auto, Motorrad, Anhänger, Lastwagen. Unterricht auf Deutsch, Englisch und Albanisch.",
-    "url": "https://drivingteam.ch/fahrschule-altstetten/",
+    "url": "https://drivingteam.ch/",
     "telephone": "+41444310033",
     "address": {
       "@type": "PostalAddress",
@@ -234,8 +234,8 @@ const jsonLdScripts = [
     "@type": "BreadcrumbList",
     "itemListElement": [
       { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" },
-      { "@type": "ListItem", "position": 2, "name": "Fahrschule Zürich", "item": "https://drivingteam.ch/fahrschule-zuerich/" },
-      { "@type": "ListItem", "position": 3, "name": "Fahrschule Altstetten", "item": "https://drivingteam.ch/fahrschule-altstetten/" }
+      { "@type": "ListItem", "position": 2, "name": "Fahrschule Zürich", "item": "https://drivingteam.ch/" },
+      { "@type": "ListItem", "position": 3, "name": "Fahrschule Altstetten", "item": "https://drivingteam.ch/" }
     ]
   }) },
   { type: 'application/ld+json', innerHTML: JSON.stringify({

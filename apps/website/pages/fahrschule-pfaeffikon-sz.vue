@@ -148,7 +148,7 @@
             <p class="font-semibold text-gray-900 text-sm">Motorrad Grundkurs</p>
             <p class="text-xs text-primary-600">Lachen</p>
           </a>
-          <a href="/fahrschule-zuerich/" class="flex flex-col items-center gap-2 p-4 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
+          <a href="/" class="flex flex-col items-center gap-2 p-4 border-2 border-gray-200 rounded-xl hover:border-primary-400 hover:bg-primary-50 transition text-center">
             <span class="text-2xl">🏙️</span>
             <p class="font-semibold text-gray-900 text-sm">Fahrschule</p>
             <p class="text-xs text-primary-600">Zürich</p>

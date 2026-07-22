@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>WAB Kurs Schweiz | Weiterbildung Neulenker | Driving Team</Title>
-      <Meta name="description" content="WAB Kurs – Pflicht für alle Neulenker innerhalb 12 Monate nach der Fahrprüfung. Ab CHF 290.-, Pfäffikon ZH & Tuggen SZ, auch auf Englisch. Jetzt anmelden!" />
-      <Meta property="og:title" content="WAB Kurs Schweiz – Weiterbildung für Neulenker | Driving Team" />
-      <Meta property="og:description" content="Obligatorische WAB Kurse für Neulenker. Innerhalb 12 Monaten nach Fahrprüfung. Ab CHF 290.-. Standorte Pfäffikon ZH & Tuggen SZ." />
+      <Title>WAB Kurs & Neulenker Weiterbildung | ab CHF 290.– | Driving Team</Title>
+      <Meta name="description" content="WAB Kurs / Neulenker Weiterbildung – Pflicht innerhalb 12 Monate nach der Fahrprüfung. Ab CHF 290.–, Pfäffikon ZH & Tuggen SZ, auch auf Englisch. Jetzt anmelden!" />
+      <Meta property="og:title" content="WAB Kurs & Neulenker Weiterbildung | ab CHF 290.– | Driving Team" />
+      <Meta property="og:description" content="Obligatorische WAB Kurse und Neulenker Weiterbildung. Innerhalb 12 Monaten nach Fahrprüfung. Ab CHF 290.–. Standorte Pfäffikon ZH & Tuggen SZ." />
       <Meta property="og:url" content="https://drivingteam.ch/wab-kurse/" />
       <Link rel="canonical" href="https://drivingteam.ch/wab-kurse/" />
       <Link rel="alternate" hreflang="de-CH" href="https://drivingteam.ch/wab-kurse/" />
@@ -20,8 +20,8 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-10 md:py-16">
       <div class="section-container">
         <div class="text-center mb-10">
-          <p class="text-primary-200 font-semibold uppercase tracking-wider text-sm mb-3">Obligatorisch für alle Neulenker</p>
-          <h1 class="heading-lg text-white mb-4">WAB Kurs Schweiz</h1>
+          <p class="text-primary-200 font-semibold uppercase tracking-wider text-sm mb-3">WAB Kurs · Neulenker Weiterbildung</p>
+          <h1 class="heading-lg text-white mb-4">WAB Kurs & Neulenker Weiterbildung</h1>
           <p class="text-xl text-primary-100 max-w-2xl mx-auto">Weiterbildung nach der Fahrprüfung – innert 12 Monaten absolvieren und den unbefristeten Führerschein erhalten.</p>
         </div>
 

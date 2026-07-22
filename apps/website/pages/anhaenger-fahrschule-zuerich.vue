@@ -400,7 +400,7 @@
               <p class="text-xs text-gray-500">Alle Kategorien & Preise</p>
             </div>
           </a>
-          <a href="/fahrschule-zuerich/" class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition">
+          <a href="/" class="flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition">
             <span class="text-2xl">📍</span>
             <div>
               <p class="font-semibold text-gray-900 text-sm">Fahrschule Zürich-Altstetten</p>

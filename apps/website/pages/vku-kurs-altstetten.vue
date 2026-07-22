@@ -179,7 +179,7 @@
       <div class="section-container text-center">
         <h2 class="heading-md mb-4">Brauchst Du noch Fahrstunden in Altstetten?</h2>
         <p class="text-gray-600 mb-6">Alle Angebote der Fahrschule Driving Team in Zürich-Altstetten.</p>
-        <a href="/fahrschule-zuerich/" class="btn-primary text-lg">
+        <a href="/" class="btn-primary text-lg">
           🚗 Auto Fahrstunden Zürich-Altstetten
         </a>
       </div>
@@ -247,7 +247,7 @@
       <div class="flex flex-wrap justify-center gap-3 mb-8">
         <a href="/vku-kurs-zuerich/" class="bg-primary-50 border border-primary-200 rounded-full px-4 py-2 text-sm text-primary-700 hover:bg-primary-100 transition font-medium">📋 VKU Kurs Zürich</a>
         <a href="/vku-kurs-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📋 VKU Kurs Lachen</a>
-        <a href="/fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich-Altstetten</a>
+        <a href="/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich-Altstetten</a>
         <a href="/nothelferkurs-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🏥 Nothelferkurs Altstetten</a>
         <a href="/auto-fahrschule/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🚗 Auto Fahrschule</a>
       </div>
