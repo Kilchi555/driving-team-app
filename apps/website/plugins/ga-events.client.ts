@@ -54,6 +54,21 @@ export default defineNuxtPlugin(() => {
     }
   }
 
+  // BUG FIX (July 2026): booking-redirect only forwarded UTM params, never the
+  // actual click IDs (gclid/gbraid/wbraid) — so booking_redirects and the eventual
+  // Google Ads conversion upload had no click ID to work with for the vast majority
+  // of real bookings, which all go through this global link click-handler (not the
+  // less-used useBookingTracking.ts composable, which already had this fix).
+  function getClickIds() {
+    const attr = (window as any).__dtMarketingAttribution ?? {}
+    const p = new URLSearchParams(window.location.search)
+    return {
+      gclid: attr.gclid || p.get('gclid') || null,
+      gbraid: attr.gbraid || p.get('gbraid') || null,
+      wbraid: attr.wbraid || p.get('wbraid') || null,
+    }
+  }
+
   document.addEventListener('click', (e: MouseEvent) => {
     const target = (e.target as HTMLElement).closest('a')
     if (!target) return
@@ -84,6 +99,7 @@ export default defineNuxtPlugin(() => {
           session_id: sessionId,
           category,
           referrer_page: window.location.pathname,
+          ...getClickIds(),
           ...getUtmParams(),
         }),
       }).catch(() => {})
