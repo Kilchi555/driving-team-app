@@ -7,6 +7,9 @@ interface BookingRedirectPayload {
   category: string
   session_id: string
   referrer_page: string
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
   utm_source?: string | null
   utm_medium?: string | null
   utm_campaign?: string | null
@@ -44,6 +47,9 @@ export default defineEventHandler(async (event) => {
       category: body.category,
       referrer_page: body.referrer_page,
       date: new Date().toISOString().split('T')[0],
+      gclid: body.gclid || null,
+      gbraid: body.gbraid || null,
+      wbraid: body.wbraid || null,
       utm_source: body.utm_source || null,
       utm_medium: body.utm_medium || null,
       utm_campaign: body.utm_campaign || null,

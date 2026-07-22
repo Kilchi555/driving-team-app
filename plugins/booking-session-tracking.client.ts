@@ -157,9 +157,10 @@ export default defineNuxtPlugin(() => {
   }
 
   // Persist direct-traffic sessions so they also appear in marketing_attributions.
-  // This allows us to count and report direct bookings separately from website-attributed ones.
-  if (isNewSession) {
-    const fromWebsite = document.referrer.includes('drivingteam.ch')
+  // Skip when session_id came from drivingteam.ch — website already saved gclid/UTMs.
+  const sessionFromUrl = urlParams.get('session_id')
+  const fromDrivingTeam = document.referrer.includes('drivingteam.ch')
+  if (isNewSession && !(sessionFromUrl && fromDrivingTeam)) {
     fetch('/api/marketing-attribution', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -167,8 +168,8 @@ export default defineNuxtPlugin(() => {
         session_id: sessionId,
         tenant_id: window.__tenantId ?? null,
         attribution: {
-          utm_source: fromWebsite ? 'drivingteam_direct' : 'direct',
-          utm_medium: fromWebsite ? 'referral' : 'none',
+          utm_source: fromDrivingTeam ? 'drivingteam_direct' : 'direct',
+          utm_medium: fromDrivingTeam ? 'referral' : 'none',
           landing_page: window.location.pathname,
         },
       }),

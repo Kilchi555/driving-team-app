@@ -81,6 +81,7 @@ const TOP_KEYWORD_OVERRIDES: Array<{ keyword_text: string; new_match_type: 'EXAC
   { keyword_text: 'fahrschule Schlieren', new_match_type: 'EXACT' },
   { keyword_text: 'fahrschule Altstetten', new_match_type: 'EXACT' },
   { keyword_text: 'fahrschule Dietikon', new_match_type: 'EXACT' },
+  { keyword_text: 'fahrschule birmensdorf', new_match_type: 'EXACT' },
   { keyword_text: 'fahrschule Spreitenbach', new_match_type: 'EXACT' },
   { keyword_text: 'fahrschule limmattal', new_match_type: 'PHRASE' },
   { keyword_text: 'fahrlehrer Schlieren', new_match_type: 'EXACT' },
