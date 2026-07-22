@@ -6,9 +6,14 @@ export default defineNuxtConfig({
     // GA4 Measurement ID – set NUXT_PUBLIC_GA_ID in Vercel environment variables
     id: process.env.NUXT_PUBLIC_GA_ID ?? '',
     loadingStrategy: 'async',
-    // Never auto-initialize – CookieBanner calls initialize() after consent
-    // This prevents a second GA4 instance from loading before the user accepts
-    enabled: false,
+    // BUG FIX (July 2026): `enabled: false` does NOT mean "defer init" — nuxt-gtag
+    // treats it as "disable the module entirely" and swaps in no-op Mock composables,
+    // so useGtag().initialize() called from CookieBanner was silently doing nothing.
+    // This broke GA4 tracking completely from 2026-05-31 onward (sessions dropped from
+    // ~90/day to 0). `initMode: 'manual'` is the correct option: it still registers the
+    // real plugin/composables and sets default consent immediately, but skips injecting
+    // the actual gtag.js <script> tag until CookieBanner calls initialize() after consent.
+    initMode: 'manual',
     initCommands: [
       // Set default consent to denied so GA4 respects DSGVO before accept
       ['consent', 'default', {
