@@ -234,8 +234,6 @@ export default defineNuxtConfig({
     walleeSpaceId: process.env.WALLEE_SPACE_ID,
     walleeApplicationUserId: process.env.WALLEE_APPLICATION_USER_ID,
     walleeSecretKey: process.env.WALLEE_SECRET_KEY,
-    accountoApiKey: process.env.ACCOUNTO_API_KEY,
-    accountoBaseUrl: process.env.ACCOUNTO_BASE_URL,
     billScanApiKey: process.env.BILLSCAN_API_KEY,
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
     internalCancellationSecret: process.env.NUXT_INTERNAL_CANCELLATION_SECRET,

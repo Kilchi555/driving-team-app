@@ -563,7 +563,7 @@ const reservedRoutes = [
   'payment', 'shop', 'upgrade', 'staff', 'tenant-admin', 'anonymous-sale',
   'reset-password', 'register-staff', 'mock-payment-page', 'pricing-test',
   'simple-test', 'sms-test', 'sms-direct-test', 'wallee-test', 'debug-pricing',
-  'debug-other-events', 'optimized-workflow-test', 'accounto-test', 
+  'debug-other-events', 'optimized-workflow-test',
   'tenant-test', 'tenant-demo', 'tenant-debug', 'tenant-start', 'customers',
   'AdminEventTypes', 'wallee-corrected-test',
   'helvetia-offerte'

@@ -382,8 +382,6 @@
   - server/api/sms/test-sender.post.ts
   - server/api/sari/test-connection.post.ts
   - server/api/sari/test-participants.post.ts
-  - server/api/accounto/test-connection.get.ts
-  - server/api/accounto/debug-env.get.ts
   - server/api/mock/create-transaction.post.ts
   - server/api/test/feature-guards.get.ts
   - server/api/payments/receipt.post.ts.bak
