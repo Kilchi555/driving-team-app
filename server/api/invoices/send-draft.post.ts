@@ -4,7 +4,6 @@
 // 2. payments.invoice_id + payment_status = 'invoiced' setzen
 // 3. E-Mail an Schüler (via Resend)
 // 4. E-Mail-Benachrichtigung an Admin
-// 5. Accounto-Sync (best-effort, non-blocking)
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
@@ -77,7 +76,7 @@ export default defineEventHandler(async (event) => {
   // Tenant laden (für Branding / Admin-Mail)
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city')
+    .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text')
     .eq('id', staffUser.tenant_id)
     .single()
 
@@ -123,7 +122,6 @@ export default defineEventHandler(async (event) => {
       status: send_email ? 'sent' : 'draft',
       payment_status: 'pending',
       paid_amount_rappen: 0,
-      accounto_sync_status: 'not_synced',
       sent_at: send_email ? now : null,
       notes: (draft as any).notes || null,
       payment_terms: (draft as any).payment_terms || null,
@@ -381,55 +379,6 @@ export default defineEventHandler(async (event) => {
   } catch (adminEmailErr: any) {
     console.warn('⚠️ Admin-E-Mail fehlgeschlagen (non-fatal):', adminEmailErr.message)
   }
-
-  // Accounto-Sync (fire-and-forget, non-blocking)
-  setImmediate(async () => {
-    try {
-      await supabase
-        .from('invoices')
-        .update({ accounto_sync_status: 'syncing' })
-        .eq('id', invoice.id)
-
-      await $fetch('/api/accounto/create-invoice', {
-        method: 'POST',
-        body: {
-          appointments: draft.items.map((item: any) => ({
-            title: item.product_name,
-            amount: item.unit_price_rappen / 100,
-          })),
-          customerData: {
-            firstName: draft.billing_first_name || studentName.split(' ')[0],
-            lastName: draft.billing_last_name || studentName.split(' ').slice(1).join(' '),
-            email: studentEmail,
-          },
-          billingAddress: {
-            street: `${draft.billing_street || ''} ${draft.billing_street_number || ''}`.trim(),
-            zip: draft.billing_zip || '',
-            city: draft.billing_city || '',
-          },
-          emailData: {
-            email: studentEmail,
-            subject: `Rechnung ${invoiceNumber}`,
-          },
-          totalAmount: draft.total_amount_rappen / 100,
-        },
-      })
-
-      await supabase
-        .from('invoices')
-        .update({ accounto_sync_status: 'synced', accounto_last_sync: new Date().toISOString() })
-        .eq('id', invoice.id)
-    } catch (accountoErr: any) {
-      console.warn('⚠️ Accounto-Sync fehlgeschlagen (non-fatal):', accountoErr.message)
-      await supabase
-        .from('invoices')
-        .update({
-          accounto_sync_status: 'error',
-          accounto_sync_error: accountoErr.message?.substring(0, 255),
-        })
-        .eq('id', invoice.id)
-    }
-  })
 
   return {
     success: true,

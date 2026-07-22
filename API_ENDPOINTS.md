@@ -250,11 +250,6 @@
 - `POST /api/external-calendars/sync-ics` - iCalendar synchronisieren
 - `POST /api/cron/sync-external-calendars` - Sync via Cron
 
-### Accounto (Buchhaltung)
-- `GET /api/accounto/test-connection` - Test-Verbindung
-- `GET /api/accounto/debug-env` - Debug-Umgebung
-- `POST /api/accounto/create-invoice` - Rechnung erstellen
-
 ### Payment Gateway
 - `POST /api/payment-gateway/create-transaction` - Transaktion erstellen
 - `POST /api/payment-gateway/webhook` - Webhook

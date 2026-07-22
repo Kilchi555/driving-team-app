@@ -38,12 +38,6 @@ export interface Invoice {
   paid_at?: string
   paid_amount_rappen: number
   
-  // Accounto Integration
-  accounto_invoice_id?: string
-  accounto_sync_status: AccountoSyncStatus
-  accounto_sync_error?: string
-  accounto_last_sync?: string
-
   // Mahnwesen (Dunning) — 0 = keine Mahnung, 1 = Zahlungserinnerung, 2 = 1. Mahnung, 3 = 2./letzte Mahnung
   dunning_level?: number
   last_dunning_sent_at?: string
@@ -125,7 +119,6 @@ export interface InvoiceWithDetails extends Invoice {
 // Enums
 export type InvoiceStatus = 'draft' | 'pdf_created' | 'sent' | 'paid' | 'overdue' | 'cancelled'
 export type PaymentStatus = 'pending' | 'partial' | 'paid' | 'overdue'
-export type AccountoSyncStatus = 'not_synced' | 'syncing' | 'synced' | 'error'
 export type PaymentItemStatus = 'pending' | 'completed' | 'failed' | 'refunded'
 
 // Form Interfaces
@@ -242,13 +235,6 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   partial: 'Teilweise bezahlt',
   paid: 'Vollständig bezahlt',
   overdue: 'Überfällig'
-}
-
-export const ACCOUNTO_SYNC_STATUS_LABELS: Record<AccountoSyncStatus, string> = {
-  not_synced: 'Nicht synchronisiert',
-  syncing: 'Wird synchronisiert',
-  synced: 'Synchronisiert',
-  error: 'Fehler bei Synchronisation'
 }
 
 export const PAYMENT_ITEM_STATUS_LABELS: Record<PaymentItemStatus, string> = {
