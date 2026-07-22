@@ -1930,7 +1930,7 @@ const saveScale = async () => {
   } catch (error: any) {
     console.error('Error saving scale:', error)
     const message = error?.data?.statusMessage || error?.data?.message || error?.message || ''
-    const isDuplicate = /duplicate key|unique constraint/i.test(message)
+    const isDuplicate = error?.statusCode === 409 || /duplicate key|unique constraint|bereits verwendet/i.test(message)
     uiStore.showError(
       'Fehler beim Speichern',
       isDuplicate

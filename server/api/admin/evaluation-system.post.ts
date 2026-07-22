@@ -116,10 +116,12 @@ export default defineEventHandler(async (event) => {
         .eq('is_active', true)
         .or(`tenant_id.eq.${tenantId},and(is_theory.eq.true,tenant_id.is.null)`)
         .order('display_order'),
+      // is_theory lives on evaluation_categories only — filtering it here
+      // makes PostgREST reject the whole criteria query (silent empty list).
       supabase
         .from('evaluation_criteria')
         .select('*')
-        .or(`tenant_id.eq.${tenantId},is_theory.eq.true`)
+        .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .order('category_id')
         .order('display_order'),
@@ -254,26 +256,78 @@ export default defineEventHandler(async (event) => {
   if (action === 'save-scale') {
     const { id, rating, label, description, color } = body
 
+    // Soft-deleted rows (is_active=false) still occupy UNIQUE(rating, tenant_id).
+    // The UI only lists active rows, so create/edit can hit a "phantom" rating.
+    // Reuse inactive slots instead of failing with a duplicate-key 500.
+    const findTenantRating = async (ratingValue: number, excludeId?: string) => {
+      let q = supabase
+        .from('evaluation_scale')
+        .select('id, is_active')
+        .eq('tenant_id', tenantId)
+        .eq('rating', ratingValue)
+      if (excludeId) q = q.neq('id', excludeId)
+      const { data, error } = await q.maybeSingle()
+      if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+      return data
+    }
+
     if (id) {
       const ownedId = await resolveTenantScaleId(supabase, tenantId, id)
+      const conflict = await findTenantRating(rating, ownedId)
+      if (conflict) {
+        if (conflict.is_active) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: `Die Rating-Nummer ${rating} wird bereits verwendet.`,
+          })
+        }
+        // Free the inactive slot so this rating can be reassigned.
+        const { error: delError } = await supabase
+          .from('evaluation_scale')
+          .delete()
+          .eq('id', conflict.id)
+          .eq('tenant_id', tenantId)
+        if (delError) throw createError({ statusCode: 500, statusMessage: delError.message })
+      }
+
       const { data, error } = await supabase
         .from('evaluation_scale')
-        .update({ rating, label, description, color })
+        .update({ rating, label, description, color, is_active: true })
         .eq('id', ownedId)
         .eq('tenant_id', tenantId)
         .select()
         .single()
       if (error) throw createError({ statusCode: 500, statusMessage: error.message })
       return { success: true, data }
-    } else {
+    }
+
+    const existing = await findTenantRating(rating)
+    if (existing) {
+      if (existing.is_active) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: `Die Rating-Nummer ${rating} wird bereits verwendet.`,
+        })
+      }
+      // Reactivate the soft-deleted row with the new labels.
       const { data, error } = await supabase
         .from('evaluation_scale')
-        .insert({ tenant_id: tenantId, rating, label, description, color, is_active: true })
+        .update({ label, description, color, is_active: true })
+        .eq('id', existing.id)
+        .eq('tenant_id', tenantId)
         .select()
         .single()
       if (error) throw createError({ statusCode: 500, statusMessage: error.message })
       return { success: true, data }
     }
+
+    const { data, error } = await supabase
+      .from('evaluation_scale')
+      .insert({ tenant_id: tenantId, rating, label, description, color, is_active: true })
+      .select()
+      .single()
+    if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+    return { success: true, data }
   }
 
   // ─── delete-scale ─────────────────────────────────────────────────────────
