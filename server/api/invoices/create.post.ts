@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 import { computeInvoiceDueDate, getTenantInvoiceDueDays } from '~/server/utils/invoice-due-date'
+import { getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 
 export default defineEventHandler(async (event) => {
   // ✅ Use authenticated user
@@ -43,9 +44,7 @@ export default defineEventHandler(async (event) => {
 
     // Compute totals server-side (amounts must be integer rappen, not CHF decimals)
     const subtotalRappen: number = items.reduce((sum: number, item: any) => sum + toRappen(item.total_price_rappen), 0)
-    const vatRappen: number = items.reduce((sum: number, item: any) => sum + toRappen(item.vat_amount_rappen), 0)
     const discountRappen: number = toRappen(invoiceData.discount_amount_rappen)
-    const totalRappen: number = subtotalRappen + vatRappen - discountRappen
 
     const invoiceDate =
       invoiceData.invoice_date || new Date().toISOString().slice(0, 10)
@@ -54,6 +53,25 @@ export default defineEventHandler(async (event) => {
       invoiceData.due_date ||
       computeInvoiceDueDate(invoiceDate, await getTenantInvoiceDueDays(supabaseAdmin, userProfile.tenant_id))
 
+    // Tenant MwSt is source of truth — never invent 7.7% when tenant has 0
+    const tenantVatRate = await getTenantDefaultVatRate(supabaseAdmin, userProfile.tenant_id)
+    let vatRappen: number = items.reduce((sum: number, item: any) => sum + toRappen(item.vat_amount_rappen), 0)
+    let vatRate =
+      invoiceData.vat_rate != null && Number.isFinite(Number(invoiceData.vat_rate))
+        ? Number(invoiceData.vat_rate)
+        : tenantVatRate
+
+    if (tenantVatRate <= 0) {
+      vatRate = 0
+      vatRappen = 0
+      for (const item of items) {
+        item.vat_rate = 0
+        item.vat_amount_rappen = 0
+      }
+    }
+
+    const totalRappen: number = subtotalRappen + vatRappen - discountRappen
+
     // Create invoice
     const invoiceInsertData = {
       ...invoiceData,
@@ -61,6 +79,7 @@ export default defineEventHandler(async (event) => {
       invoice_number: invoiceNumber,
       invoice_date: invoiceDate,
       due_date: dueDate,
+      vat_rate: vatRate,
       subtotal_rappen: subtotalRappen,
       vat_amount_rappen: vatRappen,
       total_amount_rappen: totalRappen,

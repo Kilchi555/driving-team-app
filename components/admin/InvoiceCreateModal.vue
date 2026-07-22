@@ -703,7 +703,7 @@ const formData = ref<InvoiceFormData>({
   billing_country: 'CH',
   billing_vat_number: '',
   subtotal_rappen: 0,
-  vat_rate: 7.70,
+  vat_rate: defaultVatRate.value,
   discount_amount_rappen: 0,
   notes: '',
   internal_notes: '',
@@ -793,8 +793,8 @@ function toggleOpenItem(item: any) {
       quantity: 1,
       unit_price_rappen: item.amount_rappen,
       total_price_rappen: item.amount_rappen,
-      vat_rate: 0,
-      vat_amount_rappen: 0,
+      vat_rate: defaultVatRate.value,
+      vat_amount_rappen: Math.round(item.amount_rappen * defaultVatRate.value / 100),
       sort_order: invoiceItems.value.length,
       // Appointment details for date/time display on invoice
       appointment_id: item.appointment_id || null,
@@ -968,10 +968,16 @@ watch(invoiceIntroText, (val) => { if (val && !formData.value.notes) formData.va
 watch(invoicePaymentTerms, (val) => { if (val && !formData.value.payment_terms) formData.value.payment_terms = val }, { once: true })
 watch(invoiceFooterText, (val) => { if (val && !formData.value.footer_text) formData.value.footer_text = val }, { once: true })
 
-// When default VAT rate loads from branding, update any items still using a fallback default
+// Keep form + items in sync with tenant default VAT (no once: — branding may load late)
 watch(defaultVatRate, (val) => {
+  formData.value.vat_rate = val
   invoiceItems.value.forEach(item => {
-    if (item.vat_rate === 8.10 || item.vat_rate === 7.70 || item.vat_rate === 0) item.vat_rate = val
+    const rate = Number(item.vat_rate)
+    // Overwrite only unset / known legacy defaults — never clobber a manually chosen rate
+    if (rate === 0 || rate === 7.7 || rate === 7.70 || rate === 8.1 || rate === 8.10) {
+      item.vat_rate = val
+      calculateItemTotal(item)
+    }
   })
-}, { once: true })
+})
 </script>

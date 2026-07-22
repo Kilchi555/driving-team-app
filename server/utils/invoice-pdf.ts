@@ -96,6 +96,9 @@ export interface InvoicePdfData {
   }[]
   subtotalRappen: number
   discountRappen?: number
+  /** MwSt-Satz in Prozent, z.B. 8.1 — aus tenants.default_vat_rate / Rechnung */
+  vatRate?: number
+  vatAmountRappen?: number
   totalRappen: number
   qrCodeDataUrl?: string | null
   qrIban?: string | null
@@ -282,7 +285,11 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     const paymentTextH = doc.heightOfString(paymentText, { width: tableWidth - 20 })
     const paymentBlockH = Math.max(36, paymentTextH + 26)
     const footerTextH = data.footerText ? doc.heightOfString(data.footerText, { width: W - margin * 2 }) : 0
-    const closingBlockH = 34 + 14 + paymentBlockH + (data.footerText ? footerTextH + 10 : 0)
+    const showVat = (data.vatAmountRappen || 0) > 0
+    const showDiscount = (data.discountRappen || 0) > 0
+    const summaryExtraRows = (showDiscount ? 1 : 0) + (showVat ? 1 : 0) + ((showDiscount || showVat) ? 1 : 0) // optional Zwischensumme
+    const totalBlockH = 34 + summaryExtraRows * 22
+    const closingBlockH = totalBlockH + 14 + paymentBlockH + (data.footerText ? footerTextH + 10 : 0)
 
     const estimateItemRowHeight = (item: InvoicePdfData['items'][number]) => {
       const formattedDate = formatAppointmentDateTime((item as any).appointment_start_time || item.appointment_date)
@@ -424,6 +431,35 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       qrReservedOnCurrentPage = !!data.qrCodeDataUrl && !forceQrSeparate
       rowY = margin
     }
+
+    const drawSummaryRow = (label: string, amount: number, opts?: { bold?: boolean; fill?: string; text?: string }) => {
+      const fill = opts?.fill
+      const textColor = opts?.text || (fill ? 'white' : '#1e293b')
+      if (fill) {
+        doc.rect(margin, rowY, tableWidth, 22).fill(fill)
+      } else {
+        doc.rect(margin, rowY, tableWidth, 22).fill('#f8fafc')
+      }
+      doc.fontSize(9).fillColor(textColor).font(opts?.bold ? 'Helvetica-Bold' : 'Helvetica')
+        .text(label, margin + 8, rowY + 6, { width: tableWidth - colWidths[3] - 24, align: 'right' })
+      doc.fontSize(9).fillColor(textColor).font(opts?.bold ? 'Helvetica-Bold' : 'Helvetica')
+        .text(formatChf(amount), colPos[3] + 8, rowY + 6, { width: colWidths[3], align: 'right' })
+      rowY += 22
+    }
+
+    if (showDiscount || showVat) {
+      drawSummaryRow('Zwischensumme', data.subtotalRappen)
+    }
+    if (showDiscount) {
+      drawSummaryRow('Rabatt / Guthaben', -(data.discountRappen || 0))
+    }
+    if (showVat) {
+      const rateLabel = Number.isFinite(Number(data.vatRate))
+        ? `MwSt. (${Number(data.vatRate).toFixed(2)}%)`
+        : 'MwSt.'
+      drawSummaryRow(rateLabel, data.vatAmountRappen || 0)
+    }
+
     doc.rect(margin, rowY, tableWidth, 34).fill(primary)
     doc.fillOpacity(0.8).fontSize(10).fillColor('white').font('Helvetica')
       .text('Gesamtbetrag', margin + 8, rowY + 11, { width: tableWidth - colWidths[3] - 24, align: 'right' })

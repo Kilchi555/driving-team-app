@@ -6,6 +6,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { computeInvoiceDueDate } from '~/server/utils/invoice-due-date'
+import { computeVatAmountRappen, getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -129,10 +130,10 @@ export default defineEventHandler(async (event) => {
     .limit(1)
     .maybeSingle()
 
-  // Tenant-Daten für Rechnungsnummer-Prefix + QR-IBAN + Rechnungstexte
+  // Tenant-Daten für Rechnungsnummer-Prefix + QR-IBAN + Rechnungstexte + MwSt
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, invoice_number_prefix, next_invoice_number, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_due_days')
+    .select('id, name, invoice_number_prefix, next_invoice_number, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_due_days, default_vat_rate')
     .eq('id', staffUser.tenant_id)
     .single()
 
@@ -159,10 +160,13 @@ export default defineEventHandler(async (event) => {
   const subtotal = openPayments.reduce((sum, p) => sum + getGrossAmount(p), 0)  // Brutto
   const totalDiscounts = openPayments.reduce((sum, p) => sum + (p.discount_amount_rappen || 0) + ((p as any).voucher_discount_rappen || 0), 0)
   const totalCredits = openPayments.reduce((sum, p) => sum + (p.credit_used_rappen || 0), 0)
-  const vatRate = 0 // Fahrschulen sind in CH meist von MwSt befreit; anpassbar
-  const vatAmount = Math.round(subtotal * vatRate)
-  // Nettobetrag = Brutto - Rabatte - Guthaben + MwSt
-  const total = subtotal - totalDiscounts - totalCredits + vatAmount
+  const vatRatePercent = Number.isFinite(Number((tenant as any)?.default_vat_rate))
+    ? Number((tenant as any).default_vat_rate)
+    : await getTenantDefaultVatRate(supabase, staffUser.tenant_id)
+  // Netto nach Rabatt/Guthaben, darauf MwSt gemäss Tenant-Einstellung
+  const netAfterDiscounts = subtotal - totalDiscounts - totalCredits
+  const vatAmount = computeVatAmountRappen(Math.max(0, netAfterDiscounts), vatRatePercent)
+  const total = netAfterDiscounts + vatAmount
 
   const draft = {
     // Rechnungsinformationen
@@ -185,7 +189,7 @@ export default defineEventHandler(async (event) => {
 
     // Beträge
     subtotal_rappen: subtotal,
-    vat_rate: vatRate * 100,
+    vat_rate: vatRatePercent,
     vat_amount_rappen: vatAmount,
     discount_amount_rappen: totalDiscounts + totalCredits, // Kombiniert für DB-Trigger: total = subtotal - discount
     credit_used_rappen: totalCredits,
@@ -217,8 +221,8 @@ export default defineEventHandler(async (event) => {
         quantity: 1,
         unit_price_rappen: getGrossAmount(p),
         total_price_rappen: getGrossAmount(p),
-        vat_rate: vatRate * 100,
-        vat_amount_rappen: Math.round(p.total_amount_rappen * vatRate),
+        vat_rate: vatRatePercent,
+        vat_amount_rappen: computeVatAmountRappen(getGrossAmount(p), vatRatePercent),
         sort_order: i,
         // Breakdown
         lesson_price_rappen: p.lesson_price_rappen || 0,

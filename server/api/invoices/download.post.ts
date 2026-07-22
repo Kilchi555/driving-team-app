@@ -221,6 +221,8 @@ export default defineEventHandler(async (event) => {
     // aufs Mahnschreiben (siehe Filter oben), nicht auf die Original-Rechnung.
     subtotalRappen: (invoice.subtotal_rappen || invoice.total_amount_rappen) - (invoice.dunning_fees_rappen || 0),
     discountRappen: invoice.discount_amount_rappen || 0,
+    vatRate: Number(invoice.vat_rate) || 0,
+    vatAmountRappen: invoice.vat_amount_rappen || 0,
     totalRappen: invoice.total_amount_rappen - (invoice.dunning_fees_rappen || 0),
     qrCodeDataUrl,
     qrIban,

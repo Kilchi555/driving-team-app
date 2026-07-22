@@ -12,6 +12,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { computeInvoiceDueDate, getTenantInvoiceDueDays } from '~/server/utils/invoice-due-date'
+import { computeVatAmountRappen, getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -118,8 +119,9 @@ export default defineEventHandler(async (event) => {
     }
 
     const subtotalRappen = rentals.reduce((sum, r) => sum + (r.total_amount_rappen ?? 0), 0)
-    const vatRate = 0 // Vehicle rentals are VAT-exempt (MWST-frei) by default
-    const totalRappen = subtotalRappen
+    const vatRate = await getTenantDefaultVatRate(supabase, dbUser.tenant_id)
+    const vatAmountRappen = computeVatAmountRappen(subtotalRappen, vatRate)
+    const totalRappen = subtotalRappen + vatAmountRappen
 
     // Generate invoice number
     const invoiceCount = await supabase
@@ -152,7 +154,7 @@ export default defineEventHandler(async (event) => {
         billing_country: 'CH',
         subtotal_rappen: subtotalRappen,
         vat_rate: vatRate,
-        vat_amount_rappen: 0,
+        vat_amount_rappen: vatAmountRappen,
         discount_amount_rappen: 0,
         total_amount_rappen: totalRappen,
         status: 'sent',

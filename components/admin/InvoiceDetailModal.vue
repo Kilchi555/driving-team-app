@@ -1206,7 +1206,7 @@ const insertDueDatePlaceholder = () => {
 }
 
 const isLoadingDetails = ref(false)
-const tenantInvoiceTexts = ref<{ invoice_intro_text?: string | null, invoice_payment_terms?: string | null, invoice_footer_text?: string | null }>({})
+const tenantInvoiceTexts = ref<{ invoice_intro_text?: string | null, invoice_payment_terms?: string | null, invoice_footer_text?: string | null, default_vat_rate?: number }>({})
   const fallbackPayment = ref<any | null>(null)
   const appointmentStartTime = ref<string | null>(null)
   const appointmentEventTypeCode = ref<string | null>(null)
@@ -1289,6 +1289,7 @@ const loadDetailedData = async () => {
         invoice_intro_text: settings?.invoice_intro_text || null,
         invoice_payment_terms: settings?.invoice_payment_terms || null,
         invoice_footer_text: settings?.invoice_footer_text || null,
+        default_vat_rate: settings?.default_vat_rate != null ? parseFloat(settings.default_vat_rate) : 0,
       }
     } catch (e) {
       // ignore
@@ -1546,7 +1547,7 @@ const addInvoiceItem = () => {
     quantity: 1,
     unit_price_rappen: 0, // Wird in Rappen gespeichert
     total_price_rappen: 0,
-    vat_rate: 7.70,
+    vat_rate: tenantInvoiceTexts.value.default_vat_rate ?? 0,
     vat_amount_rappen: 0,
     sort_order: (safeEditedInvoice.value.items?.length || 0),
     notes: '',

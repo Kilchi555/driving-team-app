@@ -25,6 +25,7 @@ import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 import { computeInvoiceDueDate, getTenantInvoiceDueDays } from '~/server/utils/invoice-due-date'
+import { computeVatAmountRappen, getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 
 const INTERNAL_PURPOSES = ['internal', 'maintenance', 'meeting', 'event']
 const ALL_PURPOSES = [...INTERNAL_PURPOSES, 'external']
@@ -316,11 +317,14 @@ export default defineEventHandler(async (event) => {
         const invoiceDateStr = today.toISOString().split('T')[0]
         const dueDays = await getTenantInvoiceDueDays(supabase, profile.tenant_id)
         const dueDateStr = computeInvoiceDueDate(invoiceDateStr, dueDays)
+        const vatRate = await getTenantDefaultVatRate(supabase, profile.tenant_id)
+        const vatAmountRappen = computeVatAmountRappen(costRappen, vatRate)
+        const totalRappen = costRappen + vatAmountRappen
 
         // Load tenant for branding (+ payment terms)
         const { data: tenant } = await supabase
           .from('tenants')
-          .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_payment_terms, invoice_due_days')
+          .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_payment_terms, invoice_due_days, default_vat_rate')
           .eq('id', profile.tenant_id)
           .single()
 
@@ -346,10 +350,10 @@ export default defineEventHandler(async (event) => {
             billing_city: external_city?.trim() || null,
             billing_country: 'CH',
             subtotal_rappen: costRappen,
-            vat_rate: 0,
-            vat_amount_rappen: 0,
+            vat_rate: vatRate,
+            vat_amount_rappen: vatAmountRappen,
             discount_amount_rappen: 0,
-            total_amount_rappen: costRappen,
+            total_amount_rappen: totalRappen,
             status: 'sent',
             payment_status: 'pending',
             payment_method: 'invoice',
@@ -372,8 +376,8 @@ export default defineEventHandler(async (event) => {
             quantity: 1,
             unit_price_rappen: costRappen,
             total_price_rappen: costRappen,
-            vat_rate: 0,
-            vat_amount_rappen: 0,
+            vat_rate: vatRate,
+            vat_amount_rappen: vatAmountRappen,
             sort_order: 0,
           }
           await supabase.from('invoice_items').insert(invoiceItem)
@@ -441,7 +445,9 @@ export default defineEventHandler(async (event) => {
                   }],
                   subtotalRappen: costRappen,
                   discountRappen: 0,
-                  totalRappen: costRappen,
+                  vatRate,
+                  vatAmountRappen,
+                  totalRappen,
                   qrCodeDataUrl: null,
                   qrIban: null,
                   scorRef: null,

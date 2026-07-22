@@ -1064,6 +1064,7 @@ const {
   invoiceIntroText,
   invoicePaymentTerms,
   invoiceFooterText,
+  defaultVatRate,
 } = useTenantBranding()
 const primaryColor = computed(() => brandingPrimaryColor.value || '#1E40AF')
 const primaryGradient = computed(() => {
@@ -2826,7 +2827,7 @@ const buildInvoicePayload = (internalNotes: string) => {
     billing_country: 'CH',
     billing_vat_number: companyBillingAddress.value?.vat_number || undefined,
     subtotal_rappen: chfToRappen(selectedAppointmentsTotal.value),
-    vat_rate: 7.70,
+    vat_rate: defaultVatRate.value,
     discount_amount_rappen: 0,
     notes: invoiceMessage.value || invoiceIntroText.value || undefined,
     payment_terms: invoicePaymentTerms.value || undefined,
@@ -2836,7 +2837,7 @@ const buildInvoicePayload = (internalNotes: string) => {
 
   const invoiceItems = rows.map((appointment, index) => {
     const unitPriceRappen = chfToRappen(appointment.amount || 0)
-    const vatAmount = Math.round(unitPriceRappen * 7.70 / 100)
+    const vatAmount = Math.round(unitPriceRappen * defaultVatRate.value / 100)
     return {
       product_name: appointment.title || 'Fahrstunde',
       product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
@@ -2847,7 +2848,7 @@ const buildInvoicePayload = (internalNotes: string) => {
       quantity: 1,
       unit_price_rappen: unitPriceRappen,
       total_price_rappen: unitPriceRappen,
-      vat_rate: 7.70,
+      vat_rate: defaultVatRate.value,
       vat_amount_rappen: vatAmount,
       sort_order: index,
       notes: `Termin: ${appointment.title}`,

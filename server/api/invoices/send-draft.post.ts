@@ -323,6 +323,8 @@ export default defineEventHandler(async (event) => {
           items: draft.items,
           subtotalRappen: draft.subtotal_rappen || draft.total_amount_rappen,
           discountRappen: draft.discount_amount_rappen || 0,
+          vatRate: Number(draft.vat_rate) || 0,
+          vatAmountRappen: draft.vat_amount_rappen || 0,
           totalRappen: draft.total_amount_rappen,
           qrCodeDataUrl,
           qrIban: (draft as any).qr_iban || null,
