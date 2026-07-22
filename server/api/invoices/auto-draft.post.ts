@@ -5,6 +5,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { computeInvoiceDueDate } from '~/server/utils/invoice-due-date'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -142,9 +143,8 @@ export default defineEventHandler(async (event) => {
   const previewInvoiceNumber = `${prefix}-${year}-${String(nextNum).padStart(4, '0')}`
 
   const today = new Date()
-  const dueDate = new Date(today)
-  const dueDays = (tenant as any)?.invoice_due_days ?? 30
-  dueDate.setDate(dueDate.getDate() + dueDays)
+  const invoiceDate = today.toISOString().split('T')[0]
+  const dueDate = computeInvoiceDueDate(invoiceDate, (tenant as any)?.invoice_due_days)
 
   // Draft-Objekt zusammenstellen
   // BRUTTO-Subtotal: total_amount_rappen enthält bereits (Preis - Rabatt), aber NICHT Guthaben.
@@ -167,8 +167,8 @@ export default defineEventHandler(async (event) => {
   const draft = {
     // Rechnungsinformationen
     invoice_number_preview: previewInvoiceNumber,
-    invoice_date: today.toISOString().split('T')[0],
-    due_date: dueDate.toISOString().split('T')[0],
+    invoice_date: invoiceDate,
+    due_date: dueDate,
 
     // Empfänger
     // Rechnungsadresse: gespeicherte company_billing_address bevorzugen, Fallback auf Schülerdaten

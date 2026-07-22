@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
+import { computeInvoiceDueDate, getTenantInvoiceDueDays } from '~/server/utils/invoice-due-date'
 
 export default defineEventHandler(async (event) => {
   // ✅ Use authenticated user
@@ -46,11 +47,20 @@ export default defineEventHandler(async (event) => {
     const discountRappen: number = toRappen(invoiceData.discount_amount_rappen)
     const totalRappen: number = subtotalRappen + vatRappen - discountRappen
 
+    const invoiceDate =
+      invoiceData.invoice_date || new Date().toISOString().slice(0, 10)
+    // Prefer explicit due_date from client; otherwise use admin Zahlungsfrist
+    const dueDate =
+      invoiceData.due_date ||
+      computeInvoiceDueDate(invoiceDate, await getTenantInvoiceDueDays(supabaseAdmin, userProfile.tenant_id))
+
     // Create invoice
     const invoiceInsertData = {
       ...invoiceData,
       tenant_id: userProfile.tenant_id,
       invoice_number: invoiceNumber,
+      invoice_date: invoiceDate,
+      due_date: dueDate,
       subtotal_rappen: subtotalRappen,
       vat_amount_rappen: vatRappen,
       total_amount_rappen: totalRappen,
