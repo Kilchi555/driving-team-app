@@ -292,6 +292,7 @@
 
 import { ref, onMounted, computed } from 'vue'
 import { logger } from '~/utils/logger'
+import { filterByStudentSearch } from '~/utils/student-search'
 import { useSmsService } from '~/composables/useSmsService'
 import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
@@ -336,14 +337,9 @@ const isResendingSms = ref(false)
 const filteredCustomers = computed(() => {
   let filtered = customers.value
 
-  // Filter by search query
+  // Filter by search query (trim, multi-token full name, accents, phone digits)
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(s => 
-      s.first_name?.toLowerCase().includes(query) ||
-      s.last_name?.toLowerCase().includes(query) ||
-      s.email?.toLowerCase().includes(query)
-    )
+    filtered = filterByStudentSearch(filtered, searchQuery.value)
   }
 
   // Filter by upcoming appointments

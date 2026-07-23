@@ -569,6 +569,7 @@ import { useStudentCredits } from '~/composables/useStudentCredits'
 import StudentCreditManager from '~/components/StudentCreditManager.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import type { CreditTransactionWithDetails } from '~/types/studentCredits'
+import { filterByStudentSearch } from '~/utils/student-search'
 
 definePageMeta({
   middleware: 'admin',
@@ -632,14 +633,9 @@ const isLoadingTransactions = ref(false)
 const filteredStudents = computed(() => {
   let filtered = students.value
 
-  // Search filter
+  // Search filter (trim, multi-token full name, accents, phone digits)
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(student => 
-      student.first_name?.toLowerCase().includes(query) ||
-      student.last_name?.toLowerCase().includes(query) ||
-      student.email?.toLowerCase().includes(query)
-    )
+    filtered = filterByStudentSearch(filtered, searchQuery.value)
   }
 
   // Balance filter

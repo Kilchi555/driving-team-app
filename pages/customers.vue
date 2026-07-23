@@ -418,6 +418,7 @@ import LoadingLogo from '~/components/LoadingLogo.vue'
 import StaffPOSModal from '~/components/StaffPOSModal.vue'
 import { useTerminology } from '~/composables/useTerminology'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { filterByStudentSearch } from '~/utils/student-search'
 
 const { t } = useTerminology()
 const { primaryColor } = useTenantBranding()
@@ -472,14 +473,9 @@ const filteredStudents = computed(() => {
   // ✅ Aktiv/Inaktiv Filterung passiert jetzt in der DB-Abfrage (loadStudents)
   // Keine lokale Filterung mehr nötig
 
-  // Filter by search query
+  // Filter by search query (trim, multi-token full name, accents, phone digits)
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(s => 
-      s.first_name?.toLowerCase().includes(query) ||
-      s.last_name?.toLowerCase().includes(query) ||
-      s.email?.toLowerCase().includes(query)
-    )
+    filtered = filterByStudentSearch(filtered, searchQuery.value)
     logger.debug('✅ Filtered by search query:', filtered.length, 'students')
   }
 

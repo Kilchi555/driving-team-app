@@ -191,6 +191,7 @@
 <script setup lang="ts">
 
 import { logger } from '~/utils/logger'
+import { filterByStudentSearch } from '~/utils/student-search'
 import { ref, computed, watch, onMounted } from 'vue'
 const { primaryBg, primaryText, primaryBorder, primaryBgLight } = usePrimaryColor()
 // import { getSupabase } from '~/utils/supabase'
@@ -263,19 +264,9 @@ const selectedStudent = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
-const studentList = computed(() => {
-  if (!searchQuery.value) {
-    return availableStudents.value
-  }
-  
-  const query = searchQuery.value.toLowerCase()
-  return availableStudents.value.filter(student =>
-    student.first_name?.toLowerCase().includes(query) ||
-    student.last_name?.toLowerCase().includes(query) ||
-    student.email?.toLowerCase().includes(query) ||
-    student.phone?.includes(query)
-  )
-})
+const studentList = computed(() =>
+  filterByStudentSearch(availableStudents.value, searchQuery.value)
+)
 
 const shouldAutoLoadComputed = computed(() => {
   return props.autoLoad

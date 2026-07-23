@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { filterByStudentSearch } from '~/utils/student-search'
 import { useSmsService } from '~/composables/useSmsService'
 import type { User } from '~/types'
 
@@ -18,13 +19,9 @@ export const useStudents = () => {
   const filteredStudents = computed(() => {
     let filtered = students.value
 
-    // Suche nach Name/Email
+    // Suche nach Name/Email/Telefon (trim, multi-token, accents)
     if (searchQuery.value.trim()) {
-      const query = searchQuery.value.toLowerCase()
-      filtered = filtered.filter(student =>
-        `${student.first_name} ${student.last_name}`.toLowerCase().includes(query) ||
-        student.email?.toLowerCase().includes(query)
-      )
+      filtered = filterByStudentSearch(filtered, searchQuery.value)
     }
 
     // Aktiv/Inaktiv Filter
