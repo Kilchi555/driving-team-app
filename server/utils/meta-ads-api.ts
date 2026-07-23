@@ -5,12 +5,18 @@
 
 export const META_GRAPH = 'https://graph.facebook.com/v19.0'
 
+/** Strip whitespace / accidental `\n` pasted into Vercel env values. */
+function cleanMetaEnv(value: string | undefined | null): string {
+  if (!value) return ''
+  return value.trim().replace(/\\n$/i, '').replace(/\r?\n$/g, '').trim()
+}
+
 export function getMetaCredentials() {
   return {
-    token: process.env.META_SYSTEM_USER_TOKEN ?? process.env.META_ACCESS_TOKEN ?? '',
-    adAccount: process.env.META_AD_ACCOUNT_ID ?? '',
-    pageId: process.env.META_PAGE_ID ?? '',
-    pixelId: process.env.META_PIXEL_ID ?? '',
+    token: cleanMetaEnv(process.env.META_SYSTEM_USER_TOKEN ?? process.env.META_ACCESS_TOKEN),
+    adAccount: cleanMetaEnv(process.env.META_AD_ACCOUNT_ID),
+    pageId: cleanMetaEnv(process.env.META_PAGE_ID),
+    pixelId: cleanMetaEnv(process.env.META_PIXEL_ID),
   }
 }
 

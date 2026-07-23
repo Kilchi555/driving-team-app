@@ -25,7 +25,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
-  if (!process.env.META_PIXEL_ID) {
+  const pixelId = (process.env.META_PIXEL_ID ?? '').trim().replace(/\\n$/i, '').replace(/\r?\n$/g, '').trim()
+  if (!pixelId) {
     logger.warn('retry-meta-capi: META_PIXEL_ID not set, skipping')
     return { success: false, reason: 'missing_credentials' }
   }
