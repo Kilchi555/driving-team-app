@@ -1,13 +1,12 @@
 /**
- * TEMP DEBUG: Morning-after status check for the direct-booking A/B test ads
- * created 2026-07-22 (approval status + any early impressions/clicks) and the
- * three Wettswil/negatives fixes applied the same day. Delete after use.
+ * TEMP DEBUG: Get exact disapproval reason for the two direct-booking test
+ * ads. Delete after use.
  */
 import { defineEventHandler } from 'h3'
 import { resolveGadsAuth, getGadsAccessToken, buildGadsHeaders } from '~/server/utils/gads-auth'
 
 const GADS_VERSION = 'v23'
-const AD_IDS = ['809675038018', '818002748603', '810402944569', '818002748600']
+const AD_IDS = ['818002748603', '818002748600']
 
 export default defineEventHandler(async (event) => {
   const gads = await resolveGadsAuth(event)
@@ -18,13 +17,11 @@ export default defineEventHandler(async (event) => {
 
   const url = `https://googleads.googleapis.com/${GADS_VERSION}/customers/${customerId}/googleAds:searchStream`
   const query = `
-    SELECT ad_group.name, ad_group_ad.ad.id, ad_group_ad.status,
-      ad_group_ad.ad.final_urls, ad_group_ad.ad_strength,
+    SELECT ad_group.name, ad_group_ad.ad.id,
       ad_group_ad.policy_summary.approval_status,
-      metrics.impressions, metrics.clicks, metrics.conversions
+      ad_group_ad.policy_summary.policy_topic_entries
     FROM ad_group_ad
     WHERE ad_group_ad.ad.id IN (${AD_IDS.join(',')})
-      AND segments.date DURING LAST_7_DAYS
   `
   const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ query }) })
   const data = await res.json() as Array<{ results?: unknown[] }>

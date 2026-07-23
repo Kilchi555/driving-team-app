@@ -6392,8 +6392,8 @@ const searchUsers = async () => {
 
   try {
     isSearchingUsers.value = true
-    const data = await $fetch<any[]>(`/api/admin/users/search?q=${encodeURIComponent(userSearchQuery.value)}`)
-    searchResults.value = data || []
+    const data = await $fetch<{ users: any[] }>(`/api/admin/users/search?q=${encodeURIComponent(userSearchQuery.value)}`)
+    searchResults.value = data?.users || []
   } catch (err) {
     console.error('Error searching users:', err)
     searchResults.value = []
