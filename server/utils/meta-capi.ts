@@ -59,9 +59,17 @@ interface MetaCapiCreds {
   accessToken: string
 }
 
+/** Strip whitespace / accidental `\n` pasted into Vercel env values. */
+function cleanMetaEnv(value: string | undefined | null): string {
+  if (!value) return ''
+  return value.trim().replace(/\\n$/i, '').replace(/\r?\n$/g, '').trim()
+}
+
 function readCreds(): MetaCapiCreds | null {
-  const pixelId = process.env.META_PIXEL_ID
-  const accessToken = process.env.META_SYSTEM_USER_TOKEN ?? process.env.META_ACCESS_TOKEN
+  const pixelId = cleanMetaEnv(process.env.META_PIXEL_ID)
+  const accessToken = cleanMetaEnv(
+    process.env.META_SYSTEM_USER_TOKEN ?? process.env.META_ACCESS_TOKEN,
+  )
 
   if (!pixelId || !accessToken) return null
   return { pixelId, accessToken }
@@ -182,7 +190,7 @@ export async function sendCapiEvent(input: MetaCapiInput): Promise<MetaCapiResul
  */
 export async function recordAndSendCapiEvent(input: MetaCapiInput): Promise<void> {
   const supabase = getSupabaseAdmin()
-  const pixelId = process.env.META_PIXEL_ID ?? 'unknown'
+  const pixelId = cleanMetaEnv(process.env.META_PIXEL_ID) || 'unknown'
 
   const { data: row, error: insertError } = await supabase
     .from('meta_capi_uploads')
@@ -250,7 +258,7 @@ export async function sendCapiRefundEvent(params: {
   hashed_phone?: string | null
   refund_value_chf: number
 }): Promise<void> {
-  if (!process.env.META_PIXEL_ID) return
+  if (!cleanMetaEnv(process.env.META_PIXEL_ID)) return
 
   const result = await sendCapiEvent({
     appointment_id: `refund_${params.appointment_id}`,
