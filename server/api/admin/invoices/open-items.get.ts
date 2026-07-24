@@ -63,7 +63,7 @@ export default defineEventHandler(async (event) => {
   // ── 2. Uninvoiced course registrations — any payment method, not yet invoiced ──
   const { data: courseRegs } = await supabase
     .from('course_registrations')
-    .select('id, user_id, amount_paid_rappen, payment_status, payment_method, course_id, custom_sessions, is_partial_enrollment, partial_start_session, individual_session_number, courses(name, price_per_participant_rappen, course_start_date, category)')
+    .select('id, user_id, amount_paid_rappen, payment_status, payment_method, payment_id, course_id, custom_sessions, is_partial_enrollment, partial_start_session, individual_session_number, courses(name, price_per_participant_rappen, course_start_date, category)')
     .in('user_id', userIds)
     .eq('tenant_id', tenantId)
     .neq('status', 'cancelled')
@@ -176,7 +176,15 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Avoid double-counting: if a payment already covers a registration, skip the reg row
+  const coveredRegIds = new Set(
+    (lessonPayments || [])
+      .map((p: any) => p.course_registration_id)
+      .filter(Boolean)
+  )
+
   for (const r of (courseRegs || [])) {
+    if (coveredRegIds.has(r.id) || (r as any).payment_id) continue
     const course = (r as any).courses
     const regPartialStart = r.is_partial_enrollment ? r.partial_start_session : null
     const sessionDates = resolveSessionDates(r.course_id, {

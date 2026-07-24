@@ -12,11 +12,25 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { generateAdminEnrollmentNotificationEmail } from '~/server/utils/email-templates'
 
+type ConfirmationPaymentMethod = 'wallee' | 'cash' | 'admin' | 'invoice' | 'paid' | 'reserve'
+
 interface ConfirmationEmailRequest {
   courseRegistrationId: string
-  paymentMethod: 'wallee' | 'cash' | 'admin' | 'invoice'
+  paymentMethod: ConfirmationPaymentMethod
   totalAmount?: number // In CHF (optional, for cash display)
   testEmail?: string  // Override recipient for testing
+}
+
+function adminPaymentMethodLabel(method: ConfirmationPaymentMethod): string {
+  switch (method) {
+    case 'cash': return 'Barzahlung'
+    case 'invoice': return 'Rechnung'
+    case 'paid': return 'Bereits bezahlt'
+    case 'reserve': return 'Reserviert'
+    case 'admin': return 'Durch Fahrschule angemeldet'
+    case 'wallee': return 'Online (Wallee)'
+    default: return method
+  }
 }
 
 export default defineEventHandler(async (event) => {
@@ -37,7 +51,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (!['wallee', 'cash', 'admin', 'invoice'].includes(paymentMethod)) {
+    if (!['wallee', 'cash', 'admin', 'invoice', 'paid', 'reserve'].includes(paymentMethod)) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Invalid payment method'
@@ -219,7 +233,21 @@ export default defineEventHandler(async (event) => {
         </table>
       `
       emailSubject = `Anmeldebestätigung: ${course?.name} (Rechnung)`
-    } else if (paymentMethod === 'admin') {
+    } else if (paymentMethod === 'paid') {
+      paymentMethodNotice = `
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #dcfce7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #22c55e;">
+          <tr>
+            <td style="padding: 12px;">
+              <h3 style="margin: 0 0 8px 0; color: #166534; font-size: 14px; font-weight: 600;">Zahlung: bereits bezahlt</h3>
+              <p style="margin: 0; color: #166534; font-size: 13px;">
+                Die Zahlung wurde von der Fahrschule als erledigt markiert. Ihr Platz ist gesichert.
+              </p>
+            </td>
+          </tr>
+        </table>
+      `
+      emailSubject = `Anmeldebestätigung: ${course?.name}`
+    } else if (paymentMethod === 'admin' || paymentMethod === 'reserve') {
       paymentMethodNotice = `
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #eff6ff; border-radius: 8px; margin: 15px 0; border-left: 4px solid #3b82f6;">
           <tr>
@@ -417,7 +445,7 @@ export default defineEventHandler(async (event) => {
           courseName: course?.name || '',
           courseDate,
           courseLocation: course?.description || undefined,
-          paymentMethod: paymentMethod === 'cash' ? 'Barzahlung' : 'Online (Wallee)',
+          paymentMethod: adminPaymentMethodLabel(paymentMethod),
           paymentAmount: adminPrice,
           tenantName: tenant.name
         })

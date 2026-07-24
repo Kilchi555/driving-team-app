@@ -16,7 +16,8 @@ export default defineEventHandler(async (event) => {
     afterDate,       // Must be after this date (to ensure chronological order)
     excludeCourseId, // Exclude the user's current course
     courseLocation,  // Location filter
-    currentDate      // Exclude sessions on this date (current session date)
+    currentDate,     // Exclude sessions on this date (current session date)
+    admin,           // Admin mode: include non-public courses, relax hard date filter
   } = query
 
   if (!tenantId || !category || !sessionPosition) {
@@ -26,6 +27,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const isAdmin = admin === 'true' || admin === '1'
   const supabase = getSupabaseAdmin()
   const positionNum = parseInt(sessionPosition as string)
 
@@ -46,7 +48,7 @@ export default defineEventHandler(async (event) => {
     logger.debug(`Fetching available sessions for position ${positionNum}, afterDate: ${afterDate}`)
 
     // Get all active courses of the same category
-    const { data: courses, error: coursesError } = await supabase
+    let coursesQuery = supabase
       .from('courses')
       .select(`
         id,
@@ -55,6 +57,7 @@ export default defineEventHandler(async (event) => {
         sari_course_id,
         max_participants,
         current_participants,
+        is_public,
         course_sessions(
           id,
           sari_session_id,
@@ -68,7 +71,12 @@ export default defineEventHandler(async (event) => {
       .eq('category', category)
       .eq('sari_managed', true)
       .eq('status', 'active')
-      .eq('is_public', true)
+
+    if (!isAdmin) {
+      coursesQuery = coursesQuery.eq('is_public', true)
+    }
+
+    const { data: courses, error: coursesError } = await coursesQuery
 
     if (coursesError) {
       logger.error('Error fetching courses:', coursesError)
@@ -146,9 +154,10 @@ export default defineEventHandler(async (event) => {
         continue
       }
 
-      // Check chronological order (if afterDate provided)
+      // Check chronological order (if afterDate provided) — hard filter for public booking only.
+      // Admins get all options and see soft warnings in the UI instead.
       const firstSessionDate = new Date(sessionsForPosition[0].start_time)
-      if (afterDate) {
+      if (afterDate && !isAdmin) {
         const afterDateTime = new Date(afterDate as string)
         if (firstSessionDate <= afterDateTime) {
           logger.debug(`  - Session date ${firstSessionDate.toISOString()} is not after ${afterDateTime.toISOString()}, skipping`)
@@ -165,6 +174,8 @@ export default defineEventHandler(async (event) => {
         }
       }
 
+      const violatesAfterDate = !!(afterDate && isAdmin && firstSessionDate <= new Date(afterDate as string))
+
       // Add all sessions at this position
       for (const session of sessionsForPosition) {
         availableSessions.push({
@@ -176,7 +187,8 @@ export default defineEventHandler(async (event) => {
           startTime: session.start_time,
           endTime: session.end_time,
           freeSlots,
-          date: session.start_time.split('T')[0]
+          date: session.start_time.split('T')[0],
+          orderWarning: violatesAfterDate || undefined,
         })
       }
     }

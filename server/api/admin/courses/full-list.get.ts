@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
       instructor:users!courses_instructor_id_fkey(first_name, last_name),
       room:rooms(name, location, capacity),
       vehicle:vehicles(name, location),
-      course_category:course_categories(name, icon, color),
+      course_category:course_categories(name, icon, color, allow_partial_enrollment, partial_start_position, partial_price_rappen),
       sessions:course_sessions(
         id,
         session_number,
@@ -29,6 +29,8 @@ export default defineEventHandler(async (event) => {
         external_instructor_name,
         external_instructor_email,
         external_instructor_phone,
+        allow_individual_booking,
+        individual_price_rappen,
         staff:users!staff_id(id, first_name, last_name)
       ),
       registrations:course_registrations(id, status, deleted_at),

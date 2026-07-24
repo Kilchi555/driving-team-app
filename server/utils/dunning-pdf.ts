@@ -35,6 +35,7 @@ export interface DunningPdfData {
   scorRef?: string | null
   creditorName?: string
   primaryColor?: string
+  windowSide?: 'left' | 'right'
 }
 
 /** Extrahiert den Brieftext aus body_text oder body_html (ohne CSS/Chrome). */
@@ -126,6 +127,7 @@ export async function generateDunningPdf(data: DunningPdfData): Promise<Buffer> 
     scorRef: data.scorRef,
     creditorName: data.creditorName,
     primaryColor: data.primaryColor,
+    windowSide: data.windowSide,
     // Brief + Zahlteil nicht auf dieselbe Seite quetschen
     qrOnSeparatePage: true,
   })

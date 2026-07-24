@@ -53,7 +53,7 @@ export async function prepareDunning(supabase: SupabaseClient, opts: PrepareDunn
   if (!billingEmail) throw createError({ statusCode: 422, statusMessage: 'Keine E-Mail-Adresse für diese Rechnung hinterlegt' })
 
   const [{ data: tenant }, { data: tenantSettings }, { data: platformSettings }, { data: tenantTemplate }, { data: platformTemplate }, staffNamePromise] = await Promise.all([
-    supabase.from('tenants').select('name, legal_company_name, contact_email, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, from_email, resend_domain_verified, logo_wide_url').eq('id', opts.tenantId).single(),
+    supabase.from('tenants').select('name, legal_company_name, contact_email, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, from_email, resend_domain_verified, logo_wide_url, invoice_window_side').eq('id', opts.tenantId).single(),
     supabase.from('dunning_settings').select('*').eq('tenant_id', opts.tenantId).maybeSingle(),
     supabase.from('dunning_settings').select('*').is('tenant_id', null).maybeSingle(),
     supabase.from('dunning_templates').select('*').eq('tenant_id', opts.tenantId).eq('stage', stage).eq('language', language).maybeSingle(),

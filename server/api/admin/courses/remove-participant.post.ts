@@ -109,59 +109,67 @@ export default defineEventHandler(async (event) => {
 
     try {
       const credentials = await getSARICredentialsSecure(profile.tenant_id, 'ADMIN_REMOVE_PARTICIPANT')
-      if (!credentials) throw new Error('SARI not configured for this tenant')
-      const sari = new SARIClient(credentials)
-      const sessions: any[] = course.course_sessions || []
+      if (!credentials) {
+        logger.warn('⚠️ SARI unenroll skipped — no credentials for tenant', profile.tenant_id)
+        sariSync.attempted = true
+        sariSync.success = true // local-only / no credentials is OK — don't block removal
+        sariSync.message = 'SARI-Zugangsdaten fehlen — nur lokal abgemeldet'
+      } else {
+        const sari = new SARIClient(credentials)
+        const sessions: any[] = course.course_sessions || []
 
-      // For partial enrollments only de-enroll from sessions the user was enrolled in.
-      // We use the category's partial_start_position from DB to determine this.
-      let relevantSessions = sessions
-      if (reg.is_partial_enrollment) {
-        // Fetch partial_start_position from category
-        const { data: courseWithCategory } = await supabase
-          .from('courses')
-          .select('course_category_id, course_categories(partial_start_position)')
-          .eq('id', course.id)
-          .single()
-        const startPos = (courseWithCategory?.course_categories as any)?.partial_start_position ?? 3
-        relevantSessions = sessions.filter(s => (s.session_number ?? 99) >= startPos)
-      }
+        // For partial enrollments only de-enroll from sessions the user was enrolled in.
+        // We use the category's partial_start_position from DB to determine this.
+        let relevantSessions = sessions
+        if (reg.is_partial_enrollment) {
+          // Fetch partial_start_position from category
+          const { data: courseWithCategory } = await supabase
+            .from('courses')
+            .select('course_category_id, course_categories(partial_start_position)')
+            .eq('id', course.id)
+            .single()
+          const startPos = (courseWithCategory?.course_categories as any)?.partial_start_position ?? 3
+          relevantSessions = sessions.filter(s => (s.session_number ?? 99) >= startPos)
+        }
 
-      // Unenroll from each session individually
-      for (const session of relevantSessions) {
-        const sessionId = session.sari_session_id
-        if (!sessionId) continue
-        const numericId = typeof sessionId === 'string'
-          ? parseInt(sessionId.replace(/\D/g, ''), 10)
-          : sessionId
-        if (!numericId || isNaN(numericId)) continue
-        try {
-          await sari.unenrollStudent(numericId, faberid)
-          logger.debug(`✅ SARI unenrolled session ${numericId} for ${faberid}`)
-        } catch (sessionErr: any) {
-          if (isSariUnenrollIdempotent(sessionErr.message)) {
-            // Already not enrolled — this is the goal state, not a failure.
-            logger.debug(`ℹ️ SARI session ${numericId} already unenrolled for ${faberid}`)
-            continue
+        // Unenroll from each session individually
+        for (const session of relevantSessions) {
+          const sessionId = session.sari_session_id
+          if (!sessionId) continue
+          const numericId = typeof sessionId === 'string'
+            ? parseInt(sessionId.replace(/\D/g, ''), 10)
+            : sessionId
+          if (!numericId || isNaN(numericId)) continue
+          try {
+            await sari.unenrollStudent(numericId, faberid)
+            logger.debug(`✅ SARI unenrolled session ${numericId} for ${faberid}`)
+          } catch (sessionErr: any) {
+            if (isSariUnenrollIdempotent(sessionErr.message)) {
+              // Already not enrolled — this is the goal state, not a failure.
+              logger.debug(`ℹ️ SARI session ${numericId} already unenrolled for ${faberid}`)
+              continue
+            }
+            if (isSariUnenrollBlocked(sessionErr.message)) {
+              blockedByConfirmed = true
+            }
+            failedSessions.push(`${numericId}: ${sessionErr.message}`)
+            logger.warn(`⚠️ SARI unenroll failed for session ${numericId}:`, sessionErr.message)
           }
-          if (isSariUnenrollBlocked(sessionErr.message)) {
-            blockedByConfirmed = true
-          }
-          failedSessions.push(`${numericId}: ${sessionErr.message}`)
-          logger.warn(`⚠️ SARI unenroll failed for session ${numericId}:`, sessionErr.message)
+        }
+
+        sariSync.success = failedSessions.length === 0
+        sariSync.blocked = blockedByConfirmed
+        if (!sariSync.success) {
+          sariSync.message = blockedByConfirmed
+            ? getSariUnenrollBlockedMessage()
+            : `SARI-Abmeldung teilweise/vollständig fehlgeschlagen: ${failedSessions.join('; ')}`
         }
       }
     } catch (sariErr: any) {
       failedSessions.push(sariErr.message)
       logger.warn('⚠️ SARI de-enrollment failed:', sariErr.message)
-    }
-
-    sariSync.success = failedSessions.length === 0
-    sariSync.blocked = blockedByConfirmed
-    if (!sariSync.success) {
-      sariSync.message = blockedByConfirmed
-        ? getSariUnenrollBlockedMessage()
-        : `SARI-Abmeldung teilweise/vollständig fehlgeschlagen: ${failedSessions.join('; ')}`
+      sariSync.success = false
+      sariSync.message = sariErr.message
     }
 
     // Audit trail: record the outcome so failures are discoverable later, not just in server logs.

@@ -6,7 +6,12 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
+import { loadTenantLogoForPdf } from '~/server/utils/tenant-logo-for-pdf'
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
+import {
+  expandProductsAsSeparateLines,
+  groupProductSalesByAppointment,
+} from '~/server/utils/invoice-product-lines'
 export default defineEventHandler(async (event) => {
   try {
     const { invoiceId } = await readBody(event)
@@ -45,7 +50,7 @@ export default defineEventHandler(async (event) => {
     // Tenant-Daten laden
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, legal_company_name, contact_email, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url, invoice_intro_text, invoice_payment_terms, invoice_footer_text')
+      .select('name, legal_company_name, contact_email, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_window_side')
       .eq('id', invoice.tenant_id)
       .single()
 
@@ -77,6 +82,14 @@ export default defineEventHandler(async (event) => {
     }
 
     const items = (rawItems || []).map((item: any) => {
+      // Produktzeilen behalten ihren Produktnamen (nicht mit Event-Typ überschreiben)
+      if (item.product_id) {
+        return {
+          ...item,
+          appointment_start_time: null,
+          appointment_duration_minutes: null,
+        }
+      }
       const apt = item.appointment_id ? appointmentMap[item.appointment_id] : null
       const eventLabel = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
       const staffFirstName = (apt?.staff as any)?.first_name || null
@@ -109,27 +122,27 @@ export default defineEventHandler(async (event) => {
       return bd ? { ...item, ...bd } : item
     })
 
-    // Produkte pro Termin laden
+    // Produkte als eigene Positionen ausweisen (nicht unter der Lektionszeile)
     const aptIdsWithProducts = appointmentIds.filter(id =>
       paymentBreakdown[id] && (paymentBreakdown[id].products_price_rappen || 0) > 0
     )
-    const productsByApt: Record<string, { name: string; price_rappen: number }[]> = {}
+    let productsByApt: Record<string, { name: string; price_rappen: number; product_id?: string | null; quantity?: number }[]> = {}
     if (aptIdsWithProducts.length > 0) {
       const { data: productSales } = await supabase
         .from('product_sales')
-        .select('appointment_id, total_price_rappen, products(name)')
+        .select('appointment_id, product_id, quantity, total_price_rappen, products(id, name)')
         .in('appointment_id', aptIdsWithProducts)
       if (productSales) {
-        for (const ps of productSales as any[]) {
-          if (!productsByApt[ps.appointment_id]) productsByApt[ps.appointment_id] = []
-          productsByApt[ps.appointment_id].push({ name: ps.products?.name || 'Produkt', price_rappen: ps.total_price_rappen || 0 })
-        }
+        productsByApt = groupProductSalesByAppointment(productSales as any[])
       }
     }
-    const finalItems = enrichedItems.map((item: any) =>
-      item.appointment_id && productsByApt[item.appointment_id]
-        ? { ...item, product_details: productsByApt[item.appointment_id] }
-        : { ...item, product_details: item.product_details || [] }
+    const finalItems = expandProductsAsSeparateLines(
+      enrichedItems.map((item: any) =>
+        item.appointment_id && productsByApt[item.appointment_id]
+          ? { ...item, product_details: productsByApt[item.appointment_id] }
+          : { ...item, product_details: item.product_details || [] }
+      ),
+      productsByApt
     )
 
     const tenantName = (tenant as any)?.name || ''
@@ -199,30 +212,7 @@ export default defineEventHandler(async (event) => {
     // PDF als Anhang generieren
     let pdfAttachments: any[] = []
     try {
-      const logoDataUrl: string | null = (tenant as any)?.logo_wide_url || null
-      let tenantLogoBase64: string | null = null
-      let tenantLogoFormat: 'png' | 'jpeg' = 'png'
-      if (logoDataUrl?.startsWith('data:image/')) {
-        // Already a base64 data URL
-        const match = logoDataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/)
-        if (match) {
-          tenantLogoFormat = match[1] === 'jpg' ? 'jpeg' : match[1] as 'png' | 'jpeg'
-          tenantLogoBase64 = match[2]
-        }
-      } else if (logoDataUrl?.startsWith('http')) {
-        // Remote URL (e.g. Supabase Storage) — fetch and convert to base64
-        try {
-          const logoRes = await fetch(logoDataUrl)
-          if (logoRes.ok) {
-            const contentType = logoRes.headers.get('content-type') || 'image/png'
-            tenantLogoFormat = contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpeg' : 'png'
-            const arrayBuffer = await logoRes.arrayBuffer()
-            tenantLogoBase64 = Buffer.from(arrayBuffer).toString('base64')
-          }
-        } catch (logoErr: any) {
-          console.warn('⚠️ Logo konnte nicht geladen werden:', logoErr.message)
-        }
-      }
+      const logo = await loadTenantLogoForPdf((tenant as any)?.logo_wide_url)
       const tenantStreet = [(tenant as any)?.invoice_street?.trim(), (tenant as any)?.invoice_street_nr?.trim()].filter(Boolean).join(' ')
       const pdfBuffer = await generateInvoicePdf({
         invoiceNumber: invoice.invoice_number,
@@ -233,8 +223,8 @@ export default defineEventHandler(async (event) => {
         tenantZip: (tenant as any)?.invoice_zip || '',
         tenantCity: (tenant as any)?.invoice_city || '',
         tenantEmail: (tenant as any)?.contact_email || '',
-        tenantLogoBase64,
-        tenantLogoFormat,
+        tenantLogoBase64: logo?.base64 || null,
+        tenantLogoFormat: logo?.format,
         customerName,
         billingCompanyName: (invoice as any).billing_company_name || '',
         billingStreet: invoice.billing_street || '',
@@ -268,6 +258,7 @@ export default defineEventHandler(async (event) => {
         creditorName: (tenant as any)?.legal_company_name || tenantName,
         primaryColor: (tenant as any)?.primary_color || '#1E40AF',
         secondaryColor: (tenant as any)?.secondary_color || '#64748B',
+        windowSide: (tenant as any)?.invoice_window_side === 'right' ? 'right' : 'left',
         introText,
         paymentTerms,
         footerText,

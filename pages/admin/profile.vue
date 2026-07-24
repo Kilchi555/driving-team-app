@@ -1194,6 +1194,36 @@
                 <p class="text-xs text-gray-400 mt-1">Definiert die Fälligkeit bei neuen Rechnungen.</p>
               </div>
 
+              <!-- Couvert-Fenster -->
+              <div class="col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Adressfenster im Couvert</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label
+                    class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                    :class="invoiceSettings.invoice_window_side === 'left' ? '' : 'border-gray-200'"
+                    :style="invoiceSettings.invoice_window_side === 'left' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
+                  >
+                    <input type="radio" v-model="invoiceSettings.invoice_window_side" value="left" class="mt-1 mr-3" />
+                    <div>
+                      <div class="font-medium text-gray-900">Fenster links</div>
+                      <div class="text-sm text-gray-600">DIN / CH-Standard (Form B)</div>
+                    </div>
+                  </label>
+                  <label
+                    class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                    :class="invoiceSettings.invoice_window_side === 'right' ? '' : 'border-gray-200'"
+                    :style="invoiceSettings.invoice_window_side === 'right' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
+                  >
+                    <input type="radio" v-model="invoiceSettings.invoice_window_side" value="right" class="mt-1 mr-3" />
+                    <div>
+                      <div class="font-medium text-gray-900">Fenster rechts</div>
+                      <div class="text-sm text-gray-600">Für Couverts mit rechtem Sichtfenster</div>
+                    </div>
+                  </label>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Platziert die Rechnungsadresse so, dass sie im Fensterschlitz sichtbar ist (gilt auch für Zahlungserinnerung und Mahnung).</p>
+              </div>
+
               <!-- Rechnungstexte -->
               <div class="col-span-2 border-t pt-4 mt-2">
                 <h5 class="text-sm font-semibold text-gray-700 mb-3">Rechnungstexte (Vorlagen)</h5>
@@ -2288,6 +2318,7 @@ const invoiceSettings = ref({
   invoice_intro_text: '',
   invoice_payment_terms: '',
   invoice_footer_text: '',
+  invoice_window_side: 'left' as 'left' | 'right',
 })
 const isSavingInvoiceSettings = ref(false)
 
@@ -2307,6 +2338,7 @@ const loadInvoiceSettings = async (_tenantId: string) => {
         invoice_intro_text: data.invoice_intro_text || '',
         invoice_payment_terms: data.invoice_payment_terms || '',
         invoice_footer_text: data.invoice_footer_text || '',
+        invoice_window_side: data.invoice_window_side === 'right' ? 'right' : 'left',
       }
     }
   } catch (e) {

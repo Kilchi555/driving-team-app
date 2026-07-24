@@ -1315,6 +1315,36 @@
               </div>
             </div>
 
+            <!-- Firmenkurs / Sammelrechnung -->
+            <div class="rounded-xl border border-gray-200 p-4 space-y-3 bg-gray-50">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-medium text-gray-900">Firmenkurs (Sammelrechnung)</p>
+                  <p class="text-xs text-gray-500">Teilnehmer werden gesammelt der Firma verrechnet</p>
+                </div>
+                <ToggleSwitch
+                  :model-value="newCourse.billing_mode === 'company_collective'"
+                  @update:model-value="(v: boolean) => {
+                    newCourse.billing_mode = v ? 'company_collective' : 'individual'
+                    if (v) newCourse.is_public = false
+                    else newCourse.company_id = null
+                  }"
+                  label=""
+                />
+              </div>
+              <div v-if="newCourse.billing_mode === 'company_collective'">
+                <label class="block text-sm font-medium text-gray-500 mb-1">Firmenkunde *</label>
+                <select
+                  v-model="newCourse.company_id"
+                  class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 tenant-focus"
+                >
+                  <option :value="null" disabled>Firma wählen…</option>
+                  <option v-for="c in companyList" :key="c.id" :value="c.id">{{ c.name }}</option>
+                </select>
+                <p class="text-xs text-amber-700 mt-1">Kurs wird privat (nicht öffentlich). Teilnehmer ohne Einzelrechnung.</p>
+              </div>
+            </div>
+
             <div v-if="tenantBusinessType === 'driving_school' && newCourse.sari_managed">
               <label class="block text-sm font-medium text-gray-500 mb-2">SARI Kurs-ID</label>
               <input
@@ -2727,8 +2757,30 @@
           </button>
         </div>
 
-        <!-- Participant list actions: send by email + print -->
-        <div class="mx-5 sm:mx-6 mt-4 flex gap-2">
+        <!-- Participant list actions: company invoice + send by email + print -->
+        <div class="mx-5 sm:mx-6 mt-4 flex flex-wrap gap-2">
+          <button
+            v-if="isSelectedCourseCompanyCollective"
+            @click="createCompanyInvoice(false)"
+            :disabled="isCreatingCompanyInvoice || activeEnrollmentCount === 0"
+            class="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors"
+            :class="isCreatingCompanyInvoice || activeEnrollmentCount === 0
+              ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+              : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200'"
+          >
+            {{ isCreatingCompanyInvoice ? 'Erstelle…' : 'Firmenrechnung (PDF)' }}
+          </button>
+          <button
+            v-if="isSelectedCourseCompanyCollective"
+            @click="createCompanyInvoice(true)"
+            :disabled="isCreatingCompanyInvoice || activeEnrollmentCount === 0"
+            class="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors"
+            :class="isCreatingCompanyInvoice || activeEnrollmentCount === 0
+              ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+              : 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600'"
+          >
+            Firmenrechnung + E-Mail
+          </button>
           <button
             @click="sendParticipantListEmail"
             :disabled="isSendingParticipantList || currentEnrollments.length === 0"
@@ -2832,8 +2884,9 @@
                   <div
                     v-for="user in searchResults"
                     :key="user.id"
-                    @click="selectExistingUser(user)"
-                    class="flex items-center gap-3 px-3 py-2.5 hover:bg-indigo-50 cursor-pointer border-b border-gray-50 last:border-b-0 transition-colors"
+                    @click="selectedExistingUser = user"
+                    class="flex items-center gap-3 px-3 py-2.5 cursor-pointer border-b border-gray-50 last:border-b-0 transition-colors"
+                    :class="selectedExistingUser?.id === user.id ? 'bg-indigo-50 ring-1 ring-inset ring-indigo-200' : 'hover:bg-indigo-50'"
                   >
                     <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700 flex-shrink-0">
                       {{ (user.first_name?.[0] || '') + (user.last_name?.[0] || '') }}
@@ -2845,6 +2898,76 @@
                   </div>
                 </div>
                 <p v-else-if="userSearchQuery && !isSearchingUsers" class="text-center text-sm text-gray-400 py-4">Keine Kunden gefunden</p>
+
+                <!-- Enrollment options (existing customer) -->
+                <div class="mt-4 space-y-3 border-t border-gray-100 pt-4">
+                  <div v-if="isSelectedCourseCompanyCollective" class="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-800">
+                    Firmenkurs · Sammelrechnung an <strong>{{ selectedCourseCompanyName }}</strong>.
+                    Teilnehmer werden ohne Einzelrechnung angemeldet.
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Zahlungsart *</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <label v-for="opt in availablePaymentOptions" :key="opt.value" class="flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors"
+                        :class="enrollmentPaymentOption === opt.value ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'">
+                        <input type="radio" class="mt-0.5" :value="opt.value" v-model="enrollmentPaymentOption" />
+                        <span>
+                          <span class="block text-sm font-medium text-gray-900">{{ opt.label }}</span>
+                          <span class="block text-xs text-gray-500">{{ isSelectedCourseCompanyCollective && opt.value === 'invoice' ? 'Auf Firmenrechnung buchen' : opt.hint }}</span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                  <div v-if="enrollmentPaymentOption === 'invoice' && !isSelectedCourseCompanyCollective">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Rechnung *</label>
+                    <div class="space-y-2">
+                      <label v-for="opt in invoiceActionOptions" :key="opt.value" class="flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors"
+                        :class="enrollmentInvoiceAction === opt.value ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'">
+                        <input type="radio" class="mt-0.5" :value="opt.value" v-model="enrollmentInvoiceAction" />
+                        <span>
+                          <span class="block text-sm font-medium text-gray-900">{{ opt.label }}</span>
+                          <span class="block text-xs text-gray-500">{{ opt.hint }}</span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                  <div v-if="selectedCourseAllowsPartial">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Anmeldungstyp</label>
+                    <select v-model="enrollmentType" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50">
+                      <option value="full">Vollkurs</option>
+                      <option value="partial">Teil ab Session {{ selectedCoursePartialStart }}</option>
+                      <option v-if="selectedCourseHasIndividualSessions" value="individual">Einzelsession</option>
+                    </select>
+                    <select v-if="enrollmentType === 'individual'" v-model.number="enrollmentIndividualSession" class="mt-2 w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50">
+                      <option :value="0" disabled>Session wählen</option>
+                      <option v-for="s in individualSessions" :key="s.session_number" :value="s.session_number">
+                        Session {{ s.session_number }}
+                      </option>
+                    </select>
+                  </div>
+                  <div v-if="selectedCourse?.sari_managed && enrollmentPaymentOption !== 'reserve'" class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">Faber-ID (SARI)</label>
+                      <input v-model="enrollmentFaberid" type="text" placeholder="optional" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50" />
+                    </div>
+                    <div>
+                      <label class="block text-xs text-gray-500 mb-1">Geburtsdatum (SARI)</label>
+                      <input v-model="enrollmentBirthdate" type="date" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50" />
+                    </div>
+                    <p class="col-span-2 text-xs text-gray-400">Ohne Angaben: lokal anmelden. Mit Angaben: SARI wenn Zugangsdaten vorhanden.</p>
+                  </div>
+                  <p v-if="enrollmentPaymentOption === 'reserve'" class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    Platz wird reserviert — nicht in SARI eingetragen.
+                  </p>
+                  <button
+                    type="button"
+                    @click="confirmEnrollExistingUser"
+                    :disabled="!selectedExistingUser || !enrollmentPaymentOption || isAddingParticipant"
+                    class="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-colors disabled:bg-indigo-300 bg-indigo-600 hover:bg-indigo-700"
+                  >
+                    {{ isAddingParticipant ? 'Wird angemeldet...' : (selectedExistingUser ? `${selectedExistingUser.first_name} anmelden` : 'Kunde auswählen') }}
+                  </button>
+                </div>
               </div>
 
               <!-- New user mode -->
@@ -2894,9 +3017,60 @@
                     </div>
                   </div>
                 </div>
+
+                <div class="mt-4 space-y-3 border-t border-gray-100 pt-4">
+                  <div v-if="isSelectedCourseCompanyCollective" class="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-800">
+                    Firmenkurs · Sammelrechnung an <strong>{{ selectedCourseCompanyName }}</strong>.
+                  </div>
+                  <div v-if="selectedCourse?.sari_managed && enrollmentPaymentOption !== 'reserve'">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Faber-ID (SARI)</label>
+                    <input v-model="enrollmentFaberid" type="text" placeholder="optional" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Zahlungsart *</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <label v-for="opt in availablePaymentOptions" :key="'new-'+opt.value" class="flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors"
+                        :class="enrollmentPaymentOption === opt.value ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'">
+                        <input type="radio" class="mt-0.5" :value="opt.value" v-model="enrollmentPaymentOption" />
+                        <span>
+                          <span class="block text-sm font-medium text-gray-900">{{ opt.label }}</span>
+                          <span class="block text-xs text-gray-500">{{ isSelectedCourseCompanyCollective && opt.value === 'invoice' ? 'Auf Firmenrechnung buchen' : opt.hint }}</span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                  <div v-if="enrollmentPaymentOption === 'invoice' && !isSelectedCourseCompanyCollective">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Rechnung *</label>
+                    <div class="space-y-2">
+                      <label v-for="opt in invoiceActionOptions" :key="'new-inv-'+opt.value" class="flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors"
+                        :class="enrollmentInvoiceAction === opt.value ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'">
+                        <input type="radio" class="mt-0.5" :value="opt.value" v-model="enrollmentInvoiceAction" />
+                        <span>
+                          <span class="block text-sm font-medium text-gray-900">{{ opt.label }}</span>
+                          <span class="block text-xs text-gray-500">{{ opt.hint }}</span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                  <div v-if="selectedCourseAllowsPartial">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Anmeldungstyp</label>
+                    <select v-model="enrollmentType" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50">
+                      <option value="full">Vollkurs</option>
+                      <option value="partial">Teil ab Session {{ selectedCoursePartialStart }}</option>
+                      <option v-if="selectedCourseHasIndividualSessions" value="individual">Einzelsession</option>
+                    </select>
+                    <select v-if="enrollmentType === 'individual'" v-model.number="enrollmentIndividualSession" class="mt-2 w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50">
+                      <option :value="0" disabled>Session wählen</option>
+                      <option v-for="s in individualSessions" :key="'n-'+s.session_number" :value="s.session_number">
+                        Session {{ s.session_number }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
                 <button
                   @click="addParticipant"
-                  :disabled="!newParticipant.first_name || !newParticipant.last_name || !newParticipant.email || !newParticipant.street || !newParticipant.street_nr || !newParticipant.zip || !newParticipant.city || isAddingParticipant"
+                  :disabled="!newParticipant.first_name || !newParticipant.last_name || !newParticipant.email || !newParticipant.street || !newParticipant.street_nr || !newParticipant.zip || !newParticipant.city || !enrollmentPaymentOption || isAddingParticipant || (enrollmentType === 'individual' && !enrollmentIndividualSession)"
                   class="mt-4 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
                 >
                   {{ isAddingParticipant ? 'Wird hinzugefügt...' : 'Teilnehmer hinzufügen' }}
@@ -2938,8 +3112,7 @@
             <div
               v-for="enrollment in currentEnrollments"
               :key="enrollment.id"
-              class="rounded-2xl border transition-all"
-              :class="transferringEnrollmentId === enrollment.id ? 'border-indigo-300 bg-indigo-50/50' : 'border-gray-100 bg-gray-50/50 hover:border-gray-200 hover:bg-white'"
+              class="rounded-2xl border transition-all border-gray-100 bg-gray-50/50 hover:border-gray-200 hover:bg-white"
             >
               <div class="flex items-center gap-3 p-3 cursor-pointer" @click="openParticipantDetail(enrollment)">
                 <!-- Avatar -->
@@ -2965,26 +3138,6 @@
                 <!-- Actions -->
                 <div class="flex items-center gap-1 flex-shrink-0" @click.stop>
                   <button
-                    v-if="selectedCourse?.sari_managed && transferringEnrollmentId !== enrollment.id"
-                    @click="startTransfer(enrollment.id)"
-                    class="p-1.5 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-100 rounded-lg transition-colors"
-                    title="Umplanen"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                    </svg>
-                  </button>
-                  <button
-                    v-if="transferringEnrollmentId === enrollment.id"
-                    @click="cancelTransfer"
-                    class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    title="Abbrechen"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                  </button>
-                  <button
                     @click.stop="removeParticipant(enrollment)"
                     class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     title="Entfernen"
@@ -2992,38 +3145,6 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Transfer panel (inline) -->
-              <div v-if="transferringEnrollmentId === enrollment.id" class="px-3 pb-3">
-                <div class="pt-3 border-t border-indigo-200">
-                  <p class="text-xs font-semibold text-indigo-800 mb-2">Umplanen zu anderem Kurs</p>
-                  <div v-if="transferTargetCourses.length === 0" class="text-xs text-gray-500 py-2">
-                    Keine verfügbaren Kurse mit freien Plätzen in derselben Kategorie.
-                  </div>
-                  <select
-                    v-else
-                    v-model="transferTargetCourseId"
-                    class="w-full text-sm border border-indigo-200 rounded-xl px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
-                  >
-                    <option value="">Ziel-Kurs auswählen…</option>
-                    <option v-for="c in transferTargetCourses" :key="c.id" :value="c.id">
-                      {{ c.name }} — {{ c.max_participants - c.current_participants }} freie Plätze
-                    </option>
-                  </select>
-                  <label class="flex items-center gap-2 mb-3 cursor-pointer">
-                    <input type="checkbox" v-model="transferNotifyCustomer" class="w-4 h-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-400" />
-                    <span class="text-xs text-indigo-700">Kunde per E-Mail benachrichtigen</span>
-                  </label>
-                  <p v-if="transferError" class="text-xs text-red-600 mb-2">{{ transferError }}</p>
-                  <button
-                    @click="confirmTransfer(enrollment)"
-                    :disabled="isTransferring || !transferTargetCourseId"
-                    class="w-full py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl transition-colors"
-                  >
-                    {{ isTransferring ? 'Wird umgebucht…' : 'Umbuchen bestätigen' }}
                   </button>
                 </div>
               </div>
@@ -3774,7 +3895,173 @@
                 <span class="text-xs text-gray-500">Angemeldet am</span>
                 <span class="text-sm text-gray-700">{{ selectedParticipant?.registration_date ? new Date(selectedParticipant.registration_date).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—' }}</span>
               </div>
-              <div v-if="courseSessions.length > 0" class="px-4 py-2.5">
+
+              <!-- Whole-course transfer -->
+              <div v-if="selectedCourse?.sari_managed" class="px-4 py-3">
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <div>
+                    <p class="text-xs font-semibold text-gray-700">Gesamten Kurs umplanen</p>
+                    <p class="text-xs text-gray-400">Alle Teile in einen anderen Kurs verschieben</p>
+                  </div>
+                  <button
+                    v-if="transferringEnrollmentId !== selectedParticipant?.id"
+                    type="button"
+                    @click="startTransfer(selectedParticipant.id)"
+                    class="flex-shrink-0 text-xs font-semibold text-indigo-600 hover:text-indigo-800 px-2.5 py-1.5 rounded-lg border border-indigo-200 hover:bg-indigo-50"
+                  >
+                    Umplanen
+                  </button>
+                  <button
+                    v-else
+                    type="button"
+                    @click="cancelTransfer"
+                    class="flex-shrink-0 text-xs font-medium text-gray-500 hover:text-gray-700 px-2.5 py-1.5 rounded-lg border border-gray-200"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+                <div v-if="transferringEnrollmentId === selectedParticipant?.id" class="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 space-y-2">
+                  <div v-if="transferTargetCourses.length === 0" class="text-xs text-gray-500">
+                    Keine verfügbaren Kurse mit freien Plätzen in derselben Kategorie.
+                  </div>
+                  <template v-else>
+                    <select
+                      v-model="transferTargetCourseId"
+                      class="w-full text-sm border border-indigo-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                    >
+                      <option value="">Ziel-Kurs auswählen…</option>
+                      <option v-for="c in transferTargetCourses" :key="c.id" :value="c.id">
+                        {{ c.name }} — {{ c.max_participants - c.current_participants }} freie Plätze
+                      </option>
+                    </select>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" v-model="transferNotifyCustomer" class="w-4 h-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-400" />
+                      <span class="text-xs text-indigo-700">Kunde per E-Mail benachrichtigen</span>
+                    </label>
+                    <p v-if="transferError" class="text-xs text-red-600">{{ transferError }}</p>
+                    <button
+                      type="button"
+                      @click="confirmTransfer(selectedParticipant)"
+                      :disabled="isTransferring || !transferTargetCourseId"
+                      class="w-full py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl transition-colors"
+                    >
+                      {{ isTransferring ? 'Wird umgebucht…' : 'Umbuchen bestätigen' }}
+                    </button>
+                  </template>
+                </div>
+              </div>
+
+              <div v-if="participantSessionParts.length > 0" class="px-4 py-2.5">
+                <span class="text-xs text-gray-500 block mb-1.5">Kursdaten / Sessions</span>
+                <div class="space-y-2">
+                  <div
+                    v-for="part in participantSessionPartsDisplay"
+                    :key="part.position"
+                    class="rounded-lg border px-3 py-2"
+                    :class="pendingSessionChanges[part.position] ? 'border-indigo-300 bg-indigo-50/40' : 'border-gray-200 bg-white'"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-900">
+                          Teil {{ part.position }}
+                          <span v-if="pendingSessionChanges[part.position]" class="ml-1 text-xs font-normal text-indigo-600">(Änderung ausstehend)</span>
+                          <span v-else-if="part.isCustom" class="ml-1 text-xs font-normal text-indigo-600">(verschoben)</span>
+                        </p>
+                        <p class="text-xs text-gray-600 mt-0.5">{{ part.label }}</p>
+                        <p v-if="part.courseName" class="text-xs text-gray-400 truncate">{{ part.courseName }}</p>
+                      </div>
+                      <button
+                        v-if="selectedCourse?.sari_managed"
+                        type="button"
+                        @click="startSessionTransfer(part)"
+                        class="flex-shrink-0 text-xs font-semibold text-indigo-600 hover:text-indigo-800 px-2 py-1 rounded-lg hover:bg-indigo-50"
+                      >
+                        {{ pendingSessionChanges[part.position] ? 'Ändern' : 'Verschieben' }}
+                      </button>
+                    </div>
+
+                    <!-- Picker: stages change only -->
+                    <div v-if="sessionTransferPosition === part.position" class="mt-2 pt-2 border-t border-gray-100 space-y-2">
+                      <p class="text-xs text-gray-500">Ziel-Termin wählen (noch nicht speichern):</p>
+                      <div v-if="isLoadingSessionOptions" class="text-xs text-gray-400 py-2">Lade Termine…</div>
+                      <div v-else-if="sessionTransferOptions.length === 0" class="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-2">
+                        Keine Alternativ-Termine gefunden.
+                      </div>
+                      <div v-else class="max-h-40 overflow-y-auto space-y-1">
+                        <label
+                          v-for="opt in sessionTransferOptions"
+                          :key="opt.courseId + '-' + opt.date + '-' + (opt.sariSessionIds?.[0] || opt.sariSessionId)"
+                          class="flex items-start gap-2 p-2 rounded-lg border cursor-pointer text-xs"
+                          :class="sessionTransferTargetKey === optKey(opt) ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'"
+                        >
+                          <input type="radio" class="mt-0.5" :value="optKey(opt)" v-model="sessionTransferTargetKey" />
+                          <span>
+                            <span class="font-medium text-gray-900 block">{{ formatSessionOptionLabel(opt) }}</span>
+                            <span class="text-gray-500">{{ opt.courseName }} · {{ opt.freeSlots }} frei</span>
+                            <span v-if="opt.orderWarning" class="block text-amber-700 mt-0.5">⚠ Reihenfolge ggf. verletzt</span>
+                          </span>
+                        </label>
+                      </div>
+                      <p v-if="sessionTransferError" class="text-xs text-red-600">{{ sessionTransferError }}</p>
+                      <div class="flex gap-2">
+                        <button type="button" @click="cancelSessionTransfer" class="flex-1 py-1.5 text-xs font-medium border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">
+                          Abbrechen
+                        </button>
+                        <button
+                          type="button"
+                          @click="stageSessionTransfer"
+                          :disabled="!sessionTransferTargetKey"
+                          class="flex-1 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg"
+                        >
+                          Übernehmen
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Batch confirm -->
+                <div v-if="pendingSessionChangeCount > 0" class="mt-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 space-y-2">
+                  <p class="text-xs font-semibold text-indigo-900">
+                    {{ pendingSessionChangeCount }} Session-Änderung{{ pendingSessionChangeCount === 1 ? '' : 'en' }} ausstehend
+                  </p>
+                  <div
+                    v-if="sessionTransferWarning.length"
+                    class="text-xs rounded-lg px-2 py-2 space-y-2"
+                    :class="sessionOrderHardBlocked
+                      ? 'text-red-900 bg-red-50 border border-red-200'
+                      : 'text-amber-900 bg-amber-50 border border-amber-200'"
+                  >
+                    <p v-for="(w, i) in sessionTransferWarning" :key="i">{{ w }}</p>
+                    <p v-if="sessionOrderHardBlocked" class="font-medium">
+                      Mit aktivem SARI Sync ist diese Reihenfolge nicht erlaubt — bitte Termine anpassen.
+                    </p>
+                    <label v-else class="flex items-start gap-2 cursor-pointer">
+                      <input type="checkbox" v-model="sessionTransferAcknowledge" class="mt-0.5" />
+                      <span>Warnung zur Kenntnis genommen — auf eigene Verantwortung fortfahren</span>
+                    </label>
+                  </div>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" v-model="sessionTransferNotifyCustomer" class="w-4 h-4 rounded border-indigo-300 text-indigo-600" />
+                    <span class="text-xs text-indigo-800">Kunde per E-Mail benachrichtigen</span>
+                  </label>
+                  <p v-if="sessionTransferError && !sessionTransferPosition" class="text-xs text-red-600">{{ sessionTransferError }}</p>
+                  <div class="flex gap-2">
+                    <button type="button" @click="clearPendingSessionChanges" class="flex-1 py-2 text-xs font-medium border border-gray-200 bg-white rounded-xl text-gray-600">
+                      Verwerfen
+                    </button>
+                    <button
+                      type="button"
+                      @click="confirmAllSessionTransfers"
+                      :disabled="isTransferringSession || sessionOrderHardBlocked || (sessionTransferWarning.length > 0 && !sessionTransferAcknowledge)"
+                      class="flex-1 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl"
+                    >
+                      {{ isTransferringSession ? 'Prüfe & speichere…' : (tenantSariEnabled && selectedCourse?.sari_managed ? 'Bestätigen (inkl. SARI-Test)' : 'Bestätigen') }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div v-else-if="courseSessions.length > 0" class="px-4 py-2.5">
                 <span class="text-xs text-gray-500 block mb-1.5">Kursdaten</span>
                 <div class="space-y-0.5">
                   <div v-for="(session, idx) in courseSessions" :key="session.id" class="text-sm text-gray-800">
@@ -4043,6 +4330,7 @@ import ToggleSwitch from '~/components/ToggleSwitch.vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
 import { getCoursePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
+import { evaluateSessionOrder } from '~/utils/session-order-rules'
 
 // Warning banner: surface "no online payments" so admins understand all
 // course enrollments will fall back to cash.
@@ -4262,6 +4550,8 @@ const isLoadingParticipantUser = ref(false)
 const showParticipantDetail = ref(false)
 
 const openParticipantDetail = async (enrollment: any) => {
+  cancelTransfer()
+  clearPendingSessionChanges()
   selectedParticipant.value = enrollment
   selectedParticipantUser.value = null
   showParticipantDetail.value = true
@@ -4284,6 +4574,294 @@ const closeParticipantDetail = () => {
   showParticipantDetail.value = false
   selectedParticipant.value = null
   selectedParticipantUser.value = null
+  clearPendingSessionChanges()
+  cancelTransfer()
+}
+
+// ── Per-session transfer (Teil verschieben, staged → batch confirm) ────────
+const sessionTransferPosition = ref<number | null>(null)
+const sessionTransferOptions = ref<any[]>([])
+const isLoadingSessionOptions = ref(false)
+const sessionTransferTargetKey = ref('')
+const sessionTransferWarning = ref<string[]>([])
+const sessionTransferAcknowledge = ref(false)
+const sessionTransferError = ref('')
+const sessionTransferNotifyCustomer = ref(true)
+const isTransferringSession = ref(false)
+/** Tenant-level SARI Sync toggle (tenants.sari_enabled) — not just sari_managed on the course */
+const tenantSariEnabled = ref(false)
+/** Staged changes keyed by Teil position — applied only on confirm */
+const pendingSessionChanges = ref<Record<number, any>>({})
+
+/** Hard block when SARI Sync is on for a SARI-managed course — no soft override */
+const sessionOrderHardBlocked = computed(
+  () =>
+    tenantSariEnabled.value &&
+    !!selectedCourse.value?.sari_managed &&
+    sessionTransferWarning.value.length > 0
+)
+
+const participantSessionParts = computed(() => {
+  const course = selectedCourse.value
+  const enrollment = selectedParticipant.value
+  if (!course) return []
+
+  const sessions = [...(course.course_sessions || course.sessions || [])].sort((a: any, b: any) =>
+    String(a.start_time || '').localeCompare(String(b.start_time || ''))
+  )
+  if (sessions.length === 0) return []
+
+  const byDate = new Map<string, any[]>()
+  for (const s of sessions) {
+    const d = String(s.start_time).slice(0, 10)
+    if (!byDate.has(d)) byDate.set(d, [])
+    byDate.get(d)!.push(s)
+  }
+
+  const custom = enrollment?.custom_sessions && typeof enrollment.custom_sessions === 'object'
+    ? enrollment.custom_sessions
+    : {}
+
+  const parts: any[] = []
+  let position = 0
+  for (const [date, daySessions] of byDate) {
+    position++
+    const override = custom[String(position)]
+    const first = daySessions[0]
+    const last = daySessions[daySessions.length - 1]
+    const effectiveDate = override?.date || date
+    const start = override?.startTime || first?.start_time
+    const end = override?.endTime || last?.end_time
+    const fmt = (iso: string) => {
+      try {
+        return new Date(iso.includes('T') ? iso : `${iso}T12:00:00`).toLocaleDateString('de-CH', {
+          weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric',
+        })
+      } catch { return iso }
+    }
+    const timeFmt = (iso: string | null) => {
+      if (!iso) return ''
+      try {
+        return new Date(iso).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+      } catch { return '' }
+    }
+    parts.push({
+      position,
+      date: effectiveDate,
+      label: `${fmt(effectiveDate)}${start ? `, ${timeFmt(start)}` : ''}${end ? `–${timeFmt(end)}` : ''}`,
+      isCustom: !!override,
+      courseName: override?.courseName || null,
+      originalSariIds: daySessions.map((s: any) => s.sari_session_id).filter(Boolean),
+    })
+  }
+  return parts
+})
+
+const formatPartLabel = (date: string, startTime?: string | null, endTime?: string | null) => {
+  const fmt = (iso: string) => {
+    try {
+      return new Date(iso.includes('T') ? iso : `${iso}T12:00:00`).toLocaleDateString('de-CH', {
+        weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric',
+      })
+    } catch { return iso }
+  }
+  const timeFmt = (iso: string | null | undefined) => {
+    if (!iso) return ''
+    try {
+      return new Date(iso).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+    } catch { return '' }
+  }
+  return `${fmt(date)}${startTime ? `, ${timeFmt(startTime)}` : ''}${endTime ? `–${timeFmt(endTime)}` : ''}`
+}
+
+/** Display parts with pending staged overrides overlaid */
+const participantSessionPartsDisplay = computed(() => {
+  return participantSessionParts.value.map((part: any) => {
+    const pending = pendingSessionChanges.value[part.position]
+    if (!pending) return part
+    return {
+      ...part,
+      date: pending.targetDate,
+      label: formatPartLabel(pending.targetDate, pending.targetStartTime, pending.targetEndTime),
+      courseName: pending.targetCourseName || part.courseName,
+      isCustom: true,
+      pending: true,
+    }
+  })
+})
+
+const pendingSessionChangeCount = computed(() => Object.keys(pendingSessionChanges.value).length)
+
+const recomputePendingOrderWarnings = () => {
+  const positions = participantSessionPartsDisplay.value.map((p: any) => ({
+    position: p.position,
+    date: p.date,
+  }))
+  const result = evaluateSessionOrder(selectedCourse.value?.category, positions)
+  sessionTransferWarning.value = result.warnings
+  if (result.ok) sessionTransferAcknowledge.value = false
+}
+
+const optKey = (opt: any) => `${opt.courseId}|${opt.date}|${(opt.sariSessionIds || [opt.sariSessionId]).join(',')}`
+
+const formatSessionOptionLabel = (opt: any) => {
+  try {
+    const d = new Date(`${opt.date}T12:00:00`).toLocaleDateString('de-CH', {
+      weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric',
+    })
+    const t0 = opt.startTime ? new Date(opt.startTime).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) : ''
+    const t1 = opt.endTime ? new Date(opt.endTime).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) : ''
+    return `${d}${t0 ? `, ${t0}` : ''}${t1 ? `–${t1}` : ''}`
+  } catch {
+    return opt.date
+  }
+}
+
+const startSessionTransfer = async (part: any) => {
+  sessionTransferPosition.value = part.position
+  sessionTransferTargetKey.value = ''
+  sessionTransferError.value = ''
+  sessionTransferOptions.value = []
+  isLoadingSessionOptions.value = true
+
+  try {
+    const prev = participantSessionPartsDisplay.value.find((p: any) => p.position === part.position - 1)
+    const response = await $fetch<any>('/api/courses/available-sessions', {
+      query: {
+        tenantId: selectedCourse.value.tenant_id || currentUser.value?.tenant_id,
+        category: selectedCourse.value.category,
+        sessionPosition: part.position,
+        afterDate: prev?.date || undefined,
+        excludeCourseId: selectedCourse.value.id,
+        currentDate: part.date,
+        admin: 'true',
+      },
+    })
+
+    const raw = response?.sessions || []
+    const grouped = new Map<string, any[]>()
+    for (const s of raw) {
+      const key = `${s.courseId}-${s.date}`
+      if (!grouped.has(key)) grouped.set(key, [])
+      grouped.get(key)!.push(s)
+    }
+    sessionTransferOptions.value = Array.from(grouped.values()).map((group) => {
+      const sorted = [...group].sort((a, b) => String(a.startTime).localeCompare(String(b.startTime)))
+      const first = sorted[0]
+      const last = sorted[sorted.length - 1]
+      return {
+        ...first,
+        startTime: first.startTime,
+        endTime: last.endTime,
+        sariSessionIds: sorted.map((s) => s.sariSessionId).filter(Boolean),
+        orderWarning: sorted.some((s) => s.orderWarning),
+      }
+    })
+  } catch (err: any) {
+    sessionTransferError.value = err?.data?.statusMessage || err?.message || 'Termine konnten nicht geladen werden'
+  } finally {
+    isLoadingSessionOptions.value = false
+  }
+}
+
+const cancelSessionTransfer = () => {
+  sessionTransferPosition.value = null
+  sessionTransferOptions.value = []
+  sessionTransferTargetKey.value = ''
+  sessionTransferError.value = ''
+}
+
+const clearPendingSessionChanges = () => {
+  pendingSessionChanges.value = {}
+  sessionTransferWarning.value = []
+  sessionTransferAcknowledge.value = false
+  sessionTransferError.value = ''
+  cancelSessionTransfer()
+}
+
+const stageSessionTransfer = () => {
+  if (!sessionTransferPosition.value || !sessionTransferTargetKey.value) return
+  const opt = sessionTransferOptions.value.find((o) => optKey(o) === sessionTransferTargetKey.value)
+  if (!opt) {
+    sessionTransferError.value = 'Bitte einen Termin wählen'
+    return
+  }
+
+  pendingSessionChanges.value = {
+    ...pendingSessionChanges.value,
+    [sessionTransferPosition.value]: {
+      sessionPosition: sessionTransferPosition.value,
+      targetCourseId: opt.courseId,
+      targetSariSessionIds: opt.sariSessionIds || [opt.sariSessionId],
+      targetDate: opt.date,
+      targetStartTime: opt.startTime,
+      targetEndTime: opt.endTime,
+      targetCourseName: opt.courseName,
+    },
+  }
+  sessionTransferError.value = ''
+  cancelSessionTransfer()
+  recomputePendingOrderWarnings()
+}
+
+const confirmAllSessionTransfers = async () => {
+  if (!selectedParticipant.value || pendingSessionChangeCount.value === 0) return
+  if (sessionOrderHardBlocked.value) return
+  if (sessionTransferWarning.value.length > 0 && !sessionTransferAcknowledge.value) return
+
+  isTransferringSession.value = true
+  sessionTransferError.value = ''
+  try {
+    const changes = Object.values(pendingSessionChanges.value)
+    const result: any = await $fetch('/api/admin/courses/transfer-session', {
+      method: 'POST',
+      headers: authStore.accessToken
+        ? { Authorization: `Bearer ${authStore.accessToken}` }
+        : undefined,
+      body: {
+        registrationId: selectedParticipant.value.id,
+        changes,
+        acknowledgeOrderWarning:
+          !(tenantSariEnabled.value && selectedCourse.value?.sari_managed) &&
+          sessionTransferAcknowledge.value,
+        notifyCustomer: sessionTransferNotifyCustomer.value,
+      },
+    })
+
+    await loadCourseEnrollments(selectedCourse.value.id)
+    const updated = currentEnrollments.value.find((e: any) => e.id === selectedParticipant.value.id)
+    if (updated) selectedParticipant.value = updated
+    else if (result?.customSessions) {
+      selectedParticipant.value = { ...selectedParticipant.value, custom_sessions: result.customSessions }
+    }
+
+    const bits = [`${changes.length} Session${changes.length === 1 ? '' : 's'} verschoben`]
+    if (result?.sariTestPassed) bits.push('SARI-Test ok')
+    if (result?.sariSynced) bits.push('SARI aktualisiert')
+    if (result?.emailSent) bits.push('E-Mail gesendet')
+    if (result?.warning) bits.push(result.warning)
+    if (result?.orderOverride) bits.push('Reihenfolge-Warnung bestätigt')
+    success.value = bits.join(' · ')
+    clearPendingSessionChanges()
+  } catch (err: any) {
+    const data = err?.data?.data || err?.data
+    if (err?.statusCode === 409 && (data?.code === 'SESSION_ORDER_BLOCKED' || data?.canOverride === false)) {
+      sessionTransferWarning.value = data?.warnings || [err?.data?.statusMessage || err?.statusMessage || 'Reihenfolge nicht erlaubt']
+      sessionTransferAcknowledge.value = false
+      sessionTransferError.value = 'Mit aktivem SARI Sync ist diese Reihenfolge nicht erlaubt.'
+      if (typeof data?.sariSyncActive === 'boolean') tenantSariEnabled.value = data.sariSyncActive
+    } else if (err?.statusCode === 409 && (data?.code === 'SESSION_ORDER_WARNING' || data?.canOverride)) {
+      sessionTransferWarning.value = data?.warnings || [err?.data?.statusMessage || err?.statusMessage || 'Reihenfolge-Warnung']
+      sessionTransferAcknowledge.value = false
+      sessionTransferError.value = 'Bitte Warnung bestätigen, um trotzdem fortzufahren.'
+      if (typeof data?.sariSyncActive === 'boolean') tenantSariEnabled.value = data.sariSyncActive
+    } else {
+      sessionTransferError.value =
+        err?.data?.statusMessage || err?.statusMessage || err?.message || 'Verschieben fehlgeschlagen'
+    }
+  } finally {
+    isTransferringSession.value = false
+  }
 }
 
 // Only count non-cancelled registrations for capacity (cancelled don't occupy a spot)
@@ -4308,6 +4886,60 @@ const enrollmentMode = ref('search') // 'search' or 'new'
 const userSearchQuery = ref('')
 const searchResults = ref<any[]>([])
 const isSearchingUsers = ref(false)
+const selectedExistingUser = ref<any>(null)
+const enrollmentPaymentOption = ref<'cash' | 'invoice' | 'paid' | 'reserve' | 'online_link' | ''>('')
+const enrollmentInvoiceAction = ref<'later' | 'pdf' | 'email'>('later')
+const enrollmentType = ref<'full' | 'partial' | 'individual'>('full')
+const enrollmentIndividualSession = ref(0)
+const enrollmentFaberid = ref('')
+const enrollmentBirthdate = ref('')
+const companyList = ref<any[]>([])
+const isCreatingCompanyInvoice = ref(false)
+
+const paymentOptions = [
+  { value: 'cash', label: 'Bar vor Ort', hint: 'Payment offen, Bar am Kurstag' },
+  { value: 'invoice', label: 'Rechnung', hint: 'Payment + Rechnung jetzt oder später' },
+  { value: 'paid', label: 'Bereits bezahlt', hint: 'Payment als bezahlt' },
+  { value: 'reserve', label: 'Platz reservieren', hint: 'Ohne SARI, Payment offen' },
+  { value: 'online_link', label: 'Online-Link senden', hint: 'Wallee-Link per E-Mail, kein Login' },
+] as const
+
+const invoiceActionOptions = [
+  { value: 'later', label: 'Rechnung später', hint: 'Pendentes Payment — später verrechnen' },
+  { value: 'pdf', label: 'Rechnung jetzt (PDF)', hint: 'Erstellt PDF, kein E-Mail-Versand' },
+  { value: 'email', label: 'Rechnung jetzt + E-Mail', hint: 'PDF erstellen und per Mail senden' },
+] as const
+
+const isSelectedCourseCompanyCollective = computed(() =>
+  selectedCourse.value?.billing_mode === 'company_collective' && !!selectedCourse.value?.company_id
+)
+
+const selectedCourseCompanyName = computed(() => {
+  const id = selectedCourse.value?.company_id
+  if (!id) return ''
+  return companyList.value.find((c: any) => c.id === id)?.name || 'Firma'
+})
+
+const availablePaymentOptions = computed(() => {
+  if (isSelectedCourseCompanyCollective.value) {
+    return paymentOptions.filter((o) => o.value !== 'online_link')
+  }
+  return paymentOptions
+})
+
+const selectedCourseAllowsPartial = computed(() =>
+  !!(selectedCourse.value?.course_category?.allow_partial_enrollment || selectedCourse.value?.is_partial_only)
+)
+const selectedCoursePartialStart = computed(() =>
+  selectedCourse.value?.course_category?.partial_start_position || 3
+)
+const individualSessions = computed(() =>
+  (selectedCourse.value?.sessions || selectedCourse.value?.course_sessions || [])
+    .filter((s: any) => s.allow_individual_booking)
+    .sort((a: any, b: any) => (a.session_number || 0) - (b.session_number || 0))
+)
+const selectedCourseHasIndividualSessions = computed(() => individualSessions.value.length > 0)
+
 const newParticipant = ref({
   first_name: '',
   last_name: '',
@@ -4542,7 +5174,9 @@ const newCourse = ref({
   sari_course_id: null as string | null,
   registration_deadline: null as string | null,
   status: 'draft',
-  payment_method: null as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null
+  payment_method: null as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null,
+  billing_mode: 'individual' as 'individual' | 'company_collective',
+  company_id: null as string | null,
 })
 
 // Live preview: which payment method will the auto-detection pick when
@@ -4836,6 +5470,17 @@ const createCourse = async () => {
     if (courseData.room_id === '') courseData.room_id = null
     if (courseData.vehicle_id === '') courseData.vehicle_id = null
     if (courseData.sari_course_id === '') courseData.sari_course_id = null
+    if (courseData.company_id === '') courseData.company_id = null
+
+    if (courseData.billing_mode === 'company_collective') {
+      if (!courseData.company_id) {
+        throw new Error('Bitte Firmenkunden für den Firmenkurs wählen')
+      }
+      courseData.is_public = false
+    } else {
+      courseData.billing_mode = 'individual'
+      courseData.company_id = null
+    }
 
     // Remove empty resource IDs (omit from object)
     if (!newCourse.value.requires_room) {
@@ -4982,7 +5627,9 @@ const resetNewCourse = () => {
     sari_course_id: null,
     registration_deadline: null,
     status: 'scheduled',
-    payment_method: null
+    payment_method: null,
+    billing_mode: 'individual',
+    company_id: null,
   }
   coursePrice.value = 0
   registrationDeadline.value = ''
@@ -5757,7 +6404,9 @@ const editCourse = (course: any) => {
     sari_course_id: course.sari_course_id || '',
     registration_deadline: course.registration_deadline || null,
     status: course.status || 'draft',
-    payment_method: (course.payment_method as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null) ?? null
+    payment_method: (course.payment_method as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null) ?? null,
+    billing_mode: (course.billing_mode === 'company_collective' ? 'company_collective' : 'individual') as 'individual' | 'company_collective',
+    company_id: course.company_id || null,
   }
   
   // Set derived values
@@ -6144,6 +6793,8 @@ onMounted(async () => {
   // Fire-and-forget: load Wallee status so the warning banner can decide
   // whether to render. Failures are non-fatal.
   loadWalleeStatus().catch(() => {})
+  loadCompanies().catch(() => {})
+  loadTenantSariEnabled().catch(() => {})
   
   // Ensure current user is loaded first
   if (!currentUser.value?.tenant_id) {
@@ -6384,6 +7035,134 @@ const toggleAddParticipantForm = () => {
   }
 }
 
+const resetEnrollmentFormExtras = () => {
+  selectedExistingUser.value = null
+  enrollmentPaymentOption.value = isSelectedCourseCompanyCollective.value ? 'invoice' : ''
+  enrollmentInvoiceAction.value = 'later'
+  enrollmentType.value = 'full'
+  enrollmentIndividualSession.value = 0
+  enrollmentFaberid.value = ''
+  enrollmentBirthdate.value = ''
+}
+
+const openInvoicePdf = async (invoiceId: string) => {
+  try {
+    const result = await $fetch<{ success: boolean; pdfUrl?: string; dataUrl?: string }>('/api/invoices/download', {
+      method: 'POST',
+      body: { invoiceId },
+    })
+    const url = result?.pdfUrl || result?.dataUrl
+    if (url) window.open(url, '_blank')
+  } catch (err: any) {
+    console.error('PDF download failed:', err)
+    error.value = err?.data?.statusMessage || 'PDF konnte nicht geöffnet werden'
+  }
+}
+
+const createCompanyInvoice = async (sendEmail: boolean) => {
+  if (!selectedCourse.value?.id) return
+  try {
+    isCreatingCompanyInvoice.value = true
+    const result: any = await $fetch('/api/admin/courses/company-invoice', {
+      method: 'POST',
+      body: { courseId: selectedCourse.value.id, sendEmail },
+    })
+    await loadCourseEnrollments(selectedCourse.value.id)
+    const chf = ((result.totalRappen || 0) / 100).toFixed(2)
+    success.value = `Firmenrechnung ${result.invoiceNumber} erstellt (${result.participantCount} TN, CHF ${chf})${sendEmail ? ' · E-Mail gesendet' : ''}`
+    if (!sendEmail && result.invoiceId) await openInvoicePdf(result.invoiceId)
+  } catch (err: any) {
+    error.value = err?.data?.statusMessage || err.message || 'Firmenrechnung fehlgeschlagen'
+  } finally {
+    isCreatingCompanyInvoice.value = false
+  }
+}
+
+const loadCompanies = async () => {
+  try {
+    const data = await $fetch<{ companies: any[] }>('/api/admin/companies')
+    companyList.value = data?.companies || []
+  } catch (err) {
+    console.error('Error loading companies:', err)
+    companyList.value = []
+  }
+}
+
+const confirmEnrollExistingUser = async () => {
+  if (!selectedExistingUser.value) return
+  if (!enrollmentPaymentOption.value) {
+    error.value = 'Bitte Zahlungsart wählen'
+    return
+  }
+  if (enrollmentType.value === 'individual' && !enrollmentIndividualSession.value) {
+    error.value = 'Bitte Session wählen'
+    return
+  }
+
+  try {
+    isAddingParticipant.value = true
+    const existingEnrollment = currentEnrollments.value.find(e => e.user_id === selectedExistingUser.value.id)
+    if (existingEnrollment) {
+      alert('Dieser Kunde ist bereits für diesen Kurs angemeldet.')
+      return
+    }
+    if (activeEnrollmentCount.value >= (selectedCourse.value?.max_participants || 0)) {
+      alert('Kurs ist bereits ausgebucht.')
+      return
+    }
+
+    const result: any = await $fetch('/api/admin/courses/enroll', {
+      method: 'POST',
+      body: {
+        courseId: selectedCourse.value.id,
+        userId: selectedExistingUser.value.id,
+        paymentOption: enrollmentPaymentOption.value,
+        invoiceAction: enrollmentPaymentOption.value === 'invoice' ? enrollmentInvoiceAction.value : undefined,
+        enrollmentType: enrollmentType.value,
+        partialStartPosition: selectedCoursePartialStart.value,
+        individualSessionNumber: enrollmentType.value === 'individual' ? enrollmentIndividualSession.value : undefined,
+        faberid: enrollmentFaberid.value || undefined,
+        birthdate: enrollmentBirthdate.value || selectedExistingUser.value.birthdate || undefined,
+        participant: {
+          first_name: selectedExistingUser.value.first_name,
+          last_name: selectedExistingUser.value.last_name,
+          email: selectedExistingUser.value.email,
+          phone: selectedExistingUser.value.phone,
+          birthdate: enrollmentBirthdate.value || selectedExistingUser.value.birthdate,
+          faberid: enrollmentFaberid.value || undefined,
+        },
+      },
+    })
+
+    await loadCourseEnrollments(selectedCourse.value.id)
+    await loadCourses()
+    showAddParticipantForm.value = false
+    userSearchQuery.value = ''
+    searchResults.value = []
+    resetEnrollmentFormExtras()
+
+    const bits = ['Kunde erfolgreich angemeldet']
+    if (result?.sari?.synced) bits.push('SARI synchronisiert')
+    else if (result?.sari?.message) bits.push(result.sari.message)
+    if (result?.paymentUrl) bits.push('Zahlungslink gesendet')
+    if (result?.invoiceNumber) bits.push(`Rechnung ${result.invoiceNumber}`)
+    if (result?.warning) bits.push(result.warning)
+    success.value = bits.join(' · ')
+    if (enrollmentInvoiceAction.value === 'pdf' && result?.invoiceId) {
+      await openInvoicePdf(result.invoiceId)
+    }
+  } catch (err: any) {
+    console.error('Error enrolling user:', err)
+    error.value = err?.data?.statusMessage || err.message || 'Fehler beim Anmelden des Kunden'
+  } finally {
+    isAddingParticipant.value = false
+  }
+}
+
+const selectExistingUser = async (_user: any) => {
+  // Legacy no-op — selection is handled by confirmEnrollExistingUser
+}
+
 const searchUsers = async () => {
   if (!userSearchQuery.value.trim()) {
     searchResults.value = []
@@ -6394,51 +7173,12 @@ const searchUsers = async () => {
     isSearchingUsers.value = true
     const data = await $fetch<{ users: any[] }>(`/api/admin/users/search?q=${encodeURIComponent(userSearchQuery.value)}`)
     searchResults.value = data?.users || []
+    selectedExistingUser.value = null
   } catch (err) {
     console.error('Error searching users:', err)
     searchResults.value = []
   } finally {
     isSearchingUsers.value = false
-  }
-}
-
-const selectExistingUser = async (user: any) => {
-  try {
-    logger.debug('Enrolling existing user:', user.id)
-    isAddingParticipant.value = true
-    
-    // Check if user is already enrolled
-    const existingEnrollment = currentEnrollments.value.find(e => e.user_id === user.id)
-    if (existingEnrollment) {
-      alert('Dieser Kunde ist bereits für diesen Kurs angemeldet.')
-      return
-    }
-
-    // Check if course is full (cancelled registrations don't count against capacity)
-    if (activeEnrollmentCount.value >= (selectedCourse.value?.max_participants || 0)) {
-      alert('Kurs ist bereits ausgebucht.')
-      return
-    }
-
-    // Create enrollment
-    await $fetch('/api/admin/courses/enroll-user', {
-      method: 'POST',
-      body: { courseId: selectedCourse.value.id, userId: user.id },
-    })
-
-    // Reload enrollments and hide form
-    await loadCourseEnrollments(selectedCourse.value.id)
-    await loadCourses() // Update course statistics
-    showAddParticipantForm.value = false
-    userSearchQuery.value = ''
-    searchResults.value = []
-    
-    success.value = 'Kunde erfolgreich angemeldet!'
-  } catch (err: any) {
-    console.error('Error enrolling user:', err)
-    error.value = err.message || 'Fehler beim Anmelden des Kunden'
-  } finally {
-    isAddingParticipant.value = false
   }
 }
 
@@ -6539,32 +7279,42 @@ const loadDeletedEnrollments = async (courseId: string) => {
 
 const addParticipant = async () => {
   try {
+    if (!enrollmentPaymentOption.value) {
+      error.value = 'Bitte Zahlungsart wählen'
+      return
+    }
+    if (enrollmentType.value === 'individual' && !enrollmentIndividualSession.value) {
+      error.value = 'Bitte Session wählen'
+      return
+    }
     logger.debug('addParticipant called with:', newParticipant.value)
     isAddingParticipant.value = true
     
-    // Check if course is full (cancelled registrations don't count against capacity)
     if (activeEnrollmentCount.value >= (selectedCourse.value?.max_participants || 0)) {
       alert('Kurs ist bereits ausgebucht.')
       return
     }
 
-    // Create user (if not exists) + enrollment via server endpoint
-    logger.debug('Adding participant via API...')
-    await $fetch('/api/admin/courses/add-participant', {
+    const result: any = await $fetch('/api/admin/courses/enroll', {
       method: 'POST',
       body: {
         courseId: selectedCourse.value.id,
-        participant: newParticipant.value,
+        paymentOption: enrollmentPaymentOption.value,
+        invoiceAction: enrollmentPaymentOption.value === 'invoice' ? enrollmentInvoiceAction.value : undefined,
+        enrollmentType: enrollmentType.value,
+        partialStartPosition: selectedCoursePartialStart.value,
+        individualSessionNumber: enrollmentType.value === 'individual' ? enrollmentIndividualSession.value : undefined,
+        participant: {
+          ...newParticipant.value,
+          birthdate: enrollmentBirthdate.value || newParticipant.value.birthdate || null,
+          faberid: enrollmentFaberid.value || null,
+        },
       },
     })
 
-    logger.debug('Enrollment created successfully')
-
-    // Reload enrollments
     await loadCourseEnrollments(selectedCourse.value.id)
-    await loadCourses() // Update course statistics
+    await loadCourses()
     
-    // Hide form and clear data
     showAddParticipantForm.value = false
     newParticipant.value = {
       first_name: '',
@@ -6577,11 +7327,21 @@ const addParticipant = async () => {
       zip: '',
       city: ''
     }
-    
-    success.value = 'Teilnehmer erfolgreich hinzugefügt!'
+    resetEnrollmentFormExtras()
+
+    const bits = ['Teilnehmer erfolgreich hinzugefügt']
+    if (result?.sari?.synced) bits.push('SARI synchronisiert')
+    else if (result?.sari?.message) bits.push(result.sari.message)
+    if (result?.paymentUrl) bits.push('Zahlungslink gesendet')
+    if (result?.invoiceNumber) bits.push(`Rechnung ${result.invoiceNumber}`)
+    if (result?.warning) bits.push(result.warning)
+    success.value = bits.join(' · ')
+    if (enrollmentInvoiceAction.value === 'pdf' && result?.invoiceId) {
+      await openInvoicePdf(result.invoiceId)
+    }
   } catch (err: any) {
     console.error('Error adding participant:', err)
-    error.value = err.message || 'Fehler beim Hinzufügen des Teilnehmers'
+    error.value = err?.data?.statusMessage || err.message || 'Fehler beim Hinzufügen des Teilnehmers'
   } finally {
     isAddingParticipant.value = false
   }
@@ -6684,21 +7444,27 @@ const confirmTransfer = async (enrollment: any) => {
   isTransferring.value = true
   transferError.value = ''
   try {
-    const response = await fetch('/api/sari/transfer-enrollment', {
+    const data: any = await $fetch('/api/sari/transfer-enrollment', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ registrationId: enrollment.id, targetCourseId: transferTargetCourseId.value, notifyCustomer: transferNotifyCustomer.value }),
+      headers: authStore.accessToken
+        ? { Authorization: `Bearer ${authStore.accessToken}` }
+        : undefined,
+      body: {
+        registrationId: enrollment.id,
+        targetCourseId: transferTargetCourseId.value,
+        notifyCustomer: transferNotifyCustomer.value,
+      },
     })
-    const data = await response.json()
-    if (!response.ok) {
-      throw new Error(data?.statusMessage || data?.message || 'Umplanung fehlgeschlagen')
-    }
-    success.value = `✅ ${enrollment.first_name} ${enrollment.last_name} wurde umgebucht zu "${data.toCourse?.name}"`
+    const bits = [`${enrollment.first_name} ${enrollment.last_name} wurde umgebucht zu "${data.toCourse?.name}"`]
+    if (data?.warning) bits.push(data.warning)
+    success.value = bits.join(' · ')
     cancelTransfer()
+    closeParticipantDetail()
     await loadCourseEnrollments(selectedCourse.value.id)
     await loadCourses()
   } catch (err: any) {
-    transferError.value = err?.message || 'Umplanung fehlgeschlagen'
+    transferError.value =
+      err?.data?.statusMessage || err?.statusMessage || err?.message || 'Umplanung fehlgeschlagen'
   } finally {
     isTransferring.value = false
   }
@@ -6774,6 +7540,19 @@ const getEnrollmentStatusText = (status: string) => {
 
 // ── SARI Manual Sync ──────────────────────────────────────────────────────────
 const sariSyncing = ref(false)
+
+const loadTenantSariEnabled = async () => {
+  try {
+    const data = await $fetch<any>('/api/sari/sync-status', {
+      headers: authStore.accessToken
+        ? { Authorization: `Bearer ${authStore.accessToken}` }
+        : undefined,
+    })
+    tenantSariEnabled.value = !!(data?.config?.sari_enabled ?? data?.sari_enabled)
+  } catch {
+    // Non-fatal — server still enforces hard block when sync is on
+  }
+}
 
 const sariBackfilling = ref(false)
 const runSariBackfill = async () => {

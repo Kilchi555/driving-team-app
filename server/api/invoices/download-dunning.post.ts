@@ -8,24 +8,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getStageDef, daysOverdue } from '~/server/utils/invoice-dunning'
 import { generateDunningPdf, dunningPdfFilename, extractDunningLetterText } from '~/server/utils/dunning-pdf'
 import { uploadPdfAndGetPublicUrl } from '~/server/utils/upload-pdf-public'
-
-async function loadTenantLogo(logoDataUrl: string | null | undefined): Promise<string | null> {
-  if (!logoDataUrl) return null
-  if (logoDataUrl.startsWith('data:image/')) {
-    const match = logoDataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/)
-    return match?.[2] || null
-  }
-  if (logoDataUrl.startsWith('http')) {
-    try {
-      const logoRes = await fetch(logoDataUrl)
-      if (!logoRes.ok) return null
-      return Buffer.from(await logoRes.arrayBuffer()).toString('base64')
-    } catch {
-      return null
-    }
-  }
-  return null
-}
+import { loadTenantLogoForPdf } from '~/server/utils/tenant-logo-for-pdf'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
@@ -76,7 +59,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, legal_company_name, contact_email, primary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url')
+    .select('name, legal_company_name, contact_email, primary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url, invoice_window_side')
     .eq('id', profile.tenant_id)
     .single()
 
@@ -121,7 +104,7 @@ export default defineEventHandler(async (event) => {
   const customerName = invoice.billing_contact_person ||
     `${invoice.customer_first_name || ''} ${invoice.customer_last_name || ''}`.trim() || 'Kunde'
 
-  const tenantLogoBase64 = await loadTenantLogo((tenant as any)?.logo_wide_url)
+  const logo = await loadTenantLogoForPdf((tenant as any)?.logo_wide_url)
 
   const pdfBuffer = await generateDunningPdf({
     stage: log.stage,
@@ -141,7 +124,7 @@ export default defineEventHandler(async (event) => {
     tenantZip: tenant?.invoice_zip || undefined,
     tenantCity: tenant?.invoice_city || undefined,
     tenantEmail: tenant?.contact_email || undefined,
-    tenantLogoBase64,
+    tenantLogoBase64: logo?.base64 || null,
     customerName,
     billingCompanyName: invoice.billing_company_name || undefined,
     billingStreet: [invoice.billing_street, invoice.billing_street_number].filter(Boolean).join(' ').trim() || undefined,
@@ -153,6 +136,7 @@ export default defineEventHandler(async (event) => {
     scorRef,
     creditorName: tenant?.legal_company_name || tenantName,
     primaryColor: tenant?.primary_color || undefined,
+    windowSide: tenant?.invoice_window_side === 'right' ? 'right' : 'left',
   })
 
   const filename = dunningPdfFilename(stageDef.label, invoice.invoice_number)
