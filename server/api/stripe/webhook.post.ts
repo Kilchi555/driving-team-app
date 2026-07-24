@@ -5,6 +5,7 @@ import {
 } from '~/utils/planFeatures'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 import { sendEmail } from '~/server/utils/email'
+import { resolveSubscriptionPeriodEnd } from '~/server/utils/stripe-subscription-period'
 
 export default defineEventHandler(async (event) => {
   const stripeSecret = process.env.STRIPE_SECRET_KEY
@@ -265,18 +266,8 @@ async function handleSubscriptionUpsert(
   const plan = (sub.metadata?.plan || resolvePlanFromPrices(sub)) as SubscriptionPlan
   console.log(`📦 Resolved plan: "${plan}" (from metadata: "${sub.metadata?.plan}", from prices: "${resolvePlanFromPrices(sub)}")`)
 
-  // Basil API (2025-03-31+): current_period_end lives on subscription items
-  const itemEnds = (sub.items?.data ?? [])
-    .map((item) => (item as Stripe.SubscriptionItem).current_period_end)
-    .filter((ts): ts is number => typeof ts === 'number' && Number.isFinite(ts))
-  const periodEndTs =
-    (itemEnds.length > 0 ? Math.max(...itemEnds) : null)
-    ?? (sub as any).current_period_end
-    ?? (sub as any).billing_cycle_anchor
-    ?? null
-  const currentPeriodEnd = periodEndTs != null && Number.isFinite(Number(periodEndTs))
-    ? new Date(Number(periodEndTs) * 1000).toISOString()
-    : null
+  // Basil API: period end is on subscription items (never billing_cycle_anchor)
+  const currentPeriodEnd = resolveSubscriptionPeriodEnd(sub)
 
   // ── Resolve add-ons from subscription items ─────────────────────────────
   const addonSeats = parseAddonSeats(sub)
@@ -295,10 +286,9 @@ async function handleSubscriptionUpsert(
 
   // ── Update tenant ───────────────────────────────────────────────────────
   const isWalleeTrialing = sub.metadata?.with_wallee === 'true' && sub.status === 'trialing'
-  const updatePayload = {
+  const updatePayload: Record<string, unknown> = {
     stripe_subscription_id: sub.id,
     subscription_plan: plan,
-    current_period_end: currentPeriodEnd,
     is_trial: false,
     addon_seats: addonSeats,
     addon_courses_enabled: addonCourses,
@@ -307,6 +297,7 @@ async function handleSubscriptionUpsert(
     subscription_cancel_at: cancelAt,
     ...(isWalleeTrialing ? { wallee_trial_started_at: new Date().toISOString() } : {}),
   }
+  if (currentPeriodEnd) updatePayload.current_period_end = currentPeriodEnd
 
   console.log(`🔄 Updating tenant ${tenantId} with:`, JSON.stringify(updatePayload))
 

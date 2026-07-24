@@ -1,5 +1,10 @@
+import Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import {
+  isStalePeriodEnd,
+  resolveSubscriptionPeriodEnd,
+} from '~/server/utils/stripe-subscription-period'
 
 export default defineEventHandler(async (event) => {
   // Bearer header with HTTP-only-cookie fallback + token refresh, instead of
@@ -39,11 +44,37 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Tenant not found' })
   }
 
+  let currentPeriodEnd = tenant.current_period_end ?? null
+
+  // Heal stale/wrong dates (e.g. billing_cycle_anchor written as period end).
+  if (
+    tenant.stripe_subscription_id
+    && isStalePeriodEnd(currentPeriodEnd)
+    && process.env.STRIPE_SECRET_KEY
+  ) {
+    try {
+      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: '2025-08-27.basil',
+      })
+      const sub = await stripe.subscriptions.retrieve(tenant.stripe_subscription_id)
+      const fresh = resolveSubscriptionPeriodEnd(sub)
+      if (fresh) {
+        currentPeriodEnd = fresh
+        await supabase
+          .from('tenants')
+          .update({ current_period_end: fresh })
+          .eq('id', userRow.tenant_id)
+      }
+    } catch (err: any) {
+      console.warn('⚠️ billing-status: could not refresh period end from Stripe:', err?.message || err)
+    }
+  }
+
   return {
     plan: tenant.subscription_plan ?? 'trial',
     is_trial: tenant.is_trial ?? true,
     trial_ends_at: tenant.trial_ends_at ?? null,
-    current_period_end: tenant.current_period_end ?? null,
+    current_period_end: currentPeriodEnd,
     subscription_cancel_at: tenant.subscription_cancel_at ?? null,
     addon_seats: tenant.addon_seats ?? 0,
     addon_courses_enabled: tenant.addon_courses_enabled ?? false,
