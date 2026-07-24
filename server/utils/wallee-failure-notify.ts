@@ -117,13 +117,13 @@ export async function notifyGenuineWalleeFailure(paymentId: string, walleeState:
 
     // ── 2) Notify the customer so they know to retry ────────────────────────
     if (meta.email) {
-      try {
-        const retryBaseUrl = (process.env.NUXT_PUBLIC_APP_URL
-          ? (process.env.NUXT_PUBLIC_APP_URL.startsWith('http') ? process.env.NUXT_PUBLIC_APP_URL : `https://${process.env.NUXT_PUBLIC_APP_URL}`)
-          : 'https://app.simy.ch').replace(/\/$/, '')
-        const retryLink = tenant.slug ? `${retryBaseUrl}/customer/courses/${tenant.slug}` : retryBaseUrl
+      const retryBaseUrl = (process.env.NUXT_PUBLIC_APP_URL
+        ? (process.env.NUXT_PUBLIC_APP_URL.startsWith('http') ? process.env.NUXT_PUBLIC_APP_URL : `https://${process.env.NUXT_PUBLIC_APP_URL}`)
+        : 'https://app.simy.ch').replace(/\/$/, '')
+      const retryLink = tenant.slug ? `${retryBaseUrl}/customer/courses/${tenant.slug}` : retryBaseUrl
 
-        await sendTenantEmail(payment.tenant_id, {
+      try {
+        const { messageId } = await sendTenantEmail(payment.tenant_id, {
           to: meta.email,
           subject: `Zahlung fehlgeschlagen – ${meta.course_name || 'Kursanmeldung'}`,
           html: `
@@ -137,8 +137,52 @@ export async function notifyGenuineWalleeFailure(paymentId: string, walleeState:
           `
         })
         logger.info(`📧 Notified customer ${meta.email} of failed course payment ${payment.id}`)
+
+        try {
+          await supabase.from('admin_notifications').insert({
+            notification_type: 'course_payment_failed_customer',
+            tenant_id: payment.tenant_id,
+            recipients: [meta.email],
+            details: {
+              payment_id: payment.id,
+              course_id: meta.course_id,
+              course_name: meta.course_name,
+              customer_name: customerName,
+              customer_email: meta.email,
+              amount_rappen: payment.total_amount_rappen,
+              wallee_state: walleeState,
+              retry_link: retryLink,
+              resend_message_id: messageId || null,
+              send_status: 'sent'
+            }
+          })
+        } catch (logErr: any) {
+          logger.warn('⚠️ Could not log course_payment_failed_customer notification:', logErr.message)
+        }
       } catch (custErr: any) {
         logger.warn(`⚠️ Could not send customer failure notification for payment ${payment.id}:`, custErr.message)
+
+        try {
+          await supabase.from('admin_notifications').insert({
+            notification_type: 'course_payment_failed_customer',
+            tenant_id: payment.tenant_id,
+            recipients: [meta.email],
+            details: {
+              payment_id: payment.id,
+              course_id: meta.course_id,
+              course_name: meta.course_name,
+              customer_name: customerName,
+              customer_email: meta.email,
+              amount_rappen: payment.total_amount_rappen,
+              wallee_state: walleeState,
+              retry_link: retryLink,
+              send_status: 'failed',
+              error: custErr.message
+            }
+          })
+        } catch (logErr: any) {
+          logger.warn('⚠️ Could not log failed course_payment_failed_customer notification:', logErr.message)
+        }
       }
     }
 

@@ -23,6 +23,8 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event)
 
+  const windowSide = body.invoice_window_side === 'right' ? 'right' : 'left'
+
   const { error } = await supabase
     .from('tenants')
     .update({
@@ -37,6 +39,7 @@ export default defineEventHandler(async (event) => {
       invoice_intro_text: body.invoice_intro_text?.trim() || null,
       invoice_payment_terms: body.invoice_payment_terms?.trim() || null,
       invoice_footer_text: body.invoice_footer_text?.trim() || null,
+      invoice_window_side: windowSide,
     })
     .eq('id', staffUser.tenant_id)
 

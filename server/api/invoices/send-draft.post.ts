@@ -10,6 +10,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
+import { loadTenantLogoForPdf } from '~/server/utils/tenant-logo-for-pdf'
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 
@@ -76,7 +77,7 @@ export default defineEventHandler(async (event) => {
   // Tenant laden (für Branding / Admin-Mail)
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text')
+    .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_window_side')
     .eq('id', staffUser.tenant_id)
     .single()
 
@@ -141,6 +142,7 @@ export default defineEventHandler(async (event) => {
       tenant_id: staffUser.tenant_id,
       appointment_id: item.appointment_id || null,
       payment_id: item.payment_id || null,
+      product_id: item.product_id || null,
       product_name: item.product_name,
       product_description: item.product_description || null,
       appointment_title: item.appointment_title || null,
@@ -282,17 +284,7 @@ export default defineEventHandler(async (event) => {
       // PDF generieren und als Anhang beifügen
       let pdfAttachments: any[] = []
       try {
-        // Logo aus base64 data URL extrahieren
-        const logoDataUrl: string | null = (tenantData as any).logo_wide_url || null
-        let tenantLogoBase64: string | null = null
-        let tenantLogoFormat: 'png' | 'jpeg' = 'png'
-        if (logoDataUrl?.startsWith('data:image/')) {
-          const match = logoDataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/)
-          if (match) {
-            tenantLogoFormat = match[1] === 'jpg' ? 'jpeg' : match[1] as 'png' | 'jpeg'
-            tenantLogoBase64 = match[2]
-          }
-        }
+        const logo = await loadTenantLogoForPdf((tenantData as any).logo_wide_url)
 
         const legalName = (tenantData as any).legal_company_name || tenantData.name
         const tenantStreet = [
@@ -311,8 +303,8 @@ export default defineEventHandler(async (event) => {
           tenantZip,
           tenantCity,
           tenantEmail: tenantData.contact_email,
-          tenantLogoBase64,
-          tenantLogoFormat,
+          tenantLogoBase64: logo?.base64 || null,
+          tenantLogoFormat: logo?.format,
           customerName: studentName,
           billingStreet: draft.billing_street,
           billingZip: draft.billing_zip,
@@ -330,6 +322,7 @@ export default defineEventHandler(async (event) => {
           creditorName: (draft as any).creditor_name || legalName,
           primaryColor: tenantData.primary_color || '#1E40AF',
           secondaryColor: tenantData.secondary_color || '#64748B',
+          windowSide: tenantData.invoice_window_side === 'right' ? 'right' : 'left',
           introText: (draft as any).notes || (tenantData as any).invoice_intro_text || null,
           paymentTerms: (draft as any).payment_terms || (tenantData as any).invoice_payment_terms || null,
           footerText: (draft as any).footer_text || (tenantData as any).invoice_footer_text || null,

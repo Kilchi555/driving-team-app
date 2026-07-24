@@ -13,6 +13,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { prepareDunning } from '~/server/utils/invoice-dunning-send'
 import { generateDunningPdf, dunningPdfFilename } from '~/server/utils/dunning-pdf'
+import { loadTenantLogoForPdf } from '~/server/utils/tenant-logo-for-pdf'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
@@ -61,17 +62,7 @@ export default defineEventHandler(async (event) => {
   let pdfBuffer: Buffer | null = null
   let pdfName = dunningPdfFilename(prepared.stageDef.label, invoice.invoice_number)
   try {
-    let tenantLogoBase64: string | null = null
-    const logoDataUrl = tenant?.logo_wide_url as string | undefined
-    if (logoDataUrl?.startsWith('data:image/')) {
-      const match = logoDataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/)
-      if (match) tenantLogoBase64 = match[2]
-    } else if (logoDataUrl?.startsWith('http')) {
-      try {
-        const logoRes = await fetch(logoDataUrl)
-        if (logoRes.ok) tenantLogoBase64 = Buffer.from(await logoRes.arrayBuffer()).toString('base64')
-      } catch { /* optional */ }
-    }
+    const logo = await loadTenantLogoForPdf(tenant?.logo_wide_url)
 
     pdfBuffer = await generateDunningPdf({
       stage,
@@ -91,7 +82,7 @@ export default defineEventHandler(async (event) => {
       tenantZip: tenant?.invoice_zip || undefined,
       tenantCity: tenant?.invoice_city || undefined,
       tenantEmail: tenant?.contact_email || undefined,
-      tenantLogoBase64,
+      tenantLogoBase64: logo?.base64 || null,
       customerName: prepared.customerName,
       billingCompanyName: invoice.billing_company_name || undefined,
       billingStreet: [invoice.billing_street, invoice.billing_street_number].filter(Boolean).join(' ').trim() || undefined,
@@ -104,6 +95,7 @@ export default defineEventHandler(async (event) => {
       scorRef: prepared.scorRef,
       creditorName: tenant?.legal_company_name || tenantName,
       primaryColor: tenant?.primary_color || undefined,
+      windowSide: tenant?.invoice_window_side === 'right' ? 'right' : 'left',
     })
   } catch (pdfErr: any) {
     console.warn('⚠️ Mahnschreiben-PDF konnte nicht erzeugt werden (E-Mail geht ohne Anhang):', pdfErr?.message)

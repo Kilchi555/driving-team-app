@@ -3,6 +3,10 @@
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import {
+  expandProductsAsSeparateLines,
+  groupProductSalesByAppointment,
+} from '~/server/utils/invoice-product-lines'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -108,21 +112,18 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // product_sales pro Termin laden (für tatsächliche Produktnamen)
-  let productsByAppointment: Record<string, { name: string; price_rappen: number }[]> = {}
+  // product_sales pro Termin laden — als eigene Positionen ausweisen
+  let productsByAppointment: Record<string, { name: string; price_rappen: number; product_id?: string | null; quantity?: number }[]> = {}
   const aptIdsWithProducts = appointmentIds.filter(id =>
     paymentBreakdown[id] && (paymentBreakdown[id].products_price_rappen || 0) > 0
   )
   if (aptIdsWithProducts.length > 0) {
     const { data: productSales } = await supabase
       .from('product_sales')
-      .select('appointment_id, total_price_rappen, products(name)')
+      .select('appointment_id, product_id, quantity, total_price_rappen, products(id, name)')
       .in('appointment_id', aptIdsWithProducts)
     if (productSales) {
-      for (const ps of productSales as any[]) {
-        if (!productsByAppointment[ps.appointment_id]) productsByAppointment[ps.appointment_id] = []
-        productsByAppointment[ps.appointment_id].push({ name: ps.products?.name || 'Produkt', price_rappen: ps.total_price_rappen || 0 })
-      }
+      productsByAppointment = groupProductSalesByAppointment(productSales as any[])
     }
   }
 
@@ -132,6 +133,14 @@ export default defineEventHandler(async (event) => {
 
   // start_time, event type und payment breakdown in invoice_items einbetten
   const enrichedItems = (invoice.invoice_items as any[]).map((item: any) => {
+    if (item.product_id) {
+      return {
+        ...item,
+        appointment_start_time: null,
+        product_details: [],
+        products_price_rappen: 0,
+      }
+    }
     const aptData = item.appointment_id ? appointmentEventTypes[item.appointment_id] : null
     const eventTypeCode = aptData?.event_type_code
     const eventLabel = eventTypeCode ? (eventTypeMap[eventTypeCode] || eventTypeCode) : null
@@ -144,7 +153,6 @@ export default defineEventHandler(async (event) => {
       appointment_start_time: item.appointment_id ? (appointmentStartTimes[item.appointment_id] || null) : null,
       product_name: staffFirstName ? `${baseLabel} mit ${staffFirstName}` : baseLabel,
       product_description: category || item.product_description,
-      // Breakdown aus Zahlungsdaten (für aufgeklappte Preisdetails)
       ...(breakdown ? {
         lesson_price_rappen: breakdown.lesson_price_rappen,
         admin_fee_rappen: breakdown.admin_fee_rappen,
@@ -157,5 +165,7 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  return { invoice: { ...invoice, invoice_items: enrichedItems } }
+  const expandedItems = expandProductsAsSeparateLines(enrichedItems, productsByAppointment)
+
+  return { invoice: { ...invoice, invoice_items: expandedItems } }
 })

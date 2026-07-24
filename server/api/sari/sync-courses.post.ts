@@ -82,7 +82,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ Load SARI credentials securely
+    // ✅ Load SARI credentials securely — soft-fail when missing (e.g. tenant without SARI setup)
     let sariSecrets
     try {
       sariSecrets = await getTenantSecretsSecure(
@@ -91,11 +91,24 @@ export default defineEventHandler(async (event) => {
         'SARI_SYNC_COURSES'
       )
     } catch (secretsErr: any) {
-      logger.error('❌ Failed to load SARI credentials:', secretsErr.message)
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'SARI credentials not configured for this tenant'
-      })
+      logger.warn('⚠️ SARI sync skipped — credentials not configured:', secretsErr.message)
+      return {
+        success: true,
+        skipped: true,
+        reason: 'no_credentials',
+        message: 'SARI-Zugangsdaten fehlen — Sync übersprungen. Lokale Anmeldungen bleiben unverändert.',
+        courseType,
+      }
+    }
+
+    if (!sariSecrets?.SARI_CLIENT_ID || !sariSecrets?.SARI_CLIENT_SECRET || !sariSecrets?.SARI_USERNAME || !sariSecrets?.SARI_PASSWORD) {
+      return {
+        success: true,
+        skipped: true,
+        reason: 'no_credentials',
+        message: 'SARI-Zugangsdaten unvollständig — Sync übersprungen.',
+        courseType,
+      }
     }
 
     // 5. Create SARI client

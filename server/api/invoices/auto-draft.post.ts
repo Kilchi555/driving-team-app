@@ -7,6 +7,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { computeInvoiceDueDate } from '~/server/utils/invoice-due-date'
 import { computeVatAmountRappen, getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
+import { groupProductSalesByAppointment } from '~/server/utils/invoice-product-lines'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -200,40 +201,8 @@ export default defineEventHandler(async (event) => {
     staff_id: staffUser.id,
     tenant_id: staffUser.tenant_id,
 
-    // Items aus Zahlungen
-    items: openPayments.map((p, i) => {
-      const apt = p.appointments as any
-      const eventTypeMap: Record<string, string> = {
-        lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorieunterricht', vku: 'VKU', haltbar: 'Haltbarkeitsprüfung'
-      }
-      const label = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
-      const staffFirstName = apt?.staff?.first_name || null
-      const productName = staffFirstName ? `${label || apt?.title || 'Fahrstunde'} mit ${staffFirstName}` : (label || apt?.title || 'Fahrstunde')
-      return {
-        payment_id: p.id,
-        appointment_id: p.appointment_id,
-        product_name: productName,
-        product_description: apt?.type ? `Kat. ${apt.type}` : null,
-        appointment_title: apt?.title || null,
-        appointment_date: apt?.start_time || null,
-        appointment_start_time: apt?.start_time || null,
-        appointment_duration_minutes: apt?.duration_minutes || null,
-        quantity: 1,
-        unit_price_rappen: getGrossAmount(p),
-        total_price_rappen: getGrossAmount(p),
-        vat_rate: vatRatePercent,
-        vat_amount_rappen: computeVatAmountRappen(getGrossAmount(p), vatRatePercent),
-        sort_order: i,
-        // Breakdown
-        lesson_price_rappen: p.lesson_price_rappen || 0,
-        admin_fee_rappen: p.admin_fee_rappen || 0,
-        products_price_rappen: p.products_price_rappen || 0,
-        discount_amount_rappen: p.discount_amount_rappen || 0,
-        credit_used_rappen: p.credit_used_rappen || 0,
-        voucher_discount_rappen: (p as any).voucher_discount_rappen || 0,
-        product_details: [] as { name: string; price_rappen: number }[],
-      }
-    }),
+    // Items aus Zahlungen — Produkte als eigene Positionen (nicht in der Lektionszeile)
+    items: [] as any[],
 
     // Metadaten
     payment_ids: openPayments.map(p => p.id),
@@ -255,28 +224,124 @@ export default defineEventHandler(async (event) => {
     footer_text: (tenant as any)?.invoice_footer_text || null,
   }
 
-  // Produkte pro Termin laden und in Draft-Items einbetten
+  // Produkte pro Termin laden und als eigene Draft-Positionen ausweisen
   const aptIdsWithProducts = openPayments
     .filter(p => (p.products_price_rappen || 0) > 0 && p.appointment_id)
     .map(p => p.appointment_id)
+  let productsByApt: Record<string, { name: string; price_rappen: number; product_id?: string | null; quantity?: number }[]> = {}
   if (aptIdsWithProducts.length > 0) {
     const { data: productSales } = await supabase
       .from('product_sales')
-      .select('appointment_id, total_price_rappen, products(name)')
+      .select('appointment_id, product_id, quantity, total_price_rappen, products(id, name)')
       .in('appointment_id', aptIdsWithProducts)
     if (productSales) {
-      const byApt: Record<string, { name: string; price_rappen: number }[]> = {}
-      for (const ps of productSales as any[]) {
-        if (!byApt[ps.appointment_id]) byApt[ps.appointment_id] = []
-        byApt[ps.appointment_id].push({ name: ps.products?.name || 'Produkt', price_rappen: ps.total_price_rappen || 0 })
-      }
-      draft.items = draft.items.map((item: any) =>
-        item.appointment_id && byApt[item.appointment_id]
-          ? { ...item, product_details: byApt[item.appointment_id] }
-          : item
-      )
+      productsByApt = groupProductSalesByAppointment(productSales as any[])
     }
   }
+
+  const eventTypeMap: Record<string, string> = {
+    lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorieunterricht', vku: 'VKU', haltbar: 'Haltbarkeitsprüfung'
+  }
+
+  let sortOrder = 0
+  draft.items = openPayments.flatMap((p) => {
+    const apt = p.appointments as any
+    const label = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
+    const staffFirstName = apt?.staff?.first_name || null
+    const serviceName = staffFirstName
+      ? `${label || apt?.title || 'Fahrstunde'} mit ${staffFirstName}`
+      : (label || apt?.title || 'Fahrstunde')
+
+    const products = (p.appointment_id && productsByApt[p.appointment_id]) || []
+    const productsTotal = products.reduce((sum, pd) => sum + (pd.price_rappen || 0), 0)
+      || (p.products_price_rappen || 0)
+    const serviceGross = Math.max(0, getGrossAmount(p) - productsTotal)
+
+    const serviceItem = {
+      payment_id: p.id,
+      appointment_id: p.appointment_id,
+      product_id: null as string | null,
+      product_name: serviceName,
+      product_description: apt?.type ? `Kat. ${apt.type}` : null,
+      appointment_title: apt?.title || null,
+      appointment_date: apt?.start_time || null,
+      appointment_start_time: apt?.start_time || null,
+      appointment_duration_minutes: apt?.duration_minutes || null,
+      quantity: 1,
+      unit_price_rappen: serviceGross,
+      total_price_rappen: serviceGross,
+      vat_rate: vatRatePercent,
+      vat_amount_rappen: computeVatAmountRappen(serviceGross, vatRatePercent),
+      sort_order: sortOrder++,
+      lesson_price_rappen: p.lesson_price_rappen || 0,
+      admin_fee_rappen: p.admin_fee_rappen || 0,
+      products_price_rappen: 0,
+      discount_amount_rappen: p.discount_amount_rappen || 0,
+      credit_used_rappen: p.credit_used_rappen || 0,
+      voucher_discount_rappen: (p as any).voucher_discount_rappen || 0,
+      product_details: [] as { name: string; price_rappen: number }[],
+    }
+
+    const productItems = products.map((pd) => {
+      const price = pd.price_rappen || 0
+      const qty = pd.quantity || 1
+      return {
+        payment_id: p.id,
+        appointment_id: p.appointment_id,
+        product_id: pd.product_id || null,
+        product_name: pd.name || 'Produkt',
+        product_description: null as string | null,
+        appointment_title: null as string | null,
+        appointment_date: null as string | null,
+        appointment_start_time: null as string | null,
+        appointment_duration_minutes: null as number | null,
+        quantity: qty,
+        unit_price_rappen: price,
+        total_price_rappen: price * qty,
+        vat_rate: vatRatePercent,
+        vat_amount_rappen: computeVatAmountRappen(price * qty, vatRatePercent),
+        sort_order: sortOrder++,
+        lesson_price_rappen: 0,
+        admin_fee_rappen: 0,
+        products_price_rappen: 0,
+        discount_amount_rappen: 0,
+        credit_used_rappen: 0,
+        voucher_discount_rappen: 0,
+        product_details: [] as { name: string; price_rappen: number }[],
+      }
+    })
+
+    // Fallback: Produkte bekannt über Payment, aber keine product_sales-Zeilen
+    if (productItems.length === 0 && (p.products_price_rappen || 0) > 0) {
+      const price = p.products_price_rappen || 0
+      productItems.push({
+        payment_id: p.id,
+        appointment_id: p.appointment_id,
+        product_id: null,
+        product_name: 'Material / Produkte',
+        product_description: null,
+        appointment_title: null,
+        appointment_date: null,
+        appointment_start_time: null,
+        appointment_duration_minutes: null,
+        quantity: 1,
+        unit_price_rappen: price,
+        total_price_rappen: price,
+        vat_rate: vatRatePercent,
+        vat_amount_rappen: computeVatAmountRappen(price, vatRatePercent),
+        sort_order: sortOrder++,
+        lesson_price_rappen: 0,
+        admin_fee_rappen: 0,
+        products_price_rappen: 0,
+        discount_amount_rappen: 0,
+        credit_used_rappen: 0,
+        voucher_discount_rappen: 0,
+        product_details: [],
+      })
+    }
+
+    return [serviceItem, ...productItems]
+  })
 
   return { hasOpenItems: true, draft }
 })

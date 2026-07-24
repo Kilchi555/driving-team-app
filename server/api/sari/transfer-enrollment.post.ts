@@ -1,13 +1,16 @@
 /**
  * POST /api/sari/transfer-enrollment
- * Transfer (reschedule) a participant from one SARI course to another.
+ * Transfer (reschedule) a participant from one course to another.
  *
  * Admins can transfer any registration within their tenant.
  * Customers can only transfer their own registration, and only if the course
  * starts more than 7 days in the future.
  *
- * The transfer is free: existing payment_id is carried over to the new registration.
- * SARI is unenrolled + re-enrolled atomically before any DB changes are made.
+ * SARI is best-effort:
+ * - With faberid + credentials → unenroll/enroll in SARI then update DB
+ * - Without faberid / credentials → local DB transfer only (same as admin enroll soft-skip)
+ *
+ * Existing payment_id is carried over to the new registration.
  */
 
 import { getSupabaseServerWithSession } from '~/utils/supabase'
@@ -22,7 +25,6 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseServerWithSession(event)
 
-  // Authentication
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
@@ -30,7 +32,6 @@ export default defineEventHandler(async (event) => {
 
   const supabaseAdmin = getSupabaseAdmin()
 
-  // Load caller's profile
   const { data: callerProfile } = await supabaseAdmin
     .from('users')
     .select('id, tenant_id, role')
@@ -44,7 +45,6 @@ export default defineEventHandler(async (event) => {
 
   const isAdmin = ['admin', 'superadmin', 'staff'].includes(callerProfile.role)
 
-  // Parse input
   const body = await readBody(event)
   const { registrationId, targetCourseId, notifyCustomer } = body ?? {}
 
@@ -52,13 +52,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'registrationId und targetCourseId erforderlich' })
   }
 
-  // Customers always get a notification; admins can opt in via notifyCustomer flag
   const shouldNotify = isAdmin ? (notifyCustomer === true) : true
 
-  // Load old registration
   const { data: oldReg } = await supabaseAdmin
     .from('course_registrations')
-    .select('id, course_id, tenant_id, user_id, sari_faberid, is_partial_enrollment, first_name, last_name, payment_id, payment_method, amount_paid_rappen, sari_data, sari_licenses, email, phone, street, zip, city')
+    .select('id, course_id, tenant_id, user_id, sari_faberid, is_partial_enrollment, first_name, last_name, payment_id, payment_method, payment_status, amount_paid_rappen, sari_data, sari_licenses, email, phone, street, street_nr, zip, city, birthdate, status')
     .eq('id', registrationId)
     .eq('tenant_id', callerProfile.tenant_id)
     .in('status', ['confirmed', 'enrolled', 'pending'])
@@ -69,14 +67,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Anmeldung nicht gefunden' })
   }
 
-  // For customer role: only allow transferring their own registration
-  if (!isAdmin) {
-    if (oldReg.user_id !== callerProfile.id) {
-      throw createError({ statusCode: 403, statusMessage: 'Keine Berechtigung für diese Anmeldung' })
-    }
+  if (!isAdmin && oldReg.user_id !== callerProfile.id) {
+    throw createError({ statusCode: 403, statusMessage: 'Keine Berechtigung für diese Anmeldung' })
   }
 
-  // Load old course (with category config for partial enrollment)
   const { data: oldCourse } = await supabaseAdmin
     .from('courses')
     .select(`
@@ -88,11 +82,10 @@ export default defineEventHandler(async (event) => {
     .eq('tenant_id', callerProfile.tenant_id)
     .single()
 
-  if (!oldCourse?.sari_managed || !oldCourse.sari_course_id) {
-    throw createError({ statusCode: 400, statusMessage: 'Ausgangs-Kurs ist kein SARI-verwalteter Kurs' })
+  if (!oldCourse) {
+    throw createError({ statusCode: 404, statusMessage: 'Ausgangs-Kurs nicht gefunden' })
   }
 
-  // Load target course
   const { data: targetCourse } = await supabaseAdmin
     .from('courses')
     .select('id, name, sari_managed, sari_course_id, category, current_participants, max_participants, course_start_date, tenant_id')
@@ -105,10 +98,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Ziel-Kurs nicht gefunden' })
   }
 
-  if (!targetCourse.sari_managed || !targetCourse.sari_course_id) {
-    throw createError({ statusCode: 400, statusMessage: 'Ziel-Kurs ist kein SARI-verwalteter Kurs' })
-  }
-
   if (targetCourse.id === oldCourse.id) {
     throw createError({ statusCode: 400, statusMessage: 'Ziel-Kurs ist identisch mit dem aktuellen Kurs' })
   }
@@ -117,139 +106,171 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Umplanung nur innerhalb derselben Kurs-Kategorie möglich' })
   }
 
-  // Check free slots
   const freeSlots = (targetCourse.max_participants ?? 0) - (targetCourse.current_participants ?? 0)
   if (freeSlots <= 0) {
     throw createError({ statusCode: 409, statusMessage: 'Ziel-Kurs ist ausgebucht' })
   }
 
-  // For customers: enforce 7-day deadline
   if (!isAdmin) {
     const startDate = oldCourse.course_start_date ? new Date(oldCourse.course_start_date) : null
     if (!startDate || startDate.getTime() - Date.now() < SEVEN_DAYS_MS) {
       throw createError({
         statusCode: 403,
-        statusMessage: 'Selbstständige Umplanung ist nur bis 7 Tage vor Kursbeginn möglich. Bitte kontaktiere den Fahrlehrer.'
+        statusMessage: 'Selbstständige Umplanung ist nur bis 7 Tage vor Kursbeginn möglich. Bitte kontaktiere den Fahrlehrer.',
       })
     }
   }
 
-  // Resolve faberid and birthdate
-  const faberid = oldReg.sari_faberid
-  if (!faberid) {
-    throw createError({ statusCode: 400, statusMessage: 'Keine SARI-Ausweisnummer für diese Anmeldung hinterlegt' })
+  // Resolve faberid / birthdate (registration → user profile → sari_data)
+  let faberid = (oldReg.sari_faberid || '').replace(/\./g, '') || null
+  let birthdate: string | null =
+    oldReg.birthdate ||
+    (oldReg.sari_data as any)?.birthdate ||
+    null
+
+  if ((!faberid || !birthdate) && oldReg.user_id) {
+    const { data: userRow } = await supabaseAdmin
+      .from('users')
+      .select('faberid, birthdate')
+      .eq('id', oldReg.user_id)
+      .maybeSingle()
+    if (!faberid && userRow?.faberid) faberid = String(userRow.faberid).replace(/\./g, '')
+    if (!birthdate && userRow?.birthdate) birthdate = userRow.birthdate
   }
 
-  const birthdate: string | null = (oldReg.sari_data as any)?.birthdate ?? null
-
-  // Load SARI credentials for this tenant
   const { data: tenant } = await supabaseAdmin
     .from('tenants')
     .select('id, name, sari_enabled, sari_environment')
     .eq('id', callerProfile.tenant_id)
     .single()
 
-  if (!tenant?.sari_enabled) {
-    throw createError({ statusCode: 400, statusMessage: 'SARI ist für diesen Tenant nicht aktiviert' })
-  }
+  // ── SARI sync (best-effort) ──────────────────────────────────────────────
+  let sariSynced = false
+  let sariWarning: string | undefined
+  const bothSari =
+    !!(oldCourse.sari_managed && oldCourse.sari_course_id) &&
+    !!(targetCourse.sari_managed && targetCourse.sari_course_id)
 
-  let sariSecrets: any
-  try {
-    sariSecrets = await getTenantSecretsSecure(
-      callerProfile.tenant_id,
-      ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
-      'TRANSFER_ENROLLMENT'
-    )
-  } catch {
-    throw createError({ statusCode: 400, statusMessage: 'SARI-Zugangsdaten nicht konfiguriert' })
-  }
-
-  const sari = new SARIClient({
-    environment: (tenant.sari_environment || 'test') as 'test' | 'production',
-    clientId: sariSecrets.SARI_CLIENT_ID,
-    clientSecret: sariSecrets.SARI_CLIENT_SECRET,
-    username: sariSecrets.SARI_USERNAME,
-    password: sariSecrets.SARI_PASSWORD,
-  })
-
-  // Helper: extract all numeric session IDs from a GROUP_X_Y_Z string (preserves order)
-  const extractAllSariIds = (sariCourseId: string): string[] => {
-    const parts = String(sariCourseId).split('_')
-    return parts.filter(p => p && !isNaN(parseInt(p)))
-  }
-
-  // Determine which session IDs to transfer (full course or partial)
-  const partialStartPos: number = (oldCourse.course_categories as any)?.partial_start_position ?? 3
-  const isPartial = !!oldReg.is_partial_enrollment
-
-  const filterSessions = (ids: string[]): string[] => {
-    if (!isPartial) return ids
-    // Partial enrollment: only sessions from partialStartPos onwards (1-indexed)
-    return ids.slice(partialStartPos - 1)
-  }
-
-  const oldSariIds = filterSessions(extractAllSariIds(oldCourse.sari_course_id))
-  const targetSariIds = filterSessions(extractAllSariIds(targetCourse.sari_course_id))
-
-  if (oldSariIds.length === 0 || targetSariIds.length === 0) {
-    throw createError({ statusCode: 400, statusMessage: 'Keine gültigen SARI-Session-IDs gefunden' })
-  }
-
-  // Validate all target sessions before making any changes (checks deadline, capacity, order)
-  logger.info(`🔍 Validating ${targetSariIds.length} target sessions for ${faberid}`)
-  const validation = await sari.validateAllSessions(targetSariIds, faberid, birthdate ?? '')
-  if (!validation.canEnroll) {
-    throw createError({ statusCode: 409, statusMessage: validation.reason || 'Anmeldung im Ziel-Kurs nicht möglich' })
-  }
-
-  // === SARI operations — unenroll from all old sessions, enroll in all new sessions ===
-  logger.info(`🔄 Transfer ${faberid}: unenroll [${oldSariIds}] → enroll [${targetSariIds}]`)
-
-  // 1. Unenroll from all old sessions
-  for (const sessionId of oldSariIds) {
+  if (bothSari && faberid && tenant?.sari_enabled) {
+    let sariSecrets: any = null
     try {
-      await sari.unenrollStudent(parseInt(sessionId), faberid)
-      logger.debug(`✅ Unenrolled session ${sessionId}`)
-    } catch (err: any) {
-      // Already not enrolled is fine (idempotent) — nothing to roll back, no DB changes made yet.
-      if (isSariUnenrollIdempotent(err.message)) continue
-
-      logger.error(`SARI unenroll failed for session ${sessionId}: ${err.message}`)
-      if (isSariUnenrollBlocked(err.message)) {
-        throw createError({ statusCode: 409, statusMessage: getSariUnenrollBlockedMessage() })
-      }
-      throw createError({ statusCode: 502, statusMessage: `SARI-Abmeldung (Session ${sessionId}) fehlgeschlagen: ${err.message}` })
+      sariSecrets = await getTenantSecretsSecure(
+        callerProfile.tenant_id,
+        ['SARI_CLIENT_ID', 'SARI_CLIENT_SECRET', 'SARI_USERNAME', 'SARI_PASSWORD'],
+        'TRANSFER_ENROLLMENT'
+      )
+    } catch {
+      sariWarning = 'Keine SARI-Zugangsdaten — nur lokal umgebucht'
     }
+
+    if (sariSecrets) {
+      const sari = new SARIClient({
+        environment: (tenant.sari_environment || 'test') as 'test' | 'production',
+        clientId: sariSecrets.SARI_CLIENT_ID,
+        clientSecret: sariSecrets.SARI_CLIENT_SECRET,
+        username: sariSecrets.SARI_USERNAME,
+        password: sariSecrets.SARI_PASSWORD,
+      })
+
+      const extractAllSariIds = (sariCourseId: string): string[] => {
+        const parts = String(sariCourseId).split('_')
+        return parts.filter(p => p && !isNaN(parseInt(p)))
+      }
+
+      const partialStartPos: number = (oldCourse.course_categories as any)?.partial_start_position ?? 3
+      const isPartial = !!oldReg.is_partial_enrollment
+      const filterSessions = (ids: string[]): string[] => {
+        if (!isPartial) return ids
+        return ids.slice(partialStartPos - 1)
+      }
+
+      const oldSariIds = filterSessions(extractAllSariIds(oldCourse.sari_course_id!))
+      const targetSariIds = filterSessions(extractAllSariIds(targetCourse.sari_course_id!))
+
+      if (oldSariIds.length === 0 || targetSariIds.length === 0) {
+        sariWarning = 'Keine gültigen SARI-Session-IDs — nur lokal umgebucht'
+      } else {
+        try {
+          logger.info(`🔍 Validating ${targetSariIds.length} target sessions for ${faberid}`)
+          const validation = await sari.validateAllSessions(targetSariIds, faberid, birthdate ?? '')
+          if (!validation.canEnroll) {
+            throw createError({ statusCode: 409, statusMessage: validation.reason || 'Anmeldung im Ziel-Kurs nicht möglich' })
+          }
+
+          logger.info(`🔄 Transfer ${faberid}: unenroll [${oldSariIds}] → enroll [${targetSariIds}]`)
+
+          for (const sessionId of oldSariIds) {
+            try {
+              await sari.unenrollStudent(parseInt(sessionId), faberid)
+            } catch (err: any) {
+              if (isSariUnenrollIdempotent(err.message)) continue
+              if (isSariUnenrollBlocked(err.message)) {
+                throw createError({ statusCode: 409, statusMessage: getSariUnenrollBlockedMessage() })
+              }
+              throw createError({ statusCode: 502, statusMessage: `SARI-Abmeldung (Session ${sessionId}) fehlgeschlagen: ${err.message}` })
+            }
+          }
+
+          const enrolledSessions: string[] = []
+          for (const sessionId of targetSariIds) {
+            try {
+              await sari.enrollStudent(parseInt(sessionId), faberid, birthdate ?? '')
+              enrolledSessions.push(sessionId)
+            } catch (err: any) {
+              for (const sid of enrolledSessions) {
+                try { await sari.unenrollStudent(parseInt(sid), faberid) } catch {}
+              }
+              for (const sid of oldSariIds) {
+                try { await sari.enrollStudent(parseInt(sid), faberid, birthdate ?? '') } catch {}
+              }
+              if (err.message?.includes('PERSON_ALREADY_ADDED')) {
+                throw createError({ statusCode: 409, statusMessage: 'Teilnehmer ist bereits im Ziel-Kurs angemeldet' })
+              }
+              throw createError({ statusCode: 502, statusMessage: `SARI-Anmeldung (Session ${sessionId}) fehlgeschlagen: ${err.message}` })
+            }
+          }
+          sariSynced = true
+        } catch (err: any) {
+          if (err?.statusCode) throw err
+          logger.warn('⚠️ SARI transfer failed, continuing locally:', err?.message)
+          sariWarning = err?.message || 'SARI-Umplanung fehlgeschlagen — nur lokal umgebucht'
+        }
+      }
+    }
+  } else if (bothSari && !faberid) {
+    sariWarning = 'Keine Faber-ID — nur lokal umgebucht (nicht in SARI)'
   }
 
-  // 2. Enroll in all new sessions (with rollback if any fail)
-  const enrolledSessions: string[] = []
-  for (const sessionId of targetSariIds) {
-    try {
-      await sari.enrollStudent(parseInt(sessionId), faberid, birthdate ?? '')
-      enrolledSessions.push(sessionId)
-      logger.debug(`✅ Enrolled session ${sessionId}`)
-    } catch (err: any) {
-      logger.error(`SARI enroll failed for session ${sessionId}: ${err.message}`)
-      // Rollback: unenroll newly enrolled sessions + re-enroll in old course
-      for (const sid of enrolledSessions) {
-        try { await sari.unenrollStudent(parseInt(sid), faberid) } catch {}
-      }
-      for (const sid of oldSariIds) {
-        try { await sari.enrollStudent(parseInt(sid), faberid, birthdate ?? '') } catch {}
-      }
-      if (err.message?.includes('PERSON_ALREADY_ADDED')) {
-        throw createError({ statusCode: 409, statusMessage: 'Teilnehmer ist bereits im Ziel-Kurs angemeldet' })
-      }
-      throw createError({ statusCode: 502, statusMessage: `SARI-Anmeldung (Session ${sessionId}) fehlgeschlagen: ${err.message}` })
-    }
-  }
-
-  // === DB changes — SARI operations succeeded ===
+  // ── DB changes ───────────────────────────────────────────────────────────
   const now = new Date().toISOString()
 
-  // Cancel old registration (soft delete)
-  const { error: cancelError } = await supabaseAdmin
+  // payment_id is UNIQUE on course_registrations — release it from the old row first
+  if (oldReg.payment_id) {
+    await supabaseAdmin
+      .from('course_registrations')
+      .update({ payment_id: null, updated_at: now })
+      .eq('id', oldReg.id)
+  }
+
+  // payment_method CHECK only allows: online, cash_on_site, invoice, wallee, credit
+  const allowedMethods = new Set(['online', 'cash_on_site', 'invoice', 'wallee', 'credit'])
+  let paymentMethod = oldReg.payment_method || null
+  if (paymentMethod && !allowedMethods.has(paymentMethod)) {
+    if (paymentMethod === 'company' || paymentMethod === 'admin' || paymentMethod === 'reserved') {
+      paymentMethod = 'invoice'
+    } else {
+      paymentMethod = 'invoice'
+    }
+  }
+
+  // payment_status CHECK: pending, paid, failed, refunded
+  const allowedStatuses = new Set(['pending', 'paid', 'failed', 'refunded'])
+  let paymentStatus = oldReg.payment_status || 'pending'
+  if (!allowedStatuses.has(paymentStatus)) {
+    paymentStatus = paymentStatus === 'invoiced' || paymentStatus === 'completed' ? 'pending' : 'pending'
+  }
+
+  await supabaseAdmin
     .from('course_registrations')
     .update({
       status: 'cancelled',
@@ -259,12 +280,6 @@ export default defineEventHandler(async (event) => {
     })
     .eq('id', oldReg.id)
 
-  if (cancelError) {
-    logger.error(`Failed to cancel old registration ${oldReg.id}: ${cancelError.message}`)
-    // SARI already transferred — log but continue so new registration is still created
-  }
-
-  // Create new registration
   const { data: newReg, error: newRegError } = await supabaseAdmin
     .from('course_registrations')
     .insert({
@@ -272,10 +287,10 @@ export default defineEventHandler(async (event) => {
       tenant_id: callerProfile.tenant_id,
       user_id: oldReg.user_id,
       participant_id: null,
-      status: 'confirmed',
-      payment_status: 'paid',
-      payment_id: oldReg.payment_id,
-      payment_method: oldReg.payment_method,
+      status: oldReg.status === 'pending' ? 'pending' : 'confirmed',
+      payment_status: paymentStatus,
+      payment_id: oldReg.payment_id || null,
+      payment_method: paymentMethod,
       amount_paid_rappen: oldReg.amount_paid_rappen ?? 0,
       discount_applied_rappen: 0,
       first_name: oldReg.first_name,
@@ -283,16 +298,18 @@ export default defineEventHandler(async (event) => {
       email: oldReg.email,
       phone: oldReg.phone,
       street: oldReg.street,
+      street_nr: oldReg.street_nr,
       zip: oldReg.zip,
       city: oldReg.city,
+      birthdate,
       sari_faberid: faberid,
       sari_data: oldReg.sari_data,
       sari_licenses: oldReg.sari_licenses,
-      sari_synced: true,
-      sari_synced_at: now,
+      sari_synced: sariSynced,
+      sari_synced_at: sariSynced ? now : null,
       transferred_from_registration_id: oldReg.id,
       notes: `Umgebucht von Kurs "${oldCourse.name}" am ${new Date().toLocaleDateString('de-CH')}`,
-      registered_by: user.id,
+      registered_by: callerProfile.id,
       created_at: now,
     })
     .select('id')
@@ -300,31 +317,44 @@ export default defineEventHandler(async (event) => {
 
   if (newRegError) {
     logger.error(`Failed to create new registration: ${newRegError.message}`)
-    throw createError({ statusCode: 500, statusMessage: 'Neue Anmeldung konnte nicht erstellt werden' })
+    // Best-effort: restore payment_id on old row if we cleared it and insert failed
+    if (oldReg.payment_id) {
+      await supabaseAdmin
+        .from('course_registrations')
+        .update({ payment_id: oldReg.payment_id, status: oldReg.status, deleted_at: null, updated_at: now })
+        .eq('id', oldReg.id)
+    }
+    throw createError({
+      statusCode: 500,
+      statusMessage: `Neue Anmeldung konnte nicht erstellt werden: ${newRegError.message}`,
+    })
   }
 
-  // Update participant counts on both courses
-  await supabaseAdmin
-    .from('courses')
-    .update({
-      current_participants: Math.max(0, (oldCourse.current_participants ?? 1) - 1),
-      updated_at: now,
-    })
-    .eq('id', oldCourse.id)
+  // Recount both courses accurately
+  for (const courseId of [oldCourse.id, targetCourse.id]) {
+    const { count } = await supabaseAdmin
+      .from('course_registrations')
+      .select('id', { count: 'exact', head: true })
+      .eq('course_id', courseId)
+      .neq('status', 'cancelled')
+      .is('deleted_at', null)
+    await supabaseAdmin
+      .from('courses')
+      .update({ current_participants: count || 0, updated_at: now })
+      .eq('id', courseId)
+  }
 
-  await supabaseAdmin
-    .from('courses')
-    .update({
-      current_participants: (targetCourse.current_participants ?? 0) + 1,
-      updated_at: now,
-    })
-    .eq('id', targetCourse.id)
+  // Move payment link to new registration if present
+  if (oldReg.payment_id) {
+    await supabaseAdmin
+      .from('payments')
+      .update({ course_registration_id: newReg.id, updated_at: now })
+      .eq('id', oldReg.payment_id)
+  }
 
-  logger.info(`✅ Transfer complete: ${faberid} → "${targetCourse.name}" (new reg ${newReg.id})`)
+  logger.info(`✅ Transfer complete: ${faberid || oldReg.email} → "${targetCourse.name}" (new reg ${newReg.id})${sariSynced ? ' + SARI' : ' local-only'}`)
 
-  // Send transfer confirmation email to the participant (fire-and-forget)
-  const emailAddress = oldReg.email as string | null
-  if (shouldNotify && emailAddress) {
+  if (shouldNotify && oldReg.email) {
     const formatDate = (iso: string | null | undefined) => {
       if (!iso) return undefined
       try {
@@ -344,16 +374,16 @@ export default defineEventHandler(async (event) => {
       fromCourseDate: formatDate(oldCourse.course_start_date),
       toCourseName: targetCourse.name,
       toCourseDate: formatDate(targetCourse.course_start_date),
-      tenantName: tenant.name,
+      tenantName: tenant?.name || 'Fahrschule',
       tenantEmail: tenantContact?.contact_email ?? undefined,
       tenantPhone: tenantContact?.contact_phone ?? undefined,
     })
 
     sendTenantEmail(callerProfile.tenant_id, {
-      to: emailAddress,
+      to: oldReg.email,
       subject: `Kursumplanung bestätigt – ${targetCourse.name}`,
       html,
-    }).catch((err: any) => logger.warn(`Transfer email failed for ${emailAddress}: ${err.message}`))
+    }).catch((err: any) => logger.warn(`Transfer email failed for ${oldReg.email}: ${err.message}`))
   }
 
   return {
@@ -361,5 +391,7 @@ export default defineEventHandler(async (event) => {
     newRegistrationId: newReg.id,
     fromCourse: { id: oldCourse.id, name: oldCourse.name },
     toCourse: { id: targetCourse.id, name: targetCourse.name },
+    sariSynced,
+    warning: sariWarning,
   }
 })

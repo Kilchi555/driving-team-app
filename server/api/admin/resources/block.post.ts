@@ -324,7 +324,7 @@ export default defineEventHandler(async (event) => {
         // Load tenant for branding (+ payment terms)
         const { data: tenant } = await supabase
           .from('tenants')
-          .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_due_days, default_vat_rate')
+          .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_due_days, default_vat_rate, invoice_window_side')
           .eq('id', profile.tenant_id)
           .single()
 
@@ -418,16 +418,8 @@ export default defineEventHandler(async (event) => {
               // Generate PDF (non-fatal if it fails)
               let pdfAttachments: any[] = []
               try {
-                const logoDataUrl: string | null = tenantData?.logo_wide_url || null
-                let tenantLogoBase64: string | null = null
-                let tenantLogoFormat: 'png' | 'jpeg' = 'png'
-                if (logoDataUrl?.startsWith('data:image/')) {
-                  const match = logoDataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/)
-                  if (match) {
-                    tenantLogoFormat = match[1] === 'jpg' ? 'jpeg' : match[1] as 'png' | 'jpeg'
-                    tenantLogoBase64 = match[2]
-                  }
-                }
+                const { loadTenantLogoForPdf } = await import('~/server/utils/tenant-logo-for-pdf')
+                const logo = await loadTenantLogoForPdf(tenantData?.logo_wide_url)
                 const pdfBuffer = await generateInvoicePdf({
                   invoiceNumber: invoiceNumber!,
                   invoiceDate: invoiceDateStr,
@@ -437,8 +429,8 @@ export default defineEventHandler(async (event) => {
                   tenantZip: tenantData?.invoice_zip || '',
                   tenantCity: tenantData?.invoice_city || '',
                   tenantEmail: tenantData?.contact_email || '',
-                  tenantLogoBase64,
-                  tenantLogoFormat,
+                  tenantLogoBase64: logo?.base64 || null,
+                  tenantLogoFormat: logo?.format,
                   customerName,
                   billingStreet: [external_street, external_street_nr].filter(Boolean).join(' '),
                   billingZip: external_zip || '',
@@ -462,6 +454,7 @@ export default defineEventHandler(async (event) => {
                   creditorName: tenantData?.legal_company_name || tenantData?.name || '',
                   primaryColor: tenantData?.primary_color || '#1E40AF',
                   secondaryColor: tenantData?.secondary_color || '#64748B',
+                  windowSide: tenantData?.invoice_window_side === 'right' ? 'right' : 'left',
                   introText,
                   paymentTerms,
                   footerText,
