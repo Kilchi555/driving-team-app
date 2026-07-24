@@ -2643,9 +2643,23 @@
               <span v-if="selectedCourse?.category" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200">
                 {{ selectedCourse.category }}
               </span>
-              <span v-if="selectedCourse?.sari_managed" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 ring-1 ring-purple-200">
-                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
-                SARI
+              <span v-if="selectedCourse?.sari_managed" class="inline-flex items-center gap-1.5">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 ring-1 ring-purple-200">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"/></svg>
+                  SARI
+                </span>
+                <button
+                  type="button"
+                  @click="syncSARIParticipants"
+                  :disabled="isSyncingSARIParticipants"
+                  class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium text-purple-500/80 hover:text-purple-700 hover:bg-purple-50 disabled:opacity-50 transition-colors"
+                  :title="sariParticipantsSyncMessage || 'Teilnehmer aus SARI synchronisieren'"
+                >
+                  <svg class="w-3 h-3" :class="isSyncingSARIParticipants ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                  {{ isSyncingSARIParticipants ? '…' : 'Sync' }}
+                </button>
               </span>
             </div>
             <h2 class="text-lg font-bold text-gray-900 leading-tight truncate">{{ selectedCourse?.name || 'Kurs' }}</h2>
@@ -2727,24 +2741,6 @@
 
       <!-- Scrollable content -->
       <div class="flex-1 overflow-y-auto">
-
-        <!-- SARI sync banner -->
-        <div v-if="selectedCourse?.sari_managed" class="mx-5 sm:mx-6 mt-4 flex items-center gap-3 p-3 bg-purple-50 border border-purple-200 rounded-xl">
-          <svg class="w-4 h-4 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-          </svg>
-          <div class="flex-1 min-w-0">
-            <p class="text-xs font-medium text-purple-800">SARI-verwalteter Kurs</p>
-            <p class="text-xs text-purple-600 truncate">ID: {{ selectedCourse.sari_course_id }}</p>
-          </div>
-          <button
-            @click="syncSARIParticipants"
-            :disabled="isSyncingSARIParticipants"
-            class="flex-shrink-0 px-3 py-1.5 text-xs font-medium bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors"
-          >
-            {{ isSyncingSARIParticipants ? 'Sync...' : 'Sync' }}
-          </button>
-        </div>
 
         <!-- Participant list actions: company invoice + send by email + print -->
         <div class="mx-5 sm:mx-6 mt-4 flex flex-wrap gap-2">
@@ -2896,27 +2892,77 @@
                   </div>
                   <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Zahlungsart *</label>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <label v-for="opt in availablePaymentOptions" :key="opt.value" class="flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors"
-                        :class="enrollmentPaymentOption === opt.value ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'">
-                        <input type="radio" class="mt-0.5" :value="opt.value" v-model="enrollmentPaymentOption" />
-                        <span>
-                          <span class="block text-sm font-medium text-gray-900">{{ opt.label }}</span>
-                          <span class="block text-xs text-gray-500">{{ isSelectedCourseCompanyCollective && opt.value === 'invoice' ? 'Auf Firmenrechnung buchen' : opt.hint }}</span>
-                        </span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <label
+                        v-for="opt in availablePaymentOptions"
+                        :key="opt.value"
+                        class="group relative flex items-start gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all"
+                        :class="enrollmentPaymentOption === opt.value
+                          ? 'shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'"
+                        :style="enrollmentPaymentOption === opt.value
+                          ? { borderColor: primaryColor, backgroundColor: primaryColor + '12' }
+                          : {}"
+                      >
+                        <input type="radio" class="sr-only" :value="opt.value" v-model="enrollmentPaymentOption" />
+                        <div
+                          class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-sm font-semibold"
+                          :style="enrollmentPaymentOption === opt.value
+                            ? { backgroundColor: primaryColor, color: '#fff' }
+                            : { backgroundColor: '#f3f4f6', color: '#4b5563' }"
+                        ><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="paymentOptionIconPaths[opt.icon]"/></svg></div>
+                        <div class="min-w-0 flex-1 pt-0.5">
+                          <span class="block text-sm font-semibold text-gray-900 leading-tight">{{ opt.label }}</span>
+                          <span class="block text-xs text-gray-500 mt-0.5 leading-snug">{{ isSelectedCourseCompanyCollective && opt.value === 'invoice' ? 'Auf Firmenrechnung buchen' : opt.hint }}</span>
+                        </div>
+                        <div
+                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 transition-colors"
+                          :style="enrollmentPaymentOption === opt.value
+                            ? { borderColor: primaryColor, backgroundColor: primaryColor }
+                            : { borderColor: '#d1d5db' }"
+                        >
+                          <svg v-if="enrollmentPaymentOption === opt.value" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                          </svg>
+                        </div>
                       </label>
                     </div>
                   </div>
                   <div v-if="enrollmentPaymentOption === 'invoice' && !isSelectedCourseCompanyCollective">
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Rechnung *</label>
                     <div class="space-y-2">
-                      <label v-for="opt in invoiceActionOptions" :key="opt.value" class="flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors"
-                        :class="enrollmentInvoiceAction === opt.value ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'">
-                        <input type="radio" class="mt-0.5" :value="opt.value" v-model="enrollmentInvoiceAction" />
-                        <span>
-                          <span class="block text-sm font-medium text-gray-900">{{ opt.label }}</span>
-                          <span class="block text-xs text-gray-500">{{ opt.hint }}</span>
-                        </span>
+                      <label
+                        v-for="opt in invoiceActionOptions"
+                        :key="opt.value"
+                        class="group relative flex items-start gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all"
+                        :class="enrollmentInvoiceAction === opt.value
+                          ? 'shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'"
+                        :style="enrollmentInvoiceAction === opt.value
+                          ? { borderColor: primaryColor, backgroundColor: primaryColor + '12' }
+                          : {}"
+                      >
+                        <input type="radio" class="sr-only" :value="opt.value" v-model="enrollmentInvoiceAction" />
+                        <div
+                          class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-sm font-semibold"
+                          :style="enrollmentInvoiceAction === opt.value
+                            ? { backgroundColor: primaryColor, color: '#fff' }
+                            : { backgroundColor: '#f3f4f6', color: '#4b5563' }"
+                        ><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="paymentOptionIconPaths[opt.icon]"/></svg></div>
+                        <div class="min-w-0 flex-1 pt-0.5">
+                          <span class="block text-sm font-semibold text-gray-900 leading-tight">{{ opt.label }}</span>
+                          <span class="block text-xs text-gray-500 mt-0.5 leading-snug">{{ opt.hint }}</span>
+                        </div>
+                        <div
+                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 transition-colors"
+                          :style="enrollmentInvoiceAction === opt.value
+                            ? { borderColor: primaryColor, backgroundColor: primaryColor }
+                            : { borderColor: '#d1d5db' }"
+                        >
+                          <svg v-if="enrollmentInvoiceAction === opt.value" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                          </svg>
+                        </div>
                       </label>
                     </div>
                   </div>
@@ -3017,27 +3063,77 @@
                   </div>
                   <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Zahlungsart *</label>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <label v-for="opt in availablePaymentOptions" :key="'new-'+opt.value" class="flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors"
-                        :class="enrollmentPaymentOption === opt.value ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'">
-                        <input type="radio" class="mt-0.5" :value="opt.value" v-model="enrollmentPaymentOption" />
-                        <span>
-                          <span class="block text-sm font-medium text-gray-900">{{ opt.label }}</span>
-                          <span class="block text-xs text-gray-500">{{ isSelectedCourseCompanyCollective && opt.value === 'invoice' ? 'Auf Firmenrechnung buchen' : opt.hint }}</span>
-                        </span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <label
+                        v-for="opt in availablePaymentOptions"
+                        :key="'new-'+opt.value"
+                        class="group relative flex items-start gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all"
+                        :class="enrollmentPaymentOption === opt.value
+                          ? 'shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'"
+                        :style="enrollmentPaymentOption === opt.value
+                          ? { borderColor: primaryColor, backgroundColor: primaryColor + '12' }
+                          : {}"
+                      >
+                        <input type="radio" class="sr-only" :value="opt.value" v-model="enrollmentPaymentOption" />
+                        <div
+                          class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-sm font-semibold"
+                          :style="enrollmentPaymentOption === opt.value
+                            ? { backgroundColor: primaryColor, color: '#fff' }
+                            : { backgroundColor: '#f3f4f6', color: '#4b5563' }"
+                        ><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="paymentOptionIconPaths[opt.icon]"/></svg></div>
+                        <div class="min-w-0 flex-1 pt-0.5">
+                          <span class="block text-sm font-semibold text-gray-900 leading-tight">{{ opt.label }}</span>
+                          <span class="block text-xs text-gray-500 mt-0.5 leading-snug">{{ isSelectedCourseCompanyCollective && opt.value === 'invoice' ? 'Auf Firmenrechnung buchen' : opt.hint }}</span>
+                        </div>
+                        <div
+                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 transition-colors"
+                          :style="enrollmentPaymentOption === opt.value
+                            ? { borderColor: primaryColor, backgroundColor: primaryColor }
+                            : { borderColor: '#d1d5db' }"
+                        >
+                          <svg v-if="enrollmentPaymentOption === opt.value" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                          </svg>
+                        </div>
                       </label>
                     </div>
                   </div>
                   <div v-if="enrollmentPaymentOption === 'invoice' && !isSelectedCourseCompanyCollective">
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Rechnung *</label>
                     <div class="space-y-2">
-                      <label v-for="opt in invoiceActionOptions" :key="'new-inv-'+opt.value" class="flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors"
-                        :class="enrollmentInvoiceAction === opt.value ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'">
-                        <input type="radio" class="mt-0.5" :value="opt.value" v-model="enrollmentInvoiceAction" />
-                        <span>
-                          <span class="block text-sm font-medium text-gray-900">{{ opt.label }}</span>
-                          <span class="block text-xs text-gray-500">{{ opt.hint }}</span>
-                        </span>
+                      <label
+                        v-for="opt in invoiceActionOptions"
+                        :key="'new-inv-'+opt.value"
+                        class="group relative flex items-start gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all"
+                        :class="enrollmentInvoiceAction === opt.value
+                          ? 'shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'"
+                        :style="enrollmentInvoiceAction === opt.value
+                          ? { borderColor: primaryColor, backgroundColor: primaryColor + '12' }
+                          : {}"
+                      >
+                        <input type="radio" class="sr-only" :value="opt.value" v-model="enrollmentInvoiceAction" />
+                        <div
+                          class="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-sm font-semibold"
+                          :style="enrollmentInvoiceAction === opt.value
+                            ? { backgroundColor: primaryColor, color: '#fff' }
+                            : { backgroundColor: '#f3f4f6', color: '#4b5563' }"
+                        ><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="paymentOptionIconPaths[opt.icon]"/></svg></div>
+                        <div class="min-w-0 flex-1 pt-0.5">
+                          <span class="block text-sm font-semibold text-gray-900 leading-tight">{{ opt.label }}</span>
+                          <span class="block text-xs text-gray-500 mt-0.5 leading-snug">{{ opt.hint }}</span>
+                        </div>
+                        <div
+                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 transition-colors"
+                          :style="enrollmentInvoiceAction === opt.value
+                            ? { borderColor: primaryColor, backgroundColor: primaryColor }
+                            : { borderColor: '#d1d5db' }"
+                        >
+                          <svg v-if="enrollmentInvoiceAction === opt.value" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                          </svg>
+                        </div>
                       </label>
                     </div>
                   </div>
@@ -4888,18 +4984,29 @@ const companyList = ref<any[]>([])
 const isCreatingCompanyInvoice = ref(false)
 
 const paymentOptions = [
-  { value: 'cash', label: 'Bar vor Ort', hint: 'Payment offen, Bar am Kurstag' },
-  { value: 'invoice', label: 'Rechnung', hint: 'Payment + Rechnung jetzt oder später' },
-  { value: 'paid', label: 'Bereits bezahlt', hint: 'Payment als bezahlt' },
-  { value: 'reserve', label: 'Platz reservieren', hint: 'Ohne SARI, Payment offen' },
-  { value: 'online_link', label: 'Online-Link senden', hint: 'Wallee-Link per E-Mail, kein Login' },
+  { value: 'cash', label: 'Bar vor Ort', hint: 'Payment offen, Bar am Kurstag', icon: 'cash' },
+  { value: 'invoice', label: 'Rechnung', hint: 'Payment + Rechnung jetzt oder später', icon: 'invoice' },
+  { value: 'paid', label: 'Bereits bezahlt', hint: 'Payment als bezahlt', icon: 'paid' },
+  { value: 'reserve', label: 'Platz reservieren', hint: 'Ohne SARI, Payment offen', icon: 'reserve' },
+  { value: 'online_link', label: 'Online-Link senden', hint: 'Wallee-Link per E-Mail, kein Login', icon: 'link' },
 ] as const
 
 const invoiceActionOptions = [
-  { value: 'later', label: 'Rechnung später', hint: 'Pendentes Payment — später verrechnen' },
-  { value: 'pdf', label: 'Rechnung jetzt (PDF)', hint: 'Erstellt PDF, kein E-Mail-Versand' },
-  { value: 'email', label: 'Rechnung jetzt + E-Mail', hint: 'PDF erstellen und per Mail senden' },
+  { value: 'later', label: 'Rechnung später', hint: 'Pendentes Payment — später verrechnen', icon: 'later' },
+  { value: 'pdf', label: 'Rechnung jetzt (PDF)', hint: 'Erstellt PDF, kein E-Mail-Versand', icon: 'pdf' },
+  { value: 'email', label: 'Rechnung jetzt + E-Mail', hint: 'PDF erstellen und per Mail senden', icon: 'email' },
 ] as const
+
+const paymentOptionIconPaths: Record<string, string> = {
+  cash: 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
+  invoice: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+  paid: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+  reserve: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z',
+  link: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
+  later: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+  pdf: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
+  email: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+}
 
 const isSelectedCourseCompanyCollective = computed(() =>
   selectedCourse.value?.billing_mode === 'company_collective' && !!selectedCourse.value?.company_id
