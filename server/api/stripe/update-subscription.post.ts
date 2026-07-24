@@ -161,21 +161,31 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Apply update with proration ─────────────────────────────────────────────
-  const updatedSub = await stripe.subscriptions.update(tenant.stripe_subscription_id, {
-    items: itemUpdates,
-    proration_behavior: 'create_prorations',
-    metadata: {
-      plan: desiredPlan,
-      addon_seats: String(desiredSeats),
-      addon_courses: String(desiredCourses),
-      addon_affiliate: String(desiredAffiliate),
-      addon_gbp: String(desiredGbp),
-      tenant_id: tenantId,
-    },
-  })
+  let updatedSub: Stripe.Subscription
+  try {
+    updatedSub = await stripe.subscriptions.update(tenant.stripe_subscription_id, {
+      items: itemUpdates,
+      proration_behavior: 'create_prorations',
+      metadata: {
+        plan: desiredPlan,
+        addon_seats: String(desiredSeats),
+        addon_courses: String(desiredCourses),
+        addon_affiliate: String(desiredAffiliate),
+        addon_gbp: String(desiredGbp),
+        tenant_id: tenantId,
+      },
+    })
+  } catch (err: any) {
+    console.error('❌ Stripe subscription update failed:', err?.message || err)
+    throw createError({
+      statusCode: 502,
+      statusMessage: err?.message || 'Stripe-Abonnement konnte nicht aktualisiert werden',
+    })
+  }
 
   // ── Sync to DB immediately (webhook will also fire but this keeps UI snappy) ─
-  const currentPeriodEnd = new Date((updatedSub.current_period_end as number) * 1000).toISOString()
+  // Basil API (2025-03-31+): current_period_end lives on subscription items, not the subscription.
+  const currentPeriodEnd = resolveSubscriptionPeriodEnd(updatedSub)
 
   await supabase
     .from('tenants')
@@ -219,7 +229,9 @@ export default defineEventHandler(async (event) => {
     const oldPlanName = PLANS.find(p => p.id === tenant.subscription_plan)?.name ?? tenant.subscription_plan ?? '–'
     const isUpgrade = PLANS.findIndex(p => p.id === desiredPlan) > PLANS.findIndex(p => p.id === tenant.subscription_plan)
     const changeLabel = isUpgrade ? 'Upgrade' : 'Änderung'
-    const nextBillingStr = new Date(currentPeriodEnd).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })
+    const nextBillingStr = currentPeriodEnd
+      ? new Date(currentPeriodEnd).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })
+      : '–'
 
     const addonsText = [
       desiredSeats > 0 ? `${desiredSeats} Extra-Seat${desiredSeats !== 1 ? 's' : ''}` : '',
@@ -299,3 +311,19 @@ export default defineEventHandler(async (event) => {
     message: 'Abonnement erfolgreich aktualisiert. Anteilsmässige Verrechnung erfolgt auf der nächsten Rechnung.',
   }
 })
+
+/** Basil API: period end is on subscription items; fall back for older payloads. */
+function resolveSubscriptionPeriodEnd(sub: Stripe.Subscription): string | null {
+  const itemEnds = (sub.items?.data ?? [])
+    .map((item) => (item as Stripe.SubscriptionItem).current_period_end)
+    .filter((ts): ts is number => typeof ts === 'number' && Number.isFinite(ts))
+
+  const periodEndTs =
+    (itemEnds.length > 0 ? Math.max(...itemEnds) : null)
+    ?? (sub as any).current_period_end
+    ?? (sub as any).billing_cycle_anchor
+    ?? null
+
+  if (periodEndTs == null || !Number.isFinite(Number(periodEndTs))) return null
+  return new Date(Number(periodEndTs) * 1000).toISOString()
+}
