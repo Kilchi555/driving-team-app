@@ -71,8 +71,15 @@ export default defineEventHandler(async (event) => {
   // Resolve plan from subscription metadata, fall back to price matching
   const plan = (sub.metadata?.plan || resolvePlanFromPrices(sub)) as SubscriptionPlan
 
-  const periodEndTs = (sub as any).current_period_end ?? null
-  const currentPeriodEnd = periodEndTs
+  // Basil API (2025-03-31+): current_period_end lives on subscription items
+  const itemEnds = (sub.items?.data ?? [])
+    .map((item) => (item as Stripe.SubscriptionItem).current_period_end)
+    .filter((ts): ts is number => typeof ts === 'number' && Number.isFinite(ts))
+  const periodEndTs =
+    (itemEnds.length > 0 ? Math.max(...itemEnds) : null)
+    ?? (sub as any).current_period_end
+    ?? null
+  const currentPeriodEnd = periodEndTs != null && Number.isFinite(Number(periodEndTs))
     ? new Date(Number(periodEndTs) * 1000).toISOString()
     : null
 
