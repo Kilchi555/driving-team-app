@@ -113,9 +113,12 @@ export default defineNuxtPlugin((nuxtApp) => {
       // NOT trigger a full-page reload (that loses the checkout intent and feels broken).
       // The calling page (upgrade.vue / billing.vue) handles the 401 by refreshing the
       // token and retrying, or by prompting re-login.
+      // Same for course admin actions that retry with refreshClientSession.
       const isStripeRequest = url.includes('/api/stripe/')
-      if (isStripeRequest && status === 401) {
-        console.debug('ℹ️ Stripe 401 - letting the page retry/handle it (no reload)')
+      const isCourseAdminRetryable =
+        url.includes('/api/courses/send-participant-list')
+      if ((isStripeRequest || isCourseAdminRetryable) && status === 401) {
+        console.debug('ℹ️ Auth-retryable 401 - letting the page retry/handle it (no reload)')
         const d = (response as any)?._data
         throw createError({ statusCode: status, statusMessage: d?.statusMessage || response?.statusText || 'Request failed', data: d?.data ?? d ?? undefined })
       }

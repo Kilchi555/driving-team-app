@@ -556,8 +556,14 @@
                     <div class="flex items-start justify-between gap-3 sm:hidden">
                       <div class="flex-1 min-w-0">
                         <div class="text-sm font-medium text-gray-900">{{ item.product_name }}</div>
-                        <div v-if="item.product_description" class="text-xs text-gray-500 mt-0.5">{{ item.product_description }}</div>
-                        <div v-if="item.appointment_date" class="text-xs text-gray-500 mt-0.5">
+                        <div
+                          v-if="item.product_description"
+                          class="text-xs text-gray-500 mt-0.5 whitespace-pre-line"
+                        >{{ displayCourseSessionsDescription(item.product_description) }}</div>
+                        <div
+                          v-if="item.appointment_date && !looksLikeCourseSessionsDescription(item.product_description) && !/^Kurs\s*·/i.test(item.product_description || '')"
+                          class="text-xs text-gray-500 mt-0.5"
+                        >
                           {{ new Date(item.appointment_date).toLocaleDateString('de-CH') }}
                           <span v-if="item.appointment_start_time"> · {{ item.appointment_start_time.slice(0, 5) }} Uhr</span>
                           <span v-if="item.appointment_duration_minutes"> · {{ item.appointment_duration_minutes }} Min.</span>
@@ -571,8 +577,14 @@
                     <div class="hidden sm:grid sm:grid-cols-12 items-start">
                       <div class="col-span-6">
                         <div class="text-sm font-medium text-gray-900">{{ item.product_name }}</div>
-                        <div v-if="item.product_description" class="text-xs text-gray-500 mt-0.5">{{ item.product_description }}</div>
-                        <div v-if="item.appointment_date" class="text-xs text-gray-500 mt-0.5">
+                        <div
+                          v-if="item.product_description"
+                          class="text-xs text-gray-500 mt-0.5 whitespace-pre-line"
+                        >{{ displayCourseSessionsDescription(item.product_description) }}</div>
+                        <div
+                          v-if="item.appointment_date && !looksLikeCourseSessionsDescription(item.product_description) && !/^Kurs\s*·/i.test(item.product_description || '')"
+                          class="text-xs text-gray-500 mt-0.5"
+                        >
                           {{ new Date(item.appointment_date).toLocaleDateString('de-CH') }}
                           <span v-if="item.appointment_start_time"> · {{ item.appointment_start_time.slice(0, 5) }} Uhr</span>
                           <span v-if="item.appointment_duration_minutes"> · {{ item.appointment_duration_minutes }} Min.</span>
@@ -801,6 +813,7 @@ import PaymentStatusBadge from './PaymentStatusBadge.vue'
 import DunningSendDialog from './DunningSendDialog.vue'
 // ProductSelectorModal entfernt (Rechnung ist read-only bzgl. Positionen)
 import type { InvoiceStatus, PaymentStatus } from '~/types/invoice'
+import { looksLikeCourseSessionsDescription, displayCourseSessionsDescription } from '~/utils/format-course-sessions'
 
 interface InvoiceItem {
   id: string

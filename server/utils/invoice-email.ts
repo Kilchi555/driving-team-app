@@ -1,6 +1,14 @@
 // server/utils/invoice-email.ts
 // Gemeinsames responsives Email-Template für Rechnungen
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 export function formatChfEmail(rappen: number): string {
   return `CHF ${(rappen / 100).toFixed(2)}`
 }
@@ -98,19 +106,37 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
     const pb = hasBreakdown ? '4px' : '12px'
     const durationStr = item.appointment_duration_minutes ? `${item.appointment_duration_minutes} Min.` : ''
     const typeStr = item.product_description || ''
-    const metaParts = [
-      dateStr ? formatAppointmentDateEmail(dateStr) : '',
-      typeStr,
-      durationStr,
-    ].filter(Boolean)
-    const metaLine = metaParts.length > 0 ? `<br><span style="color:#94a3b8;font-size:11px;">${metaParts.join(' · ')}</span>` : ''
+    const descLines = typeStr.split(/\n+/).map(l => l.trim()).filter(Boolean)
+    let sessionLines = descLines.length > 1 || /^Teil\s+\d+/i.test(descLines[0] || '')
+      ? descLines
+      : null
+    if (!sessionLines) {
+      const legacy = typeStr.match(/^Kurs\s*·\s*(.+)$/i)
+      if (legacy?.[1]) {
+        const dates = legacy[1].split(',').map(s => s.trim()).filter(Boolean)
+        if (dates.length > 1) sessionLines = dates.map((d, i) => `Teil ${i + 1} · ${d}`)
+      }
+    }
+    let metaLine = ''
+    if (sessionLines) {
+      metaLine = `<br><span style="color:#94a3b8;font-size:11px;line-height:1.45;">${sessionLines.map(l => escapeHtml(l)).join('<br>')}</span>`
+    } else {
+      const metaParts = [
+        dateStr ? formatAppointmentDateEmail(dateStr) : '',
+        typeStr,
+        durationStr,
+      ].filter(Boolean)
+      metaLine = metaParts.length > 0
+        ? `<br><span style="color:#94a3b8;font-size:11px;">${escapeHtml(metaParts.join(' · '))}</span>`
+        : ''
+    }
     const discountLine = (item as any).discount_percent > 0
       ? `<br><span style="color:#d97706;font-size:11px;font-weight:600;">−${(item as any).discount_percent}% Rabatt</span>`
       : ''
     return `
     <tr>
       <td class="col-desc" style="padding:12px 12px ${pb};border-bottom:${border};">
-        <strong style="color:#1e293b;font-size:14px;">${item.product_name}</strong>
+        <strong style="color:#1e293b;font-size:14px;">${escapeHtml(item.product_name)}</strong>
         ${metaLine}${discountLine}
       </td>
       <td class="col-anz" style="padding:12px 8px ${pb};border-bottom:${border};text-align:center;color:#94a3b8;font-size:13px;">${item.quantity}</td>

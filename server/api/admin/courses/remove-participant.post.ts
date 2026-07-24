@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUnenrollBlockedMessage } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import { generateCourseRegistrationCancellationEmail } from '~/server/utils/email-templates'
+import { formatCourseSessionLine } from '~/utils/format-course-sessions'
 import { logger } from '~/utils/logger'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
 
@@ -70,7 +71,7 @@ export default defineEventHandler(async (event) => {
         description,
         sari_managed,
         sari_course_id,
-        course_sessions(id, sari_session_id, start_time, session_number)
+        course_sessions(id, sari_session_id, start_time, end_time, session_number)
       ),
       users!course_registrations_user_id_fkey(faberid, birthdate)
     `)
@@ -323,24 +324,39 @@ export default defineEventHandler(async (event) => {
   const shouldNotify = notify !== false // default true if not specified
   if (recipientEmail && shouldNotify) {
     try {
-      const sessions: any[] = course?.course_sessions || []
-      const firstSession = sessions
-        .filter(s => s.start_time)
-        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())[0]
+      const sessions: any[] = (course?.course_sessions || [])
+        .filter((s: any) => s.start_time)
+        .sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 
-      const courseDate = firstSession?.start_time
-        ? new Date(firstSession.start_time).toLocaleDateString('de-CH', {
-            weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric',
-            timeZone: 'Europe/Zurich'
-          })
-        : undefined
+      // Partial enrollments: only the Teile the participant was booked for
+      let emailSessions = sessions
+      if (reg.is_partial_enrollment) {
+        const { data: courseWithCategory } = await supabase
+          .from('courses')
+          .select('course_category_id, course_categories(partial_start_position)')
+          .eq('id', course.id)
+          .single()
+        const startPos = (courseWithCategory?.course_categories as any)?.partial_start_position ?? 3
+        emailSessions = sessions.filter((s: any) => (s.session_number ?? 99) >= startPos)
+      }
+
+      const sessionLines = emailSessions.map((s: any, i: number) =>
+        formatCourseSessionLine(
+          {
+            session_number: s.session_number,
+            start_time: s.start_time,
+            end_time: s.end_time,
+          },
+          i,
+        ),
+      )
 
       const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
       const { subject, html } = generateCourseRegistrationCancellationEmail({
         firstName:  reg.first_name || '',
         lastName:   reg.last_name  || '',
         courseName: course?.name   || '',
-        courseDate,
+        sessionLines,
         location:   course?.description || undefined,
         tenantName: tenant?.name        || 'Ihre Fahrschule',
         tenantEmail: tenant?.contact_email || undefined,

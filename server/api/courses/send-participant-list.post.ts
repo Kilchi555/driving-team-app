@@ -10,23 +10,12 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
-import { getAuthenticatedUser } from '~/server/utils/auth'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
-  // ── Auth ──────────────────────────────────────────────────
-  const user = await getAuthenticatedUser(event)
-  if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-
+  // ── Auth (Bearer + httpOnly cookie + refresh fallback) ───────────────────
+  const me = await requireAdminProfile(event, ['admin', 'owner', 'super_admin'])
   const supabase = getSupabaseAdmin()
-
-  const { data: me } = await supabase
-    .from('users')
-    .select('id, tenant_id, role')
-    .eq('auth_user_id', user.id)
-    .single()
-  if (!me || !['admin', 'owner', 'super_admin'].includes(me.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
 
   // ── Body ──────────────────────────────────────────────────
   const { courseId, sessionId } = await readBody(event)

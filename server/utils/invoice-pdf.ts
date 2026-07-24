@@ -288,12 +288,29 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     const totalBlockH = 34 + summaryExtraRows * 22
     const closingBlockH = totalBlockH + 14 + paymentBlockH + (data.footerText ? footerTextH + 10 : 0)
 
-    const estimateItemRowHeight = (item: InvoicePdfData['items'][number]) => {
+    const resolveItemMetaLines = (item: InvoicePdfData['items'][number]): string[] => {
+      const desc = (item.product_description || '').trim()
+      const descLines = desc.split(/\n+/).map(l => l.trim()).filter(Boolean)
+      const isSessionBlock = descLines.length > 1 || /^Teil\s+\d+/i.test(descLines[0] || '')
+      if (isSessionBlock) return descLines
+
+      // Legacy: "Kurs · 08.08.2026, 15.08.2026, 22.08.2026"
+      const legacy = desc.match(/^Kurs\s*·\s*(.+)$/i)
+      if (legacy?.[1]) {
+        const dates = legacy[1].split(',').map(s => s.trim()).filter(Boolean)
+        if (dates.length > 1) {
+          return dates.map((d, i) => `Teil ${i + 1} · ${d}`)
+        }
+      }
+
       const formattedDate = formatAppointmentDateTime((item as any).appointment_start_time || item.appointment_date)
       const durationStr = item.appointment_duration_minutes ? `${item.appointment_duration_minutes} Min.` : ''
-      const typeStr = item.product_description || ''
-      const metaLine = [formattedDate, typeStr, durationStr].filter(Boolean).join(' · ')
-      const hasDate = metaLine.length > 0
+      const line = [formattedDate, desc, durationStr].filter(Boolean).join(' · ')
+      return line ? [line] : []
+    }
+
+    const estimateItemRowHeight = (item: InvoicePdfData['items'][number]) => {
+      const metaLines = resolveItemMetaLines(item)
       let breakdownCount = 0
       if ((item.lesson_price_rappen || 0) > 0) breakdownCount++
       if ((item.admin_fee_rappen || 0) > 0) breakdownCount++
@@ -303,7 +320,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       if ((item.discount_amount_rappen || 0) > 0) breakdownCount++
       if ((item.voucher_discount_rappen || 0) > 0) breakdownCount++
       if ((item.credit_used_rappen || 0) > 0) breakdownCount++
-      const rowH = hasDate ? 32 : 22
+      const rowH = 22 + (metaLines.length > 0 ? metaLines.length * 11 + 2 : 0)
       const breakdownH = breakdownCount > 0 ? breakdownCount * 14 + 4 : 0
       return rowH + breakdownH
     }
@@ -340,12 +357,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     let rowY = tableTop + 24
     data.items.forEach((item) => {
-      const formattedDate = formatAppointmentDateTime((item as any).appointment_start_time || item.appointment_date)
-      const durationStr = item.appointment_duration_minutes ? `${item.appointment_duration_minutes} Min.` : ''
-      const typeStr = item.product_description || ''
-      const metaParts = [formattedDate, typeStr, durationStr].filter(Boolean)
-      const metaLine = metaParts.join(' · ')
-      const hasDate = metaLine.length > 0
+      const metaLines = resolveItemMetaLines(item)
+      const hasMeta = metaLines.length > 0
 
       const breakdown: { label: string; amount: number }[] = []
       if ((item.lesson_price_rappen || 0) > 0)
@@ -368,7 +381,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       if ((item.credit_used_rappen || 0) > 0)
         breakdown.push({ label: 'Guthaben verwendet', amount: -(item.credit_used_rappen!) })
 
-      const rowH = hasDate ? 32 : 22
+      const rowH = 22 + (hasMeta ? metaLines.length * 11 + 2 : 0)
       const breakdownH = breakdown.length > 0 ? breakdown.length * 14 + 4 : 0
       const totalRowH = rowH + breakdownH
 
@@ -379,12 +392,16 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       doc.fontSize(9).fillColor(ink).font('Helvetica-Bold')
         .text(item.product_name, colPos[0] + 8, rowY + 5, { width: colWidths[0], ellipsis: true })
 
-      if (hasDate) {
+      if (hasMeta) {
+        let metaY = rowY + 18
         doc.fontSize(7.5).fillColor(muted).font('Helvetica')
-          .text(metaLine, colPos[0] + 8, rowY + 18, { width: colWidths[0] })
+        for (const line of metaLines) {
+          doc.text(line, colPos[0] + 8, metaY, { width: colWidths[0] })
+          metaY += 11
+        }
       }
 
-      const vCenter = rowY + (rowH - 9) / 2
+      const vCenter = rowY + Math.max(5, (22 - 9) / 2)
       doc.fontSize(9).fillColor(muted).font('Helvetica')
         .text(String(item.quantity), colPos[1] + 8, vCenter, { width: colWidths[1], align: 'center' })
         .text(formatChf(item.unit_price_rappen), colPos[2] + 8, vCenter, { width: colWidths[2], align: 'right' })
