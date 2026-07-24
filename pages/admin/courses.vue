@@ -7177,15 +7177,19 @@ const resetEnrollmentFormExtras = () => {
 
 const openInvoicePdf = async (invoiceId: string) => {
   try {
-    const result = await $fetch<{ success: boolean; pdfUrl?: string; dataUrl?: string }>('/api/invoices/download', {
+    const result = await $fetch<{ success: boolean; pdfUrl?: string; filename?: string }>('/api/invoices/download', {
       method: 'POST',
       body: { invoiceId },
     })
-    const url = result?.pdfUrl || result?.dataUrl
-    if (url) window.open(url, '_blank')
+    if (result?.pdfUrl) {
+      const { openPdf } = await import('~/utils/openPdf')
+      await openPdf(result.pdfUrl, result.filename || 'Rechnung.pdf')
+    } else {
+      error.value = 'PDF konnte nicht geöffnet werden'
+    }
   } catch (err: any) {
     console.error('PDF download failed:', err)
-    error.value = err?.data?.statusMessage || 'PDF konnte nicht geöffnet werden'
+    error.value = err?.data?.statusMessage || err?.message || 'PDF konnte nicht geöffnet werden'
   }
 }
 
