@@ -163,15 +163,44 @@ export default defineEventHandler(async (event) => {
 
       if (itemsError) throw itemsError
 
-      // Stamp invoice_id back on source rows (courses, rooms, vehicles)
+      // Stamp invoice_id back on source rows (payments, courses, rooms, vehicles)
       for (const item of items) {
         if (!item._open_item_id || !item._open_item_source_table) continue
         const table = item._open_item_source_table as string
+        const sourceId = item._open_item_id as string
+
+        if (table === 'payments') {
+          // Course/lesson open items come from payments — link them so they
+          // disappear from "Offene Positionen" (filter: invoice_id IS NULL).
+          const { data: paymentRow, error: payErr } = await supabaseAdmin
+            .from('payments')
+            .update({
+              invoice_id: invoice.id,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', sourceId)
+            .eq('tenant_id', userProfile.tenant_id)
+            .select('id, course_registration_id')
+            .maybeSingle()
+
+          if (payErr) {
+            console.warn('[invoice/create] Could not stamp invoice_id on payment:', payErr)
+          } else if (paymentRow?.course_registration_id) {
+            const { error: regErr } = await supabaseAdmin
+              .from('course_registrations')
+              .update({ invoice_id: invoice.id })
+              .eq('id', paymentRow.course_registration_id)
+              .eq('tenant_id', userProfile.tenant_id)
+            if (regErr) console.warn('[invoice/create] Could not stamp invoice_id on course_registration:', regErr)
+          }
+          continue
+        }
+
         if (!['course_registrations', 'room_bookings', 'vehicle_bookings'].includes(table)) continue
         const { error: stampErr } = await supabaseAdmin
           .from(table)
           .update({ invoice_id: invoice.id })
-          .eq('id', item._open_item_id)
+          .eq('id', sourceId)
         if (stampErr) console.warn(`[invoice/create] Could not stamp invoice_id on ${table}:`, stampErr)
       }
     }
