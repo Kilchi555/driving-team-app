@@ -108,7 +108,14 @@
         <div class="flex-none flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100">
           <button class="px-4 py-2.5 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50" @click="close">Abbrechen</button>
           <button
-            :disabled="isSending || isLoadingPreview || !preview"
+            :disabled="isSending || isLoadingPreview || isOpeningPdf || !preview"
+            @click="openPdfPreview"
+            class="px-4 py-2.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-50"
+          >
+            {{ isOpeningPdf ? 'PDF wird erzeugt…' : 'PDF-Vorschau' }}
+          </button>
+          <button
+            :disabled="isSending || isLoadingPreview || isOpeningPdf || !preview"
             @click="confirmSend"
             class="px-5 py-2.5 text-sm font-semibold text-white rounded-xl shadow-sm disabled:opacity-50"
             :style="{ background: stageColor }"
@@ -149,6 +156,7 @@ const feeRappen = ref(0)
 const preview = ref<any>(null)
 const isLoadingPreview = ref(false)
 const isSending = ref(false)
+const isOpeningPdf = ref(false)
 const errorMsg = ref('')
 const editedSubject = ref('')
 const editedBody = ref('')
@@ -226,6 +234,31 @@ async function refreshPreview() {
 function selectStage(newStage: number) {
   stage.value = newStage
   loadPreview()
+}
+
+async function openPdfPreview() {
+  if (!props.invoiceId || !preview.value) return
+  isOpeningPdf.value = true
+  errorMsg.value = ''
+  try {
+    const res = await $fetch<{ success: boolean; pdfUrl?: string; filename?: string }>('/api/invoices/preview-dunning-pdf', {
+      method: 'POST',
+      body: {
+        invoiceId: props.invoiceId,
+        stage: stage.value,
+        overrideSubject: editedSubject.value,
+        overrideBody: editedBody.value,
+        overrideFeeRappen: feeRappen.value,
+      },
+    })
+    if (!res?.pdfUrl) throw new Error('Keine PDF-URL erhalten')
+    const { openPdf } = await import('~/utils/openPdf')
+    await openPdf(res.pdfUrl, res.filename || `Vorschau_${stageLabel.value}.pdf`)
+  } catch (e: any) {
+    errorMsg.value = e?.data?.statusMessage || e?.message || 'PDF-Vorschau konnte nicht geöffnet werden'
+  } finally {
+    isOpeningPdf.value = false
+  }
 }
 
 async function confirmSend() {

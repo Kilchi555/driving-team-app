@@ -814,6 +814,9 @@ import DunningSendDialog from './DunningSendDialog.vue'
 // ProductSelectorModal entfernt (Rechnung ist read-only bzgl. Positionen)
 import type { InvoiceStatus, PaymentStatus } from '~/types/invoice'
 import { looksLikeCourseSessionsDescription, displayCourseSessionsDescription } from '~/utils/format-course-sessions'
+import { useUIStore } from '~/stores/ui'
+
+const uiStore = useUIStore()
 
 interface InvoiceItem {
   id: string
@@ -979,12 +982,15 @@ const downloadPdf = async () => {
     if (res?.pdfUrl) {
       const { openPdf } = await import('~/utils/openPdf')
       await openPdf(res.pdfUrl, res.filename || `Rechnung_${props.invoice.invoice_number}.pdf`)
+    } else {
+      uiStore.showError('PDF', 'Keine PDF-URL erhalten')
     }
     if (res?.newStatus) {
       emit('statusChanged', props.invoice.id, res.newStatus)
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('PDF download failed:', e)
+    uiStore.showError('PDF', e?.data?.statusMessage || e?.message || 'PDF konnte nicht geöffnet werden')
   } finally {
     isDownloadingPdf.value = false
   }
@@ -1001,9 +1007,12 @@ const downloadDunningPdf = async (logId?: string) => {
     if (res?.pdfUrl) {
       const { openPdf } = await import('~/utils/openPdf')
       await openPdf(res.pdfUrl, res.filename || `${dunningLevelLabel.value}_${props.invoice.invoice_number}.pdf`)
+    } else {
+      uiStore.showError('Mahnschreiben', 'Keine PDF-URL erhalten')
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error('Dunning PDF download failed:', e)
+    uiStore.showError('Mahnschreiben', e?.data?.statusMessage || e?.message || 'PDF konnte nicht geöffnet werden')
   } finally {
     isDownloadingDunningPdf.value = false
   }
