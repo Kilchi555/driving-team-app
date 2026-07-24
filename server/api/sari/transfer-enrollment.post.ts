@@ -252,15 +252,11 @@ export default defineEventHandler(async (event) => {
       .eq('id', oldReg.id)
   }
 
-  // payment_method CHECK only allows: online, cash_on_site, invoice, wallee, credit
-  const allowedMethods = new Set(['online', 'cash_on_site', 'invoice', 'wallee', 'credit'])
+  // payment_method CHECK allows: online, cash_on_site, invoice, wallee, credit, admin, reserved, company
+  const allowedMethods = new Set(['online', 'cash_on_site', 'invoice', 'wallee', 'credit', 'admin', 'reserved', 'company'])
   let paymentMethod = oldReg.payment_method || null
   if (paymentMethod && !allowedMethods.has(paymentMethod)) {
-    if (paymentMethod === 'company' || paymentMethod === 'admin' || paymentMethod === 'reserved') {
-      paymentMethod = 'invoice'
-    } else {
-      paymentMethod = 'invoice'
-    }
+    paymentMethod = 'invoice'
   }
 
   // payment_status CHECK: pending, paid, failed, refunded

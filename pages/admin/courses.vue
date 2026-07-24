@@ -2742,10 +2742,9 @@
       <!-- Scrollable content -->
       <div class="flex-1 overflow-y-auto">
 
-        <!-- Participant list actions: company invoice + send by email + print -->
-        <div class="mx-5 sm:mx-6 mt-4 flex flex-wrap gap-2">
+        <!-- Company invoice actions (only for Firmenkurse) -->
+        <div v-if="isSelectedCourseCompanyCollective" class="mx-5 sm:mx-6 mt-4 flex flex-wrap gap-2">
           <button
-            v-if="isSelectedCourseCompanyCollective"
             @click="createCompanyInvoice(false)"
             :disabled="isCreatingCompanyInvoice || activeEnrollmentCount === 0"
             class="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors"
@@ -2756,7 +2755,6 @@
             {{ isCreatingCompanyInvoice ? 'Erstelle…' : 'Firmenrechnung (PDF)' }}
           </button>
           <button
-            v-if="isSelectedCourseCompanyCollective"
             @click="createCompanyInvoice(true)"
             :disabled="isCreatingCompanyInvoice || activeEnrollmentCount === 0"
             class="flex-1 min-w-[140px] flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors"
@@ -2766,39 +2764,6 @@
           >
             Firmenrechnung + E-Mail
           </button>
-          <button
-            @click="sendParticipantListEmail"
-            :disabled="isSendingParticipantList || currentEnrollments.length === 0"
-            class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors"
-            :class="isSendingParticipantList || currentEnrollments.length === 0
-              ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-              : 'bg-white hover:bg-blue-50 text-blue-700 border-blue-200 hover:border-blue-400'"
-          >
-            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            {{ isSendingParticipantList ? 'Wird gesendet…' : 'Liste per Email senden' }}
-          </button>
-          <button
-            @click="printParticipantList"
-            :disabled="currentEnrollments.length === 0"
-            class="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors"
-            :class="currentEnrollments.length === 0
-              ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-              : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-400'"
-            title="Drucken / PDF"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-            </svg>
-          </button>
-        </div>
-        <div v-if="participantListEmailResult" class="mx-5 sm:mx-6 mt-2 flex items-center gap-2 p-2 rounded-lg text-xs font-medium"
-          :class="participantListEmailResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
-          <svg v-if="participantListEmailResult.success" class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-          </svg>
-          {{ participantListEmailResult.message }}
         </div>
 
         <!-- Add Participant -->
@@ -2849,43 +2814,84 @@
             <div class="p-4">
               <!-- Search mode -->
               <div v-if="enrollmentMode === 'search'">
-                <div class="flex gap-2 mb-3">
-                  <input
-                    v-model="userSearchQuery"
-                    @input="searchUsers"
-                    type="text"
-                    placeholder="Name oder E-Mail..."
-                    class="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-gray-50"
-                  />
-                  <button
-                    @click="searchUsers"
-                    :disabled="isSearchingUsers"
-                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium rounded-xl transition-colors"
-                  >
-                    {{ isSearchingUsers ? '...' : 'Suchen' }}
-                  </button>
-                </div>
-                <div v-if="searchResults.length > 0" class="space-y-1 max-h-48 overflow-y-auto rounded-xl border border-gray-100">
-                  <div
-                    v-for="user in searchResults"
-                    :key="user.id"
-                    @click="selectedExistingUser = user"
-                    class="flex items-center gap-3 px-3 py-2.5 cursor-pointer border-b border-gray-50 last:border-b-0 transition-colors"
-                    :class="selectedExistingUser?.id === user.id ? 'bg-indigo-50 ring-1 ring-inset ring-indigo-200' : 'hover:bg-indigo-50'"
-                  >
-                    <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700 flex-shrink-0">
-                      {{ (user.first_name?.[0] || '') + (user.last_name?.[0] || '') }}
+                <!-- Selected participant chip -->
+                <div
+                  v-if="selectedExistingUser"
+                  class="flex items-start sm:items-center gap-2.5 sm:gap-3 px-3 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200"
+                >
+                  <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-bold text-emerald-700 flex-shrink-0 mt-0.5 sm:mt-0">
+                    {{ (selectedExistingUser.first_name?.[0] || '') + (selectedExistingUser.last_name?.[0] || '') }}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="text-sm font-semibold text-emerald-900 truncate">
+                      {{ selectedExistingUser.first_name }} {{ selectedExistingUser.last_name }}
                     </div>
-                    <div class="min-w-0">
-                      <div class="text-sm font-medium text-gray-900">{{ user.first_name }} {{ user.last_name }}</div>
-                      <div class="text-xs text-gray-500 truncate">{{ user.email }}</div>
+                    <div class="text-xs text-emerald-700/80 mt-0.5 break-words">
+                      <span v-if="selectedExistingUser.email" class="break-all">{{ selectedExistingUser.email }}</span>
+                      <span v-if="selectedExistingUser.email && selectedExistingUser.phone" class="hidden sm:inline"> · </span>
+                      <span
+                        v-if="selectedExistingUser.phone"
+                        class="block sm:inline mt-0.5 sm:mt-0"
+                      >{{ selectedExistingUser.phone }}</span>
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    @click="clearSelectedExistingUser"
+                    class="flex-shrink-0 w-8 h-8 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 active:bg-red-100 transition-colors"
+                    title="Auswahl entfernen"
+                    aria-label="Auswahl entfernen"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
                 </div>
-                <p v-else-if="userSearchQuery && !isSearchingUsers" class="text-center text-sm text-gray-400 py-4">Keine Kunden gefunden</p>
 
-                <!-- Enrollment options (existing customer) -->
-                <div class="mt-4 space-y-3 border-t border-gray-100 pt-4">
+                <!-- Search UI (hidden while a user is selected) -->
+                <template v-else>
+                  <div class="flex gap-2 mb-3">
+                    <input
+                      v-model="userSearchQuery"
+                      @input="searchUsers"
+                      type="text"
+                      placeholder="Name oder E-Mail..."
+                      class="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-gray-50"
+                    />
+                    <button
+                      @click="searchUsers"
+                      :disabled="isSearchingUsers"
+                      class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium rounded-xl transition-colors"
+                    >
+                      {{ isSearchingUsers ? '...' : 'Suchen' }}
+                    </button>
+                  </div>
+                  <div v-if="searchResults.length > 0" class="space-y-1 max-h-48 overflow-y-auto rounded-xl border border-gray-100">
+                    <div
+                      v-for="user in searchResults"
+                      :key="user.id"
+                      @click="selectExistingUser(user)"
+                      class="flex items-start sm:items-center gap-2.5 sm:gap-3 px-3 py-2.5 cursor-pointer border-b border-gray-50 last:border-b-0 transition-colors hover:bg-indigo-50 active:bg-indigo-100"
+                    >
+                      <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700 flex-shrink-0 mt-0.5 sm:mt-0">
+                        {{ (user.first_name?.[0] || '') + (user.last_name?.[0] || '') }}
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <div class="text-sm font-medium text-gray-900 truncate">{{ user.first_name }} {{ user.last_name }}</div>
+                        <div class="text-xs text-gray-500 mt-0.5 break-words">
+                          <span v-if="user.email" class="break-all">{{ user.email }}</span>
+                          <span v-if="user.email && user.phone" class="hidden sm:inline"> · </span>
+                          <span v-if="user.phone" class="block sm:inline mt-0.5 sm:mt-0">{{ user.phone }}</span>
+                          <span v-if="!user.email && !user.phone">Keine Kontaktdaten</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <p v-else-if="userSearchQuery && !isSearchingUsers" class="text-center text-sm text-gray-400 py-4">Keine Kunden gefunden</p>
+                </template>
+
+                <!-- Enrollment options — only after a customer is selected -->
+                <div v-if="selectedExistingUser" class="mt-4 space-y-3 border-t border-gray-100 pt-4">
                   <div v-if="isSelectedCourseCompanyCollective" class="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-800">
                     Firmenkurs · Sammelrechnung an <strong>{{ selectedCourseCompanyName }}</strong>.
                     Teilnehmer werden ohne Einzelrechnung angemeldet.
@@ -2896,7 +2902,7 @@
                       <label
                         v-for="opt in availablePaymentOptions"
                         :key="opt.value"
-                        class="group relative flex items-start gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all"
+                        class="group relative flex items-center gap-3 p-3 rounded-2xl border-2 cursor-pointer transition-all"
                         :class="enrollmentPaymentOption === opt.value
                           ? 'shadow-sm'
                           : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'"
@@ -2911,12 +2917,11 @@
                             ? { backgroundColor: primaryColor, color: '#fff' }
                             : { backgroundColor: '#f3f4f6', color: '#4b5563' }"
                         ><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="paymentOptionIconPaths[opt.icon]"/></svg></div>
-                        <div class="min-w-0 flex-1 pt-0.5">
+                        <div class="min-w-0 flex-1">
                           <span class="block text-sm font-semibold text-gray-900 leading-tight">{{ opt.label }}</span>
-                          <span class="block text-xs text-gray-500 mt-0.5 leading-snug">{{ isSelectedCourseCompanyCollective && opt.value === 'invoice' ? 'Auf Firmenrechnung buchen' : opt.hint }}</span>
                         </div>
                         <div
-                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 transition-colors"
+                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
                           :style="enrollmentPaymentOption === opt.value
                             ? { borderColor: primaryColor, backgroundColor: primaryColor }
                             : { borderColor: '#d1d5db' }"
@@ -2934,7 +2939,7 @@
                       <label
                         v-for="opt in invoiceActionOptions"
                         :key="opt.value"
-                        class="group relative flex items-start gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all"
+                        class="group relative flex items-center gap-3 p-3 rounded-2xl border-2 cursor-pointer transition-all"
                         :class="enrollmentInvoiceAction === opt.value
                           ? 'shadow-sm'
                           : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'"
@@ -2949,12 +2954,11 @@
                             ? { backgroundColor: primaryColor, color: '#fff' }
                             : { backgroundColor: '#f3f4f6', color: '#4b5563' }"
                         ><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="paymentOptionIconPaths[opt.icon]"/></svg></div>
-                        <div class="min-w-0 flex-1 pt-0.5">
+                        <div class="min-w-0 flex-1">
                           <span class="block text-sm font-semibold text-gray-900 leading-tight">{{ opt.label }}</span>
-                          <span class="block text-xs text-gray-500 mt-0.5 leading-snug">{{ opt.hint }}</span>
                         </div>
                         <div
-                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 transition-colors"
+                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
                           :style="enrollmentInvoiceAction === opt.value
                             ? { borderColor: primaryColor, backgroundColor: primaryColor }
                             : { borderColor: '#d1d5db' }"
@@ -2989,7 +2993,7 @@
                       <label class="block text-xs text-gray-500 mb-1">Geburtsdatum (SARI)</label>
                       <input v-model="enrollmentBirthdate" type="date" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50" />
                     </div>
-                    <p class="col-span-2 text-xs text-gray-400">Ohne Angaben: lokal anmelden. Mit Angaben: SARI wenn Zugangsdaten vorhanden.</p>
+                    <p class="col-span-2 text-xs text-gray-400">Optional für SARI-Sync.</p>
                   </div>
                   <p v-if="enrollmentPaymentOption === 'reserve'" class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                     Platz wird reserviert — nicht in SARI eingetragen.
@@ -2997,10 +3001,10 @@
                   <button
                     type="button"
                     @click="confirmEnrollExistingUser"
-                    :disabled="!selectedExistingUser || !enrollmentPaymentOption || isAddingParticipant"
+                    :disabled="!enrollmentPaymentOption || isAddingParticipant"
                     class="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-colors disabled:bg-indigo-300 bg-indigo-600 hover:bg-indigo-700"
                   >
-                    {{ isAddingParticipant ? 'Wird angemeldet...' : (selectedExistingUser ? `${selectedExistingUser.first_name} anmelden` : 'Kunde auswählen') }}
+                    {{ isAddingParticipant ? 'Wird angemeldet...' : `${selectedExistingUser.first_name} anmelden` }}
                   </button>
                 </div>
               </div>
@@ -3067,7 +3071,7 @@
                       <label
                         v-for="opt in availablePaymentOptions"
                         :key="'new-'+opt.value"
-                        class="group relative flex items-start gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all"
+                        class="group relative flex items-center gap-3 p-3 rounded-2xl border-2 cursor-pointer transition-all"
                         :class="enrollmentPaymentOption === opt.value
                           ? 'shadow-sm'
                           : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'"
@@ -3082,12 +3086,11 @@
                             ? { backgroundColor: primaryColor, color: '#fff' }
                             : { backgroundColor: '#f3f4f6', color: '#4b5563' }"
                         ><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="paymentOptionIconPaths[opt.icon]"/></svg></div>
-                        <div class="min-w-0 flex-1 pt-0.5">
+                        <div class="min-w-0 flex-1">
                           <span class="block text-sm font-semibold text-gray-900 leading-tight">{{ opt.label }}</span>
-                          <span class="block text-xs text-gray-500 mt-0.5 leading-snug">{{ isSelectedCourseCompanyCollective && opt.value === 'invoice' ? 'Auf Firmenrechnung buchen' : opt.hint }}</span>
                         </div>
                         <div
-                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 transition-colors"
+                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
                           :style="enrollmentPaymentOption === opt.value
                             ? { borderColor: primaryColor, backgroundColor: primaryColor }
                             : { borderColor: '#d1d5db' }"
@@ -3105,7 +3108,7 @@
                       <label
                         v-for="opt in invoiceActionOptions"
                         :key="'new-inv-'+opt.value"
-                        class="group relative flex items-start gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition-all"
+                        class="group relative flex items-center gap-3 p-3 rounded-2xl border-2 cursor-pointer transition-all"
                         :class="enrollmentInvoiceAction === opt.value
                           ? 'shadow-sm'
                           : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'"
@@ -3120,12 +3123,11 @@
                             ? { backgroundColor: primaryColor, color: '#fff' }
                             : { backgroundColor: '#f3f4f6', color: '#4b5563' }"
                         ><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="paymentOptionIconPaths[opt.icon]"/></svg></div>
-                        <div class="min-w-0 flex-1 pt-0.5">
+                        <div class="min-w-0 flex-1">
                           <span class="block text-sm font-semibold text-gray-900 leading-tight">{{ opt.label }}</span>
-                          <span class="block text-xs text-gray-500 mt-0.5 leading-snug">{{ opt.hint }}</span>
                         </div>
                         <div
-                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 transition-colors"
+                          class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
                           :style="enrollmentInvoiceAction === opt.value
                             ? { borderColor: primaryColor, backgroundColor: primaryColor }
                             : { borderColor: '#d1d5db' }"
@@ -3167,18 +3169,48 @@
 
         <!-- Current Participants -->
         <div class="mx-5 sm:mx-6 mt-6 mb-4">
-          <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center justify-between gap-3 mb-3">
             <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Teilnehmer
               <span class="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-bold">{{ currentEnrollments.length }}</span>
             </label>
-            <button
-              v-if="deletedEnrollments.length > 0"
-              @click="showDeletedParticipants = !showDeletedParticipants"
-              class="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              {{ showDeletedParticipants ? 'Gelöschte ausblenden' : `${deletedEnrollments.length} Gelöschte` }}
-            </button>
+            <div class="flex items-center gap-1">
+              <button
+                type="button"
+                @click="sendParticipantListEmail"
+                :disabled="isSendingParticipantList || currentEnrollments.length === 0"
+                class="inline-flex items-center gap-1 px-1.5 py-1 rounded-md text-[11px] font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors"
+                :title="isSendingParticipantList ? 'Wird gesendet…' : 'Liste per E-Mail senden'"
+              >
+                <svg class="w-3.5 h-3.5" :class="isSendingParticipantList ? 'animate-pulse' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                <span class="hidden sm:inline">{{ isSendingParticipantList ? '…' : 'E-Mail' }}</span>
+              </button>
+              <button
+                type="button"
+                @click="printParticipantList"
+                :disabled="currentEnrollments.length === 0"
+                class="inline-flex items-center gap-1 px-1.5 py-1 rounded-md text-[11px] font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors"
+                title="Drucken / PDF"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                </svg>
+                <span class="hidden sm:inline">Druck</span>
+              </button>
+              <button
+                v-if="deletedEnrollments.length > 0"
+                @click="showDeletedParticipants = !showDeletedParticipants"
+                class="ml-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {{ showDeletedParticipants ? 'Gelöschte ausblenden' : `${deletedEnrollments.length} Gelöschte` }}
+              </button>
+            </div>
+          </div>
+          <div v-if="participantListEmailResult" class="mb-2 flex items-center gap-1.5 text-[11px] font-medium"
+            :class="participantListEmailResult.success ? 'text-green-600' : 'text-red-600'">
+            {{ participantListEmailResult.message }}
           </div>
 
           <!-- Empty state -->
@@ -7257,8 +7289,16 @@ const confirmEnrollExistingUser = async () => {
   }
 }
 
-const selectExistingUser = async (_user: any) => {
-  // Legacy no-op — selection is handled by confirmEnrollExistingUser
+const selectExistingUser = (user: any) => {
+  selectedExistingUser.value = user
+  searchResults.value = []
+  userSearchQuery.value = ''
+}
+
+const clearSelectedExistingUser = () => {
+  selectedExistingUser.value = null
+  searchResults.value = []
+  userSearchQuery.value = ''
 }
 
 const searchUsers = async () => {

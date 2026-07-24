@@ -148,11 +148,13 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     // Absenderzeile knapp über dem Fenster; Empfängeradresse im Fensterschlitz.
     // Typisches Fenster: ~20mm vom Rand, oben ~50mm, ca. 85×45mm.
     // Seite (links/rechts) kommt aus tenants.invoice_window_side.
+    // +20pt: Absender/Empfänger etwas tiefer, damit sie sauber im Couvertfenster sitzen.
     const windowSide = data.windowSide === 'right' ? 'right' : 'left'
     const winWidth = mmToPt(85)
     const winX = windowSide === 'right' ? (W - mmToPt(20) - winWidth) : mmToPt(20)
-    const winTop = mmToPt(50)
-    const senderY = mmToPt(45)
+    const addrShiftY = 20
+    const winTop = mmToPt(50) + addrShiftY
+    const senderY = mmToPt(45) + addrShiftY
 
     // Weisser Seitengrund (explizit, falls Drucker/Viewer Defaults setzt)
     doc.rect(0, 0, W, H).fill('white')
@@ -256,8 +258,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
         .text(value, metaX, y + 10, { width: metaW })
     })
 
-    // Inhalt beginnt unterhalb der Fensterzone (~100mm), damit nichts im Schlitz liegt
-    const contentTop = mmToPt(100)
+    // Inhalt beginnt unterhalb der Fensterzone, damit nichts im Schlitz liegt
+    const contentTop = mmToPt(100) + addrShiftY
 
     // ── Einleitungstext ──────────────────────────────────────────────────────
     let introBlockH = 0
