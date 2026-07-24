@@ -986,12 +986,13 @@ export default defineEventHandler(async (event) => {
             logger.debug('📊 Course IDs to update:', courseIds)
             
             for (const courseId of courseIds) {
-              // Count confirmed registrations for this course
+              // Count active confirmed registrations (exclude soft-deleted)
               const { count, error: countError } = await supabase
                 .from('course_registrations')
                 .select('*', { count: 'exact', head: true })
                 .eq('course_id', courseId)
                 .eq('status', 'confirmed')
+                .is('deleted_at', null)
               
               if (!countError && count !== null) {
                 const { error: updateError } = await supabase
@@ -2279,12 +2280,13 @@ async function updateSessionParticipantCounts(supabase: any, courseId: string) {
       return
     }
 
-    // Get all confirmed registrations for this course
+    // Active confirmed registrations only (soft-deleted still keep status=confirmed)
     const { data: registrations } = await supabase
       .from('course_registrations')
       .select('id, custom_sessions, is_partial_enrollment, individual_session_number, partial_start_session')
       .eq('course_id', courseId)
       .eq('status', 'confirmed')
+      .is('deleted_at', null)
 
     const allRegs = registrations || []
 

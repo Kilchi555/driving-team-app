@@ -168,8 +168,28 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Live recount so soft-deleted registrations never inflate "Ausgebucht"
+    const courseList = courses || []
+    if (courseList.length > 0) {
+      const courseIds = courseList.map((c: any) => c.id)
+      const { data: activeRegs } = await supabase
+        .from('course_registrations')
+        .select('course_id')
+        .in('course_id', courseIds)
+        .neq('status', 'cancelled')
+        .is('deleted_at', null)
+
+      const counts = new Map<string, number>()
+      for (const reg of activeRegs || []) {
+        counts.set(reg.course_id, (counts.get(reg.course_id) || 0) + 1)
+      }
+      for (const course of courseList) {
+        course.current_participants = counts.get(course.id) || 0
+      }
+    }
+
     const duration = Date.now() - startTime
-    logger.debug(`✅ Public courses fetched in ${duration}ms:`, courses?.length || 0)
+    logger.debug(`✅ Public courses fetched in ${duration}ms:`, courseList.length)
 
     return {
       success: true,
@@ -182,8 +202,8 @@ export default defineEventHandler(async (event) => {
         accent_color: tenant.accent_color,
         wallee_enabled: tenant.wallee_enabled ?? false
       },
-      courses: courses || [],
-      count: courses?.length || 0,
+      courses: courseList,
+      count: courseList.length,
       duration
     }
 

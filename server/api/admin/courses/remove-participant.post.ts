@@ -289,6 +289,7 @@ export default defineEventHandler(async (event) => {
       .from('course_registrations')
       .select('id', { count: 'exact', head: true })
       .eq('course_id', courseId)
+      .neq('status', 'cancelled')
       .is('deleted_at', null)
 
     const newCount = count ?? 0
@@ -315,6 +316,41 @@ export default defineEventHandler(async (event) => {
       .from('courses')
       .update(updatePayload)
       .eq('id', courseId)
+
+    // Keep session-level counts in sync (same deleted_at rules)
+    const { data: sessions } = await supabase
+      .from('course_sessions')
+      .select('id, session_number')
+      .eq('course_id', courseId)
+
+    const { data: activeRegs } = await supabase
+      .from('course_registrations')
+      .select('custom_sessions, individual_session_number, partial_start_session')
+      .eq('course_id', courseId)
+      .neq('status', 'cancelled')
+      .is('deleted_at', null)
+
+    for (const session of sessions || []) {
+      const sNum = session.session_number
+      const sessionCount = (activeRegs || []).filter((reg: any) => {
+        if (reg.individual_session_number != null) {
+          return reg.individual_session_number === sNum
+        }
+        if (reg.partial_start_session != null) {
+          if (sNum < reg.partial_start_session) return false
+        }
+        if (reg.custom_sessions) {
+          const override = (reg.custom_sessions as Record<string, any>)[String(sNum)]
+          if (override) return false
+        }
+        return true
+      }).length
+
+      await supabase
+        .from('course_sessions')
+        .update({ current_participants: sessionCount })
+        .eq('id', session.id)
+    }
 
     logger.debug(`✅ Course participant count updated to ${newCount}, status: ${newStatus ?? currentStatus}`)
   }
