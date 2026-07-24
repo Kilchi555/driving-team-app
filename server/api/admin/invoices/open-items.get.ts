@@ -83,13 +83,21 @@ export default defineEventHandler(async (event) => {
   }
 
   const sessionsByCourse = new Map<string, { session_number: number; start_time: string; end_time: string | null }[]>()
+  const courseNameById = new Map<string, string>()
   if (courseIdsNeedingSessions.size > 0) {
-    const { data: sessions } = await supabase
-      .from('course_sessions')
-      .select('course_id, session_number, start_time, end_time')
-      .in('course_id', Array.from(courseIdsNeedingSessions))
-      .eq('is_active', true)
-      .order('session_number', { ascending: true })
+    const courseIdList = Array.from(courseIdsNeedingSessions)
+    const [{ data: sessions }, { data: courseRows }] = await Promise.all([
+      supabase
+        .from('course_sessions')
+        .select('course_id, session_number, start_time, end_time')
+        .in('course_id', courseIdList)
+        .eq('is_active', true)
+        .order('session_number', { ascending: true }),
+      supabase
+        .from('courses')
+        .select('id, name')
+        .in('id', courseIdList),
+    ])
 
     for (const s of (sessions || [])) {
       const list = sessionsByCourse.get(s.course_id) || []
@@ -99,6 +107,9 @@ export default defineEventHandler(async (event) => {
         end_time: s.end_time || null,
       })
       sessionsByCourse.set(s.course_id, list)
+    }
+    for (const c of (courseRows || [])) {
+      if (c?.id && c?.name) courseNameById.set(c.id, c.name)
     }
   }
 
@@ -149,7 +160,7 @@ export default defineEventHandler(async (event) => {
     // checkout) don't carry a title from the appointments join — fall back to the
     // course info stored on the payment itself instead of a generic "Fahrstunde".
     const meta = ((p as any).metadata || {}) as Record<string, any>
-    const isCoursePayment = !apt && !!(meta.course_name || p.course_registration_id)
+    const isCoursePayment = !apt && !!(meta.course_name || meta.course_id || p.course_registration_id)
     const coursePartialStart = meta.is_partial_enrollment ? meta.partial_start_position : null
     const sessions = isCoursePayment
       ? resolveSessions(meta.course_id, {
@@ -159,14 +170,21 @@ export default defineEventHandler(async (event) => {
         })
       : []
     const sessionDates = sessions.map(s => s.start_time)
+    const resolvedCourseName =
+      meta.course_name ||
+      (meta.course_id ? courseNameById.get(meta.course_id) : null) ||
+      null
+    const fallbackDescription =
+      p.description && !/^Course:\s*Unknown$/i.test(p.description) ? p.description : null
     items.push({
       type: isCoursePayment ? 'course' : 'lesson',
       source_id: p.id,
       source_table: 'payments',
       appointment_id: p.appointment_id || null,
       label: apt?.title
-        || buildCourseLabel(meta.course_name, { individualSessionNumber: meta.individual_session_number, partialStartPosition: coursePartialStart })
-        || p.description || 'Fahrstunde',
+        || buildCourseLabel(resolvedCourseName, { individualSessionNumber: meta.individual_session_number, partialStartPosition: coursePartialStart })
+        || fallbackDescription
+        || 'Fahrstunde',
       appointment_type: apt?.type || null,
       date: apt?.start_time || sessionDates[0] || meta.course_start_date || p.created_at,
       session_dates: sessionDates.length > 1 ? sessionDates : undefined,

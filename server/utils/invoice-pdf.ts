@@ -148,11 +148,12 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     // Absenderzeile knapp über dem Fenster; Empfängeradresse im Fensterschlitz.
     // Typisches Fenster: ~20mm vom Rand, oben ~50mm, ca. 85×45mm.
     // Seite (links/rechts) kommt aus tenants.invoice_window_side.
-    // +20pt: Absender/Empfänger etwas tiefer, damit sie sauber im Couvertfenster sitzen.
+    // +20pt Y / +20pt X: leicht nach unten und rechts für Couvertfenster.
     const windowSide = data.windowSide === 'right' ? 'right' : 'left'
     const winWidth = mmToPt(85)
-    const winX = windowSide === 'right' ? (W - mmToPt(20) - winWidth) : mmToPt(20)
     const addrShiftY = 20
+    const addrShiftX = 20
+    const winX = (windowSide === 'right' ? (W - mmToPt(20) - winWidth) : mmToPt(20)) + addrShiftX
     const winTop = mmToPt(50) + addrShiftY
     const senderY = mmToPt(45) + addrShiftY
 

@@ -218,6 +218,10 @@ export default defineEventHandler(async (event) => {
     
     // Build payment record - only include columns that exist in the table
     // ✅ IMPORTANT: Only store primitive values in metadata to avoid circular references
+    const resolvedCourseName =
+      (typeof metadata?.course_name === 'string' && metadata.course_name.trim()) ||
+      (typeof course?.name === 'string' && course.name.trim()) ||
+      null
     const paymentInsertData: any = {
       user_id: actualUserId,
       appointment_id: null, // No appointment for course registrations
@@ -226,13 +230,13 @@ export default defineEventHandler(async (event) => {
       payment_status: 'pending',
       total_amount_rappen: amount,
       currency: currency,
-      description: `Course: ${metadata?.course_name || 'Unknown'}`,
+      description: resolvedCourseName || 'Kursanmeldung',
       // wallee_transaction_id will be set AFTER Wallee transaction is created
       tenant_id: tenantId,
       metadata: {
         enrollment_id: enrollmentId,
         course_id: courseId,
-        course_name: metadata?.course_name || null,
+        course_name: resolvedCourseName,
         course_location: metadata?.course_location || null,
         course_start_date: typeof enrollment.courses?.course_start_date === 'string' 
           ? enrollment.courses.course_start_date 
