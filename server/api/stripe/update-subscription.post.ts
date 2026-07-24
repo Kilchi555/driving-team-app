@@ -4,6 +4,7 @@ import { PLANS, ADDONS, type SubscriptionPlan } from '~/utils/planFeatures'
 import { sendEmail } from '~/server/utils/email'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
+import { resolveSubscriptionPeriodEnd } from '~/server/utils/stripe-subscription-period'
 
 interface UpdateBody {
   plan?: SubscriptionPlan
@@ -184,20 +185,33 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Sync to DB immediately (webhook will also fire but this keeps UI snappy) ─
-  // Basil API (2025-03-31+): current_period_end lives on subscription items, not the subscription.
-  const currentPeriodEnd = resolveSubscriptionPeriodEnd(updatedSub)
+  // Basil API: period end is on items. Re-fetch if the update payload omits it.
+  let currentPeriodEnd = resolveSubscriptionPeriodEnd(updatedSub)
+  if (!currentPeriodEnd) {
+    try {
+      const refreshed = await stripe.subscriptions.retrieve(tenant.stripe_subscription_id, {
+        expand: ['items.data.price'],
+      })
+      currentPeriodEnd = resolveSubscriptionPeriodEnd(refreshed)
+    } catch (err: any) {
+      console.warn('⚠️ Could not re-fetch subscription for period end:', err?.message || err)
+    }
+  }
+
+  const tenantUpdate: Record<string, unknown> = {
+    subscription_plan: desiredPlan,
+    addon_seats: desiredSeats,
+    addon_courses_enabled: desiredCourses,
+    addon_affiliate_enabled: desiredAffiliate,
+    addon_gbp_enabled: desiredGbp,
+    is_trial: false,
+  }
+  // Never overwrite a good period end with null (would blank the billing UI).
+  if (currentPeriodEnd) tenantUpdate.current_period_end = currentPeriodEnd
 
   await supabase
     .from('tenants')
-    .update({
-      subscription_plan: desiredPlan,
-      current_period_end: currentPeriodEnd,
-      addon_seats: desiredSeats,
-      addon_courses_enabled: desiredCourses,
-      addon_affiliate_enabled: desiredAffiliate,
-      addon_gbp_enabled: desiredGbp,
-      is_trial: false,
-    })
+    .update(tenantUpdate)
     .eq('id', tenantId)
 
   await syncFeatureFlags(supabase, tenantId, desiredPlan, {
@@ -311,19 +325,3 @@ export default defineEventHandler(async (event) => {
     message: 'Abonnement erfolgreich aktualisiert. Anteilsmässige Verrechnung erfolgt auf der nächsten Rechnung.',
   }
 })
-
-/** Basil API: period end is on subscription items; fall back for older payloads. */
-function resolveSubscriptionPeriodEnd(sub: Stripe.Subscription): string | null {
-  const itemEnds = (sub.items?.data ?? [])
-    .map((item) => (item as Stripe.SubscriptionItem).current_period_end)
-    .filter((ts): ts is number => typeof ts === 'number' && Number.isFinite(ts))
-
-  const periodEndTs =
-    (itemEnds.length > 0 ? Math.max(...itemEnds) : null)
-    ?? (sub as any).current_period_end
-    ?? (sub as any).billing_cycle_anchor
-    ?? null
-
-  if (periodEndTs == null || !Number.isFinite(Number(periodEndTs))) return null
-  return new Date(Number(periodEndTs) * 1000).toISOString()
-}

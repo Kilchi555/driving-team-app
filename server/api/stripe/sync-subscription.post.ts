@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { PLANS, type SubscriptionPlan } from '~/utils/planFeatures'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
+import { resolveSubscriptionPeriodEnd } from '~/server/utils/stripe-subscription-period'
 
 /**
  * Called from the success page after a Stripe checkout.
@@ -71,17 +72,8 @@ export default defineEventHandler(async (event) => {
   // Resolve plan from subscription metadata, fall back to price matching
   const plan = (sub.metadata?.plan || resolvePlanFromPrices(sub)) as SubscriptionPlan
 
-  // Basil API (2025-03-31+): current_period_end lives on subscription items
-  const itemEnds = (sub.items?.data ?? [])
-    .map((item) => (item as Stripe.SubscriptionItem).current_period_end)
-    .filter((ts): ts is number => typeof ts === 'number' && Number.isFinite(ts))
-  const periodEndTs =
-    (itemEnds.length > 0 ? Math.max(...itemEnds) : null)
-    ?? (sub as any).current_period_end
-    ?? null
-  const currentPeriodEnd = periodEndTs != null && Number.isFinite(Number(periodEndTs))
-    ? new Date(Number(periodEndTs) * 1000).toISOString()
-    : null
+  // Basil API: period end is on subscription items
+  const currentPeriodEnd = resolveSubscriptionPeriodEnd(sub)
 
   const addonSeats = parseAddonSeats(sub)
   const addonCourses = sub.metadata?.addon_courses === 'true'
