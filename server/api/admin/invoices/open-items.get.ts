@@ -82,28 +82,32 @@ export default defineEventHandler(async (event) => {
     if (r.course_id) courseIdsNeedingSessions.add(r.course_id)
   }
 
-  const sessionsByCourse = new Map<string, { session_number: number; start_time: string }[]>()
+  const sessionsByCourse = new Map<string, { session_number: number; start_time: string; end_time: string | null }[]>()
   if (courseIdsNeedingSessions.size > 0) {
     const { data: sessions } = await supabase
       .from('course_sessions')
-      .select('course_id, session_number, start_time')
+      .select('course_id, session_number, start_time, end_time')
       .in('course_id', Array.from(courseIdsNeedingSessions))
       .eq('is_active', true)
       .order('session_number', { ascending: true })
 
     for (const s of (sessions || [])) {
       const list = sessionsByCourse.get(s.course_id) || []
-      list.push({ session_number: s.session_number, start_time: s.start_time })
+      list.push({
+        session_number: s.session_number,
+        start_time: s.start_time,
+        end_time: s.end_time || null,
+      })
       sessionsByCourse.set(s.course_id, list)
     }
   }
 
-  // Resolve which session dates apply to a given enrollment (full / partial / single session)
-  const resolveSessionDates = (courseId: string | null | undefined, opts: {
+  // Resolve which sessions apply to a given enrollment (full / partial / single session)
+  const resolveSessions = (courseId: string | null | undefined, opts: {
     individualSessionNumber?: number | null
     partialStartPosition?: number | null
     customSessions?: Record<string, any> | null
-  }): string[] => {
+  }): { session_number: number; start_time: string; end_time: string | null }[] => {
     const sessions = (courseId && sessionsByCourse.get(courseId)) || []
     if (sessions.length === 0) return []
 
@@ -117,7 +121,7 @@ export default defineEventHandler(async (event) => {
     if (opts.customSessions && typeof opts.customSessions === 'object') {
       relevant = relevant.filter(s => !opts.customSessions![String(s.session_number)])
     }
-    return relevant.map(s => s.start_time)
+    return relevant
   }
 
   // Course names conventionally bake in the date of session 1 (e.g. "Kurs XY - 08.08.2026"),
@@ -147,13 +151,14 @@ export default defineEventHandler(async (event) => {
     const meta = ((p as any).metadata || {}) as Record<string, any>
     const isCoursePayment = !apt && !!(meta.course_name || p.course_registration_id)
     const coursePartialStart = meta.is_partial_enrollment ? meta.partial_start_position : null
-    const sessionDates = isCoursePayment
-      ? resolveSessionDates(meta.course_id, {
+    const sessions = isCoursePayment
+      ? resolveSessions(meta.course_id, {
           individualSessionNumber: meta.individual_session_number,
           partialStartPosition: coursePartialStart,
           customSessions: meta.custom_sessions,
         })
       : []
+    const sessionDates = sessions.map(s => s.start_time)
     items.push({
       type: isCoursePayment ? 'course' : 'lesson',
       source_id: p.id,
@@ -165,6 +170,7 @@ export default defineEventHandler(async (event) => {
       appointment_type: apt?.type || null,
       date: apt?.start_time || sessionDates[0] || meta.course_start_date || p.created_at,
       session_dates: sessionDates.length > 1 ? sessionDates : undefined,
+      sessions: sessions.length > 0 ? sessions : undefined,
       duration_minutes: apt?.duration_minutes || null,
       staff_name: staffName,
       amount_rappen: p.total_amount_rappen || 0,
@@ -187,11 +193,12 @@ export default defineEventHandler(async (event) => {
     if (coveredRegIds.has(r.id) || (r as any).payment_id) continue
     const course = (r as any).courses
     const regPartialStart = r.is_partial_enrollment ? r.partial_start_session : null
-    const sessionDates = resolveSessionDates(r.course_id, {
+    const sessions = resolveSessions(r.course_id, {
       individualSessionNumber: r.individual_session_number,
       partialStartPosition: regPartialStart,
       customSessions: r.custom_sessions as any,
     })
+    const sessionDates = sessions.map(s => s.start_time)
     items.push({
       type: 'course',
       source_id: r.id,
@@ -200,6 +207,7 @@ export default defineEventHandler(async (event) => {
       appointment_type: course?.category || null,
       date: sessionDates[0] || course?.course_start_date || null,
       session_dates: sessionDates.length > 1 ? sessionDates : undefined,
+      sessions: sessions.length > 0 ? sessions : undefined,
       amount_rappen: course?.price_per_participant_rappen || r.amount_paid_rappen || 0,
       unit: 'Kurs',
       user_id: r.user_id,

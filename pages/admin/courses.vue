@@ -7,6 +7,7 @@
           <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Kursverwaltung</h1>
           <div v-if="activeTab === 'courses'" class="flex items-center gap-2">
             <button
+              v-if="tenantSariEnabled"
               @click="triggerSariSync"
               :disabled="sariSyncing"
               class="flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium transition-colors text-sm"
@@ -17,18 +18,6 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
               <span class="hidden xs:inline sm:inline">{{ sariSyncing ? 'Synchronisiert…' : 'SARI Sync' }}</span>
-            </button>
-            <button
-              @click="runSariBackfill"
-              :disabled="sariBackfilling"
-              class="flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium transition-colors text-sm"
-              :class="sariBackfilling ? 'bg-blue-100 text-blue-400 cursor-not-allowed' : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200'"
-              title="Fehlende Adressdaten aus SARI ergänzen"
-            >
-              <svg class="w-4 h-4 flex-shrink-0" :class="sariBackfilling ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-              <span class="hidden sm:inline">{{ sariBackfilling ? 'Ergänzt…' : 'SARI Daten ergänzen' }}</span>
             </button>
             <button
               @click="openCreateCourseModal"
@@ -4317,7 +4306,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
-const { primaryColor } = useTenantBranding()
+const { primaryColor, brandName, getLogo } = useTenantBranding()
 import { useCourseCategories } from '~/composables/useCourseCategories'
 import { useInstructorInvitations } from '~/composables/useInstructorInvitations'
 import { useRoomReservations } from '~/composables/useRoomReservations'
@@ -4331,6 +4320,8 @@ import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
 import { getCoursePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
 import { evaluateSessionOrder } from '~/utils/session-order-rules'
+import { refreshClientSession } from '~/utils/client-session-refresh'
+import { formatCourseSessionLine } from '~/utils/format-course-sessions'
 
 // Warning banner: surface "no online payments" so admins understand all
 // course enrollments will fall back to cash.
@@ -7186,20 +7177,39 @@ const sendParticipantListEmail = async () => {
   if (!selectedCourse.value?.id || isSendingParticipantList.value) return
   isSendingParticipantList.value = true
   participantListEmailResult.value = null
-  try {
-    const result = await $fetch<any>('/api/courses/send-participant-list', {
+
+  const postList = (token?: string | null) =>
+    $fetch<any>('/api/courses/send-participant-list', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${authStore.accessToken}` },
-      body: { courseId: selectedCourse.value.id }
+      // Never send a possibly-stale authStore.accessToken — that blocks cookie
+      // auth and the fetch interceptor. Only attach a freshly resolved Bearer.
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+      body: { courseId: selectedCourse.value!.id },
     })
+
+  try {
+    // Prefer a fresh token up front — avoids the expired-Bearer 401 + page-reload loop.
+    const session = await refreshClientSession()
+    let result
+    try {
+      result = await postList(session?.access_token)
+    } catch (err: any) {
+      if (err?.status === 401 || err?.statusCode === 401) {
+        const forced = await refreshClientSession({ force: true })
+        if (!forced?.access_token) throw err
+        result = await postList(forced.access_token)
+      } else {
+        throw err
+      }
+    }
     participantListEmailResult.value = {
       success: true,
-      message: result.message || `Liste an ${result.sent} Empfänger gesendet`
+      message: result.message || `Liste an ${result.sent} Empfänger gesendet`,
     }
   } catch (err: any) {
     participantListEmailResult.value = {
       success: false,
-      message: err?.data?.statusMessage || err?.message || 'Fehler beim Senden'
+      message: err?.data?.statusMessage || err?.message || 'Fehler beim Senden',
     }
   } finally {
     isSendingParticipantList.value = false
@@ -7209,46 +7219,341 @@ const sendParticipantListEmail = async () => {
 
 const printParticipantList = () => {
   if (!selectedCourse.value || currentEnrollments.value.length === 0) return
+
   const course = selectedCourse.value
-  const rows = currentEnrollments.value.map((p: any, i: number) => `
+  const color = primaryColor.value || '#1E40AF'
+  const tenant = brandName.value || 'Fahrschule'
+  const logoUrl = getLogo('header') || getLogo('square') || ''
+
+  const escapeHtml = (s: unknown) =>
+    String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+
+  const sessions = [...(course.course_sessions || course.sessions || [])]
+    .filter((s: any) => s?.start_time)
+    .sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+
+  const sessionHeaders = sessions.map((s: any, i: number) => {
+    const line = formatCourseSessionLine(
+      { session_number: s.session_number, start_time: s.start_time, end_time: s.end_time },
+      i,
+    )
+    // "Teil 1 · Sa., 08.08.2026, 08:00–12:00" → Kurzlabel für Spaltenkopf
+    const short = line.replace(/^Teil\s+(\d+)\s*·\s*/i, 'T$1<br>')
+
+    let instructorName = ''
+    if (s.instructor_type === 'external' && s.external_instructor_name) {
+      instructorName = String(s.external_instructor_name).trim()
+    } else if (s.staff?.first_name || s.staff?.last_name) {
+      instructorName = `${s.staff.first_name || ''} ${s.staff.last_name || ''}`.trim()
+    } else if (s.staff_id) {
+      const staffMember = availableStaff.value.find((st: any) => st.id === s.staff_id)
+      if (staffMember) {
+        instructorName = `${staffMember.first_name || ''} ${staffMember.last_name || ''}`.trim()
+      }
+    }
+
+    return {
+      n: s.session_number ?? i + 1,
+      short,
+      line,
+      instructorName: instructorName || 'Kursleiter',
+    }
+  })
+
+  const participants = currentEnrollments.value
+  const stand = new Date().toLocaleDateString('de-CH', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+
+  const sessionColWidth = sessionHeaders.length > 0
+    ? Math.max(72, Math.min(110, Math.floor(420 / sessionHeaders.length)))
+    : 100
+
+  const theadSessions = sessionHeaders.length > 0
+    ? sessionHeaders.map(h =>
+        `<th class="sig" style="width:${sessionColWidth}px" title="${escapeHtml(h.line)}">${h.short}</th>`,
+      ).join('')
+    : '<th class="sig" style="width:120px">Unterschrift</th>'
+
+  const rows = participants.map((p: any, i: number) => {
+    const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || '—'
+    const phone = p.phone || '—'
+    const email = p.email || ''
+    const sigCells = sessionHeaders.length > 0
+      ? sessionHeaders.map(() => `<td class="sig"><div class="sig-line"></div></td>`).join('')
+      : `<td class="sig"><div class="sig-line"></div></td>`
+    return `<tr>
+      <td class="num">${i + 1}</td>
+      <td class="name">
+        <div class="name-main">${escapeHtml(name)}</div>
+        ${email ? `<div class="name-sub">${escapeHtml(email)}</div>` : ''}
+      </td>
+      <td class="phone">${escapeHtml(phone)}</td>
+      ${sigCells}
+    </tr>`
+  }).join('')
+
+  const sessionLegend = sessionHeaders.length > 1
+    ? `<div class="sessions">
+        ${sessionHeaders.map(h => `<span class="chip">📅 ${escapeHtml(h.line)}</span>`).join('')}
+      </div>`
+    : sessionHeaders.length === 1
+      ? `<div class="sessions"><span class="chip">📅 ${escapeHtml(sessionHeaders[0].line)}</span></div>`
+      : ''
+
+  const instructorRows = (sessionHeaders.length > 0 ? sessionHeaders : [{
+    n: 1,
+    line: 'Kurs',
+    short: 'Kurs',
+    instructorName: 'Kursleiter',
+  }]).map(h => `
     <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;color:#6b7280">${i + 1}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-weight:500">${p.first_name || ''} ${p.last_name || ''}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#374151">${p.email || '—'}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;color:#374151">${p.phone || '—'}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;width:100px"></td>
-    </tr>`).join('')
+      <td class="teil">${escapeHtml(h.line)}</td>
+      <td class="leiter">${escapeHtml(h.instructorName)}</td>
+      <td class="leiter-sig"><div class="sig-line"></div></td>
+    </tr>
+  `).join('')
+
+  const instructorBlock = `
+    <div class="instructor-block">
+      <p class="instructor-title">Kursleiter — Unterschrift pro Kursteil</p>
+      <table class="instructor-table">
+        <thead>
+          <tr>
+            <th>Kursteil</th>
+            <th>Kursleiter</th>
+            <th>Unterschrift</th>
+          </tr>
+        </thead>
+        <tbody>${instructorRows}</tbody>
+      </table>
+    </div>`
+
+  const logoHtml = logoUrl
+    ? `<img class="logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(tenant)}" />`
+    : `<div class="logo-fallback" style="background:${escapeHtml(color)}">${escapeHtml(tenant.charAt(0).toUpperCase())}</div>`
 
   const win = window.open('', '_blank')
   if (!win) return
   win.document.write(`<!DOCTYPE html>
-<html lang="de"><head><meta charset="UTF-8">
-<title>Teilnehmerliste: ${course.name}</title>
-<style>
-  body { font-family: -apple-system, Arial, sans-serif; font-size: 13px; color: #111; margin: 0; padding: 24px; }
-  h1 { font-size: 18px; margin: 0 0 4px; }
-  .meta { color: #6b7280; font-size: 12px; margin-bottom: 20px; }
-  table { width: 100%; border-collapse: collapse; }
-  th { padding: 8px 12px; background: #f9fafb; border-bottom: 2px solid #e5e7eb; text-align: left; font-size: 11px; text-transform: uppercase; color: #6b7280; }
-  @media print { @page { margin: 1.5cm; } }
-</style>
-</head><body>
-<h1>Teilnehmerliste: ${course.name}</h1>
-<p class="meta">Stand: ${new Date().toLocaleDateString('de-CH')} · ${currentEnrollments.value.length} Teilnehmer</p>
-<table>
-  <thead><tr>
-    <th style="width:36px">#</th>
-    <th>Name</th>
-    <th>E-Mail</th>
-    <th>Telefon</th>
-    <th>Unterschrift</th>
-  </tr></thead>
-  <tbody>${rows}</tbody>
-</table>
-</body></html>`)
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Teilnehmerliste: ${escapeHtml(course.name)}</title>
+  <style>
+    :root { --brand: ${escapeHtml(color)}; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      color: #111827;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 12px;
+      background: #fff;
+    }
+    .page { padding: 18mm 14mm 14mm; }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 14px;
+      border-bottom: 3px solid var(--brand);
+      margin-bottom: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo { height: 42px; max-width: 180px; object-fit: contain; }
+    .logo-fallback {
+      width: 42px; height: 42px; border-radius: 10px; color: #fff;
+      font-weight: 700; font-size: 18px; display: flex; align-items: center; justify-content: center;
+    }
+    .brand-text { min-width: 0; }
+    .brand-name { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.2; }
+    .brand-label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+    .doc-meta { text-align: right; color: #6b7280; font-size: 11px; line-height: 1.45; }
+    .title {
+      margin: 0 0 6px;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #111827;
+    }
+    .subtitle { margin: 0 0 12px; color: #4b5563; font-size: 12px; }
+    .sessions {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      margin: 0 0 16px;
+    }
+    .chip {
+      display: inline-block;
+      background: color-mix(in srgb, var(--brand) 10%, #fff);
+      border: 1px solid color-mix(in srgb, var(--brand) 28%, #e5e7eb);
+      color: #1f2937;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    thead th {
+      background: color-mix(in srgb, var(--brand) 12%, #fff);
+      color: #374151;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 9px 8px;
+      border-bottom: 2px solid var(--brand);
+      text-align: left;
+      vertical-align: bottom;
+    }
+    th.sig, td.sig { text-align: center; }
+    th.sig { font-size: 9px; line-height: 1.25; text-transform: none; letter-spacing: 0; font-weight: 700; color: #111827; }
+    tbody td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: middle;
+    }
+    tbody tr:nth-child(even) td { background: #f9fafb; }
+    td.num { width: 28px; color: #9ca3af; text-align: center; font-weight: 600; }
+    td.name { width: auto; }
+    .name-main { font-weight: 650; font-size: 12.5px; color: #111827; }
+    .name-sub { font-size: 10px; color: #6b7280; margin-top: 2px; word-break: break-all; }
+    td.phone { width: 110px; color: #374151; white-space: nowrap; }
+    .sig-line {
+      height: 28px;
+      border-bottom: 1.5px solid #9ca3af;
+      margin: 0 4px;
+    }
+    .instructor-block {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border: 1.5px solid color-mix(in srgb, var(--brand) 35%, #e5e7eb);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--brand) 5%, #fff);
+    }
+    .instructor-title {
+      margin: 0 0 10px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--brand);
+    }
+    .instructor-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .instructor-table th {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: #6b7280;
+      text-align: left;
+      padding: 0 8px 6px;
+      font-weight: 700;
+      border: none;
+      background: transparent;
+    }
+    .instructor-table td {
+      padding: 8px;
+      border: none;
+      border-top: 1px solid color-mix(in srgb, var(--brand) 18%, #e5e7eb);
+      vertical-align: middle;
+      background: transparent !important;
+    }
+    .instructor-table .teil {
+      width: 38%;
+      font-size: 11px;
+      color: #374151;
+      font-weight: 600;
+    }
+    .instructor-table .leiter {
+      width: 32%;
+      font-size: 12px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .instructor-table .leiter-sig {
+      width: 30%;
+    }
+    .instructor-table .sig-line {
+      height: 26px;
+      margin: 0;
+    }
+    .footer {
+      margin-top: 18px;
+      padding-top: 10px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      color: #9ca3af;
+      font-size: 10px;
+    }
+    @page { size: A4 landscape; margin: 10mm; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page { padding: 0; }
+      tbody tr:nth-child(even) td { background: #f3f4f6 !important; }
+      thead th { background: color-mix(in srgb, var(--brand) 14%, #fff) !important; }
+      .instructor-block { background: color-mix(in srgb, var(--brand) 5%, #fff) !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        ${logoHtml}
+        <div class="brand-text">
+          <div class="brand-name">${escapeHtml(tenant)}</div>
+          <div class="brand-label">Teilnehmerliste</div>
+        </div>
+      </div>
+      <div class="doc-meta">
+        Stand: ${escapeHtml(stand)}<br>
+        ${participants.length} Teilnehmer
+      </div>
+    </div>
+
+    <h1 class="title">${escapeHtml(course.name)}</h1>
+    <p class="subtitle">Teilnehmer und Kursleiter unterschreiben bei jedem Kursteil.</p>
+    ${sessionLegend}
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:28px">#</th>
+          <th>Name</th>
+          <th style="width:110px">Telefon</th>
+          ${theadSessions}
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+
+    ${instructorBlock}
+
+    <div class="footer">
+      <span>${escapeHtml(tenant)}</span>
+      <span>Gedruckt am ${escapeHtml(stand)}</span>
+    </div>
+  </div>
+</body>
+</html>`)
   win.document.close()
   win.focus()
-  win.print()
+  setTimeout(() => win.print(), 250)
 }
 
 const loadCourseEnrollments = async (courseId: string) => {
@@ -7551,21 +7856,6 @@ const loadTenantSariEnabled = async () => {
     tenantSariEnabled.value = !!(data?.config?.sari_enabled ?? data?.sari_enabled)
   } catch {
     // Non-fatal — server still enforces hard block when sync is on
-  }
-}
-
-const sariBackfilling = ref(false)
-const runSariBackfill = async () => {
-  if (sariBackfilling.value) return
-  if (!confirm('Fehlende Adressdaten (Strasse, PLZ, Ort, Geburtsdatum) aus SARI ergänzen?\n\nDies betrifft alle Anmeldungen mit Lernfahrausweis-Nr. bei denen diese Felder leer sind.')) return
-  sariBackfilling.value = true
-  try {
-    const result = await $fetch('/api/admin/courses/sari-backfill', { method: 'POST', body: {} }) as any
-    alert(result.message || `${result.updated} Registrierungen aktualisiert.`)
-  } catch (err: any) {
-    alert('Fehler: ' + (err?.data?.statusMessage || err?.message || 'Unbekannter Fehler'))
-  } finally {
-    sariBackfilling.value = false
   }
 }
 

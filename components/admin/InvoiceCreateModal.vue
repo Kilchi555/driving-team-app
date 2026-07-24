@@ -117,10 +117,16 @@
                 </div>
                 <!-- Detail pills -->
                 <div class="flex flex-wrap gap-1.5 mt-1">
-                  <!-- Multi-session enrollments: list each session date instead of just one -->
-                  <span v-if="item.session_dates && item.session_dates.length > 1" class="text-xs text-gray-500">
-                    {{ item.session_dates.map(formatDateShort).join(' · ') }}
-                  </span>
+                  <!-- Multi-session enrollments: Teil N · Datum · Zeit -->
+                  <div v-if="item.sessions?.length" class="w-full space-y-0.5">
+                    <p
+                      v-for="(session, sIdx) in item.sessions"
+                      :key="`${item.source_id}-s-${session.session_number || sIdx}`"
+                      class="text-xs text-gray-500"
+                    >
+                      {{ formatCourseSessionLine(session, sIdx) }}
+                    </p>
+                  </div>
                   <span v-else-if="item.date" class="text-xs text-gray-500">
                     {{ formatDate(item.date) }}
                   </span>
@@ -403,7 +409,10 @@
 
               <!-- Row 2: Date (if appointment) + Totals -->
               <div class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-                <span v-if="item.appointment_date" class="inline-flex items-center gap-1 text-blue-600 font-medium">
+                <span
+                  v-if="item.appointment_date && !looksLikeCourseSessionsDescription(item.product_description)"
+                  class="inline-flex items-center gap-1 text-blue-600 font-medium"
+                >
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                   {{ formatDate(item.appointment_date) }}
                   <span v-if="item.appointment_duration_minutes" class="text-gray-400 font-normal">· {{ item.appointment_duration_minutes }} Min</span>
@@ -415,14 +424,14 @@
                 <span class="text-gray-400">(MwSt: CHF {{ formatCurrency(item.vat_amount_rappen) }})</span>
               </div>
 
-              <!-- Optional description -->
+              <!-- Optional description (mehrzeilig für Kursteile) -->
               <div v-if="item.product_description !== undefined" class="mt-2">
-                <input
+                <textarea
                   v-model="item.product_description"
-                  type="text"
+                  rows="3"
                   placeholder="Zusatztext / Beschreibung (optional)"
-                  class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-300"
-                >
+                  class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-300 resize-y"
+                />
               </div>
               <button
                 v-else
@@ -552,6 +561,11 @@ import { useProducts } from '~/composables/useProducts'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import type { InvoiceFormData, InvoiceItemFormData } from '~/types/invoice'
 import { DEFAULT_INVOICE_VALUES, DEFAULT_INVOICE_ITEM_VALUES } from '~/types/invoice'
+import {
+  formatCourseSessionLine,
+  formatCourseSessionsDescription,
+  looksLikeCourseSessionsDescription,
+} from '~/utils/format-course-sessions'
 import {
   XMarkIcon,
   PlusIcon,
@@ -781,11 +795,16 @@ function toggleOpenItem(item: any) {
     // Add as invoice item, remove the empty placeholder if present
     const hasEmpty = invoiceItems.value.length === 1 && !invoiceItems.value[0].product_name
     if (hasEmpty) invoiceItems.value.splice(0, 1)
-    // Multi-session enrollments (e.g. partial course bookings) don't fit into the
-    // single appointment_date field — list all session dates in the description instead.
-    const description = item.session_dates?.length > 1
-      ? `${item.unit} · ${item.session_dates.map(formatDateShort).join(', ')}`
-      : item.unit
+    // Multi-session Kurse: alle Teile mit Datum+Zeit in der Beschreibung,
+    // kein einzelnes appointment_date (sonst erscheint nur der 1. Tag doppelt).
+    const sessions = item.sessions?.length
+      ? item.sessions
+      : (item.session_dates?.length > 1
+          ? item.session_dates.map((d: string, i: number) => ({ session_number: i + 1, start_time: d }))
+          : [])
+    const sessionDesc = formatCourseSessionsDescription(sessions)
+    const description = sessionDesc || item.unit || undefined
+    const isMultiSession = sessions.length > 1
     const newItem: any = {
       ...DEFAULT_INVOICE_ITEM_VALUES,
       product_name: item.label,
@@ -799,8 +818,8 @@ function toggleOpenItem(item: any) {
       // Appointment details for date/time display on invoice
       appointment_id: item.appointment_id || null,
       appointment_title: item.label,
-      appointment_date: item.date || null,
-      appointment_duration_minutes: item.duration_minutes || null,
+      appointment_date: isMultiSession ? null : (item.date || null),
+      appointment_duration_minutes: isMultiSession ? null : (item.duration_minutes || null),
       _open_item_id: item.source_id,
       _open_item_type: item.type,
       _open_item_source_table: item.source_table,

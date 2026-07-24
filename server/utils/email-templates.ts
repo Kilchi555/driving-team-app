@@ -620,7 +620,10 @@ export function generateCourseRegistrationCancellationEmail(data: {
   firstName: string
   lastName: string
   courseName: string
+  /** @deprecated Prefer `sessionLines` — kept as fallback for a single date */
   courseDate?: string
+  /** Formatted session lines, e.g. "Teil 1 · Sa., 08.08.2026, 08:00–12:00" */
+  sessionLines?: string[]
   location?: string
   tenantName?: string
   tenantEmail?: string
@@ -633,6 +636,7 @@ export function generateCourseRegistrationCancellationEmail(data: {
     lastName,
     courseName,
     courseDate,
+    sessionLines = [],
     location,
     tenantName = 'Simy',
     tenantEmail,
@@ -646,6 +650,14 @@ export function generateCourseRegistrationCancellationEmail(data: {
   const logoHtml = logoUrl
     ? `<tr><td style="background:#fff;text-align:center;padding:20px 40px 0"><img src="${logoUrl}" alt="${tenantName}" style="height:44px;max-width:200px;object-fit:contain"></td></tr>`
     : ''
+
+  const sessionsHtml = sessionLines.length > 0
+    ? sessionLines
+        .map((line) => `<p style="margin:4px 0 0;font-size:14px;color:#6b7280;line-height:1.45;">📅 ${line}</p>`)
+        .join('')
+    : (courseDate
+        ? `<p style="margin:4px 0 0;font-size:14px;color:#6b7280;">📅 ${courseDate}</p>`
+        : '')
 
   const html = `
 <!DOCTYPE html>
@@ -671,8 +683,8 @@ export function generateCourseRegistrationCancellationEmail(data: {
                 <tr>
                   <td style="padding:20px 24px;">
                     <p style="margin:0 0 4px;font-size:18px;font-weight:700;color:#111827;">${courseName}</p>
-                    ${courseDate ? '<p style="margin:4px 0 0;font-size:14px;color:#6b7280;">📅 ' + courseDate + '</p>' : ''}
-                    ${location ? '<p style="margin:4px 0 0;font-size:14px;color:#6b7280;">📍 ' + location + '</p>' : ''}
+                    ${sessionsHtml}
+                    ${location ? '<p style="margin:8px 0 0;font-size:14px;color:#6b7280;">📍 ' + location + '</p>' : ''}
                   </td>
                 </tr>
               </table>
