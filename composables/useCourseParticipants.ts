@@ -273,11 +273,12 @@ export const useCourseParticipants = () => {
 
   // Helper functions
   const updateParticipantCount = async (courseId: string) => {
-    const { data: count, error: countError } = await supabase
+    const { count, error: countError } = await supabase
       .from('course_registrations')
-      .select('id', { count: 'exact' })
+      .select('id', { count: 'exact', head: true })
       .eq('course_id', courseId)
       .in('status', ['confirmed', 'pending'])
+      .is('deleted_at', null)
 
     if (countError) {
       console.error('Error counting participants:', countError)

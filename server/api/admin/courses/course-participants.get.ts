@@ -30,6 +30,7 @@ export default defineEventHandler(async (event) => {
     .select('id, first_name, last_name, email, phone, user_id, status, tenant_id')
     .eq('course_id', courseId)
     .eq('status', 'confirmed')
+    .is('deleted_at', null)
 
   if (error) {
     logger.error('❌ Error loading course participants:', error)

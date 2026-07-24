@@ -622,21 +622,20 @@ export class SARISyncEngine {
       }
     }
 
-    // Get actual registration count (including existing ones)
-    const { data: registrations } = await this.supabase
+    // Active registrations only — soft-deleted / cancelled must not occupy seats
+    const { count: totalParticipants } = await this.supabase
       .from('course_registrations')
-      .select('id')
+      .select('id', { count: 'exact', head: true })
       .eq('course_id', courseId)
+      .neq('status', 'cancelled')
+      .is('deleted_at', null)
 
-    const totalParticipants = registrations?.length || 0
-
-    // Always update course with actual participant count from registrations
-    logger.debug(`📊 Updating course ${courseId} with ${totalParticipants} total registrations (${participantsSynced} new)`)
+    logger.debug(`📊 Updating course ${courseId} with ${totalParticipants ?? 0} active registrations (${participantsSynced} new)`)
     
     const { error: updateError } = await this.supabase
       .from('courses')
       .update({
-        current_participants: totalParticipants
+        current_participants: totalParticipants ?? 0
       })
       .eq('id', courseId)
 
@@ -782,6 +781,7 @@ export class SARISyncEngine {
         .select('id, custom_sessions, individual_session_number, partial_start_session')
         .eq('course_id', courseId)
         .in('status', ['confirmed', 'enrolled'])
+        .is('deleted_at', null)
 
       const allRegs = registrations || []
 
