@@ -134,7 +134,7 @@ export async function getAuthenticatedUser(event: H3Event) {
                 const supabaseAdmin = getSupabaseAdmin()
                 const { data: dbUser } = await supabaseAdmin
                   .from('users')
-                  .select('id, tenant_id, auth_user_id, role, email, first_name, last_name, can_edit_guide')
+                  .select('id, tenant_id, auth_user_id, role, email, first_name, last_name, can_edit_guide, can_view_all_students')
                   .eq('auth_user_id', authUser.id)
                   .single()
                 if (dbUser) {
@@ -160,6 +160,7 @@ export async function getAuthenticatedUser(event: H3Event) {
                       first_name: dbUser.first_name,
                       last_name: dbUser.last_name,
                       can_edit_guide: (dbUser as any).can_edit_guide ?? false,
+                      can_view_all_students: (dbUser as any).can_view_all_students ?? false,
                       tenant_slug: tenantTrialData?.slug || null,
                       tenant: tenantTrialData
                     }
@@ -185,7 +186,7 @@ export async function getAuthenticatedUser(event: H3Event) {
       const supabase = getSupabaseAdmin()
       const { data: dbUser, error: userError } = await supabase
         .from('users')
-        .select('id, tenant_id, auth_user_id, role, email, first_name, last_name, can_edit_guide')
+        .select('id, tenant_id, auth_user_id, role, email, first_name, last_name, can_edit_guide, can_view_all_students')
         .eq('auth_user_id', authUser.id)
         .single()
       
@@ -215,6 +216,7 @@ export async function getAuthenticatedUser(event: H3Event) {
             first_name: dbUser.first_name,
             last_name: dbUser.last_name,
             can_edit_guide: dbUser.can_edit_guide ?? false,
+            can_view_all_students: (dbUser as any).can_view_all_students ?? false,
             tenant_slug: tenantTrialData?.slug || null,
             tenant: tenantTrialData
           }

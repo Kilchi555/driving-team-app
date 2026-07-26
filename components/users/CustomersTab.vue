@@ -32,8 +32,8 @@
             </label>
           </div>
 
-          <!-- All Students Toggle (nur für Staff - Admins sehen immer alle) -->
-          <div v-if="currentUser?.role === 'staff'" class="flex items-center gap-3 rounded-lg">
+          <!-- All Students Toggle (nur für Staff ohne can_view_all_students) -->
+          <div v-if="currentUser?.role === 'staff' && !currentUser?.can_view_all_students" class="flex items-center gap-3 rounded-lg">
             <span class="text-sm font-medium text-gray-700">
               {{ showAllStudents ? 'Alle' : 'Meine' }}
             </span>
@@ -290,7 +290,7 @@
 
 <script setup lang="ts">
 
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { filterByStudentSearch } from '~/utils/student-search'
 import { useUIStore } from '~/stores/ui'
@@ -324,6 +324,14 @@ const showOnlyNoUpcoming = ref(false)
 const showPendingModal = ref(false)
 const pendingCustomer = ref<any>(null)
 const isResendingSms = ref(false)
+
+watch(
+  () => props.currentUser?.can_view_all_students,
+  (canViewAll) => {
+    if (canViewAll) showAllStudents.value = true
+  },
+  { immediate: true }
+)
 
 // Computed
 const filteredCustomers = computed(() => {

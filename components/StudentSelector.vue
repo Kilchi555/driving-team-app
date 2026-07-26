@@ -13,7 +13,7 @@
       </div>
 
     <div 
-      v-if="!selectedStudent && currentUser?.role === 'staff'"
+      v-if="!selectedStudent && currentUser?.role === 'staff' && !currentUser?.can_view_all_students"
       class="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg border"
     >
 
@@ -278,7 +278,9 @@ const loadStudents = async (editStudentId?: string | null) => {
   if (isLoading.value) return
   
   const staffId = props.currentUser?.id
-  if (!staffId && !props.showAllStudents) {
+  // Allow load when Alle is toggled locally even if currentUser isn't ready yet —
+  // the API authenticates via cookies and does not need the client staff id.
+  if (!staffId && !showAllStudentsLocal.value && !props.showAllStudents) {
     console.error('❌ No staff ID available for staff-specific load or showAllStudents is false.')
     return
   }

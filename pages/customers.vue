@@ -98,8 +98,8 @@
             </label>
           </div>
 
-          <!-- All Students Toggle (nur für Staff - Admins sehen immer alle Schüler) -->
-          <div v-if="currentUser.role === 'staff'" class="flex items-center gap-3 rounded-lg">
+          <!-- All Students Toggle (nur für Staff ohne can_view_all_students - Admins sehen immer alle) -->
+          <div v-if="currentUser.role === 'staff' && !currentUser.can_view_all_students" class="flex items-center gap-3 rounded-lg">
             <span class="text-sm font-medium text-gray-700">
               {{ showAllStudents ? 'Alle' : 'Meine' }}
             </span>
@@ -406,7 +406,7 @@ definePageMeta({
   middleware: 'auth'
 })
 
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { logger } from '~/utils/logger'
@@ -442,6 +442,15 @@ const searchQuery = ref('')
 const showInactive = ref(false)
 const showAllStudents = ref(false)
 const showOnlyNoUpcoming = ref(false)
+
+// Staff with can_view_all_students always sees the full tenant list (no admin needed)
+watch(
+  () => currentUser.value?.can_view_all_students,
+  (canViewAll) => {
+    if (canViewAll) showAllStudents.value = true
+  },
+  { immediate: true }
+)
 const studentsWithUpcomingIds = ref<Set<string>>(new Set())
 const showPendingModal = ref(false)
 const pendingStudent = ref<any>(null)
@@ -739,6 +748,22 @@ const loadStudents = async (loadAppointments = true) => {
       return
     }
 
+    // Set list immediately so a follow-up enrichment failure can't wipe a successful load
+    students.value = studentsToProcess.map((student: any) => ({
+      ...(student as any),
+      assignedInstructor: '-',
+      scheduledLessonsCount: 0,
+      completedLessonsCount: 0,
+      cancelledLessonsCount: 0,
+      deletedLessonsCount: 0,
+      lessonsCount: 0,
+      lastLesson: null,
+      fullAddress: [(student as any).street, (student as any).street_nr, (student as any).zip, (student as any).city]
+        .filter(Boolean)
+        .join(' '),
+      payment_provider: (student as any).payment_provider_customer_id ? 'Konfiguriert' : 'Nicht konfiguriert'
+    }))
+
     // ✅ OPTIMIERT: Lade alle Fahrlehrer-Daten via API Endpoint
     logger.debug('🚀 Loading all staff data via API...')
     
@@ -750,18 +775,22 @@ const loadStudents = async (loadAppointments = true) => {
 
     // Nur laden wenn Schüler vorhanden – leere Liste würde 400 zurückgeben
     if (studentIds.length > 0) {
-      const instructorResponse = await $fetch('/api/admin/get-student-instructors', {
-        method: 'POST',
-        body: { studentIds }
-      }) as any
+      try {
+        const instructorResponse = await $fetch('/api/admin/get-student-instructors', {
+          method: 'POST',
+          body: { studentIds }
+        }) as any
 
-      if (!instructorResponse?.success) {
-        throw new Error('Failed to load student instructors via API')
+        if (instructorResponse?.success) {
+          allLessonInstructors = instructorResponse.data?.allLessonInstructors || []
+          instructorData = instructorResponse.data?.instructorData || []
+          logger.debug('✅ Loaded instructor data for all students:', instructorData.length)
+        } else {
+          logger.warn('⚠️ Failed to load student instructors via API — keeping student list')
+        }
+      } catch (instructorErr) {
+        logger.warn('⚠️ Instructor enrichment failed — keeping student list:', instructorErr)
       }
-
-      allLessonInstructors = instructorResponse.data?.allLessonInstructors || []
-      instructorData = instructorResponse.data?.instructorData || []
-      logger.debug('✅ Loaded instructor data for all students:', instructorData.length)
     } else {
       logger.debug('ℹ️ No students assigned – skipping instructor data load')
     }
@@ -839,11 +868,15 @@ const loadStudents = async (loadAppointments = true) => {
     logger.debug('📋 Loading billing addresses for students')
     let companyBillingAddresses: any[] = []
     if (studentIds.length > 0) {
-      const billingResponse = await $fetch('/api/admin/get-billing-addresses', {
-        method: 'POST',
-        body: { studentIds }
-      }) as any
-      companyBillingAddresses = billingResponse?.data || []
+      try {
+        const billingResponse = await $fetch('/api/admin/get-billing-addresses', {
+          method: 'POST',
+          body: { studentIds }
+        }) as any
+        companyBillingAddresses = billingResponse?.data || []
+      } catch (billingErr) {
+        logger.warn('⚠️ Billing address enrichment failed — keeping student list:', billingErr)
+      }
     }
     logger.debug('📋 Billing addresses result:', { count: companyBillingAddresses.length })
 
@@ -888,7 +921,10 @@ const loadStudents = async (loadAppointments = true) => {
   } catch (err: any) {
     console.error('❌ Error loading students:', err)
     error.value = err.message || 'Fehler beim Laden der Schüler'
-    students.value = []
+    // Only clear if we never got a successful list this call
+    if (!students.value.length) {
+      students.value = []
+    }
   } finally {
     isLoading.value = false
   }
