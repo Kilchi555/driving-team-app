@@ -12,6 +12,8 @@ export interface GetFilteredStudentsOptions {
   userRole: string
   showAllStudents: boolean
   showInactive: boolean
+  /** Staff privilege: see all tenant students without admin role / Alle toggle */
+  canViewAllStudents?: boolean
 }
 
 // Normalizes both sides: "B Automatik" -> "B" to match exam_passed_categories
@@ -87,10 +89,10 @@ const SELECT_COLUMNS = CLIENT_SAFE_FIELDS.join(', ')
  * Returns the students a given user is allowed/expected to see, applying
  * the exact same assignment- and active/inactive-rules everywhere.
  *
- * - Staff with showAllStudents=false: only students assigned to them
- *   (old-style single field OR new-style array field).
- * - Everyone else (staff with showAllStudents=true, admin, tenant_admin,
- *   super_admin): all clients in the tenant.
+ * - Staff with showAllStudents=false and canViewAllStudents=false: only
+ *   students assigned to them (old-style single field OR new-style array).
+ * - Everyone else (staff with showAllStudents/canViewAllStudents, admin,
+ *   tenant_admin, super_admin): all clients in the tenant.
  * - showInactive=false (default): active, not-yet-completed students, plus
  *   users still in onboarding (auth_user_id === null).
  * - showInactive=true: deactivated students OR students who completed all
@@ -102,9 +104,9 @@ const SELECT_COLUMNS = CLIENT_SAFE_FIELDS.join(', ')
  */
 export async function getFilteredStudents(
   supabase: SupabaseClient,
-  { tenantId, userId, userRole, showAllStudents, showInactive }: GetFilteredStudentsOptions
+  { tenantId, userId, userRole, showAllStudents, showInactive, canViewAllStudents = false }: GetFilteredStudentsOptions
 ): Promise<any[]> {
-  const restrictToAssigned = userRole === 'staff' && !showAllStudents
+  const restrictToAssigned = userRole === 'staff' && !showAllStudents && !canViewAllStudents
 
   let students: any[] = []
 

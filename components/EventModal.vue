@@ -51,6 +51,7 @@
               ref="studentSelectorRef"
               v-model="selectedStudent"
               :current-user="props.currentUser"
+              :show-all-students="props.currentUser?.can_view_all_students === true"
               :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
               :auto-load="shouldAutoLoadStudents"
               :is-freeslot-mode="isFreeslotMode"

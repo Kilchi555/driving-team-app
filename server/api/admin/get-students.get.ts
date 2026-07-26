@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     // Get user's profile
     const { data: userProfile, error: userProfileError } = await serviceSupabase
       .from('users')
-      .select('id, tenant_id, role')
+      .select('id, tenant_id, role, can_view_all_students')
       .eq('auth_user_id', authUser.id)
       .single()
 
@@ -50,15 +50,17 @@ export default defineEventHandler(async (event) => {
     const tenantId = userProfile.tenant_id
     const userId = userProfile.id
     const userRole = userProfile.role
+    const canViewAllStudents = userProfile.can_view_all_students === true
 
-    logger.debug(`🔍 Fetching students for user ${userId} with role ${userRole} in tenant ${tenantId} (showAllStudents=${showAllStudents}, showInactive=${showInactive})`)
+    logger.debug(`🔍 Fetching students for user ${userId} with role ${userRole} in tenant ${tenantId} (showAllStudents=${showAllStudents}, canViewAllStudents=${canViewAllStudents}, showInactive=${showInactive})`)
 
     const students = await getFilteredStudents(serviceSupabase, {
       tenantId,
       userId,
       userRole,
-      showAllStudents,
-      showInactive
+      showAllStudents: showAllStudents || canViewAllStudents,
+      showInactive,
+      canViewAllStudents
     })
 
     logger.info(`✅ Successfully fetched ${students.length} students for user ${userId}`)
