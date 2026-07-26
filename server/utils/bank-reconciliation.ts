@@ -2,7 +2,7 @@
 // Gemeinsame Matching-Logik für den Zahlungsabgleich (CAMT- und CSV-Import).
 // Ordnet eingehende Bank-Zahlungen offenen Rechnungen zu.
 
-import { generateReference } from '~/server/utils/swiss-qr'
+import { generateReference } from './swiss-qr'
 
 export interface MatchableEntry {
   amount_rappen: number
@@ -25,11 +25,13 @@ export interface OpenInvoiceForMatching {
   status: string
   billing_contact_person: string | null
   billing_company_name: string | null
+  /** Auf der Rechnung gespeicherte/gedruckte Zahlungsreferenz (QRR/SCOR), falls vorhanden */
+  payment_reference?: string | null
 }
 
 export interface MatchResult {
   entry: MatchableEntry
-  match_type: 'exact_ref' | 'invoice_number' | 'amount_name' | 'ambiguous' | 'none'
+  match_type: 'exact_ref' | 'invoice_number' | 'amount_name' | 'amount_only' | 'ambiguous' | 'none'
   confidence: number // 0–100
   invoice_id?: string
   invoice_number?: string
@@ -57,11 +59,34 @@ export function computeDedupeKey(opts: {
   return `fallback:${opts.date}|${opts.amountRappen}|${opts.reference}|${opts.debtorName.trim().toLowerCase()}`
 }
 
+function alnumUpper(s: string): string {
+  return (s || '').replace(/[^A-Z0-9]/gi, '').toUpperCase()
+}
+
+function fillMatch(
+  entry: MatchableEntry,
+  inv: OpenInvoiceForMatching,
+  match_type: MatchResult['match_type'],
+  confidence: number,
+): MatchResult {
+  return {
+    entry,
+    match_type,
+    confidence,
+    invoice_id: inv.id,
+    invoice_number: inv.invoice_number,
+    invoice_total: inv.total_amount_rappen,
+    customer_name: inv.billing_contact_person || inv.billing_company_name || '',
+    invoice_status: inv.status,
+    invoice_payment_status: inv.payment_status,
+  }
+}
+
 /**
  * Matcht eine Liste von Bank-Zahlungseinträgen gegen die offenen Rechnungen eines
- * Tenants. Priorität: exakte QR-Zahlungsreferenz (QRR/SCOR) > Rechnungsnummer als
- * Referenz-Substring (Legacy) > Rechnungsnummer im Freitext > Betrag+Name (fuzzy) >
- * nur Betrag (sehr unsicher, wird bei mehreren Kandidaten als "ambiguous" markiert).
+ * Tenants. Priorität: exakte QR-Zahlungsreferenz (QRR/SCOR) > gespeicherte
+ * payment_reference > QRR enthält Rechnungsziffern > Rechnungsnummer im Freitext >
+ * Betrag+Name > nur Betrag (bei mehreren Kandidaten → ambiguous).
  */
 export function matchEntriesToInvoices(
   entries: MatchableEntry[],
@@ -72,66 +97,61 @@ export function matchEntriesToInvoices(
     let bestMatch: MatchResult = { entry, match_type: 'none', confidence: 0 }
     let amountOnlyCandidates = 0
 
+    // Gesamter Zahlungstext, alphanumerisch normalisiert (Bindestriche etc. weg)
+    const haystack = alnumUpper([entry.reference, entry.reference_raw, entry.remittance_info].join(' '))
+    const refClean = alnumUpper(entry.reference)
+
     for (const inv of invoices) {
-      const invNum = (inv.invoice_number || '').replace(/\s/g, '').toUpperCase()
+      const invNumClean = alnumUpper(inv.invoice_number || '')
+      const invDigits = (inv.invoice_number || '').replace(/\D/g, '')
       const custName = (inv.billing_contact_person || inv.billing_company_name || '').toLowerCase()
       const amtExact = Math.abs(inv.total_amount_rappen - entry.amount_rappen) <= 1
+      const storedRef = alnumUpper(inv.payment_reference || '')
 
       // 0. Exakte, für diese Rechnung erwartete QR-Zahlungsreferenz (QRR/SCOR)
-      const expectedRef = invNum ? generateReference(inv.invoice_number, tenantQrIban).ref : ''
-      if (expectedRef && entry.reference === expectedRef) {
+      const expectedRef = inv.invoice_number
+        ? alnumUpper(generateReference(inv.invoice_number, tenantQrIban).ref)
+        : ''
+      if (expectedRef && refClean && refClean === expectedRef) {
         const confidence = amtExact ? 99 : 80
         if (confidence > bestMatch.confidence) {
-          bestMatch = {
-            entry,
-            match_type: 'exact_ref',
-            confidence,
-            invoice_id: inv.id,
-            invoice_number: inv.invoice_number,
-            invoice_total: inv.total_amount_rappen,
-            customer_name: inv.billing_contact_person || inv.billing_company_name || '',
-            invoice_status: inv.status,
-            invoice_payment_status: inv.payment_status,
-          }
+          bestMatch = fillMatch(entry, inv, 'exact_ref', confidence)
           continue
         }
       }
 
-      // 1. Referenz enthält die Rechnungsnummer als Substring (Legacy-/Fallback-Fall)
-      const refClean = entry.reference.replace(/[^A-Z0-9]/g, '')
-      const invNumClean = invNum.replace(/[^A-Z0-9]/g, '')
-      if (refClean && invNumClean && (refClean === invNumClean || refClean.includes(invNumClean) || invNumClean.includes(refClean))) {
-        const confidence = amtExact ? 95 : 72
+      // 0b. Gespeicherte/gedruckte payment_reference (kann von regenerate abweichen)
+      if (storedRef && refClean && (refClean === storedRef || haystack.includes(storedRef))) {
+        const confidence = amtExact ? 98 : 78
         if (confidence > bestMatch.confidence) {
-          bestMatch = {
-            entry,
-            match_type: 'exact_ref',
-            confidence,
-            invoice_id: inv.id,
-            invoice_number: inv.invoice_number,
-            invoice_total: inv.total_amount_rappen,
-            customer_name: inv.billing_contact_person || inv.billing_company_name || '',
-            invoice_status: inv.status,
-            invoice_payment_status: inv.payment_status,
-          }
+          bestMatch = fillMatch(entry, inv, 'exact_ref', confidence)
+          continue
         }
       }
 
-      // 2. Rechnungsnummer im freien Text (Zahlungszweck)
-      const remit = entry.remittance_info.replace(/\s/g, '').toUpperCase()
-      if (invNumClean && remit.includes(invNumClean)) {
-        const confidence = amtExact ? 90 : 65
+      // 1. QRR (25–27 Ziffern) enthält die Ziffern der Rechnungsnummer
+      //    (Bank-Refs können anders gepaddet/gekürzt sein als unser generateQRR)
+      if (
+        /^\d{25,27}$/.test(refClean)
+        && invDigits.length >= 6
+        && (refClean.includes(invDigits) || refClean.slice(0, -1).endsWith(invDigits) || refClean.endsWith(invDigits))
+      ) {
+        const confidence = amtExact ? 96 : 74
         if (confidence > bestMatch.confidence) {
-          bestMatch = {
-            entry,
-            match_type: 'invoice_number',
-            confidence,
-            invoice_id: inv.id,
-            invoice_number: inv.invoice_number,
-            invoice_total: inv.total_amount_rappen,
-            customer_name: inv.billing_contact_person || inv.billing_company_name || '',
-            invoice_status: inv.status,
-            invoice_payment_status: inv.payment_status,
+          bestMatch = fillMatch(entry, inv, 'exact_ref', confidence)
+        }
+      }
+
+      // 2. Referenz / Freitext enthält die Rechnungsnummer (RE-2026-0029 ↔ RE20260029)
+      if (invNumClean && invNumClean.length >= 4) {
+        const inRef = !!(refClean && (refClean === invNumClean || refClean.includes(invNumClean) || invNumClean.includes(refClean)))
+        const inText = haystack.includes(invNumClean)
+        if (inRef || inText) {
+          const confidence = inRef
+            ? (amtExact ? 95 : 72)
+            : (amtExact ? 90 : 65)
+          if (confidence > bestMatch.confidence) {
+            bestMatch = fillMatch(entry, inv, inRef ? 'exact_ref' : 'invoice_number', confidence)
           }
         }
       }
@@ -144,45 +164,24 @@ export function matchEntriesToInvoices(
         if (nameMatch) {
           const confidence = 70
           if (confidence > bestMatch.confidence) {
-            bestMatch = {
-              entry,
-              match_type: 'amount_name',
-              confidence,
-              invoice_id: inv.id,
-              invoice_number: inv.invoice_number,
-              invoice_total: inv.total_amount_rappen,
-              customer_name: inv.billing_contact_person || inv.billing_company_name || '',
-              invoice_status: inv.status,
-              invoice_payment_status: inv.payment_status,
-            }
+            bestMatch = fillMatch(entry, inv, 'amount_name', confidence)
           }
         }
       }
 
-      // 4. Nur Betrag (sehr niedrige Konfidenz) — nur als letzter, schwacher Kandidat
+      // 4. Nur Betrag — merken, aber keine Rechnung vorwählen (zu unsicher)
       if (amtExact && bestMatch.confidence < 40) {
         amountOnlyCandidates++
-        if (amountOnlyCandidates === 1) {
-          bestMatch = {
-            entry,
-            match_type: 'amount_name',
-            confidence: 35,
-            invoice_id: inv.id,
-            invoice_number: inv.invoice_number,
-            invoice_total: inv.total_amount_rappen,
-            customer_name: inv.billing_contact_person || inv.billing_company_name || '',
-            invoice_status: inv.status,
-            invoice_payment_status: inv.payment_status,
-          }
-        }
       }
     }
 
     // Mehrere offene Rechnungen mit identischem Betrag und ohne stärkeres
-    // Unterscheidungsmerkmal → nicht raten, sondern explizit als mehrdeutig
-    // kennzeichnen und die Auswahl dem Admin überlassen.
-    if (bestMatch.confidence === 35 && amountOnlyCandidates > 1) {
+    // Unterscheidungsmerkmal → nicht raten, Admin wählt manuell.
+    if (bestMatch.confidence < 40 && amountOnlyCandidates > 1) {
       bestMatch = { entry, match_type: 'ambiguous', confidence: 30 }
+    } else if (bestMatch.confidence < 40 && amountOnlyCandidates === 1) {
+      // Ein Betrags-Treffer reicht nicht zur Vorauswahl — nur Hinweis anzeigen.
+      bestMatch = { entry, match_type: 'amount_only', confidence: 35 }
     }
 
     return bestMatch

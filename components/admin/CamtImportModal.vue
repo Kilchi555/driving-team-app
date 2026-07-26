@@ -53,7 +53,8 @@
           <!-- Step 1.5 (nur CSV): Spalten-Zuordnung -->
           <div v-else-if="step === 'mapping'">
             <p class="text-sm text-gray-600 mb-4">
-              Ordne die Spalten deiner CSV-Datei den benötigten Feldern zu. Wir haben eine Vorauswahl anhand der Spaltentitel getroffen — bitte prüfen.
+              Ordne die Spalten deiner CSV den benötigten Feldern zu. Vorauswahl anhand der Spaltentitel — bitte prüfen.
+              QRR, Zahlername und Rechnungsnummer werden zusätzlich spaltenübergreifend aus der ganzen Zeile gelesen.
             </p>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
@@ -225,8 +226,15 @@
                     </td>
                     <!-- Referenz -->
                     <td class="px-3 py-3 max-w-xs">
-                      <div class="text-xs text-gray-600 truncate" :title="r.entry.reference_raw || r.entry.remittance_info">
-                        {{ r.entry.reference_raw || r.entry.remittance_info || '—' }}
+                      <div class="text-xs text-gray-600 truncate" :title="[r.entry.reference_raw, r.entry.remittance_info].filter(Boolean).join(' — ')">
+                        {{ r.entry.reference_raw || '—' }}
+                      </div>
+                      <div
+                        v-if="r.entry.remittance_info && r.entry.remittance_info !== r.entry.reference_raw"
+                        class="text-xs text-gray-400 truncate mt-0.5"
+                        :title="r.entry.remittance_info"
+                      >
+                        {{ r.entry.remittance_info }}
                       </div>
                     </td>
                     <!-- Betrag -->
@@ -244,6 +252,9 @@
                       </div>
                       <div v-else-if="r.match_type === 'ambiguous'" class="text-xs text-orange-600 mb-1">
                         Mehrere Rechnungen mit gleichem Betrag — bitte manuell wählen
+                      </div>
+                      <div v-else-if="r.match_type === 'amount_only'" class="text-xs text-orange-600 mb-1">
+                        Nur Betrag stimmt überein — bitte manuell wählen
                       </div>
                       <!-- Manuelle Zuweisung / Korrektur eines Auto-Matches -->
                       <select
@@ -276,6 +287,7 @@
                       <span v-if="r.match_type === 'exact_ref'" class="text-xs text-green-600">Referenznummer</span>
                       <span v-else-if="r.match_type === 'invoice_number'" class="text-xs text-blue-600">Rechnungsnummer</span>
                       <span v-else-if="r.match_type === 'amount_name'" class="text-xs text-orange-500">Betrag + Name</span>
+                      <span v-else-if="r.match_type === 'amount_only'" class="text-xs text-orange-500">Nur Betrag</span>
                       <span v-else-if="r.match_type === 'ambiguous'" class="text-xs text-orange-600 font-medium">Mehrdeutig</span>
                       <span v-else class="text-xs text-gray-400">Nicht erkannt</span>
                     </td>

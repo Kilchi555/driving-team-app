@@ -166,7 +166,7 @@ export default defineEventHandler(async (event) => {
       notes
     `)
     .eq('tenant_id', staffUser.tenant_id)
-    .in('status', ['sent', 'overdue'])
+    .in('status', ['sent', 'overdue', 'pdf_created'])
     .neq('payment_status', 'paid')
     .order('invoice_date', { ascending: false })
 
