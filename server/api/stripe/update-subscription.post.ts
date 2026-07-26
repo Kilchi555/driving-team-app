@@ -50,9 +50,28 @@ export default defineEventHandler(async (event) => {
   const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' })
 
   // ── Fetch current subscription from Stripe ──────────────────────────────────
-  const sub = await stripe.subscriptions.retrieve(tenant.stripe_subscription_id, {
-    expand: ['items.data.price'],
-  })
+  let sub: Stripe.Subscription
+  try {
+    sub = await stripe.subscriptions.retrieve(tenant.stripe_subscription_id, {
+      expand: ['items.data.price'],
+    })
+  } catch (err: any) {
+    // Common locally: DB has a live-mode subscription id while STRIPE_SECRET_KEY is test.
+    const code = err?.code || err?.raw?.code
+    const status = err?.statusCode || err?.status || err?.raw?.statusCode
+    console.error('❌ Stripe subscription retrieve failed:', err?.message || err)
+    if (code === 'resource_missing' || status === 404) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Abonnement in Stripe nicht gefunden (Test/Live-Mismatch?). Bitte neu abonnieren.',
+        data: { code: 'subscription_not_found' },
+      })
+    }
+    throw createError({
+      statusCode: 502,
+      statusMessage: err?.message || 'Stripe-Abonnement konnte nicht geladen werden',
+    })
+  }
 
   if (sub.status === 'canceled' || sub.status === 'incomplete_expired') {
     throw createError({

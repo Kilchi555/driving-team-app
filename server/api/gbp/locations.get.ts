@@ -1,18 +1,24 @@
 import { defineEventHandler, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { requireFeature } from '~/server/utils/require-feature'
-import { listGbpPosts } from '~/server/utils/gbp'
-import { getGbpLocationIdFromEvent } from '~/server/utils/gbp-location-param'
+import { listTenantGbpLocations } from '~/server/utils/gbp'
 
+/**
+ * GET /api/gbp/locations
+ * Lists linked GBP locations for the current tenant.
+ */
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
   if (!authUser?.tenant_id) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   await requireFeature(authUser.tenant_id, 'gbp_enabled')
 
-  try {
-    const data = await listGbpPosts(authUser.tenant_id, getGbpLocationIdFromEvent(event))
-    return { success: true, posts: data.localPosts ?? [] }
-  } catch (err: any) {
-    throw createError({ statusCode: 500, statusMessage: err.message || 'Failed to fetch posts' })
+  const locations = await listTenantGbpLocations(authUser.tenant_id)
+  return {
+    locations: locations.map((l) => ({
+      id: l.id,
+      title: l.title,
+      gbpAccountName: l.gbp_account_name,
+      gbpLocationId: l.gbp_location_id,
+    })),
   }
 })

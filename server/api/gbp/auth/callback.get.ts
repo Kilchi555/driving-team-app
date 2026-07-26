@@ -1,15 +1,15 @@
 import { defineEventHandler, getQuery, sendRedirect } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { listGbpAccounts, listGbpLocations } from '~/server/utils/gbp'
 import { getAppUrl } from '~/server/utils/app-url'
+import { ensureTenantGbpDefaults } from '~/server/utils/gbp'
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
 
 /**
  * GET /api/gbp/auth/callback
- * Handles the OAuth callback from Google.
- * Exchanges the code for tokens, fetches GBP account info, stores in DB.
+ * Exchanges OAuth code for tokens. Does NOT auto-link a location —
+ * tenant must pick from real GBP locations in the UI.
  */
 export default defineEventHandler(async (event) => {
   const appUrl = getAppUrl()
@@ -39,16 +39,26 @@ export default defineEventHandler(async (event) => {
 
   const redirectUri = `${appUrl}/api/gbp/auth/callback`
 
-  // Exchange code for tokens
   let tokens: { access_token?: string; refresh_token?: string; expires_in?: number; error?: string; error_description?: string }
   try {
     const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, grant_type: 'authorization_code' }),
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
     })
     tokens = await tokenRes.json()
-    console.log('[GBP callback] Token exchange result:', { ok: tokenRes.ok, has_access: !!tokens.access_token, has_refresh: !!tokens.refresh_token, error: tokens.error })
+    console.log('[GBP callback] Token exchange result:', {
+      ok: tokenRes.ok,
+      has_access: !!tokens.access_token,
+      has_refresh: !!tokens.refresh_token,
+      error: tokens.error,
+    })
   } catch (e) {
     console.error('[GBP callback] Token exchange fetch failed:', e)
     return sendRedirect(event, `${appUrl}/admin/google-business-profile?gbp=error&reason=token_fetch_failed`)
@@ -59,12 +69,6 @@ export default defineEventHandler(async (event) => {
     return sendRedirect(event, `${appUrl}/admin/google-business-profile?gbp=error&reason=${tokens.error || 'no_access_token'}`)
   }
 
-  // refresh_token is only returned on first authorization – store null if missing (will be updated on re-auth)
-  if (!tokens.refresh_token) {
-    console.warn('[GBP callback] No refresh_token returned (user may have authorized before). Proceeding without it.')
-  }
-
-  // Fetch Google user info
   let userInfo: { sub?: string; email?: string } = {}
   try {
     const userRes = await fetch(GOOGLE_USERINFO_URL, { headers: { Authorization: `Bearer ${tokens.access_token}` } })
@@ -73,47 +77,38 @@ export default defineEventHandler(async (event) => {
     console.warn('[GBP callback] Userinfo fetch failed (non-fatal):', e)
   }
 
-  // Fetch GBP accounts to auto-link the first location
-  let gbpLocationId: string | null = null
-  let gbpLocationName: string | null = null
-  let gbpAccountName: string | null = null
+  const expiresAt = new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000).toISOString()
+  const supabase = getSupabaseAdmin()
 
-  try {
-    const accounts = await listGbpAccounts(tokens.access_token)
-    console.log('[GBP callback] Accounts found:', accounts.accounts?.length ?? 0)
-    if (accounts.accounts?.length > 0) {
-      gbpAccountName = accounts.accounts[0].name
-      const locations = await listGbpLocations(tokens.access_token, gbpAccountName!)
-      console.log('[GBP callback] Locations found:', locations.locations?.length ?? 0)
-      if (locations.locations?.length > 0) {
-        gbpLocationId = locations.locations[0].name
-        gbpLocationName = locations.locations[0].title
-      }
-    }
-  } catch (e) {
-    console.warn('[GBP callback] GBP account/location fetch failed (non-fatal):', e)
+  // Preserve existing refresh_token if Google did not return a new one
+  const { data: existing } = await supabase
+    .from('tenant_google_connections')
+    .select('refresh_token')
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
+  const refreshToken = tokens.refresh_token || existing?.refresh_token
+  if (!refreshToken) {
+    console.error('[GBP callback] No refresh_token available (new or existing)')
+    return sendRedirect(event, `${appUrl}/admin/google-business-profile?gbp=error&reason=no_refresh_token`)
   }
 
-  const expiresAt = new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000).toISOString()
-
-  // Build upsert payload — only include refresh_token if we got a new one
   const upsertData: Record<string, unknown> = {
     tenant_id: tenantId,
     google_account_id: userInfo.sub ?? 'unknown',
     google_account_email: userInfo.email ?? null,
     access_token: tokens.access_token,
+    refresh_token: refreshToken,
     token_expires_at: expiresAt,
-    gbp_location_id: gbpLocationId,
-    gbp_location_name: gbpLocationName,
-    gbp_account_name: gbpAccountName,
+    // Do not auto-link a location — leave null until picker
+    gbp_location_id: null,
+    gbp_location_name: null,
+    gbp_account_name: null,
     connected_at: new Date().toISOString(),
-  }
-  if (tokens.refresh_token) {
-    upsertData.refresh_token = tokens.refresh_token
   }
 
   try {
-    const { error: dbError } = await getSupabaseAdmin()
+    const { error: dbError } = await supabase
       .from('tenant_google_connections')
       .upsert(upsertData, { onConflict: 'tenant_id' })
 
@@ -124,6 +119,12 @@ export default defineEventHandler(async (event) => {
   } catch (e) {
     console.error('[GBP callback] DB upsert threw:', e)
     return sendRedirect(event, `${appUrl}/admin/google-business-profile?gbp=error&reason=db_error`)
+  }
+
+  try {
+    await ensureTenantGbpDefaults(tenantId)
+  } catch (e) {
+    console.warn('[GBP callback] ensureTenantGbpDefaults failed (non-fatal):', e)
   }
 
   console.log('[GBP callback] Successfully connected GBP for tenant:', tenantId)

@@ -1,11 +1,10 @@
-import { H3Event, createError } from 'h3'
+import { createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 /**
- * Throws 403 if the tenant does not have the given feature flag enabled.
- * Use in API handlers after getAuthenticatedUser().
+ * Returns whether the tenant has the given feature flag enabled.
  */
-export async function requireFeature(tenantId: string, featureKey: string): Promise<void> {
+export async function isFeatureEnabled(tenantId: string, featureKey: string): Promise<boolean> {
   const { data } = await getSupabaseAdmin()
     .from('tenant_settings')
     .select('setting_value')
@@ -14,13 +13,22 @@ export async function requireFeature(tenantId: string, featureKey: string): Prom
     .eq('setting_key', featureKey)
     .single()
 
-  if (!data) throw createError({ statusCode: 403, statusMessage: `Feature '${featureKey}' not enabled` })
+  if (!data) return false
 
   try {
     const parsed = JSON.parse(data.setting_value)
-    if (!parsed.enabled) throw createError({ statusCode: 403, statusMessage: `Feature '${featureKey}' not enabled` })
-  } catch (e: any) {
-    if (e.statusCode === 403) throw e
-    if (data.setting_value !== 'true') throw createError({ statusCode: 403, statusMessage: `Feature '${featureKey}' not enabled` })
+    return parsed.enabled === true
+  } catch {
+    return data.setting_value === 'true'
+  }
+}
+
+/**
+ * Throws 403 if the tenant does not have the given feature flag enabled.
+ * Use in API handlers after getAuthenticatedUser().
+ */
+export async function requireFeature(tenantId: string, featureKey: string): Promise<void> {
+  if (!(await isFeatureEnabled(tenantId, featureKey))) {
+    throw createError({ statusCode: 403, statusMessage: `Feature '${featureKey}' not enabled` })
   }
 }
