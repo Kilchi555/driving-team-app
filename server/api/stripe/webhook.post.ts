@@ -419,9 +419,12 @@ function resolvePlanFromPrices(sub: Stripe.Subscription): string {
 }
 
 function hasAddonByEnvKey(sub: Stripe.Subscription, envKey: string): boolean {
-  const priceId = process.env[envKey]
+  const priceId = process.env[envKey]?.trim()
   if (!priceId) return false
-  return sub.items.data.some(item => item.price.id === priceId)
+  return sub.items.data.some(item => {
+    const itemPriceId = typeof item.price === 'string' ? item.price : item.price?.id
+    return itemPriceId === priceId
+  })
 }
 
 function parseAddonSeats(sub: Stripe.Subscription): number {

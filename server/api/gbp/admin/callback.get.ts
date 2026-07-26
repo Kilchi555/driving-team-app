@@ -1,13 +1,14 @@
 import { defineEventHandler, getQuery, sendRedirect } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { listGbpAccounts, listGbpLocations } from '~/server/utils/gbp'
+import { ensureTenantGbpDefaults } from '~/server/utils/gbp'
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GOOGLE_USERINFO_URL = 'https://www.googleapis.com/oauth2/v3/userinfo'
 
 /**
  * GET /api/gbp/admin/callback
- * Handles OAuth callback for simy.ch's own GBP. Stores under SIMY_GBP_TENANT_ID.
+ * OAuth callback for simy.ch GBP. Stores under SIMY_GBP_TENANT_ID.
+ * Does not auto-link a location — picker in UI.
  */
 export default defineEventHandler(async (event) => {
   const { code, state, error } = getQuery(event) as Record<string, string>
@@ -32,49 +33,61 @@ export default defineEventHandler(async (event) => {
   const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: redirectUri, grant_type: 'authorization_code' }),
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    }),
   })
 
-  const tokens = await tokenRes.json() as { access_token?: string; refresh_token?: string; expires_in?: number; error?: string }
-  if (!tokens.access_token || !tokens.refresh_token) {
+  const tokens = await tokenRes.json() as {
+    access_token?: string
+    refresh_token?: string
+    expires_in?: number
+    error?: string
+  }
+
+  if (!tokens.access_token) {
     return sendRedirect(event, `${appUrl}/admin/simy-gbp?gbp=error&reason=token_exchange_failed`)
   }
 
-  const userRes = await fetch(GOOGLE_USERINFO_URL, { headers: { Authorization: `Bearer ${tokens.access_token}` } })
+  const userRes = await fetch(GOOGLE_USERINFO_URL, {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  })
   const userInfo = await userRes.json() as { sub?: string; email?: string }
 
-  let gbpLocationId: string | null = null
-  let gbpLocationName: string | null = null
-  let gbpAccountName: string | null = null
+  const supabase = getSupabaseAdmin()
+  const { data: existing } = await supabase
+    .from('tenant_google_connections')
+    .select('refresh_token')
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
 
-  try {
-    const accounts = await listGbpAccounts(tokens.access_token)
-    if (accounts.accounts?.length > 0) {
-      gbpAccountName = accounts.accounts[0].name
-      const locations = await listGbpLocations(tokens.access_token, gbpAccountName!)
-      if (locations.locations?.length > 0) {
-        gbpLocationId = locations.locations[0].name
-        gbpLocationName = locations.locations[0].title
-      }
-    }
-  } catch { /* non-fatal */ }
+  const refreshToken = tokens.refresh_token || existing?.refresh_token
+  if (!refreshToken) {
+    return sendRedirect(event, `${appUrl}/admin/simy-gbp?gbp=error&reason=no_refresh_token`)
+  }
 
   const expiresAt = new Date(Date.now() + (tokens.expires_in ?? 3600) * 1000).toISOString()
 
-  await getSupabaseAdmin()
+  await supabase
     .from('tenant_google_connections')
     .upsert({
       tenant_id: tenantId,
       google_account_id: userInfo.sub ?? 'simy-admin',
       google_account_email: userInfo.email ?? null,
       access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
+      refresh_token: refreshToken,
       token_expires_at: expiresAt,
-      gbp_location_id: gbpLocationId,
-      gbp_location_name: gbpLocationName,
-      gbp_account_name: gbpAccountName,
+      gbp_location_id: null,
+      gbp_location_name: null,
+      gbp_account_name: null,
       connected_at: new Date().toISOString(),
     }, { onConflict: 'tenant_id' })
+
+  await ensureTenantGbpDefaults(tenantId)
 
   return sendRedirect(event, `${appUrl}/admin/simy-gbp?gbp=connected`)
 })

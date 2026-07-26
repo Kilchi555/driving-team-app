@@ -21,6 +21,7 @@ export default defineEventHandler(async (event) => {
 
   const filePart = parts.find(p => p.name === 'file')
   const categoryPart = parts.find(p => p.name === 'category')
+  const locationPart = parts.find(p => p.name === 'locationId')
   if (!filePart?.data) throw createError({ statusCode: 400, statusMessage: 'File required' })
 
   const mimeType = filePart.type ?? 'image/jpeg'
@@ -40,7 +41,8 @@ export default defineEventHandler(async (event) => {
   const publicUrl = urlData.publicUrl
 
   const category = (categoryPart?.data?.toString() ?? 'INTERIOR') as 'EXTERIOR' | 'INTERIOR' | 'PRODUCT' | 'LOGO' | 'COVER'
-  const result = await uploadGbpPhoto(authUser.tenant_id, publicUrl, category)
+  const locationId = locationPart?.data?.toString() || null
+  const result = await uploadGbpPhoto(authUser.tenant_id, publicUrl, category, locationId)
 
   return { success: true, publicUrl, gbpMedia: result }
 })

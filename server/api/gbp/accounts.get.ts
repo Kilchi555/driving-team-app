@@ -1,5 +1,6 @@
 import { defineEventHandler, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { requireFeature } from '~/server/utils/require-feature'
 import { getValidAccessToken, listGbpAccounts, listGbpLocations } from '~/server/utils/gbp'
 
 /**
@@ -10,6 +11,7 @@ import { getValidAccessToken, listGbpAccounts, listGbpLocations } from '~/server
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
   if (!authUser?.tenant_id) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  await requireFeature(authUser.tenant_id, 'gbp_enabled')
 
   let accessToken: string
   try {

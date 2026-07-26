@@ -268,7 +268,7 @@
 
         <!-- Google Business Profile Add-on -->
         <div @click="toggleGbp"
-          :class="['rounded-2xl border-2 p-5 transition-all bg-white cursor-pointer',
+          :class="['rounded-2xl border-2 p-5 transition-all bg-white cursor-pointer mt-4',
             addonGbp ? 'shadow-lg' : 'border-gray-100 shadow-sm']"
           :style="addonGbp ? { borderColor: primaryColor, boxShadow: `0 10px 25px rgba(var(--brand-rgb), 0.12)` } : {}">
           <div class="flex items-start justify-between mb-4">
@@ -965,6 +965,11 @@ onMounted(async () => {
         }
       } catch { /* non-critical */ }
     }
+
+    // Deep-link from GBP page: /upgrade?addon=gbp
+    if (route.query.addon === 'gbp' && !addonGbp.value) {
+      addonGbp.value = true
+    }
   } catch { /* not critical */ }
 })
 
@@ -1134,8 +1139,11 @@ const startCheckout = async () => {
           const freshToken = await forceServerRefresh()
           if (!freshToken) { showAuthPrompt.value = true; return }
           result = await updateSubscription(freshToken)
-        } else if (err?.data?.code === 'subscription_canceled') {
-          // Stale/canceled sub → fall back to a fresh Checkout
+        } else if (
+          err?.data?.code === 'subscription_canceled'
+          || err?.data?.code === 'subscription_not_found'
+        ) {
+          // Stale/canceled/mismatched sub (e.g. live id + local test key) → fresh Checkout
           hasActiveSubscription.value = false
           const session = await createCheckout(token)
           if (session?.url) { window.location.href = session.url; return }

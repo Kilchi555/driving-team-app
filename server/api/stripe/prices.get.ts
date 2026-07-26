@@ -26,15 +26,28 @@ async function fetchPrices(): Promise<PricingResponse> {
     .filter(p => p.priceEnvKey && process.env[p.priceEnvKey]?.trim())
     .map(p => ({ key: p.id, priceId: process.env[p.priceEnvKey!]!.trim() }))
 
-  const addonPriceIds = ADDONS
-    .filter(a => process.env[a.priceEnvKey]?.trim())
-    .map(a => ({ key: a.key, priceId: process.env[a.priceEnvKey]!.trim() }))
+  // Include every known add-on so the UI never shows "CHF –" when an env var
+  // was added after the server started (or is missing in a given environment).
+  const addonPriceIds = ADDONS.map(a => ({
+    key: a.key,
+    priceId: process.env[a.priceEnvKey]?.trim() || '',
+  }))
 
-  const allPriceIds = [...planPriceIds, ...addonPriceIds]
+  const fetchable = [
+    ...planPriceIds.map(p => ({ ...p, kind: 'plan' as const })),
+    ...addonPriceIds.filter(a => a.priceId).map(a => ({ ...a, kind: 'addon' as const })),
+  ]
 
   const results = await Promise.allSettled(
-    allPriceIds.map(({ priceId }) => stripe.prices.retrieve(priceId))
+    fetchable.map(({ priceId }) => stripe.prices.retrieve(priceId))
   )
+
+  const fetched = new Map<string, Stripe.Price>()
+  fetchable.forEach(({ key }, i) => {
+    const result = results[i]
+    if (result.status === 'fulfilled') fetched.set(key, result.value)
+    else console.error(`❌ Failed to fetch Stripe price for ${key}:`, result.reason?.message)
+  })
 
   const toInfo = (price: Stripe.Price): PriceInfo => {
     const amount = price.unit_amount ?? 0
@@ -43,8 +56,12 @@ async function fetchPrices(): Promise<PricingResponse> {
     return { id: price.id, unitAmount: amount, currency, formatted }
   }
 
-  const plans: Record<string, PriceInfo> = {}
-  const addons: Record<string, PriceInfo> = {}
+  const fallbackInfo = (amount: number): PriceInfo => ({
+    id: '',
+    unitAmount: amount,
+    currency: 'CHF',
+    formatted: amount ? `CHF ${(amount / 100).toFixed(2)}` : 'Preis fehlt',
+  })
 
   // Known live prices as fallback (in Rappen) — update when Stripe prices change
   const FALLBACK_PLAN_AMOUNTS: Record<string, number> = {
@@ -53,54 +70,41 @@ async function fetchPrices(): Promise<PricingResponse> {
     enterprise: 25900,   // CHF 259.–
   }
   const FALLBACK_ADDON_AMOUNTS: Record<string, number> = {
-    seats: 1900,    // CHF 19.–
-    courses: 2900,  // CHF 29.–
+    seats: 1900,     // CHF 19.–
+    courses: 2900,   // CHF 29.–
     affiliate: 3900, // CHF 39.–
+    gbp: 1900,       // CHF 19.–
   }
 
-  planPriceIds.forEach(({ key }, i) => {
-    const result = results[i]
-    if (result.status === 'fulfilled') {
-      plans[key] = toInfo(result.value)
-    } else {
-      const fallback = FALLBACK_PLAN_AMOUNTS[key] ?? 0
-      console.error(`❌ Failed to fetch price for plan ${key} (using fallback CHF ${fallback / 100}):`, result.reason?.message)
-      plans[key] = {
-        id: '',
-        unitAmount: fallback,
-        currency: 'CHF',
-        formatted: fallback ? `CHF ${(fallback / 100).toFixed(2)}` : 'Preis fehlt',
-      }
-    }
-  })
+  const plans: Record<string, PriceInfo> = {}
+  for (const { key } of planPriceIds) {
+    const price = fetched.get(key)
+    plans[key] = price ? toInfo(price) : fallbackInfo(FALLBACK_PLAN_AMOUNTS[key] ?? 0)
+  }
 
-  addonPriceIds.forEach(({ key }, i) => {
-    const result = results[planPriceIds.length + i]
-    if (result.status === 'fulfilled') {
-      addons[key] = toInfo(result.value)
-    } else {
-      const fallback = FALLBACK_ADDON_AMOUNTS[key] ?? 0
-      console.error(`❌ Failed to fetch price for addon ${key} (using fallback CHF ${fallback / 100}):`, result.reason?.message)
-      addons[key] = {
-        id: '',
-        unitAmount: fallback,
-        currency: 'CHF',
-        formatted: fallback ? `CHF ${(fallback / 100).toFixed(2)}` : 'Preis fehlt',
-      }
-    }
-  })
+  const addons: Record<string, PriceInfo> = {}
+  for (const { key } of addonPriceIds) {
+    const price = fetched.get(key)
+    addons[key] = price ? toInfo(price) : fallbackInfo(FALLBACK_ADDON_AMOUNTS[key] ?? 0)
+  }
 
   return { plans, addons }
 }
 
-// Cache prices for 5 minutes — they rarely change and each fetch hits Stripe 6 times
-// Use a shorter cache (30s) when fallback prices are used so real prices load quickly after fix
+// Cache prices for 5 minutes — they rarely change and each fetch hits Stripe a few times.
+// Include configured price IDs in the cache key so adding/changing env vars invalidates it.
 export default defineCachedEventHandler(
   () => fetchPrices(),
   {
     maxAge: 60 * 5,
     name: 'stripe-prices',
-    getKey: () => 'prices',
+    getKey: () => {
+      const ids = [
+        ...PLANS.map(p => p.priceEnvKey && process.env[p.priceEnvKey]?.trim()),
+        ...ADDONS.map(a => process.env[a.priceEnvKey]?.trim()),
+      ].filter(Boolean)
+      return `prices:${ids.join(',')}`
+    },
     shouldBypassCache: () => false,
   }
 )

@@ -1,31 +1,52 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireFeature } from '~/server/utils/require-feature'
+import { linkGbpLocation } from '~/server/utils/gbp'
 
 /**
  * POST /api/gbp/link-location
- * Manually links a GBP location to the tenant's connection.
+ * Links a real GBP location (from Google APIs) to the tenant.
+ * Rejects Place-ID style values.
  */
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
   if (!authUser?.tenant_id) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  await requireFeature(authUser.tenant_id, 'gbp_enabled')
 
-  const { gbpAccountName, gbpLocationId, gbpLocationName } = await readBody(event) as {
-    gbpAccountName: string
-    gbpLocationId: string
-    gbpLocationName: string
+  const body = await readBody(event) as {
+    gbpAccountName?: string
+    gbpLocationId?: string
+    gbpLocationName?: string
+    // legacy UI field names
+    accountName?: string
+    locationId?: string
+    title?: string
   }
+
+  const gbpAccountName = body.gbpAccountName || body.accountName
+  const gbpLocationId = body.gbpLocationId || body.locationId
+  const title = body.gbpLocationName || body.title || null
 
   if (!gbpAccountName || !gbpLocationId) {
     throw createError({ statusCode: 400, statusMessage: 'gbpAccountName and gbpLocationId required' })
   }
 
-  const { error } = await getSupabaseAdmin()
-    .from('tenant_google_connections')
-    .update({ gbp_account_name: gbpAccountName, gbp_location_id: gbpLocationId, gbp_location_name: gbpLocationName ?? null })
-    .eq('tenant_id', authUser.tenant_id)
-
-  if (error) throw createError({ statusCode: 500, statusMessage: 'DB update failed' })
-
-  return { ok: true }
+  try {
+    const location = await linkGbpLocation(authUser.tenant_id, {
+      gbpAccountName,
+      gbpLocationId,
+      title,
+    })
+    return {
+      ok: true,
+      location: {
+        id: location.id,
+        title: location.title,
+        gbpAccountName: location.gbp_account_name,
+        gbpLocationId: location.gbp_location_id,
+      },
+    }
+  } catch (err: any) {
+    throw createError({ statusCode: 400, statusMessage: err.message || 'Failed to link location' })
+  }
 })
