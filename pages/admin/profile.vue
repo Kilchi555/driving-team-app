@@ -946,6 +946,56 @@
           </div>
         </div>
 
+        <!-- Externe Kalender (Datenschutz) -->
+        <div v-show="activeTab === 'features'" class="bg-white rounded-lg shadow-sm border p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900">Externe Kalender</h2>
+              <p class="text-sm text-gray-600">Datenschutz für synchronisierte Privat-Termine</p>
+            </div>
+          </div>
+
+          <div class="space-y-6 mt-6">
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div class="flex-1">
+                <h3 class="text-sm font-medium text-gray-900">Termintitel anonymisieren</h3>
+                <p class="text-sm text-gray-600">
+                  Wenn aktiv, erscheinen externe Termine im Simy-Kalender nur als «Privat».
+                  Ausgeschaltet werden die Originaltitel aus dem verbundenen Kalender angezeigt.
+                </p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer ml-4">
+                <input
+                  type="checkbox"
+                  :checked="anonymizeExternalEventTitles"
+                  @change="toggleAnonymizeExternalEventTitles"
+                  :disabled="isSavingAnonymizeExternalTitles"
+                  class="sr-only peer"
+                />
+                <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all disabled:opacity-50"></div>
+              </label>
+            </div>
+
+            <div v-if="anonymizeExternalEventTitles" class="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+              <p class="text-sm text-slate-800">
+                <strong>Aktiv:</strong> Externe Termine werden als «Privat» gespeichert (Datenschutz-Standard).
+                Nach dem nächsten Sync gelten die Titel neu.
+              </p>
+            </div>
+            <div v-else class="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p class="text-sm text-amber-800">
+                <strong>Deaktiviert:</strong> Originaltitel aus Apple/Google-Kalender werden im Team-Kalender sichtbar.
+                Nach dem nächsten Sync (oder manuell unter Einstellungen → Externe Kalender) werden die Titel aktualisiert.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Kontakt Tab -->
         <div v-show="activeTab === 'contact'" class="space-y-6">
           <div class="bg-white rounded-lg shadow-sm border p-6">
@@ -2424,12 +2474,69 @@ const sariSyncResult = ref<{ success: boolean; message: string } | null>(null)
 const instructorConfirmationRequired = ref(true)
 const isSavingInstructorConfirmation = ref(false)
 
+// External calendar privacy (default: anonymize titles as "Privat")
+const anonymizeExternalEventTitles = ref(true)
+const isSavingAnonymizeExternalTitles = ref(false)
+
 const loadInstructorConfirmationSetting = async () => {
   try {
     const result: any = await $fetch('/api/admin/tenant/instructor-confirmation-setting')
     instructorConfirmationRequired.value = result.require_instructor_confirmation ?? true
   } catch (err: any) {
     logger.error('Error loading instructor confirmation setting:', err)
+  }
+}
+
+const loadAnonymizeExternalEventTitles = async () => {
+  try {
+    const settings = await $fetch<any[]>('/api/admin/tenant-settings')
+    const row = settings?.find(
+      (s) => s.category === 'calendar' && s.setting_key === 'anonymize_external_event_titles'
+    )
+    if (row?.setting_value != null) {
+      const raw = String(row.setting_value).trim().toLowerCase()
+      anonymizeExternalEventTitles.value = raw === 'true' || raw === '1'
+    } else {
+      anonymizeExternalEventTitles.value = true
+    }
+  } catch (err: any) {
+    logger.error('Error loading external calendar privacy setting:', err)
+    anonymizeExternalEventTitles.value = true
+  }
+}
+
+const toggleAnonymizeExternalEventTitles = async () => {
+  isSavingAnonymizeExternalTitles.value = true
+  const previous = anonymizeExternalEventTitles.value
+  const newValue = !previous
+  anonymizeExternalEventTitles.value = newValue
+  try {
+    await $fetch('/api/admin/tenant-settings', {
+      method: 'POST',
+      body: {
+        category: 'calendar',
+        setting_key: 'anonymize_external_event_titles',
+        setting_value: String(newValue),
+        setting_type: 'boolean',
+      },
+    })
+    autoSaveMessage.value = newValue
+      ? '✅ Externe Termine werden als «Privat» gespeichert'
+      : '✅ Originaltitel von externen Terminen werden angezeigt'
+    showAutoSaveIndicator.value = true
+    setTimeout(() => {
+      showAutoSaveIndicator.value = false
+    }, 3000)
+  } catch (err: any) {
+    logger.error('Error saving external calendar privacy setting:', err)
+    anonymizeExternalEventTitles.value = previous
+    autoSaveMessage.value = '❌ Fehler beim Speichern'
+    showAutoSaveIndicator.value = true
+    setTimeout(() => {
+      showAutoSaveIndicator.value = false
+    }, 3000)
+  } finally {
+    isSavingAnonymizeExternalTitles.value = false
   }
 }
 
@@ -2779,6 +2886,7 @@ const loadData = async () => {
       await loadPaymentReminderSettings(tenantId)
       await loadSARISettings(tenantId)
       await loadInstructorConfirmationSetting()
+      await loadAnonymizeExternalEventTitles()
       await loadTemplates(tenantId)
       await loadFeatures()
     }

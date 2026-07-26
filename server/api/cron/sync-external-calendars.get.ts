@@ -3,6 +3,10 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { parseIcsBusyEvents } from '~/server/utils/parse-ics-busy-events'
+import {
+  resolveExternalEventTitle,
+  shouldAnonymizeExternalEventTitles,
+} from '~/server/utils/external-calendar-privacy'
 import { logger } from '~/utils/logger'
 import { sendEmail } from '~/server/utils/email'
 
@@ -133,6 +137,7 @@ export default defineEventHandler(async (event) => {
 
     let syncedCount = 0
     let failedCount = 0
+    const anonymizeCache = new Map<string, boolean>()
 
     // ============ SYNC EACH CALENDAR ============
     for (const calendar of calendars) {
@@ -253,6 +258,12 @@ export default defineEventHandler(async (event) => {
           continue
         }
 
+        const anonymizeTitles = await shouldAnonymizeExternalEventTitles(
+          supabase,
+          calendar.tenant_id,
+          anonymizeCache,
+        )
+
         // Insert new busy times
         const busyTimes = windowEvents.map(ev => {
           const formatUTCTime = (isoStr: string): string => {
@@ -271,7 +282,7 @@ export default defineEventHandler(async (event) => {
             staff_id: calendar.staff_id,
             external_calendar_id: calendar.id,
             external_event_id: ((ev.uid || `event_${Date.now()}_${Math.random()}`) + '').slice(0, 255),
-            event_title: 'Privat',
+            event_title: resolveExternalEventTitle(ev.summary, anonymizeTitles),
             start_time: formatUTCTime(ev.start),
             end_time: formatUTCTime(ev.end),
             sync_source: 'ics'

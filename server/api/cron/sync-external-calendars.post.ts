@@ -4,6 +4,10 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
 import { parseIcsBusyEvents } from '~/server/utils/parse-ics-busy-events'
+import {
+  resolveExternalEventTitle,
+  shouldAnonymizeExternalEventTitles,
+} from '~/server/utils/external-calendar-privacy'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -50,6 +54,7 @@ export default defineEventHandler(async (event) => {
 
     let syncedCount = 0
     let failedCount = 0
+    const anonymizeCache = new Map<string, boolean>()
 
     // ============ LAYER 3: SYNC EACH CALENDAR ============
     for (const calendar of calendars) {
@@ -136,6 +141,12 @@ export default defineEventHandler(async (event) => {
           continue
         }
 
+        const anonymizeTitles = await shouldAnonymizeExternalEventTitles(
+          supabase,
+          calendar.tenant_id,
+          anonymizeCache,
+        )
+
         // Insert new busy times
         const busyTimes = windowEvents.map(event => {
           const convertToUTC = (isoStr: string): string => {
@@ -154,7 +165,7 @@ export default defineEventHandler(async (event) => {
             staff_id: calendar.staff_id,
             external_calendar_id: calendar.id,
             external_event_id: ((event.uid || `event_${Date.now()}_${Math.random()}`) + '').slice(0, 255),
-            event_title: 'Privat',
+            event_title: resolveExternalEventTitle(event.summary, anonymizeTitles),
             start_time: convertToUTC(event.start),
             end_time: convertToUTC(event.end),
             sync_source: 'ics'
