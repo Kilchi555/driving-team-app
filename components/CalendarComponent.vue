@@ -3230,7 +3230,7 @@ defineExpose({
   background-color: #10b981 !important;
 }
 
-.fc-event.category-default {
+.fc-event.category-default:not(.fc-bg-event):not(.external-busy-block) {
   background-color: #666666 !important;
 }
 
