@@ -334,6 +334,7 @@ type CalendarEvent = {
   borderColor?: string
   textColor?: string
   display?: string
+  editable?: boolean
   classNames?: string[]
   extendedProps?: {
     location?: string
@@ -356,6 +357,8 @@ type CalendarEvent = {
     is_team_invite?: boolean
     original_type?: string
     type?: string
+    eventType?: string
+    isExternalBusy?: boolean
     isNonWorkingHours?: boolean
     isClickThrough?: boolean
   }
@@ -909,54 +912,54 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
     
     const busyTimes = response.busyTimes
     logger.debug('✅ Loaded external busy times via API:', busyTimes.length)
-    
-    // Convert UTC times to local time for display
-    const parseUTCTime = (utcTimeString: string) => {
-      let timeStr = utcTimeString
-      if (timeStr.includes(' ') && !timeStr.includes('T')) {
-        timeStr = timeStr.replace(' ', 'T')
+
+    // Normalize Supabase timestamps to real ISO so Safari/iOS don't get Invalid Date
+    // (Safari rejects "2026-07-27 05:30:00+00" and space-separated local strings).
+    const toIso = (value: string): string | null => {
+      if (!value) return null
+      let s = String(value).trim()
+      if (s.includes(' ') && !s.includes('T')) s = s.replace(' ', 'T')
+      // "+00" / "+00:00" / "Z" all ok once T is present; normalize bare ±HH
+      s = s.replace(/([+-]\d{2})$/, '$1:00')
+      const d = new Date(s)
+      if (Number.isNaN(d.getTime())) {
+        logger.warn('⚠️ Skipping external busy with invalid date:', value)
+        return null
       }
-      if (timeStr.includes('+00') && !timeStr.includes('+00:00')) {
-        timeStr = timeStr.replace('+00', '+00:00')
-      }
-      if (!timeStr.includes('+') && !timeStr.includes('Z')) {
-        timeStr += '+00:00'
-      }
-      
-      const utcDate = new Date(timeStr)
-      const localDateStr = utcDate.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
-      const localDate = new Date(localDateStr)
-      
-      const localYear = localDate.getFullYear()
-      const localMonth = String(localDate.getMonth() + 1).padStart(2, '0')
-      const localDay = String(localDate.getDate()).padStart(2, '0')
-      const localHour = String(localDate.getHours()).padStart(2, '0')
-      const localMinute = String(localDate.getMinutes()).padStart(2, '0')
-      const localSecond = String(localDate.getSeconds()).padStart(2, '0')
-      return `${localYear}-${localMonth}-${localDay}T${localHour}:${localMinute}:${localSecond}`
+      return d.toISOString()
     }
     
-    // Convert to calendar events
-    const events: CalendarEvent[] = busyTimes.map((busy: any) => {
-      return {
+    // Render as normal (non-background) gray blocks so they stay visible on white
+    // working-hour slots. Background events were covered by `.fc-timegrid-slot-lane
+    // { background: white !important }` and also got Invalid Date on Safari.
+    const events: CalendarEvent[] = []
+    for (const busy of busyTimes) {
+      const start = toIso(busy.start_time)
+      const end = toIso(busy.end_time)
+      if (!start || !end) continue
+
+      events.push({
         id: `external-busy-${busy.id}`,
         title: busy.event_title || 'Privat',
-        start: parseUTCTime(busy.start_time),
-        end: parseUTCTime(busy.end_time),
-        backgroundColor: '#e5e7eb',
-        borderColor: 'transparent',
-        textColor: '#9333ea',
-        display: 'background',
+        start,
+        end,
+        backgroundColor: '#d1d5db',
+        borderColor: '#9ca3af',
+        textColor: '#374151',
+        editable: false,
         classNames: ['external-busy-block'],
         extendedProps: {
           type: 'external_busy',
+          eventType: 'external_busy',
           external_event_id: busy.external_event_id,
           sync_source: busy.sync_source,
+          isExternalBusy: true,
           isClickThrough: true
         }
-      }
-    })
+      })
+    }
     
+    logger.debug('✅ External busy events ready for calendar:', events.length)
     return events
     
   } catch (error) {
@@ -1820,6 +1823,15 @@ dateClick: (arg) => {
 
 eventContent: (arg) => {
   const extendedProps = arg.event.extendedProps
+  if (extendedProps?.type === 'external_busy' || extendedProps?.isExternalBusy) {
+    return {
+      html: `
+        <div class="external-busy-content">
+          <div class="event-name">${arg.event.title || 'Privat'}</div>
+        </div>
+      `
+    }
+  }
   const locationObj = extendedProps?.location
   // For pickup bookings, show the customer's pickup address; otherwise standard location
   const location = extendedProps?.customer_pickup_address ||
@@ -1857,6 +1869,12 @@ eventClick: (clickInfo) => {
     // ✅ Sicherheitsprüfung: Ist der Calendar noch mounted?
     if (!calendar.value) {
       logger.debug('⚠️ Calendar not mounted, skipping event click')
+      return
+    }
+
+    const props = clickInfo.event.extendedProps as any
+    if (props?.type === 'external_busy' || props?.isExternalBusy) {
+      logger.debug('📅 Ignoring click on external busy block')
       return
     }
     
@@ -1905,7 +1923,17 @@ select: (_arg) => {
   }
 },
   eventClassNames: (arg) => {
-  const category = arg.event.extendedProps?.category || 'default'
+  // Don't paint category colors onto working-hours / external-busy blocks
+  const props = arg.event.extendedProps as any
+  if (
+    arg.event.display === 'background' ||
+    props?.type === 'external_busy' ||
+    props?.isExternalBusy ||
+    props?.isNonWorkingHours
+  ) {
+    return []
+  }
+  const category = props?.category || 'default'
   // ✅ Sicherheitsprüfung: category muss ein String sein
   const categoryString = typeof category === 'string' ? category : 'default'
   return [`category-${categoryString.toLowerCase()}`]
@@ -2940,16 +2968,34 @@ defineExpose({
   box-shadow: none !important;
 }
 
-/* External Busy Times — gleiches Grau wie Nicht-Arbeitszeit (nie lila) */
-.fc .fc-bg-event.external-busy-block,
+/* External Busy Times — visible gray "Privat" blocks on white working hours */
+.fc .fc-event.external-busy-block,
+.fc .fc-timegrid-event.external-busy-block,
 .external-busy-block {
-  background: #e5e7eb !important;
-  background-color: #e5e7eb !important;
-  opacity: 1 !important;
+  background: #d1d5db !important;
+  background-color: #d1d5db !important;
+  border: 1px dashed #6b7280 !important;
+  opacity: 0.9 !important;
   pointer-events: none !important;
-  z-index: 1 !important;
-  border: none !important;
+  z-index: 2 !important;
   box-shadow: none !important;
+  color: #374151 !important;
+}
+
+.fc .fc-event.external-busy-block .fc-event-main,
+.fc .fc-event.external-busy-block .fc-event-title,
+.external-busy-block .external-busy-content,
+.external-busy-block .event-name {
+  color: #374151 !important;
+  background: transparent !important;
+  font-style: italic;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+.external-busy-content {
+  padding: 2px 4px;
+  height: 100%;
 }
 
 .non-working-hours-block .fc-event-title,
@@ -2964,7 +3010,7 @@ defineExpose({
 }
 
 .external-busy-block:hover {
-  opacity: 1 !important;
+  opacity: 0.95 !important;
   transform: none !important;
   box-shadow: none !important;
 }
@@ -3185,7 +3231,7 @@ defineExpose({
   background-color: #10b981 !important;
 }
 
-.fc-event.category-default {
+.fc-event.category-default:not(.fc-bg-event):not(.external-busy-block) {
   background-color: #666666 !important;
 }
 
