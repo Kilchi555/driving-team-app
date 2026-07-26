@@ -1825,8 +1825,11 @@ const isAssigning = ref(false)
 
 const isAssignedToMe = computed(() => {
   if (!props.currentUser?.id || !props.selectedStudent) return false
-  const ids: string[] = (props.selectedStudent as any).assigned_staff_ids || []
-  return ids.includes(props.currentUser.id)
+  const staffId = props.currentUser.id
+  const student = props.selectedStudent as any
+  if (student.assigned_staff_id === staffId) return true
+  const ids: string[] = student.assigned_staff_ids || []
+  return Array.isArray(ids) && ids.includes(staffId)
 })
 
 // Billing Address Edit Modal

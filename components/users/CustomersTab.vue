@@ -32,8 +32,8 @@
             </label>
           </div>
 
-          <!-- All Students Toggle -->
-          <div class="flex items-center gap-3 rounded-lg">
+          <!-- All Students Toggle (nur für Staff - Admins sehen immer alle) -->
+          <div v-if="currentUser?.role === 'staff'" class="flex items-center gap-3 rounded-lg">
             <span class="text-sm font-medium text-gray-700">
               {{ showAllStudents ? 'Alle' : 'Meine' }}
             </span>
@@ -57,7 +57,7 @@
 
         <!-- Statistics -->
         <div class="flex gap-3 text-xs sm:text-sm text-gray-600">
-          <span v-if="!showAllStudents">Meine: {{ customers.length }}</span>
+          <span v-if="currentUser?.role === 'staff' && !showAllStudents">Meine: {{ customers.length }}</span>
           <span v-else>Alle: {{ customers.length }}</span>
           <span>Aktiv: {{ customers.filter(s => s.is_active).length }}</span>
           <span>Inaktiv: {{ customers.filter(s => !s.is_active).length }}</span>
@@ -293,10 +293,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { logger } from '~/utils/logger'
 import { filterByStudentSearch } from '~/utils/student-search'
-import { useSmsService } from '~/composables/useSmsService'
 import { useUIStore } from '~/stores/ui'
-import { useAuthStore } from '~/stores/auth'
-import { getSupabase } from '~/utils/supabase'
 import EnhancedStudentModal from '~/components/EnhancedStudentModal.vue'
 import AddStudentModal from '~/components/AddStudentModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
@@ -311,13 +308,8 @@ const emit = defineEmits<{
   userUpdated: [updateData: any]
 }>()
 
-// Supabase client
-const supabase = getSupabase()
-
 // Composables
-const { sendSms } = useSmsService()
 const uiStore = useUIStore()
-const authStore = useAuthStore()
 
 // Local state
 const selectedCustomer = ref<any>(null)
@@ -372,87 +364,39 @@ const filteredCustomers = computed(() => {
 })
 
 // Methods
-const loadCustomers = async (loadAppointments = true) => {
+const loadCustomers = async (_loadAppointments = true) => {
   if (!props.currentUser) return
   
   isLoading.value = true
   error.value = null
   
   try {
-    logger.debug('🔄 Loading customers from database...')
-    
-    // Get current user's tenant_id
-    const authUser = authStore.user // ✅ MIGRATED
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_user_id', authUser?.id)
-      .single()
-    const tenantId = userProfile?.tenant_id
-    
-    if (!tenantId) {
-      throw new Error('User has no tenant assigned')
+    logger.debug('🔄 Loading customers via get-students API...')
+
+    // Same endpoint & filter logic as EventModal StudentSelector and pages/customers.vue
+    // (server/utils/get-filtered-students.ts) — no client-side staff filtering.
+    const params = new URLSearchParams()
+    params.append('showAllStudents', showAllStudents.value.toString())
+    params.append('showInactive', showInactive.value.toString())
+
+    const response = await $fetch(`/api/admin/get-students?${params.toString()}`, {
+      method: 'GET'
+    }) as any
+
+    if (!response?.success || !response?.data) {
+      throw new Error('Failed to load customers from API')
     }
 
-    // Load customers
-    const { data, error: supabaseError } = await supabase
-      .from('users')
-      .select(`
-        id,
-        created_at,
-        email,
-        first_name,
-        last_name,
-        phone,
-        birthdate,
-        street,
-        street_nr,
-        zip,
-        city,
-        profession,
-        is_active,
-        category,
-        assigned_staff_id,
-        payment_provider_customer_id,
-        auth_user_id,
-        onboarding_status,
-        onboarding_token,
-        onboarding_token_expires
-      `)
-      .eq('role', 'client')
-      .eq('tenant_id', tenantId)
-      .order('first_name', { ascending: true })
-
-    if (supabaseError) {
-      throw new Error(`Database error: ${supabaseError.message}`)
-    }
-
-    if (!data) {
-      customers.value = []
-      return
-    }
-
-    // Client-side filtering for active/pending users
-    let filteredData = data
-    if (!showInactive.value) {
-      filteredData = data.filter((customer: any) => {
-        return customer.is_active === true || customer.auth_user_id === null
-      })
-    }
-
-    // Enrich customer data
-    const enrichedCustomers = filteredData.map((customer: any) => {
-      return {
-        ...customer,
-        assignedInstructor: '-', // TODO: Load instructor data
-        completedLessonsCount: 0, // TODO: Load lesson count
-        lastLesson: null, // TODO: Load last lesson
-        fullAddress: [customer.street, customer.street_nr, customer.zip, customer.city]
-          .filter(Boolean)
-          .join(' '),
-        payment_provider: customer.payment_provider_customer_id ? 'Konfiguriert' : 'Nicht konfiguriert'
-      }
-    })
+    const enrichedCustomers = (response.data as any[]).map((customer: any) => ({
+      ...customer,
+      assignedInstructor: '-',
+      completedLessonsCount: 0,
+      lastLesson: null,
+      fullAddress: [customer.street, customer.street_nr, customer.zip, customer.city]
+        .filter(Boolean)
+        .join(' '),
+      payment_provider: customer.payment_provider_customer_id ? 'Konfiguriert' : 'Nicht konfiguriert'
+    }))
 
     customers.value = enrichedCustomers
     logger.debug('✅ Customers loaded successfully:', customers.value.length)
@@ -491,6 +435,24 @@ const handleEvaluateLesson = () => {
 
 const handleCustomerUpdated = (updateData: any) => {
   logger.debug('📡 Customer updated:', updateData)
+
+  // Staff removed themselves from assignment — drop from "Meine" list
+  if (updateData._unassigned) {
+    if (props.currentUser?.role === 'staff' && !showAllStudents.value) {
+      customers.value = customers.value.filter(s => s.id !== updateData.id)
+    }
+    selectedCustomer.value = null
+    emit('userUpdated', updateData)
+    return
+  }
+
+  // Staff assigned themselves — reload so Meine/Alle stays consistent
+  if (updateData._assigned) {
+    selectedCustomer.value = null
+    loadCustomers()
+    emit('userUpdated', updateData)
+    return
+  }
   
   const customerIndex = customers.value.findIndex(s => s.id === updateData.id)
   if (customerIndex !== -1) {
@@ -527,63 +489,32 @@ const handleOpenReminderModal = (student: any) => {
 }
 
 const resendOnboardingSms = async () => {
-  if (!pendingCustomer.value) return
+  if (!pendingCustomer.value?.id) return
   
   isResendingSms.value = true
   
   try {
-    // Get tenant name for SMS sender
-    let senderName = 'Fahrschule'
-    try {
-      const authUser = authStore.user // ✅ MIGRATED
-      const { data: userProfile } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('auth_user_id', authUser?.id)
-        .single()
-      
-      if (userProfile?.tenant_id) {
-        const { data: tenantData } = await supabase
-          .from('tenants')
-          .select('name, twilio_from_sender')
-          .eq('id', userProfile.tenant_id)
-          .single()
-        
-        if (tenantData?.twilio_from_sender) {
-          senderName = tenantData.twilio_from_sender
-        } else if (tenantData?.name) {
-          senderName = tenantData.name
-        }
-      }
-    } catch (tenantError) {
-      console.warn('Could not load tenant name:', tenantError)
+    const smsResponse = await $fetch('/api/students/resend-onboarding-sms', {
+      method: 'POST',
+      body: { studentId: pendingCustomer.value.id }
+    }) as any
+
+    if (!smsResponse?.success) {
+      throw new Error(smsResponse?.message || 'Failed to send SMS via API')
     }
-    
-    const onboardingLink = `https://app.simy.ch/onboarding/${pendingCustomer.value.onboarding_token}`
-    const message = `Hallo ${pendingCustomer.value.first_name}! Willkommen bei ${senderName}. Vervollständige deine Registrierung: ${onboardingLink} (Link 7 Tage gültig)`
-    
-    const result = await sendSms(pendingCustomer.value.phone, message, senderName)
-    
-    if (result.success) {
-      uiStore.addNotification({
-        type: 'success',
-        title: 'SMS erfolgreich gesendet!',
-        message: `Onboarding-Link wurde an ${formatPhone(pendingCustomer.value.phone)} gesendet.`
-      })
-      showPendingModal.value = false
-    } else {
-      uiStore.addNotification({
-        type: 'error',
-        title: 'SMS-Versand fehlgeschlagen',
-        message: result.error || 'Bitte versuchen Sie es erneut oder kopieren Sie den Link manuell.'
-      })
-    }
+
+    uiStore.addNotification({
+      type: 'success',
+      title: 'SMS erfolgreich gesendet!',
+      message: `Onboarding-Link wurde an ${smsResponse.phone || formatPhone(pendingCustomer.value.phone)} gesendet.`
+    })
+    showPendingModal.value = false
   } catch (err: any) {
     console.error('Error resending SMS:', err)
     uiStore.addNotification({
       type: 'error',
       title: 'Fehler',
-      message: 'SMS konnte nicht gesendet werden.'
+      message: err.message || 'SMS konnte nicht gesendet werden.'
     })
   } finally {
     isResendingSms.value = false
@@ -591,26 +522,43 @@ const resendOnboardingSms = async () => {
 }
 
 const copyOnboardingLink = async () => {
-  if (!pendingCustomer.value) return
+  if (!pendingCustomer.value?.id) return
   
   try {
-    const onboardingLink = `https://app.simy.ch/onboarding/${pendingCustomer.value.onboarding_token}`
+    const tokenResponse = await $fetch('/api/students/get-onboarding-token', {
+      method: 'GET',
+      params: { studentId: pendingCustomer.value.id }
+    }) as any
+
+    if (!tokenResponse?.success || !tokenResponse?.onboarding_token) {
+      throw new Error(tokenResponse?.message || 'Failed to fetch onboarding token')
+    }
+
+    const onboardingLink = `https://app.simy.ch/onboarding/${tokenResponse.onboarding_token}`
     
-    await navigator.clipboard.writeText(onboardingLink)
+    try {
+      await navigator.clipboard.writeText(onboardingLink)
+    } catch {
+      const input = document.createElement('input')
+      input.type = 'text'
+      input.value = onboardingLink
+      document.body.appendChild(input)
+      input.select()
+      document.execCommand('copy')
+      document.body.removeChild(input)
+    }
     
     uiStore.addNotification({
       type: 'success',
       title: 'Link kopiert!',
       message: 'Der Onboarding-Link wurde in die Zwischenablage kopiert.'
     })
-    
-    logger.debug('🔗 Onboarding-Link:', onboardingLink)
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error copying link:', err)
     uiStore.addNotification({
       type: 'error',
       title: 'Fehler',
-      message: 'Link konnte nicht kopiert werden.'
+      message: err.message || 'Link konnte nicht kopiert werden.'
     })
   }
 }
