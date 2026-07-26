@@ -349,6 +349,9 @@ const totalMonthlyCost = computed(() => {
   if (billing.value.addon_affiliate_enabled) {
     total += pricing.value.addons?.affiliate?.unitAmount ?? 0
   }
+  if (billing.value.addon_gbp_enabled) {
+    total += pricing.value.addons?.gbp?.unitAmount ?? 0
+  }
   if (total === 0) return null
   return `CHF ${(total / 100).toFixed(2)}`
 })
