@@ -2,6 +2,10 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { resolvePLZForExternalBusyTime } from '~/utils/postalCodeUtils'
 import { parseIcsBusyEvents } from '~/server/utils/parse-ics-busy-events'
+import {
+  resolveExternalEventTitle,
+  shouldAnonymizeExternalEventTitles,
+} from '~/server/utils/external-calendar-privacy'
 import { logger } from '~/utils/logger'
 
 interface ICSImportRequest {
@@ -173,7 +177,12 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       throw createError({ statusCode: 500, statusMessage: `Failed to clear busy times: ${clearError.message}` })
     }
 
-    // Insert new busy times - alle Titel als "Privat" speichern
+    const anonymizeTitles = await shouldAnonymizeExternalEventTitles(
+      supabase,
+      calendar.tenant_id,
+    )
+
+    // Insert new busy times (titles anonymized per tenant setting, default: Privat)
     const busyTimes = windowEvents.map(event => {
       // Convert to UTC for consistent storage with appointments
       // ICS events can be in various formats (local or UTC)
@@ -197,7 +206,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
         staff_id: calendar.staff_id,
         external_calendar_id: calendar_id,
         external_event_id: ((event.uid || `event_${Date.now()}_${Math.random()}`) + '').slice(0, 255),
-        event_title: 'Privat', // Anonymisiert für Datenschutz
+        event_title: resolveExternalEventTitle(event.summary, anonymizeTitles),
         start_time: convertToUTC(event.start),
         end_time: convertToUTC(event.end),
         sync_source: 'ics'

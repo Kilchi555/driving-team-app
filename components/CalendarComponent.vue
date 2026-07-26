@@ -334,6 +334,7 @@ type CalendarEvent = {
   borderColor?: string
   textColor?: string
   display?: string
+  editable?: boolean
   classNames?: string[]
   extendedProps?: {
     location?: string
@@ -356,6 +357,8 @@ type CalendarEvent = {
     is_team_invite?: boolean
     original_type?: string
     type?: string
+    eventType?: string
+    isExternalBusy?: boolean
     isNonWorkingHours?: boolean
     isClickThrough?: boolean
   }
@@ -925,7 +928,9 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
       return d.toISOString()
     }
 
-    // Background blocks — same gray as non-working hours (previous design)
+    // Timed (non-background) events: background events are covered by
+    // `.fc-timegrid-slot-lane { background: white !important }` and also blend
+    // into non-working-hour gray. Keep the classic solid gray look, just visible.
     const events: CalendarEvent[] = []
     for (const busy of busyTimes) {
       const start = toIso(busy.start_time)
@@ -937,20 +942,23 @@ const loadExternalBusyTimes = async (): Promise<CalendarEvent[]> => {
         title: busy.event_title || 'Privat',
         start,
         end,
-        backgroundColor: '#e5e7eb',
+        backgroundColor: '#c4c9d2',
         borderColor: 'transparent',
-        textColor: '#9333ea',
-        display: 'background',
+        textColor: '#4b5563',
+        editable: false,
         classNames: ['external-busy-block'],
         extendedProps: {
           type: 'external_busy',
+          eventType: 'external_busy',
           external_event_id: busy.external_event_id,
           sync_source: busy.sync_source,
+          isExternalBusy: true,
           isClickThrough: true
         }
       })
     }
 
+    logger.debug('✅ External busy events ready for calendar:', events.length)
     return events
     
   } catch (error) {
@@ -1814,6 +1822,15 @@ dateClick: (arg) => {
 
 eventContent: (arg) => {
   const extendedProps = arg.event.extendedProps
+  if (extendedProps?.type === 'external_busy' || extendedProps?.isExternalBusy) {
+    return {
+      html: `
+        <div class="external-busy-content">
+          <div class="event-name">${arg.event.title || 'Privat'}</div>
+        </div>
+      `
+    }
+  }
   const locationObj = extendedProps?.location
   // For pickup bookings, show the customer's pickup address; otherwise standard location
   const location = extendedProps?.customer_pickup_address ||
@@ -1854,6 +1871,11 @@ eventClick: (clickInfo) => {
       return
     }
 
+    const props = clickInfo.event.extendedProps as any
+    if (props?.type === 'external_busy' || props?.isExternalBusy) {
+      return
+    }
+    
     const appointmentData = calendarEvents.value.find(evt => evt.id === clickInfo.event.id)
     
     if (!appointmentData) {
@@ -1899,7 +1921,16 @@ select: (_arg) => {
   }
 },
   eventClassNames: (arg) => {
-  const category = arg.event.extendedProps?.category || 'default'
+  const props = arg.event.extendedProps as any
+  if (
+    arg.event.display === 'background' ||
+    props?.type === 'external_busy' ||
+    props?.isExternalBusy ||
+    props?.isNonWorkingHours
+  ) {
+    return []
+  }
+  const category = props?.category || 'default'
   // ✅ Sicherheitsprüfung: category muss ein String sein
   const categoryString = typeof category === 'string' ? category : 'default'
   return [`category-${categoryString.toLowerCase()}`]
@@ -2934,16 +2965,36 @@ defineExpose({
   box-shadow: none !important;
 }
 
-/* External Busy Times — gleiches Grau wie Nicht-Arbeitszeit (nie lila) */
-.fc .fc-bg-event.external-busy-block,
+/* External Busy — solid gray timed blocks (visible on white working hours).
+   Not FC background-events: those are covered by white slot-lane !important. */
+.fc .fc-event.external-busy-block,
+.fc .fc-timegrid-event.external-busy-block,
 .external-busy-block {
-  background: #e5e7eb !important;
-  background-color: #e5e7eb !important;
+  background: #c4c9d2 !important;
+  background-color: #c4c9d2 !important;
   opacity: 1 !important;
   pointer-events: none !important;
-  z-index: 1 !important;
+  z-index: 2 !important;
   border: none !important;
   box-shadow: none !important;
+  color: #374151 !important;
+}
+
+.fc .fc-event.external-busy-block .fc-event-main,
+.fc .fc-event.external-busy-block .fc-event-title,
+.external-busy-block .external-busy-content,
+.external-busy-block .event-name {
+  color: #374151 !important;
+  background: transparent !important;
+  font-style: italic;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+.external-busy-content {
+  padding: 2px 4px;
+  height: 100%;
+  overflow: hidden;
 }
 
 .non-working-hours-block .fc-event-title,
