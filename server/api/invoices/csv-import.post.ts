@@ -5,7 +5,10 @@
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { parseCsv, parseSwissAmount, parseFlexibleDate, type ColumnMapping } from '~/server/utils/csv-parse'
+import {
+  parseCsv, parseSwissAmount, parseFlexibleDate, enrichCsvPaymentFields,
+  type ColumnMapping,
+} from '~/server/utils/csv-parse'
 import {
   matchEntriesToInvoices, flagAlreadyImported, computeDedupeKey,
   type MatchableEntry, type OpenInvoiceForMatching,
@@ -75,25 +78,38 @@ export default defineEventHandler(async (event) => {
 
     const reference = (referenceIdx > -1 ? row[referenceIdx] || '' : '').trim()
     const description = (descriptionIdx > -1 ? row[descriptionIdx] || '' : '').trim()
-    const debtorName = (debtorNameIdx > -1 ? row[debtorNameIdx] || '' : '').trim()
+    const mappedDebtor = (debtorNameIdx > -1 ? row[debtorNameIdx] || '' : '').trim()
     const bankRef = (transactionIdIdx > -1 ? row[transactionIdIdx] || '' : '').trim() || null
 
-    const referenceRaw = reference || description
-    const cleanRef = referenceRaw.replace(/\s/g, '').toUpperCase()
+    // Spaltenübergreifend: QRR/Name/Rechnungsnr. aus der ganzen Zeile —
+    // Banken streuen dieselben Infos auf unterschiedliche Spalten.
+    const enriched = enrichCsvPaymentFields({
+      row,
+      headers,
+      mappedReference: reference,
+      mappedDescription: description,
+      mappedDebtorName: mappedDebtor,
+      skipHeaderIndexes: [dateIdx, amountIdx, creditIdx, debitIdx, transactionIdIdx].filter(i => i > -1),
+    })
+
     const amountRappen = Math.round(amount * 100)
 
     entries.push({
       amount_rappen: amountRappen,
       date,
-      reference: cleanRef,
-      reference_raw: referenceRaw,
-      debtor_name: debtorName,
+      reference: enriched.reference,
+      reference_raw: enriched.reference_raw,
+      debtor_name: enriched.debtor_name,
       iban: '',
-      remittance_info: description,
+      remittance_info: enriched.remittance_info,
       raw_amount: amount,
       bank_ref: bankRef,
       dedupe_key: computeDedupeKey({
-        bankRef, date, amountRappen, reference: cleanRef, debtorName,
+        bankRef,
+        date,
+        amountRappen,
+        reference: enriched.reference || enriched.reference_raw,
+        debtorName: enriched.debtor_name,
       }),
     })
   }
@@ -121,7 +137,7 @@ export default defineEventHandler(async (event) => {
       notes
     `)
     .eq('tenant_id', staffUser.tenant_id)
-    .in('status', ['sent', 'overdue'])
+    .in('status', ['sent', 'overdue', 'pdf_created'])
     .neq('payment_status', 'paid')
     .order('invoice_date', { ascending: false })
 

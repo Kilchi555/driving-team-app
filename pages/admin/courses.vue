@@ -4350,7 +4350,7 @@
             </div>
             <div class="px-3 py-2 space-y-1 text-sm text-gray-700">
               <div class="flex justify-between">
-                <span class="text-gray-500">Bezahlt</span>
+                <span class="text-gray-500">{{ refundPreview.payment.status === 'completed' ? 'Bezahlt' : 'Betrag' }}</span>
                 <span class="font-medium">CHF {{ refundPreview.payment.totalPaidChf.toFixed(2) }}</span>
               </div>
               <div v-if="refundPreview.payment.creditUsedChf > 0" class="flex justify-between text-xs">
@@ -4364,9 +4364,9 @@
               <div v-if="refundPreview.policyDescription" class="text-xs text-gray-500 italic">{{ refundPreview.policyDescription }}</div>
             </div>
 
-            <!-- Refund amount highlight -->
+            <!-- Refund amount highlight (only meaningful if something was actually paid) -->
             <div
-              v-if="refundPreview.refundAmountChf > 0"
+              v-if="refundPreview.payment.status === 'completed' && refundPreview.refundAmountChf > 0"
               class="px-3 py-2 border-t border-gray-100 flex items-center justify-between"
               :class="refundPreview.canRefundViaWallee ? 'bg-green-50' : 'bg-gray-50'"
             >
@@ -4376,6 +4376,9 @@
               <span class="text-sm font-bold" :class="refundPreview.canRefundViaWallee ? 'text-green-700' : 'text-gray-800'">
                 CHF {{ refundPreview.refundAmountChf.toFixed(2) }}
               </span>
+            </div>
+            <div v-else-if="refundPreview.payment.status !== 'completed'" class="px-3 py-2 border-t border-gray-100 bg-gray-50 text-xs text-gray-500">
+              Keine Rückerstattung nötig — Zahlung noch nicht eingegangen
             </div>
             <div v-else class="px-3 py-2 border-t border-gray-100 bg-gray-50 text-xs text-gray-500">
               Keine Rückerstattung gemäss Stornierungsrichtlinie
