@@ -633,10 +633,12 @@ const handleEvaluateLesson = () => {
 const handleStudentUpdated = (updateData: { id: string, [key: string]: any }) => {
   logger.debug('📡 Received student update:', updateData)
 
-  // If staff unassigned themselves, remove from list and close modal
+  // If staff unassigned themselves, remove from "Meine" list and close modal
   if (updateData._unassigned) {
     const removedStudent = students.value.find(s => s.id === updateData.id)
-    students.value = students.value.filter(s => s.id !== updateData.id)
+    if (currentUser.value?.role === 'staff' && !showAllStudents.value) {
+      students.value = students.value.filter(s => s.id !== updateData.id)
+    }
     selectedStudent.value = null
     const removedName = removedStudent ? `${removedStudent.first_name} ${removedStudent.last_name}` : 'Schüler'
     showSuccessToast('Aus Schülerliste entfernt', `${removedName} wurde erfolgreich aus deiner Liste entfernt.`)

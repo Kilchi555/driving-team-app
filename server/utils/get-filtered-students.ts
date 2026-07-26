@@ -1,9 +1,9 @@
 // server/utils/get-filtered-students.ts
 //
 // Single source of truth for "which students does this user see" used by
-// both /api/admin/get-students (EventModal -> StudentSelector) and
-// pages/customers.vue. Keep this logic in one place so both UIs always
-// show exactly the same list.
+// both /api/admin/get-students (EventModal -> StudentSelector),
+// pages/customers.vue and components/users/CustomersTab.vue. Keep this
+// logic in one place so all UIs always show exactly the same list.
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export interface GetFilteredStudentsOptions {
