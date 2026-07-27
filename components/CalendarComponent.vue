@@ -1737,6 +1737,9 @@ showConfirmDialog({
     selectable: true,
     editable: true,
     longPressDelay: 500,
+    // Allow timed events to paint on top of each other; CSS forces 100% column width
+    // so external busy + Simy lessons fully stack instead of sitting side-by-side.
+    slotEventOverlap: true,
     slotLabelFormat: {
       hour: '2-digit',
       minute: '2-digit',
@@ -2986,7 +2989,7 @@ defineExpose({
   background-color: #c4c9d2 !important;
   opacity: 1 !important;
   pointer-events: none !important;
-  z-index: 2 !important;
+  z-index: 1 !important;
   border: none !important;
   box-shadow: none !important;
   color: #374151 !important;
@@ -3246,14 +3249,37 @@ defineExpose({
   min-width: 100% !important;
 }
 
-.fc-timegrid-event-harness {
+/*
+ * FullCalendar positions overlapping events via inline inset/left on the harness
+ * (e.g. left: 50%). Width:100% alone makes Simy events stick out beside external
+ * busy blocks. Force every timed event to fill the column so private + lesson
+ * stack 100% on top of each other.
+ */
+.fc-timegrid-event-harness,
+.fc-timegrid-event-harness.fc-timegrid-event-harness-inset {
+  left: 0 !important;
+  right: 0 !important;
   width: 100% !important;
   min-width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
 .fc-timegrid-event-harness .fc-event {
   width: 100% !important;
   min-width: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+}
+
+/* External busy stays under real appointments when fully stacked */
+.fc-timegrid-event-harness:has(.external-busy-block) {
+  z-index: 1 !important;
+}
+
+.fc-timegrid-event-harness:not(:has(.external-busy-block)) {
+  z-index: 3 !important;
 }
 
 /* ✅ Zusätzliche FullCalendar-Überschreibungen */
