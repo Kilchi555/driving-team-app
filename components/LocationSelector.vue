@@ -9,8 +9,8 @@
       <button
         type="button"
         @click="switchToStandardLocations"
-        :class="['flex-1 min-w-0 px-2 py-1.5 text-sm rounded-xl border font-medium transition-colors text-center', useStandardLocations && !homeAddressActive ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
-        :style="useStandardLocations && !homeAddressActive ? primaryBg : {}"
+        :class="['flex-1 min-w-0 px-2 py-1.5 text-sm rounded-xl border font-medium transition-colors text-center', useStandardLocations && !isHomeLocationSelected ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
+        :style="useStandardLocations && !isHomeLocationSelected ? primaryBg : {}"
       >
         Standard
       </button>
@@ -21,10 +21,10 @@
         :title="homeAddressButtonTitle"
         :class="[
           'flex-1 min-w-0 px-2 py-1.5 text-sm rounded-xl border font-medium transition-colors text-center',
-          homeAddressActive ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50',
+          isHomeLocationSelected ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50',
           (!canUseHomeAddress || isApplyingHomeAddress) ? 'opacity-50 cursor-not-allowed' : ''
         ]"
-        :style="homeAddressActive ? primaryBg : {}"
+        :style="isHomeLocationSelected ? primaryBg : {}"
       >
         {{ isApplyingHomeAddress ? '…' : 'Zuhause' }}
       </button>
@@ -38,8 +38,8 @@
           emit('update:modelValue', null)
           emit('locationSelected', null)
         }"
-        :class="['flex-1 min-w-0 px-2 py-1.5 text-sm rounded-xl border font-medium transition-colors text-center', !useStandardLocations && !homeAddressActive ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
-        :style="!useStandardLocations && !homeAddressActive ? primaryBg : {}"
+        :class="['flex-1 min-w-0 px-2 py-1.5 text-sm rounded-xl border font-medium transition-colors text-center', !useStandardLocations && !isHomeLocationSelected ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
+        :style="!useStandardLocations && !isHomeLocationSelected ? primaryBg : {}"
       >
         Neue
       </button>
@@ -277,6 +277,8 @@ const emit = defineEmits(['update:modelValue', 'locationSelected', 'manual-input
 const useStandardLocations = ref(true)
 const homeAddressActive = ref(false)
 const isApplyingHomeAddress = ref(false)
+/** Bumped on user choice / student change so late auto-select awaits cannot overwrite. */
+const selectionEpoch = ref(0)
 const selectedLocationId = ref('')
 const manualLocationInput = ref('')
 const locationSearchQuery = ref('')
@@ -316,6 +318,40 @@ const homeAddressFormatted = computed(() => {
   return [street, cityLine].filter(Boolean).join(', ')
 })
 
+const normalizeAddress = (address: string) => {
+  return address
+    .toLowerCase()
+    .replace(/,?\s*switzerland$/i, '')
+    .replace(/,?\s*schweiz$/i, '')
+    .replace(/[.,]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const addressMatchesHome = (value?: string | null) => {
+  const home = homeAddressFormatted.value
+  if (!home || !value) return false
+  return normalizeAddress(value) === normalizeAddress(home)
+}
+
+/** True when the currently shown location is the client's home address. */
+const isHomeLocationSelected = computed(() => {
+  if (isApplyingHomeAddress.value) return true
+
+  const loc = currentSelectedLocation.value || selectedCustomLocation.value
+  if (loc) {
+    if (addressMatchesHome(loc.address) || addressMatchesHome(loc.name)) return true
+    // Named Zuhause pickup with matching address
+    if (/zuhause/i.test(loc.name || '') && addressMatchesHome(loc.address)) return true
+  }
+
+  if (!useStandardLocations.value && manualLocationInput.value.trim()) {
+    return addressMatchesHome(manualLocationInput.value)
+  }
+
+  return false
+})
+
 const canUseHomeAddress = computed(() => {
   // Allow click whenever a student is selected — address is refreshed from DB on click
   return !!props.selectedStudentId && !props.isPastAppointment
@@ -326,6 +362,12 @@ const homeAddressButtonTitle = computed(() => {
   if (homeAddressFormatted.value) return homeAddressFormatted.value
   return 'Heimadresse aus Kundenprofil laden'
 })
+
+// Keep race-protection flag in sync with address match (and explicit Zuhause apply)
+watch(isHomeLocationSelected, (matches) => {
+  if (isApplyingHomeAddress.value) return
+  homeAddressActive.value = matches
+}, { immediate: true })
 
 const mapLocationItem = (item: any, source: 'standard' | 'pickup'): Location => ({
   ...item,
@@ -419,7 +461,7 @@ const handleManualLocationSubmit = () => {
   locationSearchQuery.value = input
   
   emit('update:modelValue', null)
-  emit('locationSelected', tempLocation)
+  emit('locationSelected', tempLocation, { userInitiated: true })
   
   logger.debug('📝 Manual location created:', tempLocation)
 }
@@ -435,16 +477,45 @@ const clearManualLocation = () => {
 }
 
 const switchToStandardLocations = () => {
+  if (props.isPastAppointment) return
+
+  selectionEpoch.value += 1
   useStandardLocations.value = true
-  homeAddressActive.value = false
-  // Keep an already selected standard/pickup; only clear free-text manual state
-  if (!selectedLocationId.value || selectedLocationId.value.includes('temp_') || selectedLocationId.value.includes('manual_')) {
-    manualLocationInput.value = ''
-    selectedCustomLocation.value = null
-    locationSearchQuery.value = ''
+  manualLocationInput.value = ''
+  selectedCustomLocation.value = null
+  locationSearchQuery.value = ''
+
+  const current = currentSelectedLocation.value
+  const currentIsHome = current && (
+    addressMatchesHome(current.address) ||
+    addressMatchesHome(current.name) ||
+    (/zuhause/i.test(current.name || '') && addressMatchesHome(current.address))
+  )
+
+  // Already on a real standard (non-home) place — just show Standard tab
+  if (current && current.location_type !== 'pickup' && !currentIsHome) {
+    homeAddressActive.value = false
+    return
+  }
+
+  // Leaving Zuhause / pickup → select first staff standard location
+  const firstStandard = standardLocations.value.find((loc) => {
+    const isHome = addressMatchesHome(loc.address) || addressMatchesHome(loc.name)
+    return loc.location_type !== 'pickup' && !isHome
+  }) || standardLocations.value[0]
+
+  if (firstStandard) {
+    homeAddressActive.value = false
+    selectedLocationId.value = firstStandard.id
+    emit('update:modelValue', firstStandard.id)
+    emit('locationSelected', firstStandard, { userInitiated: true })
+    logger.debug('📍 Switched to standard location:', firstStandard.name || firstStandard.address)
   } else {
-    manualLocationInput.value = ''
-    selectedCustomLocation.value = null
+    homeAddressActive.value = false
+    selectedLocationId.value = ''
+    emit('update:modelValue', null)
+    emit('locationSelected', null, { userInitiated: true })
+    logger.debug('⚠️ No standard locations available to switch to')
   }
 }
 
@@ -529,6 +600,8 @@ const loadStudentPickupLocations = async (studentId: string) => {
     return
   }
 
+  const epochAtStart = selectionEpoch.value
+
   try {
     logger.debug('🔍 Loading student pickup locations for:', studentId)
     
@@ -538,6 +611,16 @@ const loadStudentPickupLocations = async (studentId: string) => {
         selected_client_id: studentId
       }
     }) as any
+
+    if (epochAtStart !== selectionEpoch.value || homeAddressActive.value || isApplyingHomeAddress.value) {
+      logger.debug('🏠 Skipping pickup auto-select — user already chose a location during load')
+      if (response?.data) {
+        const { standards, pickups } = splitLocationsResponse(response.data)
+        if (standards.length > 0) standardLocations.value = standards
+        studentPickupLocations.value = pickups
+      }
+      return
+    }
     
     if (response?.data) {
       const { standards, pickups } = splitLocationsResponse(response.data)
@@ -555,6 +638,11 @@ const loadStudentPickupLocations = async (studentId: string) => {
     let lastLocationWasFound = false
     if (props.currentStaffId && !props.modelValue && !props.disableAutoSelection) {
       const lastLocation = await loadLastUsedLocation(studentId, props.currentStaffId)
+
+      if (epochAtStart !== selectionEpoch.value || homeAddressActive.value || isApplyingHomeAddress.value) {
+        logger.debug('🏠 Skipping last-used auto-select — user chose during await')
+        return
+      }
       
       if (lastLocation?.location_id && !selectedLocationId.value) {
         // Suche die entsprechende Location in den geladenen Locations
@@ -564,8 +652,9 @@ const loadStudentPickupLocations = async (studentId: string) => {
         if (matchingLocation) {
           selectedLocationId.value = matchingLocation.id
           useStandardLocations.value = true
-          homeAddressActive.value = matchingLocation.location_type === 'pickup' &&
-            /zuhause/i.test(matchingLocation.name || '')
+          homeAddressActive.value = addressMatchesHome(matchingLocation.address) ||
+            addressMatchesHome(matchingLocation.name) ||
+            (/zuhause/i.test(matchingLocation.name || '') && !!addressMatchesHome(matchingLocation.address))
           lastLocationWasFound = true
           emit('update:modelValue', matchingLocation.id)
           emit('locationSelected', matchingLocation)
@@ -584,7 +673,14 @@ const loadStudentPickupLocations = async (studentId: string) => {
     }
     
     // 3. Fallback priority: client pickup → first standard
-    if (!selectedLocationId.value && !props.modelValue && !props.disableAutoSelection) {
+    if (
+      !selectedLocationId.value &&
+      !props.modelValue &&
+      !props.disableAutoSelection &&
+      epochAtStart === selectionEpoch.value &&
+      !homeAddressActive.value &&
+      !isApplyingHomeAddress.value
+    ) {
       logger.debug('🔍 Auto-selection decision:', {
         selectedLocationId: selectedLocationId.value,
         modelValue: props.modelValue,
@@ -598,7 +694,9 @@ const loadStudentPickupLocations = async (studentId: string) => {
         const firstPickup = studentPickupLocations.value[0]
         selectedLocationId.value = firstPickup.id
         useStandardLocations.value = true
-        homeAddressActive.value = /zuhause/i.test(firstPickup.name || '')
+        homeAddressActive.value = addressMatchesHome(firstPickup.address) ||
+          addressMatchesHome(firstPickup.name) ||
+          (/zuhause/i.test(firstPickup.name || '') && !!addressMatchesHome(firstPickup.address))
         emit('update:modelValue', firstPickup.id)
         emit('locationSelected', firstPickup)
         logger.debug('📍 Auto-selected first client pickup:', firstPickup.name)
@@ -632,10 +730,14 @@ const applyHomeAddress = async () => {
     return
   }
 
-  try {
-    isApplyingHomeAddress.value = true
-    error.value = null
+  // Lock immediately so in-flight auto-select / EventModal last-location cannot win the race
+  selectionEpoch.value += 1
+  const epoch = selectionEpoch.value
+  homeAddressActive.value = true
+  isApplyingHomeAddress.value = true
+  error.value = null
 
+  try {
     // Always load current profile address from DB (props may be stale after an edit)
     let address = homeAddressFormatted.value
     let postalCode = props.homeZip || null
@@ -660,7 +762,10 @@ const applyHomeAddress = async () => {
       logger.debug('⚠️ Could not refresh home address from profile, using props:', profileErr?.message)
     }
 
+    if (epoch !== selectionEpoch.value) return
+
     if (!address) {
+      homeAddressActive.value = false
       error.value = 'Keine Heimadresse beim Kunden hinterlegt'
       return
     }
@@ -681,6 +786,8 @@ const applyHomeAddress = async () => {
       }
     }) as any
 
+    if (epoch !== selectionEpoch.value) return
+
     const mapped = mapLocationItem(savedLocation, 'pickup')
     studentPickupLocations.value = [
       mapped,
@@ -693,13 +800,18 @@ const applyHomeAddress = async () => {
     manualLocationInput.value = ''
     selectedLocationId.value = mapped.id
     emit('update:modelValue', mapped.id)
-    emit('locationSelected', mapped)
+    emit('locationSelected', mapped, { userInitiated: true })
     logger.debug('🏠 Applied current home address:', mapped.address)
   } catch (err: any) {
     console.error('❌ Error applying home address:', err)
-    error.value = `Zuhause konnte nicht geladen werden: ${err.message || err?.data?.message || 'Unbekannter Fehler'}`
+    if (epoch === selectionEpoch.value) {
+      homeAddressActive.value = false
+      error.value = `Zuhause konnte nicht geladen werden: ${err.message || err?.data?.message || 'Unbekannter Fehler'}`
+    }
   } finally {
-    isApplyingHomeAddress.value = false
+    if (epoch === selectionEpoch.value) {
+      isApplyingHomeAddress.value = false
+    }
   }
 }
 
@@ -998,7 +1110,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       selectedCustomLocation.value = existingLocation
       
       emit('update:modelValue', existingLocation.id)
-      emit('locationSelected', existingLocation)
+      emit('locationSelected', existingLocation, { userInitiated: true })
       
       logger.debug('🔄 Using existing pickup location:', existingLocation.name)
       isLoadingGooglePlaces.value = false
@@ -1014,7 +1126,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
       selectedCustomLocation.value = savedLocation
       
       emit('update:modelValue', savedLocation.id)
-      emit('locationSelected', savedLocation)
+      emit('locationSelected', savedLocation, { userInitiated: true })
       
       // ✅ SUCCESS MESSAGE:
       logger.debug('✅ Neue Adresse gespeichert:', savedLocation.name)
@@ -1035,7 +1147,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
         selectedCustomLocation.value = savedLocation
         
         emit('update:modelValue', savedLocation.id)
-        emit('locationSelected', savedLocation)
+        emit('locationSelected', savedLocation, { userInitiated: true })
         
         logger.debug('✅ Staff pickup location saved:', savedLocation.name)
         isLoadingGooglePlaces.value = false
@@ -1062,7 +1174,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
         selectedCustomLocation.value = tempLocation
         
         emit('update:modelValue', null)
-        emit('locationSelected', tempLocation)
+        emit('locationSelected', tempLocation, { userInitiated: true })
         
         logger.debug('⚠️ Fallback to temporary location:', tempLocation)
       }
@@ -1088,7 +1200,7 @@ const selectLocationSuggestion = async (suggestion: GooglePlaceSuggestion) => {
         selectedCustomLocation.value = tempLocation
         
         emit('update:modelValue', null)
-        emit('locationSelected', tempLocation)
+        emit('locationSelected', tempLocation, { userInitiated: true })
         
         logger.debug('⚠️ Using temporary location (no student selected):', tempLocation)
         isLoadingGooglePlaces.value = false
@@ -1124,14 +1236,21 @@ const onLocationChange = () => {
     logger.debug('🚫 Cannot change location for past appointment')
     return
   }
+
+  selectionEpoch.value += 1
   
-  const location = [...standardLocations.value, ...studentPickupLocations.value]
+  const location = [...standardLocations.value, ...studentPickupLocations.value, ...directLookupLocations.value]
     .find(l => l.id === selectedLocationId.value)
     
   if (location) {
+    // Highlight Zuhause automatically when the chosen place matches home
+    homeAddressActive.value = addressMatchesHome(location.address) || addressMatchesHome(location.name) ||
+      (/zuhause/i.test(location.name || '') && addressMatchesHome(location.address))
     emit('update:modelValue', location.id)
-    emit('locationSelected', location)
+    emit('locationSelected', location, { userInitiated: true })
     logger.debug('📍 Location selected:', location.name)
+  } else {
+    homeAddressActive.value = false
   }
 }
 
@@ -1178,6 +1297,7 @@ watch(() => props.currentStaffId, async (newStaffId, oldStaffId) => {
 watch(() => props.selectedStudentId, async (newStudentId, oldStudentId) => {
   if (newStudentId && newStudentId !== oldStudentId) {
     isLoadingLocations.value = true
+    selectionEpoch.value += 1
     
     // Reset current selection when student changes
     selectedLocationId.value = ''
@@ -1188,6 +1308,7 @@ watch(() => props.selectedStudentId, async (newStudentId, oldStudentId) => {
     await loadStudentPickupLocations(newStudentId)
     isLoadingLocations.value = false
   } else if (!newStudentId) {
+    selectionEpoch.value += 1
     studentPickupLocations.value = []
     selectedLocationId.value = ''
     selectedCustomLocation.value = null
@@ -1200,6 +1321,20 @@ watch(() => props.selectedStudentId, async (newStudentId, oldStudentId) => {
 
 watch(() => props.modelValue, (newValue) => {
   logger.debug('🔍 LocationSelector: modelValue changed:', newValue)
+
+  // Ignore stale parent writes while Zuhause is being applied or is the active choice
+  if (
+    (isApplyingHomeAddress.value || homeAddressActive.value) &&
+    selectedLocationId.value &&
+    newValue !== selectedLocationId.value
+  ) {
+    logger.debug('🏠 Ignoring modelValue overwrite during Zuhause selection:', {
+      newValue,
+      selectedLocationId: selectedLocationId.value
+    })
+    return
+  }
+
   if (newValue && newValue !== selectedLocationId.value) {
     selectedLocationId.value = newValue
     
@@ -1212,6 +1347,7 @@ watch(() => props.modelValue, (newValue) => {
     
     if (isCustomLocation) {
       useStandardLocations.value = false
+      homeAddressActive.value = false
       logger.debug('🔍 LocationSelector: Custom location detected, showing custom tab')
     } else {
       useStandardLocations.value = true
@@ -1295,12 +1431,20 @@ onMounted(async () => {
     
     // ✅ AUTO-SELECT DEFAULT LOCATION:
     // Prefer client pickups when available, otherwise first standard
-    if (!selectedLocationId.value && !props.modelValue && !props.disableAutoSelection) {
+    if (
+      !selectedLocationId.value &&
+      !props.modelValue &&
+      !props.disableAutoSelection &&
+      !homeAddressActive.value &&
+      !isApplyingHomeAddress.value
+    ) {
       if (props.selectedStudentId && studentPickupLocations.value.length > 0) {
         const firstPickup = studentPickupLocations.value[0]
         selectedLocationId.value = firstPickup.id
         useStandardLocations.value = true
-        homeAddressActive.value = /zuhause/i.test(firstPickup.name || '')
+        homeAddressActive.value = addressMatchesHome(firstPickup.address) ||
+          addressMatchesHome(firstPickup.name) ||
+          (/zuhause/i.test(firstPickup.name || '') && !!addressMatchesHome(firstPickup.address))
         emit('update:modelValue', firstPickup.id)
         emit('locationSelected', firstPickup)
         logger.debug('📍 Auto-selected first client pickup on mount:', firstPickup.name)

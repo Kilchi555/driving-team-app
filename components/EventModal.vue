@@ -2122,6 +2122,9 @@ const isEditingStaff = ref(false)
 
 // ✅ Manual Location Input tracking
 const manualLocationInput = ref<string>('')
+/** True after staff explicitly picks a location (dropdown / Zuhause / Neue).
+ * Prevents late "last used location" loads in handleStudentSelected from overwriting. */
+const locationManuallyChosen = ref(false)
 
 // ✅ NEW: Extended form validation that includes manual input
 const isFormValidWithManualInput = computed(() => {
@@ -3510,6 +3513,9 @@ const handleStudentSelected = async (student: Student | null) => {
     logger.debug('🚫 Cannot change student for past appointment')
     return
   }
+
+  // New student → allow auto last-location again until staff picks explicitly
+  locationManuallyChosen.value = false
   
   // ✅ WICHTIG: Bei Freeslot-Modus Schülerauswahl erlauben, aber nicht automatisch
   // Der User kann manuell einen Schüler wählen
@@ -3642,22 +3648,29 @@ const handleStudentSelected = async (student: Student | null) => {
             
             // ✅ NEU: Auch den letzten Standort des Schülers laden (NUR IM CREATE MODE!)
             // 🚫 NICHT im Edit/View Mode - dort soll die bestehende Location behalten werden
-            if (props.mode === 'create') {
+            // 🚫 NICHT wenn Staff schon manuell gewählt hat (z.B. Zuhause) — Race mit async load
+            if (props.mode === 'create' && !locationManuallyChosen.value) {
               try {
                 logger.debug('📍 Loading last location for student:', student.first_name)
                 const lastLocation = await modalForm.loadLastAppointmentLocation?.(student.id)
                 
-                if (lastLocation.location_id && lastLocation.location_id !== formData.value.location_id) {
+                if (
+                  !locationManuallyChosen.value &&
+                  lastLocation.location_id &&
+                  lastLocation.location_id !== formData.value.location_id
+                ) {
                   logger.debug('🔄 Updating location to student\'s last used location:', lastLocation.location_id)
                   formData.value.location_id = lastLocation.location_id
                   
                   // ✅ Auch selectedLocation via secure API aktualisieren
                   const locationData = await eventModalApi.getLocationById(lastLocation.location_id)
                   
-                  if (locationData) {
+                  if (locationData && !locationManuallyChosen.value) {
                     selectedLocation.value = locationData
                     logger.debug('✅ Location updated via API:', locationData.name)
                   }
+                } else if (locationManuallyChosen.value) {
+                  logger.debug('🏠 Skipping last-location overwrite — staff already chose a location')
                 }
               } catch (locationError) {
                 logger.debug('⚠️ Could not load student\'s last location:', locationError)
@@ -3747,56 +3760,65 @@ const handleStudentSelected = async (student: Student | null) => {
       }
       
       // 2. Letzten Standort für diesen Schüler laden
-      const lastLocation = await modalForm.loadLastAppointmentLocation(student.id)
-      if (lastLocation.location_id && lastLocation.location_id !== formData.value.location_id) {
-        logger.debug('🔄 Updating location to student\'s last used via API:', lastLocation.location_id)
-        formData.value.location_id = lastLocation.location_id
-        
-        // ✅ Auch selectedLocation via secure API aktualisieren
-        const locationData = await eventModalApi.getLocationById(lastLocation.location_id)
-        
-        if (locationData) {
-          // ✅ NEU: Füge die custom_location_address hinzu, falls verfügbar
-          if (lastLocation.custom_location_address) {
-            locationData.custom_location_address = lastLocation.custom_location_address
-            logger.debug('✅ Added custom_location_address to location data:', lastLocation.custom_location_address)
-          }
+      // Skip if staff already chose (e.g. Zuhause) while category/duration was still loading
+      if (!locationManuallyChosen.value) {
+        const lastLocation = await modalForm.loadLastAppointmentLocation(student.id)
+        if (
+          !locationManuallyChosen.value &&
+          lastLocation.location_id &&
+          lastLocation.location_id !== formData.value.location_id
+        ) {
+          logger.debug('🔄 Updating location to student\'s last used via API:', lastLocation.location_id)
+          formData.value.location_id = lastLocation.location_id
           
-          selectedLocation.value = locationData
-          logger.debug('✅ Location updated via API:', locationData.name)
+          // ✅ Auch selectedLocation via secure API aktualisieren
+          const locationData = await eventModalApi.getLocationById(lastLocation.location_id)
           
-          // ✅ Titel neu generieren nach Standort-Änderung (nur wenn nicht manuell bearbeitet)
-          nextTick(() => {
-            if (selectedStudent.value && locationData && !titleManuallyEdited.value) {
-              logger.debug('🔄 Regenerating title after location change (title not manually edited)...')
-              // Der TitleInput wird automatisch aktualisiert, da er an selectedLocation gebunden ist
-              
-              // ✅ NEU: Titel explizit neu generieren mit vollständigen Location-Daten
-              if (formData.value.title && formData.value.title.includes(' - ')) {
-                const studentName = formData.value.title.split(' - ')[0]
-                // ✅ PRIORITÄT: Verwende custom_location_address falls verfügbar
-                let locationText = locationData.name
-                if (locationData.custom_location_address?.address) {
-                  locationText = locationData.custom_location_address.address
-                  logger.debug('📍 Using custom_location_address for title:', locationText)
-                } else if (locationData.address) {
-                  locationText = locationData.address
-                  logger.debug('📍 Using location address for title:', locationText)
-                }
-                
-                // ✅ Ignoriere "Treffpunkt" Namen
-                if (locationText === 'Treffpunkt' && locationData.address) {
-                  locationText = locationData.address
-                }
-                
-                const newTitle = `${studentName} - ${locationText}`
-                formData.value.title = newTitle
-                logger.debug('✅ Title regenerated with full location:', newTitle)
-              }
-            } else if (titleManuallyEdited.value) {
-              logger.debug('⚠️ Title was manually edited - skipping auto-update')
+          if (locationData && !locationManuallyChosen.value) {
+            // ✅ NEU: Füge die custom_location_address hinzu, falls verfügbar
+            if (lastLocation.custom_location_address) {
+              locationData.custom_location_address = lastLocation.custom_location_address
+              logger.debug('✅ Added custom_location_address to location data:', lastLocation.custom_location_address)
             }
-          })
+            
+            selectedLocation.value = locationData
+            logger.debug('✅ Location updated via API:', locationData.name)
+            
+            // ✅ Titel neu generieren nach Standort-Änderung (nur wenn nicht manuell bearbeitet)
+            nextTick(() => {
+              if (selectedStudent.value && locationData && !titleManuallyEdited.value && !locationManuallyChosen.value) {
+                logger.debug('🔄 Regenerating title after location change (title not manually edited)...')
+                // Der TitleInput wird automatisch aktualisiert, da er an selectedLocation gebunden ist
+                
+                // ✅ NEU: Titel explizit neu generieren mit vollständigen Location-Daten
+                if (formData.value.title && formData.value.title.includes(' - ')) {
+                  const studentName = formData.value.title.split(' - ')[0]
+                  // ✅ PRIORITÄT: Verwende custom_location_address falls verfügbar
+                  let locationText = locationData.name
+                  if (locationData.custom_location_address?.address) {
+                    locationText = locationData.custom_location_address.address
+                    logger.debug('📍 Using custom_location_address for title:', locationText)
+                  } else if (locationData.address) {
+                    locationText = locationData.address
+                    logger.debug('📍 Using location address for title:', locationText)
+                  }
+                  
+                  // ✅ Ignoriere "Treffpunkt" Namen
+                  if (locationText === 'Treffpunkt' && locationData.address) {
+                    locationText = locationData.address
+                  }
+                  
+                  const newTitle = `${studentName} - ${locationText}`
+                  formData.value.title = newTitle
+                  logger.debug('✅ Title regenerated with full location:', newTitle)
+                }
+              } else if (titleManuallyEdited.value) {
+                logger.debug('⚠️ Title was manually edited - skipping auto-update')
+              }
+            })
+          }
+        } else if (locationManuallyChosen.value) {
+          logger.debug('🏠 Skipping freeslot last-location overwrite — staff already chose a location')
         }
       }
       
@@ -3892,6 +3914,7 @@ const handleStudentCleared = () => {
   formData.value.user_id = ''
   formData.value.title = ''
   formData.value.type = ''
+  locationManuallyChosen.value = false
   triggerStudentLoad()
 }
 
@@ -4348,13 +4371,19 @@ const updateLocationId = (locationId: string | null) => {
   formData.value.location_id = locationId || null
 }
 
-const handleLocationSelected = (location: any) => {
-  logger.debug('📍 Location selected:', location)
+const handleLocationSelected = (location: any, meta?: { userInitiated?: boolean }) => {
+  logger.debug('📍 Location selected:', location, meta)
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
   if (isPastAppointment.value) {
     logger.debug('🚫 Cannot change location for past appointment')
     return
+  }
+
+  // Only explicit staff actions (Zuhause / dropdown / Neue) lock out late last-location overwrites.
+  // LocationSelector auto-select must NOT set this flag.
+  if (location?.id && meta?.userInitiated) {
+    locationManuallyChosen.value = true
   }
   
   selectedLocation.value = location
@@ -4367,6 +4396,9 @@ const handleLocationSelected = (location: any) => {
 // ✅ NEW: Handle manual location input
 const handleManualInputChanged = (input: string) => {
   logger.debug('✍️ Manual input changed:', input)
+  if (input?.trim()) {
+    locationManuallyChosen.value = true
+  }
   manualLocationInput.value = input
 }
 
