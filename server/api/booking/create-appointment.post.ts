@@ -38,6 +38,7 @@ import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
 import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
+import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 import { resolveRoomSettings, pickAvailableRoomId, type RoomServiceType } from '~/server/utils/room-availability'
@@ -599,6 +600,21 @@ export default defineEventHandler(async (event: H3Event) => {
 
     auditDetails.appointment_id = newAppointment.id
     logger.debug('✅ Appointment created successfully:', newAppointment.id)
+
+    // Persist pickup as reusable client location (staff LocationSelector / Treffpunkte)
+    if (body.customer_pickup_address?.trim()) {
+      try {
+        await ensureClientPickupLocation(supabase, {
+          tenantId,
+          clientUserId: userData.id,
+          address: body.customer_pickup_address,
+          name: 'Pickup-Adresse',
+          postalCode: body.customer_pickup_plz || null
+        })
+      } catch (pickupErr: any) {
+        logger.warn('⚠️ Could not save booking pickup location (non-fatal):', pickupErr?.message)
+      }
+    }
 
     // Create vehicle_bookings placeholder when the chosen option requires a school vehicle.
     // vehicle_id is null (no specific vehicle assigned yet — staff does that later).

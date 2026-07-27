@@ -330,11 +330,14 @@
             <LocationSelector
               :model-value="formData.location_id"
               :selected-student-id="isLessonType(formData.eventType) ? selectedStudent?.id : undefined"
+              :selected-student-name="isLessonType(formData.eventType) && selectedStudent ? `${selectedStudent.first_name} ${selectedStudent.last_name}`.trim() : ''"
+              :home-street="isLessonType(formData.eventType) ? selectedStudent?.street : undefined"
+              :home-street-nr="isLessonType(formData.eventType) ? selectedStudent?.street_nr : undefined"
+              :home-zip="isLessonType(formData.eventType) ? selectedStudent?.zip : undefined"
+              :home-city="isLessonType(formData.eventType) ? selectedStudent?.city : undefined"
               :current-staff-id="formData.staff_id"
               :custom-location-address="formData.custom_location_address"
-              :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
               :disable-auto-selection="props.mode === 'edit' || props.mode === 'view'"
-              :show-buttons="!(props.mode === 'edit' && isPastAppointment)"
               :is-past-appointment="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
               @update:model-value="updateLocationId"
               @location-selected="handleLocationSelected"
@@ -983,6 +986,10 @@ interface Student {
   phone: string
   category: string
   assigned_staff_id: string
+  street?: string | null
+  street_nr?: string | null
+  zip?: string | null
+  city?: string | null
 }
 
 interface Props {

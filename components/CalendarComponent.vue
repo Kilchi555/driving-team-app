@@ -492,11 +492,20 @@ const loadDrivingCategoryColors = async () => {
 const resolveDrivingCategoryColor = (category: string): string | undefined => {
   const m = drivingCategoryColorsMap.value
   if (!category || !m || Object.keys(m).length === 0) return undefined
-  if (m[category]) return m[category]
-  const u = category.toUpperCase()
-  if (m[u]) return m[u]
-  const l = category.toLowerCase()
-  if (m[l]) return m[l]
+  // Appointments / profiles may store "B Automatik" or "B, A" — try exact, then first token / parent code
+  const candidates = [
+    category,
+    category.split(',')[0]?.trim(),
+    category.split(/\s+/)[0]?.trim()
+  ].filter(Boolean) as string[]
+
+  for (const candidate of candidates) {
+    if (m[candidate]) return m[candidate]
+    const u = candidate.toUpperCase()
+    if (m[u]) return m[u]
+    const l = candidate.toLowerCase()
+    if (m[l]) return m[l]
+  }
   if (category === 'Boot' && m.Motorboot) return m.Motorboot
   if (category === 'Motorboot' && m.Boot) return m.Boot
   return undefined
@@ -1077,8 +1086,8 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
         }
       }
       
-      // ✅ Kategorie vom Appointment type Feld nehmen
-      const category = apt.type || 'B'
+      // ✅ Kategorie vom Appointment type Feld nehmen (erste Kategorie bei Komma-Listen)
+      const category = (apt.type || 'B').toString().split(',')[0].trim() || 'B'
       
       // ✅ FIXED: event_type_code has PRIORITY over type
       // If event_type_code is NOT a standard lesson type (lesson/exam/theory), use it
@@ -1103,6 +1112,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
       const isUnpaid = !apt.payment_status || (apt.payment_status !== 'completed' && apt.payment_status !== 'invoiced')
       const borderColor = (hasRealCustomer && isUnpaid) ? '#ef4444' : eventColor // Rot für unbezahlt
       const unpaidClass = (hasRealCustomer && isUnpaid) ? 'unpaid-appointment' : ''
+      const categoryClass = `category-${category.replace(/\s+/g, '-')}`
       
       // Convert UTC appointment times to local time for display
       // Appointments are stored in UTC, calendar expects local time
@@ -1149,13 +1159,14 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
         duration_minutes: apt.duration_minutes,
         status: apt.status,
         // ✅ Merge classNames from API (e.g., reserved-slot-event) with local ones
-        classNames: [...(apt.classNames || []), `category-${category}`, unpaidClass].filter(Boolean),
+        classNames: [...(apt.classNames || []), categoryClass, unpaidClass].filter(Boolean),
         extendedProps: {
           // ✅ Produktdaten für Wiederherstellung
           has_products: false, // Wird später gesetzt
           staff_note: apt.description || '',
           client_note: '',
           category: userObj?.category || apt.type || 'B',
+          appointmentCategory: apt.type || 'B',
           instructor: `${(apt as any).staff?.first_name || ''} ${(apt as any).staff?.last_name || ''}`.trim(),
           student: studentName,
           phone: userObj?.phone || '', // ✅ NEU: Phone für SMS-Benachrichtigungen
@@ -1930,10 +1941,11 @@ select: (_arg) => {
   ) {
     return []
   }
-  const category = props?.category || 'default'
-  // ✅ Sicherheitsprüfung: category muss ein String sein
-  const categoryString = typeof category === 'string' ? category : 'default'
-  return [`category-${categoryString.toLowerCase()}`]
+  // Prefer appointment vehicle category (apt.type), not the student's full category list
+  const raw = props?.appointmentCategory || props?.type || props?.category || 'default'
+  const categoryString = typeof raw === 'string' ? raw.split(',')[0].trim() : 'default'
+  const safe = categoryString.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9_-]/g, '') || 'default'
+  return [`category-${safe}`, `category-${safe.toLowerCase()}`]
 },
 })
 
@@ -3182,7 +3194,8 @@ defineExpose({
   font-weight: 500 !important;
   transition: all 0.2s ease !important;
   display: block !important;
-  background-color: var(--color-primary, #111827) !important; /* Tenant-Primärfarbe als Fallback */
+  /* backgroundColor kommt von FullCalendar inline (categories.color / getEventColor) —
+     hier kein !important, sonst wirken Termine grau (Tenant-Primary / inherit). */
   overflow: hidden;
 }
 
@@ -3197,42 +3210,8 @@ defineExpose({
   font-size: 10px !important;
 }
 
-/* === EVENT KATEGORIEN === */
-.fc-event.category-a {
-  background-color: #019ee5 !important;
-}
-
-.fc-event.category-b {
-  background-color: #62b22f !important;
-}
-
-.fc-event.category-be {
-  background-color: #f59e0b !important;
-}
-
-.fc-event.category-c {
-  background-color: #ef4444 !important;
-}
-
-.fc-event.category-ce {
-  background-color: #8b5cf6 !important;
-}
-
-.fc-event.category-d {
-  background-color: #1d1e19 !important;
-}
-
-.fc-event.category-bpt {
-  background-color: #06b6d4 !important;
-}
-
-.fc-event.category-boat {
-  background-color: #10b981 !important;
-}
-
-.fc-event.category-default:not(.fc-bg-event):not(.external-busy-block) {
-  background-color: #666666 !important;
-}
+/* Hardcoded category colors removed as !important overrides — colors load from
+   `categories.color` via getEventColor() → FullCalendar backgroundColor. */
 
 /* === CUSTOM EVENT CONTENT === */
 .custom-event {
@@ -3299,58 +3278,10 @@ defineExpose({
   border-color: #dc2626 !important;
 } */
 
-/* Kategorie-Farben sollen greifen — aber NICHT bei Background-Events
-   (Arbeitszeit-Grau / External-Busy), sonst wird backgroundColor verworfen
-   und der Kalender wirkt überall grau. */
-.fc-event:not(.fc-bg-event) {
-  background-color: inherit !important;
-}
-
-.fc-timegrid-event:not(.fc-bg-event) {
-  background-color: inherit !important;
-}
-
-.fc-event:not(.fc-bg-event) .fc-event-main {
-  background-color: inherit !important;
-}
-
-/* ✅ Spezifische Background-Überschreibungen für Kategorien */
-.fc-event.category-B {
-  background-color: #7ab25f !important;
-}
-
-.fc-event.category-A,
-.fc-event.category-A1,
-.fc-event.category-A35kW {
-  background-color: #f59e0b !important;
-}
-
-.fc-event.category-BE {
-  background-color: #3b82f6 !important;
-}
-
-.fc-event.category-C,
-.fc-event.category-C1 {
-  background-color: #8b5cf6 !important;
-}
-
-.fc-event.category-CE {
-  background-color: #ef4444 !important;
-}
-
-.fc-event.category-D,
-.fc-event.category-D1 {
-  background-color: #06b6d4 !important;
-}
-
-.fc-event.category-Motorboot,
-.fc-event.category-Boot {
-  background-color: #1d4ed8 !important;
-}
-
-.fc-event.category-BPT {
-  background-color: #10b981 !important;
-}
+/* WICHTIG: Kein background-color: inherit !important hier —
+   das hat alle Termin-Farben aus der DB (categories.color) zerstört
+   und Termine grau (Primary/Parent) dargestellt. Background-Events
+   (Nicht-Arbeitszeit) haben eigene Selektoren oben. */
 
 .event-location {
   font-size: 7px;
@@ -3484,67 +3415,38 @@ defineExpose({
   opacity: 0.7 !important;
 }
 
-/* ✅ Kategorie-basierte Event-Farben */
-.category-B {
-  background-color: #7ab25f !important;
-  border-color: #5a8a3f !important;
-  border-width: 1px !important;
-  border-style: solid !important;
-}
-
+/* ✅ Kategorie-Klassen nur noch für Borders/Metadaten — Hintergrund kommt aus DB via JS.
+   Keine background-color !important mehr, sonst überschreiben sie categories.color. */
+.category-B,
 .category-A,
 .category-A1,
-.category-A35kW {
-  background-color: #f59e0b !important;
-  border-color: #d97706 !important;
-  border-width: 1px !important;
-  border-style: solid !important;
-}
-
-.category-BE {
-  background-color: #3b82f6 !important;
-  border-color: #2563eb !important;
-  border-width: 1px !important;
-  border-style: solid !important;
-}
-
+.category-A35kW,
+.category-BE,
 .category-C,
-.category-C1 {
-  background-color: #8b5cf6 !important;
-  border-color: #7c3aed !important;
-  border-width: 1px !important;
-  border-style: solid !important;
-}
-
-.category-CE {
-  background-color: #ef4444 !important;
-  border-color: #dc2626 !important;
-  border-width: 1px !important;
-  border-style: solid !important;
-}
-
+.category-C1,
+.category-CE,
 .category-D,
-.category-D1 {
-  background-color: #06b6d4 !important;
-  border-color: #0891b2 !important;
-  border-width: 1px !important;
-  border-style: solid !important;
-}
-
+.category-D1,
 .category-Motorboot,
-.category-Boot {
-  background-color: #1d4ed8 !important;
-  border-color: #1e40af !important;
+.category-Boot,
+.category-BPT {
   border-width: 1px !important;
   border-style: solid !important;
 }
 
-.category-BPT {
-  background-color: #10b981 !important;
-  border-color: #059669 !important;
-  border-width: 1px !important;
-  border-style: solid !important;
-}
+.category-B { border-color: #5a8a3f !important; }
+.category-A,
+.category-A1,
+.category-A35kW { border-color: #d97706 !important; }
+.category-BE { border-color: #2563eb !important; }
+.category-C,
+.category-C1 { border-color: #7c3aed !important; }
+.category-CE { border-color: #dc2626 !important; }
+.category-D,
+.category-D1 { border-color: #0891b2 !important; }
+.category-Motorboot,
+.category-Boot { border-color: #1e40af !important; }
+.category-BPT { border-color: #059669 !important; }
 
 /* ENTFERNT: Zu aggressive Regel die alles weiß macht */
 /* .fc-timegrid * {

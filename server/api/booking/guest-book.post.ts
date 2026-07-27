@@ -33,6 +33,7 @@ import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-
 import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 import { sanitizeString } from '~/server/utils/validators'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
+import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
 
 interface GuestBookRequest {
   // Booking identifiers
@@ -444,6 +445,21 @@ export default defineEventHandler(async (event) => {
   }
 
   logger.debug('✅ Guest appointment created:', newAppointment.id)
+
+  // Persist pickup as reusable client location (staff LocationSelector / Treffpunkte)
+  if (body.customer_pickup_address?.trim()) {
+    try {
+      await ensureClientPickupLocation(supabase, {
+        tenantId,
+        clientUserId: newUserId,
+        address: body.customer_pickup_address,
+        name: 'Pickup-Adresse',
+        postalCode: body.customer_pickup_plz || null
+      })
+    } catch (pickupErr: any) {
+      logger.warn('⚠️ Could not save guest pickup location (non-fatal):', pickupErr?.message)
+    }
+  }
 
   // ── Create payment record (pending cash/invoice) ──────────────────────────
   await supabase
