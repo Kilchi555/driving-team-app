@@ -2,6 +2,7 @@ import { defineEventHandler, createError, getQuery } from 'h3'
 import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
 import logger from '~/utils/logger'
+import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
 
 /**
  * ✅ GET /api/staff/get-locations
@@ -152,16 +153,46 @@ export default defineEventHandler(async (event) => {
             statusMessage: 'Failed to fetch client pickup locations'
           })
         }
+
+        // Lazy-promote guest/online pickup addresses that were only stored on appointments
+        // (common for no-login clients). Creates a reusable locations row once.
+        let pickups = clientPickups || []
+        try {
+          const { data: lastPickupAppt } = await supabaseAdmin
+            .from('appointments')
+            .select('customer_pickup_address, customer_pickup_plz')
+            .eq('user_id', selectedClientId)
+            .eq('tenant_id', tenantId)
+            .not('customer_pickup_address', 'is', null)
+            .order('start_time', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (lastPickupAppt?.customer_pickup_address?.trim()) {
+            const promoted = await ensureClientPickupLocation(supabaseAdmin, {
+              tenantId,
+              clientUserId: selectedClientId,
+              address: lastPickupAppt.customer_pickup_address,
+              name: 'Pickup-Adresse',
+              postalCode: lastPickupAppt.customer_pickup_plz || null
+            })
+            if (promoted && !pickups.some((p) => p.id === promoted.id)) {
+              pickups = [...pickups, promoted]
+            }
+          }
+        } catch (promoteErr: any) {
+          logger.warn('⚠️ Could not promote appointment pickup address:', promoteErr?.message)
+        }
         
         // Combine and sort
         const combined = [
           ...(staffLocations || []),
-          ...(clientPickups || [])
+          ...pickups
         ].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
         
         logger.debug('✅ Staff locations fetched (with client filter):', {
           staffLocations: staffLocations?.length || 0,
-          clientPickups: clientPickups?.length || 0,
+          clientPickups: pickups.length,
           total: combined.length
         })
         
@@ -253,11 +284,80 @@ export default defineEventHandler(async (event) => {
         data: locations || []
       }
     } else if (['admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)) {
-      // Admins see all active locations in their tenant
-      logger.debug('🔍 Admin fetching all tenant locations:', {
+      // Admins see all active locations in their tenant.
+      // With selected_client_id: all standards + that client's pickups (same UX as staff).
+      const selectedClientId = query.selected_client_id as string | undefined
+
+      logger.debug('🔍 Admin fetching locations:', {
         adminId: userProfile.id,
-        role: userProfile.role
+        role: userProfile.role,
+        selectedClientId: selectedClientId || null
       })
+
+      if (selectedClientId) {
+        const [{ data: standards, error: standardsError }, { data: clientPickups, error: pickupsError }] =
+          await Promise.all([
+            supabaseAdmin
+              .from('locations')
+              .select('id, name, address, formatted_address, postal_code, canton, city, tenant_id, location_type, user_id, is_active, public_bookable, time_windows')
+              .eq('tenant_id', tenantId)
+              .eq('is_active', true)
+              .eq('location_type', 'standard'),
+            supabaseAdmin
+              .from('locations')
+              .select('id, name, address, formatted_address, postal_code, city, tenant_id, location_type, user_id, is_active, public_bookable')
+              .eq('tenant_id', tenantId)
+              .eq('is_active', true)
+              .eq('user_id', selectedClientId)
+              .eq('location_type', 'pickup')
+          ])
+
+        if (standardsError || pickupsError) {
+          logger.error('❌ Error fetching admin locations (with client filter):', standardsError || pickupsError)
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Failed to fetch locations'
+          })
+        }
+
+        let pickups = clientPickups || []
+        try {
+          const { data: lastPickupAppt } = await supabaseAdmin
+            .from('appointments')
+            .select('customer_pickup_address, customer_pickup_plz')
+            .eq('user_id', selectedClientId)
+            .eq('tenant_id', tenantId)
+            .not('customer_pickup_address', 'is', null)
+            .order('start_time', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (lastPickupAppt?.customer_pickup_address?.trim()) {
+            const promoted = await ensureClientPickupLocation(supabaseAdmin, {
+              tenantId,
+              clientUserId: selectedClientId,
+              address: lastPickupAppt.customer_pickup_address,
+              name: 'Pickup-Adresse',
+              postalCode: lastPickupAppt.customer_pickup_plz || null
+            })
+            if (promoted && !pickups.some((p) => p.id === promoted.id)) {
+              pickups = [...pickups, promoted]
+            }
+          }
+        } catch (promoteErr: any) {
+          logger.warn('⚠️ Could not promote appointment pickup address (admin):', promoteErr?.message)
+        }
+
+        const combined = [
+          ...(standards || []),
+          ...pickups
+        ].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+
+        return {
+          success: true,
+          data: combined
+        }
+      }
       
       const { data: locations, error } = await supabaseAdmin
         .from('locations')

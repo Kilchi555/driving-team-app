@@ -56,7 +56,11 @@ interface Student {
   category: string
   assigned_staff_id: string
   preferred_location_id?: string
-  preferred_duration?: number 
+  preferred_duration?: number
+  street?: string | null
+  street_nr?: string | null
+  zip?: string | null
+  city?: string | null
 }
 
 const useEventModalForm = (currentUser?: any, refs?: {

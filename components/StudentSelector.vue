@@ -210,6 +210,10 @@ interface Student {
   preferred_duration?: number
   is_active?: boolean
   onboarding_status?: 'pending' | 'completed' | null
+  street?: string | null
+  street_nr?: string | null
+  zip?: string | null
+  city?: string | null
 }
 
 // Props
@@ -337,7 +341,11 @@ const loadStudentsFromDB = async () => {
     assigned_staff_id: user.assigned_staff_id || '',
     preferred_location_id: user.preferred_location_id || undefined,
     is_active: user.is_active,
-    onboarding_status: user.onboarding_status
+    onboarding_status: user.onboarding_status,
+    street: user.street || null,
+    street_nr: user.street_nr || null,
+    zip: user.zip || null,
+    city: user.city || null
   }))
 
   availableStudents.value = typedStudents

@@ -4,27 +4,44 @@
       📍 Standort
     </label>
     
-    <!-- Toggle zwischen Standard und Custom (nur für zukünftige Termine) -->
-    <div v-if="!props.isPastAppointment" class="flex gap-2 mb-3">
+    <!-- Toggle zwischen Standard, Zuhause und Custom (nur für zukünftige Termine) -->
+    <div v-if="!props.isPastAppointment" class="flex gap-1.5 mb-3">
       <button
-        @click="useStandardLocations = true; clearManualLocation()"
-        :class="['px-3 py-1.5 text-sm rounded-xl border font-medium transition-colors', useStandardLocations ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
-        :style="useStandardLocations ? primaryBg : {}"
+        type="button"
+        @click="switchToStandardLocations"
+        :class="['flex-1 min-w-0 px-2 py-1.5 text-sm rounded-xl border font-medium transition-colors text-center', useStandardLocations && !homeAddressActive ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
+        :style="useStandardLocations && !homeAddressActive ? primaryBg : {}"
       >
-        Standard-Orte
+        Standard
       </button>
       <button
+        type="button"
+        @click="applyHomeAddress"
+        :disabled="!canUseHomeAddress || isApplyingHomeAddress"
+        :title="homeAddressButtonTitle"
+        :class="[
+          'flex-1 min-w-0 px-2 py-1.5 text-sm rounded-xl border font-medium transition-colors text-center',
+          homeAddressActive ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50',
+          (!canUseHomeAddress || isApplyingHomeAddress) ? 'opacity-50 cursor-not-allowed' : ''
+        ]"
+        :style="homeAddressActive ? primaryBg : {}"
+      >
+        {{ isApplyingHomeAddress ? '…' : 'Zuhause' }}
+      </button>
+      <button
+        type="button"
         @click="() => {
           useStandardLocations = false
+          homeAddressActive = false
           selectedLocationId = ''
           clearManualLocation()
           emit('update:modelValue', null)
           emit('locationSelected', null)
         }"
-        :class="['px-3 py-1.5 text-sm rounded-xl border font-medium transition-colors', !useStandardLocations ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
-        :style="!useStandardLocations ? primaryBg : {}"
+        :class="['flex-1 min-w-0 px-2 py-1.5 text-sm rounded-xl border font-medium transition-colors text-center', !useStandardLocations && !homeAddressActive ? 'border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']"
+        :style="!useStandardLocations && !homeAddressActive ? primaryBg : {}"
       >
-        Adresse eingeben
+        Neue
       </button>
     </div>
 
@@ -232,6 +249,22 @@ const props = defineProps({
   customLocationAddress: {  // ✅ NEW: Custom address for manual locations
     type: String,
     default: null
+  },
+  homeStreet: {
+    type: String,
+    default: null
+  },
+  homeStreetNr: {
+    type: String,
+    default: null
+  },
+  homeZip: {
+    type: String,
+    default: null
+  },
+  homeCity: {
+    type: String,
+    default: null
   }
 })
 
@@ -242,6 +275,8 @@ const emit = defineEmits(['update:modelValue', 'locationSelected', 'manual-input
 
 // Reactive state
 const useStandardLocations = ref(true)
+const homeAddressActive = ref(false)
+const isApplyingHomeAddress = ref(false)
 const selectedLocationId = ref('')
 const manualLocationInput = ref('')
 const locationSearchQuery = ref('')
@@ -273,6 +308,41 @@ const currentSelectedLocation = computed(() => {
 
   return allKnownLocations.value.find(loc => loc.id === selectedLocationId.value)
 })
+
+const homeAddressFormatted = computed(() => {
+  const street = [props.homeStreet, props.homeStreetNr].filter(Boolean).join(' ').trim()
+  const cityLine = [props.homeZip, props.homeCity].filter(Boolean).join(' ').trim()
+  if (!street && !cityLine) return ''
+  return [street, cityLine].filter(Boolean).join(', ')
+})
+
+const canUseHomeAddress = computed(() => {
+  // Allow click whenever a student is selected — address is refreshed from DB on click
+  return !!props.selectedStudentId && !props.isPastAppointment
+})
+
+const homeAddressButtonTitle = computed(() => {
+  if (!props.selectedStudentId) return 'Zuerst einen Kunden auswählen'
+  if (homeAddressFormatted.value) return homeAddressFormatted.value
+  return 'Heimadresse aus Kundenprofil laden'
+})
+
+const mapLocationItem = (item: any, source: 'standard' | 'pickup'): Location => ({
+  ...item,
+  address: item.address || item.formatted_address || '',
+  location_type: item.location_type || source,
+  source
+})
+
+const splitLocationsResponse = (data: any[]) => {
+  const standards = data
+    .filter((item: any) => item.location_type !== 'pickup')
+    .map((item: any) => mapLocationItem(item, 'standard'))
+  const pickups = data
+    .filter((item: any) => item.location_type === 'pickup')
+    .map((item: any) => mapLocationItem(item, 'pickup'))
+  return { standards, pickups }
+}
 
 // ✅ Ensures a previously selected location (props.modelValue) is always shown
 // correctly, even if it isn't present in standardLocations/studentPickupLocations
@@ -358,9 +428,24 @@ const clearManualLocation = () => {
   manualLocationInput.value = ''
   selectedCustomLocation.value = null
   locationSearchQuery.value = ''
+  homeAddressActive.value = false
   emit('update:modelValue', null)
   emit('locationSelected', null)
   emit('manual-input-changed', '')
+}
+
+const switchToStandardLocations = () => {
+  useStandardLocations.value = true
+  homeAddressActive.value = false
+  // Keep an already selected standard/pickup; only clear free-text manual state
+  if (!selectedLocationId.value || selectedLocationId.value.includes('temp_') || selectedLocationId.value.includes('manual_')) {
+    manualLocationInput.value = ''
+    selectedCustomLocation.value = null
+    locationSearchQuery.value = ''
+  } else {
+    manualLocationInput.value = ''
+    selectedCustomLocation.value = null
+  }
 }
 
 // === DATABASE FUNCTIONS ===
@@ -385,14 +470,17 @@ const loadStandardLocations = async () => {
     }) as any
     
     if (response?.data) {
-      const filteredLocations = response.data.map((item: any) => ({
-        ...item,
-        address: item.address || '',
-        source: 'standard' as const
-      }))
-      
-      standardLocations.value = filteredLocations
-      logger.debug('✅ Standard locations loaded:', filteredLocations.length)
+      const { standards, pickups } = splitLocationsResponse(response.data)
+      standardLocations.value = standards
+      // When client is selected, API returns pickups in the same payload —
+      // keep Treffpunkte in sync so we don't rely on the separate (previously broken) query.
+      if (props.selectedStudentId) {
+        studentPickupLocations.value = pickups
+      }
+      logger.debug('✅ Locations loaded:', {
+        standards: standards.length,
+        pickups: props.selectedStudentId ? pickups.length : 'n/a'
+      })
     }
     
   } catch (err: any) {
@@ -444,21 +532,21 @@ const loadStudentPickupLocations = async (studentId: string) => {
   try {
     logger.debug('🔍 Loading student pickup locations for:', studentId)
     
-    // Use secure API to load pickup locations (handles auth server-side)
+    // Must use selected_client_id — get-locations ignores user_id / location_type for staff
     const response = await $fetch('/api/staff/get-locations', {
       query: {
-        location_type: 'pickup',
-        user_id: studentId
+        selected_client_id: studentId
       }
     }) as any
     
     if (response?.data) {
-      studentPickupLocations.value = response.data.map((item: any) => ({
-        ...item,
-        address: item.address || '',
-        source: 'pickup' as const
-      }))
-      logger.debug('✅ Student pickup locations loaded:', response.data.length)
+      const { standards, pickups } = splitLocationsResponse(response.data)
+      // Keep standards in sync when reloading for a student switch
+      if (standards.length > 0) {
+        standardLocations.value = standards
+      }
+      studentPickupLocations.value = pickups
+      logger.debug('✅ Student pickup locations loaded:', pickups.length)
     } else {
       studentPickupLocations.value = []
     }
@@ -475,6 +563,9 @@ const loadStudentPickupLocations = async (studentId: string) => {
         
         if (matchingLocation) {
           selectedLocationId.value = matchingLocation.id
+          useStandardLocations.value = true
+          homeAddressActive.value = matchingLocation.location_type === 'pickup' &&
+            /zuhause/i.test(matchingLocation.name || '')
           lastLocationWasFound = true
           emit('update:modelValue', matchingLocation.id)
           emit('locationSelected', matchingLocation)
@@ -492,8 +583,7 @@ const loadStudentPickupLocations = async (studentId: string) => {
       return
     }
     
-    // 3. ✅ FALLBACK: Wähle erste Standard-Location des Staffs wenn keine letzte Location gefunden
-    // Das ist der sinnvolle Fallback, wenn der Kunde noch keine Termine hat
+    // 3. Fallback priority: client pickup → first standard
     if (!selectedLocationId.value && !props.modelValue && !props.disableAutoSelection) {
       logger.debug('🔍 Auto-selection decision:', {
         selectedLocationId: selectedLocationId.value,
@@ -504,12 +594,19 @@ const loadStudentPickupLocations = async (studentId: string) => {
         standardsAvailable: standardLocations.value.length
       })
       
-      if (!lastLocationWasFound && standardLocations.value.length > 0) {
-        // ✅ Keine letzte Location gefunden, aber wir haben Standard-Locations des Staffs
-        // → Wähle die erste Standard-Location (Fallback)
+      if (!lastLocationWasFound && studentPickupLocations.value.length > 0) {
+        const firstPickup = studentPickupLocations.value[0]
+        selectedLocationId.value = firstPickup.id
+        useStandardLocations.value = true
+        homeAddressActive.value = /zuhause/i.test(firstPickup.name || '')
+        emit('update:modelValue', firstPickup.id)
+        emit('locationSelected', firstPickup)
+        logger.debug('📍 Auto-selected first client pickup:', firstPickup.name)
+      } else if (!lastLocationWasFound && standardLocations.value.length > 0) {
         const firstStandard = standardLocations.value[0]
         selectedLocationId.value = firstStandard.id
         useStandardLocations.value = true
+        homeAddressActive.value = false
         emit('update:modelValue', firstStandard.id)
         emit('locationSelected', firstStandard)
         logger.debug('📍 Auto-selected first standard location (no last location found):', firstStandard.name)
@@ -524,6 +621,85 @@ const loadStudentPickupLocations = async (studentId: string) => {
     if (!handleOfflineError(err)) {
       error.value = `Fehler beim Laden der Treffpunkte: ${err.message}`
     }
+  }
+}
+
+const applyHomeAddress = async () => {
+  if (props.isPastAppointment) return
+
+  if (!props.selectedStudentId) {
+    error.value = 'Bitte zuerst einen Kunden auswählen'
+    return
+  }
+
+  try {
+    isApplyingHomeAddress.value = true
+    error.value = null
+
+    // Always load current profile address from DB (props may be stale after an edit)
+    let address = homeAddressFormatted.value
+    let postalCode = props.homeZip || null
+    let city = props.homeCity || null
+
+    try {
+      const profileRes = await $fetch('/api/admin/get-user-for-edit', {
+        query: { user_id: props.selectedStudentId }
+      }) as { user?: any }
+      const u = profileRes?.user
+      if (u) {
+        const street = [u.street, u.street_nr].filter(Boolean).join(' ').trim()
+        const cityLine = [u.zip, u.city].filter(Boolean).join(' ').trim()
+        const fresh = [street, cityLine].filter(Boolean).join(', ')
+        if (fresh) {
+          address = fresh
+          postalCode = u.zip || null
+          city = u.city || null
+        }
+      }
+    } catch (profileErr: any) {
+      logger.debug('⚠️ Could not refresh home address from profile, using props:', profileErr?.message)
+    }
+
+    if (!address) {
+      error.value = 'Keine Heimadresse beim Kunden hinterlegt'
+      return
+    }
+
+    const locationName = props.selectedStudentName
+      ? `${props.selectedStudentName} - Zuhause`.trim()
+      : 'Zuhause'
+
+    // Sync pickup to current profile address (updates stale "Zuhause" pickups)
+    const savedLocation = await $fetch('/api/locations/upsert-home-pickup', {
+      method: 'POST',
+      body: {
+        userId: props.selectedStudentId,
+        name: locationName,
+        address,
+        postal_code: postalCode,
+        city
+      }
+    }) as any
+
+    const mapped = mapLocationItem(savedLocation, 'pickup')
+    studentPickupLocations.value = [
+      mapped,
+      ...studentPickupLocations.value.filter((loc) => loc.id !== mapped.id)
+    ]
+
+    useStandardLocations.value = true
+    homeAddressActive.value = true
+    selectedCustomLocation.value = null
+    manualLocationInput.value = ''
+    selectedLocationId.value = mapped.id
+    emit('update:modelValue', mapped.id)
+    emit('locationSelected', mapped)
+    logger.debug('🏠 Applied current home address:', mapped.address)
+  } catch (err: any) {
+    console.error('❌ Error applying home address:', err)
+    error.value = `Zuhause konnte nicht geladen werden: ${err.message || err?.data?.message || 'Unbekannter Fehler'}`
+  } finally {
+    isApplyingHomeAddress.value = false
   }
 }
 
@@ -962,6 +1138,7 @@ const onLocationChange = () => {
 const clearCustomLocation = () => {
   selectedCustomLocation.value = null
   manualLocationInput.value = ''
+  homeAddressActive.value = false
   emit('update:modelValue', null)
   emit('locationSelected', null)
 }
@@ -1005,6 +1182,7 @@ watch(() => props.selectedStudentId, async (newStudentId, oldStudentId) => {
     // Reset current selection when student changes
     selectedLocationId.value = ''
     selectedCustomLocation.value = null
+    homeAddressActive.value = false
     emit('update:modelValue', null)
     
     await loadStudentPickupLocations(newStudentId)
@@ -1013,7 +1191,10 @@ watch(() => props.selectedStudentId, async (newStudentId, oldStudentId) => {
     studentPickupLocations.value = []
     selectedLocationId.value = ''
     selectedCustomLocation.value = null
+    homeAddressActive.value = false
     emit('update:modelValue', null)
+    // Reload staff-only standards without client pickups
+    await loadStandardLocations()
   }
 })
 
@@ -1113,12 +1294,17 @@ onMounted(async () => {
     }
     
     // ✅ AUTO-SELECT DEFAULT LOCATION:
-    // 1. Wenn kein Student ausgewählt -> erste Standard-Location
-    // 2. Wenn Student ausgewählt ABER keine Pickups -> erste Standard-Location
-    if (!selectedLocationId.value && !props.modelValue && !props.disableAutoSelection && standardLocations.value.length > 0) {
-      const hasPickups = studentPickupLocations.value.length > 0
-      
-      if (!props.selectedStudentId || (props.selectedStudentId && !hasPickups)) {
+    // Prefer client pickups when available, otherwise first standard
+    if (!selectedLocationId.value && !props.modelValue && !props.disableAutoSelection) {
+      if (props.selectedStudentId && studentPickupLocations.value.length > 0) {
+        const firstPickup = studentPickupLocations.value[0]
+        selectedLocationId.value = firstPickup.id
+        useStandardLocations.value = true
+        homeAddressActive.value = /zuhause/i.test(firstPickup.name || '')
+        emit('update:modelValue', firstPickup.id)
+        emit('locationSelected', firstPickup)
+        logger.debug('📍 Auto-selected first client pickup on mount:', firstPickup.name)
+      } else if (standardLocations.value.length > 0) {
         const firstStandard = standardLocations.value[0]
         selectedLocationId.value = firstStandard.id
         useStandardLocations.value = true
