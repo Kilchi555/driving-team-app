@@ -387,7 +387,7 @@ const { user: currentUser, isClient, userProfile } = storeToRefs(authStore)
 
 // ✅ Verwende das neue useCustomerPayments Composable
 const {
-  payments: customerPayments,
+  visiblePayments: customerPayments,
   pendingPayments,
   loadPayments: loadCustomerPayments,
   isLoading: paymentsLoading,

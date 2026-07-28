@@ -14,16 +14,171 @@
 // It is idempotent (guarded by `metadata.wallee_failure_state`) so no matter
 // which of the three call sites reaches a given payment first, staff and the
 // customer are each notified exactly once.
+//
+// Sibling-success guard: if the customer already paid successfully for the
+// same course (retry created a second payment row), we still tag the failed
+// attempt but do NOT email staff/customer.
 
 import { logger } from '~/utils/logger'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+
+type PaymentMeta = {
+  course_id?: string
+  course_name?: string
+  email?: string
+  phone?: string
+  firstname?: string
+  lastname?: string
+  [key: string]: any
+}
+
+function normalizeEmail(email: string | null | undefined): string | null {
+  const trimmed = String(email || '').trim().toLowerCase()
+  return trimmed || null
+}
+
+/**
+ * Returns true when the customer already has a successful payment or a
+ * confirmed/paid registration for the same course (typical retry after decline).
+ */
+export async function hasSuccessfulSiblingCourseEnrollment(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  payment: {
+    id: string
+    tenant_id: string
+    user_id?: string | null
+    metadata?: PaymentMeta | null
+  }
+): Promise<boolean> {
+  const meta = payment.metadata || {}
+  const courseId = meta.course_id
+  if (!courseId) return false
+
+  const email = normalizeEmail(meta.email)
+
+  // 1) Completed sibling payment for same course + same email / user
+  const { data: siblingPayments, error: payErr } = await supabase
+    .from('payments')
+    .select('id, user_id, metadata')
+    .eq('tenant_id', payment.tenant_id)
+    .eq('payment_status', 'completed')
+    .neq('id', payment.id)
+    .contains('metadata', { course_id: courseId })
+    .limit(20)
+
+  if (payErr) {
+    logger.warn(`⚠️ hasSuccessfulSiblingCourseEnrollment payment lookup failed:`, payErr.message)
+  } else {
+    const hit = (siblingPayments || []).some((p: any) => {
+      const pMeta = p.metadata || {}
+      if (payment.user_id && p.user_id && payment.user_id === p.user_id) return true
+      if (email && normalizeEmail(pMeta.email) === email) return true
+      return false
+    })
+    if (hit) return true
+  }
+
+  // 2) Confirmed/paid course registration for same course + email/user
+  const { data: regs, error: regErr } = await supabase
+    .from('course_registrations')
+    .select('id, user_id, email, status, payment_status')
+    .eq('course_id', courseId)
+    .eq('payment_status', 'paid')
+    .limit(50)
+
+  if (regErr) {
+    logger.warn(`⚠️ hasSuccessfulSiblingCourseEnrollment registration lookup failed:`, regErr.message)
+    return false
+  }
+
+  return (regs || []).some((r: any) => {
+    if (payment.user_id && r.user_id === payment.user_id) return true
+    if (email && normalizeEmail(r.email) === email) return true
+    return false
+  })
+}
+
+/**
+ * After a successful course payment, cancel leftover guest/retry attempts for
+ * the same course + email/user so recover-cron does not later notify "unpaid".
+ */
+export async function cancelOrphanedSiblingCoursePayments(opts: {
+  successfulPaymentId: string
+  tenantId: string
+  courseId: string
+  email?: string | null
+  userId?: string | null
+}): Promise<number> {
+  const { successfulPaymentId, tenantId, courseId, userId } = opts
+  const email = normalizeEmail(opts.email)
+  if (!courseId || (!email && !userId)) return 0
+
+  const supabase = getSupabaseAdmin()
+
+  const { data: candidates, error } = await supabase
+    .from('payments')
+    .select('id, user_id, payment_status, metadata, course_registration_id, appointment_id')
+    .eq('tenant_id', tenantId)
+    .in('payment_status', ['pending', 'failed', 'processing'])
+    .neq('id', successfulPaymentId)
+    .contains('metadata', { course_id: courseId })
+    .limit(100)
+
+  if (error) {
+    logger.warn(`⚠️ cancelOrphanedSiblingCoursePayments lookup failed:`, error.message)
+    return 0
+  }
+
+  const orphanIds = (candidates || [])
+    .filter((p: any) => {
+      if (p.appointment_id) return false
+      if (p.course_registration_id) return false
+      const pMeta = p.metadata || {}
+      if (pMeta.course_id !== courseId) return false
+      if (userId && p.user_id && p.user_id === userId) return true
+      if (email && normalizeEmail(pMeta.email) === email) return true
+      // Guest orphan: no user_id, same course+email in metadata
+      if (!p.user_id && email && normalizeEmail(pMeta.email) === email) return true
+      return false
+    })
+    .map((p: any) => p.id)
+
+  if (orphanIds.length === 0) return 0
+
+  let cancelled = 0
+  for (const orphanId of orphanIds) {
+    const orphan = (candidates || []).find((p: any) => p.id === orphanId)
+    const { error: rowErr } = await supabase
+      .from('payments')
+      .update({
+        payment_status: 'cancelled',
+        notes: `Automatisch storniert: ersetzt durch erfolgreiche Zahlung ${successfulPaymentId}`,
+        updated_at: new Date().toISOString(),
+        metadata: {
+          ...(orphan?.metadata || {}),
+          replaced_by_payment_id: successfulPaymentId,
+          replaced_at: new Date().toISOString()
+        }
+      })
+      .eq('id', orphanId)
+      .in('payment_status', ['pending', 'failed', 'processing'])
+
+    if (!rowErr) cancelled++
+    else logger.warn(`⚠️ Could not cancel orphan payment ${orphanId}:`, rowErr.message)
+  }
+
+  if (cancelled > 0) {
+    logger.info(`🧹 Cancelled ${cancelled} orphaned course payment(s) after success ${successfulPaymentId}`)
+  }
+  return cancelled
+}
 
 export async function notifyGenuineWalleeFailure(paymentId: string, walleeState: string) {
   const supabase = getSupabaseAdmin()
 
   const { data: payment, error } = await supabase
     .from('payments')
-    .select('id, tenant_id, total_amount_rappen, metadata, created_at')
+    .select('id, tenant_id, user_id, total_amount_rappen, metadata, created_at')
     .eq('id', paymentId)
     .single()
 
@@ -35,10 +190,21 @@ export async function notifyGenuineWalleeFailure(paymentId: string, walleeState:
   // Already tagged/notified for this payment — nothing to do.
   if (payment.metadata?.wallee_failure_state) return
 
+  const meta = payment.metadata || {}
+  const siblingSuccess = meta.course_id
+    ? await hasSuccessfulSiblingCourseEnrollment(supabase, payment)
+    : false
+
   const updatedMetadata = {
-    ...(payment.metadata || {}),
+    ...meta,
     wallee_failure_state: walleeState,
-    wallee_failure_detected_at: new Date().toISOString()
+    wallee_failure_detected_at: new Date().toISOString(),
+    ...(siblingSuccess
+      ? {
+          failure_notify_suppressed: true,
+          failure_notify_suppressed_reason: 'sibling_course_payment_succeeded'
+        }
+      : {})
   }
 
   try {
@@ -50,9 +216,34 @@ export async function notifyGenuineWalleeFailure(paymentId: string, walleeState:
     logger.warn(`⚠️ Could not tag genuine Wallee failure on payment ${payment.id}:`, e.message)
   }
 
+  // Customer already paid / enrolled via a retry — do not send confusing emails.
+  // Also cancel this leftover attempt so recover-cron / Phase 4 stop touching it.
+  if (siblingSuccess) {
+    logger.info(
+      `⏭️ Skipping failure notify for payment ${payment.id}: sibling course enrollment already succeeded`
+    )
+    try {
+      await supabase
+        .from('payments')
+        .update({
+          payment_status: 'cancelled',
+          notes: 'Automatisch storniert: Kunde hat denselben Kurs bereits erfolgreich bezahlt',
+          updated_at: new Date().toISOString(),
+          metadata: {
+            ...updatedMetadata,
+            cancelled_as_orphan_after_sibling_success: true
+          }
+        })
+        .eq('id', payment.id)
+        .in('payment_status', ['pending', 'failed', 'processing'])
+    } catch (cancelErr: any) {
+      logger.warn(`⚠️ Could not cancel orphan failed payment ${payment.id}:`, cancelErr.message)
+    }
+    return
+  }
+
   // Only course-enrollment payments have enough metadata (name/email/course)
   // to build a useful notification right now.
-  const meta = payment.metadata || {}
   if (!meta.course_id) return
 
   try {

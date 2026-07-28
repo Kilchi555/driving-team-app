@@ -1335,7 +1335,7 @@ const accentButtonColorLight = computed(() => `${accent.value}15`)
 const accentButtonBorderColor = computed(() => `${accent.value}40`)
 
 const {
-  payments,
+  visiblePayments: payments,
   pendingPayments,
   loadPayments,
   isLoading: paymentsLoading,

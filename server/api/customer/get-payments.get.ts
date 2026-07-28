@@ -113,6 +113,7 @@ export default defineEventHandler(async (event) => {
       `)
       .eq('tenant_id', userProfile.tenant_id)
       .eq('user_id', userProfile.id)  // ✅ CRITICAL: Only customer's own payments!
+      .neq('payment_status', 'failed') // Failed attempts never surface in customer UX
       .order('created_at', { ascending: false })
 
     if (paymentsError) {
@@ -120,8 +121,19 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'Failed to fetch payments' })
     }
 
-    logger.info(`✅ Fetched ${paymentsData?.length || 0} payments for customer ${userProfile.id}`)
-    return { success: true, data: paymentsData || [] }
+    // Hide cancelled orphaned course checkout attempts (retry leftovers) from customers.
+    // Appointment cancellations with a payment row still show.
+    const visiblePayments = (paymentsData || []).filter((p: any) => {
+      if (p.payment_status !== 'cancelled') return true
+      if (p.appointment_id) return true
+      if (p.metadata?.course_id && (p.metadata?.replaced_by_payment_id || p.metadata?.wallee_failure_state || p.metadata?.cancelled_as_orphan_after_sibling_success)) {
+        return false
+      }
+      return true
+    })
+
+    logger.info(`✅ Fetched ${visiblePayments.length} payments for customer ${userProfile.id}`)
+    return { success: true, data: visiblePayments }
 
   } catch (error: any) {
     logger.error('❌ Error in get-payments API:', error)

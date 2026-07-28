@@ -6,7 +6,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } from '~/server/utils/wallee-config'
-import { notifyGenuineWalleeFailure } from '~/server/utils/wallee-failure-notify'
+import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
 
 const STATUS_MAPPING: Record<string, string> = {
   'PENDING': 'pending',
@@ -186,6 +186,21 @@ export default defineEventHandler(async (event) => {
               errors.push({ paymentId: payment.id, error: updateError.message })
             } else {
               recovered++
+
+              // Successful course recovery — cancel leftover retry attempts
+              if ((mappedStatus === 'completed' || mappedStatus === 'authorized') && payment.metadata?.course_id) {
+                try {
+                  await cancelOrphanedSiblingCoursePayments({
+                    successfulPaymentId: payment.id,
+                    tenantId: payment.tenant_id,
+                    courseId: payment.metadata.course_id,
+                    email: payment.metadata?.email || null,
+                    userId: payment.user_id || null
+                  })
+                } catch (orphanErr: any) {
+                  logger.warn(`⚠️ Phase 1: cancel orphans failed for ${payment.id}:`, orphanErr.message)
+                }
+              }
 
               // Log the recovery
               try {
@@ -414,7 +429,7 @@ export default defineEventHandler(async (event) => {
 
       const { data: failedPayments, error: failedQueryError } = await supabase
         .from('payments')
-        .select('id, user_id, tenant_id, wallee_transaction_id, wallee_space_id, payment_status, created_at, updated_at')
+        .select('id, user_id, tenant_id, wallee_transaction_id, wallee_space_id, payment_status, created_at, updated_at, metadata')
         .eq('payment_status', 'failed')
         .eq('payment_method', 'wallee')
         .lt('updated_at', tenMinutesAgoPhase3)
@@ -476,6 +491,19 @@ export default defineEventHandler(async (event) => {
               failedReset++
               if (mappedStatus === 'completed' || mappedStatus === 'authorized') {
                 recovered++
+                if (payment.metadata?.course_id) {
+                  try {
+                    await cancelOrphanedSiblingCoursePayments({
+                      successfulPaymentId: payment.id,
+                      tenantId: payment.tenant_id,
+                      courseId: payment.metadata.course_id,
+                      email: payment.metadata?.email || null,
+                      userId: payment.user_id || null
+                    })
+                  } catch (orphanErr: any) {
+                    logger.warn(`⚠️ Phase 3: cancel orphans failed for ${payment.id}:`, orphanErr.message)
+                  }
+                }
               } else if (mappedStatus === 'pending') {
                 // Genuine failure (the webhook already marked this 'failed' earlier,
                 // e.g. Wallee DECLINE/FAILED) — tag + notify staff/customer here too,

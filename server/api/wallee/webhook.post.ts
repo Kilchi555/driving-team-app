@@ -14,7 +14,7 @@ import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
-import { notifyGenuineWalleeFailure } from '~/server/utils/wallee-failure-notify'
+import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -539,6 +539,26 @@ export default defineEventHandler(async (event) => {
     }
     
     logger.info(`✅ Updated ${paymentsToUpdate.length} payment(s) to: ${paymentStatus}`)
+
+    // ============ LAYER 7b: CANCEL ORPHANED COURSE RETRY ATTEMPTS ============
+    // Guest course checkout creates a new payment row on every retry. When one
+    // succeeds, cancel leftover pending/failed/processing siblings for the same
+    // course+email so recover-cron does not later send "payment failed" emails.
+    if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
+      for (const p of paymentsToUpdate) {
+        const courseId = p.metadata?.course_id
+        if (!courseId) continue
+        cancelOrphanedSiblingCoursePayments({
+          successfulPaymentId: p.id,
+          tenantId: p.tenant_id,
+          courseId,
+          email: p.metadata?.email || null,
+          userId: p.user_id || null
+        }).catch((e: any) => {
+          logger.warn(`⚠️ cancelOrphanedSiblingCoursePayments failed for ${p.id}:`, e.message)
+        })
+      }
+    }
 
     // ============ LAYER 8: NOTIFY ON GENUINE FAILURE (fast path) ============
     // Wallee just told us in real time that the payment actually failed/was
