@@ -6,8 +6,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 // - Update payment method / card
 // - Download invoices
 // - View billing history
-// The portal is hosted by Stripe and branded with the platform account (Simy),
-// not the tenant name — that is expected for a multi-tenant SaaS.
+// Branded with the platform account (Simy) — expected for multi-tenant SaaS.
 export default defineEventHandler(async (event) => {
   const stripeSecret = process.env.STRIPE_SECRET_KEY
   if (!stripeSecret) {
@@ -33,43 +32,51 @@ export default defineEventHandler(async (event) => {
 
   const stripe = new Stripe(stripeSecret, { apiVersion: '2025-08-27.basil' })
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+  const keyMode = stripeSecret.startsWith('sk_live') ? 'live' : 'test'
 
-  // Prefer the customer that actually owns the active subscription.
-  // Otherwise portal can open on an empty/orphan customer (no cards, no invoices)
-  // after a test/live mismatch recreate.
-  let customerId: string | null = tenant?.stripe_customer_id || null
+  let customerId: string | null = null
+  let subscriptionId: string | null = tenant?.stripe_subscription_id || null
 
-  if (tenant?.stripe_subscription_id) {
+  // 1) Prefer active subscription tagged with this tenant (most reliable)
+  try {
+    const found = await stripe.subscriptions.search({
+      query: `metadata["tenant_id"]:"${tenantId}" AND status:"active"`,
+      limit: 5,
+    })
+    const sub = found.data[0]
+    if (sub) {
+      subscriptionId = sub.id
+      customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id || null
+    }
+  } catch (err: any) {
+    // Search may be unavailable on some accounts — fall through
+    console.warn('⚠️ Portal: subscription search failed:', err?.message || err)
+  }
+
+  // 2) Fall back to stored subscription id
+  if (!customerId && subscriptionId) {
     try {
-      const sub = await stripe.subscriptions.retrieve(tenant.stripe_subscription_id)
-      const subCustomer = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id
-      if (subCustomer) {
-        if (customerId && customerId !== subCustomer) {
-          console.warn(
-            `⚠️ Portal: tenant ${tenantId} customer ${customerId} ≠ subscription customer ${subCustomer} — using subscription customer`
-          )
-        }
-        customerId = subCustomer
-        if (tenant.stripe_customer_id !== subCustomer) {
-          await supabase
-            .from('tenants')
-            .update({ stripe_customer_id: subCustomer })
-            .eq('id', tenantId)
-        }
-      }
+      const sub = await stripe.subscriptions.retrieve(subscriptionId)
+      customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id || null
     } catch (err: any) {
       if (err?.code !== 'resource_missing') throw err
-      console.warn(`⚠️ Portal: subscription ${tenant.stripe_subscription_id} missing in current Stripe mode`)
+      console.warn(`⚠️ Portal: subscription ${subscriptionId} missing in ${keyMode} mode`)
     }
   }
 
+  // 3) Fall back to stored customer id
+  if (!customerId && tenant?.stripe_customer_id) {
+    customerId = tenant.stripe_customer_id
+  }
+
+  // Validate customer still exists
   if (customerId) {
     try {
       const customer = await stripe.customers.retrieve(customerId)
       if ((customer as any).deleted) customerId = null
     } catch (err: any) {
       if (err?.code === 'resource_missing') {
-        console.warn(`⚠️ Stripe customer ${customerId} not found in current mode`)
+        console.warn(`⚠️ Portal: customer ${customerId} missing in ${keyMode} mode`)
         customerId = null
       } else {
         throw err
@@ -77,25 +84,47 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Only create a brand-new customer when there is truly nothing to attach —
-  // never when a subscription/customer ID exists in DB but is missing in this Stripe mode
-  // (typical local setup: live IDs in DB + sk_test_ key → would open an empty portal).
+  // 4) Self-heal: if customer has no billing history, find a better match by email
+  //    (guards against empty orphan customers created by older portal code).
+  if (customerId && tenant?.contact_email) {
+    const history = await billingHistoryCounts(stripe, customerId)
+    if (history.invoices === 0 && history.cards === 0) {
+      const better = await findCustomerWithHistory(stripe, tenant.contact_email, subscriptionId)
+      if (better && better !== customerId) {
+        console.warn(
+          `⚠️ Portal: tenant ${tenantId} customer ${customerId} has no history — switching to ${better}`
+        )
+        customerId = better
+      }
+    }
+  }
+
+  // 5) Email search if we still have no customer
+  if (!customerId && tenant?.contact_email) {
+    customerId = await findCustomerWithHistory(stripe, tenant.contact_email, subscriptionId)
+  }
+
+  // Persist repaired IDs
+  if (customerId) {
+    const patch: Record<string, string> = {}
+    if (tenant?.stripe_customer_id !== customerId) patch.stripe_customer_id = customerId
+    if (subscriptionId && tenant?.stripe_subscription_id !== subscriptionId) {
+      patch.stripe_subscription_id = subscriptionId
+    }
+    if (Object.keys(patch).length > 0) {
+      await supabase.from('tenants').update(patch).eq('id', tenantId)
+    }
+  }
+
   if (!customerId) {
     const hasStoredStripeIds = !!(tenant?.stripe_subscription_id || tenant?.stripe_customer_id)
-    const keyMode = stripeSecret.startsWith('sk_live') ? 'live' : 'test'
-
     if (hasStoredStripeIds) {
       throw createError({
         statusCode: 409,
         statusMessage: keyMode === 'test'
-          ? 'Billing-Portal nicht verfügbar: Die Abo-Daten sind im Stripe-Live-Modus, lokal läuft aber der Test-Key. Bitte auf app.simy.ch öffnen oder lokal den Live-Key verwenden.'
-          : 'Stripe-Abo/Customer nicht im aktuellen Stripe-Modus gefunden. Bitte Support kontaktieren.',
-        data: {
-          code: 'stripe_mode_mismatch',
-          stripe_mode: keyMode,
-          has_subscription_id: !!tenant?.stripe_subscription_id,
-          has_customer_id: !!tenant?.stripe_customer_id,
-        },
+          ? 'Billing-Portal nicht verfügbar: Die Abo-Daten sind im Stripe-Live-Modus, lokal läuft aber der Test-Key. Bitte auf app.simy.ch öffnen.'
+          : 'Kein gültiger Stripe-Customer mit Rechnungen gefunden. Bitte Support kontaktieren.',
+        data: { code: 'stripe_mode_mismatch', stripe_mode: keyMode },
       })
     }
 
@@ -118,3 +147,36 @@ export default defineEventHandler(async (event) => {
 
   return { url: session.url }
 })
+
+async function billingHistoryCounts(stripe: Stripe, customerId: string) {
+  const [invoices, cards] = await Promise.all([
+    stripe.invoices.list({ customer: customerId, limit: 1 }),
+    stripe.paymentMethods.list({ customer: customerId, type: 'card', limit: 1 }),
+  ])
+  return { invoices: invoices.data.length, cards: cards.data.length }
+}
+
+/** Prefer customer that owns the known subscription, else one with invoices/cards. */
+async function findCustomerWithHistory(
+  stripe: Stripe,
+  email: string,
+  subscriptionId: string | null
+): Promise<string | null> {
+  const listed = await stripe.customers.list({ email, limit: 20 })
+  let withHistory: string | null = null
+
+  for (const c of listed.data) {
+    if (subscriptionId) {
+      try {
+        const subs = await stripe.subscriptions.list({ customer: c.id, status: 'all', limit: 20 })
+        if (subs.data.some(s => s.id === subscriptionId)) return c.id
+      } catch { /* continue */ }
+    }
+    const history = await billingHistoryCounts(stripe, c.id)
+    if (history.invoices > 0 || history.cards > 0) {
+      withHistory = c.id
+    }
+  }
+
+  return withHistory
+}
