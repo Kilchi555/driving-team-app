@@ -294,6 +294,8 @@ async function withLocation(
 
 /**
  * Fetch GBP performance insights (views, clicks, calls).
+ * Performance API: GET …/locations/{id}:fetchMultiDailyMetricsTimeSeries (empty body).
+ * @see https://developers.google.com/my-business/reference/performance/rest/v1/locations/fetchMultiDailyMetricsTimeSeries
  */
 export async function getGbpInsights(tenantId: string, locationId?: string | null) {
   return withLocation(tenantId, locationId, async (accessToken, loc) => {
@@ -301,22 +303,37 @@ export async function getGbpInsights(tenantId: string, locationId?: string | nul
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - 28)
 
-    const body = {
-      dailyRange: {
-        startDate: { year: startDate.getFullYear(), month: startDate.getMonth() + 1, day: startDate.getDate() },
-        endDate: { year: endDate.getFullYear(), month: endDate.getMonth() + 1, day: endDate.getDate() },
-      },
-    }
+    const metrics = [
+      'BUSINESS_IMPRESSIONS_DESKTOP_MAPS',
+      'BUSINESS_IMPRESSIONS_MOBILE_MAPS',
+      'CALL_CLICKS',
+      'WEBSITE_CLICKS',
+      'BUSINESS_DIRECTION_REQUESTS',
+    ]
+    const params = new URLSearchParams()
+    for (const m of metrics) params.append('dailyMetrics', m)
+    params.set('dailyRange.start_date.year', String(startDate.getFullYear()))
+    params.set('dailyRange.start_date.month', String(startDate.getMonth() + 1))
+    params.set('dailyRange.start_date.day', String(startDate.getDate()))
+    params.set('dailyRange.end_date.year', String(endDate.getFullYear()))
+    params.set('dailyRange.end_date.month', String(endDate.getMonth() + 1))
+    params.set('dailyRange.end_date.day', String(endDate.getDate()))
 
     const res = await fetch(
-      `${GBP_PERFORMANCE_BASE}/${loc.gbp_location_id}:fetchMultiDailyMetricsTimeSeries?dailyMetric=BUSINESS_IMPRESSIONS_DESKTOP_MAPS&dailyMetric=BUSINESS_IMPRESSIONS_MOBILE_MAPS&dailyMetric=CALL_CLICKS&dailyMetric=WEBSITE_CLICKS&dailyMetric=BUSINESS_DIRECTION_REQUESTS`,
-      {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }
+      `${GBP_PERFORMANCE_BASE}/${loc.gbp_location_id}:fetchMultiDailyMetricsTimeSeries?${params}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
     )
-    return res.json()
+    const text = await res.text()
+    let data: any
+    try {
+      data = text ? JSON.parse(text) : {}
+    } catch {
+      throw new Error(`GBP Insights API returned non-JSON (${res.status})`)
+    }
+    if (!res.ok) {
+      throw new Error(data?.error?.message || `GBP Insights API error ${res.status}`)
+    }
+    return data
   })
 }
 

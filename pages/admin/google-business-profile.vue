@@ -136,16 +136,30 @@
 
         <!-- No location linked — show picker from Google APIs only -->
         <div v-if="linkedLocations.length === 0 || showAddLocation" class="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-          <p class="text-sm font-semibold text-amber-900 mb-1">
-            {{ linkedLocations.length === 0 ? 'Kein Business Profile verknüpft' : 'Weiteren Standort verknüpfen' }}
-          </p>
-          <p class="text-xs text-amber-700 mb-4">Wähle einen Standort aus deinem Google-Konto.</p>
-          <div v-if="accountsLoading" class="text-xs text-amber-600">Lade Business Profile Accounts…</div>
-          <div v-else-if="accountsError" class="text-xs text-red-600">{{ accountsError }}</div>
-          <div v-else-if="allLocations.length === 0" class="text-xs text-amber-700">
-            Keine Standorte im Google-Konto gefunden. Stelle sicher, dass du Owner/Manager bist.
+          <div class="flex items-start justify-between gap-3 mb-1">
+            <div>
+              <p class="text-sm font-semibold text-amber-900">
+                {{ linkedLocations.length === 0 ? 'Kein Business Profile verknüpft' : 'Weiteren Standort verknüpfen' }}
+              </p>
+              <p class="text-xs text-amber-700 mt-0.5">Wähle einen oder mehrere Standorte aus deinem Google-Konto.</p>
+            </div>
+            <button
+              v-if="linkedLocations.length > 0"
+              type="button"
+              @click="showAddLocation = false"
+              class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg border border-amber-300 text-amber-800 hover:bg-amber-100"
+            >
+              Fertig
+            </button>
           </div>
-          <div v-else class="space-y-2">
+          <div v-if="accountsLoading" class="text-xs text-amber-600 mt-4">Lade Business Profile Accounts…</div>
+          <div v-else-if="accountsError" class="text-xs text-red-600 mt-4">{{ accountsError }}</div>
+          <div v-else-if="allLocations.length === 0" class="text-xs text-amber-700 mt-4">
+            {{ hasGoogleLocations
+              ? 'Alle gefundenen Standorte sind bereits verknüpft.'
+              : 'Keine Standorte im Google-Konto gefunden. Stelle sicher, dass du Owner/Manager bist.' }}
+          </div>
+          <div v-else class="space-y-2 mt-4">
             <div
               v-for="location in allLocations"
               :key="location.locationId"
@@ -160,7 +174,7 @@
                 :disabled="linkingLocation"
                 class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-50"
               >
-                Verknüpfen
+                {{ linkingLocationId === location.locationId ? 'Verknüpfe…' : 'Verknüpfen' }}
               </button>
             </div>
           </div>
@@ -695,7 +709,10 @@ async function loadInsights() {
   insightsError.value = ''
   try {
     const data = await $fetch<any>('/api/gbp/insights', { query: locQuery() })
-    const series = data.insights?.multiDailyMetricTimeSeries ?? []
+    // Response: multiDailyMetricTimeSeries[].dailyMetricTimeSeries[].{ dailyMetric, timeSeries }
+    const series = (data.insights?.multiDailyMetricTimeSeries ?? []).flatMap(
+      (block: any) => block.dailyMetricTimeSeries ?? []
+    )
     const sum = (metricType: string) => {
       const s = series.find((s: any) => s.dailyMetric === metricType)
       return (s?.timeSeries?.datedValues ?? []).reduce((acc: number, v: any) => acc + (parseInt(v.value) || 0), 0)
@@ -707,7 +724,7 @@ async function loadInsights() {
       { label: 'Routenanfragen', value: sum('BUSINESS_DIRECTION_REQUESTS') },
     ]
   } catch (e: any) {
-    insightsError.value = e?.data?.statusMessage || 'Insights konnten nicht geladen werden'
+    insightsError.value = e?.data?.statusMessage || e?.message || 'Insights konnten nicht geladen werden'
   } finally {
     insightsLoading.value = false
   }
@@ -961,13 +978,31 @@ const gbpAccounts = ref<any[]>([])
 const accountsLoading = ref(false)
 const accountsError = ref('')
 const linkingLocation = ref(false)
+const linkingLocationId = ref<string | null>(null)
+
+/** Normalize "accounts/…/locations/123" or "locations/123" → "locations/123" for comparisons. */
+function normalizeGbpLocationResource(name: string): string {
+  const match = name.match(/locations\/[^/]+$/)
+  return match ? match[0] : name
+}
+
+const linkedLocationKeys = computed(() =>
+  new Set(linkedLocations.value.map((l) => normalizeGbpLocationResource(l.gbpLocationId)))
+)
+
+const hasGoogleLocations = computed(() =>
+  gbpAccounts.value.some((a) => (a.locations ?? []).length > 0)
+)
 
 const allLocations = computed(() => {
   const locs: { locationId: string; title: string; accountName: string; gbpAccountName: string }[] = []
+  const linked = linkedLocationKeys.value
   for (const account of gbpAccounts.value) {
     for (const loc of account.locations ?? []) {
+      const locationId = loc.name as string
+      if (linked.has(normalizeGbpLocationResource(locationId))) continue
       locs.push({
-        locationId: loc.name,
+        locationId,
         title: loc.title ?? loc.name,
         accountName: account.accountName ?? account.name,
         gbpAccountName: account.name,
@@ -992,6 +1027,8 @@ async function loadAccounts() {
 
 async function linkLocation(location: { locationId: string; title: string; gbpAccountName: string }) {
   linkingLocation.value = true
+  linkingLocationId.value = location.locationId
+  const previousSelected = selectedLocationId.value
   try {
     const res = await $fetch<any>('/api/gbp/link-location', {
       method: 'POST',
@@ -1001,10 +1038,12 @@ async function linkLocation(location: { locationId: string; title: string; gbpAc
         gbpLocationName: location.title,
       },
     })
-    showAddLocation.value = false
+    // Stay in the picker so multiple locations can be linked; user closes with "Fertig".
+    showAddLocation.value = true
     await loadStatus()
-    if (res?.location?.id) selectedLocationId.value = res.location.id
-    if (selectedLocationId.value) {
+    // Only auto-select when this was the first linked location
+    if (!previousSelected && res?.location?.id) {
+      selectedLocationId.value = res.location.id
       loadInsights()
       loadReviews()
     }
@@ -1012,6 +1051,7 @@ async function linkLocation(location: { locationId: string; title: string; gbpAc
     alert(e?.data?.statusMessage || 'Verknüpfung fehlgeschlagen')
   } finally {
     linkingLocation.value = false
+    linkingLocationId.value = null
   }
 }
 

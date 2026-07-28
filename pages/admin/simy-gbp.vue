@@ -230,7 +230,9 @@ async function loadInsights() {
   insightsLoading.value = true
   try {
     const data = await $fetch<any>('/api/gbp/admin/insights')
-    const series = data.insights?.multiDailyMetricTimeSeries ?? []
+    const series = (data.insights?.multiDailyMetricTimeSeries ?? []).flatMap(
+      (block: any) => block.dailyMetricTimeSeries ?? []
+    )
     const sum = (m: string) => (series.find((s: any) => s.dailyMetric === m)?.timeSeries?.datedValues ?? [])
       .reduce((acc: number, v: any) => acc + (parseInt(v.value) || 0), 0)
     insightMetrics.value = [
