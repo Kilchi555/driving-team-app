@@ -111,13 +111,14 @@
           <div v-if="activeAddons.length > 0" class="mb-5">
             <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Aktive Add-ons</p>
             <div class="flex flex-wrap gap-2">
-              <span v-for="addon in activeAddons" :key="addon"
+              <span v-for="addon in activeAddons" :key="addon.label"
                 class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
                 :style="{ backgroundColor: brandTintBg, color: primaryColor, border: `1px solid ${brandTintBorder}` }">
-                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                 </svg>
-                {{ addon }}
+                {{ addon.label }}
+                <span v-if="addon.price" class="opacity-70 font-medium">· {{ addon.price }}</span>
               </span>
             </div>
           </div>
@@ -356,13 +357,40 @@ const totalMonthlyCost = computed(() => {
   return `CHF ${(total / 100).toFixed(2)}`
 })
 
+const formatAddonPrice = (rappen: number): string | null => {
+  if (!rappen) return null
+  return `CHF ${(rappen / 100).toFixed(0)}.–`
+}
+
 const activeAddons = computed(() => {
-  const addons: string[] = []
+  const addons: { label: string; price: string | null }[] = []
   if (!billing.value) return addons
-  if (billing.value.addon_seats > 0) addons.push(`${billing.value.addon_seats} Extra-Seat${billing.value.addon_seats !== 1 ? 's' : ''}`)
-  if (billing.value.addon_courses_enabled) addons.push('Kursbuchungsseite')
-  if (billing.value.addon_affiliate_enabled) addons.push('Affiliate-System')
-  if (billing.value.addon_gbp_enabled) addons.push('Google Business Profile')
+  if (billing.value.addon_seats > 0) {
+    const unit = pricing.value?.addons?.seats?.unitAmount ?? 0
+    const total = billing.value.addon_seats * unit
+    addons.push({
+      label: `${billing.value.addon_seats} Extra-Seat${billing.value.addon_seats !== 1 ? 's' : ''}`,
+      price: formatAddonPrice(total),
+    })
+  }
+  if (billing.value.addon_courses_enabled) {
+    addons.push({
+      label: 'Kursbuchungsseite',
+      price: formatAddonPrice(pricing.value?.addons?.courses?.unitAmount ?? 0),
+    })
+  }
+  if (billing.value.addon_affiliate_enabled) {
+    addons.push({
+      label: 'Affiliate-System',
+      price: formatAddonPrice(pricing.value?.addons?.affiliate?.unitAmount ?? 0),
+    })
+  }
+  if (billing.value.addon_gbp_enabled) {
+    addons.push({
+      label: 'Google Business Profile',
+      price: formatAddonPrice(pricing.value?.addons?.gbp?.unitAmount ?? 0),
+    })
+  }
   return addons
 })
 
