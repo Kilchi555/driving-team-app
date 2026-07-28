@@ -189,13 +189,17 @@ export default defineEventHandler(async (event) => {
           paid_at
         `)
         .in('appointment_id', appointmentIds)
+        .neq('payment_status', 'failed')
       
       if (paymentsError) {
         logger.warn('⚠️ Error fetching payments for appointments:', paymentsError)
       } else if (paymentsData) {
-        // Create a map of appointment_id -> payment
+        // Create a map of appointment_id -> payment (prefer non-cancelled if multiple)
         paymentsMap = paymentsData.reduce((acc, payment) => {
-          acc[payment.appointment_id] = payment
+          const existing = acc[payment.appointment_id]
+          if (!existing || (existing.payment_status === 'cancelled' && payment.payment_status !== 'cancelled')) {
+            acc[payment.appointment_id] = payment
+          }
           return acc
         }, {} as Record<string, any>)
       }

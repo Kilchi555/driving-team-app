@@ -15,6 +15,7 @@ export const useCustomerPayments = () => {
   // Computed
   const pendingPayments = computed(() => {
     return payments.value.filter(p => {
+      if (p.payment_status === 'failed' || p.payment_status === 'cancelled') return false
       if (p.payment_status !== 'pending') return false
       
       const appointment = Array.isArray(p.appointments) ? p.appointments[0] : p.appointments
@@ -22,6 +23,22 @@ export const useCustomerPayments = () => {
         return false
       }
       
+      return true
+    })
+  })
+
+  /** Customer-visible payments — never surface failed / orphaned course attempts */
+  const visiblePayments = computed(() => {
+    return payments.value.filter(p => {
+      if (p.payment_status === 'failed') return false
+      if (
+        p.payment_status === 'cancelled' &&
+        !p.appointment_id &&
+        p.metadata?.course_id &&
+        (p.metadata?.replaced_by_payment_id || p.metadata?.wallee_failure_state || p.metadata?.cancelled_as_orphan_after_sibling_success)
+      ) {
+        return false
+      }
       return true
     })
   })
@@ -68,6 +85,7 @@ export const useCustomerPayments = () => {
 
   return {
     payments,
+    visiblePayments,
     isLoading,
     error,
     pendingPayments,

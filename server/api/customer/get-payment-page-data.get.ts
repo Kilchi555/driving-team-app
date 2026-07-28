@@ -168,6 +168,7 @@ export default defineEventHandler(async (event) => {
       `)
         .eq('tenant_id', tenantId)
         .eq('user_id', requestingUser.id)  // ✅ CRITICAL: Only customer's own payments!
+        .neq('payment_status', 'failed')
         .order('created_at', { ascending: false })
 
       if (res.error) {
@@ -184,7 +185,14 @@ export default defineEventHandler(async (event) => {
         })
         throw createError({ statusCode: 500, statusMessage: 'Failed to fetch payments' })
       }
-      paymentsData = res.data
+      paymentsData = (res.data || []).filter((p: any) => {
+        if (p.payment_status !== 'cancelled') return true
+        if (p.appointment_id) return true
+        if (p.metadata?.course_id && (p.metadata?.replaced_by_payment_id || p.metadata?.wallee_failure_state || p.metadata?.cancelled_as_orphan_after_sibling_success)) {
+          return false
+        }
+        return true
+      })
     }
 
     // ============ LAYER 5: AUDIT LOGGING ============
@@ -211,13 +219,13 @@ export default defineEventHandler(async (event) => {
     const stats = {
       total_payments: payments.length,
       pending_payments: payments.filter(p => p.payment_status === 'pending').length,
-      paid_payments: payments.filter(p => p.payment_status === 'paid').length,
-      failed_payments: payments.filter(p => p.payment_status === 'failed').length,
+      paid_payments: payments.filter(p => p.payment_status === 'paid' || p.payment_status === 'completed').length,
+      failed_payments: 0, // Never expose failed attempts in customer payment page data
       pending_amount_rappen: payments
         .filter(p => p.payment_status === 'pending')
         .reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0),
       paid_amount_rappen: payments
-        .filter(p => p.payment_status === 'paid')
+        .filter(p => p.payment_status === 'paid' || p.payment_status === 'completed')
         .reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0),
       total_amount_rappen: payments.reduce((sum, p) => sum + (p.total_amount_rappen || 0), 0)
     }
