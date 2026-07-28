@@ -626,6 +626,23 @@ definePageMeta({
 // Composables
 const router = useRouter()
 const route = useRoute()
+
+/** Safe internal post-login path from query or sessionStorage (email deep links). */
+function resolveReturnTo(): string | null {
+  const candidates = [route.query.returnTo as string | undefined]
+  try {
+    candidates.push(sessionStorage.getItem('redirect_after_login') || undefined)
+  } catch { /* ignore */ }
+  for (const raw of candidates) {
+    if (!raw) continue
+    const path = decodeURIComponent(String(raw))
+    if (path.startsWith('/') && !path.startsWith('//')) {
+      try { sessionStorage.removeItem('redirect_after_login') } catch { /* ignore */ }
+      return path
+    }
+  }
+  return null
+}
 const { login, logout, isLoggedIn, loading } = useAuthStore()
 const { showError, showSuccess } = useUIStore()
 const { loadTenant, currentTenant } = useTenant()
@@ -748,10 +765,8 @@ const handlePasskeyLogin = async () => {
       } else if (role === 'client') {
         redirectPath = '/customer-dashboard'
       }
-      const returnTo = route.query.returnTo as string | undefined
-      if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
-        redirectPath = returnTo
-      }
+      const returnTo = resolveReturnTo()
+      if (returnTo) redirectPath = returnTo
       window.location.href = redirectPath
     } else {
       passkeyError.value = 'Passkey-Anmeldung fehlgeschlagen.'
@@ -785,10 +800,8 @@ const handleBackupCodeLogin = async () => {
       } else if (role === 'client') {
         redirectPath = '/customer-dashboard'
       }
-      const returnTo = route.query.returnTo as string | undefined
-      if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
-        redirectPath = returnTo
-      }
+      const returnTo = resolveReturnTo()
+      if (returnTo) redirectPath = returnTo
       window.location.href = redirectPath
     } else {
       backupCodeError.value = 'Ungültiger Code.'
@@ -1048,11 +1061,9 @@ const handleLogin = async () => {
       }
     }
     
-    // If a returnTo param was provided (e.g. from /upgrade), honour it for safe internal paths
-    const returnTo = route.query.returnTo as string | undefined
-    if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
-      redirectPath = returnTo
-    }
+    // Honour returnTo query or sessionStorage deep link (e.g. billing email)
+    const returnTo = resolveReturnTo()
+    if (returnTo) redirectPath = returnTo
 
     logger.debug('🔄 Redirecting to:', redirectPath)
     if (isNativeApp.value && biometricAvailable.value && !biometricCredentialsStored.value && !loginViaBiometric.value) {
@@ -1185,10 +1196,8 @@ const handleMFAVerify = async () => {
       }
     }
     
-    const returnTo2 = route.query.returnTo as string | undefined
-    if (returnTo2 && returnTo2.startsWith('/') && !returnTo2.startsWith('//')) {
-      redirectPath = returnTo2
-    }
+    const returnTo2 = resolveReturnTo()
+    if (returnTo2) redirectPath = returnTo2
 
     logger.debug('🔄 Redirecting to:', redirectPath)
     router.push(redirectPath)
@@ -1391,10 +1400,8 @@ onMounted(async () => {
 
     // Honour a safe internal returnTo (e.g. deep link from a reminder email)
     // even if the user already has a valid session on this device.
-    const returnTo = route.query.returnTo as string | undefined
-    if (returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//')) {
-      redirectPath = returnTo
-    }
+    const returnTo = resolveReturnTo()
+    if (returnTo) redirectPath = returnTo
 
     router.push(redirectPath)
   }

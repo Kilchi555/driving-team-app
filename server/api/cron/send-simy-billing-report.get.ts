@@ -12,21 +12,10 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { getHeader } from 'h3'
-
-// Approximate monthly prices in CHF (Rappen) — kept in sync with Stripe manually
-const PLAN_PRICES: Record<string, number> = {
-  starter:      4900,   // CHF 49.–
-  professional: 9900,   // CHF 99.–
-  enterprise:   19900,  // CHF 199.–
-}
-const SEAT_PRICE = 1900  // CHF 19.– per extra seat
+import { fetchStripePrices, estimateMrrFromPricing } from '~/server/utils/stripe-prices'
 
 function chf(rappen: number): string {
   return `CHF ${(rappen / 100).toFixed(2).replace('.', '.')}.–`
-}
-
-function estimateMRR(plan: string, addonSeats: number): number {
-  return (PLAN_PRICES[plan] ?? 0) + (addonSeats || 0) * SEAT_PRICE
 }
 
 export default defineEventHandler(async (event) => {
@@ -41,10 +30,22 @@ export default defineEventHandler(async (event) => {
   const now = new Date()
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
+  // Live Stripe prices (same source as /api/stripe/prices + /upgrade)
+  let pricing
+  try {
+    pricing = await fetchStripePrices()
+  } catch (err: any) {
+    logger.error('❌ Billing report: failed to fetch Stripe prices:', err?.message || err)
+    throw createError({ statusCode: 502, statusMessage: 'Stripe prices unavailable' })
+  }
+
+  const estimateMRR = (plan: string, addons: Parameters<typeof estimateMrrFromPricing>[2]) =>
+    estimateMrrFromPricing(pricing, plan, addons)
+
   // ── 1. All non-trial tenants ──────────────────────────────────────────────
   const { data: tenants, error: tenantsError } = await supabase
     .from('tenants')
-    .select('id, name, contact_email, subscription_plan, addon_seats, addon_courses_enabled, addon_affiliate_enabled, current_period_end, is_active, created_at, slug')
+    .select('id, name, contact_email, subscription_plan, addon_seats, addon_courses_enabled, addon_affiliate_enabled, addon_gbp_enabled, current_period_end, is_active, created_at, slug')
     .neq('subscription_plan', 'trial')
     .not('subscription_plan', 'is', null)
     .order('created_at', { ascending: false })
@@ -96,20 +97,21 @@ export default defineEventHandler(async (event) => {
   const newThisWeek = tenants.filter(t => new Date(t.created_at) >= weekAgo)
 
   // ── 4. MRR snapshot ───────────────────────────────────────────────────────
-  const totalMRR = tenants.reduce((sum, t) => sum + estimateMRR(t.subscription_plan, t.addon_seats), 0)
+  const totalMRR = tenants.reduce((sum, t) => sum + estimateMRR(t.subscription_plan, t), 0)
   const activeMRR = tenants
     .filter(t => statusMap.get(t.id)?.status !== 'past_due')
-    .reduce((sum, t) => sum + estimateMRR(t.subscription_plan, t.addon_seats), 0)
+    .reduce((sum, t) => sum + estimateMRR(t.subscription_plan, t), 0)
 
   // ── 5. Build email ────────────────────────────────────────────────────────
   const reportDate = now.toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
   const tenantRow = (t: any, status?: string) => {
-    const mrr = estimateMRR(t.subscription_plan, t.addon_seats)
+    const mrr = estimateMRR(t.subscription_plan, t)
     const addons = [
       t.addon_seats > 0 ? `+${t.addon_seats} Seats` : '',
       t.addon_courses_enabled ? 'Kurse' : '',
       t.addon_affiliate_enabled ? 'Affiliate' : '',
+      t.addon_gbp_enabled ? 'GBP' : '',
     ].filter(Boolean).join(', ')
 
     return `<tr style="border-bottom:1px solid #f3f4f6">

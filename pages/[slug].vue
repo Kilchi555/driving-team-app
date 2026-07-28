@@ -780,21 +780,33 @@ const handleLogin = async () => {
     // Show success message and redirect
     showSuccess('Erfolgreich angemeldet', `Willkommen bei ${brandName.value}!`)
     
-    // Check if there's a redirect parameter first
-    const redirectUrl = route.query.redirect as string
-    if (redirectUrl) {
-      logger.debug('🔄 Redirecting to:', redirectUrl)
-      // Remove base URL if present to make it relative
+    // Prefer deep-link return (email / auth middleware): returnTo, redirect, or sessionStorage
+    const resolvePostLoginRedirect = (): string | null => {
+      const candidates = [
+        route.query.returnTo as string | undefined,
+        route.query.redirect as string | undefined,
+      ]
+      try {
+        candidates.push(sessionStorage.getItem('redirect_after_login') || undefined)
+      } catch { /* ignore */ }
+
       const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
-      let relativeUrl = decodeURIComponent(redirectUrl)
-      
-      // If it's an absolute URL, extract the path
-      if (relativeUrl.startsWith(baseUrl)) {
-        relativeUrl = relativeUrl.replace(baseUrl, '')
+      for (const raw of candidates) {
+        if (!raw) continue
+        let relativeUrl = decodeURIComponent(String(raw))
+        if (relativeUrl.startsWith(baseUrl)) relativeUrl = relativeUrl.replace(baseUrl, '')
+        if (relativeUrl.startsWith('/') && !relativeUrl.startsWith('//')) {
+          try { sessionStorage.removeItem('redirect_after_login') } catch { /* ignore */ }
+          return relativeUrl
+        }
       }
-      
-      logger.debug('🔄 Relative redirect URL:', relativeUrl)
-      router.push(relativeUrl)
+      return null
+    }
+
+    const deepLink = resolvePostLoginRedirect()
+    if (deepLink) {
+      logger.debug('🔄 Redirecting to deep link:', deepLink)
+      router.push(deepLink)
       return
     }
     
@@ -920,6 +932,21 @@ const handleMFAVerify = async () => {
         } else {
           redirectPath = '/customer-dashboard'
         }
+      }
+    }
+
+    const deepCandidates = [
+      route.query.returnTo as string | undefined,
+      route.query.redirect as string | undefined,
+    ]
+    try { deepCandidates.push(sessionStorage.getItem('redirect_after_login') || undefined) } catch { /* ignore */ }
+    for (const raw of deepCandidates) {
+      if (!raw) continue
+      const path = decodeURIComponent(String(raw))
+      if (path.startsWith('/') && !path.startsWith('//')) {
+        redirectPath = path
+        try { sessionStorage.removeItem('redirect_after_login') } catch { /* ignore */ }
+        break
       }
     }
     
@@ -1268,13 +1295,25 @@ onMounted(async () => {
       }
 
       logger.debug('✅ User profile found, redirecting...')
-      if (user?.role === 'admin' || user?.role === 'tenant_admin') {
-        router.push('/admin')
-      } else if (user?.role === 'staff') {
-        router.push('/dashboard')
-      } else {
-        router.push('/customer-dashboard')
+      let autoPath = '/customer-dashboard'
+      if (user?.role === 'admin' || user?.role === 'tenant_admin') autoPath = '/admin'
+      else if (user?.role === 'staff') autoPath = '/dashboard'
+
+      const deepCandidates = [
+        route.query.returnTo as string | undefined,
+        route.query.redirect as string | undefined,
+      ]
+      try { deepCandidates.push(sessionStorage.getItem('redirect_after_login') || undefined) } catch { /* ignore */ }
+      for (const raw of deepCandidates) {
+        if (!raw) continue
+        const path = decodeURIComponent(String(raw))
+        if (path.startsWith('/') && !path.startsWith('//')) {
+          autoPath = path
+          try { sessionStorage.removeItem('redirect_after_login') } catch { /* ignore */ }
+          break
+        }
       }
+      router.push(autoPath)
     }
   } catch (sessionError) {
     logger.debug('✅ Session check failed (user logged out):', sessionError)
