@@ -387,6 +387,7 @@ const { user: currentUser, isClient, userProfile } = storeToRefs(authStore)
 
 // ✅ Verwende das neue useCustomerPayments Composable
 const {
+  payments: paymentsRef,
   visiblePayments: customerPayments,
   pendingPayments,
   loadPayments: loadCustomerPayments,
@@ -558,8 +559,8 @@ const loadAllData = async () => {
     preferredPaymentMethod.value = data.user?.preferred_payment_method || 'wallee'
     logger.debug('💳 Preferred payment method:', preferredPaymentMethod.value)
 
-    // Load payments directly from API response instead of separate call
-    customerPayments.value = data.payments || []
+    // Write into the underlying ref; customerPayments is the filtered computed view
+    paymentsRef.value = data.payments || []
     logger.debug('✅ Payments loaded from API:', customerPayments.value.length, 'payments')
 
     logger.debug('✅ All payment page data loaded via API:', {
