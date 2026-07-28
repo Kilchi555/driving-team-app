@@ -64,11 +64,22 @@
           <div v-if="insightsLoading" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div v-for="i in 4" :key="i" class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-24" />
           </div>
-          <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div v-for="m in insightMetrics" :key="m.label" class="bg-white rounded-2xl p-5 border border-gray-100">
-              <p class="text-2xl font-bold text-gray-900">{{ m.value.toLocaleString('de-CH') }}</p>
-              <p class="text-xs text-gray-400 mt-1 font-medium">{{ m.label }}</p>
-              <p class="text-xs text-gray-300 mt-0.5">letzte 28 Tage</p>
+          <div v-else class="space-y-3">
+            <p v-if="insightsMeta" class="text-xs text-gray-400">
+              Gespeichert
+              <template v-if="insightsMeta.historyFrom && insightsMeta.historyTo">
+                · Historie {{ formatDate(insightsMeta.historyFrom) }}–{{ formatDate(insightsMeta.historyTo) }}
+              </template>
+              <template v-if="insightsMeta.lastSyncedAt">
+                · zuletzt aktualisiert {{ formatDateTime(insightsMeta.lastSyncedAt) }}
+              </template>
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div v-for="m in insightMetrics" :key="m.label" class="bg-white rounded-2xl p-5 border border-gray-100">
+                <p class="text-2xl font-bold text-gray-900">{{ m.value.toLocaleString('de-CH') }}</p>
+                <p class="text-xs text-gray-400 mt-1 font-medium">{{ m.label }}</p>
+                <p class="text-xs text-gray-300 mt-0.5">letzte {{ insightsMeta?.displayDays ?? 28 }} Tage</p>
+              </div>
             </div>
           </div>
         </div>
@@ -187,6 +198,12 @@ const status = ref<any>(null)
 // Insights
 const insightsLoading = ref(false)
 const insightMetrics = ref<{ label: string; value: number }[]>([])
+const insightsMeta = ref<{
+  displayDays: number
+  historyFrom: string | null
+  historyTo: string | null
+  lastSyncedAt: string | null
+} | null>(null)
 
 // Reviews
 const reviews = ref<any[]>([])
@@ -230,17 +247,19 @@ async function loadInsights() {
   insightsLoading.value = true
   try {
     const data = await $fetch<any>('/api/gbp/admin/insights')
-    const series = (data.insights?.multiDailyMetricTimeSeries ?? []).flatMap(
-      (block: any) => block.dailyMetricTimeSeries ?? []
-    )
-    const sum = (m: string) => (series.find((s: any) => s.dailyMetric === m)?.timeSeries?.datedValues ?? [])
-      .reduce((acc: number, v: any) => acc + (parseInt(v.value) || 0), 0)
+    const t = data.totals ?? {}
     insightMetrics.value = [
-      { label: 'Profilaufrufe', value: sum('BUSINESS_IMPRESSIONS_MOBILE_MAPS') + sum('BUSINESS_IMPRESSIONS_DESKTOP_MAPS') },
-      { label: 'Website-Klicks', value: sum('WEBSITE_CLICKS') },
-      { label: 'Anrufe', value: sum('CALL_CLICKS') },
-      { label: 'Routenanfragen', value: sum('BUSINESS_DIRECTION_REQUESTS') },
+      { label: 'Profilaufrufe', value: (t.BUSINESS_IMPRESSIONS_MOBILE_MAPS || 0) + (t.BUSINESS_IMPRESSIONS_DESKTOP_MAPS || 0) },
+      { label: 'Website-Klicks', value: t.WEBSITE_CLICKS || 0 },
+      { label: 'Anrufe', value: t.CALL_CLICKS || 0 },
+      { label: 'Routenanfragen', value: t.BUSINESS_DIRECTION_REQUESTS || 0 },
     ]
+    insightsMeta.value = {
+      displayDays: data.displayDays ?? 28,
+      historyFrom: data.historyFrom ?? null,
+      historyTo: data.historyTo ?? null,
+      lastSyncedAt: data.lastSyncedAt ?? null,
+    }
   } catch { /* ignore */ } finally { insightsLoading.value = false }
 }
 
@@ -307,7 +326,18 @@ async function uploadPhoto() {
 }
 
 function starRating(r: string) { return { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }[r] ?? 0 }
-function formatDate(iso: string) { return iso ? new Date(iso).toLocaleDateString('de-CH') : '' }
+function formatDate(iso: string) {
+  if (!iso) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [y, m, d] = iso.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString('de-CH')
+  }
+  return new Date(iso).toLocaleDateString('de-CH')
+}
+function formatDateTime(iso: string) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
 
 watch(activeTab, (tab) => {
   if (tab === 'insights' && !insightMetrics.value.length) loadInsights()

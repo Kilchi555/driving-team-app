@@ -199,11 +199,22 @@
           <div v-else-if="insightsError" class="bg-white rounded-2xl p-6 border border-gray-100 text-center">
             <p class="text-sm text-gray-400">{{ insightsError }}</p>
           </div>
-          <div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div v-for="metric in insightMetrics" :key="metric.label" class="bg-white rounded-2xl p-5 border border-gray-100">
-              <p class="text-2xl font-bold text-gray-900">{{ metric.value.toLocaleString('de-CH') }}</p>
-              <p class="text-xs text-gray-400 mt-1 font-medium">{{ metric.label }}</p>
-              <p class="text-xs text-gray-300 mt-0.5">letzte 28 Tage</p>
+          <div v-else class="space-y-3">
+            <p v-if="insightsMeta" class="text-xs text-gray-400">
+              Gespeichert
+              <template v-if="insightsMeta.historyFrom && insightsMeta.historyTo">
+                · Historie {{ formatDate(insightsMeta.historyFrom) }}–{{ formatDate(insightsMeta.historyTo) }}
+              </template>
+              <template v-if="insightsMeta.lastSyncedAt">
+                · zuletzt aktualisiert {{ formatDateTime(insightsMeta.lastSyncedAt) }}
+              </template>
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div v-for="metric in insightMetrics" :key="metric.label" class="bg-white rounded-2xl p-5 border border-gray-100">
+                <p class="text-2xl font-bold text-gray-900">{{ metric.value.toLocaleString('de-CH') }}</p>
+                <p class="text-xs text-gray-400 mt-1 font-medium">{{ metric.label }}</p>
+                <p class="text-xs text-gray-300 mt-0.5">letzte {{ insightsMeta?.displayDays ?? 28 }} Tage</p>
+              </div>
             </div>
           </div>
         </div>
@@ -667,6 +678,7 @@ async function loadStatus() {
 
 async function onLocationChange() {
   insightMetrics.value = []
+  insightsMeta.value = null
   reviews.value = []
   posts.value = []
   scheduledPosts.value = []
@@ -702,6 +714,12 @@ async function disconnect() {
 const insightsLoading = ref(false)
 const insightsError = ref('')
 const insightMetrics = ref<{ label: string; value: number }[]>([])
+const insightsMeta = ref<{
+  displayDays: number
+  historyFrom: string | null
+  historyTo: string | null
+  lastSyncedAt: string | null
+} | null>(null)
 
 async function loadInsights() {
   if (!status.value?.connected || !selectedLocationId.value) return
@@ -709,20 +727,19 @@ async function loadInsights() {
   insightsError.value = ''
   try {
     const data = await $fetch<any>('/api/gbp/insights', { query: locQuery() })
-    // Response: multiDailyMetricTimeSeries[].dailyMetricTimeSeries[].{ dailyMetric, timeSeries }
-    const series = (data.insights?.multiDailyMetricTimeSeries ?? []).flatMap(
-      (block: any) => block.dailyMetricTimeSeries ?? []
-    )
-    const sum = (metricType: string) => {
-      const s = series.find((s: any) => s.dailyMetric === metricType)
-      return (s?.timeSeries?.datedValues ?? []).reduce((acc: number, v: any) => acc + (parseInt(v.value) || 0), 0)
-    }
+    const t = data.totals ?? {}
     insightMetrics.value = [
-      { label: 'Profilaufrufe Maps', value: sum('BUSINESS_IMPRESSIONS_MOBILE_MAPS') + sum('BUSINESS_IMPRESSIONS_DESKTOP_MAPS') },
-      { label: 'Website-Klicks', value: sum('WEBSITE_CLICKS') },
-      { label: 'Anruf-Klicks', value: sum('CALL_CLICKS') },
-      { label: 'Routenanfragen', value: sum('BUSINESS_DIRECTION_REQUESTS') },
+      { label: 'Profilaufrufe Maps', value: (t.BUSINESS_IMPRESSIONS_MOBILE_MAPS || 0) + (t.BUSINESS_IMPRESSIONS_DESKTOP_MAPS || 0) },
+      { label: 'Website-Klicks', value: t.WEBSITE_CLICKS || 0 },
+      { label: 'Anruf-Klicks', value: t.CALL_CLICKS || 0 },
+      { label: 'Routenanfragen', value: t.BUSINESS_DIRECTION_REQUESTS || 0 },
     ]
+    insightsMeta.value = {
+      displayDays: data.displayDays ?? 28,
+      historyFrom: data.historyFrom ?? null,
+      historyTo: data.historyTo ?? null,
+      lastSyncedAt: data.lastSyncedAt ?? null,
+    }
   } catch (e: any) {
     insightsError.value = e?.data?.statusMessage || e?.message || 'Insights konnten nicht geladen werden'
   } finally {
@@ -970,7 +987,23 @@ function starRating(rating: string): number {
 
 function formatDate(iso: string): string {
   if (!iso) return ''
+  // Date-only (YYYY-MM-DD) → avoid timezone shift by treating as local calendar day
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [y, m, d] = iso.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
   return new Date(iso).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function formatDateTime(iso: string): string {
+  if (!iso) return ''
+  return new Date(iso).toLocaleString('de-CH', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 // Location picker
