@@ -414,7 +414,11 @@ async function openPortal() {
     })
     if (res?.url) window.location.href = res.url
   } catch (e: any) {
-    error.value = e?.data?.statusMessage || 'Stripe-Portal konnte nicht geöffnet werden.'
+    error.value = e?.data?.statusMessage
+      || e?.statusMessage
+      || e?.data?.message
+      || e?.message
+      || 'Stripe-Portal konnte nicht geöffnet werden.'
   } finally {
     portalLoading.value = false
   }
