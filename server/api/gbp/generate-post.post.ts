@@ -32,36 +32,44 @@ export default defineEventHandler(async (event) => {
     .eq('id', authUser.tenant_id)
     .single()
 
-  const summary = await generateGbpPostDraft({
-    tenantName: tenant?.name || 'Fahrschule',
-    locationTitle: loc.title,
-    keywords: settings.keywords,
-    brandVoice: settings.brand_voice,
-    ctaType: settings.default_cta_type,
-  })
-
-  if (!summary) throw createError({ statusCode: 502, statusMessage: 'AI returned empty post' })
-
-  const status = body?.status ?? (body?.scheduledFor ? 'scheduled' : 'draft')
-
-  const { data, error } = await getSupabaseAdmin()
-    .from('gbp_scheduled_posts')
-    .insert({
-      tenant_id: authUser.tenant_id,
-      location_id: loc.id,
-      summary,
-      topic_type: 'STANDARD',
-      call_to_action_type: settings.default_cta_type,
-      call_to_action_url: settings.default_cta_url,
-      scheduled_for: body?.scheduledFor || null,
-      status,
-      media_urls: body?.mediaUrls ?? [],
-      language_code: 'de',
-      source: 'ai',
+  try {
+    const summary = await generateGbpPostDraft({
+      tenantName: tenant?.name || 'Fahrschule',
+      locationTitle: loc.title,
+      keywords: settings.keywords,
+      brandVoice: settings.brand_voice,
+      ctaType: settings.default_cta_type,
     })
-    .select('*')
-    .single()
 
-  if (error) throw createError({ statusCode: 500, statusMessage: error.message })
-  return { ok: true, post: data }
+    if (!summary) throw createError({ statusCode: 502, statusMessage: 'AI returned empty post' })
+
+    const status = body?.status ?? (body?.scheduledFor ? 'scheduled' : 'draft')
+
+    const { data, error } = await getSupabaseAdmin()
+      .from('gbp_scheduled_posts')
+      .insert({
+        tenant_id: authUser.tenant_id,
+        location_id: loc.id,
+        summary,
+        topic_type: 'STANDARD',
+        call_to_action_type: settings.default_cta_type,
+        call_to_action_url: settings.default_cta_url,
+        scheduled_for: body?.scheduledFor || null,
+        status,
+        media_urls: body?.mediaUrls ?? [],
+        language_code: 'de',
+        source: 'ai',
+      })
+      .select('*')
+      .single()
+
+    if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+    return { ok: true, post: data }
+  } catch (err: any) {
+    if (err?.statusCode) throw err
+    throw createError({
+      statusCode: 502,
+      statusMessage: err?.message || 'KI-Post konnte nicht erzeugt werden',
+    })
+  }
 })

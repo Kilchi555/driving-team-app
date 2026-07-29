@@ -96,21 +96,27 @@
       <!-- Connected -->
       <template v-else>
 
-        <!-- Connection info -->
+        <!-- Connection info: Google account (not a single location) -->
         <div class="bg-white rounded-2xl p-5 border border-gray-100 flex items-center justify-between gap-4">
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 min-w-0">
             <span class="inline-block w-2.5 h-2.5 rounded-full bg-green-400 flex-shrink-0"></span>
-            <div>
-              <p class="text-sm font-semibold text-gray-900">{{ selectedLocationTitle || 'Verbunden — Standort wählen' }}</p>
-              <p class="text-xs text-gray-400">{{ status.email }} · Verbunden {{ formatDate(status.connectedAt) }}</p>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-gray-900">Google-Konto verbunden</p>
+              <p class="text-xs text-gray-400 truncate">
+                {{ status.email }}
+                · Verbunden {{ formatDate(status.connectedAt) }}
+                · {{ linkedLocations.length }} Standort{{ linkedLocations.length === 1 ? '' : 'e' }}
+              </p>
             </div>
           </div>
           <button
-            @click="disconnect"
+            type="button"
+            @click="disconnectAccount"
             :disabled="disconnecting"
-            class="text-xs text-red-500 hover:text-red-700 font-medium px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+            class="shrink-0 text-xs text-gray-400 hover:text-red-600 font-medium px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+            title="OAuth komplett trennen (alle Standorte)"
           >
-            Trennen
+            {{ disconnecting ? '…' : 'Konto trennen' }}
           </button>
         </div>
 
@@ -127,11 +133,56 @@
             </option>
           </select>
           <button
+            type="button"
             @click="toggleAddLocation"
             class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
           >
             + Standort hinzufügen
           </button>
+          <button
+            type="button"
+            @click="toggleUnlinkLocation"
+            class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+          >
+            Standorte trennen
+          </button>
+        </div>
+
+        <!-- Unlink locations (multi, like link picker) -->
+        <div v-if="showUnlinkLocation && linkedLocations.length > 0" class="bg-red-50 border border-red-200 rounded-2xl p-5">
+          <div class="flex items-start justify-between gap-3 mb-1">
+            <div>
+              <p class="text-sm font-semibold text-red-900">Standorte trennen</p>
+              <p class="text-xs text-red-700 mt-0.5">Entferne einen oder mehrere Standorte. Das Google-Konto bleibt verbunden.</p>
+            </div>
+            <button
+              type="button"
+              @click="showUnlinkLocation = false"
+              class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-300 text-red-800 hover:bg-red-100"
+            >
+              Fertig
+            </button>
+          </div>
+          <div class="space-y-2 mt-4">
+            <div
+              v-for="loc in linkedLocations"
+              :key="loc.id"
+              class="flex items-center justify-between bg-white rounded-xl border border-red-200 px-4 py-3 gap-3"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-900 truncate">{{ loc.title || loc.gbpLocationId }}</p>
+                <p class="text-xs text-gray-400 truncate">{{ loc.gbpAccountName }}</p>
+              </div>
+              <button
+                type="button"
+                @click="unlinkLocation(loc.id)"
+                :disabled="unlinkingLocation"
+                class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {{ unlinkingLocationId === loc.id ? 'Trenne…' : 'Trennen' }}
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- No location linked — show picker from Google APIs only -->
@@ -638,11 +689,9 @@ const disconnecting = ref(false)
 const linkedLocations = ref<{ id: string; title: string | null; gbpAccountName: string; gbpLocationId: string }[]>([])
 const selectedLocationId = ref<string | null>(null)
 const showAddLocation = ref(false)
-
-const selectedLocationTitle = computed(() => {
-  const loc = linkedLocations.value.find(l => l.id === selectedLocationId.value)
-  return loc?.title || status.value?.locationName || null
-})
+const showUnlinkLocation = ref(false)
+const unlinkingLocation = ref(false)
+const unlinkingLocationId = ref<string | null>(null)
 
 function locQuery() {
   return selectedLocationId.value ? { locationId: selectedLocationId.value } : undefined
@@ -693,18 +742,46 @@ async function onLocationChange() {
 }
 
 function toggleAddLocation() {
+  showUnlinkLocation.value = false
   showAddLocation.value = !showAddLocation.value
   if (showAddLocation.value) loadAccounts()
 }
 
-async function disconnect() {
-  if (!confirm('Google Business Profile wirklich trennen?')) return
+function toggleUnlinkLocation() {
+  showAddLocation.value = false
+  showUnlinkLocation.value = !showUnlinkLocation.value
+}
+
+async function unlinkLocation(id: string) {
+  unlinkingLocation.value = true
+  unlinkingLocationId.value = id
+  try {
+    await $fetch(`/api/gbp/locations/${id}`, { method: 'DELETE' })
+    showUnlinkLocation.value = true
+    await loadStatus()
+    if (linkedLocations.value.length === 0) {
+      showUnlinkLocation.value = false
+      showAddLocation.value = true
+      await loadAccounts()
+    }
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Standort konnte nicht getrennt werden')
+  } finally {
+    unlinkingLocation.value = false
+    unlinkingLocationId.value = null
+  }
+}
+
+async function disconnectAccount() {
+  if (!confirm('Google-Konto wirklich komplett trennen? Alle Standorte und die OAuth-Verbindung werden entfernt.')) return
   disconnecting.value = true
   try {
     await $fetch('/api/gbp/disconnect', { method: 'DELETE' })
     status.value = { connected: false }
     linkedLocations.value = []
     selectedLocationId.value = null
+    showAddLocation.value = false
+    showUnlinkLocation.value = false
   } finally {
     disconnecting.value = false
   }
