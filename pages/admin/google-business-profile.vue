@@ -121,31 +121,33 @@
         </div>
 
         <!-- Location switcher (multi-location) -->
-        <div v-if="linkedLocations.length > 0" class="bg-white rounded-2xl p-4 border border-gray-100 flex flex-wrap items-center gap-3">
+        <div v-if="linkedLocations.length > 0" class="bg-white rounded-2xl p-4 border border-gray-100 space-y-3">
           <label class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Standort</label>
           <select
             v-model="selectedLocationId"
-            class="text-sm rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="block w-full min-w-0 max-w-full truncate text-sm rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             @change="onLocationChange"
           >
             <option v-for="loc in linkedLocations" :key="loc.id" :value="loc.id">
               {{ loc.title || loc.gbpLocationId }}
             </option>
           </select>
-          <button
-            type="button"
-            @click="toggleAddLocation"
-            class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-          >
-            + Standort hinzufügen
-          </button>
-          <button
-            type="button"
-            @click="toggleUnlinkLocation"
-            class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
-          >
-            Standorte trennen
-          </button>
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              @click="toggleAddLocation"
+              class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+            >
+              + Standort hinzufügen
+            </button>
+            <button
+              type="button"
+              @click="toggleUnlinkLocation"
+              class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+            >
+              Standorte trennen
+            </button>
+          </div>
         </div>
 
         <!-- Unlink locations (multi, like link picker) -->
