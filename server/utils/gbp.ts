@@ -644,9 +644,10 @@ export async function updateGbpLocationProfile(
       maskFields.push('regularHours')
     }
     if (updates.primaryCategoryId) {
+      // Google's Category resource uses "name" (e.g. "categories/gcid:driving_school"), not "categoryId".
       body.categories = {
-        primaryCategory: { categoryId: updates.primaryCategoryId },
-        additionalCategories: (updates.additionalCategoryIds ?? []).map((categoryId) => ({ categoryId })),
+        primaryCategory: { name: updates.primaryCategoryId },
+        additionalCategories: (updates.additionalCategoryIds ?? []).map((name) => ({ name })),
       }
       maskFields.push('categories')
     }
