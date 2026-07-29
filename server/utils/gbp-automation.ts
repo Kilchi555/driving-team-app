@@ -2,7 +2,7 @@ import { createError } from 'h3'
 
 /** Shared GBP helpers for P1 automation */
 
-function requireAnthropicApiKey(): string {
+export function requireAnthropicApiKey(): string {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
     throw createError({
@@ -150,6 +150,53 @@ Anforderungen:
 - CTA am Ende passend zu: ${params.ctaType || 'BOOK'}
 - Nur den Post-Text`
   return callAnthropic(prompt, 500)
+}
+
+export interface GbpServiceSuggestion {
+  name: string
+  description: string
+}
+
+/**
+ * Suggest a list of free-form services for a location, based on its category.
+ * Returns a clean array — never echoes services the location already has.
+ */
+export async function generateGbpServiceSuggestions(params: {
+  tenantName: string
+  locationTitle?: string | null
+  categoryName?: string | null
+  existingServiceNames?: string[]
+  keywords?: string[]
+  brandVoice?: string | null
+}): Promise<GbpServiceSuggestion[]> {
+  const existing = (params.existingServiceNames ?? []).filter(Boolean)
+  const kw = (params.keywords ?? []).filter(Boolean)
+  const voice = params.brandVoice ? `\nMarkenstimme: ${params.brandVoice}` : ''
+  const loc = params.locationTitle ? `\nStandort: ${params.locationTitle}` : ''
+  const cat = params.categoryName ? `\nGoogle-Kategorie: ${params.categoryName}` : ''
+  const kwLine = kw.length ? `\nStichworte, die zum Angebot passen könnten: ${kw.join(', ')}` : ''
+  const existingLine = existing.length
+    ? `\nBereits vorhandene Leistungen (NICHT wiederholen): ${existing.join(', ')}`
+    : ''
+
+  const prompt = `Du erstellst eine Liste von Leistungen für das Google Business Profile von "${params.tenantName}" (Fahrschule Schweiz).${loc}${cat}${voice}${kwLine}${existingLine}
+
+Schlage 6–10 konkrete, realistische Leistungen einer Schweizer Fahrschule vor (z.B. Führerscheinkategorien, Kurse, Zusatzangebote). Erfinde keine Leistungen, die eine Fahrschule offensichtlich nicht anbietet.
+
+Antworte AUSSCHLIESSLICH mit validem JSON in diesem Format, ohne Markdown-Codeblock, ohne Erklärung:
+[{"name": "Kurzname (max. 40 Zeichen)", "description": "Kurze Beschreibung, max. 100 Zeichen"}]`
+
+  const raw = await callAnthropic(prompt, 900)
+  const cleaned = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
+  try {
+    const parsed = JSON.parse(cleaned)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((s: any) => s?.name)
+      .map((s: any) => ({ name: String(s.name).slice(0, 60), description: s.description ? String(s.description).slice(0, 150) : '' }))
+  } catch {
+    throw createError({ statusCode: 502, statusMessage: 'KI-Antwort konnte nicht gelesen werden' })
+  }
 }
 
 export async function generateGbpReviewSuggestion(params: {
