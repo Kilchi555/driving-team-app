@@ -22,21 +22,32 @@ create table if not exists public.business_type_presets (
 -- Basic seed for initial types
 insert into public.business_types (code, name, description) values
   ('driving_school', 'Fahrschule', 'Standard Fahrschule'),
-  ('mental_coach', 'Mental-Coaching', 'Coaching & Beratung')
+  ('mental_coach', 'Mental-Coaching', 'Coaching & Beratung'),
+  ('consulting', 'Consulting', 'Beratung & Consulting (z.B. IT, Strategie, Projekte)')
 on conflict (code) do nothing;
 
--- Seed minimal presets (feature flags + labels)
+-- Seed minimal presets (feature flags + labels).
+-- ui_labels mirrors the Terminology interface in composables/useTerminology.ts
+-- (client, staff, appointment, categoriesLabel, businessNoun, ...) plus
+-- label_event_type_header, which is read separately by EventTypeSelector.vue.
+-- See sql_migrations/20260729_align_business_type_ui_labels.sql for the
+-- migration that brought existing rows in line with this schema.
 insert into public.business_type_presets (business_type_code, feature_flags, ui_labels)
 values
   (
     'driving_school',
     '{"booking_public_enabled": true, "invoices_enabled": true, "packages_enabled": false, "product_sales_enabled": false}',
-    '{"term_lesson":"Fahrstunde","term_exam":"Prüfung","term_category":"Kategorie","label_event_type_header":"Terminart"}'
+    '{"client":"Benutzer","clientsPlural":"Benutzer","clientPossessive":"Benutzer","staff":"Fahrlehrer","staffPlural":"Fahrlehrer","appointment":"Fahrstunde","appointmentsPlural":"Fahrstunden","bookAction":"Fahrstunde buchen","categoriesLabel":"Kategorien","categoryLabel":"Kategorie","businessNoun":"Fahrschule","label_event_type_header":"Terminart"}'
   ),
   (
     'mental_coach',
     '{"booking_public_enabled": true, "invoices_enabled": true, "packages_enabled": true, "product_sales_enabled": false}',
-    '{"term_lesson":"Sitzung","term_exam":"Erstgespräch","term_category":"Themenbereich","label_event_type_header":"Sitzungsart"}'
+    '{"client":"Klient","clientsPlural":"Klienten","clientPossessive":"Klient","staff":"Coach","staffPlural":"Coaches","appointment":"Sitzung","appointmentsPlural":"Sitzungen","bookAction":"Sitzung buchen","categoriesLabel":"Themenbereiche","categoryLabel":"Themenbereich","businessNoun":"Coaching-Praxis","label_event_type_header":"Sitzungsart"}'
+  ),
+  (
+    'consulting',
+    '{"booking_public_enabled": true, "invoices_enabled": true, "packages_enabled": true, "product_sales_enabled": false}',
+    '{"client":"Kunde","clientsPlural":"Kunden","clientPossessive":"Kunde","staff":"Berater","staffPlural":"Berater","appointment":"Beratung","appointmentsPlural":"Beratungen","bookAction":"Beratung buchen","categoriesLabel":"Leistungsbereiche","categoryLabel":"Leistungsbereich","businessNoun":"Consulting-Unternehmen","label_event_type_header":"Terminart"}'
   )
 on conflict do nothing;
 

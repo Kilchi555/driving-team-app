@@ -2,6 +2,7 @@ import { defineEventHandler, getQuery, getHeader, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateEmail } from '~/server/utils/validators'
+import { isReservedSlug } from '~/server/utils/reserved-slugs'
 
 const SLUG_RE = /^[a-z0-9-]{3,50}$/
 
@@ -25,20 +26,27 @@ export default defineEventHandler(async (event) => {
   }
 
   const supabase = getSupabaseAdmin()
-  const result: { slug?: { available: boolean }; email?: { available: boolean } } = {}
+  const result: {
+    slug?: { available: boolean; reason?: 'invalid' | 'reserved' | 'taken' }
+    email?: { available: boolean }
+  } = {}
 
   if (slug) {
     const normalized = String(slug).toLowerCase().trim()
     // Reject obviously invalid slugs immediately — no DB round-trip
     if (!SLUG_RE.test(normalized)) {
-      result.slug = { available: false }
+      result.slug = { available: false, reason: 'invalid' }
+    } else if (isReservedSlug(normalized)) {
+      result.slug = { available: false, reason: 'reserved' }
     } else {
       const { data } = await supabase
         .from('tenants')
         .select('id')
         .eq('slug', normalized)
         .maybeSingle()
-      result.slug = { available: !data }
+      result.slug = data
+        ? { available: false, reason: 'taken' }
+        : { available: true }
     }
   }
 

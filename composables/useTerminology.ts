@@ -2,12 +2,23 @@
 //
 // Branchenspezifische Terminologie für Multi-Tenant Multi-Business-Type Setup.
 //
-// Verwendung in Templates:
+// Verwendung in Templates (eingeloggter Tenant):
 //   const { t } = useTerminology()
 //   <h1>{{ t.clientsPlural }}-Verwaltung</h1>
 //   <p>{{ t.client }} {{ student.first_name }} bearbeiten</p>
 //
-// Neue Branche hinzufügen: einfach Eintrag in TERMS ergänzen.
+// Verwendung ausserhalb eines Tenant-Kontexts (z.B. tenant-register.vue, wo
+// business_type nur lokal im Formular steht und es noch keinen Tenant gibt):
+//   import { getTerminologyDefaults } from '~/composables/useTerminology'
+//   const labels = computed(() => getTerminologyDefaults(formData.value.business_type))
+//
+// Neue Branche hinzufügen: einfach Eintrag in TERMS ergänzen (alle Felder ausfüllen).
+//
+// Grammatik-Hinweis: `staff`/`staffPlural` sind bewusst auf maskuline
+// Berufsbezeichnungen (Fahrlehrer, Berater, Coach, Therapeut, Tutor, Trainer,
+// Mitarbeiter) beschränkt, damit generische Sätze wie "Weiteren {{staff}}
+// hinzufügen" ohne Sonderfall-Grammatik pro Branche funktionieren. Bei neuen
+// Branchen mit femininer/neutraler Berufsbezeichnung ggf. UI-Texte prüfen.
 //
 // Falls Tenant kein business_type hat → fallback auf 'driving_school' (aktueller Default).
 
@@ -33,6 +44,20 @@ export interface Terminology {
 
   /** Verb für "buchen" einer Session (z.B. "Fahrstunde buchen") */
   bookAction: string
+
+  /** Plural: Angebotsgruppen (z.B. "Kategorien" / "Leistungsbereiche") */
+  categoriesLabel: string
+  /** Singular: eine Angebotsgruppe (z.B. "Kategorie" / "Leistungsbereich") */
+  categoryLabel: string
+
+  /**
+   * Generische Bezeichnung des Geschäfts selbst (z.B. "Fahrschule",
+   * "Consulting-Unternehmen"). Bewusst ohne Artikel verwendet (z.B.
+   * "{{businessNoun}} registrieren" statt "Deine {{businessNoun}}
+   * registrieren"), um Genus-Probleme (der/die/das) bei neuen Branchen zu
+   * vermeiden.
+   */
+  businessNoun: string
 }
 
 const TERMS: Record<string, Terminology> = {
@@ -44,7 +69,10 @@ const TERMS: Record<string, Terminology> = {
     staffPlural: 'Fahrlehrer',
     appointment: 'Fahrstunde',
     appointmentsPlural: 'Fahrstunden',
-    bookAction: 'Fahrstunde buchen'
+    bookAction: 'Fahrstunde buchen',
+    categoriesLabel: 'Kategorien',
+    categoryLabel: 'Kategorie',
+    businessNoun: 'Fahrschule'
   },
   // 'mental_coach' is the actual business_type code used by business_types /
   // tenant-register.vue. 'coaching' is kept as an alias for any legacy data.
@@ -56,7 +84,23 @@ const TERMS: Record<string, Terminology> = {
     staffPlural: 'Coaches',
     appointment: 'Sitzung',
     appointmentsPlural: 'Sitzungen',
-    bookAction: 'Sitzung buchen'
+    bookAction: 'Sitzung buchen',
+    categoriesLabel: 'Themenbereiche',
+    categoryLabel: 'Themenbereich',
+    businessNoun: 'Coaching-Praxis'
+  },
+  consulting: {
+    client: 'Kunde',
+    clientsPlural: 'Kunden',
+    clientPossessive: 'Kunde',
+    staff: 'Berater',
+    staffPlural: 'Berater',
+    appointment: 'Beratung',
+    appointmentsPlural: 'Beratungen',
+    bookAction: 'Beratung buchen',
+    categoriesLabel: 'Leistungsbereiche',
+    categoryLabel: 'Leistungsbereich',
+    businessNoun: 'Consulting-Unternehmen'
   },
   coaching: {
     client: 'Klient',
@@ -66,7 +110,10 @@ const TERMS: Record<string, Terminology> = {
     staffPlural: 'Coaches',
     appointment: 'Session',
     appointmentsPlural: 'Sessions',
-    bookAction: 'Session buchen'
+    bookAction: 'Session buchen',
+    categoriesLabel: 'Themenbereiche',
+    categoryLabel: 'Themenbereich',
+    businessNoun: 'Coaching-Praxis'
   },
   therapy: {
     client: 'Patient',
@@ -76,7 +123,10 @@ const TERMS: Record<string, Terminology> = {
     staffPlural: 'Therapeuten',
     appointment: 'Sitzung',
     appointmentsPlural: 'Sitzungen',
-    bookAction: 'Sitzung buchen'
+    bookAction: 'Sitzung buchen',
+    categoriesLabel: 'Behandlungsbereiche',
+    categoryLabel: 'Behandlungsbereich',
+    businessNoun: 'Praxis'
   },
   tutoring: {
     client: 'Schüler',
@@ -86,7 +136,10 @@ const TERMS: Record<string, Terminology> = {
     staffPlural: 'Tutoren',
     appointment: 'Nachhilfe',
     appointmentsPlural: 'Nachhilfestunden',
-    bookAction: 'Nachhilfe buchen'
+    bookAction: 'Nachhilfe buchen',
+    categoriesLabel: 'Fächer',
+    categoryLabel: 'Fach',
+    businessNoun: 'Nachhilfeschule'
   },
   fitness: {
     client: 'Mitglied',
@@ -96,7 +149,10 @@ const TERMS: Record<string, Terminology> = {
     staffPlural: 'Trainer',
     appointment: 'Training',
     appointmentsPlural: 'Trainings',
-    bookAction: 'Training buchen'
+    bookAction: 'Training buchen',
+    categoriesLabel: 'Trainingsbereiche',
+    categoryLabel: 'Trainingsbereich',
+    businessNoun: 'Fitnessstudio'
   },
   generic: {
     client: 'Kunde',
@@ -106,11 +162,26 @@ const TERMS: Record<string, Terminology> = {
     staffPlural: 'Mitarbeiter',
     appointment: 'Termin',
     appointmentsPlural: 'Termine',
-    bookAction: 'Termin buchen'
+    bookAction: 'Termin buchen',
+    categoriesLabel: 'Kategorien',
+    categoryLabel: 'Kategorie',
+    businessNoun: 'Unternehmen'
   }
 }
 
 const FALLBACK_BUSINESS_TYPE = 'driving_school'
+
+/**
+ * Pure lookup, no Vue composable dependencies. Use this whenever the
+ * business_type is available as a plain value/ref outside of a logged-in
+ * tenant context (e.g. tenant-register.vue, where the tenant doesn't exist
+ * yet and business_type lives in local form state instead of
+ * useTenantBranding()).
+ */
+export function getTerminologyDefaults(businessType: string | undefined | null): Terminology {
+  const key = businessType && TERMS[businessType] ? businessType : FALLBACK_BUSINESS_TYPE
+  return TERMS[key]
+}
 
 export function useTerminology() {
   const { currentTenantBranding } = useTenantBranding()
@@ -122,7 +193,7 @@ export function useTerminology() {
     return TERMS[raw] ? raw : FALLBACK_BUSINESS_TYPE
   })
 
-  const t = computed<Terminology>(() => TERMS[businessType.value])
+  const t = computed<Terminology>(() => getTerminologyDefaults(businessType.value))
 
   return { t, businessType }
 }

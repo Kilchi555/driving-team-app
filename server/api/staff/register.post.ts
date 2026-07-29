@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const { validateRegistrationEmail } = await import('~/server/utils/email-validator')
-    const emailValidation = validateRegistrationEmail(email)
+    const emailValidation = await validateRegistrationEmail(email)
     if (!emailValidation.valid) {
       logger.warn('⚠️ Email validation failed for staff registration:', emailValidation.reason)
       throw createError({
