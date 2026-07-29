@@ -272,6 +272,123 @@
           </div>
         </div>
 
+        <!-- Analysis tab -->
+        <div v-if="selectedLocationId && activeTab === 'analysis'" class="space-y-4">
+          <div class="bg-white rounded-2xl p-5 border border-gray-100">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-gray-900">GBP-Analyse</p>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  <template v-if="audit">Zuletzt analysiert {{ formatDateTime(audit.generatedAt) }}</template>
+                  <template v-else>Noch keine Analyse durchgeführt</template>
+                </p>
+              </div>
+              <button
+                @click="runAnalysis"
+                :disabled="analysisRunning"
+                class="px-4 py-2 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-50"
+              >
+                {{ analysisRunning ? 'Analysiere… (bis zu 20s)' : (audit ? '↻ Neu analysieren' : '✦ Jetzt analysieren') }}
+              </button>
+            </div>
+            <p v-if="analysisError" class="text-xs text-red-500 mt-2">{{ analysisError }}</p>
+          </div>
+
+          <div v-if="analysisLoading" class="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse h-40" />
+
+          <template v-else-if="audit">
+            <!-- Overall score -->
+            <div class="bg-white rounded-2xl p-6 border border-gray-100 flex items-center gap-5">
+              <div
+                class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold shrink-0"
+                :class="scoreRingClass(audit.overallScore)"
+              >{{ audit.overallScore }}</div>
+              <div>
+                <p class="text-base font-semibold text-gray-900">{{ scoreLabel(audit.overallScore) }}</p>
+                <p class="text-xs text-gray-400 mt-1">Gesamtscore aus Profil, Bewertungen, Aktualität und Sichtbarkeit</p>
+              </div>
+            </div>
+
+            <!-- Category scores -->
+            <div class="grid sm:grid-cols-2 gap-4">
+              <div v-for="cat in audit.categories" :key="cat.key" class="bg-white rounded-2xl p-5 border border-gray-100 space-y-2">
+                <div class="flex items-center justify-between">
+                  <p class="text-sm font-semibold text-gray-900">{{ cat.label }}</p>
+                  <span class="text-sm font-bold" :class="scoreTextClass(cat.score)">{{ cat.score }}</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div class="h-full rounded-full" :class="scoreBarClass(cat.score)" :style="{ width: cat.score + '%' }" />
+                </div>
+                <p class="text-xs text-gray-500">{{ cat.summary }}</p>
+              </div>
+            </div>
+
+            <!-- Strengths -->
+            <div v-if="audit.strengths?.length" class="bg-white rounded-2xl p-5 border border-gray-100 space-y-2">
+              <p class="text-sm font-semibold text-gray-900">Was schon gut läuft</p>
+              <ul class="space-y-1.5">
+                <li v-for="(s, i) in audit.strengths" :key="i" class="flex items-start gap-2 text-sm text-gray-600">
+                  <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                  {{ s }}
+                </li>
+              </ul>
+            </div>
+
+            <!-- Recommendations -->
+            <div v-if="audit.recommendations?.length" class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
+              <p class="text-sm font-semibold text-gray-900">Empfehlungen für mehr Reichweite</p>
+              <div v-for="(rec, i) in audit.recommendations" :key="i" class="border border-gray-100 rounded-xl p-4 space-y-2">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full" :class="priorityBadgeClass(rec.priority)">
+                      {{ priorityLabel(rec.priority) }}
+                    </span>
+                    <p class="text-sm font-semibold text-gray-900">{{ rec.title }}</p>
+                  </div>
+                  <button
+                    v-if="rec.tab && tabs.some(t => t.id === rec.tab)"
+                    type="button"
+                    @click="activeTab = rec.tab"
+                    class="shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                  >Beheben →</button>
+                </div>
+                <p class="text-sm text-gray-600">{{ rec.description }}</p>
+                <div class="flex gap-3 text-xs text-gray-400">
+                  <span>Impact: <span class="font-medium text-gray-600">{{ impactLabel(rec.impact) }}</span></span>
+                  <span>Aufwand: <span class="font-medium text-gray-600">{{ impactLabel(rec.effort) }}</span></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Raw facts -->
+            <div class="bg-white rounded-2xl p-5 border border-gray-100">
+              <p class="text-sm font-semibold text-gray-900 mb-3">Zahlen im Überblick</p>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                <div>
+                  <p class="text-lg font-bold text-gray-900">{{ audit.facts.reviewCount }}</p>
+                  <p class="text-xs text-gray-400">Bewertungen · Ø{{ audit.facts.averageRating.toFixed(1) }}★</p>
+                </div>
+                <div>
+                  <p class="text-lg font-bold text-gray-900">{{ audit.facts.lastPostDaysAgo ?? '–' }}</p>
+                  <p class="text-xs text-gray-400">Tage seit letztem Post</p>
+                </div>
+                <div>
+                  <p class="text-lg font-bold text-gray-900">{{ audit.facts.photoCount }}</p>
+                  <p class="text-xs text-gray-400">Veröffentlichte Fotos</p>
+                </div>
+                <div>
+                  <p class="text-lg font-bold text-gray-900">{{ audit.facts.hoursConfiguredDays }}/7</p>
+                  <p class="text-xs text-gray-400">Öffnungstage hinterlegt</p>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div v-else class="bg-white rounded-2xl p-8 border border-gray-100 text-center">
+            <p class="text-sm text-gray-500">Starte deine erste Analyse — dauert ca. 15–20 Sekunden.</p>
+          </div>
+        </div>
+
         <!-- Profile tab -->
         <div v-if="selectedLocationId && activeTab === 'profile'" class="space-y-4">
           <div v-if="profileLoading" class="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse h-40" />
@@ -398,8 +515,21 @@
 
             <!-- Services -->
             <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
-              <p class="text-sm font-semibold text-gray-900">Leistungen</p>
-              <p class="text-xs text-gray-400">Erscheinen im Google-Profil als Service-Liste. Benötigt eine gesetzte Hauptkategorie.</p>
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-gray-900">Leistungen</p>
+                  <p class="text-xs text-gray-400 mt-0.5">Erscheinen im Google-Profil als Service-Liste. Benötigt eine gesetzte Hauptkategorie.</p>
+                </div>
+                <button
+                  type="button"
+                  @click="generateServiceSuggestions"
+                  :disabled="generatingServices"
+                  class="shrink-0 px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {{ generatingServices ? 'KI schreibt…' : '✦ Mit KI vorschlagen' }}
+                </button>
+              </div>
+              <p v-if="serviceSuggestError" class="text-xs text-red-500">{{ serviceSuggestError }}</p>
               <div v-if="services.length === 0" class="text-sm text-gray-400 py-2">Noch keine Leistungen hinzugefügt</div>
               <div v-for="(s, i) in services" :key="i" class="flex items-start gap-3 border border-gray-100 rounded-xl p-3">
                 <input type="checkbox" v-model="s.isOffered" class="mt-1" title="Wird angeboten" />
@@ -906,6 +1036,7 @@ useHead({ title: 'Google Business Profile' })
 
 const tabs = [
   { id: 'insights', label: 'Insights' },
+  { id: 'analysis', label: 'Analyse' },
   { id: 'profile', label: 'Profil' },
   { id: 'reviews', label: 'Bewertungen' },
   { id: 'posts', label: 'Posts' },
@@ -978,7 +1109,10 @@ async function onLocationChange() {
   reviewActions.value = []
   mediaAssets.value = []
   await loadSettingsKeywords()
+  audit.value = null
+  analysisChecked.value = false
   if (activeTab.value === 'insights') loadInsights()
+  if (activeTab.value === 'analysis') loadAnalysis()
   if (activeTab.value === 'profile') loadProfileTab()
   if (activeTab.value === 'reviews') loadReviews()
   if (activeTab.value === 'posts') loadPosts()
@@ -1080,6 +1214,75 @@ const replyingTo = ref<string | null>(null)
 const replyText = ref('')
 const replying = ref(false)
 
+// Analysis tab
+const audit = ref<any>(null)
+const analysisLoading = ref(false)
+const analysisRunning = ref(false)
+const analysisError = ref('')
+const analysisChecked = ref(false)
+
+async function loadAnalysis() {
+  analysisLoading.value = true
+  analysisError.value = ''
+  try {
+    const res = await $fetch<any>('/api/gbp/analysis', { query: locQuery() })
+    audit.value = res.audit
+    analysisChecked.value = true
+  } catch (e: any) {
+    analysisError.value = e?.data?.statusMessage || 'Analyse konnte nicht geladen werden'
+  } finally {
+    analysisLoading.value = false
+  }
+}
+
+async function runAnalysis() {
+  analysisRunning.value = true
+  analysisError.value = ''
+  try {
+    const res = await $fetch<any>('/api/gbp/analysis', { method: 'POST', body: { locationId: selectedLocationId.value } })
+    audit.value = res.audit
+    analysisChecked.value = true
+  } catch (e: any) {
+    analysisError.value = e?.data?.statusMessage || 'Analyse fehlgeschlagen'
+  } finally {
+    analysisRunning.value = false
+  }
+}
+
+function scoreLabel(score: number): string {
+  if (score >= 85) return 'Exzellent aufgestellt'
+  if (score >= 70) return 'Gut ausgebaut'
+  if (score >= 50) return 'Ausbaufähig'
+  return 'Kritischer Handlungsbedarf'
+}
+function scoreRingClass(score: number): string {
+  if (score >= 85) return 'bg-green-50 text-green-600'
+  if (score >= 70) return 'bg-blue-50 text-blue-600'
+  if (score >= 50) return 'bg-amber-50 text-amber-600'
+  return 'bg-red-50 text-red-600'
+}
+function scoreTextClass(score: number): string {
+  if (score >= 70) return 'text-green-600'
+  if (score >= 50) return 'text-amber-600'
+  return 'text-red-600'
+}
+function scoreBarClass(score: number): string {
+  if (score >= 70) return 'bg-green-500'
+  if (score >= 50) return 'bg-amber-500'
+  return 'bg-red-500'
+}
+function priorityLabel(p: string): string {
+  return p === 'critical' ? 'Kritisch' : p === 'important' ? 'Wichtig' : 'Optional'
+}
+function priorityBadgeClass(p: string): string {
+  if (p === 'critical') return 'bg-red-100 text-red-700'
+  if (p === 'important') return 'bg-amber-100 text-amber-700'
+  return 'bg-gray-100 text-gray-600'
+}
+function impactLabel(v: string): string {
+  return v === 'high' ? 'Hoch' : v === 'medium' ? 'Mittel' : 'Niedrig'
+}
+
 // Profile tab
 const weekDays = [
   { id: 'MONDAY', label: 'Montag' },
@@ -1114,6 +1317,33 @@ const categoriesSaved = ref(false)
 const services = ref<{ isOffered: boolean; name: string; description: string | null; priceAmount: number | null; priceCurrency: string | null }[]>([])
 const servicesSaving = ref(false)
 const servicesSaved = ref(false)
+const generatingServices = ref(false)
+const serviceSuggestError = ref('')
+
+async function generateServiceSuggestions() {
+  generatingServices.value = true
+  serviceSuggestError.value = ''
+  try {
+    const res = await $fetch<any>('/api/gbp/services/ai-generate', {
+      method: 'POST',
+      body: {
+        locationId: selectedLocationId.value,
+        existingServiceNames: services.value.map(s => s.name).filter(Boolean),
+      },
+    })
+    const existingNames = new Set(services.value.map(s => s.name.trim().toLowerCase()))
+    for (const s of res.suggestions ?? []) {
+      if (!existingNames.has(s.name.trim().toLowerCase())) {
+        services.value.push({ isOffered: true, name: s.name, description: s.description || null, priceAmount: null, priceCurrency: null })
+        existingNames.add(s.name.trim().toLowerCase())
+      }
+    }
+  } catch (e: any) {
+    serviceSuggestError.value = e?.data?.statusMessage || 'Vorschläge konnten nicht geladen werden'
+  } finally {
+    generatingServices.value = false
+  }
+}
 
 async function loadProfileTab() {
   profileLoading.value = true
@@ -1800,6 +2030,7 @@ onMounted(async () => {
 
 watch(activeTab, (tab) => {
   if (tab === 'insights' && insightMetrics.value.length === 0) loadInsights()
+  if (tab === 'analysis' && !analysisChecked.value && !analysisLoading.value) loadAnalysis()
   if (tab === 'profile' && !profileForm.value) loadProfileTab()
   if (tab === 'reviews' && reviews.value.length === 0) loadReviews()
   if (tab === 'posts' && posts.value.length === 0) loadPosts()
