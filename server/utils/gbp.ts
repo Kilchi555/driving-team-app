@@ -547,6 +547,19 @@ export interface GbpLocationProfile {
 
 const PROFILE_READ_MASK = 'title,phoneNumbers,websiteUri,regularHours,categories,profile'
 
+/** Google represents hours as a structured TimeOfDay ({hours, minutes}), not "HH:MM" strings. */
+function timeOfDayToString(t: { hours?: number; minutes?: number } | null | undefined): string {
+  if (!t) return ''
+  const h = String(t.hours ?? 0).padStart(2, '0')
+  const m = String(t.minutes ?? 0).padStart(2, '0')
+  return `${h}:${m}`
+}
+
+function stringToTimeOfDay(s: string): { hours: number; minutes: number } {
+  const [h, m] = (s || '00:00').split(':').map((n) => parseInt(n, 10) || 0)
+  return { hours: h, minutes: m }
+}
+
 /**
  * Fetch a location's editable profile fields (description, hours, categories, contact).
  */
@@ -570,9 +583,9 @@ export async function getGbpLocationProfile(
       description: data.profile?.description ?? null,
       regularHours: (data.regularHours?.periods ?? []).map((p: any) => ({
         openDay: p.openDay,
-        openTime: p.openTime,
+        openTime: timeOfDayToString(p.openTime),
         closeDay: p.closeDay,
-        closeTime: p.closeTime,
+        closeTime: timeOfDayToString(p.closeTime),
       })),
       primaryCategory: data.categories?.primaryCategory
         ? { categoryId: data.categories.primaryCategory.categoryId ?? data.categories.primaryCategory.name, displayName: data.categories.primaryCategory.displayName }
@@ -620,7 +633,14 @@ export async function updateGbpLocationProfile(
       maskFields.push('websiteUri')
     }
     if (updates.regularHours !== undefined) {
-      body.regularHours = { periods: updates.regularHours }
+      body.regularHours = {
+        periods: updates.regularHours.map((p) => ({
+          openDay: p.openDay,
+          openTime: stringToTimeOfDay(p.openTime),
+          closeDay: p.closeDay,
+          closeTime: stringToTimeOfDay(p.closeTime),
+        })),
+      }
       maskFields.push('regularHours')
     }
     if (updates.primaryCategoryId) {
