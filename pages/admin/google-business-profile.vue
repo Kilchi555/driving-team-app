@@ -570,6 +570,36 @@
               :max-length="1500"
               :rows="5"
             />
+
+            <!-- Image attachment -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-gray-600">Bild (optional)</span>
+                <button type="button" @click="activeTab = 'photos'" class="text-xs text-blue-600 hover:text-blue-700">+ Neues Bild hochladen</button>
+              </div>
+              <div v-if="approvedMediaAssets.length" class="flex gap-2 overflow-x-auto pb-1">
+                <button
+                  v-for="asset in approvedMediaAssets"
+                  :key="asset.id"
+                  type="button"
+                  @click="newPost.mediaUrl = newPost.mediaUrl === asset.public_url ? '' : asset.public_url"
+                  class="relative shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors"
+                  :class="newPost.mediaUrl === asset.public_url ? 'border-blue-600' : 'border-transparent hover:border-gray-300'"
+                >
+                  <img :src="asset.public_url" :alt="asset.category" class="w-full h-full object-cover" />
+                  <span v-if="newPost.mediaUrl === asset.public_url" class="absolute inset-0 bg-blue-600/30 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                  </span>
+                </button>
+              </div>
+              <p v-else class="text-xs text-gray-400">Noch keine freigegebenen Fotos im Pool — lade eins unter "Fotos" hoch oder füge unten eine Bild-URL ein.</p>
+              <input
+                v-model="newPost.mediaUrl"
+                placeholder="oder Bild-URL einfügen — https://…"
+                class="w-full text-xs rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
             <div class="flex flex-wrap gap-3">
               <select v-model="newPost.topicType" class="text-sm rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option value="STANDARD">Standard</option>
@@ -603,6 +633,12 @@
           <div v-else class="space-y-3">
             <div v-for="post in posts" :key="post.name" class="bg-white rounded-2xl p-5 border border-gray-100">
               <div class="flex items-start justify-between gap-3">
+                <img
+                  v-if="post.media?.[0]?.googleUrl"
+                  :src="post.media[0].googleUrl"
+                  alt=""
+                  class="w-14 h-14 rounded-lg object-cover shrink-0 bg-gray-50"
+                />
                 <div class="flex-1">
                   <span class="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 mb-2">{{ post.topicType || 'Standard' }}</span>
                   <p class="text-sm text-gray-700 leading-relaxed">{{ post.summary }}</p>
@@ -1115,7 +1151,7 @@ async function onLocationChange() {
   if (activeTab.value === 'analysis') loadAnalysis()
   if (activeTab.value === 'profile') loadProfileTab()
   if (activeTab.value === 'reviews') loadReviews()
-  if (activeTab.value === 'posts') loadPosts()
+  if (activeTab.value === 'posts') { loadPosts(); loadMedia() }
   if (activeTab.value === 'photos') loadMedia()
   if (activeTab.value === 'automation') loadQueue()
   if (activeTab.value === 'settings') loadSettings()
@@ -1502,7 +1538,7 @@ async function saveServices() {
 // Posts
 const posts = ref<any[]>([])
 const postsLoading = ref(false)
-const newPost = ref({ summary: '', topicType: 'STANDARD', callToActionType: '', callToActionUrl: '' })
+const newPost = ref({ summary: '', topicType: 'STANDARD', callToActionType: '', callToActionUrl: '', mediaUrl: '' })
 const postPublishing = ref(false)
 const settingsKeywords = ref<string[]>([])
 
@@ -1511,6 +1547,7 @@ const photoUrl = ref('')
 const photoUploading = ref(false)
 const photoResult = ref('')
 const mediaAssets = ref<any[]>([])
+const approvedMediaAssets = computed(() => mediaAssets.value.filter((a) => a.approved))
 const mediaLoading = ref(false)
 const poolFile = ref<File | null>(null)
 const poolFileInput = ref<HTMLInputElement | null>(null)
@@ -1674,13 +1711,14 @@ async function publishPost() {
         summary: newPost.value.summary,
         topicType: newPost.value.topicType,
         locationId: selectedLocationId.value,
+        ...(newPost.value.mediaUrl?.trim() && { mediaUrls: [newPost.value.mediaUrl.trim()] }),
         ...(newPost.value.callToActionType && {
           callToActionType: newPost.value.callToActionType,
           callToActionUrl: newPost.value.callToActionUrl,
         }),
       },
     })
-    newPost.value = { summary: '', topicType: 'STANDARD', callToActionType: '', callToActionUrl: '' }
+    newPost.value = { summary: '', topicType: 'STANDARD', callToActionType: '', callToActionUrl: '', mediaUrl: '' }
     await loadPosts()
   } catch (e: any) {
     alert(e?.data?.statusMessage || 'Post fehlgeschlagen')
@@ -2033,7 +2071,10 @@ watch(activeTab, (tab) => {
   if (tab === 'analysis' && !analysisChecked.value && !analysisLoading.value) loadAnalysis()
   if (tab === 'profile' && !profileForm.value) loadProfileTab()
   if (tab === 'reviews' && reviews.value.length === 0) loadReviews()
-  if (tab === 'posts' && posts.value.length === 0) loadPosts()
+  if (tab === 'posts') {
+    if (posts.value.length === 0) loadPosts()
+    if (mediaAssets.value.length === 0) loadMedia()
+  }
   if (tab === 'photos') loadMedia()
   if (tab === 'automation') loadQueue()
   if (tab === 'settings') loadSettings()
