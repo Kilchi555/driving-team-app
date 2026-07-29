@@ -422,42 +422,6 @@
                 </button>
               </div>
             </div>
-
-            <!-- Q&A -->
-            <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
-              <p class="text-sm font-semibold text-gray-900">Fragen & Antworten</p>
-              <div class="flex gap-2">
-                <input v-model="newQuestionText" placeholder="Neue Frage anlegen, z.B. „Bietet ihr Motorradkurse an?“…" class="flex-1 min-w-0 text-sm rounded-lg border border-gray-200 px-3 py-2" />
-                <button @click="createQuestion" :disabled="!newQuestionText.trim() || creatingQuestion" class="shrink-0 px-3 py-2 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 disabled:opacity-50">
-                  {{ creatingQuestion ? '…' : '+ Frage' }}
-                </button>
-              </div>
-              <div v-if="questionsLoading" class="text-sm text-gray-400 py-2">Lade Fragen…</div>
-              <div v-else-if="questions.length === 0" class="text-sm text-gray-400 py-2">Noch keine Fragen vorhanden</div>
-              <div v-for="q in questions" :key="q.name" class="border border-gray-100 rounded-xl p-4 space-y-2">
-                <div class="flex items-start justify-between gap-2">
-                  <p class="text-sm font-medium text-gray-900">{{ q.text }}</p>
-                  <button type="button" @click="removeQuestion(q)" class="text-xs text-gray-300 hover:text-red-500 shrink-0">Löschen</button>
-                </div>
-                <p v-if="q.topAnswers?.length" class="text-xs text-gray-500">Aktuelle Antwort: {{ q.topAnswers[0].text }}</p>
-                <GbpAiTextField
-                  v-model="questionAnswers[q.name]"
-                  context="qanda_answer"
-                  :location-id="selectedLocationId"
-                  :question-text="q.text"
-                  label="Antwort"
-                  :max-length="300"
-                  :rows="2"
-                />
-                <button
-                  @click="answerQuestion(q)"
-                  :disabled="!questionAnswers[q.name]?.trim() || answeringQuestion === q.name"
-                  class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {{ answeringQuestion === q.name ? 'Speichern…' : 'Antwort speichern' }}
-                </button>
-              </div>
-            </div>
           </template>
         </div>
 
@@ -1150,12 +1114,6 @@ const categoriesSaved = ref(false)
 const services = ref<{ isOffered: boolean; name: string; description: string | null; priceAmount: number | null; priceCurrency: string | null }[]>([])
 const servicesSaving = ref(false)
 const servicesSaved = ref(false)
-const questions = ref<any[]>([])
-const questionsLoading = ref(false)
-const questionAnswers = reactive<Record<string, string>>({})
-const newQuestionText = ref('')
-const creatingQuestion = ref(false)
-const answeringQuestion = ref<string | null>(null)
 
 async function loadProfileTab() {
   profileLoading.value = true
@@ -1179,7 +1137,6 @@ async function loadProfileTab() {
       }
     }
     services.value = servicesRes.services || []
-    await loadQuestions()
   } catch (e: any) {
     alert(e?.data?.statusMessage || 'Profil konnte nicht geladen werden')
   } finally {
@@ -1309,62 +1266,6 @@ async function saveServices() {
     alert(e?.data?.statusMessage || 'Leistungen konnten nicht gespeichert werden')
   } finally {
     servicesSaving.value = false
-  }
-}
-
-async function loadQuestions() {
-  questionsLoading.value = true
-  try {
-    const res = await $fetch<any>('/api/gbp/questions', { query: locQuery() })
-    questions.value = res.questions || []
-    for (const q of questions.value) {
-      if (questionAnswers[q.name] === undefined) questionAnswers[q.name] = q.topAnswers?.[0]?.text || ''
-    }
-  } catch (e: any) {
-    questions.value = []
-  } finally {
-    questionsLoading.value = false
-  }
-}
-
-async function createQuestion() {
-  if (!newQuestionText.value.trim()) return
-  creatingQuestion.value = true
-  try {
-    await $fetch('/api/gbp/questions', {
-      method: 'POST',
-      body: { locationId: selectedLocationId.value, text: newQuestionText.value.trim() },
-    })
-    newQuestionText.value = ''
-    await loadQuestions()
-  } catch (e: any) {
-    alert(e?.data?.statusMessage || 'Frage konnte nicht erstellt werden')
-  } finally {
-    creatingQuestion.value = false
-  }
-}
-
-async function answerQuestion(q: any) {
-  const text = questionAnswers[q.name]?.trim()
-  if (!text) return
-  answeringQuestion.value = q.name
-  try {
-    await $fetch('/api/gbp/questions/answer', { method: 'POST', body: { questionName: q.name, text } })
-    await loadQuestions()
-  } catch (e: any) {
-    alert(e?.data?.statusMessage || 'Antwort konnte nicht gespeichert werden')
-  } finally {
-    answeringQuestion.value = null
-  }
-}
-
-async function removeQuestion(q: any) {
-  if (!confirm('Frage wirklich löschen?')) return
-  try {
-    await $fetch('/api/gbp/questions/delete', { method: 'POST', body: { questionName: q.name } })
-    await loadQuestions()
-  } catch (e: any) {
-    alert(e?.data?.statusMessage || 'Frage konnte nicht gelöscht werden')
   }
 }
 
