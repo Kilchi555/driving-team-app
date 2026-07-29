@@ -1,5 +1,5 @@
 <script setup lang="ts">
-export type GbpAiTextContext = 'post' | 'photo_caption' | 'review_reply'
+export type GbpAiTextContext = 'post' | 'photo_caption' | 'review_reply' | 'profile_description' | 'qanda_answer'
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<{
     starRating?: number
     reviewText?: string
   }
+  questionText?: string
 }>(), {
   defaultKeywords: () => [],
   maxLength: 1500,
@@ -37,11 +38,13 @@ const loading = ref(false)
 const previousText = ref<string | null>(null)
 const error = ref('')
 
-const showKeywords = computed(() => props.context !== 'review_reply')
+const showKeywords = computed(() => props.context !== 'review_reply' && props.context !== 'qanda_answer')
 const showTone = computed(() => true)
 const charHint = computed(() => {
   if (props.context === 'photo_caption') return 'Ziel: 80–220 Zeichen'
   if (props.context === 'review_reply') return 'Max. 3 Sätze empfohlen'
+  if (props.context === 'qanda_answer') return 'Max. 2–3 Sätze empfohlen'
+  if (props.context === 'profile_description') return 'Ziel: 400–750 Zeichen (Google-Limit)'
   return 'Ziel: 400–900 Zeichen'
 })
 
@@ -89,6 +92,7 @@ async function runAi(mode: 'generate' | 'regenerate' | 'shorter' | 'more_cta' = 
         tone: tone.value,
         mode,
         reviewContext: props.reviewContext,
+        questionText: props.questionText,
       },
     })
     text.value = res.text
@@ -177,7 +181,7 @@ function restorePrevious() {
         Kürzer
       </button>
       <button
-        v-if="text.trim() && context !== 'review_reply'"
+        v-if="text.trim() && context !== 'review_reply' && context !== 'qanda_answer'"
         type="button"
         :disabled="loading"
         class="w-full sm:w-auto px-3 py-2 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50 disabled:opacity-50"

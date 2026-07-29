@@ -527,6 +527,238 @@ export async function replyToGbpReview(
   })
 }
 
+export interface GbpBusinessHoursPeriod {
+  openDay: string
+  openTime: string
+  closeDay: string
+  closeTime: string
+}
+
+export interface GbpLocationProfile {
+  name: string
+  title: string | null
+  phoneNumber: string | null
+  websiteUri: string | null
+  description: string | null
+  regularHours: GbpBusinessHoursPeriod[]
+  primaryCategory: { categoryId: string; displayName: string } | null
+  additionalCategories: { categoryId: string; displayName: string }[]
+}
+
+const PROFILE_READ_MASK = 'title,phoneNumbers,websiteUri,regularHours,categories,profile'
+
+/**
+ * Fetch a location's editable profile fields (description, hours, categories, contact).
+ */
+export async function getGbpLocationProfile(
+  tenantId: string,
+  locationId?: string | null
+): Promise<GbpLocationProfile> {
+  return withLocation(tenantId, locationId, async (accessToken, loc) => {
+    const res = await fetch(
+      `${GBP_API_BASE}/${loc.gbp_location_id}?readMask=${PROFILE_READ_MASK}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    )
+    const data = await res.json()
+    if (!res.ok) throw new Error(data?.error?.message || `GBP profile fetch failed (${res.status})`)
+
+    return {
+      name: data.name,
+      title: data.title ?? null,
+      phoneNumber: data.phoneNumbers?.primaryPhone ?? null,
+      websiteUri: data.websiteUri ?? null,
+      description: data.profile?.description ?? null,
+      regularHours: (data.regularHours?.periods ?? []).map((p: any) => ({
+        openDay: p.openDay,
+        openTime: p.openTime,
+        closeDay: p.closeDay,
+        closeTime: p.closeTime,
+      })),
+      primaryCategory: data.categories?.primaryCategory
+        ? { categoryId: data.categories.primaryCategory.categoryId ?? data.categories.primaryCategory.name, displayName: data.categories.primaryCategory.displayName }
+        : null,
+      additionalCategories: (data.categories?.additionalCategories ?? []).map((c: any) => ({
+        categoryId: c.categoryId ?? c.name,
+        displayName: c.displayName,
+      })),
+    }
+  })
+}
+
+export interface GbpLocationProfileUpdate {
+  description?: string | null
+  phoneNumber?: string | null
+  websiteUri?: string | null
+  regularHours?: GbpBusinessHoursPeriod[]
+  primaryCategoryId?: string
+  additionalCategoryIds?: string[]
+}
+
+/**
+ * Patch editable profile fields. Only fields present in `updates` are sent.
+ * Categories are all-or-nothing: passing either requires both to be resolved.
+ */
+export async function updateGbpLocationProfile(
+  tenantId: string,
+  updates: GbpLocationProfileUpdate,
+  locationId?: string | null
+) {
+  return withLocation(tenantId, locationId, async (accessToken, loc) => {
+    const body: Record<string, unknown> = {}
+    const maskFields: string[] = []
+
+    if (updates.description !== undefined) {
+      body.profile = { description: updates.description ?? '' }
+      maskFields.push('profile')
+    }
+    if (updates.phoneNumber !== undefined) {
+      body.phoneNumbers = { primaryPhone: updates.phoneNumber ?? '' }
+      maskFields.push('phoneNumbers')
+    }
+    if (updates.websiteUri !== undefined) {
+      body.websiteUri = updates.websiteUri ?? ''
+      maskFields.push('websiteUri')
+    }
+    if (updates.regularHours !== undefined) {
+      body.regularHours = { periods: updates.regularHours }
+      maskFields.push('regularHours')
+    }
+    if (updates.primaryCategoryId) {
+      body.categories = {
+        primaryCategory: { categoryId: updates.primaryCategoryId },
+        additionalCategories: (updates.additionalCategoryIds ?? []).map((categoryId) => ({ categoryId })),
+      }
+      maskFields.push('categories')
+    }
+
+    if (maskFields.length === 0) return { success: true, unchanged: true }
+
+    const res = await fetch(
+      `${GBP_API_BASE}/${loc.gbp_location_id}?updateMask=${maskFields.join(',')}`,
+      {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }
+    )
+    const data = await res.json()
+    if (!res.ok) throw new Error(data?.error?.message || `GBP profile update failed (${res.status})`)
+    return data
+  })
+}
+
+/**
+ * Search Google's canonical business categories (for primary/additional category pickers).
+ */
+export async function searchGbpCategories(tenantId: string, query: string) {
+  const accessToken = await getValidAccessToken(tenantId)
+  const params = new URLSearchParams({
+    regionCode: 'CH',
+    languageCode: 'de',
+    view: 'BASIC',
+    pageSize: '20',
+  })
+  if (query.trim()) params.set('filter', `displayName=${query.trim()}`)
+
+  const res = await fetch(`${GBP_API_BASE}/categories?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.error?.message || `GBP category search failed (${res.status})`)
+  return (data.categories ?? []).map((c: any) => ({ categoryId: c.categoryId ?? c.name, displayName: c.displayName }))
+}
+
+export interface GbpServiceItem {
+  isOffered: boolean
+  name: string
+  description?: string | null
+  priceAmount?: number | null
+  priceCurrency?: string | null
+}
+
+/**
+ * Fetch free-form service items configured for a location, plus its primary category
+ * (required to write new free-form services back to Google).
+ */
+export async function getGbpServices(tenantId: string, locationId?: string | null): Promise<{
+  services: GbpServiceItem[]
+  primaryCategoryId: string | null
+}> {
+  return withLocation(tenantId, locationId, async (accessToken, loc) => {
+    const res = await fetch(
+      `${GBP_API_BASE}/${loc.gbp_location_id}?readMask=serviceItems,categories`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    )
+    const data = await res.json()
+    if (!res.ok) throw new Error(data?.error?.message || `GBP services fetch failed (${res.status})`)
+
+    const services: GbpServiceItem[] = (data.serviceItems ?? [])
+      .filter((s: any) => s.freeFormServiceItem)
+      .map((s: any) => ({
+        isOffered: s.isOffered !== false,
+        name: s.freeFormServiceItem?.label?.displayName ?? '',
+        description: s.freeFormServiceItem?.label?.description ?? null,
+        priceAmount: s.price?.units != null ? Number(s.price.units) : null,
+        priceCurrency: s.price?.currencyCode ?? null,
+      }))
+
+    return {
+      services,
+      primaryCategoryId: data.categories?.primaryCategory?.categoryId ?? data.categories?.primaryCategory?.name ?? null,
+    }
+  })
+}
+
+/**
+ * Overwrite the full free-form service list for a location.
+ * Google does not support updating individual services — the whole array is replaced.
+ */
+export async function updateGbpServices(
+  tenantId: string,
+  services: GbpServiceItem[],
+  locationId?: string | null
+) {
+  return withLocation(tenantId, locationId, async (accessToken, loc) => {
+    const categoryRes = await fetch(
+      `${GBP_API_BASE}/${loc.gbp_location_id}?readMask=categories`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    )
+    const categoryData = await categoryRes.json()
+    const categoryId = categoryData.categories?.primaryCategory?.categoryId ?? categoryData.categories?.primaryCategory?.name
+    if (!categoryId) throw new Error('Keine Hauptkategorie gesetzt — bitte zuerst unter Profil festlegen')
+
+    const serviceItems = services.map((s) => {
+      const item: Record<string, unknown> = {
+        isOffered: s.isOffered,
+        freeFormServiceItem: {
+          category: categoryId,
+          label: {
+            displayName: s.name,
+            ...(s.description ? { description: s.description } : {}),
+            languageCode: 'de',
+          },
+        },
+      }
+      if (s.priceAmount != null && s.priceCurrency) {
+        item.price = { currencyCode: s.priceCurrency, units: String(Math.round(s.priceAmount)) }
+      }
+      return item
+    })
+
+    const res = await fetch(
+      `${GBP_API_BASE}/${loc.gbp_location_id}?updateMask=serviceItems`,
+      {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serviceItems }),
+      }
+    )
+    const data = await res.json()
+    if (!res.ok) throw new Error(data?.error?.message || `GBP services update failed (${res.status})`)
+    return data
+  })
+}
+
 /**
  * Link a real GBP location (from Google APIs) to the tenant.
  * Validates resource names look legitimate (no Place-ID hack).

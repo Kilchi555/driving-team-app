@@ -272,6 +272,195 @@
           </div>
         </div>
 
+        <!-- Profile tab -->
+        <div v-if="selectedLocationId && activeTab === 'profile'" class="space-y-4">
+          <div v-if="profileLoading" class="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse h-40" />
+          <template v-else>
+            <!-- Beschreibung & Kontakt -->
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+              <p class="text-sm font-semibold text-gray-900">Über uns & Kontakt</p>
+              <GbpAiTextField
+                v-model="profileForm.description"
+                context="profile_description"
+                :location-id="selectedLocationId"
+                :default-keywords="settingsKeywords"
+                label="Beschreibung"
+                placeholder="Rohtext oder Stichworte — dann SEO-Beschreibung generieren…"
+                :max-length="750"
+                :rows="5"
+              />
+              <div class="grid sm:grid-cols-2 gap-4">
+                <label class="block space-y-1">
+                  <span class="text-xs font-medium text-gray-600">Telefon</span>
+                  <input v-model="profileForm.phoneNumber" placeholder="+41 44 000 00 00" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </label>
+                <label class="block space-y-1">
+                  <span class="text-xs font-medium text-gray-600">Website</span>
+                  <input v-model="profileForm.websiteUri" placeholder="https://…" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </label>
+              </div>
+              <div class="flex items-center justify-between">
+                <p v-if="profileSaved" class="text-xs text-green-600">Gespeichert</p>
+                <span v-else />
+                <button @click="saveProfileBasics" :disabled="profileSaving" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                  {{ profileSaving ? 'Speichern…' : 'Speichern' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Öffnungszeiten -->
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
+              <p class="text-sm font-semibold text-gray-900">Öffnungszeiten</p>
+              <div class="space-y-2">
+                <div v-for="day in weekDays" :key="day.id" class="flex flex-wrap items-center gap-3">
+                  <span class="w-24 text-xs font-medium text-gray-600 shrink-0">{{ day.label }}</span>
+                  <label class="flex items-center gap-1.5 text-xs text-gray-500">
+                    <input type="checkbox" :checked="!hoursByDay[day.id].closed" @change="hoursByDay[day.id].closed = !($event.target as HTMLInputElement).checked" />
+                    Geöffnet
+                  </label>
+                  <template v-if="!hoursByDay[day.id].closed">
+                    <input v-model="hoursByDay[day.id].open" type="time" class="text-sm rounded-lg border border-gray-200 px-2 py-1.5" />
+                    <span class="text-xs text-gray-400">bis</span>
+                    <input v-model="hoursByDay[day.id].close" type="time" class="text-sm rounded-lg border border-gray-200 px-2 py-1.5" />
+                  </template>
+                  <span v-else class="text-xs text-gray-400">Geschlossen</span>
+                </div>
+              </div>
+              <div class="flex items-center justify-between pt-1">
+                <p v-if="hoursSaved" class="text-xs text-green-600">Gespeichert</p>
+                <span v-else />
+                <button @click="saveHours" :disabled="hoursSaving" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                  {{ hoursSaving ? 'Speichern…' : 'Öffnungszeiten speichern' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Kategorien -->
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
+              <p class="text-sm font-semibold text-gray-900">Kategorien</p>
+              <div>
+                <span class="text-xs font-medium text-gray-600 block mb-1">Hauptkategorie</span>
+                <div v-if="profileForm.primaryCategory" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                  {{ profileForm.primaryCategory.displayName }}
+                  <button type="button" class="text-blue-400 hover:text-blue-800" @click="profileForm.primaryCategory = null">×</button>
+                </div>
+                <input
+                  v-else
+                  v-model="categorySearch.primary"
+                  type="text"
+                  placeholder="Kategorie suchen, z.B. Fahrschule…"
+                  class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2 mt-1"
+                  @input="searchCategories('primary')"
+                />
+                <div v-if="categoryResults.primary.length" class="mt-1 bg-white border border-gray-200 rounded-lg shadow-sm max-h-48 overflow-y-auto">
+                  <button
+                    v-for="c in categoryResults.primary"
+                    :key="c.categoryId"
+                    type="button"
+                    class="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                    @click="selectPrimaryCategory(c)"
+                  >{{ c.displayName }}</button>
+                </div>
+              </div>
+              <div>
+                <span class="text-xs font-medium text-gray-600 block mb-1">Weitere Kategorien</span>
+                <div class="flex flex-wrap gap-1.5 mb-2">
+                  <span v-for="c in profileForm.additionalCategories" :key="c.categoryId" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+                    {{ c.displayName }}
+                    <button type="button" class="text-gray-400 hover:text-gray-800" @click="removeAdditionalCategory(c.categoryId)">×</button>
+                  </span>
+                </div>
+                <input
+                  v-model="categorySearch.additional"
+                  type="text"
+                  placeholder="Weitere Kategorie hinzufügen…"
+                  class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2"
+                  @input="searchCategories('additional')"
+                />
+                <div v-if="categoryResults.additional.length" class="mt-1 bg-white border border-gray-200 rounded-lg shadow-sm max-h-48 overflow-y-auto">
+                  <button
+                    v-for="c in categoryResults.additional"
+                    :key="c.categoryId"
+                    type="button"
+                    class="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                    @click="addAdditionalCategory(c)"
+                  >{{ c.displayName }}</button>
+                </div>
+              </div>
+              <div class="flex items-center justify-between pt-1">
+                <p v-if="categoriesSaved" class="text-xs text-green-600">Gespeichert</p>
+                <span v-else />
+                <button @click="saveCategories" :disabled="categoriesSaving || !profileForm.primaryCategory" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                  {{ categoriesSaving ? 'Speichern…' : 'Kategorien speichern' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Services -->
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
+              <p class="text-sm font-semibold text-gray-900">Leistungen</p>
+              <p class="text-xs text-gray-400">Erscheinen im Google-Profil als Service-Liste. Benötigt eine gesetzte Hauptkategorie.</p>
+              <div v-if="services.length === 0" class="text-sm text-gray-400 py-2">Noch keine Leistungen hinzugefügt</div>
+              <div v-for="(s, i) in services" :key="i" class="flex items-start gap-3 border border-gray-100 rounded-xl p-3">
+                <input type="checkbox" v-model="s.isOffered" class="mt-1" title="Wird angeboten" />
+                <div class="flex-1 min-w-0 space-y-1">
+                  <input v-model="s.name" placeholder="Name der Leistung" class="w-full text-sm font-medium rounded-lg border border-gray-200 px-2 py-1.5" />
+                  <input v-model="s.description" placeholder="Beschreibung (optional)" class="w-full text-xs rounded-lg border border-gray-200 px-2 py-1.5" />
+                </div>
+                <button type="button" @click="services.splice(i, 1)" class="text-gray-300 hover:text-red-500 shrink-0 mt-1">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <button type="button" @click="services.push({ isOffered: true, name: '', description: null, priceAmount: null, priceCurrency: null })" class="text-xs font-semibold text-blue-600 hover:text-blue-700">
+                + Leistung hinzufügen
+              </button>
+              <div class="flex items-center justify-between pt-1">
+                <p v-if="servicesSaved" class="text-xs text-green-600">Gespeichert</p>
+                <span v-else />
+                <button @click="saveServices" :disabled="servicesSaving" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                  {{ servicesSaving ? 'Speichern…' : 'Leistungen speichern' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Q&A -->
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
+              <p class="text-sm font-semibold text-gray-900">Fragen & Antworten</p>
+              <div class="flex gap-2">
+                <input v-model="newQuestionText" placeholder="Neue Frage anlegen, z.B. „Bietet ihr Motorradkurse an?“…" class="flex-1 min-w-0 text-sm rounded-lg border border-gray-200 px-3 py-2" />
+                <button @click="createQuestion" :disabled="!newQuestionText.trim() || creatingQuestion" class="shrink-0 px-3 py-2 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 disabled:opacity-50">
+                  {{ creatingQuestion ? '…' : '+ Frage' }}
+                </button>
+              </div>
+              <div v-if="questionsLoading" class="text-sm text-gray-400 py-2">Lade Fragen…</div>
+              <div v-else-if="questions.length === 0" class="text-sm text-gray-400 py-2">Noch keine Fragen vorhanden</div>
+              <div v-for="q in questions" :key="q.name" class="border border-gray-100 rounded-xl p-4 space-y-2">
+                <div class="flex items-start justify-between gap-2">
+                  <p class="text-sm font-medium text-gray-900">{{ q.text }}</p>
+                  <button type="button" @click="removeQuestion(q)" class="text-xs text-gray-300 hover:text-red-500 shrink-0">Löschen</button>
+                </div>
+                <p v-if="q.topAnswers?.length" class="text-xs text-gray-500">Aktuelle Antwort: {{ q.topAnswers[0].text }}</p>
+                <GbpAiTextField
+                  v-model="questionAnswers[q.name]"
+                  context="qanda_answer"
+                  :location-id="selectedLocationId"
+                  :question-text="q.text"
+                  label="Antwort"
+                  :max-length="300"
+                  :rows="2"
+                />
+                <button
+                  @click="answerQuestion(q)"
+                  :disabled="!questionAnswers[q.name]?.trim() || answeringQuestion === q.name"
+                  class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {{ answeringQuestion === q.name ? 'Speichern…' : 'Antwort speichern' }}
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+
         <!-- Posts tab -->
         <div v-if="selectedLocationId && activeTab === 'posts'" class="space-y-4">
           <!-- New post form -->
@@ -753,6 +942,7 @@ useHead({ title: 'Google Business Profile' })
 
 const tabs = [
   { id: 'insights', label: 'Insights' },
+  { id: 'profile', label: 'Profil' },
   { id: 'reviews', label: 'Bewertungen' },
   { id: 'posts', label: 'Posts' },
   { id: 'photos', label: 'Fotos' },
@@ -825,6 +1015,7 @@ async function onLocationChange() {
   mediaAssets.value = []
   await loadSettingsKeywords()
   if (activeTab.value === 'insights') loadInsights()
+  if (activeTab.value === 'profile') loadProfileTab()
   if (activeTab.value === 'reviews') loadReviews()
   if (activeTab.value === 'posts') loadPosts()
   if (activeTab.value === 'photos') loadMedia()
@@ -924,6 +1115,258 @@ const averageRating = ref(0)
 const replyingTo = ref<string | null>(null)
 const replyText = ref('')
 const replying = ref(false)
+
+// Profile tab
+const weekDays = [
+  { id: 'MONDAY', label: 'Montag' },
+  { id: 'TUESDAY', label: 'Dienstag' },
+  { id: 'WEDNESDAY', label: 'Mittwoch' },
+  { id: 'THURSDAY', label: 'Donnerstag' },
+  { id: 'FRIDAY', label: 'Freitag' },
+  { id: 'SATURDAY', label: 'Samstag' },
+  { id: 'SUNDAY', label: 'Sonntag' },
+]
+type CategoryOption = { categoryId: string; displayName: string }
+const profileLoading = ref(false)
+const profileForm = ref<{
+  description: string
+  phoneNumber: string
+  websiteUri: string
+  primaryCategory: CategoryOption | null
+  additionalCategories: CategoryOption[]
+} | null>(null)
+const profileSaving = ref(false)
+const profileSaved = ref(false)
+const hoursByDay = reactive<Record<string, { closed: boolean; open: string; close: string }>>(
+  Object.fromEntries(weekDays.map(d => [d.id, { closed: true, open: '09:00', close: '18:00' }]))
+)
+const hoursSaving = ref(false)
+const hoursSaved = ref(false)
+const categorySearch = reactive({ primary: '', additional: '' })
+const categoryResults = reactive<{ primary: CategoryOption[]; additional: CategoryOption[] }>({ primary: [], additional: [] })
+let categorySearchTimer: ReturnType<typeof setTimeout> | null = null
+const categoriesSaving = ref(false)
+const categoriesSaved = ref(false)
+const services = ref<{ isOffered: boolean; name: string; description: string | null; priceAmount: number | null; priceCurrency: string | null }[]>([])
+const servicesSaving = ref(false)
+const servicesSaved = ref(false)
+const questions = ref<any[]>([])
+const questionsLoading = ref(false)
+const questionAnswers = reactive<Record<string, string>>({})
+const newQuestionText = ref('')
+const creatingQuestion = ref(false)
+const answeringQuestion = ref<string | null>(null)
+
+async function loadProfileTab() {
+  profileLoading.value = true
+  try {
+    const [profileRes, servicesRes] = await Promise.all([
+      $fetch<any>('/api/gbp/profile', { query: locQuery() }),
+      $fetch<any>('/api/gbp/services', { query: locQuery() }),
+    ])
+    const p = profileRes.profile
+    profileForm.value = {
+      description: p.description || '',
+      phoneNumber: p.phoneNumber || '',
+      websiteUri: p.websiteUri || '',
+      primaryCategory: p.primaryCategory,
+      additionalCategories: p.additionalCategories || [],
+    }
+    for (const day of weekDays) hoursByDay[day.id] = { closed: true, open: '09:00', close: '18:00' }
+    for (const period of p.regularHours || []) {
+      if (hoursByDay[period.openDay]) {
+        hoursByDay[period.openDay] = { closed: false, open: period.openTime, close: period.closeTime }
+      }
+    }
+    services.value = servicesRes.services || []
+    await loadQuestions()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Profil konnte nicht geladen werden')
+  } finally {
+    profileLoading.value = false
+  }
+}
+
+async function saveProfileBasics() {
+  if (!profileForm.value) return
+  profileSaving.value = true
+  profileSaved.value = false
+  try {
+    await $fetch('/api/gbp/profile', {
+      method: 'PUT',
+      body: {
+        locationId: selectedLocationId.value,
+        description: profileForm.value.description,
+        phoneNumber: profileForm.value.phoneNumber,
+        websiteUri: profileForm.value.websiteUri,
+      },
+    })
+    profileSaved.value = true
+    setTimeout(() => (profileSaved.value = false), 2500)
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Speichern fehlgeschlagen')
+  } finally {
+    profileSaving.value = false
+  }
+}
+
+async function saveHours() {
+  hoursSaving.value = true
+  hoursSaved.value = false
+  try {
+    const regularHours = weekDays
+      .filter(d => !hoursByDay[d.id].closed)
+      .map(d => ({
+        openDay: d.id,
+        closeDay: d.id,
+        openTime: hoursByDay[d.id].open,
+        closeTime: hoursByDay[d.id].close,
+      }))
+    await $fetch('/api/gbp/profile', {
+      method: 'PUT',
+      body: { locationId: selectedLocationId.value, regularHours },
+    })
+    hoursSaved.value = true
+    setTimeout(() => (hoursSaved.value = false), 2500)
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Öffnungszeiten konnten nicht gespeichert werden')
+  } finally {
+    hoursSaving.value = false
+  }
+}
+
+function searchCategories(target: 'primary' | 'additional') {
+  if (categorySearchTimer) clearTimeout(categorySearchTimer)
+  categorySearchTimer = setTimeout(async () => {
+    const q = categorySearch[target].trim()
+    if (q.length < 2) {
+      categoryResults[target] = []
+      return
+    }
+    try {
+      const res = await $fetch<any>('/api/gbp/categories', { query: { q } })
+      categoryResults[target] = res.categories || []
+    } catch {
+      categoryResults[target] = []
+    }
+  }, 300)
+}
+
+function selectPrimaryCategory(c: CategoryOption) {
+  if (!profileForm.value) return
+  profileForm.value.primaryCategory = c
+  categorySearch.primary = ''
+  categoryResults.primary = []
+}
+
+function addAdditionalCategory(c: CategoryOption) {
+  if (!profileForm.value) return
+  if (!profileForm.value.additionalCategories.some(x => x.categoryId === c.categoryId)) {
+    profileForm.value.additionalCategories.push(c)
+  }
+  categorySearch.additional = ''
+  categoryResults.additional = []
+}
+
+function removeAdditionalCategory(categoryId: string) {
+  if (!profileForm.value) return
+  profileForm.value.additionalCategories = profileForm.value.additionalCategories.filter(c => c.categoryId !== categoryId)
+}
+
+async function saveCategories() {
+  if (!profileForm.value?.primaryCategory) return
+  categoriesSaving.value = true
+  categoriesSaved.value = false
+  try {
+    await $fetch('/api/gbp/profile', {
+      method: 'PUT',
+      body: {
+        locationId: selectedLocationId.value,
+        primaryCategoryId: profileForm.value.primaryCategory.categoryId,
+        additionalCategoryIds: profileForm.value.additionalCategories.map(c => c.categoryId),
+      },
+    })
+    categoriesSaved.value = true
+    setTimeout(() => (categoriesSaved.value = false), 2500)
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Kategorien konnten nicht gespeichert werden')
+  } finally {
+    categoriesSaving.value = false
+  }
+}
+
+async function saveServices() {
+  servicesSaving.value = true
+  servicesSaved.value = false
+  try {
+    await $fetch('/api/gbp/services', {
+      method: 'PUT',
+      body: { locationId: selectedLocationId.value, services: services.value.filter(s => s.name.trim()) },
+    })
+    servicesSaved.value = true
+    setTimeout(() => (servicesSaved.value = false), 2500)
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Leistungen konnten nicht gespeichert werden')
+  } finally {
+    servicesSaving.value = false
+  }
+}
+
+async function loadQuestions() {
+  questionsLoading.value = true
+  try {
+    const res = await $fetch<any>('/api/gbp/questions', { query: locQuery() })
+    questions.value = res.questions || []
+    for (const q of questions.value) {
+      if (questionAnswers[q.name] === undefined) questionAnswers[q.name] = q.topAnswers?.[0]?.text || ''
+    }
+  } catch (e: any) {
+    questions.value = []
+  } finally {
+    questionsLoading.value = false
+  }
+}
+
+async function createQuestion() {
+  if (!newQuestionText.value.trim()) return
+  creatingQuestion.value = true
+  try {
+    await $fetch('/api/gbp/questions', {
+      method: 'POST',
+      body: { locationId: selectedLocationId.value, text: newQuestionText.value.trim() },
+    })
+    newQuestionText.value = ''
+    await loadQuestions()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Frage konnte nicht erstellt werden')
+  } finally {
+    creatingQuestion.value = false
+  }
+}
+
+async function answerQuestion(q: any) {
+  const text = questionAnswers[q.name]?.trim()
+  if (!text) return
+  answeringQuestion.value = q.name
+  try {
+    await $fetch('/api/gbp/questions/answer', { method: 'POST', body: { questionName: q.name, text } })
+    await loadQuestions()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Antwort konnte nicht gespeichert werden')
+  } finally {
+    answeringQuestion.value = null
+  }
+}
+
+async function removeQuestion(q: any) {
+  if (!confirm('Frage wirklich löschen?')) return
+  try {
+    await $fetch('/api/gbp/questions/delete', { method: 'POST', body: { questionName: q.name } })
+    await loadQuestions()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Frage konnte nicht gelöscht werden')
+  }
+}
 
 // Posts
 const posts = ref<any[]>([])
@@ -1456,6 +1899,7 @@ onMounted(async () => {
 
 watch(activeTab, (tab) => {
   if (tab === 'insights' && insightMetrics.value.length === 0) loadInsights()
+  if (tab === 'profile' && !profileForm.value) loadProfileTab()
   if (tab === 'reviews' && reviews.value.length === 0) loadReviews()
   if (tab === 'posts' && posts.value.length === 0) loadPosts()
   if (tab === 'photos') loadMedia()
