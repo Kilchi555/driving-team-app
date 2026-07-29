@@ -53,7 +53,7 @@ export default defineEventHandler(async (event) => {
 
     // Validate email format if method is email
     if (method === 'email') {
-      const emailValidation = validateRegistrationEmail(contact)
+      const emailValidation = await validateRegistrationEmail(contact)
       if (!emailValidation.valid) {
         console.warn('[PasswordReset] ⚠️ Email validation failed:', emailValidation.reason)
         throw createError({

@@ -8,6 +8,7 @@ import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 import { generateRegistrationToken } from '~/server/utils/registration-token'
 import { resolveBusinessType, applyCategoryAndEventTypeDefaults, applyEvaluationDefaults } from '~/server/utils/business-type-presets'
+import { isReservedSlug } from '~/server/utils/reserved-slugs'
 
 interface TenantRegistrationData {
   name: string
@@ -172,7 +173,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     }
 
     const { validateRegistrationEmail } = await import('~/server/utils/email-validator')
-    const emailValidation = validateRegistrationEmail(data.contact_email)
+    const emailValidation = await validateRegistrationEmail(data.contact_email)
     if (!emailValidation.valid) {
       logger.warn('⚠️ Email validation failed for tenant registration:', emailValidation.reason)
       throw createError({
@@ -676,16 +677,7 @@ function validateTenantData(data: TenantRegistrationData): string | null {
     return 'URL-Kennung darf maximal 50 Zeichen lang sein'
   }
 
-  // Reserved slugs that would conflict with app routes
-  const RESERVED_SLUGS = new Set([
-    'admin', 'api', 'login', 'logout', 'register', 'booking',
-    'tenant-register', 'onboarding', 'billing', 'dashboard',
-    'reset-password', 'password-reset', 'set-password',
-    'staff', 'customers', 'calendar', 'settings', 'profile',
-    'help', 'support', 'terms', 'privacy', 'agb', 'datenschutz',
-    'static', 'assets', 'public', 'simy', 'app', 'www', 'mail',
-  ])
-  if (RESERVED_SLUGS.has(data.slug.toLowerCase())) {
+  if (isReservedSlug(data.slug)) {
     return 'Diese URL-Kennung ist reserviert. Bitte wähle eine andere.'
   }
 
@@ -709,6 +701,23 @@ function validateTenantData(data: TenantRegistrationData): string | null {
 
   if (!data.contact_phone?.trim()) {
     return 'Telefonnummer ist erforderlich'
+  }
+
+  // Reject obvious placeholder / spam signups (e.g. name "Test", phone 00411111111)
+  const placeholderNames = /^(test|demo|asdf|xxx|foo|bar|sample|example)$/i
+  if (
+    placeholderNames.test(data.name.trim()) ||
+    placeholderNames.test(data.contact_person_first_name.trim()) ||
+    placeholderNames.test(data.contact_person_last_name.trim())
+  ) {
+    return 'Bitte echte Firmendaten verwenden.'
+  }
+  const phoneDigits = data.contact_phone.replace(/\D/g, '')
+  if (/(.)\1{5,}/.test(phoneDigits)) {
+    return 'Bitte eine gültige Telefonnummer angeben.'
+  }
+  if (/^1234$/.test(data.zip.trim()) && placeholderNames.test(data.city.trim())) {
+    return 'Bitte echte Adressdaten verwenden.'
   }
 
   if (!data.street?.trim()) {

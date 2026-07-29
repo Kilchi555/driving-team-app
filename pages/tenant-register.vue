@@ -15,8 +15,8 @@
             </svg>
           </div>
           <div>
-            <h1 class="text-lg sm:text-xl font-bold tracking-tight">{{ isWebsiteMode ? 'Website-Kunde anlegen' : 'Fahrschule registrieren' }}</h1>
-            <p class="text-blue-200 text-xs sm:text-sm mt-0.5">{{ isWebsiteMode ? 'Kundendaten erfassen – Website wird automatisch generiert' : 'Deine Fahrschule auf Autopilot – in wenigen Minuten startklar' }}</p>
+            <h1 class="text-lg sm:text-xl font-bold tracking-tight">{{ isWebsiteMode ? 'Website-Kunde anlegen' : `${labels.businessNoun} registrieren` }}</h1>
+            <p class="text-blue-200 text-xs sm:text-sm mt-0.5">{{ isWebsiteMode ? 'Kundendaten erfassen – Website wird automatisch generiert' : `${labels.businessNoun} auf Autopilot – in wenigen Minuten startklar` }}</p>
           </div>
         </div>
         <div class="absolute -right-4 -top-4 w-32 h-32 bg-white/5 rounded-full pointer-events-none"></div>
@@ -72,16 +72,16 @@
         <div v-if="currentStep === 0" class="space-y-8">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-1">Firmen-Daten</h2>
-            <p class="text-sm text-gray-500 mb-4">Wie soll deine Fahrschule heissen und wo ist sie erreichbar?</p>
+            <p class="text-sm text-gray-500 mb-4">Wie soll dein Unternehmen heissen und wo ist es erreichbar?</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="sm:col-span-2">
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Firmen-Name *</label>
-                <input v-model="formData.name" type="text" required placeholder="z.B. Fahrschule Muster"
+                <input v-model="formData.name" type="text" required :placeholder="`z.B. ${labels.businessNoun} Muster`"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
               <div class="sm:col-span-2">
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Rechtlicher Name (für Rechnungen) *</label>
-                <input v-model="formData.legal_company_name" type="text" required placeholder="z.B. Fahrschule Muster GmbH"
+                <input v-model="formData.legal_company_name" type="text" required :placeholder="`z.B. ${labels.businessNoun} Muster GmbH`"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm"
                   @input="legalNameManuallyEdited = true">
               </div>
@@ -89,7 +89,7 @@
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">URL-Kennung *</label>
                 <div class="flex items-stretch rounded-xl overflow-hidden border border-gray-200 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
                   <span class="hidden sm:flex items-center px-3 bg-gray-100 text-gray-500 text-xs font-mono border-r border-gray-200 whitespace-nowrap">simy.ch/</span>
-                  <input v-model="formData.slug" type="text" required placeholder="meine-fahrschule"
+                  <input v-model="formData.slug" type="text" required :placeholder="slugPlaceholder"
                     pattern="[a-z0-9\-]+"
                     class="flex-1 px-4 py-2.5 bg-gray-50 focus:bg-white outline-none text-sm"
                     @input="sanitizeSlug(); onSlugInput()"
@@ -104,6 +104,10 @@
                 <p v-else-if="slugCheck === 'available'" class="text-xs text-green-600 mt-1 flex items-center gap-1">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                   simy.ch/{{ formData.slug }} ist verfügbar
+                </p>
+                <p v-else-if="slugCheck === 'reserved'" class="text-xs text-red-500 mt-1 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                  Diese URL-Kennung ist reserviert – bitte eine andere wählen
                 </p>
                 <p v-else-if="slugCheck === 'taken'" class="text-xs text-red-500 mt-1 flex items-center gap-1">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -225,7 +229,7 @@
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Anzahl Fahrlehrer</label>
+                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Anzahl {{ labels.staffPlural }}</label>
                 <input v-model="formData.staff_count" type="number" min="1" max="999" placeholder="1"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
@@ -242,7 +246,7 @@
         <div v-if="currentStep === 1" class="space-y-5">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <h2 class="text-base font-semibold text-gray-900 mb-0.5">Welche Kategorien bietest du an?</h2>
+              <h2 class="text-base font-semibold text-gray-900 mb-0.5">Welche {{ labels.categoriesLabel }} bietest du an?</h2>
             </div>
           </div>
 
@@ -252,7 +256,7 @@
               <div class="absolute inset-0 rounded-full border-4 border-blue-100"></div>
               <div class="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
             </div>
-            <p class="text-sm text-gray-500 font-medium">Kategorien werden geladen…</p>
+            <p class="text-sm text-gray-500 font-medium">{{ labels.categoriesLabel }} werden geladen…</p>
           </div>
 
           <!-- Empty state -->
@@ -262,7 +266,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
             </svg>
             <p class="text-sm font-medium text-amber-800">Keine Vorlagen gefunden</p>
-            <p class="text-xs text-amber-600">Kategorien können nach der Registrierung hinzugefügt werden.</p>
+            <p class="text-xs text-amber-600">{{ labels.categoriesLabel }} können nach der Registrierung hinzugefügt werden.</p>
           </div>
 
           <!-- Category grid -->
@@ -384,7 +388,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
                       </svg>
                       <span v-else class="w-3 h-3 flex-shrink-0 rounded-sm border-2 border-current opacity-40"></span>
-                      {{ 'Kategorie ' + (child.code || child.name) }}
+                      {{ labels.categoryLabel + ' ' + (child.code || child.name) }}
                     </button>
                     <!-- Custom sub-categories under this template parent -->
                     <button
@@ -496,13 +500,13 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                Eigene Kategorie hinzufügen
+                Eigene {{ labels.categoryLabel }} hinzufügen
               </button>
 
               <transition enter-active-class="transition-all duration-300 ease-out" enter-from-class="opacity-0 -translate-y-2 scale-98" enter-to-class="opacity-100 translate-y-0 scale-100"
                 leave-active-class="transition-all duration-200 ease-in" leave-from-class="opacity-100 translate-y-0 scale-100" leave-to-class="opacity-0 -translate-y-2 scale-98">
                 <div v-if="showAddCatForm" class="mt-3 rounded-2xl border-2 border-blue-200 bg-blue-50 p-4 space-y-4">
-                  <p class="text-xs font-bold uppercase tracking-wide text-blue-700">Neue Kategorie</p>
+                  <p class="text-xs font-bold uppercase tracking-wide text-blue-700">Neue {{ labels.categoryLabel }}</p>
 
                   <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -547,7 +551,7 @@
 
                   <!-- Parent selector (visible when "Unterkategorie" chosen) -->
                   <div v-if="newCat.parentTempId !== null">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Übergeordnete Kategorie</label>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Übergeordnete {{ labels.categoryLabel }}</label>
                     <select v-model="newCat.parentTempId"
                       class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
                       <option v-for="p in availableParents" :key="p.id" :value="p.id">
@@ -577,12 +581,12 @@
         <div v-if="currentStep === 2" class="space-y-5">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">
-              {{ pricingMode === 'per_event_type' ? 'Was kosten deine Leistungen?' : 'Was kostet eine Fahrstunde bei dir?' }}
+              {{ pricingMode === 'per_event_type' ? 'Was kosten deine Leistungen?' : `Preis pro ${labels.appointment}` }}
             </h2>
             <p class="text-sm text-gray-500">
               {{ pricingMode === 'per_event_type'
                 ? 'Preis & Dauer pro Leistung – als Standardwert, jederzeit anpassbar.'
-                : 'Preis & Dauer pro Kategorie – als Standardwert für neue Lektionen, jederzeit anpassbar.' }}
+                : `Preis & Dauer pro ${labels.categoryLabel} – als Standardwert für neue ${labels.appointmentsPlural}, jederzeit anpassbar.` }}
             </p>
           </div>
 
@@ -714,15 +718,16 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             <span v-if="pricingMode === 'per_event_type'">Weitere Leistungen und Preise kannst du jederzeit nach dem Login im Adminbereich anpassen.</span>
-            <span v-else>Kurse (VKU, Theorie, Nothilfe, etc.) können nach dem Login im Adminbereich unter <strong>Kurse</strong> erstellt werden. Alle Preise sind jederzeit anpassbar.</span>
+            <span v-else-if="formData.business_type === 'driving_school'">Kurse (VKU, Theorie, Nothilfe, etc.) können nach dem Login im Adminbereich unter <strong>Kurse</strong> erstellt werden. Alle Preise sind jederzeit anpassbar.</span>
+            <span v-else>Weitere {{ labels.categoriesLabel }} und Preise kannst du jederzeit nach dem Login im Adminbereich anpassen.</span>
           </div>
         </div>
 
         <!-- ═══ STEP 3: Standorte ═══ -->
         <div v-if="currentStep === 3" class="space-y-5">
           <div>
-            <h2 class="text-base font-semibold text-gray-900 mb-0.5">Wo bietest du deine Fahrstunden an?</h2>
-            <p class="text-sm text-gray-500">Mindestens ein Standort – als Treffpunkt für deine Fahrstunden.</p>
+            <h2 class="text-base font-semibold text-gray-900 mb-0.5">Wo bietest du deine {{ labels.appointmentsPlural }} an?</h2>
+            <p class="text-sm text-gray-500">Mindestens ein Standort – als Treffpunkt für deine {{ labels.appointmentsPlural }}.</p>
           </div>
 
           <div class="flex items-start gap-3 bg-blue-50 rounded-xl p-3.5 text-sm text-blue-700">
@@ -730,7 +735,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
-            <span>Fahrlehrer wählen beim Erstellen von Terminen einen Standort aus. Weitere können später hinzugefügt werden.</span>
+            <span>{{ labels.staffPlural }} wählen beim Erstellen von Terminen einen Standort aus. Weitere können später hinzugefügt werden.</span>
           </div>
 
           <div class="space-y-3">
@@ -933,14 +938,14 @@
                   <svg class="w-4 h-4 text-pink-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                   </svg>
-                  <input v-model="formData.instagram_url" type="url" placeholder="instagram.com/fahrschule"
+                  <input v-model="formData.instagram_url" type="url" :placeholder="`instagram.com/${slugPlaceholder}`"
                     class="flex-1 py-2.5 bg-transparent text-sm outline-none">
                 </div>
                 <div class="flex items-center gap-2 bg-gray-50 rounded-xl border border-gray-200 overflow-hidden px-3">
                   <svg class="w-4 h-4 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                   </svg>
-                  <input v-model="formData.facebook_url" type="url" placeholder="facebook.com/fahrschule"
+                  <input v-model="formData.facebook_url" type="url" :placeholder="`facebook.com/${slugPlaceholder}`"
                     class="flex-1 py-2.5 bg-transparent text-sm outline-none">
                 </div>
                 <div class="flex items-center gap-2 bg-gray-50 rounded-xl border border-gray-200 overflow-hidden px-3">
@@ -998,7 +1003,7 @@
                   <input
                     v-model="formData.contact_email"
                     type="email"
-                    placeholder="info@deine-fahrschule.ch"
+                    placeholder="info@deine-firma.ch"
                     class="w-full sm:w-80 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm"
                   />
                 </div>
@@ -1010,7 +1015,7 @@
                   <input
                     v-model="formData.from_email"
                     type="email"
-                    placeholder="info@deine-fahrschule.ch"
+                    placeholder="info@deine-firma.ch"
                     class="w-full sm:w-80 px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm"
                   />
                 </div>
@@ -1024,9 +1029,9 @@
               </p>
               <p class="text-xs text-gray-400 mb-3">
                 Name der bei SMS-Nachrichten als Absender erscheint, z. B.
-                <code class="bg-gray-100 px-1 rounded">Fahrschule</code>.
+                <code class="bg-gray-100 px-1 rounded">{{ labels.businessNoun }}</code>.
                 <span class="text-amber-600 font-medium">Maximal 11 Zeichen</span> – Einschränkung des SMS-Providers.
-                Leer lassen = Fahrschulname wird automatisch verwendet.
+                Leer lassen = Firmenname wird automatisch verwendet.
             </p>
             <!-- Vorschläge basierend auf Firmenname -->
             <div v-if="smsSenderSuggestions.length" class="flex flex-wrap gap-1.5 mb-2">
@@ -1044,7 +1049,7 @@
                 v-model="formData.twilio_from_sender"
                 type="text"
                 maxlength="11"
-                placeholder="Fahrschule"
+                :placeholder="labels.businessNoun"
                 class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm pr-14"
               />
               <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono"
@@ -1061,7 +1066,7 @@
         <div v-if="currentStep === 5" class="space-y-6">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">Admin-Konto erstellen</h2>
-            <p class="text-sm text-gray-500">Dein persönlicher Login-Zugang zur Fahrschule.</p>
+            <p class="text-sm text-gray-500">Dein persönlicher Login-Zugang.</p>
           </div>
 
           <div class="flex items-center justify-between bg-indigo-50 rounded-2xl px-4 py-3 border border-indigo-100">
@@ -1184,11 +1189,11 @@
         <!-- ═══ STEP 6: Mitarbeiter einladen ═══ -->
         <div v-if="currentStep === 6" class="space-y-5">
           <div>
-            <h2 class="text-base font-semibold text-gray-900 mb-0.5">Fahrlehrer hinzufügen</h2>
+            <h2 class="text-base font-semibold text-gray-900 mb-0.5">{{ labels.staffPlural }} hinzufügen</h2>
             <p class="text-sm text-gray-500">Weitere können jederzeit nach der Registrierung eingeladen werden.</p>
           </div>
 
-          <!-- Toggle: Admin = Fahrlehrer -->
+          <!-- Toggle: Admin = Staff -->
           <div class="flex items-center justify-between bg-green-50 rounded-2xl px-4 py-3 border border-green-100">
             <div class="flex items-center gap-2.5">
               <div class="w-7 h-7 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -1199,7 +1204,7 @@
               <div>
                 <span class="text-sm font-medium text-green-800">Meine Daten übernehmen</span>
                 <p class="text-xs text-green-600 mt-0.5">
-                  {{ staffAdminIsSelf ? 'Deine Admin-Daten wurden vorausgefüllt – du erhältst einen separaten Fahrlehrer-Login.' : 'Admin-Daten in den ersten Fahrlehrer-Eintrag kopieren.' }}
+                  {{ staffAdminIsSelf ? `Deine Admin-Daten wurden vorausgefüllt – du erhältst einen separaten ${labels.staff}-Login.` : `Admin-Daten in den ersten ${labels.staff}-Eintrag kopieren.` }}
                 </p>
               </div>
             </div>
@@ -1209,7 +1214,7 @@
             </label>
           </div>
 
-          <!-- Warning wenn Admin = Fahrlehrer: andere E-Mail erforderlich -->
+          <!-- Warning wenn Admin = Staff: andere E-Mail erforderlich -->
           <div v-if="staffAdminIsSelf" class="flex items-start gap-3 bg-amber-50 rounded-xl p-3.5 border border-amber-200">
             <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
@@ -1218,7 +1223,7 @@
               <p class="font-semibold mb-0.5">Zwei separate Logins</p>
               <p class="text-xs leading-relaxed">
                 Du erhältst eine <strong>Einladungs-SMS</strong> auf die eingetragene Telefonnummer.
-                Beim Fahrlehrer-Onboarding musst du eine <strong>andere E-Mail</strong> als
+                Beim {{ labels.staff }}-Onboarding musst du eine <strong>andere E-Mail</strong> als
                 <span class="font-mono">{{ adminForm.email }}</span> verwenden — das sind zwei getrennte Accounts.
               </p>
             </div>
@@ -1228,7 +1233,7 @@
             <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
             </svg>
-            <span>Fahrlehrer mit Telefonnummer erhalten nach der Registrierung eine Einladungs-SMS.</span>
+            <span>{{ labels.staffPlural }} mit Telefonnummer erhalten nach der Registrierung eine Einladungs-SMS.</span>
           </div>
 
           <div class="space-y-3">
@@ -1244,7 +1249,7 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                     </svg>
                   </div>
-                  <span class="text-sm font-semibold text-gray-700">Fahrlehrer {{ index + 1 }}</span>
+                  <span class="text-sm font-semibold text-gray-700">{{ labels.staff }} {{ index + 1 }}</span>
                 </div>
                 <button v-if="staffList.length > 1" type="button" @click="removeStaff(index)"
                   class="w-6 h-6 rounded-full bg-gray-200 hover:bg-red-100 hover:text-red-500 text-gray-400 flex items-center justify-center transition-colors text-sm leading-none">
@@ -1281,7 +1286,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
             </svg>
-            Weiteren Fahrlehrer hinzufügen
+            Weiteren {{ labels.staff }} hinzufügen
           </button>
 
           <p v-if="!staffList.every(s => s.first_name.trim() && s.phone.trim())"
@@ -1289,7 +1294,7 @@
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
             </svg>
-            Bitte Vorname und Telefonnummer für jeden Fahrlehrer erfassen.
+            Bitte Vorname und Telefonnummer für jeden {{ labels.staff }} erfassen.
           </p>
         </div>
 
@@ -1336,7 +1341,7 @@
 
             <!-- Kategorien -->
             <div class="rounded-2xl bg-blue-50 border border-blue-100 p-4">
-              <p class="text-xs font-bold text-blue-400 uppercase tracking-wide mb-2.5">Kategorien</p>
+              <p class="text-xs font-bold text-blue-400 uppercase tracking-wide mb-2.5">{{ labels.categoriesLabel }}</p>
               <div class="flex items-baseline gap-1.5">
                 <span class="text-2xl font-bold text-blue-700">{{ effectiveCategoryCount }}</span>
                 <span class="text-sm text-blue-500">ausgewählt</span>
@@ -1416,8 +1421,8 @@
               :style="{ borderColor: `${formData.primary_color || '#3B82F6'} transparent transparent transparent` }"></div>
           </div>
           <div class="text-center">
-            <h2 class="text-lg font-semibold text-gray-900 mb-1">Fahrschule wird eingerichtet…</h2>
-            <p class="text-sm text-gray-500">Kategorien, Vorlagen und Benutzer werden erstellt.</p>
+            <h2 class="text-lg font-semibold text-gray-900 mb-1">{{ labels.businessNoun }} wird eingerichtet…</h2>
+            <p class="text-sm text-gray-500">{{ labels.categoriesLabel }}, Vorlagen und Benutzer werden erstellt.</p>
           </div>
         </div>
 
@@ -1431,7 +1436,7 @@
               </svg>
             </div>
             <h2 class="text-xl font-bold text-gray-900 mb-1">{{ formData.name }} ist startklar!</h2>
-            <p class="text-sm text-gray-500">Deine Fahrschule wurde erfolgreich auf Autopilot eingerichtet.</p>
+            <p class="text-sm text-gray-500">Alles wurde erfolgreich auf Autopilot eingerichtet.</p>
             <div v-if="createdCustomerNumber" class="inline-flex items-center gap-2 mt-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-1.5">
               <span class="text-xs text-blue-500 font-medium">Kundennummer</span>
               <span class="font-mono font-bold text-blue-800">{{ createdCustomerNumber }}</span>
@@ -1445,13 +1450,13 @@
             </div>
             <div class="divide-y divide-gray-100">
               <div v-for="item in [
-                { done: true, label: 'Fahrschule registriert' },
-                { done: true, label: `${effectiveCategoryCount} Kategorien konfiguriert` },
+                { done: true, label: `${labels.businessNoun} registriert` },
+                { done: true, label: `${effectiveCategoryCount} ${labels.categoriesLabel} konfiguriert` },
                 { done: true, label: `${validLocations.length} Standort(e) angelegt` },
                 { done: true, label: 'Preise & Dauern konfiguriert' },
                 { done: true, label: 'Termintypen & Bewertungsvorlagen importiert' },
                 { done: true, label: 'Verfügbarkeit Mo–Sa 08:00–18:00 eingerichtet' },
-                { done: (staffInviteResults?.filter(r => ['sms_sent','email_sent','invited'].includes(r.status))?.length ?? 0) > 0, label: `Fahrlehrer eingeladen (${staffInviteResults?.filter(r => ['sms_sent','email_sent','invited'].includes(r.status))?.length ?? 0})` },
+                { done: (staffInviteResults?.filter(r => ['sms_sent','email_sent','invited'].includes(r.status))?.length ?? 0) > 0, label: `${labels.staffPlural} eingeladen (${staffInviteResults?.filter(r => ['sms_sent','email_sent','invited'].includes(r.status))?.length ?? 0})` },
               ]" :key="item.label"
               class="flex items-center gap-3 px-4 py-2.5">
                 <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
@@ -1467,7 +1472,7 @@
                 <div class="space-y-1.5">
                   <div class="flex items-center gap-2 text-sm text-amber-800">
                     <div class="w-4 h-4 rounded-full border-2 border-amber-400 flex-shrink-0"></div>
-                    Erste Fahrstunde buchen
+                    {{ labels.bookAction }}
                   </div>
                   <div v-if="formData.from_email" class="flex items-center gap-2 text-sm text-amber-800">
                     <div class="w-4 h-4 rounded-full border-2 border-amber-400 flex-shrink-0"></div>
@@ -1516,7 +1521,7 @@
             </div>
           </div>
 
-          <!-- Fahrlehrer-Einladungen -->
+          <!-- Staff-Einladungen -->
           <div v-if="staffInviteResults && staffInviteResults.length > 0" class="rounded-2xl border border-gray-200 p-4 mb-5">
             <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Einladungsstatus</p>
             <div class="space-y-2">
@@ -1622,7 +1627,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
-            Fahrschule einrichten
+            {{ labels.businessNoun }} einrichten
           </button>
         </div>
 
@@ -1645,6 +1650,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
+import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
 import { compressImage } from '~/utils/imageCompression'
 import { extractColorsFromLogo } from '~/utils/logoUtils'
 import DOMPurify from 'isomorphic-dompurify'
@@ -1657,16 +1663,18 @@ const LOADING_STEP = 8
 const SUCCESS_STEP = 9
 
 // ─── Steps ─────────────────────────────────────────────────────────────────
-const steps = [
+// Computed statt fixem Array, da 'Kategorien' und 'Mitarbeiter' je nach
+// Branche anders heissen (z.B. Consulting: 'Leistungsbereiche'/'Berater').
+const steps = computed(() => [
   { title: 'Grunddaten' },
-  { title: 'Kategorien' },
+  { title: labels.value.categoriesLabel },
   { title: 'Preise' },
   { title: 'Standorte' },
   { title: 'Branding' },
   { title: 'Admin' },
-  { title: 'Mitarbeiter' },
+  { title: labels.value.staffPlural },
   { title: 'Bestätigung' },
-]
+])
 
 // ─── Form Data ─────────────────────────────────────────────────────────────
 const formData = ref({
@@ -1698,8 +1706,42 @@ const formData = ref({
   twilio_from_sender: '',
 })
 
+// ─── Branchen-Terminologie ──────────────────────────────────────────────────
+// Es gibt hier (bewusst) noch keinen Tenant, daher liefert useTerminology()
+// (welche über useTenantBranding() den *eingeloggten* Tenant liest) den
+// falschen Wert. getTerminologyDefaults() ist die reine, parameterlose
+// Variante dafür — sie liest lokal aus formData.business_type.
+//
+// Fallback-Kette pro Schlüssel: DB (business_type_presets.ui_labels, via
+// /api/tenants/business-types) > hardcodierte TS-Defaults. So können neue/
+// angepasste Branchenbegriffe rein per DB-Eintrag gepflegt werden, ohne
+// Code-Deploy — die TS-Defaults greifen nur, wenn die API (noch) nicht
+// geladen ist oder für einen Key keinen DB-Wert liefert.
+const labels = computed(() => {
+  const fallback = getTerminologyDefaults(formData.value.business_type)
+  const dbLabels = businessTypes.value.find(bt => bt.code === formData.value.business_type)?.ui_labels || {}
+  const merged = { ...fallback }
+  for (const key of Object.keys(fallback) as (keyof Terminology)[]) {
+    const dbValue = dbLabels[key]
+    if (typeof dbValue === 'string' && dbValue.trim()) merged[key] = dbValue
+  }
+  return merged
+})
+
+// Slug-Platzhalter aus dem branchenspezifischen "businessNoun" abgeleitet
+// (z.B. "fahrschule", "consulting-unternehmen", "coaching-praxis"), damit der
+// Platzhalter auch für zukünftige Branchen automatisch passt.
+const slugPlaceholder = computed(() => {
+  const slug = labels.value.businessNoun
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return slug || 'meine-firma'
+})
+
 // ─── Business Types ────────────────────────────────────────────────────────
-interface BusinessTypeOption { code: string; name: string; description?: string }
+interface BusinessTypeOption { code: string; name: string; description?: string; ui_labels?: Record<string, string> }
 const businessTypes = ref<BusinessTypeOption[]>([])
 
 const loadBusinessTypes = async () => {
@@ -1782,19 +1824,27 @@ const eventTypesLoading = ref(false)
 
 const loadEventTypeTemplates = async () => {
   if (eventTypesLoading.value || eventTypeTemplates.value.length > 0) return
+  // Snapshot the type this fetch is *for* — if the user switches business_type
+  // again (step 0 → back → different type) before this resolves, the reset
+  // watcher below already cleared eventTypeTemplates for the new type, and we
+  // must not let this now-stale response overwrite it a moment later.
+  const requestedType = formData.value.business_type
   eventTypesLoading.value = true
   try {
     const res = await $fetch<{ eventTypes: EventTypeTemplate[]; pricingMode: 'per_category' | 'per_event_type' }>(
       '/api/tenants/template-event-types',
-      { query: { business_type: formData.value.business_type } }
+      { query: { business_type: requestedType } }
     )
+    if (formData.value.business_type !== requestedType) return
     eventTypeTemplates.value = res.eventTypes || []
     pricingMode.value = res.pricingMode || 'per_category'
   } catch {
-    // Fallback keeps the step usable even if the endpoint is unreachable
+    if (formData.value.business_type !== requestedType) return
+    // Fallback keeps the step usable even if the endpoint is unreachable.
+    // Uses the branch-aware label so it doesn't silently show "Fahrstunde"
+    // for a business type that isn't driving_school.
     eventTypeTemplates.value = [
-      { code: 'lesson', name: 'Fahrstunde', price_chf: 95, duration_minutes: 45, default_enabled: true },
-      { code: 'theory', name: 'Theorie', price_chf: 85, duration_minutes: 45, default_enabled: false },
+      { code: 'lesson', name: labels.value.appointment, price_chf: 95, duration_minutes: 45, default_enabled: true },
     ]
     pricingMode.value = 'per_category'
   } finally {
@@ -1868,7 +1918,7 @@ watch([pricingGroups, eventTypeTemplates], ([groups, types]) => {
   } else {
     const pricingTypes = types.length > 0
       ? types
-      : [{ code: 'lesson', name: 'Fahrstunde', price_chf: 95, duration_minutes: 45, default_enabled: true }]
+      : [{ code: 'lesson', name: labels.value.appointment, price_chf: 95, duration_minutes: 45, default_enabled: true }]
     for (const cat of groups) {
       for (const t of pricingTypes) {
         const existing = pricingRows.value.find(r => r.catId === cat.id && r.type === t.code)
@@ -1984,15 +2034,20 @@ const effectiveCategoryCount = computed(() => {
 const loadTemplateCategories = async () => {
   if (categoriesLoading.value) return
   if (templateCategories.value.length > 0) return // already loaded, keep user's selection
+  // Snapshot the type this fetch is *for* — see loadEventTypeTemplates() above
+  // for why this guard against a stale, since-superseded response is needed.
+  const requestedType = formData.value.business_type
   categoriesLoading.value = true
   try {
     const res = await $fetch<{ categories: TemplateCategory[] }>('/api/tenants/template-categories', {
-      query: { business_type: formData.value.business_type }
+      query: { business_type: requestedType }
     })
+    if (formData.value.business_type !== requestedType) return
     templateCategories.value = res.categories || []
     // Start with nothing selected – user picks explicitly
     selectedCategoryIds.value = new Set<number>()
   } catch {
+    if (formData.value.business_type !== requestedType) return
     templateCategories.value = []
   } finally {
     categoriesLoading.value = false
@@ -2151,17 +2206,26 @@ const smsSenderSuggestions = computed((): string[] => {
   const add = (s: string) => { const c = clean(s); if (c && !seen.has(c)) { seen.add(c); suggestions.push(c) } }
 
   const words = raw.split(/\s+/).filter(Boolean)
-  // 1. "Fahrschule" – always a valid 10-char suggestion
-  add('Fahrschule')
-  // 2. First word (often already "Fahrschule" or brand name)
+  // Branchenspezifisches Kürzel aus den Anfangsbuchstaben von "businessNoun"
+  // (z.B. "Fahrschule" → "FS", "Consulting-Unternehmen" → "CU").
+  const businessNounWords = labels.value.businessNoun.split(/[^a-zA-Z]+/).filter(Boolean)
+  const prefix = businessNounWords.map(w => w[0]).join('').toUpperCase().slice(0, 3) || 'FS'
+  const genericWords = new Set([
+    ...businessNounWords.map(w => w.toLowerCase()),
+    prefix.toLowerCase(), 'die', 'der', 'das'
+  ])
+
+  // 1. Branchen-Bezeichnung – immer eine gültige Vorschlag-Basis
+  add(labels.value.businessNoun)
+  // 2. First word (often already the brand or business name)
   add(words[0])
-  // 3. "FS " + first non-generic word (skip "Fahrschule"/"FS")
-  const brandWords = words.filter(w => !/^(fahrschule|fs|die|der|die)$/i.test(w))
-  if (brandWords[0]) add('FS ' + brandWords[0])
+  // 3. Prefix + first non-generic word
+  const brandWords = words.filter(w => !genericWords.has(w.toLowerCase()))
+  if (brandWords[0]) add(prefix + ' ' + brandWords[0])
   // 4. Full name truncated to 11 chars
   add(raw)
-  // 5. Initials + rest: "FS.Muster" style
-  if (brandWords[0]) add('FS.' + brandWords[0])
+  // 5. Initials + rest: "XY.Muster" style
+  if (brandWords[0]) add(prefix + '.' + brandWords[0])
 
   return suggestions.slice(0, 4)
 })
@@ -2252,7 +2316,7 @@ const canProceed = computed(() => {
                 formData.value.contact_person_first_name && formData.value.contact_person_last_name &&
                 formData.value.contact_email && formData.value.contact_phone &&
                 formData.value.street && formData.value.streetNr && formData.value.zip && formData.value.city) &&
-             slugCheck.value !== 'taken' && slugCheck.value !== 'checking' &&
+             slugCheck.value !== 'taken' && slugCheck.value !== 'reserved' && slugCheck.value !== 'checking' &&
              (emailCheck.value === 'available' || emailCheck.value === 'error') &&
              !!adminEmailEarly.value && adminEmailEarly.value.includes('@')
     case 1: {
@@ -2307,7 +2371,7 @@ const previousStep = () => {
 }
 
 // ─── Availability Checks ───────────────────────────────────────────────────
-type CheckState = 'idle' | 'checking' | 'available' | 'taken' | 'error'
+type CheckState = 'idle' | 'checking' | 'available' | 'taken' | 'reserved' | 'error'
 
 const slugCheck  = ref<CheckState>('idle')
 const emailCheck = ref<CheckState>('idle')
@@ -2322,8 +2386,17 @@ const checkSlug = (val: string) => {
   slugCheck.value = 'checking'
   slugDebounce = setTimeout(async () => {
     try {
-      const res = await $fetch<{ slug: { available: boolean } }>('/api/tenants/check-availability', { query: { slug } })
-      slugCheck.value = res.slug.available ? 'available' : 'taken'
+      const res = await $fetch<{ slug: { available: boolean; reason?: 'invalid' | 'reserved' | 'taken' } }>(
+        '/api/tenants/check-availability',
+        { query: { slug } }
+      )
+      if (res.slug.available) {
+        slugCheck.value = 'available'
+      } else if (res.slug.reason === 'reserved') {
+        slugCheck.value = 'reserved'
+      } else {
+        slugCheck.value = 'taken'
+      }
     } catch { slugCheck.value = 'error' }
   }, 500)
 }
@@ -2374,6 +2447,9 @@ const finalizeSlug = () => {
 
 const onSlugInput = () => {
   userEditedSlug.value = true
+  if (error.value && /URL-Kennung|reserviert|bereits vergeben/i.test(error.value)) {
+    error.value = null
+  }
   checkSlug(formData.value.slug)
 }
 
@@ -2566,10 +2642,24 @@ const submitRegistration = async () => {
     if (logoSquareFile.value) fd.append('logo_square_file', logoSquareFile.value)
 
     // 1. Register tenant + copy templates + create locations
+    // Backend catches validation errors and returns HTTP 200 with { success: false, error }
+    // so we must surface response.error directly — throwing new Error() loses status
+    // fields and the outer catch used to fall back to a generic message.
     const response = await $fetch('/api/tenants/register', { method: 'POST', body: fd }) as any
 
     if (!response.success) {
-      throw new Error(response.error || 'Unbekannter Fehler')
+      const msg = response.error || 'Unbekannter Fehler'
+      if (/URL-Kennung|reserviert|bereits vergeben/i.test(msg)) {
+        slugCheck.value = /reserviert/i.test(msg) ? 'reserved' : 'taken'
+        currentStep.value = 0
+      } else if (/E-Mail|email/i.test(msg)) {
+        emailCheck.value = 'taken'
+        currentStep.value = 7
+      } else {
+        currentStep.value = 7
+      }
+      error.value = msg
+      return
     }
 
     createdTenantSlug.value     = response.tenant.slug
@@ -2673,14 +2763,29 @@ const submitRegistration = async () => {
   } catch (err: any) {
     console.error('Registration failed:', err)
     const statusCode = err.status || err.statusCode || err.data?.statusCode
-    const knownMessage = err.data?.statusMessage || err.statusMessage
+    const knownMessage =
+      err.data?.statusMessage ||
+      err.data?.message ||
+      err.statusMessage ||
+      err.message
 
-    if (statusCode === 409) {
-      // Email already in use — set emailCheck so the field turns red
+    const isUserFacing =
+      !!knownMessage &&
+      knownMessage.length < 200 &&
+      !/^FetchError/i.test(knownMessage) &&
+      !/\[[A-Z]+\]\s+\//.test(knownMessage) &&
+      (statusCode == null || statusCode < 500)
+
+    if (statusCode === 409 || /E-Mail|email.*bereits|bereits.*registriert/i.test(knownMessage || '')) {
       emailCheck.value = 'taken'
       error.value = knownMessage || 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere Adresse oder logge dich ein.'
+    } else if (/URL-Kennung|reserviert|bereits vergeben/i.test(knownMessage || '')) {
+      slugCheck.value = /reserviert/i.test(knownMessage || '') ? 'reserved' : 'taken'
+      error.value = knownMessage
+      currentStep.value = 0
+      return
     } else {
-      error.value = knownMessage && knownMessage.length < 200 && statusCode < 500
+      error.value = isUserFacing
         ? knownMessage
         : 'Ein technischer Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere support@simy.ch'
     }
@@ -2711,8 +2816,49 @@ watch(() => formData.value.name, (newName: string) => {
 watch(() => adminSameAsCompany.value, () => applyAdminFromCompany())
 watch(() => adminForm.value.password, (pw) => checkPasswordStrength(pw))
 
+// Wenn der Geschäftstyp geändert wird (z.B. User geht von Step 1+ zurück zu
+// Step 0 und wählt eine andere Branche), waren bereits geladene Kategorien/
+// Event-Types/Preise für den *alten* Typ gedacht. Ohne Reset blieben sie
+// stehen, weil loadTemplateCategories()/loadEventTypeTemplates() nur laden,
+// wenn ihre jeweilige Liste noch leer ist. Wir setzen die Auswahl daher
+// zurück, sobald sich der Typ ändert, und laden sofort neu, falls der User
+// die betroffenen Schritte schon besucht hatte — sonst holt nextStep() die
+// Daten wie gewohnt beim ersten Betreten des Schritts.
+//
+// WICHTIG: loadFromStorage() (siehe unten) ersetzt formData.value komplett
+// in einem Zug ("formData.value = { ...formData.value, ...d.formData }"),
+// was bei einem wiederhergestellten Draft mit z.B. business_type='consulting'
+// denselben "Typ hat sich geändert"-Fall auslöst wie ein echter Dropdown-
+// Wechsel — obwohl der User nichts geändert hat, sondern nur seinen alten
+// Stand lädt. Ohne die isRestoringFromStorage-Guard hier würde das gerade
+// wiederhergestellte selectedCategoryIds/customCategories/pricingRows/
+// customEventTypes sofort wieder gelöscht. flush:'sync' + das Flag stellen
+// sicher, dass der Reset währenddessen sicher übersprungen wird.
+watch(() => formData.value.business_type, (newType, oldType) => {
+  if (isRestoringFromStorage) return
+  if (!oldType || newType === oldType) return
+
+  const hadCategoryData = templateCategories.value.length > 0 || customCategories.value.length > 0
+  const hadPricingData = eventTypeTemplates.value.length > 0
+
+  templateCategories.value = []
+  selectedCategoryIds.value = new Set()
+  customCategories.value = []
+  eventTypeTemplates.value = []
+  pricingRows.value = []
+  customEventTypes.value = []
+  pricingMode.value = 'per_category'
+
+  if (hadCategoryData) loadTemplateCategories()
+  if (hadPricingData) loadEventTypeTemplates()
+}, { flush: 'sync' })
+
 // ─── LocalStorage ─────────────────────────────────────────────────────────
 const STORAGE_KEY = 'tenant-registration-data'
+// Plain (non-reactive) flag, not a ref — it only needs to be readable
+// synchronously by the flush:'sync' watcher above during loadFromStorage(),
+// never by the template.
+let isRestoringFromStorage = false
 
 const saveToStorage = () => {
   if (typeof window === 'undefined') return
@@ -2740,6 +2886,7 @@ const loadFromStorage = () => {
   if (typeof window === 'undefined') return
   const saved = localStorage.getItem(STORAGE_KEY)
   if (!saved) return
+  isRestoringFromStorage = true
   try {
     const d = JSON.parse(saved)
     formData.value            = { ...formData.value, ...d.formData }
@@ -2766,7 +2913,9 @@ const loadFromStorage = () => {
     if (d.pricingItems && typeof d.pricingItems === 'object') pricingRows.value = d.pricingItems
     if (Array.isArray(d.customEventTypes)) customEventTypes.value = d.customEventTypes
     if (adminSameAsCompany.value) applyAdminFromCompany()
-  } catch { /* ignore */ }
+  } catch { /* ignore */ } finally {
+    isRestoringFromStorage = false
+  }
 }
 
 watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, staffAdminIsSelf, selectedCategoryIds, pricingRows, customEventTypes, logoPreview, logoSquarePreview], saveToStorage, { deep: true })

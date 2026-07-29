@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
 
     // Validate email format and check for disposable/spam emails
     logger.debug('Register', '📧 Validating email:', email)
-    const emailValidation = validateRegistrationEmail(email)
+    const emailValidation = await validateRegistrationEmail(email)
     if (!emailValidation.valid) {
       console.warn('⚠️ Email validation failed:', emailValidation.reason)
       throw createError({
