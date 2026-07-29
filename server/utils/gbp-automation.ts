@@ -2,6 +2,17 @@ import { createError } from 'h3'
 
 /** Shared GBP helpers for P1 automation */
 
+function requireAnthropicApiKey(): string {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'AI nicht konfiguriert (ANTHROPIC_API_KEY fehlt)',
+    })
+  }
+  return apiKey
+}
+
 export function gbpStarToNumber(rating?: string | number | null): number {
   if (typeof rating === 'number') return rating
   const map: Record<string, number> = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 }
@@ -22,6 +33,7 @@ export async function generateGbpReviewSuggestion(params: {
   reviewText?: string | null
   brandVoice?: string | null
 }): Promise<string> {
+  const apiKey = requireAnthropicApiKey()
   const Anthropic = (await import('@anthropic-ai/sdk')).default
   const stars = params.starRating
   const tone = stars >= 4 ? 'dankend und herzlich' : stars === 3 ? 'verständnisvoll und lösungsorientiert' : 'entschuldigend und konstruktiv'
@@ -44,7 +56,7 @@ Regeln:
 
 Antworte NUR mit dem Text der Antwort, kein JSON, keine Erklärungen.`
 
-  const client = new Anthropic()
+  const client = new Anthropic({ apiKey })
   const message = await client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 300,
@@ -61,6 +73,7 @@ export async function generateGbpPostDraft(params: {
   brandVoice?: string | null
   ctaType?: string | null
 }): Promise<string> {
+  const apiKey = requireAnthropicApiKey()
   const Anthropic = (await import('@anthropic-ai/sdk')).default
   const keywords = (params.keywords ?? []).filter(Boolean)
   const voice = params.brandVoice ? `\nMarkenstimme: ${params.brandVoice}` : ''
@@ -78,7 +91,7 @@ Anforderungen:
 - CTA am Ende passend zu: ${params.ctaType || 'BOOK'}
 - Nur den Post-Text ausgeben, kein JSON`
 
-  const client = new Anthropic()
+  const client = new Anthropic({ apiKey })
   const message = await client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 500,
