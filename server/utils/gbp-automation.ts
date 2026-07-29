@@ -26,7 +26,7 @@ export function assertCronAuth(authHeader: string | undefined) {
   }
 }
 
-export type GbpAiTextContext = 'post' | 'photo_caption' | 'review_reply' | 'profile_description' | 'qanda_answer'
+export type GbpAiTextContext = 'post' | 'photo_caption' | 'review_reply' | 'profile_description'
 export type GbpAiTextTone = 'local_friendly' | 'factual' | 'cta_focus'
 export type GbpAiTextMode = 'generate' | 'regenerate' | 'shorter' | 'more_cta'
 
@@ -43,7 +43,6 @@ export interface GenerateGbpAiTextParams {
   reviewerName?: string | null
   starRating?: number | null
   reviewText?: string | null
-  questionText?: string | null
 }
 
 const TONE_LABELS: Record<GbpAiTextTone, string> = {
@@ -109,22 +108,6 @@ Regeln:
 - Signatur: "${params.tenantName}"
 - Nur den Antworttext, kein JSON`
     return callAnthropic(prompt, 300)
-  }
-
-  if (params.context === 'qanda_answer') {
-    prompt = `Du beantwortest eine Frage im Google Business Profile Q&A-Bereich für "${params.tenantName}" (Fahrschule Schweiz).${loc}${voice}${kw}
-Ton: ${tone}.
-
-Frage eines Interessenten:
-"${params.questionText || '(keine Frage angegeben)'}"
-${modeBlock}
-
-Regeln:
-- Max. 2–3 Sätze, Schweizer Hochdeutsch
-- Direkt und hilfreich antworten, keine Marketing-Floskeln
-- Signatur weglassen
-- Nur den Antworttext, kein JSON`
-    return callAnthropic(prompt, 250)
   }
 
   if (params.context === 'profile_description') {

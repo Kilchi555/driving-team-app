@@ -27,7 +27,6 @@ export default defineEventHandler(async (event) => {
       starRating?: number
       reviewText?: string
     }
-    questionText?: string
   }>(event)
 
   if (!body?.context) throw createError({ statusCode: 400, statusMessage: 'context required' })
@@ -67,7 +66,6 @@ export default defineEventHandler(async (event) => {
       reviewerName: body.reviewContext?.reviewerName,
       starRating: body.reviewContext?.starRating,
       reviewText: body.reviewContext?.reviewText,
-      questionText: body.questionText,
     })
 
     if (!text) throw createError({ statusCode: 502, statusMessage: 'KI lieferte keinen Text' })
