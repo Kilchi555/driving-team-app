@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-gray-50/60 p-4 sm:p-6">
-    <div class="max-w-4xl mx-auto space-y-6">
+  <div class="min-h-screen bg-gray-50/60 p-4 sm:p-6 overflow-x-hidden">
+    <div class="max-w-4xl mx-auto space-y-6 min-w-0">
 
       <!-- Header -->
       <div class="flex items-center gap-4">
@@ -334,39 +334,95 @@
             <p class="text-sm font-semibold text-gray-900">Foto-Pool</p>
             <p class="text-xs text-gray-400">Fotos hier ablegen, freigeben — Automation oder manuell nach GBP publishen.</p>
 
-            <div class="flex flex-wrap gap-3 items-end">
-              <label class="block space-y-1">
-                <span class="text-xs font-medium text-gray-600">Datei</span>
-                <input type="file" accept="image/jpeg,image/png,image/webp" @change="onPoolFile" class="text-sm" />
-              </label>
-              <select v-model="poolCategory" class="text-sm rounded-xl border border-gray-200 px-3 py-2">
-                <option value="INTERIOR">Innen</option>
-                <option value="EXTERIOR">Aussen</option>
-                <option value="LOGO">Logo</option>
-                <option value="COVER">Titelbild</option>
-                <option value="PRODUCT">Produkt</option>
-              </select>
-              <label class="flex items-center gap-2 text-xs text-gray-600">
-                <input type="checkbox" v-model="poolApprovedOnUpload" />
-                Sofort freigeben
-              </label>
+            <div class="space-y-3">
+              <div>
+                <span class="text-xs font-medium text-gray-600 mb-1.5 block">Datei</span>
+                <input
+                  ref="poolFileInput"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  class="hidden"
+                  @change="onPoolFile"
+                />
+                <div
+                  role="button"
+                  tabindex="0"
+                  class="w-full flex items-center gap-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 px-4 py-3 text-left hover:border-blue-300 hover:bg-blue-50/40 transition-colors cursor-pointer"
+                  @click="poolFileInput?.click()"
+                  @keydown.enter.prevent="poolFileInput?.click()"
+                  @keydown.space.prevent="poolFileInput?.click()"
+                >
+                  <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white border border-gray-200 text-blue-600">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-sm font-medium text-gray-900 truncate">
+                      {{ poolFile ? poolFile.name : 'Bild auswählen' }}
+                    </span>
+                    <span class="block text-xs text-gray-400 truncate">
+                      {{ poolFile ? formatFileSize(poolFile.size) : 'JPEG, PNG oder WebP' }}
+                    </span>
+                  </span>
+                  <button
+                    v-if="poolFile"
+                    type="button"
+                    @click.stop="clearPoolFile"
+                    class="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-white hover:text-gray-600"
+                    aria-label="Datei entfernen"
+                  >
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <select v-model="poolCategory" class="w-full sm:flex-1 bg-white text-gray-900 text-sm rounded-xl border border-gray-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="INTERIOR">Innen</option>
+                  <option value="EXTERIOR">Aussen</option>
+                  <option value="LOGO">Logo</option>
+                  <option value="COVER">Titelbild</option>
+                  <option value="PRODUCT">Produkt</option>
+                </select>
+                <label class="flex items-center gap-2 text-xs text-gray-600 shrink-0">
+                  <input type="checkbox" v-model="poolApprovedOnUpload" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  Sofort freigeben
+                </label>
+              </div>
+
               <button
+                type="button"
                 @click="uploadToPool"
                 :disabled="!poolFile || poolUploading"
-                class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+                class="w-full px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
               >
                 {{ poolUploading ? 'Upload…' : 'In Pool laden' }}
               </button>
             </div>
 
-            <div class="border-t border-gray-100 pt-4 space-y-2">
+            <div class="border-t border-gray-100 pt-4 space-y-3">
               <p class="text-xs font-medium text-gray-500">Oder per URL hinzufügen</p>
-              <div class="flex gap-3">
-                <input v-model="photoUrl" placeholder="https://example.com/foto.jpg" class="flex-1 text-sm rounded-xl border border-gray-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <button @click="addUrlToPool" :disabled="!photoUrl || poolUploading" class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold hover:bg-gray-50 disabled:opacity-50">
+              <input
+                v-model="photoUrl"
+                placeholder="https://example.com/foto.jpg"
+                class="block w-full min-w-0 text-sm rounded-xl border border-gray-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <button
+                  @click="addUrlToPool"
+                  :disabled="!photoUrl || poolUploading"
+                  class="w-full sm:w-auto px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold hover:bg-gray-50 disabled:opacity-50"
+                >
                   URL → Pool
                 </button>
-                <button @click="uploadPhoto" :disabled="!photoUrl || photoUploading" class="px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50">
+                <button
+                  @click="uploadPhoto"
+                  :disabled="!photoUrl || photoUploading"
+                  class="w-full sm:w-auto px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50"
+                >
                   {{ photoUploading ? '…' : 'Direkt zu GBP' }}
                 </button>
               </div>
@@ -850,6 +906,7 @@ const photoResult = ref('')
 const mediaAssets = ref<any[]>([])
 const mediaLoading = ref(false)
 const poolFile = ref<File | null>(null)
+const poolFileInput = ref<HTMLInputElement | null>(null)
 const poolCategory = ref<'EXTERIOR' | 'INTERIOR' | 'PRODUCT' | 'LOGO' | 'COVER'>('INTERIOR')
 const poolApprovedOnUpload = ref(true)
 const poolUploading = ref(false)
@@ -858,6 +915,17 @@ const publishingAssetId = ref<string | null>(null)
 function onPoolFile(e: Event) {
   const input = e.target as HTMLInputElement
   poolFile.value = input.files?.[0] ?? null
+}
+
+function clearPoolFile() {
+  poolFile.value = null
+  if (poolFileInput.value) poolFileInput.value.value = ''
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 async function loadMedia() {
@@ -882,7 +950,7 @@ async function uploadToPool() {
     fd.append('locationId', selectedLocationId.value)
     fd.append('approved', poolApprovedOnUpload.value ? 'true' : 'false')
     await $fetch('/api/gbp/media/upload', { method: 'POST', body: fd })
-    poolFile.value = null
+    clearPoolFile()
     photoResult.value = 'Foto im Pool gespeichert'
     await loadMedia()
   } catch (e: any) {
