@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { requireFeature } from '~/server/utils/require-feature'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getGbpAutomationSettings, resolveGbpLocation } from '~/server/utils/gbp'
-import { generateGbpPostDraft } from '~/server/utils/gbp-automation'
+import { generateGbpAiText } from '~/server/utils/gbp-automation'
 import { getGbpLocationIdFromEvent } from '~/server/utils/gbp-location-param'
 
 /**
@@ -20,6 +20,10 @@ export default defineEventHandler(async (event) => {
     scheduledFor?: string | null
     status?: 'draft' | 'scheduled'
     mediaUrls?: string[]
+    keywords?: string[]
+    draftText?: string | null
+    tone?: 'local_friendly' | 'factual' | 'cta_focus'
+    mode?: 'generate' | 'regenerate' | 'shorter' | 'more_cta'
   }>(event)
 
   const locationId = getGbpLocationIdFromEvent(event, body)
@@ -33,12 +37,17 @@ export default defineEventHandler(async (event) => {
     .single()
 
   try {
-    const summary = await generateGbpPostDraft({
+    const mergedKeywords = [...new Set([...(settings.keywords ?? []), ...(body.keywords ?? [])])].filter(Boolean)
+    const summary = await generateGbpAiText({
+      context: 'post',
       tenantName: tenant?.name || 'Fahrschule',
       locationTitle: loc.title,
-      keywords: settings.keywords,
+      keywords: mergedKeywords,
       brandVoice: settings.brand_voice,
       ctaType: settings.default_cta_type,
+      draftText: body.draftText,
+      tone: body.tone,
+      mode: body.mode,
     })
 
     if (!summary) throw createError({ statusCode: 502, statusMessage: 'AI returned empty post' })

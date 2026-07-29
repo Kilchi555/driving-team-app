@@ -13,6 +13,7 @@ export default defineEventHandler(async (event) => {
     photoUrl: string
     category?: 'EXTERIOR' | 'INTERIOR' | 'PRODUCT' | 'LOGO' | 'COVER'
     locationId?: string
+    description?: string | null
   }>(event)
 
   if (!body?.photoUrl) throw createError({ statusCode: 400, statusMessage: 'photoUrl required' })
@@ -22,7 +23,8 @@ export default defineEventHandler(async (event) => {
       authUser.tenant_id,
       body.photoUrl,
       body.category,
-      getGbpLocationIdFromEvent(event, body)
+      getGbpLocationIdFromEvent(event, body),
+      body.description
     )
     return { success: true, media: result }
   } catch (err: any) {

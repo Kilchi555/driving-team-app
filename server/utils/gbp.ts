@@ -481,19 +481,24 @@ export async function uploadGbpPhoto(
   tenantId: string,
   photoUrl: string,
   category: 'EXTERIOR' | 'INTERIOR' | 'PRODUCT' | 'LOGO' | 'COVER' = 'INTERIOR',
-  locationId?: string | null
+  locationId?: string | null,
+  description?: string | null
 ) {
   return withLocation(tenantId, locationId, async (accessToken, loc) => {
+    const payload: Record<string, unknown> = {
+      mediaFormat: 'PHOTO',
+      locationAssociation: { category },
+      sourceUrl: photoUrl,
+    }
+    if (description?.trim() && category !== 'COVER') {
+      payload.description = description.trim()
+    }
     const res = await fetch(
       `${GBP_REVIEWS_BASE}/${loc.gbp_account_name}/${loc.gbp_location_id}/media`,
       {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mediaFormat: 'PHOTO',
-          locationAssociation: { category },
-          sourceUrl: photoUrl,
-        }),
+        body: JSON.stringify(payload),
       }
     )
     return res.json()

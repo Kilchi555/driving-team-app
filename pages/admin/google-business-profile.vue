@@ -277,12 +277,15 @@
           <!-- New post form -->
           <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
             <p class="text-sm font-semibold text-gray-900">Neuer Post</p>
-            <textarea
+            <GbpAiTextField
               v-model="newPost.summary"
-              rows="4"
-              placeholder="Was möchtest du teilen? Neues Feature, Angebot, Tipp…"
-              class="w-full text-sm rounded-xl border border-gray-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              maxlength="1500"
+              context="post"
+              :location-id="selectedLocationId"
+              :default-keywords="settingsKeywords"
+              label="Post-Text"
+              placeholder="Rohtext oder Stichworte — dann SEO-Text generieren…"
+              :max-length="1500"
+              :rows="5"
             />
             <div class="flex flex-wrap gap-3">
               <select v-model="newPost.topicType" class="text-sm rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -300,7 +303,7 @@
               <input v-if="newPost.callToActionType" v-model="newPost.callToActionUrl" placeholder="https://…" class="flex-1 min-w-40 text-sm rounded-lg border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-xs text-gray-400">{{ newPost.summary.length }}/1500 Zeichen</span>
+              <span class="text-xs text-gray-400">CTA & Typ unten wählen</span>
               <button @click="publishPost" :disabled="!newPost.summary.trim() || postPublishing" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">
                 {{ postPublishing ? 'Veröffentlichen…' : 'Jetzt veröffentlichen' }}
               </button>
@@ -393,6 +396,17 @@
                 </label>
               </div>
 
+              <GbpAiTextField
+                v-model="poolNotes"
+                context="photo_caption"
+                :location-id="selectedLocationId"
+                :default-keywords="settingsKeywords"
+                label="Foto-Beschreibung (optional, für Google SEO)"
+                placeholder="Stichworte oder Rohtext — KI macht daraus eine Caption…"
+                :max-length="250"
+                :rows="3"
+              />
+
               <button
                 type="button"
                 @click="uploadToPool"
@@ -451,6 +465,7 @@
                     Publishes: {{ asset.publish_count || 0 }}
                     <span v-if="asset.last_published_at"> · zuletzt {{ formatDate(asset.last_published_at) }}</span>
                   </p>
+                  <p v-if="asset.notes" class="text-xs text-gray-500 line-clamp-2">{{ asset.notes }}</p>
                   <div class="flex flex-wrap gap-2">
                     <button
                       v-if="!asset.approved"
@@ -515,25 +530,30 @@
               </div>
               <div v-else>
                 <div v-if="replyingTo === review.reviewId" class="space-y-2">
-                  <textarea
+                  <GbpAiTextField
                     v-model="replyText"
-                    rows="3"
-                    placeholder="Antwort schreiben…"
-                    class="w-full text-sm rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    context="review_reply"
+                    :location-id="selectedLocationId"
+                    :default-keywords="settingsKeywords"
+                    label="Antwort"
+                    placeholder="Antwort schreiben oder KI generieren…"
+                    :max-length="500"
+                    :rows="3"
+                    :review-context="{
+                      reviewerName: review.reviewer?.displayName,
+                      starRating: starRating(review.starRating),
+                      reviewText: review.comment,
+                    }"
                   />
                   <div class="flex gap-2 flex-wrap">
                     <button @click="submitReply(review.reviewId)" :disabled="replying" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50">
                       {{ replying ? 'Senden…' : 'Antworten' }}
-                    </button>
-                    <button @click="generateAiReply(review)" :disabled="aiReplying === review.reviewId" class="px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 text-xs font-semibold hover:bg-blue-50 transition-colors disabled:opacity-50">
-                      {{ aiReplying === review.reviewId ? 'KI schreibt…' : '✦ KI-Vorschlag' }}
                     </button>
                     <button @click="replyingTo = null" class="px-3 py-1.5 rounded-lg text-gray-500 text-xs hover:bg-gray-100 transition-colors">Abbrechen</button>
                   </div>
                 </div>
                 <div v-else class="flex gap-3">
                   <button @click="replyingTo = review.reviewId; replyText = ''" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Antworten</button>
-                  <button @click="replyingTo = review.reviewId; generateAiReply(review)" class="text-xs text-purple-500 hover:text-purple-700 font-medium">✦ KI-Antwort</button>
                 </div>
               </div>
             </div>
@@ -616,10 +636,19 @@
                   <span class="text-xs text-gray-400">{{ ra.status }}</span>
                 </div>
                 <p v-if="ra.review_comment" class="text-sm text-gray-600">{{ ra.review_comment }}</p>
-                <textarea
-                  v-model="ra.suggested_reply"
-                  rows="3"
-                  class="w-full text-sm rounded-xl border border-gray-200 px-3 py-2 resize-none"
+                <GbpAiTextField
+                  :model-value="ra.suggested_reply"
+                  context="review_reply"
+                  :location-id="selectedLocationId"
+                  label="Antwort"
+                  :max-length="500"
+                  :rows="3"
+                  :review-context="{
+                    reviewerName: ra.reviewer_name,
+                    starRating: ra.star_rating,
+                    reviewText: ra.review_comment,
+                  }"
+                  @update:model-value="(v: string) => { ra.suggested_reply = v }"
                 />
                 <div class="flex gap-2">
                   <button
@@ -772,6 +801,9 @@ async function loadStatus() {
     if (selectedLocationId.value && !linkedLocations.value.some(l => l.id === selectedLocationId.value)) {
       selectedLocationId.value = linkedLocations.value[0]?.id ?? null
     }
+    if (status.value?.connected && selectedLocationId.value) {
+      await loadSettingsKeywords()
+    }
   } catch (e: any) {
     const code = e?.statusCode ?? e?.status ?? e?.response?.status ?? e?.data?.statusCode
     if (code === 403) {
@@ -791,6 +823,7 @@ async function onLocationChange() {
   scheduledPosts.value = []
   reviewActions.value = []
   mediaAssets.value = []
+  await loadSettingsKeywords()
   if (activeTab.value === 'insights') loadInsights()
   if (activeTab.value === 'reviews') loadReviews()
   if (activeTab.value === 'posts') loadPosts()
@@ -891,13 +924,13 @@ const averageRating = ref(0)
 const replyingTo = ref<string | null>(null)
 const replyText = ref('')
 const replying = ref(false)
-const aiReplying = ref<string | null>(null)
 
 // Posts
 const posts = ref<any[]>([])
 const postsLoading = ref(false)
 const newPost = ref({ summary: '', topicType: 'STANDARD', callToActionType: '', callToActionUrl: '' })
 const postPublishing = ref(false)
+const settingsKeywords = ref<string[]>([])
 
 // Photos
 const photoUrl = ref('')
@@ -908,6 +941,7 @@ const mediaLoading = ref(false)
 const poolFile = ref<File | null>(null)
 const poolFileInput = ref<HTMLInputElement | null>(null)
 const poolCategory = ref<'EXTERIOR' | 'INTERIOR' | 'PRODUCT' | 'LOGO' | 'COVER'>('INTERIOR')
+const poolNotes = ref('')
 const poolApprovedOnUpload = ref(true)
 const poolUploading = ref(false)
 const publishingAssetId = ref<string | null>(null)
@@ -949,8 +983,10 @@ async function uploadToPool() {
     fd.append('category', poolCategory.value)
     fd.append('locationId', selectedLocationId.value)
     fd.append('approved', poolApprovedOnUpload.value ? 'true' : 'false')
+    if (poolNotes.value.trim()) fd.append('notes', poolNotes.value.trim())
     await $fetch('/api/gbp/media/upload', { method: 'POST', body: fd })
     clearPoolFile()
+    poolNotes.value = ''
     photoResult.value = 'Foto im Pool gespeichert'
     await loadMedia()
   } catch (e: any) {
@@ -971,9 +1007,11 @@ async function addUrlToPool() {
         category: poolCategory.value,
         locationId: selectedLocationId.value,
         approved: poolApprovedOnUpload.value,
+        notes: poolNotes.value.trim() || undefined,
       },
     })
     photoUrl.value = ''
+    poolNotes.value = ''
     photoResult.value = 'URL im Pool gespeichert'
     await loadMedia()
   } catch (e: any) {
@@ -1011,6 +1049,20 @@ async function deleteAsset(id: string) {
   await loadMedia()
 }
 
+async function loadSettingsKeywords() {
+  if (!selectedLocationId.value) {
+    settingsKeywords.value = []
+    return
+  }
+  try {
+    const data = await $fetch<any>('/api/gbp/settings', { query: locQuery() })
+    const s = data.settings ?? data
+    settingsKeywords.value = Array.isArray(s.keywords) ? s.keywords : []
+  } catch {
+    settingsKeywords.value = []
+  }
+}
+
 async function loadReviews() {
   if (!status.value?.connected || !selectedLocationId.value) return
   reviewsLoading.value = true
@@ -1024,25 +1076,6 @@ async function loadReviews() {
     reviewsError.value = e?.data?.statusMessage || 'Bewertungen konnten nicht geladen werden'
   } finally {
     reviewsLoading.value = false
-  }
-}
-
-async function generateAiReply(review: any) {
-  aiReplying.value = review.reviewId
-  try {
-    const data = await $fetch<any>(`/api/gbp/reviews/${review.reviewId}/ai-reply`, {
-      method: 'POST',
-      body: {
-        reviewText: review.comment ?? '',
-        reviewerName: review.reviewer?.displayName ?? '',
-        starRating: starRating(review.starRating),
-      },
-    })
-    replyText.value = data.suggestedReply
-  } catch (e: any) {
-    alert(e?.data?.statusMessage || 'KI-Vorschlag fehlgeschlagen')
-  } finally {
-    aiReplying.value = null
   }
 }
 
@@ -1099,10 +1132,12 @@ async function uploadPhoto() {
         photoUrl: photoUrl.value,
         category: poolCategory.value,
         locationId: selectedLocationId.value,
+        description: poolNotes.value.trim() || undefined,
       },
     })
     photoResult.value = 'Foto erfolgreich hochgeladen!'
     photoUrl.value = ''
+    poolNotes.value = ''
   } catch (e: any) {
     alert(e?.data?.statusMessage || 'Upload fehlgeschlagen')
   } finally {

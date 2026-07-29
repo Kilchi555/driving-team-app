@@ -24,6 +24,7 @@ export default defineEventHandler(async (event) => {
   const locationPart = parts.find(p => p.name === 'locationId')
   const approvedPart = parts.find(p => p.name === 'approved')
   const publishNowPart = parts.find(p => p.name === 'publishNow')
+  const notesPart = parts.find(p => p.name === 'notes')
 
   if (!filePart?.data) throw createError({ statusCode: 400, statusMessage: 'File required' })
 
@@ -56,6 +57,7 @@ export default defineEventHandler(async (event) => {
   const category = (categoryPart?.data?.toString() ?? 'INTERIOR') as 'EXTERIOR' | 'INTERIOR' | 'PRODUCT' | 'LOGO' | 'COVER'
   const approved = approvedPart?.data?.toString() === 'true'
   const publishNow = publishNowPart?.data?.toString() === 'true'
+  const notes = notesPart?.data?.toString()?.trim() || null
 
   const { data: asset, error } = await supabase
     .from('gbp_media_assets')
@@ -67,6 +69,7 @@ export default defineEventHandler(async (event) => {
       category,
       approved: approved || publishNow,
       source: 'upload',
+      notes,
     })
     .select('*')
     .single()
@@ -76,7 +79,7 @@ export default defineEventHandler(async (event) => {
   let gbpMedia = null
   if (publishNow && locationUuid) {
     const { uploadGbpPhoto } = await import('~/server/utils/gbp')
-    gbpMedia = await uploadGbpPhoto(authUser.tenant_id, publicUrl, category, locationUuid)
+    gbpMedia = await uploadGbpPhoto(authUser.tenant_id, publicUrl, category, locationUuid, notes)
     await supabase
       .from('gbp_media_assets')
       .update({

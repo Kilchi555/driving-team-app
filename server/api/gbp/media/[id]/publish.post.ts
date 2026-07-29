@@ -37,7 +37,8 @@ export default defineEventHandler(async (event) => {
     authUser.tenant_id,
     asset.public_url,
     asset.category,
-    loc.id
+    loc.id,
+    asset.notes
   )
 
   if (gbp?.error) {
