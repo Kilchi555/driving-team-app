@@ -22,7 +22,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { sendTenantEmail, sendEmail } from '~/server/utils/email'
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
-import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
+import { generateInvoicePdf, formatTenantContactPerson } from '~/server/utils/invoice-pdf'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 import { computeInvoiceDueDate, getTenantInvoiceDueDays } from '~/server/utils/invoice-due-date'
 import { computeVatAmountRappen, getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
@@ -324,7 +324,7 @@ export default defineEventHandler(async (event) => {
         // Load tenant for branding (+ payment terms)
         const { data: tenant } = await supabase
           .from('tenants')
-          .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_due_days, default_vat_rate, invoice_window_side')
+          .select('id, name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_due_days, default_vat_rate, invoice_window_side')
           .eq('id', profile.tenant_id)
           .single()
 
@@ -429,9 +429,11 @@ export default defineEventHandler(async (event) => {
                   tenantZip: tenantData?.invoice_zip || '',
                   tenantCity: tenantData?.invoice_city || '',
                   tenantEmail: tenantData?.contact_email || '',
+                  tenantContactPerson: formatTenantContactPerson(tenantData),
                   tenantLogoBase64: logo?.base64 || null,
                   tenantLogoFormat: logo?.format,
-                  customerName,
+                  customerName: external_contact_name.trim() || customerName,
+                  billingCompanyName: external_company_name?.trim() || '',
                   billingStreet: [external_street, external_street_nr].filter(Boolean).join(' '),
                   billingZip: external_zip || '',
                   billingCity: external_city || '',

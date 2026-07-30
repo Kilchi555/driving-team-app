@@ -126,7 +126,7 @@ export async function createIndividualCourseInvoice(opts: {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, legal_company_name, contact_email, primary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, qr_iban, invoice_window_side')
+    .select('id, name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, primary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, qr_iban, invoice_window_side')
     .eq('id', opts.tenantId)
     .single()
 
@@ -312,7 +312,7 @@ export async function createCompanyCourseInvoice(opts: {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, legal_company_name, contact_email, primary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, qr_iban, invoice_window_side')
+    .select('id, name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, primary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, qr_iban, invoice_window_side')
     .eq('id', opts.tenantId)
     .single()
 
@@ -479,7 +479,7 @@ async function sendCourseInvoiceEmail(opts: {
 }) {
   const { sendTenantEmail } = await import('~/server/utils/email')
   const { buildInvoiceEmailHtml } = await import('~/server/utils/invoice-email')
-  const { generateInvoicePdf } = await import('~/server/utils/invoice-pdf')
+  const { generateInvoicePdf, formatTenantContactPerson } = await import('~/server/utils/invoice-pdf')
   const { loadTenantLogoForPdf, resolveTenantWideLogoUrl } = await import('~/server/utils/tenant-logo-for-pdf')
 
   const html = buildInvoiceEmailHtml({
@@ -522,6 +522,7 @@ async function sendCourseInvoiceEmail(opts: {
       tenantZip: opts.tenant?.invoice_zip || '',
       tenantCity: opts.tenant?.invoice_city || '',
       tenantEmail: opts.tenant?.contact_email || undefined,
+      tenantContactPerson: formatTenantContactPerson(opts.tenant) || undefined,
       tenantLogoBase64: logo?.base64 || null,
       tenantLogoFormat: logo?.format,
       introText: opts.tenant?.invoice_intro_text || null,

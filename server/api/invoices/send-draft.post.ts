@@ -9,7 +9,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
-import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
+import { generateInvoicePdf, formatTenantContactPerson } from '~/server/utils/invoice-pdf'
 import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
   // Tenant laden (für Branding / Admin-Mail)
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, legal_company_name, contact_email, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_window_side')
+    .select('id, name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_window_side')
     .eq('id', staffUser.tenant_id)
     .single()
 
@@ -303,9 +303,11 @@ export default defineEventHandler(async (event) => {
           tenantZip,
           tenantCity,
           tenantEmail: tenantData.contact_email,
+          tenantContactPerson: formatTenantContactPerson(tenantData as any),
           tenantLogoBase64: logo?.base64 || null,
           tenantLogoFormat: logo?.format,
-          customerName: studentName,
+          customerName: [draft.billing_first_name, draft.billing_last_name].filter(Boolean).join(' ') || studentName,
+          billingCompanyName: (draft as any).billing_company_name || '',
           billingStreet: draft.billing_street,
           billingZip: draft.billing_zip,
           billingCity: draft.billing_city,
