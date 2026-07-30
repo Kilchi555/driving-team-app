@@ -88,6 +88,7 @@ export default defineEventHandler(async (event) => {
         tenant_id,
         user_id,
         appointment_id,
+        invoice_id,
         total_amount_rappen,
         admin_fee_rappen,
         credit_used_rappen,
@@ -433,6 +434,41 @@ export default defineEventHandler(async (event) => {
       } catch (paymentError: any) {
         logger.error(`❌ Error processing payment ${paymentId}:`, paymentError)
         results.push({ payment_id: paymentId, success: false, error: paymentError.message })
+      }
+    }
+
+    // ✅ Sync linked invoices after cash settlement (same rules as /api/invoices/mark-paid)
+    if (method === 'cash') {
+      const invoiceIds = [...new Set(
+        (allPayments as any[])
+          .filter((p: any) => p.invoice_id && results.some(r => r.payment_id === p.id && r.success && !r.skipped))
+          .map((p: any) => p.invoice_id as string)
+      )]
+
+      for (const invoiceId of invoiceIds) {
+        try {
+          const { data: invoicePayments } = await supabaseAdmin
+            .from('payments')
+            .select('id, payment_status')
+            .eq('invoice_id', invoiceId)
+
+          const allPaid = !!invoicePayments?.length && invoicePayments.every(p => p.payment_status === 'completed')
+          const anyPaid = !!invoicePayments?.some(p => p.payment_status === 'completed' || p.payment_status === 'partial')
+
+          // Staff may settle payment rows; only admin/tenant_admin flip the invoice header to paid/partial
+          if (['admin', 'tenant_admin', 'super_admin', 'superadmin'].includes(userProfile.role) && anyPaid) {
+            await supabaseAdmin
+              .from('invoices')
+              .update({
+                payment_status: allPaid ? 'paid' : 'partial',
+                ...(allPaid ? { paid_at: now } : {}),
+                updated_at: now,
+              })
+              .eq('id', invoiceId)
+          }
+        } catch (invErr: any) {
+          logger.warn(`⚠️ Invoice sync failed for ${invoiceId}:`, invErr?.message)
+        }
       }
     }
 
