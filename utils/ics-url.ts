@@ -143,7 +143,7 @@ export function humanizeIcsFetchError(codeOrMessage: string): { message: string;
   if (lower.includes('too large') || lower.includes('ics too large')) {
     return {
       message: 'Die Kalender-Datei ist zu gross.',
-      tip: 'Nutze einen Kalender nur mit relevanten Terminen, oder kontaktiere den Support.',
+      tip: 'Apple-/iCloud-Kalender mit vielen alten Terminen können sehr gross werden. Erstelle einen neuen Kalender nur mit aktuellen Terminen und teile dessen ICS-URL, oder kontaktiere den Support.',
     }
   }
   if (lower.includes('vcalendar') || lower.includes('html') || lower.includes('not a vcalendar')) {
