@@ -480,7 +480,7 @@ async function sendCourseInvoiceEmail(opts: {
   const { sendTenantEmail } = await import('~/server/utils/email')
   const { buildInvoiceEmailHtml } = await import('~/server/utils/invoice-email')
   const { generateInvoicePdf } = await import('~/server/utils/invoice-pdf')
-  const { loadTenantLogoForPdf } = await import('~/server/utils/tenant-logo-for-pdf')
+  const { loadTenantLogoForPdf, resolveTenantWideLogoUrl } = await import('~/server/utils/tenant-logo-for-pdf')
 
   const html = buildInvoiceEmailHtml({
     customerName: opts.studentName,
@@ -501,7 +501,7 @@ async function sendCourseInvoiceEmail(opts: {
 
   let attachments: { filename: string; content: Buffer }[] = []
   try {
-    const logo = await loadTenantLogoForPdf(opts.tenant?.logo_wide_url)
+    const logo = await loadTenantLogoForPdf(resolveTenantWideLogoUrl(opts.tenant))
     const pdfBuffer = await generateInvoicePdf({
       invoiceNumber: opts.invoiceNumber,
       invoiceDate: opts.invoiceDate,

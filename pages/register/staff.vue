@@ -34,11 +34,11 @@
         </div>
 
         <!-- ── Success ── -->
-        <div v-else-if="currentStep === STEP_SUCCESS" class="p-8 text-center space-y-6">
-          <div class="text-6xl">✅</div>
-          <div>
+        <div v-else-if="currentStep === STEP_SUCCESS" class="p-8 space-y-6">
+          <div class="text-center space-y-2">
+            <div class="text-6xl">✅</div>
             <h2 class="text-xl font-bold text-gray-900">Willkommen im Team!</h2>
-            <p class="text-gray-500 mt-1">Ihr Konto wurde erfolgreich erstellt.</p>
+            <p class="text-gray-500">Dein Konto wurde erfolgreich erstellt.</p>
           </div>
 
           <!-- ICS-Feed URL -->
@@ -74,10 +74,59 @@
             <NuxtLink to="/login" class="inline-block mt-2 text-xs font-semibold text-amber-700 underline">Zur Login-Seite</NuxtLink>
           </div>
 
-          <button @click="goToDashboard"
-            class="w-full text-white font-semibold py-3 rounded-lg transition-opacity hover:opacity-90"
-            :style="{ background: tenantColor }">
-            🚀 Zum Dashboard
+          <!--
+            Bombensicher für iOS/Android Passwortspeicher:
+            Native form POST (kein @submit.prevent) mit username + password im DOM.
+            Safari/Chrome bieten dann «Passwort speichern» an.
+          -->
+          <form
+            method="POST"
+            action="/api/auth/credential-save-ack"
+            autocomplete="on"
+            class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-left space-y-3"
+          >
+            <input type="hidden" name="redirect" value="/dashboard">
+            <p class="text-sm font-semibold text-gray-900">Zugangsdaten speichern</p>
+            <p class="text-xs text-gray-500">
+              Tippe auf den Button unten. Wenn dein Handy fragt, ob es Benutzername und Passwort speichern soll — bitte bestätigen.
+            </p>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1" for="staff-success-username">E-Mail</label>
+              <input
+                id="staff-success-username"
+                name="username"
+                type="email"
+                autocomplete="username"
+                :value="form.email"
+                class="input w-full bg-white text-sm"
+              >
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1" for="staff-success-password">Passwort</label>
+              <input
+                id="staff-success-password"
+                name="password"
+                type="password"
+                autocomplete="new-password"
+                :value="form.password"
+                class="input w-full bg-white text-sm"
+              >
+            </div>
+            <button
+              type="submit"
+              class="w-full text-white font-semibold py-3 rounded-lg transition-opacity hover:opacity-90"
+              :style="{ background: tenantColor }"
+            >
+              Passwort speichern &amp; zum Dashboard
+            </button>
+          </form>
+
+          <button
+            type="button"
+            @click="goToDashboard"
+            class="w-full text-sm text-gray-500 hover:text-gray-700 underline"
+          >
+            Ohne Speichern weiter
           </button>
 
           <!-- App Store -->
@@ -138,7 +187,7 @@
               </div>
               <div class="col-span-2">
                 <label class="label">E-Mail *</label>
-                <input v-model="form.email" type="email" autocomplete="email" name="username" id="staff-wizard-email" class="input" placeholder="max@example.com"
+                <input v-model="form.email" type="email" autocomplete="username" name="username" id="staff-wizard-email" class="input" placeholder="max@example.com"
                   @input="onStaffEmailInput(form.email)"
                   @blur="checkStaffEmail(form.email)"
                   :class="{ '!border-red-300': staffEmailCheck === 'taken', '!border-green-300': staffEmailCheck === 'available' }"
@@ -669,12 +718,12 @@
             </div>
           </div>
 
-          <!-- iOS Password Autofill: mirrors always present in DOM so Safari can detect
-               username + password at form submission, even though they're on different steps -->
-          <div style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;white-space:nowrap;border:0">
-            <input type="email" name="username" autocomplete="username" :value="form.email" tabindex="-1" readonly>
-            <input type="password" name="password" autocomplete="new-password" :value="form.password" tabindex="-1" readonly>
-            <input type="password" name="confirm-password" autocomplete="new-password" :value="form.confirmPassword" tabindex="-1" readonly>
+          <!-- Password-manager mirrors: off-screen but NOT display:none / readonly
+               (iOS Safari ignores display:none and often skips readonly fields) -->
+          <div aria-hidden="true" class="pm-mirror">
+            <input type="email" name="username" autocomplete="username" :value="form.email" tabindex="-1">
+            <input type="password" name="password" autocomplete="new-password" :value="form.password" tabindex="-1">
+            <input type="password" name="new-password" autocomplete="new-password" :value="form.confirmPassword" tabindex="-1">
           </div>
 
         </form>
@@ -1161,10 +1210,13 @@ const submit = async () => {
     const loginOk = await authStore.login(form.email, form.password).catch(() => false)
     if (!loginOk) autoLoginFailed.value = true
 
-    // Save credentials for Android/Chrome; iOS relies on mirror inputs + form submit
-    if (loginOk) {
-      await saveCredentials(form.email, form.password, `${form.firstName} ${form.lastName}`.trim())
-    }
+    // Chrome/Android (+ iframe fallback). iOS primarily uses the success-screen form.
+    await saveCredentials(
+      form.email,
+      form.password,
+      `${form.firstName} ${form.lastName}`.trim(),
+      'new-password'
+    )
 
     // Generate ICS URL after login
     if (loginOk) {
@@ -1197,6 +1249,11 @@ const submit = async () => {
     }
 
     currentStep.value = STEP_SUCCESS
+
+    // Preload branding so the native credential-save form redirect lands cleanly
+    if (tenantSlugRef.value) {
+      loadTenantBranding(tenantSlugRef.value).catch(() => {})
+    }
 
   } catch (err: any) {
     console.error('Registration error:', err)
@@ -1305,4 +1362,16 @@ onMounted(() => loadInvitation())
 .input-sm { @apply px-2 py-1 border border-gray-300 rounded text-sm; }
 .input-sm:focus { outline: none; border-color: var(--brand, #7C3AED); box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand, #7C3AED) 25%, transparent); }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--brand, #7C3AED); }
+
+/* Off-screen password-manager mirrors — avoid display:none / visibility:hidden / readonly */
+.pm-mirror {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0.01;
+  pointer-events: none;
+}
 </style>

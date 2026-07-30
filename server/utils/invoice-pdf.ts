@@ -217,6 +217,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       .strokeColor(muted).lineWidth(0.4).stroke()
 
     // ── Empfängeradresse (Fensterzone, ohne Hintergrundfläche) ───────────────
+    // Nur postalische Empfängeradresse im Fenster — Kontaktperson separat in den Meta-Daten.
     let addrY = winTop + 2
     const addrMainName = data.billingCompanyName || data.customerName
     doc.fontSize(11).fillColor(ink).font('Helvetica-Bold')
@@ -224,11 +225,6 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     addrY += 14
 
     doc.font('Helvetica').fontSize(10).fillColor(ink)
-    if (data.billingCompanyName && data.customerName && data.customerName !== data.billingCompanyName) {
-      // Kontaktperson gehört in den Fensterschlitz (nicht daneben)
-      doc.text(data.customerName, winX, addrY, { width: winWidth })
-      addrY += 13
-    }
     if (data.billingStreet) {
       doc.text(data.billingStreet, winX, addrY, { width: winWidth })
       addrY += 13
@@ -250,6 +246,9 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       ['Rechnungsdatum', formatDate(data.invoiceDate)],
       ['Fällig am', formatDate(data.dueDate)],
     ]
+    if (data.billingCompanyName && data.customerName && data.customerName !== data.billingCompanyName) {
+      metaRows.push(['Kontaktperson', data.customerName])
+    }
     if (data.tenantEmail) metaRows.push(['Kontakt', data.tenantEmail])
     metaRows.forEach(([label, value], i) => {
       const y = metaTop + i * 22

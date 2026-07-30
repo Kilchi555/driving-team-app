@@ -89,7 +89,7 @@ export function useTenantAssets(tenantId?: string) {
       return {
         logo: toPublicUrl(data?.logo_url),
         logoSquare: toPublicUrl(data?.logo_square_url),
-        logoWide: toPublicUrl(data?.logo_wide_url),
+        logoWide: toPublicUrl(data?.logo_wide_url || data?.logo_url),
         favicon: toPublicUrl(data?.favicon_url)
       }
     } catch (err) {

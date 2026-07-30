@@ -237,7 +237,7 @@ export const useTenantBranding = () => {
         logos: {
           standard: data.logo_url,
           square: data.logo_square_url,
-          wide: data.logo_wide_url,
+          wide: data.logo_wide_url || data.logo_url,
           dark: data.logo_dark_url,
           favicon: data.favicon_url,
         },

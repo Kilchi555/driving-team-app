@@ -418,8 +418,8 @@ export default defineEventHandler(async (event) => {
               // Generate PDF (non-fatal if it fails)
               let pdfAttachments: any[] = []
               try {
-                const { loadTenantLogoForPdf } = await import('~/server/utils/tenant-logo-for-pdf')
-                const logo = await loadTenantLogoForPdf(tenantData?.logo_wide_url)
+                const { loadTenantLogoForPdf, resolveTenantWideLogoUrl } = await import('~/server/utils/tenant-logo-for-pdf')
+                const logo = await loadTenantLogoForPdf(resolveTenantWideLogoUrl(tenantData))
                 const pdfBuffer = await generateInvoicePdf({
                   invoiceNumber: invoiceNumber!,
                   invoiceDate: invoiceDateStr,
