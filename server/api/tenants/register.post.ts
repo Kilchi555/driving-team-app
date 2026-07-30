@@ -302,11 +302,13 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         surface_color: '#F9FAFB',
         text_color: '#111827',
         text_secondary_color: '#6B7280',
-        // Branding
+        // Branding — wide logo must be stored in logo_wide_url (what headers/PDFs/admin UI use).
+        // logo_url remains a generic fallback for legacy callers.
         brand_name: data.name, // Standard: Firmenname
         // Trial-Management
-        logo_url: logoUrl,
+        logo_wide_url: logoUrl,
         logo_square_url: logoSquareUrl,
+        logo_url: logoUrl || logoSquareUrl,
         timezone: data.timezone || 'Europe/Zurich',
         currency: 'CHF',
         language: data.language || 'de',

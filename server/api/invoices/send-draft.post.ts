@@ -10,7 +10,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
-import { loadTenantLogoForPdf } from '~/server/utils/tenant-logo-for-pdf'
+import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 
@@ -284,7 +284,7 @@ export default defineEventHandler(async (event) => {
       // PDF generieren und als Anhang beifügen
       let pdfAttachments: any[] = []
       try {
-        const logo = await loadTenantLogoForPdf((tenantData as any).logo_wide_url)
+        const logo = await loadTenantLogoForPdf(resolveTenantWideLogoUrl(tenantData as any))
 
         const legalName = (tenantData as any).legal_company_name || tenantData.name
         const tenantStreet = [

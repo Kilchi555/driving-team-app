@@ -200,9 +200,20 @@ export default defineEventHandler(async (event) => {
         [column]: publicUrl,
         updated_at: new Date().toISOString(),
       }
-      // Prefer square as generic logo_url fallback when uploading square
+      // Prefer square as generic logo_url fallback when uploading square;
+      // also keep logo_url in sync when uploading wide so legacy callers still work.
       if (assetType === 'logo_square') {
         tenantUpdate.logo_url = publicUrl
+      } else if (assetType === 'logo_wide') {
+        // Only set logo_url if empty — don't overwrite a square-preferred fallback
+        const { data: current } = await supabase
+          .from('tenants')
+          .select('logo_url')
+          .eq('id', tenantId)
+          .maybeSingle()
+        if (!current?.logo_url) {
+          tenantUpdate.logo_url = publicUrl
+        }
       }
       const { error: tenantUpdateError } = await supabase
         .from('tenants')

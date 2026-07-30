@@ -31,6 +31,15 @@ async function toPdfCompatible(buffer: Buffer): Promise<TenantLogoForPdf | null>
   }
 }
 
+/** Prefer wide logo; fall back to generic/square for older tenants. */
+export function resolveTenantWideLogoUrl(tenant: {
+  logo_wide_url?: string | null
+  logo_url?: string | null
+  logo_square_url?: string | null
+} | null | undefined): string | null {
+  return tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+}
+
 /**
  * Lädt logo_wide_url (data-URI oder HTTPS) und liefert Base64 ohne data:-Prefix.
  * Gibt null zurück wenn kein Logo oder Konvertierung fehlschlägt.

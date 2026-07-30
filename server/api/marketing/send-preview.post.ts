@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
 
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, slug, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_square_url')
+      .select('name, slug, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
       .eq('id', tenantId)
       .single()
 
@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
       const previewSubject = `[TEST${labelSuffix}] ${baseSubject}`
       const html = wrapMarketingEmail(
         rendered, tenantName, unsubscribeLink, primaryColor,
-        tenant?.logo_wide_url || null, tenant?.logo_square_url || null,
+        tenant?.logo_wide_url || tenant?.logo_url || null, tenant?.logo_square_url || null,
         null, tenantId,
       )
       return { subject: previewSubject, html }

@@ -8,7 +8,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getStageDef, daysOverdue } from '~/server/utils/invoice-dunning'
 import { generateDunningPdf, dunningPdfFilename, extractDunningLetterText } from '~/server/utils/dunning-pdf'
 import { uploadPdfAndGetPublicUrl } from '~/server/utils/upload-pdf-public'
-import { loadTenantLogoForPdf } from '~/server/utils/tenant-logo-for-pdf'
+import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
@@ -104,7 +104,7 @@ export default defineEventHandler(async (event) => {
   const customerName = invoice.billing_contact_person ||
     `${invoice.customer_first_name || ''} ${invoice.customer_last_name || ''}`.trim() || 'Kunde'
 
-  const logo = await loadTenantLogoForPdf((tenant as any)?.logo_wide_url)
+  const logo = await loadTenantLogoForPdf(resolveTenantWideLogoUrl(tenant as any))
 
   const pdfBuffer = await generateDunningPdf({
     stage: log.stage,

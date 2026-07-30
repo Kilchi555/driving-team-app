@@ -13,7 +13,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { prepareDunning } from '~/server/utils/invoice-dunning-send'
 import { generateDunningPdf, dunningPdfFilename } from '~/server/utils/dunning-pdf'
-import { loadTenantLogoForPdf } from '~/server/utils/tenant-logo-for-pdf'
+import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
   let pdfBuffer: Buffer | null = null
   let pdfName = dunningPdfFilename(prepared.stageDef.label, invoice.invoice_number)
   try {
-    const logo = await loadTenantLogoForPdf(tenant?.logo_wide_url)
+    const logo = await loadTenantLogoForPdf(resolveTenantWideLogoUrl(tenant))
 
     pdfBuffer = await generateDunningPdf({
       stage,

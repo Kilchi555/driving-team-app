@@ -5,7 +5,7 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
-import { loadTenantLogoForPdf } from '~/server/utils/tenant-logo-for-pdf'
+import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
 import { uploadPdfAndGetPublicUrl } from '~/server/utils/upload-pdf-public'
 import {
   expandProductsAsSeparateLines,
@@ -171,7 +171,7 @@ export default defineEventHandler(async (event) => {
     } catch { /* QR optional */ }
   }
 
-  const logo = await loadTenantLogoForPdf((tenant as any)?.logo_wide_url)
+  const logo = await loadTenantLogoForPdf(resolveTenantWideLogoUrl(tenant as any))
   const tenantStreet = [(tenant as any)?.invoice_street?.trim(), (tenant as any)?.invoice_street_nr?.trim()].filter(Boolean).join(' ')
 
   const pdfBuffer = await generateInvoicePdf({
