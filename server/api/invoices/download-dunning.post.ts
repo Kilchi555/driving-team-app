@@ -9,6 +9,7 @@ import { getStageDef, daysOverdue } from '~/server/utils/invoice-dunning'
 import { generateDunningPdf, dunningPdfFilename, extractDunningLetterText } from '~/server/utils/dunning-pdf'
 import { uploadPdfAndGetPublicUrl } from '~/server/utils/upload-pdf-public'
 import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
+import { formatTenantContactPerson } from '~/server/utils/invoice-pdf'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
@@ -59,7 +60,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, legal_company_name, contact_email, primary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url, invoice_window_side')
+    .select('name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, primary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url, invoice_window_side')
     .eq('id', profile.tenant_id)
     .single()
 
@@ -124,6 +125,7 @@ export default defineEventHandler(async (event) => {
     tenantZip: tenant?.invoice_zip || undefined,
     tenantCity: tenant?.invoice_city || undefined,
     tenantEmail: tenant?.contact_email || undefined,
+    tenantContactPerson: formatTenantContactPerson(tenant) || undefined,
     tenantLogoBase64: logo?.base64 || null,
     customerName,
     billingCompanyName: invoice.billing_company_name || undefined,

@@ -10,6 +10,7 @@ import { prepareDunning } from '~/server/utils/invoice-dunning-send'
 import { generateDunningPdf, dunningPdfFilename } from '~/server/utils/dunning-pdf'
 import { uploadPdfAndGetPublicUrl } from '~/server/utils/upload-pdf-public'
 import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
+import { formatTenantContactPerson } from '~/server/utils/invoice-pdf'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
@@ -56,6 +57,7 @@ export default defineEventHandler(async (event) => {
     tenantZip: tenant?.invoice_zip || undefined,
     tenantCity: tenant?.invoice_city || undefined,
     tenantEmail: tenant?.contact_email || undefined,
+    tenantContactPerson: formatTenantContactPerson(tenant) || undefined,
     tenantLogoBase64: logo?.base64 || null,
     customerName: prepared.customerName,
     billingCompanyName: invoice.billing_company_name || undefined,

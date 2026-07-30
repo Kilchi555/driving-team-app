@@ -65,6 +65,8 @@ export interface InvoicePdfData {
   tenantZip?: string
   tenantCity?: string
   tenantEmail?: string
+  /** Ansprechpartner des Tenants (Vor- + Nachname), Meta-Seite neben der Adresse */
+  tenantContactPerson?: string
   tenantLogoBase64?: string | null   // base64 PNG/JPEG ohne data:-Prefix
   tenantLogoFormat?: 'png' | 'jpeg'
   customerName: string
@@ -115,6 +117,17 @@ export interface InvoicePdfData {
    * (used for Zahlungserinnerung / Mahnung so the letter is never cramped above the slip).
    */
   qrOnSeparatePage?: boolean
+}
+
+/** Vor- + Nachname der Tenant-Kontaktperson (Admin bei Registrierung). */
+export function formatTenantContactPerson(tenant: {
+  contact_person_first_name?: string | null
+  contact_person_last_name?: string | null
+} | null | undefined): string {
+  return [tenant?.contact_person_first_name, tenant?.contact_person_last_name]
+    .map((p) => (p || '').trim())
+    .filter(Boolean)
+    .join(' ')
 }
 
 export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
@@ -217,7 +230,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       .strokeColor(muted).lineWidth(0.4).stroke()
 
     // ── Empfängeradresse (Fensterzone, ohne Hintergrundfläche) ───────────────
-    // Nur postalische Empfängeradresse im Fenster — Kontaktperson separat in den Meta-Daten.
+    // Nur postalische Adresse im Couvert-Fenster — Kontaktperson darunter, ausserhalb.
     let addrY = winTop + 2
     const addrMainName = data.billingCompanyName || data.customerName
     doc.fontSize(11).fillColor(ink).font('Helvetica-Bold')
@@ -235,7 +248,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     }
     // E-Mail bewusst NICHT im Fenster (nur postalische Adresse)
 
-    // Meta-Daten auf der Gegenseite des Fensters (sichtbar ausserhalb Couvert-Schlitz)
+    // Meta-Daten auf der Gegenseite des Fensters (Tenant-Seite)
     const metaGap = mmToPt(12)
     const metaX = windowSide === 'right' ? margin : (winX + winWidth + metaGap)
     const metaW = windowSide === 'right'
@@ -246,9 +259,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       ['Rechnungsdatum', formatDate(data.invoiceDate)],
       ['Fällig am', formatDate(data.dueDate)],
     ]
-    if (data.billingCompanyName && data.customerName && data.customerName !== data.billingCompanyName) {
-      metaRows.push(['Kontaktperson', data.customerName])
-    }
+    if (data.tenantContactPerson) metaRows.push(['Kontaktperson', data.tenantContactPerson])
     if (data.tenantEmail) metaRows.push(['Kontakt', data.tenantEmail])
     metaRows.forEach(([label, value], i) => {
       const y = metaTop + i * 22
@@ -258,8 +269,22 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
         .text(value, metaX, y + 10, { width: metaW })
     })
 
-    // Inhalt beginnt unterhalb der Fensterzone, damit nichts im Schlitz liegt
-    const contentTop = mmToPt(100) + addrShiftY
+    // Fensterende (DIN ~45mm hoch) — alles darunter ist ausserhalb des Couvert-Schlitzes
+    const winBottom = winTop + mmToPt(45)
+    let belowWindowY = winBottom + 8
+
+    // Kunden-Kontaktperson unter dem Fenster, Kunden-Seite (nicht im Couvert sichtbar)
+    if (data.billingCompanyName && data.customerName && data.customerName !== data.billingCompanyName) {
+      doc.fontSize(7).fillColor(muted).font('Helvetica')
+        .text('KONTAKTPERSON', winX, belowWindowY, { width: winWidth, characterSpacing: 0.4 })
+      belowWindowY += 10
+      doc.fontSize(9).fillColor(ink).font('Helvetica')
+        .text(data.customerName, winX, belowWindowY, { width: winWidth })
+      belowWindowY += 14
+    }
+
+    // Inhalt beginnt unterhalb Fenster (+ optional Kontaktperson)
+    const contentTop = Math.max(mmToPt(100) + addrShiftY, belowWindowY + 6)
 
     // ── Einleitungstext ──────────────────────────────────────────────────────
     let introBlockH = 0

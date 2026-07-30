@@ -4,7 +4,7 @@
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { generateInvoicePdf } from '~/server/utils/invoice-pdf'
+import { generateInvoicePdf, formatTenantContactPerson } from '~/server/utils/invoice-pdf'
 import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
 import { uploadPdfAndGetPublicUrl } from '~/server/utils/upload-pdf-public'
 import {
@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
   // Tenant
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, legal_company_name, contact_email, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_window_side')
+    .select('name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_window_side')
     .eq('id', invoice.tenant_id)
     .single()
 
@@ -183,6 +183,7 @@ export default defineEventHandler(async (event) => {
     tenantZip: (tenant as any)?.invoice_zip || '',
     tenantCity: (tenant as any)?.invoice_city || '',
     tenantEmail: (tenant as any)?.contact_email || '',
+    tenantContactPerson: formatTenantContactPerson(tenant as any),
     tenantLogoBase64: logo?.base64 || null,
     tenantLogoFormat: logo?.format,
     customerName,
