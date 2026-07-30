@@ -236,11 +236,13 @@ export default defineEventHandler(async (event) => {
     // Get tenant info for branding using service role
     const { data: tenant } = await serviceSupabase
       .from('tenants')
-      .select('name, contact_email, twilio_from_sender, slug')
+      .select('name, contact_email, twilio_from_sender, slug, business_type')
       .eq('id', userProfile.tenant_id)
       .single()
 
-    const tenantName = tenant?.name || 'Ihre Fahrschule'
+    const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+    const terms = getTerminologyDefaults(tenant?.business_type)
+    const tenantName = tenant?.name || terms.businessNoun
     const smsSenderName = tenant?.twilio_from_sender || tenantName
     const loginLink = tenant?.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
 
@@ -248,7 +250,7 @@ export default defineEventHandler(async (event) => {
     logger.debug(`📱 Sending SMS to ${sanitizedPhone} with link: ${inviteLink}`)
 
     try {
-      const smsMessage = `Hallo ${sanitizedFirstName}! Sie wurden als Fahrlehrer bei ${tenantName} eingeladen. Registrierung: ${inviteLink}\nLogin nach Registrierung: ${loginLink}`
+      const smsMessage = `Hallo ${sanitizedFirstName}! Sie wurden als ${terms.staff} bei ${tenantName} eingeladen. Registrierung: ${inviteLink}\nLogin nach Registrierung: ${loginLink}`
 
       const smsResult = await sendSMS({
         to: sanitizedPhone,

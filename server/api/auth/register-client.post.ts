@@ -6,6 +6,7 @@ import { validateRegistrationEmail } from '~/server/utils/email-validator'
 import { logger } from '~/utils/logger'
 import { logAudit } from '~/server/utils/audit'
 import { checkPasswordPwned } from '~/server/utils/hibp-checker'
+import { normalizePhoneNumber } from '~/server/utils/sms'
 import {
   validateRequiredString,
   validateBasicPassword,
@@ -165,64 +166,93 @@ export default defineEventHandler(async (event) => {
     // ✅ Sanitize all string inputs to prevent XSS
     const sanitizedFirstName = sanitizeString(firstName, 100)
     const sanitizedLastName = sanitizeString(lastName, 100)
-    const sanitizedPhone = phone ? sanitizeString(phone, 20) : null
+    const sanitizedPhoneRaw = phone ? sanitizeString(phone, 20) : null
+    const sanitizedPhone = sanitizedPhoneRaw
+      ? (normalizePhoneNumber(sanitizedPhoneRaw) || sanitizedPhoneRaw)
+      : null
     const sanitizedStreet = street ? sanitizeString(street, 100) : null
     const sanitizedStreetNr = streetNr ? sanitizeString(streetNr, 10) : null
     const sanitizedCity = city ? sanitizeString(city, 100) : null
     const sanitizedProfession = profession ? sanitizeString(profession, 100) : null
     const sanitizedLernfahrausweisNr = lernfahrausweisNr ? sanitizeString(lernfahrausweisNr, 50) : null
 
-    // ============ PRE-CHECK: Duplicate Phone & Email ============
-    // Check BEFORE creating auth user to avoid orphaned auth users
-    
-    // Check for existing email in this tenant
+    // ============ PRE-CHECK: Find claimable pending user OR block true duplicates ============
+    // Staff/SMS often creates users with phone but email=null and auth_user_id=null.
+    // If the person later uses the public register form, we should CLAIM that row
+    // (attach auth + fill profile) instead of failing with "already registered".
+
+    const emailNormalized = email.toLowerCase().trim()
+
     const { data: existingEmailUser } = await serviceSupabase
       .from('users')
-      .select('id, first_name, last_name, is_active, onboarding_status, auth_user_id')
-      .eq('email', email.toLowerCase().trim())
+      .select('id, first_name, last_name, is_active, onboarding_status, auth_user_id, phone, email, role')
+      .eq('email', emailNormalized)
       .eq('tenant_id', tenantId)
-      .single()
-    
+      .maybeSingle()
+
+    let claimableUser: typeof existingEmailUser = null
+
     if (existingEmailUser) {
       if (existingEmailUser.auth_user_id) {
-        // Fully registered user — block duplicate registration
-        logger.warn('⚠️ Duplicate email detected (already has auth account):', email.toLowerCase().trim())
+        logger.warn('⚠️ Duplicate email detected (already has auth account):', emailNormalized)
         throw createError({
           statusCode: 409,
           statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an oder verwenden Sie eine andere E-Mail.',
           data: { code: 'DUPLICATE_EMAIL' }
         })
       }
-      // User was manually added by admin (no auth account yet) — allow registration to continue
-      // The code below will update this user with the new auth_user_id
-      logger.debug('Register', '👤 Found manually-added user without auth account — proceeding to link:', existingEmailUser.id)
+      // Pending / invited / guest without auth → claim this row
+      claimableUser = existingEmailUser
+      logger.debug('Register', '👤 Claimable user found by email (no auth):', existingEmailUser.id)
     }
-    
-    // Check for existing phone in this tenant (if phone provided)
+
     if (sanitizedPhone) {
       const { data: existingPhoneUser } = await serviceSupabase
         .from('users')
-        .select('id, first_name, last_name, is_active, onboarding_status')
+        .select('id, first_name, last_name, is_active, onboarding_status, auth_user_id, phone, email, role')
         .eq('phone', sanitizedPhone)
         .eq('tenant_id', tenantId)
-        .single()
-      
+        .maybeSingle()
+
       if (existingPhoneUser) {
-        logger.warn('⚠️ Duplicate phone detected:', sanitizedPhone)
-        throw createError({
-          statusCode: 409,
-          statusMessage: 'Diese Telefonnummer ist bereits registriert. Bitte melden Sie sich an oder verwenden Sie eine andere Nummer.',
-          data: { code: 'DUPLICATE_PHONE' }
-        })
+        if (existingPhoneUser.auth_user_id) {
+          // Fully registered with this phone — only OK if it's the same claimable row we already matched by email
+          if (!claimableUser || claimableUser.id !== existingPhoneUser.id) {
+            logger.warn('⚠️ Duplicate phone detected (already has auth account):', sanitizedPhone)
+            throw createError({
+              statusCode: 409,
+              statusMessage: 'Diese Telefonnummer ist bereits registriert. Bitte melden Sie sich an oder verwenden Sie eine andere Nummer.',
+              data: { code: 'DUPLICATE_PHONE' }
+            })
+          }
+        } else if (!claimableUser) {
+          // Phone matches a pending user without auth (typical SMS-invite with email=null)
+          claimableUser = existingPhoneUser
+          logger.debug('Register', '👤 Claimable user found by phone (no auth):', existingPhoneUser.id)
+        } else if (claimableUser.id !== existingPhoneUser.id) {
+          // Email points to one pending user, phone to another — don't silently merge two people
+          logger.warn('⚠️ Email and phone match different pending users', {
+            emailUserId: claimableUser.id,
+            phoneUserId: existingPhoneUser.id,
+          })
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'E-Mail und Telefonnummer gehören zu unterschiedlichen offenen Anmeldungen. Bitte nutze den Link aus der SMS/E-Mail deiner Fahrschule, oder kontaktiere die Fahrschule.',
+            data: { code: 'CONFLICTING_PENDING_USERS' }
+          })
+        }
       }
     }
-    
-    logger.debug('Register', '✅ No duplicate email or phone found - proceeding with registration')
 
-    // 1. Create auth user
+    if (!claimableUser) {
+      logger.debug('Register', '✅ No existing user to claim — will create new profile')
+    }
+
+    // 1. Create auth user (or recover orphaned auth if email already in auth.users)
     logger.debug('Register', '🔐 Creating auth user for:', email)
+    let authUserId: string
     const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
-      email: email.toLowerCase().trim(),
+      email: emailNormalized,
       password: password,
       email_confirm: true,
       user_metadata: {
@@ -232,92 +262,136 @@ export default defineEventHandler(async (event) => {
     })
 
     if (authError) {
-      console.error('❌ Auth creation error:', authError)
-      throw createError({
-        statusCode: 400,
-        statusMessage: authError.message || 'Fehler bei der Authentifizierung'
-      })
+      const authMsg = (authError.message || '').toLowerCase()
+      if (authMsg.includes('already') || authMsg.includes('registered')) {
+        // Auth exists but public.users may be claimable / unlinked — recover like onboarding does
+        logger.debug('Register', '🔍 Auth user already exists — attempting orphan recovery...')
+        try {
+          const { data: byEmail, error: byEmailErr } = await serviceSupabase.auth.admin.getUserByEmail(emailNormalized)
+          let recovered = byEmail?.user
+          if (byEmailErr || !recovered) {
+            const { data: listData } = await serviceSupabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+            recovered = listData?.users?.find(u => u.email?.toLowerCase() === emailNormalized)
+          }
+          if (!recovered) {
+            throw createError({
+              statusCode: 409,
+              statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.',
+              data: { code: 'DUPLICATE_EMAIL' }
+            })
+          }
+          // Ensure no OTHER public.users row already owns this auth id
+          const { data: linkedElsewhere } = await serviceSupabase
+            .from('users')
+            .select('id')
+            .eq('auth_user_id', recovered.id)
+            .neq('id', claimableUser?.id || '00000000-0000-0000-0000-000000000000')
+            .maybeSingle()
+          if (linkedElsewhere) {
+            throw createError({
+              statusCode: 409,
+              statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.',
+              data: { code: 'DUPLICATE_EMAIL' }
+            })
+          }
+          const { error: updateAuthError } = await serviceSupabase.auth.admin.updateUserById(recovered.id, {
+            password,
+            email_confirm: true,
+            user_metadata: { first_name: sanitizedFirstName, last_name: sanitizedLastName }
+          })
+          if (updateAuthError) {
+            throw createError({
+              statusCode: 500,
+              statusMessage: 'Fehler beim Aktualisieren des bestehenden Kontos. Bitte kontaktiere die Fahrschule.',
+            })
+          }
+          authUserId = recovered.id
+          logger.debug('Register', '✅ Orphaned auth user recovered:', authUserId)
+        } catch (err: any) {
+          if (err.statusCode) throw err
+          console.error('❌ Auth orphan recovery failed:', err)
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.',
+            data: { code: 'DUPLICATE_EMAIL' }
+          })
+        }
+      } else {
+        console.error('❌ Auth creation error:', authError)
+        throw createError({
+          statusCode: 400,
+          statusMessage: authError.message || 'Fehler bei der Authentifizierung'
+        })
+      }
+    } else {
+      authUserId = authData.user.id
+      logger.debug('Register', '✅ Auth user created:', authUserId)
     }
 
-    logger.debug('Register', '✅ Auth user created:', authData.user.id)
-
-    // 2. Check if user already exists (from invitation)
-    logger.debug('Register', '👤 Checking for existing user with email:', email)
-    const { data: existingUser, error: existingUserError } = await serviceSupabase
-      .from('users')
-      .select('id, email')
-      .eq('email', email.toLowerCase().trim())
-      .eq('tenant_id', tenantId)
-      .single()
-
+    // 2. Update claimable user OR create new profile
+    logger.debug('Register', '👤 Resolving user profile for:', email)
     let userProfile
     const userRole = isAdmin ? 'tenant_admin' : 'client'
     const categoryArray = Array.isArray(categories) ? categories : (categories ? [categories] : [])
     logger.debug('Register', '📋 Category array for DB:', categoryArray)
     // Tracks whether the users row was newly INSERTed (fires the
     // create_student_credit_trigger) vs. UPDATEd for an invited user (no trigger).
-    const wasNewUserInsert = !(existingUser && existingUser.id)
+    const wasNewUserInsert = !claimableUser
 
-    if (existingUser && existingUser.id) {
-      // UPDATE existing user (from invitation)
-      logger.debug('Register', '🔄 Updating existing user profile from invitation:', existingUser.id)
-      
+    const profilePayload = {
+      auth_user_id: authUserId,
+      email: emailNormalized,
+      first_name: sanitizedFirstName,
+      last_name: sanitizedLastName,
+      phone: sanitizedPhone,
+      birthdate: birthDate || null,
+      street: sanitizedStreet,
+      street_nr: sanitizedStreetNr,
+      zip: zip?.trim() || null,
+      city: sanitizedCity,
+      profession: sanitizedProfession,
+      category: categoryArray,
+      lernfahrausweis_nr: sanitizedLernfahrausweisNr,
+      role: userRole,
+      is_active: true,
+      onboarding_status: 'completed',
+      onboarding_completed_at: new Date().toISOString(),
+      onboarding_token: null,
+      onboarding_token_expires: null,
+    }
+
+    if (claimableUser) {
+      // UPDATE existing pending / invited / guest user — attach auth & complete profile
+      logger.debug('Register', '🔄 Claiming existing user without auth:', claimableUser.id)
+
       const { data: updatedUser, error: updateError } = await serviceSupabase
         .from('users')
-        .update({
-          auth_user_id: authData.user.id,
-          first_name: sanitizedFirstName,
-          last_name: sanitizedLastName,
-          phone: sanitizedPhone,
-          birthdate: birthDate || null,
-          street: sanitizedStreet,
-          street_nr: sanitizedStreetNr,
-          zip: zip?.trim() || null,
-          city: sanitizedCity,
-          profession: sanitizedProfession,
-          category: categoryArray,
-          lernfahrausweis_nr: sanitizedLernfahrausweisNr,
-          role: userRole,
-          is_active: true,
-        })
-        .eq('id', existingUser.id)
+        .update(profilePayload)
+        .eq('id', claimableUser.id)
+        .is('auth_user_id', null) // race-safe: only claim if still unlinked
         .select()
         .single()
 
-      if (updateError) {
-        await serviceSupabase.auth.admin.deleteUser(authData.user.id)
-        console.error('❌ Error updating user profile:', JSON.stringify(updateError, null, 2))
+      if (updateError || !updatedUser) {
+        await serviceSupabase.auth.admin.deleteUser(authUserId).catch(() => {})
+        console.error('❌ Error claiming user profile:', JSON.stringify(updateError, null, 2))
         throw createError({
           statusCode: 400,
-          statusMessage: `Fehler beim Aktualisieren des Benutzerprofils: ${updateError.message}`
+          statusMessage: `Fehler beim Aktualisieren des Benutzerprofils: ${updateError?.message || 'Eintrag konnte nicht übernommen werden'}`
         })
       }
 
       userProfile = updatedUser
-      logger.debug('Register', '✅ User profile updated:', userProfile.id)
+      logger.debug('Register', '✅ Existing user claimed & completed:', userProfile.id)
     } else {
       // CREATE new user profile
       logger.debug('Register', '➕ Creating new user profile in users table...')
-      
+
       const { data: newUser, error: userError } = await serviceSupabase
         .from('users')
         .insert({
-          auth_user_id: authData.user.id,
+          ...profilePayload,
           tenant_id: tenantId,
-          first_name: sanitizedFirstName,
-          last_name: sanitizedLastName,
-          email: email.toLowerCase().trim(),
-          phone: sanitizedPhone,
-          birthdate: birthDate || null,
-          street: sanitizedStreet,
-          street_nr: sanitizedStreetNr,
-          zip: zip?.trim() || null,
-          city: sanitizedCity,
-          profession: sanitizedProfession,
-          category: categoryArray,
-          lernfahrausweis_nr: sanitizedLernfahrausweisNr,
-          role: userRole,
-          is_active: true,
           ...(referredByCode ? { referred_by_code: String(referredByCode).trim().toUpperCase() } : {})
         })
         .select()
@@ -325,14 +399,14 @@ export default defineEventHandler(async (event) => {
 
       if (userError) {
         // Delete the auth user if profile creation fails
-        await serviceSupabase.auth.admin.deleteUser(authData.user.id)
+        await serviceSupabase.auth.admin.deleteUser(authUserId).catch(() => {})
         console.error('❌ Error creating user profile:', JSON.stringify(userError, null, 2))
         console.error('📋 Attempted insert data:', {
-          auth_user_id: authData.user.id,
+          auth_user_id: authUserId,
           tenant_id: tenantId,
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          email: email.toLowerCase().trim(),
+          email: emailNormalized,
           role: userRole
         })
         throw createError({

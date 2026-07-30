@@ -16,6 +16,7 @@
 // "reseed a tenant" admin action use exactly the same logic.
 
 import { logger } from '~/utils/logger'
+import { getWorkingDaysTemplateDefaults, type WorkingDaysTemplate } from '~/utils/workingDaysTemplate'
 
 type SupabaseAdmin = ReturnType<typeof import('~/utils/supabase').getSupabaseAdmin>
 
@@ -55,6 +56,18 @@ export async function getBusinessTypePreset(supabase: SupabaseAdmin, businessTyp
   return data as BusinessTypePreset | null
 }
 
+export type { WorkingDaysTemplate } from '~/utils/workingDaysTemplate'
+export { getWorkingDaysTemplateDefaults } from '~/utils/workingDaysTemplate'
+
+/** Loads working_days_template from business_type_presets.defaults (with TS fallback). */
+export async function resolveWorkingDaysTemplate(
+  supabase: SupabaseAdmin,
+  businessType: string
+): Promise<WorkingDaysTemplate> {
+  const preset = await getBusinessTypePreset(supabase, businessType)
+  return getWorkingDaysTemplateDefaults(businessType, preset?.defaults?.working_days_template)
+}
+
 /**
  * Copies category + event_type template rows (tenant_id IS NULL) matching
  * `businessType` onto a new/existing tenant. Additive only — never deletes
@@ -92,18 +105,24 @@ export async function applyCategoryAndEventTypeDefaults(
         existingCodes = new Set((existing || []).map((c: any) => c.code))
       }
 
-      const filtered = opts.selectedCategoryIds?.length
-        ? validTemplates.filter(c => {
-            if (!c.parent_category_id) return opts.selectedCategoryIds!.includes(String(c.id))
-            const parentSelected = opts.selectedCategoryIds!.includes(String(c.parent_category_id))
-            if (!parentSelected) return false
-            const hasSpecificChildSelected = validTemplates.some(sibling =>
-              sibling.parent_category_id === c.parent_category_id &&
-              opts.selectedCategoryIds!.includes(String(sibling.id))
-            )
-            return hasSpecificChildSelected ? opts.selectedCategoryIds!.includes(String(c.id)) : true
-          })
-        : validTemplates
+      // selectedCategoryIds semantics:
+      //   undefined → copy ALL templates (legacy / admin reseed default)
+      //   []        → copy NONE (explicit skip, e.g. per_event_type registration)
+      //   [...ids]  → copy only the selected templates
+      const filtered = opts.selectedCategoryIds === undefined
+        ? validTemplates
+        : opts.selectedCategoryIds.length === 0
+          ? []
+          : validTemplates.filter(c => {
+              if (!c.parent_category_id) return opts.selectedCategoryIds!.includes(String(c.id))
+              const parentSelected = opts.selectedCategoryIds!.includes(String(c.parent_category_id))
+              if (!parentSelected) return false
+              const hasSpecificChildSelected = validTemplates.some(sibling =>
+                sibling.parent_category_id === c.parent_category_id &&
+                opts.selectedCategoryIds!.includes(String(sibling.id))
+              )
+              return hasSpecificChildSelected ? opts.selectedCategoryIds!.includes(String(c.id)) : true
+            })
 
       const parentCats = filtered.filter(c => !c.parent_category_id && !existingCodes.has(c.code))
       const leafCats = filtered.filter(c => c.parent_category_id)

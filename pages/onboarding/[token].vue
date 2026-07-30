@@ -20,8 +20,8 @@
       </div>
     </div>
 
-    <!-- Error State -->
-    <div v-else-if="error" class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <!-- Error State (invalid/expired link on page load only) -->
+    <div v-else-if="linkError" class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
       <div class="bg-red-50 py-8 px-4 shadow sm:rounded-lg sm:px-10">
         <div class="text-center">
           <div class="flex justify-center mb-4">
@@ -30,7 +30,7 @@
             </svg>
           </div>
           <h3 class="text-lg font-semibold text-red-800 mb-2">Link ungültig oder abgelaufen</h3>
-          <p class="text-sm text-red-600 mb-6">{{ error }}</p>
+          <p class="text-sm text-red-600 mb-6">{{ linkError }}</p>
 
           <div class="space-y-3">
             <p class="text-sm text-gray-600 font-medium">Was können Sie tun?</p>
@@ -64,12 +64,14 @@
               <p class="text-sm font-medium text-gray-800 mb-1">📱 Fahrschule kontaktieren</p>
               <p class="text-xs text-gray-500 mb-3">Bitten Sie Ihre Fahrschule, den Onboarding-Link erneut per SMS zu senden.</p>
               <a
-                :href="`mailto:${userData?.email || ''}`"
+                v-if="tenantContactEmail"
+                :href="`mailto:${tenantContactEmail}`"
                 class="text-xs underline hover:opacity-80 transition-opacity"
                 :style="{ color: primaryColor }"
               >
                 Fahrschule kontaktieren
               </a>
+              <p v-else class="text-xs text-gray-500">Bitte rufe deine Fahrschule an oder schreibe ihr eine Nachricht.</p>
             </div>
 
             <!-- Option 3: Login (falls bereits registriert) -->
@@ -703,7 +705,7 @@
       </div>
     </div>
 
-    <!-- Error Modal -->
+    <!-- Error Modal (submit failures — keep the form visible underneath) -->
     <div v-if="showErrorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-lg max-w-md w-full p-6">
         <div class="flex items-center mb-4">
@@ -716,12 +718,13 @@
             <h3 class="text-lg font-medium text-gray-900">Registrierung fehlgeschlagen</h3>
           </div>
         </div>
-        <div class="mb-6">
-          <p class="text-sm text-gray-600">{{ error }}</p>
+        <div class="mb-6 space-y-2">
+          <p class="text-sm text-gray-700">{{ submitError }}</p>
+          <p v-if="submitErrorTip" class="text-sm text-gray-500">{{ submitErrorTip }}</p>
         </div>
         <div class="flex flex-col sm:flex-row gap-3">
           <button
-            @click="showErrorModal = false"
+            @click="dismissSubmitError"
             class="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
           >
             Nochmal versuchen
@@ -840,7 +843,11 @@ const steps = ['Passwort', 'Profil', 'Dokumente', 'AGB']
 
 const isLoading = ref(true)
 const isSubmitting = ref(false)
-const error = ref('')
+/** Page-level error when the onboarding link itself is invalid (replaces the form). */
+const linkError = ref('')
+/** Modal error after a failed submit — form stays visible. */
+const submitError = ref('')
+const submitErrorTip = ref('')
 const passwordError = ref('')
 const successMessage = ref('')
 const requestingLink = ref(false)
@@ -848,6 +855,7 @@ const showErrorModal = ref(false)
 const showSuccessModal = ref(false)
 const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
+const tenantContactEmail = ref('')
 const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 12)
 const passwordMismatch = computed(() => form.confirmPassword.length > 0 && form.password !== form.confirmPassword)
 const categoryError = ref('')
@@ -1156,12 +1164,13 @@ onMounted(async () => {
     }) as any
 
     if (fetchError.value || !data.value?.success) {
-      error.value = 'Ungültiger oder abgelaufener Link. Bitte kontaktiere deine Fahrschule.'
+      linkError.value = 'Ungültiger oder abgelaufener Link. Bitte kontaktiere deine Fahrschule oder fordere einen neuen Link an.'
       return
     }
 
     userData.value = data.value.user
     tenantName.value = data.value.tenantName || 'Deiner Fahrschule'
+    tenantContactEmail.value = data.value.tenantContactEmail || ''
 
     // Load tenant branding so the page uses the tenant's primary color
     if (userData.value?.tenant_id) {
@@ -1211,7 +1220,7 @@ onMounted(async () => {
     }
     
   } catch (err: any) {
-    error.value = 'Fehler beim Laden der Daten. Bitte versuche es später erneut.'
+    linkError.value = 'Fehler beim Laden der Daten. Bitte versuche es später erneut.'
   } finally {
     isLoading.value = false
   }
@@ -1310,10 +1319,17 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-// Show error message
-const showErrorMessage = (message: string) => {
-  error.value = message
+// Show error message in modal — do NOT set linkError (that would replace the form)
+const showErrorMessage = (message: string, tip?: string) => {
+  submitError.value = message
+  submitErrorTip.value = tip || ''
   showErrorModal.value = true
+}
+
+const dismissSubmitError = () => {
+  showErrorModal.value = false
+  submitError.value = ''
+  submitErrorTip.value = ''
 }
 
 // Show success message
@@ -1648,22 +1664,36 @@ const completeOnboarding = async () => {
 
     if (completeError.value) {
       console.error('❌ Complete error details:', completeError.value)
-      let errorMessage = completeError.value.data?.message || completeError.value.message || 'Unbekannter Fehler'
-      
-      // Provide more helpful error messages
-      if (errorMessage.includes('duplicate') || errorMessage.includes('Email')) {
-        errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere E-Mail oder kontaktiere die Fahrschule.'
-      } else if (errorMessage.includes('password') || errorMessage.includes('Passwort')) {
-        errorMessage = 'Das Passwort erfüllt nicht die Anforderungen (min. 12 Zeichen, Gross- und Kleinbuchstaben, Zahlen, Sonderzeichen)'
-      } else if (errorMessage.includes('Token')) {
+      const data = completeError.value.data || {}
+      let errorMessage =
+        data.statusMessage ||
+        data.message ||
+        completeError.value.statusMessage ||
+        completeError.value.message ||
+        'Unbekannter Fehler'
+      const tip = data.tip || data.data?.tip
+
+      // Provide more helpful error messages for common cases
+      if (/duplicate|already.*(registered|exist)|bereits/i.test(errorMessage)) {
+        errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere E-Mail oder melde dich direkt an.'
+      } else if (/password|passwort/i.test(errorMessage) && !/wähle|mindestens|lecks/i.test(errorMessage)) {
+        errorMessage = 'Das Passwort erfüllt nicht die Anforderungen (mindestens 12 Zeichen, nicht in Datenlecks bekannt).'
+      } else if (/token|abgelaufen|ungültig/i.test(errorMessage) && /invalid|expired|token/i.test(errorMessage)) {
         errorMessage = 'Der Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.'
+      } else if (/onboarding completion failed/i.test(errorMessage)) {
+        errorMessage = 'Die Registrierung konnte nicht abgeschlossen werden. Bitte versuche es erneut.'
       }
-      
-      throw new Error(errorMessage)
+
+      showErrorMessage(errorMessage, tip)
+      return
     }
 
     if (!data.value?.success) {
-      throw new Error('Registrierung fehlgeschlagen: Die Daten konnten nicht gespeichert werden. Bitte versuche es erneut.')
+      showErrorMessage(
+        'Die Daten konnten nicht gespeichert werden. Bitte versuche es erneut.',
+        'Wenn es erneut fehlschlägt, bitte deine Fahrschule um einen neuen Registrierungslink.',
+      )
+      return
     }
 
     // Success - show success message and redirect
@@ -1696,8 +1726,14 @@ const completeOnboarding = async () => {
 
   } catch (err: any) {
     console.error('❌ Onboarding completion error:', err)
-    const message = err?.data?.message || err?.data?.statusMessage || err?.statusMessage || err?.message || 'Fehler beim Abschliessen der Registrierung. Bitte versuche es später erneut oder kontaktiere die Fahrschule.'
-    showErrorMessage(message)
+    const message =
+      err?.data?.statusMessage ||
+      err?.data?.message ||
+      err?.statusMessage ||
+      err?.message ||
+      'Fehler beim Abschliessen der Registrierung. Bitte versuche es später erneut oder kontaktiere die Fahrschule.'
+    const tip = err?.data?.tip || err?.data?.data?.tip
+    showErrorMessage(message, tip)
   } finally {
     isSubmitting.value = false
   }

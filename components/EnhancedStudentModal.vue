@@ -720,12 +720,25 @@
               <!-- Zeile 2: Buttons -->
               <div class="flex gap-2">
                 <button
-                  v-if="cashVisible && selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p && !isInvoicedPayment(p) })"
+                  v-if="cashVisible && hasOpenSelectedPayments"
                   class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md"
                   :style="{ backgroundColor: secondaryColor || '#22C55E' }"
                   @click="openCashPaymentDialog('cash')"
                 >
-                  Bar bezahlen
+                  Bar
+                </button>
+                <button
+                  v-if="hasOpenSelectedPayments"
+                  class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed border"
+                  :class="canPayWithCredit
+                    ? 'text-white border-transparent'
+                    : 'text-gray-400 bg-gray-100 border-gray-200'"
+                  :style="canPayWithCredit ? { backgroundColor: primaryColor } : {}"
+                  :disabled="!canPayWithCredit || isProcessingBulkAction"
+                  :title="!canPayWithCredit ? 'Kein verfügbares Guthaben' : `CHF ${(creditToApplyRappen / 100).toFixed(2)} verrechnen`"
+                  @click="openCreditPaymentDialog"
+                >
+                  Guthaben
                 </button>
                 <button
                   v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p && isInvoicedPayment(p) })"
@@ -733,15 +746,15 @@
                   :style="{ backgroundColor: secondaryColor || '#22C55E' }"
                   @click="handleBulkMarkAsPaid"
                 >
-                  Bar bezahlen
+                  Bar
                 </button>
                 <button
                   v-if="canCreateInvoice && selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p?.payment_status === 'pending' && !isInvoicedPayment(p) })"
-                  class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md"
-                  :style="{ background: primaryGradient }"
+                  class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:shadow-md border bg-white"
+                  :style="{ color: primaryColor, borderColor: primaryColor }"
                   @click="handleBulkInvoice"
                 >
-                  Rechnung erstellen
+                  Rechnung
                 </button>
               </div>
             </div>
@@ -1620,7 +1633,7 @@
       >
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
           <div class="flex items-center justify-between">
-            <h3 class="text-base font-bold text-gray-900">Bar bezahlen</h3>
+            <h3 class="text-base font-bold text-gray-900">Bar erhalten</h3>
             <button @click="showPartialPaymentDialog = false" class="text-gray-400 hover:text-gray-600">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -1633,30 +1646,43 @@
               {{ selectedPayments.length }} Zahlung{{ selectedPayments.length > 1 ? 'en' : '' }} · Offen
               <span class="font-semibold text-gray-900">{{ formatCurrency(totalSelectedAmount) }}</span>
             </p>
-            <!-- Show credit being automatically applied -->
             <p v-if="totalCreditUsedInSelection > 0" class="text-xs text-green-700 font-medium flex items-center gap-1">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              CHF {{ (totalCreditUsedInSelection / 100).toFixed(2) }} Guthaben wird automatisch angerechnet
+              CHF {{ (totalCreditUsedInSelection / 100).toFixed(2) }} Guthaben bereits angerechnet
             </p>
-            <p class="text-xs text-gray-400">
-              Bei Teilzahlung werden günstigste Termine zuerst vollständig abgerechnet.
+            <p class="text-xs text-gray-500">
+              Beliebigen erhaltenen Betrag eingeben — muss nicht exakt sein.
             </p>
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">Bezahlter Betrag (CHF)</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-medium text-gray-700">Erhaltener Betrag (CHF)</label>
+              <button
+                type="button"
+                class="text-xs font-medium hover:underline"
+                :style="{ color: primaryColor }"
+                @click="partialPaymentInput = (totalSelectedAmount / 100).toFixed(2)"
+              >
+                Exakt offen
+              </button>
+            </div>
             <input
               v-model="partialPaymentInput"
               type="number"
               min="0.01"
               step="0.05"
+              inputmode="decimal"
               class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 transition-colors"
-              :class="partialInputOverMax ? 'border-amber-400 bg-amber-50' : 'border-gray-300'"
+              :class="partialInputOverMax ? 'border-amber-400 bg-amber-50' : partialInputUnderMax ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300'"
               :style="{ '--tw-ring-color': primaryColor }"
               @keydown.enter="confirmPartialPayment"
             />
-            <p v-if="partialInputOverMax" class="mt-1 text-xs text-green-700 font-medium">
-              CHF {{ (parsePartialInput() - totalSelectedAmount / 100).toFixed(2) }} Überzahlung → wird dem Guthaben des Kunden gutgeschrieben.
+            <p v-if="partialInputOverMax" class="mt-1.5 text-xs text-green-700 font-medium">
+              Überzahlung CHF {{ (parsePartialInput() - totalSelectedAmount / 100).toFixed(2) }} → wird dem Guthaben gutgeschrieben.
+            </p>
+            <p v-else-if="partialInputUnderMax" class="mt-1.5 text-xs text-amber-700 font-medium">
+              Teilzahlung — Rest bleibt offen. Günstigste Termine werden zuerst vollständig abgerechnet.
             </p>
           </div>
 
@@ -1721,6 +1747,65 @@
             >
               <span v-if="isProcessingBulkAction">Wird verarbeitet…</span>
               <span v-else>Bestätigen</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Credit Payment Dialog -->
+    <Transition name="fade">
+      <div
+        v-if="showCreditPaymentDialog"
+        class="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4"
+        @click.self="showCreditPaymentDialog = false"
+      >
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-gray-900">Mit Guthaben bezahlen</h3>
+            <button @click="showCreditPaymentDialog = false" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between gap-3">
+              <span class="text-gray-500">Ausgewählt</span>
+              <span class="font-semibold text-gray-900">{{ formatCurrency(totalSelectedAmount) }}</span>
+            </div>
+            <div class="flex justify-between gap-3">
+              <span class="text-gray-500">Verfügbares Guthaben</span>
+              <span class="font-semibold text-gray-900">{{ formatCurrency(Math.max(0, studentAvailableBalance ?? 0)) }}</span>
+            </div>
+            <div class="flex justify-between gap-3 border-t border-gray-100 pt-3">
+              <span class="text-gray-700 font-medium">Wird verrechnet</span>
+              <span class="font-bold" :style="{ color: primaryColor }">{{ formatCurrency(creditToApplyRappen) }}</span>
+            </div>
+            <p v-if="creditToApplyRappen < totalSelectedAmount" class="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+              Guthaben reicht nicht für alles — günstigste Termine werden zuerst vollständig abgerechnet. Rest bleibt offen.
+            </p>
+            <p v-else class="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+              Alle ausgewählten Zahlungen werden vollständig durch Guthaben gedeckt.
+            </p>
+          </div>
+
+          <div class="flex gap-3 pt-1">
+            <button
+              @click="showCreditPaymentDialog = false"
+              class="flex-1 px-4 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Abbrechen
+            </button>
+            <button
+              @click="confirmCreditPayment"
+              :disabled="isProcessingBulkAction || creditToApplyRappen <= 0"
+              class="flex-1 px-4 py-2 rounded-xl text-white text-sm font-semibold transition-all disabled:opacity-50"
+              :style="{ background: primaryGradient }"
+            >
+              <span v-if="isProcessingBulkAction">Wird verarbeitet…</span>
+              <span v-else>Guthaben verrechnen</span>
             </button>
           </div>
         </div>
@@ -2485,8 +2570,22 @@ const expandedCancelledPayments = ref<Set<string>>(new Set())
 
 // Partial payment dialog state
 const showPartialPaymentDialog = ref(false)
+const showCreditPaymentDialog = ref(false)
 const partialPaymentInput = ref<number | string>('')
 const partialPaymentMethod = ref<'cash' | 'online'>('cash')
+
+const hasOpenSelectedPayments = computed(() =>
+  selectedPayments.value.some(id => {
+    const p = payments.value.find(p => p.id === id)
+    return p && !isInvoicedPayment(p) && p.payment_status !== 'completed' && p.appointment?.status !== 'cancelled'
+  })
+)
+
+const creditToApplyRappen = computed(() =>
+  Math.min(Math.max(0, studentAvailableBalance.value ?? 0), totalSelectedAmount.value)
+)
+
+const canPayWithCredit = computed(() => creditToApplyRappen.value > 0)
 
 // Toggle payment selection
 const togglePaymentSelection = (paymentId: string) => {
@@ -2557,6 +2656,42 @@ const confirmPartialPayment = async () => {
   await handleBulkPayment(partialPaymentMethod.value, amountRappen)
 }
 
+const openCreditPaymentDialog = () => {
+  if (!canPayWithCredit.value || selectedPayments.value.length === 0) return
+  showCreditPaymentDialog.value = true
+}
+
+const confirmCreditPayment = async () => {
+  if (!canPayWithCredit.value || selectedPayments.value.length === 0) return
+
+  isProcessingBulkAction.value = true
+  try {
+    const openIds = selectedPayments.value.filter(id => {
+      const p = payments.value.find(p => p.id === id)
+      return p && !isInvoicedPayment(p) && p.payment_status !== 'completed'
+    })
+
+    const response = await $fetch('/api/staff/process-bulk-payment', {
+      method: 'POST',
+      body: { payment_ids: openIds, method: 'credit' }
+    }) as any
+
+    if (!response?.success) {
+      throw new Error(response?.error || 'Guthaben konnte nicht verrechnet werden')
+    }
+
+    showCreditPaymentDialog.value = false
+    await loadPayments()
+    await loadLessons()
+    selectedPayments.value = []
+  } catch (error: any) {
+    console.error('❌ Error processing credit payment:', error)
+    alert(error?.data?.statusMessage || error?.message || 'Guthaben konnte nicht verrechnet werden')
+  } finally {
+    isProcessingBulkAction.value = false
+  }
+}
+
 // Computed properties
 const paymentsCount = computed(() => payments.value.length)
 
@@ -2590,6 +2725,12 @@ const partialInputOverMax = computed(() => {
   const amount = parsePartialInput()
   if (isNaN(amount) || amount <= 0) return false
   return Math.round(amount * 100) > totalSelectedAmount.value
+})
+
+const partialInputUnderMax = computed(() => {
+  const amount = parsePartialInput()
+  if (isNaN(amount) || amount <= 0) return false
+  return Math.round(amount * 100) < totalSelectedAmount.value
 })
 
 // Preview of how a partial payment amount will be distributed across selected appointments

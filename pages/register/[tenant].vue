@@ -195,6 +195,9 @@
                 ⚠ Diese Nummer ist bereits registriert.
                 <button type="button" @click="showPendingPhoneModal = true" class="underline font-medium">Details anzeigen</button>
               </p>
+              <p v-else-if="pendingPhoneFirstName && !pendingPhoneIsActive" class="mt-1 text-sm text-amber-700">
+                Wir haben schon ein offenes Profil für diese Nummer — beim Absenden wird es aktiviert.
+              </p>
               <p v-else-if="isCheckingPhone" class="text-xs mt-1 flex items-center gap-1" :style="{ color: primaryColor }">
                 <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                 Wird geprüft...
@@ -476,10 +479,12 @@
               <p v-if="fieldErrors.email" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
               <!-- Pending user: has been added manually but hasn't registered yet -->
               <div v-if="emailIsPending" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
-                <p class="text-sm font-medium text-amber-800">Account noch nicht aktiviert</p>
+                <p class="text-sm font-medium text-amber-800">Konto bereits angelegt — du kannst hier weiter machen</p>
                 <p class="text-sm text-amber-700">
-                  Sie wurden von Ihrer Fahrschule bereits erfasst, haben die Registrierung aber noch nicht abgeschlossen.
-                  Geben Sie Ihre Telefonnummer unten ein und klicken Sie auf "SMS senden", um Ihren Registrierungslink zu erhalten.
+                  Deine Fahrschule hat dich schon erfasst. Fülle das Formular aus und sende ab — wir verknüpfen dein bestehendes Profil und aktivieren dein Konto.
+                </p>
+                <p class="text-xs text-amber-600">
+                  Optional: Registrierungslink erneut per SMS anfordern.
                 </p>
                 <div v-if="!pendingEmailSmsSent">
                   <button
@@ -490,25 +495,26 @@
                     style="background:#d97706"
                   >
                     <span v-if="isResendingPendingEmailSms">Wird gesendet...</span>
-                    <span v-else>Registrierungslink per SMS anfordern</span>
+                    <span v-else>Link per SMS anfordern</span>
                   </button>
                   <p v-if="!formData.phone" class="text-xs text-amber-600 mt-1">Bitte zuerst Telefonnummer eingeben.</p>
                 </div>
-                <p v-else class="text-sm text-green-700 font-medium">SMS wurde gesendet! Bitte prüfen Sie Ihr Handy.</p>
+                <p v-else class="text-sm text-green-700 font-medium">SMS wurde gesendet! Bitte prüfe dein Handy.</p>
               </div>
               <!-- Active user: already fully registered -->
               <div v-else-if="fieldErrors.email?.includes('bereits registriert')" class="mt-2 p-3 border rounded-lg" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
-                <p class="text-sm font-medium mb-2" :style="{ color: primaryColor }">Sie haben bereits ein Konto?</p>
+                <p class="text-sm font-medium mb-2" :style="{ color: primaryColor }">Du hast bereits ein Konto</p>
+                <p class="text-xs text-gray-600 mb-3">Melde dich an — oder setze dein Passwort zurück, falls du es vergessen hast.</p>
                 <div class="flex gap-2 flex-wrap">
                   <NuxtLink
-                    :to="tenantSlug ? `/${tenantSlug}` : '/login'"
+                    :to="loginHref"
                     class="text-sm font-medium text-white px-3 py-1.5 rounded-md transition-colors"
                     :style="{ background: primaryColor }"
                   >
-                    Jetzt anmelden
+                    Zum Login
                   </NuxtLink>
                   <NuxtLink
-                    :to="tenantSlug ? `/${tenantSlug}?action=forgot` : '/login?action=forgot'"
+                    :to="forgotPasswordHref"
                     class="text-sm font-medium px-3 py-1.5 border rounded-md bg-white transition-colors"
                     :style="{ color: primaryColor, borderColor: `${primaryColor}66` }"
                   >
@@ -745,29 +751,48 @@
               {{ pendingPhoneIsActive ? 'Nummer bereits registriert' : 'Konto bereits angelegt' }}
             </h3>
             <p class="text-sm text-gray-600 mt-1">
-              <span v-if="pendingPhoneFirstName">Hallo <strong>{{ pendingPhoneFirstName }}</strong>, Ihr</span>
-              <span v-else>Ihr</span>
+              <span v-if="pendingPhoneFirstName">Hallo <strong>{{ pendingPhoneFirstName }}</strong>, dein</span>
+              <span v-else>Dein</span>
               <span v-if="pendingPhoneIsActive">
-                Konto ist bereits aktiv. Bitte melden Sie sich direkt an.
+                Konto ist bereits aktiv. Bitte melde dich direkt an.
               </span>
               <span v-else>
-                Konto wurde bereits von Ihrer Fahrschule angelegt und wartet auf Aktivierung.
+                Konto wurde bereits von deiner Fahrschule angelegt. Du kannst die Registrierung hier abschliessen — wir verknüpfen dein bestehendes Profil.
               </span>
             </p>
           </div>
         </div>
 
         <!-- Active account: show login link -->
-        <div v-if="pendingPhoneIsActive" class="border rounded-lg p-4 mb-5" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
+        <div v-if="pendingPhoneIsActive" class="border rounded-lg p-4 mb-5 space-y-3" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
           <p class="text-sm" :style="{ color: primaryColor }">
-            🔑 Melden Sie sich mit Ihren bestehenden Zugangsdaten an oder setzen Sie das Passwort zurück.
+            Diese Nummer gehört schon zu einem aktiven Konto. Melde dich an oder setze dein Passwort zurück.
           </p>
+          <div class="flex gap-2 flex-wrap">
+            <NuxtLink
+              :to="loginHref"
+              class="text-sm font-medium text-white px-3 py-1.5 rounded-md transition-colors"
+              :style="{ background: primaryColor }"
+            >
+              Zum Login
+            </NuxtLink>
+            <NuxtLink
+              :to="forgotPasswordHref"
+              class="text-sm font-medium px-3 py-1.5 border rounded-md bg-white transition-colors"
+              :style="{ color: primaryColor, borderColor: `${primaryColor}66` }"
+            >
+              Passwort vergessen?
+            </NuxtLink>
+          </div>
         </div>
 
-        <!-- Pending account: offer SMS resend -->
-        <div v-else class="border rounded-lg p-4 mb-5" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
+        <!-- Pending account: continue here OR resend SMS -->
+        <div v-else class="border rounded-lg p-4 mb-5 space-y-2" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
           <p class="text-sm" :style="{ color: primaryColor }">
-            📱 Wir senden Ihnen den Aktivierungslink erneut per SMS an Ihre hinterlegte Nummer.
+            ✅ Am einfachsten: Formular hier ausfüllen und absenden — dein bestehender Eintrag wird ergänzt und aktiviert.
+          </p>
+          <p class="text-xs text-gray-600">
+            Alternativ kannst du den Aktivierungslink erneut per SMS anfordern.
           </p>
         </div>
 
@@ -776,29 +801,29 @@
         </div>
 
         <div v-if="pendingPhoneSmsSent" class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-          <p class="text-sm text-green-700">✅ SMS wurde gesendet! Bitte prüfen Sie Ihr Handy.</p>
+          <p class="text-sm text-green-700">✅ SMS wurde gesendet! Bitte prüfe dein Handy.</p>
         </div>
 
-        <div class="flex gap-3">
+        <div class="flex flex-col sm:flex-row gap-3">
           <button
             type="button"
             @click="showPendingPhoneModal = false"
             class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Abbrechen
+            {{ pendingPhoneIsActive ? 'Abbrechen' : 'Hier weiter registrieren' }}
           </button>
 
           <!-- Active account: go to login -->
           <NuxtLink
             v-if="pendingPhoneIsActive"
-            :to="tenantSlug ? `/${tenantSlug}` : '/login'"
+            :to="loginHref"
             class="flex-1 px-4 py-2 text-white rounded-lg text-sm font-medium text-center transition-colors"
             :style="{ background: primaryColor }"
           >
             Zum Login
           </NuxtLink>
 
-          <!-- Pending account: resend SMS -->
+          <!-- Pending account: optional SMS resend -->
           <button
             v-else-if="!pendingPhoneSmsSent"
             type="button"
@@ -811,7 +836,7 @@
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
-            <span>{{ isSendingPendingPhoneSms ? 'Wird gesendet...' : '📱 SMS senden' }}</span>
+            <span>{{ isSendingPendingPhoneSms ? 'Wird gesendet...' : '📱 Link per SMS' }}</span>
           </button>
           <button
             v-else
@@ -858,6 +883,10 @@ const supabase = getSupabase()
 
 // Get tenant slug from URL parameter
 const tenantSlug = computed(() => route.params.tenant as string)
+const loginHref = computed(() => (tenantSlug.value ? `/${tenantSlug.value}` : '/login'))
+const forgotPasswordHref = computed(() =>
+  tenantSlug.value ? `/${tenantSlug.value}?action=forgot` : '/login?forgot=1'
+)
 
 // Tenant Management
 const { loadTenant, tenantId, currentTenant } = useTenant()
@@ -1005,10 +1034,8 @@ const maxSteps = computed(() => {
 })
 
 const canProceed = computed(() => {
-  // Block if phone number already exists in system
+  // Block only if phone belongs to an already-active account
   if (phoneExistsBlocked.value) return false
-  // Block if email belongs to a pending (not yet registered) user
-  if (emailIsPending.value) return false
 
   if (currentStep.value === 1) {
     if (isAdminRegistration.value) {
@@ -1225,7 +1252,8 @@ const normalizePhone = async () => {
     }) as any
 
     if (res.isPending) {
-      phoneExistsBlocked.value = true
+      // Pending invite without auth — allow claiming via this form (don't block)
+      phoneExistsBlocked.value = false
       pendingPhoneFirstName.value = res.firstName || null
       pendingPhoneSmsSent.value = false
       pendingPhoneSmsError.value = ''
@@ -1576,15 +1604,38 @@ const submitRegistration = async () => {
     
   } catch (error: any) {
     console.error('❌ Registration failed:', error)
-    
-    let errorMessage = error.message || 'Unbekannter Fehler bei der Registrierung'
+
+    const apiMessage =
+      error?.data?.statusMessage ||
+      error?.statusMessage ||
+      error?.data?.message ||
+      error?.message ||
+      ''
+    const errorCode = error?.data?.data?.code || error?.data?.code
+    let errorMessage = apiMessage || 'Unbekannter Fehler bei der Registrierung'
     let errorTitle = 'Registrierung fehlgeschlagen'
-    
+
     // Spezifische Fehlermeldungen
-    if (errorMessage.includes('duplicate key') || errorMessage.includes('already registered') || errorMessage.includes('already exists')) {
-      errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwenden Sie eine andere E-Mail-Adresse oder loggen Sie sich ein.'
-    } else if (errorMessage.includes('Invalid email')) {
-      errorMessage = 'Ungültige E-Mail-Adresse. Bitte prüfen Sie Ihre Eingabe.'
+    if (
+      error.statusCode === 409 ||
+      errorCode === 'DUPLICATE_EMAIL' ||
+      errorCode === 'DUPLICATE_PHONE' ||
+      /duplicate key|already registered|already exists|bereits registriert/i.test(errorMessage)
+    ) {
+      if (errorCode === 'DUPLICATE_PHONE' || /telefon|phone|nummer/i.test(errorMessage)) {
+        errorTitle = 'Telefonnummer bereits registriert'
+        errorMessage = 'Diese Telefonnummer gehört schon zu einem aktiven Konto. Bitte melde dich an oder setze dein Passwort zurück.'
+        phoneExistsBlocked.value = true
+        pendingPhoneIsActive.value = true
+        showPendingPhoneModal.value = true
+      } else {
+        errorTitle = 'E-Mail bereits registriert'
+        errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich an oder setze dein Passwort zurück.'
+        fieldErrors.value.email = '✗ Diese E-Mail-Adresse ist bereits registriert'
+        emailIsPending.value = false
+      }
+    } else if (errorMessage.includes('Invalid email') || /ungültige e-mail/i.test(errorMessage)) {
+      errorMessage = 'Ungültige E-Mail-Adresse. Bitte prüfe deine Eingabe.'
     } else if (errorMessage.includes('Password') || errorMessage.includes('weak password') || errorMessage.includes('Passwort') || errorMessage.includes('nicht erlaubtes Muster')) {
       // Show password error directly at the field, not as a modal
       fieldErrors.value.password = errorMessage.includes('nicht erlaubtes Muster')
@@ -1608,9 +1659,9 @@ const submitRegistration = async () => {
       errorTitle = 'Server-Fehler'
       errorMessage = 'Ein Server-Fehler ist aufgetreten. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.'
     }
-    
+
     showError(errorTitle, errorMessage)
-    
+
   } finally {
     isSubmitting.value = false
   }

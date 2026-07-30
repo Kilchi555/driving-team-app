@@ -31,6 +31,9 @@ interface RawVEvent {
   recurrenceId?: string
 }
 
+/** Hard cap per RRULE master — FREQ=MINUTELY over months would otherwise OOM the serverless function. */
+const MAX_RRULE_OCCURRENCES = 2_000
+
 export function parseIcsBusyEvents(
   icsData: string,
   window: { start: Date; end: Date },
@@ -100,29 +103,38 @@ export function parseIcsBusyEvents(
         if (!Number.isNaN(exMs)) set.exdate(new Date(exMs))
       }
 
-      // Include occurrences that may start just before the window but still overlap it
+      // Iterate with after() instead of between() so high-frequency RRULEs
+      // (e.g. FREQ=MINUTELY) cannot allocate hundreds of thousands of Dates at once.
       const betweenStart = new Date(window.start.getTime() - durationMs)
-      const occurrences = set.between(betweenStart, window.end, true)
+      let occ = set.after(betweenStart, true)
+      let pushed = 0
+      let iterations = 0
 
-      for (const occ of occurrences) {
+      while (occ && iterations < MAX_RRULE_OCCURRENCES) {
+        iterations++
         const occStart = occ.getTime()
+        if (occStart > window.end.getTime()) break
+
         const occEnd = occStart + durationMs
-        if (occEnd < window.start.getTime() || occStart > window.end.getTime()) continue
-        if (ev.uid && overrideKeys.has(overrideKey(ev.uid, new Date(occStart).toISOString()))) {
-          continue
-        }
-        // Also match overrides keyed by the raw recurrence-id string precision
-        if (ev.uid && overrideKeys.has(overrideKey(ev.uid, occ.toISOString()))) {
-          continue
+        if (occEnd >= window.start.getTime()) {
+          const skipOverride =
+            !!ev.uid &&
+            (overrideKeys.has(overrideKey(ev.uid, new Date(occStart).toISOString())) ||
+              overrideKeys.has(overrideKey(ev.uid, occ.toISOString())))
+
+          if (!skipOverride) {
+            push({
+              uid: ev.uid,
+              summary: ev.summary,
+              location: ev.location,
+              start: new Date(occStart).toISOString(),
+              end: new Date(occEnd).toISOString(),
+            })
+            pushed++
+          }
         }
 
-        push({
-          uid: ev.uid,
-          summary: ev.summary,
-          location: ev.location,
-          start: new Date(occStart).toISOString(),
-          end: new Date(occEnd).toISOString(),
-        })
+        occ = set.after(occ, false)
       }
     } catch (err: any) {
       // Fall back to the master instance only

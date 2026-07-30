@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="text-center">
         <h2 class="text-3xl font-bold text-gray-900">
-          👨‍🏫 Fahrlehrer Registration
+          {{ labels.staff }} Registration
         </h2>
         <p class="mt-2 text-sm text-gray-600">
           Vervollständigen Sie Ihre Registrierung
@@ -48,7 +48,7 @@
           <!-- Welcome Message -->
           <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
             <p class="text-sm text-purple-800">
-              Vervollständigen Sie Ihre Registrierung als Fahrlehrer.
+              Vervollständigen Sie Ihre Registrierung als {{ labels.staff }}.
             </p>
           </div>
 
@@ -173,9 +173,9 @@
             </div>
           </div>
 
-          <!-- Kategorien (falls Fahrschule) -->
+          <!-- Kategorien (falls vorhanden) -->
           <div v-if="availableCategories.length" class="space-y-3">
-            <h4 class="text-sm font-semibold text-gray-800 border-b border-gray-200 pb-1">Unterrichtete Kategorien</h4>
+            <h4 class="text-sm font-semibold text-gray-800 border-b border-gray-200 pb-1">Unterrichtete {{ labels.categoriesLabel }}</h4>
             <div v-for="category in availableCategories" :key="category.code" 
                  class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
               <div class="text-sm text-gray-700">{{ category.name }}</div>
@@ -184,11 +184,11 @@
                 <div class="relative w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-purple-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
               </label>
             </div>
-            <p v-if="!selectedCategories.length" class="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2">Mindestens eine Kategorie wählen (optional).</p>
+            <p v-if="!selectedCategories.length" class="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2">Mindestens eine {{ labels.categoryLabel }} wählen (optional).</p>
           </div>
 
-          <!-- Führerausweis Upload -->
-          <div class="space-y-4">
+          <!-- Führerausweis Upload (nur Fahrschule) -->
+          <div v-if="isDrivingSchool" class="space-y-4">
             <h4 class="text-sm font-semibold text-gray-800 border-b border-gray-200 pb-1">Führerausweis Upload</h4>
             
             <!-- Vorderseite -->
@@ -401,6 +401,7 @@ definePageMeta({ name: 'register-staff-legacy' })
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from '#app'
+import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
 
 const route = useRoute()
 const router = useRouter()
@@ -413,6 +414,9 @@ const password = ref('')
 const confirmPassword = ref('')
 const isRegistering = ref(false)
 const registrationError = ref('')
+const businessType = ref('driving_school')
+const isDrivingSchool = computed(() => businessType.value === 'driving_school')
+const labels = computed((): Terminology => getTerminologyDefaults(businessType.value))
 
 // Additional staff fields
 const firstName = ref('')
@@ -524,6 +528,7 @@ const loadInvitation = async () => {
       .select('business_type')
       .eq('id', data.tenant_id)
       .single()
+    businessType.value = tenant?.business_type || 'driving_school'
     if (tenant?.business_type === 'driving_school') {
       const { data: cats } = await supabase
         .from('categories')

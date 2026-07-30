@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { probeIcsUrl } from '~/server/utils/probe-ics-url'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -74,35 +75,64 @@ export default defineEventHandler(async (event) => {
         })
       }
 
+      if (!ics_url || typeof ics_url !== 'string' || !ics_url.trim()) {
+        throw createError({
+          statusCode: 400,
+          message: 'ICS-URL ist erforderlich',
+        })
+      }
+
+      // Live-check before saving — refuse bad / unreachable feeds early
+      const probe = await probeIcsUrl(ics_url)
+      if (!probe.ok) {
+        throw createError({
+          statusCode: 400,
+          message: probe.tip ? `${probe.message} ${probe.tip}` : probe.message,
+          data: { code: probe.code, tip: probe.tip, url: probe.url },
+        })
+      }
+
       const calendarData = {
         tenant_id: userData.tenant_id,
         staff_id: userData.id,
         provider,
-        account_identifier,
+        account_identifier: account_identifier || probe.url,
         calendar_name,
         connection_type: provider === 'ics' ? 'ics_url' : 'oauth',
-        ics_url,
-        sync_enabled: true
+        ics_url: probe.url,
+        sync_enabled: true,
+        consecutive_failures: 0,
+        last_fetch_error: null,
       }
 
       // Upsert: bei Duplikat aktualisieren statt Fehler
-      const { error: upsertError } = await supabase
+      const { data: upserted, error: upsertError } = await supabase
         .from('external_calendars')
         .upsert(calendarData, {
           onConflict: 'tenant_id,staff_id,provider,account_identifier'
         })
+        .select('id')
+        .single()
 
       if (upsertError) throw upsertError
 
       logger.info('📅 External calendar connected', {
         provider,
         staffId: userData.id,
-        tenantId: userData.tenant_id
+        tenantId: userData.tenant_id,
+        calendarId: upserted?.id,
+        veventCount: probe.veventCount,
       })
 
       return {
         success: true,
-        message: 'Kalender erfolgreich verbunden!'
+        message:
+          probe.veventCount > 0
+            ? `Kalender verbunden — Feed OK (${probe.veventCount} Termin(e) erkannt).`
+            : 'Kalender verbunden — Feed OK (noch keine Termine im Feed).',
+        calendar_id: upserted?.id,
+        normalized_url: probe.url,
+        vevent_count: probe.veventCount,
       }
     } else if (action === 'disconnect') {
       // ============ LAYER 2: AUTHORIZATION FOR DISCONNECT ============

@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 4: Get tenant name and slug (with tenant isolation)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('name, slug, id')
+      .select('name, slug, id, from_email, contact_email')
       .eq('id', user.tenant_id)
       .single()
 
@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Verify onboarding token: Tenant not found', { tenantId: user.tenant_id })
       throw createError({
         statusCode: 400,
-        statusMessage: 'Tenant not found'
+        statusMessage: 'Fahrschule nicht gefunden'
       })
     }
 
@@ -103,14 +103,23 @@ export default defineEventHandler(async (event) => {
         tenant_slug: tenant.slug
       },
       tenantName: tenant.name,
-      tenantSlug: tenant.slug
+      tenantSlug: tenant.slug,
+      tenantContactEmail: tenant.contact_email || tenant.from_email || null,
     }
 
   } catch (error: any) {
     logger.error('❌ Token verification error:', { message: error.message })
+    const statusMessage =
+      error.statusMessage ||
+      error.message ||
+      'Der Registrierungslink konnte nicht geprüft werden.'
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage: error.statusMessage || error.message || 'Token verification failed',
+      statusMessage: statusMessage.includes('Too many') || statusMessage.includes('Token is required')
+        ? (statusMessage.includes('Too many')
+          ? 'Zu viele Versuche. Bitte warte kurz und versuche es erneut.'
+          : 'Ungültiger Link.')
+        : statusMessage,
       data: error.data
     })
   }

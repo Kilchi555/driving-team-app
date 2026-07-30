@@ -26,42 +26,42 @@
       <!-- Progress Indicator -->
       <div v-if="currentStep < LOADING_STEP" class="px-6 sm:px-10 pt-5 pb-2 border-b border-gray-100">
         <div class="hidden sm:flex justify-between text-xs mb-2.5 px-0.5">
-          <span v-for="(step, i) in steps" :key="i" class="flex-1 text-center truncate px-1 font-medium transition-colors"
-            :class="[i < currentStep ? 'text-green-600 cursor-pointer hover:opacity-70' : i === currentStep ? '' : 'text-gray-400']"
-            :style="i === currentStep ? { color: formData.primary_color || '#2563EB' } : {}"
-            @click="i < currentStep ? currentStep = i : undefined">
+          <span v-for="(step, i) in steps" :key="step.id" class="flex-1 text-center truncate px-1 font-medium transition-colors"
+            :class="[i < visibleStepIndex ? 'text-green-600 cursor-pointer hover:opacity-70' : i === visibleStepIndex ? '' : 'text-gray-400']"
+            :style="i === visibleStepIndex ? { color: formData.primary_color || '#2563EB' } : {}"
+            @click="i < visibleStepIndex ? currentStep = step.id : undefined">
             {{ step.title }}
           </span>
         </div>
         <div class="flex items-center">
-          <template v-for="(step, index) in steps" :key="index">
+          <template v-for="(step, index) in steps" :key="step.id">
             <div
-              @click="index < currentStep ? currentStep = index : undefined"
+              @click="index < visibleStepIndex ? currentStep = step.id : undefined"
               class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 flex-shrink-0 z-10"
               :class="[
-                index < currentStep  ? 'text-white cursor-pointer hover:opacity-80' :
-                index === currentStep ? 'text-white ring-4' :
+                index < visibleStepIndex  ? 'text-white cursor-pointer hover:opacity-80' :
+                index === visibleStepIndex ? 'text-white ring-4' :
                                         'bg-gray-100 text-gray-400 cursor-not-allowed'
               ]"
-              :style="index < currentStep
+              :style="index < visibleStepIndex
                 ? { backgroundColor: formData.secondary_color || '#10B981' }
-                : index === currentStep
+                : index === visibleStepIndex
                   ? { backgroundColor: formData.primary_color || '#3B82F6', '--tw-ring-color': (formData.primary_color || '#3B82F6') + '30' }
                   : {}"
-              :title="index < currentStep ? `Zurück zu: ${step.title}` : undefined"
+              :title="index < visibleStepIndex ? `Zurück zu: ${step.title}` : undefined"
             >
-              <svg v-if="index < currentStep" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="index < visibleStepIndex" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
               </svg>
               <span v-else>{{ index + 1 }}</span>
             </div>
             <div v-if="index < steps.length - 1" class="flex-1 h-0.5 transition-all duration-500"
-              :class="index < currentStep ? '' : 'bg-gray-200'"
-              :style="index < currentStep ? { backgroundColor: formData.secondary_color || '#10B981' } : {}"></div>
+              :class="index < visibleStepIndex ? '' : 'bg-gray-200'"
+              :style="index < visibleStepIndex ? { backgroundColor: formData.secondary_color || '#10B981' } : {}"></div>
           </template>
         </div>
         <p class="sm:hidden text-xs text-center font-medium mt-2" :style="{ color: formData.primary_color || '#2563EB' }">
-          Schritt {{ currentStep + 1 }}/{{ steps.length }} – {{ steps[currentStep]?.title }}
+          Schritt {{ visibleStepIndex + 1 }}/{{ steps.length }} – {{ steps[visibleStepIndex]?.title }}
         </p>
       </div>
 
@@ -70,6 +70,19 @@
 
         <!-- ═══ STEP 0: Grunddaten ═══ -->
         <div v-if="currentStep === 0" class="space-y-8">
+          <div>
+            <h2 class="text-base font-semibold text-gray-900 mb-1">Deine Branche</h2>
+            <p class="text-sm text-gray-500 mb-4">Damit sich Begriffe, Kategorien & Preisvorlagen im ganzen Formular automatisch richtig anpassen.</p>
+            <div class="max-w-sm">
+              <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Geschäftstyp *</label>
+              <select v-model="formData.business_type" required
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
+                <option value="" disabled>Bitte wählen…</option>
+                <option v-for="bt in businessTypes" :key="bt.code" :value="bt.code">{{ bt.name }}</option>
+              </select>
+            </div>
+          </div>
+
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-1">Firmen-Daten</h2>
             <p class="text-sm text-gray-500 mb-4">Wie soll dein Unternehmen heissen und wo ist es erreichbar?</p>
@@ -207,13 +220,6 @@
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-4">Weitere Angaben</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Geschäftstyp</label>
-                <select v-model="formData.business_type"
-                  class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
-                  <option v-for="bt in businessTypes" :key="bt.code" :value="bt.code">{{ bt.name }}</option>
-                </select>
-              </div>
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Sprache</label>
                 <select v-model="formData.language"
@@ -1339,8 +1345,8 @@
               </div>
             </div>
 
-            <!-- Kategorien -->
-            <div class="rounded-2xl bg-blue-50 border border-blue-100 p-4">
+            <!-- Kategorien (nur wenn der Schritt nicht übersprungen wurde) -->
+            <div v-if="!skipsCategories" class="rounded-2xl bg-blue-50 border border-blue-100 p-4">
               <p class="text-xs font-bold text-blue-400 uppercase tracking-wide mb-2.5">{{ labels.categoriesLabel }}</p>
               <div class="flex items-baseline gap-1.5">
                 <span class="text-2xl font-bold text-blue-700">{{ effectiveCategoryCount }}</span>
@@ -1665,16 +1671,24 @@ const SUCCESS_STEP = 9
 // ─── Steps ─────────────────────────────────────────────────────────────────
 // Computed statt fixem Array, da 'Kategorien' und 'Mitarbeiter' je nach
 // Branche anders heissen (z.B. Consulting: 'Leistungsbereiche'/'Berater').
-const steps = computed(() => [
-  { title: 'Grunddaten' },
-  { title: labels.value.categoriesLabel },
-  { title: 'Preise' },
-  { title: 'Standorte' },
-  { title: 'Branding' },
-  { title: 'Admin' },
-  { title: labels.value.staffPlural },
-  { title: 'Bestätigung' },
+// Bei per_event_type (Consulting, Mental Coach) wird der Kategorien-Schritt
+// übersprungen — Preise hängen an Leistungen, nicht an Bereichen.
+const allStepDefs = computed(() => [
+  { id: 0, title: 'Grunddaten', skip: false },
+  { id: 1, title: labels.value.categoriesLabel, skip: pricingMode.value === 'per_event_type' },
+  { id: 2, title: 'Preise', skip: false },
+  { id: 3, title: 'Standorte', skip: false },
+  { id: 4, title: 'Branding', skip: false },
+  { id: 5, title: 'Admin', skip: false },
+  { id: 6, title: labels.value.staffPlural, skip: false },
+  { id: 7, title: 'Bestätigung', skip: false },
 ])
+const steps = computed(() => allStepDefs.value.filter(s => !s.skip))
+const visibleStepIndex = computed(() => {
+  const idx = steps.value.findIndex(s => s.id === currentStep.value)
+  return idx >= 0 ? idx : 0
+})
+const skipsCategories = computed(() => pricingMode.value === 'per_event_type')
 
 // ─── Form Data ─────────────────────────────────────────────────────────────
 const formData = ref({
@@ -1690,7 +1704,11 @@ const formData = ref({
   streetNr: '',
   zip: '',
   city: '',
-  business_type: 'driving_school',
+  // Bewusst leer statt eines Default-Werts wie 'driving_school': Solange die
+  // Branche unbekannt ist (frischer Besuch ohne ?type=…-Link), sollen
+  // neutrale Begriffe ('generic' in labels unten) angezeigt werden statt
+  // fälschlich "Fahrschule"-Sprache für z.B. einen Consulting-Interessenten.
+  business_type: '',
   primary_color: '#3B82F6',
   secondary_color: '#10B981',
   accent_color: '#8B5CF6',
@@ -1718,7 +1736,12 @@ const formData = ref({
 // Code-Deploy — die TS-Defaults greifen nur, wenn die API (noch) nicht
 // geladen ist oder für einen Key keinen DB-Wert liefert.
 const labels = computed(() => {
-  const fallback = getTerminologyDefaults(formData.value.business_type)
+  // Solange keine Branche gewählt ist, explizit 'generic' statt formData.value.
+  // business_type='' an getTerminologyDefaults() zu übergeben — dessen interner
+  // Fallback ist 'driving_school' (für eingeloggte Alt-Tenants ohne
+  // business_type gedacht), was hier vor der Auswahl fälschlich Fahrschule-
+  // Sprache zeigen würde.
+  const fallback = getTerminologyDefaults(formData.value.business_type || 'generic')
   const dbLabels = businessTypes.value.find(bt => bt.code === formData.value.business_type)?.ui_labels || {}
   const merged = { ...fallback }
   for (const key of Object.keys(fallback) as (keyof Terminology)[]) {
@@ -2312,7 +2335,8 @@ const passwordError = computed(() => {
 const canProceed = computed(() => {
   switch (currentStep.value) {
     case 0:
-      return !!(formData.value.name && formData.value.legal_company_name && formData.value.slug &&
+      return !!(formData.value.business_type &&
+                formData.value.name && formData.value.legal_company_name && formData.value.slug &&
                 formData.value.contact_person_first_name && formData.value.contact_person_last_name &&
                 formData.value.contact_email && formData.value.contact_phone &&
                 formData.value.street && formData.value.streetNr && formData.value.zip && formData.value.city) &&
@@ -2320,6 +2344,7 @@ const canProceed = computed(() => {
              (emailCheck.value === 'available' || emailCheck.value === 'error') &&
              !!adminEmailEarly.value && adminEmailEarly.value.includes('@')
     case 1: {
+      if (skipsCategories.value) return true
       if (selectedCategoryIds.value.size === 0) return false
       // Every selected parent that HAS subcategories must have at least one sub selected
       for (const cat of templateCategories.value) {
@@ -2357,9 +2382,18 @@ const tenantUrl = computed(() =>
 )
 
 // ─── Navigation ───────────────────────────────────────────────────────────
-const nextStep = () => {
+const nextStep = async () => {
   if (!canProceed.value || currentStep.value >= 7) return
-  const next = currentStep.value + 1
+
+  // Need pricingMode before deciding whether to skip categories
+  if (currentStep.value === 0) {
+    await loadEventTypeTemplates()
+  }
+
+  let next = currentStep.value + 1
+  // per_event_type: skip categories step (prices are per Leistung, not Bereich)
+  if (next === 1 && pricingMode.value === 'per_event_type') next = 2
+
   if (next === 1) loadTemplateCategories()
   if (next === 2) loadEventTypeTemplates()
   if (next === 3) prefillFirstLocation()
@@ -2367,7 +2401,10 @@ const nextStep = () => {
 }
 
 const previousStep = () => {
-  if (currentStep.value > 0) currentStep.value--
+  if (currentStep.value <= 0) return
+  let prev = currentStep.value - 1
+  if (prev === 1 && pricingMode.value === 'per_event_type') prev = 0
+  currentStep.value = prev
 }
 
 // ─── Availability Checks ───────────────────────────────────────────────────
@@ -2552,14 +2589,19 @@ const submitRegistration = async () => {
       if (v) fd.append(key, v)
     })
 
-    // Selected category IDs (only template IDs — custom categories sent separately)
+    // Selected category IDs (only template IDs — custom categories sent separately).
+    // Always send the field so an intentional empty selection is distinguishable
+    // from "omit and copy all templates" on older admin paths.
     const templateIds = Array.from(selectedCategoryIds.value).filter(id => id > 0)
-    if (templateIds.length > 0) {
+    if (skipsCategories.value) {
+      fd.append('skip_categories', '1')
+      fd.append('selected_category_ids', '')
+    } else if (templateIds.length > 0) {
       fd.append('selected_category_ids', templateIds.join(','))
     }
 
-    // Custom categories defined by the user
-    if (customCategories.value.length > 0) {
+    // Custom categories defined by the user (not applicable when categories step is skipped)
+    if (!skipsCategories.value && customCategories.value.length > 0) {
       const customJson = customCategories.value.map(cc => {
         let parentCode: string | null = null
         if (cc.parentTempId !== null) {
@@ -2836,21 +2878,35 @@ watch(() => adminForm.value.password, (pw) => checkPasswordStrength(pw))
 // sicher, dass der Reset währenddessen sicher übersprungen wird.
 watch(() => formData.value.business_type, (newType, oldType) => {
   if (isRestoringFromStorage) return
-  if (!oldType || newType === oldType) return
 
-  const hadCategoryData = templateCategories.value.length > 0 || customCategories.value.length > 0
-  const hadPricingData = eventTypeTemplates.value.length > 0
+  // Real branch switch (not the initial empty→first pick): wipe branch-specific
+  // template data so the next load can't leak the previous industry's rows.
+  if (oldType && newType && newType !== oldType) {
+    templateCategories.value = []
+    selectedCategoryIds.value = new Set()
+    customCategories.value = []
+    eventTypeTemplates.value = []
+    pricingRows.value = []
+    customEventTypes.value = []
+    pricingMode.value = 'per_category'
+  }
 
-  templateCategories.value = []
-  selectedCategoryIds.value = new Set()
-  customCategories.value = []
-  eventTypeTemplates.value = []
-  pricingRows.value = []
-  customEventTypes.value = []
-  pricingMode.value = 'per_category'
-
-  if (hadCategoryData) loadTemplateCategories()
-  if (hadPricingData) loadEventTypeTemplates()
+  // Load pricingMode early so the progress bar can hide the categories step
+  // for per_event_type branches before the user clicks Weiter.
+  // Fire-and-forget (watcher stays sync for the isRestoringFromStorage guard).
+  if (newType) {
+    loadEventTypeTemplates().then(() => {
+      if (currentStep.value === 1 && pricingMode.value === 'per_event_type') {
+        currentStep.value = 2
+      } else if (
+        oldType && newType !== oldType &&
+        currentStep.value >= 1 &&
+        pricingMode.value !== 'per_event_type'
+      ) {
+        loadTemplateCategories()
+      }
+    })
+  }
 }, { flush: 'sync' })
 
 // ─── LocalStorage ─────────────────────────────────────────────────────────
@@ -2940,10 +2996,26 @@ const pageBackground = computed(() => {
 onMounted(async () => {
   const q = route.query
 
-  loadBusinessTypes()
+  // Awaited (rather than fire-and-forget) so the business_type query-param
+  // check below can validate against the real list before applying it.
+  await loadBusinessTypes()
 
   // Restore any previously saved progress first
   loadFromStorage()
+
+  // Pre-select the business type when arriving from an industry-specific
+  // marketing link (e.g. /tenant-register?type=consulting), so labels
+  // ("Berater" instead of "Fahrlehrer" etc.) are correct from the very first
+  // field the visitor sees — no need to manually switch the dropdown.
+  // Takes precedence over a restored draft, same reasoning as the brand-color
+  // params below: a fresh, explicit link is more trustworthy than a stale
+  // localStorage draft from a possibly-abandoned earlier attempt (which may
+  // even be for a different business type). Validated against the loaded
+  // list so a typo'd/unknown code can't silently "select" a non-existent type.
+  const typeParam = typeof q.type === 'string' ? q.type : (typeof q.business_type === 'string' ? q.business_type : '')
+  if (typeParam && businessTypes.value.some(bt => bt.code === typeParam)) {
+    formData.value.business_type = typeParam
+  }
 
   // Brand colors from URL params / sessionStorage always take precedence over
   // anything stored in localStorage (they come fresh from the simy.ch color picker)
@@ -2988,8 +3060,19 @@ onMounted(async () => {
   }
 
   if (adminSameAsCompany.value) applyAdminFromCompany()
+
+  // Resolve pricingMode early (hides categories step for per_event_type).
+  // Always load when a business type is known — even on step 0 — so the
+  // progress bar is correct before the user clicks Weiter.
+  if (formData.value.business_type) await loadEventTypeTemplates()
+
+  // Draft may have been saved on the categories step; bump past it when skipped.
+  if (currentStep.value === 1 && pricingMode.value === 'per_event_type') {
+    currentStep.value = 2
+  }
+
   // Pre-load categories/event-types if a saved draft resumes past those steps
-  if (currentStep.value >= 1) await loadTemplateCategories()
+  if (currentStep.value >= 1 && pricingMode.value !== 'per_event_type') await loadTemplateCategories()
   if (currentStep.value >= 2) await loadEventTypeTemplates()
 })
 </script>

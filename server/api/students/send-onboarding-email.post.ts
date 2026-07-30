@@ -89,7 +89,7 @@ export default defineEventHandler(async (event) => {
               </p>
               
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                Schön, dass du dich für uns entschieden hast! Um deine Registrierung abzuschließen, klicke bitte auf den folgenden Button:
+                Schön, dass du dich für uns entschieden hast! Um dein Konto zu aktivieren, klicke auf den Button und folge den Schritten (Passwort setzen, Profil ergänzen).
               </p>
 
               <!-- CTA Button -->
@@ -98,7 +98,7 @@ export default defineEventHandler(async (event) => {
                   <td align="center">
                     <a href="${onboardingLink}" 
                        style="display: inline-block; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: bold;">
-                      Registrierung abschließen
+                      Registrierung abschliessen
                     </a>
                   </td>
                 </tr>
@@ -110,7 +110,12 @@ export default defineEventHandler(async (event) => {
               </p>
 
               <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                ⏰ Dieser Link ist 14 Tage gültig.
+                ⏰ Dieser Link ist <strong>30 Tage</strong> gültig.
+              </p>
+
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+                Bereits registriert? Dann melde dich direkt in der App an — du brauchst diesen Link nicht mehr.<br>
+                Link funktioniert nicht? Bitte deine Fahrschule um einen neuen Link.
               </p>
             </td>
           </tr>

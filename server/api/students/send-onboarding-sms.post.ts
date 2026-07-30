@@ -200,7 +200,7 @@ export default defineEventHandler(async (event) => {
 
     // SMS Message with onboarding link and login link
     const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch/login'
-    const message = `Hallo ${sanitizedFirstName}! Willkommen bei ${tenantName}. Vervollständige deine Registrierung: ${onboardingLink} (Link 30 Tage gültig). Nach der Registrierung kannst du dich über folgenden Link anmelden: ${loginLink}`
+    const message = `Hallo ${sanitizedFirstName}! Willkommen bei ${tenantName}. Bitte Registrierung hier abschliessen (30 Tage gültig): ${onboardingLink} Danach Login: ${loginLink}`
 
     logger.debug('📱 Sending onboarding SMS:', {
       to: formattedPhone.substring(0, 6) + '****',

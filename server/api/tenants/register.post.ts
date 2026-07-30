@@ -7,7 +7,7 @@ import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 import { generateRegistrationToken } from '~/server/utils/registration-token'
-import { resolveBusinessType, applyCategoryAndEventTypeDefaults, applyEvaluationDefaults } from '~/server/utils/business-type-presets'
+import { resolveBusinessType, applyCategoryAndEventTypeDefaults, applyEvaluationDefaults, resolveWorkingDaysTemplate } from '~/server/utils/business-type-presets'
 import { isReservedSlug } from '~/server/utils/reserved-slugs'
 
 interface TenantRegistrationData {
@@ -42,6 +42,8 @@ interface TenantRegistrationData {
   twilio_from_sender?: string    // Alphanumeric SMS sender ID (max 11 chars)
   selected_categories?: string   // comma-separated codes, e.g. "B,BE,A"
   selected_category_ids?: string // comma-separated UUIDs of template categories to copy
+  /** When '1', copy zero category templates (per_event_type business types). */
+  skip_categories?: string
   working_days_template?: string // JSON string
   locations_json?: string        // JSON array of LocationEntry objects
   pricing_json?: string          // JSON array of PricingItem objects
@@ -120,6 +122,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       twilio_from_sender: '',
       selected_categories: '',
       selected_category_ids: '',
+      skip_categories: '',
       working_days_template: '',
       locations_json: '',
       pricing_json: '',
@@ -264,24 +267,13 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     const trialEndsAt = new Date()
     trialEndsAt.setDate(trialEndsAt.getDate() + 60) // 60 Tage Trial
 
-    // Default working hours template: Mo–Fr 07:00–19:00, Sa 08:00–16:00
-    const defaultWorkingDaysTemplate = {
-      days: [1, 2, 3, 4, 5, 6],
-      start_time: '07:00',
-      end_time: '19:00',
-      schedule: {
-        1: { start: '07:00', end: '19:00' }, // Montag
-        2: { start: '07:00', end: '19:00' }, // Dienstag
-        3: { start: '07:00', end: '19:00' }, // Mittwoch
-        4: { start: '07:00', end: '19:00' }, // Donnerstag
-        5: { start: '07:00', end: '19:00' }, // Freitag
-        6: { start: '08:00', end: '16:00' }, // Samstag
-      }
-    }
-    
-    // Validate against the live business_types table (not a hardcoded list) so
-    // new types added via the super-admin dashboard are usable immediately.
+    // Default working hours: branch-specific from business_type_presets.defaults
+    // (e.g. consulting Mo–Fr 09–17, driving_school Mo–Sa with longer hours).
+    // Explicit form override via working_days_template still wins.
     const resolvedBusinessType = await resolveBusinessType(supabase, data.business_type)
+    const defaultWorkingDaysTemplate = data.working_days_template
+      ? JSON.parse(data.working_days_template)
+      : await resolveWorkingDaysTemplate(supabase, resolvedBusinessType)
 
     const { data: newTenant, error: insertError } = await supabase
       .from('tenants')
@@ -343,9 +335,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         selected_categories: data.selected_categories
           ? data.selected_categories.split(',').map(c => c.trim()).filter(Boolean)
           : null,
-        working_days_template: data.working_days_template
-          ? JSON.parse(data.working_days_template)
-          : defaultWorkingDaysTemplate,
+        working_days_template: defaultWorkingDaysTemplate,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -372,9 +362,15 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
 
     // 6. Standard-Kategorien und Templates kopieren (optional)
     try {
-      const selectedIds = data.selected_category_ids
-        ? data.selected_category_ids.split(',').map(id => id.trim()).filter(Boolean)
-        : undefined
+      // skip_categories=1 → explicit empty list (copy none). Otherwise a
+      // non-empty selected_category_ids filters; omitting both keeps the
+      // legacy "copy all templates" behaviour for admin/reseed paths.
+      const skipCategories = data.skip_categories === '1' || data.skip_categories === 'true'
+      const selectedIds = skipCategories
+        ? []
+        : (data.selected_category_ids?.trim()
+            ? data.selected_category_ids.split(',').map(id => id.trim()).filter(Boolean)
+            : undefined)
       await copyDefaultDataToTenant(tenantId, resolvedBusinessType, selectedIds, data.pricing_json)
       logger.debug('✅ Default data copied to tenant')
 
