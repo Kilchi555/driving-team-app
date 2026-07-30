@@ -720,7 +720,7 @@
               <!-- Zeile 2: Buttons -->
               <div class="flex gap-2">
                 <button
-                  v-if="cashVisible && hasOpenSelectedPayments"
+                  v-if="cashVisible && (hasOpenSelectedPayments || hasInvoicedSelectedPayments)"
                   class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md"
                   :style="{ backgroundColor: secondaryColor || '#22C55E' }"
                   @click="openCashPaymentDialog('cash')"
@@ -739,14 +739,6 @@
                   @click="openCreditPaymentDialog"
                 >
                   Guthaben
-                </button>
-                <button
-                  v-if="selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p && isInvoicedPayment(p) })"
-                  class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:shadow-md hover:opacity-90"
-                  :style="{ backgroundColor: secondaryColor || '#22C55E' }"
-                  @click="handleBulkMarkAsPaid"
-                >
-                  Bar
                 </button>
                 <button
                   v-if="canCreateInvoice && selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p?.payment_status === 'pending' && !isInvoicedPayment(p) })"
@@ -2578,6 +2570,13 @@ const hasOpenSelectedPayments = computed(() =>
   selectedPayments.value.some(id => {
     const p = payments.value.find(p => p.id === id)
     return p && !isInvoicedPayment(p) && p.payment_status !== 'completed' && p.appointment?.status !== 'cancelled'
+  })
+)
+
+const hasInvoicedSelectedPayments = computed(() =>
+  selectedPayments.value.some(id => {
+    const p = payments.value.find(p => p.id === id)
+    return p && isInvoicedPayment(p) && p.payment_status !== 'completed'
   })
 )
 
