@@ -110,7 +110,7 @@ export default defineEventHandler(async (event) => {
     // Filter based on user role
     if (userProfile.role === 'staff') {
       // Staff sees:
-      // 1. Their own standard locations (location_type = 'standard' AND user_id = current staff)
+      // 1. Standard locations where they are listed in staff_ids
       // 2. Pickup locations of the selected client (if provided via query param)
       const selectedClientId = query.selected_client_id as string | undefined
       
@@ -119,16 +119,26 @@ export default defineEventHandler(async (event) => {
           staffId: userProfile.id,
           clientId: selectedClientId
         })
-        
-        // Get staff's standard locations
-        const { data: staffLocations, error: staffError } = await supabaseAdmin
-          .from('locations')
-          .select('id, name, address, formatted_address, postal_code, canton, city, tenant_id, location_type, user_id, is_active, public_bookable, time_windows')
-          .eq('tenant_id', tenantId)
-          .eq('is_active', true)
-          .eq('user_id', userProfile.id)
-          .eq('location_type', 'standard')
-        
+
+        // Standard locations are shared via staff_ids (user_id is typically null).
+        // Must NOT filter standards by user_id — that hides school locations like Leuholz.
+        const [{ data: allStandards, error: staffError }, { data: clientPickups, error: clientError }] =
+          await Promise.all([
+            supabaseAdmin
+              .from('locations')
+              .select('id, name, address, formatted_address, postal_code, canton, city, tenant_id, location_type, user_id, is_active, public_bookable, staff_ids, time_windows')
+              .eq('tenant_id', tenantId)
+              .eq('is_active', true)
+              .eq('location_type', 'standard'),
+            supabaseAdmin
+              .from('locations')
+              .select('id, name, address, formatted_address, postal_code, city, tenant_id, location_type, user_id, is_active, public_bookable')
+              .eq('tenant_id', tenantId)
+              .eq('is_active', true)
+              .eq('user_id', selectedClientId)
+              .eq('location_type', 'pickup')
+          ])
+
         if (staffError) {
           logger.error('❌ Error fetching staff locations:', staffError)
           throw createError({
@@ -136,16 +146,7 @@ export default defineEventHandler(async (event) => {
             statusMessage: 'Failed to fetch staff locations'
           })
         }
-        
-        // Get client's pickup locations
-        const { data: clientPickups, error: clientError } = await supabaseAdmin
-          .from('locations')
-          .select('id, name, address, formatted_address, postal_code, city, tenant_id, location_type, user_id, is_active, public_bookable')
-          .eq('tenant_id', tenantId)
-          .eq('is_active', true)
-          .eq('user_id', selectedClientId)
-          .eq('location_type', 'pickup')
-        
+
         if (clientError) {
           logger.error('❌ Error fetching client pickups:', clientError)
           throw createError({
@@ -153,6 +154,19 @@ export default defineEventHandler(async (event) => {
             statusMessage: 'Failed to fetch client pickup locations'
           })
         }
+
+        const staffLocations = (allStandards || []).filter((location: any) => {
+          if (!location.staff_ids) return false
+          try {
+            const staffIds = typeof location.staff_ids === 'string'
+              ? JSON.parse(location.staff_ids)
+              : location.staff_ids
+            return Array.isArray(staffIds) && staffIds.includes(userProfile.id)
+          } catch (e) {
+            logger.error('❌ Error parsing staff_ids for location:', location.id, e)
+            return false
+          }
+        })
 
         // Lazy-promote guest/online pickup addresses that were only stored on appointments
         // (common for no-login clients). Creates a reusable locations row once.
@@ -183,27 +197,32 @@ export default defineEventHandler(async (event) => {
         } catch (promoteErr: any) {
           logger.warn('⚠️ Could not promote appointment pickup address:', promoteErr?.message)
         }
-        
-        // Combine and sort
+
+        // Combine and sort (strip staff_ids from response payload for consistency)
         const combined = [
-          ...(staffLocations || []),
+          ...staffLocations.map(({ staff_ids: _staffIds, ...rest }: any) => rest),
           ...pickups
         ].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-        
+
         logger.debug('✅ Staff locations fetched (with client filter):', {
-          staffLocations: staffLocations?.length || 0,
+          staffLocations: staffLocations.length,
           clientPickups: pickups.length,
           total: combined.length
         })
-        
+
         return {
           success: true,
           data: combined
         }
       } else {
-        // No client selected, show only standard locations where staff is registered
-        logger.debug('🔍 Staff fetching standard locations where staff is registered (no client selected):', {
-          staffId: userProfile.id
+        // No client selected:
+        // - default: only standard locations where this staff is registered (EventModal etc.)
+        // - include_all_standard=true: all tenant standard locations (StaffSettings join UI)
+        const includeAllStandard = query.include_all_standard === 'true' || query.include_all_standard === '1'
+
+        logger.debug('🔍 Staff fetching standard locations (no client selected):', {
+          staffId: userProfile.id,
+          includeAllStandard
         })
         
         // Get ALL standard locations first, then filter by staff_ids in memory
@@ -222,6 +241,16 @@ export default defineEventHandler(async (event) => {
             statusCode: 500,
             statusMessage: 'Failed to fetch locations'
           })
+        }
+
+        if (includeAllStandard) {
+          logger.debug('✅ Staff locations fetched (all standard):', {
+            total: allLocations?.length || 0
+          })
+          return {
+            success: true,
+            data: allLocations || []
+          }
         }
         
         // Filter locations where current staff is in the staff_ids array
