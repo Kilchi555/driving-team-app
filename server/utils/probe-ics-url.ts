@@ -8,8 +8,10 @@ import {
   normalizeIcsUrl,
 } from '~/utils/ics-url'
 
-export const ICS_PROBE_TIMEOUT_MS = 12_000
-export const ICS_PROBE_MAX_BYTES = 2 * 1024 * 1024
+// Apple/iCloud published calendars with years of history are often 3–6 MB.
+// Keep a hard ceiling for serverless memory, but don't reject real teaching calendars.
+export const ICS_PROBE_TIMEOUT_MS = 25_000
+export const ICS_PROBE_MAX_BYTES = 8 * 1024 * 1024
 
 export interface IcsProbeSuccess {
   ok: true
