@@ -1,34 +1,13 @@
 // server/utils/tenant-logo-for-pdf.ts
-// Lädt ein Tenant-Logo und liefert PDFKit-kompatibles PNG/JPEG-Base64.
-// WebP/GIF werden via sharp nach PNG konvertiert (PDFKit kennt nur PNG/JPEG).
+// Lädt ein Tenant-Logo und liefert PDFKit-kompatibles PNG-Base64.
+// PDFKit kennt nur PNG/JPEG — und Alpha-Kanäle können als weisses Rechteck
+// gerendert werden. Deshalb immer via sharp nach undurchsichtigem RGB-PNG.
 
 import sharp from 'sharp'
 
 export type TenantLogoForPdf = {
   base64: string
   format: 'png' | 'jpeg'
-}
-
-function isPng(buf: Buffer): boolean {
-  return buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47
-}
-
-function isJpeg(buf: Buffer): boolean {
-  return buf.length >= 3 && buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF
-}
-
-async function toPdfCompatible(buffer: Buffer): Promise<TenantLogoForPdf | null> {
-  if (!buffer.length) return null
-  if (isPng(buffer)) return { base64: buffer.toString('base64'), format: 'png' }
-  if (isJpeg(buffer)) return { base64: buffer.toString('base64'), format: 'jpeg' }
-
-  // WebP, GIF, etc. → PNG
-  try {
-    const png = await sharp(buffer).png().toBuffer()
-    return { base64: png.toString('base64'), format: 'png' }
-  } catch {
-    return null
-  }
 }
 
 /** Prefer wide logo; fall back to generic/square for older tenants. */
@@ -38,6 +17,33 @@ export function resolveTenantWideLogoUrl(tenant: {
   logo_square_url?: string | null
 } | null | undefined): string | null {
   return tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+}
+
+/**
+ * Normalisiert jedes Bildformat (WebP/PNG/JPEG/GIF/…) zu undurchsichtigem RGB-PNG.
+ * - Transparent → weiss (PDF-Hintergrund ist weiss)
+ * - Kein Alpha → PDFKit rendert kein weisses Soft-Mask-Rechteck
+ */
+export async function toPdfCompatible(
+  buffer: Buffer,
+): Promise<TenantLogoForPdf | null> {
+  if (!buffer.length) return null
+
+  try {
+    // Important: do NOT chain ensureAlpha()+removeAlpha() — that can leave a
+    // 4-channel PNG which PDFKit may render as an opaque white rectangle.
+    // flatten() alone composites transparency onto white and yields RGB.
+    const png = await sharp(buffer, { animated: false })
+      .rotate() // honour EXIF orientation
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .png({ compressionLevel: 8 })
+      .toBuffer()
+
+    if (!png.length) return null
+    return { base64: png.toString('base64'), format: 'png' }
+  } catch {
+    return null
+  }
 }
 
 /**
