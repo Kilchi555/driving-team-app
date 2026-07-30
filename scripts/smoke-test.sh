@@ -34,7 +34,10 @@ trap cleanup EXIT
 
 echo "🔧 Building app (this mirrors production closely enough to catch bundling bugs)..."
 rm -rf .output "$SMOKE_BUILD_DIR"
-NUXT_BUILD_DIR="$SMOKE_BUILD_DIR" npm run build
+# Force node-server so we can boot `.output/server/index.mjs` locally.
+# Production still uses the vercel preset via nuxt/Vercel; this smoke build only
+# verifies the Nitro server bundle starts and /api/health responds.
+NITRO_PRESET=node-server NUXT_BUILD_DIR="$SMOKE_BUILD_DIR" npm run build
 
 echo "🚀 Booting built server on port $PORT..."
 PORT="$PORT" NODE_ENV=production node .output/server/index.mjs >"$LOG_FILE" 2>&1 &
