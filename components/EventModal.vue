@@ -144,8 +144,10 @@
 
           <!-- Category & Duration Section -->
           <div v-if="isLessonType(formData.eventType) && selectedStudent && !showEventTypeSelection" class="py-2 space-y-3">
-            <!-- ✅ CategorySelector immer anzeigen (auch bei Theorielektionen für bessere Organisation) -->
+            <!-- CategorySelector: driving_school only (license classes). Other business
+                 types already get an empty list from CategorySelector/useCategoryData. -->
             <CategorySelector
+              v-if="requiresCategory"
               ref="categorySelectorRef"
               v-model="formData.type"
               :selected-user="selectedStudent"
@@ -173,7 +175,7 @@
 
 
             <DurationSelector
-              v-if="formData.type || formData.appointment_type === 'theory'"
+              v-if="formData.type || !requiresCategory || formData.appointment_type === 'theory'"
               v-model="formData.duration_minutes"
               :available-durations="Array.isArray(availableDurations) ? availableDurations : [45]"
               :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute ?? fallbackPricePerMinute)"
@@ -2147,7 +2149,7 @@ const isFormValidWithManualInput = computed(() => {
                               formData.value.startTime &&
                               formData.value.endTime &&
                               selectedStudent.value && 
-                              formData.value.type && 
+                              (!requiresCategory.value || !!formData.value.type) &&
                               formData.value.duration_minutes > 0
       
       logger.debug('🔍 Form validation with manual input:', {
@@ -2205,6 +2207,7 @@ const {
   loadExistingPayment,
   isPopulating,
   isChargeableEventType,
+  requiresCategory,
 } = modalForm
 
 watch(() => formData.value.type, async (newType) => {
@@ -2968,9 +2971,11 @@ const handleEndTimeUpdate = (newEndTime: string) => {
 // Uses a sequence number to discard stale results when inputs change mid-flight
 let _priceCalcSeq = 0
 const calculatePriceForCurrentData = async (): Promise<void> => {
-  if (!formData.value.type || !formData.value.duration_minutes || !isLessonType(formData.value.eventType)) {
+  const hasCategoryOrNotRequired = !!formData.value.type || !requiresCategory.value
+  if (!hasCategoryOrNotRequired || !formData.value.duration_minutes || !isLessonType(formData.value.eventType)) {
     logger.debug('🚫 Skipping price calculation - missing data:', {
       type: formData.value.type,
+      requiresCategory: requiresCategory.value,
       duration: formData.value.duration_minutes,
       eventType: formData.value.eventType
     })
@@ -2999,7 +3004,9 @@ const calculatePriceForCurrentData = async (): Promise<void> => {
 
   // Capture inputs at call time – detect if we've been superseded before writing results
   const mySeq = ++_priceCalcSeq
-  const capturedType = formData.value.type
+  // For per_event_type tenants without categories, look up price via appointment_type
+  // (event_price rules keyed by event_type_code).
+  const capturedType = formData.value.type || formData.value.appointment_type || ''
 
   // Mark as calculating so the UI shows the loading placeholder
   dynamicPricing.value = { ...dynamicPricing.value, isLoading: true }
@@ -5746,8 +5753,9 @@ const initializeFormData = async () => {
 
   // ✅ WICHTIG: Grundlegende Werte setzen falls nicht vorhanden
   // In edit/view mode: skip defaults – populateFormFromAppointment will set the real values
+  // Default category 'B' is driving_school only — other business types have no license categories.
   const isEditOrView = props.mode === 'edit' || props.mode === 'view'
-  if (!formData.value.type && !isEditOrView) {
+  if (!formData.value.type && !isEditOrView && requiresCategory.value) {
     formData.value.type = 'B'
     logger.debug('✅ Default category set to B')
   }
@@ -5868,8 +5876,10 @@ const initializeFormData = async () => {
         }
       } else {
         logger.debug('ℹ️ No last appointment category found, using default')
-        formData.value.type = 'B' // Default Kategorie
-        selectedCategory.value = { code: 'B' }
+        if (requiresCategory.value) {
+          formData.value.type = 'B' // Default Kategorie
+          selectedCategory.value = { code: 'B' }
+        }
       }
       
       // 2. Letzten Standort laden (ohne Schüler-ID, da noch keiner ausgewählt ist)
@@ -5902,7 +5912,7 @@ const initializeFormData = async () => {
       
     } catch (error) {
       console.error('❌ Error loading last appointment data:', error)
-      formData.value.type = 'B' // Fallback
+      if (requiresCategory.value) formData.value.type = 'B' // Fallback
     }
   }
 
@@ -6097,9 +6107,13 @@ const handleCreateMode = async () => {
     // ✅ NEU: Standard-Zahlungsmethode für Create-Mode setzen
     selectedPaymentMethod.value = 'wallee'
     
-    // ✅ NEU: Standard-Kategorie für Create-Mode setzen
-    formData.value.type = 'B' // Standard-Kategorie
-    logger.debug('🎯 CREATE MODE: Set default category to B')
+    // ✅ NEU: Standard-Kategorie für Create-Mode setzen (driving_school only)
+    if (requiresCategory.value) {
+      formData.value.type = 'B' // Standard-Kategorie
+      logger.debug('🎯 CREATE MODE: Set default category to B')
+    } else {
+      formData.value.type = null
+    }
     
     // ✅ NEU: Standard-Dauer für Create-Mode setzen
     formData.value.duration_minutes = 45
@@ -6400,7 +6414,7 @@ const initializePastedAppointment = async () => {
       formData.value.user_id = props.eventData.user_id || ''
       formData.value.staff_id = props.eventData.staff_id || ((props.currentUser?.role === 'staff') ? props.currentUser.id : '')
       formData.value.location_id = props.eventData.location_id || ''
-      formData.value.type = props.eventData.type || 'B'
+      formData.value.type = props.eventData.type || (requiresCategory.value ? 'B' : null)
       formData.value.appointment_type = props.eventData.appointment_type || 'lesson'
       
       // ✅ FIX: EventType aus appointment data bestimmen, nicht hardcoded
@@ -6428,7 +6442,7 @@ const initializePastedAppointment = async () => {
       
       // ✅ UI-States setzen
       selectedLessonType.value = props.eventData.appointment_type || 'lesson'
-      selectedCategory.value = { code: props.eventData.type || 'B' }
+      selectedCategory.value = { code: props.eventData.type || (requiresCategory.value ? 'B' : null) }
       
       // ✅ WICHTIG: Produkte und Rabatte explizit zurücksetzen (sollen nicht kopiert werden)
       selectedProducts.value = []
@@ -6761,7 +6775,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
         formData.value.startTime = startTime
         formData.value.endTime = endTime
         formData.value.duration_minutes = duration
-        formData.value.type = 'B' // ✅ Standard-Kategorie setzen
+        formData.value.type = requiresCategory.value ? 'B' : null
         
         // ✅ FIX: EventType aus eventData bestimmen falls vorhanden
         if (eventData?.extendedProps?.eventType) {
@@ -6775,7 +6789,8 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
         
         // ✅ UI-State auch setzen
         selectedLessonType.value = 'lesson'
-        selectedCategory.value = { code: 'B' }
+        if (requiresCategory.value) selectedCategory.value = { code: 'B' }
+        else selectedCategory.value = null
         
         logger.debug('🎯 Form data after calendar extraction:', {
           startDate: formData.value.startDate,

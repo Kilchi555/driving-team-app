@@ -10,6 +10,7 @@ import { useCategoryWithFallback } from '~/composables/useCategoryWithFallback'
 import type { CategoryWithParent, EvaluationCriteria } from '~/composables/useCategoryWithFallback'
 import { getFallbackRule } from '~/utils/fallbackPricingRules'
 import { useFallbackLogger } from '~/composables/useFallbackLogger'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 // Types (können später in separates types file)
 interface AppointmentData {
@@ -122,6 +123,16 @@ const useEventModalForm = (currentUser?: any, refs?: {
   const categoryData = useCategoryData()
   const eventTypes = useEventTypes()
   const { getCategoryWithParent } = useCategoryWithFallback()
+  const { currentTenantBranding } = useTenantBranding()
+
+  // Categories (license classes) are a driving_school concept. Other business
+  // types price via event_price rules and already get an empty CategorySelector
+  // (see CategorySelector.vue / useCategoryData.ts). Don't require formData.type
+  // for those tenants — otherwise save stays blocked and orphaned 'B' defaults leak in.
+  const requiresCategory = computed(() => {
+    const bt = currentTenantBranding.value?.business_type || 'driving_school'
+    return bt === 'driving_school'
+  })
 
   // Warm the shared event_types cache as early as possible so
   // isChargeableEventType() has real require_payment data by the time the
@@ -157,7 +168,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ NEU: Debug-Log für Form-Validierung
       const isValid = baseValid && 
                      selectedStudent.value && 
-                     formData.value.type && 
+                     (!requiresCategory.value || !!formData.value.type) &&
                      (formData.value.location_id || formData.value.custom_location_address) &&
                      formData.value.duration_minutes > 0
       
@@ -165,6 +176,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         baseValid,
         hasStudent: !!selectedStudent.value,
         hasType: !!formData.value.type,
+        requiresCategory: requiresCategory.value,
         hasLocation: !!(formData.value.location_id || formData.value.custom_location_address),
         hasDuration: formData.value.duration_minutes > 0,
         isValid
@@ -1029,7 +1041,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         end_time: localEnd,
         duration_minutes: formData.value.duration_minutes,
         // ✅ IMPORTANT: Set type to null for "other event types" (VKU, Nothelfer, etc.)
-        type: isOtherEventType ? null : formData.value.type,
+        // and for non-driving_school tenants that don't use license categories.
+        type: (isOtherEventType || !requiresCategory.value) ? null : formData.value.type,
         status: formData.value.status || 'confirmed',
         // ✅ Missing fields added
         event_type_code: eventTypeCode,
@@ -1787,6 +1800,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
     isFormValid,
     computedEndTime,
     totalPrice,
+    requiresCategory,
     
     // Actions
     resetForm,

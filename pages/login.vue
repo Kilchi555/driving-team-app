@@ -1353,8 +1353,8 @@ const handleLogout = async () => {
 
 // Lifecycle
 onMounted(async () => {
-  // Auto-open forgot password modal if ?forgot=1 is in the URL
-  if (route.query.forgot === '1') {
+  // Auto-open forgot password modal if redirected with ?forgot=1 or ?action=forgot
+  if (route.query.forgot === '1' || route.query.action === 'forgot') {
     showForgotPasswordModal.value = true
   }
 

@@ -6,6 +6,8 @@ import {
   resolveExternalEventTitle,
   shouldAnonymizeExternalEventTitles,
 } from '~/server/utils/external-calendar-privacy'
+import { probeIcsUrl } from '~/server/utils/probe-ics-url'
+import { humanizeIcsFetchError } from '~/utils/ics-url'
 import { logger } from '~/utils/logger'
 
 interface ICSImportRequest {
@@ -89,51 +91,35 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     let icsData: string
     if (ics_content && ics_content.trim().length > 0) {
       icsData = ics_content
+      if (!icsData.includes('BEGIN:VCALENDAR')) {
+        const human = humanizeIcsFetchError('Response is not a VCALENDAR (HTML or wrong URL?)')
+        throw createError({
+          statusCode: 400,
+          statusMessage: human.tip ? `${human.message} ${human.tip}` : human.message,
+        })
+      }
     } else {
-      try {
-        // Convert webcal:// to https://
-        let fetchUrl = ics_url as string
-        if (fetchUrl.startsWith('webcal://')) {
-          fetchUrl = fetchUrl.replace('webcal://', 'https://')
-          logger.debug('Converted webcal:// to https://', fetchUrl)
-        }
-        
-        logger.debug('Fetching ICS from:', fetchUrl)
-        
-        const icsResponse = await fetch(fetchUrl, {
-          headers: {
-            'User-Agent': 'DrivingTeamApp-ICS-Sync/1.0',
-            'Accept': 'text/calendar, text/plain, */*'
-          },
-          redirect: 'follow'
+      const probe = await probeIcsUrl(ics_url as string)
+      if (!probe.ok) {
+        await supabase.from('external_calendars').update({
+          consecutive_failures: (calendar.consecutive_failures ?? 0) + 1,
+          last_fetch_error: probe.message,
+          last_failure_at: new Date().toISOString(),
+        }).eq('id', calendar_id)
+
+        throw createError({
+          statusCode: 400,
+          statusMessage: probe.tip ? `${probe.message} ${probe.tip}` : probe.message,
         })
-        
-        logger.debug('ICS fetch response:', icsResponse.status, icsResponse.statusText)
-        
-        if (!icsResponse.ok) {
-          throw createError({
-            statusCode: 400,
-            statusMessage: `ICS-URL nicht erreichbar: ${icsResponse.status} ${icsResponse.statusText}. Prüfen Sie, ob die URL öffentlich zugänglich ist.`
-          })
-        }
-        
-        icsData = await icsResponse.text()
-        logger.debug('ICS data length:', icsData.length)
-        
-        if (!icsData || icsData.length < 50) {
-          throw createError({
-            statusCode: 400,
-            statusMessage: 'ICS-URL liefert keine gültigen Daten. Prüfen Sie die URL.'
-          })
-        }
-        
-      } catch (fetchErr: any) {
-        console.error('ICS fetch error:', fetchErr)
-        const errorMsg = fetchErr.statusMessage || fetchErr.message || 'URL nicht erreichbar'
-        throw createError({ 
-          statusCode: 400, 
-          statusMessage: `Fehler beim Abrufen der ICS-URL: ${errorMsg}. Stellen Sie sicher, dass die URL öffentlich zugänglich ist.`
-        })
+      }
+
+      icsData = probe.body
+
+      if (probe.url !== calendar.ics_url) {
+        await supabase
+          .from('external_calendars')
+          .update({ ics_url: probe.url })
+          .eq('id', calendar_id)
       }
     }
     

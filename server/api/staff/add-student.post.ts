@@ -199,8 +199,8 @@ export default defineEventHandler(async (event) => {
         // Format phone number (ensure +41 format)
         const formattedPhone = formatSwissPhoneNumber(body.phone)
         
-        const loginLine = loginLink ? `\n\nNach der Registrierung kannst du dich hier anmelden:\n${loginLink}` : ''
-        const message = `Hallo ${body.first_name}!\n\nWillkommen bei ${tenantName}. Vervollständige deine Registrierung unter:\n${onboardingLink}${loginLine}\n\n(Link 30 Tage gültig)\n\nFreundliche Grüße\n${tenantName}`
+        const loginLine = loginLink ? `\nDanach Login: ${loginLink}` : ''
+        const message = `Hallo ${body.first_name}! Willkommen bei ${tenantName}. Bitte Registrierung abschliessen (30 Tage gültig): ${onboardingLink}${loginLine}`
         
         await sendSMS({
           to: formattedPhone,

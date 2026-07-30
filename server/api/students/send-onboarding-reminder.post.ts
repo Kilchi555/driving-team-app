@@ -197,11 +197,12 @@ export default defineEventHandler(async (event) => {
               </p>
 
               <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                ⏰ <strong>Dieser Link ist 14 Tage gültig.</strong>
+                ⏰ <strong>Dieser Link ist 30 Tage gültig.</strong>
               </p>
 
               <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                Falls du Probleme hast oder Fragen zur Registrierung hast, kontaktiere bitte den Support von ${tenantName}.
+                Bereits registriert? Dann melde dich direkt an — du brauchst diesen Link nicht mehr.<br>
+                Falls der Link nicht funktioniert, bitte ${tenantName} um einen neuen Link.
               </p>
             </td>
           </tr>

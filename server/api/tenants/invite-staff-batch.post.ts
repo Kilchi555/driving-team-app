@@ -1,5 +1,5 @@
 // server/api/tenants/invite-staff-batch.post.ts
-// Batch-Einladung von Fahrlehrern direkt im Onboarding-Flow.
+// Batch-Einladung von Mitarbeitern (staff) direkt im Onboarding-Flow.
 // Kein JWT erforderlich – stattdessen wird geprüft, ob der Tenant
 // in den letzten 30 Minuten erstellt wurde (Anti-Abuse-Check).
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
@@ -39,13 +39,19 @@ export default defineEventHandler(async (event) => {
   // ─── Anti-Abuse: Tenant muss in den letzten 30 Min erstellt worden sein ───
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, slug, twilio_from_sender, created_at')
+    .select('id, name, slug, twilio_from_sender, created_at, business_type')
     .eq('id', tenant_id)
     .single()
 
   if (tenantError || !tenant) {
     throw createError({ statusCode: 404, statusMessage: 'Tenant nicht gefunden' })
   }
+
+  const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+  const terms = getTerminologyDefaults(tenant.business_type)
+  const tenantName = tenant.name || terms.businessNoun
+  const staffLabel = terms.staff
+  const senderName = tenant.twilio_from_sender || tenantName
 
   const tenantAge = Date.now() - new Date(tenant.created_at).getTime()
   if (tenantAge > 30 * 60 * 1000) {
@@ -92,9 +98,6 @@ export default defineEventHandler(async (event) => {
     .limit(1)
     .maybeSingle()
   const invitedBy: string | null = adminUser?.id ?? null
-
-  const tenantName  = tenant.name
-  const senderName  = tenant.twilio_from_sender || tenantName
 
   // Einladungs-Link Basis-URL
   const envBase = process.env.NUXT_PUBLIC_BASE_URL || process.env.BASE_URL
@@ -189,7 +192,7 @@ export default defineEventHandler(async (event) => {
     // ─── SMS senden ────────────────────────────────────────────────────────
     if (phone) {
       try {
-        const smsText = `Hallo ${firstName}! Willkommen bei ${tenantName}. Bitte vervollständige deine Registrierung als Fahrlehrer: ${inviteLink}`
+        const smsText = `Hallo ${firstName}! Willkommen bei ${tenantName}. Bitte vervollständige deine Registrierung als ${staffLabel}: ${inviteLink}`
         await sendSMS({ to: phone, message: smsText, senderName })
         await supabase.from('sms_logs').insert({
           to_phone: phone,
@@ -215,8 +218,8 @@ export default defineEventHandler(async (event) => {
       try {
         await sendEmail({
           to: email,
-          subject: `Einladung als Fahrlehrer – ${tenantName}`,
-          html: buildInviteEmailHtml({ firstName, lastName, tenantName, inviteLink }),
+          subject: `Einladung als ${staffLabel} – ${tenantName}`,
+          html: buildInviteEmailHtml({ firstName, lastName, tenantName, inviteLink, staffLabel }),
           senderName: tenantName
         })
         results.push({ name: `${firstName} ${lastName}`, status: 'email_sent', message: 'E-Mail gesendet', invite_link: inviteLink })
@@ -240,8 +243,8 @@ function generateToken(): string {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
-function buildInviteEmailHtml({ firstName, lastName, tenantName, inviteLink }: {
-  firstName: string; lastName: string; tenantName: string; inviteLink: string
+function buildInviteEmailHtml({ firstName, lastName, tenantName, inviteLink, staffLabel }: {
+  firstName: string; lastName: string; tenantName: string; inviteLink: string; staffLabel: string
 }): string {
   return `<!DOCTYPE html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#f4f4f4;padding:40px 0">
 <table width="600" style="background:#fff;border-radius:8px;margin:0 auto;padding:40px">
@@ -249,7 +252,7 @@ function buildInviteEmailHtml({ firstName, lastName, tenantName, inviteLink }: {
     <h1 style="color:#fff;margin:0">Willkommen im Team!</h1></td></tr>
   <tr><td style="padding:30px">
     <p>Hallo <strong>${firstName} ${lastName}</strong>,</p>
-    <p>Sie wurden als Fahrlehrer bei <strong>${tenantName}</strong> eingeladen.</p>
+    <p>Sie wurden als ${staffLabel} bei <strong>${tenantName}</strong> eingeladen.</p>
     <p style="text-align:center">
       <a href="${inviteLink}" style="background:#2563eb;color:#fff;padding:14px 36px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">Jetzt registrieren</a>
     </p>

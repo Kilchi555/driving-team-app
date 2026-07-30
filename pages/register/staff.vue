@@ -5,21 +5,21 @@
       <!-- Header + Progress (outside card) -->
       <div v-if="currentStep < STEP_LOADING" class="mb-6">
         <div class="text-center mb-4">
-          <h1 class="text-2xl font-bold text-gray-900">👨‍🏫 Fahrlehrer Registrierung</h1>
+          <h1 class="text-2xl font-bold text-gray-900">{{ labels.staff }} Registrierung</h1>
           <p class="text-sm text-gray-500 mt-1">{{ tenantName }}</p>
         </div>
         <!-- Progress bar -->
         <div class="flex items-center gap-1">
           <div
-            v-for="(s, i) in VISIBLE_STEPS"
-            :key="i"
+            v-for="(s, i) in visibleSteps"
+            :key="s.id"
             class="flex-1 h-1.5 rounded-full transition-all"
-            :style="i <= currentStep ? { background: tenantColor } : { background: '#e5e7eb' }"
+            :style="i <= visibleStepIndex ? { background: tenantColor } : { background: '#e5e7eb' }"
           ></div>
         </div>
         <div class="flex justify-between mt-1">
-          <span class="text-xs text-gray-400">Schritt {{ currentStep + 1 }} / {{ VISIBLE_STEPS.length }}</span>
-          <span class="text-xs font-medium" :style="{ color: tenantColor }">{{ VISIBLE_STEPS[currentStep]?.label }}</span>
+          <span class="text-xs text-gray-400">Schritt {{ visibleStepIndex + 1 }} / {{ visibleSteps.length }}</span>
+          <span class="text-xs font-medium" :style="{ color: tenantColor }">{{ visibleSteps[visibleStepIndex]?.label }}</span>
         </div>
       </div>
 
@@ -190,13 +190,13 @@
             </div>
           </template>
 
-          <!-- ═══ STEP 1: Profil ═══ -->
+          <!-- ═══ STEP 1: Profil / Kategorien ═══ -->
           <template v-if="currentStep === 1">
-            <h2 class="text-lg font-semibold text-gray-900">Fahrlehrer-Profil</h2>
+            <h2 class="text-lg font-semibold text-gray-900">{{ labels.staff }}-Profil</h2>
 
-            <!-- Kategorien -->
+            <!-- Kategorien (nur Fahrschule / wenn Templates vorhanden) -->
             <div v-if="availableCategories.length">
-              <label class="label mb-2">Unterrichtete Kategorien</label>
+              <label class="label mb-2">Unterrichtete {{ labels.categoriesLabel }}</label>
               <div class="grid grid-cols-2 gap-2">
                 <label
                   v-for="cat in availableCategories"
@@ -211,10 +211,11 @@
                 >
                   <input type="checkbox" :value="cat.code" v-model="form.selectedCategories">
                   <span class="font-medium">{{ cat.code }}</span>
-                  <span class="text-gray-400 text-xs truncate">{{ cat.description }}</span>
+                  <span class="text-gray-400 text-xs truncate">{{ cat.description || cat.name }}</span>
                 </label>
               </div>
             </div>
+            <p v-else class="text-sm text-gray-500">Kein weiterer Profilschritt nötig – weiter zu den Arbeitszeiten.</p>
           </template>
 
           <!-- ═══ STEP 2: Arbeitszeiten ═══ -->
@@ -256,11 +257,67 @@
 
           <!-- ═══ STEP 3: Standorte ═══ -->
           <template v-if="currentStep === 3">
-            <h2 class="text-lg font-semibold text-gray-900">Standorte</h2>
+            <h2 class="text-lg font-semibold text-gray-900">
+              {{ isDrivingSchool ? 'Standorte' : 'Wo triffst du Kunden?' }}
+            </h2>
+            <p v-if="!isDrivingSchool" class="text-sm text-gray-500">
+              Physische Treffpunkte sind optional — bei reinem Telefon-/Video-Kontakt reicht „Nur remote“.
+            </p>
 
-            <!-- Treffpunkte -->
-            <div>
-              <h3 class="text-sm font-semibold text-gray-700 mb-2">Treffpunkte / Abholorte</h3>
+            <!-- Remote-first option for non-driving-school -->
+            <div v-if="!isDrivingSchool" class="space-y-3">
+              <label
+                class="flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all"
+                :class="!form.remoteOnly ? 'border-gray-200 hover:border-gray-300' : ''"
+                :style="form.remoteOnly
+                  ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' }
+                  : {}"
+              >
+                <input type="checkbox" v-model="form.remoteOnly" class="mt-0.5"
+                  @change="onRemoteOnlyChange">
+                <div>
+                  <div class="text-sm font-medium text-gray-900">Nur remote (Telefon / Video)</div>
+                  <div class="text-xs text-gray-500 mt-0.5">Kein physischer Treffpunkt nötig — Termine finden online oder telefonisch statt.</div>
+                </div>
+              </label>
+
+              <div v-if="form.remoteOnly" class="flex flex-wrap gap-2 pl-1">
+                <span
+                  v-for="channel in remoteChannels"
+                  :key="channel.name"
+                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white"
+                  :style="{ background: tenantColor }"
+                >
+                  {{ channel.name }}
+                </span>
+              </div>
+
+              <div v-else class="space-y-2">
+                <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Schnell hinzufügen</p>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="channel in remoteChannels"
+                    :key="channel.name"
+                    type="button"
+                    @click="addRemoteChannel(channel)"
+                    class="px-3 py-1.5 text-xs font-medium rounded-full border transition-colors"
+                    :class="hasRemoteChannel(channel.name)
+                      ? 'text-white border-transparent'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'"
+                    :style="hasRemoteChannel(channel.name) ? { background: tenantColor } : {}"
+                  >
+                    {{ hasRemoteChannel(channel.name) ? '✓ ' : '+ ' }}{{ channel.name }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Physische Treffpunkte -->
+            <div v-if="!form.remoteOnly || isDrivingSchool" :class="!isDrivingSchool ? 'border-t pt-4 mt-2' : ''">
+              <h3 class="text-sm font-semibold text-gray-700 mb-2">
+                {{ isDrivingSchool ? 'Treffpunkte / Abholorte' : 'Physische Treffpunkte' }}
+                <span v-if="!isDrivingSchool" class="font-normal text-gray-400">(optional)</span>
+              </h3>
 
               <!-- Bestehende Tenant-Treffpunkte -->
               <div v-if="tenantLocations.length" class="space-y-2 mb-3">
@@ -273,7 +330,8 @@
                     ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' }
                     : {}"
                 >
-                  <input type="checkbox" :value="loc.id" v-model="form.selectedLocationIds" class="mt-0.5">
+                  <input type="checkbox" :value="loc.id" v-model="form.selectedLocationIds" class="mt-0.5"
+                    @change="onPhysicalLocationToggle">
                   <div>
                     <div class="text-sm font-medium">{{ loc.name }}</div>
                     <div class="text-xs text-gray-500">{{ loc.address }}</div>
@@ -281,22 +339,22 @@
                 </label>
               </div>
 
-              <!-- Eigene neue Treffpunkte als Tags -->
-              <div v-if="form.newLocations.length" class="flex flex-wrap gap-2 mb-3">
+              <!-- Eigene neue Treffpunkte als Tags (ohne Remote-Kanäle, die oben stehen) -->
+              <div v-if="physicalNewLocations.length" class="flex flex-wrap gap-2 mb-3">
                 <span
-                  v-for="(loc, i) in form.newLocations"
+                  v-for="(loc, i) in physicalNewLocations"
                   :key="i"
                   class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-white"
                   :style="{ background: tenantColor }"
                 >
                   {{ loc.name }}
-                  <button type="button" @click="form.newLocations.splice(i, 1)" class="ml-0.5 hover:opacity-75">×</button>
+                  <button type="button" @click="removeNewLocation(loc.name)" class="ml-0.5 hover:opacity-75">×</button>
                 </span>
               </div>
 
               <!-- Neuen Treffpunkt hinzufügen -->
               <div v-if="showNewLocationForm" class="border border-gray-200 rounded-lg p-3 space-y-2 mb-2">
-                <input v-model="newLocationName" type="text" placeholder="Name (z.B. Bahnhof Zürich HB)" class="input text-sm">
+                <input v-model="newLocationName" type="text" :placeholder="isDrivingSchool ? 'Name (z.B. Bahnhof Zürich HB)' : 'Name (z.B. Büro Zürich)'" class="input text-sm">
                 <input v-model="newLocationAddress" type="text" placeholder="Adresse (z.B. Bahnhofplatz 1, 8001 Zürich)" class="input text-sm">
                 <div class="flex gap-2">
                   <button
@@ -321,8 +379,8 @@
               </button>
             </div>
 
-            <!-- Prüfungsorte mit Suche -->
-            <div class="border-t pt-4">
+            <!-- Prüfungsorte (nur Fahrschule) -->
+            <div v-if="isDrivingSchool" class="border-t pt-4">
               <h3 class="text-sm font-semibold text-gray-700 mb-1">Prüfungsorte</h3>
               <p class="text-xs text-gray-500 mb-3">Suche und wähle die Prüfungsorte, an denen du Prüfungen abnimmst.</p>
 
@@ -444,10 +502,15 @@
                 <div>
                   <label class="label">ICS-URL einfügen</label>
                   <input v-model="form.externalCalendarUrl" type="url" class="input"
-                    :placeholder="form.externalCalendarProvider === 'apple' ? 'https://p123-caldav.icloud.com/published/...' : form.externalCalendarProvider === 'google' ? 'https://calendar.google.com/calendar/ical/.../basic.ics' : 'https://...ics'"
-                    @blur="normalizeCalendarUrl">
-                  <p v-if="form.externalCalendarUrl && form.externalCalendarUrl.startsWith('https://')" class="text-xs text-green-600 mt-1">
-                    ✓ URL wird automatisch verwendet
+                    :placeholder="form.externalCalendarProvider === 'apple' ? 'webcal://p123-caldav.icloud.com/published/...' : form.externalCalendarProvider === 'google' ? 'https://calendar.google.com/calendar/ical/.../basic.ics' : 'https://...ics'"
+                    @blur="normalizeCalendarUrl"
+                    @input="onExternalCalendarUrlInput">
+                  <p v-if="externalCalendarUrlHint?.ok" class="text-xs text-green-600 mt-1">
+                    ✓ {{ externalCalendarUrlHint.message }}
+                  </p>
+                  <p v-else-if="externalCalendarUrlHint && !externalCalendarUrlHint.ok" class="text-xs text-red-600 mt-1">
+                    {{ externalCalendarUrlHint.message }}
+                    <span v-if="externalCalendarUrlHint.tip" class="block mt-0.5 text-red-500">{{ externalCalendarUrlHint.tip }}</span>
                   </p>
                 </div>
               </div>
@@ -456,12 +519,12 @@
             <!-- Eigener Kalender-Link (Vorschau) -->
             <div class="bg-gray-50 border rounded-lg p-4 mt-2">
               <p class="text-sm font-semibold text-gray-700 mb-1">📅 Dein persönlicher Simy-Kalender-Link</p>
-              <p class="text-xs text-gray-500">Nach der Registrierung erhältst du einen ICS-Link, den du in deiner Kalender-App als Abo eintragen kannst. So siehst du alle deine Fahrstunden direkt in deiner eigenen Kalender-App (Apple, Google, Outlook, etc.).</p>
+              <p class="text-xs text-gray-500">Nach der Registrierung erhältst du einen ICS-Link, den du in deiner Kalender-App als Abo eintragen kannst. So siehst du alle deine {{ labels.appointmentsPlural }} direkt in deiner eigenen Kalender-App (Apple, Google, Outlook, etc.).</p>
               <p class="text-xs mt-2 font-medium" :style="{ color: tenantColor }">→ Wird auf der Bestätigungsseite angezeigt</p>
             </div>
           </template>
 
-          <!-- ═══ STEP 5: Dokumente ═══ -->
+          <!-- ═══ STEP 5: Dokumente (nur Fahrschule) ═══ -->
           <template v-if="currentStep === 5">
             <h2 class="text-lg font-semibold text-gray-900">Dokumente</h2>
             <p class="text-sm text-gray-500">Lade deinen Führerausweis hoch (Vorderseite erforderlich).</p>
@@ -586,9 +649,9 @@
           <!-- Navigation -->
           <div class="flex justify-between items-center pt-5 mt-2 border-t gap-3">
             <button
-              v-if="currentStep > 0"
+              v-if="visibleStepIndex > 0"
               type="button"
-              @click="currentStep--"
+              @click="previousStep"
               class="px-5 py-3 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors whitespace-nowrap flex-shrink-0"
             >← Zurück</button>
             <div v-else></div>
@@ -628,6 +691,9 @@ import { useRoute, useRouter } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { saveCredentials } from '~/utils/save-credentials'
+import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
+import { getWorkingDaysTemplateDefaults, workingDaysTemplateToForm } from '~/utils/workingDaysTemplate'
+import { inspectIcsUrlShape, normalizeIcsUrl } from '~/utils/ics-url'
 
 const route              = useRoute()
 const router             = useRouter()
@@ -637,15 +703,6 @@ const { loadTenantBranding } = useTenantBranding()
 // ─── Constants ──────────────────────────────────────────────────────────────
 const STEP_LOADING = 7
 const STEP_SUCCESS = 8
-const VISIBLE_STEPS = [
-  { label: 'Basisdaten' },
-  { label: 'Profil' },
-  { label: 'Arbeitszeiten' },
-  { label: 'Standorte' },
-  { label: 'Kalender' },
-  { label: 'Dokumente' },
-  { label: 'Passwort' },
-]
 
 const weekDays = [
   { value: 1, short: 'Mo' }, { value: 2, short: 'Di' }, { value: 3, short: 'Mi' },
@@ -669,20 +726,98 @@ const autoLoginFailed    = ref(false)
 const tenantName         = ref('')
 const tenantSlugRef      = ref('')
 const tenantColor        = ref('#7C3AED')
+const businessType       = ref('driving_school')
+const tenantUiLabels     = ref<Record<string, string>>({})
 const availableCategories  = ref<any[]>([])
 const tenantLocations      = ref<any[]>([])
 const tenantExamLocations  = ref<any[]>([]) // global exam locations (tenant_id = null)
 const affiliateEnabled     = ref(false)
+
+// Branch-aware wording (staff / categories / appointments …)
+const isDrivingSchool = computed(() => businessType.value === 'driving_school')
+const labels = computed((): Terminology => {
+  const fallback = getTerminologyDefaults(businessType.value)
+  const merged = { ...fallback }
+  for (const key of Object.keys(fallback) as (keyof Terminology)[]) {
+    const dbValue = tenantUiLabels.value[key]
+    if (typeof dbValue === 'string' && dbValue.trim()) merged[key] = dbValue
+  }
+  return merged
+})
+
+// Categories only for driving schools with templates; Führerausweis only for driving schools.
+const allStepDefs = computed(() => [
+  { id: 0, label: 'Basisdaten', skip: false },
+  { id: 1, label: labels.value.categoriesLabel, skip: !isDrivingSchool.value || availableCategories.value.length === 0 },
+  { id: 2, label: 'Arbeitszeiten', skip: false },
+  { id: 3, label: isDrivingSchool.value ? 'Standorte' : 'Treffpunkte', skip: false },
+  { id: 4, label: 'Kalender', skip: false },
+  { id: 5, label: 'Dokumente', skip: !isDrivingSchool.value },
+  { id: 6, label: 'Passwort', skip: false },
+])
+const visibleSteps = computed(() => allStepDefs.value.filter(s => !s.skip))
+const visibleStepIndex = computed(() => {
+  const idx = visibleSteps.value.findIndex(s => s.id === currentStep.value)
+  return idx >= 0 ? idx : 0
+})
+const stepIsSkipped = (id: number) => !!allStepDefs.value.find(s => s.id === id)?.skip
 
 // New meetup location form state
 const showNewLocationForm  = ref(false)
 const newLocationName      = ref('')
 const newLocationAddress   = ref('')
 
+const remoteChannels = [
+  { name: 'Telefon', address: 'Remote / Telefon' },
+  { name: 'Video-Call', address: 'Remote / Video (Zoom, Teams, …)' },
+] as const
+
+const isRemoteChannelName = (name: string) =>
+  remoteChannels.some(c => c.name === name)
+
+const hasRemoteChannel = (name: string) =>
+  form.newLocations.some(l => l.name === name)
+
+const physicalNewLocations = computed(() =>
+  form.newLocations.filter(l => !isRemoteChannelName(l.name))
+)
+
+const removeNewLocation = (name: string) => {
+  const idx = form.newLocations.findIndex(l => l.name === name)
+  if (idx >= 0) form.newLocations.splice(idx, 1)
+}
+
+const addRemoteChannel = (channel: { name: string; address: string }) => {
+  if (hasRemoteChannel(channel.name)) {
+    removeNewLocation(channel.name)
+    return
+  }
+  form.remoteOnly = false
+  form.newLocations.push({ name: channel.name, address: channel.address })
+}
+
+const onRemoteOnlyChange = () => {
+  if (!form.remoteOnly) return
+  form.selectedLocationIds = []
+  showNewLocationForm.value = false
+  // Keep only remote channels; ensure at least Telefon + Video-Call
+  form.newLocations = form.newLocations.filter(l => isRemoteChannelName(l.name))
+  for (const channel of remoteChannels) {
+    if (!hasRemoteChannel(channel.name)) {
+      form.newLocations.push({ name: channel.name, address: channel.address })
+    }
+  }
+}
+
+const onPhysicalLocationToggle = () => {
+  if (form.selectedLocationIds.length > 0) form.remoteOnly = false
+}
+
 const addNewLocation = () => {
   const name    = newLocationName.value.trim()
   const address = newLocationAddress.value.trim()
   if (!name || !address) return
+  form.remoteOnly = false
   form.newLocations.push({ name, address })
   newLocationName.value    = ''
   newLocationAddress.value = ''
@@ -737,9 +872,8 @@ const isDraggingFront    = ref(false)
 const isDraggingBack     = ref(false)
 
 // ─── Form ────────────────────────────────────────────────────────────────────
-const defaultWorkingDays = () => Object.fromEntries(
-  weekDays.map(d => [d.value, { active: d.value <= 5, start: '07:00', end: '18:00' }])
-)
+const defaultWorkingDays = (businessType?: string | null) =>
+  workingDaysTemplateToForm(getWorkingDaysTemplateDefaults(businessType))
 
 const form = reactive({
   // Step 0
@@ -747,9 +881,10 @@ const form = reactive({
   street: '', streetNr: '', zip: '', city: '',
   // Step 1
   selectedCategories: [] as string[],
-  // Step 2
+  // Step 2 — overwritten from tenant template / business_type after invitation load
   workingDays: defaultWorkingDays() as Record<number, { active: boolean; start: string; end: string }>,
   // Step 3
+  remoteOnly: false,
   selectedLocationIds: [] as string[],
   selectedExamLocationIds: [] as string[], // kept for backward compat
   selectedExamLocations: [] as any[],      // full objects for global exam locations
@@ -853,22 +988,28 @@ const canProceed = computed(() => {
         staffEmailCheck.value === 'available'
       )
     case 1:
-      // At least one category selected (skip if none available)
+      // At least one category selected (step is skipped when none available)
       return availableCategories.value.length === 0 || form.selectedCategories.length > 0
     case 2:
       // At least one working day active
       return Object.values(form.workingDays).some(d => d.active)
     case 3: {
-      const hasLocation     = tenantLocations.value.length === 0 || form.selectedLocationIds.length > 0 || form.newLocations.length > 0
-      const hasExamLocation = tenantExamLocations.value.length === 0 || form.selectedExamLocations.length > 0
+      // Non-driving-school: remote-only OR any physical/virtual meetup is enough
+      const hasLocation = isDrivingSchool.value
+        ? (tenantLocations.value.length === 0 || form.selectedLocationIds.length > 0 || form.newLocations.length > 0)
+        : (form.remoteOnly || form.selectedLocationIds.length > 0 || form.newLocations.length > 0)
+      // Exam locations only required for driving schools
+      const hasExamLocation = !isDrivingSchool.value ||
+        tenantExamLocations.value.length === 0 ||
+        form.selectedExamLocations.length > 0
       return hasLocation && hasExamLocation
     }
     case 4:
       // Calendar connection is fully optional – always allow proceeding
       return true
     case 5:
-      // Front side of license required
-      return !!licenseFrontFile.value
+      // Front side of license required (step skipped for non-driving-school)
+      return !isDrivingSchool.value || !!licenseFrontFile.value
     case 6:
       return passwordIsValid.value &&
              form.password === form.confirmPassword &&
@@ -908,24 +1049,21 @@ const loadInvitation = async () => {
     tenantName.value          = response.tenant?.name || ''
     tenantSlugRef.value       = response.tenant?.slug || ''
     tenantColor.value         = response.tenant?.primary_color || '#7C3AED'
+    businessType.value        = response.tenant?.business_type || 'driving_school'
+    tenantUiLabels.value      = response.ui_labels || {}
     availableCategories.value = response.categories   || []
     tenantLocations.value     = response.locations    || []
     tenantExamLocations.value = response.examLocations || []
     affiliateEnabled.value    = response.affiliateEnabled || false
 
-    // Apply tenant working hours template if available
-    if (response.tenant?.working_days_template) {
-      const tpl = response.tenant.working_days_template
-      if (Array.isArray(tpl.days)) {
-        Object.keys(form.workingDays).forEach(d => {
-          form.workingDays[+d].active = tpl.days.includes(+d)
-          // Per-day overrides take priority over global start/end
-          const daySchedule = tpl.schedule?.[d]
-          form.workingDays[+d].start = daySchedule?.start ?? tpl.start_time ?? '07:00'
-          form.workingDays[+d].end   = daySchedule?.end   ?? tpl.end_time   ?? '19:00'
-        })
-      }
-    }
+    // Apply working hours: tenant template (set at registration from the
+    // business_type preset) wins; otherwise fall back to the branch default.
+    const tpl = response.tenant?.working_days_template
+      || getWorkingDaysTemplateDefaults(businessType.value, response.working_days_defaults)
+    const applied = workingDaysTemplateToForm(tpl)
+    Object.keys(applied).forEach(d => {
+      form.workingDays[+d] = applied[+d]
+    })
 
   } catch (err: any) {
     if (!loadError.value) loadError.value = 'Fehler beim Laden der Einladung'
@@ -938,9 +1076,17 @@ const loadInvitation = async () => {
 const nextStep = async () => {
   if (currentStep.value === 6) {
     await submit()
-  } else {
-    currentStep.value++
+    return
   }
+  let next = currentStep.value + 1
+  while (next < STEP_LOADING && stepIsSkipped(next)) next++
+  currentStep.value = next
+}
+
+const previousStep = () => {
+  let prev = currentStep.value - 1
+  while (prev >= 0 && stepIsSkipped(prev)) prev--
+  if (prev >= 0) currentStep.value = prev
 }
 
 // Form submit handler — called by type="submit" button on final step
@@ -960,6 +1106,18 @@ const submit = async () => {
       .filter(([, v]) => v.active)
       .map(([day, v]) => ({ day_of_week: +day, start_time: v.start, end_time: v.end }))
 
+    // Remote-only staff: ensure Telefon/Video locations exist for booking
+    let locationIds = [...form.selectedLocationIds]
+    let locationsToCreate = [...form.newLocations]
+    if (form.remoteOnly && !isDrivingSchool.value) {
+      locationIds = []
+      for (const channel of remoteChannels) {
+        if (!locationsToCreate.some(l => l.name === channel.name)) {
+          locationsToCreate.push({ name: channel.name, address: channel.address })
+        }
+      }
+    }
+
     const response = await $fetch<any>('/api/staff/register', {
       method: 'POST',
       body: {
@@ -977,8 +1135,8 @@ const submit = async () => {
         selectedCategories:    form.selectedCategories,
         acceptedTerms:         form.acceptedTerms,
         workingHours,
-        selectedLocationIds:      form.selectedLocationIds,
-        newLocations:             form.newLocations,
+        selectedLocationIds:      locationIds,
+        newLocations:             locationsToCreate,
         selectedExamLocationIds:  form.selectedExamLocations.map((l: any) => l.id),
       }
     })
@@ -1018,23 +1176,24 @@ const submit = async () => {
       }
     }
 
-    // Connect external calendar after login
+    // Connect external calendar after login (only if URL shape looks like an ICS feed)
     if (loginOk && form.externalCalendarProvider && form.externalCalendarUrl) {
       try {
-        const normalizedUrl = form.externalCalendarUrl
-          .replace(/^webcal:\/\//i, 'https://')
-          .replace(/^http:\/\//i, 'https://')
-        await $fetch('/api/staff/external-calendars', {
-          method: 'POST',
-          body: {
-            action: 'connect',
-            data: {
-              provider: form.externalCalendarProvider,
-              ics_url: normalizedUrl,
+        const normalizedUrl = normalizeIcsUrl(form.externalCalendarUrl)
+        const shape = inspectIcsUrlShape(normalizedUrl)
+        if (shape.ok) {
+          await $fetch('/api/staff/external-calendars', {
+            method: 'POST',
+            body: {
+              action: 'connect',
+              data: {
+                provider: form.externalCalendarProvider === 'outlook' ? 'microsoft' : form.externalCalendarProvider,
+                ics_url: shape.url,
+              }
             }
-          }
-        })
-      } catch { /* non-fatal */ }
+          })
+        }
+      } catch { /* non-fatal — user can reconnect in settings */ }
     }
 
     currentStep.value = STEP_SUCCESS
@@ -1047,12 +1206,35 @@ const submit = async () => {
 }
 
 // Auto-normalize calendar URL: webcal:// and http:// → https://
+const externalCalendarUrlHint = ref<{ ok: boolean; message: string; tip?: string } | null>(null)
+
+const refreshExternalCalendarUrlHint = () => {
+  if (!form.externalCalendarUrl?.trim()) {
+    externalCalendarUrlHint.value = null
+    return
+  }
+  const shape = inspectIcsUrlShape(form.externalCalendarUrl)
+  if (!shape.ok) {
+    externalCalendarUrlHint.value = { ok: false, message: shape.message, tip: shape.tip }
+    return
+  }
+  externalCalendarUrlHint.value = {
+    ok: true,
+    message: 'URL-Format OK — wird nach der Registrierung verbunden und geprüft.',
+  }
+}
+
+const onExternalCalendarUrlInput = () => {
+  refreshExternalCalendarUrlHint()
+}
+
 const normalizeCalendarUrl = () => {
-  if (!form.externalCalendarUrl) return
-  form.externalCalendarUrl = form.externalCalendarUrl
-    .trim()
-    .replace(/^webcal:\/\//i, 'https://')
-    .replace(/^http:\/\//i, 'https://')
+  if (!form.externalCalendarUrl) {
+    externalCalendarUrlHint.value = null
+    return
+  }
+  form.externalCalendarUrl = normalizeIcsUrl(form.externalCalendarUrl)
+  refreshExternalCalendarUrlHint()
 }
 
 // ─── Dashboard redirect ───────────────────────────────────────────────────────

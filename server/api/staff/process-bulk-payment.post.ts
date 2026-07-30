@@ -5,13 +5,14 @@ import logger from '~/utils/logger'
 
 /**
  * ✅ POST /api/staff/process-bulk-payment
- * 
- * Secure API to process multiple payments in bulk (mark as cash or online)
- * 
+ *
+ * Secure API to process multiple payments in bulk
+ *
  * Body:
  *   - payment_ids (required): Array of Payment IDs
- *   - method (required): 'cash' or 'online'
- * 
+ *   - method (required): 'cash' | 'online' | 'credit'
+ *   - partial_amount_rappen (optional): for cash partial payments
+ *
  * Security Layers:
  *   1. Bearer Token Authentication
  *   2. Tenant Isolation
@@ -70,10 +71,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (!['cash', 'online'].includes(method)) {
+    if (!['cash', 'online', 'credit'].includes(method)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Method must be "cash" or "online"'
+        statusMessage: 'Method must be "cash", "online", or "credit"'
       })
     }
 
@@ -116,12 +117,192 @@ export default defineEventHandler(async (event) => {
       return { ...p, due_rappen: remaining, already_paid_rappen: alreadyPaid, full_due_rappen: fullDue, metadata: p.metadata || {} }
     })
 
-    // Distribute partial payment if provided
+    const totalDueRappen = paymentDues.reduce((sum: number, p: any) => sum + p.due_rappen, 0)
+
+    // ── CREDIT: apply student wallet balance to selected open payments ──────
+    if (method === 'credit') {
+      const studentUserId = (allPayments as any[])[0]?.user_id
+      if (!studentUserId) {
+        throw createError({ statusCode: 400, statusMessage: 'No student on selected payments' })
+      }
+      if ((allPayments as any[]).some((p: any) => p.user_id !== studentUserId)) {
+        throw createError({ statusCode: 400, statusMessage: 'Selected payments must belong to the same student' })
+      }
+
+      const openStatuses = new Set(['pending', 'partial', 'processing'])
+      const eligible = paymentDues
+        .filter((p: any) => openStatuses.has(p.payment_status) && p.due_rappen > 0)
+        .sort((a: any, b: any) => a.due_rappen - b.due_rappen)
+
+      if (eligible.length === 0) {
+        throw createError({ statusCode: 400, statusMessage: 'Keine offenen Zahlungen zum Verrechnen' })
+      }
+
+      const { data: creditRow } = await supabaseAdmin
+        .from('student_credits')
+        .select('id, balance_rappen, pending_withdrawal_rappen')
+        .eq('user_id', studentUserId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+
+      const rawBalance = creditRow?.balance_rappen || 0
+      const frozen = creditRow?.pending_withdrawal_rappen || 0
+      let remainingCredit = Math.max(0, rawBalance - frozen)
+
+      if (remainingCredit <= 0) {
+        throw createError({ statusCode: 400, statusMessage: 'Kein verfügbares Guthaben' })
+      }
+
+      const now = new Date().toISOString()
+      const results: any[] = []
+      let totalCreditApplied = 0
+      let runningBalance = rawBalance
+
+      for (const p of eligible) {
+        if (remainingCredit <= 0) {
+          results.push({ payment_id: p.id, success: true, skipped: true })
+          continue
+        }
+
+        const apply = Math.min(p.due_rappen, remainingCredit)
+        if (apply <= 0) {
+          results.push({ payment_id: p.id, success: true, skipped: true })
+          continue
+        }
+
+        const newCreditUsed = (p.credit_used_rappen || 0) + apply
+        const fullyCovered = apply >= p.due_rappen
+        const balanceBefore = runningBalance
+        const balanceAfter = runningBalance - apply
+
+        try {
+          const updateData: any = {
+            credit_used_rappen: newCreditUsed,
+            updated_at: now
+          }
+
+          if (fullyCovered) {
+            updateData.payment_status = 'completed'
+            updateData.payment_method = 'credit'
+            updateData.paid_at = now
+          }
+
+          const { error: updateError } = await supabaseAdmin
+            .from('payments')
+            .update(updateData)
+            .eq('id', p.id)
+            .eq('tenant_id', tenantId)
+
+          if (updateError) throw updateError
+
+          const { data: tx, error: txErr } = await supabaseAdmin
+            .from('credit_transactions')
+            .insert({
+              user_id: studentUserId,
+              tenant_id: tenantId,
+              transaction_type: 'appointment_payment',
+              amount_rappen: -apply,
+              balance_before_rappen: balanceBefore,
+              balance_after_rappen: balanceAfter,
+              payment_method: 'credit',
+              reference_id: p.appointment_id || p.id,
+              reference_type: p.appointment_id ? 'appointment' : 'payment',
+              created_by: userProfile.id,
+              notes: `Guthaben für Zahlung (Payment ${p.id})`,
+              status: 'completed',
+              created_at: now
+            })
+            .select('id')
+            .single()
+
+          if (txErr) {
+            logger.warn(`⚠️ Credit transaction log failed for ${p.id}:`, txErr)
+          } else if (tx?.id) {
+            await supabaseAdmin
+              .from('payments')
+              .update({ credit_transaction_id: tx.id })
+              .eq('id', p.id)
+          }
+
+          if (fullyCovered && p.appointment_id) {
+            await supabaseAdmin
+              .from('appointments')
+              .update({ status: 'confirmed' })
+              .eq('id', p.appointment_id)
+              .eq('status', 'pending_confirmation')
+              .eq('tenant_id', tenantId)
+
+            $fetch('/api/affiliate/process-reward', {
+              method: 'POST',
+              headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
+              body: {
+                appointment_id: p.appointment_id,
+                user_id: studentUserId,
+                tenant_id: tenantId,
+                driving_category: (p.appointments as any)?.type ?? null
+              }
+            }).catch((err: any) =>
+              logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
+            )
+          }
+
+          remainingCredit -= apply
+          runningBalance = balanceAfter
+          totalCreditApplied += apply
+          results.push({
+            payment_id: p.id,
+            success: true,
+            status: fullyCovered ? 'completed' : 'partial',
+            credit_applied_rappen: apply
+          })
+        } catch (paymentError: any) {
+          logger.error(`❌ Credit apply failed for payment ${p.id}:`, paymentError)
+          results.push({ payment_id: p.id, success: false, error: paymentError.message })
+        }
+      }
+
+      if (totalCreditApplied > 0) {
+        const newBalance = rawBalance - totalCreditApplied
+        if (creditRow?.id) {
+          const { error: creditErr } = await supabaseAdmin
+            .from('student_credits')
+            .update({ balance_rappen: newBalance, updated_at: now })
+            .eq('id', creditRow.id)
+          if (creditErr) {
+            logger.error('❌ Failed to update student credit after bulk apply:', creditErr)
+            throw createError({ statusCode: 500, statusMessage: 'Guthaben konnte nicht aktualisiert werden' })
+          }
+        } else {
+          throw createError({ statusCode: 500, statusMessage: 'Guthaben-Konto fehlt' })
+        }
+      }
+
+      const successCount = results.filter(r => r.success && !r.skipped).length
+      logger.debug('✅ Bulk credit payment completed:', {
+        userId: userProfile.id,
+        tenantId,
+        totalCreditApplied,
+        successCount
+      })
+
+      return {
+        success: true,
+        results,
+        credit_used_rappen: totalCreditApplied,
+        credit_remaining_rappen: Math.max(0, rawBalance - totalCreditApplied - frozen),
+        summary: {
+          total: payment_ids.length,
+          successful: successCount,
+          failed: results.filter(r => !r.success).length,
+          skipped: results.filter(r => r.skipped).length
+        }
+      }
+    }
+
+    // Distribute partial payment if provided (cash / online)
     let remainingRappen = (typeof partial_amount_rappen === 'number' && partial_amount_rappen > 0)
       ? partial_amount_rappen
       : null
-
-    const totalDueRappen = paymentDues.reduce((sum: number, p: any) => sum + p.due_rappen, 0)
 
     // Sort by remaining due ascending so cheapest appointments are covered first
     const sortedPayments = remainingRappen !== null

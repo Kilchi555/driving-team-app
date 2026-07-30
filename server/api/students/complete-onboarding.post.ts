@@ -23,7 +23,8 @@ export default defineEventHandler(async (event) => {
       })
       throw createError({
         statusCode: 400,
-        message: 'Missing required fields: token, password, and email are required'
+        statusMessage: 'E-Mail und Passwort sind erforderlich.',
+        message: 'E-Mail und Passwort sind erforderlich.',
       })
     }
 
@@ -32,7 +33,8 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Complete onboarding: Invalid email format', { email })
       throw createError({
         statusCode: 400,
-        message: 'Invalid email format'
+        statusMessage: 'Bitte gib eine gültige E-Mail-Adresse ein.',
+        message: 'Bitte gib eine gültige E-Mail-Adresse ein.',
       })
     }
 
@@ -58,14 +60,16 @@ export default defineEventHandler(async (event) => {
     if (firstName && firstName.length > 100) {
       throw createError({
         statusCode: 400,
-        message: 'First name is too long'
+        statusMessage: 'Vorname ist zu lang (max. 100 Zeichen).',
+        message: 'Vorname ist zu lang (max. 100 Zeichen).',
       })
     }
 
     if (lastName && lastName.length > 100) {
       throw createError({
         statusCode: 400,
-        message: 'Last name is too long'
+        statusMessage: 'Nachname ist zu lang (max. 100 Zeichen).',
+        message: 'Nachname ist zu lang (max. 100 Zeichen).',
       })
     }
 
@@ -84,7 +88,8 @@ export default defineEventHandler(async (event) => {
       })
       throw createError({
         statusCode: 429,
-        message: `Too many attempts. Please try again in ${rateLimitResult.retryAfter} seconds.`,
+        statusMessage: `Zu viele Versuche. Bitte warte ${rateLimitResult.retryAfter} Sekunden und versuche es erneut.`,
+        message: `Zu viele Versuche. Bitte warte ${rateLimitResult.retryAfter} Sekunden und versuche es erneut.`,
         data: { retryAfter: rateLimitResult.retryAfter * 1000 }
       })
     }
@@ -108,7 +113,8 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Complete onboarding: User lookup error', { error: userError.message })
       throw createError({
         statusCode: 400,
-        message: `User lookup failed: ${userError.message}`
+        statusMessage: 'Dieser Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.',
+        message: 'Dieser Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.',
       })
     }
 
@@ -116,7 +122,8 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Complete onboarding: User not found with token')
       throw createError({
         statusCode: 400,
-        message: 'Invalid or expired token'
+        statusMessage: 'Dieser Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.',
+        message: 'Dieser Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.',
       })
     }
 
@@ -128,7 +135,8 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Complete onboarding: Token expired', { userId: user.id })
       throw createError({
         statusCode: 400,
-        message: 'Token has expired'
+        statusMessage: 'Dieser Registrierungslink ist abgelaufen. Bitte fordere einen neuen Link an.',
+        message: 'Dieser Registrierungslink ist abgelaufen. Bitte fordere einen neuen Link an.',
       })
     }
 
@@ -509,17 +517,75 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     logger.error('❌ Complete onboarding error:', { 
       message: error.message, 
+      statusMessage: error.statusMessage,
       statusCode: error.statusCode 
     })
     
     const statusCode = error.statusCode || 500
-    const statusMessage = error.statusMessage || 'Onboarding completion failed'
+    // Prefer the concrete German message from createError; never leak the English fallback
+    // when a nested throw used `message` instead of `statusMessage`.
+    const rawMessage =
+      error.statusMessage ||
+      error.message ||
+      'Die Registrierung konnte nicht abgeschlossen werden. Bitte versuche es erneut oder kontaktiere deine Fahrschule.'
+
+    // Map leftover English / technical messages to clear German UX copy
+    const statusMessage = humanizeOnboardingError(rawMessage, statusCode)
     
     throw createError({
       statusCode,
       statusMessage,
-      data: error.data
+      message: statusMessage,
+      data: {
+        ...(error.data || {}),
+        tip: onboardingErrorTip(statusMessage, statusCode),
+      },
     })
   }
 })
 
+function humanizeOnboardingError(raw: string, statusCode: number): string {
+  const msg = (raw || '').trim()
+  const lower = msg.toLowerCase()
+
+  if (lower.includes('onboarding completion failed')) {
+    return 'Die Registrierung konnte nicht abgeschlossen werden. Bitte versuche es erneut.'
+  }
+  if (lower.includes('missing required') || lower.includes('invalid email')) {
+    return 'Bitte prüfe E-Mail und Passwort und versuche es erneut.'
+  }
+  if (lower.includes('invalid or expired') || lower.includes('token has expired') || lower.includes('user lookup failed') || lower.includes('user not found')) {
+    return 'Dieser Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.'
+  }
+  if (lower.includes('too many attempts')) {
+    return 'Zu viele Versuche. Bitte warte kurz und versuche es danach erneut.'
+  }
+  if (lower.includes('already') && (lower.includes('registered') || lower.includes('konto') || lower.includes('email'))) {
+    return msg.includes('Bitte') ? msg : 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich direkt an.'
+  }
+  if (statusCode >= 500 && (/^[A-Za-z0-9_:\-\s.]+$/.test(msg) && !/[äöüÄÖÜß]/.test(msg))) {
+    // Likely an English/technical 500 — don't show it raw
+    return 'Ein technischer Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere deine Fahrschule.'
+  }
+  return msg
+}
+
+function onboardingErrorTip(message: string, statusCode: number): string | undefined {
+  const lower = (message || '').toLowerCase()
+  if (lower.includes('bereits') || lower.includes('anmelden')) {
+    return 'Falls du dich schon registriert hast: nutze «Zum Login». Ansonsten verwende eine andere E-Mail-Adresse.'
+  }
+  if (lower.includes('abgelaufen') || lower.includes('ungültig') || lower.includes('neuen link')) {
+    return 'Bitte deine Fahrschule um einen neuen SMS- oder E-Mail-Link — oder nutze «Neuen Link zusenden» auf dieser Seite.'
+  }
+  if (lower.includes('passwort')) {
+    return 'Wähle ein Passwort mit mindestens 12 Zeichen, das noch nicht geleakt wurde.'
+  }
+  if (statusCode === 429) {
+    return 'Aus Sicherheitsgründen sind nur wenige Versuche pro Stunde erlaubt.'
+  }
+  if (statusCode >= 500) {
+    return 'Wenn es erneut fehlschlägt, melde dich bei deiner Fahrschule — sie kann den Link neu senden.'
+  }
+  return undefined
+}

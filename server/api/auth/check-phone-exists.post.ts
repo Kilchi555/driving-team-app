@@ -47,8 +47,8 @@ export default defineEventHandler(async (event) => {
 
     const user = users[0]
 
-    // Pending = client role, no auth_user_id, has onboarding token
-    const isPending = user.role === 'client' && !user.auth_user_id && !!user.onboarding_token
+    // Pending = client without login yet (SMS invite, guest booking, admin add, …)
+    const isPending = user.role === 'client' && !user.auth_user_id
     // Active = has auth_user_id (any role)
     const isActive = !!user.auth_user_id
     // Staff/admin = non-client role

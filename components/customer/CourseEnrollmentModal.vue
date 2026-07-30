@@ -775,8 +775,8 @@ const emit = defineEmits(['close', 'enrolled'])
 // Tenant hooks
 const { tenantPrimaryColor } = useTenant()
 const { walleeEnabled: walleeEnabledFromStore, loadWalleeStatus } = useWalleeStatus()
-const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer')
-const { invoiceEnabled } = useInvoicePaymentSettings()
+const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer', () => props.tenantSlug)
+const { invoiceEnabled } = useInvoicePaymentSettings(() => props.tenantSlug)
 
 // Prefer the prop value (from public API) over the store value to avoid an auth-required
 // API call that would redirect unauthenticated public users.

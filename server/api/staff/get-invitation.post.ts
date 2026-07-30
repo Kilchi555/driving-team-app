@@ -98,14 +98,34 @@ export default defineEventHandler(async (event) => {
       .eq('is_active', true)
       .order('name')
 
-    // Get global exam locations (Prüfungsorte – tenant_id = null, searchable by staff)
-    const { data: examLocations } = await supabase
-      .from('locations')
-      .select('id, name, address, city, canton, postal_code, location_type')
-      .is('tenant_id', null)
-      .eq('location_type', 'exam')
-      .eq('is_active', true)
-      .order('name')
+    // Exam locations are a driving_school concept (Führerscheinprüfungen)
+    let examLocations: any[] = []
+    if (tenant?.business_type === 'driving_school') {
+      const { data: exams } = await supabase
+        .from('locations')
+        .select('id, name, address, city, canton, postal_code, location_type')
+        .is('tenant_id', null)
+        .eq('location_type', 'exam')
+        .eq('is_active', true)
+        .order('name')
+      examLocations = exams || []
+    }
+
+    // Branch-aware UI labels + working-hours defaults from business_type_presets
+    // (tenant has no auth session yet during staff invite registration).
+    let ui_labels: Record<string, string> = {}
+    let working_days_defaults: any = null
+    if (tenant?.business_type) {
+      const { data: preset } = await supabase
+        .from('business_type_presets')
+        .select('ui_labels, defaults')
+        .eq('business_type_code', tenant.business_type)
+        .maybeSingle()
+      if (preset?.ui_labels && typeof preset.ui_labels === 'object') {
+        ui_labels = preset.ui_labels as Record<string, string>
+      }
+      working_days_defaults = (preset?.defaults as any)?.working_days_template || null
+    }
 
     // Check if affiliate is enabled for this tenant
     const { data: affiliateSetting } = await supabase
@@ -124,8 +144,10 @@ export default defineEventHandler(async (event) => {
       tenant,
       categories,
       locations: locations || [],
-      examLocations: examLocations || [],
-      affiliateEnabled
+      examLocations,
+      affiliateEnabled,
+      ui_labels,
+      working_days_defaults
     }
 
   } catch (error: any) {
