@@ -139,19 +139,23 @@
               </div>
 
               <div class="mb-3">
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                   <button
-                    v-for="rating in [1, 2, 3, 4, 5, 6]"
-                    :key="rating"
-                    @click="setCriteriaRating(criteriaId, rating)"
+                    v-for="scaleItem in evaluationScale"
+                    :key="scaleItem.rating"
+                    @click="setCriteriaRating(criteriaId, scaleItem.rating)"
                     :class="[
                       'w-10 h-10 rounded-full text-sm font-semibold transition-all',
-                      getCriteriaRating(criteriaId) === rating
-                        ? getRatingColorClass(rating, true)
+                      getCriteriaRating(criteriaId) === scaleItem.rating
+                        ? 'text-white shadow-sm'
                         : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                     ]"
+                    :style="getCriteriaRating(criteriaId) === scaleItem.rating
+                      ? { backgroundColor: getRatingColor(scaleItem.rating) }
+                      : undefined"
+                    :title="scaleItem.label"
                   >
-                    {{ rating }}
+                    {{ scaleItem.rating }}
                   </button>
                 </div>
                 <p class="text-xs text-gray-500 mt-1">
@@ -397,10 +401,11 @@ const sortedCriteriaOrder = computed(() => {
   logger.debug('🔍 SORT DEBUG - criteriaRatings:', criteriaRatings.value)
   
   if (!sortByNewest.value) {
-    // Sortiere nach Bewertung (schlechteste zuerst)
+    // Sortiere nach Bewertung (schlechteste zuerst); unrated ans Ende
+    const unratedFallback = (evaluationScale.value.at(-1)?.rating ?? 6) + 1
     const sorted = [...selectedCriteriaOrder.value].sort((a, b) => {
-      const ratingA = criteriaRatings.value[a] || 7
-      const ratingB = criteriaRatings.value[b] || 7
+      const ratingA = criteriaRatings.value[a] || unratedFallback
+      const ratingB = criteriaRatings.value[b] || unratedFallback
       logger.debug('🔍 RATING SORT:', a, 'rating:', ratingA, 'vs', b, 'rating:', ratingB, 'result:', ratingA - ratingB)
       return ratingA - ratingB
     })
@@ -683,28 +688,9 @@ const getCriteriaRating = (criteriaId: string) => {
   return criteriaRatings.value[criteriaId] || 0 // Rückgabe 0, falls nicht gesetzt
 }
 
-const getRatingColorClass = (rating: number, selected = false) => {
-  const colors = {
-    1: selected ? 'bg-red-500 text-white' : 'bg-red-100 text-red-700',
-    2: selected ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700',
-    3: selected ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-700',
-    4: selected ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-700',
-    5: selected ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700',
-    6: selected ? 'bg-emerald-500 text-white' : 'bg-emerald-100 text-emerald-700'
-  }
-  return colors[rating as keyof typeof colors] || (selected ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-700')
-}
-
 const getRatingText = (rating: number | null) => {
-  const texts = {
-    1: 'Besprochen',
-    2: 'Geübt',
-    3: 'Ungenügend',
-    4: 'Genügend',
-    5: 'Gut',
-    6: 'Prüfungsreif'
-  }
-  return rating ? texts[rating as keyof typeof texts] || '' : ''
+  if (!rating) return ''
+  return getRatingLabel(rating)
 }
 
 const saveEvaluation = async () => {
@@ -1053,23 +1039,29 @@ watch(showDropdown, (isOpen) => {
   }
 })
 
-// ✅ Helper Funktionen für Rating-Farben (müssen VOR den Watches definiert sein)
-const FALLBACK_RATING_COLORS: Record<number, string> = {
-  1: '#ef4444',
-  2: '#f97316',
-  3: '#eab308',
-  4: '#3b82f6',
-  5: '#22c55e',
-  6: '#10b981',
-}
+// ✅ Tenant-spezifische Bewertungsskala (aus evaluation_scale)
+const FALLBACK_RATING_SCALE = [
+  { rating: 1, label: 'Besprochen', color: '#ef4444' },
+  { rating: 2, label: 'Geübt', color: '#f97316' },
+  { rating: 3, label: 'Ungenügend', color: '#eab308' },
+  { rating: 4, label: 'Genügend', color: '#3b82f6' },
+  { rating: 5, label: 'Gut', color: '#22c55e' },
+  { rating: 6, label: 'Prüfungsreif', color: '#10b981' },
+]
 
 const allRatings = ref<any[]>([])
+const loadedScaleTenantId = ref<string | null>(null)
+
+const evaluationScale = computed(() => {
+  const scale = allRatings.value.length > 0 ? allRatings.value : FALLBACK_RATING_SCALE
+  return [...scale].sort((a, b) => (a.rating ?? 0) - (b.rating ?? 0))
+})
 
 const loadRatingColors = async () => {
-  if (allRatings.value.length > 0) return // bereits geladen
   try {
     const tenantId = currentTenant.value?.id || props.appointment?.tenant_id
     if (!tenantId) return
+    if (loadedScaleTenantId.value === tenantId && allRatings.value.length > 0) return
 
     const response = await $fetch('/api/staff/get-rating-points', {
       method: 'POST',
@@ -1077,8 +1069,9 @@ const loadRatingColors = async () => {
     }) as any
 
     if (response?.success) {
-      allRatings.value = response.data || []
-      logger.debug('✅ Ratings loaded:', allRatings.value.length)
+      allRatings.value = (response.data || []).slice().sort((a: any, b: any) => (a.rating ?? 0) - (b.rating ?? 0))
+      loadedScaleTenantId.value = tenantId
+      logger.debug('✅ Ratings loaded for tenant:', tenantId, allRatings.value.length)
     }
   } catch (err) {
     logger.warn('⚠️ Failed to load ratings:', err)
@@ -1086,13 +1079,12 @@ const loadRatingColors = async () => {
 }
 
 const getRatingColor = (ratingValue: number): string => {
-  if (allRatings.value.length === 0) return FALLBACK_RATING_COLORS[ratingValue] || '#999999'
-  const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
-  return rating?.color || FALLBACK_RATING_COLORS[ratingValue] || '#999999'
+  const rating = evaluationScale.value.find((r: any) => r.rating === ratingValue)
+  return rating?.color || '#999999'
 }
 
 const getRatingLabel = (ratingValue: number): string => {
-  const rating = allRatings.value.find((r: any) => r.rating === ratingValue)
+  const rating = evaluationScale.value.find((r: any) => r.rating === ratingValue)
   return rating?.label || 'Unbekannt'
 }
 
@@ -1135,11 +1127,9 @@ watch(() => props.isOpen, (isOpen) => {
     allCriteriaRatings.value = {}
     historyRatings.value = {}
     historyNotes.value = {}
-    
+    allRatings.value = []
+    loadedScaleTenantId.value = null
 
-    
-
-    
     // Clean up event listeners
     document.removeEventListener('click', handleClickOutside)
     document.removeEventListener('keydown', handleEscapeKey)

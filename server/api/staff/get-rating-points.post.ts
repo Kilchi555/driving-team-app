@@ -21,12 +21,13 @@ export default defineEventHandler(async (event) => {
   )
 
   try {
-    // Try with tenant_id first
+    // Tenant-specific scale first
     const { data: dataWithTenant, error: errorWithTenant } = await supabase
       .from('evaluation_scale')
       .select('rating, color, label')
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
+      .order('rating', { ascending: true })
 
     if (!errorWithTenant && dataWithTenant && dataWithTenant.length > 0) {
       return {
@@ -35,11 +36,13 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Fallback: try without tenant_id filter (for backwards compatibility)
+    // Fallback: global defaults (tenant_id IS NULL)
     const { data: fallbackData, error: fallbackError } = await supabase
       .from('evaluation_scale')
       .select('rating, color, label')
+      .is('tenant_id', null)
       .eq('is_active', true)
+      .order('rating', { ascending: true })
 
     if (fallbackError) throw fallbackError
 
