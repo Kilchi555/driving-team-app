@@ -61,12 +61,13 @@ export default defineEventHandler(async (event) => {
   // Send double opt-in confirmation email
   const consentLink = buildConsentLink(baseUrl, lead.id, lead.unsubscribe_token)
   const unsubscribeLink = buildUnsubscribeLink(baseUrl, lead.id, lead.unsubscribe_token)
-  const firstName = first_name?.trim() || 'dort'
+  const firstName = first_name?.trim()
+  const greeting = firstName ? `Hallo ${firstName}` : 'Hallo'
   const primaryColor = tenant.primary_color || '#1e293b'
 
   const content = `
     <h2 style="margin:0 0 16px;color:#111827;font-size:20px;font-weight:700">Bitte bestätige deine Anmeldung</h2>
-    <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7">Hallo ${firstName}</p>
+    <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7">${greeting}</p>
     <p style="margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7">
       Du hast dich für den Newsletter von ${tenant.name} angemeldet. Klicke auf den Button um deine Anmeldung zu bestätigen.
     </p>
