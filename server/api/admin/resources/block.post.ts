@@ -324,7 +324,7 @@ export default defineEventHandler(async (event) => {
         // Load tenant for branding (+ payment terms)
         const { data: tenant } = await supabase
           .from('tenants')
-          .select('id, name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_due_days, default_vat_rate, invoice_window_side')
+          .select('id, name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_due_days, default_vat_rate, invoice_window_side, from_email, resend_domain_verified')
           .eq('id', profile.tenant_id)
           .single()
 
@@ -471,7 +471,9 @@ export default defineEventHandler(async (event) => {
                 to: external_contact_email.trim().toLowerCase(),
                 subject: `Rechnung ${invoiceNumber} – ${tenantData?.name || ''}`,
                 html,
-                senderName: tenantData?.name,
+                fromName: tenantData?.name,
+                fromEmail: tenantData?.from_email ?? null,
+                domainVerified: !!tenantData?.resend_domain_verified,
                 attachments: pdfAttachments,
               })
               console.log(`✅ [block] Rechnung ${invoiceNumber} per E-Mail versendet an ${external_contact_email}`)

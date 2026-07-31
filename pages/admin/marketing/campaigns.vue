@@ -97,6 +97,16 @@
                   <span :class="statusBadge(c.status)" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0">
                     {{ statusLabel(c.status) }}
                   </span>
+                  <span
+                    v-if="c.schedule_enabled"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 shrink-0"
+                    :title="scheduleSummary(c)"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Auto
+                  </span>
                 </div>
                 <p class="text-sm text-gray-500 mt-0.5">
                   <template v-if="c.variants?.length > 1">
@@ -107,12 +117,16 @@
                   </template>
                   <span v-if="c.subject_override" class="ml-1 text-gray-400">· "{{ c.subject_override }}"</span>
                 </p>
+                <p v-if="c.schedule_enabled" class="text-xs text-indigo-600 mt-1">
+                  {{ scheduleSummary(c) }}
+                  <span v-if="c.next_run_at" class="text-indigo-400"> · nächster Lauf {{ formatDateTime(c.next_run_at) }}</span>
+                </p>
               </div>
               <span class="text-xs text-gray-400 shrink-0">{{ formatDate(c.created_at) }}</span>
             </div>
 
-            <!-- Metrics (sent/pilot only) -->
-              <div v-if="c.status === 'sent' || c.status === 'pilot'" class="space-y-2">
+            <!-- Metrics (sent/pilot/recurring) -->
+              <div v-if="c.status === 'sent' || c.status === 'pilot' || c.status === 'recurring'" class="space-y-2">
                 <div class="flex flex-wrap gap-x-4 gap-y-1 items-center">
                   <span class="text-sm text-gray-600">
                     <strong class="text-gray-900">{{ c.sent_count?.toLocaleString('de-CH') ?? 0 }}</strong>
@@ -200,7 +214,17 @@
                 <span v-else class="text-xs text-gray-400">Alle aktiven Leads</span>
               </div>
 
-              <div class="flex items-center gap-2 shrink-0">
+              <div class="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                <button
+                  @click="openScheduleModal(c)"
+                  class="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-50 transition-colors flex items-center gap-1.5"
+                  title="Zeitplan bearbeiten"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="hidden sm:inline">{{ c.schedule_enabled ? 'Zeitplan' : 'Automatisieren' }}</span>
+                </button>
                 <button
                   @click="duplicateCampaign(c)"
                   :disabled="duplicatingId === c.id"
@@ -222,7 +246,7 @@
                   </svg>
                   Senden
                 </button>
-                <template v-if="c.status === 'pilot'">
+                <template v-if="c.status === 'pilot' || c.status === 'recurring'">
                   <button
                     v-if="c.variants?.length > 1"
                     @click="openEditVariants(c)"
@@ -241,7 +265,7 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                     </svg>
-                    Weitere senden
+                    {{ c.status === 'recurring' ? 'Jetzt senden' : 'Weitere senden' }}
                   </button>
                 </template>
               </div>
@@ -490,6 +514,49 @@
                 </svg>
                 Neuen Rabattcode erstellen
               </button>
+            </div>
+          </div>
+
+          <!-- Automated schedule -->
+          <div class="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 space-y-3">
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input v-model="createForm.schedule.enabled" type="checkbox" class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+              <div>
+                <span class="text-sm font-semibold text-gray-900">Automatisch wiederholen</span>
+                <p class="text-xs text-gray-500 mt-0.5">
+                  Sendet periodisch die nächste Charge an noch nicht angeschriebene Leads (Zeitzone: Zürich).
+                </p>
+              </div>
+            </label>
+            <div v-if="createForm.schedule.enabled" class="grid grid-cols-2 gap-3 pt-1">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Frequenz</label>
+                <select v-model="createForm.schedule.frequency" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option value="weekly">Wöchentlich</option>
+                  <option value="daily">Täglich</option>
+                </select>
+              </div>
+              <div v-if="createForm.schedule.frequency === 'weekly'">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Wochentag</label>
+                <select v-model.number="createForm.schedule.dayOfWeek" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option v-for="d in scheduleDayOptions" :key="d.value" :value="d.value">{{ d.label }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Uhrzeit (Zürich)</label>
+                <select v-model.number="createForm.schedule.hour" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option v-for="h in 24" :key="h - 1" :value="h - 1">{{ String(h - 1).padStart(2, '0') }}:00</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Batch pro Lauf</label>
+                <select v-model.number="createForm.schedule.batchSize" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                  <option :value="100">100</option>
+                  <option :value="250">250</option>
+                  <option :value="500">500</option>
+                  <option :value="1000">1000</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -755,6 +822,72 @@
     </div>
   </div>
 
+  <!-- Schedule Modal -->
+  <div v-if="scheduleCampaign" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+      <div class="flex items-center justify-between p-6 border-b">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Automatisierung</h3>
+          <p class="text-sm text-gray-500 mt-0.5">{{ scheduleCampaign.name }}</p>
+        </div>
+        <button @click="scheduleCampaign = null" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <label class="flex items-start gap-3 cursor-pointer">
+          <input v-model="scheduleForm.enabled" type="checkbox" class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+          <div>
+            <span class="text-sm font-semibold text-gray-900">Zeitplan aktiv</span>
+            <p class="text-xs text-gray-500 mt-0.5">Pro Lauf werden nur Leads angeschrieben, die diese Kampagne noch nicht erhalten haben.</p>
+          </div>
+        </label>
+        <div v-if="scheduleForm.enabled" class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Frequenz</label>
+            <select v-model="scheduleForm.frequency" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+              <option value="weekly">Wöchentlich</option>
+              <option value="daily">Täglich</option>
+            </select>
+          </div>
+          <div v-if="scheduleForm.frequency === 'weekly'">
+            <label class="block text-xs font-medium text-gray-600 mb-1">Wochentag</label>
+            <select v-model.number="scheduleForm.dayOfWeek" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+              <option v-for="d in scheduleDayOptions" :key="d.value" :value="d.value">{{ d.label }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Uhrzeit (Zürich)</label>
+            <select v-model.number="scheduleForm.hour" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+              <option v-for="h in 24" :key="h - 1" :value="h - 1">{{ String(h - 1).padStart(2, '0') }}:00</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Batch pro Lauf</label>
+            <select v-model.number="scheduleForm.batchSize" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+              <option :value="100">100</option>
+              <option :value="250">250</option>
+              <option :value="500">500</option>
+              <option :value="1000">1000</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 p-6 border-t">
+        <button @click="scheduleCampaign = null" class="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Abbrechen</button>
+        <button
+          @click="saveSchedule"
+          :disabled="savingSchedule"
+          class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {{ savingSchedule ? 'Speichere…' : 'Speichern' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Edit Variant Subjects Modal -->
   <div v-if="editVariantsCampaign" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg">
@@ -865,7 +998,34 @@ const createForm = reactive({
   showDiscount: false,
   discount_code: '',
   variants: [{ label: 'a', templateId: '', splitPct: 100, subjectOverride: '' }] as { label: string; templateId: string; splitPct: number; subjectOverride: string }[],
+  schedule: {
+    enabled: false,
+    frequency: 'weekly' as 'weekly' | 'daily',
+    dayOfWeek: 1,
+    hour: 9,
+    batchSize: 500,
+  },
 })
+
+const scheduleDayOptions = [
+  { value: 1, label: 'Montag' },
+  { value: 2, label: 'Dienstag' },
+  { value: 3, label: 'Mittwoch' },
+  { value: 4, label: 'Donnerstag' },
+  { value: 5, label: 'Freitag' },
+  { value: 6, label: 'Samstag' },
+  { value: 7, label: 'Sonntag' },
+]
+
+const scheduleCampaign = ref<any>(null)
+const scheduleForm = reactive({
+  enabled: false,
+  frequency: 'weekly' as 'weekly' | 'daily',
+  dayOfWeek: 1,
+  hour: 9,
+  batchSize: 500,
+})
+const savingSchedule = ref(false)
 
 const variantSplitTotal = computed(() => createForm.variants.reduce((s, v) => s + (v.splitPct ?? 0), 0))
 
@@ -927,8 +1087,33 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
+function formatDateTime(d: string) {
+  return new Date(d).toLocaleString('de-CH', {
+    day: '2-digit', month: '2-digit', year: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'Europe/Zurich',
+  })
+}
+
+function scheduleSummary(c: any): string {
+  if (!c.schedule_enabled) return ''
+  const hour = `${String(c.schedule_hour ?? 9).padStart(2, '0')}:00`
+  if (c.schedule_frequency === 'daily') {
+    return `Täglich um ${hour} · ${c.schedule_batch_size || 500}/Lauf`
+  }
+  const day = scheduleDayOptions.find(d => d.value === c.schedule_day_of_week)?.label || 'Montag'
+  return `${day}s um ${hour} · ${c.schedule_batch_size || 500}/Lauf`
+}
+
 function statusLabel(status: string) {
-  return { draft: 'Entwurf', sending: 'Wird gesendet', sent: 'Gesendet', pilot: 'Pilot laufend', failed: 'Fehlgeschlagen' }[status] ?? status
+  return {
+    draft: 'Entwurf',
+    sending: 'Wird gesendet',
+    sent: 'Gesendet',
+    pilot: 'Pilot laufend',
+    recurring: 'Automatisch',
+    failed: 'Fehlgeschlagen',
+  }[status] ?? status
 }
 
 function statusBadge(status: string) {
@@ -937,6 +1122,7 @@ function statusBadge(status: string) {
     sending: 'bg-blue-100 text-blue-700',
     sent: 'bg-green-100 text-green-700',
     pilot: 'bg-orange-100 text-orange-700',
+    recurring: 'bg-indigo-100 text-indigo-700',
     failed: 'bg-red-100 text-red-700',
   }[status] ?? 'bg-gray-100 text-gray-600'
 }
@@ -1017,10 +1203,50 @@ function openCreate() {
   createForm.showDiscount = false
   createForm.discount_code = ''
   createForm.variants = [{ label: 'a', templateId: '', splitPct: 100, subjectOverride: '' }]
+  createForm.schedule.enabled = false
+  createForm.schedule.frequency = 'weekly'
+  createForm.schedule.dayOfWeek = 1
+  createForm.schedule.hour = 9
+  createForm.schedule.batchSize = 500
   estimatedCount.value = null
   createModalOpen.value = true
   loadEstimatedCount()
   loadDiscounts()
+}
+
+function openScheduleModal(campaign: any) {
+  scheduleCampaign.value = campaign
+  scheduleForm.enabled = !!campaign.schedule_enabled
+  scheduleForm.frequency = (campaign.schedule_frequency || 'weekly') as 'weekly' | 'daily'
+  scheduleForm.dayOfWeek = campaign.schedule_day_of_week || 1
+  scheduleForm.hour = typeof campaign.schedule_hour === 'number' ? campaign.schedule_hour : 9
+  scheduleForm.batchSize = campaign.schedule_batch_size || 500
+}
+
+async function saveSchedule() {
+  if (!scheduleCampaign.value) return
+  const tenantId = authStore.userProfile?.tenant_id
+  if (!tenantId) return
+  savingSchedule.value = true
+  try {
+    await $fetch(`/api/marketing/campaigns/${scheduleCampaign.value.id}/schedule`, {
+      method: 'PATCH',
+      body: {
+        tenantId,
+        enabled: scheduleForm.enabled,
+        frequency: scheduleForm.frequency,
+        dayOfWeek: scheduleForm.dayOfWeek,
+        hour: scheduleForm.hour,
+        batchSize: scheduleForm.batchSize,
+      },
+    })
+    scheduleCampaign.value = null
+    await loadData()
+  } catch (err: any) {
+    alert(`Fehler: ${err.message || 'Zeitplan konnte nicht gespeichert werden'}`)
+  } finally {
+    savingSchedule.value = false
+  }
 }
 
 function addVariant() {
@@ -1076,6 +1302,15 @@ async function createCampaign() {
           splitPct: createForm.variants.length === 1 ? 100 : v.splitPct,
           subjectOverride: v.subjectOverride || null,
         })),
+        schedule: createForm.schedule.enabled
+          ? {
+              enabled: true,
+              frequency: createForm.schedule.frequency,
+              dayOfWeek: createForm.schedule.dayOfWeek,
+              hour: createForm.schedule.hour,
+              batchSize: createForm.schedule.batchSize,
+            }
+          : undefined,
       },
     })
     createModalOpen.value = false
@@ -1139,7 +1374,7 @@ async function openSendConfirm(campaign: any) {
   sendResult.value = null
   testEmailResult.value = null
   testEmailAddress.value = ''
-  pilotMode.value = campaign.status === 'draft' || campaign.status === 'pilot' // default pilot ON for new drafts and ongoing pilots
+  pilotMode.value = campaign.status === 'draft' || campaign.status === 'pilot' || campaign.status === 'recurring' // default pilot ON for drafts/pilots/recurring
   recipients.value = []
   recipientsTotal.value = 0
   recipientsLoading.value = true

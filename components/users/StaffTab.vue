@@ -221,9 +221,9 @@
                       </div>
                     </div>
                     
-                    <!-- Kategorien mit Schiebereglern -->
+                    <!-- Kategorien mit Schiebereglern (pro Staff × Standort) -->
                     <div v-if="getStaffCategories(staff).length > 0" class="mt-3">
-                      <label class="text-xs font-medium text-gray-700 block mb-2">Kategorien:</label>
+                      <label class="text-xs font-medium text-gray-700 block mb-2">Kategorien (nur dieser Fahrlehrer):</label>
                       <div class="flex flex-wrap gap-2">
                         <div 
                           v-for="categoryCode in getStaffCategories(staff)" 
@@ -233,10 +233,10 @@
                           <span class="text-xs font-medium text-gray-700">{{ categoryCode }}</span>
                           <!-- Toggle Switch -->
                           <button
-                            @click="location.available_categories?.includes(categoryCode) ? location.available_categories.splice(location.available_categories.indexOf(categoryCode), 1) : (location.available_categories = [...(location.available_categories || []), categoryCode]); updateLocationCategories(location)"
+                            @click="toggleStaffLocationCategory(staff, location, categoryCode)"
                             :class="[
                               'relative inline-flex h-5 w-9 items-center rounded-full transition-colors',
-                              location.available_categories?.includes(categoryCode) 
+                              (location.staff_available_categories || []).includes(categoryCode) 
                                 ? 'bg-green-600' 
                                 : 'bg-gray-300'
                             ]"
@@ -244,7 +244,7 @@
                             <span
                               :class="[
                                 'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                                location.available_categories?.includes(categoryCode) 
+                                (location.staff_available_categories || []).includes(categoryCode) 
                                   ? 'translate-x-4' 
                                   : 'translate-x-0.5'
                               ]"
@@ -255,13 +255,13 @@
 
                       <!-- Pickup-Einstellungen (nur wenn Pickup-Modus aktiv) -->
                       <div
-                        v-if="staff.availability_mode !== 'standard' && location.available_categories?.length > 0"
+                        v-if="staff.availability_mode !== 'standard' && (location.staff_available_categories || []).length > 0"
                         class="mt-3 pt-3 border-t border-gray-100"
                       >
                         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pickup per Kategorie</p>
                         <div class="flex flex-wrap gap-2">
                           <div
-                            v-for="categoryCode in location.available_categories"
+                            v-for="categoryCode in (location.staff_available_categories || [])"
                             :key="`pickup-${categoryCode}`"
                             :class="[
                               'flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer select-none',
@@ -805,6 +805,22 @@ const loadStaff = async () => {
       console.warn('⚠️ Could not load locations:', locationsError)
     }
 
+    // Per-staff category overrides at each location
+    const { data: staffLocRows, error: staffLocError } = await supabase
+      .from('staff_locations')
+      .select('staff_id, location_id, available_categories, is_online_bookable')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
+
+    if (staffLocError) {
+      console.warn('⚠️ Could not load staff_locations:', staffLocError)
+    }
+
+    const staffLocMap = new Map<string, any>()
+    for (const row of staffLocRows || []) {
+      staffLocMap.set(`${row.staff_id}:${row.location_id}`, row)
+    }
+
     // Load per-category pickup availability - NO LONGER NEEDED
     // Data is already in users.category array
     // const staffCategoryAvailability = byStaff
@@ -830,14 +846,21 @@ const loadStaff = async () => {
         peak_time_evening_end: availability?.peak_time_evening_end || '19:00',
         minimum_booking_lead_time_hours: availability?.minimum_booking_lead_time_hours || 24,
         category_pickup: categoryPickup,
-        locations: locations.map(location => ({
-          ...location,
-          available_categories: location.available_categories || [],
-          pickup_enabled: location.pickup_enabled || false,
-          pickup_radius_minutes: location.pickup_radius_minutes || 10,
-          category_pickup_settings: location.category_pickup_settings || {},
-          time_windows: parseTimeWindows(location.time_windows) // ✅ Parse time_windows if it's a string
-        }))
+        locations: locations.map(location => {
+          const sl = staffLocMap.get(`${staff.id}:${location.id}`)
+          const staffCats = Array.isArray(sl?.available_categories)
+            ? sl.available_categories
+            : (location.available_categories || [])
+          return {
+            ...location,
+            available_categories: location.available_categories || [],
+            staff_available_categories: staffCats,
+            pickup_enabled: location.pickup_enabled || false,
+            pickup_radius_minutes: location.pickup_radius_minutes || 10,
+            category_pickup_settings: location.category_pickup_settings || {},
+            time_windows: parseTimeWindows(location.time_windows)
+          }
+        })
       }
     })
 
@@ -854,8 +877,27 @@ const loadStaff = async () => {
 }
 
 const getStaffCategories = (staff: any): string[] => {
-  // Return all available categories so they can be selected for this location
+  // Prefer categories from staff profile; fall back to all tenant categories
+  const raw = staff?.category
+  if (Array.isArray(raw) && raw.length > 0) return raw.map((c: any) => String(c))
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed.map((c: any) => String(c))
+    } catch { /* ignore */ }
+  }
   return availableCategories.value.map((cat: any) => cat.code)
+}
+
+const toggleStaffLocationCategory = async (staff: any, location: any, categoryCode: string) => {
+  const current: string[] = Array.isArray(location.staff_available_categories)
+    ? [...location.staff_available_categories]
+    : []
+  const idx = current.indexOf(categoryCode)
+  if (idx >= 0) current.splice(idx, 1)
+  else current.push(categoryCode)
+  location.staff_available_categories = current
+  await updateStaffLocationCategories(staff, location)
 }
 
 // Time Windows Management
@@ -1158,14 +1200,17 @@ const createLocation = async () => {
       throw new Error('User has no tenant assigned')
     }
     
-    // Create location
+    const staffId = selectedStaffForLocation.value.id
+    const staffCategories = getStaffCategories(selectedStaffForLocation.value)
+
+    // Create location (staff assignment is via staff_ids array — staff_id column no longer exists)
     const { data: newLocationData, error: locationError } = await supabase
       .from('locations')
       .insert({
         name: newLocation.value.name,
         address: newLocation.value.address,
         location_type: newLocation.value.location_type,
-        staff_id: selectedStaffForLocation.value.id,
+        staff_ids: [staffId],
         tenant_id: tenantId,
         is_active: true,
         available_categories: []
@@ -1174,12 +1219,31 @@ const createLocation = async () => {
       .single()
     
     if (locationError) throw locationError
+
+    // Ensure staff_locations row for per-staff categories / online booking
+    const { error: staffLocError } = await supabase
+      .from('staff_locations')
+      .insert({
+        staff_id: staffId,
+        location_id: newLocationData.id,
+        tenant_id: tenantId,
+        is_active: true,
+        is_online_bookable: false,
+        available_categories: staffCategories
+      })
+
+    if (staffLocError) {
+      console.warn('⚠️ Could not create staff_locations entry (non-fatal):', staffLocError)
+    }
     
     // Add to local state
     if (!selectedStaffForLocation.value.locations) {
       selectedStaffForLocation.value.locations = []
     }
-    selectedStaffForLocation.value.locations.push(newLocationData)
+    selectedStaffForLocation.value.locations.push({
+      ...newLocationData,
+      staff_available_categories: staffCategories
+    })
     
     alert(`Standort "${newLocation.value.name}" wurde erfolgreich hinzugefügt!`)
     
@@ -1191,7 +1255,7 @@ const createLocation = async () => {
     }
   } catch (err: any) {
     console.error('❌ Error creating location:', err)
-    alert('Fehler: Standort konnte nicht erstellt werden.')
+    alert(`Fehler: Standort konnte nicht erstellt werden.${err?.message ? ` (${err.message})` : ''}`)
   } finally {
     isCreatingLocation.value = false
   }
@@ -1203,15 +1267,29 @@ const removeLocation = async (staff: any, location: any) => {
   }
   
   try {
+    // Unassign staff from shared location via staff_ids (do not deactivate the location)
+    const currentStaffIds = Array.isArray(location.staff_ids) ? [...location.staff_ids] : []
+    const updatedStaffIds = currentStaffIds.filter((id: string) => id !== staff.id)
+
     const { error } = await supabase
       .from('locations')
       .update({
-        staff_id: null,
-        is_active: false
+        staff_ids: updatedStaffIds
       })
       .eq('id', location.id)
     
     if (error) throw error
+
+    // Deactivate staff_locations link (keeps history; booking filters on is_active)
+    const { error: staffLocError } = await supabase
+      .from('staff_locations')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('staff_id', staff.id)
+      .eq('location_id', location.id)
+
+    if (staffLocError) {
+      console.warn('⚠️ Could not deactivate staff_locations entry (non-fatal):', staffLocError)
+    }
     
     // Remove from local state
     const index = staff.locations.findIndex((l: any) => l.id === location.id)
@@ -1223,7 +1301,7 @@ const removeLocation = async (staff: any, location: any) => {
     alert(`Standort "${location.name}" wurde erfolgreich von ${staff.first_name} ${staff.last_name} entfernt.`)
   } catch (err: any) {
     console.error('❌ Error removing location:', err)
-    alert('Fehler: Standort konnte nicht entfernt werden.')
+    alert(`Fehler: Standort konnte nicht entfernt werden.${err?.message ? ` (${err.message})` : ''}`)
   }
 }
 
@@ -1305,6 +1383,7 @@ const updateLocationCategoryPickupSettings = async (location: any) => {
 }
 
 const updateLocationCategories = async (location: any) => {
+  // Legacy: location-level categories (kept for admin bulk edits if needed)
   try {
     logger.debug('🔄 Updating location categories:', location.id, location.available_categories)
     
@@ -1318,17 +1397,67 @@ const updateLocationCategories = async (location: any) => {
     if (error) throw error
 
     logger.debug('✅ Location categories updated')
-    
-    // Show toast after 1 second delay
+  } catch (err: any) {
+    console.error('❌ Error updating location categories:', err)
+    uiStore.addNotification({
+      type: 'error',
+      title: 'Fehler',
+      message: 'Kategorie-Zuordnung konnte nicht gespeichert werden.'
+    })
+  }
+}
+
+const updateStaffLocationCategories = async (staff: any, location: any) => {
+  try {
+    const cats = Array.isArray(location.staff_available_categories)
+      ? location.staff_available_categories
+      : []
+
+    logger.debug('🔄 Updating staff location categories:', {
+      staff_id: staff.id,
+      location_id: location.id,
+      available_categories: cats
+    })
+
+    const { data: existing } = await supabase
+      .from('staff_locations')
+      .select('id')
+      .eq('staff_id', staff.id)
+      .eq('location_id', location.id)
+      .maybeSingle()
+
+    if (existing?.id) {
+      const { error } = await supabase
+        .from('staff_locations')
+        .update({
+          available_categories: cats,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existing.id)
+      if (error) throw error
+    } else {
+      const { error } = await supabase
+        .from('staff_locations')
+        .insert({
+          staff_id: staff.id,
+          location_id: location.id,
+          tenant_id: staff.tenant_id || location.tenant_id,
+          is_active: true,
+          is_online_bookable: true,
+          available_categories: cats
+        })
+      if (error) throw error
+    }
+
     setTimeout(() => {
       uiStore.addNotification({
         type: 'success',
         title: 'Gespeichert',
-        message: `Kategorien für ${location.name} wurden aktualisiert.`
+        message: `Kategorien für ${location.name} (${staff.first_name}) aktualisiert.`
       })
-    }, 1000)
+    }, 400)
   } catch (err: any) {
-    console.error('❌ Error updating location categories:', err)
+    console.error('❌ Error updating staff location categories:', err)
     uiStore.addNotification({
       type: 'error',
       title: 'Fehler',

@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
   // Tenant laden (für Branding / Admin-Mail)
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_window_side')
+    .select('id, name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, invoice_number_prefix, next_invoice_number, primary_color, secondary_color, logo_wide_url, invoice_street, invoice_street_nr, invoice_zip, invoice_city, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_window_side, from_email, resend_domain_verified')
     .eq('id', staffUser.tenant_id)
     .single()
 
@@ -343,7 +343,9 @@ export default defineEventHandler(async (event) => {
         to: studentEmail,
         subject: `Rechnung ${invoiceNumber} – ${tenantData.name}`,
         html,
-        senderName: tenantData.name,
+        fromName: tenantData.name,
+        fromEmail: tenantData.from_email ?? null,
+        domainVerified: !!tenantData.resend_domain_verified,
         attachments: pdfAttachments,
       })
     } catch (emailErr: any) {
@@ -369,6 +371,9 @@ export default defineEventHandler(async (event) => {
         to: adminEmail,
         subject: `📄 Neue Rechnung ${invoiceNumber} für ${studentName}`,
         html: adminHtml,
+        fromName: tenantData.name,
+        fromEmail: tenantData.from_email ?? null,
+        domainVerified: !!tenantData.resend_domain_verified,
       })
     }
   } catch (adminEmailErr: any) {

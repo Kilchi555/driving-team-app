@@ -14,9 +14,31 @@ export interface TemplateVariables {
   discount_code?: string
 }
 
-export function renderTemplate(template: string, variables: TemplateVariables): string {
+/**
+ * When first_name is missing, rewrite common German greetings to plain "Hallo"
+ * so we never produce "Liebe/r dort" or "Hallo dort".
+ */
+function applyFirstName(template: string, firstName: string | null | undefined): string {
+  const name = firstName?.trim()
+  if (name) return template.replace(/\{\{first_name\}\}/g, name)
+
   return template
-    .replace(/\{\{first_name\}\}/g, variables.first_name || 'dort')
+    // Liebe/r Max,  /  Lieber Max  /  Liebe Max
+    .replace(/Liebe\/r\s*\{\{first_name\}\}/gi, 'Hallo')
+    .replace(/Lieber?\s*\{\{first_name\}\}/gi, 'Hallo')
+    .replace(/Hallo\s*\{\{first_name\}\}/gi, 'Hallo')
+    .replace(/Guten Tag\s*,?\s*\{\{first_name\}\}/gi, 'Guten Tag')
+    // "Alles gut, {{first_name}}?" → "Alles gut?"
+    .replace(/,\s*\{\{first_name\}\}/g, '')
+    // Remaining bare {{first_name}} → drop
+    .replace(/\{\{first_name\}\}/g, '')
+    // Clean leftover "Hallo ," from greeting rewrites
+    .replace(/Hallo\s+,/g, 'Hallo,')
+    .replace(/,\s*,/g, ',')
+}
+
+export function renderTemplate(template: string, variables: TemplateVariables): string {
+  return applyFirstName(template, variables.first_name)
     .replace(/\{\{last_name\}\}/g, variables.last_name || '')
     .replace(/\{\{email\}\}/g, variables.email || '')
     .replace(/\{\{unsubscribe_link\}\}/g, variables.unsubscribe_link || '#')

@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     // Tenant-Daten laden
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_window_side')
+      .select('name, legal_company_name, contact_email, contact_person_first_name, contact_person_last_name, primary_color, secondary_color, qr_iban, invoice_street, invoice_street_nr, invoice_zip, invoice_city, logo_wide_url, invoice_intro_text, invoice_payment_terms, invoice_footer_text, invoice_window_side, from_email, resend_domain_verified')
       .eq('id', invoice.tenant_id)
       .single()
 
@@ -274,7 +274,9 @@ export default defineEventHandler(async (event) => {
       to: billingEmail,
       subject: `Rechnung ${invoice.invoice_number} – ${tenantName}`,
       html,
-      senderName: tenantName,
+      fromName: tenantName,
+      fromEmail: (tenant as any)?.from_email ?? null,
+      domainVerified: !!(tenant as any)?.resend_domain_verified,
       attachments: pdfAttachments,
     })
 

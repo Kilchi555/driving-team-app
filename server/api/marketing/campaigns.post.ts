@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { computeNextRunAt, type ScheduleFrequency } from '~/server/utils/campaign-schedule'
 
 interface VariantInput {
   templateId: string
@@ -7,15 +8,30 @@ interface VariantInput {
   subjectOverride?: string
 }
 
+interface ScheduleInput {
+  enabled?: boolean
+  frequency?: ScheduleFrequency
+  dayOfWeek?: number
+  hour?: number
+  batchSize?: number
+}
+
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const { tenantId, createdBy, name, subject_override, segment_filter = {}, variants } = body
+  const { tenantId, createdBy, name, subject_override, segment_filter = {}, variants, schedule } = body as {
+    tenantId?: string
+    createdBy?: string
+    name?: string
+    subject_override?: string
+    segment_filter?: Record<string, any>
+    variants?: VariantInput[]
+    schedule?: ScheduleInput
+  }
 
   if (!tenantId || !name) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId and name are required' })
   }
 
-  // variants must be an array with at least one entry
   const variantList: VariantInput[] = Array.isArray(variants) && variants.length > 0
     ? variants
     : null as any
@@ -30,21 +46,38 @@ export default defineEventHandler(async (event) => {
   }
 
   const supabase = getSupabaseAdmin()
-
-  // Use variant A's template as the primary template_id for backward compat
   const primaryTemplateId = variantList.find(v => v.label === 'a')?.templateId ?? variantList[0].templateId
+
+  const scheduleEnabled = !!schedule?.enabled
+  const frequency: ScheduleFrequency = schedule?.frequency || 'weekly'
+  const dayOfWeek = frequency === 'weekly' ? (schedule?.dayOfWeek ?? 1) : null
+  const hour = typeof schedule?.hour === 'number' ? schedule.hour : 9
+  const batchSize = typeof schedule?.batchSize === 'number' && schedule.batchSize > 0
+    ? Math.min(2000, schedule.batchSize)
+    : 500
+
+  const insertRow: Record<string, any> = {
+    tenant_id: tenantId,
+    created_by: createdBy || null,
+    name,
+    template_id: primaryTemplateId,
+    subject_override: subject_override || null,
+    segment_filter,
+    status: scheduleEnabled ? 'recurring' : 'draft',
+  }
+
+  if (scheduleEnabled) {
+    insertRow.schedule_enabled = true
+    insertRow.schedule_frequency = frequency
+    insertRow.schedule_day_of_week = dayOfWeek
+    insertRow.schedule_hour = hour
+    insertRow.schedule_batch_size = batchSize
+    insertRow.next_run_at = computeNextRunAt({ frequency, dayOfWeek, hour }).toISOString()
+  }
 
   const { data: campaign, error: campErr } = await supabase
     .from('email_campaigns')
-    .insert({
-      tenant_id: tenantId,
-      created_by: createdBy || null,
-      name,
-      template_id: primaryTemplateId,
-      subject_override: subject_override || null,
-      segment_filter,
-      status: 'draft',
-    })
+    .insert(insertRow)
     .select()
     .single()
 

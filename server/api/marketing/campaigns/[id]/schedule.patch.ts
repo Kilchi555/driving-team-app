@@ -1,0 +1,96 @@
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { computeNextRunAt, type ScheduleFrequency } from '~/server/utils/campaign-schedule'
+
+/**
+ * PATCH /api/marketing/campaigns/:id/schedule
+ * Enable, update, or pause a recurring campaign schedule.
+ */
+export default defineEventHandler(async (event) => {
+  const campaignId = getRouterParam(event, 'id')
+  const body = await readBody(event)
+  const {
+    tenantId,
+    enabled,
+    frequency,
+    dayOfWeek,
+    hour,
+    batchSize,
+  } = body as {
+    tenantId?: string
+    enabled?: boolean
+    frequency?: ScheduleFrequency
+    dayOfWeek?: number | null
+    hour?: number
+    batchSize?: number
+  }
+
+  if (!tenantId || !campaignId) {
+    throw createError({ statusCode: 400, statusMessage: 'tenantId and campaignId are required' })
+  }
+
+  const supabase = getSupabaseAdmin()
+
+  const { data: campaign, error } = await supabase
+    .from('email_campaigns')
+    .select('id, status, schedule_enabled, schedule_frequency, schedule_day_of_week, schedule_hour, schedule_batch_size')
+    .eq('id', campaignId)
+    .eq('tenant_id', tenantId)
+    .single()
+
+  if (error || !campaign) {
+    throw createError({ statusCode: 404, statusMessage: 'Campaign not found' })
+  }
+
+  const nextEnabled = typeof enabled === 'boolean' ? enabled : campaign.schedule_enabled
+  const nextFrequency: ScheduleFrequency = (frequency || campaign.schedule_frequency || 'weekly') as ScheduleFrequency
+  const nextDow = nextFrequency === 'weekly'
+    ? (typeof dayOfWeek === 'number' ? dayOfWeek : (campaign.schedule_day_of_week ?? 1))
+    : null
+  const nextHour = typeof hour === 'number' ? hour : (campaign.schedule_hour ?? 9)
+  const nextBatch = typeof batchSize === 'number' && batchSize > 0
+    ? Math.min(2000, batchSize)
+    : (campaign.schedule_batch_size ?? 500)
+
+  if (nextFrequency === 'weekly' && (nextDow == null || nextDow < 1 || nextDow > 7)) {
+    throw createError({ statusCode: 400, statusMessage: 'dayOfWeek must be 1–7 for weekly schedules' })
+  }
+  if (nextHour < 0 || nextHour > 23) {
+    throw createError({ statusCode: 400, statusMessage: 'hour must be 0–23' })
+  }
+
+  const patch: Record<string, any> = {
+    schedule_enabled: nextEnabled,
+    schedule_frequency: nextFrequency,
+    schedule_day_of_week: nextDow,
+    schedule_hour: nextHour,
+    schedule_batch_size: nextBatch,
+  }
+
+  if (nextEnabled) {
+    patch.next_run_at = computeNextRunAt({
+      frequency: nextFrequency,
+      dayOfWeek: nextDow,
+      hour: nextHour,
+    }).toISOString()
+    if (['draft', 'pilot', 'sent'].includes(campaign.status)) {
+      patch.status = 'recurring'
+    }
+  } else {
+    patch.next_run_at = null
+    if (campaign.status === 'recurring') {
+      patch.status = 'pilot'
+    }
+  }
+
+  const { data: updated, error: updateErr } = await supabase
+    .from('email_campaigns')
+    .update(patch)
+    .eq('id', campaignId)
+    .eq('tenant_id', tenantId)
+    .select()
+    .single()
+
+  if (updateErr) throw createError({ statusCode: 500, statusMessage: updateErr.message })
+
+  return { success: true, campaign: updated }
+})
