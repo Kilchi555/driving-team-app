@@ -254,6 +254,8 @@ if (import.meta.client && showUpdatedBanner.value) {
   const url = new URL(window.location.href)
   url.searchParams.delete('updated')
   window.history.replaceState({}, '', url.pathname + url.search)
+  // Ensure nav/feature gates reflect the new plan/add-ons immediately
+  useFeatures().reload().catch(() => {})
 }
 
 interface BillingStatus {

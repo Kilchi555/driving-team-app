@@ -5,11 +5,21 @@
         <div class="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 class="text-2xl font-bold text-gray-900">Marketing</h1>
-            <p class="text-sm text-gray-500 mt-0.5">Email-Kampagnen, Leads-Datenbank und Templates</p>
+            <p class="text-sm text-gray-500 mt-0.5">Aktionen, Email-Kampagnen, Leads und Templates</p>
           </div>
           <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             <NuxtLink
-              v-for="action in quickActions"
+              to="/admin/marketing/aktion"
+              class="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-xl text-sm font-medium hover:opacity-90 transition-all shadow-sm order-first"
+              :style="{ background: primaryColor }"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Aktion starten
+            </NuxtLink>
+            <NuxtLink
+              v-for="action in quickActions.filter(a => a.href !== '/admin/marketing/aktion')"
               :key="action.href"
               :to="action.href"
               class="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-gray-400 hover:shadow-sm transition-all"
@@ -24,8 +34,7 @@
             <!-- AI Suggestions -->
             <NuxtLink
               to="/admin/marketing/ai"
-              class="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-xl text-sm font-medium hover:opacity-90 transition-all shadow-sm"
-              :style="{ background: primaryColor }"
+              class="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-gray-400 hover:shadow-sm transition-all"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -89,6 +98,14 @@ const stats = ref<any>(null)
 
 const quickActions = [
   {
+    href: '/admin/marketing/aktion',
+    title: 'Aktion starten',
+    description: 'Rabatt, Kurs oder Affiliate in einer Minute bewerben',
+    icon: 'M13 10V3L4 14h7v7l9-11h-7z',
+    iconBg: 'bg-amber-100',
+    iconColor: 'text-amber-600',
+  },
+  {
     href: '/admin/marketing/import',
     title: 'Leads importieren',
     description: 'CSV-Datei hochladen und Kontakte importieren',
@@ -135,6 +152,14 @@ const quickActions = [
     icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9',
     iconBg: 'bg-red-100',
     iconColor: 'text-red-600',
+  },
+  {
+    href: '/admin/affiliate',
+    title: 'Affiliate',
+    description: 'Empfehlungen belohnen und Neukunden gewinnen',
+    icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z',
+    iconBg: 'bg-emerald-100',
+    iconColor: 'text-emerald-600',
   },
   {
     href: '/admin/marketing/google-ads-tools',

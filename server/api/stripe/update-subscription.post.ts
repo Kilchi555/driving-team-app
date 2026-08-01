@@ -339,7 +339,7 @@ export default defineEventHandler(async (event) => {
     success: true,
     subscription_id: updatedSub.id,
     plan: desiredPlan,
-    addons: { seats: desiredSeats, courses: desiredCourses, affiliate: desiredAffiliate },
+    addons: { seats: desiredSeats, courses: desiredCourses, affiliate: desiredAffiliate, gbp: desiredGbp },
     current_period_end: currentPeriodEnd,
     message: 'Abonnement erfolgreich aktualisiert. Anteilsmässige Verrechnung erfolgt auf der nächsten Rechnung.',
   }

@@ -1,5 +1,6 @@
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -108,6 +109,24 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Failed to create enrollment'
       })
     }
+
+    const { data: courseRow } = await supabase
+      .from('courses')
+      .select('name, category, course_category:course_categories(code, name)')
+      .eq('id', courseId)
+      .maybeSingle()
+
+    upsertMarketingLeadSafe({
+      tenantId: userProfile.tenant_id,
+      email: participant.email,
+      firstName: participant.first_name || participant.firstName,
+      lastName: participant.last_name || participant.lastName,
+      phone: participant.phone,
+      categories: categoriesFromCourse(courseRow),
+      tags: ['client', 'course'],
+      source: 'admin_course_enroll',
+      sourceLabel: courseRow?.name ? `Kurs: ${courseRow.name}` : 'Admin Kursanmeldung',
+    })
 
     // Send confirmation email (same as online booking flow — fire-and-forget)
     $fetch('/api/emails/send-course-enrollment-confirmation', {

@@ -17,6 +17,8 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
+import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 // Users created on/after this date get reminders every 3 days
 const FREQUENT_REMINDER_CUTOFF = new Date('2026-04-17T00:00:00.000Z')
@@ -90,10 +92,15 @@ export default defineEventHandler(async (event) => {
   const tenantIds = [...new Set(students.map((s: any) => s.tenant_id))]
   const { data: tenants } = await supabase
     .from('tenants')
-    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, twilio_from_sender, booking_policy')
+    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, twilio_from_sender, booking_policy, business_type')
     .in('id', tenantIds)
 
   const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
+
+  const termsMap = new Map<string, Terminology>()
+  await Promise.all(tenantIds.map(async (tid: string) => {
+    termsMap.set(tid, await getTenantTerminology(supabase, tid))
+  }))
 
   // ── 3. Check which reminders are already queued ─────────────
   const studentIds = students.map((s: any) => s.id)
@@ -129,6 +136,7 @@ export default defineEventHandler(async (event) => {
     const reminderDays = getReminderDays(createdAt)
 
     const tenant = tenantMap.get(student.tenant_id)
+    const terms = termsMap.get(student.tenant_id) || getTerminologyDefaults(tenant?.business_type)
     const policy = (tenant?.booking_policy as any) ?? {}
 
     // Booking-Policy: Reminder gesamt deaktiviert?
@@ -140,7 +148,7 @@ export default defineEventHandler(async (event) => {
     const reminderEmailEnabled = policy.registration_reminder_email_enabled !== false  // Standard: true
     const reminderSmsEnabled   = policy.registration_reminder_sms_enabled   !== false  // Standard: true
 
-    const tenantName = tenant?.name || 'Ihre Fahrschule'
+    const tenantName = tenant?.name || `Ihre ${terms.businessNoun}`
     const tenantSlug = tenant?.slug || ''
     const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch'
     const onboardingUrl = `https://app.simy.ch/onboarding/${student.onboarding_token}`

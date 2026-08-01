@@ -21,6 +21,9 @@ export default defineEventHandler(async (event) => {
 
   if (profileError || !userProfile) throw createError({ statusCode: 403, message: 'User not found' })
 
+  const { requireFeature } = await import('~/server/utils/require-feature')
+  await requireFeature(userProfile.tenant_id, 'affiliate_enabled')
+
   // Load affiliate code
   const { data: affiliateCode } = await supabaseAdmin
     .from('affiliate_codes')

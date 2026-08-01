@@ -58,11 +58,13 @@ interface Location {
   location_type: string
   is_active: boolean
   staff_ids?: string[]
-  available_categories?: string[] // Categories this location supports
+  available_categories?: string[] // Categories this location supports (legacy / fallback)
   category?: string[] // Deprecated, use available_categories
   tenant_id: string
   postal_code?: string // For travel time calculations
   time_windows?: TimeWindow[] // Optional booking availability windows
+  /** Per-staff category overrides from staff_locations.available_categories */
+  _staff_categories?: Record<string, string[] | null>
 }
 
 interface StaffWorkingHours {
@@ -330,7 +332,7 @@ export class AvailabilityCalculator {
       // Query staff_locations to get only is_online_bookable = true locations
       let staffLocQuery = this.supabase
         .from('staff_locations')
-        .select('location_id, is_active, is_online_bookable')
+        .select('location_id, staff_id, is_active, is_online_bookable, available_categories')
         .in('staff_id', staffIds)
         .eq('is_active', true)
         .eq('is_online_bookable', true)
@@ -410,7 +412,16 @@ export class AvailabilityCalculator {
           ...loc,
           staff_ids: parsedStaffIds,
           available_categories: availableCategories,
-          time_windows: timeWindows
+          time_windows: timeWindows,
+          // Per-staff category overrides keyed by staff_id
+          _staff_categories: Object.fromEntries(
+            (staffLocs || [])
+              .filter((sl: any) => sl.location_id === loc.id)
+              .map((sl: any) => [
+                sl.staff_id,
+                Array.isArray(sl.available_categories) ? sl.available_categories : null
+              ])
+          ) as Record<string, string[] | null>
         }
       })
       
@@ -689,11 +700,18 @@ export class AvailabilityCalculator {
         for (const location of staffLocations) {
           // For each category the staff offers (deduped to avoid duplicates)
           for (const category of deduplicatedCategories) {
-            // Check if location supports this category
-            if (location.available_categories && location.available_categories.length > 0 && !location.available_categories.includes(category.code)) {
-              continue // Location doesn't support this category
+            // Prefer per-staff categories at this location; fall back to location-level
+            const perStaffCats = location._staff_categories?.[staff.id]
+            if (Array.isArray(perStaffCats)) {
+              // Explicit per-staff list (may be empty = no categories at this location)
+              if (!perStaffCats.includes(category.code)) {
+                continue
+              }
+            } else if (location.available_categories && location.available_categories.length > 0
+                && !location.available_categories.includes(category.code)) {
+              // Legacy fallback: location-level categories
+              continue
             }
-            // If available_categories is empty, all categories are allowed
             
             // For each lesson duration
             for (const durationMinutes of category.lesson_duration_minutes) {

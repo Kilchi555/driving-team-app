@@ -530,6 +530,7 @@
               :tenant-id="props.tenantId"
               :amount-rappen="props.course.price_per_participant_rappen"
               :primary-color="getTenantPrimaryColor()"
+              :initial-code="promoCodeInitial"
               @applied="(d) => appliedDiscount = d"
               @removed="appliedDiscount = null"
             />
@@ -771,6 +772,19 @@ interface Props {
 
 const props = defineProps<Props>()
 const emit = defineEmits(['close', 'enrolled'])
+
+const route = useRoute()
+const promoCodeInitial = computed(() => {
+  const fromQuery = (route.query.code as string || '').trim()
+  if (fromQuery) return fromQuery.toUpperCase()
+  if (!process.client) return null
+  try {
+    const stored = sessionStorage.getItem('marketing_promo_code')
+    const storedTenant = sessionStorage.getItem('marketing_promo_tenant')
+    if (stored && storedTenant === props.tenantSlug) return stored
+  } catch {}
+  return null
+})
 
 // Tenant hooks
 const { tenantPrimaryColor } = useTenant()

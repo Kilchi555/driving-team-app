@@ -1,6 +1,7 @@
-import { defineEventHandler, getHeader, createError, readBody } from 'h3'
+import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { isFeatureEnabled, requireFeature } from '~/server/utils/require-feature'
 
 async function getAdminUser(event: any) {
   const authUser = await getAuthenticatedUser(event)
@@ -20,14 +21,23 @@ async function getAdminUser(event: any) {
 }
 
 /**
- * GET  /api/affiliate/admin-settings  → read settings
- * PUT  /api/affiliate/admin-settings  → update settings
+ * GET  /api/affiliate/admin-settings  → read settings (+ featureEnabled for paywall)
+ * PUT  /api/affiliate/admin-settings  → update settings (requires paid affiliate feature)
  */
 export default defineEventHandler(async (event) => {
   const admin = await getAdminUser(event)
   const supabaseAdmin = getSupabaseAdmin()
+  const featureEnabled = await isFeatureEnabled(admin.tenant_id, 'affiliate_enabled')
 
   if (event.method === 'GET') {
+    if (!featureEnabled) {
+      return {
+        success: true,
+        featureEnabled: false,
+        data: { reward_rappen: 5000, enabled: false },
+      }
+    }
+
     const { data: rows } = await supabaseAdmin
       .from('tenant_settings')
       .select('setting_key, setting_value')
@@ -41,6 +51,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
+      featureEnabled: true,
       data: {
         reward_rappen: parseInt(settings['reward_rappen'] ?? '5000', 10),
         enabled: settings['enabled'] !== 'false',
@@ -49,6 +60,8 @@ export default defineEventHandler(async (event) => {
   }
 
   if (event.method === 'PUT') {
+    await requireFeature(admin.tenant_id, 'affiliate_enabled')
+
     const body = await readBody(event)
     const { reward_rappen, enabled } = body
 
@@ -74,7 +87,7 @@ export default defineEventHandler(async (event) => {
       }, { onConflict: 'tenant_id,category,setting_key' })
     }
 
-    return { success: true }
+    return { success: true, featureEnabled: true }
   }
 
   throw createError({ statusCode: 405, message: 'Method not allowed' })

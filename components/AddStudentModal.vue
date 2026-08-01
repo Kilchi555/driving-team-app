@@ -92,7 +92,7 @@
     <div class="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl max-w-lg w-full mx-0 sm:mx-4 max-h-[92vh] overflow-hidden flex flex-col">
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <h2 class="text-base font-semibold text-gray-900">Neuer Schüler</h2>
+        <h2 class="text-base font-semibold text-gray-900">Neuer {{ t.client }}</h2>
         <button
           @click="$emit('close')"
           class="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
@@ -319,7 +319,7 @@
                   <span class="opacity-0" style="animation: dot-bounce 1.2s ease-in-out infinite 400ms">.</span>
                 </span>
               </span>
-              <span v-else key="idle">{{ bookingPolicy.onboarding_sms_enabled ? 'Einladen & Speichern' : 'Schüler erstellen' }}</span>
+              <span v-else key="idle">{{ bookingPolicy.onboarding_sms_enabled ? 'Einladen & Speichern' : `${t.client} erstellen` }}</span>
             </transition>
           </button>
         </div>
@@ -337,7 +337,9 @@ const { primaryBg, primaryText, primaryBgLight } = usePrimaryColor()
 import { useUIStore } from '~/stores/ui'
 import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'
+import { useTerminology } from '~/composables/useTerminology'
 
+const { t } = useTerminology()
 const uiStore = useUIStore()
 const router = useRouter()
 
@@ -630,13 +632,13 @@ const submitForm = async () => {
     
     const smsEnabled = bookingPolicy.value.onboarding_sms_enabled
     const hasEmail = !!form.value.email.trim()
-    let inviteMsg = 'Schüler wurde erfasst.'
+    let inviteMsg = `${t.value.client} wurde erfasst.`
     if (smsEnabled && form.value.phone) inviteMsg = `Onboarding-SMS wurde an ${form.value.phone} gesendet.`
-    else if (hasEmail) inviteMsg = `Schüler wurde erfasst. Bestätigungs-E-Mail folgt nach Terminerstellung.`
+    else if (hasEmail) inviteMsg = `${t.value.client} wurde erfasst. Bestätigungs-E-Mail folgt nach Terminerstellung.`
 
     uiStore.addNotification({
       type: 'success',
-      title: 'Schüler erstellt!',
+      title: `${t.value.client} erstellt!`,
       message: inviteMsg,
     })
     
@@ -688,36 +690,36 @@ const submitForm = async () => {
       // ✅ Status-basierte Meldungen
       if (isActive && hasAccount) {
         // Aktiver Schüler mit Konto
-        title = '✅ Schüler ist bereits aktiv'
-        actionTitle = 'Der Schüler ist bereits registriert und hat ein Konto'
+        title = `✅ ${t.value.client} ist bereits aktiv`
+        actionTitle = `Der ${t.value.client} ist bereits registriert und hat ein Konto`
         actions = [
-          'Schüler anweisen, sich mit E-Mail/Telefon anzumelden',
+          `${t.value.client} anweisen, sich mit E-Mail/Telefon anzumelden`,
           'Bei Passwort vergessen: "Passwort vergessen" verwenden'
         ]
       } else if (onboardingStatus === 'pending' && !hasAccount) {
         // Pending - Onboarding noch nicht abgeschlossen
-        title = '⏳ Schüler wartet auf Onboarding'
-        actionTitle = 'Der Schüler hat noch sein Onboarding nicht abgeschlossen'
+        title = `⏳ ${t.value.client} wartet auf Onboarding`
+        actionTitle = `Der ${t.value.client} hat noch sein Onboarding nicht abgeschlossen`
         actions = [
-          'Schüler:in kann den Link in der Onboarding-SMS/E-Mail noch verwenden',
+          `${t.value.client} kann den Link in der Onboarding-SMS/E-Mail noch verwenden`,
           'Falls dieser nicht mehr gültig ist, kannst du ein neues SMS/E-Mail senden."',
         ]
       } else if (onboardingStatus === 'completed' && !hasAccount) {
         // Completed aber kein Account - ungewöhnlich
         title = '⚠️ Onboarding abgeschlossen, aber kein Konto'
-        actionTitle = 'Der Schüler hat Onboarding gemacht, aber hat kein aktives Konto'
+        actionTitle = `Der ${t.value.client} hat Onboarding gemacht, aber hat kein aktives Konto`
         actions = [
-          'Kontakt mit dem Schüler aufnehmen',
+          `Kontakt mit dem ${t.value.clientPossessive} aufnehmen`,
           'Konto manuell aktivieren oder neu erstellen',
           'Technischer Support kontaktieren'
         ]
       } else if (!isActive && !hasAccount) {
         // Inaktiver Schüler ohne Konto
-        title = '❌ Schüler ist inaktiv'
-        actionTitle = 'Der Schüler ist inaktiv oder wurde gelöscht'
+        title = `❌ ${t.value.client} ist inaktiv`
+        actionTitle = `Der ${t.value.client} ist inaktiv oder wurde gelöscht`
         actions = [
-          'Bestehende Telefonnummer in der Schülerliste suchen',
-          'Ggf. inaktiven/alten Schüler aktivieren oder löschen',
+          `Bestehende Telefonnummer in der ${t.value.clientsPlural}-Liste suchen`,
+          `Ggf. inaktiven/alten ${t.value.clientPossessive} aktivieren oder löschen`,
           'Andere Telefonnummer verwenden'
         ]
       }
@@ -762,37 +764,37 @@ const submitForm = async () => {
       // ✅ Status-basierte Meldungen
       if (isActive && hasAccount) {
         // Aktiver Schüler mit Konto
-        title = '✅ Schüler ist bereits aktiv'
-        actionTitle = 'Der Schüler ist bereits registriert und hat ein Konto'
+        title = `✅ ${t.value.client} ist bereits aktiv`
+        actionTitle = `Der ${t.value.client} ist bereits registriert und hat ein Konto`
         actions = [
-          'Schüler anweisen, sich mit E-Mail anzumelden',
+          `${t.value.client} anweisen, sich mit E-Mail anzumelden`,
           'Bei Passwort vergessen: "Passwort vergessen" verwenden'
         ]
       } else if (onboardingStatus === 'pending' && !hasAccount) {
         // Pending - Onboarding noch nicht abgeschlossen
-        title = '⏳ Schüler wartet auf Onboarding'
-        actionTitle = 'Der Schüler hat noch sein Onboarding nicht abgeschlossen'
+        title = `⏳ ${t.value.client} wartet auf Onboarding`
+        actionTitle = `Der ${t.value.client} hat noch sein Onboarding nicht abgeschlossen`
         actions = [
-          'Schüler kann noch die Onboarding-SMS/E-Mail verwenden',
+          `${t.value.client} kann noch die Onboarding-SMS/E-Mail verwenden`,
           'Erneut SMS/E-Mail senden (falls nicht erhalten)',
           'Konto manuell löschen und neu erstellen falls nötig'
         ]
       } else if (onboardingStatus === 'completed' && !hasAccount) {
         // Completed aber kein Account - ungewöhnlich
         title = '⚠️ Onboarding abgeschlossen, aber kein Konto'
-        actionTitle = 'Der Schüler hat Onboarding gemacht, aber hat kein aktives Konto'
+        actionTitle = `Der ${t.value.client} hat Onboarding gemacht, aber hat kein aktives Konto`
         actions = [
-          'Kontakt mit dem Schüler aufnehmen',
+          `Kontakt mit dem ${t.value.clientPossessive} aufnehmen`,
           'Konto manuell aktivieren oder neu erstellen',
           'Technischer Support kontaktieren'
         ]
       } else if (!isActive && !hasAccount) {
         // Inaktiver Schüler ohne Konto
-        title = '❌ Schüler ist inaktiv'
-        actionTitle = 'Der Schüler ist inaktiv oder wurde gelöscht'
+        title = `❌ ${t.value.client} ist inaktiv`
+        actionTitle = `Der ${t.value.client} ist inaktiv oder wurde gelöscht`
         actions = [
-          'Bestehende E-Mail in der Schülerliste suchen',
-          'Ggf. inaktiven/alten Schüler aktivieren oder löschen',
+          `Bestehende E-Mail in der ${t.value.clientsPlural}-Liste suchen`,
+          `Ggf. inaktiven/alten ${t.value.clientPossessive} aktivieren oder löschen`,
           'Andere E-Mail verwenden'
         ]
       }
@@ -824,14 +826,14 @@ const submitForm = async () => {
       uiStore.addNotification({
         type: 'error',
         title: 'Duplikat gefunden',
-        message: 'Ein Schüler mit dieser E-Mail oder Telefonnummer existiert bereits.'
+        message: `Ein ${t.value.client} mit dieser E-Mail oder Telefonnummer existiert bereits.`
       })
     } else {
       // General error
       uiStore.addNotification({
         type: 'error',
         title: 'Fehler',
-        message: 'Fehler beim Hinzufügen des Schülers: ' + errorMessage
+        message: `Fehler beim Hinzufügen des ${t.value.clientPossessive}: ` + errorMessage
       })
     }
   } finally {

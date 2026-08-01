@@ -8,6 +8,7 @@ import { sendEmail, generateAppointmentDeletedEmail, generateStaffNotificationEm
 import { sendSMS, generateAppointmentDeletedSMS } from '~/server/utils/sms'
 import { logger } from '~/utils/logger'
 import { sendPushToUser } from '~/server/utils/push'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -55,10 +56,10 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // 2. Load tenant data
+    // 2. Load tenant data + terminology
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('name, contact_email, contact_phone, twilio_from_sender')
+      .select('name, contact_email, contact_phone, twilio_from_sender, business_type')
       .eq('id', tenantId)
       .single()
 
@@ -69,6 +70,8 @@ export default defineEventHandler(async (event) => {
         message: 'Tenant not found'
       })
     }
+
+    const terms = await getTenantTerminology(supabase, tenantId)
 
     // 3. Format appointment data
     const startTime = new Date(appointment.start_time)
@@ -109,9 +112,10 @@ export default defineEventHandler(async (event) => {
 
       const staffName = staff 
         ? `${staff.first_name} ${staff.last_name}`
-        : 'Ihr Fahrlehrer'
+        : `Ihr ${terms.staff}`
 
       const customerName = `${user.first_name} ${user.last_name}`
+      const tenantDisplayName = tenant.name || `Ihre ${terms.businessNoun}`
 
       // Generate and send email
       const emailHtml = generateAppointmentDeletedEmail({
@@ -120,16 +124,17 @@ export default defineEventHandler(async (event) => {
         appointmentTime,
         staffName,
         reason: appointment.deletion_reason || 'Keine Bestätigung erhalten',
-        tenantName: tenant.name,
+        tenantName: tenantDisplayName,
         tenantEmail: tenant.contact_email,
-        tenantPhone: tenant.contact_phone
+        tenantPhone: tenant.contact_phone,
+        staffLabel: terms.staff,
       })
 
       await sendEmail({
         to: user.email,
-        subject: `Termin storniert - ${tenant.name}`,
+        subject: `Termin storniert - ${tenantDisplayName}`,
         html: emailHtml,
-        senderName: tenant.name
+        senderName: tenantDisplayName
       })
 
       logger.debug(`✅ Customer deletion email sent to ${user.email}`)
@@ -137,7 +142,7 @@ export default defineEventHandler(async (event) => {
       // Push notification (fire-and-forget)
       sendPushToUser(userId || appointment.user_id, {
         title: '❌ Termin storniert',
-        body: `Deine Fahrstunde am ${appointmentDate} um ${appointmentTime} Uhr wurde storniert.`,
+        body: `Deine ${terms.appointment} am ${appointmentDate} um ${appointmentTime} Uhr wurde storniert.`,
         data: { path: '/customer-dashboard' },
       }).catch(() => {})
 

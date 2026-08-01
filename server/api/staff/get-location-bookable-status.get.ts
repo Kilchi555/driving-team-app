@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     // Get staff_locations for this user, joined with location postal_code
     const { data: staffLocations, error: staffLocError } = await serviceSupabase
       .from('staff_locations')
-      .select('location_id, is_online_bookable, locations:location_id(postal_code)')
+      .select('location_id, is_online_bookable, available_categories, locations:location_id(postal_code)')
       .eq('staff_id', userProfile.id)
 
     if (staffLocError) {

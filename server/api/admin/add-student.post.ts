@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 
 const supabaseUrl = process.env.SUPABASE_URL!
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -144,6 +145,20 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ Student created with ID:', userId)
+
+    if (body.email && String(body.email).trim()) {
+      upsertMarketingLeadSafe({
+        tenantId,
+        email: body.email,
+        firstName: body.first_name,
+        lastName: body.last_name,
+        phone: body.phone,
+        categories: categoriesFromUserCategory(categoryArray),
+        tags: ['client'],
+        source: 'admin_add_student',
+        sourceLabel: 'Admin: Schüler angelegt',
+      })
+    }
 
     // Return student data
     const studentData = {

@@ -7,6 +7,7 @@ import { defineEventHandler, readBody, createError, getRequestHeader, getRequest
 import { createClient } from '@supabase/supabase-js'
 import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { upsertMarketingLeadSafe } from '~/server/utils/upsert-marketing-lead'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -141,8 +142,24 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // Check if location supports the category
-      if (!location.available_categories.includes(category_code)) {
+      // Check if location / staff offers the category (prefer staff_locations if staff_id given)
+      let categorySupported = Array.isArray(location.available_categories)
+        && location.available_categories.includes(category_code)
+
+      if (staff_id) {
+        const { data: staffLoc } = await supabase
+          .from('staff_locations')
+          .select('available_categories')
+          .eq('staff_id', staff_id)
+          .eq('location_id', location_id)
+          .maybeSingle()
+
+        if (Array.isArray(staffLoc?.available_categories)) {
+          categorySupported = staffLoc.available_categories.includes(category_code)
+        }
+      }
+
+      if (!categorySupported) {
         throw createError({
           statusCode: 400,
           statusMessage: `Location does not support category: ${category_code}`
@@ -249,6 +266,18 @@ export default defineEventHandler(async (event) => {
       console.warn('⚠️ Failed to send inquiry emails:', emailErr.message)
       // Don't fail the inquiry creation if email fails
     }
+
+    upsertMarketingLeadSafe({
+      tenantId: tenant_id,
+      email,
+      firstName: first_name,
+      lastName: last_name,
+      phone,
+      categories: category_code ? [String(category_code).trim()] : [],
+      tags: ['inquiry'],
+      source: 'booking_inquiry',
+      sourceLabel: 'Buchungsanfrage',
+    })
 
     return {
       success: true,

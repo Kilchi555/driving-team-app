@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError, getQuery } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireFeature } from '~/server/utils/require-feature'
 
 async function getAdminProfile(event: any) {
   const authUser = await getAuthenticatedUser(event)
@@ -29,6 +30,7 @@ async function getAdminProfile(event: any) {
  */
 export default defineEventHandler(async (event) => {
   const { profile, supabaseAdmin } = await getAdminProfile(event)
+  await requireFeature(profile.tenant_id, 'affiliate_enabled')
 
   if (event.method === 'GET') {
     const query = getQuery(event)

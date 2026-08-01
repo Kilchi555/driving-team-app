@@ -10,6 +10,8 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { v4 as uuidv4 } from 'uuid'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { buildOnboardingEmailHtml } from '~/server/utils/onboarding-email'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -108,7 +110,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('🏢 Loading tenant information for:', tenantId)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('name, primary_color, twilio_from_sender')
+      .select('name, slug, primary_color, twilio_from_sender, business_type, logo_wide_url, logo_url, logo_square_url')
       .eq('id', tenantId)
       .single()
 
@@ -130,9 +132,14 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Tenant loaded:', tenant.name)
 
-    const tenantName = tenant.name || 'Ihre Fahrschule'
+    const terms = await getTenantTerminology(supabase, tenantId)
+    const tenantName = tenant.name || `Ihre ${terms.businessNoun}`
     const primaryColor = tenant.primary_color || '#2563eb'
-    const customerName = `${firstName} ${lastName}`.trim() || 'Kunde'
+    const logoUrl = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
+    const customerFirstName = (firstName || '').trim() || terms.client
+    const loginLink = tenant.slug
+      ? `https://app.simy.ch/${tenant.slug}`
+      : 'https://app.simy.ch/login'
     
     let emailSent = false
     let smsSent = false
@@ -145,87 +152,16 @@ export default defineEventHandler(async (event) => {
       try {
         logger.debug('📧 Sending reminder email to:', email)
         
-        const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Registrierungserinnerung von ${tenantName}</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          
-          <!-- Header -->
-          <tr>
-            <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">
-                Registrierungserinnerung
-              </h1>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px 30px;">
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                Hallo ${customerName},
-              </p>
-              
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                wir erinnern dich daran, dass deine Registrierung bei ${tenantName} noch ausstehend ist. Um dein Konto zu aktivieren und auf deine Buchungen zuzugreifen, klicke bitte auf den folgenden Button:
-              </p>
-
-              <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
-                <tr>
-                  <td align="center">
-                    <a href="${onboardingLink}" 
-                       style="display: inline-block; background-color: ${primaryColor}; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: bold;">
-                      Jetzt registrieren
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                Oder kopiere diesen Link in deinen Browser:<br>
-                <a href="${onboardingLink}" style="color: ${primaryColor}; word-break: break-all;">${onboardingLink}</a>
-              </p>
-
-              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                ⏰ <strong>Dieser Link ist 30 Tage gültig.</strong>
-              </p>
-
-              <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
-                Bereits registriert? Dann melde dich direkt an — du brauchst diesen Link nicht mehr.<br>
-                Falls der Link nicht funktioniert, bitte ${tenantName} um einen neuen Link.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-              <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0;">
-                ${tenantName}
-              </p>
-              <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                Diese E-Mail wurde automatisch generiert. Bitte nicht antworten.
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-        `
+        const emailHtml = buildOnboardingEmailHtml({
+          variant: 'reminder',
+          tenantName,
+          primaryColor,
+          logoUrl,
+          customerFirstName,
+          onboardingLink,
+          loginLink,
+          businessNoun: terms.businessNoun,
+        })
 
         await sendEmail({
           to: email,

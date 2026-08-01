@@ -19,6 +19,7 @@ import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { normalizePhoneNumber } from '~/server/utils/sms'
+import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -80,7 +81,7 @@ const handler = defineEventHandler(async (event) => {
     const [courseResult, tenantResult] = await Promise.all([
       supabase
         .from('courses')
-        .select('*, course_sessions(*), course_category:course_categories(allow_partial_enrollment, partial_start_position, partial_price_rappen)')
+        .select('*, course_sessions(*), course_category:course_categories(code, name, allow_partial_enrollment, partial_start_position, partial_price_rappen)')
         .eq('id', courseId)
         .eq('tenant_id', tenantId)
         .single(),
@@ -540,6 +541,18 @@ const handler = defineEventHandler(async (event) => {
     }
 
     logger.info('✅ Confirmed enrollment created:', enrollment.id)
+
+    upsertMarketingLeadSafe({
+      tenantId,
+      email: finalEmail,
+      firstName: customerData?.firstname || firstName,
+      lastName: customerData?.lastname || lastName,
+      phone: finalPhone || phone,
+      categories: categoriesFromCourse(course),
+      tags: ['client', 'course'],
+      source: 'course_enroll',
+      sourceLabel: course?.name ? `Kurs: ${course.name}` : 'Kursanmeldung',
+    })
 
     // ── Vehicle bookings for each session (if vehicle selected) ──────────────
     // For partial/individual enrollments only create bookings for the sessions the customer booked.

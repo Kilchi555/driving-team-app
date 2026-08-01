@@ -18,6 +18,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
+import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 import { sendSMS } from '~/server/utils/sms'
 import { v4 as uuidv4 } from 'uuid'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
@@ -251,6 +252,20 @@ export default defineEventHandler(async (event) => {
       smsSuccess,
       emailSuccess
     })
+
+    if (body.email?.trim()) {
+      upsertMarketingLeadSafe({
+        tenantId: userProfile.tenant_id,
+        email: body.email,
+        firstName: body.first_name,
+        lastName: body.last_name,
+        phone: body.phone,
+        categories: categoriesFromUserCategory(body.category),
+        tags: ['client'],
+        source: 'staff_add_student',
+        sourceLabel: 'Staff: Schüler angelegt',
+      })
+    }
 
     return {
       success: true,

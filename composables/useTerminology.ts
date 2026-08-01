@@ -62,9 +62,9 @@ export interface Terminology {
 
 const TERMS: Record<string, Terminology> = {
   driving_school: {
-    client: 'Benutzer',
-    clientsPlural: 'Benutzer',
-    clientPossessive: 'Benutzer',
+    client: 'Schüler',
+    clientsPlural: 'Schüler',
+    clientPossessive: 'Schüler',
     staff: 'Fahrlehrer',
     staffPlural: 'Fahrlehrer',
     appointment: 'Fahrstunde',
@@ -183,6 +183,25 @@ export function getTerminologyDefaults(businessType: string | undefined | null):
   return TERMS[key]
 }
 
+/** Merge DB `ui_labels` over code defaults (same pattern as staff register). */
+export function mergeTerminology(
+  businessType: string | undefined | null,
+  uiLabels?: Record<string, string> | null,
+): Terminology {
+  const fallback = getTerminologyDefaults(businessType)
+  if (!uiLabels || typeof uiLabels !== 'object') return fallback
+  const merged = { ...fallback }
+  for (const key of Object.keys(fallback) as (keyof Terminology)[]) {
+    const dbValue = uiLabels[key]
+    if (typeof dbValue === 'string' && dbValue.trim()) merged[key] = dbValue
+  }
+  return merged
+}
+
+export function isDrivingSchoolBusinessType(businessType: string | undefined | null): boolean {
+  return (businessType || FALLBACK_BUSINESS_TYPE) === 'driving_school'
+}
+
 export function useTerminology() {
   const { currentTenantBranding } = useTenantBranding()
 
@@ -193,7 +212,12 @@ export function useTerminology() {
     return TERMS[raw] ? raw : FALLBACK_BUSINESS_TYPE
   })
 
-  const t = computed<Terminology>(() => getTerminologyDefaults(businessType.value))
+  const t = computed<Terminology>(() => {
+    const uiLabels = (currentTenantBranding.value as any)?.ui_labels
+    return mergeTerminology(businessType.value, uiLabels)
+  })
 
-  return { t, businessType }
+  const isDrivingSchool = computed(() => isDrivingSchoolBusinessType(businessType.value))
+
+  return { t, businessType, isDrivingSchool }
 }

@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 4: Get tenant name and slug (with tenant isolation)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('name, slug, id, from_email, contact_email')
+      .select('name, slug, id, from_email, contact_email, business_type')
       .eq('id', user.tenant_id)
       .single()
 
@@ -78,8 +78,20 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Verify onboarding token: Tenant not found', { tenantId: user.tenant_id })
       throw createError({
         statusCode: 400,
-        statusMessage: 'Fahrschule nicht gefunden'
+        statusMessage: 'Anbieter nicht gefunden'
       })
+    }
+
+    let ui_labels: Record<string, string> = {}
+    if (tenant.business_type) {
+      const { data: preset } = await supabase
+        .from('business_type_presets')
+        .select('ui_labels')
+        .eq('business_type_code', tenant.business_type)
+        .maybeSingle()
+      if (preset?.ui_labels && typeof preset.ui_labels === 'object') {
+        ui_labels = preset.ui_labels as Record<string, string>
+      }
     }
 
     logger.debug('✅ Token verified successfully', { userId: user.id, tenantId: tenant.id })
@@ -105,6 +117,8 @@ export default defineEventHandler(async (event) => {
       tenantName: tenant.name,
       tenantSlug: tenant.slug,
       tenantContactEmail: tenant.contact_email || tenant.from_email || null,
+      businessType: tenant.business_type || 'driving_school',
+      ui_labels,
     }
 
   } catch (error: any) {

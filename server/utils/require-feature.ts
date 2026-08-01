@@ -1,6 +1,16 @@
 import { createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
+/** User-facing German copy for locked plan features (API 403). */
+const FEATURE_LOCKED_MESSAGES: Record<string, string> = {
+  affiliate_enabled:
+    'Das Affiliate-System ist für deinen Plan nicht aktiv. Aktiviere es unter Abonnement / Upgrade.',
+  gbp_enabled:
+    'Google Business Profile ist für deinen Plan nicht aktiv. Aktiviere das Add-on unter Abonnement / Upgrade.',
+  courses_enabled:
+    'Die Kursbuchungsseite ist für deinen Plan nicht aktiv. Aktiviere sie unter Abonnement / Upgrade.',
+}
+
 /**
  * Returns whether the tenant has the given feature flag enabled.
  */
@@ -29,6 +39,13 @@ export async function isFeatureEnabled(tenantId: string, featureKey: string): Pr
  */
 export async function requireFeature(tenantId: string, featureKey: string): Promise<void> {
   if (!(await isFeatureEnabled(tenantId, featureKey))) {
-    throw createError({ statusCode: 403, statusMessage: `Feature '${featureKey}' not enabled` })
+    const message =
+      FEATURE_LOCKED_MESSAGES[featureKey]
+      ?? 'Diese Funktion ist für deinen Plan nicht freigeschaltet. Bitte prüfe dein Abonnement.'
+    throw createError({
+      statusCode: 403,
+      statusMessage: message,
+      data: { code: 'feature_not_enabled', feature: featureKey },
+    })
   }
 }

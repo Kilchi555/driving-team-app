@@ -8,8 +8,9 @@
           <LoadingLogo size="3xl" :tenant-id="activeTenantId || undefined" :tenant-slug="tenantSlug" />
           <h1 class="text-xl font-bold text-gray-700 py-8">
             {{ isAdminRegistration ? 'Admin-Account erstellen' :
-               serviceType === 'fahrlektion' ? 'Registrierung für Fahrlektionen' : 
-               serviceType === 'theorie' ? 'Registrierung für Theorielektion' : 
+               !isDrivingSchool ? 'Registrierung' :
+               serviceType === 'fahrlektion' ? `Registrierung für ${labels.appointmentsPlural}` :
+               serviceType === 'theorie' ? 'Registrierung für Theorielektion' :
                serviceType === 'beratung' ? 'Registrierung für Beratung' : 'Unverbindlich registrieren' }}
           </h1>
         </div>
@@ -301,10 +302,10 @@
             </div>
           </div>
 
-          <!-- Categories (only for normal registration) -->
-          <div v-if="!isAdminRegistration">
+          <!-- Categories (driving schools only) -->
+          <div v-if="showCategorySelection">
             <label class="block text-sm font-medium text-gray-700 mb-3">
-              Führerschein-Kategorien *
+              {{ isDrivingSchool ? 'Führerschein-' : '' }}{{ labels.categoriesLabel }} *
             </label>
             <div class="space-y-3">
               <label v-for="category in availableCategories" :key="category.code" :for="`cat-${category.code}`" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden cursor-pointer tenant-hover-border transition-colors">
@@ -481,7 +482,7 @@
               <div v-if="emailIsPending" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
                 <p class="text-sm font-medium text-amber-800">Konto bereits angelegt — du kannst hier weiter machen</p>
                 <p class="text-sm text-amber-700">
-                  Deine Fahrschule hat dich schon erfasst. Fülle das Formular aus und sende ab — wir verknüpfen dein bestehendes Profil und aktivieren dein Konto.
+                  {{ labels.businessNoun }} hat dich schon erfasst. Fülle das Formular aus und sende ab — wir verknüpfen dein bestehendes Profil und aktivieren dein Konto.
                 </p>
                 <p class="text-xs text-amber-600">
                   Optional: Registrierungslink erneut per SMS anfordern.
@@ -757,7 +758,7 @@
                 Konto ist bereits aktiv. Bitte melde dich direkt an.
               </span>
               <span v-else>
-                Konto wurde bereits von deiner Fahrschule angelegt. Du kannst die Registrierung hier abschliessen — wir verknüpfen dein bestehendes Profil.
+                Konto wurde bereits von {{ labels.businessNoun }} angelegt. Du kannst die Registrierung hier abschliessen — wir verknüpfen dein bestehendes Profil.
               </span>
             </p>
           </div>
@@ -873,6 +874,7 @@ import { logger } from '~/utils/logger'
 import { useAffiliateRef } from '~/composables/useAffiliateRef'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
+import { mergeTerminology, isDrivingSchoolBusinessType } from '~/composables/useTerminology'
 
 const { primaryColor, accentColor } = useTenantBranding()
 
@@ -890,6 +892,10 @@ const forgotPasswordHref = computed(() =>
 
 // Tenant Management
 const { loadTenant, tenantId, currentTenant } = useTenant()
+
+const businessType = computed(() => currentTenant.value?.business_type || 'driving_school')
+const isDrivingSchool = computed(() => isDrivingSchoolBusinessType(businessType.value))
+const labels = computed(() => mergeTerminology(businessType.value))
 
 // Get service type from URL parameter (empty = generic/interest registration, no Lernfahrausweis required)
 const serviceType = ref(route.query.service as string || '')
@@ -1023,7 +1029,11 @@ const activeTenantId = computed(() => {
 })
 
 const requiresLernfahrausweis = computed(() => {
-  return serviceType.value === 'fahrlektion' && !isAdminRegistration.value
+  return isDrivingSchool.value && serviceType.value === 'fahrlektion' && !isAdminRegistration.value
+})
+
+const showCategorySelection = computed(() => {
+  return !isAdminRegistration.value && isDrivingSchool.value && availableCategories.value.length > 0
 })
 
 const maxSteps = computed(() => {
@@ -1045,12 +1055,14 @@ const canProceed = computed(() => {
              formData.value.street && formData.value.streetNr && 
              formData.value.zip && formData.value.city
     }
-    // Normal registration: all fields required
-    return formData.value.firstName && formData.value.lastName && 
+    // Normal registration: all fields required; categories only for driving schools
+    const baseOk = !!(formData.value.firstName && formData.value.lastName && 
            formData.value.birthDate && formData.value.phone && 
            formData.value.street && formData.value.streetNr && 
-           formData.value.zip && formData.value.city && 
-           formData.value.categories.length > 0
+           formData.value.zip && formData.value.city)
+    if (!baseOk) return false
+    if (showCategorySelection.value) return formData.value.categories.length > 0
+    return true
   }
   if (currentStep.value === 2 && requiresLernfahrausweis.value) {
     // Upload is optional – always allow proceeding
@@ -1286,7 +1298,7 @@ const resendOnboardingByPhone = async () => {
     })
     pendingPhoneSmsSent.value = true
   } catch (err: any) {
-    pendingPhoneSmsError.value = err?.data?.statusMessage || 'SMS konnte nicht gesendet werden. Bitte kontaktieren Sie Ihre Fahrschule.'
+    pendingPhoneSmsError.value = err?.data?.statusMessage || `SMS konnte nicht gesendet werden. Bitte kontaktiere ${labels.value.businessNoun}.`
   } finally {
     isSendingPendingPhoneSms.value = false
   }

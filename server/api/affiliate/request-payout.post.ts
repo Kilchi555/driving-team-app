@@ -31,6 +31,10 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (!userProfile) throw createError({ statusCode: 403, message: 'User not found' })
+
+  const { requireFeature } = await import('~/server/utils/require-feature')
+  await requireFeature(userProfile.tenant_id, 'affiliate_enabled')
+
   if (!userProfile.phone) {
     throw createError({ statusCode: 400, message: 'Keine Telefonnummer hinterlegt. Bitte wende dich an den Support.' })
   }

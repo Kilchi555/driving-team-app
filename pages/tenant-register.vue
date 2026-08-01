@@ -623,7 +623,7 @@
                     <span class="text-sm font-semibold text-gray-700">{{ row.typeLabel }}</span>
                   </div>
                   <!-- Row 2: price + duration inputs (indented to align with label) -->
-                  <div class="flex items-center gap-3 pl-10">
+                  <div class="flex items-center gap-3 pl-10 flex-wrap">
                     <div class="flex items-center gap-1.5">
                       <span class="text-xs font-medium text-gray-400">CHF</span>
                       <input
@@ -634,6 +634,20 @@
                       />
                     </div>
                     <DurationPicker v-model="row.duration_minutes" :disabled="!row.enabled" />
+                    <label v-if="pricingMode === 'per_event_type'"
+                      class="inline-flex items-center gap-2 ml-auto text-xs font-medium text-gray-600 select-none"
+                      :class="!row.enabled ? 'pointer-events-none' : 'cursor-pointer'">
+                      <button type="button" :disabled="!row.enabled"
+                        @click="row.public_bookable = !row.public_bookable"
+                        class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
+                        :style="row.public_bookable && row.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
+                        :class="!(row.public_bookable && row.enabled) ? 'bg-gray-200' : ''"
+                        :title="row.public_bookable ? 'Online buchbar' : 'Nur intern'">
+                        <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                          :class="row.public_bookable ? 'translate-x-3' : 'translate-x-0'" />
+                      </button>
+                      Online buchbar
+                    </label>
                   </div>
                 </div>
               </div>
@@ -660,7 +674,7 @@
                   ✕
                 </button>
               </div>
-              <div class="flex items-center gap-3 pl-10">
+              <div class="flex items-center gap-3 pl-10 flex-wrap">
                 <div class="flex items-center gap-1.5">
                   <span class="text-xs font-medium text-gray-400">CHF</span>
                   <input
@@ -671,6 +685,20 @@
                   />
                 </div>
                 <DurationPicker v-model="ce.duration_minutes" :disabled="!ce.enabled" />
+                <label
+                  class="inline-flex items-center gap-2 ml-auto text-xs font-medium text-gray-600 select-none"
+                  :class="!ce.enabled ? 'pointer-events-none' : 'cursor-pointer'">
+                  <button type="button" :disabled="!ce.enabled"
+                    @click="ce.public_bookable = !ce.public_bookable"
+                    class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
+                    :style="ce.public_bookable && ce.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
+                    :class="!(ce.public_bookable && ce.enabled) ? 'bg-gray-200' : ''"
+                    :title="ce.public_bookable ? 'Online buchbar' : 'Nur intern'">
+                    <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                      :class="ce.public_bookable ? 'translate-x-3' : 'translate-x-0'" />
+                  </button>
+                  Online buchbar
+                </label>
               </div>
             </div>
           </div>
@@ -703,6 +731,18 @@
                   </div>
                   <DurationPicker v-model="newEventType.duration_minutes" />
                 </div>
+
+                <label class="inline-flex items-center gap-2 text-xs font-medium text-gray-600 cursor-pointer select-none">
+                  <button type="button"
+                    @click="newEventType.public_bookable = !newEventType.public_bookable"
+                    class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                    :style="newEventType.public_bookable ? { background: formData.primary_color || '#2563EB' } : {}"
+                    :class="!newEventType.public_bookable ? 'bg-gray-200' : ''">
+                    <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                      :class="newEventType.public_bookable ? 'translate-x-3' : 'translate-x-0'" />
+                  </button>
+                  Online buchbar (öffentliche Buchungsseite)
+                </label>
 
                 <div class="flex gap-2 pt-1">
                   <button type="button" @click="addCustomEventType" :disabled="!newEventType.name.trim()"
@@ -1827,6 +1867,8 @@ interface PricingRow {
   price_chf: number
   duration_minutes: number
   enabled: boolean
+  /** Online-Buchung (event_types.public_bookable) — relevant in per_event_type mode */
+  public_bookable: boolean
 }
 
 // Dynamic, business-type-aware event types for the pricing step (replaces the
@@ -1837,6 +1879,7 @@ interface EventTypeTemplate {
   price_chf: number
   duration_minutes: number
   default_enabled: boolean
+  public_bookable?: boolean
 }
 const eventTypeTemplates = ref<EventTypeTemplate[]>([])
 // 'per_category': price varies per selected category (driving_school: Fahrstunde/Prüfung/Theorie
@@ -1867,7 +1910,7 @@ const loadEventTypeTemplates = async () => {
     // Uses the branch-aware label so it doesn't silently show "Fahrstunde"
     // for a business type that isn't driving_school.
     eventTypeTemplates.value = [
-      { code: 'lesson', name: labels.value.appointment, price_chf: 95, duration_minutes: 45, default_enabled: true },
+      { code: 'lesson', name: labels.value.appointment, price_chf: 95, duration_minutes: 45, default_enabled: true, public_bookable: true },
     ]
     pricingMode.value = 'per_category'
   } finally {
@@ -1936,12 +1979,13 @@ watch([pricingGroups, eventTypeTemplates], ([groups, types]) => {
         price_chf: template.price_chf,
         duration_minutes: template.duration_minutes,
         enabled: template.default_enabled,
+        public_bookable: template.public_bookable ?? true,
       })
     }
   } else {
     const pricingTypes = types.length > 0
       ? types
-      : [{ code: 'lesson', name: labels.value.appointment, price_chf: 95, duration_minutes: 45, default_enabled: true }]
+      : [{ code: 'lesson', name: labels.value.appointment, price_chf: 95, duration_minutes: 45, default_enabled: true, public_bookable: true }]
     for (const cat of groups) {
       for (const t of pricingTypes) {
         const existing = pricingRows.value.find(r => r.catId === cat.id && r.type === t.code)
@@ -1955,6 +1999,7 @@ watch([pricingGroups, eventTypeTemplates], ([groups, types]) => {
           price_chf: t.price_chf,
           duration_minutes: t.duration_minutes,
           enabled: t.default_enabled,
+          public_bookable: t.public_bookable ?? true,
         })
       }
     }
@@ -1975,10 +2020,11 @@ interface CustomEventType {
   price_chf: number
   duration_minutes: number
   enabled: boolean
+  public_bookable: boolean
 }
 const customEventTypes = ref<CustomEventType[]>([])
 const showAddEventTypeForm = ref(false)
-const newEventType = ref({ name: '', price_chf: 0, duration_minutes: 60 })
+const newEventType = ref({ name: '', price_chf: 0, duration_minutes: 60, public_bookable: true })
 
 const slugifyEventTypeCode = (name: string): string => {
   const base = name
@@ -2003,8 +2049,9 @@ const addCustomEventType = () => {
     price_chf: newEventType.value.price_chf || 0,
     duration_minutes: newEventType.value.duration_minutes || 60,
     enabled: true,
+    public_bookable: newEventType.value.public_bookable,
   })
-  newEventType.value = { name: '', price_chf: 0, duration_minutes: 60 }
+  newEventType.value = { name: '', price_chf: 0, duration_minutes: 60, public_bookable: true }
   showAddEventTypeForm.value = false
 }
 
@@ -2641,6 +2688,7 @@ const submitRegistration = async () => {
             category_code: null,
             price_chf: r.price_chf,
             duration_minutes: r.duration_minutes,
+            public_bookable: !!r.public_bookable,
           }
         }
         const ruleType = CATEGORY_MODE_RULE_TYPE[r.type]
@@ -2670,6 +2718,7 @@ const submitRegistration = async () => {
         price_chf: c.price_chf,
         duration_minutes: c.duration_minutes,
         is_custom: true,
+        public_bookable: !!c.public_bookable,
       }))
 
     fd.append('pricing_json', JSON.stringify([...pricingJson, ...customEventTypeJson]))

@@ -231,12 +231,15 @@
           </div>
 
           <!-- Affiliate -->
-          <div @click="toggleAffiliate"
+          <div
+            id="addon-affiliate"
+            ref="addonAffiliateEl"
+            @click="toggleAffiliate"
             :class="['rounded-2xl border-2 p-5 transition-all bg-white cursor-pointer',
               addonAffiliate ? 'shadow-lg'
               : planIncludesAffiliate ? 'border-gray-100 opacity-60'
               : 'border-gray-100 shadow-sm']"
-            :style="addonAffiliate ? { borderColor: primaryColor, boxShadow: `0 10px 25px rgba(var(--brand-rgb), 0.12)` } : {}">
+            :style="addonCardStyle(addonAffiliate, highlightAddon === 'affiliate')">
             <div class="flex items-start justify-between mb-4">
               <div>
                 <p class="font-bold text-gray-900 text-sm">Affiliate-System</p>
@@ -267,10 +270,13 @@
         </div>
 
         <!-- Google Business Profile Add-on -->
-        <div @click="toggleGbp"
+        <div
+          id="addon-gbp"
+          ref="addonGbpEl"
+          @click="toggleGbp"
           :class="['rounded-2xl border-2 p-5 transition-all bg-white cursor-pointer mt-4',
             addonGbp ? 'shadow-lg' : 'border-gray-100 shadow-sm']"
-          :style="addonGbp ? { borderColor: primaryColor, boxShadow: `0 10px 25px rgba(var(--brand-rgb), 0.12)` } : {}">
+          :style="addonCardStyle(addonGbp, highlightAddon === 'gbp')">
           <div class="flex items-start justify-between mb-4">
             <div>
               <p class="font-bold text-gray-900 text-sm">Google Business Profile</p>
@@ -703,7 +709,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useLazyFetch, useHead, useRoute } from '#imports'
 import { PLANS } from '~/utils/planFeatures'
 import { useTrialFeatures } from '~/composables/useTrialFeatures'
@@ -832,6 +838,9 @@ const addonSeats = ref(0)
 const addonCourses = ref(false)
 const addonAffiliate = ref(false)
 const addonGbp = ref(false)
+const highlightAddon = ref<'affiliate' | 'gbp' | null>(null)
+const addonAffiliateEl = ref<HTMLElement | null>(null)
+const addonGbpEl = ref<HTMLElement | null>(null)
 const withWallee = ref(true)
 const tenantHasUid = ref(true)
 const loading = ref(false)
@@ -966,9 +975,20 @@ onMounted(async () => {
       } catch { /* non-critical */ }
     }
 
-    // Deep-link from GBP page: /upgrade?addon=gbp
-    if (route.query.addon === 'gbp' && !addonGbp.value) {
+    // Deep-link from feature pages: /upgrade?addon=gbp|affiliate
+    const deepAddon = typeof route.query.addon === 'string' ? route.query.addon : null
+    if (deepAddon === 'gbp' && !addonGbp.value) {
       addonGbp.value = true
+    }
+    if (deepAddon === 'affiliate' && !addonAffiliate.value && !planIncludesAffiliate.value) {
+      addonAffiliate.value = true
+    }
+    if (deepAddon === 'gbp' || deepAddon === 'affiliate') {
+      highlightAddon.value = deepAddon
+      await nextTick()
+      const el = deepAddon === 'gbp' ? addonGbpEl.value : addonAffiliateEl.value
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setTimeout(() => { highlightAddon.value = null }, 2200)
     }
   } catch { /* not critical */ }
 })
@@ -1045,6 +1065,19 @@ watch(selectedPlan, () => {
 
 const toggleCourses = () => { if (!planIncludesCourses.value) addonCourses.value = !addonCourses.value }
 const toggleAffiliate = () => { if (!planIncludesAffiliate.value) addonAffiliate.value = !addonAffiliate.value }
+
+function addonCardStyle(selected: boolean, highlighted: boolean) {
+  const style: Record<string, string> = {}
+  if (selected) {
+    style.borderColor = primaryColor.value
+    style.boxShadow = '0 10px 25px rgba(var(--brand-rgb), 0.12)'
+  }
+  if (highlighted) {
+    style.borderColor = primaryColor.value
+    style.boxShadow = `0 0 0 4px color-mix(in srgb, ${primaryColor.value} 28%, transparent), 0 10px 25px rgba(var(--brand-rgb), 0.12)`
+  }
+  return style
+}
 const toggleGbp = () => { addonGbp.value = !addonGbp.value }
 
 /** Resolve a fresh access token.
@@ -1157,6 +1190,10 @@ const startCheckout = async () => {
         || (result?.unchanged
           ? 'Keine Änderungen erkannt.'
           : 'Abonnement aktualisiert. Anteilsmässige Verrechnung erfolgt auf der nächsten Rechnung.')
+      try {
+        const { reload: reloadFeatures } = useFeatures()
+        await reloadFeatures()
+      } catch { /* nav still works; flags refresh on next full load */ }
       await navigateTo('/admin/billing?updated=1')
       return
     }
@@ -1170,6 +1207,10 @@ const startCheckout = async () => {
         hasActiveSubscription.value = true
         const result = await updateSubscription(token)
         updateSuccess.value = result?.message || 'Abonnement aktualisiert.'
+        try {
+          const { reload: reloadFeatures } = useFeatures()
+          await reloadFeatures()
+        } catch { /* non-critical */ }
         await navigateTo('/admin/billing?updated=1')
         return
       }

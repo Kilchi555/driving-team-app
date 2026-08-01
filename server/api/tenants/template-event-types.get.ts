@@ -79,6 +79,7 @@ export default defineEventHandler(async (event) => {
     duration_minutes: priceByCode[e.code]?.duration_minutes || e.default_duration_minutes || 45,
     price_chf: priceByCode[e.code]?.price_chf ?? FALLBACK_PRICE_CHF[e.code] ?? 0,
     require_payment: e.require_payment,
+    public_bookable: e.public_bookable ?? true,
     // Only the tenant's "primary" event type is pre-checked; everything else
     // is shown but off by default, editable via the toggle.
     default_enabled: !!e.is_default,

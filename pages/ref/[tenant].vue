@@ -51,10 +51,10 @@
              :style="brandColor ? `background-color: ${brandColor}` : 'background-color: #10b981'">
           {{ getInitials(branding?.name || 'F') }}
         </div>
-        <h1 class="text-lg font-bold text-gray-900">{{ branding?.name || 'Fahrschule' }}</h1>
+        <h1 class="text-lg font-bold text-gray-900">{{ branding?.name || labels.businessNoun }}</h1>
         <p class="text-sm text-gray-500 mt-1">
           <span v-if="referrerName">
-            <strong>{{ referrerName }}</strong> empfiehlt dir diese Fahrschule
+            <strong>{{ referrerName }}</strong> empfiehlt dir {{ labels.businessNoun }}
           </span>
           <span v-else>Jetzt kostenlos registrieren</span>
         </p>
@@ -135,7 +135,7 @@
 
         <p class="text-xs text-gray-400 text-center leading-relaxed">
           Mit dem Absenden stimmst du zu, eine SMS mit einem Registrierungslink zu erhalten.
-          Deine Daten werden nur für die Registrierung bei {{ branding?.name || 'der Fahrschule' }} verwendet.
+          Deine Daten werden nur für die Registrierung bei {{ branding?.name || labels.businessNoun }} verwendet.
         </p>
       </form>
     </div>
@@ -152,6 +152,8 @@ const route = useRoute()
 const tenantSlug = route.params.tenant as string
 const refCode = (route.query.ref as string | undefined)?.trim().toUpperCase() || ''
 
+import { mergeTerminology } from '~/composables/useTerminology'
+
 // ---- Branding via useFetch (SSR + client dedup, no flash) ----
 const { data: brandingResult } = await useFetch<any>(`/api/tenants/branding`, {
   query: { slug: tenantSlug },
@@ -160,6 +162,7 @@ const { data: brandingResult } = await useFetch<any>(`/api/tenants/branding`, {
 const branding = computed(() => brandingResult.value?.data ?? null)
 const brandColor = computed(() => branding.value?.primary_color || null)
 const logoUrl = computed(() => branding.value?.logo_wide_url || branding.value?.logo_square_url || branding.value?.logo_url || null)
+const labels = computed(() => mergeTerminology(branding.value?.business_type))
 
 const referrerName = ref<string | null>(null)
 

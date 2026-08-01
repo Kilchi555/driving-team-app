@@ -11,6 +11,7 @@ import { generateCustomerCancelledAdminEmail } from '~/server/utils/email'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { calculateCancellationCharges } from '~/utils/policyCalculations'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
@@ -650,11 +651,12 @@ export default defineEventHandler(async (event) => {
       // Fetch tenant info
       const { data: tenant } = await supabaseAdmin
         .from('tenants')
-        .select('name, slug')
+        .select('name, slug, business_type')
         .eq('id', tenantId)
         .single()
 
-      const tenantName = tenant?.name || 'Fahrschule'
+      const terms = await getTenantTerminology(supabaseAdmin, tenantId)
+      const tenantName = tenant?.name || `Ihre ${terms.businessNoun}`
       const tenantSlug = tenant?.slug || ''
 
       // Refund info for customer email — reflects any charge tier (0/50/100%…), not just free-vs-full
@@ -676,6 +678,7 @@ export default defineEventHandler(async (event) => {
         chargePercentage,
         tenantName,
         requiresMedicalCertificate: reason.requires_proof || false,
+        staffLabel: terms.staff,
       }
 
       // 1. Notify staff (queued for retry/audit)

@@ -740,7 +740,7 @@ import { useRoute, useRouter } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { saveCredentials } from '~/utils/save-credentials'
-import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
+import { getTerminologyDefaults, mergeTerminology, type Terminology } from '~/composables/useTerminology'
 import { getWorkingDaysTemplateDefaults, workingDaysTemplateToForm } from '~/utils/workingDaysTemplate'
 import { inspectIcsUrlShape, normalizeIcsUrl } from '~/utils/ics-url'
 
@@ -785,13 +785,7 @@ const affiliateEnabled     = ref(false)
 // Branch-aware wording (staff / categories / appointments …)
 const isDrivingSchool = computed(() => businessType.value === 'driving_school')
 const labels = computed((): Terminology => {
-  const fallback = getTerminologyDefaults(businessType.value)
-  const merged = { ...fallback }
-  for (const key of Object.keys(fallback) as (keyof Terminology)[]) {
-    const dbValue = tenantUiLabels.value[key]
-    if (typeof dbValue === 'string' && dbValue.trim()) merged[key] = dbValue
-  }
-  return merged
+  return mergeTerminology(businessType.value, tenantUiLabels.value)
 })
 
 // Categories only for driving schools with templates; Führerausweis only for driving schools.

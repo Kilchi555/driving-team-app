@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 const client = new Anthropic()
 
 export default defineEventHandler(async (event) => {
-  const { tenantId, topic, categories, tenantName } = await readBody(event)
+  const { tenantId, topic, categories, tenantName, offerContext } = await readBody(event)
 
   if (!tenantId || !topic) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId and topic are required' })
@@ -24,6 +24,19 @@ export default defineEventHandler(async (event) => {
   const month = new Date().toLocaleString('de-CH', { month: 'long' })
   const year = new Date().getFullYear()
 
+  const offerLines: string[] = []
+  if (offerContext && typeof offerContext === 'object') {
+    if (offerContext.themeKey) offerLines.push(`Aktionsthema: ${offerContext.themeKey}`)
+    if (offerContext.discount_percent) offerLines.push(`Rabatt: ${offerContext.discount_percent}`)
+    if (offerContext.discount_code) offerLines.push(`Code: ${offerContext.discount_code}`)
+    if (offerContext.discount_valid_until) offerLines.push(`Gültig bis: ${offerContext.discount_valid_until}`)
+    if (offerContext.course_name) offerLines.push(`Kurs: ${offerContext.course_name}`)
+    if (offerContext.category_label) offerLines.push(`Kategorie: ${offerContext.category_label}`)
+  }
+  const offerBlock = offerLines.length
+    ? `\nAngebots-Details (bitte in Betreff und Text verwenden):\n- ${offerLines.join('\n- ')}\n`
+    : ''
+
   const prompt = `Du bist ein erfahrener Marketing-Experte für Fahrschulen in der Schweiz.
 Du hilfst "${schoolName}", eine Email-Marketingkampagne zu planen.
 
@@ -31,7 +44,7 @@ Kontext:
 - Monat: ${month} ${year}
 - Zielgruppe (Lead-Kategorien): ${categoryList}
 - Thema / Kampagnenziel: "${topic}"
-
+${offerBlock}
 Erstelle GENAU folgendes im JSON-Format:
 
 1. "campaignIdeas": 3 konkrete Kampagnenideen (jede mit "title", "strategy", "timing")
@@ -43,6 +56,8 @@ Wichtige Regeln:
 - Ton: professionell, freundlich, motivierend
 - Keine leeren Floskeln, direkte Kommunikation
 - Betreffzeilen sollen neugierig machen ohne Clickbait zu sein
+- Nutze Platzhalter {{first_name}}, {{discount_code}}, {{discount_percent}}, {{discount_valid_until}}, {{course_name}}, {{category_label}}, {{cta_url}} wo sinnvoll
+- Erwähne den CTA als Textzeile "Jetzt: {{cta_url}}" falls ein Angebot vorliegt
 
 Antworte NUR als gültiges JSON:
 {

@@ -15,6 +15,7 @@ import {
   sanitizeString,
   throwValidationError
 } from '~/server/utils/validators'
+import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -565,6 +566,18 @@ export default defineEventHandler(async (event) => {
         duration_ms: Date.now() - startTime
       }
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
+
+    upsertMarketingLeadSafe({
+      tenantId,
+      email: emailNormalized,
+      firstName: sanitizedFirstName,
+      lastName: sanitizedLastName,
+      phone: sanitizedPhone,
+      categories: categoriesFromUserCategory(categoryArray),
+      tags: ['client'],
+      source: 'register',
+      sourceLabel: 'Kunden-Registrierung',
+    })
 
     return {
       success: true,

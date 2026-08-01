@@ -162,24 +162,36 @@
                   <span v-else class="text-gray-400">Nicht angegeben</span>
                 </dd>
               </div>
-              <div v-if="userDetails?.birthdate">
+              <div>
                 <dt class="text-sm font-medium text-gray-500">Geburtsdatum</dt>
-                <dd class="mt-1 text-sm text-gray-900">{{ formatDateShort(userDetails.birthdate) }}</dd>
-              </div>
-              <div v-if="userDetails?.street || userDetails?.zip || userDetails?.city">
-                <dt class="text-sm font-medium text-gray-500">Adresse</dt>
                 <dd class="mt-1 text-sm text-gray-900">
-                  <div v-if="userDetails?.street">{{ userDetails.street }} {{ userDetails.street_nr }}</div>
-                  <div v-if="userDetails?.zip || userDetails?.city">{{ userDetails.zip }} {{ userDetails.city }}</div>
+                  <template v-if="userDetails?.birthdate">{{ formatDateShort(userDetails.birthdate) }}</template>
+                  <span v-else class="text-gray-400">Nicht angegeben</span>
                 </dd>
               </div>
-              <div v-if="userDetails?.faberid">
-                <dt class="text-sm font-medium text-gray-500">Ausweisnummer (LFA)</dt>
-                <dd class="mt-1 text-sm font-mono text-gray-900">{{ userDetails.faberid }}</dd>
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Adresse</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <template v-if="userDetails?.street || userDetails?.zip || userDetails?.city">
+                    <div v-if="userDetails?.street || userDetails?.street_nr">{{ [userDetails.street, userDetails.street_nr].filter(Boolean).join(' ') }}</div>
+                    <div v-if="userDetails?.zip || userDetails?.city">{{ [userDetails.zip, userDetails.city].filter(Boolean).join(' ') }}</div>
+                  </template>
+                  <span v-else class="text-gray-400">Nicht angegeben</span>
+                </dd>
               </div>
-              <div v-if="userDetails?.profession">
+              <div>
+                <dt class="text-sm font-medium text-gray-500">Ausweisnummer (LFA)</dt>
+                <dd class="mt-1 text-sm font-mono text-gray-900">
+                  <template v-if="userDetails?.faberid">{{ userDetails.faberid }}</template>
+                  <span v-else class="text-gray-400 font-sans">Nicht angegeben</span>
+                </dd>
+              </div>
+              <div>
                 <dt class="text-sm font-medium text-gray-500">Beruf</dt>
-                <dd class="mt-1 text-sm text-gray-900">{{ userDetails.profession }}</dd>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <template v-if="userDetails?.profession">{{ userDetails.profession }}</template>
+                  <span v-else class="text-gray-400">Nicht angegeben</span>
+                </dd>
               </div>
               <div>
                 <dt class="text-sm font-medium text-gray-500">Rolle</dt>
@@ -208,7 +220,7 @@
                   </span>
                 </dd>
               </div>
-              <div v-if="userDetails?.role === 'staff'" class="md:col-span-3">
+              <div v-if="userDetails?.role === 'client' || userDetails?.role === 'staff'" class="md:col-span-3">
                 <dt class="text-sm font-medium text-gray-500 mb-2">Fahrkategorien</dt>
                 <dd class="mt-1">
                   <div v-if="userDetails.category && userDetails.category.length > 0" class="flex flex-wrap gap-1.5">
@@ -694,7 +706,7 @@
 
     <!-- Edit Modal -->
     <div v-if="showEditModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click="closeEditModal">
-      <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white" @click.stop>
+      <div class="relative top-6 mx-auto mb-10 p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto" @click.stop>
         <div class="mb-4">
           <div class="flex items-center justify-between">
             <h3 class="text-lg leading-6 font-medium text-gray-900">
@@ -762,6 +774,89 @@
                   class="mt-1 block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
+
+              <!-- Geburtsdatum -->
+              <div>
+                <label for="modalBirthdate" class="block text-sm font-medium text-gray-700">Geburtsdatum</label>
+                <input
+                  id="modalBirthdate"
+                  v-model="editForm.birthdate"
+                  type="date"
+                  class="mt-1 block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+              </div>
+
+              <!-- Ausweisnummer LFA -->
+              <div>
+                <label for="modalFaberid" class="block text-sm font-medium text-gray-700">Ausweisnummer (LFA)</label>
+                <input
+                  id="modalFaberid"
+                  v-model="editForm.faberid"
+                  type="text"
+                  class="mt-1 block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono"
+                  placeholder="z. B. 123456789"
+                />
+              </div>
+
+              <!-- Beruf -->
+              <div class="md:col-span-2">
+                <label for="modalProfession" class="block text-sm font-medium text-gray-700">Beruf</label>
+                <input
+                  id="modalProfession"
+                  v-model="editForm.profession"
+                  type="text"
+                  class="mt-1 block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="z. B. Student, Elektriker"
+                />
+              </div>
+
+              <!-- Strasse / Nr. -->
+              <div class="md:col-span-2 grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                  <label for="modalStreet" class="block text-sm font-medium text-gray-700">Strasse</label>
+                  <input
+                    id="modalStreet"
+                    v-model="editForm.street"
+                    type="text"
+                    class="mt-1 block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Hauptstrasse"
+                  />
+                </div>
+                <div>
+                  <label for="modalStreetNr" class="block text-sm font-medium text-gray-700">Nr.</label>
+                  <input
+                    id="modalStreetNr"
+                    v-model="editForm.street_nr"
+                    type="text"
+                    class="mt-1 block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="12"
+                  />
+                </div>
+              </div>
+
+              <!-- PLZ / Ort -->
+              <div class="md:col-span-2 grid grid-cols-3 gap-3">
+                <div>
+                  <label for="modalZip" class="block text-sm font-medium text-gray-700">PLZ</label>
+                  <input
+                    id="modalZip"
+                    v-model="editForm.zip"
+                    type="text"
+                    class="mt-1 block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="8000"
+                  />
+                </div>
+                <div class="col-span-2">
+                  <label for="modalCity" class="block text-sm font-medium text-gray-700">Ort</label>
+                  <input
+                    id="modalCity"
+                    v-model="editForm.city"
+                    type="text"
+                    class="mt-1 block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Zürich"
+                  />
+                </div>
+              </div>
               
               <!-- Rolle -->
               <div>
@@ -793,8 +888,8 @@
             </div>
           </div>
 
-          <!-- Fahrkategorien (nur für Staff) -->
-          <div v-if="editForm.role === 'staff'" class="bg-gray-50 p-4 rounded-lg">
+          <!-- Fahrkategorien (Kunde & Staff) -->
+          <div v-if="editForm.role === 'staff' || editForm.role === 'client'" class="bg-gray-50 p-4 rounded-lg">
             <h4 class="text-sm font-semibold text-gray-900 mb-3">Fahrkategorien</h4>
 
             <div v-if="filteredCategories.length === 0" class="text-center py-4 text-sm text-gray-500">
@@ -1150,6 +1245,13 @@ interface EditForm {
   last_name: string | null
   email: string | null
   phone: string | null
+  birthdate: string | null
+  street: string | null
+  street_nr: string | null
+  zip: string | null
+  city: string | null
+  profession: string | null
+  faberid: string | null
   role: string | null
   is_active: boolean
 }
@@ -1159,6 +1261,13 @@ const editForm = ref<EditForm>({
   last_name: null,
   email: null,
   phone: null,
+  birthdate: null,
+  street: null,
+  street_nr: null,
+  zip: null,
+  city: null,
+  profession: null,
+  faberid: null,
   role: null,
   is_active: true
 })
@@ -1346,11 +1455,24 @@ const loadSystemActivities = async () => {
 const editUser = () => {
   // Populate edit form with current user data
   if (userDetails.value) {
+    // Normalize birthdate to YYYY-MM-DD for <input type="date">
+    const rawBirthdate = userDetails.value.birthdate
+    const birthdate = rawBirthdate
+      ? String(rawBirthdate).slice(0, 10)
+      : null
+
     editForm.value = {
       first_name: userDetails.value.first_name,
       last_name: userDetails.value.last_name,
       email: userDetails.value.email,
       phone: userDetails.value.phone,
+      birthdate,
+      street: userDetails.value.street || null,
+      street_nr: userDetails.value.street_nr || null,
+      zip: userDetails.value.zip || null,
+      city: userDetails.value.city || null,
+      profession: userDetails.value.profession || null,
+      faberid: userDetails.value.faberid || null,
       role: userDetails.value.role,
       is_active: userDetails.value.is_active
     }
@@ -1381,12 +1503,19 @@ const saveChanges = async () => {
       last_name: editForm.value.last_name,
       email: editForm.value.email,
       phone: editForm.value.phone,
+      birthdate: editForm.value.birthdate || null,
+      street: editForm.value.street || null,
+      street_nr: editForm.value.street_nr || null,
+      zip: editForm.value.zip || null,
+      city: editForm.value.city || null,
+      profession: editForm.value.profession || null,
+      faberid: editForm.value.faberid || null,
       role: editForm.value.role,
       is_active: editForm.value.is_active
     }
     
-    // Add categories if user is staff
-    if (editForm.value.role === 'staff') {
+    // Add categories for staff and clients
+    if (editForm.value.role === 'staff' || editForm.value.role === 'client') {
       updateData.category = selectedCategories.value.length > 0 ? selectedCategories.value : null
     }
     

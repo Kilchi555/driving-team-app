@@ -358,6 +358,10 @@ const syncStripeSubscription = async () => {
       body: { sessionId: stripeSessionId },
     })
     logger.debug('✅ Stripe subscription synced from success page')
+    try {
+      const { reload: reloadFeatures } = useFeatures()
+      await reloadFeatures()
+    } catch { /* non-critical */ }
   } catch (err) {
     logger.debug('⚠️ Stripe subscription sync failed (webhook may handle it):', err)
   }

@@ -7,6 +7,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { H3Event } from 'h3'
 import { sendSMS } from '~/server/utils/sms'
 import { v4 as uuidv4 } from 'uuid'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event: H3Event) => {
   const startTime = Date.now()
@@ -184,12 +185,13 @@ export default defineEventHandler(async (event: H3Event) => {
     // Get tenant data for SMS sender name and slug (needed for both flows)
     const { data: tenant } = await supabaseAdmin
       .from('tenants')
-      .select('name, slug, twilio_from_sender')
+      .select('name, slug, twilio_from_sender, business_type')
       .eq('id', tenantId)
       .single()
 
-    const senderName = tenant?.twilio_from_sender || tenant?.name || 'Ihre Fahrschule'
-    const tenantName = tenant?.name || 'Ihre Fahrschule'
+    const terms = await getTenantTerminology(supabaseAdmin, tenantId)
+    const senderName = tenant?.twilio_from_sender || tenant?.name || `Ihre ${terms.businessNoun}`
+    const tenantName = tenant?.name || `Ihre ${terms.businessNoun}`
     const tenantSlug = tenant?.slug || ''
     const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch/login'
 
@@ -214,7 +216,7 @@ export default defineEventHandler(async (event: H3Event) => {
 
       smsMessage = `Hallo ${student.first_name},
 
-hier ist dein Anmelde-Link für die Fahrschule:
+hier ist dein Anmelde-Link für ${tenantName}:
 
 ${loginLink}
 

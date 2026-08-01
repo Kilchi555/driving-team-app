@@ -8,6 +8,10 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 // Allowed columns per update action to prevent mass assignment
 const ADMIN_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'role'] as const
 const STAFF_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'can_edit_guide'] as const
+const USER_UPDATE_WHITELIST = [
+  'first_name', 'last_name', 'email', 'phone', 'is_active', 'role', 'category',
+  'birthdate', 'street', 'street_nr', 'zip', 'city', 'profession', 'faberid'
+] as const
 
 function pickFields<T extends object>(data: T, allowed: readonly string[]): Partial<T> {
   return Object.fromEntries(
@@ -191,6 +195,51 @@ export default defineEventHandler(async (event) => {
         .single()
 
       if (error) throw error
+      return { success: true, data }
+    }
+
+    if (action === 'update-user') {
+      if (!user_id) {
+        throw createError({ statusCode: 400, statusMessage: 'user_id required' })
+      }
+
+      // Tenant isolation for non-super_admin
+      const { data: existing, error: existingError } = await supabase
+        .from('users')
+        .select('id, tenant_id, auth_user_id')
+        .eq('id', user_id)
+        .single()
+
+      if (existingError || !existing) {
+        throw createError({ statusCode: 404, statusMessage: 'User not found' })
+      }
+
+      if (authUser.role !== 'super_admin' && existing.tenant_id !== authUser.tenant_id) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden: Tenant mismatch' })
+      }
+
+      const safeData = pickFields(user_data || {}, USER_UPDATE_WHITELIST)
+
+      // Normalize empty strings to null for optional personalien
+      for (const key of ['birthdate', 'street', 'street_nr', 'zip', 'city', 'profession', 'faberid', 'phone', 'email'] as const) {
+        if (key in safeData && (safeData as any)[key] === '') {
+          ;(safeData as any)[key] = null
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .update(safeData)
+        .eq('id', user_id)
+        .select('*, auth_user_id')
+        .single()
+
+      if (error) throw error
+
+      if ((safeData as any).email && data?.auth_user_id) {
+        await supabase.auth.admin.updateUserById(data.auth_user_id, { email: (safeData as any).email })
+      }
+
       return { success: true, data }
     }
 

@@ -28,12 +28,14 @@ import { sendEmail } from '~/server/utils/email'
 import { roundToNearest5Rappen } from '~/utils/rounding'
 import { logger } from '~/utils/logger'
 import { v4 as uuidv4 } from 'uuid'
+import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
 import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 import { sanitizeString } from '~/server/utils/validators'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 interface GuestBookRequest {
   // Booking identifiers
@@ -111,21 +113,23 @@ export default defineEventHandler(async (event) => {
   // ── Resolve tenant + policy ──────────────────────────────────────────────
   const { data: tenant, error: tenantErr } = await supabase
     .from('tenants')
-    .select('id, name, slug, booking_policy, twilio_from_sender, primary_color, logo_wide_url, logo_url, logo_square_url')
+    .select('id, name, slug, booking_policy, twilio_from_sender, primary_color, logo_wide_url, logo_url, logo_square_url, business_type')
     .eq('slug', body.tenant_slug)
     .eq('is_active', true)
     .single()
 
   if (tenantErr || !tenant) {
-    throw createError({ statusCode: 404, statusMessage: 'Fahrschule nicht gefunden' })
+    throw createError({ statusCode: 404, statusMessage: 'Unternehmen nicht gefunden' })
   }
+
+  const terms = await getTenantTerminology(supabase, tenant.id)
 
   const rawPolicy = (tenant.booking_policy as any) ?? {}
   const policy = { ...DEFAULT_BOOKING_POLICY, ...rawPolicy }
 
   // Guest booking is only allowed when registration is NOT required
   if (policy.registration_required) {
-    throw createError({ statusCode: 403, statusMessage: 'Für diese Fahrschule ist eine Registrierung erforderlich' })
+    throw createError({ statusCode: 403, statusMessage: `Für diese ${terms.businessNoun} ist eine Registrierung erforderlich` })
   }
 
   // ── Validate required fields against policy ──────────────────────────────
@@ -528,7 +532,7 @@ export default defineEventHandler(async (event) => {
 
   // ── Send onboarding SMS + Email (fire-and-forget) ────────────────────────
   // Priority: Email > SMS (only send SMS if no email)
-  const tenantName = (tenant as any).twilio_from_sender || tenant.name || 'Deine Fahrschule'
+  const tenantName = (tenant as any).twilio_from_sender || tenant.name || `Deine ${terms.businessNoun}`
   const smsEnabled = policy.onboarding_sms_enabled !== false
   const emailEnabled = policy.onboarding_email_enabled === true
   const onboardingLink = `https://app.simy.ch/onboarding/${onboardingToken}`
@@ -539,11 +543,11 @@ export default defineEventHandler(async (event) => {
   if (email && emailEnabled) {
     const primaryColor = (tenant as any).primary_color || '#2563eb'
     const logoUrl = (tenant as any).logo_wide_url || (tenant as any).logo_url || (tenant as any).logo_square_url || null
-    const customerName = `${body.first_name || ''} ${body.last_name || ''}`.trim() || 'Kunde'
-    const displayTenantName = tenant.name || 'Deine Fahrschule'
+    const customerName = `${body.first_name || ''} ${body.last_name || ''}`.trim() || terms.client
+    const displayTenantName = tenant.name || `Deine ${terms.businessNoun}`
     
     // Load staff and location info for email
-    let staffName = 'Dein Fahrlehrer'
+    let staffName = `Dein ${terms.staff}`
     let locationName = 'Dein Treffpunkt'
     
     if (slot.staff_id) {
@@ -601,7 +605,7 @@ export default defineEventHandler(async (event) => {
                   <span style="color:#1f2937;font-size:15px;font-weight:bold;">${formattedDate}, ${formattedTime} Uhr</span>
                 </td></tr>
                 <tr><td style="padding:8px 0;border-bottom:1px solid #e5e7eb;">
-                  <span style="color:#6b7280;font-size:13px;">Fahrlehrer</span><br>
+                  <span style="color:#6b7280;font-size:13px;">${terms.staff}</span><br>
                   <span style="color:#1f2937;font-size:15px;font-weight:bold;">${staffName}</span>
                 </td></tr>
                 <tr><td style="padding:8px 0;">
@@ -734,6 +738,20 @@ export default defineEventHandler(async (event) => {
     }
   } catch (err: any) {
     logger.warn('⚠️ Confirmation email trigger failed (guest, non-critical):', err.message)
+  }
+
+  if (email) {
+    upsertMarketingLeadSafe({
+      tenantId,
+      email,
+      firstName: body.first_name,
+      lastName: body.last_name,
+      phone,
+      categories: categoriesFromUserCategory(mergedCategories),
+      tags: ['client', 'booking'],
+      source: 'guest_book',
+      sourceLabel: 'Gastbuchung',
+    })
   }
 
   return {

@@ -355,7 +355,7 @@
           
           <div v-else class="text-center py-6">
             <p class="text-sm text-gray-600">
-              Für diese Kategorie sind noch keine Lektion-Dauern hinterlegt. Bitte kontaktieren Sie die Fahrschule.
+              Für diese {{ bookingLabels.categoryLabel }} sind noch keine Dauern hinterlegt. Bitte kontaktiere {{ bookingLabels.businessNoun }}.
             </p>
           </div>
 
@@ -369,7 +369,7 @@
             </svg>
             <span>
               Einmalige Administrationsgebühr: <strong>CHF {{ (categoryAdminFeeRappen / 100).toFixed(2) }}</strong>
-              — wird ab der {{ categoryAdminFeeAppliesFrom }}. Lektion dieser Kategorie verrechnet (einmalig für die gesamte Ausbildung).
+              — wird ab der {{ categoryAdminFeeAppliesFrom }}. {{ bookingLabels.appointment }} dieser {{ bookingLabels.categoryLabel }} verrechnet (einmalig für die gesamte Ausbildung).
             </span>
           </div>
 
@@ -1076,6 +1076,7 @@
               :amount-rappen="previewPriceRappen"
               :category-code="selectedCategory?.code"
               :primary-color="getBrandPrimary()"
+              :initial-code="(route.query.code as string) || null"
               context="appointment"
               @applied="(d) => bookingDiscount = d"
               @removed="bookingDiscount = null"
@@ -1091,7 +1092,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
             <p class="text-sm text-green-800">
-              <strong>Barzahlung möglich</strong> — du kannst auch direkt bei der Fahrschule bar bezahlen. Die Rechnung erhältst du nach dem Termin.
+              <strong>Barzahlung möglich</strong> — du kannst auch direkt bei {{ bookingLabels.businessNoun }} bar bezahlen. Die Rechnung erhältst du nach dem Termin.
             </p>
           </div>
 
@@ -1608,7 +1609,7 @@
               Du erhältst in Kürze eine E-Mail mit einem Link um dein kostenloses Konto zu aktivieren und deine Buchungen jederzeit zu verwalten.
             </template>
             <template v-else>
-              Kontaktiere die Fahrschule um dein Konto zu aktivieren und deine Buchungen zu verwalten.
+              Kontaktiere {{ bookingLabels.businessNoun }}, um dein Konto zu aktivieren und deine Buchungen zu verwalten.
             </template>
           </p>
         </div>
@@ -1665,6 +1666,7 @@ import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
+import { mergeTerminology, isDrivingSchoolBusinessType } from '~/composables/useTerminology'
 
 const { primaryColor } = useTenantBranding()
 const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer', () => route.params.slug as string)
@@ -2028,6 +2030,9 @@ if (initData.value?.success) {
   locationsCount.value = initData.value.data.locationsCount ?? 0
   availableServiceTypes.value = initData.value.data.availableServiceTypes || []
 }
+
+const bookingLabels = computed(() => mergeTerminology(currentTenant.value?.business_type))
+const isDrivingSchoolTenant = computed(() => isDrivingSchoolBusinessType(currentTenant.value?.business_type))
 
 // ── Booking policy (loaded from get-booking-init, public subset only) ────────
 const bookingPolicy = computed(() => initData.value?.data?.bookingPolicy ?? {
