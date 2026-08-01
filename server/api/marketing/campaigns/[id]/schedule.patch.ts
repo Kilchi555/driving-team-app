@@ -15,6 +15,8 @@ export default defineEventHandler(async (event) => {
     dayOfWeek,
     hour,
     batchSize,
+    repeatMode,
+    repeatIntervalDays,
   } = body as {
     tenantId?: string
     enabled?: boolean
@@ -22,6 +24,8 @@ export default defineEventHandler(async (event) => {
     dayOfWeek?: number | null
     hour?: number
     batchSize?: number
+    repeatMode?: 'once' | 'repeat'
+    repeatIntervalDays?: number
   }
 
   if (!tenantId || !campaignId) {
@@ -32,7 +36,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: campaign, error } = await supabase
     .from('email_campaigns')
-    .select('id, status, schedule_enabled, schedule_frequency, schedule_day_of_week, schedule_hour, schedule_batch_size')
+    .select('id, status, schedule_enabled, schedule_frequency, schedule_day_of_week, schedule_hour, schedule_batch_size, schedule_repeat_mode, schedule_repeat_interval_days')
     .eq('id', campaignId)
     .eq('tenant_id', tenantId)
     .single()
@@ -50,6 +54,12 @@ export default defineEventHandler(async (event) => {
   const nextBatch = typeof batchSize === 'number' && batchSize > 0
     ? Math.min(2000, batchSize)
     : (campaign.schedule_batch_size ?? 500)
+  const nextRepeatMode = repeatMode === 'repeat' || repeatMode === 'once'
+    ? repeatMode
+    : ((campaign as any).schedule_repeat_mode === 'repeat' ? 'repeat' : 'once')
+  const nextInterval = typeof repeatIntervalDays === 'number' && repeatIntervalDays > 0
+    ? Math.min(365, Math.max(1, Math.round(repeatIntervalDays)))
+    : ((campaign as any).schedule_repeat_interval_days ?? 30)
 
   if (nextFrequency === 'weekly' && (nextDow == null || nextDow < 1 || nextDow > 7)) {
     throw createError({ statusCode: 400, statusMessage: 'dayOfWeek must be 1–7 for weekly schedules' })
@@ -64,6 +74,8 @@ export default defineEventHandler(async (event) => {
     schedule_day_of_week: nextDow,
     schedule_hour: nextHour,
     schedule_batch_size: nextBatch,
+    schedule_repeat_mode: nextRepeatMode,
+    schedule_repeat_interval_days: nextInterval,
   }
 
   if (nextEnabled) {

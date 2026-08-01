@@ -13,9 +13,9 @@
             <h1 class="text-base font-semibold text-gray-900">Pendenzen</h1>
             <span :class="[
               'px-2 py-0.5 rounded-full text-xs font-semibold',
-              (pendingCount + unconfirmedNext24hCount + bookingProposalsCount) > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+              (evaluationPendingCount + unconfirmedNext24hCount + bookingProposalsCount) > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
             ]">
-              {{ pendingCount + unconfirmedNext24hCount + bookingProposalsCount }}
+              {{ evaluationPendingCount + unconfirmedNext24hCount + bookingProposalsCount }}
             </span>
           </div>
           
@@ -46,6 +46,7 @@
             Allgemein
           </button>
           <button
+            v-if="evaluationsEnabled"
             :class="[
               'px-3 py-3 text-sm border-b-2 whitespace-nowrap transition-all font-medium',
               activeTab === 'bewertungen' ? '' : 'border-transparent text-gray-500 hover:text-gray-700',
@@ -92,7 +93,7 @@
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="pendingCount === 0 && unconfirmedNext24hCount === 0 && bookingProposalsCount === 0" class="flex items-center justify-center py-8">
+        <div v-else-if="evaluationPendingCount === 0 && unconfirmedNext24hCount === 0 && bookingProposalsCount === 0" class="flex items-center justify-center py-8">
           <div class="text-center px-4">
             <div class="text-6xl mb-4">🎉</div>
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Pendenzen!</h3>
@@ -182,7 +183,7 @@
         </div>
 
         <!-- Pending Appointments List (Bewertungen) -->
-        <div v-else-if="activeTab === 'bewertungen'" class="p-3">
+        <div v-else-if="evaluationsEnabled && activeTab === 'bewertungen'" class="p-3">
           <div v-if="evaluationAppointments.length === 0" class="flex items-center justify-center py-8">
             <div class="text-center px-4">
               <div class="text-6xl mb-4">✅</div>
@@ -538,6 +539,18 @@ import CashPaymentConfirmation from '~/components/CashPaymentConfirmation.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import CancellationReasonModal from '~/components/CancellationReasonModal.vue'
+import { useTerminology } from '~/composables/useTerminology'
+import { useFeatures } from '~/composables/useFeatures'
+
+const { isDrivingSchool } = useTerminology()
+const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
+
+const evaluationsEnabled = computed(() =>
+  isFeatureEnabled('evaluations_enabled', isDrivingSchool.value)
+)
+const examsEnabled = computed(() =>
+  isFeatureEnabled('exams_enabled', isDrivingSchool.value)
+)
 
 // Props
 interface Props {
@@ -601,7 +614,11 @@ const {
 // Modal state
 const showEvaluationModal = ref(false)
 const selectedAppointment = ref<any>(null)
-const activeTab = ref<'pendenzen' | 'bewertungen' | 'anfragen'>(props.defaultTab === 'unconfirmed' ? 'bewertungen' : ((props.defaultTab as any) || 'bewertungen'))
+const activeTab = ref<'pendenzen' | 'bewertungen' | 'anfragen'>(
+  props.defaultTab === 'unconfirmed'
+    ? (evaluationsEnabled.value ? 'bewertungen' : 'pendenzen')
+    : ((props.defaultTab as any) || (evaluationsEnabled.value ? 'bewertungen' : 'pendenzen'))
+)
 const bookingProposals = ref<any[]>([])
 const completingProposalIds = ref<Set<string>>(new Set())
 const proposalActionError = ref('')
@@ -677,6 +694,9 @@ const pendenciesCount = computed(() => {
 })
 
 const bookingProposalsCount = computed(() => bookingProposals.value.length)
+
+/** Kriterien-Bewertungen nur bei Fahrschulen als Pendenz zählen */
+const evaluationPendingCount = computed(() => (evaluationsEnabled.value ? pendingCount.value : 0))
 
 const getProposalStatusLabel = (status: string) => {
   switch (status) {
@@ -927,6 +947,15 @@ const getStudentCategory = (appointment: any) => {
 }
 
 const openEvaluation = (appointment: any) => {
+  if (!evaluationsEnabled.value && appointment?.event_type_code !== 'exam') {
+    logger.debug('⏭️ Skipping evaluation — Termindokumentation disabled')
+    return
+  }
+  if (appointment?.event_type_code === 'exam' && !examsEnabled.value) {
+    logger.debug('⏭️ Skipping exam result — exams disabled')
+    return
+  }
+
   logger.debug('🔥 PendenzenModal - opening evaluation for:', appointment.id)
   
   logger.debug('🔥 Student category debug:', {
@@ -1453,11 +1482,12 @@ watch(() => props.isOpen, async (newIsOpen) => {
     }
     // Setze Tab anhand defaultTab, falls übergeben
     else if (props.defaultTab) {
-      activeTab.value = props.defaultTab === 'unconfirmed' ? 'bewertungen' : (props.defaultTab as any)
+      const tab = props.defaultTab === 'unconfirmed' ? 'bewertungen' : (props.defaultTab as any)
+      activeTab.value = (!evaluationsEnabled.value && tab === 'bewertungen') ? 'pendenzen' : tab
       logger.debug('📌 Using defaultTab:', activeTab.value)
     } else {
-      activeTab.value = 'bewertungen'
-      logger.debug('📌 Default: Switching to Bewertungen tab')
+      activeTab.value = evaluationsEnabled.value ? 'bewertungen' : 'pendenzen'
+      logger.debug('📌 Default tab:', activeTab.value)
     }
   } else if (!newIsOpen) {
     logger.debug('ℹ️ PendenzenModal closed')
@@ -1489,6 +1519,7 @@ watch(() => userPendencies.value, (newVal) => {
 
 // Initial load wenn Component gemounted wird UND Modal bereits offen ist
 onMounted(() => {
+  loadFeatures().catch(() => {})
   if (props.isOpen && props.currentUser?.id) {
     logger.debug('🔄 PendenzenModal mounted with open state - loading data...')
     refreshData()

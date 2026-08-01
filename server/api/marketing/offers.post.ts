@@ -15,6 +15,7 @@ import {
   type OfferCtaType,
 } from '~/server/utils/email-template'
 import { computeNextRunAt, type ScheduleFrequency } from '~/server/utils/campaign-schedule'
+import { defaultRepeatSettings, inferCampaignOfferKind } from '~/utils/campaign-repeat-defaults'
 
 type ValidityPreset = 'end_of_month' | '7_days' | '14_days' | 'custom'
 
@@ -222,6 +223,7 @@ export default defineEventHandler(async (event) => {
   })
 
   const offerSnapshot = {
+    theme_key: themeKey,
     discount_code: discountCode,
     discount_percent: discountPercent,
     discount_valid_until: formatOfferDate(validUntilIso),
@@ -275,6 +277,19 @@ export default defineEventHandler(async (event) => {
   const batchSize = typeof body.schedule?.batchSize === 'number' && body.schedule.batchSize > 0
     ? Math.min(2000, body.schedule.batchSize)
     : 500
+  const kindDefaults = defaultRepeatSettings(inferCampaignOfferKind({
+    themeKey,
+    ctaType,
+    discountCode,
+    courseId,
+    name: title,
+  }))
+  const repeatMode = body.schedule?.repeatMode === 'repeat' || body.schedule?.repeatMode === 'once'
+    ? body.schedule.repeatMode
+    : kindDefaults.repeatMode
+  const repeatIntervalDays = typeof body.schedule?.repeatIntervalDays === 'number' && body.schedule.repeatIntervalDays > 0
+    ? Math.min(365, Math.max(1, Math.round(body.schedule.repeatIntervalDays)))
+    : kindDefaults.repeatIntervalDays
 
   const campaignRow: Record<string, any> = {
     tenant_id: tenantId,
@@ -284,6 +299,8 @@ export default defineEventHandler(async (event) => {
     subject_override: subject,
     segment_filter,
     status: scheduleEnabled ? 'recurring' : 'draft',
+    schedule_repeat_mode: repeatMode,
+    schedule_repeat_interval_days: repeatIntervalDays,
   }
 
   if (scheduleEnabled) {

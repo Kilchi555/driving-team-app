@@ -7,8 +7,10 @@ import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
+  let businessNoun = 'Fahrschule'
   try {
     const body = await readBody(event)
     logger.debug('📝 Complete onboarding request received')
@@ -130,6 +132,11 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Found user:', { id: user.id, email: user.email, tenant_id: user.tenant_id })
 
+    try {
+      const terms = await getTenantTerminology(supabaseAdmin, user.tenant_id)
+      businessNoun = terms.businessNoun || businessNoun
+    } catch { /* keep default */ }
+
     // ✅ LAYER 5: Check token expiration
     const expiresAt = new Date(user.onboarding_token_expires)
     if (expiresAt < new Date()) {
@@ -245,7 +252,7 @@ export default defineEventHandler(async (event) => {
         } catch (err: any) {
           if (err.statusCode) throw err
           logger.error('❌ Recovery failed:', err)
-          throw createError({ statusCode: 500, message: 'Fehler bei der Kontoaktivierung. Bitte kontaktiere die Fahrschule.' })
+          throw createError({ statusCode: 500, message: `Fehler bei der Kontoaktivierung. Bitte kontaktiere ${businessNoun}.` })
         }
 
       } else if (authError.message.includes('password')) {
@@ -455,9 +462,9 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ LAYER 9b: Backfill appointment confirmation email(s)
-    // Bookings made BEFORE onboarding completion skip the confirmation email
-    // (send-appointment-confirmation bails while onboarding_status === 'pending').
-    // Now that the status is 'completed', send confirmations for upcoming
+    // Bookings held with confirmation_email_mode === 'after_registration' skip
+    // while onboarding_status === 'pending'. Now that status is 'completed',
+    // send confirmations for upcoming appointments.
     // confirmed appointments so the customer finally receives them.
     try {
       const { data: upcomingAppts } = await supabaseAdmin
@@ -545,10 +552,10 @@ export default defineEventHandler(async (event) => {
     const rawMessage =
       error.statusMessage ||
       error.message ||
-      'Die Registrierung konnte nicht abgeschlossen werden. Bitte versuche es erneut oder kontaktiere deine Fahrschule.'
+      `Die Registrierung konnte nicht abgeschlossen werden. Bitte versuche es erneut oder kontaktiere ${businessNoun}.`
 
     // Map leftover English / technical messages to clear German UX copy
-    const statusMessage = humanizeOnboardingError(rawMessage, statusCode)
+    const statusMessage = humanizeOnboardingError(rawMessage, statusCode, businessNoun)
     
     throw createError({
       statusCode,
@@ -556,13 +563,13 @@ export default defineEventHandler(async (event) => {
       message: statusMessage,
       data: {
         ...(error.data || {}),
-        tip: onboardingErrorTip(statusMessage, statusCode),
+        tip: onboardingErrorTip(statusMessage, statusCode, businessNoun),
       },
     })
   }
 })
 
-function humanizeOnboardingError(raw: string, statusCode: number): string {
+function humanizeOnboardingError(raw: string, statusCode: number, businessNoun = 'Fahrschule'): string {
   const msg = (raw || '').trim()
   const lower = msg.toLowerCase()
 
@@ -583,18 +590,18 @@ function humanizeOnboardingError(raw: string, statusCode: number): string {
   }
   if (statusCode >= 500 && (/^[A-Za-z0-9_:\-\s.]+$/.test(msg) && !/[äöüÄÖÜß]/.test(msg))) {
     // Likely an English/technical 500 — don't show it raw
-    return 'Ein technischer Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere deine Fahrschule.'
+    return `Ein technischer Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere ${businessNoun}.`
   }
   return msg
 }
 
-function onboardingErrorTip(message: string, statusCode: number): string | undefined {
+function onboardingErrorTip(message: string, statusCode: number, businessNoun = 'Fahrschule'): string | undefined {
   const lower = (message || '').toLowerCase()
   if (lower.includes('bereits') || lower.includes('anmelden')) {
     return 'Falls du dich schon registriert hast: nutze «Zum Login». Ansonsten verwende eine andere E-Mail-Adresse.'
   }
   if (lower.includes('abgelaufen') || lower.includes('ungültig') || lower.includes('neuen link')) {
-    return 'Bitte deine Fahrschule um einen neuen SMS- oder E-Mail-Link — oder nutze «Neuen Link zusenden» auf dieser Seite.'
+    return `Bitte kontaktiere ${businessNoun} für einen neuen SMS- oder E-Mail-Link — oder nutze «Neuen Link zusenden» auf dieser Seite.`
   }
   if (lower.includes('passwort')) {
     return 'Wähle ein Passwort mit mindestens 12 Zeichen, das noch nicht geleakt wurde.'
@@ -603,7 +610,7 @@ function onboardingErrorTip(message: string, statusCode: number): string | undef
     return 'Aus Sicherheitsgründen sind nur wenige Versuche pro Stunde erlaubt.'
   }
   if (statusCode >= 500) {
-    return 'Wenn es erneut fehlschlägt, melde dich bei deiner Fahrschule — sie kann den Link neu senden.'
+    return `Wenn es erneut fehlschlägt, melde dich bei ${businessNoun} — dort kann der Link neu gesendet werden.`
   }
   return undefined
 }

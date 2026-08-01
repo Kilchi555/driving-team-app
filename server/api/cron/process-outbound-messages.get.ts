@@ -106,10 +106,26 @@ export default defineEventHandler(async (event) => {
             failedCount++
           } else {
             console.log(`[OutboundMessageProcessor] ✅ Email sent for message ${message.id}. Resend ID:`, emailResult?.id)
+            const sentAt = new Date().toISOString()
             await supabase
               .from('outbound_messages_queue')
-              .update({ status: 'sent', sent_at: new Date().toISOString(), resend_message_id: emailResult?.id })
+              .update({ status: 'sent', sent_at: sentAt, resend_message_id: emailResult?.id })
               .eq('id', message.id)
+
+            // Marketing campaigns: mark lead contact time so repeat cooldown works
+            const ctx = message.context_data || {}
+            if (ctx.type === 'marketing' && ctx.campaign_id && ctx.lead_id) {
+              await supabase
+                .from('email_campaign_leads')
+                .update({
+                  status: 'sent',
+                  sent_at: sentAt,
+                  outbound_message_id: message.id,
+                })
+                .eq('campaign_id', ctx.campaign_id)
+                .eq('lead_id', ctx.lead_id)
+                .in('status', ['queued', 'sending', 'sent'])
+            }
             sentCount++
           }
         } else         if (message.channel === 'sms') {

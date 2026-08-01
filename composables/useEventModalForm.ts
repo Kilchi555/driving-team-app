@@ -152,9 +152,37 @@ const useEventModalForm = (currentUser?: any, refs?: {
   const LEGACY_CHARGEABLE_TYPES = ['lesson', 'exam', 'theory']
   const isChargeableEventType = (code: string | null | undefined): boolean => {
     if (!code) return false
-    const cached = eventTypes.eventTypesFullCache.value.find((et: any) => et.code === code)
+    const cache = eventTypes.eventTypesFullCache.value
+    const cached = cache.find((et: any) => et.code === code)
     if (cached && typeof cached.require_payment === 'boolean') return cached.require_payment
+    // Tenant types already loaded but this code is unknown (e.g. 'lesson' on
+    // consulting) — do not treat it as chargeable via the driving-school legacy list.
+    if (cache.length > 0) return false
     return LEGACY_CHARGEABLE_TYPES.includes(code)
+  }
+
+  /** Resolve a tenant-valid event_type_code before save (FK-safe). */
+  const resolveEventTypeCodeForSave = async (): Promise<string> => {
+    await eventTypes.loadEventTypes([], true)
+    const cache = eventTypes.eventTypesFullCache.value
+    const requested = (formData.value.appointment_type || '').trim()
+    if (requested && cache.some((et: any) => et.code === requested)) {
+      return requested
+    }
+    // Prefer tenant default, then first chargeable, then first type — never invent 'lesson'.
+    const fallback =
+      cache.find((et: any) => et.is_default) ||
+      cache.find((et: any) => et.require_payment === true) ||
+      cache[0]
+    if (!fallback?.code) {
+      throw new Error('Keine Terminarten für diesen Mandanten konfiguriert')
+    }
+    logger.warn('⚠️ Invalid appointment_type for tenant, substituting:', {
+      requested: requested || '(empty)',
+      substituted: fallback.code
+    })
+    formData.value.appointment_type = fallback.code
+    return fallback.code
   }
 
   // ============ COMPUTED ============
@@ -266,25 +294,30 @@ const useEventModalForm = (currentUser?: any, refs?: {
     // Prüfe zuerst, ob appointment.type ein event type ist (falsch gespeichert)
     const isTypeAnEventType = appointment.type && otherEventTypes.includes(appointment.type.toLowerCase())
     
-    let appointmentType = 'lesson' // Default
-    let vehicleCategory = 'B' // Default
-    
+    let appointmentType = 'lesson' // Default; save path re-resolves if invalid for tenant
+    let vehicleCategory = ''
+
     if (isTypeAnEventType) {
       // appointment.type ist ein event type, nicht die Fahrzeugkategorie
       // Das ist der korrekte Termintyp
       appointmentType = appointment.type.toLowerCase()
-      vehicleCategory = 'B' // Standard für andere Events
       logger.debug('🎯 Detected event type in appointment.type:', appointmentType)
     } else {
       // appointment.type ist die Fahrzeugkategorie, verwende event_type_code
       appointmentType = appointment.event_type_code || appointment.extendedProps?.appointment_type || 'lesson'
-      vehicleCategory = appointment.type ? appointment.type.split(',')[0].trim() : 'B'
+      vehicleCategory = appointment.type ? appointment.type.split(',')[0].trim() : ''
       logger.debug('🎯 Using event_type_code:', appointmentType)
     }
-    
+
+    // Driving-school forms historically defaulted to 'B' when type was missing.
+    // Consulting / other branches must not invent a license category.
+    if (!vehicleCategory && requiresCategory.value) {
+      vehicleCategory = 'B'
+    }
+
     logger.debug('🎯 Final appointmentType:', appointmentType)
     logger.debug('🎯 Final vehicleCategory:', vehicleCategory)
-    
+
     // ✅ NEU: Lade die komplette Kategorie mit Parent-Info
     if (vehicleCategory) {
       const fullCategory = await getCategoryWithParent(vehicleCategory)
@@ -403,7 +436,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
   }
 
   // ✅ Helper function to check if event type is a lesson type
-  const isLessonType = (eventType: string) => isChargeableEventType(eventType)
+  const isLessonType = (eventType: string) => {
+    if (!eventType) return false
+    if (['lesson', 'exam', 'theory'].includes(eventType)) return true
+    return isChargeableEventType(eventType)
+  }
 
   // ✅ Load student by ID for existing appointments
   const loadStudentById = async (userId: string) => {
@@ -843,16 +880,17 @@ const useEventModalForm = (currentUser?: any, refs?: {
     
     try {
       // ✅ NEW: Extended validation - allow either location_id OR custom_location_address
+      // Category (formData.type) is only required for driving_school tenants.
       const hasLocationOrCustom = formData.value.location_id || formData.value.custom_location_address
-      const isValidForSave = isFormValid.value || (formData.value.eventType === 'lesson' && hasLocationOrCustom && 
-                                                    formData.value.title && 
-                                                    formData.value.startDate && 
+      const isValidForSave = isFormValid.value || (formData.value.eventType === 'lesson' && hasLocationOrCustom &&
+                                                    formData.value.title &&
+                                                    formData.value.startDate &&
                                                     formData.value.startTime &&
                                                     formData.value.endTime &&
-                                                    selectedStudent.value && 
-                                                    formData.value.type && 
+                                                    selectedStudent.value &&
+                                                    (!requiresCategory.value || !!formData.value.type) &&
                                                     formData.value.duration_minutes > 0)
-      
+
       if (!isValidForSave) {
         throw new Error('Bitte füllen Sie alle Pflichtfelder aus')
       }
@@ -884,8 +922,12 @@ const useEventModalForm = (currentUser?: any, refs?: {
       
       logger.debug('📋 Appointment user_id:', userId, 'eventType:', formData.value.eventType)
       
+      // Resolve to a tenant-valid event_type_code before chargeability / insert
+      // (consulting tenants have no 'lesson' row — FK would reject it).
+      const resolvedEventTypeCode = await resolveEventTypeCodeForSave()
+
       // Determine if this is a chargeable lesson-type appointment
-      const isChargeableLesson = isChargeableEventType(formData.value.appointment_type || 'lesson')
+      const isChargeableLesson = isChargeableEventType(resolvedEventTypeCode)
       // Generate confirmation token for chargeable appointments
       const confirmationToken = isChargeableLesson ? crypto.randomUUID?.() || Math.random().toString(36).slice(2) : null
 
@@ -974,17 +1016,22 @@ const useEventModalForm = (currentUser?: any, refs?: {
           })
           
           // ✅ Berechne Preis basierend auf Duration und pricePerMinute
-          // Diese sind IMMER verfügbar, im Gegensatz zu formData.base_price_rappen
+          // 0.00 ist ein gültiger DB-Preis (Gratis/unconfigured) — nicht mit Fahrschul-Fallback überschreiben.
           const durationMinutes = formData.value.duration_minutes || 45
           let pricePerMinute = refs?.dynamicPricing?.value?.pricePerMinute
-          if (!pricePerMinute || pricePerMinute <= 0) {
-            const fallbackRule = getFallbackRule(formData.value.type || 'B')
-            pricePerMinute = fallbackRule?.price_per_minute_chf || (95 / 45)
-            logFallbackUsed(
-              'pricing',
-              `Keine dynamische Preisberechnung beim Speichern verfügbar – Fallback-Preis für Kategorie "${formData.value.type}" verwendet.`,
-              { categoryCode: formData.value.type, durationMinutes }
-            )
+          const hasKnownPpm = typeof pricePerMinute === 'number' && Number.isFinite(pricePerMinute) && pricePerMinute >= 0
+          if (!hasKnownPpm) {
+            if (requiresCategory.value) {
+              const fallbackRule = getFallbackRule(formData.value.type || 'B')
+              pricePerMinute = fallbackRule?.price_per_minute_chf || (95 / 45)
+              logFallbackUsed(
+                'pricing',
+                `Keine dynamische Preisberechnung beim Speichern verfügbar – Fallback-Preis für Kategorie "${formData.value.type}" verwendet.`,
+                { categoryCode: formData.value.type, durationMinutes }
+              )
+            } else {
+              pricePerMinute = 0
+            }
           }
           
           // Berechne die Einzelkomponenten
@@ -1028,7 +1075,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
 
       // ✅ Determine if this is an "other event type" (non-lesson)
-      const eventTypeCode = formData.value.appointment_type || 'lesson'
+      const eventTypeCode = resolvedEventTypeCode
       const isOtherEventType = !isChargeableEventType(eventTypeCode)
 
       const appointmentData = {
@@ -1163,7 +1210,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
       
       // ✅ Create or update payment entry nur für Lektionen (lesson, exam, theory)
-      const appointmentType = formData.value.appointment_type || 'lesson' // Fallback zu 'lesson' wenn undefined
+      const appointmentType = resolvedEventTypeCode
       const isLessonType = isChargeableEventType(appointmentType)
       if (isLessonType) {
         if (mode === 'create') {
@@ -1285,8 +1332,9 @@ const useEventModalForm = (currentUser?: any, refs?: {
         // ✅ Für andere Lektionen: Verwende die dynamische Preisberechnung aus dynamicPricing
         const dynamicPrice = refs?.dynamicPricing?.value
         
-        if (dynamicPrice && dynamicPrice.totalPriceChf) {
+        if (dynamicPrice && (dynamicPrice.totalPriceChf != null && dynamicPrice.totalPriceChf !== '')) {
           // Verwende den berechneten Preis aus dem PriceDisplay (OHNE Admin Fee)
+          // '0.00' is valid (free / unconfigured event-type price)
           const totalChf = parseFloat(dynamicPrice.totalPriceChf) || 0
           const adminFeeChf = dynamicPrice.adminFeeChf || 0
           const basePriceChf = totalChf - adminFeeChf
@@ -1298,8 +1346,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
             basePriceRappen: lessonPriceRappen,
             pricePerMinute: dynamicPrice.pricePerMinute
           })
-        } else {
-          // Fallback: Default price per minute (sollte nicht passieren)
+        } else if (
+          typeof dynamicPrice?.pricePerMinute === 'number' &&
+          Number.isFinite(dynamicPrice.pricePerMinute) &&
+          dynamicPrice.pricePerMinute >= 0
+        ) {
+          lessonPriceRappen = Math.round(durationMinutes * dynamicPrice.pricePerMinute * 100)
+        } else if (requiresCategory.value) {
+          // Fallback: Default price per minute (driving_school only)
           console.warn('⚠️ No dynamic pricing available, using fallback')
           const fallbackRule = getFallbackRule(formData.value.type || 'B')
           const pricePerMinute = fallbackRule?.price_per_minute_chf || (95 / 45)
@@ -1311,6 +1365,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
             { categoryCode: formData.value.type, durationMinutes },
             'error'
           )
+        } else {
+          lessonPriceRappen = 0
         }
       }
       
@@ -1548,7 +1604,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         throw new Error('Staff user has no tenant assigned')
       }
       
-      // Check if PriceDisplay already updated the payment with new price
+      // Check if PriceDisplay already updated the payment with new price.
+      // Free (0) falls through so duration × pricePerMinute can still apply.
       if (existingPayment.lesson_price_rappen && existingPayment.lesson_price_rappen > 0) {
         // Use the current payment price (already updated by PriceDisplay watcher)
         lessonPriceRappen = existingPayment.lesson_price_rappen
@@ -1556,63 +1613,78 @@ const useEventModalForm = (currentUser?: any, refs?: {
       } else {
         // Fallback: calculate based on current data
         const durationMinutes = formData.value.duration_minutes || 45
-      
-      if (appointmentType === 'theory') {
-        lessonPriceRappen = 8500
-        logger.debug('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
-      } else {
-        const dynamicPrice = refs?.dynamicPricing?.value
-        
-        // DEBUG: Zeige den aktuellen Status von dynamicPrice
-        logger.debug('🔍 Dynamic pricing state at save time:', {
-          available: !!dynamicPrice,
-          totalPriceChf: dynamicPrice?.totalPriceChf,
-          pricePerMinute: dynamicPrice?.pricePerMinute,
-          adminFeeChf: dynamicPrice?.adminFeeChf,
-          adminFeeRappen: dynamicPrice?.adminFeeRappen
-        })
-        
-        if (dynamicPrice && dynamicPrice.totalPriceChf) {
-          const totalChf = parseFloat(dynamicPrice.totalPriceChf) || 0
-          const adminFeeChf = dynamicPrice.adminFeeChf || 0
-          const basePriceChf = totalChf - adminFeeChf
-          lessonPriceRappen = Math.round(basePriceChf * 100)
+
+        if (appointmentType === 'theory') {
+          lessonPriceRappen = 8500
+          logger.debug('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
         } else {
-          logger.warn('⚠️ No dynamic pricing available, using fallback pricing calculation')
-          
-          // Fallback: Lade die Preisregel aus der DB
-          const { data: pricingRule } = await supabase
-            .from('pricing_rules')
-            .select('*')
-            .eq('category_code', formData.value.type)
-            .eq('tenant_id', staffTenantId)  // ✅ Use staffTenantId from authStore
-            .eq('is_default', false)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single()
-          
-          if (pricingRule) {
-            const basePriceChf = pricingRule.base_price_rappen / 100
+          const dynamicPrice = refs?.dynamicPricing?.value
+
+          // DEBUG: Zeige den aktuellen Status von dynamicPrice
+          logger.debug('🔍 Dynamic pricing state at save time:', {
+            available: !!dynamicPrice,
+            totalPriceChf: dynamicPrice?.totalPriceChf,
+            pricePerMinute: dynamicPrice?.pricePerMinute,
+            adminFeeChf: dynamicPrice?.adminFeeChf,
+            adminFeeRappen: dynamicPrice?.adminFeeRappen
+          })
+
+          if (dynamicPrice && (dynamicPrice.totalPriceChf != null && dynamicPrice.totalPriceChf !== '')) {
+            const totalChf = parseFloat(dynamicPrice.totalPriceChf) || 0
+            const adminFeeChf = dynamicPrice.adminFeeChf || 0
+            const basePriceChf = totalChf - adminFeeChf
             lessonPriceRappen = Math.round(basePriceChf * 100)
-            logger.debug('💾 Fallback: Using pricing rule from DB:', { category: formData.value.type, price: lessonPriceRappen })
+          } else if (
+            typeof dynamicPrice?.pricePerMinute === 'number' &&
+            Number.isFinite(dynamicPrice.pricePerMinute) &&
+            dynamicPrice.pricePerMinute >= 0
+          ) {
+            lessonPriceRappen = Math.round(durationMinutes * dynamicPrice.pricePerMinute * 100)
           } else {
-            // Last resort: Use generic calculation
-            const fallbackRule = getFallbackRule(formData.value.type || 'B')
-            const pricePerMinute = fallbackRule?.price_per_minute_chf || (95 / 45)
-            const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
-            lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
-            logger.warn('💾 Fallback: Using generic price per minute calculation:', { pricePerMinute, duration: durationMinutes, price: lessonPriceRappen })
-            logFallbackUsed(
-              'pricing',
-              `Keine Preisregel in DB gefunden – generischer Fallback-Preis für Kategorie "${formData.value.type}" verwendet.`,
-              { categoryCode: formData.value.type, durationMinutes },
-              'error'
-            )
-          }
+            logger.warn('⚠️ No dynamic pricing available, using fallback pricing calculation')
+
+            // Fallback: Lade die Preisregel aus der DB (category-scoped, driving_school)
+            let pricingRule: any = null
+            if (formData.value.type) {
+              const { data } = await supabase
+                .from('pricing_rules')
+                .select('*')
+                .eq('category_code', formData.value.type)
+                .eq('tenant_id', staffTenantId)  // ✅ Use staffTenantId from authStore
+                .eq('is_default', false)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+              pricingRule = data
+            }
+
+            if (pricingRule?.base_price_rappen != null || pricingRule?.price_per_minute_rappen != null) {
+              if (pricingRule.base_price_rappen != null) {
+                lessonPriceRappen = Math.round(Number(pricingRule.base_price_rappen))
+              } else {
+                lessonPriceRappen = Math.round(Number(pricingRule.price_per_minute_rappen) * durationMinutes)
+              }
+              logger.debug('💾 Fallback: Using pricing rule from DB:', { category: formData.value.type, price: lessonPriceRappen })
+            } else if (requiresCategory.value) {
+              // Last resort: Use generic calculation (driving_school only)
+              const fallbackRule = getFallbackRule(formData.value.type || 'B')
+              const pricePerMinute = fallbackRule?.price_per_minute_chf || (95 / 45)
+              const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
+              lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
+              logger.warn('💾 Fallback: Using generic price per minute calculation:', { pricePerMinute, duration: durationMinutes, price: lessonPriceRappen })
+              logFallbackUsed(
+                'pricing',
+                `Keine Preisregel in DB gefunden – generischer Fallback-Preis für Kategorie "${formData.value.type}" verwendet.`,
+                { categoryCode: formData.value.type, durationMinutes },
+                'error'
+              )
+            } else {
+              lessonPriceRappen = 0
+            }
           }
         }
       }
-      
+
       const selectedProducts = refs?.selectedProducts?.value || []
       const productsPriceRappen = selectedProducts.reduce((total: number, item: any) => {
         const price = item.product?.price || item.price || 0

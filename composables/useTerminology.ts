@@ -58,6 +58,12 @@ export interface Terminology {
    * vermeiden.
    */
   businessNoun: string
+
+  /**
+   * Tab-Label für Termin-/Ausbildungsverlauf im Kundenprofil
+   * (z.B. "Fortschritt" bei Fahrschulen, "Verlauf" bei Consulting).
+   */
+  progressLabel: string
 }
 
 const TERMS: Record<string, Terminology> = {
@@ -72,7 +78,8 @@ const TERMS: Record<string, Terminology> = {
     bookAction: 'Fahrstunde buchen',
     categoriesLabel: 'Kategorien',
     categoryLabel: 'Kategorie',
-    businessNoun: 'Fahrschule'
+    businessNoun: 'Fahrschule',
+    progressLabel: 'Fortschritt'
   },
   // 'mental_coach' is the actual business_type code used by business_types /
   // tenant-register.vue. 'coaching' is kept as an alias for any legacy data.
@@ -87,7 +94,8 @@ const TERMS: Record<string, Terminology> = {
     bookAction: 'Sitzung buchen',
     categoriesLabel: 'Themenbereiche',
     categoryLabel: 'Themenbereich',
-    businessNoun: 'Coaching-Praxis'
+    businessNoun: 'Coaching-Praxis',
+    progressLabel: 'Verlauf'
   },
   consulting: {
     client: 'Kunde',
@@ -100,7 +108,8 @@ const TERMS: Record<string, Terminology> = {
     bookAction: 'Beratung buchen',
     categoriesLabel: 'Leistungsbereiche',
     categoryLabel: 'Leistungsbereich',
-    businessNoun: 'Consulting-Unternehmen'
+    businessNoun: 'Consulting-Unternehmen',
+    progressLabel: 'Verlauf'
   },
   coaching: {
     client: 'Klient',
@@ -113,7 +122,8 @@ const TERMS: Record<string, Terminology> = {
     bookAction: 'Session buchen',
     categoriesLabel: 'Themenbereiche',
     categoryLabel: 'Themenbereich',
-    businessNoun: 'Coaching-Praxis'
+    businessNoun: 'Coaching-Praxis',
+    progressLabel: 'Verlauf'
   },
   therapy: {
     client: 'Patient',
@@ -126,7 +136,8 @@ const TERMS: Record<string, Terminology> = {
     bookAction: 'Sitzung buchen',
     categoriesLabel: 'Behandlungsbereiche',
     categoryLabel: 'Behandlungsbereich',
-    businessNoun: 'Praxis'
+    businessNoun: 'Praxis',
+    progressLabel: 'Verlauf'
   },
   tutoring: {
     client: 'Schüler',
@@ -139,7 +150,8 @@ const TERMS: Record<string, Terminology> = {
     bookAction: 'Nachhilfe buchen',
     categoriesLabel: 'Fächer',
     categoryLabel: 'Fach',
-    businessNoun: 'Nachhilfeschule'
+    businessNoun: 'Nachhilfeschule',
+    progressLabel: 'Fortschritt'
   },
   fitness: {
     client: 'Mitglied',
@@ -152,7 +164,8 @@ const TERMS: Record<string, Terminology> = {
     bookAction: 'Training buchen',
     categoriesLabel: 'Trainingsbereiche',
     categoryLabel: 'Trainingsbereich',
-    businessNoun: 'Fitnessstudio'
+    businessNoun: 'Fitnessstudio',
+    progressLabel: 'Verlauf'
   },
   generic: {
     client: 'Kunde',
@@ -165,7 +178,8 @@ const TERMS: Record<string, Terminology> = {
     bookAction: 'Termin buchen',
     categoriesLabel: 'Kategorien',
     categoryLabel: 'Kategorie',
-    businessNoun: 'Unternehmen'
+    businessNoun: 'Unternehmen',
+    progressLabel: 'Verlauf'
   }
 }
 

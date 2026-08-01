@@ -21,6 +21,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
 import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 const RESEND_DAYS = 7
 
@@ -176,7 +177,11 @@ export default defineEventHandler(async (event) => {
     if (!staff?.email) continue
 
     const tenant       = tenantMap.get(staffPayments[0].tenant_id)
-    const tenantName   = tenant?.name   || 'Ihre Fahrschule'
+    const terms        = await getTenantTerminology(supabase, staffPayments[0].tenant_id)
+    const clientsPlural = terms.clientsPlural || 'Schüler'
+    const appointmentsPlural = terms.appointmentsPlural || 'Fahrstunden'
+    const clientLabel = terms.client || 'Schüler'
+    const tenantName   = tenant?.name   || terms.businessNoun || 'Ihre Fahrschule'
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
     const tenantSlug   = tenant?.slug   || ''
@@ -235,7 +240,7 @@ export default defineEventHandler(async (event) => {
 
           <!-- Header -->
           <div style="background:${primaryColor};padding:24px 28px">
-            <h1 style="margin:0;font-size:18px;font-weight:700;color:#fff">Offene Zahlungen – Deine Schüler</h1>
+            <h1 style="margin:0;font-size:18px;font-weight:700;color:#fff">Offene Zahlungen – Deine ${clientsPlural}</h1>
             <p style="margin:4px 0 0;font-size:13px;color:rgba(255,255,255,0.8)">${reportDate} · ${tenantName}</p>
           </div>
 
@@ -243,7 +248,7 @@ export default defineEventHandler(async (event) => {
           <div style="padding:20px 28px 0">
             <p style="margin:0;font-size:14px;color:#374151;line-height:1.6">
               Hallo ${staff.first_name},<br><br>
-              folgende Schüler haben noch ausstehende Zahlungen für vergangene Fahrstunden:
+              folgende ${clientsPlural} haben noch ausstehende Zahlungen für vergangene ${appointmentsPlural}:
             </p>
           </div>
 
@@ -258,7 +263,7 @@ export default defineEventHandler(async (event) => {
             <table width="100%" cellpadding="0" cellspacing="0">
               <thead>
                 <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">
-                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em">Schüler</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em">${clientLabel}</th>
                   <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em">Betrag / Termin</th>
                 </tr>
               </thead>
@@ -288,7 +293,7 @@ export default defineEventHandler(async (event) => {
       tenant_id:       staffPayments[0].tenant_id,
       channel:         'email',
       recipient_email: staff.email,
-      subject:         `${staffPayments.length} offene Zahlung${staffPayments.length !== 1 ? 'en' : ''} deiner Schüler – CHF ${totalCHF}`,
+      subject:         `${staffPayments.length} offene Zahlung${staffPayments.length !== 1 ? 'en' : ''} deiner ${clientsPlural} – CHF ${totalCHF}`,
       body:            emailBody,
       status:          'pending',
       send_at:         now.toISOString(),

@@ -228,9 +228,14 @@ export default defineEventHandler(async (event) => {
 
       if (updateError) {
         logger.error('❌ Error updating appointment:', updateError)
+        const isEventTypeFk =
+          updateError.code === '23503' &&
+          String(updateError.message || '').includes('event_type')
         throw createError({
-          statusCode: 500,
-          statusMessage: `Fehler beim Aktualisieren des Termins: ${updateError.message}`
+          statusCode: isEventTypeFk ? 400 : 500,
+          statusMessage: isEventTypeFk
+            ? 'Ungültige Terminart für diesen Mandanten. Bitte Terminart neu wählen und erneut speichern.'
+            : `Fehler beim Aktualisieren des Termins: ${updateError.message}`
         })
       }
       result = data
@@ -316,9 +321,15 @@ export default defineEventHandler(async (event) => {
           if (existingPayment) {
             // Calculate new amounts
             let finalTotalAmount = totalAmountRappenForPayment ?? 0
-            let finalBasePrice = basePriceRappen || 0
-            
-            if (!finalBasePrice || finalBasePrice <= 0) {
+            // Explicit 0 from client is valid (free / event-type priced at 0) —
+            // only invent a driving-school estimate when no base price was sent
+            // AND a license category is present.
+            let finalBasePrice = typeof basePriceRappen === 'number' ? basePriceRappen : 0
+
+            if (
+              (basePriceRappen === undefined || basePriceRappen === null) &&
+              appointmentData.type
+            ) {
               const durationMins = appointmentData.duration_minutes || 45
               const fallbackRule = getFallbackRule(appointmentData.type || 'B')
               const pricePerMin = fallbackRule?.price_per_minute_chf || (95 / 45)
@@ -461,9 +472,14 @@ export default defineEventHandler(async (event) => {
 
       if (insertError) {
         logger.error('❌ Error creating appointment:', insertError)
+        const isEventTypeFk =
+          insertError.code === '23503' &&
+          String(insertError.message || '').includes('event_type')
         throw createError({
-          statusCode: 500,
-          statusMessage: `Fehler beim Erstellen des Termins: ${insertError.message}`
+          statusCode: isEventTypeFk ? 400 : 500,
+          statusMessage: isEventTypeFk
+            ? 'Ungültige Terminart für diesen Mandanten. Bitte Terminart neu wählen und erneut speichern.'
+            : `Fehler beim Erstellen des Termins: ${insertError.message}`
         })
       }
       result = data
@@ -478,9 +494,15 @@ export default defineEventHandler(async (event) => {
       // Prepare payment data synchronously (no DB calls needed)
       if (isChargeable) {
         let finalTotalAmount = totalAmountRappenForPayment ?? 0
-        let finalBasePrice = basePriceRappen || 0
-        
-        if (!finalBasePrice || finalBasePrice <= 0) {
+        // Explicit 0 from client is valid (free / event-type priced at 0) —
+        // only invent a driving-school estimate when no base price was sent
+        // AND a license category is present.
+        let finalBasePrice = typeof basePriceRappen === 'number' ? basePriceRappen : 0
+
+        if (
+          (basePriceRappen === undefined || basePriceRappen === null) &&
+          appointmentData.type
+        ) {
           const durationMins = appointmentData.duration_minutes || 45
           const fallbackRule = getFallbackRule(appointmentData.type || 'B')
           const pricePerMin = fallbackRule?.price_per_minute_chf || (95 / 45)

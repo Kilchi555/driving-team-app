@@ -17,9 +17,17 @@ import { useAuthStore } from '~/stores/auth'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useFallbackLogger } from '~/composables/useFallbackLogger'
+import { useTerminology } from '~/composables/useTerminology'
+import { useFeatures } from '~/composables/useFeatures'
 
 const { primaryColor } = useTenantBranding()
 const { logFallbackUsed } = useFallbackLogger()
+const { t, isDrivingSchool } = useTerminology()
+const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
+
+const evaluationsEnabled = computed(() =>
+  isFeatureEnabled('evaluations_enabled', isDrivingSchool.value)
+)
 
 // ✅ Protect this page - require authentication
 definePageMeta({
@@ -103,7 +111,7 @@ const defaultPendenzenTab = computed(() => {
   }
 
   const pendenzenCount = pendingTasksComposable.unconfirmedNext24hCount?.value || 0
-  const bewertungenCount = pendingCount.value || 0
+  const bewertungenCount = evaluationsEnabled.value ? (pendingCount.value || 0) : 0
   const unbestätigtCount = unconfirmedNext24hCount.value || 0
   
   logger.debug('📊 Default tab selection:', { pendenzenCount, bewertungenCount, unbestätigtCount })
@@ -119,6 +127,11 @@ const defaultPendenzenTab = computed(() => {
   
   return 'pendenzen'
 })
+
+/** Badge: Kriterien-Bewertungen nur bei Fahrschulen mitzählen */
+const pendenzenBadgeCount = computed(() =>
+  evaluationsEnabled.value ? (pendingCount.value || 0) : 0
+)
 
 // NEU: Lokale computed für bessere Reaktivität
 const pendenzenButtonClasses = computed(() => {
@@ -370,6 +383,7 @@ onMounted(async () => {
   }
 
   await fetchCurrentUser()
+  loadFeatures().catch(() => {})
   
   logger.debug('🔥 Current user after fetch:', currentUser.value)
   logger.debug('Debug - profileExists:', profileExists?.value)
@@ -527,7 +541,7 @@ onUnmounted(() => {
     >
       <div class="flex justify-around items-center h-[49px]">
 
-        <!-- Schüler -->
+        <!-- Clients (branch-specific) -->
         <button 
           @click="goToCustomers"
           class="flex flex-col items-center justify-center gap-[2px] flex-1 h-full active:opacity-60 transition-opacity"
@@ -535,7 +549,7 @@ onUnmounted(() => {
           <svg class="w-[18px] h-[18px] text-gray-400" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87m6-4.13a4 4 0 11-8 0 4 4 0 018 0zm6-4a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
-          <span class="text-[10px] font-medium text-gray-400">Schüler</span>
+          <span class="text-[10px] font-medium text-gray-400">{{ t.clientsPlural }}</span>
         </button>
 
         <!-- Pendenzen mit Badge -->
@@ -544,17 +558,17 @@ onUnmounted(() => {
           class="flex flex-col items-center justify-center gap-[2px] flex-1 h-full active:opacity-60 transition-opacity"
         >
           <div class="relative">
-            <svg class="w-[18px] h-[18px]" :class="pendingCount > 0 ? 'text-red-500' : 'text-gray-400'" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+            <svg class="w-[18px] h-[18px]" :class="pendenzenBadgeCount > 0 ? 'text-red-500' : 'text-gray-400'" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-9.33-5.003m-.67 5.003v3.158c0 .538-.214 1.055-.595 1.437L6 17h9m-4 4a2 2 0 004 0"/>
             </svg>
             <span 
-              v-if="pendingCount > 0"
+              v-if="pendenzenBadgeCount > 0"
               class="absolute -top-1.5 -right-2 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-[3px] leading-none"
             >
-              {{ pendingCount > 99 ? '99+' : pendingCount }}
+              {{ pendenzenBadgeCount > 99 ? '99+' : pendenzenBadgeCount }}
             </span>
           </div>
-          <span class="text-[10px] font-medium" :class="pendingCount > 0 ? 'text-red-500' : 'text-gray-400'">Pendenzen</span>
+          <span class="text-[10px] font-medium" :class="pendenzenBadgeCount > 0 ? 'text-red-500' : 'text-gray-400'">Pendenzen</span>
         </button>
 
         <!-- Marketing (nur Admin) -->

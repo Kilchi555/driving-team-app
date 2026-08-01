@@ -56,3 +56,23 @@ export function terminologyFromTenant(tenant: {
 } | null | undefined): Terminology {
   return mergeTerminology(tenant?.business_type, tenant?.ui_labels)
 }
+
+/** Event-type → display label map; `lesson` follows tenant appointment term. */
+export function eventTypeLabelMap(terms?: Terminology | null): Record<string, string> {
+  const appointment = terms?.appointment || 'Fahrstunde'
+  return {
+    lesson: appointment,
+    exam: 'Prüfung',
+    theory: 'Theorieunterricht',
+    vku: 'VKU',
+    haltbar: 'Haltbarkeitsprüfung',
+  }
+}
+
+/** e.g. "1 Beratung" / "3 Beratungen" — never throws. */
+export function appointmentCountLabel(terms: Terminology | null | undefined, count: number): string {
+  const n = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0
+  const singular = terms?.appointment || 'Fahrstunde'
+  const plural = terms?.appointmentsPlural || 'Fahrstunden'
+  return `${n} ${n === 1 ? singular : plural}`
+}

@@ -14,6 +14,8 @@ interface ScheduleInput {
   dayOfWeek?: number
   hour?: number
   batchSize?: number
+  repeatMode?: 'once' | 'repeat'
+  repeatIntervalDays?: number
 }
 
 export default defineEventHandler(async (event) => {
@@ -55,6 +57,10 @@ export default defineEventHandler(async (event) => {
   const batchSize = typeof schedule?.batchSize === 'number' && schedule.batchSize > 0
     ? Math.min(2000, schedule.batchSize)
     : 500
+  const repeatMode = schedule?.repeatMode === 'repeat' ? 'repeat' : 'once'
+  const repeatIntervalDays = typeof schedule?.repeatIntervalDays === 'number' && schedule.repeatIntervalDays > 0
+    ? Math.min(365, Math.max(1, Math.round(schedule.repeatIntervalDays)))
+    : 30
 
   const insertRow: Record<string, any> = {
     tenant_id: tenantId,
@@ -64,6 +70,8 @@ export default defineEventHandler(async (event) => {
     subject_override: subject_override || null,
     segment_filter,
     status: scheduleEnabled ? 'recurring' : 'draft',
+    schedule_repeat_mode: repeatMode,
+    schedule_repeat_interval_days: repeatIntervalDays,
   }
 
   if (scheduleEnabled) {

@@ -1447,8 +1447,9 @@ const openNewAppointmentModal = (arg: any) => {
         location: '',
         staff_note: '',
         client_note: '',
+        // Hint only — EventModal resolves the real tenant event type
+        // (consulting free-slots must not stay stuck on driving-school "lesson").
         eventType: 'lesson',
-        appointment_type: 'lesson', // ✅ Explizit auf 'lesson' setzen
         isNewAppointment: true
       }
     }

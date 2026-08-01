@@ -1,7 +1,13 @@
 import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { applyEvaluationDefaults } from '~/server/utils/business-type-presets'
 
+/**
+ * Seeds evaluation curriculum templates onto the current tenant.
+ * Only copies templates matching the tenant's business_type
+ * (Fahrschul-Vorlagen are never applied to consulting/coaching/…).
+ */
 export default defineEventHandler(async (event) => {
   try {
     const supabase = getSupabaseAdmin()
@@ -27,7 +33,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Check if user has permission (admin or super_admin)
     if (!['admin', 'super_admin'].includes(userProfile.role)) {
       throw createError({
         statusCode: 403,
@@ -35,23 +40,23 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Copy default evaluation data to tenant
-    const { error } = await supabase
-      .rpc('copy_default_evaluation_data_to_tenant', { 
-        target_tenant_id: userProfile.tenant_id 
-      })
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', userProfile.tenant_id)
+      .maybeSingle()
 
-    if (error) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: `Failed to copy default data: ${error.message}`
-      })
-    }
+    const businessType = tenant?.business_type || 'driving_school'
+
+    await applyEvaluationDefaults(supabase, userProfile.tenant_id, businessType)
 
     return {
       success: true,
-      message: 'Default evaluation data copied successfully',
-      tenant_id: userProfile.tenant_id
+      message: businessType === 'driving_school'
+        ? 'Default evaluation data copied successfully'
+        : `Evaluation templates for ${businessType} applied (empty if none exist)`,
+      tenant_id: userProfile.tenant_id,
+      business_type: businessType
     }
 
   } catch (error: any) {

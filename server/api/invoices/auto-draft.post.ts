@@ -8,6 +8,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { computeInvoiceDueDate } from '~/server/utils/invoice-due-date'
 import { computeVatAmountRappen, getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 import { groupProductSalesByAppointment } from '~/server/utils/invoice-product-lines'
+import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -239,9 +240,9 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const eventTypeMap: Record<string, string> = {
-    lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorieunterricht', vku: 'VKU', haltbar: 'Haltbarkeitsprüfung'
-  }
+  const terms = await getTenantTerminology(supabase, staffUser.tenant_id)
+  const eventTypeMap = eventTypeLabelMap(terms)
+  const appointmentFallback = terms.appointment || 'Fahrstunde'
 
   let sortOrder = 0
   draft.items = openPayments.flatMap((p) => {
@@ -249,8 +250,8 @@ export default defineEventHandler(async (event) => {
     const label = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
     const staffFirstName = apt?.staff?.first_name || null
     const serviceName = staffFirstName
-      ? `${label || apt?.title || 'Fahrstunde'} mit ${staffFirstName}`
-      : (label || apt?.title || 'Fahrstunde')
+      ? `${label || apt?.title || appointmentFallback} mit ${staffFirstName}`
+      : (label || apt?.title || appointmentFallback)
 
     const products = (p.appointment_id && productsByApt[p.appointment_id]) || []
     const productsTotal = products.reduce((sum, pd) => sum + (pd.price_rappen || 0), 0)

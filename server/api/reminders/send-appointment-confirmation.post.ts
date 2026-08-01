@@ -51,29 +51,28 @@ export default defineEventHandler(async (event) => {
       .eq('id', tenantId)
       .maybeSingle()
 
-    const confirmationEmailEnabled = (tenantForPolicy?.booking_policy as any)?.confirmation_email_enabled !== false
+    const policy = (tenantForPolicy?.booking_policy as any) || {}
+    const confirmationEmailEnabled = policy.confirmation_email_enabled !== false
+    // Tenant-controlled: when to send the customer confirmation.
+    // Default 'always' — registration/login is optional unless registration_required.
+    const confirmationEmailMode: 'always' | 'after_registration' | 'never' =
+      policy.confirmation_email_mode === 'after_registration' || policy.confirmation_email_mode === 'never'
+        ? policy.confirmation_email_mode
+        : 'always'
 
     // 2a. Admin disabled confirmation emails entirely
-    if (!confirmationEmailEnabled) {
-      logger.debug('⏭️ Confirmation emails disabled by tenant policy')
-      return { success: true, skipped: true, reason: 'policy_disabled', message: 'Confirmation emails disabled by admin' }
+    if (!confirmationEmailEnabled || confirmationEmailMode === 'never') {
+      logger.debug('⏭️ Confirmation emails disabled by tenant policy', {
+        confirmationEmailEnabled,
+        confirmationEmailMode
+      })
+      return {
+        success: true,
+        skipped: true,
+        reason: confirmationEmailMode === 'never' ? 'policy_mode_never' : 'policy_disabled',
+        message: 'Confirmation emails disabled by admin'
+      }
     }
-
-    // 2b/3. Whether the CUSTOMER-facing confirmation email should be skipped for now.
-    // Guest bookings always start with onboarding_status === 'pending' (the customer
-    // gets a separate "activate your account" email immediately with the same booking
-    // details — see guest-book.post.ts). The customer confirmation here is re-sent later
-    // via students/complete-onboarding.post.ts once they activate.
-    // IMPORTANT: this must NOT skip the whole function — the staff "new booking"
-    // notification below is independent of the customer's onboarding status and should
-    // always go out for online bookings, otherwise staff silently never get notified
-    // for guest bookings (which never/rarely complete onboarding).
-    const skipCustomerEmail =
-      !user.email || user.email.trim() === '' ||
-      user.onboarding_status === 'pending'
-    const skipCustomerEmailReason = !user.email || user.email.trim() === ''
-      ? 'user_email_missing'
-      : 'user_onboarding_pending'
 
     // 4. Get appointment data with payment
     const { data: appointment, error: appointmentError } = await supabase
@@ -113,6 +112,32 @@ export default defineEventHandler(async (event) => {
         reason: 'appointment_not_found',
         message: 'Appointment not found'
       }
+    }
+
+    // 2b/3. Customer-facing confirmation skip rules (tenant policy driven):
+    // - Always skip when no email address (nothing to send to)
+    // - If mode === 'after_registration': hold until onboarding_status is completed
+    //   (backfilled in students/complete-onboarding.post.ts)
+    // - mode === 'always' (default): send even for pending guests — login/registration
+    //   is optional unless the tenant sets registration_required / after_registration
+    const hasEmail = !!(user.email && user.email.trim())
+    const holdForRegistration =
+      confirmationEmailMode === 'after_registration' &&
+      user.onboarding_status === 'pending'
+    const skipCustomerEmail = !hasEmail || holdForRegistration
+    const skipCustomerEmailReason = !hasEmail
+      ? 'user_email_missing'
+      : holdForRegistration
+        ? 'waiting_for_registration'
+        : undefined
+
+    if (holdForRegistration) {
+      logger.debug('⏭️ Holding confirmation until customer completes registration', {
+        appointmentId,
+        userId,
+        confirmationEmailMode,
+        source: appointment.source
+      })
     }
 
     // 5. Get staff data + terminology

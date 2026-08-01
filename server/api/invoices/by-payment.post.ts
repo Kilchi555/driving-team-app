@@ -7,6 +7,7 @@ import {
   expandProductsAsSeparateLines,
   groupProductSalesByAppointment,
 } from '~/server/utils/invoice-product-lines'
+import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -127,9 +128,8 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const eventTypeMap: Record<string, string> = {
-    lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorieunterricht', vku: 'VKU', haltbar: 'Haltbarkeitsprüfung'
-  }
+  const terms = await getTenantTerminology(supabase, staffUser.tenant_id)
+  const eventTypeMap = eventTypeLabelMap(terms)
 
   // start_time, event type und payment breakdown in invoice_items einbetten
   const enrichedItems = (invoice.invoice_items as any[]).map((item: any) => {

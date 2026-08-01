@@ -176,6 +176,14 @@ describe('email keyword checklist (deletion template)', () => {
   })
 })
 
+describe('progressLabel', () => {
+  it('driving_school uses Fortschritt, consulting uses Verlauf', () => {
+    expect(getTerminologyDefaults('driving_school').progressLabel).toBe('Fortschritt')
+    expect(getTerminologyDefaults('consulting').progressLabel).toBe('Verlauf')
+    expect(getTerminologyDefaults('tutoring').progressLabel).toBe('Fortschritt')
+  })
+})
+
 describe('onboarding / payment copy fragments', () => {
   it('builds branch-aware onboarding fallback line', () => {
     const ds = getTerminologyDefaults('driving_school')
@@ -190,5 +198,17 @@ describe('onboarding / payment copy fragments', () => {
     const consulting = getTerminologyDefaults('consulting')
     expect(`für folgende ${ds.appointmentsPlural}`).toBe('für folgende Fahrstunden')
     expect(`für folgende ${consulting.appointmentsPlural}`).toBe('für folgende Beratungen')
+  })
+})
+
+describe('eventTypeLabelMap / appointmentCountLabel', () => {
+  it('maps lesson to appointment term', async () => {
+    const { eventTypeLabelMap, appointmentCountLabel } = await import('../tenant-terminology')
+    const consulting = getTerminologyDefaults('consulting')
+    expect(eventTypeLabelMap(consulting).lesson).toBe('Beratung')
+    expect(eventTypeLabelMap(null).lesson).toBe('Fahrstunde')
+    expect(appointmentCountLabel(consulting, 1)).toBe('1 Beratung')
+    expect(appointmentCountLabel(consulting, 3)).toBe('3 Beratungen')
+    expect(appointmentCountLabel(undefined, 2)).toBe('2 Fahrstunden')
   })
 })

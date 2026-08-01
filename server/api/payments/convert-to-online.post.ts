@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { Wallee as WalleeSDK } from 'wallee'
 import { logger } from '~/utils/logger'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 interface ConvertToOnlineRequest {
   paymentId: string
@@ -66,6 +67,10 @@ export default defineEventHandler(async (event) => {
       .eq('id', payment.tenant_id)
       .single()
 
+    const terms = await getTenantTerminology(supabase, payment.tenant_id)
+    const appointmentLabel = terms.appointment || 'Fahrstunde'
+    const businessFallback = tenant?.name || terms.businessNoun || 'Fahrschule'
+
     const { data: customer } = await supabase
       .from('users')
       .select('first_name, email')
@@ -110,7 +115,7 @@ export default defineEventHandler(async (event) => {
           currency: payment.currency || 'CHF',
           customerEmail: email,
           customerName: customer?.first_name || 'Customer',
-          description: payment.description || `${payment.appointments?.title || 'Fahrstunde'}`,
+          description: payment.description || `${payment.appointments?.title || appointmentLabel}`,
           userId: payment.user_id,
           tenantId: payment.tenant_id
         }
@@ -173,7 +178,7 @@ export default defineEventHandler(async (event) => {
     <div style="background-color: white; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 5px;">
       <h3 style="margin-top: 0; color: #2563eb;">Zahlungsdetails</h3>
       <p style="margin: 5px 0;"><strong>Betrag:</strong> CHF ${(payment.total_amount_rappen / 100).toFixed(2)}</p>
-      <p style="margin: 5px 0;"><strong>Termin:</strong> ${appointment?.title || 'Fahrstunde'}</p>
+      <p style="margin: 5px 0;"><strong>Termin:</strong> ${appointment?.title || appointmentLabel}</p>
       ${appointment?.start_time ? `<p style="margin: 5px 0;"><strong>Datum:</strong> ${new Date(appointment.start_time).toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich' })}</p>` : ''}
     </div>
     
@@ -185,7 +190,7 @@ export default defineEventHandler(async (event) => {
     </div>
     
     <p style="color: #666; font-size: 0.9em;">
-      Falls Sie Fragen haben, kontaktieren Sie bitte ${tenant?.name || 'unser Büro'}.
+      Falls Sie Fragen haben, kontaktieren Sie bitte ${businessFallback}.
     </p>
   </div>
 </body>
@@ -197,7 +202,7 @@ export default defineEventHandler(async (event) => {
           method: 'POST',
           body: {
             email,
-            subject: `Zahlung erforderlich - ${tenant?.name || 'Fahrstunde'}`,
+            subject: `Zahlung erforderlich - ${businessFallback}`,
             html: emailHtml,
             paymentLink: newWalleeResult.paymentUrl
           }
