@@ -203,7 +203,7 @@ ${ctaButton('Beratung / Termin')}
 <h2 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#111827">Verdiene bis zu CHF 70.– pro Empfehlung</h2>
 <p style="margin:0 0 20px;color:#6b7280;font-size:14px">Das Affiliate-Programm von {{tenant_name}}</p>
 <p>Hallo {{first_name}},</p>
-<p>Du kennst jemanden, der den Führerschein machen möchte? Dann empfiehl uns – und verdiene CHF-Guthaben, vollautomatisch und ohne Aufwand.</p>
+<p>Du kennst jemanden, der den Führerschein machen möchte? Dann empfiehl uns – und verdiene eine Prämie, vollautomatisch und ohne Aufwand.</p>
 <h2>So funktioniert es</h2>
 <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px">
   <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
@@ -217,8 +217,8 @@ ${ctaButton('Beratung / Termin')}
   </td></tr>
   <tr><td style="height:8px"></td></tr>
   <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
-    <p style="margin:0;font-size:14px;color:#374151;font-weight:600">③ Guthaben erhalten</p>
-    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund eine Fahrstunde bezahlt, wird das Guthaben automatisch gutgeschrieben – Auszahlung jederzeit möglich.</p>
+    <p style="margin:0;font-size:14px;color:#374151;font-weight:600">③ Prämie erhalten</p>
+    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund eine Fahrstunde bezahlt, wird die Prämie automatisch gutgeschrieben – Auszahlung jederzeit möglich.</p>
   </td></tr>
 </table>
 <h2>Was du verdienst</h2>
@@ -226,7 +226,7 @@ ${ctaButton('Beratung / Termin')}
 <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 8px">
   <tr style="background:#f8fafc">
     <td style="padding:10px 14px;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase">Kategorie</td>
-    <td style="padding:10px 14px;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:right">Guthaben</td>
+    <td style="padding:10px 14px;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:right">Prämie</td>
   </tr>
   <tr><td style="padding:11px 14px;border-top:1px solid #f3f4f6;font-size:14px">🚌 D (Bus/Car)</td><td style="padding:11px 14px;border-top:1px solid #f3f4f6;font-size:14px;font-weight:700;color:{{primary_color}};text-align:right">CHF 70.–</td></tr>
   <tr><td style="padding:11px 14px;border-top:1px solid #f3f4f6;font-size:14px">🚛 C / CE (LKW)</td><td style="padding:11px 14px;border-top:1px solid #f3f4f6;font-size:14px;font-weight:700;color:{{primary_color}};text-align:right">CHF 50.–</td></tr>
@@ -258,12 +258,12 @@ ${ctaButton('Jetzt kostenlos Partner werden →')}
   <tr><td style="height:8px"></td></tr>
   <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
     <p style="margin:0;font-size:14px;color:#374151;font-weight:600">② Freund bucht</p>
-    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund eine Fahrstunde bezahlt, wird der Betrag auf deinem Guthaben-Konto gutgeschrieben.</p>
+    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund eine Fahrstunde bezahlt, wird die Prämie automatisch gutgeschrieben.</p>
   </td></tr>
   <tr><td style="height:8px"></td></tr>
   <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
     <p style="margin:0;font-size:14px;color:#374151;font-weight:600">③ Geld auszahlen</p>
-    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Du kannst die Auszahlung deines Guthabens jederzeit per Banküberweisung beantragen.</p>
+    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Du kannst die Auszahlung deiner Prämie jederzeit per Banküberweisung beantragen.</p>
   </td></tr>
 </table>
 ${ctaButton('💸 Jetzt Geld verdienen')}
@@ -276,7 +276,7 @@ ${ctaButton('💸 Jetzt Geld verdienen')}
         subject: 'Teile {{tenant_name}} mit Freunden und verdiene mit',
         html_body: `
 <p>Liebe/r {{first_name}},</p>
-<p>Gute Ausbildung verdient Weiterempfehlung. Lade Freunde ein — über unseren Partner-Link — und verdiene Guthaben, sobald sie buchen.</p>
+<p>Gute Ausbildung verdient Weiterempfehlung. Lade Freunde ein — über unseren Partner-Link — und verdiene eine Prämie, sobald sie buchen.</p>
 ${ctaButton('Empfehlungslink öffnen')}
 <p>Danke fürs Teilen!<br>{{tenant_name}}</p>
 `.trim(),

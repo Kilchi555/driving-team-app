@@ -52,7 +52,7 @@
           </h1>
 
           <p class="text-gray-500 text-lg leading-relaxed mb-10 max-w-lg mx-auto">
-            Werde Affiliate-Partner von {{ tenant.name }} und verdiene CHF-Guthaben für jede erfolgreiche Empfehlung – vollautomatisch, ohne Aufwand.
+            Werde Affiliate-Partner von {{ tenant.name }} und verdiene eine Prämie für jede erfolgreiche Empfehlung – vollautomatisch, ohne Aufwand.
           </p>
 
           <!-- CTA Button -->
@@ -293,7 +293,7 @@ watchEffect(() => {
 })
 
 const benefits = [
-  { icon: '💸', title: 'CHF-Guthaben', desc: 'Pro Empfehlung' },
+  { icon: '💸', title: 'Prämie', desc: 'Pro Empfehlung' },
   { icon: '⚡', title: 'Automatisch', desc: 'Einmal aktivieren' },
   { icon: '🏦', title: 'Auszahlbar', desc: 'Per Überweisung' },
 ]
