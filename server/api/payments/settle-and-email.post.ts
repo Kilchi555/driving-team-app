@@ -9,6 +9,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateUUID } from '~/server/utils/validators'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 interface SettleAndEmailRequest {
   appointmentIds: string[]
@@ -21,6 +22,7 @@ interface SettleEmailData {
   appointmentDate: string
   appointmentTime: string
   staffName: string
+  staffLabel?: string
   amount: string
   invoiceNumber?: string
   tenantName: string
@@ -28,6 +30,7 @@ interface SettleEmailData {
 }
 
 function generateSettlementEmail(data: SettleEmailData): string {
+  const staffLabel = data.staffLabel || 'Fahrlehrer'
   return `
 <!DOCTYPE html>
 <html lang="de">
@@ -48,7 +51,7 @@ function generateSettlementEmail(data: SettleEmailData): string {
       <h3 style="margin-top: 0; color: #2563eb;">Termin-Details</h3>
       <p style="margin: 5px 0;"><strong>Datum:</strong> ${data.appointmentDate}</p>
       <p style="margin: 5px 0;"><strong>Zeit:</strong> ${data.appointmentTime}</p>
-      <p style="margin: 5px 0;"><strong>Fahrlehrer:</strong> ${data.staffName}</p>
+      <p style="margin: 5px 0;"><strong>${staffLabel}:</strong> ${data.staffName}</p>
       <p style="margin: 5px 0;"><strong>Betrag:</strong> CHF ${data.amount}</p>
       ${data.invoiceNumber ? `<p style="margin: 5px 0;"><strong>Rechnungsnummer:</strong> ${data.invoiceNumber}</p>` : ''}
     </div>
@@ -292,14 +295,16 @@ export default defineEventHandler(async (event) => {
       } else {
         const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
-        // Get tenant name
+        // Get tenant name + terminology
         const { data: tenant } = await supabaseAdmin
           .from('tenants')
           .select('name')
           .eq('id', tenantId)
           .single()
 
-        const tenantName = tenant?.name || 'Fahrschule'
+        const terms = await getTenantTerminology(supabaseAdmin, tenantId)
+        const tenantName = tenant?.name || terms.businessNoun || 'Fahrschule'
+        const staffLabel = terms.staff || 'Fahrlehrer'
 
         for (const appointment of appointments) {
           try {
@@ -321,6 +326,7 @@ export default defineEventHandler(async (event) => {
               appointmentDate,
               appointmentTime,
               staffName,
+              staffLabel,
               amount: '0.00', // Could fetch from payments if needed
               invoiceNumber: body.invoiceNumber,
               tenantName,

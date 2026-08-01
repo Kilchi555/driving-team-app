@@ -12,6 +12,7 @@ import {
   expandProductsAsSeparateLines,
   groupProductSalesByAppointment,
 } from '~/server/utils/invoice-product-lines'
+import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 export default defineEventHandler(async (event) => {
   try {
     const { invoiceId } = await readBody(event)
@@ -77,9 +78,8 @@ export default defineEventHandler(async (event) => {
       if (apts) for (const apt of apts) appointmentMap[apt.id] = apt
     }
 
-    const eventTypeMap: Record<string, string> = {
-      lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorieunterricht', vku: 'VKU', haltbar: 'Haltbarkeitsprüfung',
-    }
+    const terms = await getTenantTerminology(supabase, invoice.tenant_id)
+    const eventTypeMap = eventTypeLabelMap(terms)
 
     const items = (rawItems || []).map((item: any) => {
       // Produktzeilen behalten ihren Produktnamen (nicht mit Event-Typ überschreiben)
@@ -207,6 +207,7 @@ export default defineEventHandler(async (event) => {
       introText,
       paymentTerms,
       footerText,
+      appointmentLabel: terms.appointment || 'Fahrstunde',
     })
 
     // PDF als Anhang generieren
@@ -263,6 +264,7 @@ export default defineEventHandler(async (event) => {
         introText,
         paymentTerms,
         footerText,
+        appointmentLabel: terms.appointment || 'Fahrstunde',
       })
       pdfAttachments = [{ filename: `Rechnung_${invoice.invoice_number}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
     } catch (pdfErr: any) {

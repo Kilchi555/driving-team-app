@@ -15,12 +15,18 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // Load active event types
-    const { data, error } = await supabase
+    // Tenant-scoped event types with fields needed for EventModal defaults
+    let query = supabase
       .from('event_types')
-      .select('code, default_color, name')
+      .select('code, name, emoji, default_color, default_duration_minutes, require_payment, public_bookable, is_default, is_active, display_order')
       .eq('is_active', true)
-      .order('code')
+      .order('display_order', { ascending: true })
+
+    if (authUser.tenant_id) {
+      query = query.eq('tenant_id', authUser.tenant_id)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       logger.error('❌ Error loading event types:', error)

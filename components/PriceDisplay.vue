@@ -27,7 +27,7 @@
               <button
                 type="button"
                 @click="submitManualPrice"
-                :disabled="!manualPriceInput || manualPriceInput <= 0"
+                :disabled="manualPriceInput === null || manualPriceInput === undefined || Number(manualPriceInput) < 0"
                 class="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-600 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-700"
               >
                 Preis übernehmen
@@ -970,8 +970,10 @@ const manualDiscountReason = ref<string>('')
 // ✅ Manuelle Preiseingabe, wenn die automatische Berechnung fehlgeschlagen ist (Fallback aktiv)
 const manualPriceInput = ref<number | null>(null)
 const submitManualPrice = () => {
-  if (!manualPriceInput.value || manualPriceInput.value <= 0) return
-  emit('manual-price-entered', manualPriceInput.value)
+  if (manualPriceInput.value === null || manualPriceInput.value === undefined) return
+  const value = Number(manualPriceInput.value)
+  if (!Number.isFinite(value) || value < 0) return
+  emit('manual-price-entered', value)
   manualPriceInput.value = null
 }
 
@@ -1339,17 +1341,25 @@ const removeProduct = (productId: string) => {
 // ✅ NEU: Base Price aus bestehender Payment oder berechnet
 const getBasePrice = () => {
   // ✅ Im Edit-Modus: Verwende den gespeicherten Preis aus der Payment-Tabelle
+  // 0 is a valid stored price (free appointment) — do not fall through to
+  // duration × pricePerMinute which may still carry a driving-school estimate.
   if (props.isEditMode && existingPayment.value) {
     const fromPayment = existingPayment.value.lesson_price_rappen
     logger.debug('💰 getBasePrice from payment:', { fromPayment, isEditMode: props.isEditMode, hasExistingPayment: !!existingPayment.value })
-    if (typeof fromPayment === 'number' && fromPayment > 0) {
+    if (typeof fromPayment === 'number' && Number.isFinite(fromPayment) && fromPayment >= 0) {
       return fromPayment / 100
     }
   }
-  
+
   // ✅ Im Create-Modus oder Fallback: Berechne basierend auf aktueller Duration und pricePerMinute
-  const calculated = props.durationMinutes * props.pricePerMinute
-  logger.debug('💰 getBasePrice calculated:', { durationMinutes: props.durationMinutes, pricePerMinute: props.pricePerMinute, calculated, isEditMode: props.isEditMode })
+  const ppm = typeof props.pricePerMinute === 'number' && Number.isFinite(props.pricePerMinute)
+    ? Math.max(0, props.pricePerMinute)
+    : 0
+  const duration = typeof props.durationMinutes === 'number' && Number.isFinite(props.durationMinutes)
+    ? Math.max(0, props.durationMinutes)
+    : 0
+  const calculated = duration * ppm
+  logger.debug('💰 getBasePrice calculated:', { durationMinutes: duration, pricePerMinute: ppm, calculated, isEditMode: props.isEditMode })
   return calculated
 }
 

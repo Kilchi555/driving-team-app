@@ -224,27 +224,59 @@ export async function applyCategoryAndEventTypeDefaults(
 }
 
 /**
- * Copies evaluation_categories (+ criteria + scale) template rows matching
- * `businessType` onto a tenant. Additive only.
+ * Copies evaluation_categories (+ criteria + scale) template rows onto a tenant.
+ *
+ * Rules:
+ * - `driving_school`: templates with business_type = 'driving_school' OR NULL
+ *   (legacy global Fahrschul-Vorlagen).
+ * - Other business types: ONLY templates explicitly tagged with that
+ *   business_type — never fall back to Fahrschul-Curriculum.
+ * - If no matching templates exist → no-op (tenant starts empty and can
+ *   build topics later via Admin → Bewertungssystem / Termindokumentation).
  */
 export async function applyEvaluationDefaults(supabase: SupabaseAdmin, tenantId: string, businessType: string): Promise<void> {
   const now = new Date().toISOString()
+  const isDrivingSchool = businessType === 'driving_school'
+
   try {
-    const { data: evalCats, error: ecErr } = await supabase
+    let query = supabase
       .from('evaluation_categories')
       .select('*')
       .is('tenant_id', null)
-      .eq('business_type', businessType)
 
-    if (ecErr || !evalCats?.length) return
+    if (isDrivingSchool) {
+      // Legacy rows often have business_type NULL — treat as driving school.
+      query = query.or('business_type.eq.driving_school,business_type.is.null')
+    } else {
+      query = query.eq('business_type', businessType)
+    }
+
+    const { data: evalCats, error: ecErr } = await query
+
+    if (ecErr) {
+      logger.warn('⚠️ Evaluation template lookup failed:', ecErr)
+      return
+    }
+
+    if (!evalCats?.length) {
+      logger.debug(`⏭️ No evaluation templates for business_type=${businessType} — skip copy`)
+      return
+    }
 
     const ecIdMap = new Map<string, string>()
     for (const ec of evalCats) ecIdMap.set(ec.id, crypto.randomUUID())
 
     await supabase.from('evaluation_categories').insert(
-      evalCats.map(ec => ({ ...ec, id: ecIdMap.get(ec.id)!, tenant_id: tenantId, created_at: now, updated_at: now }))
+      evalCats.map(ec => ({
+        ...ec,
+        id: ecIdMap.get(ec.id)!,
+        tenant_id: tenantId,
+        business_type: ec.business_type || businessType,
+        created_at: now,
+        updated_at: now
+      }))
     )
-    logger.debug(`✅ Copied ${evalCats.length} evaluation categories`)
+    logger.debug(`✅ Copied ${evalCats.length} evaluation categories for ${businessType}`)
 
     const { data: criteria, error: criErr } = await supabase
       .from('evaluation_criteria')
@@ -265,10 +297,23 @@ export async function applyEvaluationDefaults(supabase: SupabaseAdmin, tenantId:
       logger.debug(`✅ Copied ${criteria.length} evaluation criteria`)
     }
 
-    const { data: scale, error: scErr } = await supabase.from('evaluation_scale').select('*').is('tenant_id', null)
+    // Rating scale: match business_type (consulting 1–4 vs Fahrschule 1–6)
+    let scaleQuery = supabase.from('evaluation_scale').select('*').is('tenant_id', null)
+    if (isDrivingSchool) {
+      scaleQuery = scaleQuery.or('business_type.eq.driving_school,business_type.is.null')
+    } else {
+      scaleQuery = scaleQuery.eq('business_type', businessType)
+    }
+    const { data: scale, error: scErr } = await scaleQuery
     if (!scErr && scale?.length) {
       await supabase.from('evaluation_scale').insert(
-        scale.map(s => ({ ...s, id: crypto.randomUUID(), tenant_id: tenantId, created_at: now, updated_at: now }))
+        scale.map(s => ({
+          ...s,
+          id: crypto.randomUUID(),
+          tenant_id: tenantId,
+          business_type: s.business_type || businessType,
+          created_at: now
+        }))
       )
       logger.debug(`✅ Copied ${scale.length} evaluation scale entries`)
     }

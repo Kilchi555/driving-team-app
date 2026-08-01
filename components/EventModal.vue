@@ -57,7 +57,7 @@
               :is-freeslot-mode="isFreeslotMode"
               :allow-student-change="!(props.mode === 'edit' && isPastAppointment)"
               :show-clear-button="!(props.mode === 'edit' && isPastAppointment)"
-              :show-switch-to-other="props.mode === 'create'"
+              :show-switch-to-other="props.mode === 'create' && isLessonType(formData.eventType)"
               @student-selected="handleStudentSelected"
               @student-cleared="handleStudentCleared"
               @switch-to-other="switchToOtherEventType"
@@ -96,9 +96,8 @@
             />
           </div>
 
-          <!-- Typ ändern Button für other event types (nur bei edit mode und zukünftigen Terminen) -->
-          <!-- ✅ ENABLED: Other Event Types jetzt full supported! -->
-          <div v-if="props.mode !== 'create' && !isPastAppointment && !isLessonType(formData.eventType) && formData.eventType !== 'other' && formData.selectedSpecialType !== 'vacation'" class="py-2">
+          <!-- Typ ändern Button für other event types (auch create, nachdem ein Typ gewählt wurde) -->
+          <div v-if="!showEventTypeSelection && !isPastAppointment && !isLessonType(formData.eventType) && formData.eventType !== 'other' && formData.selectedSpecialType !== 'vacation'" class="py-2">
             <button
               @click="changeEventType"
               class="w-full px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
@@ -178,7 +177,7 @@
               v-if="formData.type || !requiresCategory || formData.appointment_type === 'theory'"
               v-model="formData.duration_minutes"
               :available-durations="Array.isArray(availableDurations) ? availableDurations : [45]"
-              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute ?? fallbackPricePerMinute)"
+              :price-per-minute="displayPricePerMinute"
               :disabled="props?.mode === 'edit' && isPastAppointment"
               :show-buttons="!(props?.mode === 'edit' && isPastAppointment)"
               :is-past-appointment="props?.mode === 'edit' && isPastAppointment"
@@ -473,7 +472,7 @@
             <PriceDisplay
               ref="priceDisplayRef"
               :duration-minutes="formData.duration_minutes || 45"
-              :price-per-minute="dynamicPricing.isLoading ? 0 : (dynamicPricing.pricePerMinute ?? fallbackPricePerMinute)"
+              :price-per-minute="displayPricePerMinute"
               :lesson-type="currentLessonTypeText"
               :discount="formData.discount || 0"
               :discount-reason="formData.discount_reason || ''"
@@ -962,6 +961,115 @@ import { useEventModalApi } from '~/composables/useEventModalApi'
 
 // ✅ Initialize secure API layer
 const eventModalApi = useEventModalApi()
+
+/** Resolve tenant default event type for create mode. Never invent 'lesson' if tenant lacks it. */
+const resolveCreateEventTypeDefaults = async (opts?: {
+  /** Free-slot clicks: prefer a chargeable/client type (student flow), not free discovery. */
+  preferChargeable?: boolean
+}): Promise<{
+  eventType: string
+  appointment_type: string
+  selectedLessonType: string
+  selectedSpecialType: string
+  duration: number
+  title: string
+  showEventTypeSelection: boolean
+}> => {
+  const drivingSchoolFallback = {
+    eventType: 'lesson',
+    appointment_type: 'lesson',
+    selectedLessonType: 'lesson',
+    selectedSpecialType: '',
+    duration: 45,
+    title: 'Termin',
+    showEventTypeSelection: false,
+  }
+  try {
+    const all = await eventModalApi.getEventTypes()
+    const list = Array.isArray(all) ? all : []
+
+    if (opts?.preferChargeable) {
+      const paid = list.filter((t: any) => t.require_payment === true)
+      const pick = paid.find((t: any) => t.is_default) || paid[0]
+      if (pick?.code) {
+        logger.debug('✅ Free-slot defaults: prefer chargeable type', pick.code)
+        return resolveCreateEventTypeDefaultsFromRow(pick)
+      }
+    }
+
+    const et =
+      list.find((t: any) => t.is_default && t.is_active !== false) ||
+      (await eventModalApi.getDefaultEventType()) ||
+      list.find((t: any) => t.require_payment === true) ||
+      list[0]
+    if (!et?.code) return drivingSchoolFallback
+    return resolveCreateEventTypeDefaultsFromRow(et)
+  } catch (err) {
+    logger.debug('⚠️ resolveCreateEventTypeDefaults failed, using lesson fallback:', err)
+    return drivingSchoolFallback
+  }
+}
+
+const resolveCreateEventTypeDefaultsFromRow = (et: any) => {
+  const chargeable =
+    et.require_payment === true ||
+    ['lesson', 'exam', 'theory'].includes(String(et.code))
+
+  if (chargeable) {
+    return {
+      eventType: 'lesson',
+      appointment_type: et.code,
+      selectedLessonType: et.code,
+      selectedSpecialType: '',
+      duration: Number(et.default_duration_minutes) || 45,
+      title: et.name || 'Termin',
+      showEventTypeSelection: false,
+    }
+  }
+
+  return {
+    eventType: 'other',
+    appointment_type: et.code,
+    selectedLessonType: et.code,
+    selectedSpecialType: et.code,
+    duration: Number(et.default_duration_minutes) || 60,
+    title: et.name || 'Termin',
+    showEventTypeSelection: true,
+  }
+}
+
+/** Resolve + apply tenant default event type for create mode. Idempotent. */
+const applyCreateEventTypeDefaultsOnce = async (opts?: {
+  force?: boolean
+  preferChargeable?: boolean
+}) => {
+  if (createEventTypeDefaultsApplied.value && !opts?.force) {
+    logger.debug('ℹ️ Create event-type defaults already applied — skip')
+    return null
+  }
+  const defaults = await resolveCreateEventTypeDefaults({
+    preferChargeable: opts?.preferChargeable
+  })
+  formData.value.eventType = defaults.eventType as any
+  formData.value.appointment_type = defaults.appointment_type
+  formData.value.selectedSpecialType = defaults.selectedSpecialType
+  selectedLessonType.value = defaults.selectedLessonType
+  showEventTypeSelection.value = defaults.showEventTypeSelection
+  if (defaults.showEventTypeSelection) {
+    formData.value.type = null as any
+  }
+  // Always take the event-type duration on first apply (calendar slot is often a
+  // generic 45min placeholder and must not win over e.g. discovery=30 / workshop=120).
+  formData.value.duration_minutes = defaults.duration
+  calculateEndTime()
+  if (!formData.value.title || formData.value.title === 'Termin' || formData.value.title === 'Fahrstunde') {
+    formData.value.title = defaults.title
+  }
+  createEventTypeDefaultsApplied.value = true
+  logger.debug('✅ Create event-type defaults applied:', defaults)
+  return defaults
+}
+
 import { useStaffAvailability, type StaffAvailability } from '~/composables/useStaffAvailability'
 import { useStaffCategoryDurations } from '~/composables/useStaffCategoryDurations'
 import { useAutoAssignStaff } from '~/composables/useAutoAssignStaff'
@@ -1068,6 +1176,9 @@ const isLoading = ref(false)
 const isInitializing = ref(false)
 const showEventTypeSelection = ref(false)
 const selectedLessonType = ref('lesson')
+/** Apply tenant create defaults only once per modal open — avoids flipping
+ *  discovery ↔ consulting every time the user picks a student or re-inits. */
+const createEventTypeDefaultsApplied = ref(false)
 
 // ── Ferien-Bereich ──────────────────────────────────────────────────────────
 const vacationEndDate = ref('')
@@ -1371,9 +1482,13 @@ const isPastAppointment = computed(() => {
 })
 
 // ✅ Check if current event is an "other" event type (VKU, Nothelfer, Meeting, etc.)
+// Prefer appointment_type (real DB code); fall back to UI bucket eventType.
 const isOtherEventType = computed(() => {
-  const lessonTypes = ['lesson', 'exam', 'theory']
-  return !lessonTypes.includes(formData.value.eventType || 'lesson')
+  const code = formData.value.appointment_type || formData.value.selectedSpecialType || formData.value.eventType
+  if (!code || code === 'other') return true
+  // UI bucket 'lesson' means chargeable student flow
+  if (code === 'lesson') return false
+  return !isChargeableEventType(code)
 })
 
 // Helper function für Lesson Type Text
@@ -2371,7 +2486,13 @@ const handleProductAdded = (product: any) => {
 // Delegates to the DB-driven (event_types.require_payment) check from
 // useEventModalForm so newly added chargeable event types (custom or
 // template-based) get the same treatment as lesson/exam/theory automatically.
-const isLessonType = (eventType: string) => isChargeableEventType(eventType)
+// UI bucket 'lesson'/'exam'/'theory' = chargeable student flow (not necessarily a DB code).
+// Real tenant codes (consulting, workshop, …) use require_payment from the cache.
+const isLessonType = (eventType: string) => {
+  if (!eventType) return false
+  if (['lesson', 'exam', 'theory'].includes(eventType)) return true
+  return isChargeableEventType(eventType)
+}
 
 // ──────────────────────────────────────────────────────────────
 // Resource picker: vehicle and room assignment with availability
@@ -2626,9 +2747,15 @@ const shouldAutoLoadStudents = computed(() => {
     logger.debug('🎯 Free slot click detected - loading students but not auto-selecting')
     return true  // Schüler laden, aber nicht automatisch auswählen
   }
-  
-  // ✅ NUR für Lektionen UND für CREATE und EDIT mode (damit phone/category verfügbar sind)
-  return isLessonType(formData.value.eventType) && (props.mode === 'create' || props.mode === 'edit') && !showEventTypeSelection.value
+
+  if (showEventTypeSelection.value) return false
+  if (formData.value.selectedSpecialType === 'vacation') return false
+  if (!(props.mode === 'create' || props.mode === 'edit')) return false
+
+  // Chargeable client flow OR free/other event type after a concrete type is chosen
+  if (isLessonType(formData.value.eventType)) return true
+  if (formData.value.eventType && formData.value.eventType !== 'other') return true
+  return false
 })
 
 
@@ -2641,12 +2768,17 @@ const showStudentSelector = computed(() => {
     selectedLessonType: selectedLessonType.value,      // ✅ LOKALE VARIABLE
     type: formData.value.type
   })
-  
-  // ✅ Zeige StudentSelector für alle lesson-Typen (Fahrstunde, Prüfung, Theorie)
-  if (isLessonType(formData.value.eventType)) {
-    return !showEventTypeSelection.value
-  }
-  
+
+  if (showEventTypeSelection.value) return false
+  if (formData.value.selectedSpecialType === 'vacation') return false
+
+  // Chargeable / client appointments
+  if (isLessonType(formData.value.eventType)) return true
+
+  // Free / other event types (discovery, meeting, …): allow picking an existing customer
+  // once a concrete type is selected (eventType is no longer the generic 'other' bucket).
+  if (formData.value.eventType && formData.value.eventType !== 'other') return true
+
   return false
 })
 
@@ -3340,7 +3472,14 @@ const loadTheoryDurations = async (categoryCode: string) => {
 // ✅ Load default durations when no category is selected
 const loadDefaultDurations = async () => {
   logger.debug('⏱️ loadDefaultDurations called - checking for last appointment duration')
-  
+
+  // Non-driving_school: keep duration already set from event_types.default_duration_minutes
+  if (!requiresCategory.value && formData.value.duration_minutes > 0) {
+    availableDurations.value = [formData.value.duration_minutes]
+    logger.debug('✅ Keeping event-type duration (no category tenant):', formData.value.duration_minutes, 'min')
+    return
+  }
+
   // ✅ NEU: Versuche zuerst die Dauer des letzten Termins des Fahrschülers zu laden
   if (selectedStudent.value?.id) {
     try {
@@ -3356,7 +3495,7 @@ const loadDefaultDurations = async () => {
       logger.debug('⚠️ Could not load last appointment duration, using fallback')
     }
   }
-  
+
   // ✅ FALLBACK: Setze Standard-Dauern basierend auf dem Lektionstyp
   if (formData.value.appointment_type === 'theory') {
     // Für Theorielektionen: Standard 45 Minuten
@@ -3369,7 +3508,7 @@ const loadDefaultDurations = async () => {
     formData.value.duration_minutes = 45
     logger.debug('🚗 Normal lesson - using default duration: 45min')
   }
-  
+
   // ✅ WICHTIG: Stelle sicher, dass die Dauer auch im Template angezeigt wird
   await nextTick()
 }
@@ -3541,48 +3680,31 @@ const handleStudentSelected = async (student: Student | null) => {
     logger.debug('✅ staff_id gesetzt bei Student-Auswahl:', currentUser.value.id)
   }
   
-  // ✅ NEU: Load default event type via secure API if not already set (create mode only)
-  if (props.mode === 'create' && !formData.value.selectedSpecialType && currentUser.value?.tenant_id) {
+  // ✅ Student flow = chargeable types. Never re-apply free tenant defaults
+  // (e.g. discovery) here — that flipped Simy between Erstgespräch ↔ Beratung
+  // every time a student was selected after "Zurück".
+  if (
+    props.mode === 'create' &&
+    formData.value.eventType === 'lesson' &&
+    currentUser.value?.tenant_id
+  ) {
     try {
-      const defaultEventType = await eventModalApi.getDefaultEventType()
-      
-      if (defaultEventType) {
-        // Check if it's a lesson type or other type
-        if (defaultEventType.code === 'lesson') {
-          // Keep as lesson, don't show EventTypeSelector
-          formData.value.eventType = 'lesson'
-          formData.value.appointment_type = 'lesson'
-          selectedLessonType.value = 'lesson'
-          formData.value.duration_minutes = defaultEventType.default_duration_minutes || 45
-          calculateEndTime()
-          
-          logger.debug('✅ Default lesson type set:', {
-            eventType: formData.value.eventType,
-            appointmentType: formData.value.appointment_type,
-            selectedLessonType: selectedLessonType.value
-          })
-        } else {
-          // It's a special event type (nothelfer, vku, etc.)
-          formData.value.eventType = 'other'
-          formData.value.selectedSpecialType = defaultEventType.code
-          // ✅ Use the actual event type code (vku, nothelfer, etc.) - these exist in event_types table
-          formData.value.appointment_type = defaultEventType.code // e.g., 'vku', 'nothelfer'
-          formData.value.title = defaultEventType.name
-          formData.value.type = null as any // ✅ CRITICAL: No driving category for special events!
-          formData.value.duration_minutes = defaultEventType.default_duration_minutes || 60
-          calculateEndTime()
-          
-          logger.debug('✅ Default event type set:', {
-            name: defaultEventType.name,
-            code: defaultEventType.code,
-            duration: defaultEventType.default_duration_minutes
-          })
-        }
-      } else {
-        logger.debug('ℹ️ No default event type found')
+      const types = await eventModalApi.getEventTypes()
+      const list = Array.isArray(types) ? types : []
+      const paid = list.filter((t: any) => t.require_payment === true)
+      const current = formData.value.appointment_type
+      const currentIsPaid = paid.some((t: any) => t.code === current)
+      if (!currentIsPaid && paid.length > 0) {
+        const pick = paid.find((t: any) => t.is_default) || paid[0]
+        formData.value.appointment_type = pick.code
+        selectedLessonType.value = pick.code
+        formData.value.selectedSpecialType = ''
+        showEventTypeSelection.value = false
+        if (!formData.value.title) formData.value.title = pick.name || 'Termin'
+        logger.debug('✅ Ensured chargeable event type after student select:', pick.code)
       }
     } catch (err) {
-      logger.debug('⚠️ Could not load default event type:', err)
+      logger.debug('⚠️ Could not ensure chargeable event type:', err)
     }
   }
   
@@ -3991,15 +4113,35 @@ const handleEventTypeSelected = (eventType: any) => {
   // ✅ EventTypeSelector ausblenden nach Auswahl
   showEventTypeSelection.value = false
   logger.debug('✅ EventTypeSelector hidden after selection')
+
+  // Bestehende Kunden laden (optional für andere Terminarten — kein Muss)
+  if (eventType.code !== 'vacation') {
+    nextTick(() => {
+      if (shouldAutoLoadStudents.value) triggerStudentLoad()
+    })
+  }
 }
 
-const backToStudentSelection = () => {
+const backToStudentSelection = async () => {
   logger.debug('⬅️ Back to student selection')
   showEventTypeSelection.value = false
   formData.value.eventType = 'lesson'
   formData.value.selectedSpecialType = ''
   formData.value.title = ''
   formData.value.type = ''
+  // Pick a tenant-valid chargeable type — never leave stale free codes or invent 'lesson'
+  try {
+    const types = await eventModalApi.getEventTypes()
+    const list = Array.isArray(types) ? types : []
+    const paid = list.filter((t: any) => t.require_payment === true)
+    const pick = paid.find((t: any) => t.is_default) || paid[0] || list.find((t: any) => t.is_default) || list[0]
+    if (pick?.code) {
+      formData.value.appointment_type = pick.code
+      selectedLessonType.value = pick.code
+    }
+  } catch (err) {
+    logger.debug('⚠️ backToStudentSelection: could not resolve chargeable type', err)
+  }
 }
 
 // ✅ IN EVENTMODAL.VUE:
@@ -4227,15 +4369,53 @@ const showError = (title: string, message: string = '') => {
   })
 }
 
-// UI-only display fallback while dynamic pricing is still loading/unavailable -
-// same single source of truth as calculateOfflinePrice() below.
+// UI-only display fallback while dynamic pricing is still loading/unavailable.
+// Driving schools may show a category-B estimate; other branches must NOT invent
+// Fahrstundenpreise — 0.00 from the DB / missing rules stays 0.00.
 const fallbackPricePerMinute = computed(() => {
+  if (!requiresCategory.value) return 0
   const rule = getFallbackRule(formData.value.type || 'B') || getFallbackRule('B')
   return rule?.price_per_minute_chf || (95 / 45)
 })
 
+/** Resolved CHF/min for DurationSelector + PriceDisplay. Treats 0 as valid (free). */
+const displayPricePerMinute = computed(() => {
+  if (dynamicPricing.value.isLoading) return 0
+  const ppm = dynamicPricing.value.pricePerMinute
+  if (typeof ppm === 'number' && Number.isFinite(ppm) && ppm >= 0) return ppm
+  return fallbackPricePerMinute.value
+})
+
 const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, appointmentNum: number = 1) => {
   logger.debug('💰 Calculating offline price:', { categoryCode, durationMinutes, appointmentNum })
+
+  // Non-driving_school / no category: never invent B/95CHF prices — show 0 and
+  // let staff enter manually via the PriceDisplay fallback UI.
+  if (!requiresCategory.value || !categoryCode) {
+    logFallbackUsed(
+      'pricing',
+      'Offline/kein Kategorie-Preis – 0 CHF angezeigt (kein Fahrschul-Fallback).',
+      { categoryCode, durationMinutes, appointmentNum, context: 'EventModal' },
+      'warn'
+    )
+    dynamicPricing.value = {
+      ...dynamicPricing.value,
+      pricePerMinute: 0,
+      adminFeeChf: 0,
+      adminFeeRappen: 0,
+      adminFeeAppliesFrom: 2,
+      appointmentNumber: appointmentNum,
+      hasAdminFee: false,
+      totalPriceChf: '0.00',
+      category: categoryCode || '',
+      duration: durationMinutes,
+      isLoading: false,
+      error: 'Preis konnte nicht automatisch ermittelt werden – bitte prüfen oder manuell eingeben.',
+      isFallback: true,
+      manuallyEntered: false
+    }
+    return
+  }
 
   // ✅ Single source of truth for fallback prices: usePricing.ts's COMPLETE_FALLBACK_RULES,
   // instead of maintaining a second, independently-drifting hardcoded price table here.
@@ -5760,7 +5940,19 @@ const initializeFormData = async () => {
     logger.debug('✅ Default category set to B')
   }
   
-  if (!formData.value.eventType && !isEditOrView) {
+  // Create mode: prefer tenant is_default over hardcoded "lesson" (once per open)
+  if (!isEditOrView && props.mode === 'create') {
+    try {
+      const isFreeslot =
+        !!(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')
+      await applyCreateEventTypeDefaultsOnce({
+        preferChargeable: isFreeslot && !requiresCategory.value
+      })
+    } catch (err) {
+      if (!formData.value.eventType) formData.value.eventType = 'lesson'
+      logger.debug('⚠️ Tenant default event type failed, fallback lesson:', err)
+    }
+  } else if (!formData.value.eventType && !isEditOrView) {
     formData.value.eventType = 'lesson'
     logger.debug('✅ Default event type set to lesson')
   }
@@ -6094,19 +6286,24 @@ const handleEditModeLessonType = async () => {
   }
 }
 
-// ✅ Create-Mode Handling
 const handleCreateMode = async () => {
   if (props.mode === 'create' && props.eventData?.start) {
-    formData.value.eventType = 'lesson'
-    showEventTypeSelection.value = false
-    
-    // ✅ NEU: Bei Create-Mode selectedLessonType auf Standard setzen
-    selectedLessonType.value = 'lesson'
-    logger.debug('🎯 CREATE MODE: Set selectedLessonType to default: lesson')
-    
+    const isFreeslot =
+      !!(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')
+    // Free-slot on consulting/etc.: open client/chargeable flow (student + Terminart),
+    // not the free "Erstgespräch" EventTypeSelector — staff clicked a booking slot.
+    const defaults = await applyCreateEventTypeDefaultsOnce({
+      preferChargeable: isFreeslot && !requiresCategory.value
+    })
+    if (defaults?.duration) {
+      formData.value.duration_minutes = defaults.duration
+      calculateEndTime()
+    }
+    logger.debug('🎯 CREATE MODE: Applied tenant default event type:', defaults)
+
     // ✅ NEU: Standard-Zahlungsmethode für Create-Mode setzen
     selectedPaymentMethod.value = 'wallee'
-    
+
     // ✅ NEU: Standard-Kategorie für Create-Mode setzen (driving_school only)
     if (requiresCategory.value) {
       formData.value.type = 'B' // Standard-Kategorie
@@ -6114,11 +6311,9 @@ const handleCreateMode = async () => {
     } else {
       formData.value.type = null
     }
-    
-    // ✅ NEU: Standard-Dauer für Create-Mode setzen
-    formData.value.duration_minutes = 45
-    logger.debug('🎯 CREATE MODE: Set default duration to 45 minutes')
-    
+
+    logger.debug('🎯 CREATE MODE: Set default duration to', formData.value.duration_minutes, 'minutes')
+
     // ✅ NEU: Standard-Location für Create-Mode setzen (falls verfügbar)
     if (currentUser.value?.preferred_location_id) {
       formData.value.location_id = currentUser.value.preferred_location_id
@@ -6129,28 +6324,28 @@ const handleCreateMode = async () => {
     } else {
       logger.debug('⚠️ CREATE MODE: No default location available')
     }
-    
+
     // ✅ WICHTIG: Nicht die Zeit nochmal setzen - sie wurde bereits oben extrahiert und konvertiert!
     // Die Zeit wurde in der watch-Funktion bereits korrekt aus dem Calendar extrahiert
     // und von UTC zu Zurich local konvertiert
     logger.debug('✅ CREATE MODE: Keeping already-extracted time (no override)')
-    
+
     // ✅ NEU: Standard-Dauern laden für Create-Mode
     await loadDefaultDurations()
     logger.debug('🎯 CREATE MODE: Default durations loaded')
-    
+
     // ✅ NEU: Standard-Titel für Create-Mode setzen
+    const defaultTitle = defaults?.title || formData.value.title || 'Termin'
     if (selectedStudent.value?.first_name && selectedLocation.value) {
       const locationName = getLocationTextForTitle(selectedLocation.value, selectedStudent.value)
       formData.value.title = `${selectedStudent.value.first_name} - ${locationName}`
       logger.debug('🎯 CREATE MODE: Set default title with student and location')
     } else if (selectedStudent.value?.first_name) {
-      formData.value.title = `${selectedStudent.value.first_name} - Fahrstunde`
+      formData.value.title = `${selectedStudent.value.first_name} - ${defaultTitle}`
       logger.debug('🎯 CREATE MODE: Set default title with student name only')
     } else {
-      // ✅ WICHTIG: Titel so setzen, dass TitleInput ihn als auto-update-fähig erkennt
-      formData.value.title = 'Fahrstunde'
-      logger.debug('🎯 CREATE MODE: Set default title for auto-update')
+      formData.value.title = defaultTitle
+      logger.debug('🎯 CREATE MODE: Set default title from event type')
     }
   }
 }
@@ -6163,14 +6358,18 @@ const triggerInitialCalculations = async () => {
     await nextTick()
     
     // ✅ NEU: Prüfe ob alle notwendigen Daten für die Preisberechnung vorhanden sind
-    const hasRequiredData = formData.value.type && 
-                           formData.value.duration_minutes && 
-                           formData.value.eventType === 'lesson'
-    
+    // Consulting / event-type tenants have no license category (type) — price via appointment_type.
+    const hasRequiredData =
+      formData.value.duration_minutes &&
+      formData.value.eventType === 'lesson' &&
+      (requiresCategory.value ? !!formData.value.type : !!formData.value.appointment_type)
+
     logger.debug('🔍 Required data check:', {
       hasType: !!formData.value.type,
+      requiresCategory: requiresCategory.value,
       hasDuration: !!formData.value.duration_minutes,
       hasEventType: formData.value.eventType === 'lesson',
+      hasAppointmentType: !!formData.value.appointment_type,
       hasRequiredData
     })
     
@@ -6614,6 +6813,8 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
       showEventTypeSelection.value = false
     }
     isInitializing.value = true
+    // Fresh create defaults each time the modal opens
+    createEventTypeDefaultsApplied.value = false
     // Store mode in formData so composables can read it without needing props
     formData.value._mode = props.mode
     logger.debug('✅ Modal opened:', { 
@@ -6777,18 +6978,11 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
         formData.value.duration_minutes = duration
         formData.value.type = requiresCategory.value ? 'B' : null
         
-        // ✅ FIX: EventType aus eventData bestimmen falls vorhanden
-        if (eventData?.extendedProps?.eventType) {
-          formData.value.eventType = eventData.extendedProps.eventType
-          logger.debug('🎯 EventType from extendedProps:', formData.value.eventType)
-        } else {
-          formData.value.eventType = 'lesson' // Default für neue Termine
-        }
-        formData.value.appointment_type = 'lesson'
+        // ✅ FIX: Don't force calendar "lesson" over tenant defaults — handleCreateMode
+        // resolves discovery/consulting/etc. Ignoring extendedProps.eventType here
+        // prevents a lesson → discovery flip on consulting free-slots.
         formData.value.status = 'scheduled'
         
-        // ✅ UI-State auch setzen
-        selectedLessonType.value = 'lesson'
         if (requiresCategory.value) selectedCategory.value = { code: 'B' }
         else selectedCategory.value = null
         
@@ -6808,7 +7002,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
         // initializeFormData würde die Zeit NOCHMAL auslesen und dabei die falsche Zeit einsetzen
         // Statt dessen verwenden wir die bereits extrahierte Zeit
         
-        // ✅ Create-Mode handling
+        // ✅ Create-Mode handling (applies tenant default event type)
         await handleCreateMode()
         isInitializing.value = false
         

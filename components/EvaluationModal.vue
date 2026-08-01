@@ -4,7 +4,7 @@
     <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full flex flex-col evaluation-modal-container" style="height: 100%; max-height: 100%;">
       <div class="bg-white px-4 py-3 border-b border-gray-100 flex-shrink-0">
         <div class="flex items-center justify-between">
-          <h2 class="text-base font-semibold text-gray-900">Lektion bewerten</h2>
+          <h2 class="text-base font-semibold text-gray-900">{{ t.appointment }} bewerten</h2>
           
           <div class="flex items-center gap-2">
             <!-- Cancel Button für Termin-Absage -->
@@ -62,6 +62,21 @@
         </div>
 
         <div v-else class="space-y-2">
+          <div
+            v-if="!isLoading && allCriteria.length === 0"
+            class="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center"
+          >
+            <p class="text-sm font-medium text-gray-900 mb-1">Noch keine Themen konfiguriert</p>
+            <p class="text-xs text-gray-600 mb-3">
+              Lege unter Admin → Bewertungssystem deine eigenen Themen an — z.B. Projektphasen, Workshop-Module oder Gesprächspunkte.
+            </p>
+            <a
+              href="/admin/evaluation-system"
+              class="inline-flex text-sm font-medium underline"
+              :style="primaryText"
+            >Themen verwalten</a>
+          </div>
+
           <div class="relative">
             <div class="relative">
               <input
@@ -233,6 +248,7 @@ import { useTenant } from '~/composables/useTenant'
 const { primaryBg, primaryText } = usePrimaryColor()
 // Importiere den CriteriaEvaluationData-Typ
 import { usePendingTasks, type CriteriaEvaluationData } from '~/composables/usePendingTasks'
+import { useTerminology } from '~/composables/useTerminology'
 
 // Props
 interface Props {
@@ -254,6 +270,7 @@ const { saveCriteriaEvaluations } = usePendingTasks()
 
 // Tenant
 const { currentTenant } = useTenant()
+const { t, isDrivingSchool } = useTerminology()
 
 
 // State
@@ -292,8 +309,8 @@ const filteredCriteria = computed(() => {
   // ✅ NEU: Zeige ALLE Kriterien (unbewertete + bereits bewertete)
   let criteria = allCriteria.value
   
-  // Filtere nach Fahrkategorie des Schülers
-  if (props.studentCategory) {
+  // Fahrkategorie-Filter nur bei Fahrschulen (A/B/BE …)
+  if (isDrivingSchool.value && props.studentCategory) {
     logger.debug('🎓 Filtering criteria by student category:', props.studentCategory)
     const beforeFilter = criteria.length
     
@@ -501,8 +518,9 @@ const loadAllCriteria = async () => {
     logger.debug('🚫 HIDDEN (not for BE):', beExcluded.map(c => `${c.name} [${(c.driving_categories || []).join(',')}]`))
     
     if (!criteria || criteria.length === 0) {
-      const categoryType = isTheoryLesson ? 'Theorie' : props.studentCategory
-      error.value = `Keine Bewertungskriterien gefunden für ${categoryType}`
+      error.value = isDrivingSchool.value
+        ? `Keine Bewertungskriterien gefunden für ${isTheoryLesson ? 'Theorie' : (props.studentCategory || 'diese Kategorie')}`
+        : 'Keine Bewertungskriterien gefunden — bitte unter Admin → Bewertungssystem Themen anlegen.'
       return
     }
 

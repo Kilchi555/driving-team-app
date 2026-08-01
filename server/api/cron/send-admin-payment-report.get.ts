@@ -20,6 +20,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
 import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 // Swiss rounding: nearest 0.05 CHF
 function chf(rappen: number): string {
@@ -142,7 +143,9 @@ export default defineEventHandler(async (event) => {
     const tenantPayments = allTenantPayments.filter((p: any) => reminderSettings.admin_report[p.payment_method] === true)
     if (tenantPayments.length === 0) continue
 
-    const tenantName   = tenant.name || 'Ihre Fahrschule'
+    const terms = await getTenantTerminology(supabase, tenantId)
+    const clientLabel = terms.client || 'Schüler'
+    const tenantName   = tenant.name || terms.businessNoun || 'Ihre Fahrschule'
     const primaryColor = tenant.primary_color || '#2563eb'
     const logoUrl      = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
     const reportDate   = now.toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -222,7 +225,7 @@ export default defineEventHandler(async (event) => {
             <table width="100%" cellpadding="0" cellspacing="0">
               <thead>
                 <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">
-                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em">Schüler</th>
+                  <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em">${clientLabel}</th>
                   <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em">Termin</th>
                   <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em">Alter</th>
                   <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em">Betrag</th>

@@ -352,7 +352,7 @@ import { useRoute } from '#app'
 import { useStatusBar } from '~/composables/useStatusBar'
 import { useTerminology } from '~/composables/useTerminology'
 
-const { t } = useTerminology()
+const { t, isDrivingSchool } = useTerminology()
 
 const route = useRoute()
 const showMobileMenu = ref(false)
@@ -480,6 +480,13 @@ const isActive = (path) => {
 const shouldShowNavLink = (featureKey) => {
   // Don't show links while features are loading
   if (featuresLoading.value) {
+    return false
+  }
+
+  // Categories/experts remain Fahrschul-only in nav; exams follow the flag
+  // so consulting admins can opt in via Funktionen → Prüfungen.
+  const drivingSchoolOnly = ['experts_enabled', 'examiners_enabled', 'categories_enabled']
+  if (drivingSchoolOnly.includes(featureKey) && !isDrivingSchool.value) {
     return false
   }
   

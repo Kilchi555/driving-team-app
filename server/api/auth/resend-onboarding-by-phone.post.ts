@@ -4,6 +4,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logger } from '~/utils/logger'
 import { v4 as uuidv4 } from 'uuid'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const ipAddress = getClientIP(event)
@@ -59,7 +60,11 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!student.onboarding_token) {
-      throw createError({ statusCode: 400, statusMessage: 'Kein Onboarding-Token vorhanden. Bitte kontaktieren Sie Ihre Fahrschule.' })
+      let bn = 'Fahrschule'
+      try {
+        bn = (await getTenantTerminology(supabase, tenantId)).businessNoun || bn
+      } catch { /* keep default */ }
+      throw createError({ statusCode: 400, statusMessage: `Kein Onboarding-Token vorhanden. Bitte kontaktieren Sie ${bn}.` })
     }
 
     // Renew token if expired
@@ -82,7 +87,8 @@ export default defineEventHandler(async (event) => {
       .eq('id', tenantId)
       .single()
 
-    const tenantName = tenant?.name || 'Ihre Fahrschule'
+    const terms = await getTenantTerminology(supabase, tenantId)
+    const tenantName = tenant?.name || terms.businessNoun || 'Ihre Fahrschule'
     const senderName = tenant?.twilio_from_sender || tenantName
     const tenantSlug = tenant?.slug || ''
     const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch'
@@ -106,7 +112,7 @@ ${tenantName}`
 
     if (!smsResult.success) {
       logger.error('resend-onboarding-by-phone: SMS failed:', smsResult.error)
-      throw createError({ statusCode: 500, statusMessage: 'SMS konnte nicht gesendet werden. Bitte kontaktieren Sie Ihre Fahrschule.' })
+      throw createError({ statusCode: 500, statusMessage: `SMS konnte nicht gesendet werden. Bitte kontaktieren Sie ${tenantName}.` })
     }
 
     logger.debug('✅ Onboarding SMS resent to:', student.phone)

@@ -11,6 +11,7 @@ import {
   expandProductsAsSeparateLines,
   groupProductSalesByAppointment,
 } from '~/server/utils/invoice-product-lines'
+import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const { invoiceId } = await readBody(event)
@@ -71,9 +72,8 @@ export default defineEventHandler(async (event) => {
     if (apts) for (const apt of apts) appointmentMap[apt.id] = apt
   }
 
-  const eventTypeMap: Record<string, string> = {
-    lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorieunterricht', vku: 'VKU', haltbar: 'Haltbarkeitsprüfung',
-  }
+  const terms = await getTenantTerminology(supabase, invoice.tenant_id)
+  const eventTypeMap = eventTypeLabelMap(terms)
 
   const items = (rawItems || []).map((item: any) => {
     // Produktzeilen behalten ihren Produktnamen (nicht mit Event-Typ überschreiben)
@@ -225,6 +225,7 @@ export default defineEventHandler(async (event) => {
     introText: (invoice as any).notes || (tenant as any)?.invoice_intro_text || null,
     paymentTerms: (invoice as any).payment_terms || (tenant as any)?.invoice_payment_terms || null,
     footerText: (invoice as any).footer_text || (tenant as any)?.invoice_footer_text || null,
+    appointmentLabel: terms.appointment || 'Fahrstunde',
   })
 
   // HTTPS URL required for native Capacitor Browser.open() (data: URLs do not work)

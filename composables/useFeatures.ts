@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { getSupabase } from '~/utils/supabase'
 import { useAuthStore } from '~/stores/auth'
+import { FEATURE_CATALOG } from '~/utils/featureCatalog'
 
 type FeatureFlags = Record<string, boolean>
 
@@ -68,63 +69,74 @@ export function useFeatures() {
 
       logger.debug('🔍 useFeatures.load() loaded definitionsData:', definitionsData?.length || 0, definitionsData)
 
+      const isDrivingSchool = (tenantData?.business_type || 'driving_school') === 'driving_school'
+
       // Build feature definitions from the loaded data
       const definitions: FeatureDefinition[] = []
       const flags: FeatureFlags = {}
+      const seenKeys = new Set<string>()
 
       definitionsData?.forEach(row => {
         try {
           // Parse JSON metadata from setting_value
           const metadata = JSON.parse(row.setting_value)
+          const catalog = FEATURE_CATALOG[row.setting_key]
           
           // Resolve enabled state regardless of whether displayName/description exist
           // (syncFeatureFlags writes {enabled: bool} only; the definitions UI needs displayName)
           let isEnabled = false
           if (typeof metadata.enabled === 'boolean') {
             isEnabled = metadata.enabled
-          } else if (metadata.displayName) {
+          } else if (metadata.displayName || catalog) {
             // Legacy: has displayName but no enabled field → assume enabled
             isEnabled = true
           }
 
           // Always populate the flags map so isEnabled() works for nav gating
           flags[row.setting_key] = isEnabled
+          seenKeys.add(row.setting_key)
 
-          // Only add to definitions list when full metadata is present (for feature toggle UI)
-          if (metadata.displayName && metadata.description) {
-            // Check if this is a driving_school specific feature and filter by business_type
-            const drivingSchoolOnlyFeatures = ['categories_enabled', 'exams_enabled', 'experts_enabled', 'examiners_enabled']
-            if (drivingSchoolOnlyFeatures.includes(row.setting_key)) {
-              if (tenantData?.business_type !== 'driving_school') {
-                logger.debug('🚫 Hiding driving school feature', row.setting_key, 'for business_type:', tenantData?.business_type)
-                return
-              }
-            }
+          const displayName = metadata.displayName || catalog?.displayName
+          const description = metadata.description || catalog?.description
+          if (!displayName || !description) return
 
-            if (row.setting_key === 'courses_enabled') {
-              logger.debug('✅ Processing courses_enabled feature:', {
-                tenantBusinessType: tenantData?.business_type,
-                metadata,
-                isEnabled,
-                settingValue: row.setting_value
-              })
-            }
-
-            definitions.push({
-              key: row.setting_key,
-              displayName: metadata.displayName,
-              description: metadata.description,
-              icon: metadata.icon || '⚙️',
-              isVisible: true,
-              sortOrder: metadata.sortOrder || 0,
-              isEnabled
-            })
+          // Hide driving-school-only features from other business types
+          if ((catalog?.drivingSchoolOnly || ['categories_enabled', 'experts_enabled', 'examiners_enabled'].includes(row.setting_key))
+            && !isDrivingSchool) {
+            logger.debug('🚫 Hiding driving school feature', row.setting_key, 'for business_type:', tenantData?.business_type)
+            return
           }
+
+          definitions.push({
+            key: row.setting_key,
+            displayName,
+            description,
+            icon: metadata.icon || catalog?.icon || '⚙️',
+            isVisible: true,
+            sortOrder: metadata.sortOrder ?? catalog?.sortOrder ?? 0,
+            isEnabled
+          })
         } catch (e) {
           // Skip invalid JSON entries completely
           console.warn(`Feature ${row.setting_key} has invalid JSON:`, row.setting_value)
         }
       })
+
+      // Ensure catalog features appear even if never synced into tenant_settings yet
+      for (const [key, catalog] of Object.entries(FEATURE_CATALOG)) {
+        if (seenKeys.has(key)) continue
+        if (catalog.drivingSchoolOnly && !isDrivingSchool) continue
+        flags[key] = false
+        definitions.push({
+          key,
+          displayName: catalog.displayName,
+          description: catalog.description,
+          icon: catalog.icon,
+          isVisible: true,
+          sortOrder: catalog.sortOrder,
+          isEnabled: false
+        })
+      }
 
       // Sort definitions by sortOrder
       definitions.sort((a, b) => a.sortOrder - b.sortOrder)
@@ -171,13 +183,14 @@ export function useFeatures() {
       def.key === key ? { ...def, isEnabled: value } : def
     )
 
-    try {
+      try {
       const featureDef = cache.definitions.value.find(def => def.key === key)
-      const metadata = featureDef ? {
-        displayName: featureDef.displayName,
-        description: featureDef.description,
-        icon: featureDef.icon,
-        sortOrder: featureDef.sortOrder
+      const catalog = FEATURE_CATALOG[key]
+      const metadata = featureDef || catalog ? {
+        displayName: featureDef?.displayName || catalog?.displayName,
+        description: featureDef?.description || catalog?.description,
+        icon: featureDef?.icon || catalog?.icon || '⚙️',
+        sortOrder: featureDef?.sortOrder ?? catalog?.sortOrder ?? 0
       } : undefined
 
       // Use server-side API so service_role key is used (avoids RLS 401)

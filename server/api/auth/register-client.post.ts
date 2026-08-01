@@ -16,9 +16,11 @@ import {
   throwValidationError
 } from '~/server/utils/validators'
 import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
+  let businessNoun = 'Fahrschule'
   try {
     // Get client IP for rate limiting
     const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
@@ -164,6 +166,11 @@ export default defineEventHandler(async (event) => {
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
     const supabase = getSupabaseAdmin()
 
+    try {
+      const terms = await getTenantTerminology(supabase, tenantId)
+      businessNoun = terms.businessNoun || businessNoun
+    } catch { /* keep default */ }
+
     // ✅ Sanitize all string inputs to prevent XSS
     const sanitizedFirstName = sanitizeString(firstName, 100)
     const sanitizedLastName = sanitizeString(lastName, 100)
@@ -238,7 +245,7 @@ export default defineEventHandler(async (event) => {
           })
           throw createError({
             statusCode: 409,
-            statusMessage: 'E-Mail und Telefonnummer gehören zu unterschiedlichen offenen Anmeldungen. Bitte nutze den Link aus der SMS/E-Mail deiner Fahrschule, oder kontaktiere die Fahrschule.',
+            statusMessage: `E-Mail und Telefonnummer gehören zu unterschiedlichen offenen Anmeldungen. Bitte nutze den Link aus der SMS/E-Mail von ${businessNoun}, oder kontaktiere ${businessNoun}.`,
             data: { code: 'CONFLICTING_PENDING_USERS' }
           })
         }
@@ -303,7 +310,7 @@ export default defineEventHandler(async (event) => {
           if (updateAuthError) {
             throw createError({
               statusCode: 500,
-              statusMessage: 'Fehler beim Aktualisieren des bestehenden Kontos. Bitte kontaktiere die Fahrschule.',
+              statusMessage: `Fehler beim Aktualisieren des bestehenden Kontos. Bitte kontaktiere ${businessNoun}.`,
             })
           }
           authUserId = recovered.id

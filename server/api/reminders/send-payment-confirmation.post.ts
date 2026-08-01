@@ -125,10 +125,6 @@ export default defineEventHandler(async (event) => {
       .eq('id', appointment.staff_id)
       .single()
 
-    const staffName = staff
-      ? `${staff.first_name} ${staff.last_name}`
-      : 'Ihr Fahrlehrer'
-
     // 6. Get tenant data
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
@@ -143,6 +139,12 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Tenant not found'
       })
     }
+
+    const { getTenantTerminology } = await import('~/server/utils/tenant-terminology')
+    const terms = await getTenantTerminology(supabase, tenantId)
+    const staffName = staff
+      ? `${staff.first_name} ${staff.last_name}`
+      : `Ihr ${terms.staff || 'Fahrlehrer'}`
 
     // 7. Get location data for appointment details
     const { data: location } = await supabase

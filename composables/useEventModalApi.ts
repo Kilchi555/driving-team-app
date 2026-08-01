@@ -182,8 +182,15 @@ export const useEventModalApi = () => {
    */
   const getDefaultEventType = async () => {
     const eventTypes = await getEventTypes()
-    if (!eventTypes) return null
-    return eventTypes.find((et: any) => et.is_default && et.is_active) || null
+    if (!eventTypes || !Array.isArray(eventTypes) || eventTypes.length === 0) return null
+    const marked = eventTypes.find((et: any) => et.is_default && et.is_active !== false)
+    if (marked) return marked
+    // Fallback: first chargeable type, then first type — never invent "lesson"
+    return (
+      eventTypes.find((et: any) => et.require_payment === true) ||
+      eventTypes[0] ||
+      null
+    )
   }
 
   // ═══════════════════════════════════════════════════════════════

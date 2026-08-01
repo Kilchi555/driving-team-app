@@ -35,13 +35,24 @@
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'
             ]"
             :disabled="isNavigating"
+            :aria-label="isNavigating ? 'Lädt…' : 'Zurück'"
           >
-            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              v-if="isNavigating"
+              class="w-5 h-5 sm:w-6 sm:h-6 animate-spin"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <svg v-else class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <h1 class="text-xl sm:text-2xl font-bold text-gray-900">
-            {{ isNavigating ? 'Lade Kalender...' : 'Kunden' }}
+            {{ t.clientsPlural }}
           </h1>
         </div>
 
@@ -649,8 +660,8 @@ const handleStudentUpdated = (updateData: { id: string, [key: string]: any }) =>
       students.value = students.value.filter(s => s.id !== updateData.id)
     }
     selectedStudent.value = null
-    const removedName = removedStudent ? `${removedStudent.first_name} ${removedStudent.last_name}` : 'Schüler'
-    showSuccessToast('Aus Schülerliste entfernt', `${removedName} wurde erfolgreich aus deiner Liste entfernt.`)
+    const removedName = removedStudent ? `${removedStudent.first_name} ${removedStudent.last_name}` : t.client
+    showSuccessToast(`Aus ${t.clientsPlural}liste entfernt`, `${removedName} wurde erfolgreich aus deiner Liste entfernt.`)
     logger.debug('✅ Student removed from list after unassign')
     return
   }
@@ -659,8 +670,8 @@ const handleStudentUpdated = (updateData: { id: string, [key: string]: any }) =>
   if (updateData._assigned) {
     const addedStudent = students.value.find(s => s.id === updateData.id)
     selectedStudent.value = null
-    const addedName = addedStudent ? `${addedStudent.first_name} ${addedStudent.last_name}` : 'Schüler'
-    showSuccessToast('Zur Schülerliste hinzugefügt', `${addedName} wurde erfolgreich zu deiner Liste hinzugefügt.`)
+    const addedName = addedStudent ? `${addedStudent.first_name} ${addedStudent.last_name}` : t.client
+    showSuccessToast(`Zur ${t.clientsPlural}liste hinzugefügt`, `${addedName} wurde erfolgreich zu deiner Liste hinzugefügt.`)
     loadStudents()
     logger.debug('✅ Student added to list after assign')
     return

@@ -65,7 +65,7 @@
             :class="['px-2 py-1 font-medium text-sm border-b-2 transition-colors', activeTab === 'progress' ? 'border-transparent text-gray-600 hover:text-gray-800' : 'border-transparent text-gray-600 hover:text-gray-800']"
             :style="activeTab === 'progress' ? { borderBottomColor: secondaryColor, color: secondaryColor } : {}"
           >
-            Fortschritt
+            {{ t.progressLabel }}
           </button>
           
           <button
@@ -100,13 +100,13 @@
             class="hidden"
           />
 
-          <!-- Student Documents (Ausweise) Section -->
+          <!-- Student Documents Section -->
           <div class="bg-white border border-gray-200 rounded-lg p-6">
             <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" :style="{ color: primaryColor }">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
               </svg>
-              Ausweise
+              {{ isDrivingSchool ? 'Ausweise' : 'Dokumente' }}
             </h4>
             
             <!-- Bilder anzeigen -->
@@ -187,8 +187,8 @@
         <!-- Progress Tab -->
         <div v-if="activeTab === 'progress'" class="px-2"
 >
-          <!-- Sub-Tab Navigation -->
-          <div class="flex items-center gap-2 mb-4 border-b border-gray-200">
+          <!-- Sub-Tab Navigation (Prüfungen nur wenn Feature aktiv) -->
+          <div v-if="examsEnabled" class="flex items-center gap-2 mb-4 border-b border-gray-200">
             <button
               @click="progressSubTab = 'lektionen'"
               :class="[
@@ -202,7 +202,7 @@
                 color: primaryColor
               } : {}"
             >
-              Lektionen
+              {{ t.appointmentsPlural }}
             </button>
             <button
               @click="progressSubTab = 'prüfungen'"
@@ -240,12 +240,31 @@
             </div>
           </div>
 
+          <!-- PDF Export ohne Sub-Tabs (nicht-Fahrschule) -->
+          <div v-else-if="hasAnyEvaluations" class="flex justify-end mb-3">
+            <button
+              @click="exportEvaluationPdf"
+              :disabled="isExportingEvalPdf"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white rounded-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              :style="{ background: primaryColor }"
+              title="Bewertungen als PDF exportieren"
+            >
+              <svg v-if="!isExportingEvalPdf" class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <svg v-else class="w-3.5 h-3.5 flex-shrink-0 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {{ isExportingEvalPdf ? 'PDF…' : 'PDF' }}
+            </button>
+          </div>
+
           <!-- Lektionen Sub-Tab -->
           <div v-if="progressSubTab === 'lektionen'">
             <!-- Loading State -->
             <div v-if="isLoadingLessons" class="flex items-center justify-center py-8">
               <div class="animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
-              <span class="ml-3 text-gray-600">Lade Lektionen...</span>
+              <span class="ml-3 text-gray-600">Lade {{ t.appointmentsPlural }}...</span>
             </div>
 
             <div v-else-if="lessonsError" class="bg-red-50 border border-red-200 rounded p-4 text-red-700">
@@ -258,8 +277,8 @@
 
             <div v-else-if="lessons.length === 0" class="text-center py-12">
               <div class="text-6xl mb-4">📚</div>
-              <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine Lektionen gefunden</h4>
-              <p class="text-gray-600">Für diesen {{ t.client }} wurden noch keine Lektionen erfasst.</p>
+              <h4 class="font-semibold text-gray-900 mb-2 text-lg">Keine {{ t.appointmentsPlural }} gefunden</h4>
+              <p class="text-gray-600">Für diesen {{ t.client }} wurden noch keine {{ t.appointmentsPlural }} erfasst.</p>
             </div>
 
             <div v-else class="space-y-4">
@@ -275,7 +294,9 @@
                     ? 'border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed' 
                     : canEvaluateLesson(lesson)
                       ? 'border-gray-200 cursor-pointer hover:shadow-md'
-                      : 'border-gray-200 opacity-75 cursor-not-allowed'
+                      : evaluationsEnabled
+                        ? 'border-gray-200 opacity-75 cursor-not-allowed'
+                        : 'border-gray-200'
                 ]"
                 :style="lesson.status !== 'cancelled' ? { backgroundColor: primaryColor + '15' } : {}"
                 @click="lesson.status !== 'cancelled' && canEvaluateLesson(lesson) ? openEvaluationModal(lesson) : null"
@@ -286,7 +307,7 @@
                       'font-semibold',
                       lesson.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-900'
                     ]">
-                      {{ lesson.event_types?.name || lesson.event_type_code || lesson.type || 'Lektion' }}
+                      {{ lesson.event_types?.name || lesson.event_type_code || lesson.type || t.appointment }}
                       <span v-if="lesson.instructor" class="font-normal text-gray-600">
                         mit {{ lesson.instructor.first_name }}
                       </span>
@@ -299,7 +320,9 @@
                       um {{ formatLocalTime(lesson.start_time) }}
                     </p>
                   </div>
-                  <span :class="[
+                  <span
+                    v-if="evaluationsEnabled"
+                    :class="[
                     'px-2 py-1 text-xs font-medium rounded-full',
                     lesson.evaluations && lesson.evaluations.length > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                   ]">
@@ -309,7 +332,7 @@
                 
                 <div class="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <span :class="lesson.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'">Kategorie:</span>
+                    <span :class="lesson.status === 'cancelled' ? 'text-gray-400' : 'text-gray-500'">{{ t.categoryLabel }}:</span>
                     <span :class="['ml-1 font-medium', lesson.status === 'cancelled' ? 'text-gray-400' : '']">{{ lesson.type || '-' }}</span>
                   </div>
                   <div>
@@ -326,7 +349,7 @@
                 </div>
                 
                 <!-- Evaluationen -->
-                <div v-if="lesson.evaluations && lesson.evaluations.length > 0" class="mt-3 pt-3 border-t border-gray-300">
+                <div v-if="evaluationsEnabled && lesson.evaluations && lesson.evaluations.length > 0" class="mt-3 pt-3 border-t border-gray-300">
                   <div class="space-y-2">
                     <div 
                       v-for="evaluation in lesson.evaluations" 
@@ -382,7 +405,7 @@
           </div>
 
           <!-- Prüfungen Sub-Tab -->
-          <div v-if="progressSubTab === 'prüfungen'">
+          <div v-if="examsEnabled && progressSubTab === 'prüfungen'">
             <!-- Loading State -->
             <div v-if="isLoadingExamResults" class="flex items-center justify-center py-8">
               <div class="animate-spin rounded-full h-8 w-8 border-b-2" :style="{ borderBottomColor: primaryColor }"></div>
@@ -418,7 +441,7 @@
               <div class="grid grid-cols-2 gap-3">
                 <!-- Kategorie -->
                 <div>
-                  <label class="block text-xs font-medium text-gray-500 mb-1">Kategorie</label>
+                  <label class="block text-xs font-medium text-gray-500 mb-1">{{ t.categoryLabel }}</label>
                   <select
                     v-model="manualExam.category"
                     class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
@@ -1083,8 +1106,9 @@
         
         <!-- Details Tab -->
         <div v-if="activeTab === 'details'" class="space-y-6 p-2">
-          <!-- Pending Student Actions -->
-          <div v-if="!selectedStudent.auth_user_id" class="bg-orange-50 rounded-lg border border-orange-200 p-6">
+          <!-- Pending Student Actions — only relevant when the tenant requires login/registration.
+               If registration_required is false, pending/no-auth is the normal state, not a warning. -->
+          <div v-if="showOnboardingPendingWarning" class="bg-orange-50 rounded-lg border border-orange-200 p-6">
             <h4 class="text-lg font-semibold text-orange-900 mb-4 flex items-center">
               <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4v2m0 4v2M6.343 3.665c.886-.887 2.318-.887 3.03 0l9.718 9.718c.887.887.887 2.326 0 3.213l-9.718 9.718c-.712.712-2.144.712-3.03 0L3.313 15.9c-.887-.887-.887-2.326 0-3.213L6.343 3.665z"></path>
@@ -1332,7 +1356,7 @@
               <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6"/>
               </svg>
-              <span>{{ isUnassigning ? 'Wird entfernt...' : 'Aus meiner Schülerliste entfernen' }}</span>
+              <span>{{ isUnassigning ? 'Wird entfernt...' : `Aus meiner ${t.clientsPlural}liste entfernen` }}</span>
             </button>
             <!-- Not assigned: show add button -->
             <button
@@ -1348,7 +1372,7 @@
               <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h6"/>
               </svg>
-              <span>{{ isAssigning ? 'Wird hinzugefügt...' : 'Zu meiner Schülerliste hinzufügen' }}</span>
+              <span>{{ isAssigning ? 'Wird hinzugefügt...' : `Zu meiner ${t.clientsPlural}liste hinzufügen` }}</span>
             </button>
           </div>
         </div>
@@ -1826,7 +1850,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, toRefs, watch, onUnmounted } from 'vue'
+import { ref, computed, toRefs, watch, onUnmounted, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
 import { openPdf } from '~/utils/openPdf'
 import { getSupabase } from '~/utils/supabase'
@@ -1834,8 +1858,19 @@ import { useUserDocuments, type UserDocument } from '~/composables/useUserDocume
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { useTerminology } from '~/composables/useTerminology'
+import { useFeatures } from '~/composables/useFeatures'
 
-const { t } = useTerminology()
+const { t, isDrivingSchool } = useTerminology()
+const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
+
+/** Termindokumentation / Kriterien-Bewertung */
+const evaluationsEnabled = computed(() =>
+  isFeatureEnabled('evaluations_enabled', isDrivingSchool.value)
+)
+/** Prüfungen: default an bei Fahrschulen, sonst aus — Admin kann zuschalten */
+const examsEnabled = computed(() =>
+  isFeatureEnabled('exams_enabled', isDrivingSchool.value)
+)
 import EvaluationModal from '~/components/EvaluationModal.vue'
 import ExamResultModal from '~/components/ExamResultModal.vue'
 import ConfirmationDialog from '~/components/ConfirmationDialog.vue'
@@ -2217,6 +2252,7 @@ const isExportingEvalPdf = ref(false)
 // True wenn der Student mindestens eine bewertete Lektion hat.
 // Benutzt "lessons" (hat .allEvaluations) statt progressData (hat nur evaluationsCount).
 const hasAnyEvaluations = computed(() =>
+  evaluationsEnabled.value &&
   lessons.value.some((l: any) => l.allEvaluations && l.allEvaluations.length > 0)
 )
 
@@ -2267,7 +2303,13 @@ const isLoadingCreditTransactions = ref(false)
 
 // ── Receipt Download ───────────────────────────────────────
 const isProcessingReceipt = ref(false)
-const progressSubTab = ref<'lektionen' | 'prüfungen'>('lektionen') // Sub-Tab im Fortschritt
+const progressSubTab = ref<'lektionen' | 'prüfungen'>('lektionen') // Sub-Tab im Fortschritt/Verlauf
+
+watch(examsEnabled, (enabled) => {
+  if (!enabled && progressSubTab.value === 'prüfungen') {
+    progressSubTab.value = 'lektionen'
+  }
+})
 const isLoadingPayments = ref(false)
 const selectedPaymentIds = ref<Set<string>>(new Set()) // Selected payments for bulk payment
 const lessonsError = ref<string | null>(null)
@@ -2288,7 +2330,18 @@ const refundReason = ref('')
 const isSubmittingRefund = ref(false)
 const refundSuccess = ref(false)
 
-const bookingPolicy = ref<{ staff_refund_permission?: 'hidden' | 'request' | 'allowed'; staff_invoice_permission?: 'hidden' | 'create_only' | 'create_and_send' } | null>(null)
+const bookingPolicy = ref<{
+  staff_refund_permission?: 'hidden' | 'request' | 'allowed'
+  staff_invoice_permission?: 'hidden' | 'create_only' | 'create_and_send'
+  registration_required?: boolean
+} | null>(null)
+
+/** Warn only when login is required by tenant policy and the customer has no auth account yet. */
+const showOnboardingPendingWarning = computed(() => {
+  if (!props.selectedStudent || props.selectedStudent.auth_user_id) return false
+  // Default false = login optional → pending/no-auth is normal, not a warning
+  return bookingPolicy.value?.registration_required === true
+})
 const isAdminRole = computed(() => ['admin', 'superadmin'].includes(props.currentUser?.role ?? ''))
 
 // Invoice permission für Staff
@@ -2876,6 +2929,8 @@ const openReminderModal = () => {
 
 // Check if current user can evaluate this lesson
 const canEvaluateLesson = (lesson: any): boolean => {
+  if (!evaluationsEnabled.value) return false
+
   // Admins können alle Lektionen bewerten
   if (props.currentUser?.role === 'admin') {
     return true
@@ -3198,7 +3253,7 @@ const loadLessons = async () => {
     const isTimeout = error?.name === 'AbortError'
     lessonsError.value = isTimeout
       ? 'Zeitüberschreitung. Bitte erneut versuchen.'
-      : (error.message || 'Fehler beim Laden der Lektionen')
+      : (error.message || `Fehler beim Laden der ${t.value.appointmentsPlural}`)
   } finally {
     clearTimeout(timeoutId)
     // Only clear the loading flag for the call that is still "current".
@@ -3416,6 +3471,10 @@ const uploadCurrentFile = async (file: File) => {
 }
 
 // Cancel all in-flight lesson requests when the modal is closed / unmounted.
+onMounted(() => {
+  loadFeatures().catch(() => {})
+})
+
 onUnmounted(() => {
   _lessonsFetchController?.abort()
 })

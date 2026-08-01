@@ -92,10 +92,9 @@ const loadEvaluationData = async (tenantId?: string) => {
 
 const copyDefaultsToTenant = async (tenantId: string) => {
   try {
-    const { error } = await supabase
-      .rpc('copy_default_evaluation_data_to_tenant', { target_tenant_id: tenantId })
-
-    if (error) throw error
+    // Uses the business-type-aware API (never copies Fahrschul-Curriculum
+    // onto consulting/coaching tenants).
+    await $fetch('/api/tenants/copy-evaluation-defaults', { method: 'POST' })
 
     logger.debug('✅ Default evaluation data copied to tenant:', tenantId)
     

@@ -543,7 +543,7 @@
               <div>
                 <span class="text-sm font-semibold text-gray-900">Automatisch wiederholen</span>
                 <p class="text-xs text-gray-500 mt-0.5">
-                  Sendet periodisch die nächste Charge an noch nicht angeschriebene Leads (Zeitzone: Zürich).
+                  Sendet periodisch die nächste Charge (Zeitzone: Zürich). Unten wählst du, ob derselbe Lead nur einmal oder wieder kontaktiert wird.
                 </p>
               </div>
             </label>
@@ -575,6 +575,31 @@
                   <option :value="500">500</option>
                   <option :value="1000">1000</option>
                 </select>
+              </div>
+              <div class="col-span-2 rounded-lg border border-white/80 bg-white/70 p-3 space-y-2">
+                <p class="text-xs font-semibold text-gray-800">An denselben Lead</p>
+                <label class="flex items-start gap-2 cursor-pointer">
+                  <input v-model="createForm.schedule.repeatMode" type="radio" value="once" class="mt-0.5 border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                  <span class="text-xs text-gray-700">Nur einmal</span>
+                </label>
+                <label class="flex items-start gap-2 cursor-pointer">
+                  <input v-model="createForm.schedule.repeatMode" type="radio" value="repeat" class="mt-0.5 border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                  <span class="text-xs text-gray-700">Erneut nach Pause</span>
+                </label>
+                <select
+                  v-if="createForm.schedule.repeatMode === 'repeat'"
+                  v-model.number="createForm.schedule.repeatIntervalDays"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                >
+                  <option :value="7">7 Tagen</option>
+                  <option :value="14">14 Tagen</option>
+                  <option :value="30">30 Tagen (ca. monatlich)</option>
+                  <option :value="60">60 Tagen</option>
+                  <option :value="90">90 Tagen</option>
+                </select>
+                <p class="text-[11px] text-gray-500 leading-relaxed">
+                  Aktionen aus dem Wizard setzen den Abstand automatisch (Kurs 7 T / Rabatt 14 T / Affiliate 60 T) — hier jederzeit änderbar.
+                </p>
               </div>
             </div>
           </div>
@@ -860,37 +885,88 @@
           <input v-model="scheduleForm.enabled" type="checkbox" class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
           <div>
             <span class="text-sm font-semibold text-gray-900">Zeitplan aktiv</span>
-            <p class="text-xs text-gray-500 mt-0.5">Pro Lauf werden nur Leads angeschrieben, die diese Kampagne noch nicht erhalten haben.</p>
+            <p class="text-xs text-gray-500 mt-0.5">Läuft automatisch nach Frequenz und Batch-Grösse.</p>
           </div>
         </label>
-        <div v-if="scheduleForm.enabled" class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Frequenz</label>
-            <select v-model="scheduleForm.frequency" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-              <option value="weekly">Wöchentlich</option>
-              <option value="daily">Täglich</option>
-            </select>
+        <div v-if="scheduleForm.enabled" class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Frequenz</label>
+              <select v-model="scheduleForm.frequency" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <option value="weekly">Wöchentlich</option>
+                <option value="daily">Täglich</option>
+              </select>
+            </div>
+            <div v-if="scheduleForm.frequency === 'weekly'">
+              <label class="block text-xs font-medium text-gray-600 mb-1">Wochentag</label>
+              <select v-model.number="scheduleForm.dayOfWeek" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <option v-for="d in scheduleDayOptions" :key="d.value" :value="d.value">{{ d.label }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Uhrzeit (Zürich)</label>
+              <select v-model.number="scheduleForm.hour" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <option v-for="h in 24" :key="h - 1" :value="h - 1">{{ String(h - 1).padStart(2, '0') }}:00</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Batch pro Lauf</label>
+              <select v-model.number="scheduleForm.batchSize" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <option :value="100">100</option>
+                <option :value="250">250</option>
+                <option :value="500">500</option>
+                <option :value="1000">1000</option>
+              </select>
+            </div>
           </div>
-          <div v-if="scheduleForm.frequency === 'weekly'">
-            <label class="block text-xs font-medium text-gray-600 mb-1">Wochentag</label>
-            <select v-model.number="scheduleForm.dayOfWeek" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-              <option v-for="d in scheduleDayOptions" :key="d.value" :value="d.value">{{ d.label }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Uhrzeit (Zürich)</label>
-            <select v-model.number="scheduleForm.hour" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-              <option v-for="h in 24" :key="h - 1" :value="h - 1">{{ String(h - 1).padStart(2, '0') }}:00</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Batch pro Lauf</label>
-            <select v-model.number="scheduleForm.batchSize" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-              <option :value="100">100</option>
-              <option :value="250">250</option>
-              <option :value="500">500</option>
-              <option :value="1000">1000</option>
-            </select>
+
+          <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-gray-900">Wiederholung an denselben Lead</p>
+                <p v-if="scheduleRepeatDefaults" class="text-xs text-gray-500 mt-0.5">
+                  Vorschlag für <span class="font-medium text-gray-700">{{ scheduleRepeatDefaults.label }}</span>
+                  — jederzeit anpassbar.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                @click="applyScheduleRepeatDefaults"
+              >
+                Empfehlung
+              </button>
+            </div>
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input v-model="scheduleForm.repeatMode" type="radio" value="once" class="mt-1 border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+              <div>
+                <span class="text-sm font-medium text-gray-900">Nur einmal</span>
+                <p class="text-xs text-gray-500 mt-0.5">Wer die Kampagne schon hatte, bekommt sie nie wieder. Neue Leads weiterhin ja.</p>
+              </div>
+            </label>
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input v-model="scheduleForm.repeatMode" type="radio" value="repeat" class="mt-1 border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+              <div>
+                <span class="text-sm font-medium text-gray-900">Erneut möglich</span>
+                <p class="text-xs text-gray-500 mt-0.5">Nach einer Pause darf derselbe Lead die Kampagne wieder erhalten (Cooldown).</p>
+              </div>
+            </label>
+            <div v-if="scheduleForm.repeatMode === 'repeat'" class="pl-7">
+              <label class="block text-xs font-medium text-gray-600 mb-1">Frühestens wieder nach</label>
+              <select v-model.number="scheduleForm.repeatIntervalDays" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <option :value="7">7 Tagen</option>
+                <option :value="14">14 Tagen</option>
+                <option :value="30">30 Tagen (ca. monatlich)</option>
+                <option :value="60">60 Tagen</option>
+                <option :value="90">90 Tagen</option>
+              </select>
+            </div>
+            <p
+              v-if="scheduleRepeatDefaults"
+              class="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 leading-relaxed"
+            >
+              {{ scheduleRepeatDefaults.tip }}
+            </p>
           </div>
         </div>
       </div>
@@ -970,6 +1046,7 @@ import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useHead } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { repeatDefaultsForCampaign, type CampaignRepeatDefaults } from '~/utils/campaign-repeat-defaults'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Kampagnen - Marketing - Admin' })
@@ -1025,6 +1102,8 @@ const createForm = reactive({
     dayOfWeek: 1,
     hour: 9,
     batchSize: 500,
+    repeatMode: 'once' as 'once' | 'repeat',
+    repeatIntervalDays: 30,
   },
 })
 
@@ -1045,8 +1124,22 @@ const scheduleForm = reactive({
   dayOfWeek: 1,
   hour: 9,
   batchSize: 500,
+  repeatMode: 'once' as 'once' | 'repeat',
+  repeatIntervalDays: 30,
 })
 const savingSchedule = ref(false)
+
+const scheduleRepeatDefaults = computed<CampaignRepeatDefaults | null>(() => {
+  if (!scheduleCampaign.value) return null
+  return repeatDefaultsForCampaign(scheduleCampaign.value)
+})
+
+function applyScheduleRepeatDefaults() {
+  const defaults = scheduleRepeatDefaults.value
+  if (!defaults) return
+  scheduleForm.repeatMode = defaults.repeatMode
+  scheduleForm.repeatIntervalDays = defaults.repeatIntervalDays
+}
 
 const variantSplitTotal = computed(() => createForm.variants.reduce((s, v) => s + (v.splitPct ?? 0), 0))
 
@@ -1119,11 +1212,15 @@ function formatDateTime(d: string) {
 function scheduleSummary(c: any): string {
   if (!c.schedule_enabled) return ''
   const hour = `${String(c.schedule_hour ?? 9).padStart(2, '0')}:00`
+  const batch = `${c.schedule_batch_size || 500}/Lauf`
+  const repeat = c.schedule_repeat_mode === 'repeat'
+    ? ` · erneut nach ${c.schedule_repeat_interval_days || 30} Tagen`
+    : ' · nur einmal pro Lead'
   if (c.schedule_frequency === 'daily') {
-    return `Täglich um ${hour} · ${c.schedule_batch_size || 500}/Lauf`
+    return `Täglich um ${hour} · ${batch}${repeat}`
   }
   const day = scheduleDayOptions.find(d => d.value === c.schedule_day_of_week)?.label || 'Montag'
-  return `${day}s um ${hour} · ${c.schedule_batch_size || 500}/Lauf`
+  return `${day}s um ${hour} · ${batch}${repeat}`
 }
 
 function statusLabel(status: string) {
@@ -1223,6 +1320,8 @@ function openCreate() {
   createForm.schedule.dayOfWeek = 1
   createForm.schedule.hour = 9
   createForm.schedule.batchSize = 500
+  createForm.schedule.repeatMode = 'once'
+  createForm.schedule.repeatIntervalDays = 30
   estimatedCount.value = null
   createModalOpen.value = true
   loadEstimatedCount()
@@ -1236,6 +1335,17 @@ function openScheduleModal(campaign: any) {
   scheduleForm.dayOfWeek = campaign.schedule_day_of_week || 1
   scheduleForm.hour = typeof campaign.schedule_hour === 'number' ? campaign.schedule_hour : 9
   scheduleForm.batchSize = campaign.schedule_batch_size || 500
+
+  const defaults = repeatDefaultsForCampaign(campaign)
+  if (campaign.schedule_enabled) {
+    // Already configured — keep saved values (admin may have customized)
+    scheduleForm.repeatMode = campaign.schedule_repeat_mode === 'repeat' ? 'repeat' : 'once'
+    scheduleForm.repeatIntervalDays = campaign.schedule_repeat_interval_days || defaults.repeatIntervalDays
+  } else {
+    // First-time automation setup — apply type-based recommendation
+    scheduleForm.repeatMode = defaults.repeatMode
+    scheduleForm.repeatIntervalDays = defaults.repeatIntervalDays
+  }
 }
 
 async function saveSchedule() {
@@ -1253,6 +1363,8 @@ async function saveSchedule() {
         dayOfWeek: scheduleForm.dayOfWeek,
         hour: scheduleForm.hour,
         batchSize: scheduleForm.batchSize,
+        repeatMode: scheduleForm.repeatMode,
+        repeatIntervalDays: scheduleForm.repeatIntervalDays,
       },
     })
     scheduleCampaign.value = null
@@ -1328,6 +1440,8 @@ async function createCampaign() {
               dayOfWeek: createForm.schedule.dayOfWeek,
               hour: createForm.schedule.hour,
               batchSize: createForm.schedule.batchSize,
+              repeatMode: createForm.schedule.repeatMode,
+              repeatIntervalDays: createForm.schedule.repeatIntervalDays,
             }
           : undefined,
       },

@@ -13,6 +13,7 @@ import { generateInvoicePdf, formatTenantContactPerson } from '~/server/utils/in
 import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
+import { appointmentCountLabel, getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 
 function generateAdminInvoiceNotification(data: {
@@ -23,7 +24,11 @@ function generateAdminInvoiceNotification(data: {
   itemCount: number
   staffName: string
   tenantName: string
+  clientLabel?: string
+  itemCountLabel?: string
 }): string {
+  const clientLabel = data.clientLabel || 'Schüler'
+  const itemCountLabel = data.itemCountLabel || `${data.itemCount} Fahrstunde${data.itemCount !== 1 ? 'n' : ''}`
   return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>Neue Rechnung versendet</title></head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <div style="max-width:540px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);">
@@ -35,9 +40,9 @@ function generateAdminInvoiceNotification(data: {
     <p style="color:#475569;margin:0 0 20px;">Eine neue Rechnung wurde automatisch erstellt und versendet:</p>
     <table style="width:100%;border-collapse:collapse;background:#f8fafc;border-radius:8px;overflow:hidden;margin-bottom:20px;">
       <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">Rechnungsnummer</td><td style="padding:10px 14px;font-weight:700;color:#1e293b;border-bottom:1px solid #e2e8f0;">${data.invoiceNumber}</td></tr>
-      <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">Schüler</td><td style="padding:10px 14px;font-weight:600;color:#1e293b;border-bottom:1px solid #e2e8f0;">${data.studentName}</td></tr>
+      <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">${clientLabel}</td><td style="padding:10px 14px;font-weight:600;color:#1e293b;border-bottom:1px solid #e2e8f0;">${data.studentName}</td></tr>
       <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">E-Mail gesendet an</td><td style="padding:10px 14px;color:#1e293b;border-bottom:1px solid #e2e8f0;">${data.studentEmail}</td></tr>
-      <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">Positionen</td><td style="padding:10px 14px;color:#1e293b;border-bottom:1px solid #e2e8f0;">${data.itemCount} Fahrstunde${data.itemCount !== 1 ? 'n' : ''}</td></tr>
+      <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">Positionen</td><td style="padding:10px 14px;color:#1e293b;border-bottom:1px solid #e2e8f0;">${itemCountLabel}</td></tr>
       <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;border-bottom:1px solid #e2e8f0;">Betrag</td><td style="padding:10px 14px;font-weight:800;color:#6000BD;font-size:15px;border-bottom:1px solid #e2e8f0;">CHF ${(data.totalRappen / 100).toFixed(2)}</td></tr>
       <tr><td style="padding:10px 14px;color:#64748b;font-size:13px;">Erstellt von</td><td style="padding:10px 14px;color:#1e293b;">${data.staffName}</td></tr>
     </table>
@@ -182,7 +187,10 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const studentName = draft.student?.name || 'Schüler'
+  const terms = await getTenantTerminology(supabase, staffUser.tenant_id)
+  const appointmentLabel = terms.appointment || 'Fahrstunde'
+  const clientLabel = terms.client || 'Schüler'
+  const studentName = draft.student?.name || clientLabel
   const studentEmail = draft.billing_email
 
   // Billing-Adresse in company_billing_addresses speichern/aktualisieren (non-blocking)
@@ -279,6 +287,7 @@ export default defineEventHandler(async (event) => {
         introText: (draft as any).notes || (tenantData as any).invoice_intro_text || null,
         paymentTerms: (draft as any).payment_terms || (tenantData as any).invoice_payment_terms || null,
         footerText: (draft as any).footer_text || (tenantData as any).invoice_footer_text || null,
+        appointmentLabel,
       })
 
       // PDF generieren und als Anhang beifügen
@@ -328,6 +337,7 @@ export default defineEventHandler(async (event) => {
           introText: (draft as any).notes || (tenantData as any).invoice_intro_text || null,
           paymentTerms: (draft as any).payment_terms || (tenantData as any).invoice_payment_terms || null,
           footerText: (draft as any).footer_text || (tenantData as any).invoice_footer_text || null,
+          appointmentLabel,
         })
         pdfAttachments = [{
           filename: `Rechnung_${invoiceNumber}.pdf`,
@@ -365,6 +375,8 @@ export default defineEventHandler(async (event) => {
         itemCount: draft.items.length,
         staffName: `${staffUser.first_name} ${staffUser.last_name}`.trim(),
         tenantName: tenantData.name,
+        clientLabel,
+        itemCountLabel: appointmentCountLabel(terms, draft.items.length),
       })
 
       await sendEmail({

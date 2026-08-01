@@ -185,27 +185,70 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
     return { success: true, recipientCount: 0, queuedCount: 0, remainingCount: 0, message: 'No leads match this segment', status: campaign.status, variants: [] }
   }
 
-  // Also paginate already-sent IDs (same 1000-row default).
-  const alreadySentIds = new Set<string>()
+  // Also paginate prior contacts for this campaign (PostgREST 1000-row default).
+  type PriorContact = { lead_id: string; sent_at: string | null; status: string | null }
+  const priorRows: PriorContact[] = []
   for (let from = 0; ; from += PAGE) {
     const { data: alreadySent, error: sentErr } = await supabase
       .from('email_campaign_leads')
-      .select('lead_id')
+      .select('lead_id, sent_at, status')
       .eq('campaign_id', campaignId)
       .order('lead_id', { ascending: true })
       .range(from, from + PAGE - 1)
     if (sentErr) throw createError({ statusCode: 500, statusMessage: sentErr.message })
     if (!alreadySent?.length) break
-    for (const r of alreadySent) alreadySentIds.add(r.lead_id)
+    priorRows.push(...(alreadySent as PriorContact[]))
     if (alreadySent.length < PAGE) break
   }
 
-  const remainingLeads = allLeads.filter(l => !alreadySentIds.has(l.id))
+  // Latest contact time per lead.
+  // Many legacy rows stay status=queued without sent_at — fall back to campaign run time
+  // so "repeat after N days" still works (treating forever-as-now would block all repeats).
+  const campaignTouchMs = (() => {
+    const raw = campaign.last_run_at || campaign.sent_at
+    const t = raw ? new Date(raw).getTime() : 0
+    return Number.isFinite(t) && t > 0 ? t : Date.now()
+  })()
+  const lastContactAt = new Map<string, number>()
+  const nowMs = Date.now()
+  for (const row of priorRows) {
+    let ts = 0
+    if (row.sent_at) {
+      ts = new Date(row.sent_at).getTime()
+    } else if (row.status === 'queued' || row.status === 'sending') {
+      ts = campaignTouchMs
+    }
+    if (!ts) continue
+    const prev = lastContactAt.get(row.lead_id) || 0
+    if (ts > prev) lastContactAt.set(row.lead_id, ts)
+  }
+
+  const repeatMode = (campaign.schedule_repeat_mode === 'repeat' ? 'repeat' : 'once') as 'once' | 'repeat'
+  const intervalDays = Math.min(365, Math.max(1, Number(campaign.schedule_repeat_interval_days) || 30))
+  const intervalMs = intervalDays * 24 * 60 * 60 * 1000
+
+  const remainingLeads = allLeads.filter((l) => {
+    const last = lastContactAt.get(l.id)
+    if (last == null) return true
+    if (repeatMode === 'once') return false
+    return (nowMs - last) >= intervalMs
+  })
+
   const leads = batchLimit ? remainingLeads.slice(0, batchLimit) : remainingLeads
 
   if (leads.length === 0) {
     await markScheduleAdvanced(supabase, campaign, fromSchedule, /*hadSends*/ false)
-    return { success: true, recipientCount: 0, queuedCount: 0, remainingCount: 0, message: 'No remaining leads to send to', status: campaign.status, variants: [] }
+    return {
+      success: true,
+      recipientCount: 0,
+      queuedCount: 0,
+      remainingCount: 0,
+      message: repeatMode === 'repeat'
+        ? `No leads eligible yet (min. ${intervalDays} days since last send)`
+        : 'No remaining leads to send to',
+      status: campaign.status,
+      variants: [],
+    }
   }
 
   const totalRemaining = remainingLeads.length
@@ -286,6 +329,10 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
         lead_id: lead.id,
         status: 'queued',
         variant: variantDef.label,
+        sent_at: null,
+        opened_at: null,
+        clicked_at: null,
+        outbound_message_id: null,
       })
     }
   }
@@ -301,11 +348,12 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
     totalInserted += inserted?.length ?? 0
   }
 
+  // UNIQUE(campaign_id, lead_id): Wiederholungen updaten den bestehenden Eintrag
   for (let i = 0; i < campaignLeadRows.length; i += dbBatch) {
-    const { error: leadsInsertErr } = await supabase
+    const { error: leadsUpsertErr } = await supabase
       .from('email_campaign_leads')
-      .insert(campaignLeadRows.slice(i, i + dbBatch))
-    if (leadsInsertErr) console.error('[CampaignSend] email_campaign_leads insert error:', leadsInsertErr)
+      .upsert(campaignLeadRows.slice(i, i + dbBatch), { onConflict: 'campaign_id,lead_id' })
+    if (leadsUpsertErr) console.error('[CampaignSend] email_campaign_leads upsert error:', leadsUpsertErr)
   }
 
   for (const bucket of buckets) {

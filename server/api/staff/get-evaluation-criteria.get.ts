@@ -21,14 +21,21 @@ export default defineEventHandler(async (event) => {
     const query = getQuery(event)
     const isTheoryLesson = query.isTheoryLesson === 'true'
     const studentCategory = (query.studentCategory || '') as string
+
+    const { data: tenantRow } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', user.tenant_id)
+      .maybeSingle()
+    const isDrivingSchool = (tenantRow?.business_type || 'driving_school') === 'driving_school'
     
     console.log(`[${new Date().toLocaleTimeString()}] 📚 Loading evaluation criteria for user:`, user.id, 'isTheory:', isTheoryLesson, 'category:', studentCategory)
     
     let criteria: any[] = []
     
     if (isTheoryLesson) {
-      // Load tenant-specific theory criteria AND global criteria (tenant_id = null)
-      const { data: tenantTheory, error: tenantError } = await supabase
+      // Load tenant-specific theory criteria AND (for driving schools) global criteria
+      let theoryQuery = supabase
         .from('evaluation_criteria')
         .select(`
           id, 
@@ -41,8 +48,16 @@ export default defineEventHandler(async (event) => {
           evaluation_categories!inner(tenant_id, is_theory, name, id, display_order)
         `)
         .eq('is_active', true)
-        .or(`tenant_id.eq.${user.tenant_id},tenant_id.is.null`, { referencedTable: 'evaluation_categories' })
         .eq('evaluation_categories.is_theory', true)
+
+      if (isDrivingSchool) {
+        theoryQuery = theoryQuery.or(`tenant_id.eq.${user.tenant_id},tenant_id.is.null`, { referencedTable: 'evaluation_categories' })
+      } else {
+        // Consulting etc.: only own Themen — no Fahrschul-Globalcurriculum
+        theoryQuery = theoryQuery.eq('evaluation_categories.tenant_id', user.tenant_id)
+      }
+
+      const { data: tenantTheory, error: tenantError } = await theoryQuery
         .order('evaluation_categories(display_order), display_order', { ascending: true })
       
       if (tenantError) {
@@ -52,8 +67,7 @@ export default defineEventHandler(async (event) => {
       criteria = tenantTheory || []
       console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded theory criteria - tenant + global: ${criteria.length}`)
     } else {
-      // Load tenant-specific practical criteria AND global criteria (tenant_id = null)
-      const { data: tenantPractical, error: tenantError } = await supabase
+      let practicalQuery = supabase
         .from('evaluation_criteria')
         .select(`
           id, 
@@ -66,8 +80,15 @@ export default defineEventHandler(async (event) => {
           evaluation_categories!inner(tenant_id, is_theory, name, id, display_order)
         `)
         .eq('is_active', true)
-        .or(`tenant_id.eq.${user.tenant_id},tenant_id.is.null`, { referencedTable: 'evaluation_categories' })
         .eq('evaluation_categories.is_theory', false)
+
+      if (isDrivingSchool) {
+        practicalQuery = practicalQuery.or(`tenant_id.eq.${user.tenant_id},tenant_id.is.null`, { referencedTable: 'evaluation_categories' })
+      } else {
+        practicalQuery = practicalQuery.eq('evaluation_categories.tenant_id', user.tenant_id)
+      }
+
+      const { data: tenantPractical, error: tenantError } = await practicalQuery
         .order('evaluation_categories(display_order), display_order', { ascending: true })
       
       if (tenantError) {

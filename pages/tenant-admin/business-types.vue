@@ -352,6 +352,8 @@ const featureFlags = [
   { key: 'packages_enabled', label: 'Pakete' },
   { key: 'product_sales_enabled', label: 'Produktverkauf' },
   { key: 'calendar_sync_enabled', label: 'Kalender-Sync' },
+  { key: 'evaluations_enabled', label: 'Termindokumentation' },
+  { key: 'exams_enabled', label: 'Prüfungen' },
 ]
 
 const authHeaders = async () => {

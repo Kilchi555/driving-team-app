@@ -7,6 +7,7 @@ import { logger } from '~/utils/logger'
 import { sendPushToUser } from '~/server/utils/push'
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { displayName } from '~/server/utils/branded-email'
 
 interface AppointmentNotificationBody {
   email: string
@@ -135,7 +136,7 @@ const TEMPLATES = {
                   : '')
               }
 
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || terms.businessNoun}</strong></p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
             </td>
           </tr>
           <tr>
@@ -182,7 +183,7 @@ const TEMPLATES = {
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Zum Kundenkonto</a>
               </div>
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || terms.businessNoun}</strong></p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
             </td>
           </tr>
           <tr>
@@ -257,7 +258,7 @@ const TEMPLATES = {
                 </a>
               </div>
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Beste Grüsse,<br><strong>${data.tenantName || terms.businessNoun}</strong></p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Beste Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
             </td>
           </tr>
           <tr>
@@ -331,7 +332,7 @@ const TEMPLATES = {
                 </a>
               </div>
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${data.tenantName || terms.businessNoun}</strong></p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
             </td>
           </tr>
           <tr>
@@ -382,7 +383,7 @@ const TEMPLATES = {
         </tr>
         <tr>
           <td style="background-color:#f9fafb;padding:20px 30px;text-align:center;">
-            <p style="color:#9ca3af;font-size:12px;margin:0;">${data.tenantName || 'Simy'} – automatische Benachrichtigung</p>
+            <p style="color:#9ca3af;font-size:12px;margin:0;">${displayName(data.tenantName || 'Simy')} – automatische Benachrichtigung</p>
           </td>
         </tr>
       </table>
