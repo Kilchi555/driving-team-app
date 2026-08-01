@@ -22,7 +22,7 @@ export interface TemplateVariables {
   affiliate_signup_url?: string
 }
 
-export type OfferCtaType = 'booking' | 'course' | 'ref' | 'custom'
+export type OfferCtaType = 'booking' | 'course' | 'ref' | 'partner' | 'custom'
 
 export interface BuildOfferCtaParams {
   baseUrl: string
@@ -147,6 +147,9 @@ export function buildOfferCtaUrl(params: BuildOfferCtaParams): string {
     }
     case 'ref':
       return `${base}/ref/${slug}${qs ? `?${qs}` : ''}`
+    case 'partner':
+      // Affiliate signup landing (no personal ref code required)
+      return `${base}/partner/${slug}${qs ? `?${qs}` : ''}`
     case 'custom': {
       const raw = (params.customPath || '').trim()
       if (!raw) return withQs(`${base}/booking/availability/${slug}`)

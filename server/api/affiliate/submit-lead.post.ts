@@ -36,8 +36,14 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const { tenantSlug, refCode, firstName, lastName, phone, email } = body
 
-  if (!tenantSlug || !refCode || !firstName || !lastName || !phone) {
+  if (!tenantSlug || !firstName || !lastName || !phone) {
     throw createError({ statusCode: 400, message: 'Fehlende Pflichtfelder.' })
+  }
+  if (!refCode) {
+    throw createError({
+      statusCode: 400,
+      message: 'Dieser Link enthält keinen Empfehlungscode. Bitte den persönlichen Affiliate-Link verwenden, oder die Partner-Seite /partner/… öffnen.',
+    })
   }
 
   const supabaseUrl = process.env.SUPABASE_URL

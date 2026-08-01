@@ -206,7 +206,7 @@ export default defineEventHandler(async (event) => {
 
   // --- CTA ---
   let ctaType: OfferCtaType = body.ctaType || 'booking'
-  if (themeKey === 'affiliate') ctaType = 'ref'
+  if (themeKey === 'affiliate') ctaType = 'partner'
   if (themeKey === 'course' && !body.ctaType) ctaType = 'course'
   if (themeKey === 'category' && !body.ctaType) ctaType = 'booking'
 

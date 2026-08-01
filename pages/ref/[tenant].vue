@@ -61,6 +61,12 @@
       </div>
 
       <!-- Error banner -->
+      <div v-if="!refCode" class="mx-6 mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+        Dieser Link enthält keinen persönlichen Empfehlungscode.
+        Für die Partner-Anmeldung bitte
+        <NuxtLink :to="`/partner/${tenantSlug}`" class="font-semibold underline">die Partner-Seite</NuxtLink>
+        verwenden.
+      </div>
       <div v-if="formError" class="mx-6 mt-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
         {{ formError }}
       </div>
@@ -119,7 +125,7 @@
 
         <button
           type="submit"
-          :disabled="loading || !canSubmit"
+          :disabled="loading || !canSubmit || !refCode"
           class="w-full py-3 px-4 rounded-xl text-white font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
           :style="brandColor ? `background-color: ${brandColor}` : 'background-color: #10b981'"
         >
@@ -153,6 +159,14 @@ const tenantSlug = route.params.tenant as string
 const refCode = (route.query.ref as string | undefined)?.trim().toUpperCase() || ''
 
 import { mergeTerminology } from '~/composables/useTerminology'
+
+// Already-sent marketing CTAs used /ref/{slug}?cid=… without a personal ref code.
+// Redirect those to the partner signup page so old emails keep working.
+if (!refCode) {
+  const q = { ...route.query }
+  delete (q as any).ref
+  await navigateTo({ path: `/partner/${tenantSlug}`, query: q }, { replace: true })
+}
 
 // ---- Branding via useFetch (SSR + client dedup, no flash) ----
 const { data: brandingResult } = await useFetch<any>(`/api/tenants/branding`, {

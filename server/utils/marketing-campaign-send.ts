@@ -106,11 +106,23 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
     campaignId,
   })
 
-  let leadsQuery = supabase
-    .from('leads')
-    .select('id, email, first_name, last_name, unsubscribe_token, categories, tags')
-    .eq('tenant_id', tenantId)
-    .neq('status', 'unsubscribed')
+  // Build base filters once; re-apply per page (PostgREST max ~1000 rows/request).
+  const applyLeadFilters = (q: any) => {
+    let query = q
+      .eq('tenant_id', tenantId)
+      .neq('status', 'unsubscribed')
+      .order('id', { ascending: true })
+    if (effectiveCategories.length) query = query.overlaps('categories', effectiveCategories)
+    if (filter.tags?.length) query = query.overlaps('tags', filter.tags)
+    if (Array.isArray(filter.require_tags) && filter.require_tags.length) {
+      query = query.overlaps('tags', filter.require_tags)
+    }
+    if (excludeCats.length) {
+      const literal = `{${excludeCats.map(c => `"${String(c).replace(/"/g, '')}"`).join(',')}}`
+      query = query.not('categories', 'ov', literal)
+    }
+    return query
+  }
 
   let effectiveCategories: string[] = []
   if (filter.categories?.length) {
@@ -133,27 +145,26 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
     }
   }
 
-  if (effectiveCategories.length) leadsQuery = leadsQuery.overlaps('categories', effectiveCategories)
-  if (filter.tags?.length) leadsQuery = leadsQuery.overlaps('tags', filter.tags)
-  if (Array.isArray(filter.require_tags) && filter.require_tags.length) {
-    leadsQuery = leadsQuery.overlaps('tags', filter.require_tags)
-  }
-
   const excludeCats: string[] = Array.isArray(filter.exclude_categories)
     ? [...new Set([
         ...filter.exclude_categories.map((c: string) => String(c)),
         ...filter.exclude_categories.map((c: string) => String(c).toLowerCase()),
       ])]
     : []
-  if (excludeCats.length) {
-    const literal = `{${excludeCats.map(c => `"${String(c).replace(/"/g, '')}"`).join(',')}}`
-    leadsQuery = leadsQuery.not('categories', 'ov', literal)
+
+  const PAGE = 1000
+  const rawLeads: any[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error: leadsErr } = await applyLeadFilters(
+      supabase.from('leads').select('id, email, first_name, last_name, unsubscribe_token, categories, tags'),
+    ).range(from, from + PAGE - 1)
+    if (leadsErr) throw createError({ statusCode: 500, statusMessage: leadsErr.message })
+    if (!data?.length) break
+    rawLeads.push(...data)
+    if (data.length < PAGE) break
   }
 
-  const { data: rawLeads, error: leadsErr } = await leadsQuery
-  if (leadsErr) throw createError({ statusCode: 500, statusMessage: leadsErr.message })
-
-  let allLeads = rawLeads || []
+  let allLeads = rawLeads
   if (excludeCats.length && allLeads.length) {
     const excludeSet = new Set(excludeCats.map(c => c.toLowerCase()))
     allLeads = allLeads.filter((l: any) => {
@@ -174,12 +185,21 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
     return { success: true, recipientCount: 0, queuedCount: 0, remainingCount: 0, message: 'No leads match this segment', status: campaign.status, variants: [] }
   }
 
-  const { data: alreadySent } = await supabase
-    .from('email_campaign_leads')
-    .select('lead_id')
-    .eq('campaign_id', campaignId)
+  // Also paginate already-sent IDs (same 1000-row default).
+  const alreadySentIds = new Set<string>()
+  for (let from = 0; ; from += PAGE) {
+    const { data: alreadySent, error: sentErr } = await supabase
+      .from('email_campaign_leads')
+      .select('lead_id')
+      .eq('campaign_id', campaignId)
+      .order('lead_id', { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (sentErr) throw createError({ statusCode: 500, statusMessage: sentErr.message })
+    if (!alreadySent?.length) break
+    for (const r of alreadySent) alreadySentIds.add(r.lead_id)
+    if (alreadySent.length < PAGE) break
+  }
 
-  const alreadySentIds = new Set((alreadySent ?? []).map((r: any) => r.lead_id))
   const remainingLeads = allLeads.filter(l => !alreadySentIds.has(l.id))
   const leads = batchLimit ? remainingLeads.slice(0, batchLimit) : remainingLeads
 
