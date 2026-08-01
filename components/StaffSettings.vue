@@ -457,7 +457,6 @@
                 </button>
               </div>
 
-
               <!-- Ihre registrierten Standorte -->
               <div v-if="registeredLocations.length > 0" class="space-y-2">
                 <button
@@ -505,7 +504,6 @@
                   </div>
                 </button>
               </div>
-
 
               <!-- Keine Standorte -->
               <div v-if="registeredLocations.length === 0" class="text-center py-6 text-gray-500">
@@ -1498,6 +1496,31 @@
             </button>
           </div>
 
+          <!-- Kategorien an diesem Standort (pro Staff) -->
+          <div>
+            <p class="text-sm font-medium text-gray-700 mb-1">Meine Kategorien hier</p>
+            <p class="text-xs text-gray-500 mb-2">Nur für dich an diesem Standort — andere Fahrlehrer behalten ihre eigenen</p>
+            <div v-if="staffOwnCategoryOptions.length === 0" class="text-xs text-gray-400 italic">
+              Keine Kategorien in deinem Profil hinterlegt
+            </div>
+            <div v-else class="space-y-2">
+              <label
+                v-for="cat in staffOwnCategoryOptions"
+                :key="cat.code"
+                class="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  :value="cat.code"
+                  v-model="locationModalData.available_categories"
+                  class="tenant-focus w-4 h-4 border-gray-300 rounded focus:ring-2"
+                  :style="{ accentColor: primaryColor }"
+                />
+                <span class="text-sm text-gray-700">{{ cat.name }} <span class="text-gray-400">({{ cat.code }})</span></span>
+              </label>
+            </div>
+          </div>
+
           <!-- Zeitfenster -->
           <div class="pt-1">
             <div class="flex items-center justify-between mb-2">
@@ -1673,12 +1696,41 @@
           <!-- Name -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Standortname *</label>
-            <input
-              v-model="newLocationForm.name"
-              type="text"
-              placeholder="z.B. Treffpunkt A"
-              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2"
-            />
+            <div class="relative">
+              <input
+                v-model="newLocationForm.name"
+                type="text"
+                placeholder="z.B. Treffpunkt A"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2"
+                @focus="showExistingLocationSuggestions = true"
+                @input="showExistingLocationSuggestions = true"
+                @blur="hideExistingLocationSuggestionsDelayed"
+                @keydown.escape="showExistingLocationSuggestions = false"
+              />
+
+              <!-- Existing location suggestions -->
+              <div
+                v-if="showExistingLocationSuggestions && existingLocationSuggestions.length > 0"
+                class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto mt-1"
+              >
+                <p class="px-2.5 py-1.5 text-[11px] font-medium text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
+                  Bestehende Standorte
+                </p>
+                <button
+                  v-for="loc in existingLocationSuggestions"
+                  :key="loc.id"
+                  type="button"
+                  @mousedown.prevent="selectExistingLocationFromModal(loc)"
+                  class="w-full text-left p-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                >
+                  <div class="font-medium text-gray-900 text-sm">{{ loc.name }}</div>
+                  <div class="text-xs text-gray-500 truncate">{{ loc.address }}</div>
+                  <div class="text-[11px] mt-0.5 font-medium" :style="{ color: primaryColor }">
+                    Vorhandenen Standort übernehmen →
+                  </div>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Address -->
@@ -1687,14 +1739,37 @@
             <div class="relative">
               <input
                 v-model="newLocationForm.address"
-                @input="onAddressSearch"
-                @blur="hideAddressSuggestionsDelayed"
-                @focus="showAddressSuggestions = true"
+                @input="onNewLocationAddressInput"
+                @blur="onNewLocationAddressBlur"
+                @focus="onNewLocationAddressFocus"
                 @keyup.enter="selectFirstAddressSuggestion"
                 type="text"
                 placeholder="z.B. Bahnhofstrasse 1, 8048 Zürich"
                 class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2"
               />
+
+              <!-- Existing location suggestions (address match) -->
+              <div
+                v-if="showExistingLocationSuggestions && existingLocationSuggestionsFromAddress.length > 0 && addressSuggestions.length === 0"
+                class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto mt-1"
+              >
+                <p class="px-2.5 py-1.5 text-[11px] font-medium text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
+                  Bestehende Standorte
+                </p>
+                <button
+                  v-for="loc in existingLocationSuggestionsFromAddress"
+                  :key="loc.id"
+                  type="button"
+                  @mousedown.prevent="selectExistingLocationFromModal(loc)"
+                  class="w-full text-left p-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                >
+                  <div class="font-medium text-gray-900 text-sm">{{ loc.name }}</div>
+                  <div class="text-xs text-gray-500 truncate">{{ loc.address }}</div>
+                  <div class="text-[11px] mt-0.5 font-medium" :style="{ color: primaryColor }">
+                    Vorhandenen Standort übernehmen →
+                  </div>
+                </button>
+              </div>
               
               <!-- Google Places Suggestions -->
               <div v-if="showAddressSuggestions && addressSuggestions.length > 0" class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto mt-1">
@@ -1793,11 +1868,11 @@
           </button>
           <button
             @click="createNewLocation"
-            :disabled="!newLocationForm.name || !newLocationForm.address || newLocationForm.available_categories.length === 0"
+            :disabled="isCreatingLocation || !newLocationForm.name || !newLocationForm.address || newLocationForm.available_categories.length === 0"
             class="px-4 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition-colors hover:opacity-90"
             :style="{ background: primaryColor }"
           >
-            Erstellen & Hinzufügen
+            {{ isCreatingLocation ? 'Erstellen…' : 'Erstellen & Hinzufügen' }}
           </button>
         </div>
       </div>
@@ -2597,8 +2672,9 @@ const locationModalData = ref<{
   postal_code: string
   canton: string
   is_online_bookable: boolean
+  available_categories: string[]
   time_windows: Array<{ start: string; end: string; days: number[] }>
-}>({ id: '', name: '', address: '', postal_code: '', canton: '', is_online_bookable: true, time_windows: [] })
+}>({ id: '', name: '', address: '', postal_code: '', canton: '', is_online_bookable: true, available_categories: [], time_windows: [] })
 const locationModalSaving = ref(false)
 
 // Buffer-Setting (Basis-Puffer pro Staff)
@@ -2633,6 +2709,10 @@ const isSavingWorkingHours = ref(false)
 
 // New Location Modal
 const showNewLocationModal = ref(false)
+const isCreatingLocation = ref(false)
+const joiningLocationId = ref<string | null>(null)
+const showExistingLocationSuggestions = ref(false)
+let existingLocationSuggestionsTimeout: ReturnType<typeof setTimeout> | null = null
 
 // New Location Form
 const newLocationForm = ref({
@@ -2839,6 +2919,33 @@ const filteredCategoriesForDurations = computed(() => {
   )
 })
 
+/** Categories this staff is allowed to teach (from profile). */
+const staffOwnCategoryCodes = computed(() => {
+  const raw = props.currentUser?.category || localUser.value?.category || []
+  if (Array.isArray(raw)) return raw.map((c: any) => String(c))
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed.map((c: any) => String(c)) : []
+    } catch {
+      return []
+    }
+  }
+  return []
+})
+
+const staffOwnCategoryOptions = computed(() => {
+  const codes = staffOwnCategoryCodes.value
+  if (codes.length === 0) return availableCategories.value
+  const matched = availableCategories.value.filter((cat) => codes.includes(cat.code))
+  // Include any profile codes missing from availableCategories (legacy naming)
+  const known = new Set(matched.map((c) => c.code))
+  const extras = codes
+    .filter((code) => !known.has(code))
+    .map((code) => ({ id: code, code, name: code }))
+  return [...matched, ...extras]
+})
+
 // Registered Locations (wo Staff bereits eintragen ist)
 const registeredLocations = computed(() => {
   return allTenantLocations.value.filter(loc => 
@@ -2849,9 +2956,81 @@ const registeredLocations = computed(() => {
 // Available Locations (wo Staff sich noch eintragen kann)
 const availableLocationsForSignup = computed(() => {
   return allTenantLocations.value.filter(loc => 
-    !loc.staff_ids || !Array.isArray(loc.staff_ids) || !loc.staff_ids.includes(props.currentUser?.id)
+    loc.location_type !== 'pickup' &&
+    (!loc.staff_ids || !Array.isArray(loc.staff_ids) || !loc.staff_ids.includes(props.currentUser?.id))
   )
 })
+
+const matchExistingLocations = (query: string) => {
+  const q = query.trim().toLowerCase()
+  if (q.length < 2) return []
+  return availableLocationsForSignup.value
+    .filter((loc: any) => {
+      const haystack = `${loc.name || ''} ${loc.address || ''} ${loc.postal_code || ''} ${loc.city || ''}`.toLowerCase()
+      return haystack.includes(q)
+    })
+    .slice(0, 8)
+}
+
+const existingLocationSuggestions = computed(() => matchExistingLocations(newLocationForm.value.name))
+const existingLocationSuggestionsFromAddress = computed(() => matchExistingLocations(newLocationForm.value.address))
+
+const hideExistingLocationSuggestionsDelayed = () => {
+  if (existingLocationSuggestionsTimeout) clearTimeout(existingLocationSuggestionsTimeout)
+  existingLocationSuggestionsTimeout = setTimeout(() => {
+    showExistingLocationSuggestions.value = false
+  }, 150)
+}
+
+const onNewLocationAddressInput = () => {
+  showExistingLocationSuggestions.value = true
+  onAddressSearch()
+}
+
+const onNewLocationAddressFocus = () => {
+  showExistingLocationSuggestions.value = true
+  showAddressSuggestions.value = true
+}
+
+const onNewLocationAddressBlur = () => {
+  hideAddressSuggestionsDelayed()
+  hideExistingLocationSuggestionsDelayed()
+}
+
+const selectExistingLocationFromModal = async (location: any) => {
+  if (!location?.id || joiningLocationId.value) return
+  showExistingLocationSuggestions.value = false
+  joiningLocationId.value = location.id
+  try {
+    const categories = newLocationForm.value.available_categories.length > 0
+      ? [...newLocationForm.value.available_categories]
+      : [...staffOwnCategoryCodes.value]
+
+    await toggleLocationAssignment(location.id)
+    await $fetch('/api/staff/update-location-booking', {
+      method: 'POST',
+      body: {
+        location_id: location.id,
+        is_online_bookable: !!newLocationForm.value.make_bookable,
+        available_categories: categories
+      }
+    }).catch(() => {})
+
+    const idx = allTenantLocations.value.findIndex((l: any) => l.id === location.id)
+    if (idx >= 0) {
+      allTenantLocations.value[idx].is_online_bookable = !!newLocationForm.value.make_bookable
+      allTenantLocations.value[idx].staff_available_categories = categories
+    }
+    resetLocationForm()
+    showNewLocationModal.value = false
+    showSuccessToast('Standort übernommen', `"${location.name}" wurde zu deinen Standorten hinzugefügt.`)
+  } catch (err: any) {
+    console.error('❌ Error selecting existing location:', err)
+    showErrorToast('Fehler', err?.message || 'Standort konnte nicht übernommen werden')
+  } finally {
+    joiningLocationId.value = null
+  }
+}
 
 // Calendar Integration Links
 const calendarTokenLink = ref<string | null>(null)
@@ -3313,10 +3492,15 @@ const addExamLocation = async () => {
 
 // Create new location
 const createNewLocation = async () => {
+  if (isCreatingLocation.value) return
   if (!props.currentUser?.tenant_id || !newLocationForm.value.name || !newLocationForm.value.address) {
     alert('Bitte füllen Sie alle erforderlichen Felder aus')
     return
   }
+
+  isCreatingLocation.value = true
+  // Snapshot form before any await — prevents double-submit race with resetLocationForm()
+  const formSnapshot = { ...newLocationForm.value, available_categories: [...newLocationForm.value.available_categories] }
 
   try {
     const { query } = useDatabaseQuery()
@@ -3327,43 +3511,46 @@ const createNewLocation = async () => {
       action: 'insert',
       table: 'locations',
       data: {
-        name: newLocationForm.value.name,
-        address: newLocationForm.value.address,
-        canton: newLocationForm.value.canton || null,
-        postal_code: newLocationForm.value.postal_code || null,
+        name: formSnapshot.name,
+        address: formSnapshot.address,
+        canton: formSnapshot.canton || null,
+        postal_code: formSnapshot.postal_code || null,
         staff_ids: [props.currentUser.id],
         tenant_id: props.currentUser.tenant_id,
-        available_categories: newLocationForm.value.available_categories,
+        available_categories: formSnapshot.available_categories,
         location_type: 'standard',
-        is_active: true,
-        is_online_bookable: false
+        is_active: true
       }
     })
 
     if (data && data.length > 0) {
-      const makeBookable = newLocationForm.value.make_bookable
+      const makeBookable = formSnapshot.make_bookable
+      const categories = formSnapshot.available_categories
 
       // Fix label: explicitly set is_online_bookable on local object so the card shows correctly
-      allTenantLocations.value.push({ ...data[0], is_online_bookable: makeBookable })
+      allTenantLocations.value.push({
+        ...data[0],
+        is_online_bookable: makeBookable,
+        staff_available_categories: categories
+      })
 
-      // If staff wants it immediately bookable, update staff_locations + trigger recalc
-      if (makeBookable) {
-        await $fetch('/api/staff/update-location-booking', {
-          method: 'POST',
-          body: {
-            location_id: data[0].id,
-            is_online_bookable: true
-          }
-        }).catch((e: any) => {
-          console.warn('⚠️ Could not set bookable status (non-fatal):', e.message)
-        })
-      }
+      // Always ensure staff_locations row exists with per-staff categories
+      await $fetch('/api/staff/update-location-booking', {
+        method: 'POST',
+        body: {
+          location_id: data[0].id,
+          is_online_bookable: makeBookable,
+          available_categories: categories
+        }
+      }).catch((e: any) => {
+        console.warn('⚠️ Could not set bookable status (non-fatal):', e.message)
+      })
 
       // Reset form and close modal
       resetLocationForm()
       showNewLocationModal.value = false
 
-      logger.debug('✅ Location created successfully:', data[0], { makeBookable })
+      logger.debug('✅ Location created successfully:', data[0], { makeBookable, categories })
     }
   } catch (err: any) {
     console.error('❌ Error creating location:', err)
@@ -3371,6 +3558,8 @@ const createNewLocation = async () => {
       error.value = `Fehler beim Erstellen: ${err.message}`
     }
     alert(`Fehler: ${err.message}`)
+  } finally {
+    isCreatingLocation.value = false
   }
 }
 
@@ -3400,14 +3589,13 @@ const toggleLocationAssignment = async (locationId: string) => {
 
     // Aktuelle staff_ids (Array oder leer)
     let currentStaffIds = Array.isArray(location.staff_ids) ? [...location.staff_ids] : []
+    const isRemoving = currentStaffIds.includes(staffId)
 
     // Toggle: hinzufügen oder entfernen
-    if (currentStaffIds.includes(staffId)) {
-      // Entfernen
+    if (isRemoving) {
       currentStaffIds = currentStaffIds.filter(id => id !== staffId)
       logger.debug(`🔥 Removing staff ${staffId} from location ${locationId}`)
     } else {
-      // Hinzufügen
       currentStaffIds.push(staffId)
       logger.debug(`🔥 Adding staff ${staffId} to location ${locationId}`)
     }
@@ -3423,6 +3611,29 @@ const toggleLocationAssignment = async (locationId: string) => {
     const locationIndex = allTenantLocations.value.findIndex(loc => loc.id === locationId)
     if (locationIndex >= 0) {
       allTenantLocations.value[locationIndex].staff_ids = currentStaffIds
+      if (!isRemoving) {
+        allTenantLocations.value[locationIndex].is_online_bookable = false
+      }
+    }
+
+    if (!isRemoving) {
+      // Ensure staff_locations row exists with this staff's categories (default: not online bookable)
+      const categories = staffOwnCategoryCodes.value.length > 0
+        ? [...staffOwnCategoryCodes.value]
+        : []
+      await $fetch('/api/staff/update-location-booking', {
+        method: 'POST',
+        body: {
+          location_id: locationId,
+          is_online_bookable: false,
+          available_categories: categories
+        }
+      }).catch((e: any) => {
+        console.warn('⚠️ Could not create staff_locations entry (non-fatal):', e.message)
+      })
+      if (locationIndex >= 0) {
+        allTenantLocations.value[locationIndex].staff_available_categories = categories
+      }
     }
 
     logger.debug('✅ Location assignment updated successfully')
@@ -3480,6 +3691,11 @@ const openLocationModal = (location: any) => {
       try { timeWindows = JSON.parse(location.time_windows) } catch { timeWindows = [] }
     }
   }
+
+  const staffCats = Array.isArray(location.staff_available_categories)
+    ? [...location.staff_available_categories]
+    : [...staffOwnCategoryCodes.value]
+
   locationModalData.value = {
     id: location.id,
     name: location.name,
@@ -3487,6 +3703,7 @@ const openLocationModal = (location: any) => {
     postal_code: location.postal_code || '',
     canton: location.canton || '',
     is_online_bookable: location.is_online_bookable !== false,
+    available_categories: staffCats,
     time_windows: timeWindows
   }
   showLocationSettingsModal.value = true
@@ -3515,7 +3732,8 @@ const saveLocationSettings = async () => {
         is_online_bookable: locationModalData.value.is_online_bookable,
         postal_code: locationModalData.value.postal_code.trim() || null,
         canton: locationModalData.value.canton.trim().toUpperCase() || null,
-        time_windows: locationModalData.value.time_windows.length ? locationModalData.value.time_windows : null
+        time_windows: locationModalData.value.time_windows.length ? locationModalData.value.time_windows : null,
+        available_categories: locationModalData.value.available_categories
       }
     })
 
@@ -3528,6 +3746,7 @@ const saveLocationSettings = async () => {
         allTenantLocations.value[idx].canton = locationModalData.value.canton.trim().toUpperCase() || null
         allTenantLocations.value[idx].time_windows = locationModalData.value.time_windows.length
           ? locationModalData.value.time_windows : null
+        allTenantLocations.value[idx].staff_available_categories = [...locationModalData.value.available_categories]
       }
       showLocationSettingsModal.value = false
       saveSuccess.value = true
@@ -3738,8 +3957,8 @@ const loadData = async () => {
       displayCount: availableCategories.value.length
     })
 
-    // Alle Standard-Standorte des Tenants laden via Backend API
-    const locationsResponse = await $fetch<any>('/api/staff/get-locations').catch(() => ({ data: [] }))
+    // Alle Standard-Standorte des Tenants laden (inkl. noch nicht zugewiesene)
+    const locationsResponse = await $fetch<any>('/api/staff/get-locations?include_all_standard=true').catch(() => ({ data: [] }))
     const allLocations = locationsResponse?.data || locationsResponse?.locations || []
     
     // Parse staff_ids from JSON strings to arrays
@@ -3750,18 +3969,22 @@ const loadData = async () => {
 
     // Load all staff_locations for this staff to get is_online_bookable status
     try {
-      const staffLocResponse = await $fetch<{ staff_locations?: Array<{ location_id: string; is_online_bookable: boolean }> }>('/api/staff/get-location-bookable-status')
+      const staffLocResponse = await $fetch<{ staff_locations?: Array<{ location_id: string; is_online_bookable: boolean; available_categories?: string[] | null }> }>('/api/staff/get-location-bookable-status')
       const staffLocationRecords = staffLocResponse?.staff_locations || []
 
       if (staffLocationRecords && staffLocationRecords.length > 0) {
-        // Create a map for quick lookup
-        const staffLocMap = new Map(staffLocationRecords.map((sl: any) => [sl.location_id, sl.is_online_bookable]))
+        const staffLocMap = new Map(staffLocationRecords.map((sl: any) => [sl.location_id, sl]))
         
-        // Enrich allTenantLocations with is_online_bookable status
-        allTenantLocations.value = allTenantLocations.value.map((loc: any) => ({
-          ...loc,
-          is_online_bookable: staffLocMap.has(loc.id) ? staffLocMap.get(loc.id) : true // Default to true if no entry
-        }))
+        allTenantLocations.value = allTenantLocations.value.map((loc: any) => {
+          const sl = staffLocMap.get(loc.id)
+          return {
+            ...loc,
+            is_online_bookable: sl ? sl.is_online_bookable : true,
+            staff_available_categories: Array.isArray(sl?.available_categories)
+              ? sl.available_categories
+              : (loc.staff_available_categories || null)
+          }
+        })
         
         logger.debug('✅ Loaded staff_locations online bookable settings')
       }
@@ -4396,8 +4619,12 @@ watch(() => showNewLocationModal.value, (isOpen) => {
   if (!isOpen) {
     addressSuggestions.value = []
     showAddressSuggestions.value = false
+    showExistingLocationSuggestions.value = false
     if (addressSuggestionsTimeout) {
       clearTimeout(addressSuggestionsTimeout)
+    }
+    if (existingLocationSuggestionsTimeout) {
+      clearTimeout(existingLocationSuggestionsTimeout)
     }
   }
 })

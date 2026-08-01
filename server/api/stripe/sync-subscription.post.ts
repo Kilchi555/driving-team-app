@@ -1,7 +1,7 @@
 import Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { PLANS, type SubscriptionPlan } from '~/utils/planFeatures'
+import { PLANS, ADDONS, type SubscriptionPlan } from '~/utils/planFeatures'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 import { resolveSubscriptionPeriodEnd } from '~/server/utils/stripe-subscription-period'
 
@@ -76,8 +76,9 @@ export default defineEventHandler(async (event) => {
   const currentPeriodEnd = resolveSubscriptionPeriodEnd(sub)
 
   const addonSeats = parseAddonSeats(sub)
-  const addonCourses = sub.metadata?.addon_courses === 'true'
-  const addonAffiliate = sub.metadata?.addon_affiliate === 'true'
+  const addonCourses = sub.metadata?.addon_courses === 'true' || hasAddonPrice(sub, 'STRIPE_PRICE_ADDON_COURSES')
+  const addonAffiliate = sub.metadata?.addon_affiliate === 'true' || hasAddonPrice(sub, 'STRIPE_PRICE_ADDON_AFFILIATE')
+  const addonGbp = sub.metadata?.addon_gbp === 'true' || hasAddonPrice(sub, 'STRIPE_PRICE_ADDON_GBP')
 
   const cancelAtTs = (sub as any).cancel_at ?? null
   const cancelAt = cancelAtTs ? new Date(Number(cancelAtTs) * 1000).toISOString() : null
@@ -93,6 +94,7 @@ export default defineEventHandler(async (event) => {
       addon_seats: addonSeats,
       addon_courses_enabled: addonCourses,
       addon_affiliate_enabled: addonAffiliate,
+      addon_gbp_enabled: addonGbp,
       subscription_cancel_at: cancelAt,
     })
     .eq('id', tenantId)
@@ -103,9 +105,13 @@ export default defineEventHandler(async (event) => {
   }
 
   // Sync feature flags in tenant_settings
-  await syncFeatureFlags(supabase, tenantId, plan, { courses: addonCourses, affiliate: addonAffiliate })
+  await syncFeatureFlags(supabase, tenantId, plan, {
+    courses: addonCourses,
+    affiliate: addonAffiliate,
+    gbp: addonGbp,
+  })
 
-  console.log(`✅ sync-subscription: Tenant ${tenantId} synced → plan=${plan}`)
+  console.log(`✅ sync-subscription: Tenant ${tenantId} synced → plan=${plan} gbp=${addonGbp} affiliate=${addonAffiliate}`)
   return { synced: true, plan, tenantId }
 })
 
@@ -122,6 +128,16 @@ function resolvePlanFromPrices(sub: Stripe.Subscription): string {
   return 'starter'
 }
 
+function subscriptionItemPriceId(item: Stripe.SubscriptionItem): string | undefined {
+  return typeof item.price === 'string' ? item.price : item.price?.id
+}
+
+function hasAddonPrice(sub: Stripe.Subscription, envKey: string): boolean {
+  const priceId = process.env[envKey]?.trim()
+  if (!priceId) return false
+  return sub.items.data.some((item) => subscriptionItemPriceId(item) === priceId)
+}
+
 function parseAddonSeats(sub: Stripe.Subscription): number {
   // Prefer metadata — always explicitly set at our checkout time and unambiguous
   if (sub.metadata?.addon_seats !== undefined && sub.metadata.addon_seats !== '') {
@@ -129,13 +145,10 @@ function parseAddonSeats(sub: Stripe.Subscription): number {
     if (!isNaN(fromMeta)) return fromMeta
   }
   // Fallback: read from subscription line items (e.g. portal-based upgrades without our metadata)
-  const priceId = process.env['STRIPE_PRICE_ADDON_SEATS']
+  const seatsEnv = ADDONS.find((a) => a.key === 'seats')?.priceEnvKey || 'STRIPE_PRICE_ADDON_SEATS'
+  const priceId = process.env[seatsEnv]?.trim()
   if (priceId) {
-    const item = sub.items.data.find(i => {
-      // item.price can be a string ID or an expanded Price object depending on how sub was fetched
-      const itemPriceId = typeof i.price === 'string' ? i.price : i.price?.id
-      return itemPriceId === priceId
-    })
+    const item = sub.items.data.find((i) => subscriptionItemPriceId(i) === priceId)
     if (item) return item.quantity ?? 0
   }
   return 0

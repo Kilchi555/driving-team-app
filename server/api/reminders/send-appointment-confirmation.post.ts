@@ -7,6 +7,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { sendPushToUser } from '~/server/utils/push'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https://app.simy.ch').replace(/\/$/, '')
 
@@ -114,7 +115,9 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 5. Get staff data
+    // 5. Get staff data + terminology
+    const terms = await getTenantTerminology(supabase, tenantId)
+
     const { data: staff, error: staffError } = await supabase
       .from('users')
       .select('first_name, last_name, email, phone')
@@ -123,13 +126,13 @@ export default defineEventHandler(async (event) => {
 
     const staffName = staff
       ? `${staff.first_name} ${staff.last_name}`
-      : 'Ihr Fahrlehrer'
+      : terms.staff
     const staffPhone = (staff as any)?.phone || null
 
     // 6. Get tenant data
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('name, slug, primary_color')
+      .select('name, slug, primary_color, business_type')
       .eq('id', tenantId)
       .single()
 
@@ -157,7 +160,7 @@ export default defineEventHandler(async (event) => {
 
     // 7b. Get event type label from DB (fallback to code-based map)
     const EVENT_TYPE_LABELS: Record<string, string> = {
-      lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorie', other: 'Termin'
+      lesson: terms.appointment, exam: 'Prüfung', theory: 'Theorie', other: 'Termin'
     }
     let eventTypeName: string | undefined
     if (appointment.event_type_code) {
@@ -266,7 +269,7 @@ export default defineEventHandler(async (event) => {
       // Push notification to the student (fire-and-forget, non-blocking)
       sendPushToUser(userId, {
         title: '✅ Buchung bestätigt',
-        body: `Deine Fahrstunde am ${appointmentDateTime} wurde bestätigt.`,
+        body: `Deine ${terms.appointment} am ${appointmentDateTime} wurde bestätigt.`,
         data: { path: '/customer-dashboard' },
       }).catch((err: any) => {
         logger.warn('⚠️ Push notification failed (non-critical):', err.message)

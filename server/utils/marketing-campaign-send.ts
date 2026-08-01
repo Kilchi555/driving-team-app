@@ -5,6 +5,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createError } from 'h3'
 import { renderTemplate, buildUnsubscribeLink, buildConsentLink, wrapMarketingEmail } from '~/server/utils/email-template'
+import { mergeOfferVars, resolveOfferTemplateVars } from '~/server/utils/marketing-offer-vars'
 import { computeNextRunAt, type ScheduleFrequency } from '~/server/utils/campaign-schedule'
 
 export interface QueueCampaignSendOptions {
@@ -97,10 +98,17 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
 
   const filter = campaign.segment_filter || {}
   const discountCode: string = filter.discount_code || ''
+  const offerVars = await resolveOfferTemplateVars(supabase, {
+    tenantId,
+    tenantSlug,
+    baseUrl,
+    segmentFilter: filter,
+    campaignId,
+  })
 
   let leadsQuery = supabase
     .from('leads')
-    .select('id, email, first_name, last_name, unsubscribe_token')
+    .select('id, email, first_name, last_name, unsubscribe_token, categories, tags')
     .eq('tenant_id', tenantId)
     .neq('status', 'unsubscribed')
 
@@ -127,10 +135,41 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
 
   if (effectiveCategories.length) leadsQuery = leadsQuery.overlaps('categories', effectiveCategories)
   if (filter.tags?.length) leadsQuery = leadsQuery.overlaps('tags', filter.tags)
+  if (Array.isArray(filter.require_tags) && filter.require_tags.length) {
+    leadsQuery = leadsQuery.overlaps('tags', filter.require_tags)
+  }
 
-  const { data: allLeads, error: leadsErr } = await leadsQuery
+  const excludeCats: string[] = Array.isArray(filter.exclude_categories)
+    ? [...new Set([
+        ...filter.exclude_categories.map((c: string) => String(c)),
+        ...filter.exclude_categories.map((c: string) => String(c).toLowerCase()),
+      ])]
+    : []
+  if (excludeCats.length) {
+    const literal = `{${excludeCats.map(c => `"${String(c).replace(/"/g, '')}"`).join(',')}}`
+    leadsQuery = leadsQuery.not('categories', 'ov', literal)
+  }
+
+  const { data: rawLeads, error: leadsErr } = await leadsQuery
   if (leadsErr) throw createError({ statusCode: 500, statusMessage: leadsErr.message })
-  if (!allLeads || allLeads.length === 0) {
+
+  let allLeads = rawLeads || []
+  if (excludeCats.length && allLeads.length) {
+    const excludeSet = new Set(excludeCats.map(c => c.toLowerCase()))
+    allLeads = allLeads.filter((l: any) => {
+      const cats = Array.isArray(l.categories) ? l.categories.map((c: string) => String(c).toLowerCase()) : []
+      return !cats.some((c: string) => excludeSet.has(c))
+    })
+  }
+  if (Array.isArray(filter.require_tags) && filter.require_tags.length && allLeads.length) {
+    const need = filter.require_tags.map((t: string) => String(t).toLowerCase())
+    allLeads = allLeads.filter((l: any) => {
+      const tags = Array.isArray(l.tags) ? l.tags.map((t: string) => String(t).toLowerCase()) : []
+      return need.some((t: string) => tags.includes(t))
+    })
+  }
+
+  if (!allLeads.length) {
     await markScheduleAdvanced(supabase, campaign, fromSchedule, /*hadSends*/ false)
     return { success: true, recipientCount: 0, queuedCount: 0, remainingCount: 0, message: 'No leads match this segment', status: campaign.status, variants: [] }
   }
@@ -185,7 +224,7 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
       const consentLink = buildConsentLink(baseUrl, lead.id, lead.unsubscribe_token)
       const trackingPixelUrl = `${baseUrl}/api/marketing/track/open?cid=${campaignId}&lid=${lead.id}&v=${variantDef.label}`
 
-      const renderedHtml = renderTemplate(template.html_body, {
+      const baseVars = mergeOfferVars({
         first_name: lead.first_name,
         last_name: lead.last_name,
         email: lead.email,
@@ -195,15 +234,12 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
         tenant_slug: tenantSlug,
         primary_color: primaryColor,
         discount_code: discountCode,
-      })
+      }, offerVars)
+
+      const renderedHtml = renderTemplate(template.html_body, baseVars)
 
       const subject = variantDef.subjectOverride || campaign.subject_override || template.subject
-      const renderedSubject = renderTemplate(subject, {
-        first_name: lead.first_name,
-        last_name: lead.last_name,
-        email: lead.email,
-        tenant_name: tenantName,
-      })
+      const renderedSubject = renderTemplate(subject, baseVars)
 
       const trackedHtml = renderedHtml.replace(
         /href="(https?:\/\/[^"]+)"/g,

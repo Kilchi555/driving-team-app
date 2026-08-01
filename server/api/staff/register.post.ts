@@ -289,27 +289,21 @@ export default defineEventHandler(async (event) => {
       for (const locId of selectedLocationIds) {
         try {
           const { data: loc } = await serviceSupabase
-            .from('locations').select('staff_ids, available_categories').eq('id', locId).single()
+            .from('locations').select('staff_ids').eq('id', locId).single()
           if (loc) {
             const current: string[] = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
-            const currentCategories: string[] = Array.isArray(loc.available_categories) ? loc.available_categories : []
-            const mergedCategories = Array.from(new Set([...currentCategories, ...staffCategories]))
-            const updates: Record<string, any> = {}
             if (!current.includes(newUser.id)) {
-              updates.staff_ids = [...current, newUser.id]
-            }
-            if (staffCategories.some((cat: string) => !currentCategories.includes(cat))) {
-              updates.available_categories = mergedCategories
-            }
-            if (Object.keys(updates).length > 0) {
-              await serviceSupabase.from('locations').update(updates).eq('id', locId)
+              await serviceSupabase
+                .from('locations')
+                .update({ staff_ids: [...current, newUser.id] })
+                .eq('id', locId)
             }
           }
         } catch (locErr) {
           console.warn('⚠️ Location assignment failed (non-fatal):', locErr)
         }
       }
-      // Create staff_locations entries so locations are marked as online bookable
+      // Create staff_locations entries with per-staff categories
       try {
         const staffLocationRows = selectedLocationIds.map((locId: string) => ({
           staff_id: newUser.id,
@@ -317,6 +311,7 @@ export default defineEventHandler(async (event) => {
           tenant_id: invitation.tenant_id,
           is_online_bookable: true,
           is_active: true,
+          available_categories: staffCategories,
         }))
         const { error: slErr } = await serviceSupabase
           .from('staff_locations')
@@ -356,6 +351,7 @@ export default defineEventHandler(async (event) => {
               tenant_id: invitation.tenant_id,
               is_online_bookable: true,
               is_active: true,
+              available_categories: staffCategories,
             }))
             const { error: slErr2 } = await serviceSupabase
               .from('staff_locations')

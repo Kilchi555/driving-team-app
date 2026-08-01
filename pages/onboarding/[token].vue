@@ -59,19 +59,19 @@
               </div>
             </div>
 
-            <!-- Option 2: Kontakt Fahrschule -->
+            <!-- Option 2: Anbieter kontaktieren -->
             <div class="bg-white rounded-lg border border-gray-200 p-4 text-left">
-              <p class="text-sm font-medium text-gray-800 mb-1">📱 Fahrschule kontaktieren</p>
-              <p class="text-xs text-gray-500 mb-3">Bitten Sie Ihre Fahrschule, den Onboarding-Link erneut per SMS zu senden.</p>
+              <p class="text-sm font-medium text-gray-800 mb-1">📱 {{ labels.businessNoun }} kontaktieren</p>
+              <p class="text-xs text-gray-500 mb-3">Bitte {{ labels.businessNoun }} um einen neuen Onboarding-Link.</p>
               <a
                 v-if="tenantContactEmail"
                 :href="`mailto:${tenantContactEmail}`"
                 class="text-xs underline hover:opacity-80 transition-opacity"
                 :style="{ color: primaryColor }"
               >
-                Fahrschule kontaktieren
+                {{ labels.businessNoun }} kontaktieren
               </a>
-              <p v-else class="text-xs text-gray-500">Bitte rufe deine Fahrschule an oder schreibe ihr eine Nachricht.</p>
+              <p v-else class="text-xs text-gray-500">Bitte kontaktiere {{ labels.businessNoun }} telefonisch oder per Nachricht.</p>
             </div>
 
             <!-- Option 3: Login (falls bereits registriert) -->
@@ -106,11 +106,11 @@
               <div class="flex items-center w-full">
                 <div 
                   class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full border-2 transition-all duration-300 bg-white border-gray-300 text-gray-400"
-                  :class="{ 'text-white shadow-lg': index <= step }"
-                  :style="index < step ? { backgroundColor: primaryColor, borderColor: primaryColor } :
-                          index === step ? { backgroundColor: primaryColor, borderColor: primaryColor, boxShadow: `0 0 0 4px ${primaryColor}22` } : {}"
+                  :class="{ 'text-white shadow-lg': index <= visibleStepIndex }"
+                  :style="index < visibleStepIndex ? { backgroundColor: primaryColor, borderColor: primaryColor } :
+                          index === visibleStepIndex ? { backgroundColor: primaryColor, borderColor: primaryColor, boxShadow: `0 0 0 4px ${primaryColor}22` } : {}"
                 >
-                  <svg v-if="index < step" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <svg v-if="index < visibleStepIndex" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
                   </svg>
                   <span v-else class="text-sm font-semibold">{{ index + 1 }}</span>
@@ -118,11 +118,11 @@
                 <div 
                   v-if="index < steps.length - 1"
                   class="flex-1 h-0.5 mx-3 transition-colors duration-300 bg-gray-300"
-                  :style="index < step ? { backgroundColor: primaryColor } : {}"
+                  :style="index < visibleStepIndex ? { backgroundColor: primaryColor } : {}"
                 ></div>
               </div>
               <p class="mt-3 text-xs text-center font-medium text-gray-500"
-                :style="index <= step ? { color: primaryColor } : {}">{{ stepItem }}</p>
+                :style="index <= visibleStepIndex ? { color: primaryColor } : {}">{{ stepItem }}</p>
             </div>
           </div>
         </div>
@@ -448,16 +448,16 @@
                 </div>
               </div>
 
-              <!-- Category Selection -->
-              <div>
+              <!-- Category Selection (driving schools) -->
+              <div v-if="isDrivingSchool">
                 <div class="flex items-center justify-between mb-3">
                   <label class="block text-sm font-medium text-gray-700">
-                    Führerausweis-Kategorien *
+                    {{ labels.categoriesLabel }} *
                   </label>
                   <!-- Back Button for easy navigation -->
                   <button
                     type="button"
-                    @click="step--"
+                    @click="step = prevVisibleStep(step)"
                     class="text-xs text-gray-600 hover:text-gray-900 font-medium px-2 py-1 rounded hover:bg-gray-100 transition-colors"
                     title="Zurück zum Passwort"
                   >
@@ -500,7 +500,7 @@
                 <!-- Selected Categories Summary -->
                 <div v-if="form.categories.length > 0" class="mt-4 p-3 rounded-lg border" :style="{ backgroundColor: primaryColor + '12', borderColor: primaryColor + '40' }">
                   <p class="text-sm font-medium" :style="{ color: primaryColor }">
-                    ✅ {{ form.categories.length }} Kategorie{{ form.categories.length !== 1 ? 'n' : '' }} ausgewählt: 
+                    ✅ {{ form.categories.length }} {{ form.categories.length !== 1 ? labels.categoriesLabel : labels.categoryLabel }} ausgewählt:
                     <span class="font-bold">{{ form.categories.join(', ') }}</span>
                   </p>
                 </div>
@@ -510,8 +510,8 @@
             </div>
           </div>
 
-          <!-- Step 3: Upload Documents -->
-          <div v-if="step === 2">
+          <!-- Step 3: Upload Documents (driving schools) -->
+          <div v-if="step === 2 && isDrivingSchool">
             <h2 class="text-xl font-bold mb-4">Dokumente hochladen <span class="text-sm font-normal text-gray-500">(optional)</span></h2>
             <p class="text-sm text-gray-600 mb-6">
               Du kannst deinen Lernfahrausweis jetzt hochladen oder diesen Schritt überspringen und den Ausweis später in deinem Profil nachholen.
@@ -674,7 +674,7 @@
             <button
               v-if="step > 0"
               type="button"
-              @click="step--"
+              @click="step = prevVisibleStep(step)"
               class="w-full sm:w-auto px-6 py-3 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors font-medium"
             >
               ← Zurück
@@ -831,6 +831,7 @@ import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholde
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { saveCredentials } from '~/utils/save-credentials'
 import { useFallbackLogger } from '~/composables/useFallbackLogger'
+import { mergeTerminology, isDrivingSchoolBusinessType, type Terminology } from '~/composables/useTerminology'
 
 const { primaryColor, loadTenantBrandingById } = useTenantBranding()
 const { logFallbackUsed } = useFallbackLogger()
@@ -839,7 +840,31 @@ const route = useRoute()
 const token = route.params.token as string
 
 const step = ref(0)
-const steps = ['Passwort', 'Profil', 'Dokumente', 'AGB']
+const businessType = ref('driving_school')
+const tenantUiLabels = ref<Record<string, string>>({})
+const isDrivingSchool = computed(() => isDrivingSchoolBusinessType(businessType.value))
+const labels = computed((): Terminology => mergeTerminology(businessType.value, tenantUiLabels.value))
+
+const allStepDefs = computed(() => [
+  { id: 0, label: 'Passwort', skip: false },
+  { id: 1, label: 'Profil', skip: false },
+  { id: 2, label: 'Dokumente', skip: !isDrivingSchool.value },
+  { id: 3, label: 'AGB', skip: false },
+])
+const steps = computed(() => allStepDefs.value.filter(s => !s.skip).map(s => s.label))
+const visibleStepIds = computed(() => allStepDefs.value.filter(s => !s.skip).map(s => s.id))
+const visibleStepIndex = computed(() => {
+  const idx = visibleStepIds.value.indexOf(step.value)
+  return idx >= 0 ? idx : 0
+})
+const nextVisibleStep = (from: number) => {
+  const idx = visibleStepIds.value.indexOf(from)
+  return visibleStepIds.value[idx + 1] ?? from
+}
+const prevVisibleStep = (from: number) => {
+  const idx = visibleStepIds.value.indexOf(from)
+  return visibleStepIds.value[Math.max(0, idx - 1)] ?? from
+}
 
 const isLoading = ref(true)
 const isSubmitting = ref(false)
@@ -950,7 +975,7 @@ const fieldErrors = ref<Record<string, string>>({
   city: ''
 })
 
-const tenantName = ref('Deiner Fahrschule')
+const tenantName = ref('deinem Anbieter')
 const userData = ref<any>(null)
 const categories = ref<any[]>([])
 const termsText = ref('AGB werden geladen...')
@@ -1164,13 +1189,15 @@ onMounted(async () => {
     }) as any
 
     if (fetchError.value || !data.value?.success) {
-      linkError.value = 'Ungültiger oder abgelaufener Link. Bitte kontaktiere deine Fahrschule oder fordere einen neuen Link an.'
+      linkError.value = `Ungültiger oder abgelaufener Link. Bitte kontaktiere ${labels.value.businessNoun} oder fordere einen neuen Link an.`
       return
     }
 
     userData.value = data.value.user
-    tenantName.value = data.value.tenantName || 'Deiner Fahrschule'
+    tenantName.value = data.value.tenantName || 'deinem Anbieter'
     tenantContactEmail.value = data.value.tenantContactEmail || ''
+    businessType.value = data.value.businessType || 'driving_school'
+    tenantUiLabels.value = data.value.ui_labels || {}
 
     // Load tenant branding so the page uses the tenant's primary color
     if (userData.value?.tenant_id) {
@@ -1390,7 +1417,7 @@ const openRegulationModal = async (type: string) => {
     
     if (!activeTenantId) {
       console.error('❌ No tenant_id available')
-      showErrorMessage(`Fehler: Die Tenant-Informationen fehlen. Bitte kontaktiere die Fahrschule.`)
+      showErrorMessage(`Fehler: Die Tenant-Informationen fehlen. Bitte kontaktiere .`)
       return
     }
 
@@ -1428,7 +1455,7 @@ const openRegulationModal = async (type: string) => {
       logger.debug('✅ Opened reglement modal:', type, regulation.data.title)
     } else {
       console.warn('⚠️ Reglement not found:', type)
-      showErrorMessage(`${typeLabel} sind noch nicht verfügbar. Bitte kontaktiere die Fahrschule.`)
+      showErrorMessage(`${typeLabel} sind noch nicht verfügbar. Bitte kontaktiere .`)
     }
   } catch (err: any) {
     logger.error('❌ Error opening reglement modal:', err)
@@ -1467,6 +1494,7 @@ const filteredCategories = computed(() => {
 
 // ✅ NEW: Check if form is valid for submission
 const isFormValid = computed(() => {
+  const categoriesOk = !isDrivingSchool.value || form.categories.length > 0
   return (
     form.password &&
     form.confirmPassword &&
@@ -1476,7 +1504,7 @@ const isFormValid = computed(() => {
     emailStatus.value === 'available' && // ← Email MUST be available
     form.phone &&
     form.acceptedTerms &&
-    form.categories.length > 0 &&
+    categoriesOk &&
     !isSubmitting.value
   )
 })
@@ -1519,7 +1547,7 @@ const handleNextStep = async () => {
       return
     }
     passwordError.value = ''
-    step.value++
+    step.value = nextVisibleStep(step.value)
   } else if (step.value === 1) {
     // Email must be checked and available before proceeding to documents
     if (!form.email || emailStatus.value === '') {
@@ -1537,18 +1565,26 @@ const handleNextStep = async () => {
     if (emailStatus.value === 'taken' || emailStatus.value === 'error') {
       return
     }
-    // Check that at least one category is selected
-    if (form.categories.length === 0) {
-      categoryError.value = 'Bitte wähle mindestens eine Kategorie aus'
+    if (!form.birthdate) {
+      fieldErrors.value.birthdate = 'Geburtsdatum ist erforderlich'
+      return
+    }
+    validateBirthdate()
+    if (fieldErrors.value.birthdate) {
+      return
+    }
+    // Check that at least one category is selected (driving schools only)
+    if (isDrivingSchool.value && form.categories.length === 0) {
+      categoryError.value = `Bitte wähle mindestens eine ${labels.value.categoryLabel} aus`
       return
     }
     categoryError.value = ''
-    step.value++
+    step.value = nextVisibleStep(step.value)
   } else if (step.value === 2) {
     // Upload is optional – always allow proceeding to next step
-    step.value++
+    step.value = nextVisibleStep(step.value)
   } else if (step.value < 3) {
-    step.value++
+    step.value = nextVisibleStep(step.value)
   } else {
     // Final step - submit
     await completeOnboarding()
@@ -1691,7 +1727,7 @@ const completeOnboarding = async () => {
     if (!data.value?.success) {
       showErrorMessage(
         'Die Daten konnten nicht gespeichert werden. Bitte versuche es erneut.',
-        'Wenn es erneut fehlschlägt, bitte deine Fahrschule um einen neuen Registrierungslink.',
+        'Wenn es erneut fehlschlägt, bitte  um einen neuen Registrierungslink.',
       )
       return
     }
@@ -1731,7 +1767,7 @@ const completeOnboarding = async () => {
       err?.data?.message ||
       err?.statusMessage ||
       err?.message ||
-      'Fehler beim Abschliessen der Registrierung. Bitte versuche es später erneut oder kontaktiere die Fahrschule.'
+      'Fehler beim Abschliessen der Registrierung. Bitte versuche es später erneut oder kontaktiere .'
     const tip = err?.data?.tip || err?.data?.data?.tip
     showErrorMessage(message, tip)
   } finally {

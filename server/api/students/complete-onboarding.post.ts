@@ -6,6 +6,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { checkPasswordPwned } from '~/server/utils/hibp-checker'
+import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -278,6 +279,10 @@ export default defineEventHandler(async (event) => {
     const sanitizedCity = city ? sanitizeString(city, 100) : null
     const sanitizedProfession = profession ? sanitizeString(profession, 100) : null
 
+    // Empty string is invalid for Postgres `date` — must be null (same as register-client / guest-book).
+    const normalizedBirthdate =
+      typeof birthdate === 'string' && birthdate.trim() !== '' ? birthdate.trim() : null
+
     const { error: updateError } = await supabaseAdmin
       .from('users')
       .update({
@@ -286,11 +291,11 @@ export default defineEventHandler(async (event) => {
         last_name: sanitizedLastName,
         phone: sanitizedPhone,
         email: email,
-        birthdate: birthdate,
+        birthdate: normalizedBirthdate,
         category: categoryValue,
         street: sanitizedStreet,
         street_nr: sanitizedStreetNr,
-        zip: zip,
+        zip: zip || null,
         city: sanitizedCity,
         profession: sanitizedProfession,
         is_active: true,
@@ -498,6 +503,19 @@ export default defineEventHandler(async (event) => {
         lastName: sanitizedLastName
       }
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
+
+    // Auto-sync marketing lead (no consent email — pending_consent until explicit opt-in)
+    upsertMarketingLeadSafe({
+      tenantId: user.tenant_id,
+      email,
+      firstName: sanitizedFirstName,
+      lastName: sanitizedLastName,
+      phone: sanitizedPhone,
+      categories: categoriesFromUserCategory(categoryValue),
+      tags: ['client'],
+      source: 'onboarding',
+      sourceLabel: 'Onboarding abgeschlossen',
+    })
 
     logger.debug('✅ Onboarding completed successfully for user:', user.id)
 

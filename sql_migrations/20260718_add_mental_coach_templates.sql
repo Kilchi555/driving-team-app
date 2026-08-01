@@ -26,6 +26,5 @@ INSERT INTO event_types (
 )
 VALUES
   ('intake',  'Erstgespräch', '🤝', 'Kostenloses Erstgespräch', 30, '#0EA5E9', true, 0, ARRAY['staff','admin'], false, true,  true,  'mental_coach', NULL),
-  ('session', 'Sitzung',      '🧠', 'Reguläre Coaching-Sitzung', 60, '#7C3AED', true, 1, ARRAY['staff','admin'], true,  true,  false, 'mental_coach', NULL),
-  ('package', 'Paket',        '📦', 'Sitzungspaket',             60, '#10B981', true, 2, ARRAY['staff','admin'], true,  false, false, 'mental_coach', NULL)
+  ('session', 'Sitzung',      '🧠', 'Reguläre Coaching-Sitzung', 60, '#7C3AED', true, 1, ARRAY['staff','admin'], true,  true,  false, 'mental_coach', NULL)
 ON CONFLICT DO NOTHING;

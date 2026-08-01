@@ -51,6 +51,14 @@ export interface SendEmailOptions {
   attachments?: EmailAttachment[]
 }
 
+/** RFC 5322 From header: quote display names so multi-word names render in clients. */
+function formatFromHeader(email: string, displayName?: string | null): string {
+  const name = (displayName || '').trim()
+  if (!name) return email
+  const escaped = name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return `"${escaped}" <${email}>`
+}
+
 export async function sendEmail(options: SendEmailOptions): Promise<{ messageId: string }> {
   const resend = getResend()
 
@@ -61,11 +69,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ messageId:
   if (options.from) {
     from = options.from
   } else if (options.fromEmail && options.domainVerified) {
-    from = displayName ? `${displayName} <${options.fromEmail}>` : options.fromEmail
+    from = formatFromHeader(options.fromEmail, displayName)
   } else {
-    from = displayName
-      ? `${displayName} <${PLATFORM_FROM_EMAIL}>`
-      : `${PLATFORM_FROM_NAME} <${PLATFORM_FROM_EMAIL}>`
+    from = formatFromHeader(PLATFORM_FROM_EMAIL, displayName || PLATFORM_FROM_NAME)
   }
 
   const { data, error } = await resend.emails.send({
@@ -134,9 +140,12 @@ export interface AppointmentDeletedEmailParams {
   tenantName: string
   tenantEmail?: string
   tenantPhone?: string
+  /** Branch staff label (default: Fahrlehrer) */
+  staffLabel?: string
 }
 
 export function generateAppointmentDeletedEmail(p: AppointmentDeletedEmailParams): string {
+  const staffLabel = p.staffLabel || 'Fahrlehrer'
   const content = `
 <div class="header"><h1>Termin storniert</h1></div>
 <div class="body">
@@ -145,7 +154,7 @@ export function generateAppointmentDeletedEmail(p: AppointmentDeletedEmailParams
   <div class="box">
     <div class="label">Datum & Uhrzeit</div>
     <div class="value">${p.appointmentDate} um ${p.appointmentTime} Uhr</div>
-    <div class="label">Fahrlehrer</div>
+    <div class="label">${staffLabel}</div>
     <div class="value">${p.staffName}</div>
     <div class="label">Grund</div>
     <div class="value">${p.reason}</div>
@@ -205,9 +214,12 @@ export interface CustomerCancelledAdminEmailParams {
   chargePercentage: number
   tenantName: string
   requiresMedicalCertificate?: boolean
+  /** Branch staff label (default: Fahrlehrer) */
+  staffLabel?: string
 }
 
 export function generateCustomerCancelledAdminEmail(p: CustomerCancelledAdminEmailParams): string {
+  const staffLabel = p.staffLabel || 'Fahrlehrer'
   const chargeInfo = p.chargePercentage === 0
     ? '<span style="color:#059669;font-weight:600">Kostenlose Stornierung</span>'
     : `<span style="color:#dc2626;font-weight:600">${p.chargePercentage}% Stornogebühr</span>`
@@ -228,7 +240,7 @@ export function generateCustomerCancelledAdminEmail(p: CustomerCancelledAdminEma
     <div class="value">${p.customerName}${p.customerEmail ? ` · <a href="mailto:${p.customerEmail}" style="color:#2563eb">${p.customerEmail}</a>` : ''}</div>
     <div class="label">Datum &amp; Uhrzeit</div>
     <div class="value">${p.appointmentDate} um ${p.appointmentTime} Uhr</div>
-    <div class="label">Fahrlehrer</div>
+    <div class="label">${staffLabel}</div>
     <div class="value">${p.staffName}</div>
     <div class="label">Absagegrund</div>
     <div class="value">${p.reason}</div>

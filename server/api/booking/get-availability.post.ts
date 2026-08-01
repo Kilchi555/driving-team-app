@@ -157,12 +157,13 @@ export default defineEventHandler(async (event) => {
           .order('parent_category_id', { ascending: true })
           .order('name', { ascending: true }),
         
-        // 3. Get event types
+        // 3. Get event types (public booking: only online-bookable types)
         supabase
           .from('event_types')
           .select('*')
           .eq('tenant_id', tenant_id)
-          .eq('is_active', true),
+          .eq('is_active', true)
+          .eq('public_bookable', true),
         
         // 4. Get locations
         supabase

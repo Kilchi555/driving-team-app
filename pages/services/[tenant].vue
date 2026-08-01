@@ -41,6 +41,25 @@
 
         <!-- Service Buttons -->
         <div v-else class="space-y-4">
+          <!-- Non-driving: single CTA into registration -->
+          <template v-if="!isDrivingSchool">
+            <button
+              @click="goToGenericRegister"
+              class="w-full p-6 bg-white border-2 rounded-lg hover:bg-blue-50 transition-all duration-200 text-left group"
+              :style="{ borderColor: tenantPrimaryColor }"
+            >
+              <div class="flex items-center space-x-4">
+                <div class="text-4xl">✨</div>
+                <div class="flex-1">
+                  <h3 class="text-xl font-semibold text-gray-900">Als {{ labels.client }} registrieren</h3>
+                  <p class="text-sm text-gray-500 mt-1">{{ labels.bookAction }} und mehr</p>
+                </div>
+                <div class="text-2xl text-gray-400">→</div>
+              </div>
+            </button>
+          </template>
+
+          <template v-else>
           <!-- Fahrlektionen -->
           <button
             v-if="availableServices.includes('fahrlektion')"
@@ -51,7 +70,7 @@
             <div class="flex items-center space-x-4">
               <div class="text-4xl">🚗</div>
               <div class="flex-1">
-                <h3 class="text-xl font-semibold text-gray-900">Fahrlektionen</h3>
+                <h3 class="text-xl font-semibold text-gray-900">{{ labels.appointmentsPlural }}</h3>
               </div>
               <div class="text-2xl text-gray-400">→</div>
             </div>
@@ -88,14 +107,15 @@
               <div class="text-2xl text-gray-400">→</div>
             </div>
           </button>
+          </template>
 
           <!-- No Services Available -->
-          <div v-if="availableServices.length === 0" class="p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div v-if="isDrivingSchool && availableServices.length === 0" class="p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div class="flex items-start space-x-3">
               <div class="text-yellow-500 text-xl">⚠️</div>
               <div class="text-sm text-yellow-800">
                 <p class="font-medium">Keine Dienstleistungen verfügbar</p>
-                <p class="mt-1">Derzeit sind keine Services für diese Fahrschule aktiv. Bitte kontaktieren Sie die Fahrschule direkt.</p>
+                <p class="mt-1">Derzeit sind keine Services für {{ labels.businessNoun }} aktiv. Bitte kontaktiere {{ labels.businessNoun }} direkt.</p>
               </div>
             </div>
           </div>
@@ -111,6 +131,7 @@ import { ref, computed, onMounted } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { useTenant } from '~/composables/useTenant'
 import { logger } from '~/utils/logger'
+import { mergeTerminology, isDrivingSchoolBusinessType } from '~/composables/useTerminology'
 
 // Ensure no auth middleware runs on this page
 definePageMeta({
@@ -125,6 +146,10 @@ const tenantSlug = computed(() => route.params.tenant as string)
 // Tenant Management
 const { loadTenant, tenantId, currentTenant, tenantPrimaryColor, tenantSecondaryColor } = useTenant()
 
+const businessType = computed(() => currentTenant.value?.business_type || 'driving_school')
+const isDrivingSchool = computed(() => isDrivingSchoolBusinessType(businessType.value))
+const labels = computed(() => mergeTerminology(businessType.value))
+
 // State for available services
 const availableServices = ref<string[]>([])
 const isLoading = ref(true)
@@ -135,7 +160,7 @@ const activeTenantId = computed(() => {
 })
 
 const tenantName = computed(() => {
-  return currentTenant.value?.name || tenantSlug.value?.replace('-', ' ') || 'dieser Fahrschule'
+  return currentTenant.value?.name || tenantSlug.value?.replace('-', ' ') || labels.value.businessNoun
 })
 
 // Build dynamic service header text
@@ -149,6 +174,10 @@ const selectService = (serviceType: string) => {
   const url = `/register/${tenantSlug.value}?service=${serviceType}`
   logger.debug('🔗 Navigating to:', url)
   navigateTo(url)
+}
+
+const goToGenericRegister = () => {
+  navigateTo(`/register/${tenantSlug.value}`)
 }
 
 const goBack = () => {
@@ -180,6 +209,14 @@ onMounted(async () => {
   if (tenantSlug.value) {
     logger.debug('🏢 Loading services for tenant slug:', tenantSlug.value)
     try {
+      await loadTenant(tenantSlug.value)
+
+      // Non-driving schools: skip Fahrlektion/Theorie chooser → direct register
+      if (!isDrivingSchool.value) {
+        navigateTo(`/register/${tenantSlug.value}`)
+        return
+      }
+
       // Use API to get available services for this tenant
       const services = await $fetch('/api/tenants/available-services', {
         query: { slug: tenantSlug.value }
@@ -197,9 +234,6 @@ onMounted(async () => {
       }
       
       availableServices.value = services
-      
-      // Also load tenant for other uses
-      await loadTenant(tenantSlug.value)
       
     } catch (error) {
       logger.warn('⚠️ Error loading services:', error)

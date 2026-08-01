@@ -289,6 +289,26 @@
         <div v-if="userImportError" class="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
           {{ userImportError }}
         </div>
+
+        <div class="mt-6 pt-5 border-t border-gray-100">
+          <div class="font-medium text-gray-900 text-sm mb-1">Leads still aktualisieren (ohne Consent-Mails)</div>
+          <p class="text-xs text-gray-500 mb-3">
+            Übernimmt Kategorien aus bestehenden Clients und setzt Tag <code class="bg-gray-100 px-1 rounded">client</code>.
+            Bestehende Leads werden gemerged, Abgemeldete bleiben unberührt.
+          </p>
+          <button
+            type="button"
+            @click="syncClients"
+            :disabled="syncClientsLoading"
+            class="px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition"
+          >
+            {{ syncClientsLoading ? 'Sync läuft…' : 'Kunden → Leads syncen' }}
+          </button>
+          <p v-if="syncClientsResult" class="mt-2 text-sm text-gray-600">
+            {{ syncClientsResult.created }} neu · {{ syncClientsResult.updated }} aktualisiert · {{ syncClientsResult.skipped }} übersprungen
+          </p>
+          <p v-if="syncClientsError" class="mt-2 text-sm text-red-600">{{ syncClientsError }}</p>
+        </div>
       </div>
 
       <!-- Import from imported_customers -->
@@ -532,6 +552,24 @@ async function importFromUsers() {
     userImportError.value = e?.data?.statusMessage || 'Fehler beim Importieren'
   } finally {
     userImportLoading.value = false
+  }
+}
+
+const syncClientsLoading = ref(false)
+const syncClientsResult = ref<{ created: number; updated: number; skipped: number } | null>(null)
+const syncClientsError = ref('')
+
+async function syncClients() {
+  syncClientsError.value = ''
+  syncClientsResult.value = null
+  syncClientsLoading.value = true
+  try {
+    const res = await $fetch('/api/marketing/sync-clients', { method: 'POST', body: {} }) as any
+    syncClientsResult.value = res
+  } catch (e: any) {
+    syncClientsError.value = e?.data?.statusMessage || 'Sync fehlgeschlagen'
+  } finally {
+    syncClientsLoading.value = false
   }
 }
 

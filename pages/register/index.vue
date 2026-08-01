@@ -98,6 +98,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { navigateTo } from '#app'
+import { getTerminologyDefaults } from '~/composables/useTerminology'
 
 interface Tenant {
   id: string
@@ -128,9 +129,16 @@ const groupedTenants = computed(() => {
   const groups = new Map<string, BusinessType>()
 
   // Initialize business types
+  // Initialize business types
   const businessTypeNames: Record<string, string> = {
-    driving_school: 'Fahrschulen',
-    mental_coach: 'Coaching & Beratung'
+    driving_school: getTerminologyDefaults('driving_school').businessNoun + 'n',
+    mental_coach: 'Coaching',
+    coaching: 'Coaching',
+    consulting: 'Consulting',
+    therapy: 'Therapie',
+    tutoring: 'Nachhilfe',
+    fitness: 'Fitness',
+    generic: 'Unternehmen',
   }
 
   // Group tenants by business type

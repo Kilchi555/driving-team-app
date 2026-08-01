@@ -31,13 +31,15 @@
         <p class="text-sm" :style="{ color: primaryColor }">
           <strong>Verfügbare Variablen:</strong>
           <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{first_name}}'"></code>
-          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{last_name}}'"></code>
-          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{email}}'"></code>
-          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{consent_link}}'"></code>
-          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{unsubscribe_link}}'"></code>
           <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{tenant_name}}'"></code>
-          — werden beim Versand pro Lead ersetzt.
-          <span class="block mt-1"><strong v-text="'{{consent_link}}'"></strong> = Opt-In-Button (für Re-Consent) · <strong v-text="'{{unsubscribe_link}}'"></strong> = Abmelde-Link</span>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{discount_code}}'"></code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{discount_percent}}'"></code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{discount_valid_until}}'"></code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{cta_url}}'"></code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{course_name}}'"></code>
+          <code class="mx-1 px-1.5 py-0.5 rounded text-xs" :style="{ background: `${primaryColor}1f` }" v-text="'{{category_label}}'"></code>
+          — werden beim Versand pro Lead / Aktion ersetzt.
+          <span class="block mt-1">Tipp: Unter <strong>Aktion starten</strong> erstellst du Rabatt + Mail + Kampagne in einem Flow.</span>
         </p>
       </div>
 
@@ -116,7 +118,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Email-Betreff <span class="text-red-500">*</span></label>
               <input v-model="form.subject" type="text" placeholder="z.B. Ein Angebot für dich 🎉" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2" />
-              <p class="text-xs text-gray-400 mt-1">Du kannst <span class="font-mono">&#123;&#123;first_name&#125;&#125;</span> im Betreff verwenden.</p>
+              <p class="text-xs text-gray-400 mt-1">Du kannst <span class="font-mono">&#123;&#123;first_name&#125;&#125;</span>, <span class="font-mono">&#123;&#123;discount_code&#125;&#125;</span>, <span class="font-mono">&#123;&#123;cta_url&#125;&#125;</span> im Betreff verwenden.</p>
             </div>
           </div>
 
@@ -202,7 +204,7 @@
               placeholder="<h2>Hallo {{first_name}},</h2><p>...</p>"
               class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 resize-y"
             />
-            <p class="text-xs text-gray-400 mt-1">Variablen: <code>&#123;&#123;first_name&#125;&#125;</code> <code>&#123;&#123;tenant_name&#125;&#125;</code> <code>&#123;&#123;consent_link&#125;&#125;</code> <code>&#123;&#123;unsubscribe_link&#125;&#125;</code></p>
+            <p class="text-xs text-gray-400 mt-1">Variablen: <code>&#123;&#123;first_name&#125;&#125;</code> <code>&#123;&#123;discount_code&#125;&#125;</code> <code>&#123;&#123;cta_url&#125;&#125;</code> <code>&#123;&#123;tenant_name&#125;&#125;</code> <code>&#123;&#123;unsubscribe_link&#125;&#125;</code></p>
           </div>
 
           <!-- PREVIEW -->
@@ -483,6 +485,29 @@ onMounted(async () => {
         tenantColor.value = res.data.primary_color || '#6366f1'
       }
     } catch {}
+  }
+
+  // Prefill from AI / Aktion handoff
+  const route = useRoute()
+  if (route.query.draft || route.query.subject || route.query.name) {
+    openCreate()
+    form.name = String(route.query.name || 'KI-Entwurf')
+    form.subject = String(route.query.subject || '')
+    const draft = String(route.query.draft || '')
+    if (draft) {
+      form.html_body = draft.includes('<')
+        ? draft
+        : draft.split(/\n\n+/).map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('\n')
+      // Prefer simple body text for plain drafts
+      if (!draft.includes('<')) {
+        simple.body = draft
+        simple.showConsent = true
+        editorMode.value = 'simple'
+      } else {
+        parseHtmlToSimple(form.html_body)
+        editorMode.value = 'html'
+      }
+    }
   }
 })
 </script>

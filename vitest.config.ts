@@ -1,6 +1,13 @@
+import path from 'node:path'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '~': path.resolve(__dirname, '.'),
+      '@': path.resolve(__dirname, '.'),
+    },
+  },
   test: {
     environment: 'node',
     globals: true,
@@ -13,6 +20,7 @@ export default defineConfig({
     'process.env.SUPABASE_SERVICE_ROLE_KEY': JSON.stringify('test-key')
   }
 })
+
 
 
 

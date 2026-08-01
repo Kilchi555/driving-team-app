@@ -1,6 +1,7 @@
 import { defineEventHandler, getHeader, createError, readBody } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireFeature } from '~/server/utils/require-feature'
 
 async function getAdminUser(event: any) {
   const authUser = await getAuthenticatedUser(event)
@@ -25,6 +26,7 @@ async function getAdminUser(event: any) {
  */
 export default defineEventHandler(async (event) => {
   const admin = await getAdminUser(event)
+  await requireFeature(admin.tenant_id, 'affiliate_enabled')
   const supabase = getSupabaseAdmin()
 
   const url = event.path ?? event.node.req.url ?? ''

@@ -1,6 +1,6 @@
 /**
  * Replaces template variables in HTML/text strings.
- * Supported: {{first_name}}, {{last_name}}, {{email}}, {{unsubscribe_link}}, {{consent_link}}, {{tenant_name}}, {{tenant_slug}}
+ * Supported: lead/tenant vars + offer vars (discount, course, category, CTA, affiliate).
  */
 export interface TemplateVariables {
   first_name?: string | null
@@ -12,6 +12,28 @@ export interface TemplateVariables {
   tenant_slug?: string
   primary_color?: string
   discount_code?: string
+  discount_percent?: string
+  discount_valid_until?: string
+  cta_url?: string
+  course_name?: string
+  course_date?: string
+  course_price?: string
+  category_label?: string
+  affiliate_signup_url?: string
+}
+
+export type OfferCtaType = 'booking' | 'course' | 'ref' | 'custom'
+
+export interface BuildOfferCtaParams {
+  baseUrl: string
+  tenantSlug: string
+  ctaType: OfferCtaType
+  /** Optional absolute or path override when ctaType === 'custom' */
+  customPath?: string | null
+  categoryCode?: string | null
+  courseId?: string | null
+  discountCode?: string | null
+  campaignId?: string | null
 }
 
 /**
@@ -47,6 +69,14 @@ export function renderTemplate(template: string, variables: TemplateVariables): 
     .replace(/\{\{tenant_slug\}\}/g, variables.tenant_slug || '')
     .replace(/\{\{primary_color\}\}/g, variables.primary_color || '#1e293b')
     .replace(/\{\{discount_code\}\}/g, variables.discount_code || '')
+    .replace(/\{\{discount_percent\}\}/g, variables.discount_percent || '')
+    .replace(/\{\{discount_valid_until\}\}/g, variables.discount_valid_until || '')
+    .replace(/\{\{cta_url\}\}/g, variables.cta_url || '#')
+    .replace(/\{\{course_name\}\}/g, variables.course_name || '')
+    .replace(/\{\{course_date\}\}/g, variables.course_date || '')
+    .replace(/\{\{course_price\}\}/g, variables.course_price || '')
+    .replace(/\{\{category_label\}\}/g, variables.category_label || '')
+    .replace(/\{\{affiliate_signup_url\}\}/g, variables.affiliate_signup_url || variables.cta_url || '#')
 }
 
 export function buildUnsubscribeLink(baseUrl: string, leadId: string, token: string): string {
@@ -55,6 +85,119 @@ export function buildUnsubscribeLink(baseUrl: string, leadId: string, token: str
 
 export function buildConsentLink(baseUrl: string, leadId: string, token: string): string {
   return `${baseUrl}/api/marketing/confirm-consent?lead_id=${leadId}&token=${token}`
+}
+
+/** Format discount value for email copy, e.g. "50%" or "CHF 20.00" or "1 Freistunde" */
+export function formatDiscountLabel(
+  discountType: string | null | undefined,
+  discountValue: number | string | null | undefined,
+): string {
+  const value = Number(discountValue ?? 0)
+  if (discountType === 'percentage') return `${value}%`
+  if (discountType === 'fixed') return `CHF ${value.toFixed(2)}`
+  if (discountType === 'free_lesson') return '1 Freistunde'
+  if (discountType === 'free_product') return 'Gratis-Produkt'
+  if (!discountType && !discountValue) return ''
+  return String(discountValue ?? '')
+}
+
+/** Format ISO date for de-CH display (date only). */
+export function formatOfferDate(iso: string | null | undefined): string {
+  if (!iso) return ''
+  try {
+    return new Date(iso).toLocaleDateString('de-CH', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'Europe/Zurich',
+    })
+  } catch {
+    return ''
+  }
+}
+
+export function formatCoursePriceRappen(rappen: number | null | undefined): string {
+  if (rappen == null || Number.isNaN(Number(rappen))) return ''
+  return `CHF ${(Number(rappen) / 100).toFixed(2)}`
+}
+
+/**
+ * Build a deep-link CTA for marketing offers.
+ * Booking/course links include ?code= for auto-apply when a discount exists.
+ */
+export function buildOfferCtaUrl(params: BuildOfferCtaParams): string {
+  const base = (params.baseUrl || 'https://app.simy.ch').replace(/\/$/, '')
+  const slug = params.tenantSlug
+  const q = new URLSearchParams()
+
+  if (params.discountCode) q.set('code', params.discountCode)
+  if (params.campaignId) q.set('cid', params.campaignId)
+  if (params.categoryCode && params.ctaType === 'booking') q.set('category', params.categoryCode)
+
+  const qs = q.toString()
+  const withQs = (path: string) => (qs ? `${path}?${qs}` : path)
+
+  switch (params.ctaType) {
+    case 'booking':
+      return withQs(`${base}/booking/availability/${slug}`)
+    case 'course': {
+      if (params.courseId) q.set('courseId', params.courseId)
+      const courseQs = q.toString()
+      return `${base}/customer/courses/${slug}${courseQs ? `?${courseQs}` : ''}`
+    }
+    case 'ref':
+      return `${base}/ref/${slug}${qs ? `?${qs}` : ''}`
+    case 'custom': {
+      const raw = (params.customPath || '').trim()
+      if (!raw) return withQs(`${base}/booking/availability/${slug}`)
+      if (raw.startsWith('http://') || raw.startsWith('https://')) {
+        try {
+          const u = new URL(raw)
+          if (params.discountCode && !u.searchParams.has('code')) u.searchParams.set('code', params.discountCode)
+          if (params.campaignId && !u.searchParams.has('cid')) u.searchParams.set('cid', params.campaignId)
+          return u.toString()
+        } catch {
+          return raw
+        }
+      }
+      const path = raw.startsWith('/') ? raw : `/${raw}`
+      return withQs(`${base}${path}`)
+    }
+    default:
+      return withQs(`${base}/booking/availability/${slug}`)
+  }
+}
+
+/** End of current month 23:59:59 Europe/Zurich as ISO (approx via local calc). */
+export function endOfMonthZurichIso(from: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Zurich',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(from)
+  const get = (t: string) => parts.find(p => p.type === t)?.value || '01'
+  const year = Number(get('year'))
+  const month = Number(get('month'))
+  // Last day of month in Zurich: construct noon UTC for day 1 next month and subtract
+  const nextMonth = month === 12 ? 1 : month + 1
+  const nextYear = month === 12 ? year + 1 : year
+  // Use Date.UTC noon then format — simpler: day 0 of next month
+  const lastDay = new Date(Date.UTC(nextYear, nextMonth - 1, 0)).getUTCDate()
+  // 21:59 UTC ≈ 23:59 Zurich in winter; 20:59 in summer — use 21:59:59 UTC as safe end-of-day CH
+  return new Date(Date.UTC(year, month - 1, lastDay, 21, 59, 59)).toISOString()
+}
+
+export function addDaysZurichEndIso(days: number, from: Date = new Date()): string {
+  const d = new Date(from.getTime() + days * 24 * 60 * 60 * 1000)
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Zurich',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(d)
+  const get = (t: string) => Number(parts.find(p => p.type === t)?.value || 0)
+  return new Date(Date.UTC(get('year'), get('month') - 1, get('day'), 21, 59, 59)).toISOString()
 }
 
 // Always use the production URL for logo proxying in emails — email clients

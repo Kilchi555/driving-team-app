@@ -7,6 +7,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -191,11 +192,12 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 7: LOAD TENANT DATA ============
     const { data: tenant } = await supabaseAdmin
       .from('tenants')
-      .select('name, slug, twilio_from_sender')
+      .select('name, slug, twilio_from_sender, business_type')
       .eq('id', tenantId)
       .single()
 
-    let tenantName = tenant?.twilio_from_sender || tenant?.name || 'Ihre Fahrschule'
+    const terms = await getTenantTerminology(supabaseAdmin, tenantId)
+    let tenantName = tenant?.twilio_from_sender || tenant?.name || `Ihre ${terms.businessNoun}`
     let tenantSlug = tenant?.slug || ''
 
     // SMS Message with onboarding link and login link

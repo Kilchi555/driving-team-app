@@ -107,6 +107,17 @@
           <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
             <div class="flex items-start justify-between mb-3">
               <div>
+                <p class="font-bold text-gray-900 text-sm">Google Business Profile</p>
+                <p class="text-xs text-gray-400 mt-0.5">Profil, Bewertungen & Posts aus Simy</p>
+              </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary);">Add-on</span>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">Für alle Pläne als Add-on zubuchbar — mehr lokale Sichtbarkeit und Anfragen.</p>
+          </div>
+
+          <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
+            <div class="flex items-start justify-between mb-3">
+              <div>
                 <p class="font-bold text-gray-900 text-sm">Online-Zahlungen (Wallee)</p>
                 <p class="text-xs text-gray-400 mt-0.5">TWINT, Kreditkarte & mehr für deine Schüler</p>
               </div>
@@ -319,6 +330,7 @@ const comparison: { label: string; starter: boolean | string; pro: boolean | str
   { label: 'Native App (iOS & Android)', starter: true, pro: true, enterprise: true },
   { label: 'Kursbuchungsseite', starter: 'Add-on', pro: true, enterprise: true },
   { label: 'Affiliate-System', starter: 'Add-on', pro: 'Add-on', enterprise: true },
+  { label: 'Google Business Profile', starter: 'Add-on', pro: 'Add-on', enterprise: 'Add-on' },
   { label: 'Online-Zahlungen (Wallee)', starter: true, pro: true, enterprise: true },
   { label: 'Planwechsel (Self-Service)', starter: true, pro: true, enterprise: true },
   { label: 'Einrichtungsgebühr', starter: 'Keine', pro: 'Keine', enterprise: 'Keine' },

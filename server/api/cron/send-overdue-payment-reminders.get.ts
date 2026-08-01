@@ -22,6 +22,8 @@ import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
 import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
 import { getAccountAccessLink } from '~/server/utils/account-access-link'
+import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 const OVERDUE_DAYS   = 15   // appointment must be at least this many days in the past
 const RESEND_DAYS    = 7    // re-send at most once per week
@@ -130,11 +132,16 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenants } = await supabase
     .from('tenants')
-    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, contact_email')
+    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, contact_email, business_type')
     .in('id', tenantIds)
 
   const userMap   = new Map((users   || []).map((u: any) => [u.id, u]))
   const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
+
+  const termsMap = new Map<string, Terminology>()
+  await Promise.all(tenantIds.map(async (tid: string) => {
+    termsMap.set(tid, await getTenantTerminology(supabase, tid))
+  }))
 
   // ── 5. Deduplication: skip if already sent in last 7 days ────
   let recentlySent = new Set<string>()
@@ -165,7 +172,8 @@ export default defineEventHandler(async (event) => {
     if (!user || !user.email) continue
 
     const tenant       = tenantMap.get(userPayments[0].tenant_id)
-    const tenantName   = tenant?.name   || 'Ihre Fahrschule'
+    const terms        = termsMap.get(userPayments[0].tenant_id) || getTerminologyDefaults(tenant?.business_type)
+    const tenantName   = tenant?.name   || `Ihre ${terms.businessNoun}`
     const tenantSlug   = tenant?.slug   || ''
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null

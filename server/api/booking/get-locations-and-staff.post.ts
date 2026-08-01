@@ -38,10 +38,10 @@ export default defineEventHandler(async (event) => {
 
     // ✅ PARALLEL: Run all 3 independent queries at once instead of sequentially
     const [staffLocResult, allStandardLocResult, allStaffResult] = await Promise.all([
-      // 1. staff_locations with is_online_bookable: true
+      // 1. staff_locations with is_online_bookable: true (incl. per-staff categories)
       supabase
         .from('staff_locations')
-        .select('staff_id, location_id, is_online_bookable')
+        .select('staff_id, location_id, is_online_bookable, available_categories')
         .eq('tenant_id', tenant_id)
         .eq('is_active', true)
         .eq('is_online_bookable', true),
@@ -85,32 +85,6 @@ export default defineEventHandler(async (event) => {
       staff: allStaff?.length || 0
     })
 
-    // Filter locations to category
-    const categoryLocations = (allStandardLocations || []).filter((loc: any) => {
-      const availableCategories = loc.available_categories || []
-      return availableCategories.includes(category_code)
-    })
-
-    logger.debug('📍 Filtered to category locations:', categoryLocations.length)
-
-    // Get unique location IDs (from both staff_locations AND standard locations)
-    const staffLocLocationIds = [...new Set(staffLocations?.map(sl => sl.location_id) || [])]
-    const allCategoryLocationIds = categoryLocations.map(loc => loc.id)
-    const allLocationIds = [...new Set([...staffLocLocationIds, ...allCategoryLocationIds])]
-
-    // Get all staff IDs from staff_locations
-    const staffIds = [...new Set(staffLocations?.map(sl => sl.staff_id) || [])]
-
-    logger.debug('📊 Unique locations and staff from staff_locations', {
-      locationCount: allLocationIds.length,
-      staffCount: staffIds.length
-    })
-
-    // Use already-loaded location data from the parallel query above (avoids a 4th DB round-trip)
-    const locations = allStandardLocations?.filter((loc: any) => allLocationIds.includes(loc.id)) || []
-    logger.debug('📍 Loaded locations:', locations.length)
-    logger.debug('👤 Staff already loaded in parallel:', allStaff?.length || 0)
-
     // Build staff category map
     const staffCategoryMap = new Map<string, string[]>()
     
@@ -128,6 +102,44 @@ export default defineEventHandler(async (event) => {
         staffCategoryMap.set(staff.id, Array.isArray(categories) ? categories : [])
       })
     }
+
+    // Map staff_id:location_id → per-staff location categories
+    const staffLocCategoryMap = new Map<string, string[] | null>()
+    for (const sl of staffLocations || []) {
+      const key = `${sl.staff_id}:${sl.location_id}`
+      const cats = Array.isArray(sl.available_categories) ? sl.available_categories : null
+      staffLocCategoryMap.set(key, cats)
+    }
+
+    const locationById = new Map((allStandardLocations || []).map((loc: any) => [loc.id, loc]))
+
+    // Effective categories for a staff×location pair
+    const getEffectiveCategories = (staffId: string, locationId: string): string[] => {
+      const key = `${staffId}:${locationId}`
+      const perStaff = staffLocCategoryMap.get(key)
+      if (Array.isArray(perStaff)) return perStaff
+
+      const staffCats = staffCategoryMap.get(staffId) || []
+      const loc = locationById.get(locationId)
+      const locCats = Array.isArray(loc?.available_categories) ? loc.available_categories : []
+      if (locCats.length === 0) return staffCats
+      return staffCats.filter((c) => locCats.includes(c))
+    }
+
+    // Locations that have at least one online-bookable staff offering this category
+    const matchingLocationIds = new Set<string>()
+    for (const sl of staffLocations || []) {
+      const effective = getEffectiveCategories(sl.staff_id, sl.location_id)
+      if (effective.includes(category_code)) {
+        matchingLocationIds.add(sl.location_id)
+      }
+    }
+
+    logger.debug('📍 Locations matching category via staff_locations:', matchingLocationIds.size)
+
+    const locations = (allStandardLocations || []).filter((loc: any) => matchingLocationIds.has(loc.id))
+    logger.debug('📍 Loaded locations:', locations.length)
+    logger.debug('👤 Staff already loaded in parallel:', allStaff?.length || 0)
 
     // 5. Build locations map with staff
     const locationsMap = new Map<string, any>()
@@ -177,36 +189,30 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // 6. Attach staff to locations
-    // ✅ NEW: Use location.staff_ids as source of truth (not just staff_locations)
+    // 6. Attach staff to locations — only if online bookable AND offers this category at this location
     locationsMap.forEach((locationEntry, locationId) => {
       const locationStaffIds = locationEntry.staff_ids || []
       
-      // Find all staff that work at this location and have the category
       locationStaffIds.forEach((staffId: string) => {
         const staff = allStaff?.find(s => s.id === staffId)
-        
-        if (staff) {
-          const staffCategories = Array.isArray(staff.category) ? staff.category : 
-            (typeof staff.category === 'string' ? JSON.parse(staff.category || '[]') : [])
-          
-          // Include if staff has this category
-          if (staffCategories.includes(category_code)) {
-            // Check if this staff/location combo is marked as online bookable
-            const isOnlineBookable = staffLocations?.some(sl => 
-              sl.staff_id === staffId && sl.location_id === locationId && sl.is_online_bookable === true
-            )
-            
-            // Include the staff (regardless of online bookable status for standard locations)
-            locationEntry.available_staff.push({
-              id: staff.id,
-              first_name: staff.first_name || 'Unknown',
-              last_name: staff.last_name || 'Staff',
-              category: staff.category,
-              is_online_bookable: isOnlineBookable || false
-            })
-          }
-        }
+        if (!staff) return
+
+        const isOnlineBookable = staffLocations?.some(sl => 
+          sl.staff_id === staffId && sl.location_id === locationId && sl.is_online_bookable === true
+        )
+        if (!isOnlineBookable) return
+
+        const effectiveCats = getEffectiveCategories(staffId, locationId)
+        if (!effectiveCats.includes(category_code)) return
+
+        locationEntry.available_staff.push({
+          id: staff.id,
+          first_name: staff.first_name || 'Unknown',
+          last_name: staff.last_name || 'Staff',
+          category: staff.category,
+          available_categories: effectiveCats,
+          is_online_bookable: true
+        })
       })
     })
 

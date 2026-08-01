@@ -29,12 +29,13 @@ interface UpdateLocationBookingRequest {
   postal_code?: string | null
   canton?: string | null
   time_windows?: TimeWindow[] | null
+  available_categories?: string[] | null
 }
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event) as UpdateLocationBookingRequest
-    const { location_id, is_online_bookable, postal_code, canton, time_windows } = body
+    const { location_id, is_online_bookable, postal_code, canton, time_windows, available_categories } = body
 
     if (!location_id || is_online_bookable === undefined) {
       throw createError({
@@ -42,6 +43,12 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'location_id and is_online_bookable are required'
       })
     }
+
+    const normalizedCategories = Array.isArray(available_categories)
+      ? [...new Set(available_categories.map((c) => String(c).trim()).filter(Boolean))]
+      : available_categories === null
+        ? null
+        : undefined
 
     const user = await getAuthenticatedUser(event)
     if (!user) {
@@ -107,16 +114,21 @@ export default defineEventHandler(async (event) => {
       }
 
       // Create staff_locations entry
-      const { data: newEntry, error: createErr } = await supabase
-        .from('staff_locations')
-        .insert({
+      const insertPayload: Record<string, any> = {
           staff_id: userProfile.id,
           location_id,
           tenant_id: userProfile.tenant_id,
           is_online_bookable,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        })
+      }
+      if (normalizedCategories !== undefined) {
+        insertPayload.available_categories = normalizedCategories
+      }
+
+      const { data: newEntry, error: createErr } = await supabase
+        .from('staff_locations')
+        .insert(insertPayload)
         .select('id')
         .single()
 
@@ -130,12 +142,17 @@ export default defineEventHandler(async (event) => {
       staffLocation = newEntry
     } else {
       // Update the booking status for existing entry
-      const { error: updateError } = await supabase
-        .from('staff_locations')
-        .update({
+      const updatePayload: Record<string, any> = {
           is_online_bookable,
           updated_at: new Date().toISOString()
-        })
+      }
+      if (normalizedCategories !== undefined) {
+        updatePayload.available_categories = normalizedCategories
+      }
+
+      const { error: updateError } = await supabase
+        .from('staff_locations')
+        .update(updatePayload)
         .eq('id', staffLocation.id)
 
       if (updateError) {
@@ -170,7 +187,8 @@ export default defineEventHandler(async (event) => {
     logger.debug(`✅ Location booking status updated`, {
       location_id,
       is_online_bookable,
-      postal_code: postal_code ?? 'unchanged'
+      postal_code: postal_code ?? 'unchanged',
+      available_categories: normalizedCategories ?? 'unchanged'
     })
 
     // Queue availability recalculation so slots reflect the new bookable state immediately
@@ -189,7 +207,8 @@ export default defineEventHandler(async (event) => {
       success: true,
       message: `Standort ist ${is_online_bookable ? 'jetzt' : 'nicht mehr'} online buchbar`,
       location_id,
-      is_online_bookable
+      is_online_bookable,
+      available_categories: normalizedCategories ?? undefined
     }
 
   } catch (error: any) {

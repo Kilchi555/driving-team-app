@@ -15,6 +15,7 @@ import { normalizePhoneNumber } from '~/server/utils/sms'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
+import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -768,6 +769,25 @@ export default defineEventHandler(async (event) => {
             if (!insertError && newRegs) {
               logger.info(`✅ Created ${newRegs.length} new course registration(s)`)
               updatedRegistrations = [...updatedRegistrations, ...newRegs]
+
+              for (const regData of registrationsToCreate as any[]) {
+                if (!regData?.email || !regData?.tenant_id) continue
+                upsertMarketingLeadSafe({
+                  tenantId: regData.tenant_id,
+                  email: regData.email,
+                  firstName: regData.first_name,
+                  lastName: regData.last_name,
+                  phone: regData.phone,
+                  categories: categoriesFromCourse({
+                    name: regData.course_name,
+                    category: regData.course_category || regData.category,
+                    course_category: { code: regData.course_category_code, name: regData.course_category_name },
+                  }),
+                  tags: ['client', 'course'],
+                  source: 'course_enroll',
+                  sourceLabel: 'Kursanmeldung (Wallee)',
+                })
+              }
 
               // ── Create vehicle_bookings per session (non-fatal) ────────────
               ;(async () => {

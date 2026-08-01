@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
+import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 
 const COURSE_TYPE_LABELS: Record<string, string> = {
   czv_grundkurs: 'CZV Grundkurs',
@@ -99,6 +100,20 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 500,
         statusMessage: 'Failed to create course registration',
+      })
+    }
+
+    if (body.email) {
+      upsertMarketingLeadSafe({
+        tenantId: body.tenant_id,
+        email: body.email,
+        firstName: body.first_name,
+        lastName: body.last_name,
+        phone: body.phone,
+        categories: categoriesFromCourse(null, body.course_type),
+        tags: ['course_interest'],
+        source: 'course_interest',
+        sourceLabel: body.course_title || COURSE_TYPE_LABELS[body.course_type] || body.course_type,
       })
     }
 

@@ -132,6 +132,8 @@
               class="drawer-link" :class="isActive('/admin/payment-overview') ? 'drawer-active' : ''">Zahlungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/correspondence" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/correspondence') ? 'drawer-active' : ''">Korrespondenz</NuxtLink>
 
             <NuxtLink to="/admin/accounting" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
@@ -175,7 +177,8 @@
               class="drawer-link" :class="isActive('/admin/evaluation-system') ? 'drawer-active' : ''">Bewertungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('exams_enabled')" to="/admin/exam-statistics" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/exam-statistics') ? 'drawer-active' : ''">Prüfungen</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('affiliate_enabled')" to="/admin/affiliate" @click="showMobileMenu = false"
+            <!-- Always visible: paywall lives on the page (parity with Marketing → GBP) -->
+            <NuxtLink to="/admin/affiliate" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/affiliate') ? 'drawer-active' : ''">Affiliate</NuxtLink>
 
             <!-- Super Admin only -->
@@ -237,6 +240,8 @@
               class="drawer-link" :class="isActive('/admin/payment-overview') ? 'drawer-active' : ''">Zahlungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/invoices"
               class="drawer-link" :class="isActive('/admin/invoices') ? 'drawer-active' : ''">Rechnungen</NuxtLink>
+            <NuxtLink v-if="shouldShowNavLink('invoices_enabled')" to="/admin/correspondence"
+              class="drawer-link" :class="isActive('/admin/correspondence') ? 'drawer-active' : ''">Korrespondenz</NuxtLink>
             <NuxtLink to="/admin/accounting"
               class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
             <NuxtLink to="/admin/payroll"
@@ -279,7 +284,8 @@
               class="drawer-link" :class="isActive('/admin/evaluation-system') ? 'drawer-active' : ''">Bewertungen</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('exams_enabled')" to="/admin/exam-statistics"
               class="drawer-link" :class="isActive('/admin/exam-statistics') ? 'drawer-active' : ''">Prüfungen</NuxtLink>
-            <NuxtLink v-if="shouldShowNavLink('affiliate_enabled')" to="/admin/affiliate"
+            <!-- Always visible: paywall lives on the page (parity with Marketing → GBP) -->
+            <NuxtLink to="/admin/affiliate"
               class="drawer-link" :class="isActive('/admin/affiliate') ? 'drawer-active' : ''">Affiliate</NuxtLink>
 
             <!-- Super Admin only -->

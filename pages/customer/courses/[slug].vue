@@ -24,6 +24,13 @@
       </div>
     </div>
 
+    <div
+      v-if="promoCodeFromUrl"
+      class="bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-sm text-amber-900 text-center"
+    >
+      Rabattcode <strong class="font-mono">{{ promoCodeFromUrl }}</strong> ist aktiv — wird bei der Anmeldung berücksichtigt.
+    </div>
+
     <!-- Scrollable content -->
     <div class="flex-1 overflow-y-auto">
 
@@ -468,6 +475,19 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const slug = computed(() => route.params.slug as string)
+
+const promoCodeFromUrl = computed(() => {
+  const code = (route.query.code as string || '').trim().toUpperCase()
+  return code || null
+})
+
+watch(promoCodeFromUrl, (code) => {
+  if (!code || !process.client) return
+  try {
+    sessionStorage.setItem('marketing_promo_code', code)
+    sessionStorage.setItem('marketing_promo_tenant', slug.value)
+  } catch {}
+}, { immediate: true })
 
 // State
 const isLoading = ref(false)

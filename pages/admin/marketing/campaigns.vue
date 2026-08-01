@@ -457,6 +457,25 @@
                 </label>
               </div>
             </div>
+
+            <div class="mt-3">
+              <p class="text-xs font-medium text-gray-600 mb-1.5">Ausschliessen (z. B. nicht PGS)</p>
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="cat in drivingCategories"
+                  :key="'exc-' + cat.value"
+                  type="button"
+                  class="px-2.5 py-1 rounded-full text-xs font-medium border transition"
+                  :class="createForm.excludeCategories.includes(cat.value) ? 'bg-red-50 text-red-700 border-red-200' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'"
+                  @click="toggleExcludeCategory(cat.value)"
+                >nicht {{ cat.label }}</button>
+              </div>
+            </div>
+
+            <label class="mt-3 flex items-center gap-2 text-sm text-gray-700">
+              <input v-model="createForm.clientsOnly" type="checkbox" class="rounded border-gray-300" :style="{ accentColor: primaryColor }" />
+              Nur Kunden (Tag <code class="text-xs bg-gray-100 px-1 rounded">client</code>)
+            </label>
           </div>
 
           <!-- Discount code section -->
@@ -995,6 +1014,8 @@ const createForm = reactive({
   name: '',
   subject_override: '',
   categories: [] as string[],
+  excludeCategories: [] as string[],
+  clientsOnly: false,
   showDiscount: false,
   discount_code: '',
   variants: [{ label: 'a', templateId: '', splitPct: 100, subjectOverride: '' }] as { label: string; templateId: string; splitPct: number; subjectOverride: string }[],
@@ -1169,37 +1190,31 @@ async function loadEstimatedCount() {
   if (!tenantId) return
   try {
     const cats = createForm.categories
-    // "All categories selected" is equivalent to no filter
     const isAll = cats.length === 0 || cats.length === drivingCategories.value.length
-    if (isAll) {
-      const res = await $fetch<any>('/api/marketing/leads', {
-        query: { tenantId, status: 'not_unsubscribed', limit: 1 },
-      })
-      estimatedCount.value = res.total
-    } else if (cats.length === 1) {
-      const res = await $fetch<any>('/api/marketing/leads', {
-        query: { tenantId, status: 'not_unsubscribed', category: cats[0], limit: 1 },
-      })
-      estimatedCount.value = res.total
-    } else {
-      // Multiple categories — fetch all and count client-side
-      const res = await $fetch<any>('/api/marketing/leads', {
-        query: { tenantId, status: 'not_unsubscribed', limit: 10000 },
-      })
-      const all: any[] = res.leads ?? []
-      estimatedCount.value = all.filter((l: any) =>
-        cats.some((c: string) => Array.isArray(l.categories) ? l.categories.includes(c) : false)
-      ).length
-    }
+    const query: Record<string, any> = { tenantId, status: 'not_unsubscribed', limit: 1 }
+    if (!isAll && cats.length) query.categories = cats.join(',')
+    if (createForm.excludeCategories.length) query.exclude_categories = createForm.excludeCategories.join(',')
+    if (createForm.clientsOnly) query.require_tags = 'client'
+    const res = await $fetch<any>('/api/marketing/leads', { query })
+    estimatedCount.value = res.total
   } catch {
     estimatedCount.value = null
   }
+}
+
+function toggleExcludeCategory(code: string) {
+  const i = createForm.excludeCategories.indexOf(code)
+  if (i >= 0) createForm.excludeCategories.splice(i, 1)
+  else createForm.excludeCategories.push(code)
+  createForm.categories = createForm.categories.filter(c => c !== code)
 }
 
 function openCreate() {
   createForm.name = ''
   createForm.subject_override = ''
   createForm.categories = []
+  createForm.excludeCategories = []
+  createForm.clientsOnly = false
   createForm.showDiscount = false
   createForm.discount_code = ''
   createForm.variants = [{ label: 'a', templateId: '', splitPct: 100, subjectOverride: '' }]
@@ -1274,6 +1289,8 @@ function autoDistribute() {
 }
 
 watch(() => createForm.categories, loadEstimatedCount, { deep: true })
+watch(() => createForm.excludeCategories, loadEstimatedCount, { deep: true })
+watch(() => createForm.clientsOnly, loadEstimatedCount)
 
 async function createCampaign() {
   const tenantId = authStore.userProfile?.tenant_id
@@ -1286,6 +1303,8 @@ async function createCampaign() {
     const segment_filter: Record<string, any> = {}
     const isAllCategories = createForm.categories.length === 0 || createForm.categories.length === drivingCategories.value.length
     if (createForm.categories.length && !isAllCategories) segment_filter.categories = createForm.categories
+    if (createForm.excludeCategories.length) segment_filter.exclude_categories = createForm.excludeCategories
+    if (createForm.clientsOnly) segment_filter.require_tags = ['client']
     if (createForm.discount_code) segment_filter.discount_code = createForm.discount_code
 
     await $fetch('/api/marketing/campaigns', {
@@ -1461,7 +1480,32 @@ function onClickOutsideCatDropdown(e: MouseEvent) {
 }
 
 onMounted(() => {
-  loadData()
+  loadData().then(() => {
+    const route = useRoute()
+    const subjects: string[] = []
+    for (let i = 0; i < 5; i++) {
+      const s = route.query[`subject_${i}`]
+      if (typeof s === 'string' && s.trim()) subjects.push(s.trim())
+    }
+    if (subjects.length > 0 || route.query.draft) {
+      openCreate()
+      if (subjects.length === 1) {
+        createForm.subject_override = subjects[0]
+      } else if (subjects.length > 1) {
+        createForm.variants = subjects.slice(0, 5).map((subjectOverride, i) => ({
+          label: VARIANT_LABELS[i],
+          templateId: templates.value[0]?.id || '',
+          splitPct: 0,
+          subjectOverride,
+        }))
+        autoDistribute()
+      }
+      if (typeof route.query.draft === 'string' && route.query.draft && !templates.value.length) {
+        // Suggest going to templates first — keep subject overrides ready
+        createForm.name = 'KI-Kampagne'
+      }
+    }
+  })
   document.addEventListener('mousedown', onClickOutsideCatDropdown)
 })
 

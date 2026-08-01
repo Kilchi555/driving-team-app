@@ -68,6 +68,8 @@ interface Props {
   categoryCode?: string        // optional category filter
   primaryColor?: string
   context?: 'appointment' | 'product'  // enforces applies_to restriction on voucher_codes
+  /** Prefill + auto-apply from deep link (?code=) */
+  initialCode?: string | null
 }
 
 interface DiscountResult {
@@ -77,7 +79,8 @@ interface DiscountResult {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  primaryColor: '#3B82F6'
+  primaryColor: '#3B82F6',
+  initialCode: null,
 })
 
 const emit = defineEmits<{
@@ -143,10 +146,30 @@ const removeCode = () => {
   emit('removed')
 }
 
-// Re-validate if amount changes (price updates)
+// Re-validate if amount changes (price updates) — keep deep-linked code
 watch(() => props.amountRappen, () => {
   if (appliedDiscount.value) {
+    const kept = appliedDiscount.value.code
     removeCode()
+    if (kept && (props.initialCode || '').toUpperCase() === kept) {
+      code.value = kept
+      applyCode()
+    }
   }
 })
+
+const autoAppliedOnce = ref(false)
+// Auto-apply deep-linked ?code=
+watch(
+  () => [props.initialCode, props.tenantId, props.amountRappen] as const,
+  async ([initial]) => {
+    const trimmed = (initial || '').trim()
+    if (!trimmed || appliedDiscount.value || autoAppliedOnce.value) return
+    if (!props.tenantId || !props.amountRappen) return
+    autoAppliedOnce.value = true
+    code.value = trimmed.toUpperCase()
+    await applyCode()
+  },
+  { immediate: true },
+)
 </script>

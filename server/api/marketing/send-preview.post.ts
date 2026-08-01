@@ -5,6 +5,7 @@
  */
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { renderTemplate, buildUnsubscribeLink, buildConsentLink, wrapMarketingEmail } from '~/server/utils/email-template'
+import { mergeOfferVars, resolveOfferTemplateVars } from '~/server/utils/marketing-offer-vars'
 import { sendEmail } from '~/server/utils/email'
 
 export default defineEventHandler(async (event) => {
@@ -53,8 +54,16 @@ export default defineEventHandler(async (event) => {
     const unsubscribeLink = buildUnsubscribeLink(baseUrl, fakeLeadId, fakeToken)
     const consentLink = buildConsentLink(baseUrl, fakeLeadId, fakeToken)
 
+    const offerVars = await resolveOfferTemplateVars(supabase, {
+      tenantId,
+      tenantSlug,
+      baseUrl,
+      segmentFilter: (campaign as any).segment_filter,
+      campaignId,
+    })
+
     const buildPreview = (template: any, label: string, subjectOverride?: string) => {
-      const rendered = renderTemplate(template.html_body, {
+      const vars = mergeOfferVars({
         first_name: 'Vorname',
         last_name: 'Nachname',
         email: to,
@@ -64,8 +73,12 @@ export default defineEventHandler(async (event) => {
         tenant_slug: tenantSlug,
         primary_color: primaryColor,
         discount_code: (campaign as any).segment_filter?.discount_code || '',
-      })
-      const baseSubject = subjectOverride || (campaign as any).subject_override || template.subject
+      }, offerVars)
+      const rendered = renderTemplate(template.html_body, vars)
+      const baseSubject = renderTemplate(
+        subjectOverride || (campaign as any).subject_override || template.subject,
+        vars,
+      )
       const labelSuffix = templates.length > 1 ? ` - Variante ${label.toUpperCase()}` : ''
       const previewSubject = `[TEST${labelSuffix}] ${baseSubject}`
       const html = wrapMarketingEmail(

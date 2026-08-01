@@ -41,7 +41,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: 'Not authorized to generate affiliate codes' })
   }
 
-  // Check if affiliate feature is enabled for this tenant
+  // Paid plan/add-on gate (same as GBP)
+  const { requireFeature } = await import('~/server/utils/require-feature')
+  await requireFeature(userProfile.tenant_id, 'affiliate_enabled')
+
+  // Operational toggle (admin can pause code generation without cancelling the add-on)
   const { data: featureSetting } = await supabaseAdmin
     .from('tenant_settings')
     .select('setting_value')
@@ -50,8 +54,13 @@ export default defineEventHandler(async (event) => {
     .eq('setting_key', 'enabled')
     .maybeSingle()
 
-  if (featureSetting?.setting_value !== 'true') {
-    throw createError({ statusCode: 403, message: 'Affiliate system is not enabled for this tenant' })
+  // Default = enabled when unset (matches admin-settings GET)
+  if (featureSetting?.setting_value === 'false') {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Das Affiliate-System ist momentan pausiert. Bitte wende dich an deine Fahrschule.',
+      data: { code: 'affiliate_paused' },
+    })
   }
 
   // Return existing code if present

@@ -22,8 +22,8 @@ const cache = {
 }
 
 export function useFeatures() {
-  const load = async (tenantId?: string) => {
-    logger.debug('🔍 useFeatures.load() called with tenantId:', tenantId)
+  const load = async (tenantId?: string, opts?: { force?: boolean }) => {
+    logger.debug('🔍 useFeatures.load() called with tenantId:', tenantId, 'force:', !!opts?.force)
     if (cache.isLoading.value) {
       logger.debug('🔍 useFeatures.load() skipped - already loading')
       return
@@ -37,7 +37,11 @@ export function useFeatures() {
       return
     }
 
-    if (cache.loadedForTenant.value === currentTenantId && Object.keys(cache.flags.value).length > 0) {
+    if (
+      !opts?.force
+      && cache.loadedForTenant.value === currentTenantId
+      && Object.keys(cache.flags.value).length > 0
+    ) {
       logger.debug('🔍 useFeatures.load() skipped - already loaded for tenant:', currentTenantId)
       return
     }
@@ -138,6 +142,17 @@ export function useFeatures() {
     }
   }
 
+  /** Force re-fetch after plan/add-on changes (checkout, mid-cycle update). */
+  const reload = async (tenantId?: string) => {
+    let waits = 0
+    while (cache.isLoading.value && waits < 40) {
+      await new Promise(resolve => setTimeout(resolve, 50))
+      waits++
+    }
+    cache.loadedForTenant.value = null
+    await load(tenantId, { force: true })
+  }
+
   const isEnabled = (key: string, fallback = false) => {
     const flags = cache.flags.value
     if (Object.prototype.hasOwnProperty.call(flags, key)) return !!flags[key]
@@ -186,7 +201,15 @@ export function useFeatures() {
     }
   }
 
-  return { flags: cache.flags, definitions: cache.definitions, isLoading: cache.isLoading, load, isEnabled, setEnabled }
+  return {
+    flags: cache.flags,
+    definitions: cache.definitions,
+    isLoading: cache.isLoading,
+    load,
+    reload,
+    isEnabled,
+    setEnabled,
+  }
 }
 
 

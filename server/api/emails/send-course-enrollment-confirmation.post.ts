@@ -11,6 +11,15 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { generateAdminEnrollmentNotificationEmail } from '~/server/utils/email-templates'
+import {
+  buildBrandedEmailShell,
+  displayName,
+  emailDetailBox,
+  emailDetailRow,
+  emailSignature,
+  emailStatusBox,
+  escapeHtml,
+} from '~/server/utils/branded-email'
 
 type ConfirmationPaymentMethod = 'wallee' | 'cash' | 'admin' | 'invoice' | 'paid' | 'reserve'
 
@@ -21,13 +30,13 @@ interface ConfirmationEmailRequest {
   testEmail?: string  // Override recipient for testing
 }
 
-function adminPaymentMethodLabel(method: ConfirmationPaymentMethod): string {
+function adminPaymentMethodLabel(method: ConfirmationPaymentMethod, businessNoun = 'Fahrschule'): string {
   switch (method) {
     case 'cash': return 'Barzahlung'
     case 'invoice': return 'Rechnung'
     case 'paid': return 'Bereits bezahlt'
     case 'reserve': return 'Reserviert'
-    case 'admin': return 'Durch Fahrschule angemeldet'
+    case 'admin': return `Durch ${businessNoun} angemeldet`
     case 'wallee': return 'Online (Wallee)'
     default: return method
   }
@@ -88,7 +97,11 @@ export default defineEventHandler(async (event) => {
           slug,
           contact_email,
           primary_color,
-          secondary_color
+          secondary_color,
+          business_type,
+          logo_wide_url,
+          logo_url,
+          logo_square_url
         )
       `)
       .eq('id', courseRegistrationId)
@@ -126,6 +139,9 @@ export default defineEventHandler(async (event) => {
 
     const course = enrollment.courses as any
     const tenant = enrollment.tenants as any
+
+    const { getTenantTerminology } = await import('~/server/utils/tenant-terminology')
+    const terms = await getTenantTerminology(supabase, tenant?.id)
 
     // Resolve the effective price to display:
     //  1. totalAmount passed by caller (already correct for partial/individual)
@@ -204,76 +220,60 @@ export default defineEventHandler(async (event) => {
     // 3. Build email content based on payment method
     let paymentMethodNotice = ''
     let emailSubject = `Anmeldebestätigung: ${course?.name}`
+    const primary = tenant?.primary_color || '#2563eb'
+    const tenantName = tenant?.name || terms.businessNoun
+    const rawLogo = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+    const logoUrl = rawLogo?.startsWith?.('data:') ? null : rawLogo
 
     if (paymentMethod === 'cash') {
-      paymentMethodNotice = `
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fef3c7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b;">
-          <tr>
-            <td style="padding: 12px;">
-              <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 14px; font-weight: 600;">Zahlungsmethode: Barzahlung vor Ort</h3>
-              <p style="margin: 0; color: #92400e; font-size: 13px;">
-                <strong>Bitte bringen Sie CHF ${price} in bar zum ersten Kurstag mit.</strong>
-              </p>
-            </td>
-          </tr>
-        </table>
-      `
+      paymentMethodNotice = emailStatusBox({
+        bg: '#fef3c7',
+        border: '#f59e0b',
+        titleColor: '#92400e',
+        bodyColor: '#92400e',
+        title: 'Zahlungsmethode: Barzahlung vor Ort',
+        bodyHtml: `<strong>Bitte bringen Sie CHF ${escapeHtml(price)} in bar zum ersten Kurstag mit.</strong>`,
+      })
       emailSubject = `Anmeldebestätigung: ${course?.name} (Barzahlung)`
     } else if (paymentMethod === 'invoice') {
-      paymentMethodNotice = `
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #eff6ff; border-radius: 8px; margin: 15px 0; border-left: 4px solid #3b82f6;">
-          <tr>
-            <td style="padding: 12px;">
-              <h3 style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Zahlungsmethode: Rechnung</h3>
-              <p style="margin: 0; color: #1e40af; font-size: 13px;">
-                Sie erhalten die Rechnung über CHF ${price} in Kürze per separater E-Mail.
-              </p>
-            </td>
-          </tr>
-        </table>
-      `
+      paymentMethodNotice = emailStatusBox({
+        bg: '#eff6ff',
+        border: '#3b82f6',
+        titleColor: '#1e40af',
+        bodyColor: '#1e40af',
+        title: 'Zahlungsmethode: Rechnung',
+        bodyHtml: `Sie erhalten die Rechnung über CHF ${escapeHtml(price)} in Kürze per separater E-Mail.`,
+      })
       emailSubject = `Anmeldebestätigung: ${course?.name} (Rechnung)`
     } else if (paymentMethod === 'paid') {
-      paymentMethodNotice = `
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #dcfce7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #22c55e;">
-          <tr>
-            <td style="padding: 12px;">
-              <h3 style="margin: 0 0 8px 0; color: #166534; font-size: 14px; font-weight: 600;">Zahlung: bereits bezahlt</h3>
-              <p style="margin: 0; color: #166534; font-size: 13px;">
-                Die Zahlung wurde von der Fahrschule als erledigt markiert. Ihr Platz ist gesichert.
-              </p>
-            </td>
-          </tr>
-        </table>
-      `
+      paymentMethodNotice = emailStatusBox({
+        bg: '#dcfce7',
+        border: '#22c55e',
+        titleColor: '#166534',
+        bodyColor: '#166534',
+        title: 'Zahlung: bereits bezahlt',
+        bodyHtml: `Die Zahlung wurde von ${displayName(tenantName)} als erledigt markiert. Ihr Platz ist gesichert.`,
+      })
       emailSubject = `Anmeldebestätigung: ${course?.name}`
     } else if (paymentMethod === 'admin' || paymentMethod === 'reserve') {
-      paymentMethodNotice = `
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #eff6ff; border-radius: 8px; margin: 15px 0; border-left: 4px solid #3b82f6;">
-          <tr>
-            <td style="padding: 12px;">
-              <h3 style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">Anmeldung durch Fahrschule</h3>
-              <p style="margin: 0; color: #1e40af; font-size: 13px;">
-                Sie wurden durch die Fahrschule für diesen Kurs angemeldet. Bei Fragen wenden Sie sich direkt an uns.
-              </p>
-            </td>
-          </tr>
-        </table>
-      `
+      paymentMethodNotice = emailStatusBox({
+        bg: '#eff6ff',
+        border: '#3b82f6',
+        titleColor: '#1e40af',
+        bodyColor: '#1e40af',
+        title: `Anmeldung durch ${escapeHtml(tenantName)}`,
+        bodyHtml: `Sie wurden durch ${displayName(tenantName)} für diesen Kurs angemeldet. Bei Fragen wenden Sie sich direkt an uns.`,
+      })
       emailSubject = `Anmeldebestätigung: ${course?.name}`
     } else {
-      paymentMethodNotice = `
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #dcfce7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #22c55e;">
-          <tr>
-            <td style="padding: 12px;">
-              <h3 style="margin: 0 0 8px 0; color: #166534; font-size: 14px; font-weight: 600;">Zahlungsmethode: Online bezahlt</h3>
-              <p style="margin: 0; color: #166534; font-size: 13px;">
-                Deine Zahlung wurde erfolgreich verarbeitet. Dein Platz ist gesichert!
-              </p>
-            </td>
-          </tr>
-        </table>
-      `
+      paymentMethodNotice = emailStatusBox({
+        bg: '#dcfce7',
+        border: '#22c55e',
+        titleColor: '#166534',
+        bodyColor: '#166534',
+        title: 'Zahlungsmethode: Online bezahlt',
+        bodyHtml: 'Deine Zahlung wurde erfolgreich verarbeitet. Dein Platz ist gesichert!',
+      })
     }
 
     // 4. Build "Wichtig!" section – use admin-configured notice if available, otherwise fall back
@@ -321,96 +321,49 @@ export default defineEventHandler(async (event) => {
                 <li><a href="${agbUrl}" style="color: #92400e;">AGB's</a> beachten</li>`
     }
 
-    const importantNotice = `
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fef3c7; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b;">
-          <tr>
-            <td style="padding: 12px;">
-              <h3 style="margin: 0 0 8px 0; color: #92400e; font-size: 14px; font-weight: 600;">Wichtig!</h3>
-              <ul style="margin: 0; padding-left: 20px; color: #92400e; font-size: 13px;">${importantListItems}
-              </ul>
-            </td>
-          </tr>
-        </table>
-      `
+    const importantNotice = emailStatusBox({
+      bg: '#fef3c7',
+      border: '#f59e0b',
+      titleColor: '#92400e',
+      bodyColor: '#92400e',
+      title: 'Wichtig!',
+      bodyHtml: `<ul style="margin:0;padding-left:20px;color:#92400e;font-size:13px;">${importantListItems}</ul>`,
+    })
 
-    // 5. Build HTML email with responsive design
+    const courseTitle = escapeHtml((course?.name || '').split(' - ')[0])
+    const categoryLabel = courseCategory?.name ? ` – ${escapeHtml(courseCategory.name)}` : ''
+    const details = emailDetailBox(primary, [
+      emailDetailRow('Kurs', `${courseTitle}${categoryLabel}`),
+      course?.description ? emailDetailRow('Standort', escapeHtml(course.description)) : '',
+      emailDetailRow(
+        'Kurskosten',
+        `CHF ${escapeHtml(price)}${isPartial ? ' <span style="color:#d97706;font-size:11px;font-weight:600;">(Teilbuchung)</span>' : ''}`,
+      ),
+      `<p style="margin:12px 0 6px;color:#374151;font-size:14px"><strong>Termine:</strong></p><ul style="margin:0;padding-left:20px;font-size:13px;color:#374151">${formattedSessions}</ul>`,
+    ].join(''))
+
+    const bodyHtml = `
+      <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">Hallo ${escapeHtml(enrollment.first_name || '')},</p>
+      <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">vielen Dank für deine Anmeldung!</p>
+      ${details}
+      ${paymentMethodNotice}
+      ${importantNotice}
+      <p style="color:#374151;font-size:16px;line-height:1.6;margin:20px 0 0 0;">Viel Erfolg und Freude beim Kurs!</p>
+      ${emailSignature(tenantName, tenant?.contact_email, primary)}
+    `
+
+    // 5. Build HTML email with branded shell
     const enrollmentEmail = {
       to: testEmail || enrollment.email,
       subject: emailSubject,
-      html: `
-        <!DOCTYPE html>
-        <html lang="de">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${emailSubject}</title>
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f3f4f6;">
-            <tr>
-              <td align="center" style="padding: 20px 10px;">
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                  
-                  <!-- Header -->
-                  <tr>
-                    <td style="background: linear-gradient(135deg, ${tenant?.primary_color || '#10B981'} 0%, ${tenant?.secondary_color || tenant?.primary_color || '#059669'} 100%); color: white; padding: 25px 20px; text-align: center;">
-                      <h1 style="margin: 0; font-size: 22px; font-weight: 600;">Anmeldebestätigung</h1>
-                      <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">${tenant?.name}</p>
-                    </td>
-                  </tr>
-                  
-                  <!-- Content -->
-                  <tr>
-                    <td style="padding: 25px 20px;">
-                      <p style="margin: 0 0 15px 0; font-size: 16px;">Hallo ${enrollment.first_name},</p>
-                      <p style="margin: 0 0 20px 0; font-size: 15px; color: #374151;">vielen Dank für deine Anmeldung!</p>
-                      
-                      <!-- Course Details -->
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
-                        <tr>
-                          <td style="padding: 20px;">
-                            <h3 style="margin: 0 0 15px 0; color: ${tenant?.primary_color || '#10B981'}; font-size: 15px; font-weight: 600;">Kursdetails</h3>
-                            <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Kurs:</strong> ${course?.name?.split(' - ')[0]}${courseCategory?.name ? ` – ${courseCategory.name}` : ''}</p>
-                            ${courseCategory?.description ? `<p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280;">${courseCategory.description}</p>` : ''}
-                            <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Standort:</strong> ${course?.description}</p>
-                            <p style="margin: 0 0 8px 0; font-size: 13px;"><strong>Kurskosten:</strong> CHF ${price}${isPartial ? ' <span style="color:#d97706;font-size:11px;font-weight:600;">(Teilbuchung)</span>' : ''}</p>
-                            
-                            <p style="margin: 0 0 6px 0; font-size: 13px;"><strong>Termine:</strong></p>
-                            <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #374151;">
-                              ${formattedSessions}
-                            </ul>
-                          </td>
-                        </tr>
-                      </table>
-                      
-                      <!-- Payment Method Notice -->
-                      ${paymentMethodNotice}
-                      
-                      <!-- Important Notice -->
-                      ${importantNotice}
-                      
-                      <p style="margin: 20px 0 5px 0; font-size: 15px;">Viel Erfolg und Freude beim Kurs!</p>
-                      <p style="margin: 15px 0 0 0; font-size: 12px; color: #6b7280;">
-                        ${tenant?.name}<br>
-                        ${tenant?.contact_email}
-                      </p>
-                    </td>
-                  </tr>
-                  
-                  <!-- Footer -->
-                  <tr>
-                    <td style="background: #f3f4f6; padding: 15px 20px; text-align: center;">
-                      <p style="margin: 0; font-size: 11px; color: #9ca3af;">Diese E-Mail wurde automatisch generiert. Bitte antworte nicht auf diese E-Mail.</p>
-                    </td>
-                  </tr>
-                  
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-        </html>
-      `
+      html: buildBrandedEmailShell({
+        title: 'Anmeldebestätigung',
+        tenantName,
+        primaryColor: primary,
+        logoUrl,
+        bodyHtml,
+        documentTitle: emailSubject,
+      }),
     }
 
     // 5. Send email using Resend
@@ -445,7 +398,7 @@ export default defineEventHandler(async (event) => {
           courseName: course?.name || '',
           courseDate,
           courseLocation: course?.description || undefined,
-          paymentMethod: adminPaymentMethodLabel(paymentMethod),
+          paymentMethod: adminPaymentMethodLabel(paymentMethod, terms.businessNoun),
           paymentAmount: adminPrice,
           tenantName: tenant.name
         })

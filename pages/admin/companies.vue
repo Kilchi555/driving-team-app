@@ -259,13 +259,20 @@
 
           <!-- Rechnungen Tab -->
           <div v-else-if="detailTab === 'Rechnungen'" class="p-5 space-y-4">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
               <p class="text-sm text-gray-500">Rechnungen für <strong>{{ editingCompany?.name }}</strong></p>
-              <button @click="createInvoiceForCompany"
-                class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white rounded-lg"
-                :style="{ background: primaryColor }">
-                + Rechnung erstellen
-              </button>
+              <div class="flex items-center gap-2">
+                <button @click="showCorrespondenceCompose = true"
+                  class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border bg-white"
+                  :style="{ color: primaryColor, borderColor: primaryColor }">
+                  Brief schreiben
+                </button>
+                <button @click="createInvoiceForCompany"
+                  class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white rounded-lg"
+                  :style="{ background: primaryColor }">
+                  + Rechnung erstellen
+                </button>
+              </div>
             </div>
             <div v-if="companyInvoices.length === 0" class="text-center py-8 text-gray-400 text-sm">
               Noch keine Rechnungen.
@@ -300,6 +307,11 @@
       @close="showInvoiceCreateModal = false"
       @created="onInvoiceCreated"
     />
+    <CorrespondenceComposeModal
+      v-if="showCorrespondenceCompose && editingCompany"
+      :initial-company="editingCompany"
+      @close="showCorrespondenceCompose = false"
+    />
   </div>
 </template>
 
@@ -307,6 +319,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
+import CorrespondenceComposeModal from '~/components/admin/CorrespondenceComposeModal.vue'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Firmenkunden' })
@@ -439,6 +452,7 @@ async function removeUser(user: any) {
 // ── Rechnungen ───────────────────────────────────────────────────────────────
 const companyInvoices = ref<any[]>([])
 const showInvoiceCreateModal = ref(false)
+const showCorrespondenceCompose = ref(false)
 
 async function loadCompanyInvoices() {
   if (!editingCompany.value?.id) return

@@ -21,6 +21,8 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getQuery } from 'h3'
 import { getAccountAccessLink } from '~/server/utils/account-access-link'
+import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 const FALLBACK_EVENT_TYPE_LABELS: Record<string, string> = {
   lesson:     'Fahrstunde',
@@ -170,10 +172,16 @@ export default defineEventHandler(async (event) => {
   }
   const { data: tenants } = await supabase
     .from('tenants')
-    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url')
+    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, business_type')
     .in('id', tenantIds)
 
   const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
+
+  // Terminology per tenant (cached for this cron run)
+  const termsMap = new Map<string, Terminology>()
+  await Promise.all(tenantIds.map(async (tid: string) => {
+    termsMap.set(tid, await getTenantTerminology(supabase, tid))
+  }))
 
   // ── 2d. Load event types from DB for all tenants (dynamic labels) ──
   const { data: eventTypeRows } = await supabase
@@ -219,7 +227,8 @@ export default defineEventHandler(async (event) => {
     }
 
     const tenant = tenantMap.get(apt.tenant_id)
-    const tenantName   = tenant?.name || 'Ihre Fahrschule'
+    const terms = termsMap.get(apt.tenant_id) || getTerminologyDefaults(tenant?.business_type)
+    const tenantName   = tenant?.name || terms.businessNoun
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
     // Guest bookings can leave a user "pending" (no password ever set) — a
@@ -232,8 +241,9 @@ export default defineEventHandler(async (event) => {
     const dateStr = aptDate.toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Zurich' })
     const timeStr = aptDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
     const durationStr = apt.duration_minutes ? `${apt.duration_minutes} Min.` : ''
+    const lessonFallback = { ...FALLBACK_EVENT_TYPE_LABELS, lesson: terms.appointment }
     const eventLabel  = eventTypeMap.get(`${apt.tenant_id}::${apt.event_type_code}`)
-      || FALLBACK_EVENT_TYPE_LABELS[apt.event_type_code || '']
+      || lessonFallback[apt.event_type_code || '']
       || apt.title
       || 'Termin'
     const categoryStr = apt.type || ''
@@ -294,6 +304,7 @@ export default defineEventHandler(async (event) => {
       primaryColor,
       logoUrl,
       paymentHtml,
+      staffLabel: terms.staff,
     })
 
     toInsert.push({
@@ -390,6 +401,7 @@ interface EmailData {
   primaryColor: string
   logoUrl: string | null
   paymentHtml: string
+  staffLabel: string
 }
 
 function buildEmailHtml(d: EmailData): string {
@@ -409,7 +421,7 @@ function buildEmailHtml(d: EmailData): string {
     ['Datum',       d.dateStr],
     ['Zeit',        `${d.timeStr} Uhr${d.durationStr ? ` (${d.durationStr})` : ''}`],
     ['Art',         [d.eventLabel, d.categoryStr].filter(Boolean).join(' · ')],
-    d.staffName     ? ['Fahrlehrer',    d.staffName + (d.staffPhone ? ` · ${d.staffPhone}` : '')] : null,
+    d.staffName     ? [d.staffLabel,    d.staffName + (d.staffPhone ? ` · ${d.staffPhone}` : '')] : null,
     meetingTypeLabel ? ['Durchführung', meetingTypeLabel] : null,
     d.meetingType === 'online' && d.meetingLink
       ? ['Meeting-Link', `<a href="${d.meetingLink}" style="color:${d.primaryColor}">${d.meetingLink}</a>`]

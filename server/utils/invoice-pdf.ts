@@ -269,9 +269,10 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
         .text(value, metaX, y + 10, { width: metaW })
     })
 
-    // Fensterende (DIN ~45mm hoch) — alles darunter ist ausserhalb des Couvert-Schlitzes
+    // Fensterende (DIN ~45mm hoch) — Kontaktperson knapp darunter, aber noch
+    // ausserhalb des Couvert-Schlitzes (ca. 40pt höher als ganz unten am Rand).
     const winBottom = winTop + mmToPt(45)
-    let belowWindowY = winBottom + 8
+    let belowWindowY = winBottom - 32
 
     // Kunden-Kontaktperson unter dem Fenster, Kunden-Seite (nicht im Couvert sichtbar)
     if (data.billingCompanyName && data.customerName && data.customerName !== data.billingCompanyName) {

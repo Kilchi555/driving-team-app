@@ -31,14 +31,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'payoutRequestId und otp sind erforderlich.' })
   }
 
-  // Load the payout request — must belong to this user
   const { data: userProfile } = await supabaseAdmin
     .from('users')
-    .select('id')
+    .select('id, tenant_id')
     .eq('auth_user_id', authUser.id)
     .single()
 
   if (!userProfile) throw createError({ statusCode: 403, message: 'User not found' })
+
+  const { requireFeature } = await import('~/server/utils/require-feature')
+  await requireFeature(userProfile.tenant_id, 'affiliate_enabled')
 
   const { data: payoutRequest } = await supabaseAdmin
     .from('affiliate_payout_requests')

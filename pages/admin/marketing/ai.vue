@@ -170,11 +170,18 @@
                 Kopieren
               </button>
               <NuxtLink
-                to="/admin/marketing/templates"
+                :to="templateSaveLink"
                 class="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg text-white transition hover:opacity-90"
                 :style="{ background: primaryColor }"
               >
                 Als Template speichern →
+              </NuxtLink>
+              <NuxtLink
+                to="/admin/marketing/aktion"
+                class="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition hover:bg-gray-50"
+                :style="{ color: primaryColor, borderColor: primaryColor + '50' }"
+              >
+                Aktion starten →
               </NuxtLink>
             </div>
           </div>
@@ -206,7 +213,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useHead } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { useTenantBranding } from '~/composables/useTenantBranding'
@@ -274,8 +281,20 @@ function useAllSubjects() {
   result.value.subjectLines.slice(0, 5).forEach((s: string, i: number) => {
     params.set(`subject_${i}`, s)
   })
+  if (result.value.emailDraft) {
+    params.set('draft', result.value.emailDraft)
+  }
   navigateTo(`/admin/marketing/campaigns?${params.toString()}`)
 }
+
+const templateSaveLink = computed(() => {
+  if (!result.value?.emailDraft) return '/admin/marketing/templates'
+  const params = new URLSearchParams()
+  params.set('draft', result.value.emailDraft)
+  if (result.value.subjectLines?.[0]) params.set('subject', result.value.subjectLines[0])
+  if (topic.value) params.set('name', topic.value.slice(0, 80))
+  return `/admin/marketing/templates?${params.toString()}`
+})
 
 onMounted(async () => {
   const tenantId = authStore.userProfile?.tenant_id

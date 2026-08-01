@@ -19,6 +19,7 @@ import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
+import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -85,7 +86,7 @@ const handler = defineEventHandler(async (event) => {
     const [courseResult, tenantResult, courseSettingResult] = await Promise.all([
       supabase
         .from('courses')
-        .select('*, course_sessions(*), course_category:course_categories(allow_partial_enrollment, partial_start_position, partial_price_rappen)')
+        .select('*, course_sessions(*), course_category:course_categories(code, name, allow_partial_enrollment, partial_start_position, partial_price_rappen)')
         .eq('id', courseId)
         .eq('tenant_id', tenantId)
         .single(),
@@ -684,6 +685,18 @@ const handler = defineEventHandler(async (event) => {
         }).select('id').single()
 
         logger.info('✅ Course registration created (credit payment)')
+
+        upsertMarketingLeadSafe({
+          tenantId,
+          email: finalEmail,
+          firstName: customerData?.firstname,
+          lastName: customerData?.lastname,
+          phone: finalPhone,
+          categories: categoriesFromCourse(course),
+          tags: ['client', 'course'],
+          source: 'course_enroll',
+          sourceLabel: course?.name ? `Kurs: ${course.name}` : 'Kursanmeldung (Kredit)',
+        })
 
         // Meta CAPI: courses aren't linked to `appointments`, so this bypasses
         // recordAndSendCapiEvent's audit table (its appointment_id column has a

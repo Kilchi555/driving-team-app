@@ -5,6 +5,7 @@ import { defineEventHandler, readBody, createError, getRequestIP } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { upsertMarketingLeadSafe } from '~/server/utils/upsert-marketing-lead'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -170,20 +171,31 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Check if location supports the category
-    if (!location.available_categories.includes(category_code)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: `Location does not support category: ${category_code}`
-      })
-    }
-
     // 3. Validate staff_id is assigned to this location (via location.staff_ids)
     // We don't need to read the users table - the foreign key constraint will validate the staff exists
     if (!location.staff_ids.includes(staff_id)) {
       throw createError({
         statusCode: 400,
         statusMessage: `Selected staff is not assigned to location: ${location.name}`
+      })
+    }
+
+    // Check if this staff offers the category at this location (staff_locations preferred)
+    const { data: staffLoc } = await supabase
+      .from('staff_locations')
+      .select('available_categories, is_online_bookable, is_active')
+      .eq('staff_id', staff_id)
+      .eq('location_id', location_id)
+      .maybeSingle()
+
+    const perStaffCats = Array.isArray(staffLoc?.available_categories) ? staffLoc.available_categories : null
+    const locationCats = Array.isArray(location.available_categories) ? location.available_categories : []
+    const effectiveCats = perStaffCats ?? locationCats
+
+    if (effectiveCats.length > 0 && !effectiveCats.includes(category_code)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Location does not support category: ${category_code}`
       })
     }
 
@@ -317,6 +329,18 @@ export default defineEventHandler(async (event) => {
       console.warn('⚠️ Failed to send booking proposal emails:', emailErr.message)
       // Don't fail the proposal creation if email fails
     }
+
+    upsertMarketingLeadSafe({
+      tenantId: tenant_id,
+      email,
+      firstName: first_name,
+      lastName: last_name,
+      phone,
+      categories: category_code ? [String(category_code).trim()] : [],
+      tags: ['inquiry'],
+      source: 'booking_proposal',
+      sourceLabel: 'Terminvorschlag',
+    })
 
     return {
       success: true,

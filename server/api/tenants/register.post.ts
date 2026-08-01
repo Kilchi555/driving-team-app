@@ -509,6 +509,23 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
             else logger.debug(`✅ Created ${pricingRows.length} pricing rule(s)`)
           }
 
+          // Apply "Online buchbar" choices from registration onto the tenant's
+          // event_types (templates were copied with their default public_bookable;
+          // per_event_type / custom rows send an explicit override).
+          const bookableOverrides = new Map<string, boolean>()
+          for (const p of pricingItems) {
+            if (!p.event_type_code || typeof p.public_bookable !== 'boolean') continue
+            bookableOverrides.set(p.event_type_code, p.public_bookable)
+          }
+          for (const [code, publicBookable] of bookableOverrides) {
+            const { error: pbErr } = await supabase
+              .from('event_types')
+              .update({ public_bookable: publicBookable, updated_at: now })
+              .eq('tenant_id', tenantId)
+              .eq('code', code)
+            if (pbErr) logger.warn(`⚠️ public_bookable update failed for ${code}:`, pbErr)
+          }
+
           // Custom services the tenant defined during registration (not part of
           // the business_type templates) need their own event_types row so
           // they're immediately selectable when creating appointments — the
@@ -536,9 +553,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
                 requires_team_invite: false,
                 auto_generate_title: true,
                 require_payment: true,
-                // Not exposed on the public booking page by default — the tenant
-                // can opt in later once they've verified the flow.
-                public_bookable: false,
+                public_bookable: typeof p.public_bookable === 'boolean' ? p.public_bookable : false,
                 is_default: false,
                 created_at: now,
                 updated_at: now,
