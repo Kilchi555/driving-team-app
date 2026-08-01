@@ -206,7 +206,7 @@
         </div>
 
         <div v-if="form.themeKey === 'affiliate'" class="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 text-sm text-indigo-900">
-          Der CTA führt auf deine Affiliate-Seite <code class="bg-white/70 px-1 rounded">/ref/{{ tenantSlug }}</code>. Kein Rabattcode nötig.
+          Der CTA führt auf deine Partner-Seite <code class="bg-white/70 px-1 rounded">/partner/{{ tenantSlug }}</code>. Kein Rabattcode nötig.
         </div>
 
         <div class="flex justify-between pt-2">
@@ -793,7 +793,7 @@ function buildPayload(sendNow: boolean) {
     categoryFilter: form.categoryCode || null,
     validityPreset: form.validityPreset,
     validUntil: form.validityPreset === 'custom' ? form.validUntil : null,
-    ctaType: form.themeKey === 'affiliate' ? 'ref' : form.themeKey === 'course' ? 'course' : 'booking',
+    ctaType: form.themeKey === 'affiliate' ? 'partner' : form.themeKey === 'course' ? 'course' : 'booking',
     courseId: form.courseId || null,
     categoryCode: form.categoryCode || null,
     segmentCategories: form.segmentCategories,
