@@ -57,7 +57,7 @@
 
           <div class="rounded-xl border border-gray-100 p-5">
             <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Lieber direkt starten?</p>
-            <p class="text-sm text-gray-500 mb-4 leading-relaxed">60 Tage kostenlos testen — Keine Kreditkarte, in 5 Minuten bereit.</p>
+            <p class="text-sm text-gray-500 mb-4 leading-relaxed">30 Tage kostenlos testen — Keine Kreditkarte, in 5 Minuten bereit.</p>
             <a href="https://app.simy.ch/tenant-register"
               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90"
               style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
@@ -131,7 +131,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Lieber direkt einsteigen?</h2>
-        <p class="text-white mb-8 text-sm">60 Tage kostenlos testen — Keine Kreditkarte, keine Kündigung nötig.</p>
+        <p class="text-white mb-8 text-sm">30 Tage kostenlos testen — Keine Kreditkarte, keine Kündigung nötig.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-base transition-all hover:opacity-90"
           style="color: var(--brand-primary)">

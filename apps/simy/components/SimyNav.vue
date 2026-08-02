@@ -116,7 +116,7 @@
         <a href="/demo"
           class="text-sm font-bold px-4 py-2.5 rounded-xl text-white transition-all hover:opacity-90 whitespace-nowrap"
           :style="ctaStyle">
-          60 Tage gratis →
+          30 Tage gratis →
         </a>
         <!-- Mobile menu button -->
         <button @click="mobileOpen = !mobileOpen" class="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-50" aria-label="Menü">
@@ -171,7 +171,7 @@
           <a href="/demo"
             class="block w-full text-center py-3 rounded-xl text-white font-bold text-sm"
             :style="ctaStyle">
-            60 Tage gratis starten →
+            30 Tage gratis starten →
           </a>
         </div>
       </div>

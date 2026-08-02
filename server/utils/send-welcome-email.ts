@@ -24,6 +24,7 @@ import {
   escapeAttr,
   escapeHtml,
 } from '~/server/utils/branded-email'
+import { SAAS_TRIAL_LABEL } from '~/utils/saas-trial'
 
 export type WelcomeEmailRole = 'client' | 'staff' | 'admin'
 
@@ -204,7 +205,7 @@ function buildAdminHtml(
     <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px 0;">Hallo <strong>${escapeHtml(firstName)}</strong>,</p>
     <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">
       dein Simy-Konto für <strong>${name}</strong> ist bereit.
-      Du hast <strong>60 Tage kostenlos</strong> Zeit, alle Features auszuprobieren – keine Kreditkarte nötig.
+      Du hast <strong>${SAAS_TRIAL_LABEL} kostenlos</strong> Zeit, alle Features auszuprobieren – keine Kreditkarte nötig.
     </p>
     ${steps}
     ${emailCtaButton(loginUrl, 'Zum Dashboard', primary)}
