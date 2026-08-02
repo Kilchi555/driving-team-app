@@ -94,8 +94,8 @@
                       </svg>
                     </h3>
                   </template>
-                  <span :class="statusBadge(c.status)" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0">
-                    {{ statusLabel(c.status) }}
+                  <span :class="statusBadge(displayStatus(c))" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0">
+                    {{ statusLabel(displayStatus(c)) }}
                   </span>
                   <span
                     v-if="c.schedule_enabled"
@@ -126,12 +126,18 @@
             </div>
 
             <!-- Metrics (sent/pilot/recurring) -->
-              <div v-if="c.status === 'sent' || c.status === 'pilot' || c.status === 'recurring'" class="space-y-2">
+              <div v-if="c.status === 'sent' || c.status === 'pilot' || c.status === 'recurring' || c.status === 'sending'" class="space-y-2">
                 <div class="flex flex-wrap gap-x-4 gap-y-1 items-center">
                   <span class="text-sm text-gray-600">
-                    <strong class="text-gray-900">{{ c.sent_count?.toLocaleString('de-CH') ?? 0 }}</strong>
-                    <span class="text-gray-400"> / {{ c.total_recipients?.toLocaleString('de-CH') ?? '?' }} gesendet</span>
+                    <strong class="text-gray-900">{{ (c.delivered_count ?? 0).toLocaleString('de-CH') }}</strong>
+                    <span class="text-gray-500"> versendet</span>
+                    <span class="text-gray-300 mx-1">·</span>
+                    <strong :class="(c.pending_count ?? 0) > 0 ? 'text-amber-700' : 'text-gray-900'">{{ (c.pending_count ?? 0).toLocaleString('de-CH') }}</strong>
+                    <span :class="(c.pending_count ?? 0) > 0 ? 'text-amber-600' : 'text-gray-500'"> in Warteschlange</span>
+                    <span class="text-gray-400"> / {{ Number(c.total_recipients ?? c.sent_count ?? 0).toLocaleString('de-CH') }} Empfänger</span>
                   </span>
+                  <span v-if="(c.cancelled_count ?? 0) > 0" class="text-sm text-gray-400"><strong>{{ c.cancelled_count.toLocaleString('de-CH') }}</strong> abgebrochen</span>
+                  <span v-if="(c.failed_count ?? 0) > 0" class="text-sm text-red-500"><strong>{{ c.failed_count.toLocaleString('de-CH') }}</strong> fehlgeschlagen</span>
                   <span v-if="c.bounce_count > 0" class="text-sm text-red-500"><strong>{{ c.bounce_count }}</strong> Bounces</span>
                   <span v-if="c.unsubscribe_count > 0" class="text-sm text-gray-400"><strong>{{ c.unsubscribe_count }}</strong> Abmeldungen</span>
                 </div>
@@ -140,11 +146,11 @@
                   <div class="flex flex-wrap gap-x-4 gap-y-1 items-center">
                     <span class="text-sm" :class="c.open_count > 0 ? 'text-blue-600' : 'text-gray-400'">
                       <strong>{{ c.open_count ?? 0 }}</strong> Öffnungen
-                      ({{ c.sent_count ? Math.round((c.open_count ?? 0) / c.sent_count * 100) : 0 }}%)
+                      ({{ deliveryBase(c) ? Math.round((c.open_count ?? 0) / deliveryBase(c) * 100) : 0 }}%)
                     </span>
                     <span class="text-sm" :class="c.click_count > 0 ? 'text-green-600' : 'text-gray-400'">
                       <strong>{{ c.click_count ?? 0 }}</strong> Klicks
-                      ({{ c.sent_count ? Math.round((c.click_count ?? 0) / c.sent_count * 100) : 0 }}%)
+                      ({{ deliveryBase(c) ? Math.round((c.click_count ?? 0) / deliveryBase(c) * 100) : 0 }}%)
                     </span>
                   </div>
                 </template>
@@ -1223,10 +1229,22 @@ function scheduleSummary(c: any): string {
   return `${day}s um ${hour} · ${batch}${repeat}`
 }
 
+function deliveryBase(c: any): number {
+  return Number(c.delivered_count) || 0
+}
+
+/** Effective status for badge: "sent" with remaining queue → still sending. */
+function displayStatus(c: any): string {
+  if ((c.status === 'sent' || c.status === 'pilot') && (c.pending_count ?? 0) > 0) {
+    return 'sending'
+  }
+  return c.status
+}
+
 function statusLabel(status: string) {
   return {
     draft: 'Entwurf',
-    sending: 'Wird gesendet',
+    sending: 'Versand läuft',
     sent: 'Gesendet',
     pilot: 'Pilot laufend',
     recurring: 'Automatisch',
@@ -1237,7 +1255,7 @@ function statusLabel(status: string) {
 function statusBadge(status: string) {
   return {
     draft: 'bg-gray-100 text-gray-600',
-    sending: 'bg-blue-100 text-blue-700',
+    sending: 'bg-amber-100 text-amber-800',
     sent: 'bg-green-100 text-green-700',
     pilot: 'bg-orange-100 text-orange-700',
     recurring: 'bg-indigo-100 text-indigo-700',

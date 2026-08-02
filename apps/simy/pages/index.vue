@@ -26,7 +26,7 @@
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-8 border"
           :style="{ background: `rgba(var(--brand-rgb), 0.07)`, color: primaryColor, borderColor: `rgba(var(--brand-rgb), 0.28)` }">
           <span class="w-2 h-2 rounded-full animate-pulse" :style="{ background: primaryColor }"></span>
-          60 Tage kostenlos testen
+          30 Tage kostenlos testen
         </div>
 
         <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Fahrschule Software Schweiz</p>
@@ -52,7 +52,7 @@
             :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, boxShadow: `0 8px 30px rgba(var(--brand-rgb), 0.35)` }">
             <svg v-if="isNavigatingToRegister && logoTokenUploading" class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             <svg v-else class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
-            60 Tage gratis testen
+            30 Tage gratis testen
           </a>
           <a href="#features"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg border-2 transition-all"
@@ -225,7 +225,7 @@
                 <div class="h-2 rounded-full mb-2 w-full bg-gray-100"></div>
                 <div class="h-2 rounded-full mb-4 w-5/6 bg-gray-100"></div>
                 <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-bold" :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }">
-                  60 Tage gratis testen →
+                  30 Tage gratis testen →
                 </div>
               </div>
             </div>
@@ -1298,7 +1298,7 @@
       <div class="max-w-4xl mx-auto text-center">
         <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Preise</p>
         <h2 class="text-4xl font-extrabold text-gray-900 mb-3">Transparent. Flexibel. Fair.</h2>
-        <p class="text-gray-500 text-lg mb-12">Monatlich kündbar, keine Jahresbindung. Starte mit 60 Tagen kostenlos.</p>
+        <p class="text-gray-500 text-lg mb-12">Monatlich kündbar, keine Jahresbindung. Starte mit 30 Tagen kostenlos.</p>
 
         <div class="grid md:grid-cols-3 gap-5 mb-10">
           <div v-for="plan in pricingPlans" :key="plan.name"
@@ -1336,7 +1336,7 @@
               :style="plan.highlighted
                 ? { background: 'rgba(255,255,255,0.92)', color: primaryColor }
                 : { background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, color: 'white' }">
-              60 Tage gratis starten
+              30 Tage gratis starten
             </a>
           </div>
         </div>
@@ -1475,7 +1475,7 @@
         <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
           Bereit, deine Fahrschule<br>auf Autopilot zu schalten?
         </h2>
-        <p class="text-lg mb-10" style="color: rgba(255,255,255,0.7);">Starte heute mit 60 Tagen kostenlos – keine Kreditkarte, keine Bindung.</p>
+        <p class="text-lg mb-10" style="color: rgba(255,255,255,0.7);">Starte heute mit 30 Tagen kostenlos – keine Kreditkarte, keine Bindung.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="#" @click.prevent="goToRegister"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-black text-lg shadow-xl hover:scale-105 transition-all"
@@ -1831,13 +1831,13 @@ useHead({
   title: 'Simy – Fahrschulsoftware Schweiz | Buchung, Abrechnung & Fahrlehrer-App',
   htmlAttrs: { lang: 'de' },
   meta: [
-    { name: 'description', content: 'Fahrschulsoftware aus der Schweiz: Online-Buchungssystem, automatische Rechnungen mit TWINT, Fahrlehrer-App, Marketing & SEO. 60 Tage kostenlos – keine Kreditkarte.' },
+    { name: 'description', content: 'Fahrschulsoftware aus der Schweiz: Online-Buchungssystem, automatische Rechnungen mit TWINT, Fahrlehrer-App, Marketing & SEO. 30 Tage kostenlos – keine Kreditkarte.' },
     { name: 'keywords', content: 'Fahrschulsoftware Schweiz, Fahrschule Software, Fahrlehrer App, Buchungssystem Fahrschule, Online-Terminbuchung Fahrschule, Fahrschul-Verwaltung, Marketing Fahrschule, Google Ads Fahrschule' },
     { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
     { name: 'author', content: 'Simy' },
     // Open Graph
     { property: 'og:title', content: 'Simy – Fahrschule Software Schweiz' },
-    { property: 'og:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 60 Tage kostenlos testen – keine Kreditkarte.' },
+    { property: 'og:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 30 Tage kostenlos testen – keine Kreditkarte.' },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: 'https://simy.ch/' },
     { property: 'og:image', content: 'https://simy.ch/og-image.png' },
@@ -1849,7 +1849,7 @@ useHead({
     // Twitter / X Card
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: 'Simy – Fahrschule Software Schweiz' },
-    { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 60 Tage kostenlos testen – keine Kreditkarte.' },
+    { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 30 Tage kostenlos testen – keine Kreditkarte.' },
     { name: 'twitter:image', content: 'https://simy.ch/og-image.png' },
     { name: 'twitter:image:alt', content: 'Simy Fahrschule Software – Dashboard Screenshot' },
   ],
@@ -1876,7 +1876,7 @@ useHead({
           '@type': 'Offer',
           price: '0',
           priceCurrency: 'CHF',
-          description: '60 Tage kostenlos testen, keine Kreditkarte nötig',
+          description: '30 Tage kostenlos testen, keine Kreditkarte nötig',
         },
         provider: {
           '@type': 'Organization',
@@ -1937,7 +1937,7 @@ useHead({
             name: 'Was kostet Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 60 Tage sind vollständig kostenlos – keine Kreditkarte, keine Bindung.',
+              text: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte, keine Bindung.',
             },
           },
           {
@@ -2513,7 +2513,7 @@ const pricingPlans = computed(() =>
 )
 
 const faqs = reactive([
-  { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein, der 60-Tage-Trial ist vollständig kostenlos und ohne Kreditkarte. Du wirst erst nach dem Trial zur Kasse gebeten – und kannst jederzeit kündigen.', open: false },
+  { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein, der 30-Tage-Trial ist vollständig kostenlos und ohne Kreditkarte. Du wirst erst nach dem Trial zur Kasse gebeten – und kannst jederzeit kündigen.', open: false },
   { q: 'Wie funktioniert die Kündigung?', a: 'Du kannst monatlich kündigen. Die Kündigungsfrist beträgt 1 Monat auf Ende des laufenden Monats. Keine Jahresbindung, keine versteckten Kosten.', open: false },
   { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: 'Für deine Schüler unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.', open: false },
   { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },

@@ -9,6 +9,7 @@ import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 import { generateRegistrationToken } from '~/server/utils/registration-token'
 import { resolveBusinessType, applyCategoryAndEventTypeDefaults, applyEvaluationDefaults, resolveWorkingDaysTemplate } from '~/server/utils/business-type-presets'
 import { isReservedSlug } from '~/server/utils/reserved-slugs'
+import { SAAS_TRIAL_DAYS } from '~/utils/saas-trial'
 
 interface TenantRegistrationData {
   name: string
@@ -265,7 +266,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     // 5. Tenant in Datenbank erstellen
     const tenantId = crypto.randomUUID()
     const trialEndsAt = new Date()
-    trialEndsAt.setDate(trialEndsAt.getDate() + 60) // 60 Tage Trial
+    trialEndsAt.setDate(trialEndsAt.getDate() + SAAS_TRIAL_DAYS)
 
     // Default working hours: branch-specific from business_type_presets.defaults
     // (e.g. consulting Mo–Fr 09–17, driving_school Mo–Sa with longer hours).

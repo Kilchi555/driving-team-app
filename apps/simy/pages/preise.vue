@@ -14,7 +14,7 @@
           Preise
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">Fahrschulsoftware Preise — transparent &amp; fair</h1>
-        <p class="text-xl text-gray-500 max-w-xl mx-auto mb-10">60 Tage kostenlos testen — keine Kreditkarte, keine Jahresbindung.</p>
+        <p class="text-xl text-gray-500 max-w-xl mx-auto mb-10">30 Tage kostenlos testen — keine Kreditkarte, keine Jahresbindung.</p>
       </div>
     </section>
 
@@ -55,7 +55,7 @@
               :style="plan.highlighted
                 ? 'background: rgba(255,255,255,0.92); color: var(--brand-primary)'
                 : 'background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); color: white'">
-              60 Tage gratis starten
+              30 Tage gratis starten
             </a>
           </div>
         </div>
@@ -221,7 +221,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Kostenlos starten — heute noch</h2>
-        <p class="text-white mb-8">60 Tage gratis. Keine Kreditkarte. In 5 Minuten eingerichtet.</p>
+        <p class="text-white mb-8">30 Tage gratis. Keine Kreditkarte. In 5 Minuten eingerichtet.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
@@ -240,13 +240,13 @@ import { ref, computed } from 'vue'
 useHead({
   title: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat',
   meta: [
-    { name: 'description', content: 'Simy Preise: Fahrschulsoftware ab CHF 49/Monat. 60 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.' },
+    { name: 'description', content: 'Simy Preise: Fahrschulsoftware ab CHF 49/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.' },
     { name: 'keywords', content: 'Simy preis, fahrschulapp kosten, fahrschulsoftware preis' },
     { property: 'og:title', content: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat' },
-    { property: 'og:description', content: 'Simy Preise: ab CHF 49/Monat. 60 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar.' },
+    { property: 'og:description', content: 'Simy Preise: ab CHF 49/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar.' },
     { property: 'og:url', content: 'https://simy.ch/preise' },
     { name: 'twitter:title', content: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat' },
-    { name: 'twitter:description', content: 'Simy Preise: ab CHF 49/Monat. 60 Tage kostenlos testen.' },
+    { name: 'twitter:description', content: 'Simy Preise: ab CHF 49/Monat. 30 Tage kostenlos testen.' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/preise' }],
   script: [{
@@ -255,7 +255,7 @@ useHead({
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
       mainEntity: [
-        { '@type': 'Question', name: 'Brauche ich eine Kreditkarte für den Trial?', acceptedAnswer: { '@type': 'Answer', text: 'Nein. Die 60 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten.' } },
+        { '@type': 'Question', name: 'Brauche ich eine Kreditkarte für den Trial?', acceptedAnswer: { '@type': 'Answer', text: 'Nein. Die 30 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten.' } },
         { '@type': 'Question', name: 'Was kostet Simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'Simy bietet Pläne ab CHF 49/Monat. Monatlich kündbar, keine Jahresbindung.' } },
         { '@type': 'Question', name: 'Kann ich jederzeit kündigen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Monatlich kündbar, keine Jahresbindung. Kündigung mit 30 Tagen Frist auf Ende des Monats.' } },
         { '@type': 'Question', name: 'Kann ich jederzeit upgraden oder downgraden?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Planwechsel sind jederzeit möglich und wirken sofort. Beim Upgrade wird der Differenzbetrag anteilsmässig berechnet, beim Downgrade gibt es eine Gutschrift auf die nächste Rechnung.' } },
@@ -338,7 +338,7 @@ const comparison: { label: string; starter: boolean | string; pro: boolean | str
 ]
 
 const faqs = [
-  { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein. Die 60 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten — und kannst jederzeit kündigen.' },
+  { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein. Die 30 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten — und kannst jederzeit kündigen.' },
   { q: 'Kann ich jederzeit upgraden oder downgraden?', a: 'Ja. Planwechsel sind jederzeit möglich und wirken sofort. Beim Upgrade wird der Differenzbetrag anteilsmässig für die verbleibenden Tage des Monats berechnet. Beim Downgrade erhältst du eine Gutschrift auf die nächste Rechnung. Keine Wartezeit, keine manuelle Freischaltung.' },
   { q: 'Wie funktioniert die Abrechnung?', a: 'Wir stellen monatlich per TWINT, Kreditkarte oder Banküberweisung in Rechnung. Bei Jahresabo wird einmal jährlich abgerechnet.' },
   { q: 'Was passiert mit meinen Daten, wenn ich kündige?', a: 'Du kannst alle deine Daten jederzeit exportieren. Nach der Kündigung werden die Daten für 30 Tage gespeichert, dann endgültig gelöscht.' },

@@ -1,4 +1,5 @@
 import { sendEmail } from '~/server/utils/email'
+import { SAAS_TRIAL_LABEL } from '~/utils/saas-trial'
 
 interface ContactBody {
   name: string
@@ -90,7 +91,7 @@ export default defineEventHandler(async (event) => {
         </td></tr>
         <tr><td style="padding:28px 30px;">
           <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 16px 0;">Wir haben deine Anfrage erhalten und melden uns innerhalb von <strong>24 Stunden</strong> zurück.</p>
-          <p style="color:#6b7280;font-size:13px;line-height:1.6;margin:0 0 24px 0;">Möchtest du simy schon jetzt ausprobieren? Der Gratis-Test läuft 60 Tage — ohne Kreditkarte.</p>
+          <p style="color:#6b7280;font-size:13px;line-height:1.6;margin:0 0 24px 0;">Möchtest du simy schon jetzt ausprobieren? Der Gratis-Test läuft ${SAAS_TRIAL_LABEL} — ohne Kreditkarte.</p>
           <a href="https://app.simy.ch/tenant-register" style="display:inline-block;background:#6000BD;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;">Kostenlos starten →</a>
         </td></tr>
         <tr><td style="background:#f9fafb;padding:16px 30px;border-top:1px solid #e5e7eb;">
