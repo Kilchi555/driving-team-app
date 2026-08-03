@@ -51,6 +51,11 @@ export interface BookingPolicy {
   // ── Confirmation & Onboarding ──────────────────────────────────────────────
   confirmation_email_enabled: boolean
   confirmation_email_mode: 'always' | 'after_registration' | 'never'
+  /**
+   * Notify assigned staff on booking proposals / online bookings.
+   * Does not affect customer emails or tenant contact_email inquiry inbox.
+   */
+  staff_booking_notification_enabled: boolean
   registration_reminder_enabled: boolean
   registration_reminder_days: number
   registration_reminder_email_enabled: boolean
@@ -83,6 +88,7 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   registration_account_mode: 'required',
   confirmation_email_enabled: true,
   confirmation_email_mode: 'always',
+  staff_booking_notification_enabled: true,
   registration_reminder_enabled: false,
   registration_reminder_days: 7,
   registration_reminder_email_enabled: true,
@@ -187,6 +193,7 @@ export default defineEventHandler(async (event) => {
       merged.registration_account_mode,
       DEFAULT_BOOKING_POLICY.registration_account_mode
     ),
+    staff_booking_notification_enabled: merged.staff_booking_notification_enabled !== false,
   }
 
   return { success: true, policy }

@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
         created_at,
         location:locations(id, name, address, city),
         staff:users!staff_id(id, first_name, last_name, email),
-        tenant:tenants(id, name, slug, primary_color, contact_email, business_type, logo_wide_url, logo_url, logo_square_url)
+        tenant:tenants(id, name, slug, primary_color, contact_email, business_type, logo_wide_url, logo_url, logo_square_url, booking_policy)
       `)
       .eq('id', proposalId)
       .eq('tenant_id', tenant_id)
@@ -93,6 +93,7 @@ export default defineEventHandler(async (event) => {
     const intakeMode = inferIntakeMode(proposal)
     const formattedTimeSlots = formatTimeSlots(proposal.preferred_time_slots)
     const isGeneralInquiry = intakeMode === 'general'
+    const staffNotificationEnabled = (tenant?.booking_policy as any)?.staff_booking_notification_enabled !== false
 
     let customerEmail: any
     let staffEmail: any = null
@@ -103,7 +104,7 @@ export default defineEventHandler(async (event) => {
       tenantEmail = buildDynamicTenantEmail(proposal, location, staff, tenant, formattedTimeSlots, terms, intakeMode)
     } else {
       customerEmail = buildCustomerEmail(proposal, location, staff, tenant, formattedTimeSlots, terms, intakeMode)
-      if (staff?.email) {
+      if (staff?.email && staffNotificationEnabled) {
         staffEmail = buildStaffEmail(proposal, location, staff, tenant, formattedTimeSlots, terms, intakeMode)
       }
       tenantEmail = buildDynamicTenantEmail(proposal, location, staff, tenant, formattedTimeSlots, terms, intakeMode)
