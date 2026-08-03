@@ -516,6 +516,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useMFAFlow } from '~/composables/useMFAFlow'
 import { getSupabase } from '~/utils/supabase'
+import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
 
 logger.debug('📄 [slug].vue imports completed')
 
@@ -722,10 +723,9 @@ const handleLogin = async () => {
 
     logger.debug('✅ Login successful')
 
-    // Session tokens are now in HTTP-Only cookies (set by backend) — never
-    // duplicated into localStorage (XSS-readable). The client-side Supabase
-    // session gets hydrated separately by auth-restore.client.ts via the
-    // cookie-based refresh endpoint.
+    // Session tokens are in HTTP-Only cookies (server) AND returned in the body
+    // so we can hydrate supabase-js without a refresh-token rotation race.
+    await hydrateClientSessionAfterLogin(response.session)
 
     // Store user in auth store
     authStore.user = response.user

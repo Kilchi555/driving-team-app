@@ -183,19 +183,10 @@ export const useMFAFlow = () => {
 
       logger.debug('✅ MFA verification successful')
 
-      // Hydrate the client-side Supabase session too (httpOnly cookies cover
-      // server-side /api/* auth, but client-side supabase-js calls elsewhere
-      // on the page need their own in-memory/module session).
+      // Hydrate client session (cookies already set by MFA verify endpoint)
       if (session?.access_token && session?.refresh_token) {
-        try {
-          const { getSupabase } = await import('~/utils/supabase')
-          await getSupabase().auth.setSession({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token
-          })
-        } catch (setSessionErr) {
-          logger.debug('⚠️ Could not hydrate client Supabase session after MFA:', setSessionErr)
-        }
+        const { hydrateClientSessionAfterLogin } = await import('~/utils/hydrate-client-session-after-login')
+        await hydrateClientSessionAfterLogin(session)
       }
       
       // Clear state

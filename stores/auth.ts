@@ -8,6 +8,7 @@ import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { SESSION_STORAGE_KEY } from '~/utils/session-persistence'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
+import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
 
 // Types
 interface TenantTrialInfo {
@@ -248,61 +249,10 @@ const isAdmin = computed(() => {
           } catch (e) {
             logger.warn('⚠️ Could not persist tenant slug to localStorage:', e)
           }
+        }
 
-          // Clear the cookie-sync reload guard so the fetch-interceptor can resync
-          // cookies if needed right after login (without this, a stale guard value from
-          // the previous session expiry could block the sync and show "Sitzung abgelaufen"
-          // even though the user just logged in successfully).
-          try {
-            sessionStorage.removeItem('cookie_sync_reload_at')
-            sessionStorage.setItem('just_logged_in_at', Date.now().toString())
-          } catch { /* non-fatal */ }
-        }
-        
-        // 🔐 DEBUG: Log what we got from backend
-        console.log('🔐 DEBUG backendResponse.session:', backendResponse.session)
-        console.log('🔐 DEBUG backendResponse.rememberMe:', backendResponse.rememberMe)
-        
-        // ✅ KRITISCH: Setze die Supabase Client Session mit den echten Tokens
-        logger.debug('🔐 Backend session response:', {
-          hasAccessToken: !!backendResponse.session?.access_token,
-          hasRefreshToken: !!backendResponse.session?.refresh_token,
-          accessTokenLength: backendResponse.session?.access_token?.length || 0
-        })
-        
-        if (backendResponse.session?.access_token && backendResponse.session?.refresh_token) {
-          try {
-            const supabaseClient = getSupabase()
-            if (supabaseClient) {
-              // NOTE: intentionally not persisting raw tokens to localStorage —
-              // httpOnly cookies (set server-side) are the real auth layer here.
-              // setSession() below only hydrates the in-memory/module-managed
-              // Supabase client session for client-side supabase-js calls.
-              const { error: sessionError } = await supabaseClient.auth.setSession({
-                access_token: backendResponse.session.access_token,
-                refresh_token: backendResponse.session.refresh_token
-              })
-              
-              if (sessionError) {
-                logger.debug('⚠️ Error setting Supabase session:', sessionError)
-              } else {
-                logger.debug('✅ Supabase client session set successfully')
-                
-                // Verify session was set
-                const { data: verifySession } = await supabaseClient.auth.getSession()
-                const { data: verifyUser } = await supabaseClient.auth.getUser()
-                logger.debug('🔐 Session verification:', {
-                  hasSession: !!verifySession?.session,
-                  hasUser: !!verifyUser?.user,
-                  userId: verifyUser?.user?.id || 'none'
-                })
-              }
-            }
-          } catch (err) {
-            logger.debug('⚠️ Could not set Supabase session:', err)
-          }
-        }
-        
+        await hydrateClientSessionAfterLogin(backendResponse.session)
+
         logger.debug('✅ Login successful (session in HTTP-Only cookies + Supabase client)')
         return true
       }
