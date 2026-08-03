@@ -302,16 +302,17 @@ const loadData = async () => {
     let tenantId = props.tenantId
     
     if (!tenantId && props.tenantSlug) {
+      // get-tenant-data accepts UUID or slug via `tenant_id`
       const response = await $fetch('/api/booking/get-availability', {
         method: 'POST',
         body: {
           action: 'get-tenant-data',
-          slug: props.tenantSlug
+          tenant_id: props.tenantSlug,
         }
       }) as any
 
-      if (response?.success && response?.data) {
-        tenantId = response.data.id
+      if (response?.success && response?.data?.tenant?.id) {
+        tenantId = response.data.tenant.id
       }
     }
     
@@ -361,12 +362,12 @@ const submitPreferences = async () => {
         method: 'POST',
         body: {
           action: 'get-tenant-data',
-          slug: props.tenantSlug
+          tenant_id: props.tenantSlug,
         }
       }) as any
 
-      if (response?.success && response?.data) {
-        tenantId = response.data.id
+      if (response?.success && response?.data?.tenant?.id) {
+        tenantId = response.data.tenant.id
       }
     }
     

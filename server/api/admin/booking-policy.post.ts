@@ -43,6 +43,21 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid confirmation_email_mode' })
   }
 
+  const validLocationIntakeModes = ['locations', 'pickup_address', 'callback']
+  if (body.location_intake_modes !== undefined) {
+    if (!Array.isArray(body.location_intake_modes) || body.location_intake_modes.length === 0) {
+      throw createError({ statusCode: 400, statusMessage: 'location_intake_modes must be a non-empty array' })
+    }
+    const invalid = body.location_intake_modes.filter((m: string) => !validLocationIntakeModes.includes(m))
+    if (invalid.length > 0) {
+      throw createError({ statusCode: 400, statusMessage: `Invalid location_intake_modes: ${invalid.join(', ')}` })
+    }
+  }
+  // Legacy singular field — still accept and map to array
+  if (body.location_intake_mode !== undefined && !validLocationIntakeModes.includes(body.location_intake_mode)) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid location_intake_mode' })
+  }
+
   // Load current policy and merge
   const { data: current } = await supabase
     .from('tenants')
@@ -56,6 +71,14 @@ export default defineEventHandler(async (event) => {
     ...currentPolicy,
     ...body,
   }
+
+  // Prefer array; migrate legacy singular if array missing
+  if (Array.isArray(body.location_intake_modes) && body.location_intake_modes.length > 0) {
+    updatedPolicy.location_intake_modes = body.location_intake_modes
+  } else if (body.location_intake_mode) {
+    updatedPolicy.location_intake_modes = [body.location_intake_mode]
+  }
+  delete (updatedPolicy as any).location_intake_mode
 
   const { error } = await supabase
     .from('tenants')

@@ -39,160 +39,6 @@
         </div>
       </div>
 
-      <!-- ══════════════════════════════════════════════════════
-           GRUPPE 2: Online-Buchung (Kundenflow)
-      ══════════════════════════════════════════════════════ -->
-      <div class="flex items-center gap-3 pt-1">
-        <div class="flex items-center justify-center w-6 h-6 rounded-lg flex-shrink-0" :style="primaryBgLight">
-          <svg class="w-3.5 h-3.5" :style="primaryText" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-          </svg>
-        </div>
-        <div>
-          <p class="text-xs font-semibold text-gray-700 uppercase tracking-widest">Online-Buchung</p>
-          <p class="text-xs text-gray-400">Einstellungen für den Kundenflow auf der Buchungsseite</p>
-        </div>
-      </div>
-
-      <!-- Registrierung obligatorisch -->
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-semibold text-gray-800">Registrierung obligatorisch</h2>
-            <p class="text-xs text-gray-400 mt-0.5">
-              <template v-if="policy.registration_required">
-                Kunden müssen sich zuerst registrieren oder einloggen, bevor sie buchen können.
-              </template>
-              <template v-else>
-                Kunden können ohne Passwort buchen (Gast-Buchung). Nach der Buchung erhalten sie
-                <template v-if="policy.onboarding_email_enabled">per E-Mail einen Link</template>
-                <template v-else>einen Link</template>
-                zur Konto-Aktivierung.
-              </template>
-            </p>
-          </div>
-          <button
-            type="button"
-            @click="policy.registration_required = !policy.registration_required"
-            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
-            :style="policy.registration_required ? primaryBg : { background: '#e5e7eb' }"
-          >
-            <span
-              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-              :class="policy.registration_required ? 'translate-x-6' : 'translate-x-1'"
-            />
-          </button>
-        </div>
-      </div>
-
-      <!-- Felder beim Online-Buchen (Gast-Modus) -->
-      <div
-        class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-opacity"
-        :class="policy.registration_required ? 'opacity-40 pointer-events-none' : ''"
-      >
-        <div class="px-5 py-4 border-b border-gray-50">
-          <h2 class="text-sm font-semibold text-gray-800">Felder beim Online-Buchen (Gast-Modus)</h2>
-          <p class="text-xs text-gray-400 mt-0.5">
-            <span v-if="policy.registration_required">Nicht aktiv — Registrierung ist obligatorisch.</span>
-            <span v-else>Welche Angaben muss ein Kunde bei der Gast-Buchung eingeben? Klicke ein Feld mehrfach, um zwischen «aus», «optional» und «Pflicht» zu wechseln.</span>
-          </p>
-        </div>
-
-        <div class="px-5 pt-3 flex items-center gap-4">
-          <span class="flex items-center gap-1.5 text-xs text-gray-400">
-            <span class="w-4 h-4 rounded border-2 border-gray-200 bg-white inline-block"></span> Aus
-          </span>
-          <span class="flex items-center gap-1.5 text-xs text-gray-500">
-            <span class="w-4 h-4 rounded border-2 border-gray-400 bg-white inline-block flex items-center justify-center">
-              <span class="w-1.5 h-1.5 rounded-full bg-gray-400 inline-block"></span>
-            </span> Optional
-          </span>
-          <span class="flex items-center gap-1.5 text-xs text-gray-700 font-medium">
-            <span class="w-4 h-4 rounded border-2 border-transparent inline-block" :style="primaryBg"></span> Pflicht
-          </span>
-        </div>
-
-        <div class="px-5 py-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <button
-            v-for="field in bookingAvailableFields"
-            :key="field.key"
-            type="button"
-            @click="cycleBookingField(field.key)"
-            class="flex items-center gap-2.5 text-left select-none rounded-xl px-2 py-1.5 transition-colors hover:bg-gray-50"
-          >
-            <div class="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors"
-              :class="bookingFieldState(field.key) === 'hidden' ? 'border-gray-200 bg-white' : ''"
-              :style="bookingFieldState(field.key) === 'required'
-                ? primaryBg
-                : bookingFieldState(field.key) === 'optional'
-                  ? { borderColor: '#9ca3af', background: 'white' }
-                  : {}"
-            >
-              <svg v-if="bookingFieldState(field.key) === 'required'" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-              </svg>
-              <span v-else-if="bookingFieldState(field.key) === 'optional'" class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-            </div>
-            <span class="text-sm" :class="bookingFieldState(field.key) === 'hidden' ? 'text-gray-400' : 'text-gray-700'">
-              {{ field.label }}
-              <span v-if="bookingFieldState(field.key) === 'optional'" class="text-xs text-gray-400 ml-0.5">(opt.)</span>
-              <span v-else-if="bookingFieldState(field.key) === 'required'" class="text-xs text-red-400 ml-0.5">*</span>
-            </span>
-          </button>
-        </div>
-        <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
-          <p class="text-xs text-gray-400">Empfehlung: Vorname, Nachname und Telefon als Pflicht. Weniger Felder = höhere Conversion.</p>
-        </div>
-      </div>
-
-      <!-- Onboarding-E-Mail (öffentlicher Gast-Buchungsflow) -->
-      <div
-        class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-opacity"
-        :class="policy.registration_required ? 'opacity-40 pointer-events-none' : ''"
-      >
-        <div class="px-5 py-4 flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-semibold text-gray-800">Onboarding-E-Mail nach Gast-Buchung</h2>
-            <p class="text-xs text-gray-400 mt-0.5">
-              <span v-if="policy.registration_required">Nicht aktiv — Registrierung ist obligatorisch.</span>
-              <span v-else>Gäste erhalten nach der Buchung automatisch eine E-Mail mit einem Link zur Kontoaktivierung.</span>
-            </p>
-          </div>
-          <button
-            type="button"
-            @click="policy.onboarding_email_enabled = !policy.onboarding_email_enabled"
-            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
-            :style="policy.onboarding_email_enabled ? primaryBg : { background: '#e5e7eb' }"
-          >
-            <span
-              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-              :class="policy.onboarding_email_enabled ? 'translate-x-6' : 'translate-x-1'"
-            />
-          </button>
-        </div>
-      </div>
-
-      <!-- Terminbestätigungen -->
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-semibold text-gray-800">Terminbestätigungen versenden</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Schüler erhalten nach jeder Buchung eine Bestätigungs-E-Mail — sofern eine E-Mail-Adresse bekannt ist.</p>
-          </div>
-          <button
-            type="button"
-            @click="policy.confirmation_email_enabled = !policy.confirmation_email_enabled"
-            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
-            :style="policy.confirmation_email_enabled ? primaryBg : { background: '#e5e7eb' }"
-          >
-            <span
-              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-              :class="policy.confirmation_email_enabled ? 'translate-x-6' : 'translate-x-1'"
-            />
-          </button>
-        </div>
-      </div>
-
       <!-- Felder bei Schüler-Erstellung -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-50">
@@ -356,7 +202,7 @@
       </div>
 
       <!-- ══════════════════════════════════════════════════════
-           GRUPPE 3: Online-Buchung (Kundenflow)
+           GRUPPE 2: Online-Buchung (Kundenflow)
       ══════════════════════════════════════════════════════ -->
       <div class="flex items-center gap-3 pt-3">
         <div class="flex items-center justify-center w-6 h-6 rounded-lg flex-shrink-0" :style="primaryBgLight">
@@ -456,6 +302,57 @@
         </div>
         <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
           <p class="text-xs text-gray-400">Empfehlung: Vorname, Nachname und Telefon als Pflicht. Weniger Felder = höhere Conversion.</p>
+        </div>
+      </div>
+
+      <!-- Treffpunkt / Abholung -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-50">
+          <h2 class="text-sm font-semibold text-gray-800">Treffpunkt / Abholung</h2>
+          <p class="text-xs text-gray-400 mt-0.5">
+            Welche Optionen soll der Kunde im Anfrageformular haben? Mehrere möglich — der Kunde wählt dann selbst.
+          </p>
+        </div>
+        <div class="px-5 py-4 space-y-3">
+          <button
+            v-for="opt in locationIntakeOptions"
+            :key="opt.value"
+            type="button"
+            class="w-full text-left rounded-xl border-2 px-4 py-3 transition-colors"
+            :class="isLocationIntakeEnabled(opt.value)
+              ? ''
+              : 'border-gray-100 hover:border-gray-200'"
+            :style="isLocationIntakeEnabled(opt.value) ? primaryBgLight : {}"
+            @click="toggleLocationIntakeMode(opt.value)"
+          >
+            <div class="flex items-start gap-3">
+              <span
+                class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border-2"
+                :class="isLocationIntakeEnabled(opt.value) ? 'border-transparent' : 'border-gray-300 bg-white'"
+                :style="isLocationIntakeEnabled(opt.value) ? primaryBg : {}"
+              >
+                <svg
+                  v-if="isLocationIntakeEnabled(opt.value)"
+                  class="h-2.5 w-2.5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+              </span>
+              <div>
+                <p class="text-sm font-semibold text-gray-800">{{ opt.label }}</p>
+                <p class="mt-0.5 text-xs text-gray-500">{{ opt.description }}</p>
+              </div>
+            </div>
+          </button>
+        </div>
+        <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
+          <p class="text-xs text-gray-400">
+            Mindestens eine Option. Bei «Wunsch-Abholort» Adressfelder als Pflicht setzen.
+            Bei «Rückruf» Telefon als Pflicht setzen.
+          </p>
         </div>
       </div>
 
@@ -601,6 +498,7 @@ const policy = ref({
   student_optional_fields: [] as string[],
   booking_required_fields: ['first_name', 'last_name', 'phone'] as string[],
   booking_optional_fields: ['email'] as string[],
+  location_intake_modes: ['locations'] as Array<'locations' | 'pickup_address' | 'callback'>,
   registration_required: false,
   confirmation_email_enabled: true,
   registration_reminder_enabled: false,
@@ -611,6 +509,37 @@ const policy = ref({
   onboarding_email_enabled: false,
   staff_refund_permission: 'hidden' as 'hidden' | 'request' | 'allowed',
 })
+
+const locationIntakeOptions = [
+  {
+    value: 'locations' as const,
+    label: 'Standard-Standorte',
+    description: 'Kunde wählt einen Treffpunkt / eine Filiale aus der Standortliste.',
+  },
+  {
+    value: 'pickup_address' as const,
+    label: 'Wunsch-Abholort',
+    description: 'Kein Standort-Dropdown. Kunde gibt die gewünschte Abholadresse an (z.B. zu Hause).',
+  },
+  {
+    value: 'callback' as const,
+    label: 'Telefonischer Rückruf',
+    description: 'Kein Standort. Kunde hinterlässt Kontaktdaten — ihr ruft zurück und klärt den Termin.',
+  },
+]
+
+const isLocationIntakeEnabled = (mode: 'locations' | 'pickup_address' | 'callback') =>
+  policy.value.location_intake_modes.includes(mode)
+
+const toggleLocationIntakeMode = (mode: 'locations' | 'pickup_address' | 'callback') => {
+  const current = [...policy.value.location_intake_modes]
+  if (current.includes(mode)) {
+    if (current.length === 1) return // keep at least one
+    policy.value.location_intake_modes = current.filter(m => m !== mode)
+  } else {
+    policy.value.location_intake_modes = [...current, mode]
+  }
+}
 
 const refundPermissionOptions = [
   {
@@ -697,6 +626,10 @@ const loadPolicy = async () => {
     const res = await $fetch<{ success: boolean; policy: typeof policy.value }>('/api/admin/booking-policy')
     if (res.policy) {
       policy.value = { ...policy.value, ...res.policy }
+      // Ensure array form after load (API already normalizes, but keep local safe)
+      if (!Array.isArray(policy.value.location_intake_modes) || policy.value.location_intake_modes.length === 0) {
+        policy.value.location_intake_modes = ['locations']
+      }
     }
   } catch (err: any) {
     uiStore.addNotification({ type: 'error', title: 'Fehler', message: 'Einstellungen konnten nicht geladen werden.' })
