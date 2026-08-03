@@ -1901,14 +1901,12 @@
               </div>
             </div>
 
-            <!-- Felder beim Online-Buchen (Gast-Modus) -->
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-opacity"
-              :class="bpPolicy.registration_required ? 'opacity-40 pointer-events-none' : ''">
+            <!-- Öffentliche Kontaktfelder (Gast-Buchung, Anfrage & Registrierung) -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div class="px-5 py-4 border-b border-gray-50">
-                <h2 class="text-sm font-semibold text-gray-800">Felder beim Online-Buchen (Gast-Modus)</h2>
+                <h2 class="text-sm font-semibold text-gray-800">Öffentliche Kontaktfelder</h2>
                 <p class="text-xs text-gray-400 mt-0.5">
-                  <span v-if="bpPolicy.registration_required">Nicht aktiv — Registrierung ist obligatorisch.</span>
-                  <span v-else>Welche Angaben muss ein Kunde bei der Gast-Buchung eingeben? Klicke ein Feld mehrfach, um zwischen «aus», «optional» und «Pflicht» zu wechseln.</span>
+                  Gelten für Gast-Buchung, Anfrageformular und Kunden-Registrierung. Klicke ein Feld mehrfach: «aus», «optional», «Pflicht».
                 </p>
               </div>
               <div class="px-5 pt-3 flex items-center gap-4">
@@ -1934,7 +1932,92 @@
                 </button>
               </div>
               <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
-                <p class="text-xs text-gray-400">Empfehlung: Vorname, Nachname und Telefon als Pflicht. Weniger Felder = höhere Conversion.</p>
+                <p class="text-xs text-gray-400">Empfehlung: Vorname, Nachname und Telefon als Pflicht. E-Mail/Passwort/AGB bei der Registrierung sind immer Pflicht.</p>
+              </div>
+            </div>
+
+            <!-- Kunden-Registrierung -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div class="px-5 py-4 border-b border-gray-50">
+                <h2 class="text-sm font-semibold text-gray-800">Kunden-Registrierung</h2>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  Zusätzliche Schritte auf /register. Account/Login kann ausgeschaltet werden (dann nur Anfrage ohne Passwort).
+                </p>
+              </div>
+              <div class="px-5 py-4 space-y-4">
+                <div>
+                  <p class="text-xs font-medium text-gray-600 mb-2">Account / Login erstellen</p>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      class="rounded-xl border-2 px-3 py-2 text-sm font-medium transition-colors"
+                      :class="bpPolicy.registration_account_mode === 'required' ? '' : 'border-gray-100 text-gray-500 hover:border-gray-200'"
+                      :style="bpPolicy.registration_account_mode === 'required' ? primaryBgLight : {}"
+                      @click="bpPolicy.registration_account_mode = 'required'"
+                    >
+                      An (E-Mail + Passwort)
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-xl border-2 px-3 py-2 text-sm font-medium transition-colors"
+                      :class="bpPolicy.registration_account_mode === 'hidden' ? '' : 'border-gray-100 text-gray-500 hover:border-gray-200'"
+                      :style="bpPolicy.registration_account_mode === 'hidden' ? primaryBgLight : {}"
+                      @click="bpPolicy.registration_account_mode = 'hidden'"
+                    >
+                      Aus (nur Anfrage)
+                    </button>
+                  </div>
+                  <p class="mt-2 text-xs text-gray-400">Aus = kein Passwort-Schritt. Kontakt wird als pending Kunde gespeichert.</p>
+                </div>
+                <div>
+                  <p class="text-xs font-medium text-gray-600 mb-2">Kategorie-Auswahl</p>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button
+                      v-for="opt in bpRegistrationModeOptions"
+                      :key="`bp-cat-${opt.value}`"
+                      type="button"
+                      class="rounded-xl border-2 px-3 py-2 text-sm font-medium transition-colors"
+                      :class="bpPolicy.registration_categories_mode === opt.value ? '' : 'border-gray-100 text-gray-500 hover:border-gray-200'"
+                      :style="bpPolicy.registration_categories_mode === opt.value ? primaryBgLight : {}"
+                      @click="bpPolicy.registration_categories_mode = opt.value"
+                    >
+                      {{ opt.label }}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <p class="text-xs font-medium text-gray-600 mb-2">Lernfahrausweis-Upload</p>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button
+                      v-for="opt in bpRegistrationModeOptions"
+                      :key="`bp-lfa-${opt.value}`"
+                      type="button"
+                      class="rounded-xl border-2 px-3 py-2 text-sm font-medium transition-colors"
+                      :class="bpPolicy.registration_lernfahrausweis_mode === opt.value ? '' : 'border-gray-100 text-gray-500 hover:border-gray-200'"
+                      :style="bpPolicy.registration_lernfahrausweis_mode === opt.value ? primaryBgLight : {}"
+                      @click="bpPolicy.registration_lernfahrausweis_mode = opt.value"
+                    >
+                      {{ opt.label }}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <p class="text-xs font-medium text-gray-600 mb-2">Terminwunsch (Tage, Zeiten, Bemerkungen)</p>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button
+                      v-for="opt in bpRegistrationModeOptions"
+                      :key="`bp-prop-${opt.value}`"
+                      type="button"
+                      class="rounded-xl border-2 px-3 py-2 text-sm font-medium transition-colors"
+                      :class="bpPolicy.registration_proposal_mode === opt.value ? '' : 'border-gray-100 text-gray-500 hover:border-gray-200'"
+                      :style="bpPolicy.registration_proposal_mode === opt.value ? primaryBgLight : {}"
+                      @click="bpPolicy.registration_proposal_mode = opt.value"
+                    >
+                      {{ opt.label }}
+                    </button>
+                  </div>
+                  <p class="mt-2 text-xs text-gray-400">Bei Pflicht/Optional wird nach der Registrierung eine Buchungsanfrage mit Wunschzeiten erstellt.</p>
+                </div>
               </div>
             </div>
 
@@ -2848,6 +2931,10 @@ const bpPolicy = ref({
   booking_optional_fields: ['email'] as string[],
   location_intake_modes: ['locations'] as Array<'locations' | 'pickup_address' | 'callback'>,
   registration_required: false,
+  registration_categories_mode: 'required' as 'hidden' | 'optional' | 'required',
+  registration_lernfahrausweis_mode: 'optional' as 'hidden' | 'optional' | 'required',
+  registration_proposal_mode: 'optional' as 'hidden' | 'optional' | 'required',
+  registration_account_mode: 'required' as 'hidden' | 'required',
   confirmation_email_enabled: true,
   registration_reminder_enabled: false,
   registration_reminder_days: 7,
@@ -2861,6 +2948,12 @@ const bpPolicy = ref({
   sms_hard_stop_on_quota: false,
   staff_refund_permission: 'hidden' as 'hidden' | 'request' | 'allowed',
 })
+
+const bpRegistrationModeOptions = [
+  { value: 'hidden' as const, label: 'Aus' },
+  { value: 'optional' as const, label: 'Optional' },
+  { value: 'required' as const, label: 'Pflicht' },
+]
 
 const bpLocationIntakeOptions = [
   {
@@ -2967,6 +3060,21 @@ const bpLoadPolicy = async () => {
     if (res.policy) {
       logger.debug('✅ Policy fetched, applying:', res.policy)
       bpPolicy.value = { ...bpPolicy.value, ...res.policy }
+      if (!Array.isArray(bpPolicy.value.location_intake_modes) || bpPolicy.value.location_intake_modes.length === 0) {
+        bpPolicy.value.location_intake_modes = ['locations']
+      }
+      if (!['hidden', 'optional', 'required'].includes(bpPolicy.value.registration_categories_mode)) {
+        bpPolicy.value.registration_categories_mode = 'required'
+      }
+      if (!['hidden', 'optional', 'required'].includes(bpPolicy.value.registration_lernfahrausweis_mode)) {
+        bpPolicy.value.registration_lernfahrausweis_mode = 'optional'
+      }
+      if (!['hidden', 'optional', 'required'].includes(bpPolicy.value.registration_proposal_mode)) {
+        bpPolicy.value.registration_proposal_mode = 'optional'
+      }
+      if (!['hidden', 'required'].includes(bpPolicy.value.registration_account_mode)) {
+        bpPolicy.value.registration_account_mode = 'required'
+      }
     }
     bpLoaded.value = true
     logger.debug('✅ Booking policy loaded and bpLoaded set to true')

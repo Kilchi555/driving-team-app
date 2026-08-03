@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import type { BookingPolicy } from './booking-policy.get'
-import { DEFAULT_BOOKING_POLICY } from './booking-policy.get'
+import { DEFAULT_BOOKING_POLICY, VALID_REGISTRATION_FIELD_MODES, VALID_REGISTRATION_ACCOUNT_MODES } from './booking-policy.get'
 
 const VALID_FIELDS = new Set([
   'first_name', 'last_name', 'phone', 'email',
@@ -56,6 +56,31 @@ export default defineEventHandler(async (event) => {
   // Legacy singular field — still accept and map to array
   if (body.location_intake_mode !== undefined && !validLocationIntakeModes.includes(body.location_intake_mode)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid location_intake_mode' })
+  }
+
+  if (
+    body.registration_categories_mode !== undefined &&
+    !VALID_REGISTRATION_FIELD_MODES.includes(body.registration_categories_mode)
+  ) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid registration_categories_mode' })
+  }
+  if (
+    body.registration_lernfahrausweis_mode !== undefined &&
+    !VALID_REGISTRATION_FIELD_MODES.includes(body.registration_lernfahrausweis_mode)
+  ) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid registration_lernfahrausweis_mode' })
+  }
+  if (
+    body.registration_proposal_mode !== undefined &&
+    !VALID_REGISTRATION_FIELD_MODES.includes(body.registration_proposal_mode)
+  ) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid registration_proposal_mode' })
+  }
+  if (
+    body.registration_account_mode !== undefined &&
+    !VALID_REGISTRATION_ACCOUNT_MODES.includes(body.registration_account_mode)
+  ) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid registration_account_mode' })
   }
 
   // Load current policy and merge

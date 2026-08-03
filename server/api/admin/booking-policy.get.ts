@@ -27,6 +27,27 @@ export interface BookingPolicy {
    * When true: customer must register / log in before the booking is confirmed.
    */
   registration_required: boolean
+  /**
+   * Public /register/[tenant] — category selection step.
+   * hidden | optional | required (default required for driving schools via UI; API default required)
+   */
+  registration_categories_mode: 'hidden' | 'optional' | 'required'
+  /**
+   * Public /register/[tenant] — Lernfahrausweis upload step.
+   * hidden | optional | required
+   */
+  registration_lernfahrausweis_mode: 'hidden' | 'optional' | 'required'
+  /**
+   * Public /register/[tenant] — preferred days/times + notes (creates booking_proposal).
+   * hidden | optional | required
+   */
+  registration_proposal_mode: 'hidden' | 'optional' | 'required'
+  /**
+   * Public /register/[tenant] — Account step (email/password/AGB).
+   * required = full login registration (default)
+   * hidden = no password; creates pending client only (lead / inquiry style)
+   */
+  registration_account_mode: 'hidden' | 'required'
   // ── Confirmation & Onboarding ──────────────────────────────────────────────
   confirmation_email_enabled: boolean
   confirmation_email_mode: 'always' | 'after_registration' | 'never'
@@ -56,6 +77,10 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   booking_optional_fields: ['email'],
   location_intake_modes: ['locations'],
   registration_required: false,
+  registration_categories_mode: 'required',
+  registration_lernfahrausweis_mode: 'optional',
+  registration_proposal_mode: 'optional',
+  registration_account_mode: 'required',
   confirmation_email_enabled: true,
   confirmation_email_mode: 'always',
   registration_reminder_enabled: false,
@@ -74,6 +99,32 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
 
 export type LocationIntakeMode = 'locations' | 'pickup_address' | 'callback'
 export const VALID_LOCATION_INTAKE_MODES: LocationIntakeMode[] = ['locations', 'pickup_address', 'callback']
+
+export type RegistrationFieldMode = 'hidden' | 'optional' | 'required'
+export const VALID_REGISTRATION_FIELD_MODES: RegistrationFieldMode[] = ['hidden', 'optional', 'required']
+
+export type RegistrationAccountMode = 'hidden' | 'required'
+export const VALID_REGISTRATION_ACCOUNT_MODES: RegistrationAccountMode[] = ['hidden', 'required']
+
+export function normalizeRegistrationFieldMode(
+  value: unknown,
+  fallback: RegistrationFieldMode
+): RegistrationFieldMode {
+  if (VALID_REGISTRATION_FIELD_MODES.includes(value as RegistrationFieldMode)) {
+    return value as RegistrationFieldMode
+  }
+  return fallback
+}
+
+export function normalizeRegistrationAccountMode(
+  value: unknown,
+  fallback: RegistrationAccountMode = 'required'
+): RegistrationAccountMode {
+  if (VALID_REGISTRATION_ACCOUNT_MODES.includes(value as RegistrationAccountMode)) {
+    return value as RegistrationAccountMode
+  }
+  return fallback
+}
 
 /** Normalize legacy singular location_intake_mode + new location_intake_modes array. */
 export function normalizeLocationIntakeModes(policy: Partial<BookingPolicy> | Record<string, any> | null | undefined): LocationIntakeMode[] {
@@ -120,6 +171,22 @@ export default defineEventHandler(async (event) => {
   const policy: BookingPolicy = {
     ...merged,
     location_intake_modes: normalizeLocationIntakeModes(merged),
+    registration_categories_mode: normalizeRegistrationFieldMode(
+      merged.registration_categories_mode,
+      DEFAULT_BOOKING_POLICY.registration_categories_mode
+    ),
+    registration_lernfahrausweis_mode: normalizeRegistrationFieldMode(
+      merged.registration_lernfahrausweis_mode,
+      DEFAULT_BOOKING_POLICY.registration_lernfahrausweis_mode
+    ),
+    registration_proposal_mode: normalizeRegistrationFieldMode(
+      merged.registration_proposal_mode,
+      DEFAULT_BOOKING_POLICY.registration_proposal_mode
+    ),
+    registration_account_mode: normalizeRegistrationAccountMode(
+      merged.registration_account_mode,
+      DEFAULT_BOOKING_POLICY.registration_account_mode
+    ),
   }
 
   return { success: true, policy }

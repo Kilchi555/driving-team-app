@@ -8,6 +8,7 @@
           <LoadingLogo size="3xl" :tenant-id="activeTenantId || undefined" :tenant-slug="tenantSlug" />
           <h1 class="text-xl font-bold text-gray-700 py-8">
             {{ isAdminRegistration ? 'Admin-Account erstellen' :
+               !showAccountStep ? 'Anfrage senden' :
                !isDrivingSchool ? 'Registrierung' :
                serviceType === 'fahrlektion' ? `Registrierung für ${labels.appointmentsPlural}` :
                serviceType === 'theorie' ? 'Registrierung für Theorielektion' :
@@ -33,25 +34,32 @@
                class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
             1
           </div>
-          <div v-if="requiresLernfahrausweis" class="h-1 w-12 bg-gray-300">
-            <div v-if="currentStep >= 2" class="h-full bg-green-500 transition-all duration-300"></div>
-          </div>
-          <div v-if="requiresLernfahrausweis" :class="currentStep >= 2 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
-               class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
-            2
-          </div>
-          <div class="h-1 w-12 bg-gray-300">
-            <div v-if="currentStep >= maxSteps" class="h-full bg-green-500 transition-all duration-300"></div>
-          </div>
-          <div :class="currentStep >= maxSteps ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
-               class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
-            {{ requiresLernfahrausweis ? 3 : 2 }}
-          </div>
+          <template v-if="requiresLernfahrausweis">
+            <div class="h-1 w-12 bg-gray-300">
+              <div v-if="currentStep >= 2" class="h-full bg-green-500 transition-all duration-300"></div>
+            </div>
+            <div :class="currentStep >= 2 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
+                 class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
+              2
+            </div>
+          </template>
+          <template v-if="showAccountStep">
+            <div class="h-1 w-12 bg-gray-300">
+              <div v-if="currentStep >= maxSteps" class="h-full bg-green-500 transition-all duration-300"></div>
+            </div>
+            <div :class="currentStep >= maxSteps ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
+                 class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
+              {{ maxSteps }}
+            </div>
+          </template>
         </div>
-        <div class="flex justify-center text-center mt-2 text-xs text-gray-600" :class="requiresLernfahrausweis ? 'space-x-6' : 'space-x-12'">
+        <div class="flex justify-center text-center mt-2 text-xs text-gray-600 gap-6">
           <span>Persönliche Daten</span>
-          <span v-if="requiresLernfahrausweis">Lernfahrausweis</span>
-          <span>Account</span>
+          <span v-if="requiresLernfahrausweis">
+            Lernfahrausweis
+            <span v-if="!lernfahrausweisRequired" class="text-gray-400">(opt.)</span>
+          </span>
+          <span v-if="showAccountStep">Account</span>
         </div>
       </div>
 
@@ -70,8 +78,12 @@
           
           <!-- Confirmation Message -->
           <div>
-            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Registrierung erfolgreich!</h2>
-            <p class="text-gray-600 text-base sm:text-lg">Willkommen bei {{ currentTenant?.name || 'Simy' }}!</p>
+            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+              {{ showAccountStep ? 'Registrierung erfolgreich!' : 'Anfrage gesendet!' }}
+            </h2>
+            <p class="text-gray-600 text-base sm:text-lg">
+              {{ showAccountStep ? `Willkommen bei ${currentTenant?.name || 'Simy'}!` : `Danke — ${currentTenant?.name || 'wir'} melden uns bei dir.` }}
+            </p>
           </div>
           
           <!-- Email Confirmation Required -->
@@ -83,9 +95,16 @@
                 </svg>
               </div>
               <div class="text-left min-w-0">
-                <h3 class="text-base sm:text-lg font-semibold text-green-900 mb-2">Account aktiviert</h3>
+                <h3 class="text-base sm:text-lg font-semibold text-green-900 mb-2">
+                  {{ showAccountStep ? 'Account aktiviert' : 'Wir haben deine Angaben erhalten' }}
+                </h3>
                 <p class="text-green-800 text-sm sm:text-base break-words">
-                  Ihr Account ist sofort aktiv. Sie können sich jetzt mit Ihren Zugangsdaten einloggen.
+                  <template v-if="showAccountStep">
+                    Ihr Account ist sofort aktiv. Sie können sich jetzt mit Ihren Zugangsdaten einloggen.
+                  </template>
+                  <template v-else>
+                    Es ist kein Login nötig. Wir melden uns bei dir bezüglich Termin und weiterem Vorgehen.
+                  </template>
                 </p>
               </div>
             </div>
@@ -94,11 +113,20 @@
           <!-- Action Buttons -->
           <div class="space-y-3 pt-4 sm:pt-6">
             <button
+              v-if="showAccountStep"
               @click="navigateTo(registeredTenantSlug || tenantSlug ? `/${registeredTenantSlug || tenantSlug}` : '/login')"
               class="w-full text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
               :style="{ background: primaryColor }"
             >
               Zum Login
+            </button>
+            <button
+              v-else
+              @click="navigateTo(tenantSlug ? `/${tenantSlug}` : '/')"
+              class="w-full text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
+              :style="{ background: primaryColor }"
+            >
+              Zurück zur Startseite
             </button>
           </div>
         </div>
@@ -129,42 +157,42 @@
           <!-- Personal Information Form -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- First Name -->
-            <div>
+            <div v-if="isAdminRegistration || isContactFieldVisible('first_name')">
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                Vorname *
+                Vorname <span v-if="isAdminRegistration || isContactFieldRequired('first_name')" class="text-red-500">*</span>
               </label>
               <input
                 v-model="formData.firstName"
                 type="text"
-                required
+                :required="isAdminRegistration || isContactFieldRequired('first_name')"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                 placeholder="Max"
               />
             </div>
 
             <!-- Last Name -->
-            <div>
+            <div v-if="isAdminRegistration || isContactFieldVisible('last_name')">
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                Nachname *
+                Nachname <span v-if="isAdminRegistration || isContactFieldRequired('last_name')" class="text-red-500">*</span>
               </label>
               <input
                 v-model="formData.lastName"
                 type="text"
-                required
+                :required="isAdminRegistration || isContactFieldRequired('last_name')"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                 placeholder="Mustermann"
               />
             </div>
 
             <!-- Birth Date -->
-            <div class="min-w-0">
+            <div v-if="isAdminRegistration || isContactFieldVisible('birthdate')" class="min-w-0">
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                Geburtsdatum *
+                Geburtsdatum <span v-if="isAdminRegistration || isContactFieldRequired('birthdate')" class="text-red-500">*</span>
               </label>
               <input
                 v-model="formData.birthDate"
                 type="date"
-                required
+                :required="isAdminRegistration || isContactFieldRequired('birthdate')"
                 @blur="validateBirthDate"
                 :class="[
                   'w-full px-3 py-2 border rounded-lg focus:ring-2',
@@ -175,14 +203,14 @@
             </div>
 
             <!-- Phone -->
-            <div>
+            <div v-if="isAdminRegistration || isContactFieldVisible('phone')">
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                Telefon *
+                Telefon <span v-if="isAdminRegistration || isContactFieldRequired('phone')" class="text-red-500">*</span>
               </label>
               <input
                 v-model="formData.phone"
                 type="tel"
-                required
+                :required="isAdminRegistration || isContactFieldRequired('phone')"
                 @input="phoneExistsBlocked = false"
                 @blur="normalizePhone"
                 :class="[
@@ -206,62 +234,62 @@
               <p v-else class="text-xs text-gray-500 mt-1">Format: +41791234567</p>
             </div>
 
-            <!-- Email (for Admin Registration) -->
-            <div v-if="isAdminRegistration">
+            <!-- Email (admin always; otherwise when public contact field & no account step) -->
+            <div v-if="isAdminRegistration || (!showAccountStep && isContactFieldVisible('email'))">
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                E-Mail-Adresse *
+                E-Mail-Adresse
+                <span v-if="isAdminRegistration || isContactFieldRequired('email')" class="text-red-500">*</span>
               </label>
               <input
                 v-model="formData.email"
                 type="email"
-                required
+                :required="isAdminRegistration || isContactFieldRequired('email')"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
-                placeholder="admin@ihre-firma.ch"
+                placeholder="max@example.com"
               />
             </div>
 
             <!-- Street -->
-            <div>
+            <div v-if="isAdminRegistration || isContactFieldVisible('street')">
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                Strasse *
+                Strasse <span v-if="isAdminRegistration || isContactFieldRequired('street')" class="text-red-500">*</span>
               </label>
               <input
                 v-model="formData.street"
                 type="text"
-                required
+                :required="isAdminRegistration || isContactFieldRequired('street')"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                 placeholder="Musterstrasse"
               />
             </div>
 
             <!-- Street Number -->
-            <div>
+            <div v-if="isAdminRegistration || isContactFieldVisible('street_nr')">
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                Hausnummer *
+                Hausnummer <span v-if="isAdminRegistration || isContactFieldRequired('street_nr')" class="text-red-500">*</span>
               </label>
               <input
                 v-model="formData.streetNr"
                 type="text"
-                required
+                :required="isAdminRegistration || isContactFieldRequired('street_nr')"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                 placeholder="123"
               />
             </div>
 
-            <!-- ZIP, City and Profession (same row on larger screens). This spans
-                 both columns of the outer 2-col grid so all three fields sit in
-                 one evenly-split row, instead of PLZ+Ort being squeezed into a
-                 nested grid inside a single outer cell next to Beruf. -->
-            <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <!-- ZIP -->
-              <div>
+            <!-- ZIP, City and Profession -->
+            <div
+              v-if="isAdminRegistration || isContactFieldVisible('zip') || isContactFieldVisible('city') || isContactFieldVisible('profession')"
+              class="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4"
+            >
+              <div v-if="isAdminRegistration || isContactFieldVisible('zip')">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  PLZ *
+                  PLZ <span v-if="isAdminRegistration || isContactFieldRequired('zip')" class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="formData.zip"
                   type="text"
-                  required
+                  :required="isAdminRegistration || isContactFieldRequired('zip')"
                   pattern="[0-9]{4}"
                   @blur="validateZip"
                   :class="[
@@ -273,28 +301,27 @@
                 <p v-if="fieldErrors.zip" class="mt-1 text-sm text-red-600">{{ fieldErrors.zip }}</p>
               </div>
 
-              <!-- City -->
-              <div>
+              <div v-if="isAdminRegistration || isContactFieldVisible('city')">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Ort *
+                  Ort <span v-if="isAdminRegistration || isContactFieldRequired('city')" class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="formData.city"
                   type="text"
-                  required
+                  :required="isAdminRegistration || isContactFieldRequired('city')"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                   placeholder="Zürich"
                 />
               </div>
 
-              <!-- Profession -->
-              <div>
+              <div v-if="isAdminRegistration || isContactFieldVisible('profession')">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Beruf
+                  Beruf <span v-if="isContactFieldRequired('profession')" class="text-red-500">*</span>
                 </label>
                 <input
                   v-model="formData.profession"
                   type="text"
+                  :required="isContactFieldRequired('profession')"
                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
                   placeholder="z.B. Student/in, Software Engineer"
                 />
@@ -302,54 +329,247 @@
             </div>
           </div>
 
-          <!-- Categories (driving schools only) -->
-          <div v-if="showCategorySelection">
-            <label class="block text-sm font-medium text-gray-700 mb-3">
-              {{ isDrivingSchool ? 'Führerschein-' : '' }}{{ labels.categoriesLabel }} *
+          <!-- Categories (compact multi-select dropdown) -->
+          <div v-if="showCategorySelection" class="relative" ref="categoryDropdownRef">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              {{ isDrivingSchool ? 'Führerschein-' : '' }}{{ labels.categoriesLabel }}
+              <span v-if="categoriesRequired" class="text-red-500">*</span>
+              <span v-else class="text-xs text-gray-400 font-normal">(optional)</span>
             </label>
+
+            <button
+              type="button"
+              class="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border bg-white text-left transition focus:outline-none focus:ring-2 tenant-focus"
+              :class="categoriesRequired && formData.categories.length === 0 ? 'border-gray-300' : 'border-gray-300'"
+              @click="categoryDropdownOpen = !categoryDropdownOpen"
+            >
+              <span class="min-w-0 flex-1 truncate text-sm" :class="formData.categories.length ? 'text-gray-900' : 'text-gray-400'">
+                {{ categoryDropdownLabel }}
+              </span>
+              <svg
+                class="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform"
+                :class="categoryDropdownOpen ? 'rotate-180' : ''"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
+
+            <div
+              v-if="categoryDropdownOpen"
+              class="absolute z-30 mt-1.5 w-full rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden"
+            >
+              <ul class="max-h-56 overflow-y-auto py-1">
+                <li v-for="category in availableCategories" :key="category.code">
+                  <button
+                    type="button"
+                    class="w-full flex items-start gap-3 px-3 py-2.5 text-left hover:bg-gray-50 transition-colors"
+                    @click="toggleCategory(category.code)"
+                  >
+                    <span
+                      class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border-2"
+                      :class="formData.categories.includes(category.code) ? 'border-transparent' : 'border-gray-300 bg-white'"
+                      :style="formData.categories.includes(category.code) ? { background: primaryColor } : {}"
+                    >
+                      <svg
+                        v-if="formData.categories.includes(category.code)"
+                        class="h-2.5 w-2.5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-sm font-medium text-gray-800">{{ category.name }}</span>
+                      <span class="block text-xs text-gray-500 mt-0.5">
+                        CHF {{ category.price }}/{{ category.duration || 45 }}min
+                        <template v-if="category.adminFee && category.adminFee > 0">
+                          · + CHF {{ category.adminFee }} Admin
+                        </template>
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div v-if="formData.categories.length" class="mt-2 flex flex-wrap gap-1.5">
+              <span
+                v-for="code in formData.categories"
+                :key="code"
+                class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                :style="{ background: `${primaryColor}18`, color: primaryColor }"
+              >
+                {{ categoryLabel(code) }}
+                <button
+                  type="button"
+                  class="rounded-full p-0.5 hover:bg-black/5"
+                  :aria-label="`${categoryLabel(code)} entfernen`"
+                  @click="toggleCategory(code)"
+                >
+                  <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </span>
+            </div>
+          </div>
+
+          <!-- Terminwunsch: Tage, Zeiten, Bemerkungen -->
+          <div v-if="showProposalSection" class="space-y-5 pt-2 border-t border-gray-100">
+            <div>
+              <h3 class="text-sm font-semibold text-gray-800">
+                Terminwunsch
+                <span v-if="proposalRequired" class="text-red-500">*</span>
+                <span v-else class="text-xs text-gray-400 font-normal ml-1">(optional)</span>
+              </h3>
+              <p class="text-xs text-gray-500 mt-0.5">Wann passt es dir am besten? Wir melden uns mit Vorschlägen.</p>
+            </div>
+
             <div class="space-y-3">
-              <label v-for="category in availableCategories" :key="category.code" :for="`cat-${category.code}`" class="flex justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden cursor-pointer tenant-hover-border transition-colors">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center space-x-3">
-                    <span class="text-sm font-medium text-gray-800">{{ category.name }}</span>
-                  </div>
-                  <div class="text-xs text-gray-500 mt-1">
-                    <div>CHF {{ category.price }}/{{ category.duration || 45 }}min</div>
-                    <div v-if="category.adminFee && category.adminFee > 0" class="mt-1 text-[10px] whitespace-nowrap">+ CHF {{ category.adminFee }} Admin- und Versicherung (einmalig)</div>
-                  </div>
-                </div>
-                <div class="relative inline-flex items-start ml-4 flex-shrink-0">
-                  <input
-                    :id="`cat-${category.code}`"
-                    v-model="formData.categories"
-                    :value="category.code"
-                    type="checkbox"
-                    class="sr-only peer"
-                  />
-                  <div class="tenant-toggle relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all pointer-events-none"></div>
-                </div>
+              <label class="block text-sm font-medium text-gray-700">
+                Bevorzugte Tage
+                <span v-if="proposalRequired" class="text-red-500">*</span>
               </label>
+              <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <button
+                  v-for="(dayName, dayIndex) in weekDays"
+                  :key="dayIndex"
+                  type="button"
+                  class="rounded-xl border-2 px-3 py-2 text-sm font-medium transition-colors"
+                  :class="selectedDays.includes(dayIndex) ? 'text-white' : 'text-gray-700 border-gray-200 hover:border-gray-300'"
+                  :style="selectedDays.includes(dayIndex)
+                    ? { background: primaryColor, borderColor: primaryColor }
+                    : {}"
+                  @click="toggleDay(dayIndex)"
+                >
+                  {{ dayName }}
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <label class="block text-sm font-medium text-gray-700">
+                Zeitfenster pro Tag
+                <span v-if="proposalRequired" class="text-red-500">*</span>
+              </label>
+
+              <div
+                v-if="selectedDays.length === 0"
+                class="rounded-xl px-4 py-3 text-sm"
+                :style="{ background: `${primaryColor}15`, color: primaryColor }"
+              >
+                Wähle zuerst mindestens einen Tag.
+              </div>
+
+              <div v-else class="space-y-4">
+                <div
+                  v-for="dayIndex in selectedDays"
+                  :key="dayIndex"
+                  class="space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-4"
+                >
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-semibold text-gray-800">{{ weekDays[dayIndex] }}</h4>
+                    <button
+                      type="button"
+                      class="text-xs font-medium text-red-600 hover:text-red-700"
+                      @click="removeDay(dayIndex)"
+                    >
+                      Entfernen
+                    </button>
+                  </div>
+
+                  <div
+                    v-for="(slot, slotIndex) in getTimeSlotsForDay(dayIndex)"
+                    :key="`${dayIndex}-${slotIndex}`"
+                    class="flex items-center gap-2"
+                  >
+                    <input
+                      v-model="slot.start_time"
+                      type="time"
+                      class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
+                      @change="bumpTimeSlots"
+                    />
+                    <span class="text-gray-400">–</span>
+                    <input
+                      v-model="slot.end_time"
+                      type="time"
+                      class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
+                      @change="bumpTimeSlots"
+                    />
+                    <button
+                      type="button"
+                      class="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                      title="Zeitfenster entfernen"
+                      @click="removeTimeSlot(dayIndex, slotIndex)"
+                    >
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="w-full rounded-lg border py-2 text-sm font-medium transition hover:bg-white"
+                    :style="{ borderColor: `${primaryColor}44`, color: primaryColor }"
+                    @click="addTimeSlot(dayIndex)"
+                  >
+                    + Weiteres Zeitfenster
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Bemerkungen
+              </label>
+              <textarea
+                v-model="proposalNotes"
+                rows="3"
+                maxlength="1500"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 tenant-focus"
+                placeholder="Optional: z.B. besondere Wünsche…"
+              />
+              <p class="mt-1 text-xs text-gray-400 text-right">{{ proposalNotes.length }}/1500</p>
             </div>
           </div>
         </div>
 
-        <!-- Step 2: Lernfahrausweis Upload (only for Fahrlektionen) -->
+        <!-- Step 2: Lernfahrausweis Upload -->
         <div v-if="!registrationComplete && currentStep === 2 && requiresLernfahrausweis" class="space-y-6">
           <div class="text-center mb-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-2">Ausweis hochladen</h2>
-            <p class="text-gray-600 text-sm">Lade deinen Lernfahrausweis hoch – du kannst diesen Schritt auch überspringen und den Ausweis später in deinem Profil nachholen.</p>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">
+              Ausweis hochladen
+              <span v-if="!lernfahrausweisRequired" class="text-sm font-normal text-gray-400">(optional)</span>
+            </h2>
+            <p class="text-gray-600 text-sm">
+              <template v-if="lernfahrausweisRequired">
+                Lade deinen Lernfahrausweis hoch, um fortzufahren.
+              </template>
+              <template v-else>
+                Lade deinen Lernfahrausweis hoch – du kannst diesen Schritt auch überspringen und den Ausweis später in deinem Profil nachholen.
+              </template>
+            </p>
           </div>
 
           <!-- Upload per Category -->
           <div class="space-y-6">
             <div 
-              v-for="category in formData.categories" 
+              v-for="category in lfaUploadCategories" 
               :key="category"
               class="border-2 border-gray-200 rounded-lg p-6"
             >
               <div class="mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">
-                  Kategorie {{ category }}
+                  <template v-if="category === 'general'">Ausweis</template>
+                  <template v-else>Kategorie {{ category }}</template>
+                  <span v-if="!lernfahrausweisRequired" class="ml-1 text-sm font-normal text-gray-400">(optional)</span>
                 </h3>
                 <p class="text-sm text-gray-600 mt-1">
                   <template v-if="category === 'Boot' || category === 'M' || category === 'Motorboot'">
@@ -427,8 +647,8 @@
           </div>
         </div>
 
-        <!-- Account & Registrierung (Step 2 for theory/consultation, Step 3 for driving lessons) -->
-        <div v-if="!registrationComplete && ((currentStep === 2 && !requiresLernfahrausweis) || (currentStep === 3 && requiresLernfahrausweis))" class="space-y-6">
+        <!-- Account & Registrierung -->
+        <div v-if="!registrationComplete && showAccountStep && ((currentStep === 2 && !requiresLernfahrausweis) || (currentStep === 3 && requiresLernfahrausweis))" class="space-y-6">
           <div class="text-center mb-6">
             <div class="text-4xl mb-2">🔐</div>
             <h3 class="text-xl font-semibold text-gray-900">Account erstellen</h3>
@@ -652,7 +872,11 @@
       </div>
 
       <!-- Navigation -->
-      <div v-if="!registrationComplete" class="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-between">
+      <div v-if="!registrationComplete" class="px-6 py-4 bg-gray-50 rounded-b-xl space-y-3">
+        <p v-if="proceedBlockReason && currentStep <= maxSteps" class="text-sm text-amber-700 text-right">
+          {{ proceedBlockReason }}
+        </p>
+        <div class="flex justify-between">
         <button
           v-if="currentStep > 1"
           @click="prevStep"
@@ -673,7 +897,7 @@
         </button>
         
         <button
-          v-if="currentStep === maxSteps"
+          v-if="currentStep === maxSteps && showAccountStep"
           type="submit"
           form="account-creation-form"
           :disabled="!canSubmit || isSubmitting"
@@ -682,10 +906,21 @@
           <span v-if="isSubmitting">⏳ Registrierung...</span>
           <span v-else>✅ Registrieren</span>
         </button>
+        <button
+          v-else-if="currentStep === maxSteps && !showAccountStep"
+          type="button"
+          :disabled="!canSubmit || isSubmitting"
+          class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+          @click="submitRegistration"
+        >
+          <span v-if="isSubmitting">⏳ Wird gesendet...</span>
+          <span v-else>✅ Absenden</span>
+        </button>
+        </div>
       </div>
 
       <!-- Login Link -->
-      <div v-if="!registrationComplete" class="px-6 py-3 text-center border-t">
+      <div v-if="!registrationComplete && showAccountStep" class="px-6 py-3 text-center border-t">
         <p class="text-gray-600 text-sm">
           Bereits registriert?
           <button 
@@ -864,7 +1099,7 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { navigateTo, useRoute, useRouter, useRuntimeConfig, useHead } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
@@ -896,6 +1131,62 @@ const { loadTenant, tenantId, currentTenant } = useTenant()
 const businessType = computed(() => currentTenant.value?.business_type || 'driving_school')
 const isDrivingSchool = computed(() => isDrivingSchoolBusinessType(businessType.value))
 const labels = computed(() => mergeTerminology(businessType.value))
+
+type RegistrationFieldMode = 'hidden' | 'optional' | 'required'
+
+const bookingRequiredFields = ref<string[]>(['first_name', 'last_name', 'phone'])
+const bookingOptionalFields = ref<string[]>(['email'])
+const registrationCategoriesMode = ref<RegistrationFieldMode>('required')
+const registrationLernfahrausweisMode = ref<RegistrationFieldMode>('optional')
+const registrationProposalMode = ref<RegistrationFieldMode>('optional')
+const registrationAccountMode = ref<'hidden' | 'required'>('required')
+
+const isContactFieldVisible = (key: string) =>
+  bookingRequiredFields.value.includes(key) || bookingOptionalFields.value.includes(key)
+
+const isContactFieldRequired = (key: string) => bookingRequiredFields.value.includes(key)
+
+async function loadRegistrationPolicy(slug: string) {
+  try {
+    const res = await $fetch<{
+      success: boolean
+      data?: {
+        bookingPolicy?: {
+          booking_required_fields?: string[]
+          booking_optional_fields?: string[]
+          registration_categories_mode?: RegistrationFieldMode
+          registration_lernfahrausweis_mode?: RegistrationFieldMode
+          registration_proposal_mode?: RegistrationFieldMode
+          registration_account_mode?: 'hidden' | 'required'
+        }
+      }
+    }>('/api/booking/get-booking-init', { query: { slug } })
+
+    const policy = res?.data?.bookingPolicy
+    if (!policy) return
+
+    if (Array.isArray(policy.booking_required_fields)) {
+      bookingRequiredFields.value = policy.booking_required_fields
+    }
+    if (Array.isArray(policy.booking_optional_fields)) {
+      bookingOptionalFields.value = policy.booking_optional_fields
+    }
+    if (policy.registration_categories_mode) {
+      registrationCategoriesMode.value = policy.registration_categories_mode
+    }
+    if (policy.registration_lernfahrausweis_mode) {
+      registrationLernfahrausweisMode.value = policy.registration_lernfahrausweis_mode
+    }
+    if (policy.registration_proposal_mode) {
+      registrationProposalMode.value = policy.registration_proposal_mode
+    }
+    if (policy.registration_account_mode) {
+      registrationAccountMode.value = policy.registration_account_mode
+    }
+  } catch (e) {
+    logger.warn('⚠️ Failed to load registration booking policy, using defaults:', e)
+  }
+}
 
 // Get service type from URL parameter (empty = generic/interest registration, no Lernfahrausweis required)
 const serviceType = ref(route.query.service as string || '')
@@ -999,6 +1290,25 @@ const formData = ref({
   acceptTerms: false
 })
 
+const CONTACT_FORM_KEYS: Record<string, 'firstName' | 'lastName' | 'phone' | 'email' | 'birthDate' | 'street' | 'streetNr' | 'zip' | 'city' | 'profession'> = {
+  first_name: 'firstName',
+  last_name: 'lastName',
+  phone: 'phone',
+  email: 'email',
+  birthdate: 'birthDate',
+  street: 'street',
+  street_nr: 'streetNr',
+  zip: 'zip',
+  city: 'city',
+  profession: 'profession',
+}
+
+const contactFieldValue = (key: string): string => {
+  const formKey = CONTACT_FORM_KEYS[key]
+  if (!formKey) return ''
+  return String(formData.value[formKey] || '').trim()
+}
+
 // Category type definition
 interface Category {
   code: string
@@ -1029,54 +1339,229 @@ const activeTenantId = computed(() => {
 })
 
 const requiresLernfahrausweis = computed(() => {
-  return isDrivingSchool.value && serviceType.value === 'fahrlektion' && !isAdminRegistration.value
+  return (
+    !isAdminRegistration.value &&
+    isDrivingSchool.value &&
+    registrationLernfahrausweisMode.value !== 'hidden'
+  )
+})
+
+const lernfahrausweisRequired = computed(() =>
+  requiresLernfahrausweis.value && registrationLernfahrausweisMode.value === 'required'
+)
+
+/** Categories to show LFA upload for; fallback when none selected yet */
+const lfaUploadCategories = computed(() => {
+  if (formData.value.categories.length > 0) return formData.value.categories
+  return ['general']
 })
 
 const showCategorySelection = computed(() => {
-  return !isAdminRegistration.value && isDrivingSchool.value && availableCategories.value.length > 0
+  return (
+    !isAdminRegistration.value &&
+    registrationCategoriesMode.value !== 'hidden' &&
+    availableCategories.value.length > 0
+  )
 })
 
-const maxSteps = computed(() => {
-  if (isAdminRegistration.value) {
-    return 2 // Admin: Personal data + Account
+const categoriesRequired = computed(() =>
+  showCategorySelection.value && registrationCategoriesMode.value === 'required'
+)
+
+const categoryDropdownOpen = ref(false)
+const categoryDropdownRef = ref<HTMLElement | null>(null)
+
+const categoryLabel = (code: string) =>
+  availableCategories.value.find(c => c.code === code)?.name || code
+
+const categoryDropdownLabel = computed(() => {
+  if (formData.value.categories.length === 0) {
+    return 'Kategorie wählen…'
   }
-  return requiresLernfahrausweis.value ? 3 : 2
+  if (formData.value.categories.length === 1) {
+    return categoryLabel(formData.value.categories[0])
+  }
+  return `${formData.value.categories.length} Kategorien gewählt`
+})
+
+const toggleCategory = (code: string) => {
+  const idx = formData.value.categories.indexOf(code)
+  if (idx >= 0) {
+    formData.value.categories.splice(idx, 1)
+  } else {
+    formData.value.categories.push(code)
+  }
+}
+
+const onCategoryDropdownClickOutside = (event: MouseEvent) => {
+  const el = categoryDropdownRef.value
+  if (el && event.target instanceof Node && !el.contains(event.target)) {
+    categoryDropdownOpen.value = false
+  }
+}
+
+const showProposalSection = computed(() =>
+  !isAdminRegistration.value && registrationProposalMode.value !== 'hidden'
+)
+
+const proposalRequired = computed(() =>
+  showProposalSection.value && registrationProposalMode.value === 'required'
+)
+
+const weekDays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag']
+const selectedDays = ref<number[]>([])
+const timeSlots = ref<Map<number, Array<{ start_time: string; end_time: string }>>>(new Map())
+const timeSlotsVersion = ref(0)
+const proposalNotes = ref('')
+
+const bumpTimeSlots = () => { timeSlotsVersion.value += 1 }
+
+const toggleDay = (dayIndex: number) => {
+  if (selectedDays.value.includes(dayIndex)) {
+    removeDay(dayIndex)
+  } else {
+    selectedDays.value.push(dayIndex)
+    selectedDays.value.sort((a, b) => a - b)
+    if (!timeSlots.value.has(dayIndex)) {
+      timeSlots.value.set(dayIndex, [{ start_time: '09:00', end_time: '17:00' }])
+    }
+    bumpTimeSlots()
+  }
+}
+
+const removeDay = (dayIndex: number) => {
+  selectedDays.value = selectedDays.value.filter(d => d !== dayIndex)
+  timeSlots.value.delete(dayIndex)
+  bumpTimeSlots()
+}
+
+const getTimeSlotsForDay = (dayIndex: number) => {
+  void timeSlotsVersion.value
+  return timeSlots.value.get(dayIndex) || []
+}
+
+const addTimeSlot = (dayIndex: number) => {
+  const slots = timeSlots.value.get(dayIndex) || []
+  slots.push({ start_time: '09:00', end_time: '17:00' })
+  timeSlots.value.set(dayIndex, slots)
+  bumpTimeSlots()
+}
+
+const removeTimeSlot = (dayIndex: number, slotIndex: number) => {
+  const slots = timeSlots.value.get(dayIndex) || []
+  slots.splice(slotIndex, 1)
+  if (slots.length === 0) {
+    removeDay(dayIndex)
+  } else {
+    timeSlots.value.set(dayIndex, slots)
+    bumpTimeSlots()
+  }
+}
+
+const buildPreferredTimeSlots = () => {
+  const preferred: Array<{ day_of_week: number; start_time: string; end_time: string }> = []
+  selectedDays.value.forEach((dayIndex) => {
+    const slots = timeSlots.value.get(dayIndex) || []
+    slots.forEach((slot) => {
+      preferred.push({
+        day_of_week: dayIndex,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+      })
+    })
+  })
+  return preferred
+}
+
+const hasValidTimeSlots = computed(() => {
+  void timeSlotsVersion.value
+  if (selectedDays.value.length === 0) return false
+  return selectedDays.value.every((dayIndex) => {
+    const slots = timeSlots.value.get(dayIndex) || []
+    return slots.length > 0 && slots.every(s => s.start_time && s.end_time && s.start_time < s.end_time)
+  })
+})
+
+const hasAnyProposalInput = computed(() =>
+  selectedDays.value.length > 0 || !!proposalNotes.value.trim()
+)
+
+const showAccountStep = computed(() =>
+  isAdminRegistration.value || registrationAccountMode.value === 'required'
+)
+
+const maxSteps = computed(() => {
+  if (isAdminRegistration.value) return 2
+  let steps = 1
+  if (requiresLernfahrausweis.value) steps += 1
+  if (showAccountStep.value) steps += 1
+  return steps
 })
 
 const canProceed = computed(() => {
-  // Block only if phone belongs to an already-active account
-  if (phoneExistsBlocked.value) return false
+  return !proceedBlockReason.value
+})
+
+const proceedBlockReason = computed(() => {
+  if (phoneExistsBlocked.value) {
+    return 'Diese Telefonnummer ist bereits registriert.'
+  }
 
   if (currentStep.value === 1) {
     if (isAdminRegistration.value) {
-      // Admin registration: basic info + address required
-      return formData.value.firstName && formData.value.lastName && 
+      if (!(formData.value.firstName && formData.value.lastName &&
              formData.value.phone && formData.value.email &&
-             formData.value.street && formData.value.streetNr && 
-             formData.value.zip && formData.value.city
+             formData.value.street && formData.value.streetNr &&
+             formData.value.zip && formData.value.city)) {
+        return 'Bitte alle Pflichtfelder ausfüllen.'
+      }
+      return ''
     }
-    // Normal registration: all fields required; categories only for driving schools
-    const baseOk = !!(formData.value.firstName && formData.value.lastName && 
-           formData.value.birthDate && formData.value.phone && 
-           formData.value.street && formData.value.streetNr && 
-           formData.value.zip && formData.value.city)
-    if (!baseOk) return false
-    if (showCategorySelection.value) return formData.value.categories.length > 0
-    return true
+
+    // Email is collected on the Account step when login is enabled
+    const requiredKeys = bookingRequiredFields.value.filter(
+      key => !(key === 'email' && showAccountStep.value)
+    )
+    const missing = requiredKeys.filter(key => !contactFieldValue(key))
+    if (missing.length) {
+      const labels: Record<string, string> = {
+        first_name: 'Vorname', last_name: 'Nachname', phone: 'Telefon', email: 'E-Mail',
+        birthdate: 'Geburtsdatum', street: 'Strasse', street_nr: 'Hausnummer',
+        zip: 'PLZ', city: 'Ort', profession: 'Beruf',
+      }
+      return `Bitte noch ausfüllen: ${missing.map(k => labels[k] || k).join(', ')}`
+    }
+    if (fieldErrors.value.phone) return fieldErrors.value.phone
+    if (fieldErrors.value.birthDate) return fieldErrors.value.birthDate
+    if (fieldErrors.value.zip) return fieldErrors.value.zip
+    if (categoriesRequired.value && formData.value.categories.length === 0) {
+      return 'Bitte mindestens eine Kategorie wählen.'
+    }
+    if (proposalRequired.value && !hasValidTimeSlots.value) {
+      return 'Bitte bevorzugte Tage und gültige Zeitfenster wählen.'
+    }
+    if (!proposalRequired.value && selectedDays.value.length > 0 && !hasValidTimeSlots.value) {
+      return 'Bitte Zeitfenster prüfen (Start vor Ende).'
+    }
+    return ''
   }
   if (currentStep.value === 2 && requiresLernfahrausweis.value) {
-    // Upload is optional – always allow proceeding
-    return true
+    if (lernfahrausweisRequired.value && !lfaUploadCategories.value.every(cat => !!uploadedDocuments.value[cat])) {
+      return 'Bitte Lernfahrausweis hochladen.'
+    }
   }
-  return true
+  return ''
 })
 
 const canSubmit = computed(() => {
-  return formData.value.email && 
-         formData.value.password && 
-         formData.value.confirmPassword === formData.value.password && 
-         formData.value.acceptTerms && 
-         passwordIsValid.value
+  if (!showAccountStep.value) {
+    return canProceed.value
+  }
+  return !!(formData.value.email &&
+         formData.value.password &&
+         formData.value.confirmPassword === formData.value.password &&
+         formData.value.acceptTerms &&
+         passwordIsValid.value)
 })
 
 const passwordChecks = computed(() => ({
@@ -1334,29 +1819,13 @@ const resendOnboardingByEmailUser = async () => {
 
 const nextStep = () => {
   if (canProceed.value && currentStep.value < maxSteps.value) {
-    if (isAdminRegistration.value) {
-      // Admin registration: go directly to account step
-      currentStep.value = 2
-    } else if (currentStep.value === 1 && !requiresLernfahrausweis.value) {
-      // Skip step 2 (Lernfahrausweis) for theory and consultation
-      currentStep.value = 2 // This becomes the account step
-    } else {
-      currentStep.value++
-    }
+    currentStep.value++
   }
 }
 
 const prevStep = () => {
   if (currentStep.value > 1) {
-    if (isAdminRegistration.value) {
-      // Admin registration: go back to step 1
-      currentStep.value = 1
-    } else if (currentStep.value === 2 && !requiresLernfahrausweis.value) {
-      // Skip step 2 (Lernfahrausweis) when going back
-      currentStep.value = 1
-    } else {
-      currentStep.value--
-    }
+    currentStep.value--
   }
 }
 
@@ -1521,6 +1990,7 @@ const submitRegistration = async () => {
     logger.debug('📡 Calling backend registration API...')
     const { getStoredRefCode, clearRefCode } = useAffiliateRef()
     const refCode = getStoredRefCode()
+    const pendingOnly = !showAccountStep.value
     const response = await fetch('/api/auth/register-client', {
       method: 'POST',
       headers: {
@@ -1529,8 +1999,8 @@ const submitRegistration = async () => {
       body: JSON.stringify({
         firstName: formData.value.firstName.trim(),
         lastName: formData.value.lastName.trim(),
-        email: formData.value.email.trim().toLowerCase(),
-        password: formData.value.password,
+        email: formData.value.email.trim().toLowerCase() || null,
+        password: pendingOnly ? undefined : formData.value.password,
         phone: formData.value.phone?.trim() || null,
         birthDate: formData.value.birthDate || null,
         street: formData.value.street?.trim() || null,
@@ -1543,6 +2013,7 @@ const submitRegistration = async () => {
         tenantId: activeTenantId,
         isAdmin: isAdminRegistration.value,
         referredByCode: refCode || null,
+        pendingOnly,
       })
     })
     if (refCode) clearRefCode()
@@ -1554,6 +2025,50 @@ const submitRegistration = async () => {
     }
     
     logger.debug('✅ User registered successfully:', data.userId)
+
+    // Create booking proposal with preferred times/notes when configured
+    if (
+      showProposalSection.value &&
+      data.userId &&
+      (proposalRequired.value || hasAnyProposalInput.value)
+    ) {
+      try {
+        const slots = buildPreferredTimeSlots()
+        const notes = proposalNotes.value.trim()
+        if (slots.length > 0 || notes) {
+          await $fetch('/api/booking/submit-general-inquiry', {
+            method: 'POST',
+            body: {
+              tenant_id: activeTenantId,
+              first_name: formData.value.firstName.trim(),
+              last_name: formData.value.lastName.trim(),
+              email: formData.value.email.trim().toLowerCase(),
+              phone: formData.value.phone?.trim() || null,
+              street: formData.value.street?.trim() || null,
+              street_nr: formData.value.streetNr?.trim() || null,
+              zip: formData.value.zip?.trim() || null,
+              city: formData.value.city?.trim() || null,
+              birthdate: formData.value.birthDate || null,
+              profession: formData.value.profession?.trim() || null,
+              // No category_code: avoids location_id requirement on tenants with "locations" intake
+              preferred_time_slots: slots,
+              notes: [
+                notes || (slots.length ? 'Terminwunsch bei Registrierung' : ''),
+                formData.value.categories?.length
+                  ? `Kategorien: ${formData.value.categories.join(', ')}`
+                  : '',
+              ].filter(Boolean).join('\n'),
+              created_by_user_id: data.userId,
+              location_intake_mode: 'callback',
+              skip_customer_email: pendingOnly,
+            },
+          })
+          logger.debug('✅ Booking proposal created from registration')
+        }
+      } catch (proposalErr: any) {
+        logger.warn('⚠️ Registration proposal failed (non-critical):', proposalErr?.message || proposalErr)
+      }
+    }
     
     // Upload Lernfahrausweis documents to Supabase Storage (one per category)
     if (Object.keys(uploadedDocuments.value).length > 0 && data.userId) {
@@ -1746,6 +2261,10 @@ const openRegulationModal = async (type: string) => {
 
 // Initialize
 onMounted(async () => {
+  if (process.client) {
+    document.addEventListener('click', onCategoryDropdownClickOutside)
+  }
+
   // Redirect affiliate links to the new lightweight landing page
   const refCode = route.query.ref as string | undefined
   if (refCode && route.params.tenant) {
@@ -1806,9 +2325,16 @@ onMounted(async () => {
         console.warn('⚠️ Failed to load tenant, but continuing with slug:', error)
       })
     )
+    asyncTasks.push(loadRegistrationPolicy(tenantSlug.value))
   }
 
   await Promise.allSettled(asyncTasks)
+})
+
+onBeforeUnmount(() => {
+  if (process.client) {
+    document.removeEventListener('click', onCategoryDropdownClickOutside)
+  }
 })
 
 // Clear password field error when user types a new password

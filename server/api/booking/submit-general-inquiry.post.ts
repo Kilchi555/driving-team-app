@@ -559,7 +559,8 @@ export default defineEventHandler(async (event) => {
           },
           body: JSON.stringify({
             proposalId: proposal.id,
-            tenant_id: tenant_id
+            tenant_id: tenant_id,
+            skipCustomerEmail: !!body.skip_customer_email,
           })
         })
         console.log('✅ Inquiry emails sent')
