@@ -6,6 +6,7 @@ import { setAuthCookies } from '~/server/utils/cookies'
 import { validatePassword, logPasswordValidationAttempt } from '~/server/utils/password-validator'
 import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 import { logger } from '~/utils/logger'
+import { notifyTenantAdminsNewClient } from '~/server/utils/notify-new-client-registration'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -310,6 +311,17 @@ async function registerCustomer(event: any, body: RegisterRequest) {
     userId: userData.id,
     email: userData.email.substring(0, 3) + '***',
     tenantId: finalTenantId
+  })
+
+  await notifyTenantAdminsNewClient({
+    tenantId: finalTenantId,
+    clientUserId: userData.id,
+    firstName: first_name || '',
+    lastName: last_name || '',
+    email: userData.email,
+    phone: phone || null,
+    categories: category ? [category] : null,
+    source: 'booking',
   })
 
   return {

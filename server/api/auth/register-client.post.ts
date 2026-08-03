@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { sendWelcomeEmail } from '~/server/utils/send-welcome-email'
+import { sendPendingRegistrationConfirmationEmail, sendWelcomeEmail } from '~/server/utils/send-welcome-email'
+import { notifyTenantAdminsNewClient } from '~/server/utils/notify-new-client-registration'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
 import { logger } from '~/utils/logger'
@@ -8,7 +9,6 @@ import { logAudit } from '~/server/utils/audit'
 import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import {
-  validateRequiredString,
   validateBasicPassword,
   validateEmail,
   validateUUID,
@@ -17,6 +17,24 @@ import {
 } from '~/server/utils/validators'
 import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import {
+  DEFAULT_BOOKING_POLICY,
+  normalizeRegistrationFieldMode,
+} from '~/server/api/admin/booking-policy.get'
+import { randomUUID } from 'crypto'
+
+const CONTACT_FIELD_LABELS: Record<string, string> = {
+  first_name: 'Vorname',
+  last_name: 'Nachname',
+  phone: 'Telefon',
+  email: 'E-Mail',
+  birthdate: 'Geburtsdatum',
+  street: 'Strasse',
+  street_nr: 'Hausnummer',
+  zip: 'PLZ',
+  city: 'Ort',
+  profession: 'Beruf',
+}
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -48,7 +66,8 @@ export default defineEventHandler(async (event) => {
       tenantId,
       isAdmin = false,
       captchaToken,
-      referredByCode = null
+      referredByCode = null,
+      pendingOnly = false,
     } = body
 
     // Check rate limit (after body is read so we have email and tenantId)
@@ -62,28 +81,239 @@ export default defineEventHandler(async (event) => {
     }
     logger.debug('Register', '✅ Rate limit check passed. Remaining:', rateLimit.remaining)
 
-    // Validate required fields with centralized validators
+    if (!tenantId || !validateUUID(tenantId)) {
+      throwValidationError({ tenantId: 'Ungültige Mandanten-ID' })
+    }
+
+    // ── Pending-only (no login): tenant disabled Account step on /register ──
+    if (pendingOnly && !isAdmin) {
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (!serviceRoleKey) {
+        throw createError({ statusCode: 500, statusMessage: 'Server configuration error' })
+      }
+      const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
+
+      const { data: tenantRow } = await serviceSupabase
+        .from('tenants')
+        .select('booking_policy')
+        .eq('id', tenantId)
+        .maybeSingle()
+
+      const rawPolicy = (tenantRow?.booking_policy as Record<string, any>) || {}
+      if ((rawPolicy.registration_account_mode || 'required') !== 'hidden') {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Pending-Registrierung ist für diesen Mandanten nicht aktiviert.',
+        })
+      }
+
+      const bookingRequiredFields: string[] = Array.isArray(rawPolicy.booking_required_fields)
+        ? rawPolicy.booking_required_fields
+        : DEFAULT_BOOKING_POLICY.booking_required_fields
+      const categoriesMode = normalizeRegistrationFieldMode(
+        rawPolicy.registration_categories_mode,
+        DEFAULT_BOOKING_POLICY.registration_categories_mode
+      )
+
+      const contactValues: Record<string, string> = {
+        first_name: (firstName ?? '').toString().trim(),
+        last_name: (lastName ?? '').toString().trim(),
+        phone: (phone ?? '').toString().trim(),
+        email: (email ?? '').toString().trim(),
+        birthdate: (birthDate ?? '').toString().trim(),
+        street: (street ?? '').toString().trim(),
+        street_nr: (streetNr ?? '').toString().trim(),
+        zip: (zip ?? '').toString().trim(),
+        city: (city ?? '').toString().trim(),
+        profession: (profession ?? '').toString().trim(),
+      }
+
+      const policyErrors: Record<string, string> = {}
+      for (const key of bookingRequiredFields) {
+        if (!contactValues[key]) {
+          policyErrors[key] = `${CONTACT_FIELD_LABELS[key] || key} ist erforderlich`
+        }
+      }
+      if (categoriesMode === 'required' && (!Array.isArray(categories) || categories.length === 0)) {
+        policyErrors.categories = 'Bitte mindestens eine Kategorie wählen'
+      }
+      if (Object.keys(policyErrors).length > 0) {
+        throwValidationError(policyErrors)
+      }
+
+      const sanitizedFirstName = sanitizeString(firstName || '', 100)
+      const sanitizedLastName = sanitizeString(lastName || '', 100)
+      const sanitizedPhoneRaw = phone ? sanitizeString(phone, 20) : null
+      const sanitizedPhone = sanitizedPhoneRaw
+        ? (normalizePhoneNumber(sanitizedPhoneRaw) || sanitizedPhoneRaw)
+        : null
+      const emailNormalized = email ? String(email).toLowerCase().trim() : null
+      const categoryArray = Array.isArray(categories)
+        ? categories.filter((c: any) => typeof c === 'string' && c.trim())
+        : []
+
+      // Block if email/phone already belongs to an activated account
+      if (emailNormalized) {
+        const { data: existingEmail } = await serviceSupabase
+          .from('users')
+          .select('id, onboarding_status, auth_user_id')
+          .eq('email', emailNormalized)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+        if (existingEmail?.auth_user_id || existingEmail?.onboarding_status === 'completed') {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich an.',
+          })
+        }
+      }
+      if (sanitizedPhone) {
+        const { data: existingPhone } = await serviceSupabase
+          .from('users')
+          .select('id, onboarding_status, auth_user_id')
+          .eq('phone', sanitizedPhone)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+        if (existingPhone?.auth_user_id || existingPhone?.onboarding_status === 'completed') {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Diese Telefonnummer ist bereits registriert. Bitte melde dich an.',
+          })
+        }
+      }
+
+      // Reuse pending by email/phone or create new
+      let pendingUserId: string | null = null
+      if (emailNormalized) {
+        const { data } = await serviceSupabase
+          .from('users')
+          .select('id')
+          .eq('email', emailNormalized)
+          .eq('tenant_id', tenantId)
+          .eq('onboarding_status', 'pending')
+          .maybeSingle()
+        if (data?.id) pendingUserId = data.id
+      }
+      if (!pendingUserId && sanitizedPhone) {
+        const { data } = await serviceSupabase
+          .from('users')
+          .select('id')
+          .eq('phone', sanitizedPhone)
+          .eq('tenant_id', tenantId)
+          .eq('onboarding_status', 'pending')
+          .maybeSingle()
+        if (data?.id) pendingUserId = data.id
+      }
+
+      const onboardingToken = randomUUID()
+      const tokenExpiry = new Date()
+      tokenExpiry.setDate(tokenExpiry.getDate() + 30)
+
+      const profilePayload: Record<string, any> = {
+        first_name: sanitizedFirstName,
+        last_name: sanitizedLastName,
+        phone: sanitizedPhone,
+        email: emailNormalized,
+        birthdate: birthDate || null,
+        street: street ? sanitizeString(street, 100) : null,
+        street_nr: streetNr ? sanitizeString(streetNr, 10) : null,
+        zip: zip ? sanitizeString(zip, 10) : null,
+        city: city ? sanitizeString(city, 100) : null,
+        profession: profession ? sanitizeString(profession, 100) : null,
+        category: categoryArray,
+        role: 'client',
+        tenant_id: tenantId,
+        is_active: true,
+        onboarding_status: 'pending',
+        onboarding_token: onboardingToken,
+        onboarding_token_expires: tokenExpiry.toISOString(),
+      }
+
+      if (pendingUserId) {
+        const { error: updErr } = await serviceSupabase
+          .from('users')
+          .update(profilePayload)
+          .eq('id', pendingUserId)
+        if (updErr) {
+          logger.error('Register', 'Pending user update failed:', updErr)
+          throw createError({ statusCode: 500, statusMessage: 'Kontakt konnte nicht gespeichert werden' })
+        }
+      } else {
+        pendingUserId = randomUUID()
+        const { error: insErr } = await serviceSupabase
+          .from('users')
+          .insert({ id: pendingUserId, ...profilePayload })
+        if (insErr) {
+          logger.error('Register', 'Pending user insert failed:', insErr)
+          throw createError({ statusCode: 500, statusMessage: 'Kontakt konnte nicht gespeichert werden' })
+        }
+      }
+
+      try {
+        await notifyTenantAdminsNewClient({
+          tenantId,
+          clientUserId: pendingUserId!,
+          firstName: sanitizedFirstName,
+          lastName: sanitizedLastName,
+          email: emailNormalized || '',
+          phone: sanitizedPhone,
+          categories: categoryArray,
+          source: 'register',
+        })
+      } catch (e: any) {
+        logger.warn('Register', 'Admin notify failed (pending):', e?.message)
+      }
+
+      if (emailNormalized) {
+        try {
+          await sendPendingRegistrationConfirmationEmail({
+            to: emailNormalized,
+            firstName: sanitizedFirstName,
+            tenantId,
+            phone: sanitizedPhone,
+            categories: categoryArray,
+          })
+        } catch (emailErr: any) {
+          logger.warn('Register', 'Pending confirmation email failed (non-critical):', emailErr?.message)
+        }
+      } else {
+        logger.debug('Register', '⏭️ No email on pending registration — skipping customer confirmation')
+      }
+
+      upsertMarketingLeadSafe({
+        tenantId,
+        email: emailNormalized || undefined,
+        firstName: sanitizedFirstName || undefined,
+        lastName: sanitizedLastName || undefined,
+        phone: sanitizedPhone || undefined,
+        categories: categoryArray,
+        tags: ['register_pending'],
+        source: 'register_pending',
+        sourceLabel: 'Registrierung ohne Login',
+      })
+
+      return {
+        success: true,
+        userId: pendingUserId,
+        pendingOnly: true,
+        message: 'Anfrage gespeichert',
+      }
+    }
+
+    // Validate always-required account fields
     const errors: Record<string, string> = {}
-    
-    const firstNameValidation = validateRequiredString(firstName, 'Vorname', 100)
-    if (!firstNameValidation.valid) errors.firstName = firstNameValidation.error!
-    
-    const lastNameValidation = validateRequiredString(lastName, 'Nachname', 100)
-    if (!lastNameValidation.valid) errors.lastName = lastNameValidation.error!
-    
+
     if (!validateEmail(email)) {
       errors.email = 'Ungültige E-Mail-Adresse'
     }
-    
+
     const passwordValidation = validateBasicPassword(password)
     if (!passwordValidation.valid) {
       errors.password = passwordValidation.message!
     }
-    
-    if (!tenantId || !validateUUID(tenantId)) {
-      errors.tenantId = 'Ungültige Mandanten-ID'
-    }
-    
+
     if (Object.keys(errors).length > 0) {
       throwValidationError(errors)
     }
@@ -166,14 +396,68 @@ export default defineEventHandler(async (event) => {
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
     const supabase = getSupabaseAdmin()
 
+    // Load public registration field policy
+    const { data: tenantRow } = await serviceSupabase
+      .from('tenants')
+      .select('booking_policy')
+      .eq('id', tenantId)
+      .maybeSingle()
+
+    const rawPolicy = (tenantRow?.booking_policy as Record<string, any>) || {}
+    const bookingRequiredFields: string[] = Array.isArray(rawPolicy.booking_required_fields)
+      ? rawPolicy.booking_required_fields
+      : DEFAULT_BOOKING_POLICY.booking_required_fields
+    const categoriesMode = normalizeRegistrationFieldMode(
+      rawPolicy.registration_categories_mode,
+      DEFAULT_BOOKING_POLICY.registration_categories_mode
+    )
+
+    const contactValues: Record<string, string> = {
+      first_name: (firstName ?? '').toString().trim(),
+      last_name: (lastName ?? '').toString().trim(),
+      phone: (phone ?? '').toString().trim(),
+      email: (email ?? '').toString().trim(),
+      birthdate: (birthDate ?? '').toString().trim(),
+      street: (street ?? '').toString().trim(),
+      street_nr: (streetNr ?? '').toString().trim(),
+      zip: (zip ?? '').toString().trim(),
+      city: (city ?? '').toString().trim(),
+      profession: (profession ?? '').toString().trim(),
+    }
+
+    const policyErrors: Record<string, string> = {}
+    if (isAdmin) {
+      // Admin registration keeps a fixed required contact set
+      for (const key of ['first_name', 'last_name', 'phone', 'street', 'street_nr', 'zip', 'city'] as const) {
+        if (!contactValues[key]) {
+          policyErrors[key] = `${CONTACT_FIELD_LABELS[key]} ist erforderlich`
+        }
+      }
+    } else {
+      for (const key of bookingRequiredFields) {
+        // Email is always collected on the account step — skip if listed here
+        if (key === 'email') continue
+        if (!contactValues[key]) {
+          policyErrors[key] = `${CONTACT_FIELD_LABELS[key] || key} ist erforderlich`
+        }
+      }
+      if (categoriesMode === 'required' && (!Array.isArray(categories) || categories.length === 0)) {
+        policyErrors.categories = 'Bitte mindestens eine Kategorie wählen'
+      }
+    }
+
+    if (Object.keys(policyErrors).length > 0) {
+      throwValidationError(policyErrors)
+    }
+
     try {
       const terms = await getTenantTerminology(supabase, tenantId)
       businessNoun = terms.businessNoun || businessNoun
     } catch { /* keep default */ }
 
     // ✅ Sanitize all string inputs to prevent XSS
-    const sanitizedFirstName = sanitizeString(firstName, 100)
-    const sanitizedLastName = sanitizeString(lastName, 100)
+    const sanitizedFirstName = sanitizeString(firstName || '', 100)
+    const sanitizedLastName = sanitizeString(lastName || '', 100)
     const sanitizedPhoneRaw = phone ? sanitizeString(phone, 20) : null
     const sanitizedPhone = sanitizedPhoneRaw
       ? (normalizePhoneNumber(sanitizedPhoneRaw) || sanitizedPhoneRaw)
@@ -555,6 +839,20 @@ export default defineEventHandler(async (event) => {
       logger.debug('Register', '✅ Welcome email sent to new client')
     } catch (emailErr: any) {
       logger.warn('Register', '⚠️ Welcome email failed (non-critical):', emailErr.message)
+    }
+
+    // 4b. Notify tenant admins (clients only — skip admin self-registration)
+    if (userRole === 'client') {
+      await notifyTenantAdminsNewClient({
+        tenantId,
+        clientUserId: userProfile.id,
+        firstName: sanitizedFirstName,
+        lastName: sanitizedLastName,
+        email: emailNormalized,
+        phone: sanitizedPhone,
+        categories: categoryArray,
+        source: 'register',
+      })
     }
 
     // 5. Audit logging

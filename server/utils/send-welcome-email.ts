@@ -109,12 +109,87 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
   logger.debug(`✅ Welcome email (${role}) sent to ${to}`)
 }
 
+/**
+ * Confirmation for public /register without account (pendingOnly).
+ * No login CTA — customer has no password yet.
+ */
+export async function sendPendingRegistrationConfirmationEmail(params: {
+  to: string
+  firstName: string
+  tenantId: string
+  phone?: string | null
+  categories?: string[]
+}): Promise<void> {
+  const { to, firstName, tenantId, phone, categories } = params
+  const supabase = getSupabaseAdmin()
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, primary_color, from_email, resend_domain_verified, logo_wide_url, logo_url, logo_square_url, contact_email, business_type')
+    .eq('id', tenantId)
+    .single()
+
+  const terms = await getTenantTerminology(supabase, tenantId)
+  const tenantName = tenant?.name || terms.businessNoun
+  const primaryColor = tenant?.primary_color || '#3B82F6'
+  const fromEmail = tenant?.from_email ?? null
+  const domainVerified = tenant?.resend_domain_verified ?? false
+  const rawLogo = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+  const logoUrl = rawLogo?.startsWith('data:') ? null : rawLogo
+  const contactEmail = tenant?.contact_email || null
+  const name = displayName(tenantName)
+  const receivedAt = new Date().toLocaleString('de-CH')
+
+  const detailRows: string[] = [
+    `<p style="margin:0 0 8px;color:#374151;font-size:14px;"><strong>Eingegangen:</strong> ${escapeHtml(receivedAt)}</p>`,
+  ]
+  if (categories?.length) {
+    detailRows.push(
+      `<p style="margin:0 0 8px;color:#374151;font-size:14px;"><strong>${escapeHtml(terms.categoryLabel)}:</strong> ${escapeHtml(categories.join(', '))}</p>`,
+    )
+  }
+  if (phone) {
+    detailRows.push(
+      `<p style="margin:0 0 8px;color:#374151;font-size:14px;"><strong>Telefon:</strong> ${escapeHtml(phone)}</p>`,
+    )
+  }
+
+  const bodyHtml = `
+    <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">Hallo ${escapeHtml(firstName || '')},</p>
+    <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">
+      vielen Dank für deine Anmeldung bei <strong>${name}</strong>. Wir haben deine Angaben erhalten und melden uns in Kürze bei dir.
+    </p>
+    ${emailDetailBox(primaryColor, detailRows.join(''))}
+    ${emailSignature(tenantName, contactEmail, primaryColor)}
+  `
+
+  await sendEmail({
+    to,
+    subject: `Anmeldung erhalten – ${tenantName}`,
+    fromName: tenantName,
+    fromEmail,
+    domainVerified,
+    html: buildBrandedEmailShell({
+      title: 'Anmeldung erhalten',
+      tenantName,
+      primaryColor,
+      logoUrl,
+      bodyHtml,
+      documentTitle: `Anmeldung erhalten – ${tenantName}`,
+    }),
+  })
+
+  logger.debug(`✅ Pending registration confirmation sent to ${to}`)
+}
+
 // ─── HTML Builders ─────────────────────────────────────────────────────────────
 
 function appStoreBlock(): string {
+  // Avoid pure black (#000): Apple Mail / Gmail dark mode crush black buttons
+  // into the dark background and mute white text. A near-black fill + white
+  // border (or the official badge) stays readable in both modes.
   return `<div style="margin:24px 0 0;text-align:center">
   <p style="margin:0 0 10px;color:#9ca3af;font-size:12px;">Simy auch als iPhone-App verfügbar</p>
-  <a href="https://apps.apple.com/ch/app/simy/id6766244063" style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:600;">Laden im App Store</a>
+  <a href="https://apps.apple.com/ch/app/simy/id6766244063" style="display:inline-block;background-color:#111827;color:#ffffff !important;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #ffffff;">Laden im App Store</a>
 </div>`
 }
 

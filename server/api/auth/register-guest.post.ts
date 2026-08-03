@@ -11,6 +11,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { notifyTenantAdminsNewClient } from '~/server/utils/notify-new-client-registration'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -146,6 +147,16 @@ export default defineEventHandler(async (event) => {
     // automatically, including tenant_id. An explicit insert here would always
     // hit the unique(user_id, tenant_id) constraint and fail — so we don't
     // duplicate that work.
+
+    await notifyTenantAdminsNewClient({
+      tenantId,
+      clientUserId: profileData.id,
+      firstName: firstName || '',
+      lastName: lastName || '',
+      email: email.toLowerCase(),
+      phone: phone || null,
+      source: 'shop',
+    })
 
     return {
       success: true,

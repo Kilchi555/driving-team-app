@@ -18,6 +18,8 @@ import {
 interface BookingProposalEmailRequest {
   proposalId: string
   tenant_id: string
+  /** When true, only notify staff/tenant (customer already got registration confirmation). */
+  skipCustomerEmail?: boolean
 }
 
 type IntakeMode = 'locations' | 'pickup_address' | 'callback' | 'general'
@@ -36,9 +38,9 @@ export default defineEventHandler(async (event) => {
     }
 
     const body = await readBody(event) as BookingProposalEmailRequest
-    const { proposalId, tenant_id } = body
+    const { proposalId, tenant_id, skipCustomerEmail } = body
 
-    logger.debug('📧 Sending booking proposal emails:', { proposalId })
+    logger.debug('📧 Sending booking proposal emails:', { proposalId, skipCustomerEmail: !!skipCustomerEmail })
 
     if (!proposalId || !tenant_id) {
       throw createError({
@@ -115,9 +117,11 @@ export default defineEventHandler(async (event) => {
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
       try {
-        if (proposal.email) {
+        if (proposal.email && !skipCustomerEmail) {
           await resend.emails.send({ from: fromWithName, ...customerEmail })
           logger.info('✅ Email sent to customer:', proposal.email)
+        } else if (skipCustomerEmail) {
+          logger.info('⏭️ Skipping customer proposal email (already confirmed at registration)')
         }
       } catch (err: any) {
         logger.error('❌ Failed to send customer email:', err.message)

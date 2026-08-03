@@ -5,7 +5,7 @@
 
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
-import { DEFAULT_BOOKING_POLICY, normalizeLocationIntakeModes } from '~/server/api/admin/booking-policy.get'
+import { DEFAULT_BOOKING_POLICY, normalizeLocationIntakeModes, normalizeRegistrationFieldMode, normalizeRegistrationAccountMode } from '~/server/api/admin/booking-policy.get'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
@@ -86,6 +86,22 @@ export default defineEventHandler(async (event) => {
     booking_required_fields: rawPolicy.booking_required_fields ?? DEFAULT_BOOKING_POLICY.booking_required_fields,
     booking_optional_fields: rawPolicy.booking_optional_fields ?? DEFAULT_BOOKING_POLICY.booking_optional_fields,
     location_intake_modes: normalizeLocationIntakeModes(rawPolicy),
+    registration_categories_mode: normalizeRegistrationFieldMode(
+      rawPolicy.registration_categories_mode,
+      DEFAULT_BOOKING_POLICY.registration_categories_mode
+    ),
+    registration_lernfahrausweis_mode: normalizeRegistrationFieldMode(
+      rawPolicy.registration_lernfahrausweis_mode,
+      DEFAULT_BOOKING_POLICY.registration_lernfahrausweis_mode
+    ),
+    registration_proposal_mode: normalizeRegistrationFieldMode(
+      rawPolicy.registration_proposal_mode,
+      DEFAULT_BOOKING_POLICY.registration_proposal_mode
+    ),
+    registration_account_mode: normalizeRegistrationAccountMode(
+      rawPolicy.registration_account_mode,
+      DEFAULT_BOOKING_POLICY.registration_account_mode
+    ),
     onboarding_sms_enabled: rawPolicy.onboarding_sms_enabled ?? DEFAULT_BOOKING_POLICY.onboarding_sms_enabled,
     onboarding_email_enabled: rawPolicy.onboarding_email_enabled ?? DEFAULT_BOOKING_POLICY.onboarding_email_enabled,
   }
