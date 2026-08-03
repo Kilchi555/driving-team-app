@@ -655,7 +655,7 @@ const authStore = useAuthStore()
 
 // ── Auth ────────────────────────────────────────────────────────────────────
 
-const isAuthenticated = computed(() => !!(authStore.isLoggedIn as any)?.value ?? !!(authStore.isLoggedIn as any))
+const isAuthenticated = computed(() => !!authStore.isLoggedIn)
 const isInactive = ref(false)
 
 const authMode = ref<'login' | 'register'>('login')

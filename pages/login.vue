@@ -616,6 +616,7 @@ import { useUIStore } from '~/stores/ui'
 import { useTenant } from '~/composables/useTenant'
 import { useMFAFlow } from '~/composables/useMFAFlow'
 import { logger } from '~/utils/logger'
+import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
 
 // Meta
 definePageMeta({
@@ -974,26 +975,9 @@ const handleLogin = async () => {
     // Reset failed login attempts on success
     failedLoginAttempts.value = 0
 
-    // Session tokens are in HTTP-Only cookies (set by backend) AND returned in
-    // the response body so we can hydrate supabase-js without rotating the
-    // brand-new refresh token (force-refresh caused 401 races after login).
-    logger.debug('🔐 Session stored in httpOnly cookie (secure)')
-    if (response.session?.access_token && response.session?.refresh_token) {
-      try {
-        const { getSupabase } = await import('~/utils/supabase')
-        const { error: setErr } = await getSupabase().auth.setSession({
-          access_token: response.session.access_token,
-          refresh_token: response.session.refresh_token,
-        })
-        if (setErr) {
-          logger.warn('⚠️ Could not hydrate client Supabase session after login:', setErr.message)
-        } else {
-          logger.debug('✅ Client Supabase session hydrated after login')
-        }
-      } catch (hydrateErr: any) {
-        logger.warn('⚠️ Session hydrate after login failed (non-fatal):', hydrateErr?.message)
-      }
-    }
+    // Session tokens are in HTTP-Only cookies (server) AND returned in the body
+    // so we can hydrate supabase-js without a refresh-token rotation race.
+    await hydrateClientSessionAfterLogin(response.session)
     
     // Speichere User in Auth Store
     const authStore = useAuthStore()
