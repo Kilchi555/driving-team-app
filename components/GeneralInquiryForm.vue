@@ -325,16 +325,50 @@
             </div>
           </div>
 
-          <div v-if="isFieldVisible('birthdate')" class="space-y-1.5">
+          <div v-if="isFieldVisible('birthdate')" class="space-y-1.5 min-w-0">
             <label class="block text-xs text-slate-500">
               Geburtsdatum <span v-if="isFieldRequired('birthdate')" class="text-red-500">*</span>
             </label>
-            <input
-              v-model="birthdate"
-              type="date"
-              class="inquiry-field"
-              :style="fieldFocusStyle"
-            />
+            <div class="grid grid-cols-3 gap-2 min-w-0">
+              <select
+                v-model="birthdateDay"
+                class="inquiry-field min-w-0 text-sm px-2"
+                :style="fieldFocusStyle"
+                @change="syncBirthdateFromParts"
+              >
+                <option value="">Tag</option>
+                <option v-for="d in 31" :key="d" :value="String(d).padStart(2, '0')">{{ d }}</option>
+              </select>
+              <select
+                v-model="birthdateMonth"
+                class="inquiry-field min-w-0 text-sm px-2"
+                :style="fieldFocusStyle"
+                @change="syncBirthdateFromParts"
+              >
+                <option value="">Monat</option>
+                <option value="01">Jan</option>
+                <option value="02">Feb</option>
+                <option value="03">Mär</option>
+                <option value="04">Apr</option>
+                <option value="05">Mai</option>
+                <option value="06">Jun</option>
+                <option value="07">Jul</option>
+                <option value="08">Aug</option>
+                <option value="09">Sep</option>
+                <option value="10">Okt</option>
+                <option value="11">Nov</option>
+                <option value="12">Dez</option>
+              </select>
+              <select
+                v-model="birthdateYear"
+                class="inquiry-field min-w-0 text-sm px-2"
+                :style="fieldFocusStyle"
+                @change="syncBirthdateFromParts"
+              >
+                <option value="">Jahr</option>
+                <option v-for="y in birthdateYears" :key="y" :value="String(y)">{{ y }}</option>
+              </select>
+            </div>
           </div>
 
           <p
@@ -583,6 +617,22 @@ const lastName = ref('')
 const email = ref('')
 const phone = ref('')
 const birthdate = ref('')
+const birthdateDay = ref('')
+const birthdateMonth = ref('')
+const birthdateYear = ref('')
+const birthdateYears = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const years: number[] = []
+  for (let y = currentYear - 14; y >= currentYear - 100; y--) years.push(y)
+  return years
+})
+const syncBirthdateFromParts = () => {
+  if (birthdateDay.value && birthdateMonth.value && birthdateYear.value) {
+    birthdate.value = `${birthdateYear.value}-${birthdateMonth.value}-${birthdateDay.value}`
+  } else {
+    birthdate.value = ''
+  }
+}
 const street = ref('')
 const streetNr = ref('')
 const zip = ref('')
@@ -1134,6 +1184,9 @@ const closeModal = () => {
   email.value = ''
   phone.value = ''
   birthdate.value = ''
+  birthdateDay.value = ''
+  birthdateMonth.value = ''
+  birthdateYear.value = ''
   street.value = ''
   streetNr.value = ''
   zip.value = ''

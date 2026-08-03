@@ -189,16 +189,55 @@
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 Geburtsdatum <span v-if="isAdminRegistration || isContactFieldRequired('birthdate')" class="text-red-500">*</span>
               </label>
-              <input
-                v-model="formData.birthDate"
-                type="date"
-                :required="isAdminRegistration || isContactFieldRequired('birthdate')"
-                @blur="validateBirthDate"
-                :class="[
-                  'w-full px-3 py-2 border rounded-lg focus:ring-2',
-                  fieldErrors.birthDate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 tenant-focus'
-                ]"
-              />
+              <div class="grid grid-cols-3 gap-2 min-w-0">
+                <select
+                  v-model="birthdateDay"
+                  @change="syncBirthDateFromParts"
+                  :required="isAdminRegistration || isContactFieldRequired('birthdate')"
+                  :class="[
+                    'w-full min-w-0 px-2 py-2 border rounded-lg focus:ring-2 bg-white text-sm',
+                    fieldErrors.birthDate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 tenant-focus'
+                  ]"
+                >
+                  <option value="">Tag</option>
+                  <option v-for="d in 31" :key="d" :value="String(d).padStart(2, '0')">{{ d }}</option>
+                </select>
+                <select
+                  v-model="birthdateMonth"
+                  @change="syncBirthDateFromParts"
+                  :required="isAdminRegistration || isContactFieldRequired('birthdate')"
+                  :class="[
+                    'w-full min-w-0 px-2 py-2 border rounded-lg focus:ring-2 bg-white text-sm',
+                    fieldErrors.birthDate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 tenant-focus'
+                  ]"
+                >
+                  <option value="">Monat</option>
+                  <option value="01">Januar</option>
+                  <option value="02">Februar</option>
+                  <option value="03">März</option>
+                  <option value="04">April</option>
+                  <option value="05">Mai</option>
+                  <option value="06">Juni</option>
+                  <option value="07">Juli</option>
+                  <option value="08">August</option>
+                  <option value="09">September</option>
+                  <option value="10">Oktober</option>
+                  <option value="11">November</option>
+                  <option value="12">Dezember</option>
+                </select>
+                <select
+                  v-model="birthdateYear"
+                  @change="syncBirthDateFromParts"
+                  :required="isAdminRegistration || isContactFieldRequired('birthdate')"
+                  :class="[
+                    'w-full min-w-0 px-2 py-2 border rounded-lg focus:ring-2 bg-white text-sm',
+                    fieldErrors.birthDate ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 tenant-focus'
+                  ]"
+                >
+                  <option value="">Jahr</option>
+                  <option v-for="y in birthdateYears" :key="y" :value="String(y)">{{ y }}</option>
+                </select>
+              </div>
               <p v-if="fieldErrors.birthDate" class="mt-1 text-sm text-red-600">{{ fieldErrors.birthDate }}</p>
             </div>
 
@@ -901,20 +940,26 @@
           type="submit"
           form="account-creation-form"
           :disabled="!canSubmit || isSubmitting"
-          class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+          class="inline-flex items-center justify-center gap-2 min-w-[8.5rem] bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
         >
-          <span v-if="isSubmitting">⏳ Registrierung...</span>
-          <span v-else>✅ Registrieren</span>
+          <svg v-if="isSubmitting" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span>{{ isSubmitting ? 'Senden…' : 'Registrieren' }}</span>
         </button>
         <button
           v-else-if="currentStep === maxSteps && !showAccountStep"
           type="button"
           :disabled="!canSubmit || isSubmitting"
-          class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+          class="inline-flex items-center justify-center gap-2 min-w-[8.5rem] bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-colors"
           @click="submitRegistration"
         >
-          <span v-if="isSubmitting">⏳ Wird gesendet...</span>
-          <span v-else>✅ Absenden</span>
+          <svg v-if="isSubmitting" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span>{{ isSubmitting ? 'Senden…' : 'Absenden' }}</span>
         </button>
         </div>
       </div>
@@ -1391,6 +1436,7 @@ const toggleCategory = (code: string) => {
   } else {
     formData.value.categories.push(code)
   }
+  categoryDropdownOpen.value = false
 }
 
 const onCategoryDropdownClickOutside = (event: MouseEvent) => {
@@ -1682,25 +1728,54 @@ const validatePhone = () => {
   }
 }
 
+const birthdateDay = ref('')
+const birthdateMonth = ref('')
+const birthdateYear = ref('')
+const birthdateYears = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const years: number[] = []
+  for (let y = currentYear - 14; y >= currentYear - 100; y--) years.push(y)
+  return years
+})
+
+const syncBirthDateFromParts = () => {
+  if (birthdateDay.value && birthdateMonth.value && birthdateYear.value) {
+    formData.value.birthDate = `${birthdateYear.value}-${birthdateMonth.value}-${birthdateDay.value}`
+    validateBirthDate()
+  } else {
+    formData.value.birthDate = ''
+    fieldErrors.value.birthDate = ''
+  }
+}
+
+watch(() => formData.value.birthDate, (val) => {
+  if (val && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+    const [y, m, d] = val.split('-')
+    if (!birthdateYear.value) birthdateYear.value = y
+    if (!birthdateMonth.value) birthdateMonth.value = m
+    if (!birthdateDay.value) birthdateDay.value = d
+  }
+}, { immediate: true })
+
 const validateBirthDate = () => {
   if (!formData.value.birthDate) {
     fieldErrors.value.birthDate = ''
     return
   }
-  
+
   const birthDate = new Date(formData.value.birthDate)
   const today = new Date()
-  
+
   if (birthDate > today) {
     fieldErrors.value.birthDate = 'Geburtsdatum darf nicht in der Zukunft liegen'
     return
   }
-  
+
   const age = today.getFullYear() - birthDate.getFullYear()
   const monthDiff = today.getMonth() - birthDate.getMonth()
   const dayDiff = today.getDate() - birthDate.getDate()
   const actualAge = age - (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? 1 : 0)
-  
+
   if (actualAge < 16) {
     fieldErrors.value.birthDate = 'Mindestalter: 16 Jahre'
   } else {

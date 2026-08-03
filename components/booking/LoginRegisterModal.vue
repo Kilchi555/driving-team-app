@@ -349,15 +349,47 @@
 
           <!-- ============ STEP 2: Persönliche Angaben ============ -->
           <div v-show="registerStep === 2" class="space-y-4">
-            <div>
+            <div class="min-w-0">
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 Geburtsdatum <span class="text-red-500">*</span>
               </label>
-              <input
-                v-model="registerForm.birthdate"
-                type="date"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2"
-              >
+              <div class="grid grid-cols-3 gap-2 min-w-0">
+                <select
+                  v-model="birthdateDay"
+                  @change="syncRegisterBirthdate"
+                  class="w-full min-w-0 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 bg-white text-sm"
+                >
+                  <option value="">Tag</option>
+                  <option v-for="d in 31" :key="d" :value="String(d).padStart(2, '0')">{{ d }}</option>
+                </select>
+                <select
+                  v-model="birthdateMonth"
+                  @change="syncRegisterBirthdate"
+                  class="w-full min-w-0 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 bg-white text-sm"
+                >
+                  <option value="">Monat</option>
+                  <option value="01">Jan</option>
+                  <option value="02">Feb</option>
+                  <option value="03">Mär</option>
+                  <option value="04">Apr</option>
+                  <option value="05">Mai</option>
+                  <option value="06">Jun</option>
+                  <option value="07">Jul</option>
+                  <option value="08">Aug</option>
+                  <option value="09">Sep</option>
+                  <option value="10">Okt</option>
+                  <option value="11">Nov</option>
+                  <option value="12">Dez</option>
+                </select>
+                <select
+                  v-model="birthdateYear"
+                  @change="syncRegisterBirthdate"
+                  class="w-full min-w-0 px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 bg-white text-sm"
+                >
+                  <option value="">Jahr</option>
+                  <option v-for="y in birthdateYears" :key="y" :value="String(y)">{{ y }}</option>
+                </select>
+              </div>
             </div>
 
             <div class="grid grid-cols-3 gap-4">
@@ -502,6 +534,7 @@ import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
+import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
 
 const { primaryColor: tenantPrimary } = useTenantBranding()
 
@@ -592,6 +625,23 @@ const registerForm = ref({
   assigned_staff_id: props.selectedStaffId || '',
   category: props.selectedCategory || ''
 })
+
+const birthdateDay = ref('')
+const birthdateMonth = ref('')
+const birthdateYear = ref('')
+const birthdateYears = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const years: number[] = []
+  for (let y = currentYear - 14; y >= currentYear - 100; y--) years.push(y)
+  return years
+})
+const syncRegisterBirthdate = () => {
+  if (birthdateDay.value && birthdateMonth.value && birthdateYear.value) {
+    registerForm.value.birthdate = `${birthdateYear.value}-${birthdateMonth.value}-${birthdateDay.value}`
+  } else {
+    registerForm.value.birthdate = ''
+  }
+}
 
 // Unified password policy: length ≥ 12 + zxcvbn strength + HIBP breach check.
 // No mandatory composition rules (NIST SP 800-63B) — see usePasswordStrength.
@@ -744,6 +794,8 @@ const handleLogin = async () => {
     }
 
     logger.debug('✅ Login successful')
+
+    await hydrateClientSessionAfterLogin(response.session)
     
     // Restore auth state from session
     const sessionRestored = await authStore.restoreSession()
