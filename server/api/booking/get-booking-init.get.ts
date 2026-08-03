@@ -5,7 +5,8 @@
 
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
-import { DEFAULT_BOOKING_POLICY } from '~/server/api/admin/booking-policy.get'
+import { DEFAULT_BOOKING_POLICY, normalizeLocationIntakeModes } from '~/server/api/admin/booking-policy.get'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   const { slug } = getQuery(event)
@@ -84,6 +85,7 @@ export default defineEventHandler(async (event) => {
     registration_required: rawPolicy.registration_required ?? DEFAULT_BOOKING_POLICY.registration_required,
     booking_required_fields: rawPolicy.booking_required_fields ?? DEFAULT_BOOKING_POLICY.booking_required_fields,
     booking_optional_fields: rawPolicy.booking_optional_fields ?? DEFAULT_BOOKING_POLICY.booking_optional_fields,
+    location_intake_modes: normalizeLocationIntakeModes(rawPolicy),
     onboarding_sms_enabled: rawPolicy.onboarding_sms_enabled ?? DEFAULT_BOOKING_POLICY.onboarding_sms_enabled,
     onboarding_email_enabled: rawPolicy.onboarding_email_enabled ?? DEFAULT_BOOKING_POLICY.onboarding_email_enabled,
   }
@@ -91,8 +93,41 @@ export default defineEventHandler(async (event) => {
   // Strip booking_policy from tenant object before returning (avoid leaking internal settings)
   const { booking_policy: _bp, ...tenantPublic } = tenant as any
 
+  // Public booking page cannot rely on useFeatures() (guests have no auth tenant_id).
+  // Default true when unset for backwards compatibility with tenants that never toggled the flag.
+  let allowOnlineBooking = true
+  try {
+    const { data: featureRow } = await getSupabaseAdmin()
+      .from('tenant_settings')
+      .select('setting_value')
+      .eq('tenant_id', tenant.id)
+      .eq('category', 'features')
+      .eq('setting_key', 'allow_online_booking')
+      .maybeSingle()
+
+    if (featureRow?.setting_value) {
+      try {
+        const parsed = JSON.parse(featureRow.setting_value)
+        if (typeof parsed.enabled === 'boolean') {
+          allowOnlineBooking = parsed.enabled
+        }
+      } catch {
+        allowOnlineBooking = featureRow.setting_value === 'true'
+      }
+    }
+  } catch {
+    // Keep default true if feature lookup fails
+  }
+
   return {
     success: true,
-    data: { tenant: tenantPublic, categories, locationsCount, bookingPolicy, availableServiceTypes },
+    data: {
+      tenant: tenantPublic,
+      categories,
+      locationsCount,
+      bookingPolicy,
+      availableServiceTypes,
+      allow_online_booking: allowOnlineBooking,
+    },
   }
 })

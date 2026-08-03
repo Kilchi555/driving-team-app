@@ -4,7 +4,10 @@
     class="h-[100svh] overflow-y-auto bg-gray-50"
     style="padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px)"
   >
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div
+      class="mx-auto px-4 sm:px-6 lg:px-8 py-4"
+      :class="!isOnlineBookingEnabled ? 'max-w-2xl' : 'max-w-6xl'"
+    >
       
       <!-- Already-booked banner: shown when user navigates back after a successful booking -->
       <div
@@ -32,8 +35,8 @@
            instead of) the auto-redirect to the dashboard fires. -->
       <template v-if="!justCompletedBooking">
 
-      <!-- Back Button & Header -->
-      <div class="mb-4 flex items-center gap-4">
+      <!-- Back Button & Header (booking wizard only — inquiry form has its own brand header) -->
+      <div v-if="isOnlineBookingEnabled" class="mb-4 flex items-center gap-4">
         <button 
           v-if="currentStep > 0"
           @click="handleBackButton"
@@ -53,6 +56,17 @@
           </svg>
         </button>
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Fahrstunde buchen</h1>
+      </div>
+      <div v-else class="mb-2">
+        <button
+          @click="goBackToReferrer"
+          class="inline-flex items-center gap-1.5 rounded-xl px-2 py-2 text-sm font-medium text-slate-500 transition hover:bg-white/70 hover:text-slate-800"
+        >
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Zurück
+        </button>
       </div>
 
       <!-- Initial Loading Overlay – shown while SSR hydrates or client-side fetch completes -->
@@ -110,11 +124,30 @@
         </div>
       </div>
 
-      <!-- Präferenzformular (wenn Online-Buchung deaktiviert) -->
-      <AppointmentPreferencesForm
-        v-if="!isOnlineBookingEnabled"
-        :tenant-slug="(route.params.slug as string)"
+      <!-- Anfrageformular (wenn Online-Buchung deaktiviert) — mit Tenant-Branding -->
+      <GeneralInquiryForm
+        v-if="!isOnlineBookingEnabled && currentTenant?.id"
+        :tenant_id="currentTenant.id"
+        :primary-color="getBrandPrimary()"
+        :secondary-color="getBrandSecondary()"
+        :logo-url="currentTenant.logo_wide_url || currentTenant.logo_url || null"
+        :tenant-name="currentTenant.name"
+        :required-fields="bookingRequiredFields"
+        :optional-fields="bookingOptionalFields"
+        :location-intake-modes="locationIntakeModes"
+        mode="booking"
+        @submitted="handleInquirySubmittedWhileBookingDisabled"
       />
+      <div
+        v-else-if="!isOnlineBookingEnabled"
+        class="flex flex-col items-center justify-center py-16 gap-4"
+      >
+        <div
+          class="animate-spin rounded-full h-10 w-10 border-b-2"
+          :style="{ borderBottomColor: getBrandPrimary() }"
+        ></div>
+        <p class="text-sm text-gray-500">Formular wird geladen…</p>
+      </div>
 
       <!-- Verfügbarkeitstool (wenn Online-Buchung aktiviert) -->
       <div v-else class="space-y-4">
@@ -1656,11 +1689,11 @@ import { useCustomerConflictCheck } from '~/composables/useCustomerConflictCheck
 import LoginRegisterModal from '~/components/booking/LoginRegisterModal.vue'
 import DocumentUploadModal from '~/components/booking/DocumentUploadModal.vue'
 import BookingProposalForm from '~/components/BookingProposalForm.vue'
+import GeneralInquiryForm from '~/components/GeneralInquiryForm.vue'
 import { useRoute, useRuntimeConfig } from '#app'
 import { useFeatures } from '~/composables/useFeatures'
 import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
-import AppointmentPreferencesForm from '~/components/booking/AppointmentPreferencesForm.vue'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
@@ -1713,9 +1746,15 @@ const { isEnabled, load: loadFeatures } = useFeatures()
 // Initialize once at top-level so repeated instructor selections reuse the same instance
 const { checkConflicts: checkCustomerConflicts, customerAppointments } = useCustomerConflictCheck()
 
+// From get-booking-init — reliable for guests (useFeatures needs auth tenant_id)
+const allowOnlineBookingFromInit = ref<boolean | null>(null)
+
 // Prüfe ob Online-Buchung aktiviert ist
 const isOnlineBookingEnabled = computed(() => {
-  return isEnabled('allow_online_booking', true) // Default: true für Rückwärtskompatibilität
+  if (allowOnlineBookingFromInit.value !== null) {
+    return allowOnlineBookingFromInit.value
+  }
+  return isEnabled('allow_online_booking', true) // Fallback bis Init geladen
 })
 
 // Fahrzeit-Check: Slots bei Pickup nach Erreichbarkeit der Kundenadresse filtern
@@ -2029,6 +2068,9 @@ if (initData.value?.success) {
   categories.value = initData.value.data.categories || []
   locationsCount.value = initData.value.data.locationsCount ?? 0
   availableServiceTypes.value = initData.value.data.availableServiceTypes || []
+  if (typeof initData.value.data.allow_online_booking === 'boolean') {
+    allowOnlineBookingFromInit.value = initData.value.data.allow_online_booking
+  }
 }
 
 const bookingLabels = computed(() => mergeTerminology(currentTenant.value?.business_type))
@@ -2039,11 +2081,22 @@ const bookingPolicy = computed(() => initData.value?.data?.bookingPolicy ?? {
   registration_required: false,
   booking_required_fields: ['first_name', 'last_name', 'phone'],
   booking_optional_fields: ['email'],
+  location_intake_modes: ['locations'],
   onboarding_sms_enabled: true,
 })
 const registrationRequired = computed(() => bookingPolicy.value.registration_required === true)
 const bookingRequiredFields = computed<string[]>(() => bookingPolicy.value.booking_required_fields ?? ['first_name', 'last_name', 'phone'])
 const bookingOptionalFields = computed<string[]>(() => bookingPolicy.value.booking_optional_fields ?? ['email'])
+const locationIntakeModes = computed<Array<'locations' | 'pickup_address' | 'callback'>>(() => {
+  const modes = bookingPolicy.value.location_intake_modes
+  if (Array.isArray(modes) && modes.length > 0) {
+    return modes.filter((m: string) => ['locations', 'pickup_address', 'callback'].includes(m)) as Array<'locations' | 'pickup_address' | 'callback'>
+  }
+  // legacy singular
+  const legacy = (bookingPolicy.value as any).location_intake_mode
+  if (legacy === 'pickup_address' || legacy === 'callback') return [legacy]
+  return ['locations']
+})
 
 const isBookingFieldVisible = (key: string) =>
   bookingRequiredFields.value.includes(key) || bookingOptionalFields.value.includes(key)
@@ -3883,6 +3936,24 @@ const handleProposalSubmitted = async (proposalId: string) => {
   scrollContainerRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+/** Online-Buchung aus: Inquiry-Formular hat eigene Success-UI — nur Tracking. */
+const handleInquirySubmittedWhileBookingDisabled = (proposalId: string) => {
+  logger.debug('✅ Inquiry submitted (online booking disabled):', proposalId)
+  if (typeof window !== 'undefined' && (window as any).__trackBookingEvent) {
+    ;(window as any).__trackBookingEvent('inquiry_submitted', {
+      proposal_id: proposalId,
+      source: 'online_booking_disabled',
+    })
+  }
+  if (typeof window !== 'undefined' && (window as any).gtag) {
+    ;(window as any).gtag('event', 'inquiry_submitted', {
+      event_category: 'conversion',
+      event_label: 'online_booking_disabled',
+      proposal_id: proposalId,
+    })
+  }
+}
+
 // Initialize Google Places Autocomplete
 const initializeAddressAutocomplete = () => {
   if (!pickupAddressInput.value) {
@@ -5447,11 +5518,17 @@ const loadBookingInit = async (slug: string) => {
 
   if (cached.value) {
     // Reuse data from a previous fetch (e.g. navigated back to this page)
-    currentTenant.value = cached.value.tenant
-    categories.value = cached.value.categories || []
-    locationsCount.value = cached.value.locationsCount ?? 0
-    logger.debug('📦 Booking init from cache:', slug)
-    return
+    // Stale caches from before allow_online_booking was included must be refreshed
+    if (typeof cached.value.allow_online_booking !== 'boolean') {
+      cached.value = null
+    } else {
+      currentTenant.value = cached.value.tenant
+      categories.value = cached.value.categories || []
+      locationsCount.value = cached.value.locationsCount ?? 0
+      allowOnlineBookingFromInit.value = cached.value.allow_online_booking
+      logger.debug('📦 Booking init from cache:', slug)
+      return
+    }
   }
 
   try {
@@ -5464,10 +5541,13 @@ const loadBookingInit = async (slug: string) => {
       return
     }
 
-    const { tenant, categories: cats, locationsCount: locCount } = response.data
+    const { tenant, categories: cats, locationsCount: locCount, allow_online_booking: allowOnline } = response.data
     currentTenant.value = tenant
     categories.value = cats || []
     locationsCount.value = locCount ?? 0
+    if (typeof allowOnline === 'boolean') {
+      allowOnlineBookingFromInit.value = allowOnline
+    }
 
     // Persist in Nuxt state so revisiting the page skips the fetch
     cached.value = response.data
@@ -5546,9 +5626,6 @@ onMounted(async () => {
       if (lid) sessionStorage.setItem('email_campaign_lid', lid)
     } catch {}
     
-    // Fire-and-forget: features always default to true for guests, no need to block render
-    loadFeatures().catch(() => {})
-
     // Resolve ?staff=<handle> → UUID (kept in memory only, never in URL)
     const staffHandleParam = route.query.staff as string | undefined
     if (staffHandleParam && !route.query.prefill && slug.value) {
@@ -5569,11 +5646,17 @@ onMounted(async () => {
 
     // Single combined call: tenant + categories + locationsCount (no sequential waterfall)
     if (slug.value) {
-      // Only fetch if SSR didn't populate data (e.g. navigated to a different slug client-side)
-      if (!currentTenant.value) {
+      // Refetch if SSR/cache lacked allow_online_booking (guests cannot resolve it via useFeatures)
+      if (!currentTenant.value || allowOnlineBookingFromInit.value === null) {
         await loadBookingInit(slug.value)
       }
     }
+
+    // Load remaining feature flags (travel check etc.) once tenant is known
+    if (currentTenant.value?.id) {
+      await loadFeatures(currentTenant.value.id).catch(() => {})
+    }
+
     isInitializing.value = false
 
     // Nur Tenant laden wenn Online-Buchung aktiviert ist

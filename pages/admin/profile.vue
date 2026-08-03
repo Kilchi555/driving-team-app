@@ -1142,7 +1142,7 @@
           </div>
         </div>
 
-        <!-- Eventtypen Tab -->
+        <!-- Terminarten Tab -->
         <div v-if="activeTab === 'eventtypes'" class="space-y-6">
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <EventTypesManager />
@@ -1938,6 +1938,57 @@
               </div>
             </div>
 
+            <!-- Treffpunkt / Abholung -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div class="px-5 py-4 border-b border-gray-50">
+                <h2 class="text-sm font-semibold text-gray-800">Treffpunkt / Abholung</h2>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  Welche Optionen soll der Kunde im Anfrageformular haben? Mehrere möglich — der Kunde wählt dann selbst.
+                </p>
+              </div>
+              <div class="px-5 py-4 space-y-3">
+                <button
+                  v-for="opt in bpLocationIntakeOptions"
+                  :key="opt.value"
+                  type="button"
+                  class="w-full text-left rounded-xl border-2 px-4 py-3 transition-colors"
+                  :class="bpIsLocationIntakeEnabled(opt.value)
+                    ? ''
+                    : 'border-gray-100 hover:border-gray-200'"
+                  :style="bpIsLocationIntakeEnabled(opt.value) ? primaryBgLight : {}"
+                  @click="bpToggleLocationIntakeMode(opt.value)"
+                >
+                  <div class="flex items-start gap-3">
+                    <span
+                      class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border-2"
+                      :class="bpIsLocationIntakeEnabled(opt.value) ? 'border-transparent' : 'border-gray-300 bg-white'"
+                      :style="bpIsLocationIntakeEnabled(opt.value) ? primaryBg : {}"
+                    >
+                      <svg
+                        v-if="bpIsLocationIntakeEnabled(opt.value)"
+                        class="h-2.5 w-2.5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </span>
+                    <div>
+                      <p class="text-sm font-semibold text-gray-800">{{ opt.label }}</p>
+                      <p class="mt-0.5 text-xs text-gray-500">{{ opt.description }}</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+              <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 rounded-b-2xl">
+                <p class="text-xs text-gray-400">
+                  Mindestens eine Option. Bei «Wunsch-Abholort» Adressfelder als Pflicht setzen.
+                  Bei «Rückruf» Telefon als Pflicht setzen.
+                </p>
+              </div>
+            </div>
+
             <!-- Onboarding-E-Mail -->
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-opacity"
               :class="bpPolicy.registration_required ? 'opacity-40 pointer-events-none' : ''">
@@ -1971,6 +2022,82 @@
                   <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
                     :class="bpPolicy.confirmation_email_enabled ? 'translate-x-6' : 'translate-x-1'"/>
                 </button>
+              </div>
+            </div>
+
+            <!-- SMS Bestätigung / Erinnerung / Kontingent -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div class="px-5 py-4 border-b border-gray-50">
+                <h2 class="text-sm font-semibold text-gray-800">SMS (ohne E-Mail)</h2>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  Fallback wenn der Kunde nur Telefon hat. Inklusiv-Segmente gemäss Plan; Überzug CHF {{ smsOverageRate.toFixed(2) }}/Segment.
+                </p>
+                <p v-if="smsUsage" class="text-xs text-gray-600 mt-2">
+                  Verbrauch diesen Monat: <span class="font-semibold">{{ smsUsage.used }} / {{ smsUsage.included }}</span> Segmente
+                  <span v-if="smsUsage.overage > 0" class="text-amber-600"> · Überzug {{ smsUsage.overage }} (ca. CHF {{ smsUsage.overageCostChf.toFixed(2) }})</span>
+                </p>
+              </div>
+              <div class="px-5 py-4 space-y-4">
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Bestätigung per SMS</p>
+                    <p class="text-xs text-gray-400">Wenn keine E-Mail vorhanden</p>
+                  </div>
+                  <button type="button" @click="bpPolicy.confirmation_sms_enabled = !bpPolicy.confirmation_sms_enabled"
+                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                    :style="bpPolicy.confirmation_sms_enabled ? primaryBg : { background: '#e5e7eb' }">
+                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                      :class="bpPolicy.confirmation_sms_enabled ? 'translate-x-6' : 'translate-x-1'"/>
+                  </button>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Erinnerung per SMS</p>
+                    <p class="text-xs text-gray-400">Tages vorher, wenn keine E-Mail</p>
+                  </div>
+                  <button type="button" @click="bpPolicy.reminder_sms_enabled = !bpPolicy.reminder_sms_enabled"
+                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                    :style="bpPolicy.reminder_sms_enabled ? primaryBg : { background: '#e5e7eb' }">
+                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                      :class="bpPolicy.reminder_sms_enabled ? 'translate-x-6' : 'translate-x-1'"/>
+                  </button>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Hard-Stop bei leerem Kontingent</p>
+                    <p class="text-xs text-gray-400">Sonst Soft-Cap: SMS laufen weiter und werden verrechnet</p>
+                  </div>
+                  <button type="button" @click="bpPolicy.sms_hard_stop_on_quota = !bpPolicy.sms_hard_stop_on_quota"
+                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                    :style="bpPolicy.sms_hard_stop_on_quota ? primaryBg : { background: '#e5e7eb' }">
+                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                      :class="bpPolicy.sms_hard_stop_on_quota ? 'translate-x-6' : 'translate-x-1'"/>
+                  </button>
+                </div>
+
+                <div>
+                  <p class="text-sm font-medium text-gray-800 mb-2">Nachrichtenlänge</p>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button type="button"
+                      @click="bpPolicy.sms_message_length = 'short'"
+                      class="text-left rounded-xl border p-3 transition-colors"
+                      :class="bpPolicy.sms_message_length === 'short' ? 'border-transparent' : 'border-gray-100 hover:border-gray-200'"
+                      :style="bpPolicy.sms_message_length === 'short' ? { borderColor: 'var(--color-primary, #3B82F6)', background: 'var(--color-primary-bg, #EFF6FF)' } : {}">
+                      <p class="text-sm font-semibold text-gray-800">Kurz · {{ smsPreviews.short.segments }} Segment</p>
+                      <p class="text-xs text-gray-500 mt-1">≈ CHF {{ smsPreviews.short.costChf.toFixed(2) }}</p>
+                      <p class="text-xs text-gray-600 mt-2 font-mono leading-relaxed">{{ smsPreviews.short.message }}</p>
+                    </button>
+                    <button type="button"
+                      @click="bpPolicy.sms_message_length = 'long'"
+                      class="text-left rounded-xl border p-3 transition-colors"
+                      :class="bpPolicy.sms_message_length === 'long' ? 'border-transparent' : 'border-gray-100 hover:border-gray-200'"
+                      :style="bpPolicy.sms_message_length === 'long' ? { borderColor: 'var(--color-primary, #3B82F6)', background: 'var(--color-primary-bg, #EFF6FF)' } : {}">
+                      <p class="text-sm font-semibold text-gray-800">Lang · {{ smsPreviews.long.segments }} Segmente</p>
+                      <p class="text-xs text-gray-500 mt-1">≈ CHF {{ smsPreviews.long.costChf.toFixed(2) }}</p>
+                      <p class="text-xs text-gray-600 mt-2 font-mono leading-relaxed">{{ smsPreviews.long.message }}</p>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -2285,7 +2412,7 @@ const tabs = ref([
   { id: 'logos',     name: 'Logos',               icon: ImageIcon    },
   { id: 'security',  name: 'Sicherheit',          icon: ShieldIcon   },
   { id: 'features',  name: 'Funktionen',          icon: PuzzleIcon   },
-  { id: 'eventtypes',name: 'Eventtypen',          icon: TagIcon      },
+  { id: 'eventtypes',name: 'Terminarten',         icon: TagIcon      },
   { id: 'payments',  name: 'Zahlungen',           icon: PaymentIcon  },
   { id: 'booking',         name: 'Online-Buchung',         icon: ClockIcon    },
   { id: 'booking-policy', name: 'Buchung & Onboarding',   icon: ClockIcon },
@@ -2719,6 +2846,7 @@ const bpPolicy = ref({
   student_optional_fields: [] as string[],
   booking_required_fields: ['first_name', 'last_name', 'phone'] as string[],
   booking_optional_fields: ['email'] as string[],
+  location_intake_modes: ['locations'] as Array<'locations' | 'pickup_address' | 'callback'>,
   registration_required: false,
   confirmation_email_enabled: true,
   registration_reminder_enabled: false,
@@ -2727,8 +2855,65 @@ const bpPolicy = ref({
   registration_reminder_sms_enabled: true,
   onboarding_sms_enabled: true,
   onboarding_email_enabled: false,
+  confirmation_sms_enabled: true,
+  reminder_sms_enabled: true,
+  sms_message_length: 'short' as 'short' | 'long',
+  sms_hard_stop_on_quota: false,
   staff_refund_permission: 'hidden' as 'hidden' | 'request' | 'allowed',
 })
+
+const bpLocationIntakeOptions = [
+  {
+    value: 'locations' as const,
+    label: 'Standard-Standorte',
+    description: 'Kunde wählt einen Treffpunkt / eine Filiale aus der Standortliste.',
+  },
+  {
+    value: 'pickup_address' as const,
+    label: 'Wunsch-Abholort',
+    description: 'Kein Standort-Dropdown. Kunde gibt die gewünschte Abholadresse an (z.B. zu Hause).',
+  },
+  {
+    value: 'callback' as const,
+    label: 'Telefonischer Rückruf',
+    description: 'Kein Standort. Kunde hinterlässt Kontaktdaten — ihr ruft zurück und klärt den Termin.',
+  },
+]
+
+const bpIsLocationIntakeEnabled = (mode: 'locations' | 'pickup_address' | 'callback') =>
+  (bpPolicy.value.location_intake_modes || []).includes(mode)
+
+const bpToggleLocationIntakeMode = (mode: 'locations' | 'pickup_address' | 'callback') => {
+  const current = [...(bpPolicy.value.location_intake_modes || [])]
+  if (current.includes(mode)) {
+    if (current.length === 1) return
+    bpPolicy.value.location_intake_modes = current.filter(m => m !== mode)
+  } else {
+    bpPolicy.value.location_intake_modes = [...current, mode]
+  }
+}
+
+const smsUsage = ref<{ used: number; included: number; overage: number; overageCostChf: number } | null>(null)
+const smsOverageRate = ref(0.15)
+const smsPreviews = ref({
+  short: { message: 'Hallo Max, Termin Di 15.3. 14:00 bestätigt.', segments: 1, costChf: 0.15 },
+  long: { message: 'Hallo Max, Termin Di 15.3. 14:00 bestätigt. Absage/Details: https://app.simy.ch/login', segments: 2, costChf: 0.30 },
+})
+
+async function loadSmsUsage() {
+  try {
+    const res = await $fetch<{
+      usage: any
+      overageRateChf: number
+      previews: { short: any; long: any }
+    }>('/api/admin/sms-usage')
+    smsUsage.value = res.usage
+    smsOverageRate.value = res.overageRateChf
+    smsPreviews.value = res.previews
+  } catch (e) {
+    console.warn('Could not load SMS usage:', e)
+  }
+}
 
 const bpRefundPermissionOptions = [
   { value: 'hidden',  label: 'Nicht sichtbar',  description: 'Staff sieht keine Rückerstattungs-Option. Nur Admins können Rückerstattungen auslösen.' },
@@ -2855,6 +3040,7 @@ const selectTab = (tabId: string) => {
     bpLoadPolicy().then(() => {
       logger.debug('✅ Booking policy tab activated, auto-save ready')
     })
+    loadSmsUsage()
   }
 }
 
@@ -3698,7 +3884,9 @@ const rentalPortalSlug = ref<string | null>(null)
 
 const onlineBookingUrl = computed(() => {
   const slug = currentTenantBranding.value?.slug || ''
-  return typeof window !== 'undefined' ? `${window.location.origin}/booking/${slug}` : `/booking/${slug}`
+  return typeof window !== 'undefined'
+    ? `${window.location.origin}/booking/availability/${slug}`
+    : `/booking/availability/${slug}`
 })
 
 const rentalPortalUrl = computed(() => {
