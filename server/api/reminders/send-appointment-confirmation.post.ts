@@ -311,7 +311,8 @@ export default defineEventHandler(async (event) => {
     // which re-triggers this endpoint purely to send the (until-then-skipped) customer email
     // — staff were already notified immediately at booking time and must not be pinged twice.
     const isOnlineBooking = appointment.source === 'online' && appointment.created_by === userId
-    if (staff?.email && isOnlineBooking && !skipStaffNotification) {
+    const staffNotificationEnabled = policy.staff_booking_notification_enabled !== false
+    if (staff?.email && isOnlineBooking && !skipStaffNotification && staffNotificationEnabled) {
       try {
         await $fetch('/api/email/send-appointment-notification', {
           method: 'POST',
@@ -336,6 +337,8 @@ export default defineEventHandler(async (event) => {
       } catch (err: any) {
         logger.warn('⚠️ Could not send staff new booking notification (non-critical):', err.message)
       }
+    } else if (staff?.email && !staffNotificationEnabled) {
+      logger.debug('⏭️ Skipping staff notification – disabled by tenant policy')
     } else if (staff?.email && !isOnlineBooking) {
       logger.debug('⏭️ Skipping staff notification – manual appointment (source:', appointment.source, ')')
     }

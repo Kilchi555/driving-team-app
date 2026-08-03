@@ -2108,6 +2108,25 @@
               </div>
             </div>
 
+            <!-- Staff-Benachrichtigung -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div class="px-5 py-4 flex items-center justify-between">
+                <div>
+                  <h2 class="text-sm font-semibold text-gray-800">Staff bei Anfragen & Online-Buchungen benachrichtigen</h2>
+                  <p class="text-xs text-gray-400 mt-0.5">
+                    Zugewiesene Mitarbeiter erhalten eine E-Mail bei Buchungsanfragen und neuen Online-Terminen.
+                    Die Betriebs-Kontaktmail bei Anfragen bleibt unabhängig davon aktiv.
+                  </p>
+                </div>
+                <button type="button" @click="bpPolicy.staff_booking_notification_enabled = !bpPolicy.staff_booking_notification_enabled"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
+                  :style="bpPolicy.staff_booking_notification_enabled ? primaryBg : { background: '#e5e7eb' }">
+                  <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                    :class="bpPolicy.staff_booking_notification_enabled ? 'translate-x-6' : 'translate-x-1'"/>
+                </button>
+              </div>
+            </div>
+
             <!-- SMS Bestätigung / Erinnerung / Kontingent -->
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div class="px-5 py-4 border-b border-gray-50">
@@ -2936,6 +2955,7 @@ const bpPolicy = ref({
   registration_proposal_mode: 'optional' as 'hidden' | 'optional' | 'required',
   registration_account_mode: 'required' as 'hidden' | 'required',
   confirmation_email_enabled: true,
+  staff_booking_notification_enabled: true,
   registration_reminder_enabled: false,
   registration_reminder_days: 7,
   registration_reminder_email_enabled: true,
