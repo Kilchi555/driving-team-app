@@ -243,6 +243,37 @@ export default defineEventHandler(async (event) => {
         .insert({ tenant_id: tenantId, ...payload, is_active: true })
         .select()
         .single()
+
+      // Double-submit / race: same (category_id, name) already exists — treat as success.
+      if (error?.code === '23505' || error?.message?.includes('evaluation_criteria_category_id_name_key')) {
+        const { data: existing } = await supabase
+          .from('evaluation_criteria')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .eq('category_id', category_id)
+          .eq('name', name)
+          .maybeSingle()
+
+        if (existing) {
+          if (!existing.is_active) {
+            const { data: reactivated, error: reactivateError } = await supabase
+              .from('evaluation_criteria')
+              .update({
+                ...payload,
+                is_active: true,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existing.id)
+              .eq('tenant_id', tenantId)
+              .select()
+              .single()
+            if (reactivateError) throw createError({ statusCode: 500, statusMessage: reactivateError.message })
+            return { success: true, data: reactivated }
+          }
+          return { success: true, data: existing }
+        }
+      }
+
       if (error) throw createError({ statusCode: 500, statusMessage: error.message })
       return { success: true, data }
     }
@@ -565,11 +596,55 @@ export default defineEventHandler(async (event) => {
       .eq('tenant_id', tenantId)
       .single()
     if (!catCheck) throw createError({ statusCode: 403, statusMessage: 'Category not found for this tenant' })
+
+    const insertPayload = {
+      tenant_id: tenantId,
+      category_id,
+      name,
+      description: description || '',
+      driving_categories: driving_categories || [],
+      display_order: display_order || 0,
+      is_active: true,
+    }
+
     const { data, error } = await supabase
       .from('evaluation_criteria')
-      .insert({ tenant_id: tenantId, category_id, name, description: description || '', driving_categories: driving_categories || [], display_order: display_order || 0, is_active: true })
+      .insert(insertPayload)
       .select()
       .single()
+
+    // Double-submit / race: same (category_id, name) already exists — treat as success.
+    if (error?.code === '23505' || error?.message?.includes('evaluation_criteria_category_id_name_key')) {
+      const { data: existing } = await supabase
+        .from('evaluation_criteria')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('category_id', category_id)
+        .eq('name', name)
+        .maybeSingle()
+
+      if (existing) {
+        if (!existing.is_active) {
+          const { data: reactivated, error: reactivateError } = await supabase
+            .from('evaluation_criteria')
+            .update({
+              is_active: true,
+              description: insertPayload.description,
+              driving_categories: insertPayload.driving_categories,
+              display_order: insertPayload.display_order,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id)
+            .eq('tenant_id', tenantId)
+            .select()
+            .single()
+          if (reactivateError) throw createError({ statusCode: 500, statusMessage: reactivateError.message })
+          return { success: true, data: reactivated }
+        }
+        return { success: true, data: existing }
+      }
+    }
+
     if (error) throw createError({ statusCode: 500, statusMessage: error.message })
     return { success: true, data }
   }
