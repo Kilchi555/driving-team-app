@@ -90,6 +90,7 @@ export default defineEventHandler(async (event) => {
       user:users!appointments_user_id_fkey (
         id,
         email,
+        phone,
         first_name,
         onboarding_status,
         onboarding_token,
@@ -172,7 +173,7 @@ export default defineEventHandler(async (event) => {
   }
   const { data: tenants } = await supabase
     .from('tenants')
-    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, business_type')
+    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, business_type, booking_policy, twilio_from_sender')
     .in('id', tenantIds)
 
   const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
@@ -218,7 +219,9 @@ export default defineEventHandler(async (event) => {
 
   for (const apt of appointments as any[]) {
     const user = apt.user
-    if (!user?.email) { skipped++; continue }
+    const hasEmail = !!(user?.email && String(user.email).trim())
+    const hasPhone = !!(user?.phone && String(user.phone).trim())
+    if (!hasEmail && !hasPhone) { skipped++; continue }
 
     if (alreadyQueued.has(apt.id)) {
       logger.debug(`⏭️ Reminder already queued for appointment ${apt.id}`)
@@ -227,6 +230,9 @@ export default defineEventHandler(async (event) => {
     }
 
     const tenant = tenantMap.get(apt.tenant_id)
+    const policy = (tenant as any)?.booking_policy || {}
+    const reminderSmsEnabled = policy.reminder_sms_enabled !== false
+    const smsLength = policy.sms_message_length === 'long' ? 'long' : 'short'
     const terms = termsMap.get(apt.tenant_id) || getTerminologyDefaults(tenant?.business_type)
     const tenantName   = tenant?.name || terms.businessNoun
     const primaryColor = tenant?.primary_color || '#2563eb'
@@ -240,6 +246,7 @@ export default defineEventHandler(async (event) => {
     const aptDate = new Date(apt.start_time)
     const dateStr = aptDate.toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Europe/Zurich' })
     const timeStr = aptDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
+    const dateLabel = aptDate.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'Europe/Zurich' })
     const durationStr = apt.duration_minutes ? `${apt.duration_minutes} Min.` : ''
     const lessonFallback = { ...FALLBACK_EVENT_TYPE_LABELS, lesson: terms.appointment }
     const eventLabel  = eventTypeMap.get(`${apt.tenant_id}::${apt.event_type_code}`)
@@ -255,12 +262,14 @@ export default defineEventHandler(async (event) => {
     const meetingType = inviteData?.meeting_type as 'in_person' | 'phone' | 'online' | undefined
     const meetingLink = inviteData?.meeting_link
 
-    // Meeting point — hidden for phone/online; pickup address takes priority over standard location
+    // SMS/email meeting point — prefer address (not location name); pickup wins
     let meetingPoint = ''
+    let meetingAddressOnly = ''
     const isPhoneOrOnline = meetingType === 'phone' || meetingType === 'online'
     if (!isPhoneOrOnline) {
       if ((apt as any).customer_pickup_address) {
         meetingPoint = (apt as any).customer_pickup_address
+        meetingAddressOnly = meetingPoint
       } else {
         const loc = apt.location_id ? locationMap.get(apt.location_id) : null
         if (loc?.name) {
@@ -271,6 +280,9 @@ export default defineEventHandler(async (event) => {
           meetingPoint = apt.custom_location_name
           if (apt.custom_location_address) meetingPoint += `, ${apt.custom_location_address}`
         }
+        meetingAddressOnly = loc
+          ? [loc.address, loc.city].filter(Boolean).join(', ')
+          : (apt.custom_location_address || '')
       }
     }
 
@@ -287,41 +299,71 @@ export default defineEventHandler(async (event) => {
     const payment = isBillable ? (paymentMap.get(apt.id) || null) : null
     const paymentHtml = payment ? buildPaymentSection(payment, primaryColor, loginLink, isActivationLink) : ''
 
-    const html = buildEmailHtml({
-      firstName:    user.first_name || 'Hallo',
-      dateStr,
-      timeStr,
-      durationStr,
-      eventLabel,
-      categoryStr,
-      staffName,
-      staffPhone,
-      meetingPoint,
-      examLocation,
-      meetingType,
-      meetingLink,
-      tenantName,
-      primaryColor,
-      logoUrl,
-      paymentHtml,
-      staffLabel: terms.staff,
-    })
+    if (hasEmail) {
+      const html = buildEmailHtml({
+        firstName:    user.first_name || 'Hallo',
+        dateStr,
+        timeStr,
+        durationStr,
+        eventLabel,
+        categoryStr,
+        staffName,
+        staffPhone,
+        meetingPoint,
+        examLocation,
+        meetingType,
+        meetingLink,
+        tenantName,
+        primaryColor,
+        logoUrl,
+        paymentHtml,
+        staffLabel: terms.staff,
+      })
 
-    toInsert.push({
-      tenant_id:       apt.tenant_id,
-      channel:         'email',
-      recipient_email: user.email,
-      subject:         `Erinnerung: ${eventLabel} am ${dateStr} um ${timeStr} Uhr`,
-      body:            html,
-      status:          'pending',
-      send_at:         now.toISOString(),
-      context_data: {
-        stage:          'appointment_reminder',
-        appointment_id: apt.id,
-        user_id:        user.id,
-        tenant_name:    tenantName,
-      }
-    })
+      toInsert.push({
+        tenant_id:       apt.tenant_id,
+        channel:         'email',
+        recipient_email: user.email,
+        subject:         `Erinnerung: ${eventLabel} am ${dateStr} um ${timeStr} Uhr`,
+        body:            html,
+        status:          'pending',
+        send_at:         now.toISOString(),
+        context_data: {
+          stage:          'appointment_reminder',
+          appointment_id: apt.id,
+          user_id:        user.id,
+          tenant_name:    tenantName,
+        }
+      })
+    } else if (hasPhone && reminderSmsEnabled) {
+      const { buildAppointmentReminderSms } = await import('~/server/utils/sms-templates')
+      const smsBody = buildAppointmentReminderSms(
+        {
+          firstName: user.first_name || 'du',
+          dateLabel,
+          timeLabel: timeStr,
+          locationLabel: isPhoneOrOnline ? undefined : (meetingAddressOnly || undefined),
+          appLink: tenant?.slug ? `https://app.simy.ch/${tenant.slug}` : loginLink,
+        },
+        smsLength,
+      )
+      toInsert.push({
+        tenant_id:       apt.tenant_id,
+        channel:         'sms',
+        recipient_phone: user.phone,
+        body:            smsBody,
+        status:          'pending',
+        send_at:         now.toISOString(),
+        context_data: {
+          stage:          'appointment_reminder',
+          appointment_id: apt.id,
+          user_id:        user.id,
+          tenant_name:    (tenant as any)?.twilio_from_sender || tenantName,
+        }
+      })
+    } else {
+      skipped++
+    }
   }
 
   if (toInsert.length === 0) {

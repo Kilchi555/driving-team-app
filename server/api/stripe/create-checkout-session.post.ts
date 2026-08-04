@@ -232,6 +232,11 @@ export default defineEventHandler(async (event) => {
     lineItems.push({ price: gbpPriceId, quantity: 1 })
   }
 
+  // Metered SMS overage (CHF 0.15/segment above plan included quota) — no quantity
+  const { smsOverageCheckoutLineItem } = await import('~/server/utils/sms-stripe')
+  const smsLine = smsOverageCheckoutLineItem()
+  if (smsLine) lineItems.push(smsLine)
+
   // ── Create Checkout Session ───────────────────────────────────────────────
   // If tenant wants Wallee AND it's not yet active → 30-day billing pause:
   // ~20 days for Handelsregister (HR) registration + ~5 days for Wallee onboarding + buffer.

@@ -129,12 +129,20 @@
               </li>
             </ul>
 
-            <!-- Seats badge -->
-            <div class="text-xs font-medium rounded-xl px-3 py-2 text-center"
-              :style="selectedPlan === plan.id && plan.highlighted
-                ? 'background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.85);'
-                : `background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);`">
-              {{ plan.includedSeats === null ? '∞ Fahrlehrer inkl.' : `${plan.includedSeats} Fahrlehrer inkl.` }}
+            <!-- Seats + SMS badge -->
+            <div class="space-y-1.5">
+              <div class="text-xs font-medium rounded-xl px-3 py-2 text-center"
+                :style="selectedPlan === plan.id && plan.highlighted
+                  ? 'background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.85);'
+                  : `background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);`">
+                {{ plan.includedSeats === null ? '∞ Fahrlehrer inkl.' : `${plan.includedSeats} Fahrlehrer inkl.` }}
+              </div>
+              <div class="text-xs font-medium rounded-xl px-3 py-2 text-center"
+                :style="selectedPlan === plan.id && plan.highlighted
+                  ? 'background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.75);'
+                  : 'background: #F9FAFB; color: #6B7280;'">
+                {{ plan.includedSmsSegments }} SMS-Segmente inkl. / Mt.
+              </div>
             </div>
           </div>
         </div>
@@ -387,6 +395,15 @@
             <div class="flex justify-between items-center text-gray-400 text-xs pl-3">
               <span>
                 ↳ {{ includedSeatsForPlan }} Fahrlehrer Seat{{ (includedSeatsForPlan ?? 1) !== 1 ? 's' : '' }} inklusive
+              </span>
+              <span class="text-green-600 font-medium">Inklusive</span>
+            </div>
+
+            <!-- Included SMS segments -->
+            <div class="flex justify-between items-center text-gray-400 text-xs pl-3">
+              <span>
+                ↳ {{ includedSmsForPlan }} SMS-Segmente inkl. / Mt.
+                <span class="text-gray-300"> · Überzug CHF {{ smsOverageChf.toFixed(2) }}/Segment</span>
               </span>
               <span class="text-green-600 font-medium">Inklusive</span>
             </div>
@@ -711,7 +728,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useLazyFetch, useHead, useRoute } from '#imports'
-import { PLANS } from '~/utils/planFeatures'
+import { PLANS, SMS_OVERAGE_CHF_PER_SEGMENT } from '~/utils/planFeatures'
 import { useTrialFeatures } from '~/composables/useTrialFeatures'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { refreshClientSession } from '~/utils/client-session-refresh'
@@ -850,6 +867,10 @@ const error = ref<string | null>(null)
 const includedSeatsForPlan = computed(() => {
   return PLANS.find(p => p.id === selectedPlan.value)?.includedSeats ?? 1
 })
+const includedSmsForPlan = computed(() => {
+  return PLANS.find(p => p.id === selectedPlan.value)?.includedSmsSegments ?? 20
+})
+const smsOverageChf = SMS_OVERAGE_CHF_PER_SEGMENT
 
 // Total seats available for the chosen plan + addons
 const totalSeats = computed(() => {

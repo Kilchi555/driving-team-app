@@ -1,7 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { sendSMS } from '~/server/utils/sms'
+import { sendTenantSMS } from '~/server/utils/sms'
 import { sendTenantEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { cancelResourceBookingsForAppointment } from '~/server/utils/resource-bookings'
@@ -107,7 +107,13 @@ ${notes ? `<div style="background:#f9fafb;border-left:3px solid #16a34a;padding:
 
   if (!notificationSent && user?.phone) {
     try {
-      await sendSMS({ to: user.phone, message: smsText, senderName: tenant?.twilio_from_sender || tenantName })
+      await sendTenantSMS({
+        tenantId: profile.tenant_id,
+        to: user.phone,
+        message: smsText,
+        purpose: 'medical_certificate_cancel',
+        senderName: tenant?.twilio_from_sender || tenantName,
+      })
       notificationSent = true
       notificationMethod = 'sms'
     } catch (e: any) {

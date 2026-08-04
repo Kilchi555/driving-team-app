@@ -5,7 +5,7 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail, generateAppointmentDeletedEmail, generateStaffNotificationEmail } from '~/server/utils/email'
-import { sendSMS, generateAppointmentDeletedSMS } from '~/server/utils/sms'
+import { sendTenantSMS, generateAppointmentDeletedSMS } from '~/server/utils/sms'
 import { logger } from '~/utils/logger'
 import { sendPushToUser } from '~/server/utils/push'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
@@ -156,10 +156,12 @@ export default defineEventHandler(async (event) => {
             tenantPhone: tenant.contact_phone
           })
 
-          await sendSMS({
+          await sendTenantSMS({
+            tenantId,
             to: user.phone,
             message: smsText,
-            senderName: tenant.twilio_from_sender || tenant.name
+            purpose: 'appointment_deleted',
+            senderName: tenant.twilio_from_sender || tenant.name,
           })
 
           logger.debug(`✅ Customer deletion SMS sent to ${user.phone}`)

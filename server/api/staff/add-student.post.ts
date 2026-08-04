@@ -19,9 +19,8 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
-import { sendSMS } from '~/server/utils/sms'
+import { sendTenantSMS } from '~/server/utils/sms'
 import { v4 as uuidv4 } from 'uuid'
-import { logFallbackUsed } from '~/server/utils/log-fallback'
 
 interface StudentData {
   first_name?: string
@@ -161,12 +160,11 @@ export default defineEventHandler(async (event) => {
     // 6. LOAD TENANT DATA (inkl. booking_policy für SMS-Entscheid)
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, slug, twilio_from_sender, booking_policy')
+      .select('name, twilio_from_sender, booking_policy')
       .eq('id', userProfile.tenant_id)
       .single()
 
     let tenantName = tenant?.twilio_from_sender || tenant?.name || 'Ihre Fahrschule'
-    let tenantSlug: string | null = tenant?.slug || null
 
     // Serverseitige Policy: onboarding_sms_enabled (Standard: true)
     const onboardingSmsEnabled = (tenant?.booking_policy as any)?.onboarding_sms_enabled !== false
@@ -178,20 +176,6 @@ export default defineEventHandler(async (event) => {
     let emailSuccess = false
     let onboardingLink = `https://app.simy.ch/onboarding/${onboardingToken}`
 
-    if (!tenantSlug) {
-      // ✅ Kein Tenant-Rätselraten: statt eines Login-Links zur falschen
-      // (driving-team-)Fahrschule loggen wir den Fallback und lassen den
-      // Login-Link in der SMS weg (Onboarding-Link funktioniert unabhängig davon).
-      await logFallbackUsed({
-        source: 'tenant-slug',
-        message: `Kein Tenant-Slug für Onboarding-SMS gefunden (tenant_id=${userProfile.tenant_id}) – Login-Link wird weggelassen.`,
-        tenantId: userProfile.tenant_id,
-        level: 'error',
-        details: { context: 'add-student.post', studentId: newStudentId }
-      })
-    }
-    const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : null
-
     // Send SMS if phone exists and policy allows it
     if (body.phone && !skipSms) {
       try {
@@ -200,13 +184,15 @@ export default defineEventHandler(async (event) => {
         // Format phone number (ensure +41 format)
         const formattedPhone = formatSwissPhoneNumber(body.phone)
         
-        const loginLine = loginLink ? `\nDanach Login: ${loginLink}` : ''
-        const message = `Hallo ${body.first_name}! Willkommen bei ${tenantName}. Bitte Registrierung abschliessen (30 Tage gültig): ${onboardingLink}${loginLine}`
+        // Login link lives in the welcome email after registration — keep SMS short
+        const message = `Hallo ${body.first_name}! Willkommen bei ${tenantName}. Bitte Registrierung abschliessen (30 Tage gültig): ${onboardingLink}`
         
-        await sendSMS({
+        await sendTenantSMS({
+          tenantId: userProfile.tenant_id,
           to: formattedPhone,
           message: message,
-          senderName: tenantName
+          purpose: 'student_onboarding',
+          senderName: tenantName,
         })
         
         smsSuccess = true

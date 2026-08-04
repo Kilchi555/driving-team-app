@@ -16,6 +16,8 @@ export interface PlanDefinition {
   includedFeatures: string[]
   // Max included staff seats (null = unlimited)
   includedSeats: number | null
+  /** Included SMS segments per billing month (overage metered separately) */
+  includedSmsSegments: number
   highlighted?: boolean
 }
 
@@ -48,6 +50,7 @@ export const PLANS: PlanDefinition[] = [
       'Prüfungsverwaltung',
       'Kassenverwaltung',
       'Gutscheine & Rabatte',
+      '20 SMS-Segmente inkl. / Monat',
       'E-Mail Support',
     ],
     includedFeatures: [
@@ -65,6 +68,7 @@ export const PLANS: PlanDefinition[] = [
       'experts_enabled',
     ],
     includedSeats: 1,
+    includedSmsSegments: 20,
   },
   {
     id: 'professional',
@@ -75,6 +79,7 @@ export const PLANS: PlanDefinition[] = [
       'Alles aus Starter',
       'Bis zu 5 Fahrlehrer',
       'Kursbuchungsseite',
+      '50 SMS-Segmente inkl. / Monat',
       'Prioritäts-Support',
     ],
     includedFeatures: [
@@ -93,6 +98,7 @@ export const PLANS: PlanDefinition[] = [
       'experts_enabled',
     ],
     includedSeats: 5,
+    includedSmsSegments: 50,
   },
   {
     id: 'enterprise',
@@ -103,6 +109,7 @@ export const PLANS: PlanDefinition[] = [
       'Alles aus Professional',
       'Bis zu 10 Fahrlehrer',
       'Affiliate-System',
+      '100 SMS-Segmente inkl. / Monat',
       'Dedizierter Support',
     ],
     includedFeatures: [
@@ -122,8 +129,24 @@ export const PLANS: PlanDefinition[] = [
       'product_sales_enabled',
     ],
     includedSeats: 10,
+    includedSmsSegments: 100,
   },
 ]
+
+/** CHF per overage segment (must match Stripe metered price STRIPE_PRICE_ADDON_SMS_OVERAGE) */
+export const SMS_OVERAGE_CHF_PER_SEGMENT = 0.15
+
+/** Env key for metered SMS overage Stripe Price ID */
+export const SMS_OVERAGE_PRICE_ENV_KEY = 'STRIPE_PRICE_ADDON_SMS_OVERAGE'
+
+export function getIncludedSmsSegments(plan: string | null | undefined): number {
+  if (!plan || plan === 'trial') return 20
+  return getPlanById(plan)?.includedSmsSegments ?? 20
+}
+
+export function getSmsOveragePriceId(): string | undefined {
+  return process.env[SMS_OVERAGE_PRICE_ENV_KEY]?.trim() || undefined
+}
 
 // Trial gets full access so customers can explore everything
 export const TRIAL_FEATURES: string[] = [

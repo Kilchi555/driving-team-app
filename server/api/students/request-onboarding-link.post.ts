@@ -4,7 +4,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import { sendSMS } from '~/server/utils/sms'
+import { sendTenantSMS } from '~/server/utils/sms'
 import { sendEmail } from '~/server/utils/email'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 
@@ -90,13 +90,15 @@ export default defineEventHandler(async (event) => {
 
     // Send via SMS if enabled and phone available
     if ((method === 'sms' || !emailEnabled) && user.phone && smsEnabled) {
-      const loginLink = `https://app.simy.ch/${tenant.slug}`
-      const message = `Hallo ${user.first_name}!\n\nHier ist dein neuer Onboarding-Link:\n${onboardingLink}\n\nAnmeldung: ${loginLink}\n\n(Link 30 Tage gültig)\n${tenantName}`
+      // Login link lives in the welcome email after registration — keep SMS short
+      const message = `Hallo ${user.first_name}! Onboarding-Link (30 Tage): ${onboardingLink}`
 
-      await sendSMS({
+      await sendTenantSMS({
+        tenantId: tenant.id,
         to: user.phone,
         message,
-        senderName: tenantName
+        purpose: 'student_onboarding',
+        senderName: tenantName,
       })
 
       logger.debug('✅ Onboarding link sent via SMS:', user.id)

@@ -105,6 +105,19 @@
                 </span>
               </p>
             </div>
+            <div class="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 col-span-2">
+              <p class="text-xs text-gray-400 font-medium mb-0.5">SMS-Kontingent</p>
+              <p class="text-sm font-semibold text-gray-800">
+                <template v-if="smsUsage">
+                  {{ smsUsage.used }} / {{ smsUsage.included }} Segmente diesen Monat
+                  <span v-if="smsUsage.overage > 0" class="text-amber-600"> · Überzug {{ smsUsage.overage }}</span>
+                </template>
+                <template v-else>
+                  {{ includedSmsSegments }} Segmente inkl. / Monat
+                </template>
+              </p>
+              <p class="text-xs text-gray-400 mt-0.5">Überzug CHF {{ smsOverageChf.toFixed(2) }} / Segment · Soft-Cap (automatisch verrechnet)</p>
+            </div>
           </div>
 
           <!-- Add-ons -->
@@ -225,7 +238,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { PLANS } from '~/utils/planFeatures'
+import { PLANS, SMS_OVERAGE_CHF_PER_SEGMENT, getIncludedSmsSegments } from '~/utils/planFeatures'
 import type { PricingResponse } from '~/server/api/stripe/prices.get'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { refreshClientSession } from '~/utils/client-session-refresh'
@@ -248,6 +261,8 @@ const error = ref<string | null>(null)
 const showCancelDialog = ref(false)
 const route = useRoute()
 const showUpdatedBanner = ref(route.query.updated === '1')
+const smsUsage = ref<{ used: number; included: number; overage: number } | null>(null)
+const smsOverageChf = SMS_OVERAGE_CHF_PER_SEGMENT
 
 if (import.meta.client && showUpdatedBanner.value) {
   // Clean the query param without a full navigation
@@ -302,8 +317,17 @@ const authHeaders = async (): Promise<Record<string, string>> => {
 }
 
 onMounted(async () => {
-  await Promise.all([loadBillingStatus(), loadPrices()])
+  await Promise.all([loadBillingStatus(), loadPrices(), loadSmsUsage()])
 })
+
+async function loadSmsUsage() {
+  try {
+    const res = await $fetch<{ usage: { used: number; included: number; overage: number } }>('/api/admin/sms-usage', {
+      headers: await authHeaders(),
+    })
+    smsUsage.value = res.usage
+  } catch { /* non-critical */ }
+}
 
 async function loadBillingStatus() {
   loading.value = true
@@ -332,6 +356,7 @@ const planLabel = computed(() => planDef.value?.name ?? billing.value?.plan ?? '
 const planTagline = computed(() => planDef.value?.tagline ?? '')
 const planFeatures = computed(() => planDef.value?.features ?? [])
 const includedSeats = computed(() => planDef.value?.includedSeats ?? 1)
+const includedSmsSegments = computed(() => getIncludedSmsSegments(billing.value?.plan))
 
 const currentPlanPrice = computed(() => {
   if (!pricing.value || !billing.value?.plan) return null

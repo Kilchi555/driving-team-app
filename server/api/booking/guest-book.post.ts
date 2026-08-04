@@ -23,7 +23,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { DEFAULT_BOOKING_POLICY } from '~/server/api/admin/booking-policy.get'
 import { mergeAttributionFields } from '~/server/utils/marketing-attribution-merge'
-import { sendSMS } from '~/server/utils/sms'
+import { sendTenantSMS } from '~/server/utils/sms'
 import { sendEmail } from '~/server/utils/email'
 import { roundToNearest5Rappen } from '~/utils/rounding'
 import { logger } from '~/utils/logger'
@@ -659,13 +659,19 @@ export default defineEventHandler(async (event) => {
   }
   // Send SMS only if no email or email not enabled
   else if (phone && smsEnabled) {
-    const loginLink = `https://app.simy.ch/${tenant.slug}`
-    const message = `Hallo ${body.first_name}!\n\nDein Termin wurde bestätigt. Aktiviere jetzt dein kostenloses Konto um deine Buchungen zu verwalten:\n${onboardingLink}\n\nAnmeldung: ${loginLink}\n\n(Link 30 Tage gültig)\n${tenantName}`
+    // Login link lives in the welcome email after registration — keep SMS short
+    const message = `Hallo ${body.first_name}! Termin bestätigt. Konto aktivieren (30 Tage): ${onboardingLink}`
 
     onboardingSmsSent = true
     ;(async () => {
       try {
-        await sendSMS({ to: formatSwissPhoneNumber(phone), message, senderName: tenantName })
+        await sendTenantSMS({
+          tenantId: tenant.id,
+          to: formatSwissPhoneNumber(phone),
+          message,
+          purpose: 'student_onboarding',
+          senderName: tenantName,
+        })
         logger.debug('✅ Onboarding SMS sent to guest:', phone)
       } catch (err: any) {
         logger.warn('⚠️ Onboarding SMS failed (non-critical):', err.message)

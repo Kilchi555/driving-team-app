@@ -299,6 +299,13 @@ async function handleSubscriptionUpsert(
   }
   if (currentPeriodEnd) updatePayload.current_period_end = currentPeriodEnd
 
+  // Cache metered SMS overage subscription item id when present
+  const smsPriceId = process.env.STRIPE_PRICE_ADDON_SMS_OVERAGE?.trim()
+  if (smsPriceId) {
+    const smsItem = sub.items.data.find(i => i.price.id === smsPriceId)
+    if (smsItem) updatePayload.stripe_sms_subscription_item_id = smsItem.id
+  }
+
   console.log(`🔄 Updating tenant ${tenantId} with:`, JSON.stringify(updatePayload))
 
   const { error: updateError, count } = await supabase

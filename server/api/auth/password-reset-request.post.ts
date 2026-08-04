@@ -2,7 +2,7 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateRegistrationEmail } from '~/server/utils/email-validator'
-import { sendSMS } from '~/server/utils/sms'
+import { sendSMS, sendTenantSMS } from '~/server/utils/sms'
 import { validateRequiredString, throwValidationError } from '~/server/utils/validators'
 
 export default defineEventHandler(async (event) => {
@@ -173,11 +173,20 @@ export default defineEventHandler(async (event) => {
               await serviceSupabase.from('users').update({ onboarding_token: token, onboarding_token_expires: newExpires.toISOString() }).eq('id', user.id)
             }
             const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch'
-            const tenantSlugFallback = tenantId ? (await serviceSupabase.from('tenants').select('slug').eq('id', tenantId).single()).data?.slug : ''
             const onboardingUrl = `${baseUrl}/onboarding/${token}`
-            const loginLink = tenantSlugFallback ? `https://app.simy.ch/${tenantSlugFallback}` : 'https://app.simy.ch/login'
-            const smsMessage = `Bitte vervollständige zuerst deine Registrierung:\n\n${onboardingUrl}\n\nDanach kannst du dich hier anmelden:\n${loginLink}`
-            try { await sendSMS({ to: user.phone, message: smsMessage }) } catch { /* ignore */ }
+            const smsMessage = `Bitte zuerst Registrierung abschliessen: ${onboardingUrl}`
+            try {
+              if (tenantId) {
+                await sendTenantSMS({
+                  tenantId,
+                  to: user.phone,
+                  message: smsMessage,
+                  purpose: 'student_onboarding',
+                })
+              } else {
+                await sendSMS({ to: user.phone, message: smsMessage })
+              }
+            } catch { /* ignore */ }
           }
           return { success: true, code: 'ACCOUNT_PENDING', hasSms: !!(user.phone && user.onboarding_token) }
         }
