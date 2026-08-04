@@ -212,15 +212,17 @@
                   <div class="flex justify-end space-x-2 mt-4">
                     <button
                       @click="cancelInlineAdd"
-                      class="px-3 py-1 text-gray-600 border border-gray-300 rounded text-sm hover:bg-gray-50"
+                      :disabled="isSavingInlineCriteria"
+                      class="px-3 py-1 text-gray-600 border border-gray-300 rounded text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Abbrechen
                     </button>
                     <button
                       @click="saveInlineCriteria(category)"
-                      class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                      :disabled="isSavingInlineCriteria"
+                      class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Hinzufügen
+                      {{ isSavingInlineCriteria ? 'Wird hinzugefügt...' : 'Hinzufügen' }}
                     </button>
                   </div>
                 </div>
@@ -525,9 +527,10 @@
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                :disabled="isSavingCriteria"
+                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {{ editingCriteria ? 'Aktualisieren' : 'Erstellen' }}
+                {{ isSavingCriteria ? 'Speichern...' : (editingCriteria ? 'Aktualisieren' : 'Erstellen') }}
               </button>
             </div>
           </form>
@@ -1187,6 +1190,8 @@ const sectionImageInputs = ref<Map<number, HTMLInputElement | null>>(new Map()) 
 const dragOver = reactive<Record<string, boolean>>({})
 
 // Inline criteria form
+const isSavingInlineCriteria = ref(false)
+const isSavingCriteria = ref(false)
 const inlineCriteriaForm = ref({
   name: '',
   description: '',
@@ -1675,6 +1680,8 @@ const cancelInlineAdd = () => {
 }
 
 const saveInlineCriteria = async (category: EvaluationCategory) => {
+  if (isSavingInlineCriteria.value) return
+
   try {
     if (!inlineCriteriaForm.value.name.trim()) {
       uiStore.showWarning('Name erforderlich', 'Bitte geben Sie einen Namen für das Kriterium ein.')
@@ -1685,6 +1692,8 @@ const saveInlineCriteria = async (category: EvaluationCategory) => {
       uiStore.showWarning('Fahrkategorie erforderlich', 'Bitte wählen Sie mindestens eine Fahrkategorie aus.')
       return
     }
+
+    isSavingInlineCriteria.value = true
     
     const existingCriteria = criteria.value.filter((c: any) => c.category_id === category.id)
     const maxOrder = existingCriteria.length > 0 
@@ -1709,6 +1718,8 @@ const saveInlineCriteria = async (category: EvaluationCategory) => {
   } catch (err: any) {
     console.error('❌ Error creating inline criteria:', err)
     uiStore.showError('Fehler beim Erstellen', `Fehler beim Erstellen des Kriteriums: ${err.message}`)
+  } finally {
+    isSavingInlineCriteria.value = false
   }
 }
 
@@ -1810,6 +1821,8 @@ const closeCriteriaModal = () => {
 }
 
 const saveCriteria = async () => {
+  if (isSavingCriteria.value) return
+  isSavingCriteria.value = true
   try {
     await $fetch('/api/admin/evaluation-system', {
       method: 'POST',
@@ -1828,6 +1841,8 @@ const saveCriteria = async () => {
     closeCriteriaModal()
   } catch (error) {
     console.error('Error saving criteria:', error)
+  } finally {
+    isSavingCriteria.value = false
   }
 }
 
