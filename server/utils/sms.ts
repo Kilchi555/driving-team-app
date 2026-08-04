@@ -163,7 +163,7 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('subscription_plan, booking_policy, stripe_subscription_id, stripe_sms_subscription_item_id, twilio_from_sender, name, contact_email')
+    .select('subscription_plan, booking_policy, stripe_subscription_id, stripe_sms_subscription_item_id, stripe_customer_id, twilio_from_sender, name, contact_email')
     .eq('id', tenantId)
     .single()
 
@@ -206,18 +206,21 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
 
     if (overageDelta > 0 && tenant?.stripe_subscription_id) {
       try {
-        const itemId = await ensureSmsOverageSubscriptionItem({
+        // Keep metered price on the subscription (invoice line item)
+        await ensureSmsOverageSubscriptionItem({
           subscriptionId: tenant.stripe_subscription_id,
           supabase,
           tenantId,
           cachedItemId: tenant.stripe_sms_subscription_item_id,
         })
-        if (itemId) {
+        if (tenant.stripe_customer_id) {
           await reportSmsOverageUsage({
-            subscriptionItemId: itemId,
+            customerId: tenant.stripe_customer_id,
             overageSegments: overageDelta,
             idempotencyKey: messageSid,
           })
+        } else {
+          logger.warn('⚠️ SMS overage not reported — tenant missing stripe_customer_id', { tenantId })
         }
       } catch (err: any) {
         logger.warn('⚠️ SMS overage Stripe report failed (non-critical):', err?.message)

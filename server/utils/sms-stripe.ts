@@ -9,6 +9,45 @@ function getStripe(): Stripe | null {
   return new Stripe(key, { apiVersion: '2025-08-27.basil' as any })
 }
 
+/** In-memory cache: priceId → meter event_name */
+let cachedMeterEventName: { priceId: string; eventName: string } | null = null
+
+/**
+ * Resolve the Billing Meter event_name for the SMS overage price.
+ * Prefer env override, otherwise load meter linked to STRIPE_PRICE_ADDON_SMS_OVERAGE.
+ */
+export async function getSmsMeterEventName(stripe?: Stripe | null): Promise<string | null> {
+  const fromEnv = process.env.STRIPE_SMS_METER_EVENT_NAME?.trim()
+  if (fromEnv) return fromEnv
+
+  const priceId = getSmsOveragePriceId()
+  if (!priceId) return null
+
+  if (cachedMeterEventName?.priceId === priceId) {
+    return cachedMeterEventName.eventName
+  }
+
+  const client = stripe || getStripe()
+  if (!client) return null
+
+  try {
+    const price = await client.prices.retrieve(priceId)
+    const meterId = (price.recurring as any)?.meter as string | undefined
+    if (!meterId) {
+      logger.warn('⚠️ SMS overage price has no Billing Meter linked — cannot report usage on Basil API')
+      return null
+    }
+    const meter = await client.billing.meters.retrieve(meterId)
+    const eventName = meter.event_name
+    if (!eventName) return null
+    cachedMeterEventName = { priceId, eventName }
+    return eventName
+  } catch (err: any) {
+    logger.warn('⚠️ Could not resolve SMS meter event name:', err?.message || err)
+    return null
+  }
+}
+
 /**
  * Ensure the metered SMS overage price is attached to a Stripe subscription.
  * Returns the subscription item id (cached on tenants when supabase+tenantId given).
@@ -28,7 +67,7 @@ export async function ensureSmsOverageSubscriptionItem(opts: {
   if (opts.cachedItemId) {
     try {
       const item = await stripe.subscriptionItems.retrieve(opts.cachedItemId)
-      if (item && !item.deleted && item.price?.id === priceId) {
+      if (item && !(item as any).deleted && item.price?.id === priceId) {
         return opts.cachedItemId
       }
     } catch {
@@ -48,7 +87,6 @@ export async function ensureSmsOverageSubscriptionItem(opts: {
   const created = await stripe.subscriptionItems.create({
     subscription: opts.subscriptionId,
     price: priceId,
-    // Metered prices: no quantity
   })
   await cacheSmsItemId(opts.supabase, opts.tenantId, created.id)
   return created.id
@@ -66,30 +104,48 @@ async function cacheSmsItemId(
     .eq('id', tenantId)
 }
 
-/** Report only overage segments for this send (idempotent via twilio SID). */
+/**
+ * Report overage SMS segments via Stripe Billing Meters (Basil+).
+ * Legacy subscriptionItems.createUsageRecord is removed on 2025-03-31.basil.
+ */
 export async function reportSmsOverageUsage(opts: {
-  subscriptionItemId: string
+  customerId: string
   overageSegments: number
   idempotencyKey?: string
 }): Promise<void> {
   if (opts.overageSegments <= 0) return
+  if (!opts.customerId) {
+    logger.warn('⚠️ SMS overage report skipped — missing stripe_customer_id')
+    return
+  }
+
   const stripe = getStripe()
   if (!stripe) return
 
+  const eventName = await getSmsMeterEventName(stripe)
+  if (!eventName) {
+    logger.warn('⚠️ SMS overage report skipped — no meter event_name (set STRIPE_SMS_METER_EVENT_NAME or link a meter to the price)')
+    return
+  }
+
   try {
-    await stripe.subscriptionItems.createUsageRecord(
-      opts.subscriptionItemId,
+    await stripe.billing.meterEvents.create(
       {
-        quantity: opts.overageSegments,
-        timestamp: Math.floor(Date.now() / 1000),
-        action: 'increment',
+        event_name: eventName,
+        payload: {
+          stripe_customer_id: opts.customerId,
+          value: String(opts.overageSegments),
+        },
+        ...(opts.idempotencyKey
+          ? { identifier: `sms-overage-${opts.idempotencyKey}`.slice(0, 100) }
+          : {}),
       },
       opts.idempotencyKey
-        ? { idempotencyKey: `sms-overage-${opts.idempotencyKey}` }
+        ? { idempotencyKey: `sms-meter-${opts.idempotencyKey}`.slice(0, 255) }
         : undefined,
     )
   } catch (err: any) {
-    logger.warn('⚠️ Stripe SMS usage record failed (non-critical):', err?.message || err)
+    logger.warn('⚠️ Stripe SMS meter event failed (non-critical):', err?.message || err)
   }
 }
 
@@ -97,6 +153,5 @@ export async function reportSmsOverageUsage(opts: {
 export function smsOverageCheckoutLineItem(): Stripe.Checkout.SessionCreateParams.LineItem | null {
   const priceId = getSmsOveragePriceId()
   if (!priceId) return null
-  // Metered: omit quantity
   return { price: priceId }
 }

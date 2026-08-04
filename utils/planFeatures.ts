@@ -139,6 +139,9 @@ export const SMS_OVERAGE_CHF_PER_SEGMENT = 0.15
 /** Env key for metered SMS overage Stripe Price ID */
 export const SMS_OVERAGE_PRICE_ENV_KEY = 'STRIPE_PRICE_ADDON_SMS_OVERAGE'
 
+/** Optional override for Billing Meter event_name (otherwise resolved from the price's meter) */
+export const SMS_METER_EVENT_ENV_KEY = 'STRIPE_SMS_METER_EVENT_NAME'
+
 export function getIncludedSmsSegments(plan: string | null | undefined): number {
   if (!plan || plan === 'trial') return 20
   return getPlanById(plan)?.includedSmsSegments ?? 20
