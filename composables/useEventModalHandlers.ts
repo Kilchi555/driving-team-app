@@ -17,6 +17,7 @@ export const useEventModalHandlers = (
 
   const supabase = getSupabase()
   const paymentMethods = usePaymentMethods()
+  const { t } = useTerminology()
 
   // ✅ NEUE EINHEITLICHE PRICING-LÖSUNG
   const pricing = usePricing({
@@ -579,7 +580,7 @@ const handleCategorySelected = async (category: any) => {
     if (student) {
       return `${student.first_name} ${student.last_name}`
     }
-    return `Fahrstunde ${category || ''}`
+    return `${t.value.appointment} ${category || ''}`
   }
 
   /**
@@ -587,7 +588,7 @@ const handleCategorySelected = async (category: any) => {
    */
   const getEventTypeName = (eventTypeCode: string) => {
     const eventTypes: Record<string, string> = {
-      'lesson': 'Fahrstunde',
+      'lesson': t.value.appointment,
       'theory': 'Theoriestunde',
       'exam': 'Prüfung',
       'consultation': 'Beratung',

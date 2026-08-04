@@ -537,6 +537,7 @@ import { usePasswordStrength, generateStrongPassword } from '~/composables/usePa
 import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
 
 const { primaryColor: tenantPrimary } = useTenantBranding()
+const { t } = useTerminology()
 
 const emit = defineEmits(['close', 'success'])
 
@@ -839,7 +840,7 @@ const handleForgotPassword = async () => {
       if (response?.code === 'ACCOUNT_PENDING') {
         forgotPasswordMessage.value = response.hasSms
           ? 'Dein Konto ist noch nicht aktiviert. Wir haben dir einen Registrierungslink per SMS gesendet.'
-          : 'Dein Konto ist noch nicht aktiviert. Bitte kontaktiere deine Fahrschule für einen Registrierungslink.'
+          : `Dein Konto ist noch nicht aktiviert. Bitte kontaktiere ${t.value.businessNoun} für einen Registrierungslink.`
       } else if (response?.warning) {
         forgotPasswordError.value = response.message
       } else {
@@ -849,7 +850,7 @@ const handleForgotPassword = async () => {
       // Deliberately vague — avoid confirming/denying whether an email exists in the system.
       forgotPasswordMessage.value = `Falls ein Konto mit ${email} existiert, wurde ein Link zum Zurücksetzen gesendet.`
     } else if (response?.code === 'NO_EMAIL') {
-      forgotPasswordError.value = 'Dein Konto hat keine E-Mail-Adresse hinterlegt. Bitte kontaktiere deine Fahrschule.'
+      forgotPasswordError.value = `Dein Konto hat keine E-Mail-Adresse hinterlegt. Bitte kontaktiere ${t.value.businessNoun}.`
     } else {
       forgotPasswordError.value = response?.message || 'Fehler beim Senden des Links. Bitte versuche es später erneut.'
     }

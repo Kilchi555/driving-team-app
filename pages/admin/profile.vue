@@ -1064,7 +1064,7 @@
                     type="text"
                     maxlength="11"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 pr-12"
-                    placeholder="Fahrschule"
+                    :placeholder="t.businessNoun"
                   />
                   <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono"
                     :class="(brandingForm.contact.smsSender?.length || 0) >= 11 ? 'text-amber-500' : 'text-gray-400'">
@@ -1351,7 +1351,7 @@
                 <input type="radio" v-model="staffInvoicePermission" value="create_only" class="mt-1 mr-3" />
                 <div>
                   <div class="font-medium text-gray-900">Nur erstellen</div>
-                  <div class="text-sm text-gray-600">Mitarbeiter können Rechnungen erstellen, aber keine E-Mail an den Schüler senden</div>
+                  <div class="text-sm text-gray-600">Mitarbeiter können Rechnungen erstellen, aber keine E-Mail an den {{ t.client }} senden</div>
                 </div>
               </label>
               <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
@@ -1494,7 +1494,7 @@
               <div class="flex-1">
                 <h3 class="text-sm font-medium text-gray-900">"Rechnung" als Zahlungsoption erlauben</h3>
                 <p class="text-sm text-gray-600">
-                  Wenn aktiviert, können Kunden bei der Online-Buchung von Fahrstunden und bei der Kursanmeldung
+                  Wenn aktiviert, können Kunden bei der Online-Buchung von {{ t.appointmentsPlural }} und bei der Kursanmeldung
                   "Rechnung" als Zahlungsmethode wählen, statt online per Kreditkarte/TWINT zu bezahlen.
                 </p>
               </div>
@@ -1549,14 +1549,14 @@
               <!-- Weekly admin report -->
               <div class="border-t pt-4">
                 <div class="flex items-center justify-between gap-3 mb-1">
-                  <h3 class="text-sm font-semibold text-gray-800">Wochenbericht an die Fahrschule</h3>
+                  <h3 class="text-sm font-semibold text-gray-800">Wochenbericht an {{ t.businessNoun }}</h3>
                   <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
                     <input type="checkbox" v-model="paymentReminderSettings.admin_report.enabled" class="sr-only peer" />
                     <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
                   </label>
                 </div>
                 <p class="text-xs text-gray-500 mb-3">
-                  Jeden Montagmorgen eine Zusammenfassung aller offenen Zahlungen an die Rechnungs-E-Mail-Adresse der Fahrschule.
+                  Jeden Montagmorgen eine Zusammenfassung aller offenen Zahlungen an die Rechnungs-E-Mail-Adresse von {{ t.businessNoun }}.
                 </p>
                 <div v-if="paymentReminderSettings.admin_report.enabled" class="flex flex-wrap gap-4 pl-1">
                   <label v-for="method in paymentMethodOptions" :key="'admin-' + method.key"
@@ -1577,7 +1577,7 @@
                   </label>
                 </div>
                 <p class="text-xs text-gray-500 mb-3">
-                  Jeden Montagmorgen erhält jeder Mitarbeiter eine Liste seiner Schüler mit offenen Zahlungen.
+                  Jeden Montagmorgen erhält jeder Mitarbeiter eine Liste seiner {{ t.clientsPlural }} mit offenen Zahlungen.
                 </p>
                 <div v-if="paymentReminderSettings.staff_report.enabled" class="flex flex-wrap gap-4 pl-1">
                   <label v-for="method in paymentMethodOptions" :key="'staff-' + method.key"
@@ -1609,7 +1609,7 @@
           <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
             <div>
               <h2 class="text-base font-semibold text-gray-900">Portal-Links</h2>
-              <p class="mt-1 text-sm text-gray-500">Diese Links können mit Kunden, Fahrlehrern und externen Partnern geteilt werden.</p>
+              <p class="mt-1 text-sm text-gray-500">Diese Links können mit Kunden, {{ t.staffPlural }} und externen Partnern geteilt werden.</p>
             </div>
 
             <!-- Online-Buchung (existing) -->
@@ -1624,10 +1624,10 @@
               </button>
             </div>
 
-            <!-- Fahrzeugvermietung portal -->
-            <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+            <!-- Fahrzeugvermietung portal (FS only) -->
+            <div v-if="isDrivingSchool" class="flex items-start gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
               <div class="flex-1 min-w-0">
-                <p class="text-xs font-semibold text-blue-800 mb-1">Fahrzeugvermietung (externe Fahrlehrer)</p>
+                <p class="text-xs font-semibold text-blue-800 mb-1">Fahrzeugvermietung (externe {{ t.staffPlural }})</p>
                 <code class="text-xs text-blue-600 break-all">{{ rentalPortalUrl }}</code>
               </div>
               <div class="flex gap-1.5 flex-shrink-0">
@@ -1763,15 +1763,15 @@
               </div>
               <div>
                 <p class="text-xs font-semibold text-gray-700 uppercase tracking-widest">Staff & Onboarding</p>
-                <p class="text-xs text-gray-400">Einstellungen für das interne Anlegen und Onboarding von Schülern</p>
+                <p class="text-xs text-gray-400">Einstellungen für das interne Anlegen und Onboarding von {{ t.clientsPlural }}</p>
               </div>
             </div>
 
             <!-- Felder bei Schüler-Erstellung -->
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div class="px-5 py-4 border-b border-gray-50">
-                <h2 class="text-sm font-semibold text-gray-800">Felder bei Schüler-Erstellung</h2>
-                <p class="text-xs text-gray-400 mt-0.5">Welche Angaben muss der Staff beim Anlegen eines neuen Schülers erfassen? Klicke ein Feld mehrfach, um zwischen «aus», «optional» und «Pflicht» zu wechseln.</p>
+                <h2 class="text-sm font-semibold text-gray-800">Felder bei {{ t.client }}-Erstellung</h2>
+                <p class="text-xs text-gray-400 mt-0.5">Welche Angaben muss der Staff beim Anlegen neuer {{ t.clientsPlural }} erfassen? Klicke ein Feld mehrfach, um zwischen «aus», «optional» und «Pflicht» zu wechseln.</p>
               </div>
               <div class="px-5 pt-3 flex items-center gap-4">
                 <span class="flex items-center gap-1.5 text-xs text-gray-400"><span class="w-4 h-4 rounded border-2 border-gray-200 bg-white inline-block"></span> Aus</span>
@@ -1805,7 +1805,7 @@
               <div class="px-5 py-4 flex items-center justify-between">
                 <div>
                   <h2 class="text-sm font-semibold text-gray-800">Onboarding-SMS versenden</h2>
-                  <p class="text-xs text-gray-400 mt-0.5">Schüler erhalten beim Erstellen durch den Staff automatisch einen SMS-Link zur Kontoaktivierung.</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ t.clientsPlural }} erhalten beim Erstellen durch den Staff automatisch einen SMS-Link zur Kontoaktivierung.</p>
                 </div>
                 <button type="button" @click="bpPolicy.onboarding_sms_enabled = !bpPolicy.onboarding_sms_enabled"
                   class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
@@ -1821,7 +1821,7 @@
               <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
                 <div>
                   <h2 class="text-sm font-semibold text-gray-800">Registrierungs-Erinnerung</h2>
-                  <p class="text-xs text-gray-400 mt-0.5">Schüler, die sich noch nicht registriert haben, erhalten automatisch eine Erinnerung.</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ t.clientsPlural }}, die sich noch nicht registriert haben, erhalten automatisch eine Erinnerung.</p>
                 </div>
                 <button type="button" @click="bpPolicy.registration_reminder_enabled = !bpPolicy.registration_reminder_enabled"
                   class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
@@ -1985,7 +1985,7 @@
                     </button>
                   </div>
                 </div>
-                <div>
+                <div v-if="isDrivingSchool">
                   <p class="text-xs font-medium text-gray-600 mb-2">Lernfahrausweis-Upload</p>
                   <div class="grid grid-cols-3 gap-2">
                     <button
@@ -2097,7 +2097,7 @@
               <div class="px-5 py-4 flex items-center justify-between">
                 <div>
                   <h2 class="text-sm font-semibold text-gray-800">Terminbestätigungen versenden</h2>
-                  <p class="text-xs text-gray-400 mt-0.5">Schüler erhalten nach jeder Buchung eine Bestätigungs-E-Mail — sofern eine E-Mail-Adresse bekannt ist.</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ t.clientsPlural }} erhalten nach jeder Buchung eine Bestätigungs-E-Mail — sofern eine E-Mail-Adresse bekannt ist.</p>
                 </div>
                 <button type="button" @click="bpPolicy.confirmation_email_enabled = !bpPolicy.confirmation_email_enabled"
                   class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
@@ -2309,7 +2309,7 @@
             <div class="grid grid-cols-1 gap-4">
               <div>
                 <label class="block text-xs font-medium text-gray-500 mb-1">Firmenbuchhaltungsname (offiziell)</label>
-                <input v-model="legalInfo.legal_company_name" type="text" placeholder="Fahrschule Muster GmbH"
+                <input v-model="legalInfo.legal_company_name" type="text" :placeholder="`${t.businessNoun} Muster GmbH`"
                   class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
               </div>
               <div class="grid grid-cols-2 gap-4">
@@ -2337,8 +2337,9 @@
                   </svg>
                   <div class="absolute left-0 top-6 z-20 hidden group-hover:block w-72 bg-gray-900 text-white text-xs rounded-xl p-3 shadow-xl space-y-1.5">
                     <p class="font-semibold">MWST-Pflicht in der Schweiz</p>
-                    <p>Fahrschulen sind grundsätzlich befreit (MWSTG Art. 21 Abs. 2 Ziff. 11).</p>
-                    <p>Nur aktivieren bei steuerpfl. Zusatzleistungen (z.B. Fahrzeugverkauf) und Umsatz &gt; CHF 100\'000.</p>
+                    <p v-if="isDrivingSchool">Fahrschulen sind grundsätzlich befreit (MWSTG Art. 21 Abs. 2 Ziff. 11).</p>
+                    <p v-else>Prüfen Sie die MWST-Pflicht je nach Branche und Umsatz mit Ihrer Treuhandstelle.</p>
+                    <p v-if="isDrivingSchool">Nur aktivieren bei steuerpfl. Zusatzleistungen (z.B. Fahrzeugverkauf) und Umsatz &gt; CHF 100\'000.</p>
                     <p class="text-gray-400">Sätze: 8.1% Normal · 2.6% Sondersatz · 3.8% Beherbergung</p>
                   </div>
                 </div>
@@ -2374,6 +2375,7 @@ import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
 
 const { primaryColor } = useTenantBranding()
+const { t, isDrivingSchool } = useTerminology()
 const { primaryBg, primaryText, primaryBgLight } = usePrimaryColor()
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
 import { useFeatures } from '~/composables/useFeatures'
@@ -2926,12 +2928,12 @@ const smsSenderSuggestionsAdmin = computed((): string[] => {
   const seen = new Set<string>()
   const add = (s: string) => { const c = clean(s); if (c && !seen.has(c)) { seen.add(c); suggestions.push(c) } }
   const words = raw.split(/\s+/).filter(Boolean)
-  add('Fahrschule')
+  add(t.value.businessNoun)
   add(words[0])
-  const brandWords = words.filter((w: string) => !/^(fahrschule|fs|die|der|die)$/i.test(w))
-  if (brandWords[0]) add('FS ' + brandWords[0])
+  const brandWords = words.filter((w: string) => !/^(fahrschule|fs|die|der|das|praxis|unternehmen)$/i.test(w))
+  if (isDrivingSchool.value && brandWords[0]) add('FS ' + brandWords[0])
   add(raw)
-  if (brandWords[0]) add('FS.' + brandWords[0])
+  if (isDrivingSchool.value && brandWords[0]) add('FS.' + brandWords[0])
   return suggestions.slice(0, 4)
 })
 
@@ -3561,7 +3563,7 @@ const previewTemplate = (template: string) => {
   if (!template) return ''
   
   const exampleData: Record<string, string> = {
-    '{{tenant_name}}': 'Fahrschule Beispiel',
+    '{{tenant_name}}': `${t.value.businessNoun} Beispiel`,
     '{{student_name}}': 'Max Mustermann',
     '{{student_first_name}}': 'Max',
     '{{student_last_name}}': 'Mustermann',

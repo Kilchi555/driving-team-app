@@ -1125,7 +1125,7 @@
                       <input
                         v-model="session.external_instructor_name"
                         type="text"
-                        placeholder="z.B. Fahrschule Bisig"
+                        placeholder="z.B. Name der Organisation"
                         class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 session-input tenant-focus focus:outline-none focus:ring-2"
                       />
                     </div>
@@ -7376,7 +7376,7 @@ const printParticipantList = () => {
 
   const course = selectedCourse.value
   const color = primaryColor.value || '#1E40AF'
-  const tenant = brandName.value || 'Fahrschule'
+  const tenant = brandName.value || 'Unternehmen'
   const logoUrl = getLogo('header') || getLogo('square') || ''
 
   const escapeHtml = (s: unknown) =>

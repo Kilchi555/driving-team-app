@@ -83,7 +83,7 @@
               <input type="radio" value="wallet" v-model="refundDestination" class="mt-0.5 text-blue-600 focus:ring-blue-400" />
               <div>
                 <span class="text-sm font-medium text-gray-900">Guthaben aufladen</span>
-                <p class="text-xs text-gray-500 mt-0.5">CHF {{ refundAmountChf.toFixed(2) }} werden sofort Ihrem Fahrstunden-Guthaben gutgeschrieben</p>
+                <p class="text-xs text-gray-500 mt-0.5">CHF {{ refundAmountChf.toFixed(2) }} werden sofort Ihrem Termin-Guthaben gutgeschrieben</p>
               </div>
             </label>
             <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border transition-colors"
@@ -203,10 +203,12 @@
 
 import { ref, computed, watch } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
 import { calculateCancellationCharges } from '~/utils/policyCalculations'
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 const { defaultPolicy, fetchPolicies } = useCancellationPolicies()
 
 const props = defineProps<{
@@ -461,12 +463,12 @@ const close = () => {
 
 const getAppointmentTitle = (appointment: any) => {
   const EVENT_LABELS: Record<string, string> = {
-    lesson: 'Fahrlektion',
+    lesson: t.value.appointment,
     exam: 'Prüfung',
     theory: 'Theorie',
     other: 'Termin',
   }
-  const eventLabel = EVENT_LABELS[appointment.event_type_code] || 'Fahrlektion'
+  const eventLabel = EVENT_LABELS[appointment.event_type_code] || t.value.appointment
   const category = appointment.type || ''
   return category ? `${eventLabel} • ${category}` : eventLabel
 }

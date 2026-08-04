@@ -349,7 +349,7 @@
               <div class="sa-form-grid">
                 <div>
                   <label class="sa-label">Name *</label>
-                  <input v-model="tenantForm.name" placeholder="Fahrschule Muster" required class="sa-input" />
+                  <input v-model="tenantForm.name" placeholder="Unternehmen Muster" required class="sa-input" />
                 </div>
                 <div>
                   <label class="sa-label">Slug *</label>

@@ -316,7 +316,7 @@ export const useCourseParticipants = () => {
     
     try {
       // Get tenant sender name
-      let senderName = 'Fahrschule'
+      let senderName = 'Unternehmen'
       if (currentUser.value?.tenant_id) {
         const { data: tenantData } = await supabase
           .from('tenants')
@@ -342,7 +342,7 @@ export const useCourseParticipants = () => {
     
     try {
       // Get tenant sender name
-      let senderName = 'Fahrschule'
+      let senderName = 'Unternehmen'
       if (currentUser.value?.tenant_id) {
         const { data: tenantData } = await supabase
           .from('tenants')

@@ -49,7 +49,7 @@ export async function fetchTenantEmailContext(tenantId: string): Promise<TenantE
   const logoSquareUrl = isUsable(tenantResult.data?.logo_square_url) ? tenantResult.data!.logo_square_url! : null
 
   return {
-    tenantName: tenantResult.data?.name || 'Fahrschule',
+    tenantName: tenantResult.data?.name || 'Unternehmen',
     primaryColor: tenantResult.data?.primary_color || '#1e293b',
     logoUrl,
     logoSquareUrl,
@@ -170,7 +170,7 @@ export async function sendConsentEmail({
 }) {
   const ctx = await fetchTenantEmailContext(tenantId)
   // Use passed-in values as fallback if DB fetch returns empty tenant row
-  if (!ctx.tenantName || ctx.tenantName === 'Fahrschule') ctx.tenantName = tenantName
+  if (!ctx.tenantName || ctx.tenantName === 'Unternehmen') ctx.tenantName = tenantName
   if (!ctx.primaryColor || ctx.primaryColor === '#1e293b') ctx.primaryColor = primaryColor
 
   await sendConsentEmailWithContext(ctx, { leadId, token, email, firstName })

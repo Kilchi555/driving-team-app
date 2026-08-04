@@ -479,12 +479,19 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     if (data.pricing_json?.trim()) {
       try {
         const pricingItems = JSON.parse(data.pricing_json)
-        if (Array.isArray(pricingItems) && pricingItems.length > 0) {
+        if (Array.isArray(pricingItems)) {
           const now = new Date().toISOString()
+          if (pricingItems.length > 0) {
           // price_chf may be 0 (e.g. free Beratung) — still persist the rule so
           // duration + zero price show correctly in EventModal / booking.
+          // free_event rows are toggles only (no pricing_rules insert).
           const pricingRows = pricingItems
-            .filter((p: any) => p.rule_type && p.duration_minutes > 0 && Number(p.price_chf) >= 0)
+            .filter((p: any) =>
+              p.rule_type &&
+              p.rule_type !== 'free_event' &&
+              p.duration_minutes > 0 &&
+              Number(p.price_chf) >= 0
+            )
             .map((p: any) => ({
               tenant_id: tenantId,
               rule_type: p.rule_type,
@@ -510,21 +517,30 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
             else logger.debug(`✅ Created ${pricingRows.length} pricing rule(s)`)
           }
 
-          // Apply "Online buchbar" choices from registration onto the tenant's
-          // event_types (templates were copied with their default public_bookable;
-          // per_event_type / custom rows send an explicit override).
-          const bookableOverrides = new Map<string, boolean>()
+          // Apply Online-buchbar + Dauer + App-Preis from registration onto tenant event_types.
+          const etOverrides = new Map<string, { public_bookable?: boolean; duration?: number; require_payment?: boolean }>()
           for (const p of pricingItems) {
-            if (!p.event_type_code || typeof p.public_bookable !== 'boolean') continue
-            bookableOverrides.set(p.event_type_code, p.public_bookable)
+            if (!p.event_type_code) continue
+            const prev = etOverrides.get(p.event_type_code) || {}
+            if (typeof p.public_bookable === 'boolean') prev.public_bookable = p.public_bookable
+            if (p.duration_minutes > 0 && (p.rule_type === 'event_price' || p.rule_type === 'free_event' || p.is_custom)) {
+              prev.duration = p.duration_minutes
+            }
+            if (p.rule_type === 'free_event') prev.require_payment = false
+            else if (p.rule_type === 'event_price' || p.is_custom) prev.require_payment = true
+            etOverrides.set(p.event_type_code, prev)
           }
-          for (const [code, publicBookable] of bookableOverrides) {
-            const { error: pbErr } = await supabase
+          for (const [code, ov] of etOverrides) {
+            const patch: Record<string, unknown> = { updated_at: now }
+            if (typeof ov.public_bookable === 'boolean') patch.public_bookable = ov.public_bookable
+            if (ov.duration) patch.default_duration_minutes = ov.duration
+            if (typeof ov.require_payment === 'boolean') patch.require_payment = ov.require_payment
+            const { error: etUpdErr } = await supabase
               .from('event_types')
-              .update({ public_bookable: publicBookable, updated_at: now })
+              .update(patch)
               .eq('tenant_id', tenantId)
               .eq('code', code)
-            if (pbErr) logger.warn(`⚠️ public_bookable update failed for ${code}:`, pbErr)
+            if (etUpdErr) logger.warn(`⚠️ event_types update failed for ${code}:`, etUpdErr)
           }
 
           // Custom services the tenant defined during registration (not part of
@@ -553,7 +569,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
                 allowed_roles: ['staff', 'admin'],
                 requires_team_invite: false,
                 auto_generate_title: true,
-                require_payment: true,
+                require_payment: p.rule_type !== 'free_event',
                 public_bookable: typeof p.public_bookable === 'boolean' ? p.public_bookable : false,
                 is_default: false,
                 created_at: now,
@@ -563,6 +579,34 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
               const { error: etErr } = await supabase.from('event_types').insert(customEtRows)
               if (etErr) logger.warn('⚠️ Custom event type creation failed (non-critical):', etErr)
               else logger.debug(`✅ Created ${customEtRows.length} custom event type(s)`)
+            }
+          }
+          } // end pricingItems.length > 0
+
+          // per_event_type signup (incl. empty after deleting all template services):
+          // deactivate catalog services not kept. Internal types (vacation/admin) stay.
+          const isPerEventTypeSignup =
+            pricingItems.some(
+              (p: any) => p.rule_type === 'event_price' || p.rule_type === 'free_event' || p.is_custom
+            ) ||
+            ['consulting', 'mental_coach'].includes(resolvedBusinessType)
+          if (isPerEventTypeSignup) {
+            const enabledCodes = new Set(
+              pricingItems.map((p: any) => p.event_type_code).filter(Boolean)
+            )
+            const { data: tenantEts } = await supabase
+              .from('event_types')
+              .select('id, code, require_payment, public_bookable')
+              .eq('tenant_id', tenantId)
+            for (const et of tenantEts || []) {
+              const inSignupCatalog = et.require_payment || et.public_bookable
+              if (!inSignupCatalog || enabledCodes.has(et.code)) continue
+              const { error: deactErr } = await supabase
+                .from('event_types')
+                .update({ is_active: false, updated_at: now })
+                .eq('id', et.id)
+              if (deactErr) logger.warn(`⚠️ deactivate ${et.code} failed:`, deactErr)
+              else logger.debug(`ℹ️ Deactivated unused signup service: ${et.code}`)
             }
           }
         }

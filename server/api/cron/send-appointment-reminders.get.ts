@@ -22,10 +22,10 @@ import { logger } from '~/utils/logger'
 import { getQuery } from 'h3'
 import { getAccountAccessLink } from '~/server/utils/account-access-link'
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
-import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 const FALLBACK_EVENT_TYPE_LABELS: Record<string, string> = {
-  lesson:     'Fahrstunde',
+  lesson:     'Termin',
   exam:       'Prüfung',
   theory:     'Theorie',
   other:      'Termin',
@@ -248,7 +248,7 @@ export default defineEventHandler(async (event) => {
     const timeStr = aptDate.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
     const dateLabel = aptDate.toLocaleDateString('de-CH', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'Europe/Zurich' })
     const durationStr = apt.duration_minutes ? `${apt.duration_minutes} Min.` : ''
-    const lessonFallback = { ...FALLBACK_EVENT_TYPE_LABELS, lesson: terms.appointment }
+    const lessonFallback = { ...FALLBACK_EVENT_TYPE_LABELS, ...eventTypeLabelMap(terms) }
     const eventLabel  = eventTypeMap.get(`${apt.tenant_id}::${apt.event_type_code}`)
       || lessonFallback[apt.event_type_code || '']
       || apt.title

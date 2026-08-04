@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { roundToNearest5Rappen } from '~/utils/rounding'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 /**
  * POST /api/appointments/apply-discount
@@ -74,6 +75,10 @@ export default defineEventHandler(async (event) => {
       return { isValid: false, error: 'Rabattcodes können nicht auf Guthaben-Aufladungen angewendet werden' }
     }
 
+    const terms = await getTenantTerminology(supabase, tenantId)
+    const appointmentPlural = terms.appointmentsPlural || 'Termine'
+    const appointmentSingular = terms.appointment || 'Termin'
+
     // The gross amount to calculate the discount against (lesson + fee + products)
     const grossRappen = (payment.lesson_price_rappen || 0) +
                         (payment.admin_fee_rappen || 0) +
@@ -111,7 +116,7 @@ export default defineEventHandler(async (event) => {
       const appliesTo = voucherData.applies_to || 'appointments'
       if (appliesTo !== 'all') {
         if (appliesTo === 'appointments' && !isLessonPayment) {
-          return { isValid: false, error: 'Dieser Code gilt nur für Fahrstunden-Buchungen' }
+          return { isValid: false, error: `Dieser Code gilt nur für ${appointmentPlural}-Buchungen` }
         }
         if (appliesTo === 'products' && !isProductPayment) {
           return { isValid: false, error: 'Dieser Code gilt nur für Produktkäufe' }
@@ -189,7 +194,7 @@ export default defineEventHandler(async (event) => {
       const appliesTo = discountData.applies_to || 'appointments'
       if (appliesTo !== 'all') {
         if (appliesTo === 'appointments' && !isLessonPayment) {
-          return { isValid: false, error: 'Dieser Code gilt nur für Fahrstunden-Buchungen' }
+          return { isValid: false, error: `Dieser Code gilt nur für ${appointmentPlural}-Buchungen` }
         }
         if (appliesTo === 'products' && !isProductPayment) {
           return { isValid: false, error: 'Dieser Code gilt nur für Produktkäufe' }
@@ -206,7 +211,7 @@ export default defineEventHandler(async (event) => {
 
         if ((count ?? 0) > 1) {
           // > 1 because the current appointment already exists as confirmed
-          return { isValid: false, error: 'Dieser Code gilt nur für die erste Fahrstunde' }
+          return { isValid: false, error: `Dieser Code gilt nur für die erste ${appointmentSingular}` }
         }
       }
 

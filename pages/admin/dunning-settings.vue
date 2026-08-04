@@ -277,7 +277,7 @@ const sampleData: Record<string, string> = {
   gesamtbetrag_mit_gebuehr: 'CHF 473.15',
   neues_zahlungsziel: '15.07.2026',
   absender_name: 'Anna Muster',
-  firma_name: 'Fahrschule Muster AG',
+  firma_name: 'Unternehmen Muster AG',
 }
 
 function renderSample(text: string): string {

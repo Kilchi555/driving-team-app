@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 const COURSE_TYPE_LABELS: Record<string, string> = {
   czv_grundkurs: 'CZV Grundkurs',
@@ -73,8 +74,9 @@ export default defineEventHandler(async (event) => {
       .eq('id', body.tenant_id)
       .single()
 
+    const terms = await getTenantTerminology(supabase, body.tenant_id)
     const tenantColor = tenant?.primary_color || PRIMARY_COLOR
-    const tenantName = tenant?.name || 'Ihre Fahrschule'
+    const tenantName = tenant?.name || terms.businessNoun || 'Ihr Unternehmen'
 
     const { data, error } = await supabase
       .from('course_participants')

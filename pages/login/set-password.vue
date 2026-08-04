@@ -56,7 +56,7 @@
                 </p>
                 <p class="text-sm text-gray-600">{{ userInfo.email }}</p>
                 <p class="text-xs text-blue-600">
-                  {{ userInfo.role === 'staff' ? '👨‍🏫 Fahrlehrer' : '🔧 Sub-Admin' }}
+                  {{ userInfo.role === 'staff' ? '👨‍🏫 Mitarbeiter' : '🔧 Sub-Admin' }}
                 </p>
               </div>
             </div>

@@ -141,7 +141,7 @@
               <div>
                 <p class="text-sm font-medium text-amber-800">Account noch nicht aktiviert</p>
                 <p class="text-sm text-amber-700 mt-1">
-                  Sie wurden von Ihrer Fahrschule erfasst, haben die Registrierung aber noch nicht abgeschlossen.
+                  Sie wurden von Ihrem Unternehmen erfasst, haben die Registrierung aber noch nicht abgeschlossen.
                   Geben Sie Ihre Telefonnummer ein, um einen neuen Onboarding-Link per SMS zu erhalten.
                 </p>
               </div>
@@ -422,7 +422,7 @@
             </NuxtLink>
           </p>
           <p v-else class="text-sm text-gray-500">
-            Konto-Erstellung nur über Einladung deiner Fahrschule.
+            Konto-Erstellung nur über Einladung deines Unternehmens.
           </p>
 
           <div v-if="!isNativeApp" class="mt-4 pt-4 border-t border-gray-200">
@@ -1288,7 +1288,7 @@ const handlePasswordReset = async () => {
     } else if (response?.code === 'NOT_FOUND') {
       resetNotFound.value = resetContactMethod.value
     } else if (response?.code === 'NO_EMAIL') {
-      resetError.value = 'Ihr Account hat keine E-Mail-Adresse hinterlegt. Bitte kontaktieren Sie Ihre Fahrschule.'
+      resetError.value = 'Ihr Account hat keine E-Mail-Adresse hinterlegt. Bitte kontaktieren Sie Ihr Unternehmen.'
     } else {
       resetError.value = response?.message || 'Fehler beim Senden des Magic Links. Bitte versuchen Sie es später erneut.'
     }

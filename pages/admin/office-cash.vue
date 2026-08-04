@@ -18,7 +18,7 @@
             to="/admin/cash-control"
             class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
           >
-            📊 Fahrlehrer-Kassen
+            📊 {{ t.staff }}-Kassen
           </NuxtLink>
           <button
             @click="refreshData"
@@ -58,7 +58,7 @@
             <li>🏦 <strong>Hauptkasse:</strong> Zentrale Verwaltung aller Barzahlungen</li>
             <li>🏪 <strong>Empfangskasse:</strong> Für Anmeldungen und Nachzahlungen</li>
             <li>📋 <strong>Prüfungskasse:</strong> Spezielle Gebühren und Prüfungskosten</li>
-            <li>🚨 <strong>Notfallkasse:</strong> Backup bei Fahrlehrer-Ausfall</li>
+            <li>🚨 <strong>Notfallkasse:</strong> Backup bei {{ t.staff }}-Ausfall</li>
           </ul>
         </div>
         <div>
@@ -87,6 +87,7 @@ definePageMeta({
 })
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 const authStore = useAuthStore()
 

@@ -133,7 +133,7 @@ export default defineEventHandler(async (event) => {
             <!-- Header -->
             <div class="header">
               <h1>💰 Deine Kostenberechnung</h1>
-              <p style="margin: 10px 0 0 0; color: #666;">Ihre Fahrschule</p>
+              <p style="margin: 10px 0 0 0; color: #666;">Driving Team</p>
             </div>
 
             <!-- Main Content -->
@@ -157,7 +157,7 @@ export default defineEventHandler(async (event) => {
             <!-- Disclaimer -->
             <div class="disclaimer">
               <strong>⚠️ Wichtiger Hinweis – Unverbindliche Preise:</strong><br>
-              Diese Kalkulation dient nur zur Orientierung und Planungszwecken. Die tatsächlichen Kosten können je nach individuellen Umständen, Anzahl der benötigten Fahrstunden, Fahrerfahrung und anderen Faktoren variieren. Externe Kosten wie Sehtest, Lernfahrgesuch und Prüfungsgebühren des Strassenverkehrsamtes sind teilweise enthalten, aber nicht vollständig. Die Anzahl der Fahrstunden ist individuell sehr unterschiedlich.
+              Diese Kalkulation dient nur zur Orientierung und Planungszwecken. Die tatsächlichen Kosten können je nach individuellen Umständen, Anzahl der benötigten Termine, Fahrerfahrung und anderen Faktoren variieren. Externe Kosten wie Sehtest, Lernfahrgesuch und Prüfungsgebühren des Strassenverkehrsamtes sind teilweise enthalten, aber nicht vollständig. Die Anzahl der Termine ist individuell sehr unterschiedlich.
               <br><br>
               <strong>Für ein genaues, verbindliches Angebot kontaktiere uns bitte direkt!</strong>
             </div>
@@ -165,7 +165,7 @@ export default defineEventHandler(async (event) => {
             <!-- CTA -->
             <div style="text-align: center; margin: 30px 0;">
               <p style="margin-bottom: 10px; color: #666;">Bereit? Lass uns gemeinsam deine Fahrausbildung planen!</p>
-              <a href="https://app.simy.ch/booking/availability/driving-team" class="cta-button">📅 Jetzt Fahrstunden buchen</a>
+              <a href="https://app.simy.ch/booking/availability/driving-team" class="cta-button">📅 Jetzt Termin buchen</a>
             </div>
 
             <!-- Footer -->
@@ -185,7 +185,7 @@ export default defineEventHandler(async (event) => {
                   <p style="margin: 5px 0 0 0;"><a href="mailto:info@drivingteam.ch" style="color: #0066cc; text-decoration: none;">info@drivingteam.ch</a></p>
                 </div>
               </div>
-              <p style="margin-top: 20px; color: #999;">Ihre Fahrschule | Zürich & Lachen</p>
+              <p style="margin-top: 20px; color: #999;">Driving Team | Zürich & Lachen</p>
             </div>
           </div>
         </body>
@@ -195,7 +195,7 @@ export default defineEventHandler(async (event) => {
     const response = await resend.emails.send({
       from: 'noreply@drivingteam.ch',
       to: body.email,
-      subject: `💰 Deine Kostenberechnung - ${body.category} - Ihre Fahrschule`,
+      subject: `💰 Deine Kostenberechnung - ${body.category} - Driving Team`,
       html: htmlContent,
     })
 

@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
 
           const stars = gbpStarToNumber(review.starRating)
           const suggestion = await generateGbpReviewSuggestion({
-            tenantName: tenant?.name || loc.title || 'Fahrschule',
+            tenantName: tenant?.name || loc.title || 'Unternehmen',
             reviewerName: review.reviewer?.displayName,
             starRating: stars,
             reviewText: review.comment,

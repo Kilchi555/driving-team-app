@@ -197,6 +197,22 @@
     },
     {
       "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "app.simy.ch"
+        }
+      ],
+      "destination": "https://simy.ch/"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.app.simy.ch"
+        }
+      ],
       "destination": "https://simy.ch/"
     }
   ],

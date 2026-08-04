@@ -84,7 +84,7 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Tenant not found:', slug)
       throw createError({
         statusCode: 404,
-        statusMessage: 'Fahrschule nicht gefunden'
+        statusMessage: 'Unternehmen nicht gefunden'
       })
     }
 

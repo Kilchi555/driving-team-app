@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     .or(`slug.eq.${tenant_slug},rental_portal_slug.eq.${tenant_slug}`)
     .maybeSingle()
 
-  if (!tenant) throw createError({ statusCode: 404, statusMessage: 'Fahrschule nicht gefunden' })
+  if (!tenant) throw createError({ statusCode: 404, statusMessage: 'Unternehmen nicht gefunden' })
 
   const { data: vehicles, error } = await supabase
     .from('vehicles')

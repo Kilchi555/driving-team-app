@@ -71,8 +71,7 @@
         <!-- ═══ STEP 0: Grunddaten ═══ -->
         <div v-if="currentStep === 0" class="space-y-8">
           <div>
-            <h2 class="text-base font-semibold text-gray-900 mb-1">Deine Branche</h2>
-            <p class="text-sm text-gray-500 mb-4">Damit sich Begriffe, Kategorien & Preisvorlagen im ganzen Formular automatisch richtig anpassen.</p>
+            <h2 class="text-base font-semibold text-gray-900 mb-4">Deine Branche</h2>
             <div class="max-w-sm">
               <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Geschäftstyp *</label>
               <select v-model="formData.business_type" required
@@ -587,68 +586,127 @@
         <div v-if="currentStep === 2" class="space-y-5">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">
-              {{ pricingMode === 'per_event_type' ? 'Was kosten deine Leistungen?' : `Preis pro ${labels.appointment}` }}
+              {{ pricingMode === 'per_event_type' ? 'Welche Leistungen bietest du an?' : `Preis pro ${labels.appointment}` }}
             </h2>
             <p class="text-sm text-gray-500">
               {{ pricingMode === 'per_event_type'
-                ? 'Preis & Dauer pro Leistung – als Standardwert, jederzeit anpassbar.'
+                ? 'Pro Leistung: Sofortzahlung beim Buchen — oder ohne (z.B. Erstgespräch, Pauschale, Rechnung später). Mit ✕ entfernen. Später unter Admin → Terminarten anpassbar.'
                 : `Preis & Dauer pro ${labels.categoryLabel} – als Standardwert für neue ${labels.appointmentsPlural}, jederzeit anpassbar.` }}
             </p>
           </div>
 
           <div class="space-y-4">
-            <div v-for="cat in pricingGroups" :key="cat.id"
+            <div v-for="cat in pricingGroups" :key="pricingMode === 'per_event_type' ? (cat.code || cat.id) : cat.id"
               class="rounded-xl border border-gray-200 bg-white overflow-hidden">
-              <!-- Category header -->
-              <div class="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+              <!-- Category / Leistung header -->
+              <div class="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100 min-w-0">
                 <span v-if="cat.color" class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ background: cat.color }"></span>
-                <p class="text-sm font-bold text-gray-800">{{ cat.name }}</p>
-                <span v-if="cat.code" class="text-xs text-gray-400 font-mono ml-auto">{{ cat.code }}</span>
+                <p class="text-sm font-bold text-gray-800 truncate min-w-0">{{ cat.name }}</p>
+                <span v-if="cat.code" class="text-xs text-gray-400 font-mono flex-shrink-0">{{ cat.code }}</span>
+                <button
+                  v-if="pricingMode === 'per_event_type' && cat.code"
+                  type="button"
+                  @click="removeTemplateEventType(cat.code)"
+                  class="ml-auto w-5 h-5 rounded-full bg-gray-100 hover:bg-red-100 hover:text-red-500 text-gray-400 flex items-center justify-center transition-colors text-xs leading-none flex-shrink-0"
+                  :title="`${cat.name} entfernen`"
+                >✕</button>
               </div>
-              <!-- price rows with enable/disable toggle -->
-              <div class="divide-y divide-gray-50">
+              <!-- price rows -->
+              <div class="divide-y divide-gray-100">
                 <div v-for="row in pricingRows.filter(r => r.catId === cat.id)" :key="row.type"
                   class="px-4 py-3 transition-opacity"
                   :class="row.enabled ? '' : 'opacity-40'">
-                  <!-- Row 1: toggle + label -->
-                  <div class="flex items-center gap-2 mb-2.5">
-                    <button type="button" @click="row.enabled = !row.enabled"
-                      class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
-                      :style="row.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
-                      :class="!row.enabled ? 'bg-gray-200' : ''"
-                      :title="row.enabled ? `${row.typeLabel} deaktivieren` : `${row.typeLabel} aktivieren`">
-                      <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
-                        :class="row.enabled ? 'translate-x-3' : 'translate-x-0'" />
-                    </button>
-                    <span class="text-sm font-semibold text-gray-700">{{ row.typeLabel }}</span>
-                  </div>
-                  <!-- Row 2: price + duration inputs (indented to align with label) -->
-                  <div class="flex items-center gap-3 pl-10 flex-wrap">
-                    <div class="flex items-center gap-1.5">
-                      <span class="text-xs font-medium text-gray-400">CHF</span>
-                      <input
-                        v-model.number="row.price_chf"
-                        type="number" min="0" step="5"
-                        :disabled="!row.enabled"
-                        class="w-24 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                      />
+
+                  <!-- per_event_type: stacked settings (mobile-friendly) -->
+                  <template v-if="pricingMode === 'per_event_type'">
+                    <div class="space-y-3">
+                      <div class="flex items-center justify-between gap-3">
+                        <span class="text-sm font-medium text-gray-700">Aktiv</span>
+                        <button type="button" @click="row.enabled = !row.enabled"
+                          class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                          :style="row.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
+                          :class="!row.enabled ? 'bg-gray-200' : ''"
+                          :title="row.enabled ? `${row.typeLabel} deaktivieren` : `${row.typeLabel} aktivieren`">
+                          <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                            :class="row.enabled ? 'translate-x-3' : 'translate-x-0'" />
+                        </button>
+                      </div>
+                      <div class="space-y-3" :class="!row.enabled ? 'pointer-events-none' : ''">
+                        <div class="flex items-center justify-between gap-3">
+                          <div class="min-w-0 pr-2">
+                            <p class="text-sm font-medium text-gray-700">Sofortzahlung</p>
+                            <p class="text-xs text-gray-400 leading-snug">Kunde zahlt beim Buchen in der App</p>
+                          </div>
+                          <button type="button" :disabled="!row.enabled"
+                            @click="toggleRowRequirePayment(row)"
+                            class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
+                            :style="row.require_payment && row.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
+                            :class="!(row.require_payment && row.enabled) ? 'bg-gray-200' : ''">
+                            <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                              :class="row.require_payment ? 'translate-x-3' : 'translate-x-0'" />
+                          </button>
+                        </div>
+                        <div v-if="row.require_payment" class="flex items-center justify-between gap-3">
+                          <span class="text-sm font-medium text-gray-700">Preis</span>
+                          <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <span class="text-xs font-medium text-gray-400">CHF</span>
+                            <input
+                              v-model.number="row.price_chf"
+                              type="number" min="0" step="5"
+                              :disabled="!row.enabled"
+                              class="w-24 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                            />
+                          </div>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                          <span class="text-sm font-medium text-gray-700">Dauer</span>
+                          <DurationPicker v-model="row.duration_minutes" :disabled="!row.enabled" />
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                          <div class="min-w-0 pr-2">
+                            <p class="text-sm font-medium text-gray-700">Online buchbar</p>
+                            <p class="text-xs text-gray-400 leading-snug">Auf der öffentlichen Buchungsseite</p>
+                          </div>
+                          <button type="button" :disabled="!row.enabled"
+                            @click="row.public_bookable = !row.public_bookable"
+                            class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
+                            :style="row.public_bookable && row.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
+                            :class="!(row.public_bookable && row.enabled) ? 'bg-gray-200' : ''"
+                            :title="row.public_bookable ? 'Online buchbar' : 'Nur intern'">
+                            <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                              :class="row.public_bookable ? 'translate-x-3' : 'translate-x-0'" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <DurationPicker v-model="row.duration_minutes" :disabled="!row.enabled" />
-                    <label v-if="pricingMode === 'per_event_type'"
-                      class="inline-flex items-center gap-2 ml-auto text-xs font-medium text-gray-600 select-none"
-                      :class="!row.enabled ? 'pointer-events-none' : 'cursor-pointer'">
-                      <button type="button" :disabled="!row.enabled"
-                        @click="row.public_bookable = !row.public_bookable"
-                        class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
-                        :style="row.public_bookable && row.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
-                        :class="!(row.public_bookable && row.enabled) ? 'bg-gray-200' : ''"
-                        :title="row.public_bookable ? 'Online buchbar' : 'Nur intern'">
+                  </template>
+
+                  <!-- per_category: compact price × type rows -->
+                  <template v-else>
+                    <div class="flex items-center gap-2 mb-2.5 min-w-0">
+                      <button type="button" @click="row.enabled = !row.enabled"
+                        class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                        :style="row.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
+                        :class="!row.enabled ? 'bg-gray-200' : ''"
+                        :title="row.enabled ? `${row.typeLabel} deaktivieren` : `${row.typeLabel} aktivieren`">
                         <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
-                          :class="row.public_bookable ? 'translate-x-3' : 'translate-x-0'" />
+                          :class="row.enabled ? 'translate-x-3' : 'translate-x-0'" />
                       </button>
-                      Online buchbar
-                    </label>
-                  </div>
+                      <span class="text-sm font-semibold text-gray-700 truncate">{{ row.typeLabel }}</span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 sm:pl-10">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-xs font-medium text-gray-400">CHF</span>
+                        <input
+                          v-model.number="row.price_chf"
+                          type="number" min="0" step="5"
+                          :disabled="!row.enabled"
+                          class="w-24 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                        />
+                      </div>
+                      <DurationPicker v-model="row.duration_minutes" :disabled="!row.enabled" />
+                    </div>
+                  </template>
                 </div>
               </div>
             </div>
@@ -657,37 +715,63 @@
           <!-- ── Custom event types (own services, priced tenant-wide) ── -->
           <div v-if="customEventTypes.length" class="space-y-2">
             <div v-for="ce in customEventTypes" :key="ce.tempCode"
-              class="rounded-xl border border-gray-200 bg-white overflow-hidden px-4 py-3 transition-opacity"
+              class="rounded-xl border border-gray-200 bg-white overflow-hidden transition-opacity"
               :class="ce.enabled ? '' : 'opacity-40'">
-              <div class="flex items-center gap-2 mb-2.5">
-                <button type="button" @click="ce.enabled = !ce.enabled"
-                  class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
-                  :style="ce.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
-                  :class="!ce.enabled ? 'bg-gray-200' : ''">
-                  <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
-                    :class="ce.enabled ? 'translate-x-3' : 'translate-x-0'" />
-                </button>
-                <span class="text-sm font-semibold text-gray-700">{{ ce.name }}</span>
-                <span class="text-xs text-gray-400 font-mono ml-auto">eigene Leistung</span>
+              <div class="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border-b border-gray-100 min-w-0">
+                <p class="text-sm font-bold text-gray-800 truncate min-w-0">{{ ce.name }}</p>
+                <span class="text-xs text-gray-400 flex-shrink-0">eigene Leistung</span>
                 <button type="button" @click="removeCustomEventType(ce.tempCode)"
-                  class="w-5 h-5 rounded-full bg-gray-100 hover:bg-red-100 hover:text-red-500 text-gray-400 flex items-center justify-center transition-colors text-xs leading-none">
+                  class="ml-auto w-5 h-5 rounded-full bg-gray-100 hover:bg-red-100 hover:text-red-500 text-gray-400 flex items-center justify-center transition-colors text-xs leading-none flex-shrink-0">
                   ✕
                 </button>
               </div>
-              <div class="flex items-center gap-3 pl-10 flex-wrap">
-                <div class="flex items-center gap-1.5">
-                  <span class="text-xs font-medium text-gray-400">CHF</span>
-                  <input
-                    v-model.number="ce.price_chf"
-                    type="number" min="0" step="5"
-                    :disabled="!ce.enabled"
-                    class="w-24 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                  />
+              <div class="px-4 py-3 space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-sm font-medium text-gray-700">Aktiv</span>
+                  <button type="button" @click="ce.enabled = !ce.enabled"
+                    class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                    :style="ce.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
+                    :class="!ce.enabled ? 'bg-gray-200' : ''">
+                    <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                      :class="ce.enabled ? 'translate-x-3' : 'translate-x-0'" />
+                  </button>
                 </div>
-                <DurationPicker v-model="ce.duration_minutes" :disabled="!ce.enabled" />
-                <label
-                  class="inline-flex items-center gap-2 ml-auto text-xs font-medium text-gray-600 select-none"
-                  :class="!ce.enabled ? 'pointer-events-none' : 'cursor-pointer'">
+                <div class="space-y-3" :class="!ce.enabled ? 'pointer-events-none' : ''">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0 pr-2">
+                    <p class="text-sm font-medium text-gray-700">Sofortzahlung</p>
+                    <p class="text-xs text-gray-400 leading-snug">Kunde zahlt beim Buchen in der App</p>
+                  </div>
+                  <button type="button" :disabled="!ce.enabled"
+                    @click="toggleCustomRequirePayment(ce)"
+                    class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
+                    :style="ce.require_payment && ce.enabled ? { background: formData.primary_color || '#2563EB' } : {}"
+                    :class="!(ce.require_payment && ce.enabled) ? 'bg-gray-200' : ''">
+                    <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                      :class="ce.require_payment ? 'translate-x-3' : 'translate-x-0'" />
+                  </button>
+                </div>
+                <div v-if="ce.require_payment" class="flex items-center justify-between gap-3">
+                  <span class="text-sm font-medium text-gray-700">Preis</span>
+                  <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <span class="text-xs font-medium text-gray-400">CHF</span>
+                    <input
+                      v-model.number="ce.price_chf"
+                      type="number" min="0" step="5"
+                      :disabled="!ce.enabled"
+                      class="w-24 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-sm font-medium text-gray-700">Dauer</span>
+                  <DurationPicker v-model="ce.duration_minutes" :disabled="!ce.enabled" />
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0 pr-2">
+                    <p class="text-sm font-medium text-gray-700">Online buchbar</p>
+                    <p class="text-xs text-gray-400 leading-snug">Auf der öffentlichen Buchungsseite</p>
+                  </div>
                   <button type="button" :disabled="!ce.enabled"
                     @click="ce.public_bookable = !ce.public_bookable"
                     class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
@@ -697,8 +781,8 @@
                     <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
                       :class="ce.public_bookable ? 'translate-x-3' : 'translate-x-0'" />
                   </button>
-                  Online buchbar
-                </label>
+                </div>
+                </div>
               </div>
             </div>
           </div>
@@ -714,7 +798,7 @@
 
             <transition enter-active-class="transition-all duration-300 ease-out" enter-from-class="opacity-0 -translate-y-2 scale-98" enter-to-class="opacity-100 translate-y-0 scale-100"
               leave-active-class="transition-all duration-200 ease-in" leave-from-class="opacity-100 translate-y-0 scale-100" leave-to-class="opacity-0 -translate-y-2 scale-98">
-              <div v-if="showAddEventTypeForm" class="mt-3 rounded-2xl border-2 border-blue-200 bg-blue-50 p-4 space-y-4">
+              <div v-if="showAddEventTypeForm" class="mt-3 rounded-2xl border-2 border-blue-200 bg-blue-50 p-4 space-y-3">
                 <p class="text-xs font-bold uppercase tracking-wide text-blue-700">Neue Leistung</p>
 
                 <div>
@@ -723,16 +807,37 @@
                     class="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
                 </div>
 
-                <div class="flex items-center gap-3">
-                  <div class="flex items-center gap-1.5">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0 pr-2">
+                    <p class="text-sm font-medium text-gray-700">Sofortzahlung</p>
+                    <p class="text-xs text-gray-400 leading-snug">Kunde zahlt beim Buchen in der App</p>
+                  </div>
+                  <button type="button"
+                    @click="newEventType.require_payment = !newEventType.require_payment"
+                    class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                    :style="newEventType.require_payment ? { background: formData.primary_color || '#2563EB' } : {}"
+                    :class="!newEventType.require_payment ? 'bg-gray-200' : ''">
+                    <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                      :class="newEventType.require_payment ? 'translate-x-3' : 'translate-x-0'" />
+                  </button>
+                </div>
+                <div v-if="newEventType.require_payment" class="flex items-center justify-between gap-3">
+                  <span class="text-sm font-medium text-gray-700">Preis</span>
+                  <div class="flex items-center gap-1.5 flex-shrink-0">
                     <span class="text-xs font-medium text-gray-500">CHF</span>
                     <input v-model.number="newEventType.price_chf" type="number" min="0" step="5"
                       class="w-24 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white" />
                   </div>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-sm font-medium text-gray-700">Dauer</span>
                   <DurationPicker v-model="newEventType.duration_minutes" />
                 </div>
-
-                <label class="inline-flex items-center gap-2 text-xs font-medium text-gray-600 cursor-pointer select-none">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0 pr-2">
+                    <p class="text-sm font-medium text-gray-700">Online buchbar</p>
+                    <p class="text-xs text-gray-400 leading-snug">Auf der öffentlichen Buchungsseite</p>
+                  </div>
                   <button type="button"
                     @click="newEventType.public_bookable = !newEventType.public_bookable"
                     class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
@@ -741,8 +846,7 @@
                     <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
                       :class="newEventType.public_bookable ? 'translate-x-3' : 'translate-x-0'" />
                   </button>
-                  Online buchbar (öffentliche Buchungsseite)
-                </label>
+                </div>
 
                 <div class="flex gap-2 pt-1">
                   <button type="button" @click="addCustomEventType" :disabled="!newEventType.name.trim()"
@@ -750,7 +854,7 @@
                     :class="newEventType.name.trim() ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-200 cursor-not-allowed'">
                     Hinzufügen
                   </button>
-                  <button type="button" @click="showAddEventTypeForm = false; newEventType.name = ''"
+                  <button type="button" @click="cancelAddEventTypeForm"
                     class="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 bg-white border border-gray-200 hover:bg-gray-50 transition-all">
                     Abbrechen
                   </button>
@@ -772,49 +876,109 @@
         <!-- ═══ STEP 3: Standorte ═══ -->
         <div v-if="currentStep === 3" class="space-y-5">
           <div>
-            <h2 class="text-base font-semibold text-gray-900 mb-0.5">Wo bietest du deine {{ labels.appointmentsPlural }} an?</h2>
-            <p class="text-sm text-gray-500">Mindestens ein Standort – als Treffpunkt für deine {{ labels.appointmentsPlural }}.</p>
+            <h2 class="text-base font-semibold text-gray-900 mb-0.5">
+              {{ isDrivingSchool ? `Wo bietest du deine ${labels.appointmentsPlural} an?` : 'Wo triffst du Kunden?' }}
+            </h2>
+            <p class="text-sm text-gray-500">
+              {{ isDrivingSchool
+                ? `Mindestens ein Standort – als Treffpunkt für deine ${labels.appointmentsPlural}.`
+                : 'Kunden-Treffpunkt, Telefon und/oder Online Call — mindestens eine Option.' }}
+            </p>
           </div>
 
-          <div class="flex items-start gap-3 bg-blue-50 rounded-xl p-3.5 text-sm text-blue-700">
-            <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            <span>{{ labels.staffPlural }} wählen beim Erstellen von Terminen einen Standort aus. Weitere können später hinzugefügt werden.</span>
+          <!-- Meeting channels -->
+          <div class="rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100">
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+              <p class="text-sm font-medium text-gray-800">Kunden-Treffpunkt</p>
+              <button type="button"
+                @click="toggleMeetingPoint"
+                class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                :style="meetingChannels.meetingPoint ? { background: formData.primary_color || '#2563EB' } : {}"
+                :class="!meetingChannels.meetingPoint ? 'bg-gray-200' : ''"
+                :title="isDrivingSchool ? 'Bei Fahrschulen ist ein Treffpunkt nötig' : 'Kunden-Treffpunkt an/aus'">
+                <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                  :class="meetingChannels.meetingPoint ? 'translate-x-3' : 'translate-x-0'" />
+              </button>
+            </div>
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+              <p class="text-sm font-medium text-gray-800">Telefon</p>
+              <button type="button"
+                @click="meetingChannels.phone = !meetingChannels.phone"
+                class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                :style="meetingChannels.phone ? { background: formData.primary_color || '#2563EB' } : {}"
+                :class="!meetingChannels.phone ? 'bg-gray-200' : ''">
+                <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                  :class="meetingChannels.phone ? 'translate-x-3' : 'translate-x-0'" />
+              </button>
+            </div>
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+              <p class="text-sm font-medium text-gray-800">Online Call</p>
+              <button type="button"
+                @click="meetingChannels.onlineCall = !meetingChannels.onlineCall"
+                class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                :style="meetingChannels.onlineCall ? { background: formData.primary_color || '#2563EB' } : {}"
+                :class="!meetingChannels.onlineCall ? 'bg-gray-200' : ''">
+                <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                  :class="meetingChannels.onlineCall ? 'translate-x-3' : 'translate-x-0'" />
+              </button>
+            </div>
           </div>
 
-          <div class="space-y-3">
-            <div
-              v-for="(loc, index) in locationsList"
-              :key="index"
-              class="rounded-2xl border border-gray-200 bg-gray-50 p-4"
-            >
-              <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-2">
-                  <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    {{ index + 1 }}
+          <div v-if="meetingChannels.phone || meetingChannels.onlineCall"
+            class="flex flex-wrap gap-2">
+            <span v-if="meetingChannels.phone"
+              class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white"
+              :style="{ background: formData.primary_color || '#2563EB' }">
+              Telefon
+            </span>
+            <span v-if="meetingChannels.onlineCall"
+              class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white"
+              :style="{ background: formData.primary_color || '#2563EB' }">
+              Online Call
+            </span>
+            <span class="text-xs text-gray-400 self-center">wird als buchbarer Ort angelegt</span>
+          </div>
+
+          <!-- Physical meeting points -->
+          <template v-if="meetingChannels.meetingPoint">
+            <div class="flex items-start gap-3 bg-blue-50 rounded-xl p-3.5 text-sm text-blue-700">
+              <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              <span>{{ labels.staffPlural }} wählen beim Erstellen von Terminen einen Standort aus. Weitere können später hinzugefügt werden.</span>
+            </div>
+
+            <div class="space-y-3">
+              <div
+                v-for="(loc, index) in locationsList"
+                :key="index"
+                class="rounded-2xl border border-gray-200 bg-gray-50 p-4"
+              >
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                      {{ index + 1 }}
+                    </div>
+                    <span class="text-sm font-semibold text-gray-700 truncate">Standort {{ index + 1 }}</span>
                   </div>
-                  <span class="text-sm font-semibold text-gray-700">Standort {{ index + 1 }}</span>
+                  <button v-if="locationsList.length > 1" type="button" @click="removeLocation(index)"
+                    class="w-6 h-6 rounded-full bg-gray-200 hover:bg-red-100 hover:text-red-500 text-gray-400 flex items-center justify-center transition-colors text-sm leading-none flex-shrink-0">
+                    ✕
+                  </button>
                 </div>
-                <button v-if="locationsList.length > 1" type="button" @click="removeLocation(index)"
-                  class="w-6 h-6 rounded-full bg-gray-200 hover:bg-red-100 hover:text-red-500 text-gray-400 flex items-center justify-center transition-colors text-sm leading-none">
-                  ✕
-                </button>
-              </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div class="sm:col-span-2">
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Bezeichnung *</label>
-                  <input v-model="loc.name" type="text" placeholder="z.B. Hauptstandort Zürich"
-                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Strasse + Nummer</label>
-                  <input v-model="loc.address" type="text" placeholder="Musterstrasse 12"
-                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
-                </div>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Bezeichnung *</label>
+                    <input v-model="loc.name" type="text" placeholder="z.B. Hauptstandort Zürich"
+                      class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
+                  </div>
+                  <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Strasse + Nummer</label>
+                    <input v-model="loc.address" type="text" placeholder="Musterstrasse 12"
+                      class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
+                  </div>
                   <div>
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">PLZ</label>
                     <input v-model="loc.zip" type="text" placeholder="8000"
@@ -828,21 +992,23 @@
                 </div>
               </div>
             </div>
-          </div>
 
-          <button type="button" @click="addLocation"
-            class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors px-4 py-2 rounded-xl hover:bg-blue-50 border-2 border-dashed border-blue-200 hover:border-blue-400 w-full justify-center">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
-            </svg>
-            Weiteren Standort hinzufügen
-          </button>
+            <button type="button" @click="addLocation"
+              class="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors px-4 py-2 rounded-xl hover:bg-blue-50 border-2 border-dashed border-blue-200 hover:border-blue-400 w-full justify-center">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>
+              </svg>
+              Weiteren Standort hinzufügen
+            </button>
+          </template>
 
           <p v-if="!hasValidLocation" class="flex items-center gap-1.5 text-xs text-red-500 font-medium">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
             </svg>
-            Bitte mindestens einen Standort mit Bezeichnung erfassen.
+            {{ meetingChannels.meetingPoint && !validLocations.length
+              ? 'Bitte mindestens einen Standort mit Bezeichnung erfassen.'
+              : 'Bitte mindestens eine Option wählen: Kunden-Treffpunkt, Telefon oder Online Call.' }}
           </p>
         </div>
 
@@ -1421,9 +1587,10 @@
             <div class="rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
               <p class="text-xs font-bold text-emerald-400 uppercase tracking-wide mb-2.5">Standorte</p>
               <div class="space-y-1">
-                <p v-for="(loc, i) in validLocations" :key="i" class="text-sm text-gray-700 font-medium">
+                <p v-for="(loc, i) in locationsForSubmit" :key="i" class="text-sm text-gray-700 font-medium">
                   {{ loc.name }}
                   <span v-if="loc.city" class="text-gray-400 font-normal text-xs"> – {{ loc.city }}</span>
+                  <span v-else-if="loc.address?.startsWith('Remote')" class="text-gray-400 font-normal text-xs"> – remote</span>
                 </p>
               </div>
             </div>
@@ -1498,7 +1665,7 @@
               <div v-for="item in [
                 { done: true, label: `${labels.businessNoun} registriert` },
                 { done: true, label: `${effectiveCategoryCount} ${labels.categoriesLabel} konfiguriert` },
-                { done: true, label: `${validLocations.length} Standort(e) angelegt` },
+                { done: true, label: `${locationsForSubmit.length} Standort(e) angelegt` },
                 { done: true, label: 'Preise & Dauern konfiguriert' },
                 { done: true, label: 'Termintypen & Bewertungsvorlagen importiert' },
                 { done: true, label: 'Verfügbarkeit Mo–Sa 08:00–18:00 eingerichtet' },
@@ -1673,7 +1840,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
-            {{ labels.businessNoun }} einrichten
+            einrichten
           </button>
         </div>
 
@@ -1869,6 +2036,8 @@ interface PricingRow {
   enabled: boolean
   /** Online-Buchung (event_types.public_bookable) — relevant in per_event_type mode */
   public_bookable: boolean
+  /** false = no in-app price (Erstgespräch, external invoice, package, …) */
+  require_payment: boolean
 }
 
 // Dynamic, business-type-aware event types for the pricing step (replaces the
@@ -1880,6 +2049,7 @@ interface EventTypeTemplate {
   duration_minutes: number
   default_enabled: boolean
   public_bookable?: boolean
+  require_payment?: boolean
 }
 const eventTypeTemplates = ref<EventTypeTemplate[]>([])
 // 'per_category': price varies per selected category (driving_school: Fahrstunde/Prüfung/Theorie
@@ -1910,7 +2080,7 @@ const loadEventTypeTemplates = async () => {
     // Uses the branch-aware label so it doesn't silently show "Fahrstunde"
     // for a business type that isn't driving_school.
     eventTypeTemplates.value = [
-      { code: 'lesson', name: labels.value.appointment, price_chf: 95, duration_minutes: 45, default_enabled: true, public_bookable: true },
+      { code: 'lesson', name: labels.value.appointment, price_chf: 95, duration_minutes: 45, default_enabled: true, public_bookable: true, require_payment: true },
     ]
     pricingMode.value = 'per_category'
   } finally {
@@ -1955,10 +2125,34 @@ const effectiveCategoryList = computed((): TemplateCategory[] => {
 // category dimension, so each event type becomes its own single-row group.
 const pricingGroups = computed((): TemplateCategory[] => {
   if (pricingMode.value === 'per_event_type') {
-    return eventTypeTemplates.value.map((e, i) => ({ id: -(i + 1), name: e.name, code: e.code }))
+    // Stable negative ids from code so deleting a middle item doesn't rematch rows.
+    return eventTypeTemplates.value.map((e) => ({
+      id: stableEventTypeGroupId(e.code),
+      name: e.name,
+      code: e.code,
+    }))
   }
   return effectiveCategoryList.value
 })
+
+function stableEventTypeGroupId(code: string): number {
+  let h = 0
+  for (let i = 0; i < code.length; i++) h = ((h << 5) - h + code.charCodeAt(i)) | 0
+  return -Math.abs(h || 1)
+}
+
+const removeTemplateEventType = (code: string) => {
+  eventTypeTemplates.value = eventTypeTemplates.value.filter(t => t.code !== code)
+  pricingRows.value = pricingRows.value.filter(r => r.type !== code)
+}
+
+const toggleRowRequirePayment = (row: PricingRow) => {
+  row.require_payment = !row.require_payment
+  if (row.require_payment && !(row.price_chf > 0)) {
+    const template = eventTypeTemplates.value.find(t => t.code === row.type)
+    row.price_chf = template?.price_chf && template.price_chf > 0 ? template.price_chf : 100
+  }
+}
 
 // Rebuild flat pricingRows whenever selected categories/event-types change, preserving existing values
 watch([pricingGroups, eventTypeTemplates], ([groups, types]) => {
@@ -1968,8 +2162,16 @@ watch([pricingGroups, eventTypeTemplates], ([groups, types]) => {
     for (const group of groups) {
       const template = types.find(t => t.code === group.code)
       if (!template) continue
-      const existing = pricingRows.value.find(r => r.catId === group.id && r.type === template.code)
-      updated.push(existing ? { ...existing, catName: group.name, catCode: group.code } : {
+      // Match by type code (stable across deletes), not shifting catId index.
+      const existing = pricingRows.value.find(r => r.type === template.code)
+      updated.push(existing ? {
+        ...existing,
+        catId: group.id,
+        catName: group.name,
+        catCode: group.code,
+        typeLabel: template.name,
+        // Keep user's Sofortzahlung / Ohne Sofortzahlung choice
+      } : {
         catId: group.id,
         catName: group.name,
         catCode: group.code,
@@ -1980,16 +2182,23 @@ watch([pricingGroups, eventTypeTemplates], ([groups, types]) => {
         duration_minutes: template.duration_minutes,
         enabled: template.default_enabled,
         public_bookable: template.public_bookable ?? true,
+        require_payment: template.require_payment !== false,
       })
     }
   } else {
     const pricingTypes = types.length > 0
       ? types
-      : [{ code: 'lesson', name: labels.value.appointment, price_chf: 95, duration_minutes: 45, default_enabled: true, public_bookable: true }]
+      : [{ code: 'lesson', name: labels.value.appointment, price_chf: 95, duration_minutes: 45, default_enabled: true, public_bookable: true, require_payment: true }]
     for (const cat of groups) {
       for (const t of pricingTypes) {
         const existing = pricingRows.value.find(r => r.catId === cat.id && r.type === t.code)
-        updated.push(existing ? { ...existing, catName: cat.name, catCode: cat.code, catColor: cat.color } : {
+        updated.push(existing ? {
+          ...existing,
+          catName: cat.name,
+          catCode: cat.code,
+          catColor: cat.color,
+          require_payment: t.require_payment !== false,
+        } : {
           catId: cat.id,
           catName: cat.name,
           catCode: cat.code,
@@ -2000,6 +2209,7 @@ watch([pricingGroups, eventTypeTemplates], ([groups, types]) => {
           duration_minutes: t.duration_minutes,
           enabled: t.default_enabled,
           public_bookable: t.public_bookable ?? true,
+          require_payment: t.require_payment !== false,
         })
       }
     }
@@ -2021,10 +2231,11 @@ interface CustomEventType {
   duration_minutes: number
   enabled: boolean
   public_bookable: boolean
+  require_payment: boolean
 }
 const customEventTypes = ref<CustomEventType[]>([])
 const showAddEventTypeForm = ref(false)
-const newEventType = ref({ name: '', price_chf: 0, duration_minutes: 60, public_bookable: true })
+const newEventType = ref({ name: '', price_chf: 100, duration_minutes: 60, public_bookable: true, require_payment: true })
 
 const slugifyEventTypeCode = (name: string): string => {
   const base = name
@@ -2046,17 +2257,28 @@ const addCustomEventType = () => {
   customEventTypes.value.push({
     tempCode: slugifyEventTypeCode(name),
     name,
-    price_chf: newEventType.value.price_chf || 0,
+    price_chf: newEventType.value.require_payment ? (newEventType.value.price_chf || 0) : 0,
     duration_minutes: newEventType.value.duration_minutes || 60,
     enabled: true,
     public_bookable: newEventType.value.public_bookable,
+    require_payment: newEventType.value.require_payment,
   })
-  newEventType.value = { name: '', price_chf: 0, duration_minutes: 60, public_bookable: true }
+  newEventType.value = { name: '', price_chf: 100, duration_minutes: 60, public_bookable: true, require_payment: true }
   showAddEventTypeForm.value = false
 }
 
 const removeCustomEventType = (tempCode: string) => {
   customEventTypes.value = customEventTypes.value.filter(c => c.tempCode !== tempCode)
+}
+
+const toggleCustomRequirePayment = (ce: CustomEventType) => {
+  ce.require_payment = !ce.require_payment
+  if (ce.require_payment && !(ce.price_chf > 0)) ce.price_chf = 100
+}
+
+const cancelAddEventTypeForm = () => {
+  showAddEventTypeForm.value = false
+  newEventType.value = { name: '', price_chf: 100, duration_minutes: 60, public_bookable: true, require_payment: true }
 }
 
 const categoriesLoading = ref(false)
@@ -2186,6 +2408,20 @@ interface LocationEntry {
   email: string
 }
 
+const isDrivingSchool = computed(() => formData.value.business_type === 'driving_school')
+
+/** How customers can meet — physical and/or remote channels */
+const meetingChannels = ref({
+  meetingPoint: true,
+  phone: false,
+  onlineCall: false,
+})
+
+const REMOTE_LOCATION_DEFS = [
+  { key: 'phone' as const, name: 'Telefon', address: 'Remote / Telefon' },
+  { key: 'onlineCall' as const, name: 'Online Call', address: 'Remote / Video (Zoom, Teams, …)' },
+]
+
 const locationsList = ref<LocationEntry[]>([
   { name: '', address: '', zip: '', city: '', phone: '', email: '' }
 ])
@@ -2198,11 +2434,41 @@ const removeLocation = (index: number) => {
   locationsList.value.splice(index, 1)
 }
 
-const validLocations = computed(() => locationsList.value.filter(l => l.name.trim()))
-const hasValidLocation = computed(() => validLocations.value.length > 0)
+const toggleMeetingPoint = () => {
+  // Driving schools always need at least one physical Treffpunkt
+  if (isDrivingSchool.value && meetingChannels.value.meetingPoint) return
+  meetingChannels.value.meetingPoint = !meetingChannels.value.meetingPoint
+}
 
-// Pre-fill first location from company address when entering step 2
+const validLocations = computed(() => locationsList.value.filter(l => l.name.trim()))
+
+/** Physical + remote locations that will be created on register */
+const locationsForSubmit = computed((): LocationEntry[] => {
+  const locs: LocationEntry[] = []
+  if (meetingChannels.value.meetingPoint) {
+    locs.push(...validLocations.value)
+  }
+  for (const def of REMOTE_LOCATION_DEFS) {
+    if (!meetingChannels.value[def.key]) continue
+    if (locs.some(l => l.name === def.name)) continue
+    locs.push({ name: def.name, address: def.address, zip: '', city: '', phone: '', email: '' })
+  }
+  return locs
+})
+
+const hasValidLocation = computed(() => {
+  const anyChannel =
+    meetingChannels.value.meetingPoint ||
+    meetingChannels.value.phone ||
+    meetingChannels.value.onlineCall
+  if (!anyChannel) return false
+  if (meetingChannels.value.meetingPoint && validLocations.value.length === 0) return false
+  return locationsForSubmit.value.length > 0
+})
+
+// Pre-fill first location from company address when entering step 3
 const prefillFirstLocation = () => {
+  if (!meetingChannels.value.meetingPoint) return
   if (locationsList.value[0].name) return
   locationsList.value[0] = {
     name: formData.value.name ? `Hauptstandort ${formData.value.city}`.trim() : '',
@@ -2681,6 +2947,18 @@ const submitRegistration = async () => {
       .filter(r => r.enabled)
       .map(r => {
         if (pricingMode.value === 'per_event_type') {
+          // Free services: no pricing_rules row — only activate + duration/bookable.
+          if (!r.require_payment) {
+            return {
+              label: r.typeLabel,
+              rule_type: 'free_event',
+              event_type_code: r.type,
+              category_code: null,
+              price_chf: 0,
+              duration_minutes: r.duration_minutes,
+              public_bookable: !!r.public_bookable,
+            }
+          }
           return {
             label: r.typeLabel,
             rule_type: 'event_price',
@@ -2712,10 +2990,10 @@ const submitRegistration = async () => {
       .filter(c => c.enabled && c.name.trim())
       .map(c => ({
         label: c.name,
-        rule_type: 'event_price',
+        rule_type: c.require_payment ? 'event_price' : 'free_event',
         event_type_code: c.tempCode,
         category_code: null,
-        price_chf: c.price_chf,
+        price_chf: c.require_payment ? c.price_chf : 0,
         duration_minutes: c.duration_minutes,
         is_custom: true,
         public_bookable: !!c.public_bookable,
@@ -2723,8 +3001,8 @@ const submitRegistration = async () => {
 
     fd.append('pricing_json', JSON.stringify([...pricingJson, ...customEventTypeJson]))
 
-    // Locations as JSON
-    const locs = validLocations.value
+    // Locations as JSON (physical Treffpunkte + optional Telefon / Online Call)
+    const locs = locationsForSubmit.value
     if (locs.length > 0) {
       fd.append('locations_json', JSON.stringify(locs))
     }
@@ -2841,8 +3119,9 @@ const submitRegistration = async () => {
       console.warn('Welcome email failed (non-critical):', welcomeErr)
     }
 
-    // Offer to save credentials on Android/Chrome; iOS relies on mirror inputs + form submit
-    await saveCredentials(
+    // Offer to save credentials — never block the success screen (Chrome's
+    // PasswordCredential.store can hang until the user dismisses a prompt).
+    void saveCredentials(
       adminForm.value.email,
       adminForm.value.password,
       `${adminForm.value.first_name} ${adminForm.value.last_name}`.trim()
@@ -2940,6 +3219,14 @@ watch(() => formData.value.business_type, (newType, oldType) => {
     pricingMode.value = 'per_category'
   }
 
+  // Meeting channels: Fahrschule braucht Treffpunkt; Consulting/Coaching default remote
+  if (newType === 'driving_school') {
+    meetingChannels.value.meetingPoint = true
+  } else if (newType && (!oldType || oldType === 'driving_school')) {
+    meetingChannels.value.phone = true
+    meetingChannels.value.onlineCall = true
+  }
+
   // Load pricingMode early so the progress bar can hide the categories step
   // for per_event_type branches before the user clicks Weiter.
   // Fire-and-forget (watcher stays sync for the isRestoringFromStorage guard).
@@ -2980,6 +3267,7 @@ const saveToStorage = () => {
     staffList: staffList.value,
     staffAdminIsSelf: staffAdminIsSelf.value,
     locationsList: locationsList.value,
+    meetingChannels: meetingChannels.value,
     selectedCategoryIds: Array.from(selectedCategoryIds.value),
     customCategories: customCategories.value,
     pricingItems: pricingRows.value,
@@ -3013,6 +3301,13 @@ const loadFromStorage = () => {
     if (d.staffList)    staffList.value    = d.staffList
     if (typeof d.staffAdminIsSelf === 'boolean') staffAdminIsSelf.value = d.staffAdminIsSelf
     if (d.locationsList) locationsList.value = d.locationsList
+    if (d.meetingChannels && typeof d.meetingChannels === 'object') {
+      meetingChannels.value = {
+        meetingPoint: d.meetingChannels.meetingPoint !== false,
+        phone: !!d.meetingChannels.phone,
+        onlineCall: !!d.meetingChannels.onlineCall,
+      }
+    }
     if (Array.isArray(d.selectedCategoryIds)) selectedCategoryIds.value = new Set<number>(d.selectedCategoryIds)
     if (Array.isArray(d.customCategories)) customCategories.value = d.customCategories
     if (d.pricingItems && typeof d.pricingItems === 'object') pricingRows.value = d.pricingItems
@@ -3023,7 +3318,7 @@ const loadFromStorage = () => {
   }
 }
 
-watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, staffList, staffAdminIsSelf, selectedCategoryIds, pricingRows, customEventTypes, logoPreview, logoSquarePreview], saveToStorage, { deep: true })
+watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, meetingChannels, staffList, staffAdminIsSelf, selectedCategoryIds, pricingRows, customEventTypes, logoPreview, logoSquarePreview], saveToStorage, { deep: true })
 
 const route = useRoute()
 const isWebsiteMode = computed(() => route.query.mode === 'website')

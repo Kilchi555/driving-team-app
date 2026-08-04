@@ -2,6 +2,7 @@ import { defineEventHandler, getQuery, setHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import crypto from 'crypto'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 /**
  * Generate iCalendar (ICS) format for staff appointments
@@ -88,6 +89,9 @@ export default defineEventHandler(async (event) => {
     if (tenantError || !tenant) {
       logger.warn(`❌ Tenant not found for staff: ${staffId}`)
     }
+
+    const terms = await getTenantTerminology(serviceSupabase, staffUser.tenant_id)
+    const appointmentLabel = terms.appointment || 'Termin'
 
     // 3. Get all appointments for this staff member (last 6 months + next 12 months)
     const today = new Date()
@@ -198,7 +202,7 @@ export default defineEventHandler(async (event) => {
         const eventUid = `${apt.id}@${new URL(process.env.NUXT_PUBLIC_BASE_URL || process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000').hostname}`
 
         // Build title: "Vorname Name - Kategorie Type"
-        const vehicleType = apt.type || 'Fahrstunde'
+        const vehicleType = apt.type || appointmentLabel
         const eventTitle = studentFullName 
           ? `${studentFullName} - Kategorie ${vehicleType}`
           : apt.title || 'Appointment'

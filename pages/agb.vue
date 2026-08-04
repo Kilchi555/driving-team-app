@@ -11,7 +11,7 @@
           </button>
         </div>
         <h1 class="text-2xl sm:text-3xl font-bold mb-2">Allgemeine Geschäftsbedingungen</h1>
-        <p class="text-blue-200 text-sm">Simy – SaaS-Plattform für Fahrschulen | Stand: 1. April 2026 · Version 1.1</p>
+        <p class="text-blue-200 text-sm">Simy – SaaS-Plattform für Terminbetriebe | Stand: 1. April 2026 · Version 1.1</p>
       </div>
     </div>
 
@@ -47,22 +47,22 @@
         <section id="s1">
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">1. Geltungsbereich und Vertragsparteien</h2>
           <p class="mb-3">Diese Allgemeinen Geschäftsbedingungen («AGB») gelten für alle Verträge zwischen <strong>Simy IT Systems Kilchenmann</strong>, Weiherweg 2, 8610 Uster, Schweiz («Simy», «wir», «uns») und gewerblichen Kunden («Kunde», «Tenant»), die die Simy-SaaS-Plattform nutzen.</p>
-          <p class="mb-3">Diese AGB gelten ausschliesslich für Unternehmen, Fahrschulen und andere gewerbliche Nutzer (B2B). Verbraucher im Sinne des Konsumentenrechts sind von der Nutzung ausgeschlossen.</p>
-          <p class="mb-3">Die Nutzung der Plattform setzt voraus, dass der Kunde ein rechtmässig betriebenes Fahrschulunternehmen oder ein verwandtes Gewerbe führt. Simy behält sich vor, die Registrierung ohne Angabe von Gründen abzulehnen oder zu widerrufen, insbesondere wenn begründeter Verdacht auf fehlende Gewerbsberechtigung, Missbrauch oder Verstoss gegen diese AGB besteht.</p>
+          <p class="mb-3">Diese AGB gelten ausschliesslich für Unternehmen und andere gewerbliche Nutzer (B2B). Verbraucher im Sinne des Konsumentenrechts sind von der Nutzung ausgeschlossen.</p>
+          <p class="mb-3">Die Nutzung der Plattform setzt voraus, dass der Kunde ein rechtmässig betriebenes Gewerbe führt. Simy behält sich vor, die Registrierung ohne Angabe von Gründen abzulehnen oder zu widerrufen, insbesondere wenn begründeter Verdacht auf fehlende Gewerbsberechtigung, Missbrauch oder Verstoss gegen diese AGB besteht.</p>
           <p>Abweichende Bedingungen des Kunden werden nicht anerkannt, es sei denn, wir stimmen ihrer Geltung ausdrücklich schriftlich zu.</p>
         </section>
 
         <!-- §2 -->
         <section id="s2">
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">2. Leistungsbeschreibung</h2>
-          <p class="mb-3">Simy stellt dem Kunden über das Internet eine webbasierte Verwaltungssoftware für Fahrschulen bereit («Plattform»). Die Plattform umfasst im Wesentlichen:</p>
+          <p class="mb-3">Simy stellt dem Kunden über das Internet eine webbasierte Verwaltungssoftware für Terminbetriebe bereit («Plattform»). Die Plattform umfasst im Wesentlichen:</p>
           <ul class="list-disc pl-5 space-y-1.5 mb-3">
-            <li>Verwaltung von Fahrstunden und Terminen</li>
-            <li>Schülerverwaltung (Stammdaten, Lernfortschritt, Kategorien)</li>
+            <li>Verwaltung von Terminen und Buchungen</li>
+            <li>Kundenverwaltung (Stammdaten, Fortschritt, Kategorien)</li>
             <li>Rechnungsstellung und Zahlungsverwaltung</li>
-            <li>Fahrlehrer-Verwaltung und Einladungssystem</li>
-            <li>Standort- und Kategorien-Verwaltung</li>
-            <li>Bewertungen und Lernfortschritts-Tracking</li>
+            <li>Mitarbeiter-Verwaltung und Einladungssystem</li>
+            <li>Standort- und Angebotsverwaltung</li>
+            <li>Bewertungen und Fortschritts-Tracking</li>
           </ul>
           <p class="mb-3">Der konkrete Leistungsumfang richtet sich nach dem jeweils gebuchten Abonnement-Plan. Simy behält sich vor, den Leistungsumfang im Rahmen der technischen Weiterentwicklung zu erweitern oder anzupassen, ohne den vereinbarten Kernfunktionsumfang wesentlich einzuschränken.</p>
           <p>Simy erbringt keine Leistungen, die eine Zulassung als Finanzintermediär erfordern. Zahlungsabwicklungen erfolgen ausschliesslich über den zertifizierten Drittanbieter Wallee Group AG (PCI DSS Level 1).</p>
@@ -94,7 +94,7 @@
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">5. Nutzungsrechte und geistiges Eigentum</h2>
           <p class="mb-3">Simy räumt dem Kunden für die Dauer des Abonnements ein nicht-exklusives, nicht übertragbares Recht zur Nutzung der Plattform über das Internet ein. Eine Unterlizenzierung oder Weitergabe an Dritte ist untersagt.</p>
           <p class="mb-3">Alle Rechte an der Plattform, der Software, dem Design und den Marken verbleiben bei Simy. Der Kunde erhält kein Recht auf den Quellcode.</p>
-          <p class="mb-3"><strong>Kundendaten</strong> (Schülerdaten, Buchungen, Dokumente, Einstellungen) bleiben vollständig im Eigentum des Kunden. Simy erhebt keinerlei Eigentumsansprüche an diesen Daten.</p>
+          <p class="mb-3"><strong>Kundendaten</strong> (Kundendaten, Buchungen, Dokumente, Einstellungen) bleiben vollständig im Eigentum des Kunden. Simy erhebt keinerlei Eigentumsansprüche an diesen Daten.</p>
           <p>Simy ist berechtigt, anonymisierte, aggregierte Nutzungsstatistiken zur Produktverbesserung zu verwenden, sofern keine Rückschlüsse auf einzelne Kunden oder deren Endkunden möglich sind.</p>
         </section>
 
@@ -115,7 +115,7 @@
         <!-- §7 (war §6) -->
         <section id="s7">
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">7. Datenschutz und Auftragsverarbeitung</h2>
-          <p class="mb-3">Soweit der Kunde über die Plattform Personendaten (insbesondere Schülerdaten) verarbeitet, handelt Simy als <strong>Auftragsverarbeiter</strong> im Sinne des Schweizer Datenschutzgesetzes (nDSG) und der EU-Datenschutz-Grundverordnung (DSGVO). Der Kunde ist in diesem Verhältnis der <strong>Verantwortliche</strong>.</p>
+          <p class="mb-3">Soweit der Kunde über die Plattform Personendaten (insbesondere Kundendaten) verarbeitet, handelt Simy als <strong>Auftragsverarbeiter</strong> im Sinne des Schweizer Datenschutzgesetzes (nDSG) und der EU-Datenschutz-Grundverordnung (DSGVO). Der Kunde ist in diesem Verhältnis der <strong>Verantwortliche</strong>.</p>
           <p class="mb-3">Mit der Registrierung und Akzeptanz dieser AGB stimmt der Kunde dem <strong>Auftragsverarbeitungsvertrag (AVV)</strong> zu, der integraler Bestandteil dieser AGB ist und unter <NuxtLink to="/avv" class="text-blue-600 hover:underline">simy.ch/avv</NuxtLink> abrufbar ist.</p>
           <p>Für die Verarbeitung von Daten im Rahmen der eigenen Plattform-Administration (Admin-Accounts, Rechnungsdaten) ist Simy selbst Verantwortlicher. Näheres regelt die <NuxtLink to="/datenschutz" class="text-blue-600 hover:underline">Datenschutzerklärung</NuxtLink>.</p>
         </section>
@@ -128,7 +128,7 @@
             <li>Die rechtmässige Erhebung und Verarbeitung der Daten seiner Schüler und Mitarbeiter (Einholung erforderlicher Einwilligungen, Bereitstellung einer eigenen Datenschutzerklärung gegenüber seinen Endkunden)</li>
             <li>Die Geheimhaltung von Zugangsdaten; bei Kompromittierung ist Simy unverzüglich zu benachrichtigen. Das Benutzerkonto ist persönlich und nicht auf Dritte übertragbar.</li>
             <li>Die Richtigkeit der bei der Registrierung und im laufenden Betrieb angegebenen Daten</li>
-            <li>Die Einhaltung aller geltenden Gesetze, insbesondere des Strassenverkehrsrechts, der Berufszulassungsvorschriften für Fahrlehrer sowie des Datenschutzrechts</li>
+            <li>Die Einhaltung aller geltenden Gesetze und berufsrechtlichen Vorschriften sowie des Datenschutzrechts</li>
           </ul>
 
           <h3 class="font-semibold text-gray-800 mt-4 mb-2">Kommunikation (SMS / E-Mail)</h3>
@@ -143,19 +143,19 @@
             <li>Verbreitung von Schadsoftware, Spam oder unerwünschten Massennachrichten über die Plattform</li>
             <li>Diskriminierung, Belästigung oder Bedrohung anderer Nutzer oder von Simy-Mitarbeitenden</li>
             <li>Weiterverkauf oder Untervermietung des Plattformzugangs an Dritte</li>
-            <li>Nutzung der Plattform durch eine Person, die nicht über die erforderliche Fahrlehrer-Qualifikation (eidg. Fachausweis oder gleichwertig) verfügt, sofern dies Voraussetzung für die beantragte Dienstleistungserbringung ist</li>
+            <li>Nutzung der Plattform durch eine Person, die nicht über die für die beantragte Dienstleistungserbringung erforderliche berufliche Qualifikation verfügt</li>
           </ul>
         </section>
 
         <!-- §9 NEU: Empfehlungsprogramm -->
         <section id="s9">
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">9. Empfehlungsprogramm und Guthaben</h2>
-          <p class="mb-3">Simy bietet ein Empfehlungsprogramm an, über das aktive Tenants andere Fahrschulen zur Nutzung der Simy-Plattform einladen können. Für erfolgreiche Empfehlungen wird dem empfehlenden Tenant ein <strong>Guthaben auf seinem Simy-Konto</strong> gutgeschrieben.</p>
+          <p class="mb-3">Simy bietet ein Empfehlungsprogramm an, über das aktive Tenants andere Unternehmen zur Nutzung der Simy-Plattform einladen können. Für erfolgreiche Empfehlungen wird dem empfehlenden Tenant ein <strong>Guthaben auf seinem Simy-Konto</strong> gutgeschrieben.</p>
 
           <h3 class="font-semibold text-gray-800 mt-4 mb-2">Funktionsweise</h3>
           <ul class="list-disc pl-5 space-y-1.5 mb-3">
             <li>Der empfehlende Tenant erhält einen persönlichen Empfehlungslink oder -code über die Plattform.</li>
-            <li>Das Guthaben wird gutgeschrieben, sobald die empfohlene Fahrschule einen kostenpflichtigen Abonnement-Plan aktiviert und die erste Abonnementgebühr vollständig bezahlt hat.</li>
+            <li>Das Guthaben wird gutgeschrieben, sobald das empfohlene Unternehmen einen kostenpflichtigen Abonnement-Plan aktiviert und die erste Abonnementgebühr vollständig bezahlt hat.</li>
             <li>Die Höhe des Guthabens richtet sich nach dem zum Zeitpunkt der Empfehlung gültigen Programm, das auf der Simy-Website veröffentlicht ist.</li>
           </ul>
 

@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
       logger.warn('🚫 Public payment blocked: wallee not enabled', { tenantId, courseId })
       throw createError({
         statusCode: 402,
-        statusMessage: 'Online-Zahlung ist für diese Fahrschule aktuell nicht aktiviert. Bitte kontaktiere die Fahrschule direkt.'
+        statusMessage: 'Online-Zahlung ist für dieses Unternehmen aktuell nicht aktiviert. Bitte kontaktiere das Unternehmen direkt.'
       })
     }
 
@@ -169,7 +169,7 @@ export default defineEventHandler(async (event) => {
       })
       throw createError({
         statusCode: 500,
-        statusMessage: 'Zahlung konnte nicht gestartet werden, da die Fahrschule nicht eindeutig ermittelt werden konnte. Bitte versuche es erneut oder kontaktiere den Support.'
+        statusMessage: 'Zahlung konnte nicht gestartet werden, da das Unternehmen nicht eindeutig ermittelt werden konnte. Bitte versuche es erneut oder kontaktiere den Support.'
       })
     }
 

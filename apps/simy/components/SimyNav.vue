@@ -14,36 +14,55 @@
         />
       </a>
 
-      <!-- Desktop nav -->
+      <!-- Desktop nav: Branchen · Features · Preise · Kunden -->
       <div class="hidden md:flex items-center gap-1 text-sm font-medium">
 
-        <!-- Fahrschule dropdown -->
+        <!-- Branchen dropdown (Fahrschule featured) -->
         <div class="relative group">
           <button class="flex items-center gap-1 px-3 py-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all">
-            Fahrschule
+            Branchen
             <svg class="w-3.5 h-3.5 text-gray-400 transition-transform group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
             </svg>
           </button>
           <div class="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-            <div class="bg-white border border-gray-100 rounded-2xl shadow-xl p-2 min-w-[230px]">
-              <a href="/fahrschule" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon">🎓</span><span>Übersicht Fahrschule</span>
+            <div class="bg-white border border-gray-100 rounded-2xl shadow-xl p-2 min-w-[280px]">
+              <!-- Featured: Fahrschule -->
+              <div class="rounded-xl p-2 mb-1" style="background: rgba(96,0,189,0.04)">
+                <a href="/fahrschule" class="nav-dropdown-item font-semibold">
+                  <span class="nav-dropdown-icon">🚗</span><span>Fahrschule</span>
+                </a>
+                <a href="/fahrschule/software" class="nav-dropdown-item pl-9 text-gray-500 !text-[13px]">
+                  Fahrschulsoftware
+                </a>
+                <a href="/fahrschule/buchungssystem" class="nav-dropdown-item pl-9 text-gray-500 !text-[13px]">
+                  Buchungssystem
+                </a>
+                <a href="/fahrschule/app" class="nav-dropdown-item pl-9 text-gray-500 !text-[13px]">
+                  Fahrlehrer App
+                </a>
+              </div>
+
+              <a
+                v-for="v in VERTICALS"
+                :key="v.slug"
+                :href="`/${v.slug}`"
+                class="nav-dropdown-item"
+              >
+                <span class="nav-dropdown-icon">{{ verticalIcon(v.slug) }}</span>
+                <span>{{ v.navLabel }}</span>
               </a>
-              <a href="/fahrschule/software" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon">💻</span><span>Fahrschulsoftware</span>
-              </a>
-              <a href="/fahrschule/buchungssystem" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon">📅</span><span>Buchungssystem</span>
-              </a>
-              <a href="/fahrschule/app" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon">📱</span><span>Fahrlehrer App</span>
-              </a>
+
+              <div class="border-t border-gray-100 mt-1 pt-1">
+                <a href="/branchen" class="nav-dropdown-item font-semibold" style="color: #6000BD">
+                  <span class="nav-dropdown-icon">✨</span><span>Alle Branchen</span>
+                </a>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Features dropdown -->
+        <!-- Features dropdown (inkl. Marketing) -->
         <div class="relative group">
           <button class="flex items-center gap-1 px-3 py-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all">
             Features
@@ -52,7 +71,7 @@
             </svg>
           </button>
           <div class="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-            <div class="bg-white border border-gray-100 rounded-2xl shadow-xl p-2 min-w-[210px]">
+            <div class="bg-white border border-gray-100 rounded-2xl shadow-xl p-2 min-w-[220px]">
               <a href="/features/kalender" class="nav-dropdown-item">
                 <span class="nav-dropdown-icon">📅</span><span>Kalender & Planung</span>
               </a>
@@ -62,22 +81,9 @@
               <a href="/fahrschule/buchungssystem" class="nav-dropdown-item">
                 <span class="nav-dropdown-icon">🔗</span><span>Online-Buchung</span>
               </a>
-            </div>
-          </div>
-        </div>
-
-        <!-- Marketing dropdown -->
-        <div class="relative group">
-          <button class="flex items-center gap-1 px-3 py-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all">
-            Marketing
-            <svg class="w-3.5 h-3.5 text-gray-400 transition-transform group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
-            </svg>
-          </button>
-          <div class="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-            <div class="bg-white border border-gray-100 rounded-2xl shadow-xl p-2 min-w-[210px]">
+              <div class="border-t border-gray-100 my-1" />
               <a href="/marketing" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon">🚀</span><span>Marketing-Übersicht</span>
+                <span class="nav-dropdown-icon">🚀</span><span>Marketing</span>
               </a>
               <a href="/marketing/google-ads" class="nav-dropdown-item">
                 <span class="nav-dropdown-icon">📢</span><span>Google Ads</span>
@@ -91,21 +97,6 @@
 
         <a href="/preise" class="px-3 py-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all">Preise</a>
         <a href="/kunden" class="px-3 py-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all">Kunden</a>
-
-        <!-- Inline scroll-links on desktop (only when provided) -->
-        <template v-if="scrollLinks?.length">
-          <span class="w-px h-4 bg-gray-200 mx-1" />
-          <a
-            v-for="link in scrollLinks"
-            :key="link.href"
-            :href="link.href"
-            class="px-3 py-2 rounded-lg font-semibold transition-all duration-150"
-            :style="activeSection === link.href.slice(1) ? activeDesktopStyle : {}"
-            @click.prevent="scrollTo(link.href)"
-            @mouseenter="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { color: effectivePrimary.value, background: `${effectivePrimary.value}12` })"
-            @mouseleave="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { color: '', background: '' })"
-          >{{ link.label }}</a>
-        </template>
       </div>
 
       <!-- CTAs -->
@@ -113,7 +104,7 @@
         <a href="https://app.simy.ch/login" class="hidden sm:block text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors px-3 py-2">
           Einloggen
         </a>
-        <a href="/demo"
+        <a :href="registerCta"
           class="text-sm font-bold px-4 py-2.5 rounded-xl text-white transition-all hover:opacity-90 whitespace-nowrap"
           :style="ctaStyle">
           30 Tage gratis →
@@ -153,22 +144,33 @@
     <!-- ── Mobile full menu ────────────────────────────────────────────────── -->
     <Transition name="slide-down">
       <div v-if="mobileOpen" class="md:hidden border-t border-gray-100 bg-white px-6 py-4 space-y-1 overflow-y-auto" style="max-height: calc(100dvh - 64px)">
-        <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-2 pb-1">Fahrschule</p>
-        <a href="/fahrschule" class="mobile-nav-link" @click="mobileOpen=false">Übersicht</a>
+        <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-2 pb-1">Branchen</p>
+        <a href="/fahrschule" class="mobile-nav-link" @click="mobileOpen=false">Fahrschule</a>
         <a href="/fahrschule/software" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Fahrschulsoftware</a>
         <a href="/fahrschule/buchungssystem" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Buchungssystem</a>
         <a href="/fahrschule/app" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Fahrlehrer App</a>
+        <a
+          v-for="v in VERTICALS"
+          :key="v.slug"
+          :href="`/${v.slug}`"
+          class="mobile-nav-link"
+          @click="mobileOpen=false"
+        >{{ v.navLabel }}</a>
+        <a href="/branchen" class="mobile-nav-link font-semibold" style="color: #6000BD" @click="mobileOpen=false">Alle Branchen</a>
+
         <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-3 pb-1">Features</p>
-        <a href="/features/kalender" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Kalender</a>
-        <a href="/features/rechnungen" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Rechnungen & Kasse</a>
-        <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-3 pb-1">Marketing</p>
-        <a href="/marketing" class="mobile-nav-link" @click="mobileOpen=false">Marketing-Übersicht</a>
+        <a href="/features/kalender" class="mobile-nav-link" @click="mobileOpen=false">Kalender & Planung</a>
+        <a href="/features/rechnungen" class="mobile-nav-link" @click="mobileOpen=false">Rechnungen & Kasse</a>
+        <a href="/fahrschule/buchungssystem" class="mobile-nav-link" @click="mobileOpen=false">Online-Buchung</a>
+        <a href="/marketing" class="mobile-nav-link" @click="mobileOpen=false">Marketing</a>
         <a href="/marketing/google-ads" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Google Ads</a>
         <a href="/marketing/seo" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">SEO</a>
+
         <a href="/preise" class="mobile-nav-link" @click="mobileOpen=false">Preise</a>
         <a href="/kunden" class="mobile-nav-link" @click="mobileOpen=false">Kunden</a>
+
         <div class="pt-3 border-t border-gray-100">
-          <a href="/demo"
+          <a :href="registerCta"
             class="block w-full text-center py-3 rounded-xl text-white font-bold text-sm"
             :style="ctaStyle">
             30 Tage gratis starten →
@@ -180,6 +182,9 @@
 </template>
 
 <script setup lang="ts">
+import { VERTICALS } from '~/data/verticals'
+import { registerUrl } from '~/data/pricing'
+
 interface ScrollLink {
   label: string
   href: string
@@ -193,9 +198,25 @@ const props = defineProps<{
   secondaryColor?: string
 }>()
 
+const registerCta = registerUrl('driving_school')
+
 const DEFAULT_PRIMARY = '#6000BD'
 const DEFAULT_SECONDARY = '#8B2FE8'
 const BRAND_STORAGE_KEY = 'simy_brand_preview'
+
+const VERTICAL_ICONS: Record<string, string> = {
+  coaching: '🧠',
+  consulting: '💼',
+  'personal-training': '💪',
+  nachhilfe: '📚',
+  musikschule: '🎹',
+  hundeschule: '🐕',
+  massage: '🌿',
+}
+
+function verticalIcon(slug: string) {
+  return VERTICAL_ICONS[slug] || '✨'
+}
 
 // Effective branding: prop takes priority, then localStorage, then default
 const storedBrand = ref<{ primary?: string; secondary?: string; logo?: string }>({})
@@ -252,11 +273,6 @@ const activePillStyle = computed(() => ({
   color: 'white'
 }))
 
-const activeDesktopStyle = computed(() => ({
-  color: effectivePrimary.value,
-  background: `${effectivePrimary.value}12`
-}))
-
 function scrollTo(href: string) {
   const id = href.startsWith('#') ? href.slice(1) : href
   const el = document.getElementById(id)
@@ -266,7 +282,7 @@ function scrollTo(href: string) {
   window.scrollTo({ top, behavior: 'smooth' })
 }
 
-// Highlight active section while scrolling
+// Highlight active section while scrolling (mobile pill bar)
 onMounted(() => {
   if (!props.scrollLinks?.length) return
 

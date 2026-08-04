@@ -55,7 +55,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Fahrstunde buchen</h1>
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">{{ bookingLabels.bookAction }}</h1>
       </div>
       <div v-else class="mb-2">
         <button
@@ -490,7 +490,7 @@
                       <path d="M12 12a3 3 0 100-6 3 3 0 000 6zm0 1.5a6 6 0 100-12 6 6 0 000 12z"/>
                     </svg>
                     <span class="text-sm font-medium" :style="{ color: getBrandPrimary() }">
-                      {{ location.available_staff?.length || 0 }} {{ location.available_staff?.length === 1 ? 'Fahrlehrer' : 'Fahrlehrer' }}
+                      {{ location.available_staff?.length || 0 }} {{ location.available_staff?.length === 1 ? bookingLabels.staff : bookingLabels.staffPlural }}
                     </span>
                   </div>
                 </div>
@@ -611,7 +611,7 @@
           <!-- Instructor Selection Card -->
           <div class="bg-white shadow rounded-lg p-4">
             <div class="text-center mb-6">
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle deinen Fahrlehrer</h2>
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Wähle deinen {{ bookingLabels.staff }}</h2>
             
             </div>
           
@@ -668,7 +668,7 @@
                 <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
                 </svg>
-                Nur Termine, bei denen dein Fahrlehrer rechtzeitig bei dir (PLZ {{ pickupPLZ }}) sein kann
+                Nur Termine, bei denen dein {{ bookingLabels.staff }} rechtzeitig bei dir (PLZ {{ pickupPLZ }}) sein kann
               </div>
               
               <!-- Countdown Timer (wenn Termin reserviert) -->
@@ -1022,7 +1022,7 @@
           <div class="max-w-2xl mx-auto space-y-4">
             <div class="p-4 bg-gray-50 rounded-lg space-y-3">
               <div class="flex justify-between items-start text-sm">
-                <span class="text-gray-600">Kategorie:</span>
+                <span class="text-gray-600">{{ bookingLabels.categoryLabel }}:</span>
                 <span class="font-medium text-gray-900 text-right">{{ selectedCategory?.name }}</span>
               </div>
               <div class="flex justify-between items-start text-sm">
@@ -1033,7 +1033,7 @@
                 </div>
               </div>
               <div class="flex justify-between items-start text-sm">
-                <span class="text-gray-600">Fahrlehrer:</span>
+                <span class="text-gray-600">{{ bookingLabels.staff }}:</span>
                 <span class="font-medium text-gray-900 text-right">{{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
               </div>
               <div class="flex justify-between items-start text-sm">
@@ -1514,7 +1514,7 @@
           <div class="border-b border-gray-200 pb-4">
             <p class="text-xs text-gray-500 mb-1">Art</p>
             <p class="text-md font-medium text-gray-900">
-              {{ selectedServiceType === 'theorie' ? 'Theorielektion' : selectedServiceType === 'beratung' ? 'Beratung' : 'Fahrlektion' }}
+              {{ selectedServiceType === 'theorie' ? 'Theorielektion' : selectedServiceType === 'beratung' ? 'Beratung' : bookingLabels.appointment }}
             </p>
           </div>
           <div class="border-b border-gray-200 pb-4">
@@ -1527,7 +1527,7 @@
             <p v-if="selectedLocation?.address" class="text-sm text-gray-600 mt-1">{{ selectedLocation?.address }}</p>
           </div>
           <div class="border-b border-gray-200 pb-4">
-            <p class="text-xs  text-gray-500 mb-1">Fahrlehrer</p>
+            <p class="text-xs  text-gray-500 mb-1">{{ bookingLabels.staff }}</p>
             <p class="text-md font-medium text-gray-900">{{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</p>
           </div>
           <div>
@@ -1583,7 +1583,7 @@
           <span class="font-medium text-gray-900">{{ selectedCategory?.name }}</span>
         </div>
         <div class="flex justify-between text-sm">
-          <span class="text-gray-500">Fahrlehrer</span>
+          <span class="text-gray-500">{{ bookingLabels.staff }}</span>
           <span class="font-medium text-gray-900">{{ selectedInstructor?.first_name }} {{ selectedInstructor?.last_name }}</span>
         </div>
         <div class="flex justify-between text-sm">
@@ -2139,11 +2139,11 @@ const currentStep = ref(0)
 const showProposalFormManually = ref(false) // Manually trigger proposal form even if slots exist
 const selectedServiceType = ref<'fahrstunde' | 'theorie' | 'beratung'>('fahrstunde') // Step 0 selection
 
-const serviceTypes = [
+const serviceTypes = computed(() => [
   {
     id: 'fahrstunde' as const,
     icon: '🚗',
-    label: 'Fahrstunde',
+    label: bookingLabels.value.appointment,
     description: 'Direkt online buchen',
     badge: 'Sofort buchbar',
     badgeColor: 'bg-green-100 text-green-700',
@@ -2164,13 +2164,13 @@ const serviceTypes = [
     badge: 'Kostenlos',
     badgeColor: 'bg-blue-100 text-blue-700',
   },
-]
+])
 
 /** Only show service types the tenant actually offers (based on active pricing_rules).
  *  'fahrstunde' always stays visible as a safety net — practically every tenant has
  *  base_price rules, and hiding it entirely on a data hiccup would block booking. */
 const visibleServiceTypes = computed(() =>
-  serviceTypes.filter(st => st.id === 'fahrstunde' || availableServiceTypes.value.includes(st.id))
+  serviceTypes.value.filter(st => st.id === 'fahrstunde' || availableServiceTypes.value.includes(st.id))
 )
 
 const selectServiceType = (id: 'fahrstunde' | 'theorie' | 'beratung') => {
@@ -2455,7 +2455,7 @@ const bookingSteps = computed(() => {
     { id: 2, label: 'Unterkat.' },
     { id: 3, label: 'Dauer' },
     { id: 4, label: 'Standort' },
-    { id: 5, label: 'Fahrlehrer' },
+    { id: 5, label: bookingLabels.value.staff },
     { id: 6, label: 'Termin' },
     { 
       id: 7, 
@@ -2617,7 +2617,7 @@ const loadStaffForCategory = async () => {
     
   } catch (err: any) {
     logger.error('❌ loadStaffForCategory:', err)
-    error.value = 'Fehler beim Laden der Fahrlehrer'
+    error.value = `Fehler beim Laden der ${bookingLabels.value.staffPlural}`
   }
 }
 
@@ -4210,7 +4210,7 @@ const confirmBooking = async () => {
       throw new Error('Bitte wählen Sie einen Zeitslot aus')
     }
     if (!selectedInstructor.value?.id) {
-      throw new Error('Bitte wählen Sie einen Fahrlehrer aus')
+      throw new Error(`Bitte wählen Sie einen ${bookingLabels.value.staff} aus`)
     }
     if (!selectedCategory.value?.code) {
       throw new Error('Bitte wählen Sie eine Kategorie aus')

@@ -40,7 +40,7 @@ export interface ExtendedTenantBranding {
 
 export async function getTenantBrandingExtended(tenantId: string): Promise<ExtendedTenantBranding> {
   const defaults: ExtendedTenantBranding = {
-    tenantName: 'Fahrschule',
+    tenantName: 'Unternehmen',
     primaryColor: '#1a56db',
     secondaryColor: '#1e3a5f',
     accentColor: '#3b82f6',

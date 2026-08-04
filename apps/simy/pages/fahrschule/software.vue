@@ -118,7 +118,7 @@
             <p class="text-xs text-gray-500">{{ usp.desc }}</p>
           </div>
         </div>
-        <a href="https://app.simy.ch/tenant-register"
+        <a href="https://app.simy.ch/tenant-register?type=driving_school"
           class="flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
           style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.25)">
           30 Tage kostenlos testen →
@@ -162,7 +162,7 @@
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Simy 30 Tage kostenlos testen</h2>
         <p class="text-white mb-8">Überzeuge dich selbst. Keine Kreditkarte, keine Kündigung nötig.</p>
-        <a href="https://app.simy.ch/tenant-register"
+        <a href="https://app.simy.ch/tenant-register?type=driving_school"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Jetzt kostenlos starten →
@@ -202,7 +202,7 @@ useHead({
       '@context': 'https://schema.org',
       '@type': 'FAQPage',
       mainEntity: [
-        { '@type': 'Question', name: 'Was kostet Fahrschulsoftware?', acceptedAnswer: { '@type': 'Answer', text: 'Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. Simy bietet Pläne ab CHF 69/Monat mit 30 Tagen kostenlosem Test.' } },
+        { '@type': 'Question', name: 'Was kostet Fahrschulsoftware?', acceptedAnswer: { '@type': 'Answer', text: 'Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. Simy bietet Pläne ab CHF 49/Monat mit 30 Tagen kostenlosem Test.' } },
         { '@type': 'Question', name: 'Welche Fahrschulsoftware ist die beste?', acceptedAnswer: { '@type': 'Answer', text: 'Simy ist die einzige All-in-One Lösung für Schweizer Fahrschulen mit Terminbuchung, automatischen Rechnungen, Fahrlehrer-App und integriertem Website-Generator.' } },
       ],
     }),
@@ -221,7 +221,7 @@ const whatIs = [
   'Terminplanung und Online-Buchungssystem',
   'Rechnungsstellung und Zahlungsabwicklung',
   'Fahrlehrer-Kalender und Verfügbarkeitsmanagement',
-  'Automatische Erinnerungen per SMS und E-Mail',
+  'Automatische Erinnerungen per E-Mail (SMS-Fallback inkl. im Plan)',
   'Auswertungen und Statistiken',
 ]
 

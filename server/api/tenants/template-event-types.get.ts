@@ -13,33 +13,34 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
-  // Only chargeable event types belong in a pricing step (e.g. driving_school's
-  // internal 'meeting'/'admin'/'vacation'/'training'/'maintenance' types are
-  // excluded since they're never billed to a customer).
+  // Chargeable types always belong in the pricing step. Customer-facing free
+  // types (public_bookable + !require_payment, e.g. Erstgespräch) are included
+  // for per_event_type branches so tenants can enable/disable them at signup.
+  // Internal free types (vacation, admin, …) stay out via public_bookable=false.
   const { data: eventTypes, error } = await supabase
     .from('event_types')
     .select('code, name, emoji, default_duration_minutes, require_payment, public_bookable, is_default, display_order')
     .is('tenant_id', null)
     .eq('is_active', true)
     .eq('business_type', businessType)
-    .eq('require_payment', true)
     .order('display_order', { ascending: true })
 
   if (error) {
     throw createError({ statusCode: 500, statusMessage: `Fehler beim Laden der Event-Types: ${error.message}` })
   }
 
-  const codes = (eventTypes || []).map(e => e.code)
+  const all = eventTypes || []
+  const paidCodes = all.filter(e => e.require_payment).map(e => e.code)
   let priceByCode: Record<string, { price_chf: number; duration_minutes: number }> = {}
 
-  if (codes.length > 0) {
+  if (paidCodes.length > 0) {
     const { data: priceRules } = await supabase
       .from('pricing_rules')
       .select('event_type_code, price_per_minute_rappen, base_duration_minutes')
       .is('tenant_id', null)
       .eq('business_type', businessType)
       .eq('rule_type', 'event_price')
-      .in('event_type_code', codes)
+      .in('event_type_code', paidCodes)
 
     priceByCode = (priceRules || []).reduce((acc, r) => {
       if (!r.event_type_code) return acc
@@ -72,17 +73,29 @@ export default defineEventHandler(async (event) => {
     ? 'per_event_type'
     : 'per_category'
 
-  const result = (eventTypes || []).map(e => ({
+  const hasPaidDefault = all.some(e => e.require_payment && e.is_default)
+
+  // per_category (Fahrschule): only paid types in the price grid.
+  // per_event_type (Consulting/Coach): paid + customer-facing free (Erstgespräch).
+  const visible = pricingMode === 'per_event_type'
+    ? all.filter(e => e.require_payment || e.public_bookable)
+    : all.filter(e => e.require_payment)
+
+  const result = visible.map(e => ({
     code: e.code,
     name: e.name,
     emoji: e.emoji,
     duration_minutes: priceByCode[e.code]?.duration_minutes || e.default_duration_minutes || 45,
-    price_chf: priceByCode[e.code]?.price_chf ?? FALLBACK_PRICE_CHF[e.code] ?? 0,
-    require_payment: e.require_payment,
+    price_chf: e.require_payment
+      ? (priceByCode[e.code]?.price_chf ?? FALLBACK_PRICE_CHF[e.code] ?? 0)
+      : 0,
+    require_payment: !!e.require_payment,
     public_bookable: e.public_bookable ?? true,
-    // Only the tenant's "primary" event type is pre-checked; everything else
-    // is shown but off by default, editable via the toggle.
-    default_enabled: !!e.is_default,
+    // Paid: pre-check default, or all paid if none marked default.
+    // Free: pre-check the template default (e.g. Erstgespräch).
+    default_enabled: e.require_payment
+      ? (!!e.is_default || !hasPaidDefault)
+      : !!e.is_default,
     is_default: e.is_default,
   }))
 

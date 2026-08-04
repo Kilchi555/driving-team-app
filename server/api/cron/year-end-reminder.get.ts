@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
   for (const recipient of recipients) {
     if (!recipient.email) continue
     const tenant = recipient.tenant
-    const tenantName = tenant?.name || 'Ihre Fahrschule'
+    const tenantName = tenant?.name || 'Ihr Unternehmen'
 
     const subject = round === 1
       ? `Jahresabschluss ${prevYear}: Bitte Arbeitsstunden prüfen`

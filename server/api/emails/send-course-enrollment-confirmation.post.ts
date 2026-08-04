@@ -30,7 +30,7 @@ interface ConfirmationEmailRequest {
   testEmail?: string  // Override recipient for testing
 }
 
-function adminPaymentMethodLabel(method: ConfirmationPaymentMethod, businessNoun = 'Fahrschule'): string {
+function adminPaymentMethodLabel(method: ConfirmationPaymentMethod, businessNoun = 'Unternehmen'): string {
   switch (method) {
     case 'cash': return 'Barzahlung'
     case 'invoice': return 'Rechnung'

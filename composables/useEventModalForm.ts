@@ -65,9 +65,7 @@ interface Student {
 }
 
 const useEventModalForm = (currentUser?: any, refs?: {
-  customerInviteSelectorRef?: any,
   staffSelectorRef?: any,
-  invitedCustomers?: any,
   invitedStaffIds?: any,
   selectedLocation?: any,
   priceDisplayRef?: any,  
@@ -407,18 +405,24 @@ const useEventModalForm = (currentUser?: any, refs?: {
     
     logger.debug('✅ Form populated with type:', formData.value.type)
     
-    // ✅ Load student if user_id exists
+    // ✅ Load linked customer when user_id is set (lessons + other terminarten).
+    // Skip when user_id is only the staff placeholder (no customer selected).
+    const linkedCustomerId = formData.value.user_id
+    const shouldLoadStudent = !!(
+      linkedCustomerId &&
+      (formData.value.eventType === 'lesson' || linkedCustomerId !== formData.value.staff_id)
+    )
     logger.debug('🔍 Student loading check:', {
-      user_id: formData.value.user_id,
+      user_id: linkedCustomerId,
       eventType: formData.value.eventType,
-      shouldLoadStudent: !!(formData.value.user_id && formData.value.eventType === 'lesson')
+      shouldLoadStudent
     })
     
-    if (formData.value.user_id && formData.value.eventType === 'lesson') {
-      logger.debug('🎯 Loading student by ID:', formData.value.user_id)
-      loadStudentById(formData.value.user_id)
+    if (shouldLoadStudent) {
+      logger.debug('🎯 Loading student by ID:', linkedCustomerId)
+      loadStudentById(linkedCustomerId)
     } else {
-      logger.debug('ℹ️ Skipping student load - missing user_id or not a lesson')
+      logger.debug('ℹ️ Skipping student load - no linked customer')
     }
     
     // ✅ Load existing discount if appointment ID exists
@@ -426,10 +430,6 @@ const useEventModalForm = (currentUser?: any, refs?: {
       loadExistingDiscount(appointment.id)
       // ✅ Load existing products - AWAIT to ensure they're loaded before other operations
       await loadExistingProducts(appointment.id)
-      // ✅ Load invited staff and customers for other event types
-      if (isOtherEvent) {
-        loadInvitedStaffAndCustomers(appointment.id)
-      }
       // ✅ Admin fee will be loaded automatically by usePricing in edit mode
     }
     isPopulating.value = false
@@ -781,45 +781,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
   }
   
-  // ✅ Load invited staff and customers for other event types
-  const loadInvitedStaffAndCustomers = async (appointmentId: string) => {
-    logger.debug('👥 Loading invited staff and customers for appointment:', appointmentId)
-    try {
-      const response = await $fetch('/api/appointments/get-invited-customers', {
-        query: { appointmentId }
-      }) as any
-      
-      if (!response?.success) {
-        logger.debug('👥 Error loading invited customers')
-        return
-      }
-      
-      const customers = response?.data || []
-      
-      logger.debug('👥 Loaded invited customers:', customers.length || 0)
-      // Set invited customers in the form - convert to NewCustomer format
-      if (refs?.invitedCustomers) {
-        const newCustomers = (customers || []).map((customer: any) => ({
-          first_name: customer.first_name || '',
-          last_name: customer.last_name || '',
-          phone: customer.phone || '',
-          category: customer.category || '',
-          notes: customer.notes || ''
-        }))
-        refs.invitedCustomers.value = newCustomers
-        logger.debug('✅ Set invited customers in form:', newCustomers.length)
-      } else {
-        console.warn('⚠️ invitedCustomers ref not available')
-      }
-      
-      // TODO: Load invited staff when invited_staff table is created
-      // For now, we'll need to create this table first
-      logger.debug('ℹ️ Staff invitations loading not yet implemented - need invited_staff table')
-      
-    } catch (err: any) {
-      console.error('❌ Error loading invited staff and customers:', err)
-    }
-  }
+  // Legacy stub removed with CustomerInviteSelector — invited_customers table
+  // remains for shop/reminders of historical data.
   
   // ✅ Note: Admin fee loading is now handled directly in usePricing for edit mode
   

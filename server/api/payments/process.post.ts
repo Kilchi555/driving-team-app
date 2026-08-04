@@ -481,7 +481,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     // Create line items for Wallee (remaining amount after credit)
     const lineItems: Wallee.model.LineItemCreate[] = [
       {
-        name: payment.description || 'Fahrlektion',
+        name: payment.description || 'Termin',
         quantity: 1,
         amountIncludingTax: walleeAmount / 100, // Convert to CHF (remaining amount)
         type: Wallee.model.LineItemType.PRODUCT,

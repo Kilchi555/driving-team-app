@@ -101,7 +101,7 @@
 
             <!-- Assigned Staff -->
             <div v-if="studentDetail?.assigned_staff">
-              <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Zugewiesener Fahrlehrer</label>
+              <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Zugewiesener {{ t.staff }}</label>
               <p class="text-sm text-gray-900">
                 {{ studentDetail.assigned_staff.first_name }} {{ studentDetail.assigned_staff.last_name }}
               </p>
@@ -109,7 +109,7 @@
             
             <!-- Instructors List -->
             <div v-if="instructors.length > 0" class="mt-6 pt-6 border-t">
-              <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Fahrlehrer</label>
+              <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">{{ t.staffPlural }}</label>
               <div class="space-y-2">
                 <div 
                   v-for="instructor in instructors" 
@@ -127,7 +127,7 @@
                       <p class="text-sm font-medium text-gray-900 group-hover:text-blue-600">
                         {{ instructor.first_name }} {{ instructor.last_name }}
                       </p>
-                      <p class="text-xs text-gray-500">{{ instructor.lessonCount }} Fahrstunde{{ instructor.lessonCount !== 1 ? 'n' : '' }}</p>
+                      <p class="text-xs text-gray-500">{{ instructor.lessonCount }} {{ instructor.lessonCount !== 1 ? t.appointmentsPlural : t.appointment }}</p>
                     </div>
                   </div>
                   <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -222,12 +222,12 @@
                 <!-- Appointment Header -->
                 <div class="flex justify-between items-start mb-3">
                   <div>
-                    <h4 class="font-medium text-gray-900">{{ appointment.title || 'Fahrstunde' }}</h4>
+                    <h4 class="font-medium text-gray-900">{{ appointment.title || t.appointment }}</h4>
                     <p class="text-sm text-gray-600">
                       {{ formatDateTime(appointment.start_time) }} - {{ formatTime(appointment.end_time) }}
                     </p>
                     <p v-if="appointment.staff" class="text-xs text-gray-500">
-                      Fahrlehrer: {{ appointment.staff.first_name }} {{ appointment.staff.last_name }}
+                      {{ t.staff }}: {{ appointment.staff.first_name }} {{ appointment.staff.last_name }}
                     </p>
                   </div>
                   
@@ -303,7 +303,7 @@
               <h3 class="text-lg font-bold text-gray-900">
                 {{ selectedInstructor.first_name }} {{ selectedInstructor.last_name }}
               </h3>
-              <p class="text-sm text-gray-600">Fahrlehrer</p>
+              <p class="text-sm text-gray-600">{{ t.staff }}</p>
             </div>
           </div>
           
@@ -345,11 +345,11 @@
           
           <!-- Lesson Statistics -->
           <div class="pt-4 border-t">
-            <h4 class="text-sm font-medium text-gray-900 mb-3">Fahrstunden mit diesem Schüler</h4>
+            <h4 class="text-sm font-medium text-gray-900 mb-3">{{ t.appointmentsPlural }} mit diesem {{ t.client }}</h4>
             <div class="bg-blue-50 rounded-lg p-4">
               <div class="text-center">
                 <div class="text-2xl font-bold text-blue-600">{{ selectedInstructor.lessonCount }}</div>
-                <div class="text-sm text-blue-600">Fahrstunde{{ selectedInstructor.lessonCount !== 1 ? 'n' : '' }}</div>
+                <div class="text-sm text-blue-600">{{ selectedInstructor.lessonCount !== 1 ? t.appointmentsPlural : t.appointment }}</div>
               </div>
             </div>
           </div>
@@ -362,6 +362,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useStudents } from '~/composables/useStudents'
+
+const { t } = useTerminology()
 
 // Props
 interface Props {

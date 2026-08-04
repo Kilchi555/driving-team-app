@@ -89,6 +89,7 @@ import { toLocalTimeString } from '~/utils/dateUtils'
 // Router
 const route = useRoute()
 const router = useRouter()
+const { t } = useTerminology()
 
 // Supabase
 
@@ -160,7 +161,7 @@ const contactSupport = () => {
   const body = encodeURIComponent(`
 Hallo,
 
-ich hatte ein Problem bei der Zahlung meiner Fahrlektion.
+ich hatte ein Problem bei der Zahlung meiner ${t.value.appointment}.
 
 Details:
 - Transaktions-ID: ${errorDetails.value?.transactionId || 'Unbekannt'}

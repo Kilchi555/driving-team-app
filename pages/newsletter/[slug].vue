@@ -13,7 +13,7 @@
         <!-- Colored title bar -->
         <div class="px-6 py-4 text-center" :style="{ background: tenant?.primary_color || '#6366f1' }">
           <h1 class="text-lg font-black text-white">Newsletter anmelden</h1>
-          <p class="text-white/70 text-xs mt-0.5">{{ tenant?.name || 'Fahrschule' }}</p>
+          <p class="text-white/70 text-xs mt-0.5">{{ tenant?.name || 'Unternehmen' }}</p>
         </div>
       </div>
 
@@ -93,7 +93,7 @@ const tenant = computed(() => {
   }
 })
 
-useHead(computed(() => ({ title: `Newsletter – ${tenant.value?.name || 'Fahrschule'}` })))
+useHead(computed(() => ({ title: `Newsletter – ${tenant.value?.name || 'Unternehmen'}` })))
 
 const form = reactive({ first_name: '', last_name: '', email: '' })
 const loading = ref(false)

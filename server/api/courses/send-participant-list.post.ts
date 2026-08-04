@@ -11,6 +11,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   // ── Auth (Bearer + httpOnly cookie + refresh fallback) ───────────────────
@@ -50,7 +51,8 @@ export default defineEventHandler(async (event) => {
     .select('id, name, primary_color, logo_wide_url, logo_url, logo_square_url')
     .eq('id', me.tenant_id)
     .single()
-  const tenantName   = tenant?.name || 'Ihre Fahrschule'
+  const terms = await getTenantTerminology(supabase, me.tenant_id)
+  const tenantName   = tenant?.name || terms.businessNoun || 'Ihr Unternehmen'
   const primaryColor = tenant?.primary_color || '#2563eb'
   const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
 

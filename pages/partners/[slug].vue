@@ -102,8 +102,8 @@
               <input v-model="regPassword" type="password" required autocomplete="new-password" minlength="8" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Mindestens 8 Zeichen" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Fahrschule / Firma (optional)</label>
-              <input v-model="regCompany" type="text" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Fahrschule Muster AG" />
+              <label class="block text-sm font-medium text-gray-700 mb-1">Unternehmen / Firma (optional)</label>
+              <input v-model="regCompany" type="text" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Muster GmbH" />
             </div>
             <p v-if="authError" class="text-sm text-red-700 bg-red-50 rounded-lg p-3">{{ authError }}</p>
             <p v-if="authSuccess" class="text-sm text-green-700 bg-green-50 rounded-lg p-3">{{ authSuccess }}</p>
@@ -113,7 +113,7 @@
               class="w-full py-3 rounded-xl text-white font-semibold transition-opacity disabled:opacity-50"
               :style="{ background: primaryColor }"
             >{{ isAuthLoading ? 'Wird registriert…' : 'Konto erstellen' }}</button>
-            <p class="text-xs text-gray-400 text-center">Nach der Registrierung muss dein Konto von der Fahrschule aktiviert werden.</p>
+            <p class="text-xs text-gray-400 text-center">Nach der Registrierung muss dein Konto vom Unternehmen aktiviert werden.</p>
           </form>
         </div>
       </div>
@@ -128,7 +128,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
             </svg>
             <h2 class="text-base font-bold text-yellow-900 mb-1">Konto noch nicht aktiv</h2>
-            <p class="text-sm text-yellow-700">Dein Konto wurde erstellt, muss aber noch von der Fahrschule aktiviert werden. Du wirst per E-Mail benachrichtigt.</p>
+            <p class="text-sm text-yellow-700">Dein Konto wurde erstellt, muss aber noch vom Unternehmen aktiviert werden. Du wirst per E-Mail benachrichtigt.</p>
           </div>
         </div>
 
@@ -630,7 +630,7 @@
           <p v-if="bookingError" class="text-sm text-red-700 bg-red-50 rounded-lg p-3 mb-3">{{ bookingError }}</p>
           <p v-if="bookingSuccess" class="text-sm text-green-700 bg-green-50 rounded-lg p-3 mb-3">{{ bookingSuccess }}</p>
 
-          <p class="text-xs text-gray-400 mb-3">Die Buchung ist zunächst eine Anfrage und wird von der Fahrschule bestätigt.</p>
+          <p class="text-xs text-gray-400 mb-3">Die Buchung ist zunächst eine Anfrage und wird vom Unternehmen bestätigt.</p>
 
           <button
             @click="submitBooking"
@@ -1310,7 +1310,7 @@ function bookingRequirementLabel(v: any): string {
   const parts: string[] = []
   if (v.rental_requires_lesson) {
     const codes: string[] = v.rental_lesson_category_codes ?? []
-    parts.push(`Fahrlektion${codes.length ? ` (${codes.join(', ')})` : ''} am selben Tag`)
+    parts.push(`Termin${codes.length ? ` (${codes.join(', ')})` : ''} am selben Tag`)
   }
   if (v.rental_requires_course) {
     const codes: string[] = v.rental_course_category_codes ?? []

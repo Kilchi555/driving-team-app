@@ -107,11 +107,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 import ResourceBlockModal from '~/components/admin/ResourceBlockModal.vue'
 
 const emit = defineEmits<{ (e: 'load-error', msg: string): void }>()
 
 const { currentTenantBranding } = useTenantBranding()
+const { t } = useTerminology()
 const primaryColor = computed(() => currentTenantBranding.value?.colors?.primary || '#2563eb')
 
 const rooms = ref<any[]>([])
@@ -194,7 +196,7 @@ function bookingTitle(b: any): string {
 
 function purposeLabel(p: string): string {
   const map: Record<string, string> = {
-    lesson: 'Fahrstunde',
+    lesson: t.value.appointment,
     course: 'Kurs',
     meeting: 'Meeting',
     external: 'Extern',

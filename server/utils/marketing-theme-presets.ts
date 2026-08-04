@@ -16,6 +16,8 @@ export interface ThemeCreative {
   subject: string
   /** HTML body using {{…}} placeholders — wrapped later by wrapMarketingEmail */
   html_body: string
+  /** If set, creative is only offered for these business_type values */
+  requiresBusinessTypes?: string[]
 }
 
 export interface ThemePreset {
@@ -198,6 +200,7 @@ ${ctaButton('Beratung / Termin')}
       {
         id: 'affiliate_full',
         label: 'Vollprogramm',
+        requiresBusinessTypes: ['driving_school'],
         subject: '💸 Bis zu CHF 70.– pro Empfehlung – werde Partner bei {{tenant_name}}',
         html_body: `
 <h2 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#111827">Verdiene bis zu CHF 70.– pro Empfehlung</h2>
@@ -243,6 +246,7 @@ ${ctaButton('Jetzt kostenlos Partner werden →')}
       {
         id: 'affiliate_exam_alumni',
         label: 'Nach der Prüfung',
+        requiresBusinessTypes: ['driving_school'],
         subject: '💸 Freunde empfehlen & Geld verdienen – so funktioniert\'s',
         html_body: `
 <h2 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#111827">Geld verdienen mit Empfehlungen</h2>
@@ -271,12 +275,41 @@ ${ctaButton('💸 Jetzt Geld verdienen')}
 `.trim(),
       },
       {
+        id: 'affiliate_generic',
+        label: 'Empfehlungsprogramm',
+        subject: '💸 Freunde empfehlen & Prämie verdienen – {{tenant_name}}',
+        html_body: `
+<h2 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#111827">Verdiene mit Empfehlungen</h2>
+<p style="margin:0 0 16px;color:#6b7280;font-size:13px">Das Partnerprogramm von {{tenant_name}}</p>
+<p>Hallo {{first_name}},</p>
+<p>Du kennst jemanden, der unser Angebot brauchen könnte? Empfiehl uns – und verdiene eine Prämie, sobald dein Freund bucht und bezahlt.</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px">
+  <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
+    <p style="margin:0;font-size:14px;color:#374151;font-weight:600">① Partner werden</p>
+    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Registriere dich kostenlos mit einem Klick.</p>
+  </td></tr>
+  <tr><td style="height:8px"></td></tr>
+  <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
+    <p style="margin:0;font-size:14px;color:#374151;font-weight:600">② Link teilen</p>
+    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Teile deinen persönlichen Empfehlungslink.</p>
+  </td></tr>
+  <tr><td style="height:8px"></td></tr>
+  <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
+    <p style="margin:0;font-size:14px;color:#374151;font-weight:600">③ Prämie erhalten</p>
+    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund bezahlt, wird die Prämie gutgeschrieben – Auszahlung jederzeit möglich.</p>
+  </td></tr>
+</table>
+${ctaButton('Jetzt Partner werden →')}
+<p style="font-size:13px;color:#6b7280">Fragen? Antworte einfach auf diese E-Mail.<br>Freundliche Grüsse<br>{{tenant_name}}</p>
+`.trim(),
+      },
+      {
         id: 'affiliate_friends',
         label: 'Kurz & freundlich',
         subject: 'Teile {{tenant_name}} mit Freunden und verdiene mit',
         html_body: `
 <p>Liebe/r {{first_name}},</p>
-<p>Gute Ausbildung verdient Weiterempfehlung. Lade Freunde ein — über unseren Partner-Link — und verdiene eine Prämie, sobald sie buchen.</p>
+<p>Gute Erfahrungen verdienen Weiterempfehlung. Lade Freunde ein — über unseren Partner-Link — und verdiene eine Prämie, sobald sie buchen.</p>
 ${ctaButton('Empfehlungslink öffnen')}
 <p>Danke fürs Teilen!<br>{{tenant_name}}</p>
 `.trim(),
@@ -305,9 +338,20 @@ export function isThemeAvailable(theme: ThemePreset, ctx: TenantThemeContext): b
   return true
 }
 
+function isCreativeAvailable(creative: ThemeCreative, ctx: TenantThemeContext): boolean {
+  if (!creative.requiresBusinessTypes?.length) return true
+  return creative.requiresBusinessTypes.includes(ctx.businessType)
+}
+
 /** Base themes filtered for this tenant (no dynamic suggestions). */
 export function filterThemesForTenant(ctx: TenantThemeContext): ThemePreset[] {
-  return THEME_PRESETS.filter(t => isThemeAvailable(t, ctx))
+  return THEME_PRESETS
+    .filter(t => isThemeAvailable(t, ctx))
+    .map(t => ({
+      ...t,
+      creatives: t.creatives.filter(c => isCreativeAvailable(c, ctx)),
+    }))
+    .filter(t => t.creatives.length > 0)
 }
 
 /**

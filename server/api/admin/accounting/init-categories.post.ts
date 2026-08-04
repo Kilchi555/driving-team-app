@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 const DEFAULT_CATEGORIES = [
   // Einnahmen
-  { name: 'Fahrstunden', type: 'income', color: '#10b981' },
+  { name: 'Termine', type: 'income', color: '#10b981' },
   { name: 'Kurse', type: 'income', color: '#059669' },
   { name: 'Produkte & Materialien', type: 'income', color: '#34d399' },
   { name: 'Sonstige Einnahmen', type: 'income', color: '#6ee7b7' },

@@ -3,6 +3,7 @@
 
 import { sendEmail } from '~/server/utils/email'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { logger } from '~/utils/logger'
 
 interface InviteEmailBody {
@@ -45,10 +46,14 @@ export default defineEventHandler(async (event) => {
     // Load tenant branding
     let primaryColor = '#2563eb'
     let logoUrl: string | null = null
-    let tenantName = 'Ihre Fahrschule'
+    let tenantName = 'Unternehmen'
     let tenantSlug: string | null = null
+    let appointmentLabel = 'Termin'
 
     if (resolvedTenantId) {
+      const terms = await getTenantTerminology(supabase, resolvedTenantId)
+      appointmentLabel = terms.appointment
+      tenantName = terms.businessNoun
       const { data: tenant } = await supabase
         .from('tenants')
         .select('primary_color, logo_wide_url, logo_url, logo_square_url, name, slug')
@@ -86,7 +91,7 @@ export default defineEventHandler(async (event) => {
 
     // Determine event type name
     const EVENT_TYPE_LABELS: Record<string, string> = {
-      lesson: 'Fahrstunde', exam: 'Prüfung', theory: 'Theorie',
+      lesson: appointmentLabel, exam: 'Prüfung', theory: 'Theorie',
       vku: 'VKU', nothelfer: 'Nothelferkurs', meeting: 'Meeting', vacation: 'Urlaub'
     }
     const eventTypeName = appointment.custom_event_name

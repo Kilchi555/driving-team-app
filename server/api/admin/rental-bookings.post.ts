@@ -7,6 +7,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { sendTenantEmail } from '~/server/utils/email'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -44,9 +45,10 @@ export default defineEventHandler(async (event) => {
 
   if (!rental) throw createError({ statusCode: 404, statusMessage: 'Rental not found' })
 
+  const terms = await getTenantTerminology(supabase, dbUser.tenant_id)
   const renter = rental.users as any
   const vehicle = rental.vehicles as any
-  const renterName = [renter?.first_name, renter?.last_name].filter(Boolean).join(' ') || renter?.email || 'Fahrlehrer'
+  const renterName = [renter?.first_name, renter?.last_name].filter(Boolean).join(' ') || renter?.email || terms.staff || 'Mitarbeiter'
   const vehicleLabel = vehicle ? ([vehicle.marke, vehicle.modell].filter(Boolean).join(' ') || vehicle.name || 'Fahrzeug') : 'Fahrzeug'
 
   const startDt = new Date(rental.start_time)

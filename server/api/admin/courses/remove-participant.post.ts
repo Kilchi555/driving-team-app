@@ -7,6 +7,7 @@ import { generateCourseRegistrationCancellationEmail } from '~/server/utils/emai
 import { formatCourseSessionLine } from '~/utils/format-course-sessions'
 import { logger } from '~/utils/logger'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 /** Outcome of the SARI de-enrollment attempt, returned to the admin UI so a failure is never silent. */
 interface SariSyncResult {
@@ -97,6 +98,7 @@ export default defineEventHandler(async (event) => {
     .eq('id', profile.tenant_id)
     .single()
 
+  const terms = await getTenantTerminology(supabase, profile.tenant_id)
   // ── 1. SARI de-enrollment ──────────────────────────────────────────────────
   const user   = reg.users as any
   const faberid = user?.faberid
@@ -394,7 +396,7 @@ export default defineEventHandler(async (event) => {
         courseName: course?.name   || '',
         sessionLines,
         location:   course?.description || undefined,
-        tenantName: tenant?.name        || 'Ihre Fahrschule',
+        tenantName: tenant?.name        || terms.businessNoun || 'Ihr Unternehmen',
         tenantEmail: tenant?.contact_email || undefined,
         reason:     reason || undefined,
         primaryColor: tenant?.primary_color || undefined,

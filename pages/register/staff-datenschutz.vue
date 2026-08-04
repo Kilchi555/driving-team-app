@@ -1,4 +1,4 @@
-<!-- pages/register/staff-datenschutz.vue – Datenschutzerklärung für Fahrlehrer -->
+<!-- pages/register/staff-datenschutz.vue – Datenschutzerklärung für {{ t.staffPlural }} -->
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Header -->
@@ -10,8 +10,8 @@
             Zurück zur Registrierung
           </button>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-bold mb-2">Datenschutzerklärung für Fahrlehrer</h1>
-        <p class="text-violet-200 text-sm">Simy – Plattform für Fahrschulen | Stand: Mai 2026</p>
+        <h1 class="text-2xl sm:text-3xl font-bold mb-2">Datenschutzerklärung für {{ t.staffPlural }}</h1>
+        <p class="text-violet-200 text-sm">Simy – Plattform für {{ t.businessNoun }} | Stand: Mai 2026</p>
       </div>
     </div>
 
@@ -21,7 +21,7 @@
 
         <!-- Intro -->
         <div class="bg-violet-50 border border-violet-100 rounded-xl p-4 text-sm text-violet-900">
-          <p><strong>Diese Datenschutzerklärung</strong> richtet sich an <strong>Fahrlehrer/innen</strong>, die von ihrer Fahrschule zur Nutzung von Simy eingeladen wurden. Sie erklärt, welche Daten wir von dir verarbeiten, zu welchem Zweck und welche Rechte du hast.</p>
+          <p><strong>Diese Datenschutzerklärung</strong> richtet sich an <strong>{{ t.staff }}/innen</strong>, die von ihrer Organisation zur Nutzung von Simy eingeladen wurden. Sie erklärt, welche Daten wir von dir verarbeiten, zu welchem Zweck und welche Rechte du hast.</p>
         </div>
 
         <!-- Inhaltsverzeichnis -->
@@ -50,12 +50,12 @@
           <p class="mb-3">Es gibt zwei datenschutzrechtlich relevante Stellen:</p>
           <div class="grid sm:grid-cols-2 gap-4 mb-3">
             <div class="bg-gray-50 rounded-lg p-4 text-sm">
-              <p class="font-semibold text-gray-900 mb-1">Deine Fahrschule (Tenant)</p>
-              <p class="text-gray-600">Ist Verantwortliche für die Verarbeitung deiner Daten im Rahmen des Beschäftigungs- oder Auftragsverhältnisses. Die Fahrschule entscheidet, welche Daten im Rahmen der Plattformnutzung erhoben werden.</p>
+              <p class="font-semibold text-gray-900 mb-1">Deine Organisation (Tenant)</p>
+              <p class="text-gray-600">Ist Verantwortliche für die Verarbeitung deiner Daten im Rahmen des Beschäftigungs- oder Auftragsverhältnisses. {{ t.businessNoun }} entscheidet, welche Daten im Rahmen der Plattformnutzung erhoben werden.</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4 text-sm">
               <p class="font-semibold text-gray-900 mb-1">Simy (Auftragsverarbeiter)</p>
-              <p class="text-gray-600">Verarbeitet deine Daten im Auftrag deiner Fahrschule und gemäss den gesetzlichen Vorgaben. Simy hat keinen eigenen wirtschaftlichen Zugriff auf deine personenbezogenen Daten.</p>
+              <p class="text-gray-600">Verarbeitet deine Daten im Auftrag deiner Organisation und gemäss den gesetzlichen Vorgaben. Simy hat keinen eigenen wirtschaftlichen Zugriff auf deine personenbezogenen Daten.</p>
             </div>
           </div>
           <div class="bg-gray-50 rounded-lg p-4 text-sm">
@@ -86,9 +86,9 @@
             <div class="border border-gray-100 rounded-lg overflow-hidden">
               <div class="bg-violet-50 px-4 py-2 text-xs font-semibold text-violet-800 uppercase tracking-wider">Professionelle Daten</div>
               <ul class="divide-y divide-gray-50">
-                <li class="px-4 py-2.5 text-sm flex gap-3"><span class="text-violet-500 flex-shrink-0">▸</span> Unterrichtete Fahrkategorien</li>
+                <li v-if="isDrivingSchool" class="px-4 py-2.5 text-sm flex gap-3"><span class="text-violet-500 flex-shrink-0">▸</span> Unterrichtete Fahrkategorien</li>
                 <li class="px-4 py-2.5 text-sm flex gap-3"><span class="text-violet-500 flex-shrink-0">▸</span> Reguläre Arbeitszeiten und Verfügbarkeiten</li>
-                <li class="px-4 py-2.5 text-sm flex gap-3"><span class="text-violet-500 flex-shrink-0">▸</span> Treffpunkte und Prüfungsorte</li>
+                <li class="px-4 py-2.5 text-sm flex gap-3"><span class="text-violet-500 flex-shrink-0">▸</span> Treffpunkte und Standorte</li>
                 <li class="px-4 py-2.5 text-sm flex gap-3"><span class="text-violet-500 flex-shrink-0">▸</span> Kalendereinträge und Buchungen</li>
               </ul>
             </div>
@@ -96,8 +96,8 @@
             <div class="border border-gray-100 rounded-lg overflow-hidden">
               <div class="bg-violet-50 px-4 py-2 text-xs font-semibold text-violet-800 uppercase tracking-wider">Dokumente</div>
               <ul class="divide-y divide-gray-50">
-                <li class="px-4 py-2.5 text-sm flex gap-3"><span class="text-violet-500 flex-shrink-0">▸</span> Führerschein (Vorder- und Rückseite, als Bild gespeichert)</li>
-                <li class="px-4 py-2.5 text-sm flex gap-3"><span class="text-violet-500 flex-shrink-0">▸</span> Weitere für die Fahrschule relevante Dokumente</li>
+                <li v-if="isDrivingSchool" class="px-4 py-2.5 text-sm flex gap-3"><span class="text-violet-500 flex-shrink-0">▸</span> Führerschein (Vorder- und Rückseite, als Bild gespeichert)</li>
+                <li class="px-4 py-2.5 text-sm flex gap-3"><span class="text-violet-500 flex-shrink-0">▸</span> Weitere für {{ t.businessNoun }} relevante Dokumente</li>
               </ul>
             </div>
 
@@ -120,8 +120,8 @@
           <p class="mb-3">Deine Daten werden ausschliesslich für folgende Zwecke verarbeitet:</p>
           <ul class="list-disc pl-5 space-y-2">
             <li><strong>Verwaltung deines Kontos</strong> und Authentifizierung</li>
-            <li><strong>Terminverwaltung</strong>: Zuweisung von Fahrstunden und Buchungen durch deine Fahrschule</li>
-            <li><strong>Fahrschülerverwaltung</strong>: Anzeige der dir zugewiesenen Schüler</li>
+            <li><strong>Terminverwaltung</strong>: Zuweisung von {{ t.appointmentsPlural }} und Buchungen durch deine Organisation</li>
+            <li><strong>{{ t.clientsPlural }}verwaltung</strong>: Anzeige der dir zugewiesenen Schüler</li>
             <li><strong>Kommunikation</strong> über die Plattform (Benachrichtigungen, Bestätigungen)</li>
             <li><strong>Sicherheit</strong>: Schutz vor unbefugtem Zugriff und Missbrauch</li>
             <li><strong>Gesetzliche Pflichten</strong>: Aufbewahrung von Daten gemäss Schweizer Recht</li>
@@ -152,8 +152,8 @@
           </h2>
           <p class="mb-3">Deine Daten werden nur in folgenden Fällen weitergegeben:</p>
           <ul class="list-disc pl-5 space-y-2 mb-3">
-            <li><strong>Deine Fahrschule</strong>: Die Fahrschule, die dich eingeladen hat, hat Zugriff auf deine Profil- und Buchungsdaten.</li>
-            <li><strong>Fahrschüler</strong>: Name, Foto (falls hinterlegt) und Kontaktinfos können deinen zugewiesenen Schülern sichtbar sein.</li>
+            <li><strong>Deine Organisation</strong>: {{ t.businessNoun }}, die dich eingeladen hat, hat Zugriff auf deine Profil- und Buchungsdaten.</li>
+            <li><strong>{{ t.clientsPlural }}</strong>: Name, Foto (falls hinterlegt) und Kontaktinfos können deinen zugewiesenen Schülern sichtbar sein.</li>
             <li><strong>Technische Dienstleister</strong>: Supabase (Datenbankhosting, in der EU) als Auftragsverarbeiter.</li>
             <li><strong>Behörden</strong>: Nur wenn gesetzlich vorgeschrieben.</li>
           </ul>
@@ -170,10 +170,10 @@
           </h2>
           <p class="mb-3">Deine Daten werden gespeichert:</p>
           <ul class="list-disc pl-5 space-y-2">
-            <li><strong>Aktives Konto</strong>: Für die gesamte Dauer deiner Tätigkeit für die Fahrschule.</li>
+            <li><strong>Aktives Konto</strong>: Für die gesamte Dauer deiner Tätigkeit für {{ t.businessNoun }}.</li>
             <li><strong>Nach Kontoauflösung</strong>: Buchungs- und Transaktionsdaten werden gemäss den gesetzlichen Aufbewahrungsfristen (mindestens 10 Jahre) für Buchhaltungszwecke gespeichert.</li>
             <li><strong>Persönliche Daten</strong> (Adresse, Geburtsdatum): werden nach Ablauf der gesetzlichen Fristen gelöscht.</li>
-            <li><strong>Dokumente</strong> (Führerschein etc.): werden auf Anfrage oder nach Kontoauflösung gelöscht.</li>
+            <li><strong>Dokumente</strong>: werden auf Anfrage oder nach Kontoauflösung gelöscht.</li>
           </ul>
         </section>
 
@@ -238,6 +238,15 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { getTerminologyDefaults } from '~/composables/useTerminology'
+
+const route = useRoute()
+const businessType = computed(() => String(route.query.business_type || 'driving_school'))
+const t = computed(() => getTerminologyDefaults(businessType.value))
+const isDrivingSchool = computed(() => businessType.value === 'driving_school')
+
 const toc = [
   { href: '#verantwortliche', label: 'Verantwortliche Stellen' },
   { href: '#daten',           label: 'Welche Daten werden erhoben?' },
@@ -254,5 +263,5 @@ const scrollTo = (href: string) => {
   el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-useHead({ title: 'Datenschutzerklärung für Fahrlehrer – Simy' })
+useHead(() => ({ title: `Datenschutzerklärung für ${t.value.staffPlural} – Simy` }))
 </script>

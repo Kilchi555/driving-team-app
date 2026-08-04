@@ -17,21 +17,21 @@
   },
   "android": {
     "keystoreAlias": "simy",
-    "minSdkVersion": 22,
-    "targetSdkVersion": 34
+    "minSdkVersion": 24,
+    "targetSdkVersion": 36
   },
   "store": {
     "de": {
       "name": "Simy",
-      "subtitle": "Fahrschule App",
-      "description": "Simy ist die moderne Plattform für Fahrschulen. Als Fahrschüler kannst du Fahrstunden buchen, deinen Lernfortschritt verfolgen und direkt mit deinem Fahrlehrer kommunizieren.",
-      "keywords": "fahrschule, fahrstunden, führerausweis, fahrlehrer, online buchen"
+      "subtitle": "Die All-In-One App für dein KMU. Mit Kunden, Staff & Admin Logins",
+      "description": "Simy ist die All-In-One App für dein KMU — mit Logins für Kunden, Staff und Admin. Für Fahrschule, Coaching, Consulting, Personal Training, Nachhilfe, Musikschule, Hundeschule und Massage.",
+      "keywords": "terminbuchung, fahrschule, coaching, personal training, nachhilfe, musikschule, hundeschule, massage, admin, staff"
     },
     "en": {
       "name": "Simy",
-      "subtitle": "Driving School App",
-      "description": "Simy is the modern platform for driving schools. As a student, you can book lessons, track your learning progress and communicate directly with your instructor.",
-      "keywords": "driving school, lessons, licence, instructor, book online"
+      "subtitle": "All-in-one app for your SMB. With client, staff & admin logins",
+      "description": "Simy is the all-in-one app for your SMB — with logins for clients, staff and admin. For driving schools, coaching, consulting, personal training, tutoring, music school, dog training and massage.",
+      "keywords": "appointment booking, driving school, coaching, personal training, tutoring, music school, dog training, massage, admin, staff"
     }
   },
   "privacyPolicyUrl": "https://simy.ch/datenschutz",

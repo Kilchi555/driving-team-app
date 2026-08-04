@@ -203,7 +203,7 @@
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="appointments">Nur Fahrstunden / Kurse (Standard)</option>
+              <option value="appointments">Nur {{ t.appointmentsPlural }} / Kurse (Standard)</option>
               <option value="all">Alle (Termine + Produkte)</option>
               <option value="products">Nur Produkte</option>
             </select>
@@ -253,11 +253,11 @@
                 class="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
               />
               <label for="first_lesson_only" class="text-sm font-medium text-gray-800 cursor-pointer">
-                Nur für Erstkunden (erste Fahrstunde)
+                Nur für Erstkunden (erste {{ t.appointment }})
               </label>
             </div>
             <p class="text-xs text-amber-700 pl-7">
-              Code wird abgelehnt wenn der Kunde bereits eine bestätigte Fahrstunde hatte.
+              Code wird abgelehnt wenn der Kunde bereits einen bestätigten Termin hatte.
             </p>
           </div>
 
@@ -339,6 +339,9 @@
 </template>
 
 <script setup lang="ts">
+import { useTerminology } from '~/composables/useTerminology'
+const { t } = useTerminology()
+
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { useDiscounts } from '~/composables/useDiscounts'

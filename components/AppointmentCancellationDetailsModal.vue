@@ -28,7 +28,7 @@
           />
           <div class="flex-1">
             <label class="text-sm font-medium text-gray-900">
-              Fahrlektion {{ appointment.duration_minutes }}min
+              {{ t.appointment }} {{ appointment.duration_minutes }}min
             </label>
             <p class="text-xs text-gray-500 mt-0.5">
               CHF {{ formatAmount(appointment.base_price_rappen || 0) }}
@@ -96,7 +96,7 @@
           @click="selectLesson"
           class="w-full px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition"
         >
-          Nur Fahrlektion
+          Nur {{ t.appointment }}
         </button>
         <button
           @click="selectNone"
@@ -129,6 +129,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { logger } from '~/utils/logger'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 interface SelectedItems {
   lesson: boolean

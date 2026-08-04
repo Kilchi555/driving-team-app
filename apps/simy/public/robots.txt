@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://simy.ch/api/sitemap.xml
+Sitemap: https://simy.ch/sitemap.xml

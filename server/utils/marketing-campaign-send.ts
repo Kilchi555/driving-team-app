@@ -89,7 +89,7 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
     .eq('id', tenantId)
     .single()
 
-  const tenantName = tenant?.name ?? 'Fahrschule'
+  const tenantName = tenant?.name ?? 'Unternehmen'
   const tenantSlug = tenant?.slug ?? ''
   const primaryColor = tenant?.primary_color || '#1e293b'
   const logoWideUrl = tenant?.logo_wide_url || tenant?.logo_url || null

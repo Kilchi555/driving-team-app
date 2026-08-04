@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendTenantEmail, sendEmail } from '~/server/utils/email'
 import { generateCategoryWaitlistNotificationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 // ── Timezone helper ───────────────────────────────────────────────────────────
 /**
@@ -81,7 +82,7 @@ function buildIcs(events: Array<{
   const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Simy//Simy Fahrschule//DE',
+    'PRODID:-//Simy//Simy//DE',
     'METHOD:REQUEST',
     vtimezone,
     vevents,
@@ -621,7 +622,8 @@ ${confirmButtonHtml}
       .eq('id', profile.tenant_id)
       .single()
 
-    const organizerName  = tenant?.name || 'Fahrschule'
+    const terms = await getTenantTerminology(supabase, profile.tenant_id)
+    const organizerName  = tenant?.name || terms.businessNoun || 'Unternehmen'
     const organizerEmail = (tenant?.resend_domain_verified && tenant?.from_email)
       ? tenant.from_email
       : 'noreply@simy.ch'
@@ -769,7 +771,8 @@ ${extLogoHtml}
             .eq('id', profile.tenant_id)
             .single()
 
-          const tenantName = tenant?.name || 'Ihre Fahrschule'
+          const terms = await getTenantTerminology(supabase, profile.tenant_id)
+          const tenantName = tenant?.name || terms.businessNoun || 'Ihr Unternehmen'
           const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
           const primaryColor = tenant?.primary_color || '#1d4ed8'
           const simyUrl = `https://app.simy.ch/customer/courses/driving-team/?category=${category.code}`

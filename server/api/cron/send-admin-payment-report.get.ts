@@ -145,7 +145,7 @@ export default defineEventHandler(async (event) => {
 
     const terms = await getTenantTerminology(supabase, tenantId)
     const clientLabel = terms.client || 'Schüler'
-    const tenantName   = tenant.name || terms.businessNoun || 'Ihre Fahrschule'
+    const tenantName   = tenant.name || terms.businessNoun || 'Ihr Unternehmen'
     const primaryColor = tenant.primary_color || '#2563eb'
     const logoUrl      = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
     const reportDate   = now.toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })

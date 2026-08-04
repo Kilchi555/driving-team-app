@@ -225,7 +225,7 @@ async function synthesizeWithAi(input: {
   const Anthropic = (await import('@anthropic-ai/sdk')).default
   const client = new Anthropic({ apiKey })
 
-  const prompt = `Du bist ein erfahrener Local-SEO-Berater für Fahrschulen in der Schweiz. Analysiere das Google Business Profile von "${input.tenantName}"${input.locationTitle ? ` (Standort: ${input.locationTitle})` : ''} anhand dieser Fakten und Scores (0-100, bereits berechnet — nicht neu bewerten, nur interpretieren):
+  const prompt = `Du bist ein erfahrener Local-SEO-Berater für lokale Dienstleistungsbetriebe in der Schweiz. Analysiere das Google Business Profile von "${input.tenantName}"${input.locationTitle ? ` (Standort: ${input.locationTitle})` : ''} anhand dieser Fakten und Scores (0-100, bereits berechnet — nicht neu bewerten, nur interpretieren):
 
 Scores: Profil=${input.scores.profile}, Bewertungen=${input.scores.reviews}, Aktualität=${input.scores.content}, Sichtbarkeit=${input.scores.visibility}
 
@@ -237,7 +237,7 @@ Fakten:
 - ${input.facts.servicesCount} Leistungen hinterlegt
 - Sichtbarkeits-Trend (28 Tage vs. vorherige 28 Tage): ${input.facts.insightsTrendPct != null ? input.facts.insightsTrendPct + '%' : 'noch nicht genug Daten'}
 
-Schreibe auf Schweizer Hochdeutsch, konkret und handlungsorientiert (kein Marketing-Blabla). Beziehe dich auf die tatsächlichen Zahlen oben. Priorisiere Empfehlungen nach echtem Reichweiten-Impact für eine lokale Fahrschule (Sichtbarkeit in Google Maps/Suche, Anfragen). Gib 4-7 Empfehlungen, sortiert nach Priorität (critical zuerst).
+Schreibe auf Schweizer Hochdeutsch, konkret und handlungsorientiert (kein Marketing-Blabla). Beziehe dich auf die tatsächlichen Zahlen oben. Priorisiere Empfehlungen nach echtem Reichweiten-Impact für ein lokales Unternehmen (Sichtbarkeit in Google Maps/Suche, Anfragen). Gib 4-7 Empfehlungen, sortiert nach Priorität (critical zuerst).
 
 Antworte AUSSCHLIESSLICH mit validem JSON in exakt diesem Format, ohne Markdown-Codeblock:
 ${AI_JSON_SCHEMA_HINT}`

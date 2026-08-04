@@ -13,7 +13,7 @@
       <div class="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
         <div class="text-5xl mb-4">🔒</div>
         <h1 class="text-xl font-bold text-gray-900 mb-2">Link ungültig oder abgelaufen</h1>
-        <p class="text-gray-500">Bitte wende dich an deine Fahrschule für einen neuen Link.</p>
+        <p class="text-gray-500">Bitte wende dich an {{ info?.tenant?.name || 'dein Unternehmen' }} für einen neuen Link.</p>
       </div>
     </div>
 
@@ -139,7 +139,7 @@
         <div v-if="allHandled && !hasPendingSessions" class="mt-6 bg-green-50 border border-green-200 rounded-xl p-5 text-center">
           <div class="text-3xl mb-2">🎉</div>
           <p class="font-bold text-green-800">Alle Sessions bearbeitet!</p>
-          <p class="text-green-700 text-sm mt-1">Danke – deine Fahrschule wurde informiert.</p>
+          <p class="text-green-700 text-sm mt-1">Danke – {{ info.tenant.name }} wurde informiert.</p>
         </div>
       </div>
     </template>

@@ -541,6 +541,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { getBrandPrimary } from '~/utils/colors'
 
+const { t } = useTerminology()
+
 interface Category {
   id: number
   code: string
@@ -796,7 +798,7 @@ const FIELD_LABELS: Record<string, string> = {
 
 const formTitle = computed(() => {
   return isSpecificRequest.value
-    ? 'Fahrstunde anfragen'
+    ? `${t.value.appointment} anfragen`
     : 'Schreib uns eine Nachricht'
 })
 
@@ -1095,7 +1097,7 @@ const submitInquiry = async () => {
       }
 
       if (!selectedDuration.value) {
-        error.value = 'Bitte wählen Sie eine Fahrstundendauer'
+        error.value = `Bitte wählen Sie eine ${t.value.appointment}-Dauer`
         return
       }
 

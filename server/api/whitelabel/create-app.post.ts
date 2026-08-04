@@ -35,13 +35,16 @@ export default defineEventHandler(async (event) => {
   // ─── Load tenant data ─────────────────────────────────────────────────────
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, slug, primary_color, logo_square_url, domain, contact_email')
+    .select('id, name, slug, primary_color, logo_square_url, domain, contact_email, business_type')
     .eq('id', body.tenantId)
     .single()
 
   if (tenantError || !tenant) {
     throw createError({ statusCode: 404, statusMessage: 'Tenant not found' })
   }
+
+  const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+  const terms = getTerminologyDefaults(tenant.business_type)
 
   const clientId = tenant.slug
   const bundleId = `ch.${clientId.replace(/-/g, '')}.app`
@@ -69,15 +72,15 @@ export default defineEventHandler(async (event) => {
     store: {
       de: {
         name: tenant.name,
-        subtitle: 'Fahrschule App',
-        description: `Die offizielle App der ${tenant.name}. Buche Fahrstunden, verfolge deinen Lernfortschritt und kommuniziere mit deinem Fahrlehrer.`,
-        keywords: 'fahrschule, fahrstunden, führerausweis',
+        subtitle: `${terms.businessNoun} App`,
+        description: `Die offizielle App der ${tenant.name}. Buche ${terms.appointmentsPlural}, verfolge deinen Fortschritt und kommuniziere mit deinem ${terms.staff}.`,
+        keywords: `${terms.businessNoun}, ${terms.appointmentsPlural}, terminbuchung`.toLowerCase(),
       },
       en: {
         name: tenant.name,
-        subtitle: 'Driving School App',
-        description: `The official app of ${tenant.name}. Book lessons, track your progress and communicate with your instructor.`,
-        keywords: 'driving school, lessons, licence',
+        subtitle: 'Booking App',
+        description: `The official app of ${tenant.name}. Book appointments, track your progress and communicate with your team.`,
+        keywords: 'booking, appointments, scheduling',
       },
     },
     privacyPolicyUrl: `https://${tenant.domain || 'simy.ch'}/datenschutz`,

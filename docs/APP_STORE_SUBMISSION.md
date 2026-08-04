@@ -298,4 +298,9 @@ Nach Upload erscheint der Build in ASC unter "iOS Builds".
 - [ ] App Store Badge in `apps/website/components/Footer.vue` einbinden
 - [ ] Erste Bewertungen sammeln (Freunde, Family, Beta-User)
 - [ ] Crashlytics / Sentry Monitoring aktivieren
-- [ ] Google Play submission starten (Android)
+- [ ] Google Play submission — siehe **[`ANDROID_PLAY_SUBMISSION.md`](./ANDROID_PLAY_SUBMISSION.md)**
+  - ✅ Capacitor Android Shell + CI AAB Upload
+  - ✅ App Links Intent-Filters im Manifest
+  - ⬜ `ANDROID_CERT_SHA256` Env setzen (Play App Signing Fingerprints)
+  - ⬜ Play Console Listing / Screenshots / Data safety
+  - ⬜ Internal Track Upload + Review Submit

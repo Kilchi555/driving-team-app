@@ -225,7 +225,7 @@ export default defineEventHandler(async (event) => {
     introText: (invoice as any).notes || (tenant as any)?.invoice_intro_text || null,
     paymentTerms: (invoice as any).payment_terms || (tenant as any)?.invoice_payment_terms || null,
     footerText: (invoice as any).footer_text || (tenant as any)?.invoice_footer_text || null,
-    appointmentLabel: terms.appointment || 'Fahrstunde',
+    appointmentLabel: terms.appointment || 'Termin',
   })
 
   // HTTPS URL required for native Capacitor Browser.open() (data: URLs do not work)

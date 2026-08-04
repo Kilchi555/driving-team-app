@@ -13,7 +13,7 @@
           style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
           Preise
         </div>
-        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">Fahrschulsoftware Preise — transparent &amp; fair</h1>
+        <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">Software-Preise — transparent &amp; fair</h1>
         <p class="text-xl text-gray-500 max-w-xl mx-auto mb-10">30 Tage kostenlos testen — keine Kreditkarte, keine Jahresbindung.</p>
       </div>
     </section>
@@ -50,7 +50,7 @@
                 <span>{{ f.text }}<span v-if="f.new" class="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded" :style="plan.highlighted ? 'background: rgba(255,255,255,0.15)' : 'background: rgba(var(--brand-rgb),0.1); color: var(--brand-primary)'">NEU</span></span>
               </li>
             </ul>
-            <a href="https://app.simy.ch/tenant-register"
+            <a href="https://app.simy.ch/tenant-register?type=driving_school"
               class="block text-center py-3.5 rounded-xl font-bold text-sm transition-all hover:opacity-90"
               :style="plan.highlighted
                 ? 'background: rgba(255,255,255,0.92); color: var(--brand-primary)'
@@ -74,12 +74,23 @@
           <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
             <div class="flex items-start justify-between mb-3">
               <div>
-                <p class="font-bold text-gray-900 text-sm">Extra Fahrlehrer Seats</p>
+                <p class="font-bold text-gray-900 text-sm">Extra Mitarbeiter-Seats</p>
                 <p class="text-xs text-gray-400 mt-0.5">Jeder Plan inkl. feste Anzahl — weitere Seats zubuchbar</p>
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary);">Pro Seat / Mt.</span>
             </div>
             <p class="text-xs text-gray-500 leading-relaxed">Starter: 1 Seat inkl. · Professional: 5 inkl. · Enterprise: 10 inkl. Mehr nötig? Einfach dazubuchen.</p>
+          </div>
+
+          <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <p class="font-bold text-gray-900 text-sm">SMS-Segmente</p>
+                <p class="text-xs text-gray-400 mt-0.5">Im Plan inklusive — Überzug automatisch</p>
+              </div>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary);">CHF 0.15 / Seg.</span>
+            </div>
+            <p class="text-xs text-gray-500 leading-relaxed">Starter: 20 · Professional: 50 · Enterprise: 100 Segmente/Monat. E-Mail first, SMS nur ohne E-Mail. Überzug CHF 0.15/Segment auf der nächsten Rechnung.</p>
           </div>
 
           <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
@@ -222,7 +233,7 @@
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Kostenlos starten — heute noch</h2>
         <p class="text-white mb-8">30 Tage gratis. Keine Kreditkarte. In 5 Minuten eingerichtet.</p>
-        <a href="https://app.simy.ch/tenant-register"
+        <a href="https://app.simy.ch/tenant-register?type=driving_school"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Jetzt kostenlos starten →
@@ -238,14 +249,14 @@
 import { ref, computed } from 'vue'
 
 useHead({
-  title: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat',
+  title: 'Preise – Simy | Terminsoftware ab CHF 49/Monat',
   meta: [
-    { name: 'description', content: 'Simy Preise: Fahrschulsoftware ab CHF 49/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.' },
+    { name: 'description', content: 'Simy Preise: Terminsoftware ab CHF 49/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.' },
     { name: 'keywords', content: 'Simy preis, fahrschulapp kosten, fahrschulsoftware preis' },
-    { property: 'og:title', content: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat' },
+    { property: 'og:title', content: 'Preise – Simy | Terminsoftware ab CHF 49/Monat' },
     { property: 'og:description', content: 'Simy Preise: ab CHF 49/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar.' },
     { property: 'og:url', content: 'https://simy.ch/preise' },
-    { name: 'twitter:title', content: 'Preise – Simy | Fahrschulsoftware ab CHF 49/Monat' },
+    { name: 'twitter:title', content: 'Preise – Simy | Terminsoftware ab CHF 49/Monat' },
     { name: 'twitter:description', content: 'Simy Preise: ab CHF 49/Monat. 30 Tage kostenlos testen.' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/preise' }],
@@ -256,7 +267,7 @@ useHead({
       '@type': 'FAQPage',
       mainEntity: [
         { '@type': 'Question', name: 'Brauche ich eine Kreditkarte für den Trial?', acceptedAnswer: { '@type': 'Answer', text: 'Nein. Die 30 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten.' } },
-        { '@type': 'Question', name: 'Was kostet Simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'Simy bietet Pläne ab CHF 49/Monat. Monatlich kündbar, keine Jahresbindung.' } },
+        { '@type': 'Question', name: 'Was kostet Simy?', acceptedAnswer: { '@type': 'Answer', text: 'Simy bietet Pläne ab CHF 49/Monat. Monatlich kündbar, keine Jahresbindung.' } },
         { '@type': 'Question', name: 'Kann ich jederzeit kündigen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Monatlich kündbar, keine Jahresbindung. Kündigung mit 30 Tagen Frist auf Ende des Monats.' } },
         { '@type': 'Question', name: 'Kann ich jederzeit upgraden oder downgraden?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Planwechsel sind jederzeit möglich und wirken sofort. Beim Upgrade wird der Differenzbetrag anteilsmässig berechnet, beim Downgrade gibt es eine Gutschrift auf die nächste Rechnung.' } },
         { '@type': 'Question', name: 'Wie funktioniert die Abrechnung?', acceptedAnswer: { '@type': 'Answer', text: 'Monatlich per TWINT, Kreditkarte oder Banküberweisung. Bei Jahresabo einmal jährlich.' } },
@@ -278,36 +289,39 @@ function monthlyPrice(key: 'starter' | 'professional' | 'enterprise'): number {
 
 const plans = computed(() => [
   {
-    name: 'Starter', tagline: 'Für den Einzelfahrlehrer', key: 'starter' as const,
+    name: 'Starter', tagline: 'Für Einzelpersonen', key: 'starter' as const,
     price: monthlyPrice('starter'),
     highlighted: false,
     features: [
-      { text: '1 Fahrlehrer inkl.' },
+      { text: '1 Mitarbeiter inkl.' },
+      { text: '20 SMS-Segmente inkl. / Monat' },
       { text: 'Online-Terminbuchung' },
       { text: 'Kundenverwaltung' },
       { text: 'Rechnungen & Zahlungen' },
       { text: 'Kassenverwaltung' },
       { text: 'Auswertungen & Statistiken' },
-      { text: 'Fahrlehrer-App (iOS/Android)' },
+      { text: 'Mobile App (iOS/Android)' },
     ],
   },
   {
-    name: 'Professional', tagline: 'Für wachsende Fahrschulen', key: 'professional' as const,
+    name: 'Professional', tagline: 'Für wachsende Betriebe', key: 'professional' as const,
     price: monthlyPrice('professional'),
     highlighted: true,
     features: [
-      { text: 'Bis 5 Fahrlehrer inkl.' },
+      { text: 'Bis 5 Mitarbeiter inkl.' },
+      { text: '50 SMS-Segmente inkl. / Monat' },
       { text: 'Alles aus Starter' },
       { text: 'Kursbuchungsseite' },
       { text: 'Prioritäts-Support' },
     ],
   },
   {
-    name: 'Enterprise', tagline: 'Für grosse Fahrschulen & Ketten', key: 'enterprise' as const,
+    name: 'Enterprise', tagline: 'Für grosse Betriebe & Ketten', key: 'enterprise' as const,
     price: monthlyPrice('enterprise'),
     highlighted: false,
     features: [
-      { text: 'Bis 10 Fahrlehrer inkl.' },
+      { text: 'Bis 10 Mitarbeiter inkl.' },
+      { text: '100 SMS-Segmente inkl. / Monat' },
       { text: 'Alles aus Professional' },
       { text: 'Affiliate-System' },
       { text: 'Dedizierter Support' },
@@ -316,10 +330,12 @@ const plans = computed(() => [
 ])
 
 const comparison: { label: string; starter: boolean | string; pro: boolean | string; enterprise: boolean | string }[] = [
-  { label: 'Fahrlehrer inkl.', starter: '1', pro: '5', enterprise: '10' },
+  { label: 'Mitarbeiter inkl.', starter: '1', pro: '5', enterprise: '10' },
+  { label: 'SMS-Segmente inkl. / Monat', starter: '20', pro: '50', enterprise: '100' },
+  { label: 'SMS-Überzug', starter: 'CHF 0.15/Seg.', pro: 'CHF 0.15/Seg.', enterprise: 'CHF 0.15/Seg.' },
   { label: 'Online-Terminbuchung', starter: true, pro: true, enterprise: true },
   { label: 'Kundenverwaltung', starter: true, pro: true, enterprise: true },
-  { label: 'E-Mail-Erinnerungen & Benachrichtigungen', starter: true, pro: true, enterprise: true },
+  { label: 'E-Mail- & SMS-Erinnerungen', starter: true, pro: true, enterprise: true },
   { label: 'Rechnungen & Zahlungen', starter: true, pro: true, enterprise: true },
   { label: 'QR-Einzahlungsschein', starter: true, pro: true, enterprise: true },
   { label: 'Kassenverwaltung', starter: true, pro: true, enterprise: true },
@@ -341,8 +357,9 @@ const faqs = [
   { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein. Die 30 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten — und kannst jederzeit kündigen.' },
   { q: 'Kann ich jederzeit upgraden oder downgraden?', a: 'Ja. Planwechsel sind jederzeit möglich und wirken sofort. Beim Upgrade wird der Differenzbetrag anteilsmässig für die verbleibenden Tage des Monats berechnet. Beim Downgrade erhältst du eine Gutschrift auf die nächste Rechnung. Keine Wartezeit, keine manuelle Freischaltung.' },
   { q: 'Wie funktioniert die Abrechnung?', a: 'Wir stellen monatlich per TWINT, Kreditkarte oder Banküberweisung in Rechnung. Bei Jahresabo wird einmal jährlich abgerechnet.' },
+  { q: 'Wie funktionieren SMS?', a: 'Jeder Plan enthält SMS-Segmente (Starter 20, Professional 50, Enterprise 100 pro Monat). Bestätigungen und Erinnerungen gehen primär per E-Mail; SMS nur wenn keine E-Mail vorhanden ist. Über das Kontingent hinaus verrechnen wir CHF 0.15 pro Segment automatisch auf der nächsten Rechnung.' },
   { q: 'Was passiert mit meinen Daten, wenn ich kündige?', a: 'Du kannst alle deine Daten jederzeit exportieren. Nach der Kündigung werden die Daten für 30 Tage gespeichert, dann endgültig gelöscht.' },
-  { q: 'Gibt es Rabatte für mehrere Standorte?', a: 'Ja, für Fahrschulen mit mehreren Standorten haben wir individuelle Enterprise-Angebote. Kontaktiere uns für ein massgeschneidertes Angebot.' },
+  { q: 'Gibt es Rabatte für mehrere Standorte?', a: 'Ja, für Betriebe mit mehreren Standorten haben wir individuelle Enterprise-Angebote. Kontaktiere uns für ein massgeschneidertes Angebot.' },
 ]
 </script>
 

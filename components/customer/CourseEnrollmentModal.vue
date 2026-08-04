@@ -329,7 +329,7 @@
               <div class="text-sm text-amber-900">
                 <p class="font-semibold mb-1">Online-Zahlung aktuell nicht verfügbar</p>
                 <p>
-                  Für diesen Kurs wäre eine Online-Zahlung über Kreditkarte oder TWINT erforderlich, die die Fahrschule aktuell nicht aktiviert hat. Bitte kontaktiere die Fahrschule direkt für die Anmeldung.
+                  Für diesen Kurs wäre eine Online-Zahlung über Kreditkarte oder TWINT erforderlich, die das Unternehmen aktuell nicht aktiviert hat. Bitte kontaktiere das Unternehmen direkt für die Anmeldung.
                 </p>
               </div>
             </div>
@@ -574,7 +574,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p class="text-sm text-blue-800">
-                <strong>Hinweis:</strong> Für diesen Kurs ist Online-Zahlung vorgesehen. Barzahlung ist nach Absprache mit der Fahrschule möglich.
+                <strong>Hinweis:</strong> Für diesen Kurs ist Online-Zahlung vorgesehen. Barzahlung ist nach Absprache mit dem Unternehmen möglich.
               </p>
             </div>
 

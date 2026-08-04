@@ -1,24 +1,34 @@
-Simy ist die moderne App für Fahrschulen in der Schweiz. Alles, was du für deinen Weg zum Führerschein brauchst – in einer App.
+Simy ist die All-In-One App für dein KMU in der Schweiz. Termine, Kunden, Team und Abrechnung — mit getrennten Logins für Kunden, Staff und Admin. Eine App für viele Branchen.
 
-ALS FAHRSCHÜLER:IN
-• Fahrstunden direkt online buchen, verschieben und absagen
-• Push-Benachrichtigungen zu deinen Terminen
-• Termine automatisch in den Kalender deines iPhones übernehmen
-• Lernfortschritt und Bewertungen einsehen
-• Prüfungsresultate und Lernunterlagen abrufen
+FÜR DIESE BRANCHEN
+Fahrschule · Coaching · Consulting · Personal Training · Nachhilfe · Musikschule · Hundeschule · Massage
+Weitere Branchen mit branchenspezifischen Vorlagen auf simy.ch/branchen.
+
+DREI LOGINS IN EINER APP
+• Kunde / Klient: Termine buchen, verschieben und absagen, Erinnerungen, Fortschritt, Zahlungen und Rechnungen
+• Staff / Team: Kalender und Verfügbarkeiten, Kunden betreuen, Termine führen
+• Admin: Betrieb steuern — Team, Standorte, Preise, Abrechnung und Auswertungen
+
+ALS KUNDE / KLIENT
+• Termine online buchen, verschieben und absagen
+• Push-Erinnerungen zu deinen Terminen
+• Termine in deinen Kalender übernehmen
+• Fortschritt, Notizen und Unterlagen einsehen
 • Zahlungen, Guthaben und Rechnungen verwalten
-• Mit Face ID schnell und sicher einloggen
-• Direkt mit deinem Fahrlehrer kommunizieren
+• Schnell einloggen mit Biometrie (Fingerprint / Face Unlock)
 
-FÜR FAHRLEHRER:INNEN UND FAHRSCHULEN
-• Terminkalender und Verfügbarkeiten verwalten
-• Schüler und Fortschritt im Überblick
-• Prüfungsplanung und Statistiken
-• Einfache Abrechnung und Rechnungsstellung
-• Bewertungssystem und Lernkontrollen
+ALS STAFF / TEAM
+• Tag und Woche im Blick behalten
+• Verfügbarkeiten und Kundenkontakte verwalten
+• Termine dokumentieren und fortführen
+
+ALS ADMIN
+• Team und Standorte verwalten
+• Preise, Pakete und Abrechnung steuern
+• Auswertungen und Überblick über den Betrieb
 
 DATENSCHUTZ
-Deine Daten werden ausschliesslich in der Schweiz verarbeitet. Wir setzen auf moderne Sicherheitsstandards mit Verschlüsselung und biometrischer Authentifizierung.
+Deine Daten werden in der Schweiz verarbeitet. Moderne Sicherheitsstandards mit Verschlüsselung und biometrischer Authentifizierung.
 
 ZUGANG
-Simy arbeitet mit ausgewählten Fahrschulen in der Schweiz zusammen. Dein Zugang wird direkt von deiner Fahrschule eingerichtet. Du bist noch nicht angemeldet? Frag bei deiner Fahrschule nach Simy oder besuche simy.ch.
+Dein Anbieter (Fahrschule, Coach, Studio, Praxis …) richtet den Zugang ein. Self-Signup ohne Einladung ist absichtlich nicht möglich. Noch keinen Zugang? Frag bei deinem Anbieter nach Simy oder besuche simy.ch.

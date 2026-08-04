@@ -21,7 +21,7 @@
 
         <!-- Intro -->
         <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-          <p><strong>Hinweis:</strong> Dieser Auftragsverarbeitungsvertrag (AVV) ist integraler Bestandteil der <NuxtLink to="/agb" class="text-amber-700 font-semibold hover:underline">Allgemeinen Geschäftsbedingungen (AGB)</NuxtLink> von Simy. Mit der Registrierung einer Fahrschule auf der Simy-Plattform und der Akzeptanz der AGB stimmt der Kunde diesem AVV zu.</p>
+          <p><strong>Hinweis:</strong> Dieser Auftragsverarbeitungsvertrag (AVV) ist integraler Bestandteil der <NuxtLink to="/agb" class="text-amber-700 font-semibold hover:underline">Allgemeinen Geschäftsbedingungen (AGB)</NuxtLink> von Simy. Mit der Registrierung eines Unternehmens auf der Simy-Plattform und der Akzeptanz der AGB stimmt der Kunde diesem AVV zu.</p>
         </div>
 
         <!-- Inhaltsverzeichnis -->
@@ -62,7 +62,7 @@
             <div class="bg-gray-50 rounded-xl p-4 border border-gray-200">
               <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Verantwortlicher</p>
               <p class="font-semibold text-gray-900">Der registrierte Tenant</p>
-              <p class="text-gray-600">Die Fahrschule, die sich auf der Simy-Plattform registriert hat.</p>
+              <p class="text-gray-600">Das Unternehmen, das sich auf der Simy-Plattform registriert hat.</p>
               <p class="text-xs text-gray-500 mt-2">(im Folgenden: «Auftraggeber»)</p>
             </div>
           </div>
@@ -71,7 +71,7 @@
         <!-- §1 -->
         <section id="a1">
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">1. Gegenstand und Dauer der Verarbeitung</h2>
-          <p class="mb-3">Simy verarbeitet im Auftrag des Auftraggebers Personendaten im Rahmen der Bereitstellung der SaaS-Plattform für Fahrschulen. Die Verarbeitung erfolgt für die Dauer des Abonnementvertrags und endet mit dessen Beendigung.</p>
+          <p class="mb-3">Simy verarbeitet im Auftrag des Auftraggebers Personendaten im Rahmen der Bereitstellung der SaaS-Plattform für Terminbetriebe. Die Verarbeitung erfolgt für die Dauer des Abonnementvertrags und endet mit dessen Beendigung.</p>
           <p>Der Gegenstand der Auftragsverarbeitung ergibt sich aus den in Ziffer 2 beschriebenen Verarbeitungstätigkeiten.</p>
         </section>
 
@@ -94,15 +94,15 @@
                 </tr>
                 <tr class="bg-gray-50">
                   <td class="p-3 border border-gray-200 font-medium align-top">Zweck</td>
-                  <td class="p-3 border border-gray-200">Bereitstellung der Simy-Plattform zur Verwaltung des Fahrschulbetriebs (Schüler, Termine, Rechnungen, Lernfortschritt)</td>
+                  <td class="p-3 border border-gray-200">Bereitstellung der Simy-Plattform zur Verwaltung des Betriebs (Kunden, Termine, Rechnungen, Fortschritt)</td>
                 </tr>
                 <tr>
                   <td class="p-3 border border-gray-200 font-medium align-top">Kategorien betroffener Personen</td>
-                  <td class="p-3 border border-gray-200">Schüler/Fahrschüler, Fahrlehrer, sonstige Mitarbeiter der Fahrschule</td>
+                  <td class="p-3 border border-gray-200">Kunden, Mitarbeiter und sonstige betroffene Personen des Unternehmens</td>
                 </tr>
                 <tr class="bg-gray-50">
                   <td class="p-3 border border-gray-200 font-medium align-top">Kategorien von Daten</td>
-                  <td class="p-3 border border-gray-200">Stammdaten (Name, Adresse, Geburtsdatum, Telefon, E-Mail), Terminbuchungen, Fahrstundenprotokolle, Bewertungen, Zahlungshistorie, Führerscheinkategorie-Informationen</td>
+                  <td class="p-3 border border-gray-200">Stammdaten (Name, Adresse, Geburtsdatum, Telefon, E-Mail), Terminbuchungen, Protokolle, Bewertungen, Zahlungshistorie, kategorienbezogene Informationen</td>
                 </tr>
               </tbody>
             </table>
@@ -181,9 +181,9 @@
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">6. Pflichten des Auftraggebers</h2>
           <p class="mb-3">Der Auftraggeber ist als datenschutzrechtlich Verantwortlicher verpflichtet:</p>
           <ul class="list-disc pl-5 space-y-2">
-            <li>Seinen Schülern, Fahrlehrern und anderen betroffenen Personen eine eigene Datenschutzerklärung bereitzustellen</li>
+            <li>Seinen Kunden, Mitarbeitern und anderen betroffenen Personen eine eigene Datenschutzerklärung bereitzustellen</li>
             <li>Die erforderliche Rechtsgrundlage für die Verarbeitung der Daten in der Plattform sicherzustellen (z.B. Einwilligung oder Vertragserfüllung)</li>
-            <li>Datenschutzanfragen seiner Schüler (Auskunft, Löschung etc.) selbst zu beantworten, oder Simy per E-Mail um Unterstützung zu bitten</li>
+            <li>Datenschutzanfragen seiner Kunden (Auskunft, Löschung etc.) selbst zu beantworten, oder Simy per E-Mail um Unterstützung zu bitten</li>
             <li>Simy unverzüglich über Änderungen zu informieren, die die Verarbeitungstätigkeiten betreffen</li>
           </ul>
         </section>

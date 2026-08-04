@@ -104,13 +104,13 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <!-- Staff Filter -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Fahrlehrer</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">{{ t.staff }}</label>
             <select 
               v-model="filters.staffId"
               @change="applyFilters"
               class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
             >
-              <option value="">Alle Fahrlehrer</option>
+              <option value="">Alle {{ t.staffPlural }}</option>
               <option v-for="staff in staffList" :key="staff.id" :value="staff.id">
                 {{ staff.first_name }} {{ staff.last_name }}
               </option>
@@ -195,14 +195,14 @@
 
       <!-- Staff Performance Overview -->
       <div class="bg-white rounded-lg shadow-sm border p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Fahrlehrer-Performance</h2>
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">{{ t.staff }}-Performance</h2>
         
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fahrlehrer
+                  {{ t.staff }}
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Gesamt
@@ -293,7 +293,7 @@
                   Schüler
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fahrlehrer
+                  {{ t.staff }}
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Kategorie
@@ -432,6 +432,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useTerminology()
 
 import { ref, computed, onMounted } from 'vue'
 import { definePageMeta } from '#imports'

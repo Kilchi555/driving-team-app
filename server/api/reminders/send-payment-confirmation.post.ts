@@ -144,7 +144,7 @@ export default defineEventHandler(async (event) => {
     const terms = await getTenantTerminology(supabase, tenantId)
     const staffName = staff
       ? `${staff.first_name} ${staff.last_name}`
-      : `Ihr ${terms.staff || 'Fahrlehrer'}`
+      : `Ihr ${terms.staff || 'Mitarbeiter'}`
 
     // 7. Get location data for appointment details
     const { data: location } = await supabase

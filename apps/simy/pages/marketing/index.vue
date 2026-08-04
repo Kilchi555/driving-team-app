@@ -13,16 +13,16 @@
       <div class="relative max-w-5xl mx-auto text-center">
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
           style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
-          🚀 Marketing für Fahrschulen
+          🚀 Marketing für Dienstleister
         </div>
         <h1 class="text-5xl md:text-6xl font-black text-gray-900 mb-6 leading-tight">
-          Mehr Schüler mit<br />
+          Mehr Kunden mit<br />
           <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-            Fahrschule Marketing
+            lokalem Marketing
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Simy ist mehr als Verwaltungssoftware. Wir bringen dir aktiv neue Schüler — durch Google Ads und lokales SEO, das für Fahrschulen wirklich funktioniert.
+          Simy ist mehr als Verwaltungssoftware. Wir bringen dir aktiv neue Kunden — durch Google Ads und lokales SEO, das für Terminbetriebe wirklich funktioniert.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="#angebote"
@@ -54,8 +54,8 @@
       <div class="max-w-5xl mx-auto">
         <div class="text-center mb-16">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">Marketing-Angebote</p>
-          <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Zwei Wege zu mehr Schülern</h2>
-          <p class="text-gray-500 max-w-xl mx-auto">Ob sofortige Leads durch Werbung oder nachhaltiges Wachstum durch SEO — wir haben die richtige Strategie für deine Fahrschule.</p>
+          <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Zwei Wege zu mehr Kunden</h2>
+          <p class="text-gray-500 max-w-xl mx-auto">Ob sofortige Leads durch Werbung oder nachhaltiges Wachstum durch SEO — wir haben die richtige Strategie für dein Unternehmen.</p>
         </div>
 
         <div class="grid md:grid-cols-2 gap-8">
@@ -68,7 +68,7 @@
               <h3 class="text-xl font-black text-gray-900">Google Ads</h3>
               <span class="text-xs font-bold px-3 py-1 rounded-full text-white" style="background: var(--brand-primary)">Sofortige Leads</span>
             </div>
-            <p class="text-gray-500 leading-relaxed mb-6">Sofort sichtbar bei Google, wenn jemand "Fahrschule [deine Stadt]" sucht. Wir erstellen, optimieren und betreuen deine Kampagnen — du zahlst nur für Klicks.</p>
+            <p class="text-gray-500 leading-relaxed mb-6">Sofort sichtbar bei Google, wenn jemand dein Angebot in deiner Stadt sucht. Wir erstellen, optimieren und betreuen deine Kampagnen — du zahlst nur für Klicks.</p>
             <ul class="space-y-3 mb-8">
               <li v-for="item in adsHighlights" :key="item" class="flex items-center gap-3 text-sm text-gray-700">
                 <svg class="w-4 h-4 flex-shrink-0" style="color: var(--brand-primary)" fill="currentColor" viewBox="0 0 20 20">
@@ -91,7 +91,7 @@
               <h3 class="text-xl font-black text-gray-900">Lokales SEO</h3>
               <span class="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700">Nachhaltiges Wachstum</span>
             </div>
-            <p class="text-gray-500 leading-relaxed mb-6">Organisch auf Platz 1 bei Google für "Fahrschule [deine Stadt]". Einmal oben — dauerhafter Strom an neuen Anfragen, ohne laufende Werbekosten.</p>
+            <p class="text-gray-500 leading-relaxed mb-6">Organisch auf Platz 1 bei Google für deine lokalen Suchbegriffe. Einmal oben — dauerhafter Strom an neuen Anfragen, ohne laufende Werbekosten.</p>
             <ul class="space-y-3 mb-8">
               <li v-for="item in seoHighlights" :key="item" class="flex items-center gap-3 text-sm text-gray-700">
                 <svg class="w-4 h-4 flex-shrink-0 text-green-500" fill="currentColor" viewBox="0 0 20 20">
@@ -116,7 +116,7 @@
         <div class="text-center mb-12">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">Warum Simy</p>
           <h2 class="text-3xl font-extrabold text-white mb-4">Marketing + Software = Der Vorteil</h2>
-          <p class="text-gray-400 max-w-xl mx-auto">Wer nur Werbeschalten macht, verliert potenzielle Schüler durch eine schlechte Website oder ein fehlendes Buchungssystem. Simy schliesst diese Lücke.</p>
+          <p class="text-gray-400 max-w-xl mx-auto">Wer nur Werbung schaltet, verliert potenzielle Kunden durch eine schlechte Website oder ein fehlendes Buchungssystem. Simy schliesst diese Lücke.</p>
         </div>
         <div class="grid md:grid-cols-2 gap-6">
           <div v-for="benefit in whySimy" :key="benefit.title"
@@ -136,7 +136,7 @@
     <!-- CTA -->
     <section class="py-24 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
-        <h2 class="text-4xl font-black text-white mb-5">Bereit, mehr Schüler zu gewinnen?</h2>
+        <h2 class="text-4xl font-black text-white mb-5">Bereit, mehr Kunden zu gewinnen?</h2>
         <p class="text-purple-200 text-lg mb-10">Starte kostenlos mit der Software und frage uns nach unserem Marketing-Paket.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
@@ -152,19 +152,19 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Marketing für Fahrschulen – Google Ads & SEO | Simy',
+  title: 'Marketing für Terminbetriebe – Google Ads & SEO | Simy',
   meta: [
-    { name: 'description', content: 'Simy bringt mehr Schüler zu deiner Fahrschule. Google Ads und lokales SEO, speziell für Fahrschulen. Mehr Anfragen, mehr Umsatz.' },
-    { name: 'keywords', content: 'marketing fahrschule, google ads fahrschule, seo fahrschule, fahrschule mehr schüler' },
-    { property: 'og:title', content: 'Marketing für Fahrschulen – Simy | Mehr Schüler gewinnen' },
-    { property: 'og:description', content: 'Google Ads und lokales SEO für Fahrschulen. Simy bringt dir aktiv neue Schüler.' },
+    { name: 'description', content: 'Simy bringt mehr Kunden zu deinem Betrieb. Google Ads und lokales SEO für Fahrschulen, Coaching, Consulting und mehr. Mehr Anfragen, mehr Umsatz.' },
+    { name: 'keywords', content: 'marketing terminbetriebe, google ads schweiz, lokales seo, mehr kunden gewinnen' },
+    { property: 'og:title', content: 'Marketing für Terminbetriebe – Simy | Mehr Kunden gewinnen' },
+    { property: 'og:description', content: 'Google Ads und lokales SEO für Terminbetriebe. Simy bringt dir aktiv neue Kunden.' },
     { property: 'og:url', content: 'https://simy.ch/marketing' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/marketing' }],
 })
 
 const valueProps = [
-  { icon: '⚡', title: 'Sofort messbar', desc: 'Jede Anfrage wird erfasst. Du siehst genau, welche Kampagne Schüler bringt.' },
+  { icon: '⚡', title: 'Sofort messbar', desc: 'Jede Anfrage wird erfasst. Du siehst genau, welche Kampagne Kunden bringt.' },
   { icon: '🎯', title: 'Lokal & präzise', desc: 'Wir schalten Werbung nur in deinem Einzugsgebiet — kein Geld verschwenden.' },
   { icon: '🔄', title: 'Closed Loop', desc: 'Von der Google-Suche bis zur Buchung in Simy — alles ist verbunden.' },
 ]
@@ -188,7 +188,7 @@ const seoHighlights = [
 const whySimy = [
   { icon: '🔗', title: 'Alles aus einer Hand', desc: 'Website, Buchungssystem und Marketing kommen von Simy — perfekt abgestimmt.' },
   { icon: '📊', title: 'Echter ROI', desc: 'Du siehst direkt in Simy, welche Marketing-Massnahmen Buchungen generieren.' },
-  { icon: '🇨🇭', title: 'Schweizer Marktkenntnis', desc: 'Wir kennen den Schweizer Fahrschulmarkt — keine generischen Kampagnen.' },
+  { icon: '🇨🇭', title: 'Schweizer Marktkenntnis', desc: 'Wir kennen den Schweizer Markt für lokale Terminbetriebe — keine generischen Kampagnen.' },
   { icon: '🤝', title: 'Persönlicher Ansprechpartner', desc: 'Kein anonymes Support-Ticket. Du hast einen festen Ansprechpartner bei simy.' },
 ]
 </script>

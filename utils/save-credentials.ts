@@ -39,7 +39,12 @@ async function storeViaCredentialApi(
     password,
     name: displayName || username,
   })
-  await navigator.credentials.store(cred)
+  // Chrome can leave store() pending until the user interacts with the
+  // password-save prompt — never block onboarding on that.
+  await Promise.race([
+    navigator.credentials.store(cred).catch(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, 2500)),
+  ])
 }
 
 /**

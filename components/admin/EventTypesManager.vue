@@ -2,21 +2,22 @@
   <div>
     <div v-if="isLoading" class="text-center py-6">
       <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
-      <p class="text-sm text-gray-600">Eventtypen werden geladen...</p>
+      <p class="text-sm text-gray-600">Terminarten werden geladen...</p>
     </div>
 
     <div v-else>
       <div class="mb-4">
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-xl font-medium text-gray-900">Eventtypen verwalten</h2>
+          <h2 class="text-xl font-medium text-gray-900">Terminarten verwalten</h2>
           <button 
             @click="openCreateModal"
             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex">
-            + Neuer Eventtyp
+            + Neue Terminart
           </button>
         </div>
         <p class="text-sm text-gray-600">
-          Öffentlich buchbare Gruppenkurse können auf der Adminseite "Kurse" erstellt werden.
+          Mit Sofortzahlung: Kalender zeigt Preis & Zahlung beim Buchen. Ohne Sofortzahlung: Termin ohne Zahlung in der App — z.B. Erstgespräch, Pauschale oder Rechnung ausserhalb.
+          Öffentlich buchbare Gruppenkurse legst du unter «Kurse» an.
         </p>
       </div>
 
@@ -29,7 +30,7 @@
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Beschreibung</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Dauer</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Farbe</th>
-              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Kostenpflichtig</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sofortzahlung</th>
               <th v-if="showPricingColumns" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Grundpreis</th>
               <th v-if="showPricingColumns" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Gebühr/Termin</th>
               <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Standard</th>
@@ -64,7 +65,7 @@
                   <div :class="['relative w-10 h-6 rounded-full transition-colors', et.require_payment ? 'bg-blue-600' : 'bg-gray-300']">
                     <span :class="['absolute top-0.5 left-0.5 h-5 w-5 bg-white rounded-full transition-transform', et.require_payment ? 'translate-x-4' : 'translate-x-0']"></span>
                   </div>
-                  <span class="ml-2 text-xs text-gray-600">{{ et.require_payment ? 'Kostenpflichtig' : 'Kostenlos' }}</span>
+                  <span class="ml-2 text-xs text-gray-600">{{ et.require_payment ? 'Beim Buchen' : 'Ohne Sofortzahlung' }}</span>
                 </label>
               </td>
               <td v-if="showPricingColumns" class="px-4 py-2 text-sm text-gray-900">
@@ -98,7 +99,7 @@
                   <button
                     @click="deleteEventType(et)"
                     class="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                    title="Event-Type löschen"
+                    title="Terminart löschen"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -116,7 +117,7 @@
     <div v-if="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="closeCreateModal">
       <div class="bg-white rounded-lg w-full max-w-md mx-4 max-h-[90vh] overflow-hidden flex flex-col" @click.stop>
         <div class="p-6 overflow-y-auto flex-1">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Neuer Eventtyp erstellen</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Neue Terminart erstellen</h3>
         
         <div class="space-y-4">
           <div>
@@ -136,7 +137,7 @@
               v-model="newEventType.name"
               type="text"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="z.B. Fahrstunde, Prüfung"
+              :placeholder="`z.B. ${t.appointment}, Prüfung`"
               required
             >
           </div>
@@ -147,7 +148,7 @@
               v-model="newEventType.description"
               rows="2"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Kurze Beschreibung des Eventtyps"
+              placeholder="Kurze Beschreibung der Terminart"
             ></textarea>
           </div>
           
@@ -183,8 +184,8 @@
           <div class="space-y-4">
             <div class="flex items-center justify-between">
               <div class="flex flex-col">
-                <span class="text-sm font-medium text-gray-700">Kostenpflichtig</span>
-                <span class="text-xs text-gray-500">Event-Typ erfordert Zahlung</span>
+                <span class="text-sm font-medium text-gray-700">Preis in der App verrechnen</span>
+                <span class="text-xs text-gray-500">Aus = separat verrechnen (Pauschale, externe Rechnung, Kennenlernen, …)</span>
               </div>
               <label class="inline-flex items-center cursor-pointer select-none">
                 <input type="checkbox" class="sr-only" v-model="newEventType.require_payment" />
@@ -209,7 +210,7 @@
 
           </div>
 
-          <!-- Preis-Felder (nur anzeigen wenn kostenpflichtig und nicht Fahrschule) -->
+          <!-- Preis-Felder (nur anzeigen wenn App-Preis und nicht Fahrschule) -->
           <div v-if="newEventType.require_payment && showPricingColumns" class="space-y-4 border-t pt-4">
             <h4 class="text-sm font-medium text-gray-900">Preiseinstellungen</h4>
             
@@ -280,7 +281,7 @@
     <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click="closeEditModal">
       <div class="bg-white rounded-lg w-full max-w-md mx-4 max-h-[90vh] overflow-hidden flex flex-col" @click.stop>
         <div class="p-6 overflow-y-auto flex-1">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Eventtyp bearbeiten</h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Terminart bearbeiten</h3>
 
         <div v-if="editModel" class="space-y-4">
           <div>
@@ -309,7 +310,7 @@
               v-model="editModel.description"
               rows="2"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Kurze Beschreibung des Eventtyps"
+              placeholder="Kurze Beschreibung der Terminart"
             ></textarea>
           </div>
 
@@ -344,8 +345,8 @@
           <div class="space-y-4">
             <div class="flex items-center justify-between">
               <div class="flex flex-col">
-                <span class="text-sm font-medium text-gray-700">Kostenpflichtig</span>
-                <span class="text-xs text-gray-500">Event-Typ erfordert Zahlung</span>
+                <span class="text-sm font-medium text-gray-700">Preis in der App verrechnen</span>
+                <span class="text-xs text-gray-500">Aus = separat verrechnen (Pauschale, externe Rechnung, Kennenlernen, …)</span>
               </div>
               <label class="inline-flex items-center cursor-pointer select-none">
                 <input type="checkbox" class="sr-only" v-model="editModel.require_payment" />
@@ -370,7 +371,7 @@
 
           </div>
 
-          <!-- Preis-Felder (nur anzeigen wenn kostenpflichtig und nicht Fahrschule) -->
+          <!-- Preis-Felder (nur anzeigen wenn App-Preis und nicht Fahrschule) -->
           <div v-if="editModel.require_payment && showPricingColumns" class="space-y-4 border-t pt-4">
             <h4 class="text-sm font-medium text-gray-900">Preiseinstellungen</h4>
             
@@ -445,6 +446,9 @@ import { ref, onMounted, computed } from 'vue'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 interface EventTypeRow {
   id: string

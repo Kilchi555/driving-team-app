@@ -53,7 +53,7 @@ export default defineEventHandler(async (event) => {
       subject: `🏦 Wallee-Anfrage: ${tenant.name}`,
       html: `
         <h2>Neuer Wallee Onboarding-Wunsch</h2>
-        <p><strong>Fahrschule:</strong> ${tenant.name}</p>
+        <p><strong>Unternehmen:</strong> ${tenant.name}</p>
         <p><strong>E-Mail:</strong> ${tenant.contact_email}</p>
         <p><strong>Telefon:</strong> ${tenant.contact_phone || '—'}</p>
         <p><strong>Adresse:</strong> ${tenant.address || '—'}</p>

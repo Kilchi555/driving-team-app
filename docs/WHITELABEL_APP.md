@@ -2,6 +2,8 @@
 
 > **Ziel:** Jede Fahrschule bekommt ihre eigene gebrandete App im App Store und Google Play — vollständig automatisiert nach einmaliger Einrichtung.
 
+> **Android Play Submission:** siehe [`ANDROID_PLAY_SUBMISSION.md`](./ANDROID_PLAY_SUBMISSION.md)
+
 ---
 
 ## Architektur-Übersicht

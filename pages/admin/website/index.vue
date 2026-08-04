@@ -41,7 +41,7 @@
         </div>
         <select v-model="filterType" class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600">
           <option value="">Alle Typen</option>
-          <option value="booking">Fahrstunde</option>
+          <option value="booking">{{ t.appointment }}</option>
           <option value="vku">VKU</option>
           <option value="nothilfe">Nothilfe</option>
           <option value="contact">Kontakt</option>
@@ -144,6 +144,7 @@ definePageMeta({ layout: 'admin', middleware: ['admin'] })
 useHead({ title: 'Website – Leads & Übersicht' })
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 const filterType = ref('')
 const selectedLead = ref<any>(null)
@@ -167,7 +168,7 @@ const filteredLeads = computed(() =>
 )
 
 const typeLabel = (type: string) => ({
-  booking: 'Fahrstunde', vku: 'VKU', nothilfe: 'Nothilfe', contact: 'Kontakt', theorie: 'Theorie'
+  booking: t.value.appointment, vku: 'VKU', nothilfe: 'Nothilfe', contact: 'Kontakt', theorie: 'Theorie'
 }[type] || type)
 
 const typeColor = (type: string) => ({

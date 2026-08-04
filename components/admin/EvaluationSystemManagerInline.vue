@@ -752,7 +752,7 @@
         <!-- STAFF CONTENT TAB -->
         <div v-if="educationalEditorTab === 'staff'" class="p-4 space-y-4">
           <p class="text-xs text-gray-500 bg-indigo-50 rounded-xl p-3">
-            Dieser Inhalt ist nur für Fahrlehrer sichtbar. Die 13 Sektionen folgen einem pädagogischen Rahmen für professionellen Fahrunterricht.
+            Dieser Inhalt ist nur für {{ t.staffPlural }} sichtbar. Die 13 Sektionen folgen einem pädagogischen Rahmen für professionellen Fahrunterricht.
           </p>
 
           <StaffGuideEditorForm
@@ -1055,9 +1055,11 @@
 import { ref, onMounted, computed } from 'vue'
 // import { getSupabase } from '~/utils/supabase'
 import { useUIStore } from '~/stores/ui'
+import { useTerminology } from '~/composables/useTerminology'
 
 // Initialize UI store for toast notifications
 const uiStore = useUIStore()
+const { t } = useTerminology()
 
 // Types
 interface EvaluationCategory {

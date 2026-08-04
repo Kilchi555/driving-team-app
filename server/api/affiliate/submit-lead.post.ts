@@ -18,6 +18,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logger } from '~/utils/logger'
 import { v4 as uuidv4 } from 'uuid'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const ipAddress = getClientIP(event)
@@ -63,7 +64,7 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (tenantError || !tenant) {
-    throw createError({ statusCode: 404, message: 'Fahrschule nicht gefunden.' })
+    throw createError({ statusCode: 404, message: 'Unternehmen nicht gefunden.' })
   }
 
   // 2. Resolve affiliate code
@@ -120,7 +121,8 @@ export default defineEventHandler(async (event) => {
   if (existingLead) {
     return { ok: false, alreadySubmitted: true }
   }
-  const tenantName = tenant.twilio_from_sender || tenant.name || 'Fahrschule'
+  const terms = await getTenantTerminology(supabase, tenant.id)
+  const tenantName = tenant.twilio_from_sender || tenant.name || terms.businessNoun || 'Unternehmen'
   const tenantSlugResolved = tenant.slug
   const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch'
 

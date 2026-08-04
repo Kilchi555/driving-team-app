@@ -246,7 +246,7 @@
           <div v-if="step === 1">
             <h2 class="text-xl font-bold mb-4">Vervollständige dein Profil</h2>
             <p class="text-sm text-gray-600 mb-6">
-              Diese Daten benötigen wir für deine Fahrstunden.
+              Diese Daten benötigen wir für deine {{ labels.appointmentsPlural }}.
             </p>
 
             <div class="space-y-4">

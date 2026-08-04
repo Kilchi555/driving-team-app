@@ -19,6 +19,7 @@ import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
+import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conversion'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 
 // Rate limiting: 5 attempts per IP per minute
@@ -124,7 +125,7 @@ const handler = defineEventHandler(async (event) => {
     if (!coursesEnabled) {
       throw createError({
         statusCode: 403,
-        statusMessage: 'Kursbuchung ist für diese Fahrschule aktuell nicht aktiviert.'
+        statusMessage: 'Kursbuchung ist für dieses Unternehmen aktuell nicht aktiviert.'
       })
     }
 
@@ -698,16 +699,15 @@ const handler = defineEventHandler(async (event) => {
           sourceLabel: course?.name ? `Kurs: ${course.name}` : 'Kursanmeldung (Kredit)',
         })
 
-        // Meta CAPI: courses aren't linked to `appointments`, so this bypasses
-        // recordAndSendCapiEvent's audit table (its appointment_id column has a
-        // hard FK to appointments) and sends directly — fire-and-forget, never
-        // blocks the response.
+        // Meta CAPI + Google Ads: courses aren't linked to `appointments`, so
+        // Meta bypasses the audit table FK and Google uploads with order_id
+        // `course_<registration_id>`. Fire-and-forget, never blocks the response.
         ;(async () => {
           try {
             const { data: attrRow } = marketingSessionId
               ? await supabase
                   .from('marketing_attributions')
-                  .select('fbclid, fbc, fbp')
+                  .select('fbclid, fbc, fbp, gclid, gbraid, wbraid')
                   .eq('session_id', marketingSessionId)
                   .maybeSingle()
               : { data: null }
@@ -715,21 +715,37 @@ const handler = defineEventHandler(async (event) => {
             const hashedEmail = finalEmail ? await sha256Hex(finalEmail.trim().toLowerCase()) : null
             const normalizedPhone = (finalPhone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
             const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+            const valueChf = finalAmount / 100
+            const conversionDateTime = new Date()
 
             await sendCapiEvent({
               appointment_id: `course_${creditRegistration?.id ?? courseId}`,
               tenant_id: tenantId,
               event_name: 'Purchase',
-              conversion_value_chf: finalAmount / 100,
-              conversion_date_time: new Date(),
+              conversion_value_chf: valueChf,
+              conversion_date_time: conversionDateTime,
               fbclid: attrRow?.fbclid ?? null,
               fbc: attrRow?.fbc ?? null,
               fbp: attrRow?.fbp ?? null,
               hashed_email: hashedEmail,
               hashed_phone: hashedPhone,
             })
+
+            if (creditRegistration?.id) {
+              await recordAndUploadCourseConversion({
+                registration_id: creditRegistration.id,
+                tenant_id: tenantId,
+                gclid: attrRow?.gclid ?? null,
+                gbraid: attrRow?.gbraid ?? null,
+                wbraid: attrRow?.wbraid ?? null,
+                conversion_value_chf: valueChf,
+                conversion_date_time: conversionDateTime,
+                hashed_email: hashedEmail,
+                hashed_phone: hashedPhone,
+              })
+            }
           } catch (err: any) {
-            logger.warn('⚠️ Meta CAPI upload failed for course credit enrollment (non-critical):', err?.message ?? err)
+            logger.warn('⚠️ Meta/Google Ads conversion upload failed for course credit enrollment (non-critical):', err?.message ?? err)
           }
         })()
 
@@ -747,7 +763,7 @@ const handler = defineEventHandler(async (event) => {
       logger.warn('🚫 Wallee enrollment blocked: tenant has not activated online payments', { tenantId, courseId })
       throw createError({
         statusCode: 402,
-        statusMessage: 'Online-Zahlung ist für diese Fahrschule aktuell nicht aktiviert. Bitte kontaktiere die Fahrschule direkt für die Anmeldung.'
+        statusMessage: 'Online-Zahlung ist für dieses Unternehmen aktuell nicht aktiviert. Bitte kontaktiere das Unternehmen direkt für die Anmeldung.'
       })
     }
 

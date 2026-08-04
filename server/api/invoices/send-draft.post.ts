@@ -28,7 +28,7 @@ function generateAdminInvoiceNotification(data: {
   itemCountLabel?: string
 }): string {
   const clientLabel = data.clientLabel || 'Schüler'
-  const itemCountLabel = data.itemCountLabel || `${data.itemCount} Fahrstunde${data.itemCount !== 1 ? 'n' : ''}`
+  const itemCountLabel = data.itemCountLabel || `${data.itemCount} Termin${data.itemCount !== 1 ? 'e' : ''}`
   return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>Neue Rechnung versendet</title></head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <div style="max-width:540px;margin:40px auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);">
@@ -188,7 +188,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const terms = await getTenantTerminology(supabase, staffUser.tenant_id)
-  const appointmentLabel = terms.appointment || 'Fahrstunde'
+  const appointmentLabel = terms.appointment || 'Termin'
   const clientLabel = terms.client || 'Schüler'
   const studentName = draft.student?.name || clientLabel
   const studentEmail = draft.billing_email

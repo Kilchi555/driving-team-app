@@ -130,11 +130,11 @@
             <label class="block text-sm font-semibold mb-2"
               >Kurze Bio (2-3 Sätze) *</label
             >
-            <textarea
-              v-model="formData.bio"
-              class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 h-24 focus:ring-2 focus:border-transparent"
-              placeholder="z.B. Erfahrener Fahrlehrer seit 15 Jahren mit Spezialisierung auf..."
-            />
+              <textarea
+                v-model="formData.bio"
+                class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 h-24 focus:ring-2 focus:border-transparent"
+                :placeholder="`Kurzbeschreibung deiner ${terms.businessNoun}…`"
+              />
             <AIOptimizationSuggestion
               :original="formData.bio"
               content-type="bio"
@@ -143,12 +143,65 @@
             />
           </div>
 
+          <div class="space-y-4">
+            <label class="block text-sm font-semibold">Logo & Hero-Bild</label>
+            <p class="text-sm text-gray-600 -mt-2">
+              Logo erscheint in der Navigation. Das Hero-Bild füllt den ersten Bildschirm deiner Landingpage.
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="border border-gray-200 rounded-lg p-4 space-y-3">
+                <p class="text-sm font-medium">Logo (quadratisch)</p>
+                <div class="h-28 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden">
+                  <img
+                    v-if="formData.logo_url"
+                    :src="formData.logo_url"
+                    alt="Logo"
+                    class="max-h-24 max-w-full object-contain"
+                  />
+                  <span v-else class="text-xs text-gray-400">Noch kein Logo</span>
+                </div>
+                <label class="inline-flex items-center justify-center w-full px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 cursor-pointer hover:bg-gray-50">
+                  {{ uploadingLogo ? 'Lädt…' : 'Logo hochladen' }}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="hidden"
+                    :disabled="uploadingLogo || uploadingHero"
+                    @change="handleAssetUpload($event, 'logo')"
+                  />
+                </label>
+              </div>
+              <div class="border border-gray-200 rounded-lg p-4 space-y-3">
+                <p class="text-sm font-medium">Hero-Bild (16:9)</p>
+                <div class="h-28 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden">
+                  <img
+                    v-if="formData.hero_image_url"
+                    :src="formData.hero_image_url"
+                    alt="Hero"
+                    class="h-full w-full object-cover"
+                  />
+                  <span v-else class="text-xs text-gray-400">Noch kein Hero</span>
+                </div>
+                <label class="inline-flex items-center justify-center w-full px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 cursor-pointer hover:bg-gray-50">
+                  {{ uploadingHero ? 'Lädt…' : 'Hero hochladen' }}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="hidden"
+                    :disabled="uploadingLogo || uploadingHero"
+                    @change="handleAssetUpload($event, 'hero')"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label class="block text-sm font-semibold mb-3"
               >Deine Spezialisierungen</label
             >
             <div class="space-y-2">
-              <label v-for="spec in specializations" :key="spec" class="flex items-center">
+              <label v-for="spec in specializationOptions" :key="spec" class="flex items-center">
                 <input
                   :checked="formData.specializations?.includes(spec)"
                   @change="toggleSpecialization(spec)"
@@ -158,13 +211,15 @@
                 />
                 <span class="ml-2 text-sm">{{ spec }}</span>
               </label>
+              <p v-if="!specializationOptions.length" class="text-sm text-gray-500">
+                Keine {{ terms.categoriesLabel }} gefunden — du kannst später ergänzen.
+              </p>
             </div>
           </div>
 
           <div class="rounded-lg p-4 border" :style="{ background: `${primaryColor}10`, borderColor: `${primaryColor}33` }">
             <p class="text-sm">
-              ✅ Diese Infos stammen aus deiner Driving Team App und werden
-              automatisch synchronisiert
+              ✅ Diese Infos stammen aus deiner Simy-App und werden automatisch synchronisiert
             </p>
           </div>
         </div>
@@ -184,18 +239,18 @@
             <div v-for="service in appServices" :key="service.id" class="border border-gray-200 rounded-lg p-4">
               <div class="flex justify-between items-start mb-3">
                 <div>
-                  <h3 class="font-semibold">{{ service.name }}</h3>
+                  <h3 class="font-semibold">{{ service.name || service.category }}</h3>
                   <p class="text-sm text-gray-600">
                     {{ service.duration_minutes }} Min
                   </p>
                 </div>
                 <span class="text-lg font-bold" :style="{ color: primaryColor }"
-                  >€ {{ (service.price / 100).toFixed(2) }}</span
+                  >CHF {{ (service.price / 100).toFixed(0) }}</span
                 >
               </div>
               <textarea
                 v-model="serviceDescriptions[service.id]"
-                placeholder="Beschreibe diese Fahrstunde..."
+                :placeholder="`Beschreibe diese ${terms.appointment}…`"
                 class="tenant-focus w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-20 focus:ring-2 focus:border-transparent"
               />
               <AIOptimizationSuggestion
@@ -219,18 +274,30 @@
         <div>
           <h1 class="text-4xl font-bold mb-2">⭐ Deine Erfolgsgeschichte</h1>
           <p class="text-gray-600">
-            Beste Bewertungen aus deiner App werden automatisch angezeigt
+            Google-Bewertungen werden live auf der Website geladen (über deine hinterlegten Google-Standorte).
+            App-Bewertungen dienen als Fallback.
           </p>
         </div>
 
         <div class="bg-white rounded-lg p-8 space-y-6">
+          <div class="rounded-lg p-4 border" :style="{ background: `${primaryColor}10`, borderColor: `${primaryColor}33` }">
+            <p v-if="googleReviewsMeta.enabled" class="text-sm">
+              ✅ Google Reviews aktiv für
+              {{ googleReviewsMeta.places.map((p: any) => p.name || p.place_id).filter(Boolean).join(', ') || 'deine Standorte' }}.
+              Die Landingpage lädt sie live (Cache 6h).
+            </p>
+            <p v-else class="text-sm">
+              ℹ️ Noch keine Google Place IDs hinterlegt — es werden App-Bewertungen als Fallback genutzt.
+              Place IDs kannst du unter den Google-Review-Standorten des Tenants pflegen.
+            </p>
+          </div>
           <div>
             <label class="block text-sm font-semibold mb-2">
               Erfolgsquote (Auto-kalkuliert)
             </label>
-            <div class="text-4xl font-bold text-green-600">{{ successRate }}%</div>
+            <div class="text-4xl font-bold text-green-600">{{ displayRating }}</div>
             <p class="text-sm text-gray-600">
-              Basierend auf {{ totalStudents }} Schüler
+              {{ stats?.total_testimonials || topTestimonials.length }} Bewertungen · {{ stats?.total_appointments || 0 }} Termine
             </p>
           </div>
 
@@ -249,10 +316,10 @@
                     <span v-for="i in 5" :key="i">⭐</span>
                   </div>
                   <span class="font-semibold text-sm">{{
-                    testimonial.student_name
+                    testimonial.author || testimonial.student_name
                   }}</span>
                 </div>
-                <p class="text-sm text-gray-700">{{ testimonial.rating_text }}</p>
+                <p class="text-sm text-gray-700">{{ testimonial.text || testimonial.rating_text }}</p>
                 <label class="mt-3 flex items-center">
                   <input
                     type="checkbox"
@@ -316,6 +383,89 @@
               Deine Kunden können direkt über deine Website buchen!
             </p>
           </div>
+
+          <div class="border border-gray-200 rounded-lg p-4 space-y-4">
+            <div>
+              <label class="block text-sm font-semibold mb-1">Eigene Domain (optional)</label>
+              <p class="text-sm text-gray-600 mb-3">
+                Verbinde z.B. www.meine-firma.ch mit dieser Landingpage. Die Domain bleibt bei deinem Registrar — du setzt nur einen DNS-Eintrag.
+              </p>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input
+                  v-model="customDomainInput"
+                  type="text"
+                  class="tenant-focus flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:border-transparent"
+                  placeholder="www.meine-firma.ch"
+                  :disabled="customDomainBusy"
+                />
+                <button
+                  type="button"
+                  class="px-4 py-3 text-white font-medium rounded-lg hover:opacity-90 disabled:opacity-50"
+                  :style="{ background: primaryColor }"
+                  :disabled="customDomainBusy || !customDomainInput.trim()"
+                  @click="saveCustomDomain"
+                >
+                  {{ customDomainBusy ? '…' : (customDomain?.domain ? 'Aktualisieren' : 'Verbinden') }}
+                </button>
+              </div>
+            </div>
+
+            <div v-if="customDomain?.domain" class="space-y-3 text-sm">
+              <p>
+                Status:
+                <span class="font-semibold">{{ customDomainStatusLabel }}</span>
+                <span v-if="customDomain.verified" class="text-green-600"> · aktiv</span>
+              </p>
+              <div v-if="customDomain.dns" class="bg-gray-50 rounded-lg p-3 font-mono text-xs space-y-1">
+                <p class="font-sans font-semibold text-gray-700 mb-1">DNS setzen:</p>
+                <p>Typ: {{ customDomain.dns.type }}</p>
+                <p>Host: {{ customDomain.dns.host }}</p>
+                <p>Wert: {{ customDomain.dns.value }}</p>
+                <p class="font-sans text-gray-600 mt-2">{{ customDomain.dns.note }}</p>
+                <template v-if="customDomain.dns.alt">
+                  <p class="font-sans font-semibold text-gray-700 mt-3 mb-1">Optional zusätzlich:</p>
+                  <p>Typ: {{ customDomain.dns.alt.type }} · Host: {{ customDomain.dns.alt.host }} · Wert: {{ customDomain.dns.alt.value }}</p>
+                </template>
+              </div>
+              <div v-if="vercelChallenges.length" class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs space-y-1">
+                <p class="font-semibold text-amber-900">Zusätzliche Verifikation (von Vercel):</p>
+                <div v-for="(v, i) in vercelChallenges" :key="i">
+                  {{ v.type }} · {{ v.domain }} · {{ v.value }}
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  :disabled="customDomainBusy"
+                  @click="verifyCustomDomain"
+                >
+                  DNS prüfen
+                </button>
+                <button
+                  type="button"
+                  class="px-4 py-2 border border-red-200 text-red-700 rounded-lg hover:bg-red-50 disabled:opacity-50"
+                  :disabled="customDomainBusy"
+                  @click="removeCustomDomain"
+                >
+                  Entfernen
+                </button>
+                <a
+                  v-if="customDomain.live_url"
+                  :href="customDomain.live_url"
+                  target="_blank"
+                  rel="noopener"
+                  class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Öffnen
+                </a>
+              </div>
+              <p v-if="customDomainMessage" class="text-xs text-gray-600">{{ customDomainMessage }}</p>
+              <p v-if="!customDomain.vercel_api_configured" class="text-xs text-amber-700">
+                Hinweis: Vercel-API-Token noch nicht gesetzt — Domain ggf. manuell im Vercel-Projekt hinzufügen, DNS reicht dann zur Aktivierung.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -337,7 +487,7 @@
               v-model="formData.seo_title"
               type="text"
               class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:border-transparent"
-              placeholder="z.B. Fahrschule Pascal | Fahrausbildung in Zürich"
+              :placeholder="`z.B. ${terms.businessNoun} Pascal | ${terms.appointmentsPlural} in Zürich`"
               maxlength="60"
             />
             <div class="text-xs text-gray-600 mt-1">
@@ -380,7 +530,7 @@
               v-model="formData.seo_keywords"
               type="text"
               class="tenant-focus w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:border-transparent"
-              placeholder="z.B. Fahrlehrer, Fahrschule, Führerschein"
+              :placeholder="`z.B. ${terms.staff}, ${terms.businessNoun}, ${terms.appointment}`"
             />
             <AIOptimizationSuggestion
               :original="formData.seo_keywords"
@@ -440,11 +590,18 @@
 import { ref, computed, onMounted } from 'vue'
 import AIOptimizationSuggestion from '~/components/website/AIOptimizationSuggestion.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { getTerminologyDefaults } from '~/composables/useTerminology'
+import { compressImage, validateImageFile } from '~/utils/imageCompression'
+
+definePageMeta({ layout: 'admin', middleware: 'admin' })
 
 const { primaryColor, accentColor } = useTenantBranding()
 
 const currentStep = ref(0)
 const savingLoading = ref(false)
+const uploadingLogo = ref(false)
+const uploadingHero = ref(false)
+const resultUrl = ref('')
 
 const steps = [
   { label: 'Wer bist du?' },
@@ -457,23 +614,16 @@ const steps = [
 const formData = ref({
   name: '',
   bio: '',
-  specializations: [],
+  specializations: [] as string[],
   address: '',
   phone: '',
   email: '',
+  logo_url: '' as string,
+  hero_image_url: '' as string,
   seo_title: '',
   seo_description: '',
   seo_keywords: ''
 })
-
-const specializations = [
-  'Auto (Kategorie B)',
-  'Motorrad (Kategorie A)',
-  'Anhänger (BE)',
-  'Lastwagen (C)',
-  'Bus (D)',
-  'Automatik'
-]
 
 const appServices = ref<any[]>([])
 const serviceDescriptions = ref<Record<string, string>>({})
@@ -483,24 +633,43 @@ const tenantInfo = ref<any>(null)
 const staffList = ref<any[]>([])
 const categories = ref<any[]>([])
 const stats = ref<any>(null)
+const googleReviewsMeta = ref<{ enabled: boolean; places: any[] }>({ enabled: false, places: [] })
+const terminology = ref(getTerminologyDefaults('driving_school'))
+const customDomainInput = ref('')
+const customDomain = ref<any>(null)
+const customDomainBusy = ref(false)
+const customDomainMessage = ref('')
 
-const successRate = computed(() => 88) // TODO: Calculate from app data
-const totalStudents = computed(() => 245)
-const hasSocialMedia = computed(() => {
-  return tenantInfo.value?.website_url || 
-         tenantInfo.value?.domain || 
-         tenantInfo.value?.social_facebook || 
-         tenantInfo.value?.social_instagram || 
-         tenantInfo.value?.social_twitter || 
-         tenantInfo.value?.social_linkedin
+const customDomainStatusLabel = computed(() => {
+  const s = customDomain.value?.status
+  if (customDomain.value?.verified || s === 'active') return 'Aktiv'
+  if (s === 'dns_pending') return 'Warte auf DNS'
+  if (s === 'error') return 'Fehler'
+  if (s === 'pending') return 'Ausstehend'
+  return 'Nicht verbunden'
 })
+
+const vercelChallenges = computed(() => {
+  const v = customDomain.value?.verification?.vercel
+  const list = v?.verification || v?.payload?.verification || []
+  return Array.isArray(list) ? list : []
+})
+
+const terms = computed(() => terminology.value)
+const specializationOptions = computed(() =>
+  (categories.value || []).map((c: any) => c.name).filter(Boolean),
+)
+
+const displayRating = computed(() => {
+  const r = stats.value?.avg_rating
+  return r && r > 0 ? `${Number(r).toFixed(1)}★` : '—'
+})
+
 const bookingLink = computed(() => {
-  return `${window.location.origin}/book`
+  const slug = tenantInfo.value?.slug
+  if (!slug || !import.meta.client) return '…'
+  return `${window.location.origin}/booking/availability/${slug}`
 })
-
-const getPricingForCategory = (categoryCode: string) => {
-  return appServices.value.filter(s => s.category === categoryCode)
-}
 
 const toggleSpecialization = (spec: string) => {
   const idx = formData.value.specializations.indexOf(spec)
@@ -520,21 +689,146 @@ const toggleTestimonial = (id: string) => {
   }
 }
 
+const loadCustomDomain = async () => {
+  try {
+    customDomain.value = await $fetch('/api/website/custom-domain')
+    if (customDomain.value?.domain) customDomainInput.value = customDomain.value.domain
+  } catch {
+    customDomain.value = null
+  }
+}
+
+const saveCustomDomain = async () => {
+  customDomainBusy.value = true
+  customDomainMessage.value = ''
+  try {
+    await $fetch('/api/website/init', { method: 'POST' }).catch(() => null)
+    const res = await $fetch<any>('/api/website/custom-domain', {
+      method: 'POST',
+      body: { domain: customDomainInput.value },
+    })
+    customDomainMessage.value = res.message || 'Gespeichert'
+    await loadCustomDomain()
+  } catch (error: any) {
+    customDomainMessage.value = error?.data?.statusMessage || error?.message || 'Fehler'
+  } finally {
+    customDomainBusy.value = false
+  }
+}
+
+const verifyCustomDomain = async () => {
+  customDomainBusy.value = true
+  customDomainMessage.value = ''
+  try {
+    const res = await $fetch<any>('/api/website/custom-domain/verify', { method: 'POST' })
+    customDomainMessage.value = res.message || 'Geprüft'
+    await loadCustomDomain()
+  } catch (error: any) {
+    customDomainMessage.value = error?.data?.statusMessage || error?.message || 'Prüfung fehlgeschlagen'
+  } finally {
+    customDomainBusy.value = false
+  }
+}
+
+const removeCustomDomain = async () => {
+  if (!confirm('Custom Domain wirklich entfernen?')) return
+  customDomainBusy.value = true
+  customDomainMessage.value = ''
+  try {
+    await $fetch('/api/website/custom-domain', { method: 'DELETE' })
+    customDomainInput.value = ''
+    customDomainMessage.value = 'Entfernt'
+    await loadCustomDomain()
+  } catch (error: any) {
+    customDomainMessage.value = error?.data?.statusMessage || error?.message || 'Fehler'
+  } finally {
+    customDomainBusy.value = false
+  }
+}
+
+function base64ToFile(base64: string, filename: string): File {
+  const arr = base64.split(',')
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/webp'
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) u8arr[n] = bstr.charCodeAt(n)
+  return new File([u8arr], filename, { type: mime })
+}
+
+const handleAssetUpload = async (event: Event, kind: 'logo' | 'hero') => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  const tenantId = tenantInfo.value?.id
+  if (!tenantId) {
+    alert('Tenant nicht geladen')
+    return
+  }
+
+  const maxMb = kind === 'hero' ? 8 : 5
+  const validation = validateImageFile(file, maxMb)
+  if (!validation.valid) {
+    alert(validation.error || 'Ungültige Datei')
+    return
+  }
+
+  const loadingRef = kind === 'logo' ? uploadingLogo : uploadingHero
+  loadingRef.value = true
+  try {
+    const compressType = kind === 'hero' ? 'hero' : 'square'
+    const compressedBase64 = await compressImage(file, compressType)
+    const webpFile = base64ToFile(compressedBase64, `${kind}-${Date.now()}.webp`)
+
+    const form = new FormData()
+    form.append('file', webpFile)
+    form.append('assetType', kind === 'hero' ? 'banner' : 'logo_square')
+    form.append('tenantId', tenantId)
+
+    const response = await $fetch<{ asset: { url: string } }>('/api/tenant/upload-logo', {
+      method: 'POST',
+      body: form,
+    })
+
+    const url = response.asset.url
+    if (kind === 'logo') formData.value.logo_url = url
+    else formData.value.hero_image_url = url
+  } catch (error: any) {
+    alert(error?.data?.statusMessage || error?.message || 'Upload fehlgeschlagen')
+  } finally {
+    loadingRef.value = false
+    if (input) input.value = ''
+  }
+}
+
 const saveWebsite = async () => {
   savingLoading.value = true
   try {
-    await $fetch('/api/website/wizard-save', {
+    // Ensure website row exists
+    await $fetch('/api/website/init', { method: 'POST' }).catch(() => null)
+
+    const result = await $fetch<any>('/api/website/wizard-save', {
       method: 'POST',
       body: {
         ...formData.value,
         serviceDescriptions: serviceDescriptions.value,
-        selectedTestimonials: selectedTestimonials.value
-      }
+        selectedTestimonials: selectedTestimonials.value,
+        services: appServices.value,
+        testimonials: topTestimonials.value,
+        stats: stats.value,
+        publish: true,
+      },
     })
 
-    navigateTo('/admin/website/dashboard')
+    resultUrl.value = result?.live_url || result?.preview_url || ''
+    if (resultUrl.value) {
+      await navigateTo(result.preview_url || result.live_url)
+    } else {
+      alert('Website gespeichert.')
+    }
   } catch (error: any) {
-    alert('Fehler beim Speichern: ' + error.message)
+    alert('Fehler beim Speichern: ' + (error?.data?.statusMessage || error.message))
   } finally {
     savingLoading.value = false
   }
@@ -542,77 +836,45 @@ const saveWebsite = async () => {
 
 onMounted(async () => {
   try {
-    const response = await $fetch('/api/website/init-data')
+    await $fetch('/api/website/init', { method: 'POST' }).catch(() => null)
+
+    const response = await $fetch<any>('/api/website/init-data')
     const data = response?.data || response
 
-    // ✅ Load Tenant Info for display
     tenantInfo.value = data.tenant
-    
-    // ✅ Load Staff Members
     staffList.value = data.staff || []
-    
-    // ✅ Load Categories
     categories.value = data.categories || []
-    
-    // ✅ Load Statistics
     stats.value = data.stats
-
-    // ✅ Load Services
+    googleReviewsMeta.value = data.google_reviews || { enabled: false, places: [] }
+    terminology.value = data.terminology || getTerminologyDefaults(data.tenant?.business_type)
     appServices.value = data.services || []
-    
-    // ✅ Load Testimonials
     topTestimonials.value = data.testimonials || []
-    
-    // ✅ Prefill Form Step 1 - Name & Bio from Tenant
-    if (data.tenant?.name) {
-      formData.value.name = data.tenant.name
-    }
-    if (data.suggestions?.bio) {
-      formData.value.bio = data.suggestions.bio
-    }
 
-    // ✅ Prefill Contact Info
-    if (data.tenant?.email) {
-      formData.value.email = data.tenant.email
-    }
-    if (data.tenant?.phone) {
-      formData.value.phone = data.tenant.phone
-    }
-    if (data.tenant?.address) {
-      formData.value.address = data.tenant.address
-    }
+    if (data.tenant?.name) formData.value.name = data.tenant.name
+    if (data.suggestions?.bio) formData.value.bio = data.suggestions.bio
 
-    // ✅ Auto-populate specializations from categories
-    if (data.categories && data.categories.length > 0) {
-      const categoryNames = data.categories.map((c: any) => c.name)
-      formData.value.specializations = categoryNames.filter((name: string) =>
-        specializations.some(spec => spec.includes(name))
-      )
+    if (data.tenant?.contact_email || data.tenant?.email) {
+      formData.value.email = data.tenant.contact_email || data.tenant.email
     }
+    if (data.tenant?.contact_phone || data.tenant?.phone) {
+      formData.value.phone = data.tenant.contact_phone || data.tenant.phone
+    }
+    if (data.tenant?.address) formData.value.address = data.tenant.address
 
-    // ✅ Prefill SEO fields with suggestions
-    if (data.suggestions?.headline) {
-      formData.value.seo_title = data.suggestions.headline
-    }
-    if (data.tenant?.description) {
-      formData.value.seo_description = data.tenant.description
-    }
+    if (data.branding?.logo_url) formData.value.logo_url = data.branding.logo_url
+    if (data.branding?.hero_image_url) formData.value.hero_image_url = data.branding.hero_image_url
 
-    // ✅ Pre-select best testimonials
-    if (data.testimonials && data.testimonials.length > 0) {
-      selectedTestimonials.value = data.testimonials.slice(0, 3).map((t: any) => t.id)
-    }
+    formData.value.specializations = specializationOptions.value.slice(0, 6)
+    selectedTestimonials.value = topTestimonials.value.slice(0, 3).map((t: any) => t.id)
 
-    console.log('✅ Website setup data loaded successfully:', {
-      tenant: tenantInfo.value?.name,
-      staff: staffList.value.length,
-      services: appServices.value.length,
-      testimonials: topTestimonials.value.length,
-      categories: categories.value.length,
-      stats: stats.value
-    })
-  } catch (error) {
-    console.error('❌ Failed to load website setup data:', error)
+    if (data.suggestions?.seo_title) formData.value.seo_title = data.suggestions.seo_title
+    if (data.suggestions?.seo_description) formData.value.seo_description = data.suggestions.seo_description
+    if (data.suggestions?.seo_keywords) formData.value.seo_keywords = data.suggestions.seo_keywords
+
+    await loadCustomDomain()
+  } catch (error: any) {
+    console.error('Failed to load website init data', error)
+    alert('Daten konnten nicht geladen werden: ' + (error?.data?.statusMessage || error.message))
   }
 })
 </script>

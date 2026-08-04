@@ -49,7 +49,7 @@
         </svg>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold text-blue-900 mb-1">Buchungsportal-Link</p>
-          <p class="text-xs text-blue-700 mb-2">Teile diesen stabilen Link mit externen Fahrlehrern:</p>
+          <p class="text-xs text-blue-700 mb-2">Teile diesen stabilen Link mit externen {{ t.staffPlural }}:</p>
           <div class="flex items-center gap-2 flex-wrap">
             <code class="text-xs bg-white border border-blue-200 px-2 py-1 rounded font-mono break-all">{{ portalUrl }}</code>
             <button @click="copyPortalUrl" class="text-xs text-blue-600 hover:text-blue-800 underline flex-shrink-0">
@@ -151,7 +151,7 @@
               </svg>
             </button>
           </div>
-          <p class="text-sm text-gray-500">Sendet dem externen Fahrlehrer den Buchungsportal-Link per E-Mail. Ein Simy-Konto wird benötigt — falls noch keines vorhanden ist, kann es direkt auf dem Portal erstellt werden.</p>
+          <p class="text-sm text-gray-500">Sendet dem externen {{ t.staff }} den Buchungsportal-Link per E-Mail. Ein Simy-Konto wird benötigt — falls noch keines vorhanden ist, kann es direkt auf dem Portal erstellt werden.</p>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">E-Mail-Adresse *</label>
             <input v-model="inviteEmail" type="email" placeholder="fahrlehrer@beispiel.ch"
@@ -374,7 +374,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Fahrlehrer / Staff</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ t.staff }} / Staff</label>
             <select v-model="defaultPaymentStaff" @change="saveRentalSettings"
               class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-blue-400">
               <option value="invoice">Monatsrechnung</option>
@@ -520,6 +520,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useTerminology()
 import { ref, computed, onMounted } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import VehicleCalendar from '~/components/admin/VehicleCalendar.vue'

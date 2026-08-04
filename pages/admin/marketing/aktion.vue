@@ -164,7 +164,7 @@
               </div>
               <label class="flex items-center gap-2 text-sm text-gray-700 mt-5">
                 <input v-model="form.firstLessonOnly" type="checkbox" class="rounded border-gray-300" />
-                Nur erste Fahrstunde
+                Nur erste {{ t.appointment }}
               </label>
             </div>
           </div>
@@ -469,6 +469,7 @@ function previewReplace(template: string, vars: Record<string, string>) {
 
 const authStore = useAuthStore()
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 const route = useRoute()
 
 const steps = [
@@ -492,7 +493,7 @@ const allCourses = ref<any[]>([])
 const loadingCourses = ref(false)
 const estimatedCount = ref<number | null>(null)
 const tenantSlug = ref('')
-const tenantName = ref('Fahrschule')
+const tenantName = ref('Unternehmen')
 const businessType = ref('driving_school')
 
 const form = reactive({
@@ -889,7 +890,7 @@ onMounted(async () => {
   }))
   drivingCategories.value = licenseCats.length ? licenseCats : cats
   tenantSlug.value = branding?.data?.slug || themesRes.context?.slug || ''
-  tenantName.value = branding?.data?.brand_name || branding?.data?.name || 'Fahrschule'
+  tenantName.value = branding?.data?.brand_name || branding?.data?.name || 'Unternehmen'
 
   // Prefill from AI handoff / query
   if (route.query.suggestion) {

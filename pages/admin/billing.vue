@@ -97,7 +97,7 @@
               <p class="text-sm font-semibold text-gray-800">{{ billing?.current_period_end ? formatDate(billing.current_period_end) : '–' }}</p>
             </div>
             <div class="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
-              <p class="text-xs text-gray-400 font-medium mb-0.5">Fahrlehrer-Seats</p>
+              <p class="text-xs text-gray-400 font-medium mb-0.5">{{ t.staffPlural }}-Seats</p>
               <p class="text-sm font-semibold text-gray-800">
                 {{ includedSeats }} inklusive
                 <span v-if="billing?.addon_seats && billing.addon_seats > 0" :style="{ color: primaryColor }">
@@ -246,6 +246,7 @@ import { refreshClientSession } from '~/utils/client-session-refresh'
 definePageMeta({ middleware: 'admin', layout: 'admin' })
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 // Brand-tinted helpers for backgrounds/borders derived from the tenant primary color.
 // Hex + alpha suffix gives a soft tint (works for #rrggbb values).

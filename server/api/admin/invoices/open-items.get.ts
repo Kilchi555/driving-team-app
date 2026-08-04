@@ -16,10 +16,13 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'superadmin'])
   const supabase = getSupabaseAdmin()
+  const terms = await getTenantTerminology(supabase, profile.tenant_id)
+  const appointmentFallback = terms.appointment || 'Termin'
   const { user_id, company_id } = getQuery(event) as any
 
   if (!user_id && !company_id) throw createError({ statusCode: 400, statusMessage: 'user_id or company_id required' })
@@ -184,7 +187,7 @@ export default defineEventHandler(async (event) => {
       label: apt?.title
         || buildCourseLabel(resolvedCourseName, { individualSessionNumber: meta.individual_session_number, partialStartPosition: coursePartialStart })
         || fallbackDescription
-        || 'Fahrstunde',
+        || appointmentFallback,
       appointment_type: apt?.type || null,
       date: apt?.start_time || sessionDates[0] || meta.course_start_date || p.created_at,
       session_dates: sessionDates.length > 1 ? sessionDates : undefined,

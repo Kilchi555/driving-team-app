@@ -157,10 +157,13 @@ export default defineNuxtPlugin(() => {
   }
 
   // Persist direct-traffic sessions so they also appear in marketing_attributions.
-  // Skip when session_id came from drivingteam.ch — website already saved gclid/UTMs.
+  // Never overwrite / stamp "direct" when session_id arrived from the website URL —
+  // drivingteam.ch already persisted gclid under that same session (even if the
+  // Referrer header is stripped). Writing direct here used to race and confuse
+  // attribution joins for Fahrstunden bookings.
   const sessionFromUrl = urlParams.get('session_id')
   const fromDrivingTeam = document.referrer.includes('drivingteam.ch')
-  if (isNewSession && !(sessionFromUrl && fromDrivingTeam)) {
+  if (isNewSession && !sessionFromUrl) {
     fetch('/api/marketing-attribution', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

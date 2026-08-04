@@ -1,4 +1,4 @@
-<!-- pages/register/staff-agb.vue – Nutzungsbedingungen für Fahrlehrer -->
+<!-- pages/register/staff-agb.vue – Nutzungsbedingungen für {{ t.staffPlural }} -->
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Header -->
@@ -10,8 +10,8 @@
             Zurück zur Registrierung
           </button>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-bold mb-2">Nutzungsbedingungen für Fahrlehrer</h1>
-        <p class="text-violet-200 text-sm">Simy – Plattform für Fahrschulen | Stand: Mai 2026 · Version 1.0</p>
+        <h1 class="text-2xl sm:text-3xl font-bold mb-2">Nutzungsbedingungen für {{ t.staffPlural }}</h1>
+        <p class="text-violet-200 text-sm">Simy – Plattform für {{ t.businessNoun }} | Stand: Mai 2026 · Version 1.0</p>
       </div>
     </div>
 
@@ -21,7 +21,7 @@
 
         <!-- Intro -->
         <div class="bg-violet-50 border border-violet-100 rounded-xl p-4 text-sm text-violet-900">
-          <p>Diese Nutzungsbedingungen regeln deine Rechte und Pflichten als <strong>Fahrlehrer/in</strong> bei der Nutzung der Simy-Plattform. Du wurdest von deiner Fahrschule eingeladen und nutzt Simy im Rahmen deiner Tätigkeit für diese.</p>
+          <p>Diese Nutzungsbedingungen regeln deine Rechte und Pflichten als <strong>{{ t.staff }}/in</strong> bei der Nutzung der Simy-Plattform. Du wurdest von deiner Organisation eingeladen und nutzt Simy im Rahmen deiner Tätigkeit für diese.</p>
         </div>
 
         <!-- Inhaltsverzeichnis -->
@@ -47,14 +47,14 @@
             <span class="w-7 h-7 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
             Geltungsbereich und Vertragspartner
           </h2>
-          <p class="mb-3">Diese Nutzungsbedingungen gelten für dich als eingeladene/r Fahrlehrer/in, der/die über einen personalisierten Einladungslink Zugang zur Simy-Plattform erhält.</p>
+          <p class="mb-3">Diese Nutzungsbedingungen gelten für dich als eingeladene/r {{ t.staff }}/in, der/die über einen personalisierten Einladungslink Zugang zur Simy-Plattform erhält.</p>
           <p class="mb-3">Anbieter der Plattform ist:</p>
           <div class="bg-gray-50 rounded-lg p-4 text-sm mb-3">
             <p class="font-semibold">Simy</p>
             <p>Schweiz</p>
             <p>E-Mail: <a href="mailto:hallo@simy.ch" class="text-violet-600 hover:underline">hallo@simy.ch</a></p>
           </div>
-          <p>Dein primäres Vertragsverhältnis besteht mit deiner Fahrschule (dem Tenant). Simy stellt lediglich die technische Plattform zur Verfügung.</p>
+          <p>Dein primäres Vertragsverhältnis besteht mit deiner Organisation (dem Tenant). Simy stellt lediglich die technische Plattform zur Verfügung.</p>
         </section>
 
         <!-- §2 Zugang und Konto -->
@@ -63,11 +63,11 @@
             <span class="w-7 h-7 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
             Zugang und Benutzerkonto
           </h2>
-          <p class="mb-3">Der Zugang zur Plattform erfolgt ausschliesslich über einen personalisierten Einladungslink deiner Fahrschule. Du erhältst ein persönliches Konto, das nicht übertragbar ist.</p>
+          <p class="mb-3">Der Zugang zur Plattform erfolgt ausschliesslich über einen personalisierten Einladungslink deiner Organisation. Du erhältst ein persönliches Konto, das nicht übertragbar ist.</p>
           <ul class="list-disc pl-5 space-y-2 mb-3">
             <li>Du bist für die Sicherheit deines Passworts verantwortlich.</li>
             <li>Du darfst dein Konto nicht an Dritte weitergeben.</li>
-            <li>Bei Verdacht auf unbefugten Zugriff musst du uns und deine Fahrschule umgehend informieren.</li>
+            <li>Bei Verdacht auf unbefugten Zugriff musst du uns und deine Organisation umgehend informieren.</li>
             <li>Du verwendest ausschliesslich deine eigenen, korrekten Daten bei der Registrierung.</li>
           </ul>
           <p>Mit der Registrierung bestätigst du, dass du volljährig bist und rechtlich in der Lage bist, diesen Bedingungen zuzustimmen.</p>
@@ -79,15 +79,15 @@
             <span class="w-7 h-7 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
             Leistungen der Plattform
           </h2>
-          <p class="mb-3">Simy stellt dir als Fahrlehrer/in folgende Funktionen zur Verfügung:</p>
+          <p class="mb-3">Simy stellt dir als {{ t.staff }}/in folgende Funktionen zur Verfügung:</p>
           <ul class="list-disc pl-5 space-y-2 mb-3">
             <li>Verwaltung deines persönlichen Kalenders und Verfügbarkeiten</li>
-            <li>Einsicht in Buchungen und Fahrschüler deiner Fahrschule</li>
-            <li>Verwaltung deiner Unterrichtsorte und Prüfungsorte</li>
+            <li>Einsicht in Buchungen und {{ t.clientsPlural }} deiner Organisation</li>
+            <li>Verwaltung deiner Standorte</li>
             <li>Kommunikation über die Plattform</li>
-            <li>Verwaltung deiner Fahrzeuge und Unterlagendokumente</li>
+            <li>Verwaltung zugehöriger Ressourcen und Dokumente</li>
           </ul>
-          <p>Der Umfang der dir zugänglichen Funktionen wird durch die Berechtigungen bestimmt, die deine Fahrschule dir einräumt.</p>
+          <p>Der Umfang der dir zugänglichen Funktionen wird durch die Berechtigungen bestimmt, die deine Organisation dir einräumt.</p>
         </section>
 
         <!-- §4 Pflichten -->
@@ -99,8 +99,8 @@
           <p class="mb-3">Bei der Nutzung der Plattform bist du verpflichtet:</p>
           <ul class="list-disc pl-5 space-y-2 mb-3">
             <li>Alle eingegebenen Daten (Personalien, Verfügbarkeiten, Standorte) wahrheitsgemäss und aktuell zu halten.</li>
-            <li>Die Plattform ausschliesslich für den vorgesehenen Zweck im Rahmen deiner Tätigkeit als Fahrlehrer/in zu nutzen.</li>
-            <li>Kundendaten (Fahrschüler) vertraulich zu behandeln und nur im Rahmen deiner Tätigkeit zu verwenden.</li>
+            <li>Die Plattform ausschliesslich für den vorgesehenen Zweck im Rahmen deiner Tätigkeit als {{ t.staff }}/in zu nutzen.</li>
+            <li>Kundendaten ({{ t.clientsPlural }}) vertraulich zu behandeln und nur im Rahmen deiner Tätigkeit zu verwenden.</li>
             <li>Keine automatisierten Zugriffe (Bots, Scraping) durchzuführen.</li>
             <li>Anwendbare Datenschutzgesetze (insbesondere DSG/DSGVO) einzuhalten.</li>
           </ul>
@@ -115,13 +115,13 @@
             <span class="w-7 h-7 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold flex-shrink-0">5</span>
             Kündigung und Kontodeaktivierung
           </h2>
-          <p class="mb-3">Dein Konto ist an deine Fahrschule gebunden:</p>
+          <p class="mb-3">Dein Konto ist an deine Organisation gebunden:</p>
           <ul class="list-disc pl-5 space-y-2 mb-3">
-            <li>Deine Fahrschule kann deinen Zugang jederzeit deaktivieren (z.B. bei Beendigung des Arbeitsverhältnisses).</li>
-            <li>Du kannst deine Fahrschule bitten, dein Konto zu löschen.</li>
+            <li>Deine Organisation kann deinen Zugang jederzeit deaktivieren (z.B. bei Beendigung des Arbeitsverhältnisses).</li>
+            <li>Du kannst deine Organisation bitten, dein Konto zu löschen.</li>
             <li>Bei Kündigung werden deine Kontodaten für die gesetzlich vorgeschriebene Frist aufbewahrt und danach gelöscht.</li>
           </ul>
-          <p>Nach Deaktivierung hast du keinen Zugriff mehr auf die Plattform. Abgeschlossene Buchungen und Bewertungen bleiben im System der Fahrschule erhalten, solange diese Simy nutzt.</p>
+          <p>Nach Deaktivierung hast du keinen Zugriff mehr auf die Plattform. Abgeschlossene Buchungen und Bewertungen bleiben im System von {{ t.businessNoun }} erhalten, solange diese Simy nutzt.</p>
         </section>
 
         <!-- §6 Haftung -->
@@ -134,7 +134,7 @@
           <ul class="list-disc pl-5 space-y-2 mb-3">
             <li>Kurzfristige Unterbrechungen oder technische Störungen der Plattform</li>
             <li>Datenverlust durch höhere Gewalt oder Hackerangriffe trotz angemessener Sicherheitsmassnahmen</li>
-            <li>Entscheidungen oder Handlungen, die deine Fahrschule auf Basis der Plattformdaten trifft</li>
+            <li>Entscheidungen oder Handlungen, die deine Organisation auf Basis der Plattformdaten trifft</li>
             <li>Schäden durch unsachgemässe Nutzung der Plattform</li>
           </ul>
           <p>Simy ist bestrebt, eine Verfügbarkeit von 99 % (gemessen pro Monat, exkl. geplante Wartungszeiten) zu gewährleisten, übernimmt hierfür jedoch keine Garantie.</p>
@@ -167,6 +167,13 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { getTerminologyDefaults } from '~/composables/useTerminology'
+
+const route = useRoute()
+const t = computed(() => getTerminologyDefaults(String(route.query.business_type || 'driving_school')))
+
 const toc = [
   { href: '#geltungsbereich', label: 'Geltungsbereich und Vertragspartner' },
   { href: '#zugang',          label: 'Zugang und Benutzerkonto' },
@@ -183,5 +190,5 @@ const scrollTo = (href: string) => {
   el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-useHead({ title: 'Nutzungsbedingungen für Fahrlehrer – Simy' })
+useHead(() => ({ title: `Nutzungsbedingungen für ${t.value.staffPlural} – Simy` }))
 </script>

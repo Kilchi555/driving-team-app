@@ -23,11 +23,15 @@ export default defineEventHandler(async (event) => {
       resolveGbpLocation(authUser.tenant_id, locationId),
       getGbpLocationProfile(authUser.tenant_id, locationId),
       getGbpAutomationSettings(authUser.tenant_id, locationId),
-      getSupabaseAdmin().from('tenants').select('name').eq('id', authUser.tenant_id).single(),
+      getSupabaseAdmin().from('tenants').select('name, business_type').eq('id', authUser.tenant_id).single(),
     ])
 
+    const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+    const terms = getTerminologyDefaults(tenant.data?.business_type)
+
     const suggestions = await generateGbpServiceSuggestions({
-      tenantName: tenant.data?.name || 'Fahrschule',
+      tenantName: tenant.data?.name || terms.businessNoun,
+      businessNoun: terms.businessNoun,
       locationTitle: loc.title,
       categoryName: profile.primaryCategory?.displayName,
       existingServiceNames: body.existingServiceNames ?? [],

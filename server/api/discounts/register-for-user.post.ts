@@ -62,7 +62,7 @@ export default defineEventHandler(async (event) => {
     if (discount.first_lesson_only) {
       return {
         success: false,
-        error: 'Dieser Code gilt nur für die erste Fahrstunde und kann nicht als Dauerrabatt registriert werden'
+        error: 'Dieser Code gilt nur für den ersten Termin und kann nicht als Dauerrabatt registriert werden'
       }
     }
 

@@ -16,16 +16,16 @@
         </nav>
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
           style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
-          📢 Google Ads für Fahrschulen
+          📢 Google Ads für Terminbetriebe
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
-          Google Ads für Fahrschulen —<br/>
+          Google Ads für Terminbetriebe —<br/>
           <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Sofort gefunden werden
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mb-10 leading-relaxed">
-          Wenn jemand "Fahrschule [deine Stadt]" googelt, erscheinst du zuoberst. Simy erstellt und optimiert deine Kampagnen — du konzentrierst dich aufs Unterrichten.
+          Wenn jemand dein Angebot in deiner Stadt googelt, erscheinst du zuoberst. Simy erstellt und optimiert deine Kampagnen — du konzentrierst dich auf deine Kunden.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           <a href="https://app.simy.ch/tenant-register"
@@ -46,11 +46,11 @@
             <div class="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
               <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
             </div>
-            <span class="text-sm text-gray-500 font-mono">fahrschule zürich</span>
+            <span class="text-sm text-gray-500 font-mono">termin zürich buchen</span>
           </div>
           <div class="border-l-4 border-green-500 pl-4 space-y-1">
             <p class="text-xs text-gray-400">Anzeige · deineschule.ch</p>
-            <p class="text-base font-medium text-blue-700 leading-tight">Fahrschule Zürich — Online buchen & sofort starten</p>
+            <p class="text-base font-medium text-blue-700 leading-tight">Muster Praxis Zürich — Online buchen & sofort starten</p>
             <p class="text-sm text-gray-500">Verfügbare Termine heute ✓ Online-Buchung ✓ Flexible Zeiten ✓ Erfolgreich seit...</p>
           </div>
         </div>
@@ -121,7 +121,7 @@
     <!-- CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
-        <h2 class="text-3xl font-black text-white mb-4">Mehr Schüler ab sofort?</h2>
+        <h2 class="text-3xl font-black text-white mb-4">Mehr Kunden ab sofort?</h2>
         <p class="text-white mb-8">Jetzt kostenloses Erstgespräch buchen — wir zeigen dir, was in deiner Region möglich ist.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
@@ -139,12 +139,12 @@
 import { ref } from 'vue'
 
 useHead({
-  title: 'Google Ads für Fahrschulen – Sofort mehr Schüler | Simy',
+  title: 'Google Ads für Terminbetriebe – Sofort mehr Kunden | Simy',
   meta: [
-    { name: 'description', content: 'Google Ads für Fahrschulen: Simy erstellt und betreut deine Kampagnen. Sofort in Google Top-Positionen. Mehr Anfragen, mehr Buchungen. Jetzt Beratung anfragen.' },
-    { name: 'keywords', content: 'google ads fahrschule, google adwords fahrschule, werbung fahrschule, online marketing fahrschule' },
-    { property: 'og:title', content: 'Google Ads für Fahrschulen – Simy | Sofort sichtbar bei Google' },
-    { property: 'og:description', content: 'Wir erstellen & betreuen Google Ads für Fahrschulen. Sofortige Leads, messbare Ergebnisse.' },
+    { name: 'description', content: 'Google Ads für Terminbetriebe: Simy erstellt und betreut deine Kampagnen. Sofort in Google Top-Positionen. Mehr Anfragen, mehr Buchungen. Jetzt Beratung anfragen.' },
+    { name: 'keywords', content: 'google ads schweiz, google ads terminbuchung, online marketing dienstleister, lokale werbung' },
+    { property: 'og:title', content: 'Google Ads für Terminbetriebe – Simy | Sofort sichtbar bei Google' },
+    { property: 'og:description', content: 'Wir erstellen & betreuen Google Ads für Terminbetriebe. Sofortige Leads, messbare Ergebnisse.' },
     { property: 'og:url', content: 'https://simy.ch/marketing/google-ads' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/marketing/google-ads' }],
@@ -156,7 +156,7 @@ useHead({
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
         { '@type': 'ListItem', position: 2, name: 'Marketing', item: 'https://simy.ch/marketing' },
-        { '@type': 'ListItem', position: 3, name: 'Google Ads für Fahrschulen' },
+        { '@type': 'ListItem', position: 3, name: 'Google Ads für Terminbetriebe' },
       ],
     }),
   }],
@@ -181,7 +181,7 @@ const included = [
 ]
 
 const faqs = [
-  { q: 'Was kostet Google Ads für eine Fahrschule?', a: 'Das Werbebudget liegt je nach Region bei CHF 200–500/Monat. Hinzu kommt die Simy-Verwaltungsgebühr. Im Durchschnitt kostet eine neue Schüler-Anfrage CHF 8–20.' },
+  { q: 'Was kostet Google Ads für mein Unternehmen?', a: 'Das Werbebudget liegt je nach Region bei CHF 200–500/Monat. Hinzu kommt die Simy-Verwaltungsgebühr. Im Durchschnitt kostet eine neue Kunden-Anfrage CHF 8–20.' },
   { q: 'Wie schnell sieht man Ergebnisse?', a: 'Die ersten Anfragen kommen in der Regel innerhalb von 48 Stunden nach dem Start. Die Optimierung der Kampagnen dauert 2–4 Wochen.' },
   { q: 'Muss ich ein Simy-Konto haben?', a: 'Für die optimale Integration ja — aber wir können Google Ads auch standalone betreuen. Empfehlenswert ist die Kombination, da Anfragen direkt als Leads im System landen.' },
   { q: 'Kann ich das Budget selbst festlegen?', a: 'Ja, du bestimmst das monatliche Budget. Wir empfehlen ein Mindestbudget von CHF 200/Monat, damit die Kampagne genug Daten für die Optimierung sammeln kann.' },

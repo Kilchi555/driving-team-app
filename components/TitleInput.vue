@@ -55,6 +55,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
+const { t, isDrivingSchool } = useTerminology()
+
 // State
 const currentSuggestion = ref('')
 
@@ -191,13 +193,18 @@ const suggestions = computed(() => {
     suggestions.push(`${fullName} - ${location}`)
     
     // Additional variations
-    suggestions.push(`${fullName} - Fahrstunde ${location}`)
+    suggestions.push(`${fullName} - ${t.value.appointment} ${location}`)
     suggestions.push(`${firstName} ${lastName} - ${location}${category}`)
-    suggestions.push(`${fullName} - Übungsfahrt ${location}`)
-    suggestions.push(`${fullName} - Prüfungsvorbereitung ${location}`)
-    suggestions.push(`${firstName} ${lastName} - Erste Fahrstunde ${location}`)
-    suggestions.push(`${fullName} - Autobahnfahrt ab ${location}`)
-    suggestions.push(`${firstName} ${lastName} - Nachtfahrt ${location}`)
+    if (isDrivingSchool.value) {
+      suggestions.push(`${fullName} - Übungsfahrt ${location}`)
+      suggestions.push(`${fullName} - Prüfungsvorbereitung ${location}`)
+      suggestions.push(`${firstName} ${lastName} - Erste ${t.value.appointment} ${location}`)
+      suggestions.push(`${fullName} - Autobahnfahrt ab ${location}`)
+      suggestions.push(`${firstName} ${lastName} - Nachtfahrt ${location}`)
+    } else {
+      suggestions.push(`${firstName} ${lastName} - Erste ${t.value.appointment} ${location}`)
+      suggestions.push(`${fullName} - ${t.value.appointment} ${location}`)
+    }
   } else {
     // Fallback for other event types
     if (props.eventType === 'staff_meeting') {
@@ -322,9 +329,11 @@ const shouldAutoUpdate = (): boolean => {
     const lastName = props.selectedStudent.last_name
     
     // ✅ ERWEITERT: Auch bei generischen Standard-Titeln auto-updaten
-    const isGenericTitle = props.title === 'Fahrstunde' || 
+    const isGenericTitle = props.title === t.value.appointment ||
+                          props.title === 'Fahrstunde' ||
                           props.title === 'Lektion' || 
                           props.title === 'Stunde' ||
+                          props.title === 'Termin' ||
                           props.title.trim() === ''
     
     // ✅ Nur regenerieren wenn komplett leer oder generisch

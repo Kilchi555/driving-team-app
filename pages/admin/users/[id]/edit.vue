@@ -139,7 +139,7 @@
                   class="tenant-focus mt-1 block w-full border-gray-300 rounded-md shadow-sm sm:text-sm"
                 >
                   <option value="client">Kunde</option>
-                  <option value="staff">Fahrlehrer</option>
+                  <option value="staff">{{ t.staff }}</option>
                   <option value="admin">Administrator</option>
                 </select>
               </div>
@@ -220,6 +220,7 @@ import StaffTab from '~/components/users/StaffTab.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 // Page Meta für Admin-Layout
 definePageMeta({

@@ -20,6 +20,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 import { sendTenantSMS } from '~/server/utils/sms'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { v4 as uuidv4 } from 'uuid'
 
 interface StudentData {
@@ -164,7 +165,8 @@ export default defineEventHandler(async (event) => {
       .eq('id', userProfile.tenant_id)
       .single()
 
-    let tenantName = tenant?.twilio_from_sender || tenant?.name || 'Ihre Fahrschule'
+    const terms = await getTenantTerminology(supabase, userProfile.tenant_id)
+    let tenantName = tenant?.twilio_from_sender || tenant?.name || terms.businessNoun || 'Ihr Unternehmen'
 
     // Serverseitige Policy: onboarding_sms_enabled (Standard: true)
     const onboardingSmsEnabled = (tenant?.booking_policy as any)?.onboarding_sms_enabled !== false

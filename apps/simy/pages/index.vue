@@ -7,7 +7,7 @@
       :primary-color="primaryColor"
       :secondary-color="secondaryColor"
       :scroll-links="[
-        { label: 'Demo',     href: '#branding-preview', icon: '🎨' },
+        { label: 'Branding', href: '#branding-preview', icon: '🎨' },
         { label: 'Features', href: '#features',         icon: '⚡' },
         { label: 'Rechner',  href: '#rechner',          icon: '📊' },
         { label: 'Preise',   href: '#preise',           icon: '💶' },
@@ -16,37 +16,32 @@
     />
 
     <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
-    <section class="relative overflow-hidden pt-12 pb-20 px-6">
+    <section class="relative overflow-hidden pt-10 pb-16 px-6">
       <div class="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full opacity-10 pointer-events-none"
         style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       <div class="absolute -bottom-20 -left-20 w-[500px] h-[500px] rounded-full opacity-8 pointer-events-none"
         style="background: radial-gradient(circle, var(--brand-accent), transparent)"></div>
 
-      <div class="relative max-w-4xl mx-auto text-center">
-        <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-8 border"
+      <div class="relative max-w-5xl mx-auto text-center">
+        <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
           :style="{ background: `rgba(var(--brand-rgb), 0.07)`, color: primaryColor, borderColor: `rgba(var(--brand-rgb), 0.28)` }">
           <span class="w-2 h-2 rounded-full animate-pulse" :style="{ background: primaryColor }"></span>
           30 Tage kostenlos testen
         </div>
 
-        <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Fahrschule Software Schweiz</p>
-
-        <h1 class="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 mb-6 leading-tight">
-          Deine Fahrschule.<br>
+        <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 mb-5 leading-tight">
+          Terminsoftware.<br>
           <span :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }">
             Auf Autopilot.
           </span>
         </h1>
 
-        <p class="text-xl md:text-2xl text-gray-500 max-w-2xl mx-auto mb-4 leading-relaxed">
-          Die smarte <NuxtLink to="/fahrschule/software" class="underline-offset-4 hover:underline font-semibold" :style="{ color: primaryColor }">Fahrschulsoftware</NuxtLink> für die Schweiz:
-          <NuxtLink to="/fahrschule/buchungssystem" class="underline-offset-4 hover:underline font-semibold" :style="{ color: primaryColor }">Online-Buchung</NuxtLink>,
-          automatische <NuxtLink to="/features/rechnungen" class="underline-offset-4 hover:underline font-semibold" :style="{ color: primaryColor }">Abrechnung</NuxtLink>
-          und Schülerverwaltung – damit du dich wieder aufs <strong class="text-gray-700">Unterrichten</strong> konzentrieren kannst.
+        <p class="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto mb-8 leading-relaxed">
+          Online-Buchung, automatische Abrechnung und Kundenverwaltung für Schweizer Fahrschulen,
+          Coaching, Consulting und mehr — damit du wieder arbeitest statt administrierst.
         </p>
-        <p class="text-sm text-gray-400 mb-10">Monatlich kündbar · 1 Monat Kündigungsfrist · Flexibel anpassbar</p>
 
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <div class="flex flex-col sm:flex-row gap-4 justify-center mb-4">
           <a href="#" @click.prevent="goToRegister"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-xl transition-all hover:scale-105"
             :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, boxShadow: `0 8px 30px rgba(var(--brand-rgb), 0.35)` }">
@@ -54,23 +49,30 @@
             <svg v-else class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
             30 Tage gratis testen
           </a>
-          <a href="#features"
+          <NuxtLink to="/demo"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg border-2 transition-all"
             :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }"
             @mouseenter="(e) => (e.currentTarget as HTMLElement).style.background = `rgba(var(--brand-rgb), 0.05)`"
             @mouseleave="(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'">
-            Alle Features
-          </a>
+            Live-Demo ansehen
+          </NuxtLink>
         </div>
+        <p class="text-sm text-gray-400 mb-8">Keine Kreditkarte · Monatlich kündbar · Schweizer Server</p>
 
-        <!-- Trust badges -->
-        <div class="flex flex-wrap items-center justify-center gap-3 mt-12">
-          <div v-for="badge in ['DSGVO-konform', 'Schweizer Server', 'PostFinance & TWINT', 'Keine IT-Kenntnisse nötig']" :key="badge"
-            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors duration-500"
-            :style="{ background: `rgba(var(--brand-rgb), 0.07)`, borderColor: `rgba(var(--brand-rgb), 0.22)`, color: primaryColor }">
-            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
-            {{ badge }}
-          </div>
+        <div class="relative mx-auto max-w-2xl pt-10 md:pt-14">
+          <div
+            class="absolute inset-x-10 top-1/3 bottom-0 rounded-full opacity-35 blur-3xl pointer-events-none"
+            :style="{ background: `radial-gradient(ellipse at center, ${primaryColor}40, transparent 70%)` }"
+          />
+          <SimyDashboardShowcase
+            :primary-color="primaryColor"
+            :secondary-color="secondaryColor"
+          />
+          <p class="relative mt-8 md:mt-10 text-base md:text-lg text-gray-500 max-w-xl mx-auto leading-relaxed">
+            Ob am Schreibtisch, im Auto oder auf dem Handy zwischen zwei Lektionen —
+            <span class="font-semibold text-gray-800">Simy läuft überall gleich flüssig.</span>
+            Desktop, Tablet und Smartphone: ein System, das sich an dich anpasst — nicht umgekehrt.
+          </p>
         </div>
       </div>
     </section>
@@ -81,7 +83,7 @@
         <div class="text-center mb-14">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Das Problem</p>
           <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Wie viel Zeit verlierst du täglich?</h2>
-          <p class="text-gray-500 text-lg max-w-2xl mx-auto">Fahrlehrer verbringen durchschnittlich <strong>2-3 Stunden täglich</strong> mit Administration – Zeit, die du mit Unterrichten verdienen oder dir einfach mal eine Pause gönnen könntest.</p>
+          <p class="text-gray-500 text-lg max-w-2xl mx-auto">Mitarbeiter verbringen durchschnittlich <strong>2-3 Stunden täglich</strong> mit Administration – Zeit, die du mit Kunden verdienen oder dir einfach mal eine Pause gönnen könntest.</p>
         </div>
 
         <div class="grid md:grid-cols-3 gap-6 mb-14">
@@ -109,6 +111,51 @@
       </div>
     </section>
 
+    <SimyReviewsSection
+      business-type="driving_school"
+      title="Fahrschulen, die Simy nutzen — und ihre Schüler"
+      subtitle="Echte Google-Bewertungen von Fahrschulen mit Simy. Beweis statt Behauptung."
+      :limit="6"
+    />
+
+    <!-- ── Features ──────────────────────────────────────────────────────────── -->
+    <section id="features" class="py-20 px-6 bg-white">
+      <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-14">
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Features</p>
+          <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Alles was dein Betrieb braucht</h2>
+          <p class="text-gray-500 text-lg max-w-xl mx-auto">Von der Online-Lektionsbuchung bis zur TWINT-Abrechnung – in einer einzigen Schweizer Plattform.</p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <NuxtLink v-for="feat in features" :key="feat.title" :to="feat.link"
+            class="group rounded-2xl p-6 border border-gray-100 bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300 block focus:outline-none focus-visible:ring-2"
+            :style="`--tw-ring-color: ${primaryColor}`">
+            <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4 text-xl transition-colors duration-500"
+              :style="{ background: `rgba(var(--brand-rgb), ${feat.alpha})` }">
+              {{ feat.icon }}
+            </div>
+            <h3 class="font-bold text-gray-900 mb-1 group-hover:text-gray-800">{{ feat.title }}</h3>
+            <p class="text-sm text-gray-500 leading-relaxed mb-3">{{ feat.desc }}</p>
+            <span class="inline-flex items-center gap-1 text-xs font-bold transition-all group-hover:gap-2"
+              :style="{ color: primaryColor }">
+              Mehr erfahren
+              <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            </span>
+          </NuxtLink>
+        </div>
+
+        <div class="text-center mt-12">
+          <NuxtLink to="/fahrschule/software"
+            class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm border-2 transition-all hover:scale-105"
+            :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }">
+            Alle Funktionen der Software ansehen
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          </NuxtLink>
+        </div>
+      </div>
+    </section>
+
     <!-- ── Branding Preview Section ────────────────────────────────────────── -->
     <section id="branding-preview" class="py-20 px-6 bg-white border-y border-gray-100">
       <div class="max-w-5xl mx-auto">
@@ -119,7 +166,7 @@
             Dein Branding
           </div>
           <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Simy in deinen Farben</h2>
-          <p class="text-gray-500 text-lg max-w-2xl mx-auto">Passe die Farben an – die ganze Seite wechselt live in dein Branding. So siehst du genau, wie Simy für deine Fahrschule aussieht.</p>
+          <p class="text-gray-500 text-lg max-w-2xl mx-auto">Passe die Farben an – die ganze Seite wechselt live in dein Branding. So siehst du genau, wie Simy für dein Unternehmen aussieht.</p>
         </div>
 
         <div class="grid md:grid-cols-2 gap-8 items-center">
@@ -254,44 +301,6 @@
       </div>
     </section>
 
-    <!-- ── Features ──────────────────────────────────────────────────────────── -->
-    <section id="features" class="py-20 px-6 bg-white">
-      <div class="max-w-6xl mx-auto">
-        <div class="text-center mb-14">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Features</p>
-          <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Alles was deine Fahrschule braucht</h2>
-          <p class="text-gray-500 text-lg max-w-xl mx-auto">Von der Online-Lektionsbuchung bis zur TWINT-Abrechnung – in einer einzigen Schweizer Plattform.</p>
-        </div>
-
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          <NuxtLink v-for="feat in features" :key="feat.title" :to="feat.link"
-            class="group rounded-2xl p-6 border border-gray-100 bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300 block focus:outline-none focus-visible:ring-2"
-            :style="`--tw-ring-color: ${primaryColor}`">
-            <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4 text-xl transition-colors duration-500"
-              :style="{ background: `rgba(var(--brand-rgb), ${feat.alpha})` }">
-              {{ feat.icon }}
-            </div>
-            <h3 class="font-bold text-gray-900 mb-1 group-hover:text-gray-800">{{ feat.title }}</h3>
-            <p class="text-sm text-gray-500 leading-relaxed mb-3">{{ feat.desc }}</p>
-            <span class="inline-flex items-center gap-1 text-xs font-bold transition-all group-hover:gap-2"
-              :style="{ color: primaryColor }">
-              Mehr erfahren
-              <svg class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-            </span>
-          </NuxtLink>
-        </div>
-
-        <div class="text-center mt-12">
-          <NuxtLink to="/fahrschule/software"
-            class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm border-2 transition-all hover:scale-105"
-            :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }">
-            Alle Funktionen der Fahrschulsoftware ansehen
-            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-          </NuxtLink>
-        </div>
-      </div>
-    </section>
-
     <!-- ── Use-Case Hubs (Fahrschule Money-Pages) ──────────────────────────── -->
     <section class="py-20 px-6" :style="{ background: `linear-gradient(180deg, #FFFFFF 0%, rgba(var(--brand-rgb), 0.04) 100%)` }">
       <div class="max-w-6xl mx-auto">
@@ -356,6 +365,17 @@
             </span>
           </NuxtLink>
         </div>
+
+        <div class="mt-12 text-center">
+          <p class="text-sm text-gray-500 mb-4">Nicht nur Fahrschulen — Simy hat Vorlagen für weitere Branchen.</p>
+          <NuxtLink
+            to="/branchen"
+            class="inline-flex items-center gap-2 text-sm font-bold px-5 py-3 rounded-xl border border-gray-200 hover:border-purple-200 transition-all"
+            :style="{ color: primaryColor }"
+          >
+            Alle Branchen ansehen →
+          </NuxtLink>
+        </div>
       </div>
     </section>
 
@@ -389,7 +409,7 @@
         <div class="text-center mb-8 md:mb-12">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Live Demo</p>
           <h2 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-3 md:mb-4">So kommuniziert Simy mit deinen Schülern</h2>
-          <p class="text-base md:text-lg text-gray-500 max-w-xl mx-auto">Gib deinen Schulnamen ein – und sieh sofort, wie die E-Mails deiner Fahrschule aussehen werden.</p>
+          <p class="text-base md:text-lg text-gray-500 max-w-xl mx-auto">Gib deinen Firmennamen ein – und sieh sofort, wie die E-Mails deines Unternehmens aussehen werden.</p>
         </div>
 
         <!-- Mobile: flex-col with CSS order; Desktop: 2-column grid
@@ -402,11 +422,11 @@
 
             <!-- School name input -->
             <div class="bg-white rounded-2xl p-4 md:p-6 shadow-sm border" :style="{ borderColor: `rgba(var(--brand-rgb), 0.12)` }">
-              <label class="block text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Name deiner Fahrschule</label>
+              <label class="block text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Name deines Unternehmens</label>
               <input
                 v-model="schoolNameDemo"
                 type="text"
-                placeholder="z.B. Fahrschule Müller GmbH"
+                placeholder="z.B. Muster GmbH"
                 class="w-full px-4 py-3 rounded-xl border-2 text-gray-900 font-medium text-sm transition-all outline-none"
                 :style="{ borderColor: `rgba(var(--brand-rgb), 0.2)` }"
                 @focus="(e) => (e.target as HTMLInputElement).style.borderColor = primaryColor"
@@ -458,16 +478,16 @@
                 </div>
                 <div class="flex-1 bg-gray-700 rounded-md px-2 md:px-3 py-1 md:py-1.5 text-xs text-gray-400 min-w-0">
                   <span class="text-gray-500 mr-1">Von:</span>
-                  <span class="text-gray-300 truncate">{{ schoolNameDemo || 'Fahrschule Muster AG' }} via Simy</span>
+                  <span class="text-gray-300 truncate">{{ schoolNameDemo || 'Muster AG' }} via Simy</span>
                 </div>
               </div>
               <!-- Subject line -->
               <div class="bg-white px-3 md:px-5 py-2.5 md:py-3 border-b border-gray-100 flex items-center gap-2 md:gap-3">
                 <span class="text-base md:text-lg flex-shrink-0">{{ activeTemplate === 'reminder' ? '📅' : activeTemplate === 'invoice' ? '🧾' : '🎉' }}</span>
                 <span class="text-xs md:text-sm font-semibold text-gray-700 truncate">
-                  <template v-if="activeTemplate === 'reminder'">Erinnerung: Deine Fahrstunde morgen um 09:00 Uhr</template>
+                  <template v-if="activeTemplate === 'reminder'">Erinnerung: Dein Termin morgen um 09:00 Uhr</template>
                   <template v-else-if="activeTemplate === 'invoice'">Deine Rechnung: CHF 295.– fällig bis 15.05.2025</template>
-                  <template v-else>Willkommen bei {{ schoolNameDemo || 'Fahrschule Muster AG' }}!</template>
+                  <template v-else>Willkommen bei {{ schoolNameDemo || 'Muster AG' }}!</template>
                 </span>
               </div>
               <!-- Email body iframe -->
@@ -486,7 +506,7 @@
             <!-- Hint -->
             <p class="text-center text-xs text-gray-400 mt-3">
               Farben folgen deiner Auswahl im
-              <button @click="showColorPicker = true; if(showAutoPopup) showAutoPopup = false" class="font-semibold underline underline-offset-2 transition-colors hover:opacity-80" style="color: var(--brand-primary);">Branding-Tool</button>
+              <button @click="showColorPicker = true" class="font-semibold underline underline-offset-2 transition-colors hover:opacity-80" style="color: var(--brand-primary);">Branding-Tool</button>
               oben
             </p>
           </div>
@@ -538,41 +558,6 @@
             </div>
           </div>
 
-        </div>
-      </div>
-    </section>
-
-    <!-- ── Personas ───────────────────────────────────────────────────────────── -->
-    <section class="py-20 px-6 bg-white">
-      <div class="max-w-5xl mx-auto">
-        <div class="text-center mb-14">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Für alle</p>
-          <h2 class="text-4xl font-extrabold text-gray-900">Vorteile für jeden in deiner Fahrschule</h2>
-        </div>
-
-        <div class="grid md:grid-cols-3 gap-6">
-          <div v-for="persona in personas" :key="persona.title"
-            class="rounded-3xl p-8 border-2 flex flex-col"
-            :style="{ background: persona.bg, borderColor: persona.border }">
-            <div class="text-4xl mb-4">{{ persona.icon }}</div>
-            <h3 class="text-xl font-extrabold mb-1" :style="`color: ${persona.color}`">{{ persona.title }}</h3>
-            <p class="text-sm text-gray-500 mb-5">{{ persona.subtitle }}</p>
-            <ul class="space-y-2 mb-6 flex-1">
-              <li v-for="benefit in persona.benefits" :key="benefit"
-                class="flex items-start gap-2 text-sm text-gray-700">
-                <svg class="w-4 h-4 mt-0.5 flex-shrink-0" :style="`color: ${persona.color}`" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                {{ benefit }}
-              </li>
-            </ul>
-            <NuxtLink :to="persona.ctaTo"
-              class="inline-flex items-center justify-between gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all hover:gap-3 bg-white/70 hover:bg-white"
-              :style="`color: ${persona.color}; border: 1px solid ${persona.color}33`">
-              <span>{{ persona.ctaLabel }}</span>
-              <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-            </NuxtLink>
-          </div>
         </div>
       </div>
     </section>
@@ -664,7 +649,7 @@
                 <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="{ backgroundColor: primaryColor }">
                   {{ (schoolNameDemo || 'F').charAt(0).toUpperCase() }}
                 </div>
-                <span class="font-semibold text-sm text-gray-800 truncate">{{ schoolNameDemo || 'Fahrschule Muster' }}</span>
+                <span class="font-semibold text-sm text-gray-800 truncate">{{ schoolNameDemo || 'Muster AG' }}</span>
               </div>
               <button
                 v-for="item in sidebarItems" :key="item.id"
@@ -730,7 +715,7 @@
                   <div>
                     <p class="text-xs font-semibold uppercase tracking-wide mb-0.5" :style="{ color: primaryColor }">Nächster Termin</p>
                     <p class="font-bold text-gray-900 text-sm">Morgen, 09:00 Uhr · 90 Min</p>
-                    <p class="text-xs text-gray-500">Fahrstunde B · Thomas Meier · Bahnhof Uster</p>
+                    <p class="text-xs text-gray-500">Termin · Thomas Meier · Bahnhof Uster</p>
                   </div>
                 </div>
                 <div class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Aktive Schüler</div>
@@ -863,7 +848,7 @@
         <div class="text-center mb-8 md:mb-10">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Für alle</p>
           <h2 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-3">Drei Rollen. Eine Plattform.</h2>
-          <p class="text-base md:text-lg text-gray-500 max-w-xl mx-auto">Admin, Fahrlehrer und Schüler – jeder sieht genau das, was er braucht.</p>
+          <p class="text-base md:text-lg text-gray-500 max-w-xl mx-auto">Admin, Mitarbeiter und Kunden – jeder sieht genau das, was er braucht.</p>
         </div>
 
         <!-- Toggle -->
@@ -877,7 +862,7 @@
             <button @click="appDemoView = 'staff'"
               class="px-4 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
               :style="appDemoView === 'staff' ? { backgroundColor: primaryColor, color: 'white', boxShadow: `0 2px 8px rgba(var(--brand-rgb), 0.35)` } : { color: '#6b7280' }">
-              🚗 Fahrlehrer
+              👤 Mitarbeiter
             </button>
             <button @click="appDemoView = 'student'"
               class="px-4 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
@@ -980,7 +965,7 @@
             <div class="rounded-2xl border border-gray-200 p-5">
               <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Nächste Lektion</p>
               <p class="font-bold text-gray-900 text-sm">Morgen, 08:30</p>
-              <p class="text-xs text-gray-500 mt-0.5">Sara Klein · Fahrstunde B</p>
+              <p class="text-xs text-gray-500 mt-0.5">Sara Klein · Termin</p>
               <p class="text-xs text-gray-400 mt-0.5">📍 Bahnhof Uster, Gleis 1</p>
               <button class="mt-3 w-full py-2 rounded-xl text-xs font-bold text-white" :style="{ backgroundColor: primaryColor }">
                 Route planen →
@@ -1001,7 +986,7 @@
                 <p class="text-white font-bold text-lg">Hallo Anna 👋</p>
               </div>
               <div class="mx-4 -mt-4 bg-white rounded-2xl shadow-lg p-4 mb-4 border border-gray-100">
-                <p class="text-xs font-bold uppercase tracking-wide mb-2" :style="{ color: primaryColor }">Nächste Fahrstunde</p>
+                <p class="text-xs font-bold uppercase tracking-wide mb-2" :style="{ color: primaryColor }">Nächster Termin</p>
                 <p class="font-bold text-gray-900">Morgen, 09:00 Uhr</p>
                 <p class="text-sm text-gray-500">90 Min · Thomas Meier</p>
                 <p class="text-xs text-gray-400 mt-1">📍 Bahnhof Uster, Gleis 1</p>
@@ -1034,260 +1019,6 @@
               <span class="text-gray-400 text-lg">👤</span>
             </div>
           </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ── Branded App Coming Soon ────────────────────────────────────────────── -->
-    <section class="py-16 md:py-24 px-4 md:px-6 overflow-hidden relative" :style="{ background: `linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 50%, var(--brand-primary) 100%)` }">
-
-      <!-- Background glow -->
-      <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255,255,255,0.08), transparent);"></div>
-      <div class="absolute top-1/2 left-1/4 w-96 h-96 rounded-full blur-3xl pointer-events-none" style="background: rgba(255,255,255,0.05); transform: translate(-50%,-50%);"></div>
-      <div class="absolute top-1/2 right-1/4 w-80 h-80 rounded-full blur-3xl pointer-events-none" style="background: rgba(255,255,255,0.05); transform: translate(50%,-50%);"></div>
-
-      <div class="max-w-6xl mx-auto relative">
-
-        <!-- Badge -->
-        <div class="flex justify-center mb-6">
-          <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest border" style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.35); color: white;">
-            <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block"></span>
-            Demnächst verfügbar
-          </span>
-        </div>
-
-        <!-- Headline -->
-        <div class="text-center mb-4">
-          <h2 class="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-4">
-            Deine Fahrschule.<br>
-            <span style="background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.6)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Deine eigene App.</span>
-          </h2>
-          <p class="text-base md:text-lg max-w-2xl mx-auto" style="color: rgba(255,255,255,0.6);">
-            Bald gibt es Simy als native iOS & Android App – und gegen Aufpreis sogar als <strong style="color: rgba(255,255,255,0.9);">vollständig gebrandete App im App Store</strong>, die exakt in den Farben und mit dem Logo deiner Fahrschule erscheint.
-          </p>
-        </div>
-
-        <!-- Two-tier cards -->
-        <div class="grid md:grid-cols-2 gap-4 md:gap-6 mb-12 md:mb-16 mt-10 md:mt-14">
-
-          <!-- Standard App -->
-          <div class="rounded-2xl p-5 md:p-7 border" style="background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.2);">
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background: rgba(255,255,255,0.15);">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                </svg>
-              </div>
-              <div>
-                <p class="font-bold text-white">Simy App</p>
-                <p class="text-xs" style="color: rgba(255,255,255,0.6);">Inklusive in jedem Plan</p>
-              </div>
-            </div>
-            <ul class="space-y-2.5 text-sm text-white">
-              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0" style="color: rgba(255,255,255,0.8);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Native iOS & Android App</li>
-              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0" style="color: rgba(255,255,255,0.8);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Push-Benachrichtigungen</li>
-              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0" style="color: rgba(255,255,255,0.8);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Erscheint als „Simy" im App Store</li>
-            </ul>
-          </div>
-
-          <!-- Branded App -->
-          <div class="rounded-2xl p-5 md:p-7 border relative overflow-hidden" style="background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.4);">
-            <!-- Premium badge -->
-            <div class="absolute top-4 right-4">
-              <span class="text-xs font-bold px-2.5 py-1 rounded-full text-white" style="background: rgba(0,0,0,0.25);">Premium</span>
-            </div>
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background: rgba(255,255,255,0.25);">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-                </svg>
-              </div>
-              <div>
-                <p class="font-bold text-white">Branded App</p>
-                <p class="text-xs" style="color: rgba(255,255,255,0.7);">Gegen Aufpreis · Eigene App Store Seite</p>
-              </div>
-            </div>
-            <ul class="space-y-2.5 text-sm text-white">
-              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Eigenes App-Icon mit deinem Logo</li>
-              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>App Store Seite im Namen deiner Schule</li>
-              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>UI komplett in deinen Farben & Logo</li>
-              <li class="flex items-center gap-2"><svg class="w-4 h-4 flex-shrink-0 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Schüler laden „deine" App herunter</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- App Store mockup -->
-        <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-center justify-center mb-12 md:mb-16">
-
-          <!-- iPhone with App Store listing -->
-          <div class="relative flex-shrink-0">
-            <!-- Phone frame -->
-            <div class="relative mx-auto" style="width: 280px;">
-              <div class="relative rounded-[2.5rem] overflow-hidden border-4 shadow-2xl" style="border-color: #1a1a2e; background: #000; box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 40px 80px rgba(0,0,0,0.6), 0 0 60px rgba(139,92,246,0.2);">
-                <!-- Status bar -->
-                <div class="flex items-center justify-between px-5 pt-3 pb-1" style="background: #f2f2f7;">
-                  <span class="text-xs font-semibold text-black">9:41</span>
-                  <div class="w-20 h-5 rounded-full" style="background: #000;"></div>
-                  <div class="flex items-center gap-1">
-                    <svg class="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M1.5 8.5c5.8-5.8 15.2-5.8 21 0M5 12c4-4 10-4 14 0M8.5 15.5c2.2-2.2 5.8-2.2 8 0M12 19h.01"/></svg>
-                    <svg class="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
-                  </div>
-                </div>
-
-                <!-- App Store UI -->
-                <div style="background: #f2f2f7; min-height: 520px;">
-                  <!-- Search bar -->
-                  <div class="px-3 pb-2">
-                    <div class="rounded-xl px-3 py-2 flex items-center gap-2" style="background: #e5e5ea;">
-                      <svg class="w-3.5 h-3.5" style="color: #8e8e93;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                      <span class="text-xs" style="color: #8e8e93;">Fahrschule App</span>
-                    </div>
-                  </div>
-
-                  <!-- App listing card -->
-                  <div class="mx-3 rounded-2xl overflow-hidden shadow-sm" style="background: white;">
-                    <!-- App banner -->
-                    <div class="h-28 flex items-center justify-center relative overflow-hidden" :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }">
-                      <div class="absolute inset-0 opacity-10" style="background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px);"></div>
-                      <div class="text-center z-10">
-                        <div class="w-14 h-14 rounded-2xl mx-auto mb-1.5 flex items-center justify-center shadow-lg overflow-hidden" style="background: white;">
-                          <img v-if="logoPreview" :src="logoPreview" loading="lazy" class="w-full h-full object-contain p-1" alt="App Icon"/>
-                          <span v-else class="text-2xl font-black" :style="{ color: primaryColor }">F</span>
-                        </div>
-                        <p class="text-white text-xs font-bold truncate px-2">{{ schoolNameDemo || 'Fahrschule Muster AG' }}</p>
-                      </div>
-                    </div>
-
-                    <!-- App meta -->
-                    <div class="p-3">
-                      <div class="flex items-start justify-between gap-2 mb-2">
-                        <div class="min-w-0">
-                          <p class="text-sm font-bold text-gray-900 truncate">{{ schoolNameDemo || 'Fahrschule Muster AG' }}</p>
-                          <p class="text-xs" style="color: #8e8e93;">Fahrausbildung &amp; Kurse</p>
-                        </div>
-                        <button class="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold" style="background: #0071e3; color: white;">Laden</button>
-                      </div>
-
-                      <!-- Stars -->
-                      <div class="flex items-center gap-1 mb-2">
-                        <div class="flex gap-0.5">
-                          <svg v-for="i in 5" :key="i" class="w-3 h-3 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                        </div>
-                        <span class="text-xs" style="color: #8e8e93;">4.9 · 128 Bewertungen</span>
-                      </div>
-
-                      <!-- Screenshots strip -->
-                      <div class="flex gap-1.5 overflow-hidden">
-                        <div v-for="(color, i) in ['rgba(var(--brand-rgb),1)', 'rgba(var(--brand-rgb),0.8)', 'rgba(var(--brand-rgb),0.6)']" :key="i"
-                          class="flex-shrink-0 rounded-xl overflow-hidden flex items-center justify-center"
-                          style="width: 68px; height: 120px;"
-                          :style="{ background: i === 0 ? `linear-gradient(160deg, var(--brand-primary), var(--brand-secondary))` : i === 1 ? '#f2f2f7' : 'white', border: '1px solid rgba(0,0,0,0.06)' }">
-                          <div v-if="i === 0" class="text-center px-2">
-                            <div class="w-6 h-6 rounded-full mx-auto mb-1.5 flex items-center justify-center bg-white bg-opacity-20">
-                              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            </div>
-                            <div class="text-white text-center" style="font-size: 6px; font-weight: 700; line-height: 1.3;">NÄCHSTE<br>STUNDE<br>Di 14:00</div>
-                          </div>
-                          <div v-else-if="i === 1" class="px-1.5 w-full">
-                            <div class="rounded mb-1 h-2" :style="{ background: primaryColor, opacity: 0.3 }"></div>
-                            <div class="rounded mb-1 h-1.5" style="background: #d1d5db;"></div>
-                            <div class="rounded mb-1 h-1.5" style="background: #d1d5db; width: 75%;"></div>
-                            <div class="rounded mt-2 h-8" :style="{ background: `rgba(var(--brand-rgb), 0.12)` }"></div>
-                          </div>
-                          <div v-else class="px-1.5 w-full">
-                            <div class="w-8 h-8 rounded-xl mx-auto mb-1" :style="{ background: primaryColor }"></div>
-                            <div class="rounded h-1.5 mx-auto mb-1" style="background: #d1d5db; width: 80%;"></div>
-                            <div class="rounded h-1" style="background: #e5e7eb; width: 60%; margin: 0 auto;"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- "Other apps" hint -->
-                  <div class="px-3 pt-3 pb-2">
-                    <p class="text-xs font-semibold text-gray-400 mb-2">Weitere Fahrschulen-Apps</p>
-                    <div class="space-y-2">
-                      <div v-for="school in ['Fahrschule Zürich AG', 'Drive Academy Bern']" :key="school" class="flex items-center gap-2.5 rounded-xl p-2" style="background: white;">
-                        <div class="w-8 h-8 rounded-xl flex-shrink-0" :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))`, opacity: 0.7 }"></div>
-                        <div class="flex-1 min-w-0">
-                          <p class="text-xs font-semibold text-gray-800 truncate">{{ school }}</p>
-                          <p class="text-xs" style="color: #8e8e93; font-size: 10px;">Fahrausbildung</p>
-                        </div>
-                        <button class="text-xs font-bold px-3 py-1 rounded-full" style="background: #e8f0fd; color: #0071e3; font-size: 10px;">Laden</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Home indicator -->
-                <div class="flex justify-center py-2" style="background: #f2f2f7;">
-                  <div class="w-24 h-1 rounded-full" style="background: #000;"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Text side -->
-          <div class="text-center md:text-left max-w-md">
-            <div class="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full text-xs font-bold text-white" style="background: rgba(255,255,255,0.15);">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
-              White-Label App
-            </div>
-            <h3 class="text-2xl md:text-3xl font-extrabold text-white mb-3">
-              Deine Schüler laden<br><em class="not-italic" style="opacity: 0.8;">deine App</em> herunter
-            </h3>
-            <p class="mb-6 text-sm md:text-base leading-relaxed" style="color: rgba(255,255,255,0.75);">
-              Stell dir vor: Dein Logo, deine Farben, dein Name im App Store. Deine Schüler suchen nach deiner Fahrschule – und finden direkt deine App. Kein Simy-Logo. Nur du.
-            </p>
-            <ul class="space-y-3 text-sm text-left mb-8 text-white">
-              <li class="flex items-center gap-3">
-                <span class="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center" style="background: rgba(255,255,255,0.2);">
-                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </span>
-                Eigener App Store Eintrag (iOS &amp; Android)
-              </li>
-              <li class="flex items-center gap-3">
-                <span class="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center" style="background: rgba(255,255,255,0.2);">
-                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
-                </span>
-                App-Icon, Splashscreen &amp; UI komplett in deinem Branding
-              </li>
-              <li class="flex items-center gap-3">
-                <span class="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center" style="background: rgba(255,255,255,0.2);">
-                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                </span>
-                Automatische Updates – du musst nichts tun
-              </li>
-            </ul>
-
-            <!-- Waitlist CTA -->
-            <div v-if="!appWaitlistSent" class="flex flex-col sm:flex-row gap-3">
-              <input
-                v-model="appWaitlistEmail"
-                type="email"
-                placeholder="deine@email.ch"
-                class="flex-1 px-4 py-3 rounded-xl text-sm outline-none border text-white placeholder-white/50"
-                style="background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3);"
-                @keyup.enter="submitAppWaitlist"
-              />
-              <button
-                @click="submitAppWaitlist"
-                :disabled="!appWaitlistEmail"
-                class="px-6 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40 whitespace-nowrap"
-                style="background: rgba(0,0,0,0.25); color: white; border: 1px solid rgba(255,255,255,0.3);"
-              >
-                Benachrichtige mich →
-              </button>
-            </div>
-            <div v-else class="flex items-center gap-3 px-4 py-3 rounded-xl" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);">
-              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <p class="text-sm text-white font-medium">Du bist auf der Liste! Wir melden uns sobald es losgeht.</p>
-            </div>
-            <p class="text-xs mt-3" style="color: rgba(255,255,255,0.5);">Kein Spam. Nur eine Nachricht wenn die App fertig ist.</p>
-          </div>
-
         </div>
 
       </div>
@@ -1347,94 +1078,38 @@
       </div>
     </section>
 
-    <!-- ── Wachstum / Marketing Hub ────────────────────────────────────────── -->
-    <section class="py-20 px-6" :style="{ background: `linear-gradient(180deg, #FFFFFF 0%, rgba(var(--brand-2-rgb), 0.05) 100%)` }">
-      <div class="max-w-6xl mx-auto">
-        <div class="text-center mb-14">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Wachstum</p>
-          <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Mehr Schüler für deine Fahrschule</h2>
-          <p class="text-gray-500 text-lg max-w-2xl mx-auto">Software allein bringt dir keine neuen Schüler. Mit unseren Marketing-Services für Fahrschulen kommst du nachhaltig auf Wachstumskurs – kombiniert mit Simy als Closed-Loop-System.</p>
-        </div>
-
-        <div class="grid md:grid-cols-2 gap-6 mb-10">
+    <!-- ── Wachstum / Marketing Teaser ─────────────────────────────────────── -->
+    <section class="py-12 px-6" :style="{ background: `rgba(var(--brand-rgb), 0.04)` }">
+      <div class="max-w-3xl mx-auto text-center">
+        <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Optional: Wachstum</p>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Mehr Schüler? Google Ads &amp; lokales SEO</h2>
+        <p class="text-gray-500 mb-6">Zusätzlich zur Software — Managed Ads und SEO für Schweizer Dienstleistungsbetriebe.</p>
+        <div class="flex flex-wrap justify-center gap-3">
           <NuxtLink to="/marketing/google-ads"
-            class="group rounded-3xl p-8 border-2 bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
-            :style="{ borderColor: `rgba(var(--brand-rgb), 0.2)` }">
-            <div class="flex items-start gap-4 mb-5">
-              <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
-                :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, color: 'white' }">🎯</div>
-              <div>
-                <p class="text-xs font-bold uppercase tracking-widest mb-1" :style="{ color: primaryColor }">Sofort wirksam</p>
-                <h3 class="font-extrabold text-xl text-gray-900">Google Ads für Fahrschulen</h3>
-              </div>
-            </div>
-            <p class="text-sm text-gray-500 leading-relaxed mb-5 flex-1">Managed Google Ads für CH-Fahrschulen: Wir setzen Kampagnen auf, optimieren die Anzeigen und liefern dir messbare Anfragen über Schweizer Keywords wie „Fahrschule + deine Stadt".</p>
-            <ul class="space-y-1.5 mb-5 text-sm text-gray-600">
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Top-Positionen ab Tag 1</li>
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Budget ab CHF 200/Monat</li>
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Transparente Lead-Reports</li>
-            </ul>
-            <span class="inline-flex items-center gap-1 text-sm font-bold group-hover:gap-2 transition-all" :style="{ color: primaryColor }">
-              Google-Ads-Paket entdecken
-              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-            </span>
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+            :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }">
+            Google Ads →
           </NuxtLink>
-
           <NuxtLink to="/marketing/seo"
-            class="group rounded-3xl p-8 border-2 bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
-            :style="{ borderColor: `rgba(var(--brand-rgb), 0.2)` }">
-            <div class="flex items-start gap-4 mb-5">
-              <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0"
-                :style="{ background: `rgba(var(--brand-rgb), 0.12)`, color: primaryColor }">🔍</div>
-              <div>
-                <p class="text-xs font-bold uppercase tracking-widest mb-1" :style="{ color: primaryColor }">Nachhaltig & organisch</p>
-                <h3 class="font-extrabold text-xl text-gray-900">Lokales SEO für Fahrschulen</h3>
-              </div>
-            </div>
-            <p class="text-sm text-gray-500 leading-relaxed mb-5 flex-1">Dauerhaft oben bei Google und in Google Maps: Wir optimieren dein Google Business Profile, deine Website und dein lokales Ranking für „Fahrschule + deine Stadt".</p>
-            <ul class="space-y-1.5 mb-5 text-sm text-gray-600">
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Google Maps Top-3 als Ziel</li>
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Inkl. Reviews-Strategie</li>
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> SEO-optimierte Landingpages</li>
-            </ul>
-            <span class="inline-flex items-center gap-1 text-sm font-bold group-hover:gap-2 transition-all" :style="{ color: primaryColor }">
-              SEO-Service ansehen
-              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-            </span>
-          </NuxtLink>
-        </div>
-
-        <div class="text-center">
-          <NuxtLink to="/marketing"
-            class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm border-2 transition-all hover:scale-105"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold border transition-all"
             :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }">
-            Marketing-Übersicht ansehen
-            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+            Lokales SEO →
+          </NuxtLink>
+          <NuxtLink to="/marketing"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors">
+            Übersicht
           </NuxtLink>
         </div>
       </div>
     </section>
 
-    <!-- ── Social Proof Teaser ─────────────────────────────────────────────── -->
-    <section class="py-16 px-6 bg-white border-y border-gray-100">
+    <!-- ── Kundenstories CTA ───────────────────────────────────────────────── -->
+    <section class="py-12 px-6 bg-white border-y border-gray-100">
       <div class="max-w-4xl mx-auto text-center">
-        <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Social Proof</p>
-        <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Über 50 Schweizer Fahrschulen vertrauen Simy</h2>
-        <p class="text-gray-500 text-lg max-w-2xl mx-auto mb-8">Von Einzelfahrlehrern bis zur grössten Fahrschule im Kanton Zürich – lies, wie unsere Kunden bis zu 2 Stunden täglich sparen und ihre Buchungen um 40% steigern.</p>
-        <div class="flex flex-wrap items-center justify-center gap-3">
-          <NuxtLink to="/kunden" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90 shadow-lg"
-            :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, boxShadow: `0 8px 24px rgba(var(--brand-rgb), 0.25)` }">
-            Kundenstories ansehen →
-          </NuxtLink>
-          <NuxtLink to="/ueber-uns" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border transition-colors"
-            :style="{ borderColor: `rgba(var(--brand-rgb), 0.25)`, color: primaryColor }">
-            Unsere Story
-          </NuxtLink>
-          <NuxtLink to="/partner" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm border transition-colors"
-            :style="{ borderColor: `rgba(var(--brand-rgb), 0.25)`, color: primaryColor }">
-            Partner & Integrationen
-          </NuxtLink>
-        </div>
+        <p class="text-gray-500 text-base mb-5">
+          Über 50 Schweizer Betriebe arbeiten mit Simy —
+          <NuxtLink to="/kunden" class="font-semibold underline-offset-4 hover:underline" :style="{ color: primaryColor }">Kundenstories lesen</NuxtLink>.
+        </p>
       </div>
     </section>
 
@@ -1472,8 +1147,10 @@
     <!-- ── Final CTA ──────────────────────────────────────────────────────────── -->
     <section class="py-24 px-6" style="background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);">
       <div class="max-w-3xl mx-auto text-center">
+        <SimyFounderNote :blurb="founderBlurbHome" />
+
         <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
-          Bereit, deine Fahrschule<br>auf Autopilot zu schalten?
+          Bereit, dein Unternehmen<br>auf Autopilot zu schalten?
         </h2>
         <p class="text-lg mb-10" style="color: rgba(255,255,255,0.7);">Starte heute mit 30 Tagen kostenlos – keine Kreditkarte, keine Bindung.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
@@ -1518,6 +1195,16 @@
       </div>
     </section>
 
+    <!-- ── Branded App (demoted) ─────────────────────────────────────────────── -->
+    <section class="py-10 px-6 bg-gray-950">
+      <div class="max-w-3xl mx-auto text-center">
+        <p class="text-sm text-gray-400">
+          Bald: optional gebrandete Fahrschul-App im App Store —
+          <a href="#branding-preview" class="text-white font-semibold underline-offset-4 hover:underline">jetzt schon mit Simy in deinen Farben starten</a>.
+        </p>
+      </div>
+    </section>
+
     <!-- ── Footer (SEO Sitemap) ───────────────────────────────────────────────── -->
     <footer class="pt-16 pb-8 px-6 border-t border-gray-100 bg-white">
       <div class="max-w-6xl mx-auto">
@@ -1526,13 +1213,13 @@
           <!-- Brand column -->
           <div class="col-span-2 md:col-span-3 lg:col-span-2">
             <NuxtLink to="/" class="inline-flex items-center mb-4" aria-label="Simy Startseite">
-              <img :src="logoPreview || '/simy-logo.png'" alt="Simy – Fahrschulsoftware Schweiz" loading="lazy"
+              <img :src="logoPreview || '/simy-logo.png'" alt="Simy – Terminsoftware Schweiz" loading="lazy"
                 class="h-8 max-w-[120px] object-contain transition-all duration-500"
                 :style="{ filter: logoColorFilter }" />
             </NuxtLink>
             <p class="text-sm text-gray-500 leading-relaxed mb-4 max-w-xs">
-              Die <NuxtLink to="/fahrschule/software" class="font-semibold hover:underline" :style="{ color: primaryColor }">Schweizer Fahrschulsoftware</NuxtLink>
-              für Online-Buchung, Abrechnung und Wachstum. Von Fahrlehrern, für Fahrlehrer.
+              Die <NuxtLink to="/fahrschule/software" class="font-semibold hover:underline" :style="{ color: primaryColor }">Schweizer Terminsoftware</NuxtLink>
+              für Online-Buchung, Abrechnung und Wachstum. Für Fahrschulen und weitere Branchen.
             </p>
             <div class="flex flex-col gap-1.5 text-xs text-gray-400">
               <a href="mailto:info@simy.ch" class="hover:text-gray-600 transition-colors inline-flex items-center gap-1.5">
@@ -1606,7 +1293,7 @@
 
         <!-- Trust strip -->
         <div class="flex flex-wrap items-center justify-center gap-3 py-6 border-t border-b border-gray-100 mb-6">
-          <span v-for="trust in ['🇨🇭 Swiss Made', '🔒 DSGVO-konform', '🏦 Schweizer Server', '💳 TWINT & PostFinance', '⭐ 4.9/5 (38 Reviews)']" :key="trust"
+          <span v-for="trust in ['🇨🇭 Swiss Made', '🔒 DSGVO-konform', '🏦 Schweizer Server', '💳 TWINT & PostFinance', '⭐ Von Betrieben empfohlen']" :key="trust"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-50 text-gray-600">
             {{ trust }}
           </span>
@@ -1614,7 +1301,7 @@
 
         <!-- Bottom: copyright + legal -->
         <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
-          <span>© {{ currentYear }} Simy · Fahrschulsoftware aus der Schweiz</span>
+          <span>© {{ currentYear }} Simy · Terminsoftware aus der Schweiz</span>
           <div class="flex flex-wrap items-center justify-center gap-4">
             <NuxtLink to="/impressum" class="hover:text-gray-700 transition-colors">Impressum</NuxtLink>
             <NuxtLink to="/agb" class="hover:text-gray-700 transition-colors">AGB</NuxtLink>
@@ -1623,47 +1310,6 @@
         </div>
       </div>
     </footer>
-
-    <!-- ── Auto-Popup (after 10s) ───────────────────────────────────────────── -->
-    <Transition
-      enter-active-class="transition-all duration-500 ease-out"
-      enter-from-class="opacity-0 translate-y-6"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition-all duration-300 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 translate-y-6"
-    >
-      <div v-if="showAutoPopup"
-        class="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-full sm:max-w-lg z-[70]">
-        <div class="rounded-2xl shadow-2xl border border-white/10 overflow-hidden"
-          :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }">
-          <div class="px-4 py-3 sm:px-5 sm:py-4 flex items-center gap-3">
-            <div class="w-9 h-9 sm:w-10 sm:h-10 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0 text-lg sm:text-xl">🎨</div>
-            <div class="flex-1 min-w-0">
-              <p class="text-white font-bold text-xs sm:text-sm leading-snug">Simy in deinen Farben ausprobieren</p>
-              <p class="text-xs mt-0.5 hidden sm:block" style="color: rgba(255,255,255,0.7);">Passe die Farben an und sieh die Seite live in deinem Branding</p>
-            </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-              <a href="#branding-preview" @click="showAutoPopup = false"
-                class="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl font-bold text-xs whitespace-nowrap transition-all hover:scale-105"
-                :style="{ background: 'rgba(255,255,255,0.92)', color: primaryColor }">
-                <span class="hidden sm:inline">Ausprobieren →</span>
-                <span class="sm:hidden">Los →</span>
-              </a>
-              <button @click="showAutoPopup = false"
-                class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
-                style="background: rgba(255,255,255,0.15); color: white;">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-              </button>
-            </div>
-          </div>
-          <!-- Progress bar -->
-          <div class="h-0.5 bg-white/10">
-            <div class="h-full bg-white/30" :style="{ width: `${popupProgress}%`, transition: 'width 50ms linear' }"></div>
-          </div>
-        </div>
-      </div>
-    </Transition>
 
     <!-- ── Floating Color Customizer ──────────────────────────────────────────── -->
     <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
@@ -1792,7 +1438,7 @@
       </Transition>
 
       <!-- Toggle Button -->
-      <button @click="showColorPicker = !showColorPicker; if (showColorPicker) showAutoPopup = false"
+      <button @click="showColorPicker = !showColorPicker"
         class="w-14 h-14 rounded-2xl text-white shadow-2xl flex items-center justify-center transition-all hover:scale-110 relative"
         :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }"
         :title="showColorPicker ? 'Schliessen' : 'Farben anpassen'">
@@ -1818,6 +1464,9 @@ import { ref, computed, reactive, watch, onMounted, onUnmounted } from 'vue'
 import { useHead, useAsyncData } from 'nuxt/app'
 import { $fetch } from 'ofetch'
 import { getDemoReminderHtml, getDemoInvoiceHtml, getDemoWelcomeHtml } from '../utils/demo-email-templates'
+import { FOUNDER_BLURB_HOME } from '~/data/founder'
+
+const founderBlurbHome = FOUNDER_BLURB_HOME
 
 declare function definePageMeta(meta: Record<string, unknown>): void
 
@@ -1828,30 +1477,30 @@ definePageMeta({ layout: false })
 const currentYear = new Date().getFullYear()
 
 useHead({
-  title: 'Simy – Fahrschulsoftware Schweiz | Buchung, Abrechnung & Fahrlehrer-App',
+  title: 'Simy – Terminsoftware Schweiz | Buchung, Abrechnung & App',
   htmlAttrs: { lang: 'de' },
   meta: [
-    { name: 'description', content: 'Fahrschulsoftware aus der Schweiz: Online-Buchungssystem, automatische Rechnungen mit TWINT, Fahrlehrer-App, Marketing & SEO. 30 Tage kostenlos – keine Kreditkarte.' },
-    { name: 'keywords', content: 'Fahrschulsoftware Schweiz, Fahrschule Software, Fahrlehrer App, Buchungssystem Fahrschule, Online-Terminbuchung Fahrschule, Fahrschul-Verwaltung, Marketing Fahrschule, Google Ads Fahrschule' },
+    { name: 'description', content: 'Terminsoftware aus der Schweiz: Online-Buchung, automatische Rechnungen mit TWINT, Mitarbeiter-App, Marketing & SEO. Für Fahrschulen und weitere Branchen. 30 Tage kostenlos.' },
+    { name: 'keywords', content: 'Terminsoftware Schweiz, Fahrschulsoftware, Buchungssystem, Online-Terminbuchung, Kundenverwaltung, Marketing Software Schweiz' },
     { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
     { name: 'author', content: 'Simy' },
     // Open Graph
-    { property: 'og:title', content: 'Simy – Fahrschule Software Schweiz' },
-    { property: 'og:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 30 Tage kostenlos testen – keine Kreditkarte.' },
+    { property: 'og:title', content: 'Simy – Terminsoftware Schweiz | Buchung, Abrechnung & App' },
+    { property: 'og:description', content: 'Online-Buchung, Abrechnung & Kundenverwaltung für Fahrschulen und Dienstleister. 30 Tage kostenlos testen.' },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: 'https://simy.ch/' },
     { property: 'og:image', content: 'https://simy.ch/og-image.png' },
     { property: 'og:image:width', content: '1200' },
     { property: 'og:image:height', content: '630' },
-    { property: 'og:image:alt', content: 'Simy Fahrschule Software – Dashboard Screenshot' },
+    { property: 'og:image:alt', content: 'Simy Terminsoftware – Dashboard Screenshot' },
     { property: 'og:locale', content: 'de_CH' },
     { property: 'og:site_name', content: 'Simy' },
     // Twitter / X Card
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'Simy – Fahrschule Software Schweiz' },
-    { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Schülerverwaltung für Fahrschulen. 30 Tage kostenlos testen – keine Kreditkarte.' },
+    { name: 'twitter:title', content: 'Simy – Terminsoftware Schweiz | Buchung, Abrechnung & App' },
+    { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Kundenverwaltung für Fahrschulen und Dienstleister. 30 Tage kostenlos testen.' },
     { name: 'twitter:image', content: 'https://simy.ch/og-image.png' },
-    { name: 'twitter:image:alt', content: 'Simy Fahrschule Software – Dashboard Screenshot' },
+    { name: 'twitter:image:alt', content: 'Simy Terminsoftware – Dashboard Screenshot' },
   ],
   link: [
     { rel: 'canonical', href: 'https://simy.ch/' },
@@ -1868,7 +1517,7 @@ useHead({
         url: 'https://simy.ch',
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web, iOS, Android',
-        description: 'Fahrschul-Software für die Schweiz: Online-Buchung, automatische Abrechnung, Schülerverwaltung & Kommunikation.',
+        description: 'Terminsoftware für die Schweiz: Online-Buchung, automatische Abrechnung, Kundenverwaltung & Kommunikation.',
         softwareVersion: '2.0',
         datePublished: '2023-01-01',
         screenshot: 'https://simy.ch/og-image.png',
@@ -1885,22 +1534,15 @@ useHead({
           areaServed: { '@type': 'Country', name: 'Switzerland' },
         },
         featureList: [
-          'Online-Buchung für Fahrstunden',
+          'Online-Buchung für Termine',
           'Automatische Abrechnung & Rechnungsversand',
-          'Schülerverwaltung',
+          'Kundenverwaltung',
           'Zahlungen mit TWINT und Kreditkarte',
           'Automatische Terminerinnerungen',
           'Affiliate-System',
           'Kursbuchungsseite',
           'Prüfungsverwaltung',
         ],
-        aggregateRating: {
-          '@type': 'AggregateRating',
-          ratingValue: '4.9',
-          reviewCount: '38',
-          bestRating: '5',
-          worstRating: '1',
-        },
       }),
     },
     {
@@ -1934,50 +1576,50 @@ useHead({
         mainEntity: [
           {
             '@type': 'Question',
+            name: 'Brauche ich eine Kreditkarte für den Trial?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Nein, der 30-Tage-Trial ist vollständig kostenlos und ohne Kreditkarte. Du wirst erst nach dem Trial zur Kasse gebeten – und kannst jederzeit kündigen.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Wie funktioniert die Kündigung?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Du kannst monatlich kündigen. Die Kündigungsfrist beträgt 1 Monat auf Ende des laufenden Monats. Keine Jahresbindung, keine versteckten Kosten.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Welche Zahlungsmethoden unterstützt Simy?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Für deine Schüler unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Kann ich von einem Plan upgraden?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Sind meine Daten sicher?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.',
+            },
+          },
+          {
+            '@type': 'Question',
             name: 'Was kostet Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
               text: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte, keine Bindung.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'Für wen ist Simy geeignet?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Simy ist die ideale Fahrschul-Software für selbstständige Fahrlehrer und Fahrschulen in der Schweiz. Die App unterstützt von der Online-Buchung über automatische Abrechnung bis zur Schülerverwaltung.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'Welche Zahlungsarten unterstützt Simy?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Simy unterstützt TWINT, Kreditkarte, Debitkarte (Mastercard/Visa), PostFinance sowie manuelle Zahlungen per Rechnung oder Banküberweisung. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'Kann ich Simy kündigen?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Ja, Simy ist monatlich kündbar mit einer Kündigungsfrist von 1 Monat. Es gibt keine Jahresbindung.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'Ist Simy DSGVO-konform?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Ja, Simy ist vollständig DSGVO-konform. Die Daten werden auf Schweizer Servern gespeichert und verarbeitet.',
-            },
-          },
-          {
-            '@type': 'Question',
-            name: 'Brauche ich IT-Kenntnisse für Simy?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Nein. Simy ist so einfach gestaltet, dass keine IT-Kenntnisse notwendig sind. Setup in wenigen Minuten, intuitives Dashboard.',
             },
           },
         ],
@@ -2099,6 +1741,7 @@ const brandCssVars = computed(() => ({
 
 const registerUrl = computed(() => {
   const params = new URLSearchParams({
+    type: 'driving_school',
     primary_color: primaryColor.value,
     secondary_color: secondaryColor.value,
     accent_color: accentColor.value,
@@ -2345,41 +1988,9 @@ function saveLogoToSession() {
   sessionStorage.setItem('simy_preview_accent', accentColor.value)
 }
 
-// ─── Auto-Popup after 10s ─────────────────────────────────────────────────────
-const showAutoPopup = ref(false)
-const popupProgress = ref(100)
-let popupTimer: ReturnType<typeof setTimeout> | null = null
-let progressTimer: ReturnType<typeof setInterval> | null = null
-
 onMounted(() => {
-  // Restore branding from previous visit
   restoreBrandFromStorage()
-  // Watch logo separately here since logoPreview ref is defined later in the script
   watch(logoPreview, debouncedSaveBrand)
-
-  popupTimer = setTimeout(() => {
-    if (!showColorPicker.value) {
-      showAutoPopup.value = true
-      // Progress bar counts down over 8 seconds then auto-closes
-      const duration = 8000
-      const interval = 50
-      const steps = duration / interval
-      let current = steps
-      progressTimer = setInterval(() => {
-        current--
-        popupProgress.value = Math.round((current / steps) * 100)
-        if (current <= 0) {
-          showAutoPopup.value = false
-          if (progressTimer) clearInterval(progressTimer)
-        }
-      }, interval)
-    }
-  }, 10000)
-})
-
-onUnmounted(() => {
-  if (popupTimer) clearTimeout(popupTimer)
-  if (progressTimer) clearInterval(progressTimer)
 })
 
 // ─── ROI Calculator ──────────────────────────────────────────────────────────
@@ -2397,7 +2008,7 @@ const pains = [
 const features = computed(() => [
   { icon: '📅', title: 'Kalender & Terminplanung', desc: 'Simy-Termine erscheinen in Google/Apple/Outlook. Private Termine dort blockieren automatisch deine Verfügbarkeit — Schüler sehen dort keine freien Slots.', alpha: 0.10, link: '/features/kalender' },
   { icon: '💳', title: 'Rechnungen & TWINT-Zahlungen', desc: 'Online-Zahlung mit TWINT, Debit- und Kreditkarte inkl. PostFinance, Rechnungen mit 2 Klicks erstellt und versendet, Mahnungen und Gutschriften einfach erstellt.', alpha: 0.07, link: '/features/rechnungen' },
-  { icon: '👥', title: 'Schülerverwaltung', desc: 'Alle Schülerdaten, Lernfortschritte, Dokumente und Notizen zentral an einem Ort.', alpha: 0.13, link: '/fahrschule/software' },
+  { icon: '👥', title: 'Kundenverwaltung', desc: 'Alle Schülerdaten, Lernfortschritte, Dokumente und Notizen zentral an einem Ort.', alpha: 0.13, link: '/fahrschule/software' },
   { icon: '📱', title: 'Fahrlehrer-App (iOS & Android)', desc: 'Native App für unterwegs – Kalender, Schüler, Rechnungen und Push-Erinnerungen immer griffbereit.', alpha: 0.10, link: '/fahrschule/app' },
   { icon: '🌐', title: 'Online-Buchungssystem', desc: 'Schüler buchen freie Termine selbstständig – mit Bestätigung, Erinnerungen und Multi-Fahrlehrer-Sync.', alpha: 0.12, link: '/fahrschule/buchungssystem' },
   { icon: '📊', title: 'Auswertungen & Statistiken', desc: 'Umsatz, Auslastung, No-Show-Rate, Top-Schüler – alle wichtigen Kennzahlen auf einen Blick.', alpha: 0.09, link: '/fahrschule/software' },
@@ -2416,63 +2027,6 @@ const automations = [
   { icon: '💬', label: 'Willkommensnachrichten', desc: 'Neue Schüler erhalten sofort alle Infos – ohne dein Zutun.' },
   { icon: '🏆', label: 'Prüfungsbestätigung', desc: 'Bestandene Prüfungen dokumentiert und dem Schüler gemeldet.' },
 ]
-
-const personas = computed(() => [
-  {
-    icon: '🧑‍💼',
-    title: 'Admin / Inhaber',
-    subtitle: 'Du behältst den Überblick',
-    color: primaryColor.value,
-    bg: `rgba(var(--brand-rgb), 0.07)`,
-    border: `rgba(var(--brand-rgb), 0.22)`,
-    benefits: [
-      'Umsatz & Auslastung in Echtzeit',
-      'Alle Fahrlehrer im Überblick',
-      'Einfache Rechnungsstellung',
-      'DSGVO-konforme Datenverwaltung',
-      'Zahlungseingänge auf einen Blick',
-      'Eigenes Branding & Domain',
-    ],
-    ctaLabel: 'Fahrschulsoftware ansehen',
-    ctaTo: '/fahrschule/software',
-  },
-  {
-    icon: '👨‍🏫',
-    title: 'Fahrlehrer / Staff',
-    subtitle: 'Du fokussierst dich aufs Unterrichten',
-    color: secondaryColor.value,
-    bg: `rgba(var(--brand-2-rgb), 0.07)`,
-    border: `rgba(var(--brand-2-rgb), 0.22)`,
-    benefits: [
-      'Stundenplan immer aktuell',
-      'Schülerinfos jederzeit verfügbar',
-      'Automatische Erinnerungen an Schüler',
-      'Notizen & Fortschritts-Tracking',
-      'Einfache Stundenverwaltung',
-      'Mobile-optimiert für unterwegs',
-    ],
-    ctaLabel: 'Fahrlehrer-App entdecken',
-    ctaTo: '/fahrschule/app',
-  },
-  {
-    icon: '🧑‍🎓',
-    title: 'Schüler',
-    subtitle: 'Deine Schüler lieben die Einfachheit',
-    color: accentColor.value,
-    bg: `rgba(var(--brand-rgb), 0.05)`,
-    border: `rgba(var(--brand-rgb), 0.15)`,
-    benefits: [
-      'Online buchen rund um die Uhr',
-      'Automatische Lektionserinnerungen',
-      'Bezahlen per TWINT, Debit- und Kreditkarte inkl. PostFinance',
-      'Lernfortschritt immer im Blick',
-      'Prüfungsinfos sofort sichtbar',
-      'Kein App-Download nötig',
-    ],
-    ctaLabel: 'Buchungssystem ansehen',
-    ctaTo: '/fahrschule/buchungssystem',
-  },
-])
 
 const { data: stripePrices } = await useAsyncData('landing-prices', () =>
   $fetch<Record<string, { unitAmount: number; formatted: string } | null>>('/api/prices').catch(() => null)
@@ -2518,6 +2072,7 @@ const faqs = reactive([
   { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: 'Für deine Schüler unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.', open: false },
   { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },
   { q: 'Sind meine Daten sicher?', a: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.', open: false },
+  { q: 'Was kostet Simy?', a: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte, keine Bindung.', open: false },
 ])
 
 // ─── App Live Demo ───────────────────────────────────────────────────────────
@@ -2565,7 +2120,7 @@ const staffDayApts = computed(() => {
 
 const staffWeekStats = computed(() => [
   { label: 'Lektionen', value: '12' },
-  { label: 'Fahrstunden', value: '18 Std.' },
+  { label: 'Termine', value: '18 Std.' },
   { label: 'Bestätigungsrate', value: '83%', highlight: true },
   { label: 'Prüfungen', value: '1' },
 ])
@@ -2694,7 +2249,7 @@ const adminWeekStats = computed(() => [
 ])
 
 // ─── Interactive Email Demo ───────────────────────────────────────────────────
-const schoolNameDemo = ref('Fahrschule Muster AG')
+const schoolNameDemo = ref('Muster AG')
 const demoEmail = ref('')
 const activeTemplate = ref<'reminder' | 'invoice' | 'welcome'>('reminder')
 const sendingDemo = ref(false)
@@ -2702,16 +2257,6 @@ const demoSentTemplates = ref<Set<string>>(new Set())
 const demoError = ref('')
 
 const demoSentCurrent = computed(() => demoSentTemplates.value.has(activeTemplate.value))
-
-// ─── App Waitlist ─────────────────────────────────────────────────────────────
-const appWaitlistEmail = ref('')
-const appWaitlistSent = ref(false)
-
-async function submitAppWaitlist() {
-  if (!appWaitlistEmail.value) return
-  // Simple email-only waitlist – store via demo-email endpoint or just mark as sent
-  appWaitlistSent.value = true
-}
 
 // ─── Email Preview Scaling ────────────────────────────────────────────────────
 const EMAIL_WIDTH = 560
@@ -2759,7 +2304,7 @@ onUnmounted(() => {
 
 
 const demoEmailHtml = computed(() => {
-  const school = schoolNameDemo.value.trim() || 'Fahrschule Muster AG'
+  const school = schoolNameDemo.value.trim() || 'Muster AG'
   const primary = primaryColor.value
   const secondary = secondaryColor.value
   if (activeTemplate.value === 'reminder') return getDemoReminderHtml(school, primary)
@@ -2776,7 +2321,7 @@ async function sendDemoEmail() {
       method: 'POST',
       body: {
         email: demoEmail.value,
-        schoolName: schoolNameDemo.value.trim() || 'Fahrschule Muster AG',
+        schoolName: schoolNameDemo.value.trim() || 'Muster AG',
         templateType: activeTemplate.value,
         primaryColor: primaryColor.value,
         secondaryColor: secondaryColor.value,

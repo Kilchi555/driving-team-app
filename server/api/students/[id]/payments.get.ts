@@ -6,6 +6,7 @@ import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { validateUUID } from '~/server/utils/validators'
+import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -241,17 +242,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // ============ LAYER 9: MERGE ALL DATA ============
-    // Übersetzungs-Map für event_type_code
-    const eventTypeTranslations: Record<string, string> = {
-      lesson: 'Fahrstunde',
-      exam: 'Prüfung',
-      theory: 'Theorieunterricht',
-      vku: 'VKU',
-      haltbar: 'Haltbarkeitsprüfung'
-    }
-    
+    const terms = await getTenantTerminology(supabaseAdmin, tenantId)
+    const eventTypeTranslations = eventTypeLabelMap(terms)
+
     const translateEventType = (code: string | null | undefined): string => {
-      if (!code) return 'Termin'
+      if (!code) return terms.appointment || 'Termin'
       return eventTypeTranslations[code.toLowerCase()] || code
     }
     

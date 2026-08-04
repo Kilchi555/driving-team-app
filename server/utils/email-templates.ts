@@ -823,7 +823,7 @@ export function generateCategoryWaitlistNotificationEmail(data: {
     firstName,
     categoryName,
     bookingUrl,
-    tenantName = 'Ihre Fahrschule',
+    tenantName = 'Unternehmen',
     primaryColor = '#1d4ed8',
     logoUrl = null,
   } = data

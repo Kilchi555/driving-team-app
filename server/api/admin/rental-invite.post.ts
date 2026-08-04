@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const { tenant_id: tenantId } = await requireAdminProfile(event)
@@ -24,7 +25,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Tenant nicht gefunden' })
   }
 
-  const tenantName = tenant.name || 'Ihre Fahrschule'
+  const terms = await getTenantTerminology(supabase, tenantId)
+  const tenantName = tenant.name || terms.businessNoun || 'Ihr Unternehmen'
   const primaryColor = tenant.primary_color || '#2563eb'
   const portalSlug = tenant.rental_portal_slug || tenant.slug || ''
   const baseUrl = process.env.APP_URL || 'https://app.simy.ch'

@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getTerminologyDefaults } from '~/composables/useTerminology'
 
 const client = new Anthropic()
 
@@ -13,14 +14,15 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name')
+    .select('name, business_type')
     .eq('id', tenantId)
     .single()
 
-  const schoolName = tenant?.name ?? tenantName ?? 'Fahrschule'
+  const terms = getTerminologyDefaults(tenant?.business_type)
+  const schoolName = tenant?.name ?? tenantName ?? terms.businessNoun
   const categoryList = Array.isArray(categories) && categories.length > 0
     ? categories.join(', ')
-    : 'alle Fahrschüler'
+    : `alle ${terms.clientsPlural}`
   const month = new Date().toLocaleString('de-CH', { month: 'long' })
   const year = new Date().getFullYear()
 
@@ -37,10 +39,14 @@ export default defineEventHandler(async (event) => {
     ? `\nAngebots-Details (bitte in Betreff und Text verwenden):\n- ${offerLines.join('\n- ')}\n`
     : ''
 
-  const prompt = `Du bist ein erfahrener Marketing-Experte für Fahrschulen in der Schweiz.
+  const prompt = `Du bist ein erfahrener Marketing-Experte für ${terms.businessNoun}-Betriebe in der Schweiz.
 Du hilfst "${schoolName}", eine Email-Marketingkampagne zu planen.
 
 Kontext:
+- Branche: ${terms.businessNoun}
+- Terminbegriff: ${terms.appointment} / ${terms.appointmentsPlural}
+- Kundenbegriff: ${terms.client} / ${terms.clientsPlural}
+- Mitarbeiterbegriff: ${terms.staff} / ${terms.staffPlural}
 - Monat: ${month} ${year}
 - Zielgruppe (Lead-Kategorien): ${categoryList}
 - Thema / Kampagnenziel: "${topic}"
@@ -55,6 +61,7 @@ Wichtige Regeln:
 - Sprache: Deutsch (Schweizer Hochdeutsch, "Sie"-Form)
 - Ton: professionell, freundlich, motivierend
 - Keine leeren Floskeln, direkte Kommunikation
+- Verwende die branchenspezifischen Begriffe oben (nicht pauschal "Fahrschule"/"Fahrstunde", sofern die Branche eine andere ist)
 - Betreffzeilen sollen neugierig machen ohne Clickbait zu sein
 - Nutze Platzhalter {{first_name}}, {{discount_code}}, {{discount_percent}}, {{discount_valid_until}}, {{course_name}}, {{category_label}}, {{cta_url}} wo sinnvoll
 - Erwähne den CTA als Textzeile "Jetzt: {{cta_url}}" falls ein Angebot vorliegt

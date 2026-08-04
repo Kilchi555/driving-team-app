@@ -111,6 +111,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
+import { useTerminology } from '~/composables/useTerminology'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import CustomersTab from '~/components/users/CustomersTab.vue'
 import StaffTab from '~/components/users/StaffTab.vue'
@@ -120,6 +121,7 @@ import AdminsTab from '~/components/users/AdminsTab.vue'
 
 // Composables
 const { currentUser, fetchCurrentUser, isLoading: isUserLoading, userError } = useCurrentUser()
+const { t } = useTerminology()
 
 // Local state
 const activeTab = ref('customers')
@@ -130,7 +132,7 @@ const tenantSettings = ref<any>({})
 const tabs = computed(() => {
   const baseTabs = [
     { id: 'customers', name: 'Kunden', count: undefined },
-    { id: 'staff', name: 'Fahrlehrer', count: undefined },
+    { id: 'staff', name: t.value.staffPlural, count: undefined },
   ]
   
   // Admins Tab nur für Admins

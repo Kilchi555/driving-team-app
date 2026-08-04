@@ -77,7 +77,7 @@
               >
                 <option value="fixed">CHF Betrag</option>
                 <option value="percentage">Prozent</option>
-                <option value="free_lesson">Kostenlose Fahrstunde</option>
+                <option value="free_lesson">Kostenlose {{ t.appointment }}</option>
                 <option value="free_product">Kostenloses Produkt</option>
               </select>
             </div>
@@ -146,7 +146,7 @@
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">Alle</option>
-                <option value="appointments">Nur Fahrstunden</option>
+                <option value="appointments">Nur {{ t.appointmentsPlural }}</option>
                 <option value="products">Nur Produkte</option>
                 <option value="specific_categories">Spezifische Kategorien</option>
               </select>
@@ -192,7 +192,7 @@
                 <option value="manual">Manuell</option>
                 <option value="birthday">Geburtstag</option>
                 <option value="anniversary">Jubiläum</option>
-                <option value="first_lesson">Erste Fahrstunde</option>
+                <option value="first_lesson">Erste {{ t.appointment }}</option>
                 <option value="milestone">Meilenstein</option>
                 <option value="seasonal">Saisonal</option>
               </select>
@@ -208,7 +208,7 @@
                   type="checkbox"
                   class="mr-2"
                 >
-                <span class="text-sm">Bei nächster Fahrstunde automatisch anwenden</span>
+                <span class="text-sm">Bei nächster {{ t.appointment }} automatisch anwenden</span>
               </div>
             </div>
           </div>
@@ -243,7 +243,7 @@
 
               <!-- Meilenstein -->
               <div v-if="form.trigger_type === 'milestone'" class="p-3 bg-gray-50 rounded">
-                <p class="text-sm text-gray-600 mb-2">Rabatt nach bestimmter Anzahl Fahrstunden</p>
+                <p class="text-sm text-gray-600 mb-2">Rabatt nach bestimmter Anzahl {{ t.appointmentsPlural }}</p>
                 <div class="flex items-center space-x-2">
                   <span class="text-sm">Nach</span>
                   <input
@@ -253,7 +253,7 @@
                     class="px-3 py-1 border border-gray-300 rounded text-sm w-20"
                     placeholder="10"
                   >
-                  <span class="text-sm">Fahrstunden</span>
+                  <span class="text-sm">{{ t.appointmentsPlural }}</span>
                 </div>
               </div>
 
@@ -392,6 +392,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useHybridDiscounts } from '~/composables/useHybridDiscounts'
 import type { DiscountCode } from '~/composables/useHybridDiscounts'
+import { useTerminology } from '~/composables/useTerminology'
 
 interface Props {
   code?: DiscountCode | null
@@ -405,6 +406,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
+const { t } = useTerminology()
 const { createDiscountCode, updateDiscountCode, isLoading, error } = useHybridDiscounts()
 
 // Available categories

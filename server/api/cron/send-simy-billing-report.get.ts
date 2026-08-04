@@ -127,7 +127,7 @@ export default defineEventHandler(async (event) => {
   const tableHeader = (withStatus = false) => `
     <thead>
       <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">
-        <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase">Fahrschule</th>
+        <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase">Unternehmen</th>
         <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase">E-Mail</th>
         <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase">Plan</th>
         <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase">Add-ons</th>

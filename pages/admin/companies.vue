@@ -1,80 +1,103 @@
 <template>
-  <div class="p-4 max-w-6xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between flex-wrap gap-3">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900">Firmenkunden</h1>
-        <p class="text-sm text-gray-500 mt-1">Firmen verwalten, Mitarbeiter zuordnen und Rechnungen erstellen.</p>
+  <div class="p-4 sm:p-6 space-y-5 max-w-[1600px] mx-auto">
+    <!-- Header Card -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 pt-5 pb-5">
+        <div>
+          <h1 class="text-xl font-bold text-gray-900">Firmenkunden</h1>
+          <p class="text-sm text-gray-400 mt-0.5">Firmen verwalten, Mitarbeiter zuordnen und Rechnungen erstellen.</p>
+        </div>
       </div>
-      <button @click="openCreate" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white rounded-xl"
-        :style="{ background: primaryColor }">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </div>
+
+    <!-- Toolbar Card -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+      <div class="flex flex-col sm:flex-row gap-3 flex-wrap items-stretch sm:items-center px-5 py-4">
+        <div>
+          <p class="text-sm font-bold text-gray-900">{{ filteredCompanies.length }} Firmen</p>
+        </div>
+
+        <div class="flex-1 min-w-[200px] relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+          </svg>
+          <input v-model="search" type="text" placeholder="Firma suchen…"
+            class="tenant-focus w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:outline-none"/>
+        </div>
+
+        <button @click="openCreate"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90 shadow-sm transition-all hover:-translate-y-0.5 whitespace-nowrap"
+          :style="{ background: primaryColor }">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Neue Firma
+        </button>
+      </div>
+    </div>
+
+    <!-- Companies Table -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div v-if="isLoading" class="text-center py-16 text-gray-400">Lädt…</div>
+
+      <div v-else-if="filteredCompanies.length === 0" class="text-center py-16 text-gray-400">
+        <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
         </svg>
-        Neue Firma
-      </button>
-    </div>
+        <p class="font-medium text-gray-600">Keine Firmen vorhanden</p>
+        <p class="text-xs mt-1">Erstelle eine neue Firma um zu starten.</p>
+      </div>
 
-    <!-- Search -->
-    <div class="relative">
-      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
-      </svg>
-      <input v-model="search" type="text" placeholder="Firma suchen…"
-        class="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
-    </div>
-
-    <!-- Loading -->
-    <div v-if="isLoading" class="text-center py-16 text-gray-400">Lädt…</div>
-
-    <!-- Empty -->
-    <div v-else-if="filteredCompanies.length === 0" class="text-center py-16 text-gray-400">
-      <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-      </svg>
-      <p class="font-medium">Keine Firmen vorhanden</p>
-      <p class="text-xs mt-1">Erstelle eine neue Firma um zu starten.</p>
-    </div>
-
-    <!-- Company cards -->
-    <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      <div v-for="company in filteredCompanies" :key="company.id"
-        class="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
-        @click="openDetail(company)">
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex-1 min-w-0">
-            <h3 class="font-bold text-gray-900 truncate">{{ company.name }}</h3>
-            <p v-if="company.contact_person" class="text-sm text-gray-500">{{ company.contact_person }}</p>
-          </div>
-          <span class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-            :style="{ background: primaryColor }">
-            {{ company.name.charAt(0).toUpperCase() }}
-          </span>
-        </div>
-        <div class="mt-3 space-y-1 text-xs text-gray-500">
-          <div v-if="company.email" class="flex items-center gap-1.5">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            {{ company.email }}
-          </div>
-          <div v-if="company.city" class="flex items-center gap-1.5">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-            </svg>
-            {{ [company.zip, company.city].filter(Boolean).join(' ') }}
-          </div>
-          <div v-if="company.vat_number" class="flex items-center gap-1.5">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-            UID: {{ company.vat_number }}
-          </div>
-        </div>
-        <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-          <span class="text-xs text-gray-400">{{ (company.users || []).length }} Mitarbeiter</span>
-          <span class="text-xs text-blue-600 font-medium hover:underline">Details →</span>
-        </div>
+      <div v-else class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="bg-gray-50/80 border-b border-gray-100">
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Firma</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kontakt</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ort</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Mitarbeiter</th>
+              <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            <tr
+              v-for="company in filteredCompanies"
+              :key="company.id"
+              class="tenant-row-hover cursor-pointer transition-colors group"
+              @click="openDetail(company)"
+            >
+              <td class="px-5 py-3.5">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div
+                    class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-semibold"
+                    :style="{ background: `${primaryColor}1f`, color: primaryColor }"
+                  >
+                    {{ company.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold text-gray-900 tenant-row-title truncate">{{ company.name }}</p>
+                    <p v-if="company.vat_number" class="text-xs text-gray-400 mt-0.5 truncate">UID: {{ company.vat_number }}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-5 py-3.5">
+                <p class="text-sm text-gray-700">{{ company.contact_person || '—' }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ company.email || '—' }}</p>
+              </td>
+              <td class="px-5 py-3.5">
+                <p class="text-sm text-gray-700">
+                  {{ [company.zip, company.city].filter(Boolean).join(' ') || '—' }}
+                </p>
+              </td>
+              <td class="px-5 py-3.5">
+                <span class="text-sm text-gray-700">{{ (company.users || []).length }}</span>
+              </td>
+              <td class="px-5 py-3.5 text-right">
+                <span class="text-xs font-medium text-blue-600 group-hover:underline">Details →</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 

@@ -34,9 +34,9 @@ function buildNewTenantEmailHtml(params: {
     </div>
     <div style="padding:32px">
       <p style="color:#374151;font-size:15px;margin:0 0 24px">Hallo ${params.recipientName},<br><br>
-      soeben hat sich eine neue Fahrschule bei Simy registriert.</p>
+      soeben hat sich ein neues Unternehmen bei Simy registriert.</p>
       <div style="background:#f9fafb;border-radius:12px;padding:20px 24px;margin:0 0 20px">
-        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:4px">Fahrschule</div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:4px">Unternehmen</div>
         <div style="font-size:15px;color:#111827;margin-bottom:20px">${params.tenantName}</div>
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;margin-bottom:4px">Kontakt-E-Mail</div>
         <div style="font-size:15px;color:#111827;margin-bottom:20px"><a href="mailto:${params.contactEmail}" style="color:#2563eb">${params.contactEmail}</a></div>

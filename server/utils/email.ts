@@ -145,7 +145,7 @@ export interface AppointmentDeletedEmailParams {
 }
 
 export function generateAppointmentDeletedEmail(p: AppointmentDeletedEmailParams): string {
-  const staffLabel = p.staffLabel || 'Fahrlehrer'
+  const staffLabel = p.staffLabel || 'Mitarbeiter'
   const content = `
 <div class="header"><h1>Termin storniert</h1></div>
 <div class="body">
@@ -219,7 +219,7 @@ export interface CustomerCancelledAdminEmailParams {
 }
 
 export function generateCustomerCancelledAdminEmail(p: CustomerCancelledAdminEmailParams): string {
-  const staffLabel = p.staffLabel || 'Fahrlehrer'
+  const staffLabel = p.staffLabel || 'Mitarbeiter'
   const chargeInfo = p.chargePercentage === 0
     ? '<span style="color:#059669;font-weight:600">Kostenlose Stornierung</span>'
     : `<span style="color:#dc2626;font-weight:600">${p.chargePercentage}% Stornogebühr</span>`

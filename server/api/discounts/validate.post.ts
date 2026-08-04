@@ -85,7 +85,7 @@ export default defineEventHandler(async (event) => {
             return { isValid: false, discount_amount_rappen: 0, error: 'Dieser Code gilt nur für Produktkäufe' }
           }
           if (context === 'product' && appliesTo !== 'products') {
-            return { isValid: false, discount_amount_rappen: 0, error: 'Dieser Code gilt nur für Fahrstunden-Buchungen' }
+            return { isValid: false, discount_amount_rappen: 0, error: 'Dieser Code gilt nur für Termin-Buchungen' }
           }
         }
       }
@@ -256,7 +256,7 @@ export default defineEventHandler(async (event) => {
           return {
             isValid: false,
             discount_amount_rappen: 0,
-            error: 'Dieser Code gilt nur für die erste Fahrstunde'
+            error: 'Dieser Code gilt nur für den ersten Termin'
           }
         }
       }

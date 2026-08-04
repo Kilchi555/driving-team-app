@@ -157,7 +157,7 @@
                   v-else-if="reg.courses?.sari_managed && !canCustomerTransfer(reg)"
                   class="text-xs text-slate-400 max-w-[160px] text-right"
                 >
-                  Umplanung nur bis 7 Tage vor Kursbeginn — bitte Fahrlehrer kontaktieren.
+                  Umplanung nur bis 7 Tage vor Kursbeginn — bitte {{ t.staff }} kontaktieren.
                 </p>
               </div>
             </div>
@@ -464,6 +464,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAsyncData } from '#app'
 import { logger } from '~/utils/logger'
 import { useUIStore } from '~/stores/ui'
+import { useTerminology } from '~/composables/useTerminology'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import CourseEnrollmentModal from '~/components/customer/CourseEnrollmentModal.vue'
 
@@ -501,6 +502,7 @@ const tenantWalleeEnabled = ref<boolean>(false)
 // Uses watch+immediate so it works whether the plugin finishes before or after
 // this component's setup runs.
 const { currentTenantBranding } = useTenantBranding()
+const { t } = useTerminology()
 const tenantBranding = ref<any>(null)
 
 const applyStoreBranding = (branding: typeof currentTenantBranding.value) => {
@@ -746,7 +748,7 @@ const loadData = async () => {
     }
   } catch (err: any) {
     logger.error('Error loading data:', err)
-    error.value = err.data?.statusMessage || 'Fahrschule nicht gefunden'
+    error.value = err.data?.statusMessage || 'Unternehmen nicht gefunden'
   }
 }
 

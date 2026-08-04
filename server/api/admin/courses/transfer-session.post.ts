@@ -27,6 +27,7 @@ import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure
 import { SARIClient } from '~/utils/sariClient'
 import { logger } from '~/utils/logger'
 import { sendTenantEmail } from '~/server/utils/email'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import {
   buildEffectiveSessionDates,
   evaluateSessionOrder,
@@ -369,6 +370,7 @@ export default defineEventHandler(async (event) => {
   let emailSent = false
   if (notifyCustomer && reg.email) {
     try {
+      const terms = await getTenantTerminology(supabase, profile.tenant_id)
       const customerName = `${reg.first_name || ''} ${reg.last_name || ''}`.trim() || 'Kursteilnehmer'
       const rows = prepared
         .map(
@@ -400,7 +402,7 @@ export default defineEventHandler(async (event) => {
             <p style="color:#6b7280;font-size:13px;margin:0">Die Zahlung bleibt unverändert. Bei Fragen melde dich gerne bei uns.</p>
             ${tenant?.contact_email || tenant?.contact_phone ? `<p style="color:#6b7280;font-size:13px;margin:16px 0 0">${tenant.contact_email || ''}${tenant.contact_email && tenant.contact_phone ? ' · ' : ''}${tenant.contact_phone || ''}</p>` : ''}
           </div>
-          <div style="border-top:1px solid #f3f4f6;padding:16px 32px;font-size:12px;color:#9ca3af;text-align:center">${tenant?.name || 'Fahrschule'}</div>
+          <div style="border-top:1px solid #f3f4f6;padding:16px 32px;font-size:12px;color:#9ca3af;text-align:center">${tenant?.name || terms.businessNoun || 'Unternehmen'}</div>
         </div>
       </body></html>`
 

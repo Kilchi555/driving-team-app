@@ -42,8 +42,8 @@
       <div class="mt-12 hidden">
         <h3>{{ content.title }} - Häufig gestellte Fragen:</h3>
         <p>
-          Unsere {{ content.title }} werden von erfahrenen Fahrlehrern durchgeführt.
-          Wir bieten individuelles Training, flexible Zeitplanung und moderne Fahrzeuge.
+          Unsere {{ content.title }} werden von erfahrenen Fachkräften durchgeführt.
+          Wir bieten individuelles Training, flexible Zeitplanung und persönliche Betreuung.
           Jede {{ content.title }} ist personalisiert auf deine Bedürfnisse abgestimmt.
         </p>
       </div>

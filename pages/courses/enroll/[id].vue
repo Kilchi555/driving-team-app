@@ -68,7 +68,7 @@ onMounted(async () => {
 
     const slug = (data as any).tenants?.slug
     if (!slug) {
-      errorMessage.value = 'Kurs konnte keiner Fahrschule zugeordnet werden.'
+      errorMessage.value = 'Kurs konnte keinem Unternehmen zugeordnet werden.'
       return
     }
 

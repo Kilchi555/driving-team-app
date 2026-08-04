@@ -5,6 +5,7 @@ import { sendEmail } from '~/server/utils/email'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 import { resolveSubscriptionPeriodEnd } from '~/server/utils/stripe-subscription-period'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 interface UpdateBody {
   plan?: SubscriptionPlan
@@ -273,7 +274,8 @@ export default defineEventHandler(async (event) => {
   // Send plan change confirmation to tenant
   if (tenant?.contact_email) {
     const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
-    const tenantName = tenant.name || 'Fahrschule'
+    const terms = await getTenantTerminology(supabase, tenantId)
+    const tenantName = tenant.name || terms.businessNoun || 'Unternehmen'
     const planName = PLANS.find(p => p.id === desiredPlan)?.name ?? desiredPlan
     const oldPlanName = PLANS.find(p => p.id === tenant.subscription_plan)?.name ?? tenant.subscription_plan ?? '–'
     const isUpgrade = PLANS.findIndex(p => p.id === desiredPlan) > PLANS.findIndex(p => p.id === tenant.subscription_plan)

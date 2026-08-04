@@ -491,7 +491,7 @@
                 <input
                   v-model="manualExam.notes"
                   type="text"
-                  placeholder="z.B. Extern mit anderem Fahrlehrer"
+                  placeholder="z.B. Extern mit anderem Mitarbeiter"
                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
                 />
               </div>
@@ -931,7 +931,7 @@
                   <!-- Lesson Price -->
                   <div v-if="payment.lesson_price_rappen > 0" class="flex justify-between items-center">
                     <span :class="payment.appointment?.status === 'cancelled' ? 'text-gray-400' : 'text-gray-600'">
-                      Fahrstunde
+                      {{ t.appointment }}
                     </span>
                     <span :class="[
                       'font-semibold',
@@ -3804,10 +3804,10 @@ function getCreditTransactionLabel(tx: any): string {
     cash_deposit: 'Bar-Einzahlung',
     cancellation: 'Stornierung',
     cancellation_credit_refund: 'Stornierung (Rückerstattung)',
-    duration_reduction_credit: 'Fahrstunde verkürzt (Rückerstattung)',
-    payment: 'Fahrstunde bezahlt',
-    appointment: 'Fahrstunde bezahlt',
-    appointment_payment: 'Fahrstunde bezahlt',
+    duration_reduction_credit: `${t.value.appointment} verkürzt (Rückerstattung)`,
+    payment: `${t.value.appointment} bezahlt`,
+    appointment: `${t.value.appointment} bezahlt`,
+    appointment_payment: `${t.value.appointment} bezahlt`,
     withdrawal: 'Auszahlung',
     withdrawal_pending: 'Auszahlung (ausstehend)',
     withdrawal_completed: 'Auszahlung abgeschlossen',

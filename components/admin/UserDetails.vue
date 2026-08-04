@@ -321,7 +321,7 @@
               <!-- Info -->
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-900 truncate">
-                  {{ pay.appointments?.title || (pay.appointments?.event_type_code === 'lesson' ? 'Fahrstunde' : pay.appointments?.event_type_code || 'Zahlung') }}
+                  {{ pay.appointments?.title || (pay.appointments?.event_type_code === 'lesson' ? t.appointment : pay.appointments?.event_type_code || 'Zahlung') }}
                 </p>
                 <p class="text-xs text-gray-400">{{ formatDateShort(pay.created_at) }}{{ pay.payment_method ? ` · ${pay.payment_method}` : '' }}</p>
               </div>
@@ -364,7 +364,7 @@
                     </svg>
                   </div>
                   <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900 truncate">{{ pay.appointments?.title || (pay.appointments?.event_type_code === 'lesson' ? 'Fahrstunde' : pay.appointments?.event_type_code || 'Zahlung') }}</p>
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ pay.appointments?.title || (pay.appointments?.event_type_code === 'lesson' ? t.appointment : pay.appointments?.event_type_code || 'Zahlung') }}</p>
                     <p class="text-xs text-gray-400">{{ formatDateShort(pay.created_at) }}{{ pay.payment_method ? ` · ${pay.payment_method}` : '' }}{{ pay.paid_at ? ` · Bezahlt ${formatDateShort(pay.paid_at)}` : '' }}</p>
                   </div>
                   <div class="flex flex-col items-end gap-1 flex-shrink-0">
@@ -421,7 +421,7 @@
                 </div>
                 <!-- Info -->
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900">{{ appt.type || 'Fahrstunde' }}</p>
+                  <p class="text-sm font-medium text-gray-900">{{ appt.type || t.appointment }}</p>
                   <p class="text-xs text-gray-400">
                     {{ appt.start_time ? new Date(appt.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }) : '' }}
                     {{ appt.duration_minutes ? `· ${appt.duration_minutes} Min.` : '' }}
@@ -495,7 +495,7 @@
                       <p class="text-xs text-gray-400 mt-0.5">{{ appt.start_time ? new Date(appt.start_time).toLocaleDateString('de-CH', { month: 'short', timeZone: 'Europe/Zurich' }) : '' }}</p>
                     </div>
                     <div class="flex-1 min-w-0">
-                      <p class="text-sm font-medium text-gray-900">{{ appt.type || 'Fahrstunde' }}</p>
+                      <p class="text-sm font-medium text-gray-900">{{ appt.type || t.appointment }}</p>
                       <p class="text-xs text-gray-400">
                         {{ appt.start_time ? new Date(appt.start_time).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }) : '' }}
                         {{ appt.duration_minutes ? `· ${appt.duration_minutes} Min.` : '' }}
@@ -867,7 +867,7 @@
                   class="mt-1 block w-full px-3 py-2 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 >
                   <option value="client">Kunde</option>
-                  <option value="staff">Fahrlehrer</option>
+                  <option value="staff">{{ t.staff }}</option>
                   <option value="admin">Administrator</option>
                 </select>
               </div>
@@ -1040,6 +1040,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useTerminology()
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
@@ -1324,7 +1325,7 @@ const roleLabel = computed(() => {
   
   const labels: Record<string, string> = {
     'client': 'Kunde',
-    'staff': 'Fahrlehrer',
+    'staff': t.value.staff,
     'super_admin': 'Superadministrator'
   }
   return labels[userDetails.value?.role || ''] || 'Unbekannt'
@@ -1348,7 +1349,7 @@ const statusClass = computed(() => {
 const rolePermissions = computed(() => {
   const permissions: Record<string, string> = {
     'client': 'Kundenbereich, Termine buchen',
-    'staff': 'Fahrlehrer-Dashboard, Termine verwalten, Schüler bewerten',
+    'staff': `${t.value.staff}-Dashboard, Termine verwalten, ${t.value.clientsPlural} bewerten`,
     'admin': 'Vollzugriff auf alle Bereiche'
   }
   return permissions[userDetails.value?.role || ''] || 'Unbekannt'
@@ -1356,8 +1357,8 @@ const rolePermissions = computed(() => {
 
 const roleSpecificTitle = computed(() => {
   const titles: Record<string, string> = {
-    'client': 'Fahrschüler-Informationen',
-    'staff': 'Fahrlehrer-Informationen',
+    'client': `${t.value.client}-Informationen`,
+    'staff': `${t.value.staff}-Informationen`,
     'admin': 'Administrator-Informationen'
   }
   return titles[userDetails.value?.role || ''] || 'Rollen-spezifische Informationen'

@@ -49,6 +49,71 @@ const WORKING_DAYS_FALLBACKS: Record<string, WorkingDaysTemplate> = {
       5: { start: '09:00', end: '17:00' },
     },
   },
+  fitness: {
+    days: [1, 2, 3, 4, 5, 6],
+    start_time: '06:30',
+    end_time: '21:00',
+    schedule: {
+      1: { start: '06:30', end: '21:00' },
+      2: { start: '06:30', end: '21:00' },
+      3: { start: '06:30', end: '21:00' },
+      4: { start: '06:30', end: '21:00' },
+      5: { start: '06:30', end: '21:00' },
+      6: { start: '08:00', end: '14:00' },
+    },
+  },
+  tutoring: {
+    days: [1, 2, 3, 4, 5, 6],
+    start_time: '14:00',
+    end_time: '20:00',
+    schedule: {
+      1: { start: '14:00', end: '20:00' },
+      2: { start: '14:00', end: '20:00' },
+      3: { start: '14:00', end: '20:00' },
+      4: { start: '14:00', end: '20:00' },
+      5: { start: '14:00', end: '20:00' },
+      6: { start: '09:00', end: '13:00' },
+    },
+  },
+  music_school: {
+    days: [1, 2, 3, 4, 5, 6],
+    start_time: '13:00',
+    end_time: '20:00',
+    schedule: {
+      1: { start: '13:00', end: '20:00' },
+      2: { start: '13:00', end: '20:00' },
+      3: { start: '13:00', end: '20:00' },
+      4: { start: '13:00', end: '20:00' },
+      5: { start: '13:00', end: '20:00' },
+      6: { start: '09:00', end: '14:00' },
+    },
+  },
+  dog_training: {
+    days: [1, 2, 3, 4, 5, 6],
+    start_time: '08:00',
+    end_time: '18:00',
+    schedule: {
+      1: { start: '08:00', end: '18:00' },
+      2: { start: '08:00', end: '18:00' },
+      3: { start: '08:00', end: '18:00' },
+      4: { start: '08:00', end: '18:00' },
+      5: { start: '08:00', end: '18:00' },
+      6: { start: '08:00', end: '16:00' },
+    },
+  },
+  massage: {
+    days: [1, 2, 3, 4, 5, 6],
+    start_time: '08:00',
+    end_time: '19:00',
+    schedule: {
+      1: { start: '08:00', end: '19:00' },
+      2: { start: '08:00', end: '19:00' },
+      3: { start: '08:00', end: '19:00' },
+      4: { start: '08:00', end: '19:00' },
+      5: { start: '08:00', end: '19:00' },
+      6: { start: '09:00', end: '14:00' },
+    },
+  },
 }
 
 function isValidWorkingDaysTemplate(value: unknown): value is WorkingDaysTemplate {

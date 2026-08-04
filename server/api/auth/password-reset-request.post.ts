@@ -243,7 +243,7 @@ export default defineEventHandler(async (event) => {
       console.warn('[PasswordReset] ⚠️ No tenantId provided and user has no tenant_id')
     }
 
-    let businessNounFallback = 'Ihre Fahrschule'
+    let businessNounFallback = 'Ihr Unternehmen'
     try {
       if (resolvedTenantId) {
         const { getTenantTerminology } = await import('~/server/utils/tenant-terminology')

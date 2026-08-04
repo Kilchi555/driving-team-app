@@ -24,6 +24,7 @@ function toUserFacingPaymentError(err: any, contextMessage: string): Error {
 export const usePayments = () => {
 
   const { validateDiscountCode, applyDiscount, loadDiscounts, loadDiscountsByCategory, availableDiscounts } = useDiscounts()
+  const { t } = useTerminology()
   
   // State
   const isLoading = ref(false)
@@ -98,7 +99,7 @@ export const usePayments = () => {
         admin_fee_rappen: price.admin_fee_rappen || 0, // Korrekte Admin-Fee
         payment_method: 'cash',
         payment_status: 'completed',
-        description: `Fahrlektion ${price.category_code} - ${price.duration_minutes} Min`,
+        description: `Termin ${price.category_code} - ${price.duration_minutes} Min`,
         is_standalone: false,
         metadata: {
           category: price.category_code,
@@ -169,7 +170,7 @@ export const usePayments = () => {
         admin_fee_rappen: 0, // Wird aus price.total_rappen berechnet
         payment_method: 'invoice',
         payment_status: 'pending',
-        description: `Fahrlektion ${price.category_code} - ${price.duration_minutes} Min`,
+        description: `Termin ${price.category_code} - ${price.duration_minutes} Min`,
         is_standalone: false,
         metadata: {
           category: price.category_code,
@@ -236,7 +237,7 @@ export const usePayments = () => {
         payment_method: 'wallee',
         payment_status: 'pending',
         currency: 'CHF',
-        description: `Fahrstunde ${price.category_code} (${price.duration_minutes} Min)`,
+        description: `${t.value.appointment} ${price.category_code} (${price.duration_minutes} Min)`,
         is_standalone: false,
         metadata: {
           products: products || [],

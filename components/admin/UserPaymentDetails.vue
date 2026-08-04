@@ -409,7 +409,7 @@
                         </div>
                         <div>
                           <label class="block text-xs font-medium text-gray-500 mb-1">Betreff (optional)</label>
-                          <input v-model="invoiceSubject" type="text" class="invoice-modal-input w-full" placeholder="Rechnung für Fahrstunden" />
+                          <input v-model="invoiceSubject" type="text" class="invoice-modal-input w-full" :placeholder="`Rechnung für ${t.appointmentsPlural}`" />
                         </div>
                         <div>
                           <label class="block text-xs font-medium text-gray-500 mb-1">Nachricht (optional)</label>
@@ -1046,6 +1046,7 @@ v-if="(appointment.credit_used || 0) > 0"
 </template>
 
 <script setup lang="ts">
+const { t } = useTerminology()
 
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from '#app'
@@ -1061,6 +1062,7 @@ const supabase = getSupabase()
 const {
   primaryColor: brandingPrimaryColor,
   brandName,
+
   invoiceIntroText,
   invoicePaymentTerms,
   invoiceFooterText,
@@ -1270,7 +1272,7 @@ const phoneLink = computed(() => {
 const roleLabel = computed(() => {
   const labels: Record<string, string> = {
     'client': 'Kunde',
-    'staff': 'Fahrlehrer',
+    'staff': t.value.staff,
     'admin': 'Administrator'
   }
   return labels[userDetails.value?.role || ''] || 'Unbekannt'
@@ -1592,7 +1594,7 @@ const loadUserAppointments = async () => {
       
       const processedAppointment = {
         id: appointment.id,
-        title: appointment.title || 'Fahrstunde',
+        title: appointment.title || t.value.appointment,
         start_time: appointment.start_time,
         end_time: appointment.end_time,
         duration_minutes: appointment.duration_minutes || 45,
@@ -2755,13 +2757,13 @@ const invoiceSelectedAppointments = async () => {
     customBillingEmail.value = ''
     
     invoiceEmail.value = companyBillingAddress.value?.email || displayEmail.value
-    invoiceSubject.value = `Rechnung für ${selectedAppointments.value.length} Fahrstunde${selectedAppointments.value.length > 1 ? 'n' : ''}`
+    invoiceSubject.value = `Rechnung für ${selectedAppointments.value.length} ${selectedAppointments.value.length > 1 ? t.value.appointmentsPlural : t.value.appointment}`
     // Nur Intro in die Nachricht — Zahlungsbedingungen/Footer gehen separat auf die Rechnung
     const intro = (invoiceIntroText.value || '').trim()
     if (intro) {
       invoiceMessage.value = intro
     } else {
-      const tenantLabel = brandName.value || 'Ihre Fahrschule'
+      const tenantLabel = brandName.value || t.value.businessNoun
       invoiceMessage.value = `Guten Tag\n\nVielen Dank für Ihren Auftrag, welchen wir wie folgt in Rechnung stellen:\n\nFreundliche Grüsse\n${tenantLabel}`
     }
     
@@ -2839,7 +2841,7 @@ const buildInvoicePayload = (internalNotes: string) => {
     const unitPriceRappen = chfToRappen(appointment.amount || 0)
     const vatAmount = Math.round(unitPriceRappen * defaultVatRate.value / 100)
     return {
-      product_name: appointment.title || 'Fahrstunde',
+      product_name: appointment.title || t.value.appointment,
       product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
       appointment_id: appointment.id,
       appointment_title: appointment.title,

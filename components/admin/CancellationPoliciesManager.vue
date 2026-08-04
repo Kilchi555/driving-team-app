@@ -57,7 +57,7 @@
               </div>
               <p v-if="policy.description" class="text-sm text-gray-600 mt-1">{{ policy.description }}</p>
               <p class="text-xs text-gray-500 mt-1">
-                {{ policy.applies_to === 'appointments' ? '📋 Für Fahrstunden' : '📚 Für Kurse' }}
+                {{ policy.applies_to === 'appointments' ? `📋 Für ${t.appointmentsPlural}` : '📚 Für Kurse' }}
               </p>
             </div>
             <div class="flex items-center gap-2 flex-wrap shrink-0">
@@ -122,7 +122,7 @@
                   :class="rule.credit_hours_to_instructor ? 'text-green-600' : 'text-gray-400'"
                   class="font-medium"
                 >
-                  {{ rule.credit_hours_to_instructor ? '✓ Fahrlehrer-Stunden' : '✗ Keine Stunden' }}
+                  {{ rule.credit_hours_to_instructor ? `✓ ${t.staff}-Stunden` : '✗ Keine Stunden' }}
                 </span>
                 <span v-if="(rule as any).exclude_sundays" class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded-full">
                   Sonntage ausgeschlossen
@@ -189,7 +189,7 @@
                   value="appointments"
                   class="w-4 h-4 text-blue-600 focus:ring-blue-500"
                 />
-                <span class="ml-2 text-sm text-gray-700">Für Fahrstunden</span>
+                <span class="ml-2 text-sm text-gray-700">Für {{ t.appointmentsPlural }}</span>
               </label>
               <label class="flex items-center cursor-pointer">
                 <input
@@ -203,7 +203,7 @@
             </div>
             <p class="text-xs text-gray-500 mt-1">
               {{ policyForm.applies_to === 'appointments' 
-                ? 'Gilt für einzelne Termine, die direkt mit Fahrschülern vereinbart wurden' 
+                ? `Gilt für einzelne Termine, die direkt mit ${t.clientsPlural} vereinbart wurden` 
                 : 'Gilt für alle Kurse, die über das Kursmodul erstellt und gebucht wurden' }}
             </p>
           </div>
@@ -322,7 +322,7 @@
             <!-- Stunden an Fahrlehrer gutschreiben (nur für Fahrstunden-Policies) -->
             <div v-if="!isRuleForCourses" class="flex items-center justify-between">
               <div>
-                <label class="text-sm font-medium text-gray-700">Fahrstunden an Fahrlehrer gutschreiben</label>
+                <label class="text-sm font-medium text-gray-700">{{ t.appointmentsPlural }} an {{ t.staff }} gutschreiben</label>
               </div>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -380,6 +380,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useCancellationPolicies, type CancellationPolicy, type CancellationRule } from '~/composables/useCancellationPolicies'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 const {
   policiesWithRules,

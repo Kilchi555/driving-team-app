@@ -28,7 +28,7 @@
           Immer aktuell, automatisch synchronisiert. Simy zeigt dir und deinen Schülern genau, wann wer wo fährt — ohne manuelles Pflegen.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
-          <a href="https://app.simy.ch/tenant-register"
+          <a href="https://app.simy.ch/tenant-register?type=driving_school"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
             style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             Kostenlos testen →
@@ -108,7 +108,7 @@
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Den Kalender heute noch ausprobieren</h2>
         <p class="text-white mb-8">30 Tage kostenlos — Keine Kreditkarte.</p>
-        <a href="https://app.simy.ch/tenant-register"
+        <a href="https://app.simy.ch/tenant-register?type=driving_school"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Jetzt starten →
@@ -176,7 +176,7 @@ const calFeatures = [
   { icon: '👥', title: 'Multi-Fahrlehrer Ansicht', desc: 'Alle Fahrlehrer auf einem Bildschirm — perfekt für den Überblick als Schulinhaber.' },
   { icon: '🎨', title: 'Farbcodierung', desc: 'Verschiedene Kategorien (Fahrstunde, VKU, Prüfung) in verschiedenen Farben.' },
   { icon: '📍', title: 'Standort-Info', desc: 'Treffpunkt direkt im Termin — ein Klick öffnet die Navigation.' },
-  { icon: '🔔', title: 'Automatische Erinnerungen', desc: '24h vor jedem Termin: Schüler bekommt eine SMS oder E-Mail-Erinnerung.' },
+  { icon: '🔔', title: 'Automatische Erinnerungen', desc: '24h vor jedem Termin: E-Mail zuerst, SMS nur wenn keine E-Mail — Segmente inkl. im Plan.' },
   { icon: '🔒', title: 'Verfügbarkeits-Regeln', desc: 'Definiere Pufferzeit, maximale Tages-Buchungen und Vorlaufzeit pro Fahrlehrer.' },
   { icon: '📊', title: 'Auslastungs-Ansicht', desc: 'Sieh auf einen Blick, welcher Fahrlehrer wann noch freie Kapazität hat.' },
 ]

@@ -33,7 +33,7 @@
         </div>
 
         <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight text-gray-900 mb-6 leading-tight">
-          Deine Fahrschule.<br>
+          Dein Unternehmen.<br>
           <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Auf Autopilot.
           </span>
@@ -135,7 +135,7 @@
                 :style="selectedPlan === plan.id && plan.highlighted
                   ? 'background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.85);'
                   : `background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);`">
-                {{ plan.includedSeats === null ? '∞ Fahrlehrer inkl.' : `${plan.includedSeats} Fahrlehrer inkl.` }}
+                {{ plan.includedSeats === null ? `∞ ${t.staffPlural} inkl.` : `${plan.includedSeats} ${t.staffPlural} inkl.` }}
               </div>
               <div class="text-xs font-medium rounded-xl px-3 py-2 text-center"
                 :style="selectedPlan === plan.id && plan.highlighted
@@ -157,13 +157,13 @@
         </p>
         <div class="grid md:grid-cols-3 gap-4">
 
-          <!-- Fahrlehrer Seats -->
+          <!-- Staff Seats -->
           <div :class="['rounded-2xl border-2 p-5 transition-all bg-white',
             addonSeats > 0 ? 'shadow-lg' : 'border-gray-100 shadow-sm']"
             :style="addonSeats > 0 ? { borderColor: primaryColor, boxShadow: `0 10px 25px rgba(var(--brand-rgb), 0.12)` } : {}">
             <div class="flex items-start justify-between mb-4">
               <div>
-                <p class="font-bold text-gray-900 text-sm">Fahrlehrer Seats</p>
+                <p class="font-bold text-gray-900 text-sm">{{ t.staffPlural }}-Seats</p>
                 <p class="text-xs text-gray-400 mt-0.5">
                   {{ includedSeatsForPlan }} im Plan inkl.
                   <template v-if="addonSeats > 0"> · {{ addonSeats }} extra</template>
@@ -394,7 +394,7 @@
             <!-- Included seats (always shown, no extra cost) -->
             <div class="flex justify-between items-center text-gray-400 text-xs pl-3">
               <span>
-                ↳ {{ includedSeatsForPlan }} Fahrlehrer Seat{{ (includedSeatsForPlan ?? 1) !== 1 ? 's' : '' }} inklusive
+                ↳ {{ includedSeatsForPlan }} {{ t.staff }}-Seat{{ (includedSeatsForPlan ?? 1) !== 1 ? 's' : '' }} inklusive
               </span>
               <span class="text-green-600 font-medium">Inklusive</span>
             </div>
@@ -428,7 +428,7 @@
             <!-- Extra seats -->
             <div v-if="addonSeats > 0"
               class="flex justify-between items-center text-gray-600">
-              <span>{{ addonSeats }} × Extra Fahrlehrer Seat</span>
+              <span>{{ addonSeats }} × Extra {{ t.staff }}-Seat</span>
               <span class="font-medium">{{ formatChf(addonSeats * addonPriceAmount('seats')) }}</span>
             </div>
 
@@ -498,7 +498,7 @@
               <svg class="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z"/>
               </svg>
-              <span>Du hast <strong>{{ staffList.length }} Fahrlehrer</strong> aber nur <strong>{{ totalSeats }} Seat{{ totalSeats !== 1 ? 's' : '' }}</strong> — wähle welche aktiv bleiben.</span>
+              <span>Du hast <strong>{{ staffList.length }} {{ t.staffPlural }}</strong> aber nur <strong>{{ totalSeats }} Seat{{ totalSeats !== 1 ? 's' : '' }}</strong> — wähle welche aktiv bleiben.</span>
             </div>
             <span class="underline whitespace-nowrap font-medium">↓ Auswahl</span>
           </div>
@@ -552,7 +552,7 @@
         <!-- Pre-fill hint for logged-in trial users -->
         <div v-if="isLoggedIn && prefillHint && !hasActiveSubscription" class="mt-4 bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs text-blue-700 space-y-1">
           <p class="font-semibold text-blue-800 mb-1.5">Basierend auf deinem Trial erkannt:</p>
-          <p>👥 {{ prefillHint.staffCount }} aktive Fahrlehrer
+          <p>👥 {{ prefillHint.staffCount }} aktive {{ t.staffPlural }}
             → {{ addonSeats > 0 ? `${addonSeats} Add-on Seat(s) vorgewählt` : 'im gewählten Plan inklusive' }}
           </p>
           <p v-if="prefillHint.courses">📚 Kursbuchungsseite wird bereits genutzt → Add-on vorgewählt</p>
@@ -571,8 +571,8 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.008v.008H12v-.008z"/>
             </svg>
             <div>
-              <p class="text-xs font-bold text-amber-800">Du hast {{ staffList.length }} Fahrlehrer, aber nur {{ totalSeats }} Seat{{ totalSeats !== 1 ? 's' : '' }} gewählt.</p>
-              <p class="text-xs text-amber-700 mt-0.5">Wähle welche <strong>{{ totalSeats }}</strong> Fahrlehrer aktiv bleiben. Die anderen werden nach dem Upgrade deaktiviert.</p>
+              <p class="text-xs font-bold text-amber-800">Du hast {{ staffList.length }} {{ t.staffPlural }}, aber nur {{ totalSeats }} Seat{{ totalSeats !== 1 ? 's' : '' }} gewählt.</p>
+              <p class="text-xs text-amber-700 mt-0.5">Wähle welche <strong>{{ totalSeats }}</strong> {{ t.staffPlural }} aktiv bleiben. Die anderen werden nach dem Upgrade deaktiviert.</p>
             </div>
           </div>
           <div class="divide-y divide-gray-100 bg-white">
@@ -598,7 +598,7 @@
             </label>
           </div>
           <div v-if="seatConflict" class="bg-red-50 px-4 py-2 text-xs text-red-600 font-medium">
-            ⚠️ Bitte deaktiviere {{ keepActiveIds.size - totalSeats }} weitere{{ keepActiveIds.size - totalSeats !== 1 ? 'n' : 'n' }} Fahrlehrer oder füge mehr Seats hinzu.
+            ⚠️ Bitte deaktiviere {{ keepActiveIds.size - totalSeats }} weitere{{ keepActiveIds.size - totalSeats !== 1 ? 'n' : 'n' }} {{ t.staffPlural }} oder füge mehr Seats hinzu.
           </div>
         </div>
       </div>
@@ -726,6 +726,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useTerminology()
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useLazyFetch, useHead, useRoute } from '#imports'
 import { PLANS, SMS_OVERAGE_CHF_PER_SEGMENT } from '~/utils/planFeatures'
@@ -1285,7 +1286,7 @@ const openBillingPortal = async () => {
 }
 
 const comparisonRows: { label: string; values: Record<string, string | boolean> }[] = [
-  { label: 'Fahrlehrer inkl.', values: { starter: '1', professional: '5', enterprise: '10' } },
+  { label: 'Mitarbeiter inkl.', values: { starter: '1', professional: '5', enterprise: '10' } },
   { label: 'Onlineterminbuchung', values: { starter: true, professional: true, enterprise: true } },
   { label: 'Kundenverwaltung', values: { starter: true, professional: true, enterprise: true } },
   { label: 'Rechnungen & Zahlungen', values: { starter: true, professional: true, enterprise: true } },
@@ -1301,7 +1302,7 @@ const comparisonRows: { label: string; values: Record<string, string | boolean> 
 useHead({
   title: 'Plan wählen – Simy',
   meta: [
-    { name: 'description', content: 'Starte deine Fahrschule mit Simy. 30 Tage kostenlos testen.' },
+    { name: 'description', content: 'Starte dein Unternehmen mit Simy. 30 Tage kostenlos testen.' },
     { name: 'robots', content: 'noindex' },
   ],
 })

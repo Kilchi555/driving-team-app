@@ -17,6 +17,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   // ── Auth: staff/admin only ──────────────────────────────────
@@ -85,7 +86,8 @@ export default defineEventHandler(async (event) => {
     .eq('id', tenantId)
     .single()
 
-  const tenantName   = tenant?.name || 'Ihre Fahrschule'
+  const terms = await getTenantTerminology(supabase, tenantId)
+  const tenantName   = tenant?.name || terms.businessNoun || 'Ihr Unternehmen'
   const primaryColor = tenant?.primary_color || '#2563eb'
   const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
   const dashboardLink = tenant?.slug ? `https://app.simy.ch/${tenant.slug}/customer` : 'https://app.simy.ch'

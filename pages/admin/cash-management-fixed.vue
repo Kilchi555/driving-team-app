@@ -69,7 +69,7 @@
             ]"
             :style="activeTab === 'instructor' ? { borderColor: primaryColor, color: primaryColor } : {}"
           >
-            👨‍🏫 Fahrlehrer-Kassen
+            👨‍🏫 {{ t.staffPlural }}-Kassen
           </button>
         </nav>
       </div>
@@ -196,6 +196,7 @@ import { useTenantBranding } from '~/composables/useTenantBranding'
 import AdminCashBalanceManager from '~/components/admin/CashBalanceManager.vue'
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 definePageMeta({
   middleware: 'admin',

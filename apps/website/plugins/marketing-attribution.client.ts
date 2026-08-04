@@ -187,6 +187,20 @@ export default defineNuxtPlugin({
         } else {
           window.__dtMarketingAttribution = stored
         }
+
+        // Re-bind stored click IDs to the current session so a later booking that
+        // only forwards session_id (no dt_attr) can still resolve gclid server-side.
+        if (stored.gclid || stored.gbraid || stored.wbraid || stored.fbclid) {
+          const sessionId = getOrCreateSessionId()
+          fetch('/api/save-attribution', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: sessionId,
+              attribution: window.__dtMarketingAttribution,
+            }),
+          }).catch(() => {})
+        }
       } else {
         window.__dtMarketingAttribution = null
       }

@@ -1,24 +1,34 @@
-Simy is the modern app for driving schools in Switzerland. Everything you need on your way to your driver's licence – in one app.
+Simy is the all-in-one app for your SMB in Switzerland. Appointments, clients, team and billing — with separate logins for clients, staff and admin. One app for many industries.
 
-AS A STUDENT
-• Book, reschedule and cancel driving lessons online
-• Push notifications for your upcoming lessons
-• Automatically sync appointments to your iPhone calendar
-• Track your learning progress and instructor feedback
-• View exam results and learning materials
+BUILT FOR THESE INDUSTRIES
+Driving school · Coaching · Consulting · Personal training · Tutoring · Music school · Dog training · Massage
+More verticals with industry templates at simy.ch/branchen.
+
+THREE LOGINS IN ONE APP
+• Client: book, reschedule and cancel appointments, reminders, progress, payments and invoices
+• Staff / team: manage calendar and availability, look after clients, run sessions
+• Admin: run the business — team, locations, pricing, billing and reports
+
+AS A CLIENT
+• Book, reschedule and cancel appointments online
+• Push reminders for upcoming sessions
+• Sync appointments to your calendar
+• View progress, notes and materials
 • Manage payments, credits and invoices
-• Sign in quickly and securely with Face ID
-• Communicate directly with your driving instructor
+• Sign in quickly with biometrics (fingerprint / face unlock)
 
-FOR INSTRUCTORS AND DRIVING SCHOOLS
-• Manage your calendar and availability
-• Overview of all students and their progress
-• Exam planning and statistics
-• Simple invoicing and billing
-• Built-in evaluation and progress tracking
+AS STAFF / TEAM
+• Keep day and week under control
+• Manage availability and client contacts
+• Document and continue sessions
+
+AS ADMIN
+• Manage team and locations
+• Control prices, packages and billing
+• See reports and business overview
 
 PRIVACY
-Your data is processed exclusively in Switzerland. We use modern security standards with encryption and biometric authentication.
+Your data is processed in Switzerland. We use modern security standards with encryption and biometric authentication.
 
 ACCESS
-Simy works with selected driving schools in Switzerland. Your access is set up directly by your driving school. Not signed up yet? Ask your driving school about Simy or visit simy.ch.
+Your provider (driving school, coach, studio, practice …) sets up your access. Self-signup without an invitation is intentionally disabled. No access yet? Ask your provider about Simy or visit simy.ch.

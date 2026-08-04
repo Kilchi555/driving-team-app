@@ -451,9 +451,11 @@ import { useUIStore } from '~/stores/ui'
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 const props = withDefaults(
   defineProps<{
@@ -610,10 +612,10 @@ function getCreditTransactionLabel(tx: any): string {
     cash_deposit: 'Bar-Einzahlung',
     cancellation: 'Stornierung',
     cancellation_credit_refund: 'Stornierung (Rückerstattung)',
-    duration_reduction_credit: 'Fahrstunde verkürzt (Rückerstattung)',
-    payment: 'Fahrstunde bezahlt',
-    appointment: 'Fahrstunde bezahlt',
-    appointment_payment: 'Fahrstunde bezahlt',
+    duration_reduction_credit: `${t.value.appointment} verkürzt (Rückerstattung)`,
+    payment: `${t.value.appointment} bezahlt`,
+    appointment: `${t.value.appointment} bezahlt`,
+    appointment_payment: `${t.value.appointment} bezahlt`,
     withdrawal: 'Auszahlung',
     withdrawal_pending: 'Auszahlung (ausstehend)',
     withdrawal_completed: 'Auszahlung abgeschlossen',

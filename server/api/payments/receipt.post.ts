@@ -1138,7 +1138,7 @@ export default defineEventHandler(async (event) => {
         'receipt.recentTransactions': 'Guthaben-Transaktionen',
         'receipt.transactionType': 'Typ',
         'receipt.amount': 'Betrag',
-        'eventType.lesson': 'Fahrlektion',
+        'eventType.lesson': 'Termin',
         'eventType.course': 'Kurs',
         'status.pending': 'Ausstehend',
         'status.authorized': 'Reserviert',

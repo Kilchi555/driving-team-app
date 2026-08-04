@@ -350,7 +350,7 @@
               </button>
             </div>
           </div>
-          <div>
+          <div v-if="isDrivingSchool">
             <p class="text-xs font-medium text-gray-600 mb-2">Lernfahrausweis-Upload</p>
             <div class="grid grid-cols-3 gap-2">
               <button
@@ -593,6 +593,7 @@ definePageMeta({ layout: 'admin', middleware: 'admin' })
 
 const { primaryBg, primaryText, primaryBgLight } = usePrimaryColor()
 const uiStore = useUIStore()
+const { isDrivingSchool } = useTerminology()
 
 const isLoading = ref(true)
 const isSaving = ref(false)

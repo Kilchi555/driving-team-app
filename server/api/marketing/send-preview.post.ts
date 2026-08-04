@@ -40,11 +40,13 @@ export default defineEventHandler(async (event) => {
 
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, slug, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
+      .select('name, slug, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url, business_type')
       .eq('id', tenantId)
       .single()
 
-    const tenantName = tenant?.name ?? 'Fahrschule'
+    const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+    const terms = getTerminologyDefaults(tenant?.business_type)
+    const tenantName = tenant?.name ?? terms.businessNoun
     const tenantSlug = tenant?.slug ?? ''
     const primaryColor = tenant?.primary_color || '#1e293b'
     const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
@@ -108,6 +110,6 @@ export default defineEventHandler(async (event) => {
   // Mode A: raw HTML
   if (!subject || !html) throw createError({ statusCode: 400, statusMessage: 'subject and html are required for raw mode' })
 
-  const result = await sendEmail({ to, subject, html, fromName: 'Ihre Fahrschule' })
+  const result = await sendEmail({ to, subject, html, fromName: 'Ihr Unternehmen' })
   return { success: true, messageId: result.messageId }
 })

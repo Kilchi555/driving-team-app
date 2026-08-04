@@ -83,11 +83,13 @@ export default defineEventHandler(async (event) => {
   // ── 3. Fetch tenant ─────────────────────────────────────────
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, contact_email, iban, bank_name, legal_company_name, invoice_street, invoice_street_nr, invoice_zip, invoice_city, primary_color, logo_url, logo_wide_url, logo_square_url')
+    .select('id, name, contact_email, iban, bank_name, legal_company_name, invoice_street, invoice_street_nr, invoice_zip, invoice_city, primary_color, logo_url, logo_wide_url, logo_square_url, business_type')
     .eq('id', tenantId)
     .maybeSingle()
 
-  const tenantName = tenant?.name || 'Fahrschule'
+  const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+  const terms = getTerminologyDefaults(tenant?.business_type)
+  const tenantName = tenant?.name || terms.businessNoun
   const tenantEmail = tenant?.contact_email || null
   const tenantIban = tenant?.iban || '—'
   const tenantBankName = tenant?.bank_name || null
@@ -159,7 +161,7 @@ export default defineEventHandler(async (event) => {
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#94a3b8;margin-bottom:14px">Kontaktvermittlung — Zahlungsangaben</div>
 
       <div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Fahrschule</div>
+        <div style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Unternehmen</div>
         <table style="border-collapse:collapse;font-size:13px;width:100%">
           <tr><td style="padding:2px 0;color:#6b7280;width:130px">Firmenname</td><td style="color:#111827;font-weight:600">${tenantLegalName}</td></tr>
           ${tenantAddress ? `<tr><td style="padding:2px 0;color:#6b7280">Adresse</td><td style="color:#374151">${tenantAddress}</td></tr>` : ''}

@@ -15,8 +15,8 @@
   },
   "android": {
     "keystoreAlias": "driving-team",
-    "minSdkVersion": 22,
-    "targetSdkVersion": 34
+    "minSdkVersion": 24,
+    "targetSdkVersion": 36
   },
   "store": {
     "de": {

@@ -67,7 +67,7 @@
           <span class="text-2xl" :style="{ color: primaryColor }">✨</span>
         </div>
         <h2 class="text-base font-semibold">Noch keine Bewertungen</h2>
-        <p class="text-sm text-gray-500 mt-1">Sobald dein Fahrlehrer ein Thema bewertet hat, erscheint es hier.</p>
+        <p class="text-sm text-gray-500 mt-1">Sobald dein {{ t.staff }} ein Thema bewertet hat, erscheint es hier.</p>
       </div>
 
       <!-- Content -->
@@ -172,6 +172,7 @@ import { navigateTo, useRouter } from '#app'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 const isLoading = ref(true)
 const error = ref<string | null>(null)

@@ -133,7 +133,7 @@
                     <p class="font-medium text-gray-900">{{ reason.reason_name }}</p>
                     <p class="text-sm text-gray-500">
                       {{ reason.cancellation_type === 'student' ? '👨‍🎓 Schüler' : 
-                         reason.cancellation_type === 'staff' ? '👨‍🏫 Fahrlehrer' : '❓ Unbekannt' }} • 
+                         reason.cancellation_type === 'staff' ? `👨‍🏫 ${t.staff}` : '❓ Unbekannt' }} • 
                       Letzte Absage: {{ formatDate(reason.last_cancellation) }}
                     </p>
                   </div>
@@ -363,7 +363,7 @@
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-blue-100 text-blue-800'
                     ]">
-                      {{ reason.cancellation_type === 'student' ? '👨‍🎓 Schüler' : '👨‍🏫 Fahrlehrer' }}
+                      {{ reason.cancellation_type === 'student' ? '👨‍🎓 Schüler' : `👨‍🏫 ${t.staff}` }}
                     </span>
                   </td>
                     <td class="px-6 py-4">
@@ -381,7 +381,7 @@
                         <span 
                           v-if="reason.cancellation_type === 'staff'" 
                           class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
-                          title="Fahrlehrer-Absage: Immer kostenlos für Kunde"
+                          :title="`${t.staff}-Absage: Immer kostenlos für Kunde`"
                         >
                           💚 Immer kostenlos
                         </span>
@@ -464,7 +464,7 @@
               class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
             >
               <option value="student">👨‍🎓 Schüler</option>
-              <option value="staff">👨‍🏫 Fahrlehrer</option>
+              <option value="staff">👨‍🏫 {{ t.staff }}</option>
             </select>
               
               <!-- Dynamic Info based on Type -->
@@ -472,7 +472,7 @@
                 :style="{ background: `${primaryColor}10`, borderColor: `${primaryColor}33` }">
                 <p class="text-xs" :style="{ color: primaryColor }">
                   <strong>Automatische Regelung:</strong>
-                  <span v-if="reasonForm.cancellation_type === 'staff'"> Fahrlehrer-Gründe sind immer kostenlos für Kunde</span>
+                  <span v-if="reasonForm.cancellation_type === 'staff'"> {{ t.staff }}-Gründe sind immer kostenlos für Kunde</span>
                   <span v-else> Schüler-Gründe folgen Policy-Regeln (>24h = 0%, <24h = 100%)</span>
                 </p>
               </div>
@@ -626,6 +626,7 @@ import { formatDateTime } from '~/utils/dateUtils'
 import CancellationPoliciesManager from '~/components/admin/CancellationPoliciesManager.vue'
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 // Meta
 definePageMeta({

@@ -19,6 +19,7 @@ import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUne
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { logger } from '~/utils/logger'
 import { sendTenantEmail, generateCourseTransferEmail } from '~/server/utils/email'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -114,9 +115,10 @@ export default defineEventHandler(async (event) => {
   if (!isAdmin) {
     const startDate = oldCourse.course_start_date ? new Date(oldCourse.course_start_date) : null
     if (!startDate || startDate.getTime() - Date.now() < SEVEN_DAYS_MS) {
+      const terms = await getTenantTerminology(supabaseAdmin, callerProfile.tenant_id)
       throw createError({
         statusCode: 403,
-        statusMessage: 'Selbstständige Umplanung ist nur bis 7 Tage vor Kursbeginn möglich. Bitte kontaktiere den Fahrlehrer.',
+        statusMessage: `Selbstständige Umplanung ist nur bis 7 Tage vor Kursbeginn möglich. Bitte kontaktiere den ${terms.staff}.`,
       })
     }
   }
@@ -370,7 +372,7 @@ export default defineEventHandler(async (event) => {
       fromCourseDate: formatDate(oldCourse.course_start_date),
       toCourseName: targetCourse.name,
       toCourseDate: formatDate(targetCourse.course_start_date),
-      tenantName: tenant?.name || 'Fahrschule',
+      tenantName: tenant?.name || 'Unternehmen',
       tenantEmail: tenantContact?.contact_email ?? undefined,
       tenantPhone: tenantContact?.contact_phone ?? undefined,
     })

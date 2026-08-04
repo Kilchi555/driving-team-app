@@ -248,7 +248,7 @@ const { primaryColor } = useTenantBranding()
 const authStore = useAuthStore()
 const templates = ref<any[]>([])
 const loading = ref(true)
-const tenantName = ref('Fahrschule')
+const tenantName = ref('Unternehmen')
 const tenantColor = ref('#6366f1')
 const modalOpen = ref(false)
 const editingTemplate = ref<any>(null)
@@ -481,7 +481,7 @@ onMounted(async () => {
     try {
       const res = await $fetch<any>('/api/tenants/branding', { query: { id: tenantId } })
       if (res?.data) {
-        tenantName.value = res.data.brand_name || res.data.name || 'Fahrschule'
+        tenantName.value = res.data.brand_name || res.data.name || 'Unternehmen'
         tenantColor.value = res.data.primary_color || '#6366f1'
       }
     } catch {}

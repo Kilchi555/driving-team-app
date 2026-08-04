@@ -154,7 +154,7 @@
                 : 'bg-violet-600 hover:bg-violet-700 hover:-translate-y-0.5'
             ]"
           >
-            Fahrlehrer einladen
+            {{ t.staff }} einladen
           </button>
           <button
             @click="seatsAtLimit ? null : openCreateForCurrentTab()"
@@ -168,7 +168,7 @@
             ]"
             :style="seatsAtLimit ? {} : { background: primaryColor }"
           >
-            Neuer Fahrlehrer
+            Neuer {{ t.staff }}
           </button>
           <NuxtLink
             v-if="seatsAtLimit"
@@ -338,12 +338,12 @@
       <div class="admin-modal bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="px-6 py-4 border-b border-gray-200">
           <h3 class="text-lg font-semibold text-gray-900">
-            📧 Fahrlehrer einladen
+            📧 {{ t.staff }} einladen
           </h3>
         </div>
         
         <form @submit.prevent="sendStaffInvitation" class="px-6 py-4 space-y-4">
-          <p class="text-sm text-gray-500">Der Fahrlehrer erhält einen SMS-Link und füllt den Rest selbst aus.</p>
+          <p class="text-sm text-gray-500">Der {{ t.staff }} erhält einen SMS-Link und füllt den Rest selbst aus.</p>
 
           <!-- First Name -->
           <div>
@@ -423,7 +423,7 @@
       <div class="admin-modal bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-gray-200">
           <h3 class="text-lg font-semibold text-gray-900">
-            <span v-if="newUser.role === 'staff'">👨‍🏫 Neuen Fahrlehrer hinzufügen</span>
+            <span v-if="newUser.role === 'staff'">👨‍🏫 Neuen {{ t.staff }} hinzufügen</span>
             <span v-else-if="newUser.role === 'sub_admin'">🔧 Neuen Sub-Admin hinzufügen</span>
             <span v-else>👤 Neuen Benutzer hinzufügen</span>
           </h3>
@@ -440,7 +440,7 @@
                 class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 bg-gray-700 text-white text-left flex justify-between items-center"
               >
                 <span v-if="newUser.role">
-                  <span v-if="newUser.role === 'staff'">👨‍🏫 Fahrlehrer</span>
+                  <span v-if="newUser.role === 'staff'">👨‍🏫 {{ t.staff }}</span>
                   <span v-else-if="newUser.role === 'sub_admin'">🔧 Sub-Admin</span>
                 </span>
                 <span v-else class="text-gray-400">Rolle wählen</span>
@@ -459,7 +459,7 @@
                   :class="{ 'rounded-t-lg': role === availableRolesForTab[0], 'rounded-b-lg': role === availableRolesForTab[availableRolesForTab.length-1] }"
                 >
                   <span v-if="role === 'client'">👤 Kunde</span>
-                  <span v-else-if="role === 'staff'">👨‍🏫 Fahrlehrer</span>
+                  <span v-else-if="role === 'staff'">👨‍🏫 {{ t.staff }}</span>
                   <span v-else-if="role === 'admin'">👑 Admin</span>
                   <span v-else-if="role === 'sub_admin'">🔧 Sub-Admin</span>
                 </div>
@@ -756,7 +756,7 @@
               </div>
             </div>
             <p class="text-xs text-gray-500 mt-2">
-              Wählen Sie die Fahrzeugkategorien aus, die dieser Fahrlehrer unterrichten kann.
+              Wählen Sie die {{ t.categoriesLabel }} aus, die dieser {{ t.staff }} anbieten kann.
             </p>
             <div v-if="newUser.categories.length === 0" class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p class="text-xs text-yellow-700">⚠️ Mindestens eine Kategorie muss ausgewählt werden</p>
@@ -794,7 +794,7 @@
               :style="{ background: primaryColor }"
             >
               <span v-if="isCreatingUser">Erstelle...</span>
-              <span v-else-if="newUser.role === 'staff'">👨‍🏫 Fahrlehrer erstellen</span>
+              <span v-else-if="newUser.role === 'staff'">👨‍🏫 {{ t.staff }} erstellen</span>
               <span v-else-if="newUser.role === 'sub_admin'">🔧 Sub-Admin erstellen</span>
               <span v-else>👤 Benutzer erstellen</span>
             </button>
@@ -1315,7 +1315,7 @@ const getRoleLabel = (user: User): string => {
   
   const labels: Record<string, string> = {
     'client': 'Kunde',
-    'staff': 'Fahrlehrer',
+    'staff': t.value.staff,
     'super_admin': 'Superadmin'
   }
   return labels[user.role] || user.role
@@ -1740,7 +1740,7 @@ const createUser = async () => {
     }
 
     // 5. Success feedback
-    const roleLabel = newUser.value.role === 'staff' ? 'Fahrlehrer' : 
+    const roleLabel = newUser.value.role === 'staff' ? t.value.staff : 
                      newUser.value.role === 'sub_admin' ? 'Sub-Admin' : 'Benutzer'
     createUserSuccess.value = `${roleLabel} ${newUser.value.first_name} ${newUser.value.last_name} wurde erfolgreich erstellt!`
     

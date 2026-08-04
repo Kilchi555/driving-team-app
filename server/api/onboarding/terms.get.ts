@@ -105,7 +105,7 @@ export default defineEventHandler(async (event) => {
 
     // Last fallback placeholder
     if (!terms) {
-      terms = 'Bitte bestätige die Allgemeinen Geschäftsbedingungen deiner Fahrschule.'
+      terms = 'Bitte bestätige die Allgemeinen Geschäftsbedingungen deines Unternehmens.'
     }
 
     // ============ LAYER 4: AUDIT LOGGING ============

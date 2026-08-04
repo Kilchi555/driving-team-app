@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { sendSMS } from '~/server/utils/sms'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 /**
  * POST /api/affiliate/request-payout
@@ -72,10 +73,12 @@ export default defineEventHandler(async (event) => {
   }
 
   if (type === 'credit') {
-    // 'credit' just means: keep it as Fahrstunden-Guthaben – nothing to do
+    // Keep balance as appointment credit — nothing to payout
+    const terms = await getTenantTerminology(supabaseAdmin, userProfile.tenant_id)
+    const creditLabel = terms.appointment ? `${terms.appointment}-Guthaben` : 'Termin-Guthaben'
     return {
       success: true,
-      message: 'Guthaben bleibt als Fahrstunden-Guthaben gespeichert.',
+      message: `Guthaben bleibt als ${creditLabel} gespeichert.`,
       data: { type: 'credit', balance_rappen: currentBalance }
     }
   }

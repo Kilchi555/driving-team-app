@@ -104,6 +104,7 @@
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
+import { useTerminology } from '~/composables/useTerminology'
 // import { getSupabase } from '~/utils/supabase'
 
 // Props
@@ -121,6 +122,7 @@ const emit = defineEmits<{
 }>()
 
 const { cashVisible } = useCashPaymentSettings('staff')
+const { t } = useTerminology()
 
 // State
 const isProcessing = ref(false)
@@ -141,7 +143,7 @@ const availablePaymentMethods = computed(() => [
   ...(cashVisible.value ? [{
     method_code: 'cash',
     display_name: 'Barzahlung',
-    description: 'Zahlung beim Fahrlehrer',
+    description: `Zahlung beim ${t.value.staff}`,
     icon_name: 'Banknotes',
     is_active: true,
     is_online: false
@@ -256,7 +258,7 @@ const retryPayment = async () => {
       
       emit('payment-success', {
         type: 'cash',
-        message: 'Barzahlung erfasst - Zahlung erfolgt beim Fahrlehrer'
+        message: `Barzahlung erfasst - Zahlung erfolgt beim ${t.value.staff}`
       })
       
     } else if (selectedPaymentMethod.value === 'invoice') {

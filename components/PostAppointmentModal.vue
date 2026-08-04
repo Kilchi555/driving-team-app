@@ -146,7 +146,7 @@
                     value="credit"
                     class="mr-3 text-blue-600 focus:ring-blue-500"
                   >
-                  <span class="text-sm text-gray-700">💳 Als Guthaben beim Fahrschüler verbuchen</span>
+                  <span class="text-sm text-gray-700">💳 Als Guthaben beim {{ t.client }} verbuchen</span>
                 </label>
                 
                 <label class="flex items-center">
@@ -168,7 +168,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span class="text-sm text-blue-800">
-                  Der Betrag wird dem Guthaben des Fahrschülers gutgeschrieben und kann für zukünftige Termine verwendet werden.
+                  Der Betrag wird als Guthaben beim {{ t.client }} verbucht und kann für zukünftige Termine verwendet werden.
                 </span>
               </div>
             </div>
@@ -239,6 +239,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 interface Props {
   isVisible: boolean
