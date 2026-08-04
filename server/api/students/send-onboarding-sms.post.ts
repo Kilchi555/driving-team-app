@@ -1,7 +1,7 @@
 // server/api/students/send-onboarding-sms.post.ts
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
-import { sendSMS } from '~/server/utils/sms'
+import { sendTenantSMS } from '~/server/utils/sms'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
@@ -192,17 +192,15 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 7: LOAD TENANT DATA ============
     const { data: tenant } = await supabaseAdmin
       .from('tenants')
-      .select('name, slug, twilio_from_sender, business_type')
+      .select('name, twilio_from_sender, business_type')
       .eq('id', tenantId)
       .single()
 
     const terms = await getTenantTerminology(supabaseAdmin, tenantId)
     let tenantName = tenant?.twilio_from_sender || tenant?.name || `Ihre ${terms.businessNoun}`
-    let tenantSlug = tenant?.slug || ''
 
-    // SMS Message with onboarding link and login link
-    const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch/login'
-    const message = `Hallo ${sanitizedFirstName}! Willkommen bei ${tenantName}. Bitte Registrierung hier abschliessen (30 Tage gültig): ${onboardingLink} Danach Login: ${loginLink}`
+    // Login link lives in the welcome email after registration — keep SMS short (fewer segments)
+    const message = `Hallo ${sanitizedFirstName}! Willkommen bei ${tenantName}. Bitte Registrierung abschliessen (30 Tage gültig): ${onboardingLink}`
 
     logger.debug('📱 Sending onboarding SMS:', {
       to: formattedPhone.substring(0, 6) + '****',
@@ -213,10 +211,12 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 8: SEND SMS ============
     let smsResult
     try {
-      smsResult = await sendSMS({
+      smsResult = await sendTenantSMS({
+        tenantId: tenantId!,
         to: formattedPhone,
         message: message,
-        senderName: tenantName
+        purpose: 'student_onboarding',
+        senderName: tenantName,
       })
     } catch (smsError: any) {
       logger.error('OnboardingSMS', '❌ SMS sending failed:', {
@@ -231,29 +231,16 @@ export default defineEventHandler(async (event) => {
         ip_address: ipAddress
       })
       throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to send SMS'
+        statusCode: smsError?.code === 'SMS_QUOTA_EXCEEDED' ? 402 : 500,
+        statusMessage: smsError?.code === 'SMS_QUOTA_EXCEEDED'
+          ? 'SMS-Kontingent aufgebraucht'
+          : 'Failed to send SMS'
       })
     }
 
     logger.debug('✅ Onboarding SMS sent successfully')
 
-    // ============ LAYER 9: LOG SMS & AUDIT ============
-    try {
-      await supabaseAdmin
-        .from('sms_logs')
-        .insert({
-          to_phone: formattedPhone,
-          message: message,
-          twilio_sid: smsResult?.messageSid || `onboarding_${Date.now()}`,
-          status: 'sent',
-          sent_at: new Date().toISOString(),
-          purpose: 'student_onboarding'
-        })
-    } catch (logError) {
-      logger.warn('⚠️ Failed to log SMS:', logError)
-    }
-
+    // ============ LAYER 9: AUDIT ============
     await logAudit({
       user_id: authenticatedUserId,
       action: 'send_onboarding_sms',
@@ -264,6 +251,7 @@ export default defineEventHandler(async (event) => {
       details: {
         tenant_id: tenantId,
         phone_masked: formattedPhone.substring(0, 6) + '****',
+        segments: smsResult.segmentCount,
         duration_ms: Date.now() - startTime
       }
     })

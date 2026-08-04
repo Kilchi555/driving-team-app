@@ -1,5 +1,5 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { sendSMS } from '~/server/utils/sms'
+import { sendTenantSMS } from '~/server/utils/sms'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logger } from '~/utils/logger'
@@ -90,28 +90,22 @@ export default defineEventHandler(async (event) => {
     const terms = await getTenantTerminology(supabase, tenantId)
     const tenantName = tenant?.name || terms.businessNoun || 'Ihre Fahrschule'
     const senderName = tenant?.twilio_from_sender || tenantName
-    const tenantSlug = tenant?.slug || ''
     const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch'
     const onboardingUrl = `${baseUrl}/onboarding/${token}`
-    const loginLink = tenantSlug ? `https://app.simy.ch/${tenantSlug}` : 'https://app.simy.ch/login'
 
-    const smsMessage = `Hallo ${student.first_name},
+    // Login link lives in the welcome email after registration — keep SMS short
+    const smsMessage = `Hallo ${student.first_name}, bitte Registrierung abschliessen (30 Tage): ${onboardingUrl}`
 
-bitte vervollständige deine Registrierung innerhalb der nächsten 30 Tage:
-
-${onboardingUrl}
-
-Nach der Registrierung kannst du dich über folgenden Link anmelden:
-
-${loginLink}
-
-Freundliche Grüsse,
-${tenantName}`
-
-    const smsResult = await sendSMS({ to: student.phone, message: smsMessage, senderName })
+    const smsResult = await sendTenantSMS({
+      tenantId,
+      to: student.phone,
+      message: smsMessage,
+      purpose: 'student_onboarding',
+      senderName,
+    })
 
     if (!smsResult.success) {
-      logger.error('resend-onboarding-by-phone: SMS failed:', smsResult.error)
+      logger.error('resend-onboarding-by-phone: SMS failed')
       throw createError({ statusCode: 500, statusMessage: `SMS konnte nicht gesendet werden. Bitte kontaktieren Sie ${tenantName}.` })
     }
 

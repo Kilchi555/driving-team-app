@@ -5,7 +5,7 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { sendSMS } from '~/server/utils/sms'
+import { sendTenantSMS } from '~/server/utils/sms'
 import { sendEmail } from '~/server/utils/email'
 import { sanitizeString } from '~/server/utils/validators'
 import { getPlanById } from '~/utils/planFeatures'
@@ -193,14 +193,12 @@ export default defineEventHandler(async (event) => {
     if (phone) {
       try {
         const smsText = `Hallo ${firstName}! Willkommen bei ${tenantName}. Bitte vervollständige deine Registrierung als ${staffLabel}: ${inviteLink}`
-        await sendSMS({ to: phone, message: smsText, senderName })
-        await supabase.from('sms_logs').insert({
-          to_phone: phone,
+        await sendTenantSMS({
+          tenantId: tenant_id,
+          to: phone,
           message: smsText,
-          twilio_sid: 'onboarding-batch',
-          status: 'sent',
-          sent_at: new Date().toISOString(),
-          tenant_id
+          purpose: 'staff_invite',
+          senderName,
         })
         results.push({ name: `${firstName} ${lastName}`, status: 'sms_sent', message: 'SMS gesendet', invite_link: inviteLink })
         logger.debug('✅ Onboarding-SMS gesendet an:', phone)

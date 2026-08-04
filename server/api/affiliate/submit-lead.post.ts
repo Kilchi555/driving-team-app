@@ -13,7 +13,7 @@
  */
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { sendSMS } from '~/server/utils/sms'
+import { sendTenantSMS } from '~/server/utils/sms'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logger } from '~/utils/logger'
@@ -200,25 +200,18 @@ export default defineEventHandler(async (event) => {
     await supabase.from('affiliate_leads').insert(leadPayload)
   }
 
-  // 8. Send onboarding SMS
+  // 8. Send onboarding SMS (login link is in welcome email after registration)
   const onboardingUrl = `${baseUrl}/onboarding/${onboardingToken}`
-  const loginLink = `${baseUrl}/${tenantSlugResolved}`
-  const smsMessage = `Hallo ${firstName.trim()}!
-
-Deine Anmeldung bei ${tenantName} wurde gestartet. Vervollständige deine Registrierung unter:
-
-${onboardingUrl}
-
-Nach der Registrierung kannst du dich hier anmelden:
-${loginLink}
-
-(Link 30 Tage gültig)
-
-Freundliche Grüsse
-${tenantName}`
+  const smsMessage = `Hallo ${firstName.trim()}! Registrierung bei ${tenantName} abschliessen (30 Tage): ${onboardingUrl}`
 
   try {
-    await sendSMS({ to: normalisedPhone, message: smsMessage, senderName: tenantName })
+    await sendTenantSMS({
+      tenantId: tenant.id,
+      to: normalisedPhone,
+      message: smsMessage,
+      purpose: 'affiliate_lead_onboarding',
+      senderName: tenantName,
+    })
     logger.debug(`[submit-lead] Onboarding SMS sent to ${normalisedPhone} for tenant ${tenantSlugResolved}`)
   } catch (smsErr: any) {
     logger.error('[submit-lead] SMS send failed:', smsErr.message)

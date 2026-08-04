@@ -5,7 +5,7 @@ import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { H3Event } from 'h3'
-import { sendSMS } from '~/server/utils/sms'
+import { sendTenantSMS } from '~/server/utils/sms'
 import { v4 as uuidv4 } from 'uuid'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
@@ -260,34 +260,27 @@ ${tenantName}`
       const onboardingUrl = `${baseUrl}/onboarding/${student.onboarding_token}`
       logger.debug('📱 Sending onboarding SMS to:', student.phone)
 
-      smsMessage = `Hallo ${student.first_name},
-
-bitte vervollständige deine Registrierung innerhalb der nächsten 30 Tage:
-
-${onboardingUrl}
-
-Nach der Registrierung kannst du dich über folgenden Link anmelden:
-
-${loginLink}
-
-Freundliche Grüsse,
-${tenantName}`
+      // Login link lives in the welcome email after registration — keep SMS short
+      smsMessage = `Hallo ${student.first_name}, bitte Registrierung abschliessen (30 Tage): ${onboardingUrl}`
     }
 
-    // Send SMS via Twilio
-    const smsResult = await sendSMS({
+    // Send SMS via Twilio (quota + logging via sendTenantSMS)
+    const purpose = student.onboarding_token ? 'student_onboarding' : 'login_link'
+    const smsResult = await sendTenantSMS({
+      tenantId,
       to: student.phone,
       message: smsMessage,
-      senderName: senderName
+      purpose,
+      senderName: senderName,
     })
 
     if (!smsResult.success) {
-      logger.error('❌ Failed to send SMS:', smsResult.error)
+      logger.error('❌ Failed to send SMS')
       await logAudit({
         user_id: requestingUserId,
         action: 'resend_onboarding_sms',
         status: 'failed',
-        error_message: `SMS sending failed: ${smsResult.error}`,
+        error_message: 'SMS sending failed',
         ip_address: ipAddress,
         details: auditDetails
       })

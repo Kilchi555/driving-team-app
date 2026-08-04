@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
-import { sendSMS } from '~/server/utils/sms'
+import { sendTenantSMS } from '~/server/utils/sms'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
@@ -252,24 +252,15 @@ export default defineEventHandler(async (event) => {
     try {
       const smsMessage = `Hallo ${sanitizedFirstName}! Sie wurden als ${terms.staff} bei ${tenantName} eingeladen. Registrierung: ${inviteLink}\nLogin nach Registrierung: ${loginLink}`
 
-      const smsResult = await sendSMS({
+      const smsResult = await sendTenantSMS({
+        tenantId: userProfile.tenant_id,
         to: sanitizedPhone,
         message: smsMessage,
-        senderName: smsSenderName
+        purpose: 'staff_invite',
+        senderName: smsSenderName,
       })
 
       logger.debug('✅ SMS sent via Twilio:', smsResult)
-
-      await serviceSupabase
-        .from('sms_logs')
-        .insert({
-          to_phone: sanitizedPhone,
-          message: smsMessage,
-          twilio_sid: smsResult?.messageSid || 'unknown',
-          status: 'sent',
-          sent_at: new Date().toISOString(),
-          tenant_id: userProfile.tenant_id
-        })
 
       return {
         success: true,

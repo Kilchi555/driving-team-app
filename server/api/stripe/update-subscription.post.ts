@@ -176,6 +176,16 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Metered SMS overage — always attach when price configured (usage billed only on overage)
+  const { getSmsOveragePriceId } = await import('~/utils/planFeatures')
+  const smsOveragePriceId = getSmsOveragePriceId()
+  if (smsOveragePriceId) {
+    const currentSmsItem = findItem(smsOveragePriceId)
+    if (!currentSmsItem) {
+      itemUpdates.push({ price: smsOveragePriceId })
+    }
+  }
+
   if (itemUpdates.length === 0) {
     return { success: true, message: 'No changes detected', unchanged: true }
   }
@@ -227,6 +237,12 @@ export default defineEventHandler(async (event) => {
   }
   // Never overwrite a good period end with null (would blank the billing UI).
   if (currentPeriodEnd) tenantUpdate.current_period_end = currentPeriodEnd
+
+  const smsOveragePriceIdCached = smsOveragePriceId
+  if (smsOveragePriceIdCached) {
+    const smsItem = updatedSub.items.data.find(i => i.price.id === smsOveragePriceIdCached)
+    if (smsItem) tenantUpdate.stripe_sms_subscription_item_id = smsItem.id
+  }
 
   await supabase
     .from('tenants')

@@ -157,7 +157,7 @@ export default defineEventHandler(async (event) => {
     // 6. Get tenant data
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('name, slug, primary_color, business_type')
+      .select('name, slug, primary_color, business_type, twilio_from_sender')
       .eq('id', tenantId)
       .single()
 
@@ -303,6 +303,59 @@ export default defineEventHandler(async (event) => {
       logger.debug(`⏭️ Skipping customer confirmation email (${skipCustomerEmailReason}) — staff notification still proceeds`)
     }
 
+    // SMS fallback: phone present, no email, policy allows
+    let smsSent = false
+    const confirmationSmsEnabled = policy.confirmation_sms_enabled !== false
+    const smsLength = policy.sms_message_length === 'long' ? 'long' : 'short'
+    const hasPhone = !!(user.phone && String(user.phone).trim())
+    if (
+      confirmationSmsEnabled &&
+      hasPhone &&
+      skipCustomerEmailReason === 'user_email_missing'
+    ) {
+      try {
+        const { sendTenantSMS } = await import('~/server/utils/sms')
+        const { buildAppointmentConfirmationSms } = await import('~/server/utils/sms-templates')
+        const { getAccountAccessLink } = await import('~/server/utils/account-access-link')
+        const dateLabel = startTime.toLocaleDateString('de-CH', {
+          timeZone: 'Europe/Zurich',
+          weekday: 'short',
+          day: 'numeric',
+          month: 'numeric',
+        })
+        const timeLabel = startTime.toLocaleTimeString('de-CH', {
+          timeZone: 'Europe/Zurich',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+        // Pending guests → onboarding link; completed → tenant login
+        const { url: accessUrl } = await getAccountAccessLink(supabase, user, tenant.slug || '')
+        const smsMessage = buildAppointmentConfirmationSms(
+          {
+            firstName: user.first_name || 'du',
+            dateLabel,
+            timeLabel,
+            locationLabel: meeting_type === 'phone' || meeting_type === 'online'
+              ? undefined
+              : (locationAddressDisplay || undefined),
+            appLink: accessUrl,
+          },
+          smsLength,
+        )
+        await sendTenantSMS({
+          tenantId,
+          to: user.phone,
+          message: smsMessage,
+          purpose: 'appointment_confirmation',
+          senderName: (tenant as any).twilio_from_sender || tenant.name,
+        })
+        smsSent = true
+        logger.debug('✅ Appointment confirmation SMS sent')
+      } catch (smsErr: any) {
+        logger.warn('⚠️ Appointment confirmation SMS failed (non-critical):', smsErr?.message)
+      }
+    }
+
     // 12. Send staff notification – only for online bookings made by the customer (not manual).
     // AWAITED (see note on step 10 above): Vercel freezes the lambda right after this
     // function returns, so an un-awaited fire-and-forget call here was silently dropped
@@ -347,11 +400,14 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      skipped: skipCustomerEmail,
-      reason: skipCustomerEmail ? skipCustomerEmailReason : undefined,
-      message: skipCustomerEmail
-        ? `Customer email skipped (${skipCustomerEmailReason}), staff notification still attempted`
-        : 'Appointment confirmation email sent successfully'
+      skipped: skipCustomerEmail && !smsSent,
+      reason: skipCustomerEmail && !smsSent ? skipCustomerEmailReason : undefined,
+      smsSent,
+      message: smsSent
+        ? 'Appointment confirmation SMS sent (no email)'
+        : skipCustomerEmail
+          ? `Customer email skipped (${skipCustomerEmailReason}), staff notification still attempted`
+          : 'Appointment confirmation email sent successfully'
     }
   } catch (error: any) {
     logger.error('AppointmentConfirmation', 'Unexpected error:', error)

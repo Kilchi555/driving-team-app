@@ -2,7 +2,7 @@
 import { defineEventHandler, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
-import { sendSMS } from '~/server/utils/sms'
+import { sendSMS, sendTenantSMS } from '~/server/utils/sms'
 
 // Simple delay utility
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -141,11 +141,22 @@ export default defineEventHandler(async (event) => {
 
           try {
             const tenantName = message.context_data?.tenant_name || undefined
-            await sendSMS({
-              to: message.recipient_phone,
-              message: message.body,
-              senderName: tenantName,
-            })
+            const purpose = message.context_data?.stage || message.context_data?.purpose || 'outbound_queue'
+            if (message.tenant_id) {
+              await sendTenantSMS({
+                tenantId: message.tenant_id,
+                to: message.recipient_phone,
+                message: message.body,
+                purpose,
+                senderName: tenantName,
+              })
+            } else {
+              await sendSMS({
+                to: message.recipient_phone,
+                message: message.body,
+                senderName: tenantName,
+              })
+            }
             console.log(`[OutboundMessageProcessor] ✅ SMS sent for message ${message.id} to ${message.recipient_phone}`)
             await supabase
               .from('outbound_messages_queue')

@@ -245,10 +245,10 @@ export default defineEventHandler(async (event) => {
       } else if (student.phone && reminderSmsEnabled) {
         // ── SMS fallback (no email) ──────────────────────────
         const smsBody = reminderNumber === 1
-          ? `Hallo ${student.first_name}, bitte vervollständige deine Registrierung bei ${tenantName}:\n\n${onboardingUrl}\n\nNach der Registrierung: ${loginLink}`
+          ? `Hallo ${student.first_name}, bitte Registrierung abschliessen: ${onboardingUrl}`
           : isLastReminder
-            ? `Hallo ${student.first_name}, letzte Erinnerung – dein Link läuft bald ab:\n\n${onboardingUrl}`
-            : `Hallo ${student.first_name}, du hast deine Registrierung bei ${tenantName} noch nicht abgeschlossen:\n\n${onboardingUrl}`
+            ? `Hallo ${student.first_name}, letzte Erinnerung – Link läuft bald ab: ${onboardingUrl}`
+            : `Hallo ${student.first_name}, Registrierung noch offen: ${onboardingUrl}`
 
         toInsert.push({
           tenant_id:       student.tenant_id,
