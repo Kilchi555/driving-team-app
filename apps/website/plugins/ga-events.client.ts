@@ -2,10 +2,19 @@
 // Uses event delegation so there's no per-component boilerplate needed.
 // Events tracked:
 //   ViewContent       – service/landing page views (Meta retargeting audiences)
-//   InitiateCheckout  – clicks on simy.ch booking/customer links (was incorrectly Lead)
-//   Contact           – tel: link clicks
+//   InitiateCheckout  – clicks on simy.ch booking/customer links (Meta only; NOT Google Ads)
+//   Contact           – tel: link clicks (Meta + GA4; NOT Google Ads)
 //   Lead              – only from successful inquiry forms (see GeneralInquiryForm)
 //   form_submit (GA4) – contact/lead form submissions
+//
+// Google Ads primary conversions are server-side only after paid booking/course
+// (Server: Booking Completed via app.simy.ch). Do not fire gtag conversion here.
+//
+// CRITICAL: On every simy.ch click we rewrite the href (capture phase) to append
+// session_id + dt_attr BEFORE navigation. Logging booking_redirects alone is not
+// enough — without those params the booking app mints a new session and loses gclid.
+
+import { enrichSimyAnchor, getWebsiteSessionId } from '~/utils/enrich-simy-url'
 
 // Maps page paths to driving category codes when the booking URL has no category param.
 // This fixes the "unknown" category problem for VKU, Taxi, Bus, Motorboot, etc.
@@ -34,20 +43,11 @@ function inferCategoryFromPath(pathname: string): string {
 export default defineNuxtPlugin(() => {
   if (process.server) return
   const { gtag } = useGtag()
-  const config = useRuntimeConfig()
   const router = useRouter()
 
   function fireMetaEvent(event: string, params?: Record<string, unknown>) {
     if (typeof window !== 'undefined' && (window as any).fbq) {
       ;(window as any).fbq('track', event, params)
-    }
-  }
-
-  function fireGoogleAdsConversion(labelOverride?: string) {
-    const adsId = config.public.googleAdsId
-    const adsLabel = labelOverride || config.public.googleAdsConversionLabel
-    if (adsId && adsLabel) {
-      gtag('event', 'conversion', { send_to: `${adsId}/${adsLabel}` })
     }
   }
 
@@ -106,14 +106,21 @@ export default defineNuxtPlugin(() => {
     trackViewContent(to.path)
   })
 
+  // Capture phase + non-passive: mutate href before the browser follows it
+  // (including target=_blank / cmd-click). This is the primary fix for FS
+  // campaigns showing 0 conversions despite real bookings.
   document.addEventListener('click', (e: MouseEvent) => {
-    const target = (e.target as HTMLElement).closest('a')
+    const target = (e.target as HTMLElement)?.closest?.('a') as HTMLAnchorElement | null
     if (!target) return
 
-    const href = target.getAttribute('href') ?? ''
+    let href = target.getAttribute('href') ?? ''
 
     // Match all outbound simy.ch links (booking AND customer/course links)
     if (href.includes('simy.ch')) {
+      // Rewrite BEFORE reading final href / navigating — closes pre-mount race.
+      enrichSimyAnchor(target)
+      href = target.getAttribute('href') ?? href
+
       const parsedUrl = new URL(href, window.location.href)
       // Try URL params first, fall back to page-path inference
       const service = parsedUrl.searchParams.get('service') ?? ''
@@ -121,19 +128,21 @@ export default defineNuxtPlugin(() => {
       const category = urlCategory || inferCategoryFromPath(window.location.pathname)
 
       gtag('event', 'booking_click', {
-        event_category: 'conversion',
+        event_category: 'engagement',
         event_label: category,
         page_path: window.location.pathname,
       })
-      // Hot funnel signal for Meta retargeting — do NOT use Lead (pollutes optimization)
+      // Hot funnel signal for Meta retargeting — do NOT use Lead (pollutes optimization).
+      // Google Ads conversion must NOT fire here: this is only a click to the booking
+      // app, not a paid course/appointment. Paid conversions upload server-side
+      // (Server: Booking Completed) after payment / confirmed booking.
       fireMetaEvent('InitiateCheckout', {
         content_name: category,
         content_category: 'booking',
         currency: 'CHF',
       })
-      fireGoogleAdsConversion()
 
-      const sessionId = (window as any).__analyticsSessionId || 'unknown'
+      const sessionId = getWebsiteSessionId() || 'unknown'
       fetch('/api/booking-redirect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -155,11 +164,11 @@ export default defineNuxtPlugin(() => {
         page_path: window.location.pathname,
       })
       fireMetaEvent('Contact')
-      // Use phone-specific label if set, otherwise fall back to the general conversion label
-      fireGoogleAdsConversion((config.public as any).googleAdsPhoneConversionLabel || undefined)
+      // Do not fire Google Ads conversion on tel: clicks — that would count as a
+      // primary conversion before any paid booking. Phone stays GA4 + Meta Contact.
 
-      // First-party DB log for phone clicks + Google Ads conversion upload
-      const sessionId = (window as any).__analyticsSessionId || 'unknown'
+      // First-party DB log for phone clicks
+      const sessionId = getWebsiteSessionId() || 'unknown'
       fetch('/api/phone-click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -172,7 +181,15 @@ export default defineNuxtPlugin(() => {
         }),
       }).catch(() => {})
     }
-  }, { passive: true })
+  }, { capture: true })
+
+  // pointerdown fires earlier than click — covers slow enrich / touch devices.
+  document.addEventListener('pointerdown', (e: PointerEvent) => {
+    const target = (e.target as HTMLElement)?.closest?.('a') as HTMLAnchorElement | null
+    if (!target) return
+    const href = target.getAttribute('href') ?? ''
+    if (href.includes('simy.ch')) enrichSimyAnchor(target)
+  }, { capture: true })
 
   // GA4 only on generic form submit. Meta Lead must fire on *successful* inquiry
   // only (GeneralInquiryForm / waitlist) — not on every form attempt or lead magnet.

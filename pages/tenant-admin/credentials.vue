@@ -362,7 +362,7 @@ const credentialGroups: CredentialGroup[] = [
     service: 'Wallee',
     icon: '🏦',
     color: '#00a0e3',
-    description: 'Zahlungsabwicklung für Fahrstunden',
+    description: 'Zahlungsabwicklung für Termine',
     dashboardUrl: 'https://app-wallee.com/account/admin',
     credentials: [
       { key: 'WALLEE_SECRET_KEY', description: 'Application User Secret für Wallee API', targets: ['vercel'], critical: true, rotateInstructions: 'Wallee Dashboard → Account → Application Users → User auswählen → Authentication Key regenerieren.' },

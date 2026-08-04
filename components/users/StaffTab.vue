@@ -14,7 +14,7 @@
       <div v-if="isLoading" class="h-full flex items-center justify-center">
         <div class="text-center">
           <LoadingLogo size="xl" />
-          <p class="text-gray-600 mt-4">Lade Fahrlehrer...</p>
+          <p class="text-gray-600 mt-4">Lade {{ terms.staffPlural }}...</p>
         </div>
       </div>
 
@@ -36,14 +36,14 @@
       <div v-else-if="staffList.length === 0" class="h-full flex items-center justify-center">
         <div class="text-center px-4">
           <div class="text-6xl mb-4">👨‍🏫</div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">Noch keine Fahrlehrer</h3>
-          <p class="text-gray-600 mb-4">Fügen Sie den ersten Fahrlehrer hinzu</p>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Noch keine {{ terms.staffPlural }}</h3>
+          <p class="text-gray-600 mb-4">Fügen Sie den ersten {{ terms.staff }} hinzu</p>
           <button 
             v-if="currentUser.role === 'admin'"
             @click="addNewStaff"
             class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
           >
-            Ersten Fahrlehrer hinzufügen
+            Ersten {{ terms.staff }} hinzufügen
           </button>
         </div>
       </div>
@@ -89,7 +89,7 @@
                   </label>
                 </div>
                 <p class="text-xs text-gray-600 mb-3">
-                  Definieren Sie die individuellen Stosszeiten für diesen Fahrlehrer. In diesen Zeiten wird bei der Pickup-Berechnung mit erhöhtem Verkehr gerechnet.
+                  Definieren Sie die individuellen Stosszeiten für diesen {{ terms.staff }}. In diesen Zeiten wird bei der Pickup-Berechnung mit erhöhtem Verkehr gerechnet.
                 </p>
                 
                 <!-- Morgen-Stosszeit -->
@@ -223,7 +223,7 @@
                     
                     <!-- Kategorien mit Schiebereglern (pro Staff × Standort) -->
                     <div v-if="getStaffCategories(staff).length > 0" class="mt-3">
-                      <label class="text-xs font-medium text-gray-700 block mb-2">Kategorien (nur dieser Fahrlehrer):</label>
+                      <label class="text-xs font-medium text-gray-700 block mb-2">{{ terms.categoriesLabel }} (nur dieser {{ terms.staff }}):</label>
                       <div class="flex flex-wrap gap-2">
                         <div 
                           v-for="categoryCode in getStaffCategories(staff)" 
@@ -391,7 +391,7 @@
       
       <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
         <div class="p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Neuen Fahrlehrer hinzufügen</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Neuen {{ terms.staff }} hinzufügen</h3>
           
           <form @submit.prevent="createStaff">
             <div class="space-y-4">
@@ -605,6 +605,7 @@ import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useFeatures } from '~/composables/useFeatures'
+import { useTerminology } from '~/composables/useTerminology'
 import { useRuntimeConfig } from '#app'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import { getSupabase } from '~/utils/supabase'
@@ -627,6 +628,7 @@ const supabase = getSupabase()
 const uiStore = useUIStore()
 const authStore = useAuthStore()
 const { isEnabled, load: loadFeatures } = useFeatures()
+const { t: terms } = useTerminology()
 
 // Prüfe ob Online-Buchung aktiviert ist
 const isOnlineBookingEnabled = computed(() => {
@@ -869,7 +871,7 @@ const loadStaff = async () => {
 
   } catch (err: any) {
     console.error('❌ Error loading staff:', err)
-    error.value = err.message || 'Fehler beim Laden der Fahrlehrer'
+    error.value = err.message || `Fehler beim Laden der ${terms.value.staffPlural}`
     staffList.value = []
   } finally {
     isLoading.value = false
@@ -1220,20 +1222,22 @@ const createLocation = async () => {
     
     if (locationError) throw locationError
 
-    // Ensure staff_locations row for per-staff categories / online booking
-    const { error: staffLocError } = await supabase
-      .from('staff_locations')
-      .insert({
-        staff_id: staffId,
-        location_id: newLocationData.id,
-        tenant_id: tenantId,
-        is_active: true,
-        is_online_bookable: false,
-        available_categories: staffCategories
+    // Atomically ensure staff_locations row exists (must succeed — booking depends on it)
+    try {
+      await $fetch('/api/staff/assign-location', {
+        method: 'POST',
+        body: {
+          action: 'assign',
+          location_id: newLocationData.id,
+          staff_id: staffId,
+          is_online_bookable: false,
+          available_categories: staffCategories
+        }
       })
-
-    if (staffLocError) {
-      console.warn('⚠️ Could not create staff_locations entry (non-fatal):', staffLocError)
+    } catch (assignErr: any) {
+      // Roll back orphan location so we never leave staff_ids without staff_locations
+      await supabase.from('locations').delete().eq('id', newLocationData.id)
+      throw assignErr
     }
     
     // Add to local state
@@ -1255,41 +1259,27 @@ const createLocation = async () => {
     }
   } catch (err: any) {
     console.error('❌ Error creating location:', err)
-    alert(`Fehler: Standort konnte nicht erstellt werden.${err?.message ? ` (${err.message})` : ''}`)
+    alert(`Fehler: Standort konnte nicht erstellt werden.${err?.data?.statusMessage || err?.message ? ` (${err?.data?.statusMessage || err.message})` : ''}`)
   } finally {
     isCreatingLocation.value = false
   }
 }
 
 const removeLocation = async (staff: any, location: any) => {
-  if (!confirm(`Möchten Sie den Standort "${location.name}" wirklich von diesem Fahrlehrer entfernen?`)) {
+  if (!confirm(`Möchten Sie den Standort "${location.name}" wirklich von diesem ${terms.value.staff} entfernen?`)) {
     return
   }
   
   try {
-    // Unassign staff from shared location via staff_ids (do not deactivate the location)
-    const currentStaffIds = Array.isArray(location.staff_ids) ? [...location.staff_ids] : []
-    const updatedStaffIds = currentStaffIds.filter((id: string) => id !== staff.id)
-
-    const { error } = await supabase
-      .from('locations')
-      .update({
-        staff_ids: updatedStaffIds
-      })
-      .eq('id', location.id)
-    
-    if (error) throw error
-
-    // Deactivate staff_locations link (keeps history; booking filters on is_active)
-    const { error: staffLocError } = await supabase
-      .from('staff_locations')
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq('staff_id', staff.id)
-      .eq('location_id', location.id)
-
-    if (staffLocError) {
-      console.warn('⚠️ Could not deactivate staff_locations entry (non-fatal):', staffLocError)
-    }
+    // Atomically remove from staff_ids + deactivate staff_locations
+    await $fetch('/api/staff/assign-location', {
+      method: 'POST',
+      body: {
+        action: 'unassign',
+        location_id: location.id,
+        staff_id: staff.id
+      }
+    })
     
     // Remove from local state
     const index = staff.locations.findIndex((l: any) => l.id === location.id)
@@ -1301,7 +1291,7 @@ const removeLocation = async (staff: any, location: any) => {
     alert(`Standort "${location.name}" wurde erfolgreich von ${staff.first_name} ${staff.last_name} entfernt.`)
   } catch (err: any) {
     console.error('❌ Error removing location:', err)
-    alert(`Fehler: Standort konnte nicht entfernt werden.${err?.message ? ` (${err.message})` : ''}`)
+    alert(`Fehler: Standort konnte nicht entfernt werden.${err?.data?.statusMessage || err?.message ? ` (${err?.data?.statusMessage || err.message})` : ''}`)
   }
 }
 
@@ -1436,17 +1426,17 @@ const updateStaffLocationCategories = async (staff: any, location: any) => {
         .eq('id', existing.id)
       if (error) throw error
     } else {
-      const { error } = await supabase
-        .from('staff_locations')
-        .insert({
-          staff_id: staff.id,
+      // Prefer atomic assign API so staff_ids + staff_locations stay in sync
+      await $fetch('/api/staff/assign-location', {
+        method: 'POST',
+        body: {
+          action: 'assign',
           location_id: location.id,
-          tenant_id: staff.tenant_id || location.tenant_id,
-          is_active: true,
+          staff_id: staff.id,
           is_online_bookable: true,
           available_categories: cats
-        })
-      if (error) throw error
+        }
+      })
     }
 
     setTimeout(() => {
@@ -1563,7 +1553,7 @@ const createStaff = async () => {
 
     uiStore.addNotification({
       type: 'success',
-      title: 'Fahrlehrer erstellt',
+      title: `${terms.value.staff} erstellt`,
       message: `${newStaff.value.first_name} ${newStaff.value.last_name} wurde erfolgreich hinzugefügt.`
     })
 
@@ -1575,7 +1565,7 @@ const createStaff = async () => {
     uiStore.addNotification({
       type: 'error',
       title: 'Fehler',
-      message: 'Fahrlehrer konnte nicht erstellt werden.'
+      message: `${terms.value.staff} konnte nicht erstellt werden.`
     })
   } finally {
     isCreatingStaff.value = false

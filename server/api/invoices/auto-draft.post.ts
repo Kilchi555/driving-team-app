@@ -242,7 +242,7 @@ export default defineEventHandler(async (event) => {
 
   const terms = await getTenantTerminology(supabase, staffUser.tenant_id)
   const eventTypeMap = eventTypeLabelMap(terms)
-  const appointmentFallback = terms.appointment || 'Fahrstunde'
+  const appointmentFallback = terms.appointment || 'Termin'
 
   let sortOrder = 0
   draft.items = openPayments.flatMap((p) => {

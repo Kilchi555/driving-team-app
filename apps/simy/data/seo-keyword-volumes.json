@@ -1,0 +1,100 @@
+{
+  "_meta": {
+    "source": "Performance Suite Keyword-DB (OSG), primarily Google Ads / DE clickstream estimates",
+    "geo": "de-DE",
+    "note": "Not Google Keyword Planner CH. CH volumes typically ~8–15% of DE for shared German queries. GOOGLE_ADS_DEVELOPER_TOKEN + CUSTOMER_ID were empty in Vercel — official Planner CH pull blocked.",
+    "fetched": "2026-08-03"
+  },
+  "head_terms_de": [
+    { "keyword": "terminbuchung", "vol": 1600, "intent": "transactional" },
+    { "keyword": "termin buchen", "vol": 1100, "intent": "transactional" },
+    { "keyword": "online buchungssystem", "vol": 720, "intent": "commercial" },
+    { "keyword": "online terminbuchung", "vol": 640, "intent": "commercial" },
+    { "keyword": "buchungssystem", "vol": 590, "intent": "commercial" },
+    { "keyword": "calendly alternative", "vol": 530, "intent": "commercial" },
+    { "keyword": "online terminplaner", "vol": 400, "intent": "commercial" },
+    { "keyword": "terminplaner online", "vol": 390, "intent": "commercial" },
+    { "keyword": "praxissoftware", "vol": 850, "intent": "commercial" },
+    { "keyword": "praxis software", "vol": 320, "intent": "commercial" },
+    { "keyword": "kundenverwaltung software", "vol": 210, "intent": "commercial" },
+    { "keyword": "terminbuchungssystem", "vol": 170, "intent": "commercial" },
+    { "keyword": "studio software", "vol": 130, "intent": "commercial" },
+    { "keyword": "coaching software", "vol": 120, "intent": "commercial" },
+    { "keyword": "kursverwaltung software", "vol": 70, "intent": "commercial" },
+    { "keyword": "beratung software", "vol": 60, "intent": "commercial" },
+    { "keyword": "terminbuchung software", "vol": 50, "intent": "commercial" },
+    { "keyword": "qr rechnung", "vol": 50, "intent": "informational" },
+    { "keyword": "termin software", "vol": 40, "intent": "commercial" },
+    { "keyword": "trainer software", "vol": 20, "intent": "commercial" },
+    { "keyword": "massage software", "vol": 10, "intent": "commercial" },
+    { "keyword": "online terminbuchung software", "vol": 10, "intent": "commercial" }
+  ],
+  "related_from_online_terminbuchung": [
+    { "keyword": "online termin", "vol": 2400 },
+    { "keyword": "termine buchen online", "vol": 1100 },
+    { "keyword": "online termine buchen", "vol": 1100 },
+    { "keyword": "termine online buchen", "vol": 1000 },
+    { "keyword": "online terminbuchungssystem", "vol": 110 }
+  ],
+  "avoid_as_primary_title": [
+    {
+      "keyword": "hundeschule",
+      "vol": 27100,
+      "reason": "Consumer intent (find a dog school), not SaaS buyer"
+    },
+    {
+      "keyword": "musikschule",
+      "vol": 23300,
+      "reason": "Consumer intent, not software buyer"
+    },
+    {
+      "keyword": "nachhilfe",
+      "vol": 12100,
+      "reason": "Consumer intent, not software buyer"
+    },
+    {
+      "keyword": "rechnungsprogramm",
+      "vol": 3600,
+      "reason": "Broad accounting intent; use only as secondary"
+    }
+  ],
+  "title_strategy": {
+    "primary": "Online-Terminbuchung / Terminbuchung + Branche + Schweiz",
+    "secondary": "Software, Buchungssystem, QR-Rechnung, Kundenverwaltung",
+    "h1": "Lead with Online-Terminbuchung für [Branche]; keep conversion highlight short"
+  },
+  "per_url": {
+    "/coaching": {
+      "primary": "online terminbuchung coaches",
+      "secondary": ["coaching software", "terminbuchung software", "klientenverwaltung"]
+    },
+    "/consulting": {
+      "primary": "online terminbuchung berater",
+      "secondary": ["beratung software", "terminbuchungssystem"]
+    },
+    "/personal-training": {
+      "primary": "online terminbuchung personal trainer",
+      "secondary": ["studio software", "trainer software", "buchungssystem"]
+    },
+    "/nachhilfe": {
+      "primary": "online terminbuchung nachhilfe",
+      "secondary": ["kursverwaltung software", "terminbuchung software"]
+    },
+    "/musikschule": {
+      "primary": "online terminbuchung musikschule",
+      "secondary": ["kursverwaltung software", "terminplaner online"]
+    },
+    "/hundeschule": {
+      "primary": "online terminbuchung hundeschule",
+      "secondary": ["buchungssystem", "kursverwaltung software"]
+    },
+    "/massage": {
+      "primary": "online terminbuchung massage",
+      "secondary": ["praxis software", "praxissoftware", "terminbuchung"]
+    },
+    "/fahrschule": {
+      "primary": "fahrschulsoftware",
+      "secondary": ["online terminbuchung", "buchungssystem fahrschule"]
+    }
+  }
+}

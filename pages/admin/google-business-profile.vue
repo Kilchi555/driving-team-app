@@ -465,7 +465,7 @@
                   v-else
                   v-model="categorySearch.primary"
                   type="text"
-                  placeholder="Kategorie suchen, z.B. Fahrschule…"
+                  placeholder="Kategorie suchen, z.B. Unternehmen…"
                   class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2 mt-1"
                   @input="searchCategories('primary')"
                 />
@@ -1044,7 +1044,7 @@
             </label>
             <label class="block space-y-1">
               <span class="text-xs font-medium text-gray-600">Keywords (kommagetrennt)</span>
-              <input v-model="keywordsInput" placeholder="Fahrschule Zürich, Motorradgrundkurs, …" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2" />
+              <input v-model="keywordsInput" placeholder="Unternehmen Zürich, Kursangebot, …" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2" />
             </label>
             <div class="flex items-center justify-between">
               <p v-if="settingsSaved" class="text-xs text-green-600">Gespeichert</p>

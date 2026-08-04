@@ -98,63 +98,125 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
     logger.debug(`🔍 [get-payments-overview] User ${userId} requesting payments overview for tenant ${tenantId}`)
 
     // ✅ 5. TENANT ISOLATION - Only fetch data for own tenant
-    // Include ALL clients (active and inactive, with any onboarding status)
-    const { data: usersData, error: usersError } = await supabaseAdmin
-      .from('users')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        phone,
-        role,
-        preferred_payment_method,
-        default_company_billing_address_id,
-        is_active,
-        onboarding_status
-      `)
-      .eq('tenant_id', tenantId)
-      .eq('role', 'client')
-      .order('first_name')
+    // Paginate past PostgREST's default max_rows (1000) so large tenants aren't truncated.
+    const PAGE_SIZE = 1000
 
-    if (usersError) {
-      logger.error('❌ [get-payments-overview] Error loading users:', usersError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to load users'
-      })
+    type ClientUserRow = {
+      id: string
+      first_name: string | null
+      last_name: string | null
+      email: string | null
+      phone: string | null
+      role: string
+      preferred_payment_method: string | null
+      default_company_billing_address_id: string | null
+      is_active: boolean | null
+      onboarding_status: string | null
     }
 
-    // Fetch all payments — join appointment start_time directly to avoid the 1000-row limit
-    // on a separate appointments query (there can be 2000+ appointments)
-    const { data: paymentsData, error: paymentsError } = await supabaseAdmin
-      .from('payments')
-      .select(`
-        user_id,
-        appointment_id,
-        payment_status,
-        paid_at,
-        total_amount_rappen,
-        description,
-        appointments(id, start_time, status, deleted_at)
-      `)
-      .eq('tenant_id', tenantId)
-
-    if (paymentsError) {
-      logger.error('❌ [get-payments-overview] Error loading payments:', paymentsError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to load payments'
-      })
+    type PaymentRow = {
+      user_id: string | null
+      appointment_id: string | null
+      payment_status: string | null
+      paid_at: string | null
+      total_amount_rappen: number | null
+      description: string | null
+      appointments: {
+        id: string
+        start_time: string | null
+        status: string | null
+        deleted_at: string | null
+      } | null
     }
 
-    // Build a lookup: appointment_id → start_time from the joined data
+    const usersData: ClientUserRow[] = []
+    {
+      let from = 0
+      while (true) {
+        const { data: page, error: usersError } = await supabaseAdmin
+          .from('users')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            email,
+            phone,
+            role,
+            preferred_payment_method,
+            default_company_billing_address_id,
+            is_active,
+            onboarding_status
+          `)
+          .eq('tenant_id', tenantId)
+          .eq('role', 'client')
+          .order('id')
+          .range(from, from + PAGE_SIZE - 1)
+
+        if (usersError) {
+          logger.error('❌ [get-payments-overview] Error loading users:', usersError)
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Failed to load users'
+          })
+        }
+
+        if (!page || page.length === 0) break
+        usersData.push(...(page as ClientUserRow[]))
+        if (page.length < PAGE_SIZE) break
+        from += PAGE_SIZE
+      }
+    }
+
+    // Fetch ALL payments in pages — a single .select() silently caps at 1000 rows.
+    // Join appointment fields to avoid a separate appointments query that also hits the limit.
+    const paymentsData: PaymentRow[] = []
+    {
+      let from = 0
+      while (true) {
+        const { data: page, error: paymentsError } = await supabaseAdmin
+          .from('payments')
+          .select(`
+            user_id,
+            appointment_id,
+            payment_status,
+            paid_at,
+            total_amount_rappen,
+            description,
+            appointments(id, start_time, status, deleted_at)
+          `)
+          .eq('tenant_id', tenantId)
+          .order('id')
+          .range(from, from + PAGE_SIZE - 1)
+
+        if (paymentsError) {
+          logger.error('❌ [get-payments-overview] Error loading payments:', paymentsError)
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Failed to load payments'
+          })
+        }
+
+        if (!page || page.length === 0) break
+        paymentsData.push(...(page as PaymentRow[]))
+        if (page.length < PAGE_SIZE) break
+        from += PAGE_SIZE
+      }
+    }
+
+    logger.debug(`📦 [get-payments-overview] Loaded ${usersData.length} clients, ${paymentsData.length} payments`)
+
+    // Build lookups once — avoids O(users × payments) filtering below
     const appointmentStartTime: Record<string, string> = {}
-    for (const p of paymentsData || []) {
-      const apt = (p as any).appointments
+    const paymentsByUserId = new Map<string, PaymentRow[]>()
+    for (const p of paymentsData) {
+      const apt = p.appointments
       if (apt?.id && apt?.start_time) {
         appointmentStartTime[apt.id] = apt.start_time
       }
+      if (!p.user_id) continue
+      const list = paymentsByUserId.get(p.user_id)
+      if (list) list.push(p)
+      else paymentsByUserId.set(p.user_id, [p])
     }
 
     // Fetch company billing addresses
@@ -167,17 +229,18 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
       logger.warn('⚠️ [get-payments-overview] Warning loading billing addresses:', billingError)
     }
 
+    const companyBillingUserIds = new Set(
+      (billingData || []).map(b => b.created_by).filter(Boolean) as string[]
+    )
+
     // ✅ 6. DATA TRANSFORMATION - Process and aggregate data
-    const processedUsers: UserPaymentSummary[] = (usersData || []).map(user => {
-      // Find all payments for this user
-      const userPayments = (paymentsData || []).filter(payment => 
-        payment.user_id === user.id
-      )
+    const processedUsers: UserPaymentSummary[] = usersData.map(user => {
+      const userPayments = paymentsByUserId.get(user.id) || []
 
       // Find open payments and their appointment start_times (from joined data)
       // Exclude payments linked to soft-deleted appointments (unless include_deleted is set)
       const openPayments = userPayments.filter(p => {
-        const apt = (p as any).appointments
+        const apt = p.appointments
         if (!includeDeleted && apt?.deleted_at) return false
         return (
           p.payment_status === 'pending' ||
@@ -206,75 +269,48 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
 
       // Count different payment statuses
       // Note: 'invoice' (without 'd') is a legacy status that means the same as 'invoiced'
-      const invoicedCount = userPayments.filter(p => (p.payment_status === 'invoiced' || p.payment_status === 'invoice') && (includeDeleted || !(p as any).appointments?.deleted_at)).length
+      const invoicedCount = userPayments.filter(p => (p.payment_status === 'invoiced' || p.payment_status === 'invoice') && (includeDeleted || !p.appointments?.deleted_at)).length
       const completedCount = userPayments.filter(p => p.payment_status === 'completed').length
       const paidCount = userPayments.filter(p => p.payment_status === 'paid').length
-      const cancelledCount = userPayments.filter(p => 
+      const cancelledCount = userPayments.filter(p =>
         p.payment_status === 'canceled' || p.payment_status === 'cancelled' || p.payment_status === 'refunded'
       ).length
-      const pendingFailedCount = userPayments.filter(p => 
-        (p.payment_status === 'pending' || p.payment_status === 'failed') && (includeDeleted || !(p as any).appointments?.deleted_at)
+      const pendingFailedCount = userPayments.filter(p =>
+        (p.payment_status === 'pending' || p.payment_status === 'failed') && (includeDeleted || !p.appointments?.deleted_at)
       ).length
-
-      logger.debug(`🔍 Payment status counts for user ${user.id}:`, {
-        invoiced: invoicedCount,
-        completed: completedCount,
-        paid: paidCount,
-        cancelled: cancelledCount,
-        pendingFailed: pendingFailedCount,
-        total: userPayments.length,
-        statuses: userPayments.map(p => p.payment_status)
-      })
 
       // Calculate total unpaid amount: pending/failed (not yet paid) + invoiced (billed but not received)
       // Exclude payments linked to soft-deleted appointments (unless include_deleted is set)
-      const totalUnpaidAmount = userPayments
-        .filter(p => {
-          const apt = (p as any).appointments
-          if (!includeDeleted && apt?.deleted_at) return false
-          return (
-            p.payment_status === 'pending' ||
-            p.payment_status === 'failed' ||
-            p.payment_status === 'invoiced' ||
-            p.payment_status === 'invoice'
-          )
-        })
-        .reduce((sum, payment) => {
-          return sum + ((payment.total_amount_rappen || 0) / 100)
-        }, 0)
+      const totalUnpaidAmount = openPayments.reduce((sum, payment) => {
+        return sum + ((payment.total_amount_rappen || 0) / 100)
+      }, 0)
 
       // Determine payment status:
-      // Priority: completed > paid > invoiced > cancelled > open > null
-      // - If ANY payment is 'pending' or 'failed' → 'open' with count
-      // - If ANY payment is 'completed' or 'paid' → 'completed'
-      // - If ALL payments are 'invoiced' → 'invoiced'
-      // - If ALL payments are 'cancelled/refunded' → 'completed' (behandle als bezahlt)
-      // - If NO payments → null
+      // - If ANY payment is 'pending' or 'failed' → 'open'
+      // - Else if ANY unpaid invoiced → 'invoiced' (must beat completed, otherwise mixed users disappear from unpaid filters)
+      // - Else if ANY completed/paid → 'completed'
+      // - Else if ALL cancelled/refunded → 'completed'
+      // - Else null
       let paymentStatus: 'invoiced' | 'open' | 'pending' | 'completed' | null = null
       let pendingCount = 0
 
       if (userPayments.length === 0) {
         paymentStatus = null
       } else if (pendingFailedCount > 0) {
-        // There are pending or failed payments - highest priority
         paymentStatus = 'open'
         pendingCount = pendingFailedCount
-      } else if (completedCount > 0 || paidCount > 0) {
-        // There are completed or paid payments
-        paymentStatus = 'completed'
-        pendingCount = 0
       } else if (invoicedCount > 0) {
-        // All are invoiced
         paymentStatus = 'invoiced'
         pendingCount = 0
+      } else if (completedCount > 0 || paidCount > 0) {
+        paymentStatus = 'completed'
+        pendingCount = 0
       } else if (cancelledCount > 0) {
-        // All are cancelled/refunded - treat as paid
         paymentStatus = 'completed'
         pendingCount = 0
       }
 
-      // Check company billing
-      const hasCompanyBilling = (billingData || []).some(billing => billing.created_by === user.id) || 
+      const hasCompanyBilling = companyBillingUserIds.has(user.id) ||
                                !!user.default_company_billing_address_id
 
       return {
@@ -290,7 +326,6 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
         pending_payment_count: pendingCount,
         total_unpaid_amount: totalUnpaidAmount,
         total_appointments: totalAppointmentsCount,
-        // Oldest open appointment date — computed from joined payment→appointment data (no row limit issue)
         oldest_appointment_date: oldestOpenDate
       }
     })
@@ -321,6 +356,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
       resource_id: null,
       details: {
         users_loaded: processedUsers.length,
+        payments_loaded: paymentsData.length,
         limit,
         offset,
         ip_address: clientIP

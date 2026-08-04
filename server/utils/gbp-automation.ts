@@ -33,6 +33,11 @@ export type GbpAiTextMode = 'generate' | 'regenerate' | 'shorter' | 'more_cta'
 export interface GenerateGbpAiTextParams {
   context: GbpAiTextContext
   tenantName: string
+  /** Branch label e.g. Fahrschule / Coaching-Praxis — defaults via getTerminologyDefaults */
+  businessNoun?: string
+  clientSingular?: string
+  clientsPlural?: string
+  appointmentSingular?: string
   locationTitle?: string | null
   brandVoice?: string | null
   keywords?: string[]
@@ -80,6 +85,12 @@ function buildModeInstruction(mode: GbpAiTextMode, currentText?: string | null):
 }
 
 export async function generateGbpAiText(params: GenerateGbpAiTextParams): Promise<string> {
+  const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+  const defaults = getTerminologyDefaults(null)
+  const businessNoun = params.businessNoun || defaults.businessNoun
+  const clientsPlural = params.clientsPlural || defaults.clientsPlural
+  const branchTag = `(${businessNoun} Schweiz)`
+
   const keywords = (params.keywords ?? []).filter(Boolean)
   const voice = params.brandVoice ? `\nMarkenstimme: ${params.brandVoice}` : ''
   const kw = keywords.length
@@ -95,7 +106,7 @@ export async function generateGbpAiText(params: GenerateGbpAiTextParams): Promis
   if (params.context === 'review_reply') {
     const stars = params.starRating ?? 0
     const baseTone = stars >= 4 ? 'dankend und herzlich' : stars === 3 ? 'verständnisvoll' : 'entschuldigend und konstruktiv'
-    prompt = `Du schreibst eine Google-Bewertungsantwort für "${params.tenantName}" (Fahrschule Schweiz).${loc}${voice}${kw}
+    prompt = `Du schreibst eine Google-Bewertungsantwort für "${params.tenantName}" ${branchTag}.${loc}${voice}${kw}
 Ton: ${baseTone}, ${tone}.
 
 Bewertung von ${params.reviewerName || 'einem Kunden'} (${stars}/5):
@@ -111,21 +122,21 @@ Regeln:
   }
 
   if (params.context === 'profile_description') {
-    prompt = `Du schreibst die Google Business Profile Kurzbeschreibung ("Über uns") für "${params.tenantName}" (Fahrschule Schweiz).${loc}${voice}${kw}
+    prompt = `Du schreibst die Google Business Profile Kurzbeschreibung ("Über uns") für "${params.tenantName}" ${branchTag}.${loc}${voice}${kw}
 Ton: ${tone}.
 ${modeBlock}
 
 Anforderungen:
 - Schweizer Hochdeutsch, 400–750 Zeichen (Google-Limit 750)
 - Local SEO: Standort(e), Leistungen, Zielgruppe natürlich einbauen
-- Erzählt die Geschichte/den Nutzen der Fahrschule, keine Aufzählung
+- Erzählt die Geschichte/den Nutzen von ${businessNoun}, keine Aufzählung
 - Kein Keyword-Stuffing, keine erfundenen Fakten (Gründungsjahr, Preise etc.)
 - Nur den Beschreibungstext, kein JSON`
     return callAnthropic(prompt, 500)
   }
 
   if (params.context === 'photo_caption') {
-    prompt = `Du schreibst eine Google Business Profile Foto-Beschreibung für "${params.tenantName}" (Fahrschule Schweiz).${loc}${voice}${kw}
+    prompt = `Du schreibst eine Google Business Profile Foto-Beschreibung für "${params.tenantName}" ${branchTag}.${loc}${voice}${kw}
 Ton: ${tone}.
 ${modeBlock}
 
@@ -138,13 +149,13 @@ Anforderungen:
   }
 
   // post
-  prompt = `Du schreibst einen Google Business Profile Post für "${params.tenantName}" (Fahrschule Schweiz).${loc}${voice}${kw}
+  prompt = `Du schreibst einen Google Business Profile Post für "${params.tenantName}" ${branchTag}.${loc}${voice}${kw}
 Ton: ${tone}.
 ${modeBlock}
 
 Anforderungen:
 - Schweizer Hochdeutsch, 400–900 Zeichen
-- Local SEO: Orte, Leistungen, Zielgruppe natürlich einbauen
+- Local SEO: Orte, Leistungen, Zielgruppe (${clientsPlural}) natürlich einbauen
 - 1 klarer Nutzen, max. 3 Hashtags
 - Keine erfundenen Preise/Aktionen
 - CTA am Ende passend zu: ${params.ctaType || 'BOOK'}
@@ -163,12 +174,15 @@ export interface GbpServiceSuggestion {
  */
 export async function generateGbpServiceSuggestions(params: {
   tenantName: string
+  businessNoun?: string
   locationTitle?: string | null
   categoryName?: string | null
   existingServiceNames?: string[]
   keywords?: string[]
   brandVoice?: string | null
 }): Promise<GbpServiceSuggestion[]> {
+  const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+  const businessNoun = params.businessNoun || getTerminologyDefaults(null).businessNoun
   const existing = (params.existingServiceNames ?? []).filter(Boolean)
   const kw = (params.keywords ?? []).filter(Boolean)
   const voice = params.brandVoice ? `\nMarkenstimme: ${params.brandVoice}` : ''
@@ -179,9 +193,9 @@ export async function generateGbpServiceSuggestions(params: {
     ? `\nBereits vorhandene Leistungen (NICHT wiederholen): ${existing.join(', ')}`
     : ''
 
-  const prompt = `Du erstellst eine Liste von Leistungen für das Google Business Profile von "${params.tenantName}" (Fahrschule Schweiz).${loc}${cat}${voice}${kwLine}${existingLine}
+  const prompt = `Du erstellst eine Liste von Leistungen für das Google Business Profile von "${params.tenantName}" (${businessNoun} Schweiz).${loc}${cat}${voice}${kwLine}${existingLine}
 
-Schlage 6–10 konkrete, realistische Leistungen einer Schweizer Fahrschule vor (z.B. Führerscheinkategorien, Kurse, Zusatzangebote). Erfinde keine Leistungen, die eine Fahrschule offensichtlich nicht anbietet.
+Schlage 6–10 konkrete, realistische Leistungen eines Schweizer ${businessNoun}-Betriebs vor. Erfinde keine Leistungen, die offensichtlich nicht zur Branche passen.
 
 Antworte AUSSCHLIESSLICH mit validem JSON in diesem Format, ohne Markdown-Codeblock, ohne Erklärung:
 [{"name": "Kurzname (max. 40 Zeichen)", "description": "Kurze Beschreibung, max. 100 Zeichen"}]`
@@ -201,18 +215,21 @@ Antworte AUSSCHLIESSLICH mit validem JSON in diesem Format, ohne Markdown-Codebl
 
 export async function generateGbpReviewSuggestion(params: {
   tenantName: string
+  businessNoun?: string
   reviewerName?: string | null
   starRating: number
   reviewText?: string | null
   brandVoice?: string | null
 }): Promise<string> {
+  const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+  const businessNoun = params.businessNoun || getTerminologyDefaults(null).businessNoun
   const apiKey = requireAnthropicApiKey()
   const Anthropic = (await import('@anthropic-ai/sdk')).default
   const stars = params.starRating
   const tone = stars >= 4 ? 'dankend und herzlich' : stars === 3 ? 'verständnisvoll und lösungsorientiert' : 'entschuldigend und konstruktiv'
   const voice = params.brandVoice ? `\nMarkenstimme: ${params.brandVoice}` : ''
 
-  const prompt = `Du bist der Inhaber von "${params.tenantName}", einer Fahrschule in der Schweiz.${voice}
+  const prompt = `Du bist der Inhaber von "${params.tenantName}", einem ${businessNoun}-Betrieb in der Schweiz.${voice}
 Antworte auf folgende Google-Bewertung professionell auf Deutsch (Schweizer Hochdeutsch).
 
 Bewertung von ${params.reviewerName || 'einem Kunden'} (${stars}/5 Sterne):
@@ -241,11 +258,17 @@ Antworte NUR mit dem Text der Antwort, kein JSON, keine Erklärungen.`
 
 export async function generateGbpPostDraft(params: {
   tenantName: string
+  businessNoun?: string
+  clientsPlural?: string
   locationTitle?: string | null
   keywords?: string[]
   brandVoice?: string | null
   ctaType?: string | null
 }): Promise<string> {
+  const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+  const defaults = getTerminologyDefaults(null)
+  const businessNoun = params.businessNoun || defaults.businessNoun
+  const clientsPlural = params.clientsPlural || defaults.clientsPlural
   const apiKey = requireAnthropicApiKey()
   const Anthropic = (await import('@anthropic-ai/sdk')).default
   const keywords = (params.keywords ?? []).filter(Boolean)
@@ -253,12 +276,12 @@ export async function generateGbpPostDraft(params: {
   const kw = keywords.length ? `\nKeywords natürlich einbauen (nicht spammen): ${keywords.join(', ')}` : ''
   const loc = params.locationTitle ? `\nStandort: ${params.locationTitle}` : ''
 
-  const prompt = `Du schreibst einen Google Business Profile Post für "${params.tenantName}" (Fahrschule Schweiz).${loc}${voice}${kw}
+  const prompt = `Du schreibst einen Google Business Profile Post für "${params.tenantName}" (${businessNoun} Schweiz).${loc}${voice}${kw}
 
 Anforderungen:
 - Schweizer Hochdeutsch
 - 400–900 Zeichen
-- 1 klarer Nutzen für Fahrschüler
+- 1 klarer Nutzen für ${clientsPlural}
 - Kein Hashtag-Spam (max. 3)
 - Keine erfundenen Preise/Aktionen
 - CTA am Ende passend zu: ${params.ctaType || 'BOOK'}

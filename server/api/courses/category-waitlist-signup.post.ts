@@ -13,6 +13,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { generateWaitlistConfirmationEmail, generateAdminWaitlistNotificationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -107,7 +108,8 @@ export default defineEventHandler(async (event) => {
     .eq('id', tenant_id)
     .single()
 
-  const tenantName = tenant?.name || 'Ihre Fahrschule'
+  const terms = await getTenantTerminology(supabase, tenant_id)
+  const tenantName = tenant?.name || terms.businessNoun || 'Ihr Unternehmen'
   const logoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
   const now = new Date().toISOString()
   const toQueue: any[] = []

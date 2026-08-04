@@ -34,7 +34,7 @@
       <div class="bg-white rounded-lg shadow-sm border p-6">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-600">Fahrlehrer-Kassen</p>
+            <p class="text-sm text-gray-600">{{ t.staffPlural }}-Kassen</p>
             <p class="text-2xl font-bold text-purple-600">{{ instructorCount }}</p>
             <p class="text-xs text-gray-500">{{ formatCurrency(instructorBalance) }}</p>
           </div>
@@ -169,6 +169,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+
+const { t } = useTerminology()
 
 interface Props {
   officeRegisters: any[]

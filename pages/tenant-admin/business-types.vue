@@ -163,16 +163,16 @@
                     <span style="width:5rem">Code</span>
                     <span class="flex-1">Anzeigename</span>
                     <span style="width:3rem">Min.</span>
-                    <span style="width:7.5rem">Kostenpflichtig</span>
+                    <span style="width:7.5rem">App-Preis</span>
                     <span style="width:1.5rem"></span>
                   </div>
                   <div v-for="et in templateEventTypes" :key="et.id" class="sa-template-row">
                     <input v-model="et.code" class="sa-input sa-input-sm" placeholder="z.B. consult" style="width:5rem" title="Interner Code" @blur="autosaveEventType(et)" />
                     <input v-model="et.name" class="sa-input sa-input-sm" placeholder="z.B. Beratung" title="Anzeigename für Kalender & Buchung" @blur="onEventTypeNameBlur(et)" />
                     <input v-model.number="et.default_duration_minutes" type="number" class="sa-input sa-input-sm" style="width:3rem" placeholder="45" title="Standarddauer in Minuten" @blur="autosaveEventType(et)" />
-                    <label class="sa-check-label sa-check-label-sm" title="Kostenpflichtig → braucht Kategorie(n) für Preise">
+                    <label class="sa-check-label sa-check-label-sm" title="Preis in der App → braucht ggf. Kategorie(n); aus = separat verrechnen">
                       <input type="checkbox" :checked="!!et.require_payment" class="sa-check" @change="onPaymentToggle(et, $event)" />
-                      kostenpflichtig
+                      App-Preis
                     </label>
                     <span v-if="savingRowId === et.id" class="sa-save-dot" title="Speichert…" />
                     <button type="button" @click="deleteEventTypeRow(et)" class="sa-action-btn-danger">✕</button>

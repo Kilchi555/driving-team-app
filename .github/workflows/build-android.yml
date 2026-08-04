@@ -95,6 +95,9 @@ jobs:
           CLIENT="${{ matrix.client }}" npx cap add android 2>/dev/null || true
           CLIENT="${{ matrix.client }}" npx cap sync android
 
+      - name: Patch Android App Links / deep links
+        run: CLIENT="${{ matrix.client }}" node scripts/patch-android-deeplinks.mjs
+
       - name: Write google-services.json
         env:
           FIREBASE_CONFIGS: ${{ secrets.FIREBASE_CONFIGS }}

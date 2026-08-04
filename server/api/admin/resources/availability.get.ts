@@ -15,6 +15,7 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 interface Conflict {
   start: string
@@ -40,6 +41,8 @@ interface RoomAvailability {
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'superadmin'])
   const supabase = getSupabaseAdmin()
+  const terms = await getTenantTerminology(supabase, profile.tenant_id)
+  const appointmentLabel = terms.appointment || 'Termin'
 
   const query = getQuery(event) as Record<string, string>
   const { start_time, end_time, vehicle_ids, room_ids, exclude_appointment_id } = query
@@ -106,7 +109,7 @@ export default defineEventHandler(async (event) => {
           start: row.start_time,
           end: row.end_time,
           source,
-          label: source === 'course' ? 'Kurs' : 'Fahrstunde',
+          label: source === 'course' ? 'Kurs' : appointmentLabel,
         })
       }
 
@@ -165,7 +168,7 @@ export default defineEventHandler(async (event) => {
         start: row.start_time,
         end: row.end_time,
         source: 'room_booking' as const,
-        label: row.purpose === 'lesson' ? 'Fahrstunde'
+        label: row.purpose === 'lesson' ? appointmentLabel
           : row.purpose === 'course' ? 'Kurs'
           : row.purpose === 'rental' ? 'Vermietung'
           : 'Reserviert',

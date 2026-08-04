@@ -54,9 +54,9 @@
           </div>
         </section>
 
-        <!-- Fahrlehrer-Kassen -->
+        <!-- Staff-Kassen -->
         <section>
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Fahrlehrer-Kassen</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">{{ t.staffPlural }}-Kassen</p>
 
           <div v-if="isLoadingUser" class="flex justify-center py-12">
             <LoadingLogo size="lg" :tenant-id="currentUser?.tenant_id" />
@@ -331,6 +331,7 @@ definePageMeta({
 })
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 // Auth check - must be first
 const authStore = useAuthStore()

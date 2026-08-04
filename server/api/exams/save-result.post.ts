@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import logger from '~/utils/logger'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 /**
  * ✅ POST /api/exams/save-result
@@ -187,7 +188,8 @@ export default defineEventHandler(async (event) => {
               : []
 
           const primaryColor = tenant?.primary_color || '#2563eb'
-          const tenantName   = tenant?.name || 'Ihre Fahrschule'
+          const terms = await getTenantTerminology(supabase, tenantId)
+          const tenantName   = tenant?.name || terms.businessNoun || 'Ihr Unternehmen'
           const tenantSlug   = (tenant as any)?.slug || ''
           const affiliateUrl = tenantSlug
             ? `https://app.simy.ch/affiliate-dashboard?tenant=${tenantSlug}`
@@ -201,7 +203,7 @@ export default defineEventHandler(async (event) => {
           const reviewSection = reviewPlaces.length > 0 ? `
             <div style="margin:28px 0">
               <p style="margin:0 0 16px;font-size:15px;color:#374151;line-height:1.6;text-align:center">
-                Wir würden uns sehr freuen, wenn du dir kurz Zeit nimmst und uns eine Google-Bewertung hinterlässt –<br>das hilft anderen Fahrschüler:innen, uns zu finden. 🙏
+                Wir würden uns sehr freuen, wenn du dir kurz Zeit nimmst und uns eine Google-Bewertung hinterlässt –<br>das hilft anderen, uns zu finden. 🙏
               </p>
               <table width="100%" cellpadding="0" cellspacing="0">
                 ${reviewPlaces.map(p => `<tr><td style="padding:5px 0;text-align:center">
@@ -377,7 +379,7 @@ export default defineEventHandler(async (event) => {
               du hast deinen Führerausweis jetzt seit einem Monat – herzlichen Glückwunsch nochmal! 🎉
             </p>
             <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6">
-              Hast du Freunde oder Bekannte, die noch die Fahrschule vor sich haben? Mit unserem Empfehlungsprogramm verdienst du ganz einfach Geld:
+              Hast du Freunde oder Bekannte, die noch die ${terms.businessNoun || 'nächste Ausbildung'} vor sich haben? Mit unserem Empfehlungsprogramm verdienst du ganz einfach Geld:
             </p>
 
             <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px">
@@ -391,7 +393,7 @@ export default defineEventHandler(async (event) => {
               <tr>
                 <td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
                   <p style="margin:0;font-size:14px;color:#374151;font-weight:600">② Freund bucht</p>
-                  <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund eine Fahrstunde bezahlt, wird der Betrag auf deinem Guthaben-Konto gutgeschrieben.</p>
+                  <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund eine ${terms.appointment || 'Termin'} bezahlt, wird der Betrag auf deinem Guthaben-Konto gutgeschrieben.</p>
                 </td>
               </tr>
               <tr><td style="height:8px"></td></tr>

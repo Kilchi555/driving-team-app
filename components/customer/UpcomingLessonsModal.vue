@@ -118,7 +118,7 @@
                   </button>
                 </div>
                 <p v-else-if="!canTransfer(lesson)" class="text-xs text-gray-400">
-                  Umplanung nur bis 7 Tage vor Kursbeginn — bitte Fahrlehrer kontaktieren.
+                  Umplanung nur bis 7 Tage vor Kursbeginn — bitte {{ t.staff }} kontaktieren.
                 </p>
 
                 <!-- Inline transfer picker -->
@@ -210,9 +210,12 @@
 
 import { computed, ref, watch } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 import { logger } from '~/utils/logger'
 import { useCalendarSync } from '~/composables/useCalendarSync'
 import CustomerCancellationModal from './CustomerCancellationModal.vue'
+
+const { t } = useTerminology()
 
 // Props & Emits
 interface Props {
@@ -237,11 +240,11 @@ async function addLessonToCalendar(lesson: any) {
     lesson.location_name ||
     ''
   await addToCalendar({
-    title: lesson.type ? `Fahrlektion (${lesson.type})` : 'Fahrlektion',
+    title: lesson.type ? `${t.value.appointment} (${lesson.type})` : t.value.appointment,
     startDate: new Date(lesson.start_time),
     endDate: new Date(lesson.end_time),
     location: locationStr,
-    notes: staffName ? `Fahrlehrer: ${staffName}` : undefined,
+    notes: staffName ? `${t.value.staff}: ${staffName}` : undefined,
     appointmentId: lesson.id,
   })
 }
@@ -407,10 +410,10 @@ const getLessonTypeTitle = (eventTypeCode: string, lesson?: any): string => {
   const titles: Record<string, string> = {
     'exam': 'Prüfungsfahrt inkl. WarmUp und Rückfahrt',
     'theory': 'Theorielektion',
-    'lesson': 'Fahrlektion',
+    'lesson': t.value.appointment,
     'course': 'Kurs'
   }
-  return titles[eventTypeCode] || 'Fahrlektion'
+  return titles[eventTypeCode] || t.value.appointment
 }
 
 const formatLocationAddress = (locationDetails: any): string => {

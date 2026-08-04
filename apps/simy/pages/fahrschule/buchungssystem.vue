@@ -28,7 +28,7 @@
           Schüler buchen ihren Fahrstunden-Termin selbst — per Link, rund um die Uhr. Du siehst alles in einem übersichtlichen Kalender. Keine WhatsApp-Koordination mehr.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
-          <a href="https://app.simy.ch/tenant-register"
+          <a href="https://app.simy.ch/tenant-register?type=driving_school"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
             style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             Kostenlos testen →
@@ -89,7 +89,7 @@
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Bereit, Termine zu automatisieren?</h2>
         <p class="text-white mb-8">30 Tage kostenlos. Keine Kreditkarte.</p>
-        <a href="https://app.simy.ch/tenant-register"
+        <a href="https://app.simy.ch/tenant-register?type=driving_school"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Jetzt kostenlos starten →
@@ -123,7 +123,7 @@ const steps = [
 const bookingFeatures = [
   { icon: '🔗', title: 'Persönlicher Buchungslink', desc: 'Jede Fahrschule und jeder Fahrlehrer erhält einen eigenen Buchungslink — direkt teilbar per WhatsApp, QR-Code oder auf der Website.' },
   { icon: '📱', title: 'Funktioniert auf jedem Gerät', desc: 'Schüler buchen auf dem Smartphone, Tablet oder Desktop — ohne App-Download. Direkt im Browser.' },
-  { icon: '🔔', title: 'Automatische Erinnerungen', desc: 'Simy sendet 24h vor dem Termin automatisch eine SMS oder E-Mail. Weniger No-Shows, weniger Arbeit für dich.' },
+  { icon: '🔔', title: 'Automatische Erinnerungen', desc: 'Simy sendet 24h vor dem Termin automatisch eine E-Mail — SMS nur ohne E-Mail-Adresse. SMS-Segmente sind im Plan inklusive.' },
   { icon: '📅', title: 'Zwei-Wege-Kalender-Sync', desc: 'Simy-Termine erscheinen automatisch in deinem Google Calendar, Apple Calendar oder Outlook. Und umgekehrt: Hast du dort einen privaten Termin eingetragen, blockiert Simy diese Zeit automatisch — Schüler können dann genau dort keinen Slot buchen.' },
   { icon: '🔄', title: 'Stornierung & Umbuchung', desc: 'Schüler können Termine selbst absagen oder umbuchen — innerhalb der von dir definierten Fristen.' },
   { icon: '🏫', title: 'Multi-Fahrlehrer', desc: 'Jeder Fahrlehrer hat seinen eigenen Kalender. Die Admin-Ansicht zeigt alle Fahrlehrer auf einen Blick.' },

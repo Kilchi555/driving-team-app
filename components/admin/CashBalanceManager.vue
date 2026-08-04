@@ -302,7 +302,7 @@
     <div v-if="showHandoverModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
       <div class="bg-white rounded-lg max-w-md w-full p-4 sm:p-6">
         <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-1">Kassenabgabe erfassen</h3>
-        <p class="text-sm text-gray-500 mb-4">Bargeld wurde von Mitarbeiter an die Fahrschule übergeben.</p>
+        <p class="text-sm text-gray-500 mb-4">Bargeld wurde von Mitarbeiter an {{ t.businessNoun }} übergeben.</p>
 
         <div class="space-y-4">
           <div>
@@ -384,6 +384,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { formatDateTime } from '~/utils/dateUtils'
 import Toast from '~/components/Toast.vue'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 // Supabase
 
@@ -862,7 +865,7 @@ const getMovementTypeText = (type) => {
     'cash_transaction': 'Bargeldtransaktion',
     'adjustment': 'Korrektur',
     'system_init': 'Kasse eröffnet',
-    'cash_handover': 'Kassenabgabe an Fahrschule'
+    'cash_handover': `Kassenabgabe an ${t.value.businessNoun}`
   }
   return texts[type] || type
 }

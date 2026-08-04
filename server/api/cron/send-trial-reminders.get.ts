@@ -86,7 +86,7 @@ export default defineEventHandler(async (event) => {
     for (const tenant of tenants ?? []) {
       if (!tenant.contact_email) continue
       const trialEnd = new Date(tenant.trial_ends_at!)
-      const tenantName = tenant.name || 'Fahrschule'
+      const tenantName = tenant.name || 'Unternehmen'
       const endDateStr = trialEnd.toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })
 
       let subject: string

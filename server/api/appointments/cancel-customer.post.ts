@@ -636,6 +636,7 @@ export default defineEventHandler(async (event) => {
       // Fetch staff name + email
       let staffName = 'Unbekannt'
       let staffEmail: string | null = null
+      const terms = await getTenantTerminology(supabaseAdmin, tenantId)
       if (appointment.staff_id) {
         const { data: staff } = await supabaseAdmin
           .from('users')
@@ -643,7 +644,7 @@ export default defineEventHandler(async (event) => {
           .eq('id', appointment.staff_id)
           .single()
         if (staff) {
-          staffName = `${staff.first_name || ''} ${staff.last_name || ''}`.trim() || 'Fahrlehrer'
+          staffName = `${staff.first_name || ''} ${staff.last_name || ''}`.trim() || terms.staff
           staffEmail = staff.email || null
         }
       }
@@ -655,7 +656,6 @@ export default defineEventHandler(async (event) => {
         .eq('id', tenantId)
         .single()
 
-      const terms = await getTenantTerminology(supabaseAdmin, tenantId)
       const tenantName = tenant?.name || `Ihre ${terms.businessNoun}`
       const tenantSlug = tenant?.slug || ''
 

@@ -51,9 +51,9 @@
 
         <!-- 3. Lernziele -->
         <template v-else-if="section.key === 'lernziele'">
-          <GuideList v-model="form.lernziele!.wissen" label="Wissen — Der Fahrschüler weiß..." placeholder="z.B. Die gesetzliche Regelung zu ..."/>
-          <GuideList v-model="form.lernziele!.verstehen" label="Verstehen — Der Fahrschüler versteht..." placeholder="z.B. Warum diese Regel gilt"/>
-          <GuideList v-model="form.lernziele!.anwenden" label="Anwenden — Der Fahrschüler kann..." placeholder="z.B. Das richtige Verhalten demonstrieren"/>
+          <GuideList v-model="form.lernziele!.wissen" :label="`Wissen — Der ${t.client} weiß...`" placeholder="z.B. Die gesetzliche Regelung zu ..."/>
+          <GuideList v-model="form.lernziele!.verstehen" :label="`Verstehen — Der ${t.client} versteht...`" placeholder="z.B. Warum diese Regel gilt"/>
+          <GuideList v-model="form.lernziele!.anwenden" :label="`Anwenden — Der ${t.client} kann...`" placeholder="z.B. Das richtige Verhalten demonstrieren"/>
           <GuideList v-model="form.lernziele!.risikokompetenz" label="Risikokompetenz" placeholder="z.B. Gefahrenpotenzial einschätzen"/>
         </template>
 
@@ -68,7 +68,7 @@
 
         <!-- 5. Häufige Fehler -->
         <template v-else-if="section.key === 'haeufige_fehler'">
-          <GuideList v-model="form.haeufige_fehler!" label="Häufige Fehler der Fahrschüler" placeholder="z.B. Blinker erst nach dem Lenken"/>
+          <GuideList v-model="form.haeufige_fehler!" :label="`Häufige Fehler der ${t.clientsPlural}`" placeholder="z.B. Blinker erst nach dem Lenken"/>
         </template>
 
         <!-- 6. Praxisbezug -->
@@ -146,13 +146,13 @@
 
         <!-- 13. Hausaufgabe -->
         <template v-else-if="section.key === 'hausaufgabe'">
-          <GuideTextarea v-model="form.hausaufgabe" label="Was kann der Fahrschüler bis zur nächsten Fahrlektion üben oder beobachten?" :rows="4"/>
+          <GuideTextarea v-model="form.hausaufgabe" :label="`Was kann der ${t.client} bis zur nächsten ${t.appointment} üben oder beobachten?`" :rows="4"/>
         </template>
 
-        <!-- Tipps Fahrlehrer -->
+        <!-- Tipps Staff -->
         <template v-else-if="section.key === 'tipps_fahrlehrer'">
           <GuideList v-model="form.tipps_fahrlehrer!.unterrichtstipps" label="Unterrichtstipps" placeholder="Tipp für die Lektion..."/>
-          <GuideList v-model="form.tipps_fahrlehrer!.typische_schuelermeinungen" label="Typische Schüleraussagen" placeholder="z.B. «Das hab ich doch schon gewusst!»"/>
+          <GuideList v-model="form.tipps_fahrlehrer!.typische_schuelermeinungen" :label="`Typische ${t.client}-Aussagen`" placeholder="z.B. «Das hab ich doch schon gewusst!»"/>
           <GuideList v-model="form.tipps_fahrlehrer!.geeignete_fragen" label="Geeignete Fragen" placeholder="z.B. Was fällt dir an dieser Situation auf?"/>
           <GuideList v-model="form.tipps_fahrlehrer!.korrekturansaetze" label="Korrekturansätze" placeholder="z.B. Lass uns gemeinsam wiederholen..."/>
           <GuideTextarea v-model="form.tipps_fahrlehrer!.pruefungsbezug" label="Prüfungsbezug" :rows="3"/>
@@ -188,6 +188,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import type { StaffContent } from '~/types/staff-content'
+
+const { t } = useTerminology()
 
 // Sub-components defined inline via defineComponent below the script
 // We use simple helper components within the same file
@@ -226,7 +228,7 @@ const removePreview = (key: string, index: number) => emit('remove-preview', key
 
 type SectionDef = { key: string; num: string; label: string; teacher?: boolean }
 
-const sections: SectionDef[] = [
+const sections = computed<SectionDef[]>(() => [
   { key: 'thema', num: '1', label: 'Thema' },
   { key: 'warum_wichtig', num: '2', label: 'Warum ist das wichtig?' },
   { key: 'lernziele', num: '3', label: 'Lernziele' },
@@ -240,8 +242,8 @@ const sections: SectionDef[] = [
   { key: 'kontrollfragen', num: '11', label: 'Kontrollfragen' },
   { key: 'zusammenfassung', num: '12', label: 'Zusammenfassung' },
   { key: 'hausaufgabe', num: '13', label: 'Hausaufgabe / Transfer' },
-  { key: 'tipps_fahrlehrer', num: '★', label: 'Tipps für den Fahrlehrer', teacher: true }
-]
+  { key: 'tipps_fahrlehrer', num: '★', label: `Tipps für den ${t.value.staff}`, teacher: true }
+])
 
 /** Rough check: does this section have any non-empty content? */
 const sectionHasContent = (key: string): boolean => {

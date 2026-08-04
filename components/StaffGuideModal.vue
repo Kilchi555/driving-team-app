@@ -189,7 +189,7 @@
                 </ViewSection>
 
                 <!-- 3. Lernziele -->
-                <ViewSection v-if="hasObj(content.lernziele)" num="3" title="Lernziele" subtitle="Der Fahrschüler kann:">
+                <ViewSection v-if="hasObj(content.lernziele)" num="3" title="Lernziele" :subtitle="`Der ${t.client} kann:`">
                   <ViewList v-if="content.lernziele?.wissen?.length" label="Wissen" :items="content.lernziele.wissen" color="indigo"/>
                   <ViewList v-if="content.lernziele?.verstehen?.length" label="Verstehen" :items="content.lernziele.verstehen" color="blue"/>
                   <ViewList v-if="content.lernziele?.anwenden?.length" label="Anwenden" :items="content.lernziele.anwenden" color="teal"/>
@@ -288,7 +288,7 @@
                 </ViewSection>
 
                 <!-- Tipps für den Fahrlehrer -->
-                <ViewSection v-if="hasObj(content.tipps_fahrlehrer)" num="★" title="Tipps für den Fahrlehrer" teacher>
+                <ViewSection v-if="hasObj(content.tipps_fahrlehrer)" num="★" :title="`Tipps für den ${t.staff}`" teacher>
                   <ViewList v-if="content.tipps_fahrlehrer?.unterrichtstipps?.length" label="Unterrichtstipps" :items="content.tipps_fahrlehrer.unterrichtstipps" color="indigo"/>
                   <ViewList v-if="content.tipps_fahrlehrer?.typische_schuelermeinungen?.length" label="Typische Schüleraussagen" :items="content.tipps_fahrlehrer.typische_schuelermeinungen" color="gray"/>
                   <ViewList v-if="content.tipps_fahrlehrer?.geeignete_fragen?.length" label="Geeignete Fragen" :items="content.tipps_fahrlehrer.geeignete_fragen" color="teal"/>
@@ -346,6 +346,7 @@ defineEmits<{ close: [] }>()
 
 const supabase = getSupabase()
 const authStore = useAuthStore()
+const { t } = useTerminology()
 
 const isLoading = ref(true)
 const search = ref('')

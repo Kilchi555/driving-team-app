@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
       email: lead.email,
       firstName: lead.first_name,
       tenantId,
-      tenantName: tenant?.name || 'Fahrschule',
+      tenantName: tenant?.name || 'Unternehmen',
       primaryColor: tenant?.primary_color || '#1e293b',
     })
   } catch (e) {

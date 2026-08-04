@@ -11,7 +11,7 @@ export interface CompressionOptions {
   format?: 'webp' | 'jpeg' | 'png' // Output format (default: webp)
 }
 
-export type ImageType = 'square' | 'wide'
+export type ImageType = 'square' | 'wide' | 'hero'
 
 /**
  * Get canvas dimensions based on image type
@@ -19,9 +19,11 @@ export type ImageType = 'square' | 'wide'
 function getCanvasDimensions(type: ImageType) {
   if (type === 'square') {
     return { width: 400, height: 400 }
-  } else {
-    return { width: 800, height: 400 }
   }
+  if (type === 'hero') {
+    return { width: 1600, height: 900 }
+  }
+  return { width: 800, height: 400 }
 }
 
 /**
@@ -36,9 +38,10 @@ export async function compressImage(
   type: ImageType = 'square',
   options: CompressionOptions = {}
 ): Promise<string> {
-  const maxSizeKB = options.maxSize ?? 150
+  const maxSizeKB = options.maxSize ?? (type === 'hero' ? 420 : 150)
   const minQuality = options.minQuality ?? 0.4
   const format = options.format ?? 'webp'
+  const cover = type === 'hero'
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -61,8 +64,8 @@ export async function compressImage(
           canvas.width = canvasWidth
           canvas.height = canvasHeight
 
-          // Fill with white background
-          ctx.fillStyle = '#ffffff'
+          // Fill background
+          ctx.fillStyle = cover ? '#0c1222' : '#ffffff'
           ctx.fillRect(0, 0, canvasWidth, canvasHeight)
 
           // Calculate dimensions to maintain aspect ratio
@@ -74,13 +77,24 @@ export async function compressImage(
           let offsetX = 0
           let offsetY = 0
 
-          if (imgRatio > canvasRatio) {
-            // Image is wider - fit to width
+          if (cover) {
+            // Cover: fill canvas, crop overflow
+            if (imgRatio > canvasRatio) {
+              drawHeight = canvasHeight
+              drawWidth = canvasHeight * imgRatio
+              offsetX = (canvasWidth - drawWidth) / 2
+            } else {
+              drawWidth = canvasWidth
+              drawHeight = canvasWidth / imgRatio
+              offsetY = (canvasHeight - drawHeight) / 2
+            }
+          } else if (imgRatio > canvasRatio) {
+            // Contain: fit to width
             drawWidth = canvasWidth
             drawHeight = canvasWidth / imgRatio
             offsetY = (canvasHeight - drawHeight) / 2
           } else {
-            // Image is taller - fit to height
+            // Contain: fit to height
             drawHeight = canvasHeight
             drawWidth = canvasHeight * imgRatio
             offsetX = (canvasWidth - drawWidth) / 2

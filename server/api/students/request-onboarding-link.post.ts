@@ -54,14 +54,17 @@ export default defineEventHandler(async (event) => {
     // Get tenant info
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('name, slug, booking_policy')
+      .select('name, slug, booking_policy, business_type')
       .eq('id', user.tenant_id)
       .single()
 
     if (tenantError || !tenant) {
       logger.error('❌ Tenant not found:', user.tenant_id)
-      throw createError({ statusCode: 500, statusMessage: 'Fahrschule nicht gefunden' })
+      throw createError({ statusCode: 500, statusMessage: 'Unternehmen nicht gefunden' })
     }
+
+    const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+    const terms = getTerminologyDefaults(tenant.business_type)
 
     // Generate new onboarding token
     const newToken = uuidv4()
@@ -83,7 +86,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const onboardingLink = `https://app.simy.ch/onboarding/${newToken}`
-    const tenantName = tenant.name || 'Deine Fahrschule'
+    const tenantName = tenant.name || terms.businessNoun
     const policy = (tenant.booking_policy as any) || {}
     const smsEnabled = policy.onboarding_sms_enabled !== false
     const emailEnabled = policy.onboarding_email_enabled === true
@@ -111,7 +114,7 @@ export default defineEventHandler(async (event) => {
     // Send via email if enabled or as fallback
     if ((method === 'email' || !smsEnabled) && emailEnabled) {
       const primaryColor = (tenant as any).primary_color || '#2563eb'
-      const displayTenantName = tenant.name || 'Deine Fahrschule'
+      const displayTenantName = tenant.name || terms.businessNoun
 
       const emailHtml = `<!DOCTYPE html>
 <html>
@@ -169,7 +172,7 @@ export default defineEventHandler(async (event) => {
     logger.warn('⚠️ Request onboarding link: No valid method available', { userId: user.id })
     return {
       success: false,
-      message: 'Fahrschule hat keine Kontaktmethode aktiviert. Bitte kontaktiere die Fahrschule direkt.'
+      message: `${terms.businessNoun} hat keine Kontaktmethode aktiviert. Bitte kontaktiere ${terms.businessNoun} direkt.`
     }
 
   } catch (error: any) {

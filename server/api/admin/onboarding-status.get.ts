@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const auth = await getAuthenticatedUser(event)
@@ -15,6 +16,7 @@ export default defineEventHandler(async (event) => {
     { count: studentCount },
     { count: lessonCount },
     { count: courseCount },
+    terms,
   ] = await Promise.all([
     supabase
       .from('tenants')
@@ -41,6 +43,7 @@ export default defineEventHandler(async (event) => {
       .eq('tenant_id', tenant_id)
       .eq('is_active', true)
       .eq('sari_managed', false),
+    getTenantTerminology(supabase, tenant_id),
   ])
 
   const hasLogo = !!(tenant?.logo_url || tenant?.logo_square_url)
@@ -54,14 +57,25 @@ export default defineEventHandler(async (event) => {
   const hasEmail = !!(tenant?.from_email && tenant?.resend_domain_verified)
   const isPaid = tenant?.subscription_plan !== 'trial'
 
+  const clientAccusative =
+    terms.client === 'Kunde' ? 'Kunden'
+    : terms.client === 'Klient' ? 'Klienten'
+    : terms.client === 'Patient' ? 'Patienten'
+    : terms.client
+
+  // "Erste Beratung/Sitzung" (fem.) vs "Ersten Termin" — appointment terms are mostly feminine
+  const appointmentDoneLabel = ['Fahrstunde', 'Beratung', 'Sitzung', 'Session'].includes(terms.appointment)
+    ? `Erste ${terms.appointment} erstellt`
+    : `Ersten ${terms.appointment} erstellt`
+
   const steps = [
-    { id: 'account',  label: 'Konto erstellt',           done: true,        href: null },
-    { id: 'branding', label: 'Logo hochgeladen',          done: hasBranding, href: '/admin/profile?tab=branding' },
-    { id: 'staff',    label: 'Ersten Fahrlehrer hinzugefügt', done: hasStaff, href: '/admin/staff' },
-    { id: 'student',  label: 'Ersten Schüler hinzugefügt',done: hasStudent,  href: '/admin/users' },
-    { id: 'lesson',   label: 'Ersten Termin erstellt',    done: hasLesson,   href: '/admin/calendar' },
+    { id: 'account',  label: 'Konto erstellt', done: true, href: null },
+    { id: 'branding', label: 'Logo hochgeladen', done: hasBranding, href: '/admin/profile?tab=branding' },
+    { id: 'staff',    label: `Ersten ${terms.staff} hinzugefügt`, done: hasStaff, href: '/admin/staff' },
+    { id: 'student',  label: `Ersten ${clientAccusative} hinzugefügt`, done: hasStudent, href: '/admin/users' },
+    { id: 'lesson',   label: appointmentDoneLabel, done: hasLesson, href: '/admin/calendar' },
     { id: 'payments', label: 'Zahlungen einrichten (Wallee)', done: hasPayments, href: '/admin/profile?tab=payments' },
-    { id: 'upgrade',  label: 'Plan wählen',               done: isPaid,      href: '/upgrade' },
+    { id: 'upgrade',  label: 'Plan wählen', done: isPaid, href: '/upgrade' },
   ]
 
   const completedCount = steps.filter(s => s.done).length

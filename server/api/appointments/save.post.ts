@@ -15,6 +15,7 @@ import { getFallbackRule } from '~/utils/fallbackPricingRules'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
 import { recordAndSendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { isChargeableEventType } from '~/server/utils/event-type-charge'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -557,6 +558,8 @@ export default defineEventHandler(async (event) => {
           }
         })()
 
+        const terms = await getTenantTerminology(supabase, appointmentData.tenant_id)
+        const appointmentLabel = terms.appointment || 'Termin'
         const paymentData = {
           appointment_id: result.id,
           user_id: result.user_id,
@@ -573,7 +576,7 @@ export default defineEventHandler(async (event) => {
           ...(remainingAmountRappen === 0 || (cashAlreadyPaid && paymentMethodForPayment === 'cash') ? { paid_at: new Date().toISOString() } : {}),
           credit_used_rappen: creditUsedRappen || 0,
           ...(companyBillingAddressId ? { company_billing_address_id: companyBillingAddressId } : {}),
-          description: appointmentData.title || `Fahrlektion ${appointmentData.type}`,
+          description: appointmentData.title || `${appointmentLabel} ${appointmentData.type}`,
           metadata: { category: appointmentData.type || null },
           created_at: new Date().toISOString()
         }

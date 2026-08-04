@@ -45,6 +45,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
                        // Without /booking the middleware treated it as protected and
                        // hammered /api/auth/refresh in a redirect loop for guests.
                        to.path.startsWith('/booking/') ||
+                       to.path.startsWith('/s/') ||
                        to.path.match(/^\/[^\/]+\/booking\/availability\/.+$/) ||
                        isSlugRoute
   

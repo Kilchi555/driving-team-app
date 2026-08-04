@@ -11,7 +11,7 @@
           </button>
         </div>
         <h1 class="text-2xl sm:text-3xl font-bold mb-2">Datenschutzerklärung</h1>
-        <p class="text-blue-200 text-sm">Simy – SaaS-Plattform für Fahrschulen | Stand: 1. April 2026</p>
+        <p class="text-blue-200 text-sm">Simy – SaaS-Plattform für Terminbetriebe | Stand: 1. April 2026</p>
       </div>
     </div>
 
@@ -21,7 +21,7 @@
 
         <!-- Intro -->
         <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800">
-          <p><strong>Wichtiger Hinweis:</strong> Diese Datenschutzerklärung beschreibt, wie Simy mit Daten von <strong>Fahrschulen (Tenants)</strong> und deren Administratoren umgeht. Für die Verarbeitung von Schüler- und Kundendaten durch die Fahrschulen selbst sind diese als datenschutzrechtlich Verantwortliche zuständig. Der entsprechende Auftragsverarbeitungsvertrag (AVV) ist unter <NuxtLink to="/avv" class="text-blue-600 hover:underline">simy.ch/avv</NuxtLink> abrufbar.</p>
+          <p><strong>Wichtiger Hinweis:</strong> Diese Datenschutzerklärung beschreibt, wie Simy mit Daten von <strong>Unternehmen (Tenants)</strong> und deren Administratoren umgeht. Für die Verarbeitung von Schüler- und Kundendaten durch die Unternehmen selbst sind diese als datenschutzrechtlich Verantwortliche zuständig. Der entsprechende Auftragsverarbeitungsvertrag (AVV) ist unter <NuxtLink to="/avv" class="text-blue-600 hover:underline">simy.ch/avv</NuxtLink> abrufbar.</p>
         </div>
 
         <!-- Inhaltsverzeichnis -->
@@ -65,7 +65,7 @@
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">2. Welche Daten wir verarbeiten</h2>
 
           <h3 class="font-semibold text-gray-800 mb-2 mt-4">2.1 Registrierungs- und Kontodaten (Tenant-Admins)</h3>
-          <p class="mb-3">Bei der Registrierung einer Fahrschule auf Simy erheben wir:</p>
+          <p class="mb-3">Bei der Registrierung eines Unternehmens auf Simy erheben wir:</p>
           <ul class="list-disc pl-5 space-y-1 mb-3">
             <li>Firmenname, rechtlicher Name, URL-Kennung</li>
             <li>Name und Kontaktdaten der Ansprechperson (Vorname, Nachname, E-Mail, Telefon)</li>
@@ -82,7 +82,7 @@
           </ul>
 
           <h3 class="font-semibold text-gray-800 mb-2 mt-4">2.3 Daten im Auftrag (Auftragsverarbeitung)</h3>
-          <p>Schülerdaten, Buchungen, Fahrstunden, Bewertungen und andere von der Fahrschule eingegebenen Daten werden von Simy <strong>ausschliesslich im Auftrag des Kunden</strong> verarbeitet. Simy hat kein eigenes Interesse an diesen Daten und verarbeitet sie nur nach Weisung des Kunden. Es gilt der <NuxtLink to="/avv" class="text-blue-600 hover:underline">Auftragsverarbeitungsvertrag (AVV)</NuxtLink>.</p>
+          <p>Schülerdaten, Buchungen, Termine, Bewertungen und andere vom Unternehmen eingegebenen Daten werden von Simy <strong>ausschliesslich im Auftrag des Kunden</strong> verarbeitet. Simy hat kein eigenes Interesse an diesen Daten und verarbeitet sie nur nach Weisung des Kunden. Es gilt der <NuxtLink to="/avv" class="text-blue-600 hover:underline">Auftragsverarbeitungsvertrag (AVV)</NuxtLink>.</p>
         </section>
 
         <!-- §3 -->

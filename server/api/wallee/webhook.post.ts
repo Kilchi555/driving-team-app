@@ -14,6 +14,7 @@ import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
+import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conversion'
 import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 // crypto import removed - using static token validation instead of HMAC
@@ -824,12 +825,11 @@ export default defineEventHandler(async (event) => {
                 }
               })()
 
-              // ── Meta CAPI: report course purchases (webhook-confirmed only, so ──
-              // webhook retries for an already-processed payment never re-fire —
+              // ── Meta CAPI + Google Ads: report course purchases (webhook-confirmed only,
+              // so webhook retries for an already-processed payment never re-fire —
               // `newRegs` only contains registrations created in THIS delivery).
-              // course_registrations has no FK to `appointments`, so this calls
-              // sendCapiEvent directly and skips the meta_capi_uploads audit table
-              // (its appointment_id column has a hard FK to appointments).
+              // course_registrations has no FK to `appointments`, so Meta/Google both
+              // skip the appointment-FK audit tables and use order_id / synthetic ids.
               if (paymentStatus === 'completed') {
                 ;(async () => {
                   try {
@@ -843,7 +843,7 @@ export default defineEventHandler(async (event) => {
                       const { data: attrRow } = marketingSessionId
                         ? await supabase
                             .from('marketing_attributions')
-                            .select('fbclid, fbc, fbp')
+                            .select('fbclid, fbc, fbp, gclid, gbraid, wbraid')
                             .eq('session_id', marketingSessionId)
                             .maybeSingle()
                         : { data: null }
@@ -851,22 +851,36 @@ export default defineEventHandler(async (event) => {
                       const hashedEmail = regData.email ? await sha256Hex(String(regData.email).trim().toLowerCase()) : null
                       const normalizedRegPhone = String(regData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
                       const hashedPhone = normalizedRegPhone.startsWith('+') ? await sha256Hex(normalizedRegPhone) : null
+                      const valueChf = (regData.amount_paid_rappen || 0) / 100
+                      const conversionDateTime = new Date()
 
                       await sendCapiEvent({
                         appointment_id: `course_${newReg.id}`,
                         tenant_id: regData.tenant_id,
                         event_name: 'Purchase',
-                        conversion_value_chf: (regData.amount_paid_rappen || 0) / 100,
-                        conversion_date_time: new Date(),
+                        conversion_value_chf: valueChf,
+                        conversion_date_time: conversionDateTime,
                         fbclid: attrRow?.fbclid ?? null,
                         fbc: attrRow?.fbc ?? null,
                         fbp: attrRow?.fbp ?? null,
                         hashed_email: hashedEmail,
                         hashed_phone: hashedPhone,
                       })
+
+                      await recordAndUploadCourseConversion({
+                        registration_id: String(newReg.id),
+                        tenant_id: regData.tenant_id ?? null,
+                        gclid: attrRow?.gclid ?? null,
+                        gbraid: attrRow?.gbraid ?? null,
+                        wbraid: attrRow?.wbraid ?? null,
+                        conversion_value_chf: valueChf,
+                        conversion_date_time: conversionDateTime,
+                        hashed_email: hashedEmail,
+                        hashed_phone: hashedPhone,
+                      })
                     }
                   } catch (capiErr: any) {
-                    logger.warn('⚠️ Meta CAPI upload failed for course registration (webhook, non-critical):', capiErr?.message ?? capiErr)
+                    logger.warn('⚠️ Meta/Google Ads conversion upload failed for course registration (webhook, non-critical):', capiErr?.message ?? capiErr)
                   }
                 })()
               }

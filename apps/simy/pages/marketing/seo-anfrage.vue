@@ -22,7 +22,7 @@
         <h1 class="text-3xl md:text-4xl font-black text-gray-900 mb-4 leading-tight">
           Wie sichtbar ist deine<br/>
           <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-            Fahrschule bei Google?
+            Firma bei Google?
           </span>
         </h1>
         <p class="text-gray-500 leading-relaxed">
@@ -61,7 +61,7 @@
 
           <!-- Context hint -->
           <div class="rounded-xl p-4 text-sm leading-relaxed" style="color: var(--brand-primary); background: rgba(var(--brand-rgb),0.06); border: 1px solid rgba(var(--brand-rgb),0.15)">
-            Damit wir dir eine fundierte Analyse schicken können, brauchen wir nur ein paar kurze Angaben zu dir und deiner Fahrschule.
+            Damit wir dir eine fundierte Analyse schicken können, brauchen wir nur ein paar kurze Angaben zu dir und deinem Unternehmen.
           </div>
 
           <div class="grid sm:grid-cols-2 gap-5">
@@ -71,8 +71,8 @@
                 class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors" />
             </div>
             <div>
-              <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Name der Fahrschule <span class="text-red-400">*</span></label>
-              <input v-model="form.school" type="text" placeholder="Fahrschule Muster" required
+              <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Unternehmensname <span class="text-red-400">*</span></label>
+              <input v-model="form.school" type="text" placeholder="Muster GmbH" required
                 class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors" />
             </div>
           </div>
@@ -92,7 +92,7 @@
 
           <div>
             <label class="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">E-Mail <span class="text-red-400">*</span></label>
-            <input v-model="form.email" type="email" placeholder="max@fahrschule.ch" autocomplete="email" required
+            <input v-model="form.email" type="email" placeholder="max@firma.ch" autocomplete="email" required
               class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors" />
           </div>
 
@@ -144,10 +144,10 @@ import { ref, reactive } from 'vue'
 const { gtag } = useGtag()
 
 useHead({
-  title: 'Kostenlose SEO-Analyse für Fahrschulen – Simy',
+  title: 'Kostenlose SEO-Analyse für Terminbetriebe – Simy',
   meta: [
-    { name: 'description', content: 'Jetzt kostenlose SEO-Analyse für deine Fahrschule anfragen. Simy zeigt dir, wie sichtbar du bei Google bist und was du verbessern kannst.' },
-    { property: 'og:title', content: 'Kostenlose SEO-Analyse für Fahrschulen – Simy' },
+    { name: 'description', content: 'Jetzt kostenlose SEO-Analyse für dein Unternehmen anfragen. Simy zeigt dir, wie sichtbar du bei Google bist und was du verbessern kannst.' },
+    { property: 'og:title', content: 'Kostenlose SEO-Analyse für Terminbetriebe – Simy' },
     { property: 'og:description', content: 'Wir analysieren kostenlos deine Google-Sichtbarkeit und melden uns innerhalb von 24 Stunden.' },
     { property: 'og:url', content: 'https://simy.ch/marketing/seo-anfrage' },
     { name: 'robots', content: 'noindex, follow' },
@@ -176,7 +176,7 @@ async function submit() {
       name: form.name,
       email: form.email,
       topic: 'SEO-Analyse Anfrage',
-      message: `Fahrschule: ${form.school}\nStadt/Region: ${form.city}\nTelefon: ${form.phone || '—'}\nWebsite: ${form.website || '—'}\n\n${form.message}`,
+      message: `Unternehmen: ${form.school}\nStadt/Region: ${form.city}\nTelefon: ${form.phone || '—'}\nWebsite: ${form.website || '—'}\n\n${form.message}`,
     }
     await $fetch('/api/contact', { method: 'POST', body })
     submitted.value = true

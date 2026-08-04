@@ -30,7 +30,7 @@ interface SettleEmailData {
 }
 
 function generateSettlementEmail(data: SettleEmailData): string {
-  const staffLabel = data.staffLabel || 'Fahrlehrer'
+  const staffLabel = data.staffLabel || 'Mitarbeiter'
   return `
 <!DOCTYPE html>
 <html lang="de">
@@ -303,8 +303,8 @@ export default defineEventHandler(async (event) => {
           .single()
 
         const terms = await getTenantTerminology(supabaseAdmin, tenantId)
-        const tenantName = tenant?.name || terms.businessNoun || 'Fahrschule'
-        const staffLabel = terms.staff || 'Fahrlehrer'
+        const tenantName = tenant?.name || terms.businessNoun || 'Unternehmen'
+        const staffLabel = terms.staff || 'Mitarbeiter'
 
         for (const appointment of appointments) {
           try {

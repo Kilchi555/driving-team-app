@@ -89,8 +89,8 @@
           <div v-if="showEventTypeSelector" class="py-2">
             <EventTypeSelector
               :selected-type="formData.selectedSpecialType"
-              :disabled="props.mode === 'edit' && isPastAppointment"
-              :show-back-button="!(props.mode === 'edit' && isPastAppointment)"
+              :allow-selection="!(props.mode === 'edit' && isPastAppointment)"
+              :show-back-button="hasPaidEventTypes && !(props.mode === 'edit' && isPastAppointment)"
               @event-type-selected="handleEventTypeSelected"
               @back-to-student="backToStudentSelection"
             />
@@ -106,20 +106,6 @@
               Typ ändern
             </button>
           </div>
-
-          <!-- Customer Invite Selector für andere Terminarten (nicht bei Ferien) -->
-          <div v-if="!isLessonType(formData.eventType) && !showEventTypeSelection && formData.selectedSpecialType !== 'vacation'">
-            <CustomerInviteSelector
-              ref="customerInviteSelectorRef" 
-              v-model="invitedCustomers"
-              :current-user="currentUser"
-              :disabled="props.mode === 'view' || (props.mode === 'edit' && isPastAppointment)"
-              @customers-added="handleCustomersAdded"
-              @customers-cleared="handleCustomersCleared"
-            />
-          </div>
-
-
 
           <!-- Title Input (nicht bei Ferien – Titel ist immer "Ferien") -->
           <div v-if="!showEventTypeSelection && formData.selectedSpecialType !== 'vacation'"> 
@@ -529,7 +515,7 @@
           :style="{ color: primaryColor, background: `${primaryColor}15` }"
           @mouseover="($event.currentTarget as HTMLElement).style.background = `${primaryColor}33`"
           @mouseleave="($event.currentTarget as HTMLElement).style.background = `${primaryColor}15`"
-          title="Schüler Fortschritt anzeigen"
+          title="Fortschritt anzeigen"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
           Profil
@@ -642,7 +628,7 @@
               :style="cancellationType === 'student' ? { borderColor: primaryColor, background: `${primaryColor}15`, color: primaryColor } : {}"
             >
               <div class="text-3xl mb-2">👨‍🎓</div>
-              <div class="font-medium">Schüler</div>
+              <div class="font-medium">{{ t.client }}</div>
             </button>
             <button
               @click="selectCancellationType('staff')"
@@ -656,7 +642,7 @@
               :style="cancellationType === 'staff' ? { borderColor: primaryColor, background: `${primaryColor}15`, color: primaryColor } : {}"
             >
               <div class="text-3xl mb-2">👨‍🏫</div>
-              <div class="font-medium">Fahrlehrer</div>
+              <div class="font-medium">{{ t.staff }}</div>
             </button>
           </div>
         </div>
@@ -822,7 +808,7 @@
           Soll dieser Termin verrechnet werden?
         </h3>
         <p class="text-sm text-gray-600 mb-4">
-          Der Termin wird in weniger als 24 Stunden abgesagt. Wähle, ob der Schüler belastet werden soll:
+          Der Termin wird in weniger als 24 Stunden abgesagt. Wähle, ob {{ t.client }} belastet werden soll:
         </p>
         
         <div class="rounded p-3 mb-6 border" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
@@ -920,6 +906,7 @@
 
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { logger } from '~/utils/logger'
+import { useTerminology } from '~/composables/useTerminology'
 import { useSmsService } from '~/composables/useSmsService'
 const { primaryBg } = usePrimaryColor()
 import { useUIStore } from '~/stores/ui' // ✅ NEU: Toast notifications
@@ -939,7 +926,6 @@ import TimeSelector from '~/components/TimeSelector.vue'
 import TitleInput from '~/components/TitleInput.vue'
 import LessonTypeSelector from '~/components/LessonTypeSelector.vue'
 import StaffSelector from '~/components/StaffSelector.vue'
-import CustomerInviteSelector from '~/components/CustomerInviteSelector.vue' 
 import ExamLocationSelector from '~/components/ExamLocationSelector.vue'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import PostAppointmentModal from './PostAppointmentModal.vue'
@@ -962,9 +948,11 @@ import { useEventModalApi } from '~/composables/useEventModalApi'
 // ✅ Initialize secure API layer
 const eventModalApi = useEventModalApi()
 
-/** Resolve tenant default event type for create mode. Never invent 'lesson' if tenant lacks it. */
-const resolveCreateEventTypeDefaults = async (opts?: {
-  /** Free-slot clicks: prefer a chargeable/client type (student flow), not free discovery. */
+/** Resolve tenant default event type for create mode. Never invent 'lesson' if tenant lacks it.
+ *  Paid types active → student + Terminart + price flow.
+ *  Only free types → open EventTypeSelector ("Andere Terminart") directly. */
+const resolveCreateEventTypeDefaults = async (_opts?: {
+  /** @deprecated Paid presence drives the flow; kept for call-site compat. */
   preferChargeable?: boolean
 }): Promise<{
   eventType: string
@@ -987,22 +975,22 @@ const resolveCreateEventTypeDefaults = async (opts?: {
   try {
     const all = await eventModalApi.getEventTypes()
     const list = Array.isArray(all) ? all : []
+    const paid = list.filter((t: any) => t.require_payment === true)
+    const free = list.filter((t: any) => t.require_payment !== true)
+    hasPaidEventTypes.value = paid.length > 0
 
-    if (opts?.preferChargeable) {
-      const paid = list.filter((t: any) => t.require_payment === true)
+    if (paid.length > 0) {
       const pick = paid.find((t: any) => t.is_default) || paid[0]
-      if (pick?.code) {
-        logger.debug('✅ Free-slot defaults: prefer chargeable type', pick.code)
-        return resolveCreateEventTypeDefaultsFromRow(pick)
-      }
+      logger.debug('✅ Create defaults: paid types present → priced flow', pick?.code)
+      return resolveCreateEventTypeDefaultsFromRow(pick)
     }
 
     const et =
-      list.find((t: any) => t.is_default && t.is_active !== false) ||
-      (await eventModalApi.getDefaultEventType()) ||
-      list.find((t: any) => t.require_payment === true) ||
+      free.find((t: any) => t.is_default && t.is_active !== false) ||
+      free[0] ||
       list[0]
     if (!et?.code) return drivingSchoolFallback
+    logger.debug('✅ Create defaults: only free types → EventTypeSelector', et.code)
     return resolveCreateEventTypeDefaultsFromRow(et)
   } catch (err) {
     logger.debug('⚠️ resolveCreateEventTypeDefaults failed, using lesson fallback:', err)
@@ -1062,7 +1050,7 @@ const applyCreateEventTypeDefaultsOnce = async (opts?: {
   // generic 45min placeholder and must not win over e.g. discovery=30 / workshop=120).
   formData.value.duration_minutes = defaults.duration
   calculateEndTime()
-  if (!formData.value.title || formData.value.title === 'Termin' || formData.value.title === 'Fahrstunde') {
+  if (!formData.value.title || formData.value.title === 'Termin' || formData.value.title === 'Fahrstunde' || formData.value.title === t.value.appointment) {
     formData.value.title = defaults.title
   }
   createEventTypeDefaultsApplied.value = true
@@ -1175,6 +1163,8 @@ const error = ref('')
 const isLoading = ref(false)
 const isInitializing = ref(false)
 const showEventTypeSelection = ref(false)
+/** True when tenant has ≥1 require_payment event type — drives priced vs free-only create UX. */
+const hasPaidEventTypes = ref(true)
 const selectedLessonType = ref('lesson')
 /** Apply tenant create defaults only once per modal open — avoids flipping
  *  discovery ↔ consulting every time the user picks a student or re-inits. */
@@ -1289,7 +1279,6 @@ const manualChargePercentage = ref<number | null>(null) // ✅ NEW: Staff choice
 // Wallee refund destination choice for staff cancellations
 const staffRefundDestination = ref<'wallet' | 'wallee'>('wallet')
 const staffPaymentData = ref<any>(null) // cached payment row for refund destination UI
-const customerInviteSelectorRef = ref()
 const authStore = useAuthStore()
 // ✅ NEU: Track ob der Titel vom Benutzer manuell bearbeitet wurde
 const titleManuallyEdited = ref(false)
@@ -1305,10 +1294,10 @@ const {
 } = useProductSale()
 
 const { loadProducts, activeProducts, isLoading: isLoadingProducts } = useProducts()
-const invitedCustomers = ref([] as any[])
 const priceDisplayRef = ref()
 const savedCompanyBillingAddressId = ref<string | null>(null) // ✅ NEU: Company Billing Address ID
-const tenantName = ref('Fahrschule') // ✅ NEU: Tenant name for SMS/Email
+const { t } = useTerminology()
+const tenantName = ref(t.value.businessNoun) // Tenant name for SMS/Email
 const evaluationCriteria = ref<EvaluationCriteria[]>([]) // ✅ NEU: Evaluationskriterien
 
 // Student Credit Management
@@ -1496,7 +1485,7 @@ const getLessonTypeText = (appointmentType: string): string => {
   logger.debug('🔍 getLessonTypeText called with:', appointmentType)
   switch (appointmentType) {
     case 'lesson':
-      return 'Fahrlektion'
+      return t.value.appointment
     case 'exam':
       return 'Prüfungsfahrt inkl. WarmUp und Rückfahrt'
     case 'theory':
@@ -1523,7 +1512,7 @@ const getLessonTypeText = (appointmentType: string): string => {
       return 'Sonstiges'
     default:
       logger.debug('⚠️ Unknown appointment type, using default')
-      return 'Fahrlektion'
+      return t.value.appointment
   }
 }
 
@@ -1548,33 +1537,6 @@ const getLocationTextForTitle = (location: any, student: any): string => {
   }
 
   return location.name || location.address || 'Unbekannter Ort'
-}
-
-// 3. Callback-Funktion für SMS-Integration erstellen
-const handleCustomerInvites = async (appointmentData: any) => {
-  if (invitedCustomers.value.length > 0 && customerInviteSelectorRef.value) {
-    logger.debug('📱 Creating customer invites with SMS...')
-    try {
-      // Staff- und Location-Informationen zur appointmentData hinzufügen
-      const appointmentDataWithStaff = {
-        ...appointmentData,
-        staff: {
-          first_name: props.currentUser?.first_name || 'Fahrlehrer',
-          phone: props.currentUser?.phone || ''
-        },
-        location_name: selectedLocation.value?.name || 'Treffpunkt',
-        location_address: selectedLocation.value?.address || selectedLocation.value?.formatted_address || ''
-      }
-      
-      const customerInvites = await customerInviteSelectorRef.value.createInvitedCustomers(appointmentDataWithStaff)
-      logger.debug('✅ Customer invites created with SMS:', customerInvites.length)
-      return customerInvites
-    } catch (error) {
-      console.error('❌ Error creating customer invites:', error)
-      throw error
-    }
-  }
-  return []
 }
 
 // ✅ NEUE FUNKTION: Handle appointment save
@@ -1850,7 +1812,7 @@ const handleSaveAppointment = async () => {
             
             if (assignmentResult.assigned) {
               logger.debug('✅ Auto-assignment completed:', assignmentResult)
-              showSuccess('Auto-Zuordnung', `${assignmentResult.studentName} wurde dem Fahrlehrer zugeordnet.`)
+              showSuccess('Auto-Zuordnung', `${assignmentResult.studentName} wurde dem ${t.value.staff} zugeordnet.`)
             } else {
               logger.debug('ℹ️ Auto-assignment not needed:', assignmentResult.reason)
             }
@@ -2031,7 +1993,7 @@ const handleSaveAppointment = async () => {
 
       if (timeOrDateChanged) {
         const studentEmail = originalAppointmentData.studentEmail || selectedStudent.value?.email
-        const studentName = originalAppointmentData.studentName || (selectedStudent.value ? `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}`.trim() : 'Fahrschüler')
+        const studentName = originalAppointmentData.studentName || (selectedStudent.value ? `${selectedStudent.value.first_name} ${selectedStudent.value.last_name}`.trim() : t.value.client)
         const firstName = studentName?.split(' ')[0] || studentName
         const instructorName = originalAppointmentData.instructorName || (formData.value as any).staffName || tenantName.value
 
@@ -2084,13 +2046,6 @@ const handleSaveAppointment = async () => {
     }
     
     isLoading.value = false
-    
-    // Run invites BEFORE closing - needs mounted component ref for CustomerInviteSelector
-    try {
-      await handleCustomerInvites(savedAppointment)
-    } catch (inviteError: any) {
-      logger.warn('⚠️ Customer invite failed:', inviteError.message)
-    }
     
     // ✅ FAST: Close the modal IMMEDIATELY without waiting for calendar refresh
     emit('close')
@@ -2166,7 +2121,7 @@ const handleSaveAppointment = async () => {
       addNotification({
         type: 'error',
         title: 'Telefonnummer bereits vorhanden',
-        message: `Ein Schüler mit dieser Telefonnummer existiert bereits. Bitte verwende eine andere Nummer.`
+        message: `Ein ${t.value.client} mit dieser Telefonnummer existiert bereits. Bitte verwende eine andere Nummer.`
       })
     } else if (error.duplicateType === 'email' || errorMessage === 'DUPLICATE_EMAIL') {
       const existing = error.existingUser || {}
@@ -2178,7 +2133,7 @@ const handleSaveAppointment = async () => {
       addNotification({
         type: 'error',
         title: 'E-Mail bereits vorhanden',
-        message: `Ein Schüler mit dieser E-Mail existiert bereits. Bitte verwende eine andere E-Mail.`
+        message: `Ein ${t.value.client} mit dieser E-Mail existiert bereits. Bitte verwende eine andere E-Mail.`
       })
     } else if (errorCode === 409 && (errorMessage.includes('DUPLICATE') || errorMessage.includes('duplicate'))) {
       // Handle 409 Conflict errors
@@ -2188,7 +2143,7 @@ const handleSaveAppointment = async () => {
       addNotification({
         type: 'error',
         title: 'Duplikat gefunden',
-        message: 'Ein Schüler mit diesen Daten existiert bereits.'
+        message: `Ein ${t.value.client} mit diesen Daten existiert bereits.`
       })
     } else {
       // Default error message
@@ -2295,9 +2250,7 @@ const resourceSurcharges = ref<{ label: string; rappen: number; type: 'vehicle' 
 
 // ✅ Temporäre Lösung: Verwende useEventModalForm direkt ohne Zwischenspeicherung
 const modalForm = useEventModalForm(props.currentUser, {
-  customerInviteSelectorRef,
   staffSelectorRef,
-  invitedCustomers,
   invitedStaffIds,
   priceDisplayRef,
   emit,
@@ -2712,7 +2665,7 @@ watch(
 // ✅ NEU: Hilfsfunktion zur Übersetzung von event_type_code
 const translateEventTypeCode = (code: string): string => {
   const translations: { [key: string]: string } = {
-    'lesson': 'Fahrlektion',
+    'lesson': t.value.appointment,
     'theory': 'Theorielektion',
     'exam': 'Prüfung',
     'consultation': 'Beratung'
@@ -3015,7 +2968,7 @@ const getSelectedStaffAvailability = (): string => {
 // Get current staff name
 const getCurrentStaffName = (): string => {
   if (!formData.value.staff_id) {
-    return 'Kein Fahrlehrer zugewiesen'
+    return `Kein ${t.value.staff} zugewiesen`
   }
   
   const staff = availableStaff.value.find(s => s.id === formData.value.staff_id)
@@ -3024,7 +2977,7 @@ const getCurrentStaffName = (): string => {
   }
   
   // Fallback: Lade Staff-Name aus der Datenbank
-  return 'Fahrlehrer wird geladen...'
+  return `${t.value.staff} wird geladen...`
 }
 
 // Staff editing functions
@@ -3128,7 +3081,7 @@ const calculatePriceForCurrentData = async (): Promise<void> => {
       dynamicPricing.value = {
         ...dynamicPricing.value,
         isLoading: false,
-        error: 'Fahrlehrer zu dieser Zeit nicht verfügbar'
+        error: `${t.value.staff} zu dieser Zeit nicht verfügbar`
       }
       return
     }
@@ -4007,7 +3960,7 @@ const useCreditForCurrentLesson = async () => {
       user_id: selectedStudent.value.id,
       amount_rappen: Math.min(studentCredit.value.balance_rappen, totalPrice),
       appointment_id: props.eventData?.id || 'temp_' + Date.now(),
-      notes: `Guthaben für Lektion: ${formData.value.title || 'Fahrstunde'}`
+      notes: `Guthaben für Lektion: ${formData.value.title || t.value.appointment}`
     }
     
     logger.debug('💳 Using credit for lesson:', creditData)
@@ -4083,9 +4036,6 @@ const handleEventTypeSelected = (eventType: any) => {
   selectedStudent.value = null
   formData.value.user_id = ''
   
-  // ✅ Auch invitedCustomers zurücksetzen
-  invitedCustomers.value = []
-  
   formData.value.selectedSpecialType = eventType.code
   // ✅ Use the actual event type code (vku, nothelfer, etc.) - these exist in event_types table
   formData.value.appointment_type = eventType.code // e.g., 'vku', 'nothelfer'
@@ -4124,23 +4074,32 @@ const handleEventTypeSelected = (eventType: any) => {
 
 const backToStudentSelection = async () => {
   logger.debug('⬅️ Back to student selection')
-  showEventTypeSelection.value = false
-  formData.value.eventType = 'lesson'
-  formData.value.selectedSpecialType = ''
-  formData.value.title = ''
-  formData.value.type = ''
-  // Pick a tenant-valid chargeable type — never leave stale free codes or invent 'lesson'
   try {
     const types = await eventModalApi.getEventTypes()
     const list = Array.isArray(types) ? types : []
     const paid = list.filter((t: any) => t.require_payment === true)
-    const pick = paid.find((t: any) => t.is_default) || paid[0] || list.find((t: any) => t.is_default) || list[0]
+    hasPaidEventTypes.value = paid.length > 0
+    if (paid.length === 0) {
+      // Free-only tenant: stay on EventTypeSelector (no priced student flow)
+      showEventTypeSelection.value = true
+      formData.value.eventType = 'other'
+      return
+    }
+    showEventTypeSelection.value = false
+    formData.value.eventType = 'lesson'
+    formData.value.selectedSpecialType = ''
+    formData.value.title = ''
+    formData.value.type = ''
+    const pick = paid.find((t: any) => t.is_default) || paid[0]
     if (pick?.code) {
       formData.value.appointment_type = pick.code
       selectedLessonType.value = pick.code
     }
   } catch (err) {
     logger.debug('⚠️ backToStudentSelection: could not resolve chargeable type', err)
+    showEventTypeSelection.value = false
+    formData.value.eventType = 'lesson'
+    formData.value.selectedSpecialType = ''
   }
 }
 
@@ -4430,7 +4389,7 @@ const calculateOfflinePrice = (categoryCode: string, durationMinutes: number, ap
 
   logFallbackUsed(
     'pricing',
-    `Preis für Kategorie "${categoryCode}" konnte nicht online berechnet werden – Fahrlehrer sieht einen Offline-Fallback-Preis.`,
+    `Preis für Kategorie "${categoryCode}" konnte nicht online berechnet werden – ${t.value.staff} sieht einen Offline-Fallback-Preis.`,
     { categoryCode, durationMinutes, appointmentNum, context: 'EventModal' },
     'warn'
   )
@@ -4494,7 +4453,7 @@ const applyManualPrice = (totalChf: number) => {
   }
   logFallbackUsed(
     'pricing',
-    `Preis für Kategorie "${dynamicPricing.value.category}" wurde manuell durch Fahrlehrer/Admin eingegeben, nachdem die automatische Berechnung fehlgeschlagen ist.`,
+    `Preis für Kategorie "${dynamicPricing.value.category}" wurde manuell durch ${t.value.staff}/Admin eingegeben, nachdem die automatische Berechnung fehlgeschlagen ist.`,
     { categoryCode: dynamicPricing.value.category, totalChf, context: 'EventModal' },
     'warn'
   )
@@ -4677,16 +4636,6 @@ const handleStaffSelectionChanged = (staffIds: string[], staffMembers: any[]) =>
   if (staffIds.length > 0) {
     logger.debug('✅ Team members selected for invitation')
   }
-}
-
-// Customer Invite Handlers
-const handleCustomersAdded = (customers: any[]) => {
-  logger.debug('📞 Customers added to invite list:', customers.length)
-}
-
-const handleCustomersCleared = () => {
-  logger.debug('🗑️ Customer invite list cleared')
-  invitedCustomers.value = []
 }
 
 // ✅ Load category data via secure API
@@ -4969,9 +4918,9 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     // ✅ NEU: SMS und Email versenden bei Löschung
     const phoneNumber = props.eventData?.phone || props.eventData?.extendedProps?.phone
     const studentEmail = props.eventData?.email || props.eventData?.extendedProps?.email
-    const studentName = (props.eventData?.user_name || props.eventData?.student || props.eventData?.extendedProps?.student || 'Fahrschüler')
+    const studentName = (props.eventData?.user_name || props.eventData?.student || props.eventData?.extendedProps?.student || t.value.client)
     const firstName = studentName?.split(' ')[0] || studentName
-    const instructorName = (props.eventData?.instructor || props.eventData?.extendedProps?.instructor || 'dein Fahrlehrer')
+    const instructorName = (props.eventData?.instructor || props.eventData?.extendedProps?.instructor || `dein ${t.value.staff}`)
     const appointmentTime = new Date(props.eventData.start || props.eventData.start_time).toLocaleString('de-CH', {
       weekday: 'long',
       day: '2-digit',
@@ -5432,8 +5381,8 @@ const proceedWithCancellation = async (selectedReason: any) => {
     
     // ✅ Determine who is cancelling (student or staff)
     const cancellerName = cancellationType.value === 'student' 
-      ? (selectedStudent.value?.first_name || 'Schüler') 
-      : (props.currentUser?.first_name || 'Fahrlehrer')
+      ? (selectedStudent.value?.first_name || t.value.client) 
+      : (props.currentUser?.first_name || t.value.staff)
     
     const cancellerEmail = cancellationType.value === 'student' 
       ? (selectedStudent.value?.email || props.eventData?.extendedProps?.email || 'unbekannt')
@@ -5588,7 +5537,7 @@ const goToPolicySelection = async () => {
       shouldCreateInvoice: chargePercentageToUse > 0,
       shouldCreditHours: chargePercentageToUse === 100,
       invoiceDescription: chargePercentageToUse === 0 
-        ? 'Kostenlose Stornierung durch Fahrlehrer'
+        ? `Kostenlose Stornierung durch ${t.value.staff}`
         : `Stornogebühr für Termin (${chargePercentageToUse}% von ${((appointmentPrice.value || 0) / 100).toFixed(2)} CHF)`
     }
     logger.debug('✅ Policy result set with force charge percentage:', cancellationPolicyResult.value)
@@ -5940,14 +5889,10 @@ const initializeFormData = async () => {
     logger.debug('✅ Default category set to B')
   }
   
-  // Create mode: prefer tenant is_default over hardcoded "lesson" (once per open)
+  // Create mode: paid types → priced flow; only free → EventTypeSelector
   if (!isEditOrView && props.mode === 'create') {
     try {
-      const isFreeslot =
-        !!(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')
-      await applyCreateEventTypeDefaultsOnce({
-        preferChargeable: isFreeslot && !requiresCategory.value
-      })
+      await applyCreateEventTypeDefaultsOnce()
     } catch (err) {
       if (!formData.value.eventType) formData.value.eventType = 'lesson'
       logger.debug('⚠️ Tenant default event type failed, fallback lesson:', err)
@@ -6288,13 +6233,8 @@ const handleEditModeLessonType = async () => {
 
 const handleCreateMode = async () => {
   if (props.mode === 'create' && props.eventData?.start) {
-    const isFreeslot =
-      !!(props.eventData?.isFreeslotClick || props.eventData?.clickSource === 'calendar-free-slot')
-    // Free-slot on consulting/etc.: open client/chargeable flow (student + Terminart),
-    // not the free "Erstgespräch" EventTypeSelector — staff clicked a booking slot.
-    const defaults = await applyCreateEventTypeDefaultsOnce({
-      preferChargeable: isFreeslot && !requiresCategory.value
-    })
+    // Paid types → student + Terminart + price. Only free → EventTypeSelector.
+    const defaults = await applyCreateEventTypeDefaultsOnce()
     if (defaults?.duration) {
       formData.value.duration_minutes = defaults.duration
       calculateEndTime()
@@ -6863,7 +6803,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
       }
     } catch (error) {
       console.warn('⚠️ Could not load tenant name:', error)
-      tenantName.value = 'Fahrschule'
+      tenantName.value = t.value.businessNoun
     }
     
     try {

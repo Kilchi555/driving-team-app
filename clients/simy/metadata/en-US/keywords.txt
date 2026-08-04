@@ -1,1 +1,1 @@
-driving school,lessons,licence,instructor,book,progress,exam,switzerland
+Simy,appointment booking,driving school,coaching,personal training,tutoring,music school,dog training,massage,admin,staff

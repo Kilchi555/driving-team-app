@@ -142,7 +142,7 @@ export default defineEventHandler(async (event) => {
 
     const courseName     = session.course?.name || 'Kurs'
     const categoryName   = session.course?.course_category?.name || null
-    const tenantName     = tenant.name || 'Fahrschule'
+    const tenantName     = tenant.name || 'Unternehmen'
     const primaryColor   = tenant.primary_color || '#2563eb'
     const logoUrl        = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
     const participantCount = participantCountMap.get(session.course_id) || 0

@@ -116,7 +116,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // ─── Einnahmen (Zahlungen aus System) ──────────────────────────────────────
-  drawSectionHeader(`Einnahmen aus Fahrstunden & Kursen (${(payments ?? []).length} Zahlungen)`)
+  drawSectionHeader(`Einnahmen aus Terminen & Kursen (${(payments ?? []).length} Zahlungen)`)
   drawRow(['Datum', 'Beschreibung', 'Kategorie', 'Betrag'], false, true)
   doc.rect(50, y - 2, 495, 1).fill(BORDER); y += 3
 
@@ -125,7 +125,7 @@ export default defineEventHandler(async (event) => {
     const d = new Date(p.created_at).toLocaleDateString('de-CH')
     const amt = p.total_amount_rappen ?? 0
     runningIncome += amt
-    drawRow([d, p.description ?? '—', 'Fahrstunden', chf(amt)])
+    drawRow([d, p.description ?? '—', 'Termine', chf(amt)])
   }
 
   for (const e of manualIncome) {

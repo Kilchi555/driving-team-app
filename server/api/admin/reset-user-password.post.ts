@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logAudit } from '~/server/utils/audit'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -104,10 +105,12 @@ export default defineEventHandler(async (event) => {
     .single()
 
   const tenantSlug = tenant?.slug || ''
-  const tenantName = tenant?.name || 'Simy'
+  const terms = await getTenantTerminology(supabase, caller.tenant_id)
+  const tenantName = tenant?.name || terms.businessNoun || 'Simy'
   const tenantPrimaryColor = tenant?.primary_color || '#2563eb'
   const tenantLogoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
   const tenantContactEmail = tenant?.contact_email || null
+  const staffLabel = terms.staff || 'Mitarbeiter'
 
   const resetLink = `${baseUrl}/password-reset?token=${token}${tenantSlug ? `&tenant=${tenantSlug}` : ''}`
   const firstName = targetUser.first_name || 'dort'
@@ -148,7 +151,7 @@ export default defineEventHandler(async (event) => {
           <td style="padding:32px;">
             <p style="margin:0 0 8px;font-size:16px;color:#111827;">Hallo ${firstName},</p>
             <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">
-              Dein Fahrlehrer hat für dich einen Link zum Zurücksetzen deines Passworts erstellt. Klicke auf den Button unten, um ein neues Passwort zu wählen.
+              Dein ${staffLabel} hat für dich einen Link zum Zurücksetzen deines Passworts erstellt. Klicke auf den Button unten, um ein neues Passwort zu wählen.
             </p>
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:24px;">
               <tr>

@@ -71,8 +71,9 @@ import { ref, computed, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import DOMPurify from 'isomorphic-dompurify'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { getDefaultReglementContent } from '~/utils/defaultReglementContent'
 
-const { primaryColor, accentColor } = useTenantBranding()
+const { primaryColor, accentColor, currentTenantBranding } = useTenantBranding()
 
 interface Props {
   isOpen: boolean
@@ -142,7 +143,7 @@ const loadReglement = async () => {
     }
 
     const regulation = response.data
-    let content = regulation.content || getDefaultContent(props.type)
+    let content = regulation.content || getDefaultReglementContent(props.type, response.tenant?.business_type)
     
     if (response.tenant) {
       const { replacePlaceholders } = await import('~/utils/reglementPlaceholders')
@@ -161,54 +162,11 @@ const loadReglement = async () => {
     logger.error('❌ Error loading reglement:', err)
     const errorMessage = err?.data?.statusMessage || err?.message || 'Fehler beim Laden des Reglements'
     error.value = errorMessage
-    reglementContent.value = getDefaultContent(props.type || '')
+    const bt = (currentTenantBranding.value as any)?.business_type || null
+    reglementContent.value = getDefaultReglementContent(props.type || '', bt)
   } finally {
     isLoading.value = false
   }
-}
-
-// Default content for each reglement type
-const getDefaultContent = (reglementType: string): string => {
-  const defaults: Record<string, string> = {
-    'datenschutz': `
-      <h2>Datenschutzerklärung</h2>
-      <p>Wir nehmen den Schutz Ihrer persönlichen Daten sehr ernst. Diese Datenschutzerklärung informiert Sie über die Art, den Umfang und Zweck der Verarbeitung von personenbezogenen Daten.</p>
-      
-      <h3>1. Verantwortliche Stelle</h3>
-      <p>Die verantwortliche Stelle für die Datenverarbeitung ist die Fahrschule, bei der Sie Ihre Fahrstunden buchen.</p>
-      
-      <h3>2. Erhebung und Speicherung personenbezogener Daten</h3>
-      <p>Wir erheben und speichern folgende personenbezogene Daten:</p>
-      <ul>
-        <li>Name, Vorname</li>
-        <li>E-Mail-Adresse</li>
-        <li>Telefonnummer</li>
-        <li>Adresse</li>
-        <li>Termindaten</li>
-        <li>Zahlungsdaten (verschlüsselt)</li>
-      </ul>
-    `,
-    'nutzungsbedingungen': `
-      <h2>Nutzungsbedingungen</h2>
-      <p>Diese Nutzungsbedingungen regeln die Nutzung unserer Online-Plattform für die Buchung von Fahrstunden.</p>
-      
-      <h3>1. Geltungsbereich</h3>
-      <p>Diese Bedingungen gelten für alle Nutzer unserer Plattform und alle damit verbundenen Dienstleistungen.</p>
-    `,
-    'agb': `
-      <h2>Allgemeine Geschäftsbedingungen (AGB)</h2>
-      <p>Diese Allgemeinen Geschäftsbedingungen regeln das Vertragsverhältnis zwischen Ihnen und der Fahrschule.</p>
-    `,
-    'haftung': `
-      <h2>Haftungsausschluss</h2>
-      <p>Diese Haftungsausschlussbestimmungen regeln die Haftung der Fahrschule für Schäden.</p>
-    `,
-    'rueckerstattung': `
-      <h2>Rückerstattungsrichtlinien</h2>
-      <p>Diese Richtlinien regeln die Bedingungen für Rückerstattungen von Zahlungen.</p>
-    `
-  }
-  return defaults[reglementType] || '<p>Reglement nicht verfügbar</p>'
 }
 
 // Watch for modal open

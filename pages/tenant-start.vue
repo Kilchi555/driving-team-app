@@ -39,10 +39,10 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12">
           <h2 class="text-3xl font-bold text-gray-900 mb-4">
-            Alles was Ihre Fahrschule braucht
+            Alles was Ihr Unternehmen braucht
           </h2>
           <p class="text-lg text-gray-600">
-            Professionelle Tools für moderne Fahrschulen
+            Professionelle Tools für moderne Terminbetriebe
           </p>
         </div>
 
@@ -52,7 +52,7 @@
             <div class="text-4xl mb-4">📅</div>
             <h3 class="text-xl font-semibold text-gray-900 mb-2">Online Buchung</h3>
             <p class="text-gray-600">
-              Kunden können Fahrstunden direkt online buchen. 
+              Kunden können Termine direkt online buchen. 
               Automatische Terminbestätigungen und Erinnerungen.
             </p>
           </div>
@@ -70,9 +70,9 @@
           <!-- Feature 3 -->
           <div class="text-center p-6 rounded-lg border border-gray-200 hover:shadow-lg transition-shadow">
             <div class="text-4xl mb-4">👨‍🏫</div>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">Fahrlehrer-Verwaltung</h3>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">Mitarbeiter-Verwaltung</h3>
             <p class="text-gray-600">
-              Verwalten Sie Ihre Fahrlehrer, deren Arbeitszeiten 
+              Verwalten Sie Ihre Mitarbeiter, deren Arbeitszeiten 
               und Verfügbarkeiten zentral.
             </p>
           </div>
@@ -143,7 +143,7 @@
                 </li>
                 <li class="flex items-center">
                   <span class="text-green-500 mr-2">✓</span>
-                  1 Fahrlehrer
+                  1 Mitarbeiter
                 </li>
                 <li class="flex items-center">
                   <span class="text-green-500 mr-2">✓</span>
@@ -175,7 +175,7 @@
                 CHF 49
                 <span class="text-lg text-gray-500 font-normal">/Monat</span>
               </div>
-              <p class="text-gray-500 mb-6">Für kleine Fahrschulen</p>
+              <p class="text-gray-500 mb-6">Für kleine Betriebe</p>
               
               <ul class="text-left space-y-3 mb-8">
                 <li class="flex items-center">
@@ -184,7 +184,7 @@
                 </li>
                 <li class="flex items-center">
                   <span class="text-blue-500 mr-2">✓</span>
-                  Bis zu 3 Fahrlehrer
+                  Bis zu 3 Mitarbeiter
                 </li>
                 <li class="flex items-center">
                   <span class="text-blue-500 mr-2">✓</span>
@@ -217,7 +217,7 @@
                 CHF 99
                 <span class="text-lg text-gray-500 font-normal">/Monat</span>
               </div>
-              <p class="text-gray-500 mb-6">Für große Fahrschulen</p>
+              <p class="text-gray-500 mb-6">Für grosse Betriebe</p>
               
               <ul class="text-left space-y-3 mb-8">
                 <li class="flex items-center">
@@ -226,7 +226,7 @@
                 </li>
                 <li class="flex items-center">
                   <span class="text-purple-500 mr-2">✓</span>
-                  Bis zu 10 Fahrlehrer
+                  Bis zu 10 Mitarbeiter
                 </li>
                 <li class="flex items-center">
                   <span class="text-purple-500 mr-2">✓</span>
@@ -258,7 +258,7 @@
           Bereit für Ihre eigene Fahrschul-Plattform?
         </h2>
         <p class="text-xl text-blue-100 mb-8">
-          Starten Sie noch heute kostenlos und revolutionieren Sie Ihre Fahrschule!
+          Starten Sie noch heute kostenlos und bringen Sie Ihr Unternehmen auf Autopilot!
         </p>
         
         <button
@@ -299,7 +299,7 @@
                   target="_blank"
                   class="block p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                 >
-                  <div class="font-medium text-blue-900">Fahrschule Alpenblick</div>
+                  <div class="font-medium text-blue-900">Praxis Alpenblick</div>
                   <div class="text-sm text-blue-600">/auswahl?tenant=alpenblick</div>
                 </a>
                 
@@ -317,7 +317,7 @@
                   target="_blank"
                   class="block p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
                 >
-                  <div class="font-medium text-purple-900">Fahrschule Modern</div>
+                  <div class="font-medium text-purple-900">Studio Modern</div>
                   <div class="text-sm text-purple-600">/auswahl?tenant=modern</div>
                 </a>
               </div>

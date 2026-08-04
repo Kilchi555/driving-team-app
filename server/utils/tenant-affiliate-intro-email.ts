@@ -49,7 +49,7 @@ export function buildTenantAffiliateIntroEmail(opts?: {
             <h2 style="margin:28px 0 12px;color:#111827;font-size:16px;font-weight:700">Was ist das?</h2>
             <p style="margin:0 0 16px;color:#4b5563;font-size:15px;line-height:1.65">
               Eure Schüler:innen (und optional Staff) erhalten einen persönlichen Empfehlungslink.
-              Teilen sie ihn mit Freunden und Bekannten, und jemand bucht und bezahlt die erste Fahrstunde bei euch,
+              Teilen sie ihn mit Freunden und Bekannten, und jemand bucht und bezahlt den ersten Termin bei euch,
               erhält die empfehlende Person eine <strong>Gutschrift</strong> – die sie später auszahlen lassen kann.
             </p>
 
@@ -77,7 +77,7 @@ export function buildTenantAffiliateIntroEmail(opts?: {
                 <td style="padding:14px 16px;background:#f9f7ff;border-radius:8px;border-left:4px solid #6000BD">
                   <p style="margin:0;font-size:14px;color:#111827;font-weight:700">③ Freund wird Kunde</p>
                   <p style="margin:4px 0 0;font-size:13px;color:#6b7280;line-height:1.5">
-                    Sobald die erste bezahlte Fahrstunde gebucht ist, wird die Gutschrift automatisch ausgelöst.
+                    Sobald der erste bezahlte Termin gebucht ist, wird die Gutschrift automatisch ausgelöst.
                   </p>
                 </td>
               </tr>
@@ -95,7 +95,7 @@ export function buildTenantAffiliateIntroEmail(opts?: {
             <h2 style="margin:28px 0 12px;color:#111827;font-size:16px;font-weight:700">Was bringt's euch?</h2>
             <ul style="margin:0 0 20px;padding:0 0 0 18px;color:#4b5563;font-size:15px;line-height:1.7">
               <li style="margin-bottom:6px"><strong>Organische Neukunden</strong> – Empfehlungen von Menschen, die euch schon kennen und vertrauen</li>
-              <li style="margin-bottom:6px"><strong>Erfolgsbasiert</strong> – Reward nur, wenn wirklich eine bezahlte Fahrstunde zustande kommt</li>
+              <li style="margin-bottom:6px"><strong>Erfolgsbasiert</strong> – Reward nur, wenn wirklich ein bezahlter Termin zustande kommt</li>
               <li style="margin-bottom:6px"><strong>Wenig Aufwand</strong> – Einrichtung in Minuten, danach läuft vieles automatisch (inkl. Mails an Absolvent:innen)</li>
               <li style="margin-bottom:6px"><strong>Motivierte Botschafter</strong> – Schüler und Staff haben einen klaren Anreiz, euch weiterzuempfehlen</li>
             </ul>

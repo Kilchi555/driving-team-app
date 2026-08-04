@@ -290,8 +290,8 @@ const includeDeleted = ref(false)
 // Computed properties
 const totalUsers = computed(() => users.value.length)
 
-const usersWithUnpaidAppointments = computed(() => 
-  users.value.filter(user => user.payment_status === 'open').length
+const usersWithUnpaidAppointments = computed(() =>
+  users.value.filter(user => user.total_unpaid_amount > 0).length
 )
 
 const usersWithCompanyBilling = computed(() => 

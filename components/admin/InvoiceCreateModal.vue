@@ -319,7 +319,7 @@
                     v-model="item.product_name"
                     type="text"
                     required
-                    placeholder="z.B. Fahrstunde, Theorieunterricht"
+                    :placeholder="`z.B. ${t.appointment}, Theorieunterricht`"
                     class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
@@ -559,6 +559,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useInvoices } from '~/composables/useInvoices'
 import { useProducts } from '~/composables/useProducts'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 import type { InvoiceFormData, InvoiceItemFormData } from '~/types/invoice'
 import { DEFAULT_INVOICE_VALUES, DEFAULT_INVOICE_ITEM_VALUES } from '~/types/invoice'
 import {
@@ -571,6 +572,8 @@ import {
   PlusIcon,
   ArrowPathIcon
 } from '@heroicons/vue/24/outline'
+
+const { t } = useTerminology()
 
 // Props
 const props = defineProps<{

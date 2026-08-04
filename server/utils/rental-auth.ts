@@ -35,7 +35,7 @@ export async function getRentalUser(event: H3Event): Promise<RentalUser> {
     throw createError({ statusCode: 403, statusMessage: 'Kein Benutzerprofil gefunden.' })
   }
   if (dbUser.status !== 'active') {
-    throw createError({ statusCode: 403, statusMessage: 'Dein Konto ist noch nicht aktiv. Bitte kontaktiere die Fahrschule.' })
+    throw createError({ statusCode: 403, statusMessage: 'Dein Konto ist noch nicht aktiv. Bitte kontaktiere das Unternehmen.' })
   }
 
   return {

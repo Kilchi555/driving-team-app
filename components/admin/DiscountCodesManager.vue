@@ -35,7 +35,7 @@
           <option value="manual">Manuell</option>
           <option value="birthday">Geburtstag</option>
           <option value="anniversary">Jubiläum</option>
-          <option value="first_lesson">Erste Fahrstunde</option>
+          <option value="first_lesson">Erste {{ t.appointment }}</option>
           <option value="milestone">Meilenstein</option>
           <option value="seasonal">Saisonal</option>
         </select>
@@ -205,6 +205,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useHybridDiscounts } from '~/composables/useHybridDiscounts'
 import type { DiscountCode } from '~/composables/useHybridDiscounts'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 // State
 const isLoading = ref(false)
@@ -300,7 +303,7 @@ const getTriggerTypeLabel = (type: string): string => {
     manual: 'Manuell',
     birthday: 'Geburtstag',
     anniversary: 'Jubiläum',
-    first_lesson: 'Erste Fahrstunde',
+    first_lesson: `Erste ${t.value.appointment}`,
     milestone: 'Meilenstein',
     seasonal: 'Saisonal'
   }

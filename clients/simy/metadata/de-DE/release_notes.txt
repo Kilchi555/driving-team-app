@@ -1,11 +1,9 @@
-Willkommen bei Simy! Die erste Version der App bringt dir:
+Willkommen bei Simy — eine App, drei Logins (Kunde, Staff, Admin).
 
-• Fahrstunden online buchen
-• Push-Benachrichtigungen für deine Termine
-• Automatische Kalender-Synchronisation
-• Face ID Login
-• Lernfortschritt und Bewertungen
-• Zahlungen und Rechnungen
-• Sichere Datenverarbeitung in der Schweiz
+• Termine online buchen und verwalten
+• Push-Erinnerungen und Kalender-Sync
+• Biometrischer Login
+• Fortschritt, Zahlungen und Rechnungen
+• Für Fahrschule, Coaching, Consulting, Personal Training, Nachhilfe, Musikschule, Hundeschule und Massage
 
-Wir freuen uns über dein Feedback unter support@simy.ch.
+Feedback: support@simy.ch

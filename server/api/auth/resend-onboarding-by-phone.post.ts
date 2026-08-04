@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (!student.onboarding_token) {
-      let bn = 'Fahrschule'
+      let bn = 'Unternehmen'
       try {
         bn = (await getTenantTerminology(supabase, tenantId)).businessNoun || bn
       } catch { /* keep default */ }
@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
       .single()
 
     const terms = await getTenantTerminology(supabase, tenantId)
-    const tenantName = tenant?.name || terms.businessNoun || 'Ihre Fahrschule'
+    const tenantName = tenant?.name || terms.businessNoun || 'Ihr Unternehmen'
     const senderName = tenant?.twilio_from_sender || tenantName
     const baseUrl = process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch'
     const onboardingUrl = `${baseUrl}/onboarding/${token}`

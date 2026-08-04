@@ -46,7 +46,7 @@ function addToCalendarWeb(event: CalendarSyncEvent): void {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Simy//Fahrschule//DE',
+    'PRODID:-//Simy//Terminbetrieb//DE',
     'BEGIN:VEVENT',
     `DTSTART:${fmt(event.startDate)}`,
     `DTEND:${fmt(event.endDate)}`,

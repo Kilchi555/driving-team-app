@@ -56,7 +56,7 @@
     <div class="bg-white rounded-lg shadow mb-8">
       <div class="p-6 border-b">
         <h3 class="text-lg font-semibold text-gray-900">Bewertungskategorien</h3>
-        <p class="text-sm text-gray-500">Kategorien für die Bewertung von Fahrstunden</p>
+        <p class="text-sm text-gray-500">Kategorien für die Bewertung von {{ t.appointmentsPlural }}</p>
       </div>
       
       <div class="p-6">
@@ -212,6 +212,7 @@ import { useEvaluationData } from '~/composables/useEvaluationData'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 // Use the evaluation data composable
 const {

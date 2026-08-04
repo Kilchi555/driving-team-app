@@ -169,7 +169,7 @@ async function resolveOrCreateUser(
       if (raced) return { userId: raced.id, user: raced }
       throw createError({
         statusCode: 409,
-        statusMessage: 'Diese E-Mail ist in dieser Fahrschule bereits registriert.',
+        statusMessage: 'Diese E-Mail ist in diesem Unternehmen bereits registriert.',
       })
     }
     throw createError({ statusCode: 500, statusMessage: `Benutzer konnte nicht erstellt werden: ${msg}` })
@@ -591,7 +591,7 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
           .select('name, primary_color, logo_url')
           .eq('id', opts.tenantId)
           .single()
-        const tenantName = tenant?.name || 'Ihre Fahrschule'
+        const tenantName = tenant?.name || 'Ihr Unternehmen'
         const brand = tenant?.primary_color || '#1E40AF'
         const totalCHF = (amountRappen / 100).toFixed(2)
         const html = `<!DOCTYPE html><html lang="de"><body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">

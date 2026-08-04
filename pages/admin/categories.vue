@@ -111,7 +111,7 @@
                     Prüfungsdauer (Min)
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fahrlektion (CHF)
+                    {{ t.appointment }} (CHF)
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Theorie (CHF)
@@ -435,7 +435,7 @@
               
               <!-- Fahrlektionen Preise -->
               <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h5 class="text-md font-medium text-blue-900 mb-3">Fahrlektionen</h5>
+                <h5 class="text-md font-medium text-blue-900 mb-3">{{ t.appointmentsPlural }}</h5>
                 <div class="grid grid-cols-2 gap-4">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -579,7 +579,7 @@
             <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <h5 class="text-md font-medium text-blue-900 mb-1">Raum-Zuordnung</h5>
               <p class="text-xs text-blue-700 mb-4">
-                Lege pro Eventtyp fest, ob ein Raum reserviert werden muss. Der Kunde bzw. Fahrlehrer wählt den Raum
+                Lege pro Eventtyp fest, ob ein Raum reserviert werden muss. Der Kunde bzw. {{ t.staff }} wählt den Raum
                 nicht selbst aus — das System reserviert automatisch einen freien Raum aus der erlaubten Liste.
               </p>
 
@@ -951,6 +951,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import SkeletonLoader from '~/components/SkeletonLoader.vue'
 
@@ -985,17 +986,17 @@ interface Category {
 // whether a room must/can be reserved — the room itself is then picked
 // automatically by the system (no manual choice by staff or customer).
 type RoomServiceType = 'fahrstunde' | 'theorie' | 'beratung'
-const ROOM_SERVICE_TYPES: Array<{ key: RoomServiceType; label: string }> = [
-  { key: 'fahrstunde', label: 'Fahrstunde' },
-  { key: 'theorie', label: 'Theorie' },
-  { key: 'beratung', label: 'Beratung' },
-]
+const ROOM_SERVICE_TYPES = computed(() => [
+  { key: 'fahrstunde' as RoomServiceType, label: t.value.appointment },
+  { key: 'theorie' as RoomServiceType, label: 'Theorie' },
+  { key: 'beratung' as RoomServiceType, label: 'Beratung' },
+])
 
 // Only show room-config sections for event types this category actually offers.
 // "Fahrstunde" is always shown (base pricing is core to every category); Theorie/
 // Beratung follow the same enable toggles used just above in this same form.
 const visibleRoomServiceTypes = computed(() =>
-  ROOM_SERVICE_TYPES.filter(({ key }) => {
+  ROOM_SERVICE_TYPES.value.filter(({ key }) => {
     if (key === 'theorie') return categoryForm.value.theory_enabled
     if (key === 'beratung') return categoryForm.value.consultation_enabled
     return true
@@ -1012,7 +1013,7 @@ const emptyRoomRules = (): Record<RoomServiceType, { mode: 'none' | 'optional' |
 const parseRoomRules = (rs: any) => {
   const result = emptyRoomRules()
   if (!rs || typeof rs !== 'object') return result
-  for (const { key } of ROOM_SERVICE_TYPES) {
+  for (const { key } of ROOM_SERVICE_TYPES.value) {
     const rule = rs[key]
     if (rule?.mode) {
       result[key] = {

@@ -28,7 +28,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">Typ</label>
           <select v-model="typeFilter" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
             <option value="">Alle Typen</option>
-            <option value="instructor">Fahrlehrer</option>
+            <option value="instructor">{{ t.staff }}</option>
             <option value="office">Bürokasse</option>
           </select>
         </div>
@@ -92,7 +92,7 @@
                 </span>
               </td>
               <td class="px-6 py-4 text-sm text-gray-500">
-                {{ transaction.register_name || 'Fahrlehrer-Kasse' }}
+                {{ transaction.register_name || `${t.staff}-Kasse` }}
               </td>
             </tr>
             
@@ -115,6 +115,9 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 // State
 const isLoading = ref(false)

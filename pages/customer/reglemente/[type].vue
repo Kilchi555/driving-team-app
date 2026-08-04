@@ -55,6 +55,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
+import { getDefaultReglementContent } from '~/utils/defaultReglementContent'
 import DOMPurify from 'isomorphic-dompurify'
 import { logger } from '~/utils/logger'
 
@@ -71,6 +72,7 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const reglementContent = ref('')
 const lastUpdated = ref('')
+const tenantBusinessType = ref<string | null>(null)
 
 // XSS Protection: Sanitize HTML content before rendering
 const sanitizedContent = computed(() => {
@@ -113,10 +115,11 @@ const loadReglement = async () => {
     const regulation = response.data
 
     // Build content
-    let content = regulation.content || getDefaultContent(type.value)
+    let content = regulation.content || getDefaultReglementContent(type.value, response.tenant?.business_type)
     
     // Replace placeholders with tenant data from API response
     if (response.tenant) {
+      tenantBusinessType.value = response.tenant.business_type || null
       content = replacePlaceholders(content, {
         name: response.tenant.name,
         address: response.tenant.address,
@@ -133,131 +136,10 @@ const loadReglement = async () => {
     logger.error('❌ Error loading reglement:', err)
     const errorMessage = err?.data?.statusMessage || err?.message || 'Fehler beim Laden des Reglements'
     error.value = errorMessage
-    reglementContent.value = getDefaultContent(type.value)
+    reglementContent.value = getDefaultReglementContent(type.value, tenantBusinessType.value)
   } finally {
     isLoading.value = false
   }
-}
-
-// Default content for each reglement type
-const getDefaultContent = (reglementType: string): string => {
-  const defaults: Record<string, string> = {
-    'datenschutz': `
-      <h2>Datenschutzerklärung</h2>
-      <p>Wir nehmen den Schutz Ihrer persönlichen Daten sehr ernst. Diese Datenschutzerklärung informiert Sie über die Art, den Umfang und Zweck der Verarbeitung von personenbezogenen Daten.</p>
-      
-      <h3>1. Verantwortliche Stelle</h3>
-      <p>Die verantwortliche Stelle für die Datenverarbeitung ist die Fahrschule, bei der Sie Ihre Fahrstunden buchen.</p>
-      
-      <h3>2. Erhebung und Speicherung personenbezogener Daten</h3>
-      <p>Wir erheben und speichern folgende personenbezogene Daten:</p>
-      <ul>
-        <li>Name, Vorname</li>
-        <li>E-Mail-Adresse</li>
-        <li>Telefonnummer</li>
-        <li>Adresse</li>
-        <li>Termindaten</li>
-        <li>Zahlungsdaten (verschlüsselt)</li>
-      </ul>
-      
-      <h3>3. Zweck der Datenverarbeitung</h3>
-      <p>Ihre Daten werden verwendet für:</p>
-      <ul>
-        <li>Terminplanung und -verwaltung</li>
-        <li>Kommunikation bezüglich Ihrer Fahrstunden</li>
-        <li>Abrechnung und Zahlungsabwicklung</li>
-        <li>Erfüllung gesetzlicher Bestimmungen</li>
-      </ul>
-      
-      <h3>4. Datenweitergabe</h3>
-      <p>Ihre Daten werden nicht an Dritte weitergegeben, außer es ist gesetzlich vorgeschrieben oder für die Erfüllung unserer Dienstleistungen notwendig.</p>
-      
-      <h3>5. Ihre Rechte</h3>
-      <p>Sie haben das Recht auf:</p>
-      <ul>
-        <li>Auskunft über Ihre gespeicherten Daten</li>
-        <li>Berichtigung unrichtiger Daten</li>
-        <li>Löschung Ihrer Daten</li>
-        <li>Einschränkung der Verarbeitung</li>
-        <li>Widerspruch gegen die Verarbeitung</li>
-      </ul>
-    `,
-    'nutzungsbedingungen': `
-      <h2>Nutzungsbedingungen</h2>
-      <p>Diese Nutzungsbedingungen regeln die Nutzung unserer Online-Plattform für die Buchung von Fahrstunden.</p>
-      
-      <h3>1. Geltungsbereich</h3>
-      <p>Diese Bedingungen gelten für alle Nutzer unserer Plattform und alle damit verbundenen Dienstleistungen.</p>
-      
-      <h3>2. Registrierung und Account</h3>
-      <p>Für die Nutzung der Plattform ist eine Registrierung erforderlich. Sie sind verpflichtet, wahrheitsgemäße Angaben zu machen und Ihre Zugangsdaten sicher aufzubewahren.</p>
-      
-      <h3>3. Buchung von Fahrstunden</h3>
-      <p>Fahrstunden können über die Plattform gebucht werden. Die Buchung ist verbindlich, sobald sie bestätigt wurde.</p>
-      
-      <h3>4. Stornierungsregeln</h3>
-      <p>Stornierungen sind gemäss den geltenden Stornierungsrichtlinien möglich. Details finden Sie in den Allgemeinen Geschäftsbedingungen.</p>
-      
-      <h3>5. Zahlungsbedingungen</h3>
-      <p>Die Zahlung erfolgt gemäss den vereinbarten Zahlungsbedingungen. Bei wiederholten Zahlungsverzögerungen behalten wir uns das Recht vor, weitere Buchungen zu verweigern.</p>
-    `,
-    'agb': `
-      <h2>Allgemeine Geschäftsbedingungen (AGB)</h2>
-      <p>Diese Allgemeinen Geschäftsbedingungen regeln das Vertragsverhältnis zwischen Ihnen und der Fahrschule.</p>
-      
-      <h3>1. Vertragsgegenstand</h3>
-      <p>Gegenstand des Vertrags ist die Erteilung von Fahrstunden und die Vorbereitung auf die praktische Führerscheinprüfung.</p>
-      
-      <h3>2. Preise und Zahlung</h3>
-      <p>Die Preise für Fahrstunden sind auf der Plattform angegeben. Alle Preise verstehen sich inklusive der gesetzlichen Mehrwertsteuer. Die Zahlung erfolgt gemäss den vereinbarten Zahlungsbedingungen.</p>
-      
-      <h3>3. Termine und Stornierung</h3>
-      <p>Termine müssen mindestens 24 Stunden vorher storniert werden, um Stornogebühren zu vermeiden. Bei späteren Stornierungen können gemäss Stornierungsrichtlinien Gebühren anfallen.</p>
-      
-      <h3>4. Haftung</h3>
-      <p>Die Haftung beschränkt sich auf Vorsatz und grobe Fahrlässigkeit. Weitere Details finden Sie im Haftungsausschluss.</p>
-      
-      <h3>5. Datenschutz</h3>
-      <p>Ihre Daten werden gemäss unserer Datenschutzerklärung behandelt.</p>
-    `,
-    'haftung': `
-      <h2>Haftungsausschluss</h2>
-      <p>Diese Haftungsausschlussbestimmungen regeln die Haftung der Fahrschule für Schäden, die im Zusammenhang mit den Fahrstunden entstehen können.</p>
-      
-      <h3>1. Haftungsbeschränkung</h3>
-      <p>Die Fahrschule haftet nur für Schäden, die auf Vorsatz oder grober Fahrlässigkeit beruhen. Für leichte Fahrlässigkeit haftet die Fahrschule nur bei Verletzung wesentlicher Vertragspflichten.</p>
-      
-      <h3>2. Fahrzeugschäden</h3>
-      <p>Fahrzeugschäden, die während der Fahrstunde durch den Fahrschüler verursacht werden, sind durch die Fahrschule versichert. Eigenanteile oder Selbstbeteiligungen können anfallen.</p>
-      
-      <h3>3. Personenschäden</h3>
-      <p>Personenschäden sind durch die Haftpflichtversicherung der Fahrschule abgedeckt. Der Fahrschüler ist verpflichtet, sich an die Anweisungen des Fahrlehrers zu halten.</p>
-      
-      <h3>4. Haftungsausschluss für Dritte</h3>
-      <p>Die Fahrschule übernimmt keine Haftung für Schäden Dritter, die nicht auf ein Verschulden der Fahrschule zurückzuführen sind.</p>
-    `,
-    'rueckerstattung': `
-      <h2>Rückerstattungsrichtlinien</h2>
-      <p>Diese Richtlinien regeln die Bedingungen für Rückerstattungen von Zahlungen.</p>
-      
-      <h3>1. Stornierung durch den Fahrschüler</h3>
-      <p>Bei Stornierung durch den Fahrschüler gelten die Stornierungsrichtlinien. Bereits bezahlte Beträge werden gemäss diesen Richtlinien zurückerstattet, abzüglich eventueller Stornogebühren.</p>
-      
-      <h3>2. Stornierung durch die Fahrschule</h3>
-      <p>Bei Stornierung durch die Fahrschule wird der volle Betrag zurückerstattet.</p>
-      
-      <h3>3. Rückerstattungsfrist</h3>
-      <p>Rückerstattungen werden innerhalb von 14 Tagen nach Antragstellung bearbeitet. Die Gutschrift auf Ihrem Konto kann je nach Zahlungsmethode zusätzliche Zeit in Anspruch nehmen.</p>
-      
-      <h3>4. Zahlungsmethode</h3>
-      <p>Rückerstattungen erfolgen auf das ursprünglich verwendete Zahlungsmittel. Bei Barzahlung erfolgt die Rückerstattung auf ein angegebenes Bankkonto.</p>
-      
-      <h3>5. Teilweise Rückerstattung</h3>
-      <p>Bei Teilrückerstattungen (z.B. nach Stornogebühren) wird der verbleibende Betrag zurückerstattet.</p>
-    `
-  }
-
-  return defaults[reglementType] || '<p>Reglement nicht gefunden.</p>'
 }
 
 onMounted(() => {

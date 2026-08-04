@@ -45,9 +45,18 @@ echo ""
 echo "🔄 Syncing to native projects..."
 CLIENT="$CLIENT" npx cap sync
 
+# 5. Patch Android App Links + custom URL scheme from client config
+if [ -f android/app/src/main/AndroidManifest.xml ]; then
+  echo ""
+  echo "🔗 Patching Android deeplinks..."
+  CLIENT="$CLIENT" node scripts/patch-android-deeplinks.mjs
+fi
+
 echo ""
 echo "✅ Build complete for $APP_NAME ($CLIENT)"
 echo ""
 echo "Next steps:"
 echo "  iOS:     npx cap open ios"
 echo "  Android: npx cap open android"
+echo "  Fingerprint: ./scripts/android-cert-fingerprint.sh <keystore> <alias>"
+echo "  Play checklist: docs/ANDROID_PLAY_SUBMISSION.md"

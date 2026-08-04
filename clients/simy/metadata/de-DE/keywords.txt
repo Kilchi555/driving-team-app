@@ -1,1 +1,1 @@
-Simy,Simy App,Fahrschule App,Fahrlehrer,Fahrstunden online buchen,Fahrschulverwaltung
+Simy,Terminbuchung,Fahrschule,Coaching,Personal Training,Nachhilfe,Musikschule,Hundeschule,Massage,Admin,Staff

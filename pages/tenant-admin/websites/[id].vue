@@ -61,7 +61,7 @@
           <div class="cms-form-grid">
             <div>
               <label class="sa-label">Firmenname</label>
-              <input v-model="form.name" class="sa-input" placeholder="Fahrschule Muster" />
+              <input v-model="form.name" class="sa-input" placeholder="Unternehmen Muster" />
             </div>
             <div>
               <label class="sa-label">Slug (URL)</label>
@@ -89,7 +89,7 @@
             <div class="col-span-2">
               <label class="sa-label">Kurzbeschreibung (für Website-Hero)</label>
               <textarea v-model="form.description" class="sa-input" rows="3"
-                placeholder="Dein kompetenter Fahrlehrer in Zürich…" />
+                placeholder="Dein kompetentes Team in Zürich…" />
             </div>
           </div>
         </div>
@@ -99,7 +99,7 @@
           <h2 class="cms-section-title">Preise</h2>
           <div class="cms-prices">
             <div v-for="(price, i) in form.prices" :key="i" class="cms-price-row">
-              <input v-model="price.label" class="sa-input" placeholder="Fahrstunde 45 Min" />
+              <input v-model="price.label" class="sa-input" placeholder="Termin 45 Min" />
               <input v-model="price.value" class="sa-input" placeholder="CHF 85" style="max-width:120px" />
               <input v-model="price.note" class="sa-input" placeholder="Inkl. MwSt." style="flex:1" />
               <button @click="form.prices.splice(i, 1)" class="sa-icon-btn sa-icon-danger">
@@ -116,7 +116,7 @@
 
         <!-- Tab: Fahrlehrer -->
         <div v-if="activeTab === 'staff'" class="sa-card cms-section">
-          <h2 class="cms-section-title">Fahrlehrer</h2>
+          <h2 class="cms-section-title">Mitarbeiter</h2>
           <div class="space-y-4">
             <div v-for="(s, i) in form.staff" :key="i" class="cms-staff-row">
               <div class="cms-staff-avatar">{{ s.first_name?.[0] }}{{ s.last_name?.[0] }}</div>
@@ -140,7 +140,7 @@
           </div>
           <button @click="form.staff.push({ first_name:'', last_name:'', email:'', phone:'', languages:'', create_login: false })"
             class="sa-btn-ghost mt-4">
-            + Fahrlehrer hinzufügen
+            + Mitarbeiter hinzufügen
           </button>
         </div>
 
@@ -278,7 +278,7 @@ const activeTab = ref('contact')
 const tabs = [
   { id: 'contact', icon: '📋', label: 'Kontakt' },
   { id: 'prices', icon: '💶', label: 'Preise' },
-  { id: 'staff', icon: '👤', label: 'Fahrlehrer' },
+  { id: 'staff', icon: '👤', label: 'Mitarbeiter' },
   { id: 'branding', icon: '🎨', label: 'Branding' },
 ]
 

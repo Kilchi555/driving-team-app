@@ -5,6 +5,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logger } from '~/utils/logger'
 import { sendEmail } from '~/server/utils/email'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 /**
  * POST /api/affiliate/register-partner
@@ -247,9 +248,10 @@ export default defineEventHandler(async (event) => {
   // Send email via central sendEmail utility (uses RESEND_FROM_EMAIL env var)
   let emailSent = false
   try {
+    const terms = await getTenantTerminology(supabase, tenant.id)
     await sendEmail({
       to: emailLower,
-      subject: `Dein Affiliate-Zugang – ${tenant.name || 'Ihre Fahrschule'}`,
+      subject: `Dein Affiliate-Zugang – ${tenant.name || terms.businessNoun || 'Ihr Unternehmen'}`,
       senderName: tenant.name || undefined,
       html: `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px">

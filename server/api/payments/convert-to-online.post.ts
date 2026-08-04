@@ -68,8 +68,8 @@ export default defineEventHandler(async (event) => {
       .single()
 
     const terms = await getTenantTerminology(supabase, payment.tenant_id)
-    const appointmentLabel = terms.appointment || 'Fahrstunde'
-    const businessFallback = tenant?.name || terms.businessNoun || 'Fahrschule'
+    const appointmentLabel = terms.appointment || 'Termin'
+    const businessFallback = tenant?.name || terms.businessNoun || 'Unternehmen'
 
     const { data: customer } = await supabase
       .from('users')

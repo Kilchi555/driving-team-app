@@ -231,6 +231,8 @@ export default defineNuxtConfig({
   
   runtimeConfig: {
     // Private keys (only available on server-side)
+    // Comma-separated SHA-256 cert fingerprints for Android App Links (assetlinks.json)
+    androidCertSha256: process.env.ANDROID_CERT_SHA256 || '',
     walleeSpaceId: process.env.WALLEE_SPACE_ID,
     walleeApplicationUserId: process.env.WALLEE_APPLICATION_USER_ID,
     walleeSecretKey: process.env.WALLEE_SECRET_KEY,
@@ -239,6 +241,9 @@ export default defineNuxtConfig({
     internalCancellationSecret: process.env.NUXT_INTERNAL_CANCELLATION_SECRET,
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY,
     googleDistanceMatrixKey: process.env.GOOGLE_DISTANCE_MATRIX_KEY || process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY,
+    vercelToken: process.env.VERCEL_TOKEN || '',
+    vercelProjectId: process.env.VERCEL_PROJECT_ID || '',
+    vercelTeamId: process.env.VERCEL_TEAM_ID || '',
     
     // Public keys (exposed to client-side)
     public: {

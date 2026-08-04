@@ -193,7 +193,7 @@ export default defineEventHandler(async (event) => {
           appointmentDate: apptDate,
           appointmentTime: apptTime,
           certificateUrl: urlData.publicUrl,
-          tenantName: tenant?.name || 'Fahrschule',
+          tenantName: tenant?.name || 'Unternehmen',
         })
 
         await sendTenantEmail(appointment.tenant_id, {

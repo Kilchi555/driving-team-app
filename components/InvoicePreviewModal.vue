@@ -216,7 +216,7 @@
                   <!-- Breakdown rows (expandable) -->
                   <div v-if="expandedItems.includes(i)" class="bg-gray-50 border-t border-gray-100 px-5 py-2 space-y-1.5">
                     <div v-if="(item.lesson_price_rappen || 0) > 0" class="flex justify-between items-center">
-                      <span class="text-xs text-gray-500 pl-5">Fahrstunde</span>
+                      <span class="text-xs text-gray-500 pl-5">{{ t.appointment }}</span>
                       <span class="text-xs font-medium text-gray-700">{{ chf(item.lesson_price_rappen || 0) }}</span>
                     </div>
                     <div v-if="(item.admin_fee_rappen || 0) > 0" class="flex justify-between items-center">
@@ -525,6 +525,7 @@ const emit = defineEmits<{
 
 // Tenant branding
 const { brandingPrimaryColor, brandingSecondaryColor, brandingName } = useDynamicBranding()
+const { t } = useTerminology()
 const primaryColor = computed(() => brandingPrimaryColor.value || '#1E40AF')
 const secondaryColor = computed(() => brandingSecondaryColor.value || '#64748B')
 

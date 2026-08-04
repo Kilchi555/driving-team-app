@@ -57,51 +57,48 @@ export const useBookingUrl = () => {
    * @returns Vollständige URL zum Simy Booking System
    */
   const generateBookingUrl = (params?: BookingParams): string => {
-    let url = 'https://app.simy.ch/booking/availability/driving-team'
-    
-    if (!params) {
-      return url
-    }
-
+    const url = 'https://app.simy.ch/booking/availability/driving-team'
     const queryParams = new URLSearchParams()
+    const p = params ?? {}
 
     // Location Parameter
-    if (params.location) {
-      const mappedLocation = locationMap[params.location.toLowerCase()]
+    if (p.location) {
+      const mappedLocation = locationMap[p.location.toLowerCase()]
       if (mappedLocation) {
         queryParams.append('location', mappedLocation)
       }
     }
 
     // Instructor Parameter
-    if (params.instructor) {
-      const mappedInstructor = instructorMap[params.instructor.toLowerCase()]
+    if (p.instructor) {
+      const mappedInstructor = instructorMap[p.instructor.toLowerCase()]
       if (mappedInstructor) {
         queryParams.append('instructor', mappedInstructor)
       }
     }
 
     // Category Parameter
-    if (params.category) {
-      const mappedCategory = categoryMap[params.category.toLowerCase()]
+    if (p.category) {
+      const mappedCategory = categoryMap[p.category.toLowerCase()]
       if (mappedCategory) {
         queryParams.append('service', mappedCategory)
       }
     }
 
     // Service Parameter (falls nicht über category gesetzt)
-    if (params.service && !params.category) {
-      queryParams.append('service', params.service)
+    if (p.service && !p.category) {
+      queryParams.append('service', p.service)
     }
 
     // Session ID for tracking (always add if available in browser)
     if (typeof window !== 'undefined' && (window as any).__analyticsSessionId) {
       queryParams.append('session_id', (window as any).__analyticsSessionId)
-    } else if (params.sessionId) {
-      queryParams.append('session_id', params.sessionId)
+    } else if (p.sessionId) {
+      queryParams.append('session_id', p.sessionId)
     }
 
     // Marketing attribution (gclid + UTMs) — encoded blob for cross-domain forwarding
+    // Always attempt — even when no BookingParams were passed (bare generateBookingUrl()).
     if (typeof window !== 'undefined' && (window as any).__dtMarketingAttribution) {
       const encoded = encodeAttribution((window as any).__dtMarketingAttribution)
       if (encoded) queryParams.append('dt_attr', encoded)

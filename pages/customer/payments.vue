@@ -217,7 +217,7 @@
                 </div>
                 
                 <div v-if="payment.lesson_price_rappen > 0 && !(payment.metadata?.is_topup || (typeof payment.metadata === 'string' && payment.metadata.includes('is_topup')))" class="flex justify-between">
-                  <span class="text-gray-600">Fahrlektion</span>
+                  <span class="text-gray-600">{{ t.appointment }}</span>
                   <span class="font-medium text-gray-600 ml-4">CHF {{ formatAmount(payment.lesson_price_rappen) }}</span>
                 </div>
                 
@@ -367,9 +367,11 @@ import CustomerMedicalCertificateModal from '~/components/customer/CustomerMedic
 import CustomerCreditWalletPanel from '~/components/customer/CustomerCreditWalletPanel.vue'
 import { formatDateTime as formatDateTimeUtil } from '~/utils/dateUtils'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 import Toast from '~/components/Toast.vue'
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 // Components (these would need to be created)
 // import PaymentDetailsModal from '~/components/customer/PaymentDetailsModal.vue'
@@ -1298,16 +1300,16 @@ const getAppointmentTitle = (payment: any): string => {
       }
       return payment.description?.trim() || 'Shop / Produktkauf'
     }
-    return 'Fahrlektion'
+    return t.value.appointment
   }
 
   const staff = Array.isArray(appointment.staff) ? appointment.staff[0] : appointment.staff
   const staffFirstName = staff?.first_name || ''
 
   if (staffFirstName) {
-    return `Fahrlektion mit ${staffFirstName}`
+    return `${t.value.appointment} mit ${staffFirstName}`
   }
-  return 'Fahrlektion'
+  return t.value.appointment
 }
 
 const getAppointmentDateTime = (payment: any): string => {

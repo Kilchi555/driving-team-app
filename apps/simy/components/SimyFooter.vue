@@ -1,7 +1,7 @@
 <template>
   <footer class="bg-gray-950 text-gray-400">
     <div class="max-w-6xl mx-auto px-6 py-16">
-      <div class="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
 
         <!-- Brand -->
         <div class="col-span-2">
@@ -9,10 +9,10 @@
             <img :src="'/simy-logo.png'" alt="Simy Fahrschulsoftware" class="h-7 mb-4 opacity-90" style="filter: brightness(0) invert(1)" />
           </a>
           <p class="text-sm leading-relaxed max-w-xs">
-            All-in-One Fahrschulsoftware: Terminbuchung, Rechnungen, Website und Marketing aus einer Hand.
+            All-in-One Software für Dienstleister: Terminbuchung, Rechnungen, Website und Marketing — mit Branchen-Vorlagen.
           </p>
           <div class="mt-5">
-            <a href="/demo"
+            <a href="https://app.simy.ch/tenant-register?type=driving_school"
               class="inline-block text-sm font-bold px-5 py-2.5 rounded-xl text-white transition-all hover:opacity-90"
               style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
               30 Tage gratis →
@@ -20,14 +20,19 @@
           </div>
         </div>
 
-        <!-- Fahrschule -->
+        <!-- Branchen -->
         <div>
-          <p class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Fahrschule</p>
+          <p class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Branchen</p>
           <ul class="space-y-2.5">
-            <li><a href="/fahrschule" class="footer-link">Übersicht</a></li>
-            <li><a href="/fahrschule/software" class="footer-link">Fahrschulsoftware</a></li>
-            <li><a href="/fahrschule/buchungssystem" class="footer-link">Buchungssystem</a></li>
-            <li><a href="/fahrschule/app" class="footer-link">Fahrlehrer App</a></li>
+            <li><a href="/branchen" class="footer-link">Übersicht</a></li>
+            <li><a href="/fahrschule" class="footer-link">Fahrschule</a></li>
+            <li><a href="/coaching" class="footer-link">Coaching</a></li>
+            <li><a href="/consulting" class="footer-link">Consulting</a></li>
+            <li><a href="/personal-training" class="footer-link">Personal Training</a></li>
+            <li><a href="/nachhilfe" class="footer-link">Nachhilfe</a></li>
+            <li><a href="/musikschule" class="footer-link">Musikschule</a></li>
+            <li><a href="/hundeschule" class="footer-link">Hundeschule</a></li>
+            <li><a href="/massage" class="footer-link">Massage</a></li>
           </ul>
         </div>
 
@@ -52,7 +57,7 @@
             <li><a href="/kunden" class="footer-link">Kundenstories</a></li>
             <li><a href="/ueber-uns" class="footer-link">Über uns</a></li>
             <li><a href="/partner" class="footer-link">Partner</a></li>
-            <li><a href="/coaching" class="footer-link">Für Coaches <span class="text-gray-600 text-xs ml-1">coming soon</span></a></li>
+            <li><a href="/fahrschule/software" class="footer-link">Fahrschulsoftware</a></li>
             <li><a href="/kontakt" class="footer-link">Kontakt</a></li>
             <li><a href="https://app.simy.ch/login" class="footer-link">Login</a></li>
           </ul>

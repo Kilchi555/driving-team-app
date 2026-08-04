@@ -13,12 +13,12 @@ export function formatResendFrom(displayName: string, emailAddress: string): str
 
   let name = (displayName || '').replace(/\r\n|\r|\n/g, ' ').trim()
   if (!name) {
-    name = 'Fahrschule'
+    name = 'Unternehmen'
   }
 
   name = name.replace(/["\\<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 200)
   if (!name) {
-    name = 'Fahrschule'
+    name = 'Unternehmen'
   }
 
   return `"${name}" <${email}>`

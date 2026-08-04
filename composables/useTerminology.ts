@@ -154,9 +154,9 @@ const TERMS: Record<string, Terminology> = {
     progressLabel: 'Fortschritt'
   },
   fitness: {
-    client: 'Mitglied',
-    clientsPlural: 'Mitglieder',
-    clientPossessive: 'Mitglied',
+    client: 'Kunde',
+    clientsPlural: 'Kunden',
+    clientPossessive: 'Kunde',
     staff: 'Trainer',
     staffPlural: 'Trainer',
     appointment: 'Training',
@@ -164,7 +164,49 @@ const TERMS: Record<string, Terminology> = {
     bookAction: 'Training buchen',
     categoriesLabel: 'Trainingsbereiche',
     categoryLabel: 'Trainingsbereich',
-    businessNoun: 'Fitnessstudio',
+    businessNoun: 'Personal-Training-Studio',
+    progressLabel: 'Verlauf'
+  },
+  music_school: {
+    client: 'Schüler',
+    clientsPlural: 'Schüler',
+    clientPossessive: 'Schüler',
+    staff: 'Lehrperson',
+    staffPlural: 'Lehrpersonen',
+    appointment: 'Musikstunde',
+    appointmentsPlural: 'Musikstunden',
+    bookAction: 'Musikstunde buchen',
+    categoriesLabel: 'Instrumente',
+    categoryLabel: 'Instrument',
+    businessNoun: 'Musikschule',
+    progressLabel: 'Fortschritt'
+  },
+  dog_training: {
+    client: 'Hundehalter',
+    clientsPlural: 'Hundehalter',
+    clientPossessive: 'Hundehalter',
+    staff: 'Hundetrainer',
+    staffPlural: 'Hundetrainer',
+    appointment: 'Training',
+    appointmentsPlural: 'Trainings',
+    bookAction: 'Training buchen',
+    categoriesLabel: 'Trainingsbereiche',
+    categoryLabel: 'Trainingsbereich',
+    businessNoun: 'Hundeschule',
+    progressLabel: 'Verlauf'
+  },
+  massage: {
+    client: 'Kunde',
+    clientsPlural: 'Kunden',
+    clientPossessive: 'Kunde',
+    staff: 'Therapeut',
+    staffPlural: 'Therapeuten',
+    appointment: 'Behandlung',
+    appointmentsPlural: 'Behandlungen',
+    bookAction: 'Behandlung buchen',
+    categoriesLabel: 'Behandlungsarten',
+    categoryLabel: 'Behandlungsart',
+    businessNoun: 'Praxis',
     progressLabel: 'Verlauf'
   },
   generic: {

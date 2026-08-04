@@ -108,7 +108,7 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 7: Load Tenant Data for Placeholder Replacement
     const { data: tenantData } = await supabaseAdmin
       .from('tenants')
-      .select('name, address, contact_email, contact_phone, website_url')
+      .select('name, address, contact_email, contact_phone, website_url, business_type')
       .eq('id', tenantId)
       .single()
 
@@ -131,7 +131,8 @@ export default defineEventHandler(async (event) => {
         address: tenantData?.address || '',
         email: tenantData?.contact_email || '',
         phone: tenantData?.contact_phone || '',
-        website: tenantData?.website_url || ''
+        website: tenantData?.website_url || '',
+        business_type: tenantData?.business_type || 'driving_school',
       }
     }
   } catch (error: any) {

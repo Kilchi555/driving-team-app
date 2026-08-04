@@ -66,7 +66,7 @@
               <span class="font-medium">{{ formatDT(editingBooking.end_time) }}</span>
             </div>
             <div v-if="editingBooking.appointment?.instructor" class="flex justify-between text-sm">
-              <span class="text-gray-500">Fahrlehrer</span>
+              <span class="text-gray-500">{{ t.staff }}</span>
               <span class="font-medium">{{ editingBooking.appointment.instructor.first_name }} {{ editingBooking.appointment.instructor.last_name }}</span>
             </div>
             <div v-if="bookingLocationLabel" class="flex justify-between text-sm gap-3">
@@ -391,6 +391,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 
 interface Props {
   resourceType: 'room' | 'vehicle'
@@ -409,6 +410,7 @@ const emit = defineEmits<{
 }>()
 
 const { currentTenantBranding } = useTenantBranding()
+const { t } = useTerminology()
 const primaryColor = computed(() => currentTenantBranding.value?.colors?.primary || '#2563eb')
 
 const internalPurposes = [
@@ -418,13 +420,13 @@ const internalPurposes = [
   { value: 'event', label: '🎉 Event' },
 ]
 
-const linkedPurposeLabels: Record<string, string> = {
-  lesson: '🚗 Fahrstunde',
+const linkedPurposeLabels = computed<Record<string, string>>(() => ({
+  lesson: `🚗 ${t.value.appointment}`,
   course: '🎓 Kurs',
-}
+}))
 
 function purposeLabelOf(p: string): string {
-  return linkedPurposeLabels[p]
+  return linkedPurposeLabels.value[p]
     ?? internalPurposes.find(x => x.value === p)?.label
     ?? (p === 'external' ? '🌐 Extern' : p)
 }

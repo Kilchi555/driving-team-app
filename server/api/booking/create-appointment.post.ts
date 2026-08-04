@@ -505,7 +505,8 @@ export default defineEventHandler(async (event: H3Event) => {
       original_price_rappen: totalAmountRappen // Add default price
     })
     
-    // Marketing attribution: prefer payload from client, fall back to DB lookups.
+    // Prefer client payload; always merge DB + booking_redirects by session so
+    // Fahrstunden bookings keep gclid when only session_id crossed domains.
     let marketingAttr: MarketingAttributionPayload | null = body.marketing_attribution ?? null
     if (body.marketing_session_id) {
       const { data: attrRow } = await supabase

@@ -7,6 +7,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'superadmin'])
@@ -35,7 +36,9 @@ export default defineEventHandler(async (event) => {
 
   // Don't allow cancelling lesson/course bookings from here
   if (booking.appointment_id || booking.course_id) {
-    throw createError({ statusCode: 400, statusMessage: 'Fahrstunden- und Kursbuchungen können nur über den Termin/Kurs storniert werden.' })
+    const terms = await getTenantTerminology(supabase, profile.tenant_id)
+    const appointmentLabel = terms.appointment || 'Termin'
+    throw createError({ statusCode: 400, statusMessage: `${appointmentLabel}- und Kursbuchungen können nur über den Termin/Kurs storniert werden.` })
   }
 
   const { error } = await supabase

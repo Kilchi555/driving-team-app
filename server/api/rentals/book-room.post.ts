@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
       .select('id, name, contact_email')
       .or(`slug.eq.${tenant_slug},rental_portal_slug.eq.${tenant_slug}`)
       .maybeSingle()
-    if (!t) throw createError({ statusCode: 404, statusMessage: 'Fahrschule nicht gefunden' })
+    if (!t) throw createError({ statusCode: 404, statusMessage: 'Unternehmen nicht gefunden' })
     tenantId = t.id
   } else {
     tenantId = rentalUser.tenant_id

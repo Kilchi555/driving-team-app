@@ -47,7 +47,7 @@
         <div v-if="allEvaluations.length === 0" class="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-gray-300">
           <div class="text-6xl mb-4">📊</div>
           <h3 class="text-lg font-bold text-gray-900 mb-2">Noch keine Bewertungen</h3>
-          <p class="text-gray-500 px-4">Deine Bewertungen werden hier angezeigt, sobald der Fahrlehrer sie erstellt hat.</p>
+          <p class="text-gray-500 px-4">Deine Bewertungen werden hier angezeigt, sobald {{ t.staff }} sie erstellt hat.</p>
         </div>
 
         <div v-else-if="groupedByLesson.length === 0 && filterCategory !== 'all'" class="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-gray-300">
@@ -82,7 +82,7 @@
                 <div class="flex-1">
                   <div class="flex items-center gap-3 mb-2">
                     <h4 class="font-bold text-gray-900 text-base">
-                      {{ lessonGroup.is_exam ? 'Prüfungsfahrt' : 'Fahrlektion' }}
+                      {{ lessonGroup.is_exam ? 'Prüfung' : t.appointment }}
                     </h4>
                     <div 
                       v-if="lessonGroup.staff?.first_name"
@@ -196,6 +196,7 @@ const emit = defineEmits(['close'])
 
 // Tenant branding colors
 const { primaryColor, accentColor } = useTenantBranding()
+const { t } = useTerminology()
 
 // State
 const sortBy = ref('date') // 'date' oder 'rating'
@@ -452,7 +453,7 @@ const groupedByLesson = computed(() => {
       grouped[lessonId] = {
         lesson_id: lessonId,
         lesson_date: evaluation.lesson_date,
-        lesson_title: evaluation.lesson_title || (evaluation.is_exam ? 'Prüfungsfahrt' : 'Fahrstunde'),
+        lesson_title: evaluation.lesson_title || (evaluation.is_exam ? 'Prüfungsfahrt' : t.value.appointment),
         location_name: evaluation.location_name || 'Treffpunkt nicht definiert',
         driving_category: evaluation.driving_category || lesson?.type || '',
         start_time: lesson?.start_time || evaluation.lesson_date,

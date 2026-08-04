@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 /**
  * POST /api/affiliate/generate-code
@@ -56,9 +57,10 @@ export default defineEventHandler(async (event) => {
 
   // Default = enabled when unset (matches admin-settings GET)
   if (featureSetting?.setting_value === 'false') {
+    const terms = await getTenantTerminology(supabaseAdmin, userProfile.tenant_id)
     throw createError({
       statusCode: 403,
-      statusMessage: 'Das Affiliate-System ist momentan pausiert. Bitte wende dich an deine Fahrschule.',
+      statusMessage: `Das Affiliate-System ist momentan pausiert. Bitte wende dich an deine ${terms.businessNoun || 'Unternehmen'}.`,
       data: { code: 'affiliate_paused' },
     })
   }

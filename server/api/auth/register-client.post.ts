@@ -38,7 +38,7 @@ const CONTACT_FIELD_LABELS: Record<string, string> = {
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
-  let businessNoun = 'Fahrschule'
+  let businessNoun = 'Unternehmen'
   try {
     // Get client IP for rate limiting
     const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 

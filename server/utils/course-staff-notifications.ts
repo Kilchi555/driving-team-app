@@ -442,7 +442,7 @@ export function buildIcs(events: Array<{
   ].join('\r\n')).join('\r\n')
 
   return Buffer.from(
-    ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Simy//Simy Fahrschule//DE', 'METHOD:REQUEST', vtimezone, vevents, 'END:VCALENDAR'].join('\r\n'),
+    ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Simy//Terminbetrieb//DE', 'METHOD:REQUEST', vtimezone, vevents, 'END:VCALENDAR'].join('\r\n'),
     'utf-8',
   )
 }

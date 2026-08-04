@@ -7,6 +7,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { getPlanById } from '~/utils/planFeatures'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -129,9 +130,11 @@ export default defineEventHandler(async (event) => {
         const usedSeats = (activeStaff || 0) + (pendingInvites || 0)
 
         if (usedSeats >= totalAllowedSeats) {
+          const terms = await getTenantTerminology(serviceSupabase, userProfile.tenant_id)
+          const staffLabel = terms.staff || 'Mitarbeiter'
           throw createError({
             statusCode: 402,
-            statusMessage: `Seat-Limit erreicht (${usedSeats}/${totalAllowedSeats}). Bitte buchen Sie einen zusätzlichen Fahrlehrer-Seat unter /upgrade.`
+            statusMessage: `Seat-Limit erreicht (${usedSeats}/${totalAllowedSeats}). Bitte buchen Sie einen zusätzlichen ${staffLabel}-Seat unter /upgrade.`
           })
         }
       }

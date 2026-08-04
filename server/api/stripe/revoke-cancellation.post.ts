@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
 
   if (tenant?.contact_email) {
     const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
-    const tenantName = tenant.name || 'Fahrschule'
+    const tenantName = tenant.name || 'Unternehmen'
 
     sendEmail({
       to: tenant.contact_email,

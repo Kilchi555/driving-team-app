@@ -118,6 +118,7 @@ export default defineEventHandler(async (event) => {
           staff_id: userProfile.id,
           location_id,
           tenant_id: userProfile.tenant_id,
+          is_active: true,
           is_online_bookable,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()

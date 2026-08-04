@@ -316,7 +316,7 @@
         <button @click="profitView = 'instructors'"
           class="px-3 py-1.5 rounded-lg font-medium transition-all"
           :class="profitView === 'instructors' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
-          Pro Fahrlehrer
+          Pro {{ t.staff }}
         </button>
       </div>
 
@@ -433,12 +433,12 @@
           <!-- Summary bar per instructor -->
           <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100 bg-gray-50">
-              <span class="text-sm font-semibold text-gray-700">Rentabilität pro Fahrlehrer {{ selectedYear }}</span>
+              <span class="text-sm font-semibold text-gray-700">Rentabilität pro {{ t.staff }} {{ selectedYear }}</span>
             </div>
             <table class="w-full">
               <thead>
                 <tr class="text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100">
-                  <th class="px-5 py-3 text-left">Fahrlehrer</th>
+                  <th class="px-5 py-3 text-left">{{ t.staff }}</th>
                   <th class="px-5 py-3 text-right">Einnahmen</th>
                   <th class="px-5 py-3 text-right">Lohnkosten AG</th>
                   <th class="px-5 py-3 text-right">Ergebnis</th>
@@ -1059,6 +1059,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useTerminology()
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
 // ─── Types ────────────────────────────────────────────────────────────────────

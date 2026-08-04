@@ -92,7 +92,7 @@
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Werde Teil der Simy-Familie</h2>
         <p class="text-white mb-8">Starte kostenlos und erlebe selbst, was andere schon täglich nutzen.</p>
-        <a href="https://app.simy.ch/tenant-register"
+        <a href="https://app.simy.ch/tenant-register?type=driving_school"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           30 Tage kostenlos starten →

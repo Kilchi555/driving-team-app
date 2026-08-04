@@ -135,7 +135,7 @@
       <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
         <div v-if="!walleeEnabled" class="flex-1 rounded-lg border-2 border-amber-200 bg-amber-50 p-4 text-center">
           <p class="text-sm font-medium text-amber-800">⚠️ Online-Zahlung aktuell nicht verfügbar</p>
-          <p class="text-xs text-amber-600 mt-1">Bitte kontaktiere die Fahrschule direkt.</p>
+          <p class="text-xs text-amber-600 mt-1">Bitte kontaktiere {{ t.businessNoun }} direkt.</p>
         </div>
         <button
           v-else
@@ -176,6 +176,8 @@ import { useTenant } from '~/composables/useTenant'
 import { logger } from '~/utils/logger'
 import type { Product, Discount, PaymentMethod, PaymentStatus } from '~/types/payment'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
+
+const { t } = useTerminology()
 
 // Extended discount type used internally (includes computed discount_amount_rappen)
 interface AppliedDiscount extends Discount {

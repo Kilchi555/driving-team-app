@@ -96,7 +96,7 @@
           <div class="flex items-center gap-3">
             <div class="text-2xl">👥</div>
             <div class="min-w-0">
-              <p class="text-xs font-medium text-gray-500 truncate">Aktive Fahrlehrer</p>
+              <p class="text-xs font-medium text-gray-500 truncate">Aktive {{ t.staffPlural }}</p>
               <p class="text-xl font-bold text-gray-900">{{ summary.activeStaff }}</p>
             </div>
           </div>
@@ -116,7 +116,7 @@
           <div class="flex items-center gap-3">
             <div class="text-2xl">📚</div>
             <div class="min-w-0">
-              <p class="text-xs font-medium text-gray-500 truncate">Ø pro Fahrlehrer</p>
+              <p class="text-xs font-medium text-gray-500 truncate">Ø pro {{ t.staff }}</p>
               <p class="text-xl font-bold text-gray-900">{{ formatHours(summary.averageHours) }}</p>
             </div>
           </div>
@@ -138,7 +138,7 @@
         <div class="px-4 sm:px-6 py-4 border-b border-gray-200">
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h2 class="text-lg font-semibold text-gray-900">
-              Fahrlehrer-Stunden {{ selectedYear }}{{ selectedMonth !== 'all' ? ` - ${monthNames[selectedMonth]}` : '' }}
+              {{ t.staff }}-Stunden {{ selectedYear }}{{ selectedMonth !== 'all' ? ` - ${monthNames[selectedMonth]}` : '' }}
             </h2>
             <label class="relative inline-flex items-center cursor-pointer self-start sm:self-auto gap-2">
               <span class="text-sm font-medium text-gray-700">Monat</span>
@@ -164,7 +164,7 @@
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
-                  Fahrlehrer
+                  {{ t.staff }}
                 </th>
                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total
@@ -246,7 +246,7 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">Fahrlehrer</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">{{ t.staff }}</th>
                 <th v-for="month in months" :key="month" class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
                   {{ month }}
                 </th>
@@ -514,7 +514,7 @@
          ══════════════════════════════════════════════════ -->
     <div v-if="activeView === 'settings'" class="space-y-4">
       <div class="rounded-lg p-3 text-sm" :style="{ background: `${primaryColor}10`, border: `1px solid ${primaryColor}33`, color: primaryColor }">
-        Hier kannst du für jeden Fahrlehrer den Lohntyp und das Pensum festlegen.
+        Hier kannst du für jeden {{ t.staff }} den Lohntyp und das Pensum festlegen.
         Für Monatslohn-Mitarbeiter werden die Soll-Stunden pro Monat automatisch anhand der Schweizer Arbeitstage (inkl. Feiertage) berechnet.
       </div>
 
@@ -554,7 +554,7 @@
         <table class="min-w-full text-sm">
           <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
             <tr>
-              <th class="px-5 py-3 text-left">Fahrlehrer</th>
+              <th class="px-5 py-3 text-left">{{ t.staff }}</th>
               <th class="px-5 py-3 text-left">Lohntyp</th>
               <th class="px-5 py-3 text-right">
                 Basis 100%
@@ -687,6 +687,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useTerminology()
 
 import { ref, onMounted, computed, watch } from 'vue'
 import { navigateTo } from '#imports'

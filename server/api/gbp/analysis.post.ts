@@ -22,10 +22,13 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
     const [loc, tenant] = await Promise.all([
       resolveGbpLocation(authUser.tenant_id, locationId),
-      supabase.from('tenants').select('name').eq('id', authUser.tenant_id).single(),
+      supabase.from('tenants').select('name, business_type').eq('id', authUser.tenant_id).single(),
     ])
 
-    const audit = await runGbpAudit(authUser.tenant_id, tenant.data?.name || 'Fahrschule', loc.id)
+    const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+    const terms = getTerminologyDefaults(tenant.data?.business_type)
+
+    const audit = await runGbpAudit(authUser.tenant_id, tenant.data?.name || terms.businessNoun, loc.id)
 
     const { overallScore, ...result } = audit
     await supabase.from('gbp_audits').insert({

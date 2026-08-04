@@ -51,13 +51,14 @@
       <div class="px-4 pb-3 flex-shrink-0">
         <!-- Loading skeleton while affiliate status is being fetched -->
         <div v-if="!affiliateStatusLoaded" class="flex gap-2">
-          <div class="flex-1 bg-white rounded-2xl px-2 py-2 h-[38px] animate-pulse shadow-sm" />
+          <div v-if="examsEnabled" class="flex-1 bg-white rounded-2xl px-2 py-2 h-[38px] animate-pulse shadow-sm" />
           <div class="flex-1 bg-white rounded-2xl px-2 py-2 h-[38px] animate-pulse shadow-sm" />
           <div class="flex-1 bg-white rounded-2xl px-2 py-2 h-[38px] animate-pulse shadow-sm" />
         </div>
 
         <div v-else class="flex gap-2">
           <button
+            v-if="examsEnabled"
             @click="openExamStatistics"
             class="flex-1 min-w-0 bg-white rounded-2xl px-2 py-2 flex items-center justify-center gap-1.5 active:opacity-60 transition-opacity shadow-sm overflow-hidden"
           >
@@ -153,6 +154,7 @@
 
           <!-- Prüfungsstandorte -->
           <button
+            v-if="examsEnabled"
             @click="showExamLocationsSheet = true"
             class="bg-white rounded-2xl shadow-sm px-3 py-3 text-left flex items-center gap-2.5 active:opacity-60 transition-opacity"
           >
@@ -1147,7 +1149,7 @@
             <div class="relative bg-green-50 rounded-xl p-3 text-center cursor-pointer hover:bg-green-100 transition" @click="openReferralDetail('credited')">
               <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-green-300 text-green-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
               <div class="text-xl font-bold text-green-700">{{ affiliateReferrals.filter(r => r.status === 'credited').length }}</div>
-              <div class="text-xs text-gray-500 mt-0.5">1. Fahrstunde bezahlt</div>
+              <div class="text-xs text-gray-500 mt-0.5">1. {{ t.appointment }} bezahlt</div>
             </div>
             <div class="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
               <div class="flex items-center gap-2">
@@ -1165,7 +1167,7 @@
 
           <!-- Link generieren -->
           <div v-if="!affiliateCode">
-            <p class="text-sm text-gray-600 mb-3">Aktiviere deinen persönlichen Empfehlungslink und teile ihn mit Bekannten. Du erhältst eine Gutschrift, wenn jemand seine erste Fahrstunde bezahlt.</p>
+            <p class="text-sm text-gray-600 mb-3">Aktiviere deinen persönlichen Empfehlungslink und teile ihn mit Bekannten. Du erhältst eine Gutschrift, wenn jemand seine erste {{ t.appointment }} bezahlt.</p>
             <button
               @click="generateAffiliateCode"
               :disabled="affiliateGenerating"
@@ -1188,13 +1190,13 @@
             </div>
             <div class="grid grid-cols-2 gap-2">
               <a
-                :href="`https://wa.me/?text=${encodeURIComponent('Ich empfehle dir die Fahrschule Driving Team! Melde dich hier an: ' + affiliateShareLink)}`"
+                :href="`https://wa.me/?text=${encodeURIComponent(`Ich empfehle dir ${tenantDisplayName}! Melde dich hier an: ` + affiliateShareLink)}`"
                 target="_blank"
                 class="text-center font-semibold py-2.5 rounded-xl text-white text-sm transition"
                 style="background-color: #25D366"
               >📱 WhatsApp</a>
               <a
-                :href="`mailto:?subject=Fahrschule%20Empfehlung&body=${encodeURIComponent('Ich empfehle dir die Fahrschule Driving Team!\n\nMelde dich hier an: ' + affiliateShareLink)}`"
+                :href="`mailto:?subject=${encodeURIComponent(tenantDisplayName + ' Empfehlung')}&body=${encodeURIComponent(`Ich empfehle dir ${tenantDisplayName}!\n\nMelde dich hier an: ` + affiliateShareLink)}`"
                 class="text-center font-semibold py-2.5 rounded-xl text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 transition"
               >✉️ E-Mail</a>
             </div>
@@ -1271,14 +1273,14 @@
                 <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">2</div>
                 <div>
                   <p class="text-sm font-semibold text-gray-800">Person registriert sich</p>
-                  <p class="text-xs text-gray-500 mt-0.5">Die Person meldet sich über deinen Link bei der Fahrschule an.</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Die Person meldet sich über deinen Link bei {{ tenantDisplayName }} an.</p>
                 </div>
               </div>
               <div class="flex gap-3">
                 <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">3</div>
                 <div>
-                  <p class="text-sm font-semibold text-gray-800">Erste Fahrstunde bezahlt</p>
-                  <p class="text-xs text-gray-500 mt-0.5">Sobald diese Person die erste Fahrstunde bezahlt, wird dir automatisch eine Prämie gutgeschrieben.</p>
+                  <p class="text-sm font-semibold text-gray-800">Erste {{ t.appointment }} bezahlt</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Sobald diese Person die erste {{ t.appointment }} bezahlt, wird dir automatisch eine Prämie gutgeschrieben.</p>
                 </div>
               </div>
             </div>
@@ -1295,7 +1297,7 @@
                 </div>
               </div>
             </div>
-            <p class="text-xs text-gray-400 border-t pt-3">Das Guthaben wird deinem Konto gutgeschrieben und kann für Fahrstunden verwendet oder ausgezahlt werden.</p>
+            <p class="text-xs text-gray-400 border-t pt-3">Das Guthaben wird deinem Konto gutgeschrieben und kann für {{ t.appointmentsPlural }} verwendet oder ausgezahlt werden.</p>
           </div>
         </div>
       </div>
@@ -1499,7 +1501,7 @@
           <!-- Kategorien an diesem Standort (pro Staff) -->
           <div>
             <p class="text-sm font-medium text-gray-700 mb-1">Meine Kategorien hier</p>
-            <p class="text-xs text-gray-500 mb-2">Nur für dich an diesem Standort — andere Fahrlehrer behalten ihre eigenen</p>
+            <p class="text-xs text-gray-500 mb-2">Nur für dich an diesem Standort — andere {{ t.staffPlural }} behalten ihre eigenen</p>
             <div v-if="staffOwnCategoryOptions.length === 0" class="text-xs text-gray-400 italic">
               Keine Kategorien in deinem Profil hinterlegt
             </div>
@@ -2055,8 +2057,13 @@ import { useTenant } from '~/composables/useTenant'
 import { useDatabaseQuery } from '~/composables/useDatabaseQuery'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useAuthStore } from '~/stores/auth'
+import { useFeatures } from '~/composables/useFeatures'
+import { useTerminology } from '~/composables/useTerminology'
 
-const { primaryColor } = useTenantBranding()
+const { primaryColor, currentTenantBranding } = useTenantBranding()
+const { isEnabled, load: loadFeatures } = useFeatures()
+const { t, isDrivingSchool } = useTerminology()
+const examsEnabled = computed(() => isEnabled('exams_enabled', isDrivingSchool.value))
 
 interface Props {
   currentUser: any
@@ -2096,9 +2103,13 @@ const emit = defineEmits<{
 }>()
 
 // Tenant composable — on staff calendar (app host) currentTenant is often unset
-const { tenantSlug, loadTenant } = useTenant()
+const { tenantSlug, loadTenant, currentTenant } = useTenant()
 const authStore = useAuthStore()
 const resolvedTenantSlug = ref<string | null>(null)
+
+const tenantDisplayName = computed(
+  () => currentTenantBranding.value?.name || currentTenant.value?.name || t.value.businessNoun,
+)
 
 /** Slug for share links: useTenant first, then profile / storage / API */
 const effectiveTenantSlug = computed(() => tenantSlug.value || resolvedTenantSlug.value || null)
@@ -2386,7 +2397,7 @@ const affiliateRewardsList = computed(() => affiliateStats.value?.category_rewar
 
 const referralDetailTitle = computed(() => ({
   leads: 'Interessenten',
-  credited: '1. Fahrstunde bezahlt',
+  credited: `1. ${t.value.appointment} bezahlt`,
   pending: 'Registrierungen',
 }[referralDetailFilter.value]))
 
@@ -3527,23 +3538,31 @@ const createNewLocation = async () => {
       const makeBookable = formSnapshot.make_bookable
       const categories = formSnapshot.available_categories
 
-      // Fix label: explicitly set is_online_bookable on local object so the card shows correctly
+      // Atomically sync staff_locations (must succeed — booking depends on it)
+      try {
+        await $fetch('/api/staff/assign-location', {
+          method: 'POST',
+          body: {
+            action: 'assign',
+            location_id: data[0].id,
+            is_online_bookable: makeBookable,
+            available_categories: categories
+          }
+        })
+      } catch (assignErr: any) {
+        // Roll back orphan location so we never leave staff_ids without staff_locations
+        await query({
+          action: 'delete',
+          table: 'locations',
+          filters: [{ column: 'id', operator: 'eq', value: data[0].id }]
+        }).catch(() => {})
+        throw assignErr
+      }
+
       allTenantLocations.value.push({
         ...data[0],
         is_online_bookable: makeBookable,
         staff_available_categories: categories
-      })
-
-      // Always ensure staff_locations row exists with per-staff categories
-      await $fetch('/api/staff/update-location-booking', {
-        method: 'POST',
-        body: {
-          location_id: data[0].id,
-          is_online_bookable: makeBookable,
-          available_categories: categories
-        }
-      }).catch((e: any) => {
-        console.warn('⚠️ Could not set bookable status (non-fatal):', e.message)
       })
 
       // Reset form and close modal
@@ -3576,70 +3595,59 @@ const resetLocationForm = () => {
 }
 
 // Toggle Location Assignment (Hinzufügen/Entfernen) - für Standard Locations
+// Atomically keeps locations.staff_ids + staff_locations in sync
 const toggleLocationAssignment = async (locationId: string) => {
   try {
-    const { query } = useDatabaseQuery()
     const staffId = props.currentUser?.id
+    if (!staffId) throw new Error('Staff ID nicht gefunden')
 
-    // Finde die Location
     const location = allTenantLocations.value.find(loc => loc.id === locationId)
     if (!location) {
       throw new Error('Location nicht gefunden')
     }
 
-    // Aktuelle staff_ids (Array oder leer)
-    let currentStaffIds = Array.isArray(location.staff_ids) ? [...location.staff_ids] : []
+    const currentStaffIds = Array.isArray(location.staff_ids) ? [...location.staff_ids] : []
     const isRemoving = currentStaffIds.includes(staffId)
+    const categories = staffOwnCategoryCodes.value.length > 0
+      ? [...staffOwnCategoryCodes.value]
+      : []
 
-    // Toggle: hinzufügen oder entfernen
-    if (isRemoving) {
-      currentStaffIds = currentStaffIds.filter(id => id !== staffId)
-      logger.debug(`🔥 Removing staff ${staffId} from location ${locationId}`)
-    } else {
-      currentStaffIds.push(staffId)
-      logger.debug(`🔥 Adding staff ${staffId} to location ${locationId}`)
-    }
+    logger.debug(`🔥 ${isRemoving ? 'Removing' : 'Adding'} staff ${staffId} ${isRemoving ? 'from' : 'to'} location ${locationId}`)
 
-    // Update via secure API
-    await query({
-      action: 'update',
-      table: 'locations',
-      filters: [{ column: 'id', operator: 'eq', value: locationId }],
-      data: { staff_ids: currentStaffIds }
-    });
+    const response = await $fetch<{
+      success: boolean
+      staff_ids: string[]
+      is_online_bookable?: boolean
+      available_categories?: string[]
+    }>('/api/staff/assign-location', {
+      method: 'POST',
+      body: {
+        action: isRemoving ? 'unassign' : 'assign',
+        location_id: locationId,
+        is_online_bookable: false,
+        available_categories: categories
+      }
+    })
 
     const locationIndex = allTenantLocations.value.findIndex(loc => loc.id === locationId)
     if (locationIndex >= 0) {
-      allTenantLocations.value[locationIndex].staff_ids = currentStaffIds
-      if (!isRemoving) {
+      allTenantLocations.value[locationIndex].staff_ids = response.staff_ids || []
+      if (isRemoving) {
         allTenantLocations.value[locationIndex].is_online_bookable = false
-      }
-    }
-
-    if (!isRemoving) {
-      // Ensure staff_locations row exists with this staff's categories (default: not online bookable)
-      const categories = staffOwnCategoryCodes.value.length > 0
-        ? [...staffOwnCategoryCodes.value]
-        : []
-      await $fetch('/api/staff/update-location-booking', {
-        method: 'POST',
-        body: {
-          location_id: locationId,
-          is_online_bookable: false,
-          available_categories: categories
-        }
-      }).catch((e: any) => {
-        console.warn('⚠️ Could not create staff_locations entry (non-fatal):', e.message)
-      })
-      if (locationIndex >= 0) {
-        allTenantLocations.value[locationIndex].staff_available_categories = categories
+        allTenantLocations.value[locationIndex].staff_available_categories = []
+      } else {
+        allTenantLocations.value[locationIndex].is_online_bookable = false
+        allTenantLocations.value[locationIndex].staff_available_categories =
+          response.available_categories || categories
       }
     }
 
     logger.debug('✅ Location assignment updated successfully')
   } catch (err: any) {
     console.error('❌ Error in toggleLocationAssignment:', err)
-    handleSessionError(err)
+    if (!handleSessionError(err)) {
+      error.value = `Standort-Zuweisung fehlgeschlagen: ${err?.data?.statusMessage || err?.message || 'Unbekannter Fehler'}`
+    }
   }
 }
 
@@ -4199,15 +4207,15 @@ const copyToClipboard = async (text: string, type: string) => {
 
 // Share via WhatsApp
 const shareViaWhatsApp = () => {
-  const message = `Hallo! Hier ist der Link zur Registrierung für Fahrstunden: ${registrationLink.value}`
+  const message = `Hallo! Hier ist der Link zur Registrierung für ${t.value.appointmentsPlural}: ${registrationLink.value}`
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
   window.open(whatsappUrl, '_blank')
 }
 
 // Share via Email
 const shareViaEmail = () => {
-  const subject = 'Fahrstunden-Registrierung'
-  const body = `Hallo!\n\nHier ist der Link zur Registrierung für Fahrstunden:\n${registrationLink.value}\n\nBeste Grüsse`
+  const subject = `${t.value.appointmentsPlural}-Registrierung`
+  const body = `Hallo!\n\nHier ist der Link zur Registrierung für ${t.value.appointmentsPlural}:\n${registrationLink.value}\n\nBeste Grüsse`
   const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   window.open(mailtoUrl)
 }
@@ -4531,6 +4539,13 @@ onBeforeUnmount(() => {
 
 onMounted(async () => {
   try {
+    await loadFeatures()
+  } catch (err) {
+    logger.warn('ℹ️ loadFeatures failed (non-fatal):', err)
+  }
+  if (!isSettingsMounted.value) return
+
+  try {
     await loadData()
   } catch (err) {
     logger.warn('ℹ️ loadData failed (non-fatal):', err)
@@ -4544,12 +4559,14 @@ onMounted(async () => {
   }
   if (!isSettingsMounted.value) return
 
-  try {
-    await loadExamLocations()
-  } catch (err) {
-    logger.warn('ℹ️ loadExamLocations failed (non-fatal):', err)
+  if (examsEnabled.value) {
+    try {
+      await loadExamLocations()
+    } catch (err) {
+      logger.warn('ℹ️ loadExamLocations failed (non-fatal):', err)
+    }
+    if (!isSettingsMounted.value) return
   }
-  if (!isSettingsMounted.value) return
 
   // Load working hours from composable
   if (props.currentUser?.id) {

@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { sendEmail } from '~/server/utils/email'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 // Endpoint for a cron job to send trial expiry warnings.
 // Call daily via external cron (e.g. Vercel Cron, GitHub Actions, Supabase cron):
@@ -50,6 +51,8 @@ export default defineEventHandler(async (event) => {
       const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 
       try {
+        const terms = await getTenantTerminology(supabase, tenant.id)
+        const tenantName = tenant.name || terms.businessNoun
         await sendEmail({
           to: tenant.contact_email,
           subject: `Dein Simy Trial endet in ${label} – jetzt upgraden`,
@@ -68,9 +71,9 @@ export default defineEventHandler(async (event) => {
         </tr>
         <tr>
           <td style="padding:40px 30px;">
-            <p style="color:#333;font-size:16px;">Hallo <strong>${tenant.name || 'Fahrschule'}</strong>,</p>
+            <p style="color:#333;font-size:16px;">Hallo <strong>${tenantName}</strong>,</p>
             <p style="color:#555;font-size:16px;">dein kostenloser Simy-Trial endet in <strong>${label}</strong> (${trialEnd.toLocaleDateString('de-CH')}).</p>
-            <p style="color:#555;font-size:16px;">Um deine Daten und den Betrieb deiner Fahrschule ununterbrochen weiterzuführen, wähle jetzt deinen Plan:</p>
+            <p style="color:#555;font-size:16px;">Um deine Daten und den Betrieb ohne Unterbrechung weiterzuführen, wähle jetzt deinen Plan:</p>
             <table width="100%" cellpadding="0" cellspacing="0"><tr>
               <td align="center" style="padding:20px 0;">
                 <a href="${baseUrl}/upgrade"

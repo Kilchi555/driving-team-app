@@ -4,12 +4,20 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
 
 const client = new Anthropic()
 
 // Use latest Claude Haiku model for cost efficiency
 // claude-haiku-4-5 is the current latest Haiku version (replacing deprecated 3.5)
 const AI_MODEL = 'claude-haiku-4-5'
+
+function industryKeywords(terms: Terminology, businessType: string): string {
+  if (businessType === 'driving_school') {
+    return `"${terms.businessNoun}", "Fahrausbildung", "Führerschein", "${terms.appointment}", Standort`
+  }
+  return `"${terms.businessNoun}", "${terms.appointmentsPlural}", "${terms.staff}", Standort, Beratung`
+}
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -29,10 +37,31 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const supabase = getSupabaseAdmin()
+
+  const { data: userProfile } = await supabase
+    .from('users')
+    .select('id, tenant_id')
+    .eq('auth_user_id', authUser.id)
+    .single()
+
+  let businessType = 'driving_school'
+  if (userProfile?.tenant_id) {
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('business_type')
+      .eq('id', userProfile.tenant_id)
+      .single()
+    if (tenant?.business_type) businessType = tenant.business_type
+  }
+
+  const terms = getTerminologyDefaults(businessType)
   const prompt = buildOptimizationPrompt(
     content,
     content_type,
-    optimization_type
+    optimization_type,
+    terms,
+    businessType,
   )
 
   try {
@@ -50,16 +79,6 @@ export default defineEventHandler(async (event) => {
     const responseText =
       message.content[0].type === 'text' ? message.content[0].text : ''
     const suggestions = parseAIResponse(responseText)
-
-    // Log for analytics
-    const supabase = getSupabaseAdmin()
-    
-    // Get user profile to get website_id
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('id, tenant_id')
-      .eq('auth_user_id', authUser.id)
-      .single()
 
     if (userProfile?.id) {
       await supabase.from('website_ai_history').insert({
@@ -103,17 +122,21 @@ export default defineEventHandler(async (event) => {
 function buildOptimizationPrompt(
   content: string,
   contentType: string,
-  optimizationType: string
+  optimizationType: string,
+  terms: Terminology,
+  businessType: string,
 ): string {
-  const basePrompt = `You are an expert SEO copywriter and marketing specialist for driving schools and coaching services in German-speaking countries.
+  const keywords = industryKeywords(terms, businessType)
+  const basePrompt = `You are an expert SEO copywriter and marketing specialist for ${terms.businessNoun} businesses in German-speaking countries (Switzerland).
 
 IMPORTANT INSTRUCTIONS:
 - Write ONLY in Swiss/German High German (Schweizer Hochdeutsch)
 - Use professional but friendly tone
 - Always use "Sie" for formal address, not "du"
-- Use Swiss terminology where appropriate (e.g., "Fahrschule" instead of "Fahrschule")
+- Use branch terminology: business="${terms.businessNoun}", appointment="${terms.appointment}", client="${terms.client}", staff="${terms.staff}"
+- Do NOT default to Fahrschule/Fahrstunde/Fahrlehrer unless the business type is driving_school
 - Keep language simple and clear, no jargon
-- Write as if you are communicating with potential driving students in Switzerland
+- Write as if you are communicating with potential ${terms.clientsPlural} in Switzerland
 
 Current content to optimize:
 "${content}"
@@ -125,7 +148,7 @@ Generate EXACTLY 3 alternative versions of this content that are optimized for $
 
 ${
   optimizationType === 'seo'
-    ? `Include relevant keywords that potential students would search for (e.g., "Fahrschule", "Fahrausbildung", "Führerschein", etc.).
+    ? `Include relevant keywords that potential customers would search for (e.g., ${keywords}).
 Focus on:
 - Clear, specific language in Swiss German
 - Local SEO keywords if applicable

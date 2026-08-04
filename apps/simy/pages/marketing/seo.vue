@@ -16,16 +16,16 @@
         </nav>
         <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
           style="background: rgba(var(--brand-rgb),0.07); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.25)">
-          🔍 Lokales SEO für Fahrschulen
+          🔍 Lokales SEO für Terminbetriebe
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
-          SEO für Fahrschulen —<br/>
+          SEO für Terminbetriebe —<br/>
           <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             Dauerhaft oben bei Google
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mb-10 leading-relaxed">
-          Organisch auf Platz 1, wenn jemand "Fahrschule [deine Stadt]" googelt. Einmal etabliert — kostenloser Traffic für immer. Wir machen das für dich.
+          Organisch auf Platz 1, wenn jemand dein Angebot in deiner Stadt googelt. Einmal etabliert — kostenloser Traffic für immer. Wir machen das für dich.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           <a href="/marketing/seo-anfrage"
@@ -78,7 +78,7 @@
       <div class="max-w-5xl mx-auto">
         <div class="text-center mb-14">
           <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Lokales SEO — was wir konkret tun</h2>
-          <p class="text-gray-500 max-w-xl mx-auto">SEO für Fahrschulen ist nicht kompliziert — aber es braucht die richtigen Massnahmen zur richtigen Zeit.</p>
+          <p class="text-gray-500 max-w-xl mx-auto">Lokales SEO ist nicht kompliziert — aber es braucht die richtigen Massnahmen zur richtigen Zeit.</p>
         </div>
         <div class="space-y-5">
           <div v-for="(item, i) in seoActions" :key="i"
@@ -125,8 +125,8 @@
     <!-- CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
-        <h2 class="text-3xl font-black text-white mb-4">Wie gut rankt deine Fahrschule aktuell?</h2>
-        <p class="text-white mb-8">Wir machen eine kostenlose SEO-Analyse für deine Fahrschule und zeigen dir das Potenzial.</p>
+        <h2 class="text-3xl font-black text-white mb-4">Wie gut rankt dein Betrieb aktuell?</h2>
+        <p class="text-white mb-8">Wir machen eine kostenlose SEO-Analyse für dein Unternehmen und zeigen dir das Potenzial.</p>
         <a href="/marketing/seo-anfrage"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
@@ -141,12 +141,12 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'SEO für Fahrschulen – Organisch auf Platz 1 bei Google | Simy',
+  title: 'SEO für Terminbetriebe – Organisch auf Platz 1 bei Google | Simy',
   meta: [
-    { name: 'description', content: 'Lokales SEO für Fahrschulen: Simy optimiert dein Google Business Profile, deine Website und dein lokales Ranking. Dauerhaft mehr Schüler ohne Werbekosten.' },
-    { name: 'keywords', content: 'seo fahrschule, lokales seo fahrschule, google fahrschule, fahrschule google maps, fahrschule suchmaschinenoptimierung' },
-    { property: 'og:title', content: 'SEO für Fahrschulen – Simy | Dauerhaft auf Platz 1 bei Google' },
-    { property: 'og:description', content: 'Lokales SEO für Fahrschulen: Google Business, Keywords, Website-Optimierung. Nachhaltig mehr Schüler.' },
+    { name: 'description', content: 'Lokales SEO für Terminbetriebe: Simy optimiert dein Google Business Profile, deine Website und dein lokales Ranking. Dauerhaft mehr Kunden ohne Werbekosten.' },
+    { name: 'keywords', content: 'lokales seo schweiz, google business profile, google maps ranking, suchmaschinenoptimierung dienstleister' },
+    { property: 'og:title', content: 'SEO für Terminbetriebe – Simy | Dauerhaft auf Platz 1 bei Google' },
+    { property: 'og:description', content: 'Lokales SEO für Terminbetriebe: Google Business, Keywords, Website-Optimierung. Nachhaltig mehr Kunden.' },
     { property: 'og:url', content: 'https://simy.ch/marketing/seo' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/marketing/seo' }],
@@ -158,7 +158,7 @@ useHead({
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
         { '@type': 'ListItem', position: 2, name: 'Marketing', item: 'https://simy.ch/marketing' },
-        { '@type': 'ListItem', position: 3, name: 'SEO für Fahrschulen' },
+        { '@type': 'ListItem', position: 3, name: 'SEO für Terminbetriebe' },
       ],
     }),
   }],
@@ -184,7 +184,7 @@ const seoActions = [
   { title: 'On-Page SEO & Website-Struktur', desc: 'Simy-Websites sind bereits SEO-optimiert. Wir erstellen zusätzliche Stadtseiten und Landingpages für maximale lokale Reichweite.', impact: 'Hoch' },
   { title: 'Bewertungsmanagement', desc: 'Mehr Google-Bewertungen verbessern das Ranking direkt. Wir helfen dir, systematisch mehr Reviews zu sammeln.', impact: 'Mittel' },
   { title: 'Schema Markup & Structured Data', desc: 'Technische SEO-Massnahmen für Rich Snippets und bessere Darstellung in Google-Suchergebnissen.', impact: 'Mittel' },
-  { title: 'Lokale Backlinks', desc: 'Erwähnungen und Links von lokalen Websites, Vereinen und Medien stärken die lokale Autorität deiner Fahrschule.', impact: 'Mittel' },
+  { title: 'Lokale Backlinks', desc: 'Erwähnungen und Links von lokalen Websites, Vereinen und Medien stärken die lokale Autorität deines Betriebs.', impact: 'Mittel' },
 ]
 
 const timeline = [

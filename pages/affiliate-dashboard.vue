@@ -118,7 +118,7 @@
           <div class="relative z-0 overflow-hidden rounded-xl bg-green-50 p-3 text-center transition-colors hover:bg-green-100/90 cursor-pointer" role="button" tabindex="0" @click="openDetail('credited')" @keydown.enter.prevent="openDetail('credited')" @keydown.space.prevent="openDetail('credited')">
             <span class="pointer-events-none absolute top-1.5 left-1.5 flex h-4 w-4 items-center justify-center rounded-full border border-green-300 text-[9px] font-bold leading-none text-green-400">i</span>
             <div class="pointer-events-none text-xl font-bold text-green-700">{{ stats?.referrals?.filter((r: any) => r.status === 'credited')?.length ?? 0 }}</div>
-            <div class="pointer-events-none mt-0.5 text-xs text-gray-500">1. Fahrstunde bezahlt</div>
+            <div class="pointer-events-none mt-0.5 text-xs text-gray-500">1. {{ t.appointment }} bezahlt</div>
           </div>
 
           <button
@@ -300,14 +300,14 @@
               <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">2</div>
               <div>
                 <p class="text-sm font-semibold text-gray-800">Person registriert sich</p>
-                <p class="text-xs text-gray-500 mt-0.5">Die Person meldet sich über deinen Link bei der Fahrschule an.</p>
+                <p class="text-xs text-gray-500 mt-0.5">Die Person meldet sich über deinen Link bei {{ brandConfig.name || t.businessNoun }} an.</p>
               </div>
             </div>
             <div class="flex gap-3">
               <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">3</div>
               <div>
-                <p class="text-sm font-semibold text-gray-800">Erste Fahrstunde bezahlt</p>
-                <p class="text-xs text-gray-500 mt-0.5">Sobald diese Person die erste Fahrstunde bezahlt, wird dir automatisch eine Prämie gutgeschrieben.</p>
+                <p class="text-sm font-semibold text-gray-800">Erste {{ t.appointment }} bezahlt</p>
+                <p class="text-xs text-gray-500 mt-0.5">Sobald diese Person die erste {{ t.appointment }} bezahlt, wird dir automatisch eine Prämie gutgeschrieben.</p>
               </div>
             </div>
           </div>
@@ -334,7 +334,7 @@
           </div>
 
           <!-- Note -->
-          <p class="text-xs text-gray-400 border-t pt-3">Das Guthaben wird deinem Konto gutgeschrieben und kann für Fahrstunden verwendet oder ausgezahlt werden.</p>
+          <p class="text-xs text-gray-400 border-t pt-3">Das Guthaben wird deinem Konto gutgeschrieben und kann für {{ t.appointmentsPlural }} verwendet oder ausgezahlt werden.</p>
         </div>
       </div>
     </div>
@@ -413,6 +413,7 @@ const authStore = useAuthStore()
 const supabase = getSupabase()
 const { setFavicon } = useFavicon()
 const { logFallbackUsed } = useFallbackLogger()
+const { t } = useTerminology()
 
 /** Partner-Seite für «Neuen Link» — Query, dann zuletzt bekannte Session/Tenant (localStorage). */
 const AFFILIATE_PARTNER_SLUG_KEY = 'affiliate_dashboard_partner_slug'
@@ -491,6 +492,7 @@ const affiliateCreditTx = ref<any[]>([])
 const affiliateCreditTxLoading = ref(false)
 
 function affiliateCreditTxLabel(tx: any): string {
+  const appointment = t.value.appointment
   const typeMap: Record<string, string> = {
     deposit: 'Bareinzahlung',
     refund: 'Rückerstattung',
@@ -501,10 +503,10 @@ function affiliateCreditTxLabel(tx: any): string {
     cash_deposit: 'Bar-Einzahlung',
     cancellation: 'Stornierung',
     cancellation_credit_refund: 'Stornierung (Rückerstattung)',
-    duration_reduction_credit: 'Fahrstunde verkürzt (Rückerstattung)',
-    payment: 'Fahrstunde bezahlt',
-    appointment: 'Fahrstunde bezahlt',
-    appointment_payment: 'Fahrstunde bezahlt',
+    duration_reduction_credit: `${appointment} verkürzt (Rückerstattung)`,
+    payment: `${appointment} bezahlt`,
+    appointment: `${appointment} bezahlt`,
+    appointment_payment: `${appointment} bezahlt`,
     withdrawal: 'Auszahlung',
     withdrawal_pending: 'Auszahlung (ausstehend)',
     withdrawal_completed: 'Auszahlung abgeschlossen',
@@ -599,7 +601,7 @@ const affiliateRewards = computed(() => (stats.value?.category_rewards ?? []))
 const detailTitle = computed(() => ({
   leads: 'Interessenten',
   pending: 'Registrierungen',
-  credited: '1. Fahrstunde bezahlt',
+  credited: `1. ${t.value.appointment} bezahlt`,
 }[detailFilter.value]))
 
 const filteredDetail = computed(() => {
@@ -781,7 +783,8 @@ async function copyLink() {
 
 function generateWhatsAppMessage() {
   const firstName = userName.value.split(' ')[0] || 'Ich'
-  return `Hallo, hier ist der Link zur Fahrschule ${brandConfig.value.name || 'Driving Team'}, die ich dir sehr empfehlen kann.
+  const name = brandConfig.value.name || t.value.businessNoun
+  return `Hallo, hier ist der Link zu ${name}, die ich dir sehr empfehlen kann.
 
 ${shareLink.value}
 
@@ -791,7 +794,8 @@ ${firstName}`
 
 function generateEmailMessage() {
   const firstName = userName.value.split(' ')[0] || 'Ich'
-  return `Hallo, hier ist der Link zur Fahrschule ${brandConfig.value.name || 'Driving Team'}, die ich dir sehr empfehlen kann.
+  const name = brandConfig.value.name || t.value.businessNoun
+  return `Hallo, hier ist der Link zu ${name}, die ich dir sehr empfehlen kann.
 
 ${shareLink.value}
 

@@ -5,6 +5,7 @@ import { sendTenantSMS } from '~/server/utils/sms'
 import { sendTenantEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { cancelResourceBookingsForAppointment } from '~/server/utils/resource-bookings'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 /**
  * POST /api/medical-certificate/approve-and-cancel
@@ -57,7 +58,8 @@ export default defineEventHandler(async (event) => {
   }
 
   // 4. Send notification
-  const tenantName = tenant?.name || 'Ihre Fahrschule'
+  const terms = await getTenantTerminology(supabase, profile.tenant_id)
+  const tenantName = tenant?.name || terms.businessNoun || 'Ihr Unternehmen'
   const firstName = user?.first_name || ''
   const apptDate = appt.start_time ? new Date(appt.start_time).toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : ''
   const hasPaid = payment?.payment_status === 'completed'

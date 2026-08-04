@@ -422,7 +422,7 @@ export const useCancellationPolicies = () => {
         creditHours: cancellationType === 'staff',
         hoursBeforeAppointment: 0,
         description: cancellationType === 'staff' 
-          ? 'Kostenlose Stornierung durch Fahrlehrer (Termin in der Vergangenheit)' 
+          ? 'Kostenlose Stornierung durch Mitarbeiter (Termin in der Vergangenheit)' 
           : 'Volle Gebühr - Termin liegt in der Vergangenheit'
       }
     }

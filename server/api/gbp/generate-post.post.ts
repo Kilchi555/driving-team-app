@@ -32,15 +32,20 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await getSupabaseAdmin()
     .from('tenants')
-    .select('name')
+    .select('name, business_type')
     .eq('id', authUser.tenant_id)
     .single()
+
+  const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+  const terms = getTerminologyDefaults(tenant?.business_type)
 
   try {
     const mergedKeywords = [...new Set([...(settings.keywords ?? []), ...(body.keywords ?? [])])].filter(Boolean)
     const summary = await generateGbpAiText({
       context: 'post',
-      tenantName: tenant?.name || 'Fahrschule',
+      tenantName: tenant?.name || terms.businessNoun,
+      businessNoun: terms.businessNoun,
+      clientsPlural: terms.clientsPlural,
       locationTitle: loc.title,
       keywords: mergedKeywords,
       brandVoice: settings.brand_voice,

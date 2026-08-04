@@ -9,7 +9,7 @@ import { mapSupabaseError } from '~/server/utils/supabase-error'
 
 interface UploadLogoRequest {
   tenantId: string
-  assetType: 'logo' | 'logo_square' | 'logo_wide' | 'favicon'
+  assetType: 'logo' | 'logo_square' | 'logo_wide' | 'favicon' | 'banner'
   file: File
 }
 
@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
     const fileData = fileField.data
 
     // Validate asset type
-    const validAssetTypes = ['logo', 'logo_square', 'logo_wide', 'favicon']
+    const validAssetTypes = ['logo', 'logo_square', 'logo_wide', 'favicon', 'banner']
     if (!validAssetTypes.includes(assetType)) {
       throw createError({
         statusCode: 400,
@@ -102,11 +102,12 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Validate file size
-    if (fileData.length > MAX_FILE_SIZE) {
+    // Hero/banner can be larger before compression
+    const maxBytes = assetType === 'banner' ? 8 * 1024 * 1024 : MAX_FILE_SIZE
+    if (fileData.length > maxBytes) {
       throw createError({
         statusCode: 413,
-        statusMessage: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`
+        statusMessage: `File too large. Maximum size is ${maxBytes / 1024 / 1024}MB`
       })
     }
 
@@ -221,6 +222,33 @@ export default defineEventHandler(async (event) => {
         .eq('id', tenantId)
       if (tenantUpdateError) {
         logger.warn('Could not sync tenants logo column (storage upload succeeded):', tenantUpdateError)
+      }
+    }
+
+    // Sync website hero banner onto website_tenants when present
+    if (assetType === 'banner') {
+      const { error: websiteUpdateError } = await supabase
+        .from('website_tenants')
+        .update({
+          hero_image_url: publicUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('tenant_id', tenantId)
+      if (websiteUpdateError) {
+        logger.warn('Could not sync website_tenants.hero_image_url (storage upload succeeded):', websiteUpdateError)
+      }
+    }
+
+    if (assetType === 'logo_square' || assetType === 'logo') {
+      const { error: websiteLogoError } = await supabase
+        .from('website_tenants')
+        .update({
+          logo_url: publicUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('tenant_id', tenantId)
+      if (websiteLogoError) {
+        logger.warn('Could not sync website_tenants.logo_url (storage upload succeeded):', websiteLogoError)
       }
     }
 

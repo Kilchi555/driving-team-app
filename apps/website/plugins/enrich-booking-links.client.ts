@@ -3,66 +3,47 @@
  * Modifies all simy.ch booking links to include `session_id` and (when
  * available) `dt_attr` so that cross-domain conversion tracking can attribute
  * the resulting booking back to the originating ad / campaign.
- * Runs after Vue hydration to avoid SSR/client mismatch warnings.
+ *
+ * Runs as early as DOM allows (not only after Vue hydration) so hero CTAs
+ * clicked before app:mounted still carry click IDs.
  */
 
-import { encodeAttribution } from '~/utils/attribution-encode'
+import { enrichSimyAnchor } from '~/utils/enrich-simy-url'
 
 export default defineNuxtPlugin((nuxtApp) => {
+  if (import.meta.server) return
+
   const enrichBookingLinks = () => {
-    const sessionId = (window as any).__analyticsSessionId || ''
-    const attributionBlob = encodeAttribution((window as any).__dtMarketingAttribution)
-    const currentUrl = window.location.href
-    const metaConsentGiven = localStorage.getItem('dt_cookie_consent') === 'accepted'
-
-    // Enrich all simy.ch outbound links (booking AND customer/course links)
-    const bookingLinks = document.querySelectorAll('a[href*="simy.ch"]')
-
-    bookingLinks.forEach((link) => {
-      const href = link.getAttribute('href')
-      if (!href) return
-
-      let newHref = href
-      const params: string[] = []
-
-      if (sessionId && !newHref.includes('session_id=')) {
-        params.push(`session_id=${sessionId}`)
-      }
-      if (attributionBlob && !newHref.includes('dt_attr=')) {
-        params.push(`dt_attr=${attributionBlob}`)
-      }
-      if (metaConsentGiven && !newHref.includes('mc=1')) {
-        params.push('mc=1')
-      }
-      if (currentUrl && !newHref.includes('referrer=') && newHref.includes('/booking/')) {
-        params.push(`referrer=${encodeURIComponent(currentUrl)}`)
-      }
-      if (params.length === 0) return
-
-      const separator = newHref.includes('?') ? '&' : '?'
-      newHref = `${newHref}${separator}${params.join('&')}`
-      link.setAttribute('href', newHref)
+    document.querySelectorAll('a[href*="simy.ch"]').forEach((link) => {
+      enrichSimyAnchor(link as HTMLAnchorElement)
     })
   }
 
-  // Run AFTER hydration is complete to avoid SSR/client mismatch
-  nuxtApp.hook('app:mounted', () => {
+  const startObserver = () => {
     enrichBookingLinks()
-
-    // Enrich on Vue updates (for dynamically added links)
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList' || mutation.type === 'attributes') {
-          enrichBookingLinks()
-        }
-      })
+    const observer = new MutationObserver(() => {
+      enrichBookingLinks()
     })
-
     observer.observe(document.body, {
       childList: true,
       subtree: true,
       attributes: true,
       attributeFilter: ['href'],
     })
+  }
+
+  // Enrich as soon as the DOM is ready — closes the race where users click
+  // bare app.simy.ch hero links before Vue finishes mounting.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startObserver, { once: true })
+  } else if (document.body) {
+    startObserver()
+  } else {
+    document.addEventListener('DOMContentLoaded', startObserver, { once: true })
+  }
+
+  // Re-enrich after hydration for links Vue may rewrite/replace.
+  nuxtApp.hook('app:mounted', () => {
+    enrichBookingLinks()
   })
 })

@@ -187,7 +187,7 @@
                   <!-- Left: Additional info -->
                   <div class="flex items-center gap-3">
                     <span>
-                      Fahrlehrer: {{ customer.assignedInstructor || '-' }}
+                      {{ t.staff }}: {{ customer.assignedInstructor || '-' }}
                     </span>
                     <span>
                       Lektionen: {{ customer.completedLessonsCount || '-' }}
@@ -289,6 +289,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useTerminology()
 
 import { ref, onMounted, computed, watch } from 'vue'
 import { logger } from '~/utils/logger'

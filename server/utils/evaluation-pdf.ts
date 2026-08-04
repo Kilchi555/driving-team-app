@@ -376,7 +376,7 @@ export function generateEvaluationPdfHtml(
   <div class="header">
     ${logoHtml}
     <div class="header-info">
-      <div class="header-title">Fahrstunden-Auswertung</div>
+      <div class="header-title">Termin-Auswertung</div>
       ${taglineHtml}
     </div>
     <div class="header-right">
@@ -391,7 +391,7 @@ export function generateEvaluationPdfHtml(
     <div class="summary-strip">
       <div class="summary-tile">
         <div class="summary-value">${lessonEquivalentDisplay}</div>
-        <div class="summary-label">Fahrstunden (à 45 Min.)</div>
+        <div class="summary-label">Termine (à 45 Min.)</div>
       </div>
     </div>
 

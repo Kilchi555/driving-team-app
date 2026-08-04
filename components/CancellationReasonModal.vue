@@ -55,7 +55,7 @@
             ]"
           >
             <div class="text-3xl mb-2">👨‍🏫</div>
-            <div class="font-medium">Fahrlehrer</div>
+            <div class="font-medium">{{ t.staff }}</div>
           </button>
         </div>
       </div>
@@ -235,6 +235,7 @@ const emit = defineEmits<{
 }>()
 
 const uiStore = useUIStore()
+const { t } = useTerminology()
 const { cancellationReasons, staffCancellationReasons, fetchCancellationReasons } = useCancellationReasons()
 const { defaultPolicy, fetchPolicies } = useCancellationPolicies()
 
@@ -328,7 +329,7 @@ const goToPolicySelection = async (selectedReason: any) => {
       shouldCreateInvoice: chargePercentageToUse > 0,
       shouldCreditHours: chargePercentageToUse === 0,
       invoiceDescription: chargePercentageToUse === 0
-        ? 'Kostenlose Stornierung durch Fahrlehrer'
+        ? `Kostenlose Stornierung durch ${t.value.staff}`
         : `Stornogebühr für Termin (${chargePercentageToUse}% von ${((appointmentPriceLocal.value || 0) / 100).toFixed(2)} CHF)`
     }
     logger.debug('✅ Policy result set:', policyResult.value)
@@ -427,8 +428,8 @@ const confirmCancellation = async () => {
 
   try {
     const cancellerName = localCancellationType.value === 'student'
-      ? (props.appointment?.student_name || props.appointment?.users?.first_name || 'Schüler')
-      : (props.currentUser?.first_name || 'Fahrlehrer')
+      ? (props.appointment?.student_name || props.appointment?.users?.first_name || t.value.client)
+      : (props.currentUser?.first_name || t.value.staff)
 
     const deletionReason = `Termin abgesagt von ${cancellerName} wegen ${pendingReason.value.name_de}`
     const withCosts = (policyResult.value?.chargeAmountRappen || 0) > 0

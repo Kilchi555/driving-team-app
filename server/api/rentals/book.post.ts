@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
       .select('id, name, vehicle_rental_settings')
       .or(`slug.eq.${tenant_slug},rental_portal_slug.eq.${tenant_slug}`)
       .maybeSingle()
-    if (!t) throw createError({ statusCode: 404, statusMessage: 'Fahrschule nicht gefunden' })
+    if (!t) throw createError({ statusCode: 404, statusMessage: 'Unternehmen nicht gefunden' })
     tenantId = t.id
   } else {
     tenantId = rentalUser.tenant_id
@@ -138,7 +138,7 @@ export default defineEventHandler(async (event) => {
       const parts: string[] = []
       if (requiresLesson && !lessonOk) {
         const codes = vehicle.rental_lesson_category_codes ?? []
-        parts.push(`eine Fahrlektion${codes.length ? ` (${codes.join(', ')})` : ''} am selben Tag`)
+        parts.push(`einen Termin${codes.length ? ` (${codes.join(', ')})` : ''} am selben Tag`)
       }
       if (requiresCourse && !courseOk) {
         const codes = vehicle.rental_course_category_codes ?? []
@@ -324,7 +324,7 @@ export default defineEventHandler(async (event) => {
     rental_id: rental.id,
     status: requiresApproval ? 'pending' : 'confirmed',
     message: requiresApproval
-      ? 'Buchungsanfrage gesendet! Du erhältst eine Bestätigung sobald die Fahrschule sie genehmigt.'
+      ? 'Buchungsanfrage gesendet! Du erhältst eine Bestätigung sobald das Unternehmen sie genehmigt.'
       : 'Buchung bestätigt!',
   }
 })
@@ -356,7 +356,7 @@ function buildRenterEmail(p: {
   <div style="padding:32px">
     <p style="font-size:15px;color:#374151;margin:0 0 16px">Hallo ${p.renterName},</p>
     <p style="font-size:15px;color:#374151;margin:0 0 20px">${p.requiresApproval
-      ? 'deine Buchungsanfrage ist eingegangen. Die Fahrschule wird sie so schnell wie möglich bearbeiten und du erhältst eine Bestätigung per E-Mail.'
+      ? 'deine Buchungsanfrage ist eingegangen. Das Unternehmen wird sie so schnell wie möglich bearbeiten und du erhältst eine Bestätigung per E-Mail.'
       : 'deine Buchung ist bestätigt. Das Fahrzeug steht dir zur vereinbarten Zeit zur Verfügung.'}</p>
     ${bookingDetailBox(p)}
     ${p.requiresApproval ? `<p style="font-size:13px;color:#6b7280;margin:16px 0 0">Bitte warte auf die Bestätigung, bevor du das Fahrzeug abholst.</p>` : ''}

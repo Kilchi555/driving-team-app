@@ -67,7 +67,7 @@
               </p>
             </div>
             <div v-if="r.staff_first_name" class="bg-gray-50 rounded-xl px-3 py-2">
-              <p class="text-xs text-gray-400 font-medium">Fahrlehrer</p>
+              <p class="text-xs text-gray-400 font-medium">{{ t.staff }}</p>
               <p class="text-gray-800 font-semibold text-xs mt-0.5">{{ r.staff_first_name }} {{ r.staff_last_name }}</p>
             </div>
             <div v-if="r.days_since_upload !== null" class="bg-gray-50 rounded-xl px-3 py-2">
@@ -155,6 +155,7 @@ definePageMeta({ middleware: 'admin', layout: 'admin' })
 useHead({ title: 'Arztzeugnisse' })
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 const reviews = ref<any[]>([])
 const isLoading = ref(true)

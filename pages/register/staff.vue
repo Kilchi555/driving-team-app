@@ -687,9 +687,9 @@
                 <input type="checkbox" v-model="form.acceptedTerms" class="mt-0.5">
                 <span class="text-sm text-gray-700">
                   Ich akzeptiere die
-                  <a href="/register/staff-agb" target="_blank" class="hover:underline" :style="{ color: tenantColor }">Nutzungsbedingungen</a>
+                  <a :href="`/register/staff-agb?business_type=${encodeURIComponent(businessType)}`" target="_blank" class="hover:underline" :style="{ color: tenantColor }">Nutzungsbedingungen</a>
                   und die
-                  <a href="/register/staff-datenschutz" target="_blank" class="hover:underline" :style="{ color: tenantColor }">Datenschutzerklärung</a>.
+                  <a :href="`/register/staff-datenschutz?business_type=${encodeURIComponent(businessType)}`" target="_blank" class="hover:underline" :style="{ color: tenantColor }">Datenschutzerklärung</a>.
                 </span>
               </label>
             </div>

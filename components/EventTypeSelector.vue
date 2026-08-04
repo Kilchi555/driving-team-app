@@ -28,13 +28,13 @@
         v-for="eventType in freeEventTypes"
         :key="'free-' + eventType.code"
         @click="selectEventType(eventType)"
-        :disabled="!showBackButton"
+        :disabled="!allowSelection"
         class="p-3 text-sm rounded-xl border text-center transition-all duration-200 font-medium"
         :style="selectedType === eventType.code ? { ...primaryBg } : {}"
         :class="[
           selectedType === eventType.code
             ? 'shadow-sm'
-            : showBackButton
+            : allowSelection
               ? 'bg-white text-gray-700 border-gray-200 hover:shadow-sm'
               : 'bg-gray-50 text-gray-400 border-gray-100 cursor-not-allowed'
         ]"
@@ -53,7 +53,7 @@
 <script setup lang="ts">
 
 import { logger } from '~/utils/logger'
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useEventTypes } from '~/composables/useEventTypes'
 import { useUILabels } from '~/composables/useUILabels'
 const { primaryBg, primaryText, primaryBgLight, primaryBorder } = usePrimaryColor()
@@ -74,13 +74,17 @@ interface EventType {
 interface Props {
   selectedType?: string | null
   autoLoad?: boolean
+  /** Show "Zurück" to priced student flow (only when paid types exist). */
   showBackButton?: boolean
+  /** Allow picking a type (false for past appointments). */
+  allowSelection?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   selectedType: null,
   autoLoad: true,
-  showBackButton: true
+  showBackButton: true,
+  allowSelection: true
 })
 
 // Emits
@@ -113,7 +117,7 @@ const loadEventTypes = async (excludeTypes: string[] = []) => {
 
 const selectEventType = (eventType: EventType) => {
   // ❌ Vergangene Termine können nicht mehr geändert werden
-  if (!props.showBackButton) {
+  if (!props.allowSelection) {
     logger.debug('🚫 Cannot change event type for past appointment')
     return
   }

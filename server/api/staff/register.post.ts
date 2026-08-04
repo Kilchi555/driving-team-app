@@ -6,6 +6,7 @@ import { sendWelcomeEmail } from '~/server/utils/send-welcome-email'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateBasicPassword, validateEmail } from '~/server/utils/validators'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -148,9 +149,12 @@ export default defineEventHandler(async (event) => {
 
     if (existingUser) {
       logger.warn('⚠️ Duplicate staff email detected for tenant:', email)
+      const terms = await getTenantTerminology(serviceSupabase, invitation.tenant_id)
+      const staffLabel = terms.staff || 'Mitarbeiter'
+      const businessNoun = terms.businessNoun || 'Unternehmen'
       throw createError({
         statusCode: 409,
-        statusMessage: 'Diese E-Mail-Adresse ist bereits als Fahrlehrer in dieser Fahrschule registriert.'
+        statusMessage: `Diese E-Mail-Adresse ist bereits als ${staffLabel} bei ${businessNoun} registriert.`
       })
     }
 
@@ -284,8 +288,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // 6. Assign standard locations (Treffpunkte)
+    // Dual-write: locations.staff_ids + staff_locations must stay in sync for online booking
     if (Array.isArray(selectedLocationIds) && selectedLocationIds.length > 0) {
       const staffCategories: string[] = Array.isArray(selectedCategories) ? selectedCategories : []
+      const assignedLocationIds: string[] = []
       for (const locId of selectedLocationIds) {
         try {
           const { data: loc } = await serviceSupabase
@@ -298,14 +304,15 @@ export default defineEventHandler(async (event) => {
                 .update({ staff_ids: [...current, newUser.id] })
                 .eq('id', locId)
             }
+            assignedLocationIds.push(locId)
           }
         } catch (locErr) {
           console.warn('⚠️ Location assignment failed (non-fatal):', locErr)
         }
       }
       // Create staff_locations entries with per-staff categories
-      try {
-        const staffLocationRows = selectedLocationIds.map((locId: string) => ({
+      if (assignedLocationIds.length > 0) {
+        const staffLocationRows = assignedLocationIds.map((locId: string) => ({
           staff_id: newUser.id,
           location_id: locId,
           tenant_id: invitation.tenant_id,
@@ -316,11 +323,26 @@ export default defineEventHandler(async (event) => {
         const { error: slErr } = await serviceSupabase
           .from('staff_locations')
           .upsert(staffLocationRows, { onConflict: 'staff_id,location_id,tenant_id' })
-        if (slErr) console.warn('⚠️ staff_locations upsert failed:', slErr.message, slErr.details)
-      } catch (err) {
-        console.warn('⚠️ staff_locations upsert failed (non-fatal):', err)
+        if (slErr) {
+          console.error('❌ staff_locations upsert failed — rolling back staff_ids:', slErr.message, slErr.details)
+          for (const locId of assignedLocationIds) {
+            const { data: loc } = await serviceSupabase
+              .from('locations').select('staff_ids').eq('id', locId).single()
+            if (loc) {
+              const current: string[] = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
+              await serviceSupabase
+                .from('locations')
+                .update({ staff_ids: current.filter((id: string) => id !== newUser.id) })
+                .eq('id', locId)
+            }
+          }
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Standort-Zuweisung fehlgeschlagen (staff_locations). Bitte erneut versuchen.'
+          })
+        }
       }
-      logger.debug('✅ Standard locations assigned:', selectedLocationIds.length)
+      logger.debug('✅ Standard locations assigned:', assignedLocationIds.length)
     }
 
     // 7a. Create new meetup locations added by staff
@@ -340,8 +362,9 @@ export default defineEventHandler(async (event) => {
             is_active:           true,
           }))
         if (locationRows.length > 0) {
-          const { data: insertedLocs } = await serviceSupabase
+          const { data: insertedLocs, error: insertLocErr } = await serviceSupabase
             .from('locations').insert(locationRows).select('id')
+          if (insertLocErr) throw insertLocErr
           logger.debug('✅ New meetup locations created:', locationRows.length)
           // Create staff_locations entries for newly created locations
           if (insertedLocs && insertedLocs.length > 0) {
@@ -356,10 +379,21 @@ export default defineEventHandler(async (event) => {
             const { error: slErr2 } = await serviceSupabase
               .from('staff_locations')
               .upsert(staffLocationRows, { onConflict: 'staff_id,location_id,tenant_id' })
-            if (slErr2) console.warn('⚠️ staff_locations upsert (new locs) failed:', slErr2.message, slErr2.details)
+            if (slErr2) {
+              console.error('❌ staff_locations upsert (new locs) failed — deleting orphan locations:', slErr2.message)
+              await serviceSupabase
+                .from('locations')
+                .delete()
+                .in('id', insertedLocs.map((l: any) => l.id))
+              throw createError({
+                statusCode: 500,
+                statusMessage: 'Neue Treffpunkte konnten nicht vollständig angelegt werden. Bitte erneut versuchen.'
+              })
+            }
           }
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err?.statusCode) throw err
         console.warn('⚠️ Creating new locations failed (non-fatal):', err)
       }
     }

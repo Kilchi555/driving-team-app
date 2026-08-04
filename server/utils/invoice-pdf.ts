@@ -392,7 +392,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
       const breakdown: { label: string; amount: number }[] = []
       if ((item.lesson_price_rappen || 0) > 0)
-        breakdown.push({ label: data.appointmentLabel || 'Fahrstunde', amount: item.lesson_price_rappen! })
+        breakdown.push({ label: data.appointmentLabel || 'Termin', amount: item.lesson_price_rappen! })
       if ((item.admin_fee_rappen || 0) > 0)
         breakdown.push({ label: 'Admin-Gebühr', amount: item.admin_fee_rappen! })
       if ((item.products_price_rappen || 0) > 0) {

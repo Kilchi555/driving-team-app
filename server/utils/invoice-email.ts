@@ -78,7 +78,7 @@ export interface InvoiceEmailData {
 export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
   const brand = data.primaryColor || '#1E40AF'
   const brandLight = brand + '18'
-  const appointmentLabel = data.appointmentLabel || 'Fahrstunde'
+  const appointmentLabel = data.appointmentLabel || 'Termin'
 
   // Tabellen-Zeilen
   const rows = data.items.map(item => {

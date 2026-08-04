@@ -128,9 +128,9 @@
       </div>
     </Transition>
 
-    <!-- BANNER: Lernfahrausweis fehlt -->
+    <!-- BANNER: Lernfahrausweis fehlt (nur Fahrschule) -->
     <div 
-      v-if="showContent && documentsLoaded && userDocumentCategories.length > 0 && userDocumentCategories[0]?.documents?.length === 0"
+      v-if="isDrivingSchool && showContent && documentsLoaded && userDocumentCategories.length > 0 && userDocumentCategories[0]?.documents?.length === 0"
       class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3"
     >
       <div 
@@ -141,7 +141,7 @@
           <span class="text-2xl">📄</span>
           <div>
             <p class="font-semibold text-amber-900 text-sm">Lernfahrausweis hochladen</p>
-            <p class="text-amber-700 text-xs mt-0.5">Für die Buchung von Fahrstunden wird dein Lernfahrausweis benötigt.</p>
+            <p class="text-amber-700 text-xs mt-0.5">Für die Buchung von {{ t.appointmentsPlural }} wird dein Lernfahrausweis benötigt.</p>
           </div>
         </div>
         <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,7 +300,7 @@
           </div>
         </div>
         
-        <!-- Fahrstunden buchen -->
+        <!-- Fahrstunden buchen / anfragen (je nach allow_online_booking) -->
         <div 
           @click="handleClickWithDelay('lesson', navigateToLessonBooking)"
           class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform border-t-4" 
@@ -316,8 +316,8 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="text-lg font-semibold text-gray-900">Fahrstunden buchen</h3>
-                  <p class="text-sm font-medium" :style="{ color: buttonColor }">Direkt online buchen</p>
+                  <h3 class="text-lg font-semibold text-gray-900">{{ lessonBookingTitle }}</h3>
+                  <p class="text-sm font-medium" :style="{ color: buttonColor }">{{ lessonBookingSubtitle }}</p>
                 </div>
               </div>
               <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -522,7 +522,7 @@
             >
               <span class="absolute top-1.5 left-1.5 w-4 h-4 rounded-full border border-green-300 text-green-400 text-[9px] font-bold flex items-center justify-center leading-none">i</span>
               <div class="text-xl font-bold text-green-700">{{ affiliateStats?.referrals?.filter((r: any) => r.status === 'credited')?.length ?? 0 }}</div>
-              <div class="text-xs text-gray-500 mt-0.5">1. Fahrstunde bezahlt</div>
+              <div class="text-xs text-gray-500 mt-0.5">1. {{ t.appointment }} bezahlt</div>
             </div>
 
             <!-- Guthaben -->
@@ -557,12 +557,12 @@
                 </div>
                 <div class="flex gap-2">
                   <a
-                    :href="`https://wa.me/?text=${encodeURIComponent('Ich empfehle dir die Fahrschule Driving Team! Melde dich hier an: ' + affiliateShareLink)}`"
+                    :href="`https://wa.me/?text=${encodeURIComponent(`Ich empfehle dir ${tenantDisplayName}! Melde dich hier an: ` + affiliateShareLink)}`"
                     target="_blank"
                     class="flex-1 bg-green-500 text-white text-center rounded-lg px-3 py-2 text-sm font-semibold hover:bg-green-600 transition"
                   >WhatsApp</a>
                   <a
-                    :href="`mailto:?subject=Fahrschule%20Empfehlung&body=${encodeURIComponent('Ich empfehle dir die Fahrschule Driving Team!\n\nMelde dich hier an: ' + affiliateShareLink)}`"
+                    :href="`mailto:?subject=${encodeURIComponent(tenantDisplayName + ' Empfehlung')}&body=${encodeURIComponent(`Ich empfehle dir ${tenantDisplayName}!\n\nMelde dich hier an: ` + affiliateShareLink)}`"
                     class="flex-1 bg-gray-600 text-white text-center rounded-lg px-3 py-2 text-sm font-semibold hover:bg-gray-700 transition"
                   >E-Mail</a>
                 </div>
@@ -668,14 +668,14 @@
                 <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">2</div>
                 <div>
                   <p class="text-sm font-semibold text-gray-800">Person registriert sich</p>
-                  <p class="text-xs text-gray-500 mt-0.5">Die Person meldet sich über deinen Link bei der Fahrschule an.</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Die Person meldet sich über deinen Link bei {{ tenantDisplayName }} an.</p>
                 </div>
               </div>
               <div class="flex gap-3">
                 <div class="w-7 h-7 rounded-full bg-green-100 text-green-700 font-bold text-sm flex items-center justify-center shrink-0">3</div>
                 <div>
-                  <p class="text-sm font-semibold text-gray-800">Erste Fahrstunde bezahlt</p>
-                  <p class="text-xs text-gray-500 mt-0.5">Sobald diese Person die erste Fahrstunde bezahlt, wird dir automatisch eine Prämie gutgeschrieben.</p>
+                  <p class="text-sm font-semibold text-gray-800">Erste {{ t.appointment }} bezahlt</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Sobald diese Person die erste {{ t.appointment }} bezahlt, wird dir automatisch eine Prämie gutgeschrieben.</p>
                 </div>
               </div>
             </div>
@@ -703,7 +703,7 @@
             </div>
 
             <!-- Note -->
-            <p class="text-xs text-gray-400 border-t pt-3">Das Guthaben wird deinem Konto gutgeschrieben und kann für Fahrstunden verwendet oder ausgezahlt werden.</p>
+            <p class="text-xs text-gray-400 border-t pt-3">Das Guthaben wird deinem Konto gutgeschrieben und kann für {{ t.appointmentsPlural }} verwendet oder ausgezahlt werden.</p>
           </div>
         </div>
       </div>
@@ -913,7 +913,7 @@
           <!-- Loading State -->
           <div v-if="isLoading" class="text-center py-8">
             <LoadingLogo size="md" />
-            <p class="text-gray-500 mt-2">Fahrlehrer werden geladen...</p>
+            <p class="text-gray-500 mt-2">{{ t.staffPlural }} werden geladen...</p>
           </div>
 
           <!-- School Contact Info -->
@@ -922,7 +922,7 @@
             class="rounded-lg p-4 mb-6 border"
             :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }"
           >
-            <h3 class="font-semibold mb-3" :style="{ color: primaryColor }">Meine Fahrschule</h3>
+            <h3 class="font-semibold mb-3" :style="{ color: primaryColor }">{{ t.businessNoun }}</h3>
             <div class="space-y-2">
            
               <div v-if="currentTenantBranding.contact?.email" class="flex items-center gap-2 text-sm" :style="{ color: primaryColor }">
@@ -946,7 +946,7 @@
 
           <!-- Instructors List -->
           <div v-if="instructors && instructors.length > 0" class="space-y-2">
-            <h3 class="font-semibold text-gray-900 mb-3">Meine Fahrlehrer</h3>
+            <h3 class="font-semibold text-gray-900 mb-3">Meine {{ t.staffPlural }}</h3>
             <div 
               v-for="instructor in instructors" 
               :key="instructor.id"
@@ -980,7 +980,7 @@
 
           <!-- No Instructors -->
           <div v-else class="text-center py-8">
-            <p class="text-gray-600">Noch keine Fahrlehrer. Buchen Sie Ihre erste Fahrstunde!</p>
+            <p class="text-gray-600">Noch keine {{ t.staffPlural }}. Buche deine erste {{ t.appointment }}!</p>
           </div>
         </div>
       </div>
@@ -1076,9 +1076,11 @@ import UpcomingLessonsModal from './UpcomingLessonsModal.vue'
 import { useCustomerPayments } from '~/composables/useCustomerPayments'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 import { useTenant } from '~/composables/useTenant'
 import { replacePlaceholders } from '~/utils/reglementPlaceholders'
 import { checkFeatureFlag } from '~/utils/featureFlags'
+import { useFeatures } from '~/composables/useFeatures'
 import ProfileModal from './ProfileModal.vue'
 import { useCalendarSync } from '~/composables/useCalendarSync'
 
@@ -1086,12 +1088,17 @@ import { useCalendarSync } from '~/composables/useCalendarSync'
 const authStore = useAuthStore()
 const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
 const { loadTenantBrandingById, primaryColor, secondaryColor, accentColor, currentTenantBranding } = useTenantBranding()
+const { t, isDrivingSchool } = useTerminology()
 
 useStatusBar({
   backgroundColor: () => primaryColor.value,
   style: 'light'
 })
 const { currentTenant, loadTenant, setTenant } = useTenant()
+
+const tenantDisplayName = computed(
+  () => currentTenantBranding.value?.name || currentTenant.value?.name || t.value.businessNoun,
+)
 
 // State
 const isLoading = ref(true)
@@ -1140,7 +1147,7 @@ const affiliateRewards = computed(() => {
 const affiliateDetailTitle = computed(() => ({
   all: 'Alle Registrierungen',
   pending: 'Registrierungen',
-  credited: '1. Fahrstunde bezahlt',
+  credited: `1. ${t.value.appointment} bezahlt`,
   earnings: 'Einnahmen',
   leads: 'Interessenten',
 }[affiliateDetailFilter.value]))
@@ -1208,6 +1215,26 @@ async function loadCoursesFeatureEnabled() {
     coursesEnabled.value = false
   } finally {
     coursesGateResolved.value = true
+  }
+}
+
+/** Lesson-Karte: allow_online_booking → „buchen“ vs „anfragen“ (Default true wie Booking-Page) */
+const { isEnabled: isFeatureEnabled, load: loadTenantFeatures } = useFeatures()
+const onlineBookingEnabled = computed(() => isFeatureEnabled('allow_online_booking', true))
+const lessonBookingTitle = computed(() =>
+  onlineBookingEnabled.value ? `${t.value.appointmentsPlural} buchen` : `${t.value.appointment} anfragen`
+)
+const lessonBookingSubtitle = computed(() =>
+  onlineBookingEnabled.value ? 'Direkt online buchen' : 'Terminwunsch senden'
+)
+
+async function loadOnlineBookingFeature() {
+  try {
+    const tenantId = userData.value?.tenant_id
+    if (!tenantId) return
+    await loadTenantFeatures(tenantId)
+  } catch (e) {
+    logger.warn('⚠️ loadOnlineBookingFeature failed:', e)
   }
 }
 
@@ -1304,7 +1331,7 @@ const getTenantSlugOrAbort = (context: string): string | null => {
   const slug = currentTenant.value?.slug
   if (!slug) {
     logFallbackUsed('tenant-slug', `Kein Tenant-Slug verfügbar (${context}) – Navigation abgebrochen.`, { context }, 'error')
-    displayToast('error', 'Aktion nicht möglich', 'Die Fahrschule konnte nicht ermittelt werden. Bitte lade die Seite neu.')
+    displayToast('error', 'Aktion nicht möglich', `${t.value.businessNoun} konnte nicht ermittelt werden. Bitte lade die Seite neu.`)
     return null
   }
   return slug
@@ -1386,7 +1413,7 @@ const recentEvaluations = computed(() => {
       lessonEvaluations.push({
         lesson_id: lesson.id,
         lesson_date: lesson.start_time,
-        lesson_title: lesson.title || 'Fahrstunde',
+        lesson_title: lesson.title || t.value.appointment,
         sort_date: new Date(lesson.start_time).getTime(),
         criteria_evaluations: lesson.criteria_evaluations,
         average_rating: lesson.criteria_evaluations.reduce((sum: number, criteriaEval: any) => sum + criteriaEval.criteria_rating, 0) / lesson.criteria_evaluations.length
@@ -1421,11 +1448,11 @@ async function addNextAppointmentToCalendar() {
     || apt.location_name
     || ''
   await addToCalendar({
-    title: apt.type ? `Fahrlektion (${apt.type})` : 'Fahrlektion',
+    title: apt.type ? `${t.value.appointment} (${apt.type})` : t.value.appointment,
     startDate: new Date(apt.start_time),
     endDate: new Date(apt.end_time),
     location: locationStr,
-    notes: staffName ? `Fahrlehrer: ${staffName}` : undefined,
+    notes: staffName ? `${t.value.staff}: ${staffName}` : undefined,
     appointmentId: apt.id,
   })
 }
@@ -1854,12 +1881,12 @@ const loadAllData = async () => {
 
 // Helper: Event Type Label
 const getEventTypeLabel = (code: string | null | undefined) => {
-  if (!code) return 'Fahrlektion'
+  if (!code) return t.value.appointment
   const c = String(code).toLowerCase()
   if (c.includes('exam') || c === 'prüfung') return 'Prüfung'
   if (c.includes('theor')) return 'Theorielektion'
-  if (c.includes('lesson') || c === 'fahrlektion') return 'Fahrlektion'
-  return 'Fahrlektion'
+  if (c.includes('lesson') || c === 'fahrlektion') return t.value.appointment
+  return t.value.appointment
 }
 
 const getInstructorName = (appointment: any) => {
@@ -2426,7 +2453,12 @@ onMounted(async () => {
     await loadAllData()
     
     // Feature-Flags parallel (keine Verzögerung der Affiliate-Karte hinter Shop-Request)
-    await Promise.all([loadShopFeatureEnabled(), loadCoursesFeatureEnabled(), loadAffiliateStats()])
+    await Promise.all([
+      loadShopFeatureEnabled(),
+      loadCoursesFeatureEnabled(),
+      loadOnlineBookingFeature(),
+      loadAffiliateStats(),
+    ])
     
     // Show payment status toast
     if (paymentSuccess) {

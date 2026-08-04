@@ -184,7 +184,7 @@
               <div>
                 <p class="text-sm font-medium text-amber-800">Account noch nicht aktiviert</p>
                 <p class="text-sm text-amber-700 mt-1">
-                  Sie wurden von Ihrer Fahrschule erfasst, haben die Registrierung aber noch nicht abgeschlossen.
+                  Sie wurden von {{ brandName || 'Ihrem Unternehmen' }} erfasst, haben die Registrierung aber noch nicht abgeschlossen.
                   Geben Sie Ihre Telefonnummer ein, um einen neuen Registrierungslink per SMS zu erhalten.
                 </p>
               </div>
@@ -1050,7 +1050,7 @@ const handlePasswordReset = async () => {
       if (response?.code === 'ACCOUNT_PENDING') {
         resetSuccess.value = response.hasSms
           ? 'Ihr Account ist noch nicht aktiviert. Wir haben Ihnen einen Registrierungslink per SMS gesendet.'
-          : 'Ihr Account ist noch nicht aktiviert. Bitte kontaktieren Sie Ihre Fahrschule für einen Registrierungslink.'
+          : `Ihr Account ist noch nicht aktiviert. Bitte kontaktieren Sie ${brandName.value || 'Ihr Unternehmen'} für einen Registrierungslink.`
         resetForm.value.email = ''
         resetForm.value.phone = ''
         setTimeout(() => {
@@ -1078,7 +1078,7 @@ const handlePasswordReset = async () => {
     } else if (response?.code === 'NOT_FOUND') {
       resetNotFound.value = resetContactMethod.value
     } else if (response?.code === 'NO_EMAIL') {
-      resetError.value = 'Ihr Account hat keine E-Mail-Adresse hinterlegt. Bitte kontaktieren Sie Ihre Fahrschule.'
+      resetError.value = `Ihr Account hat keine E-Mail-Adresse hinterlegt. Bitte kontaktieren Sie ${brandName.value || 'Ihr Unternehmen'}.`
     } else {
       resetError.value = response?.message || 'Fehler beim Senden des Magic Links. Bitte versuchen Sie es später erneut.'
     }

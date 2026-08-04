@@ -161,6 +161,8 @@
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Weitere</p>
             <NuxtLink to="/admin/marketing" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/marketing') ? 'drawer-active' : ''">Marketing</NuxtLink>
+            <NuxtLink to="/admin/website/setup" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/website') ? 'drawer-active' : ''">Website</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('product_sales_enabled')" to="/admin/products" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/products') ? 'drawer-active' : ''">Produkte</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('data_management_enabled')" to="/admin/data-management" @click="showMobileMenu = false"

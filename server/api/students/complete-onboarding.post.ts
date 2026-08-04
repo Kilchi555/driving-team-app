@@ -8,9 +8,11 @@ import { sanitizeString } from '~/server/utils/validators'
 import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { sendWelcomeEmail } from '~/server/utils/send-welcome-email'
+import { notifyTenantAdminsNewClient } from '~/server/utils/notify-new-client-registration'
 
 export default defineEventHandler(async (event) => {
-  let businessNoun = 'Fahrschule'
+  let businessNoun = 'Unternehmen'
   try {
     const body = await readBody(event)
     logger.debug('📝 Complete onboarding request received')
@@ -524,6 +526,30 @@ export default defineEventHandler(async (event) => {
       sourceLabel: 'Onboarding abgeschlossen',
     })
 
+    // Welcome email with login link (same as register-client) — allows short onboarding SMS without login URL
+    try {
+      await sendWelcomeEmail({
+        role: 'client',
+        to: email.toLowerCase().trim(),
+        firstName: sanitizedFirstName,
+        tenantId: user.tenant_id,
+      })
+      logger.debug('✅ Welcome email sent after onboarding completion')
+    } catch (emailErr: any) {
+      logger.warn('⚠️ Welcome email failed after onboarding (non-critical):', emailErr?.message)
+    }
+
+    await notifyTenantAdminsNewClient({
+      tenantId: user.tenant_id,
+      clientUserId: user.id,
+      firstName: sanitizedFirstName,
+      lastName: sanitizedLastName,
+      email: email.toLowerCase().trim(),
+      phone: sanitizedPhone,
+      categories: Array.isArray(categoryValue) ? categoryValue : categoryValue ? [categoryValue] : null,
+      source: 'onboarding',
+    })
+
     logger.debug('✅ Onboarding completed successfully for user:', user.id)
 
     return {
@@ -569,7 +595,7 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-function humanizeOnboardingError(raw: string, statusCode: number, businessNoun = 'Fahrschule'): string {
+function humanizeOnboardingError(raw: string, statusCode: number, businessNoun = 'Unternehmen'): string {
   const msg = (raw || '').trim()
   const lower = msg.toLowerCase()
 
@@ -595,7 +621,7 @@ function humanizeOnboardingError(raw: string, statusCode: number, businessNoun =
   return msg
 }
 
-function onboardingErrorTip(message: string, statusCode: number, businessNoun = 'Fahrschule'): string | undefined {
+function onboardingErrorTip(message: string, statusCode: number, businessNoun = 'Unternehmen'): string | undefined {
   const lower = (message || '').toLowerCase()
   if (lower.includes('bereits') || lower.includes('anmelden')) {
     return 'Falls du dich schon registriert hast: nutze «Zum Login». Ansonsten verwende eine andere E-Mail-Adresse.'

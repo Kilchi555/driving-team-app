@@ -6,6 +6,7 @@ import { usePrimaryColor } from '~/composables/usePrimaryColor'
 const { primaryBg, primaryText, primaryBgLight } = usePrimaryColor()
 import { useTenantBranding } from '~/composables/useTenantBranding'
 const { primaryColor } = useTenantBranding()
+import { useTerminology } from '~/composables/useTerminology'
 import FullCalendar from '@fullcalendar/vue3'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -389,7 +390,9 @@ const isLoadingEvents = ref(false)
 const isInitialLoad = ref(true) // Flag für ersten Load
 const showDatePicker = ref(false) // Für Monatskalender-Dropdown
 const currentYear = ref(new Date().getFullYear())
-const tenantName = ref('Fahrschule') // ✅ NEU: Tenant name for SMS/Email
+const tenantName = ref('') // Tenant name for SMS/Email
+const { t } = useTerminology()
+tenantName.value = t.value.businessNoun
 let syncInterval: NodeJS.Timeout | null = null // Interval für Auto-Sync
 
 // ✅ NEW: Event types color map (loaded from DB)
@@ -1042,7 +1045,7 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
       
       // ✅ Handle both array and object formats for user data
       const userObj = Array.isArray(apt.user) ? apt.user?.[0] : apt.user
-      const studentName = `${userObj?.first_name || ''} ${userObj?.last_name || ''}`.trim() || 'Fahrlektion'
+      const studentName = `${userObj?.first_name || ''} ${userObj?.last_name || ''}`.trim() || t.value.appointment
       
       // ✅ Event-Titel bestimmen
       let eventTitle = ''
@@ -1527,9 +1530,9 @@ const handleEventDrop = async (dropInfo: any) => {
       // ✅ NEU: Immer SMS UND EMAIL versenden (kein Checkbox mehr)
       const phoneNumber = dropInfo.event.extendedProps?.phone
       const studentEmail = dropInfo.event.extendedProps?.email
-      const studentName = dropInfo.event.extendedProps?.student || 'Fahrschüler'
+      const studentName = dropInfo.event.extendedProps?.student || t.value.client
       const firstName = studentName?.split(' ')[0] || studentName
-      const instructorName = dropInfo.event.extendedProps?.instructor || 'dein Fahrlehrer'
+      const instructorName = dropInfo.event.extendedProps?.instructor || `dein ${t.value.staff}`
       const newTime = newStartTime
       
       logger.debug('📅 Time details:', { oldStartTime, newTime })
@@ -1620,11 +1623,11 @@ showConfirmDialog({
   details: `
     <strong>Termin:</strong> ${dropInfo.event.title}<br>
     <strong>Neue Zeit:</strong> ${newStartTime} - ${newEndTime}<br>
-    <strong>Fahrschüler:</strong> ${studentName}<br><br>
+    <strong>${t.value.client}:</strong> ${studentName}<br><br>
     
     <div class="rounded-lg p-3 border" style="background:${primaryColor.value}15;border-color:${primaryColor.value}33;">
       <div class="text-sm" style="color:${primaryColor.value};">
-        📱 Der Fahrschüler wird per E-Mail über die Terminverschiebung informiert.
+        📱 ${t.value.client} wird per E-Mail über die Terminverschiebung informiert.
       </div>
     </div>
   `,
@@ -1699,7 +1702,7 @@ showConfirmDialog({
   details: `
     <strong>Termin:</strong> ${resizeInfo.event.title}<br>
     <strong>Neue Dauer:</strong> ${durationMinutes} Minuten<br>
-    <strong>Fahrschüler:</strong> ${resizeInfo.event.extendedProps?.student || 'Unbekannt'}<br><br>
+    <strong>${t.value.client}:</strong> ${resizeInfo.event.extendedProps?.student || 'Unbekannt'}<br><br>
     
     <div class="rounded-lg p-3 border" style="background:${primaryColor.value}15;border-color:${primaryColor.value}33;">
       <div class="flex items-center gap-2 mb-2">
@@ -1709,7 +1712,7 @@ showConfirmDialog({
         </label>
       </div>
       <div class="text-xs" style="color:${primaryColor.value};">
-        Der Fahrschüler wird über die Terminänderung informiert.
+        ${t.value.client} wird über die Terminänderung informiert.
       </div>
     </div>
   `,
@@ -2311,14 +2314,14 @@ const pasteAppointmentDirectly = async () => {
 
     // Map event_type_code → lesbarer Name
     const eventTypeLabels: Record<string, string> = {
-      lesson: 'Fahrstunde',
+      lesson: t.value.appointment,
       exam: 'Prüfung',
       theory: 'Theorie',
       vku: 'VKU',
       nfa: 'NFA',
       other: 'Sonstiges',
     }
-    const eventTypeName = eventTypeLabels[clipboardAppointment.value?.event_type_code || 'lesson'] || 'Fahrstunde'
+    const eventTypeName = eventTypeLabels[clipboardAppointment.value?.event_type_code || 'lesson'] || t.value.appointment
     
     if (studentEmail) {
       logger.debug('📧 Sending confirmation email for pasted appointment...')
@@ -2631,7 +2634,7 @@ onMounted(async () => {
       }
     } catch (error) {
       console.warn('⚠️ Could not load tenant name:', error)
-      tenantName.value = 'Fahrschule'
+      tenantName.value = t.value.businessNoun
     }
     
     // 🔥 NEU: Calendar API Setup

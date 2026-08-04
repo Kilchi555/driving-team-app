@@ -10,6 +10,7 @@ import { getTenantBrandingExtended } from '~/server/utils/tenant-branding'
 import { generateEvaluationPdfHtml } from '~/server/utils/evaluation-pdf'
 import type { EvaluationPdfData, EvaluationLessonPdf } from '~/server/utils/evaluation-pdf'
 import { logger } from '~/utils/logger'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 // Lazy-load Puppeteer to avoid spawn issues on server start
 let puppeteer: any
@@ -153,6 +154,9 @@ export default defineEventHandler(async (event) => {
 
   logger.debug('📄 Generating evaluation PDF for student:', studentUserId)
 
+  const terms = await getTenantTerminology(supabase, tenantId)
+  const appointmentFallback = terms.appointment || 'Termin'
+
   // ── Load evaluation scale (rating labels + colors) ──────────────────────────
   const { data: scaleRows } = await supabase
     .from('evaluation_scale')
@@ -248,7 +252,7 @@ export default defineEventHandler(async (event) => {
     lessonHistory.push({
       date: formatDate(apt.start_time),
       durationMinutes: apt.duration_minutes || 0,
-      type: apt.type || apt.title || 'Fahrstunde',
+      type: apt.type || apt.title || appointmentFallback,
       staffName: apt.staff
         ? `${apt.staff.first_name || ''} ${apt.staff.last_name || ''}`.trim() || null
         : null,

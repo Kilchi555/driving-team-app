@@ -18,7 +18,7 @@
         </h2>
         <ol class="list-decimal list-inside space-y-2 text-gray-700">
           <li>Besuchen Sie die <NuxtLink to="/tenant-register" class="text-blue-600 hover:underline">Tenant-Registrierung</NuxtLink></li>
-          <li>Erstellen Sie einen neuen Tenant (z.B. "Test Fahrschule")</li>
+          <li>Erstellen Sie einen neuen Tenant (z.B. "Test Unternehmen")</li>
           <li>Melden Sie sich mit den neuen Anmeldedaten an</li>
           <li>Testen Sie die Tenant-Isolation in der Anwendung</li>
         </ol>
@@ -83,7 +83,7 @@
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
-            Neue Fahrschule registrieren
+            Neues Unternehmen registrieren
           </NuxtLink>
           
           <NuxtLink

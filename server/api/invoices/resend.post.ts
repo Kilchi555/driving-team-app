@@ -207,7 +207,7 @@ export default defineEventHandler(async (event) => {
       introText,
       paymentTerms,
       footerText,
-      appointmentLabel: terms.appointment || 'Fahrstunde',
+      appointmentLabel: terms.appointment || 'Termin',
     })
 
     // PDF als Anhang generieren
@@ -264,7 +264,7 @@ export default defineEventHandler(async (event) => {
         introText,
         paymentTerms,
         footerText,
-        appointmentLabel: terms.appointment || 'Fahrstunde',
+        appointmentLabel: terms.appointment || 'Termin',
       })
       pdfAttachments = [{ filename: `Rechnung_${invoice.invoice_number}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
     } catch (pdfErr: any) {

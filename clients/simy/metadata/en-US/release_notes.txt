@@ -1,11 +1,9 @@
-Welcome to Simy! The first release of the app brings you:
+Welcome to Simy — one app, three logins (client, staff, admin).
 
-• Book driving lessons online
-• Push notifications for your appointments
-• Automatic calendar sync
-• Face ID login
-• Track progress and feedback
-• Payments and invoices
-• Secure data processing in Switzerland
+• Book and manage appointments online
+• Push reminders and calendar sync
+• Biometric login
+• Progress, payments and invoices
+• For driving schools, coaching, consulting, personal training, tutoring, music school, dog training and massage
 
-We'd love your feedback at support@simy.ch.
+Feedback: support@simy.ch

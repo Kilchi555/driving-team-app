@@ -224,7 +224,7 @@ export async function createIndividualCourseInvoice(opts: {
         }],
         subtotalRappen: opts.amountRappen,
         totalRappen: total,
-        staffName: 'Fahrschule',
+        staffName: tenant?.name || 'Unternehmen',
       })
     } catch (mailErr: any) {
       logger.warn('⚠️ Course invoice email failed (invoice created):', mailErr?.message)
@@ -440,7 +440,7 @@ export async function createCompanyCourseInvoice(opts: {
         })),
         subtotalRappen: subtotal,
         totalRappen: total,
-        staffName: 'Fahrschule',
+        staffName: tenant?.name || 'Unternehmen',
       })
     } catch (mailErr: any) {
       logger.warn('⚠️ Company invoice email failed (invoice created):', mailErr?.message)
@@ -491,7 +491,7 @@ async function sendCourseInvoiceEmail(opts: {
     subtotalRappen: opts.subtotalRappen,
     discountRappen: 0,
     totalRappen: opts.totalRappen,
-    tenantName: opts.tenant?.name || 'Fahrschule',
+    tenantName: opts.tenant?.name || 'Unternehmen',
     staffName: opts.staffName,
     primaryColor: opts.tenant?.primary_color || null,
     introText: opts.tenant?.invoice_intro_text || null,
@@ -517,7 +517,7 @@ async function sendCourseInvoiceEmail(opts: {
       vatAmountRappen: 0,
       discountRappen: 0,
       totalRappen: opts.totalRappen,
-      tenantName: opts.tenant?.legal_company_name || opts.tenant?.name || 'Fahrschule',
+      tenantName: opts.tenant?.legal_company_name || opts.tenant?.name || 'Unternehmen',
       tenantStreet: [opts.tenant?.invoice_street, opts.tenant?.invoice_street_nr].filter(Boolean).join(' '),
       tenantZip: opts.tenant?.invoice_zip || '',
       tenantCity: opts.tenant?.invoice_city || '',
@@ -541,7 +541,7 @@ async function sendCourseInvoiceEmail(opts: {
 
   await sendTenantEmail(opts.tenant?.id, {
     to: opts.studentEmail,
-    subject: `Rechnung ${opts.invoiceNumber} – ${opts.tenant?.name || 'Fahrschule'}`,
+    subject: `Rechnung ${opts.invoiceNumber} – ${opts.tenant?.name || 'Unternehmen'}`,
     html,
     attachments,
   })

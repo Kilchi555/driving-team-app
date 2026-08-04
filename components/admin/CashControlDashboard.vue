@@ -117,7 +117,7 @@
                   <p class="text-sm text-gray-600">{{ formatDateTime(transaction.appointment_start_time) }}</p>
                 </div>
                 <div>
-                  <p class="text-xs sm:text-sm font-medium text-gray-900">Fahrlehrer</p>
+                  <p class="text-xs sm:text-sm font-medium text-gray-900">{{ t.staff }}</p>
                   <p class="text-sm text-gray-600">{{ transaction.instructor_name }}</p>
                 </div>
                 <div>
@@ -287,6 +287,8 @@
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { formatDate, formatDateTime } from '~/utils/dateUtils'
+
+const { t } = useTerminology()
 
 // Props
 interface Props {

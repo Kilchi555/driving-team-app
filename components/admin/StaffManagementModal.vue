@@ -3,7 +3,7 @@
     <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl max-h-[calc(100svh-80px-env(safe-area-inset-bottom,0px))] overflow-y-auto shadow-lg rounded-md bg-white admin-modal" @click.stop>
       <div class="mb-6">
         <div class="flex items-center justify-between">
-          <h3 class="text-xl font-medium text-gray-900">👨‍🏫 Neuen Fahrlehrer hinzufügen</h3>
+          <h3 class="text-xl font-medium text-gray-900">👨‍🏫 Neuen {{ t.staff }} hinzufügen</h3>
           <button @click="$emit('close')" class="text-gray-400 hover:text-gray-600">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -11,7 +11,7 @@
           </button>
         </div>
         <p class="text-sm text-gray-600 mt-2">
-          Erstellen Sie einen neuen Fahrlehrer-Account mit automatischer Kassen-Erstellung
+          Erstellen Sie einen neuen {{ t.staff }}-Account mit automatischer Kassen-Erstellung
         </p>
       </div>
 
@@ -65,15 +65,15 @@
 
         <!-- Staff Settings -->
         <div class="bg-blue-50 rounded-lg p-4">
-          <h4 class="font-medium text-gray-900 mb-4">Fahrlehrer-Einstellungen</h4>
+          <h4 class="font-medium text-gray-900 mb-4">{{ t.staff }}-Einstellungen</h4>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Fahrlehrer-Typ</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ t.staff }}-Typ</label>
               <select
                 v-model="form.staff_type"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="instructor">Fahrlehrer</option>
+                <option value="instructor">{{ t.staff }}</option>
                 <option value="theory_instructor">Theorielehrer</option>
                 <option value="exam_instructor">Prüfungsexperte</option>
               </select>
@@ -118,14 +118,14 @@
                   placeholder="Mindestens 12 Zeichen"
                 />
                 <p class="text-xs text-gray-500 mt-1">
-                  Der Fahrlehrer kann das Passwort nach dem ersten Login ändern
+                  Der {{ t.staff }} kann das Passwort nach dem ersten Login ändern
                 </p>
               </div>
             </div>
             
             <div class="bg-white border border-yellow-200 rounded p-3">
               <p class="text-xs text-yellow-800">
-                <strong>Hinweis:</strong> Nur Administratoren können Fahrlehrer-Accounts erstellen. 
+                <strong>Hinweis:</strong> Nur Administratoren können {{ t.staff }}-Accounts erstellen. 
                 Die Rolle wird automatisch auf "staff" gesetzt und eine persönliche Kasse wird erstellt.
               </p>
             </div>
@@ -150,7 +150,7 @@
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            {{ isSubmitting ? 'Erstelle Fahrlehrer...' : 'Fahrlehrer erstellen' }}
+            {{ isSubmitting ? `Erstelle ${t.staff}...` : `${t.staff} erstellen` }}
           </button>
         </div>
       </form>
@@ -159,6 +159,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useTerminology()
 
 import { ref, computed } from 'vue'
 
@@ -233,7 +234,7 @@ const handleSubmit = async () => {
     
   } catch (err: any) {
     console.error('❌ Error creating staff:', err)
-    alert('Fehler beim Erstellen des Fahrlehrers: ' + (err.data?.message || err.message))
+    alert(`Fehler beim Erstellen des ${t.value.staff}: ` + (err.data?.message || err.message))
   } finally {
     isSubmitting.value = false
   }

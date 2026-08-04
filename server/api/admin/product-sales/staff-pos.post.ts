@@ -8,6 +8,7 @@ import { sendTenantEmail } from '~/server/utils/email'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { Wallee } from 'wallee'
 import { logger } from '~/utils/logger'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 interface POSItem {
   product_id: string
@@ -177,7 +178,8 @@ export default defineEventHandler(async (event) => {
         .eq('id', profile.tenant_id)
         .single()
 
-      const tenantName = tenant?.name || 'Ihre Fahrschule'
+      const terms = await getTenantTerminology(supabase, profile.tenant_id)
+      const tenantName = tenant?.name || terms.businessNoun || 'Ihr Unternehmen'
       const brandColor = tenant?.primary_color || '#16a34a'
       const logoUrl = tenant?.logo_url
       const productList = items.map(i =>

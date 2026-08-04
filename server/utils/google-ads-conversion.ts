@@ -274,6 +274,51 @@ export async function recordAndUploadConversion(input: ConversionUploadInput): P
 }
 
 /**
+ * Upload a paid course-registration conversion to Google Ads.
+ *
+ * course_registrations are not appointments, so we cannot write the UUID FK
+ * audit row in google_ads_conversion_uploads. Upload directly with a stable
+ * order_id (`course_<registration_id>`) for Google-side dedupe — same pattern
+ * as Meta CAPI for courses.
+ */
+export async function recordAndUploadCourseConversion(input: {
+  registration_id: string
+  tenant_id?: string | null
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
+  conversion_value_chf: number
+  conversion_date_time?: Date | string
+  hashed_email?: string | null
+  hashed_phone?: string | null
+}): Promise<void> {
+  if (!input.gclid && !input.gbraid && !input.wbraid) {
+    logger.debug(`google-ads-conversion: course ${input.registration_id} — no click id, skip`)
+    return
+  }
+
+  const conversionDateTime = input.conversion_date_time ?? new Date()
+  const result = await uploadClickConversion({
+    appointment_id: input.registration_id,
+    order_id: `course_${input.registration_id}`,
+    tenant_id: input.tenant_id,
+    gclid: input.gclid,
+    gbraid: input.gbraid,
+    wbraid: input.wbraid,
+    conversion_value_chf: input.conversion_value_chf,
+    conversion_date_time: conversionDateTime,
+    hashed_email: input.hashed_email,
+    hashed_phone: input.hashed_phone,
+  })
+
+  if (result.uploaded) {
+    logger.info(`google-ads-conversion: course ${input.registration_id} uploaded (CHF ${input.conversion_value_chf})`)
+  } else if (result.reason !== 'no_click_id') {
+    logger.warn(`google-ads-conversion: course ${input.registration_id} failed — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
+  }
+}
+
+/**
  * Default lead value for inquiry/proposal conversions (CHF). Override via env.
  * NB: the env var has previously been set to an empty string ("") in Vercel,
  * which is not `undefined`, so `?? '10'` never kicked in and every inquiry

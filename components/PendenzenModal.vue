@@ -832,7 +832,7 @@ const formatLocalTime = (dateTimeStr: string) => {
   })
 }
 
-const weekdayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+const weekdayNames = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'] // Matches BookingProposalForm: 0=Montag … 5=Samstag
 const getPreferredSlotsLabel = (proposal: any): string[] => {
   const raw = proposal?.preferred_time_slots
   if (!raw) return []
