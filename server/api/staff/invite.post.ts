@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
-import { sendTenantSMS } from '~/server/utils/sms'
+import { sendTenantSMS, normalizePhoneNumber } from '~/server/utils/sms'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
@@ -142,21 +142,31 @@ export default defineEventHandler(async (event) => {
 
     // ✅ LAYER 4: XSS Protection - Sanitize all string inputs
     const sanitizedFirstName = sanitizeString(firstName, 100)
-    const sanitizedPhone = sanitizeString(phone, 20)
+    const normalizedPhone = normalizePhoneNumber(String(phone || ''))
+    if (!normalizedPhone) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Ungültige Telefonnummer. Bitte im Format +41… oder 07x… eingeben.'
+      })
+    }
+    const sanitizedPhone = normalizedPhone
 
-    // Check: existiert bereits eine offene Einladung für diese Telefonnummer?
-    const { data: existingInvite } = await serviceSupabase
+    // Check: offene Einladung für dieselbe Nummer (Format-agnostisch)
+    const { data: pendingInvites } = await serviceSupabase
       .from('staff_invitations')
-      .select('id, status')
-      .eq('phone', sanitizedPhone)
+      .select('id, phone, status')
       .eq('tenant_id', userProfile.tenant_id)
       .eq('status', 'pending')
-      .maybeSingle()
+
+    const existingInvite = (pendingInvites || []).find((inv) => {
+      const invNorm = normalizePhoneNumber(inv.phone || '')
+      return invNorm && invNorm === sanitizedPhone
+    })
 
     if (existingInvite) {
       throw createError({
         statusCode: 409,
-        statusMessage: 'Für diese Telefonnummer existiert bereits eine offene Einladung.'
+        statusMessage: 'Für diese Telefonnummer existiert bereits eine offene Einladung. Bitte nutze «SMS erneut senden».'
       })
     }
 

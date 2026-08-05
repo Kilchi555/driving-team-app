@@ -1437,6 +1437,7 @@
                 Du erhältst eine <strong>Einladungs-SMS</strong> auf die eingetragene Telefonnummer.
                 Beim {{ labels.staff }}-Onboarding musst du eine <strong>andere E-Mail</strong> als
                 <span class="font-mono">{{ adminForm.email }}</span> verwenden — das sind zwei getrennte Accounts.
+                Falls die SMS fehlt: unter Admin → Mitarbeiter → «SMS erneut» erneut senden.
               </p>
             </div>
           </div>

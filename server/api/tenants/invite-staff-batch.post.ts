@@ -5,7 +5,7 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { sendTenantSMS } from '~/server/utils/sms'
+import { sendTenantSMS, normalizePhoneNumber } from '~/server/utils/sms'
 import { sendEmail } from '~/server/utils/email'
 import { sanitizeString } from '~/server/utils/validators'
 import { getPlanById } from '~/utils/planFeatures'
@@ -92,7 +92,7 @@ export default defineEventHandler(async (event) => {
   // Fetch the tenant admin to use as invited_by (admin is created before staff invitations)
   const { data: adminUser } = await supabase
     .from('users')
-    .select('id')
+    .select('id, phone')
     .eq('tenant_id', tenant_id)
     .eq('role', 'admin')
     .limit(1)
@@ -112,10 +112,24 @@ export default defineEventHandler(async (event) => {
     invite_link?: string
   }> = []
 
+  // Load pending invites once for format-agnostic phone duplicate checks
+  const { data: existingPendingInvites } = await supabase
+    .from('staff_invitations')
+    .select('id, phone, email')
+    .eq('tenant_id', tenant_id)
+    .eq('status', 'pending')
+
+  const pendingPhoneSet = new Set(
+    (existingPendingInvites || [])
+      .map((inv) => normalizePhoneNumber(inv.phone || '') || '')
+      .filter(Boolean)
+  )
+
   for (const entry of staff_list) {
     const firstName = sanitizeString(entry.first_name?.trim() || '', 100)
     const lastName  = sanitizeString(entry.last_name?.trim()  || '', 100)
-    const phone     = entry.phone?.trim() || null
+    const rawPhone  = entry.phone?.trim() || null
+    const phone     = rawPhone ? normalizePhoneNumber(rawPhone) : null
     const email     = entry.email?.trim().toLowerCase() || null
 
     if (!firstName) {
@@ -123,7 +137,16 @@ export default defineEventHandler(async (event) => {
       continue
     }
     if (!phone && !email) {
-      results.push({ name: `${firstName} ${lastName}`, status: 'failed', message: 'Telefon oder E-Mail erforderlich' })
+      results.push({
+        name: `${firstName} ${lastName}`,
+        status: 'failed',
+        message: rawPhone ? 'Ungültige Telefonnummer' : 'Telefon oder E-Mail erforderlich',
+      })
+      continue
+    }
+
+    if (phone && pendingPhoneSet.has(phone)) {
+      results.push({ name: `${firstName} ${lastName}`, status: 'failed', message: 'Offene Einladung für diese Telefonnummer existiert bereits' })
       continue
     }
 
@@ -186,6 +209,8 @@ export default defineEventHandler(async (event) => {
       results.push({ name: `${firstName} ${lastName}`, status: 'failed', message: insertError.message })
       continue
     }
+
+    if (phone) pendingPhoneSet.add(phone)
 
     const inviteLink = `${baseUrl}/register/staff?token=${token}`
 
