@@ -1,54 +1,62 @@
 // server/api/staff/get-rating-points.post.ts
-// Get evaluation rating scale points for a tenant
+// Get evaluation rating scale points for the authenticated user's tenant
 
-import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { defineEventHandler, createError } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
-  const { tenantId } = body
+  const user = await getAuthenticatedUserWithDbId(event)
 
-  if (!tenantId) {
+  if (!user?.tenant_id) {
     throw createError({
-      statusCode: 400,
-      message: 'tenantId is required'
+      statusCode: 401,
+      message: 'Unauthorized'
     })
   }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  )
+  const tenantId = user.tenant_id
+  const supabase = getSupabaseAdmin()
 
   try {
-    // Tenant-specific scale first
-    const { data: dataWithTenant, error: errorWithTenant } = await supabase
+    // Prefer tenant-owned scale exclusively when the tenant has customized it
+    const { data: tenantScale, error: tenantError } = await supabase
       .from('evaluation_scale')
       .select('rating, color, label')
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('rating', { ascending: true })
 
-    if (!errorWithTenant && dataWithTenant && dataWithTenant.length > 0) {
+    if (tenantError) throw tenantError
+
+    if (tenantScale && tenantScale.length > 0) {
       return {
         success: true,
-        data: dataWithTenant
+        data: tenantScale,
+        tenantId
       }
     }
 
-    // Fallback: global defaults (tenant_id IS NULL)
-    const { data: fallbackData, error: fallbackError } = await supabase
+    // Bootstrap only: tenants without any own scale see global defaults
+    const { data: globalScale, error: globalError } = await supabase
       .from('evaluation_scale')
       .select('rating, color, label')
       .is('tenant_id', null)
       .eq('is_active', true)
       .order('rating', { ascending: true })
 
-    if (fallbackError) throw fallbackError
+    if (globalError) throw globalError
+
+    // Deduplicate by rating number (global templates can contain duplicates)
+    const byRating = new Map<number, { rating: number; color: string; label: string }>()
+    for (const item of globalScale || []) {
+      if (!byRating.has(item.rating)) byRating.set(item.rating, item)
+    }
 
     return {
       success: true,
-      data: fallbackData || []
+      data: Array.from(byRating.values()).sort((a, b) => a.rating - b.rating),
+      tenantId
     }
   } catch (err: any) {
     console.error('❌ Error loading evaluation scale:', err)

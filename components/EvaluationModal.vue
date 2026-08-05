@@ -390,18 +390,20 @@ const isValid = computed(() => {
     return false
   }
   
-  // Prüfen ob alle ausgewählten Kriterien bewertet wurden
+  // Prüfen ob alle ausgewählten Kriterien bewertet wurden (innerhalb der Tenant-Skala)
+  const allowedRatings = new Set(evaluationScale.value.map((s: any) => s.rating))
   return selectedCriteriaOrder.value.every(criteriaId => {
     const rating = criteriaRatings.value[criteriaId]
-    return rating && rating >= 1 && rating <= 6
+    return rating != null && allowedRatings.has(rating)
   })
 })
 
 const missingRequiredRatings = computed(() => {
   const missing: string[] = []
+  const allowedRatings = new Set(evaluationScale.value.map((s: any) => s.rating))
   selectedCriteriaOrder.value.forEach(criteriaId => {
     const rating = criteriaRatings.value[criteriaId]
-    if (!rating || rating < 1 || rating > 6) {
+    if (rating == null || !allowedRatings.has(rating)) {
       const criteria = getCriteriaById(criteriaId)
       if (criteria) {
         missing.push(criteria.name)
@@ -419,7 +421,7 @@ const sortedCriteriaOrder = computed(() => {
   
   if (!sortByNewest.value) {
     // Sortiere nach Bewertung (schlechteste zuerst); unrated ans Ende
-    const unratedFallback = (evaluationScale.value.at(-1)?.rating ?? 6) + 1
+    const unratedFallback = (evaluationScale.value.at(-1)?.rating ?? 999) + 1
     const sorted = [...selectedCriteriaOrder.value].sort((a, b) => {
       const ratingA = criteriaRatings.value[a] || unratedFallback
       const ratingB = criteriaRatings.value[b] || unratedFallback
@@ -579,7 +581,7 @@ const loadAllCriteria = async () => {
         criteria_order: criterion.display_order || 0,
         is_required: false,
         min_rating: 1,
-        max_rating: 6,
+        max_rating: null,
         driving_categories: criterion.driving_categories || [],
         tenant_id: (criterion.evaluation_categories as any)?.[0]?.tenant_id ?? null
       }
@@ -1058,38 +1060,41 @@ watch(showDropdown, (isOpen) => {
 })
 
 // ✅ Tenant-spezifische Bewertungsskala (aus evaluation_scale)
-const FALLBACK_RATING_SCALE = [
-  { rating: 1, label: 'Besprochen', color: '#ef4444' },
-  { rating: 2, label: 'Geübt', color: '#f97316' },
-  { rating: 3, label: 'Ungenügend', color: '#eab308' },
-  { rating: 4, label: 'Genügend', color: '#3b82f6' },
-  { rating: 5, label: 'Gut', color: '#22c55e' },
-  { rating: 6, label: 'Prüfungsreif', color: '#10b981' },
-]
-
+// Kein hardcoded 1–6 Fallback — sonst sehen Tenants mit eigener 5er-Skala falsche Buttons
 const allRatings = ref<any[]>([])
 const loadedScaleTenantId = ref<string | null>(null)
 
 const evaluationScale = computed(() => {
-  const scale = allRatings.value.length > 0 ? allRatings.value : FALLBACK_RATING_SCALE
-  return [...scale].sort((a, b) => (a.rating ?? 0) - (b.rating ?? 0))
+  return [...allRatings.value].sort((a, b) => (a.rating ?? 0) - (b.rating ?? 0))
 })
+
+const resolveScaleTenantId = (): string | null => {
+  return (
+    currentTenant.value?.id ||
+    props.appointment?.tenant_id ||
+    props.currentUser?.tenant_id ||
+    props.currentUser?.profile?.tenant_id ||
+    null
+  )
+}
 
 const loadRatingColors = async () => {
   try {
-    const tenantId = currentTenant.value?.id || props.appointment?.tenant_id
-    if (!tenantId) return
-    if (loadedScaleTenantId.value === tenantId && allRatings.value.length > 0) return
+    const tenantId = resolveScaleTenantId()
+    if (loadedScaleTenantId.value && allRatings.value.length > 0) {
+      // Already loaded for this session; still refresh if tenant changed
+      if (tenantId && loadedScaleTenantId.value === tenantId) return
+    }
 
     const response = await $fetch('/api/staff/get-rating-points', {
       method: 'POST',
-      body: { tenantId }
+      body: tenantId ? { tenantId } : {}
     }) as any
 
     if (response?.success) {
       allRatings.value = (response.data || []).slice().sort((a: any, b: any) => (a.rating ?? 0) - (b.rating ?? 0))
-      loadedScaleTenantId.value = tenantId
-      logger.debug('✅ Ratings loaded for tenant:', tenantId, allRatings.value.length)
+      loadedScaleTenantId.value = response.tenantId || tenantId
+      logger.debug('✅ Ratings loaded for tenant:', loadedScaleTenantId.value, allRatings.value.length)
     }
   } catch (err) {
     logger.warn('⚠️ Failed to load ratings:', err)
