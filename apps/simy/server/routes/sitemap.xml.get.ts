@@ -5,6 +5,11 @@ export default defineEventHandler((event) => {
   const routes: { path: string; priority: string; changefreq: string; lastmod?: string }[] = [
     { path: '/',                           priority: '1.0', changefreq: 'weekly',  lastmod: today },
     { path: '/branchen',                   priority: '0.95', changefreq: 'weekly', lastmod: today },
+    { path: '/vergleich',                  priority: '0.95', changefreq: 'weekly', lastmod: today },
+    { path: '/vergleich/calendly-alternative', priority: '0.9', changefreq: 'monthly', lastmod: today },
+    { path: '/vergleich/terminli',         priority: '0.9', changefreq: 'monthly', lastmod: today },
+    { path: '/vergleich/klara',            priority: '0.9', changefreq: 'monthly', lastmod: today },
+    { path: '/vergleich/simplybook',       priority: '0.9', changefreq: 'monthly', lastmod: today },
     { path: '/preise',                     priority: '0.9', changefreq: 'monthly', lastmod: today },
     { path: '/demo',                       priority: '0.9', changefreq: 'monthly', lastmod: today },
     { path: '/fahrschule',                 priority: '0.95', changefreq: 'monthly', lastmod: today },
@@ -30,6 +35,7 @@ export default defineEventHandler((event) => {
     { path: '/partner',                    priority: '0.5', changefreq: 'monthly', lastmod: today },
     { path: '/agb',                        priority: '0.2', changefreq: 'yearly',  lastmod: today },
     { path: '/datenschutz',               priority: '0.2', changefreq: 'yearly',  lastmod: today },
+    { path: '/konto-loeschen',            priority: '0.3', changefreq: 'yearly',  lastmod: today },
   ]
 
   const xml = [

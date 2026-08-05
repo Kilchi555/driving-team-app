@@ -8,7 +8,7 @@
       <a href="/" class="flex-shrink-0">
         <img
           :src="effectiveLogo || '/simy-logo.png'"
-          alt="Simy – Fahrschulsoftware Schweiz"
+          alt="Simy – Terminsoftware Schweiz"
           class="h-8 max-w-[120px] object-contain transition-all duration-500"
           :style="{ filter: logoColorFilter }"
         />
@@ -91,6 +91,16 @@
               <a href="/marketing/seo" class="nav-dropdown-item">
                 <span class="nav-dropdown-icon">🔍</span><span>SEO</span>
               </a>
+              <div class="border-t border-gray-100 my-1" />
+              <a href="/vergleich" class="nav-dropdown-item font-semibold">
+                <span class="nav-dropdown-icon">⚖️</span><span>Vergleiche</span>
+              </a>
+              <a href="/vergleich/calendly-alternative" class="nav-dropdown-item pl-9 text-gray-500 !text-[13px]">
+                Calendly Alternative
+              </a>
+              <a href="/vergleich/terminli" class="nav-dropdown-item pl-9 text-gray-500 !text-[13px]">
+                vs Terminli
+              </a>
             </div>
           </div>
         </div>
@@ -165,6 +175,8 @@
         <a href="/marketing" class="mobile-nav-link" @click="mobileOpen=false">Marketing</a>
         <a href="/marketing/google-ads" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Google Ads</a>
         <a href="/marketing/seo" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">SEO</a>
+        <a href="/vergleich" class="mobile-nav-link" @click="mobileOpen=false">Vergleiche</a>
+        <a href="/vergleich/calendly-alternative" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Calendly Alternative</a>
 
         <a href="/preise" class="mobile-nav-link" @click="mobileOpen=false">Preise</a>
         <a href="/kunden" class="mobile-nav-link" @click="mobileOpen=false">Kunden</a>
@@ -198,7 +210,7 @@ const props = defineProps<{
   secondaryColor?: string
 }>()
 
-const registerCta = registerUrl('driving_school')
+const registerCta = registerUrl()
 
 const DEFAULT_PRIMARY = '#6000BD'
 const DEFAULT_SECONDARY = '#8B2FE8'

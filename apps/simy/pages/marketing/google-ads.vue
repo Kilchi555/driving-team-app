@@ -137,6 +137,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { breadcrumbLd, ldScripts, serviceLd } from '~/utils/schema'
 
 useHead({
   title: 'Google Ads für Terminbetriebe – Sofort mehr Kunden | Simy',
@@ -148,18 +149,18 @@ useHead({
     { property: 'og:url', content: 'https://simy.ch/marketing/google-ads' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/marketing/google-ads' }],
-  script: [{
-    type: 'application/ld+json',
-    children: JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
-        { '@type': 'ListItem', position: 2, name: 'Marketing', item: 'https://simy.ch/marketing' },
-        { '@type': 'ListItem', position: 3, name: 'Google Ads für Terminbetriebe' },
-      ],
+  script: ldScripts(
+    serviceLd({
+      name: 'Google Ads für Terminbetriebe',
+      description: 'Managed Google Ads für Schweizer Terminbetriebe — lokal, messbar, verbunden mit Simy.',
+      url: 'https://simy.ch/marketing/google-ads',
     }),
-  }],
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Marketing', url: 'https://simy.ch/marketing' },
+      { name: 'Google Ads', url: 'https://simy.ch/marketing/google-ads' },
+    ]),
+  ),
 })
 
 const openFaq = ref<number | null>(null)

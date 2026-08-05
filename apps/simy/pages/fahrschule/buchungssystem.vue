@@ -102,6 +102,8 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, faqPageLd, ldScripts, softwareAppLd } from '~/utils/schema'
+
 useHead({
   title: 'Buchungssystem Fahrschule – Online-Terminbuchung | Simy',
   meta: [
@@ -112,6 +114,23 @@ useHead({
     { property: 'og:url', content: 'https://simy.ch/fahrschule/buchungssystem' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule/buchungssystem' }],
+  script: ldScripts(
+    softwareAppLd({
+      name: 'Simy Buchungssystem für Fahrschulen',
+      description: 'Online-Terminbuchung für Fahrschulen: Schüler buchen selbst, Reminder und Kalender-Sync inklusive.',
+      url: 'https://simy.ch/fahrschule/buchungssystem',
+    }),
+    faqPageLd([
+      { q: 'Können Schüler selbst Fahrstunden buchen?', a: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink für Website, WhatsApp oder E-Mail-Signatur.' },
+      { q: 'Gibt es automatische Erinnerungen?', a: 'Ja. Simy sendet Bestätigungen und Erinnerungen per E-Mail; SMS nur ohne E-Mail-Adresse.' },
+      { q: 'Synchronisiert Simy mit Google/Apple Calendar?', a: 'Ja. Zwei-Wege-Sync: Simy-Termine erscheinen im Kalender, private Termine blockieren Buchungs-Slots.' },
+    ]),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Fahrschule', url: 'https://simy.ch/fahrschule' },
+      { name: 'Buchungssystem', url: 'https://simy.ch/fahrschule/buchungssystem' },
+    ]),
+  ),
 })
 
 const steps = [

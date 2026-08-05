@@ -160,6 +160,33 @@
       </div>
     </section>
 
+    <section v-if="v.guide" class="py-20 px-6 bg-white border-y border-gray-100">
+      <div class="max-w-3xl mx-auto">
+        <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-4">{{ v.guide.title }}</h2>
+        <p class="text-gray-600 leading-relaxed mb-10">{{ v.guide.intro }}</p>
+        <div class="space-y-8">
+          <div v-for="section in v.guide.sections" :key="section.heading">
+            <h3 class="text-lg font-bold text-gray-900 mb-2">{{ section.heading }}</h3>
+            <p class="text-sm text-gray-500 leading-relaxed">{{ section.body }}</p>
+          </div>
+        </div>
+        <div class="mt-10 flex flex-wrap gap-3">
+          <a
+            href="/vergleich/calendly-alternative"
+            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200 transition-all"
+          >Calendly Alternative</a>
+          <a
+            href="/vergleich"
+            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200 transition-all"
+          >Alle Vergleiche</a>
+          <a
+            href="/fahrschule/software"
+            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200 transition-all"
+          >Fahrschulsoftware</a>
+        </div>
+      </div>
+    </section>
+
     <section class="py-16 px-6 bg-gray-50">
       <div class="max-w-3xl mx-auto text-center">
         <h2 class="text-2xl font-extrabold text-gray-900 mb-3">{{ v.proofTitle }}</h2>
@@ -249,9 +276,13 @@ const trust = ['Keine Kreditkarte nötig', 'In Minuten startklar', 'Swiss Made',
 
 const related = computed(() =>
   VERTICALS.filter((x) => x.slug !== props.vertical.slug)
-    .slice(0, 4)
+    .slice(0, 3)
     .map((x) => ({ href: `/${x.slug}`, label: x.navLabel }))
-    .concat([{ href: '/fahrschule', label: 'Fahrschule' }, { href: '/branchen', label: 'Alle Branchen' }])
+    .concat([
+      { href: '/fahrschule', label: 'Fahrschule' },
+      { href: '/vergleich', label: 'Vergleiche' },
+      { href: '/branchen', label: 'Alle Branchen' },
+    ])
 )
 
 const canonical = computed(() => `https://simy.ch/${props.vertical.slug}`)

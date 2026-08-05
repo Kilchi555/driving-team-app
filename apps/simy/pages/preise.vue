@@ -50,7 +50,7 @@
                 <span>{{ f.text }}<span v-if="f.new" class="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded" :style="plan.highlighted ? 'background: rgba(255,255,255,0.15)' : 'background: rgba(var(--brand-rgb),0.1); color: var(--brand-primary)'">NEU</span></span>
               </li>
             </ul>
-            <a href="https://app.simy.ch/tenant-register?type=driving_school"
+            <a href="https://app.simy.ch/tenant-register"
               class="block text-center py-3.5 rounded-xl font-bold text-sm transition-all hover:opacity-90"
               :style="plan.highlighted
                 ? 'background: rgba(255,255,255,0.92); color: var(--brand-primary)'
@@ -130,11 +130,11 @@
             <div class="flex items-start justify-between mb-3">
               <div>
                 <p class="font-bold text-gray-900 text-sm">Online-Zahlungen (Wallee)</p>
-                <p class="text-xs text-gray-400 mt-0.5">TWINT, Kreditkarte & mehr für deine Schüler</p>
+                <p class="text-xs text-gray-400 mt-0.5">TWINT, Kreditkarte & mehr für deine Kunden</p>
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-green-50 text-green-700">Inklusive</span>
             </div>
-            <p class="text-xs text-gray-500 leading-relaxed">In jedem Plan enthalten. Es fällt eine Transaktionsgebühr von <strong>1.7%</strong> pro Schülerzahlung an — kein monatlicher Aufpreis.</p>
+            <p class="text-xs text-gray-500 leading-relaxed">In jedem Plan enthalten. Es fällt eine Transaktionsgebühr von <strong>1.7%</strong> pro Kundenzahlung an — kein monatlicher Aufpreis.</p>
           </div>
 
         </div>
@@ -233,7 +233,7 @@
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Kostenlos starten — heute noch</h2>
         <p class="text-white mb-8">30 Tage gratis. Keine Kreditkarte. In 5 Minuten eingerichtet.</p>
-        <a href="https://app.simy.ch/tenant-register?type=driving_school"
+        <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Jetzt kostenlos starten →
@@ -247,34 +247,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-
-useHead({
-  title: 'Preise – Simy | Terminsoftware ab CHF 49/Monat',
-  meta: [
-    { name: 'description', content: 'Simy Preise: Terminsoftware ab CHF 49/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.' },
-    { name: 'keywords', content: 'Simy preis, fahrschulapp kosten, fahrschulsoftware preis' },
-    { property: 'og:title', content: 'Preise – Simy | Terminsoftware ab CHF 49/Monat' },
-    { property: 'og:description', content: 'Simy Preise: ab CHF 49/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar.' },
-    { property: 'og:url', content: 'https://simy.ch/preise' },
-    { name: 'twitter:title', content: 'Preise – Simy | Terminsoftware ab CHF 49/Monat' },
-    { name: 'twitter:description', content: 'Simy Preise: ab CHF 49/Monat. 30 Tage kostenlos testen.' },
-  ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/preise' }],
-  script: [{
-    type: 'application/ld+json',
-    children: JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: [
-        { '@type': 'Question', name: 'Brauche ich eine Kreditkarte für den Trial?', acceptedAnswer: { '@type': 'Answer', text: 'Nein. Die 30 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten.' } },
-        { '@type': 'Question', name: 'Was kostet Simy?', acceptedAnswer: { '@type': 'Answer', text: 'Simy bietet Pläne ab CHF 49/Monat. Monatlich kündbar, keine Jahresbindung.' } },
-        { '@type': 'Question', name: 'Kann ich jederzeit kündigen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Monatlich kündbar, keine Jahresbindung. Kündigung mit 30 Tagen Frist auf Ende des Monats.' } },
-        { '@type': 'Question', name: 'Kann ich jederzeit upgraden oder downgraden?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Planwechsel sind jederzeit möglich und wirken sofort. Beim Upgrade wird der Differenzbetrag anteilsmässig berechnet, beim Downgrade gibt es eine Gutschrift auf die nächste Rechnung.' } },
-        { '@type': 'Question', name: 'Wie funktioniert die Abrechnung?', acceptedAnswer: { '@type': 'Answer', text: 'Monatlich per TWINT, Kreditkarte oder Banküberweisung. Bei Jahresabo einmal jährlich.' } },
-      ],
-    }),
-  }],
-})
+import { breadcrumbLd, faqPageLd, ldScripts, productOffersLd } from '~/utils/schema'
+import { STARTING_PRICE_CHF } from '~/data/pricing'
 
 const openFaq = ref<number | null>(null)
 
@@ -341,8 +315,8 @@ const comparison: { label: string; starter: boolean | string; pro: boolean | str
   { label: 'Kassenverwaltung', starter: true, pro: true, enterprise: true },
   { label: 'Gutscheine & Rabatte', starter: true, pro: true, enterprise: true },
   { label: 'Auswertungen & Statistiken', starter: true, pro: true, enterprise: true },
-  { label: 'Prüfungsverwaltung', starter: true, pro: true, enterprise: true },
-  { label: 'Ausbildungsauswertungen', starter: true, pro: true, enterprise: true },
+  { label: 'Prüfungen & Fortschritt', starter: true, pro: true, enterprise: true },
+  { label: 'Fortschritts-Auswertungen', starter: true, pro: true, enterprise: true },
   { label: 'Native App (iOS & Android)', starter: true, pro: true, enterprise: true },
   { label: 'Kursbuchungsseite', starter: 'Add-on', pro: true, enterprise: true },
   { label: 'Affiliate-System', starter: 'Add-on', pro: 'Add-on', enterprise: true },
@@ -361,6 +335,37 @@ const faqs = [
   { q: 'Was passiert mit meinen Daten, wenn ich kündige?', a: 'Du kannst alle deine Daten jederzeit exportieren. Nach der Kündigung werden die Daten für 30 Tage gespeichert, dann endgültig gelöscht.' },
   { q: 'Gibt es Rabatte für mehrere Standorte?', a: 'Ja, für Betriebe mit mehreren Standorten haben wir individuelle Enterprise-Angebote. Kontaktiere uns für ein massgeschneidertes Angebot.' },
 ]
+
+useHead(() => ({
+  title: `Preise – Simy | Terminsoftware ab CHF ${STARTING_PRICE_CHF}/Monat`,
+  meta: [
+    { name: 'description', content: `Simy Preise: Terminsoftware ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.` },
+    { name: 'keywords', content: 'Simy preis, terminsoftware kosten, online buchungssystem preis schweiz' },
+    { property: 'og:title', content: `Preise – Simy | Terminsoftware ab CHF ${STARTING_PRICE_CHF}/Monat` },
+    { property: 'og:description', content: `Simy Preise: ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar.` },
+    { property: 'og:url', content: 'https://simy.ch/preise' },
+    { name: 'twitter:title', content: `Preise – Simy | Terminsoftware ab CHF ${STARTING_PRICE_CHF}/Monat` },
+    { name: 'twitter:description', content: `Simy Preise: ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen.` },
+  ],
+  link: [{ rel: 'canonical', href: 'https://simy.ch/preise' }],
+  script: ldScripts(
+    productOffersLd({
+      name: 'Simy Terminsoftware',
+      description: 'Online-Buchung, Abrechnung und App für Schweizer Selbständige und KMUs.',
+      url: 'https://simy.ch/preise',
+      plans: plans.value.map((p) => ({
+        name: p.name,
+        price: p.price,
+        description: p.tagline,
+      })),
+    }),
+    faqPageLd(faqs),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Preise', url: 'https://simy.ch/preise' },
+    ]),
+  ),
+}))
 </script>
 
 <style scoped>

@@ -30,7 +30,7 @@
         </div>
 
         <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 mb-5 leading-tight">
-          Terminsoftware.<br>
+          Dein KMU.<br>
           <span :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }">
             Auf Autopilot.
           </span>
@@ -49,13 +49,13 @@
             <svg v-else class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
             30 Tage gratis testen
           </a>
-          <NuxtLink to="/demo"
+          <a href="#branding-preview"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg border-2 transition-all"
             :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }"
             @mouseenter="(e) => (e.currentTarget as HTMLElement).style.background = `rgba(var(--brand-rgb), 0.05)`"
             @mouseleave="(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'">
-            Live-Demo ansehen
-          </NuxtLink>
+            In deinen Farben testen
+          </a>
         </div>
         <p class="text-sm text-gray-400 mb-8">Keine Kreditkarte · Monatlich kündbar · Schweizer Server</p>
 
@@ -306,8 +306,8 @@
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-14">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Drei Wege zu Simy</p>
-          <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Was suchst du für deine Fahrschule?</h2>
-          <p class="text-gray-500 text-lg max-w-2xl mx-auto">Egal ob du nur ein Online-Buchungssystem brauchst, eine App für unterwegs willst oder eine komplette Fahrschulsoftware – wir haben den passenden Weg.</p>
+          <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Was suchst du für deinen Betrieb?</h2>
+          <p class="text-gray-500 text-lg max-w-2xl mx-auto">Egal ob Online-Buchung, App für unterwegs oder die komplette Betriebssoftware — wir haben den passenden Einstieg. Besonders stark bei Fahrschulen, offen für weitere Branchen.</p>
         </div>
 
         <div class="grid md:grid-cols-3 gap-6">
@@ -368,12 +368,47 @@
 
         <div class="mt-12 text-center">
           <p class="text-sm text-gray-500 mb-4">Nicht nur Fahrschulen — Simy hat Vorlagen für weitere Branchen.</p>
+          <div class="flex flex-wrap justify-center gap-3">
+            <NuxtLink
+              to="/branchen"
+              class="inline-flex items-center gap-2 text-sm font-bold px-5 py-3 rounded-xl border border-gray-200 hover:border-purple-200 transition-all"
+              :style="{ color: primaryColor }"
+            >
+              Alle Branchen ansehen →
+            </NuxtLink>
+            <NuxtLink
+              to="/vergleich"
+              class="inline-flex items-center gap-2 text-sm font-bold px-5 py-3 rounded-xl border border-gray-200 hover:border-purple-200 transition-all text-gray-700"
+            >
+              Software vergleichen →
+            </NuxtLink>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── BOFU: Comparison hub teaser ─────────────────────────────────────── -->
+    <section class="py-16 px-6 bg-white border-y border-gray-100">
+      <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-10">
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Vergleiche</p>
+          <h2 class="text-3xl font-extrabold text-gray-900 mb-3">Simy statt Tool-Zoo</h2>
+          <p class="text-gray-500 max-w-2xl mx-auto">
+            Du vergleichst gerade Calendly, Terminli oder KLARA? Hier die ehrlichen Gegenüberstellungen —
+            für Schweizer Selbständige und KMUs bis 20 Mitarbeitende.
+          </p>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <NuxtLink
-            to="/branchen"
-            class="inline-flex items-center gap-2 text-sm font-bold px-5 py-3 rounded-xl border border-gray-200 hover:border-purple-200 transition-all"
-            :style="{ color: primaryColor }"
+            v-for="cmp in comparisonTeasers"
+            :key="cmp.to"
+            :to="cmp.to"
+            class="rounded-2xl border border-gray-100 p-5 hover:border-purple-200 hover:shadow-md transition-all"
           >
-            Alle Branchen ansehen →
+            <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">vs</p>
+            <h3 class="font-extrabold text-gray-900 mb-2">{{ cmp.name }}</h3>
+            <p class="text-xs text-gray-500 leading-relaxed mb-3">{{ cmp.blurb }}</p>
+            <span class="text-sm font-bold" :style="{ color: primaryColor }">Vergleich →</span>
           </NuxtLink>
         </div>
       </div>
@@ -1152,17 +1187,17 @@
         <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
           Bereit, dein Unternehmen<br>auf Autopilot zu schalten?
         </h2>
-        <p class="text-lg mb-10" style="color: rgba(255,255,255,0.7);">Starte heute mit 30 Tagen kostenlos – keine Kreditkarte, keine Bindung.</p>
+        <p class="text-lg mb-10" style="color: rgba(255,255,255,0.7);">Starte heute mit 30 Tagen kostenlos – keine Kreditkarte, monatlich kündbar.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="#" @click.prevent="goToRegister"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-black text-lg shadow-xl hover:scale-105 transition-all"
             :style="{ background: 'rgba(255,255,255,0.92)', color: primaryColor }">
             Jetzt kostenlos starten →
           </a>
-          <NuxtLink to="/demo"
+          <a href="#branding-preview"
             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-white font-bold text-lg border-2 border-white/30 hover:bg-white/10 transition-all">
-            Live-Demo ansehen
-          </NuxtLink>
+            In deinen Farben testen
+          </a>
         </div>
 
         <!-- Sekundäre Vertrauens-Links -->
@@ -1199,7 +1234,7 @@
     <section class="py-10 px-6 bg-gray-950">
       <div class="max-w-3xl mx-auto text-center">
         <p class="text-sm text-gray-400">
-          Bald: optional gebrandete Fahrschul-App im App Store —
+          Bald: optional gebrandete App im App Store —
           <a href="#branding-preview" class="text-white font-semibold underline-offset-4 hover:underline">jetzt schon mit Simy in deinen Farben starten</a>.
         </p>
       </div>
@@ -1209,7 +1244,7 @@
     <footer class="pt-16 pb-8 px-6 border-t border-gray-100 bg-white">
       <div class="max-w-6xl mx-auto">
         <!-- Sitemap grid -->
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 mb-10">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-8 mb-10">
           <!-- Brand column -->
           <div class="col-span-2 md:col-span-3 lg:col-span-2">
             <NuxtLink to="/" class="inline-flex items-center mb-4" aria-label="Simy Startseite">
@@ -1247,6 +1282,19 @@
               <li><NuxtLink to="/features/kalender" class="text-gray-500 hover:text-gray-900 transition-colors">Kalender</NuxtLink></li>
               <li><NuxtLink to="/features/rechnungen" class="text-gray-500 hover:text-gray-900 transition-colors">Rechnungen & TWINT</NuxtLink></li>
               <li><NuxtLink to="/fahrschule" class="text-gray-500 hover:text-gray-900 transition-colors">Alle Funktionen</NuxtLink></li>
+            </ul>
+          </div>
+
+          <!-- Vergleich column -->
+          <div>
+            <h3 class="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4">Vergleiche</h3>
+            <ul class="space-y-2.5 text-sm">
+              <li><NuxtLink to="/vergleich" class="text-gray-500 hover:text-gray-900 transition-colors">Übersicht</NuxtLink></li>
+              <li><NuxtLink to="/vergleich/calendly-alternative" class="text-gray-500 hover:text-gray-900 transition-colors">Calendly Alternative</NuxtLink></li>
+              <li><NuxtLink to="/vergleich/terminli" class="text-gray-500 hover:text-gray-900 transition-colors">vs Terminli</NuxtLink></li>
+              <li><NuxtLink to="/vergleich/klara" class="text-gray-500 hover:text-gray-900 transition-colors">vs KLARA</NuxtLink></li>
+              <li><NuxtLink to="/vergleich/simplybook" class="text-gray-500 hover:text-gray-900 transition-colors">vs SimplyBook</NuxtLink></li>
+              <li><NuxtLink to="/branchen" class="text-gray-500 hover:text-gray-900 transition-colors">Branchen</NuxtLink></li>
             </ul>
           </div>
 
@@ -1595,7 +1643,7 @@ useHead({
             name: 'Welche Zahlungsmethoden unterstützt Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Für deine Schüler unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.',
+              text: 'Für deine Kunden unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.',
             },
           },
           {
@@ -1619,7 +1667,7 @@ useHead({
             name: 'Was kostet Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte, keine Bindung.',
+              text: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende).',
             },
           },
         ],
@@ -1685,7 +1733,7 @@ const navSoftware = [
   { to: '/fahrschule/software', icon: '💻', title: 'Fahrschulsoftware', desc: 'Die komplette All-in-One-Lösung' },
   { to: '/fahrschule/buchungssystem', icon: '📅', title: 'Online-Buchungssystem', desc: 'Schüler buchen Fahrstunden selbst' },
   { to: '/fahrschule/app', icon: '📱', title: 'Fahrlehrer-App', desc: 'iOS & Android für unterwegs' },
-  { to: '/features/kalender', icon: '🗓️', title: 'Kalender & Terminplanung', desc: 'Multi-Fahrlehrer-Sync & Erinnerungen' },
+  { to: '/features/kalender', icon: '🗓️', title: 'Kalender & Terminplanung', desc: 'Multi-Mitarbeiter-Sync & Erinnerungen' },
   { to: '/features/rechnungen', icon: '💳', title: 'Rechnungen & TWINT', desc: 'Automatisierte Schweizer Abrechnung' },
   { to: '/fahrschule', icon: '🚗', title: 'Alle Funktionen ansehen →', desc: 'Übersicht für deine Fahrschule' },
 ]
@@ -1741,7 +1789,6 @@ const brandCssVars = computed(() => ({
 
 const registerUrl = computed(() => {
   const params = new URLSearchParams({
-    type: 'driving_school',
     primary_color: primaryColor.value,
     secondary_color: secondaryColor.value,
     accent_color: accentColor.value,
@@ -1999,6 +2046,13 @@ const roiHours = computed(() => roi.hoursPerDay)
 const roiSaving = computed(() => Math.round(roi.hourlyRate * roi.hoursPerDay * 22 / 10) * 10)
 
 // ─── Static Content ──────────────────────────────────────────────────────────
+const comparisonTeasers = [
+  { to: '/vergleich/calendly-alternative', name: 'Calendly', blurb: 'Scheduler vs. Schweizer Betrieb mit QR & TWINT.' },
+  { to: '/vergleich/terminli', name: 'Terminli', blurb: 'Schlanke Buchung vs. All-in-One mit Team & App.' },
+  { to: '/vergleich/klara', name: 'KLARA', blurb: 'Suite-Modul vs. spezialisierter Terminbetrieb.' },
+  { to: '/vergleich/simplybook', name: 'SimplyBook', blurb: 'Globale Module vs. Schweiz-first Billing.' },
+]
+
 const pains = [
   { icon: '⏰', title: 'Manuelle Terminverwaltung', text: 'Zeitraubendes Planen von Lektionen – alles per Whatsapp, SMS oder Telefon.' },
   { icon: '💸', title: 'Vergessene Rechnungen', text: 'Offene Posten, die durch die Lappen gehen. Mahnungen manuell schreiben. Zahlungen mühsam nachverfolgen. Quittungen schreiben etc.' },
@@ -2006,7 +2060,7 @@ const pains = [
 ]
 
 const features = computed(() => [
-  { icon: '📅', title: 'Kalender & Terminplanung', desc: 'Simy-Termine erscheinen in Google/Apple/Outlook. Private Termine dort blockieren automatisch deine Verfügbarkeit — Schüler sehen dort keine freien Slots.', alpha: 0.10, link: '/features/kalender' },
+  { icon: '📅', title: 'Kalender & Terminplanung', desc: 'Simy-Termine erscheinen in Google/Apple/Outlook. Private Termine dort blockieren automatisch deine Verfügbarkeit — Kunden sehen dort keine freien Slots.', alpha: 0.10, link: '/features/kalender' },
   { icon: '💳', title: 'Rechnungen & TWINT-Zahlungen', desc: 'Online-Zahlung mit TWINT, Debit- und Kreditkarte inkl. PostFinance, Rechnungen mit 2 Klicks erstellt und versendet, Mahnungen und Gutschriften einfach erstellt.', alpha: 0.07, link: '/features/rechnungen' },
   { icon: '👥', title: 'Kundenverwaltung', desc: 'Alle Schülerdaten, Lernfortschritte, Dokumente und Notizen zentral an einem Ort.', alpha: 0.13, link: '/fahrschule/software' },
   { icon: '📱', title: 'Fahrlehrer-App (iOS & Android)', desc: 'Native App für unterwegs – Kalender, Schüler, Rechnungen und Push-Erinnerungen immer griffbereit.', alpha: 0.10, link: '/fahrschule/app' },
@@ -2036,26 +2090,26 @@ const PLAN_STATIC = [
   {
     key: 'starter',
     name: 'Starter',
-    tagline: 'Alles für den Einzelfahrlehrer',
+    tagline: 'Für Einzelpersonen & Solo',
     fallbackPrice: '49',
     highlighted: true,
-    featureList: ['1 Fahrlehrer', 'Onlineterminbuchung', 'Kundenverwaltung', 'Rechnungen & Zahlungen', 'Prüfungsverwaltung', 'E-Mail Support'],
+    featureList: ['1 Mitarbeiter', 'Online-Terminbuchung', 'Kundenverwaltung', 'Rechnungen & Zahlungen', 'E-Mail Support'],
   },
   {
     key: 'professional',
     name: 'Professional',
-    tagline: 'Für wachsende Fahrschulen',
+    tagline: 'Für wachsende Betriebe',
     fallbackPrice: '149',
     highlighted: false,
-    featureList: ['Bis 5 Fahrlehrer', 'Alles aus Starter', 'Kursbuchungsseite', 'Prioritäts-Support'],
+    featureList: ['Bis 5 Mitarbeiter', 'Alles aus Starter', 'Kursbuchungsseite', 'Prioritäts-Support'],
   },
   {
     key: 'enterprise',
     name: 'Enterprise',
-    tagline: 'Für grosse Fahrschulen & Ketten',
+    tagline: 'Für Teams & mehrere Standorte',
     fallbackPrice: '259',
     highlighted: false,
-    featureList: ['Bis zu 10 Fahrlehrer', 'Alles aus Professional', 'Affiliate-System', 'Dedizierter Support'],
+    featureList: ['Bis zu 10 Mitarbeiter', 'Alles aus Professional', 'Affiliate-System', 'Dedizierter Support'],
   },
 ]
 
@@ -2069,10 +2123,10 @@ const pricingPlans = computed(() =>
 const faqs = reactive([
   { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein, der 30-Tage-Trial ist vollständig kostenlos und ohne Kreditkarte. Du wirst erst nach dem Trial zur Kasse gebeten – und kannst jederzeit kündigen.', open: false },
   { q: 'Wie funktioniert die Kündigung?', a: 'Du kannst monatlich kündigen. Die Kündigungsfrist beträgt 1 Monat auf Ende des laufenden Monats. Keine Jahresbindung, keine versteckten Kosten.', open: false },
-  { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: 'Für deine Schüler unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.', open: false },
+  { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: 'Für deine Kunden unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.', open: false },
   { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },
   { q: 'Sind meine Daten sicher?', a: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.', open: false },
-  { q: 'Was kostet Simy?', a: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte, keine Bindung.', open: false },
+  { q: 'Was kostet Simy?', a: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende).', open: false },
 ])
 
 // ─── App Live Demo ───────────────────────────────────────────────────────────

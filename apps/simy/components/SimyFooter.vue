@@ -6,13 +6,13 @@
         <!-- Brand -->
         <div class="col-span-2">
           <a href="/">
-            <img :src="'/simy-logo.png'" alt="Simy Fahrschulsoftware" class="h-7 mb-4 opacity-90" style="filter: brightness(0) invert(1)" />
+            <img :src="'/simy-logo.png'" alt="Simy – Terminsoftware Schweiz" class="h-7 mb-4 opacity-90" style="filter: brightness(0) invert(1)" />
           </a>
           <p class="text-sm leading-relaxed max-w-xs">
             All-in-One Software für Dienstleister: Terminbuchung, Rechnungen, Website und Marketing — mit Branchen-Vorlagen.
           </p>
           <div class="mt-5">
-            <a href="https://app.simy.ch/tenant-register?type=driving_school"
+            <a href="https://app.simy.ch/tenant-register"
               class="inline-block text-sm font-bold px-5 py-2.5 rounded-xl text-white transition-all hover:opacity-90"
               style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
               30 Tage gratis →
@@ -36,15 +36,18 @@
           </ul>
         </div>
 
-        <!-- Features -->
+        <!-- Features + Vergleiche -->
         <div>
           <p class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Features</p>
           <ul class="space-y-2.5">
             <li><a href="/features/kalender" class="footer-link">Kalender & Planung</a></li>
             <li><a href="/features/rechnungen" class="footer-link">Rechnungen & Kasse</a></li>
             <li><a href="/marketing" class="footer-link">Marketing</a></li>
-            <li><a href="/marketing/google-ads" class="footer-link">Google Ads</a></li>
-            <li><a href="/marketing/seo" class="footer-link">SEO</a></li>
+            <li><a href="/vergleich" class="footer-link">Vergleiche</a></li>
+            <li><a href="/vergleich/calendly-alternative" class="footer-link">Calendly Alternative</a></li>
+            <li><a href="/vergleich/terminli" class="footer-link">vs Terminli</a></li>
+            <li><a href="/vergleich/klara" class="footer-link">vs KLARA</a></li>
+            <li><a href="/vergleich/simplybook" class="footer-link">vs SimplyBook</a></li>
           </ul>
         </div>
 

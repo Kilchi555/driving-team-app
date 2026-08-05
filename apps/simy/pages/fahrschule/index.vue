@@ -335,6 +335,17 @@ useHead({
         ],
       }),
     },
+    {
+      type: 'application/ld+json',
+      children: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
+          { '@type': 'ListItem', position: 2, name: 'Fahrschule', item: 'https://simy.ch/fahrschule' },
+        ],
+      }),
+    },
   ],
 })
 

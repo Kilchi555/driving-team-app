@@ -8,6 +8,11 @@ export type VerticalHighlight = {
   points: string[]
 }
 export type VerticalStat = { value: string; label: string }
+export type VerticalGuide = {
+  title: string
+  intro: string
+  sections: { heading: string; body: string }[]
+}
 
 export type SimyVertical = {
   /** URL path without leading slash, e.g. coaching */
@@ -45,6 +50,8 @@ export type SimyVertical = {
   highlightsTitle: string
   highlightsSub: string
   highlights: VerticalHighlight[]
+  /** Optional long-form guide (SEO depth) */
+  guide?: VerticalGuide
   /** Proof */
   proofTitle: string
   proofSub: string
@@ -71,11 +78,11 @@ export const VERTICALS: SimyVertical[] = [
     description:
       'Online-Terminbuchung und Coaching-Software für die Schweiz: Sitzungskalender, SMS-Erinnerungen, Pakete und QR-Rechnungen. 30 Tage kostenlos testen.',
     keywords:
-      'online terminbuchung coach, coaching software schweiz, terminbuchung software, klientenverwaltung coach, online terminplaner coaching',
+      'online terminbuchung coach, coaching software schweiz, terminbuchung software, kundenverwaltung coach, online terminplaner coaching',
     h1Line1: 'Online-Terminbuchung für',
     h1Highlight: 'Coaches',
     heroSub:
-      'Terminbuchungssystem, Sitzungskalender, Klientenverwaltung und Schweizer QR-Rechnungen — alles in Simy. Kein Tool-Zoo, kein Excel.',
+      'Terminbuchungssystem, Sitzungskalender, Kundenverwaltung und Schweizer QR-Rechnungen — alles in Simy. Kein Tool-Zoo, kein Excel.',
     ctaPrimary: '30 Tage kostenlos testen',
     ctaSecondary: 'So funktioniert’s',
     stats: [
@@ -113,7 +120,7 @@ export const VERTICALS: SimyVertical[] = [
       {
         icon: '📅',
         title: 'Online-Terminbuchung',
-        desc: 'Klienten buchen freie Slots selbst — rund um die Uhr, mit deinen Arbeitszeiten und Puffern.',
+        desc: 'Kunden buchen freie Slots selbst — rund um die Uhr, mit deinen Arbeitszeiten und Puffern.',
       },
       {
         icon: '💬',
@@ -132,7 +139,7 @@ export const VERTICALS: SimyVertical[] = [
       },
       {
         icon: '🧑‍💼',
-        title: 'Klientenverwaltung',
+        title: 'Kundenverwaltung',
         desc: 'Kontakte, Historie und Notizen an einem Ort — DSG-konform.',
       },
       {
@@ -160,7 +167,7 @@ export const VERTICALS: SimyVertical[] = [
         desc: 'Strukturiere Angebote nach Fokus — z. B. Stress, Fokus, Performance.',
         points: [
           'Kategorien als Leistungsbereiche',
-          'Klare Buchungsseite für Klienten',
+          'Klare Buchungsseite für Kunden',
           'Auswertungen nach Themen möglich',
         ],
       },
@@ -168,6 +175,25 @@ export const VERTICALS: SimyVertical[] = [
     proofTitle: 'Bewährt in der Schweiz',
     proofSub:
       'Dieselbe Plattform, auf der Fahrschulen und Beratungsunternehmen Termine, Rechnungen und Kunden führen — jetzt mit Coaching-Vorlagen.',
+    guide: {
+      title: 'Online-Terminbuchung für Coaches in der Schweiz — Ratgeber',
+      intro:
+        'Coaches in der Schweiz brauchen mehr als einen Kalender-Link: Sitzungstypen (Erstgespräch vs. bezahlt), No-Show-Schutz, Pakete und QR-Rechnungen. Simy bündelt das in einer Coaching-Software statt Calendly + Excel + Banking-App.',
+      sections: [
+        {
+          heading: 'Was gute Coaching-Software abdecken muss',
+          body: 'Klare Terminarten, automatische Erinnerungen (E-Mail/SMS), Kundenhistorie und Schweizer Zahlungsverkehr. Rein internationale Scheduler stoppen meist bei der Buchung — die Rechnung bleibt Handarbeit.',
+        },
+        {
+          heading: 'Warum «Online-Terminbuchung Coach» oft zu kurz greift',
+          body: 'Suchintent meint häufig den ganzen Workflow: Kunde bucht → Reminder → Sitzung → QR-Rechnung oder TWINT. Deshalb lohnt sich All-in-One gegenüber einem reinen Terminplaner.',
+        },
+        {
+          heading: 'Calendly vs. Simy für Coaches',
+          body: 'Calendly ist stark für Discovery-Calls. Für Schweizer Coaching-Praxen mit Paketen und Rechnungen ist Simy die passendere Alternative — siehe den direkten Vergleich.',
+        },
+      ],
+    },
     faqs: [
       {
         q: 'Ist Simy für Solo-Coaches geeignet?',
@@ -182,15 +208,27 @@ export const VERTICALS: SimyVertical[] = [
         a: 'Ja. Hosting und Verarbeitung erfolgen DSG-/DSGVO-konform mit Fokus auf Schweizer Anforderungen.',
       },
       {
-        q: 'Kann ich bestehende Klienten importieren?',
-        a: 'Du legst Klienten manuell an oder übernimmst sie schrittweise beim Onboarding — Support hilft bei der Einrichtung.',
+        q: 'Kann ich bestehende Kunden importieren?',
+        a: 'Du legst Kunden manuell an oder übernimmst sie schrittweise beim Onboarding — Support hilft bei der Einrichtung.',
+      },
+      {
+        q: 'Unterstützt Simy Sitzungspakete (z. B. 10er)?',
+        a: 'Ja. Du verkaufst Pakete; Simy zählt Einheiten mit — ohne Excel-Nebenrechnung.',
+      },
+      {
+        q: 'Gibt es QR-Rechnungen für Coaching?',
+        a: 'Ja. Schweizer QR-IBAN-Rechnungen gehören zum Standard-Workflow, zahlbar per Banking-App.',
+      },
+      {
+        q: 'Ist Simy eine Calendly-Alternative für Coaches?',
+        a: 'Ja, wenn du Buchung und Abrechnung zusammen willst. Details: /vergleich/calendly-alternative.',
       },
     ],
     finalTitle: 'Bereit für weniger Admin und mehr Sitzungen?',
     finalSub: '30 Tage kostenlos. Keine Kreditkarte. In Minuten startklar.',
     finalNote: 'Mit Coaching-Vorlage: Intake + Sitzung + Themenbereiche',
     schemaName: 'Simy für Coaching',
-    schemaDescription: 'Online-Terminbuchung und Coaching-Software Schweiz: Klientenverwaltung und QR-Rechnungen',
+    schemaDescription: 'Online-Terminbuchung und Coaching-Software Schweiz: Kundenverwaltung und QR-Rechnungen',
   },
   {
     slug: 'consulting',
@@ -289,6 +327,25 @@ export const VERTICALS: SimyVertical[] = [
     ],
     proofTitle: 'Gebaut für Schweizer KMUs',
     proofSub: 'Simy läuft produktiv bei Dienstleistern mit Staff, Kunden und Rechnungen.',
+    guide: {
+      title: 'Online-Terminbuchung für Berater — was zählt in der Schweiz',
+      intro:
+        'Consultants verlieren Zeit zwischen Calendly, Word-Angeboten und Banking-App. Online-Terminbuchung für Berater bedeutet in der Praxis: Discovery, bezahlte Slots, Leistungsbereiche und QR-Rechnung ohne Medienbruch.',
+      sections: [
+        {
+          heading: 'Discovery und bezahlte Beratung trennen',
+          body: 'Zwei Terminarten out of the box senken die Hürde für Erstgespräche und halten den Cashflow bei Folge-Slots klar.',
+        },
+        {
+          heading: 'Schweiz-first Billing',
+          body: 'QR-IBAN und korrekte Rechnungsadressen sind Pflicht gegenüber Treuhändern und Firmenkunden — kein US-Scheduler-Export-Chaos.',
+        },
+        {
+          heading: 'Wann Suite, wann Simy?',
+          body: 'Brauchst du volle Finanzbuchhaltung in einer Suite, prüfe KLARA. Primär Terminbetrieb und Kundenabrechnung? Dann ist Simy der direktere Fit — siehe /vergleich/klara.',
+        },
+      ],
+    },
     faqs: [
       {
         q: 'Eignet sich Simy für Freelance-Consultants?',
@@ -301,6 +358,18 @@ export const VERTICALS: SimyVertical[] = [
       {
         q: 'Gibt es eine Provision auf Buchungen?',
         a: 'Nein. Deine Buchungsseite gehört dir — keine Marktplatzgebühr.',
+      },
+      {
+        q: 'Ersetzt Simy meine Buchhaltungssoftware?',
+        a: 'Nein. Simy deckt Kundenabrechnung und Export ab; die Finanzbuchhaltung bleibt beim Treuhänder oder einer Suite.',
+      },
+      {
+        q: 'Kann ich Leistungsbereiche (z. B. IT vs. Strategie) abbilden?',
+        a: 'Ja. Kategorien strukturieren Angebote und die Buchungsseite für Kunden.',
+      },
+      {
+        q: 'Ist Simy eine Calendly-Alternative für Berater?',
+        a: 'Ja, wenn du Termin und QR-Rechnung zusammen willst. Vergleich: /vergleich/calendly-alternative.',
       },
     ],
     finalTitle: 'Mehr billable Hours, weniger Admin',
@@ -869,6 +938,25 @@ export const VERTICALS: SimyVertical[] = [
     ],
     proofTitle: 'Terminsoftware mit Billing',
     proofSub: 'Viele Massage-Tools stoppen bei Buchung — Simy liefert die Rechnung gleich mit.',
+    guide: {
+      title: 'Online-Terminbuchung für Massagepraxen — ohne Marktplatzgebühr',
+      intro:
+        'Massage-Kundinnen erwarten Online-Buchung und Reminder. Viele Tools sind Marktplätze mit Provision. Simy ist Praxis-Software: Buchung, SMS/E-Mail-Erinnerungen und QR-Rechnung — deine Kunden bleiben deine Kunden.',
+      sections: [
+        {
+          heading: 'Selbstzahler klar positionieren',
+          body: 'Simy fokussiert Wellness und Massage ohne Krankenkassen-Tarifwesen — dafür bleibt der Start schnell und die Preise klar.',
+        },
+        {
+          heading: 'Treatwell & Co. vs. eigene Buchungsseite',
+          body: 'Marktplätze bringen Sichtbarkeit, kosten aber Provision und Branding. Mit Simy steuerst du die Buchungsseite in deinem Look — ohne Kommission pro Termin.',
+        },
+        {
+          heading: 'SimplyBook oder Simy?',
+          body: 'Internationale Modul-Plattformen können viel. Für Schweiz-first Billing und schlanke Ops ist Simy oft die klarere Alternative — siehe /vergleich/simplybook.',
+        },
+      ],
+    },
     faqs: [
       {
         q: 'Unterstützt Simy Krankenkassen-Tarife?',
@@ -881,6 +969,18 @@ export const VERTICALS: SimyVertical[] = [
       {
         q: 'Gibt es eine Provision?',
         a: 'Nein. Deine Buchungen gehören dir — keine Marktplatzgebühr.',
+      },
+      {
+        q: 'Reduziert Simy No-Shows?',
+        a: 'Ja — automatische Bestätigungen und Reminder per E-Mail/SMS senken vergessene Termine spürbar.',
+      },
+      {
+        q: 'Kann ich Behandlungsarten mit unterschiedlichen Preisen anbieten?',
+        a: 'Ja. Mehrere Terminarten mit Dauer und Preis — Kunden wählen auf der Buchungsseite.',
+      },
+      {
+        q: 'Ist Simy eine Treatwell-Alternative ohne Kommission?',
+        a: 'Für bestehende Kunden und Eigenmarketing ja: Buchung + Rechnung ohne Marktplatzgebühr. Neukunden-Marketplace ersetzt Simy nicht.',
       },
     ],
     finalTitle: 'Mehr Behandlungen, weniger Telefon',
