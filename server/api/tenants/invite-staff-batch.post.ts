@@ -5,7 +5,7 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { sendTenantSMS } from '~/server/utils/sms'
+import { sendTenantSMS, normalizePhoneNumber } from '~/server/utils/sms'
 import { sendEmail } from '~/server/utils/email'
 import { sanitizeString } from '~/server/utils/validators'
 import { getPlanById } from '~/utils/planFeatures'
@@ -115,7 +115,8 @@ export default defineEventHandler(async (event) => {
   for (const entry of staff_list) {
     const firstName = sanitizeString(entry.first_name?.trim() || '', 100)
     const lastName  = sanitizeString(entry.last_name?.trim()  || '', 100)
-    const phone     = entry.phone?.trim() || null
+    const rawPhone  = entry.phone?.trim() || null
+    const phone     = rawPhone ? (normalizePhoneNumber(rawPhone) || rawPhone) : null
     const email     = entry.email?.trim().toLowerCase() || null
 
     if (!firstName) {
@@ -124,6 +125,10 @@ export default defineEventHandler(async (event) => {
     }
     if (!phone && !email) {
       results.push({ name: `${firstName} ${lastName}`, status: 'failed', message: 'Telefon oder E-Mail erforderlich' })
+      continue
+    }
+    if (rawPhone && !normalizePhoneNumber(rawPhone)) {
+      results.push({ name: `${firstName} ${lastName}`, status: 'failed', message: `Ungültige Telefonnummer: ${rawPhone}` })
       continue
     }
 
@@ -192,7 +197,8 @@ export default defineEventHandler(async (event) => {
     // ─── SMS senden ────────────────────────────────────────────────────────
     if (phone) {
       try {
-        const smsText = `Hallo ${firstName}! Willkommen bei ${tenantName}. Bitte vervollständige deine Registrierung als ${staffLabel}: ${inviteLink}`
+        // Keep message GSM-7 friendly (no umlauts) to avoid 3 UCS-2 segments
+        const smsText = `Hallo ${firstName}! Willkommen bei ${tenantName}. Bitte registriere dich als ${staffLabel}: ${inviteLink}`
         await sendTenantSMS({
           tenantId: tenant_id,
           to: phone,
@@ -204,9 +210,14 @@ export default defineEventHandler(async (event) => {
         logger.debug('✅ Onboarding-SMS gesendet an:', phone)
         continue
       } catch (smsErr: any) {
-        logger.warn('⚠️ SMS fehlgeschlagen für', phone, smsErr.message)
-        // Fallback: nur Einladungs-Link zurückgeben
-        results.push({ name: `${firstName} ${lastName}`, status: 'invited', message: `SMS fehlgeschlagen. Link: ${inviteLink}`, invite_link: inviteLink })
+        logger.warn('⚠️ SMS fehlgeschlagen für', phone, smsErr?.message || smsErr)
+        // Fallback: nur Einladungs-Link zurückgeben (UI shows this on success screen)
+        results.push({
+          name: `${firstName} ${lastName}`,
+          status: 'invited',
+          message: `SMS fehlgeschlagen (${smsErr?.message || 'unbekannt'}). Link: ${inviteLink}`,
+          invite_link: inviteLink,
+        })
         continue
       }
     }

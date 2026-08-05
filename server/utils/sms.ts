@@ -101,14 +101,32 @@ export async function sendSMS({ to, message, senderName }: SendSMSOptions) {
       logger.debug(`SMS using phone number: "${from}"`)
     }
     
-    const result = await client.messages.create({
-      body: message,
-      from: from,
-      to: normalizedTo
-    })
+    try {
+      const result = await client.messages.create({
+        body: message,
+        from: from,
+        to: normalizedTo
+      })
 
-    logger.debug('✅ SMS sent successfully:', result.sid)
-    return { success: true, messageSid: result.sid }
+      logger.debug('✅ SMS sent successfully:', result.sid)
+      return { success: true, messageSid: result.sid }
+    } catch (primaryError: any) {
+      // Alphanumeric sender IDs are often rejected/filtered if not pre-registered
+      // with the destination carrier. Retry once with the Twilio phone number.
+      if (from !== fromNumber) {
+        logger.warn(
+          `⚠️ SMS with sender "${from}" failed (${primaryError?.message || primaryError}); retrying with phone number`
+        )
+        const result = await client.messages.create({
+          body: message,
+          from: fromNumber,
+          to: normalizedTo
+        })
+        logger.debug('✅ SMS sent successfully on phone-number fallback:', result.sid)
+        return { success: true, messageSid: result.sid }
+      }
+      throw primaryError
+    }
   } catch (error) {
     console.error('❌ Error sending SMS:', error)
     throw error
@@ -183,17 +201,24 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
   const smsResult = await sendSMS({ to, message, senderName: resolvedSender })
   const messageSid = smsResult.messageSid || `sms_${Date.now()}`
 
-  const { error: logError } = await supabase.from('sms_logs').insert({
+  const logRow: Record<string, unknown> = {
     tenant_id: tenantId,
     to_phone: normalizePhoneNumber(to) || to,
     message,
     twilio_sid: messageSid,
     status: 'sent',
-    purpose,
     segment_count: segmentCount,
     billable,
     sent_at: new Date().toISOString(),
-  })
+  }
+  // purpose column may be missing until migrations/20260805_sms_logs_purpose.sql is applied
+  if (purpose) logRow.purpose = purpose
+
+  let { error: logError } = await supabase.from('sms_logs').insert(logRow)
+  if (logError?.message?.includes('purpose') && 'purpose' in logRow) {
+    delete logRow.purpose
+    ;({ error: logError } = await supabase.from('sms_logs').insert(logRow))
+  }
   if (logError) {
     logger.warn('⚠️ sms_logs insert failed (non-critical):', logError.message)
   }
