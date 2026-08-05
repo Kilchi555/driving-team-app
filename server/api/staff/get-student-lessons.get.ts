@@ -50,6 +50,7 @@ export default defineEventHandler(async (event) => {
       .select(`
         id,
         user_id,
+        tenant_id,
         start_time,
         end_time,
         type,

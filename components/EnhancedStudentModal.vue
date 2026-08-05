@@ -375,7 +375,7 @@
                           v-else
                           class="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-800"
                         >
-                          {{ evaluation.criteria_rating }}/6
+                          {{ evaluation.criteria_rating }}/{{ maxScaleRating }}
                         </span>
                       </div>
                       <p v-if="evaluation.criteria_note" class="text-xs text-gray-600 mt-1">
@@ -2316,6 +2316,10 @@ const lessonsError = ref<string | null>(null)
 const paymentsError = ref<string | null>(null)
 const examResultsError = ref<string | null>(null)
 const ratingPointsMap = ref<Record<number, { color: string; label: string }>>({}) // Map für Rating-Punkte aus DB
+const maxScaleRating = computed(() => {
+  const ratings = Object.keys(ratingPointsMap.value).map(Number)
+  return ratings.length > 0 ? Math.max(...ratings) : null
+})
 
 // Evaluation Modal State
 const showEvaluationModal = ref(false)
@@ -3108,25 +3112,14 @@ const calculateAge = (birthdate: string | null | undefined): number | null => {
 
 // Load rating points from database
 const loadRatingPoints = async () => {
-  if (!props.selectedStudent) return
-  
   try {
-    // Get tenant_id from selected student
-    const tenantId = props.selectedStudent.tenant_id
-    
-    if (!tenantId) {
-      console.warn('⚠️ No tenant_id found for loading rating points')
-      return
-    }
-    
+    const tenantId = props.selectedStudent?.tenant_id || (props.currentUser as any)?.tenant_id
+
     logger.debug('📊 Loading evaluation scale for tenant:', tenantId)
-    
-    // Load rating points via API
-    logger.debug('📊 Loading evaluation scale for tenant:', tenantId)
-    
+
     const ratingResponse = await $fetch('/api/staff/get-rating-points', {
       method: 'POST',
-      body: { tenantId }
+      body: tenantId ? { tenantId } : {}
     }) as any
 
     if (!ratingResponse?.success) {
@@ -3146,7 +3139,7 @@ const loadRatingPoints = async () => {
     
     ratingPointsMap.value = map
     logger.debug('✅ Loaded rating points:', Object.keys(map).length, 'ratings')
-    
+
   } catch (error: any) {
     console.error('❌ Error in loadRatingPoints:', error)
   }
