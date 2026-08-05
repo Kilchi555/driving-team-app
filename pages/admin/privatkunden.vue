@@ -202,8 +202,7 @@
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
               <th v-if="activeTab === 'staff'" class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 <span class="flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/></svg>
-                  Guide bearbeiten
+                  Aktionen
                 </span>
               </th>
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">E-Mail</th>
@@ -269,10 +268,32 @@
                 </span>
               </td>
 
-              <!-- Guide-Edit Toggle (only for staff tab, non-invitation, non-deleted) -->
+              <!-- Guide-Edit Toggle / Resend invite (staff tab) -->
               <td v-if="activeTab === 'staff'" class="px-5 py-3.5" @click.stop>
                 <button
-                  v-if="!user.is_invitation && !user.deleted_at"
+                  v-if="user.is_invitation && user.invitation_status !== 'expired'"
+                  @click="resendStaffInvitation(user)"
+                  :disabled="resendingInvitationId === user.id"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                  title="Einladungs-SMS erneut senden"
+                >
+                  <svg v-if="resendingInvitationId === user.id" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                  </svg>
+                  <span>{{ resendingInvitationId === user.id ? 'Senden…' : 'SMS erneut' }}</span>
+                </button>
+                <button
+                  v-else-if="user.is_invitation && user.invitation_status === 'expired'"
+                  @click="resendStaffInvitation(user)"
+                  :disabled="resendingInvitationId === user.id"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  title="Abgelaufene Einladung erneuern und per SMS senden"
+                >
+                  <span>{{ resendingInvitationId === user.id ? 'Senden…' : 'Erneuern + SMS' }}</span>
+                </button>
+                <button
+                  v-else-if="!user.is_invitation && !user.deleted_at"
                   @click="toggleGuideEdit(user)"
                   :disabled="togglingGuideEdit === user.id"
                   :title="user.can_edit_guide ? 'Zugriff entziehen' : 'Zugriff gewähren'"
@@ -914,6 +935,7 @@ const seatsAtLimit = computed(() => {
 const showInviteStaffModal = ref(false)
 const isInvitingStaff = ref(false)
 const inviteStaffError = ref('')
+const resendingInvitationId = ref<string | null>(null)
 const inviteForm = ref({
   firstName: '',
   phone: '',
@@ -1531,6 +1553,34 @@ const handleDrop = (event: DragEvent, type: 'front' | 'back') => {
 }
 
 // Staff Invitation Functions
+const resendStaffInvitation = async (user: User) => {
+  if (!user?.id || !user.is_invitation) return
+  resendingInvitationId.value = user.id
+  try {
+    const data = await $fetch<any>('/api/staff/resend-invite', {
+      method: 'POST',
+      body: { invitationId: user.id },
+    })
+
+    if (data?.sentVia === 'sms_failed') {
+      inviteManualLink.value = data.inviteLink || ''
+      showInviteManualLink.value = true
+      showInviteStaffModal.value = true
+      inviteStaffError.value = data.message || 'SMS konnte nicht gesendet werden'
+    } else {
+      showInviteSuccessToast.value = true
+      inviteSuccessMessage.value = `Einladung per SMS an ${data.phone || user.phone} erneut gesendet!`
+    }
+    await loadUsers()
+  } catch (error: any) {
+    console.error('❌ Error resending staff invitation:', error)
+    inviteStaffError.value = error?.data?.statusMessage || error?.statusMessage || error?.message || 'Fehler beim erneuten Senden'
+    showInviteStaffModal.value = true
+  } finally {
+    resendingInvitationId.value = null
+  }
+}
+
 const sendStaffInvitation = async () => {
   inviteStaffError.value = ''
   isInvitingStaff.value = true
