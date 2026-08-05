@@ -235,6 +235,8 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, faqPageLd, ldScripts, softwareAppLd } from '~/utils/schema'
+
 useHead({
   title: 'Fahrlehrer App – Simy | iOS & Android Fahrschulsoftware',
   meta: [
@@ -245,6 +247,23 @@ useHead({
     { property: 'og:url', content: 'https://simy.ch/fahrschule/app' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule/app' }],
+  script: ldScripts(
+    softwareAppLd({
+      name: 'Simy Fahrlehrer App',
+      description: 'Native iOS- und Android-App für Fahrlehrer: Kalender, Schüler, Rechnungen und Push-Benachrichtigungen.',
+      url: 'https://simy.ch/fahrschule/app',
+    }),
+    faqPageLd([
+      { q: 'Gibt es eine Fahrlehrer-App für iOS und Android?', a: 'Ja. Simy bietet eine native App für iOS und Android mit Kalender, Schülerprofilen und Rechnungen.' },
+      { q: 'Funktioniert die App offline?', a: 'Die App synchronisiert mit dem Simy-Backend; Kernfunktionen sind für den Alltag unterwegs optimiert.' },
+      { q: 'Kostet die App extra?', a: 'Nein. Die Fahrlehrer-App ist in den Simy-Plänen enthalten — 30 Tage kostenlos testen.' },
+    ]),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Fahrschule', url: 'https://simy.ch/fahrschule' },
+      { name: 'Fahrlehrer App', url: 'https://simy.ch/fahrschule/app' },
+    ]),
+  ),
 })
 
 const appFeatures = [

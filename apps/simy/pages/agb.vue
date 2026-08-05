@@ -8,7 +8,7 @@
           <span class="text-gray-600">AGB</span>
         </nav>
         <h1 class="text-3xl font-black text-gray-900 mb-3">Allgemeine Geschäftsbedingungen</h1>
-        <p class="text-sm text-gray-400 mb-12">Stand: Mai 2026 · Simy GmbH, Schweiz</p>
+        <p class="text-sm text-gray-400 mb-12">Stand: Mai 2026 · Simy IT Systems, Schweiz</p>
 
         <div class="prose prose-gray max-w-none space-y-10">
           <div v-for="section in sections" :key="section.title">
@@ -23,15 +23,29 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, ldScripts, webPageLd } from '~/utils/schema'
+
 useHead({
   title: 'AGB – Simy | Allgemeine Geschäftsbedingungen',
-  meta: [{ name: 'description', content: 'Allgemeine Geschäftsbedingungen der Simy GmbH.' }],
+  meta: [{ name: 'description', content: 'Allgemeine Geschäftsbedingungen der Simy IT Systems.' }],
+  link: [{ rel: 'canonical', href: 'https://simy.ch/agb' }],
+  script: ldScripts(
+    webPageLd({
+      name: 'AGB – Simy',
+      description: 'Allgemeine Geschäftsbedingungen der Simy IT Systems.',
+      url: 'https://simy.ch/agb',
+    }),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'AGB', url: 'https://simy.ch/agb' },
+    ]),
+  ),
 })
 
 const sections = [
   {
     title: '1. Geltungsbereich',
-    content: 'Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für alle Verträge zwischen der Simy GmbH (nachfolgend "Simy") und ihren Kunden (nachfolgend "Nutzer") im Zusammenhang mit der Nutzung der Simy-Softwareplattform und zugehöriger Dienstleistungen.',
+    content: 'Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für alle Verträge zwischen Simy IT Systems (nachfolgend "Simy") und ihren Kunden (nachfolgend "Nutzer") im Zusammenhang mit der Nutzung der Simy-Softwareplattform und zugehöriger Dienstleistungen.',
   },
   {
     title: '2. Vertragsschluss',
@@ -39,7 +53,7 @@ const sections = [
   },
   {
     title: '3. Leistungen',
-    content: 'Simy stellt dem Nutzer eine webbasierte Software für die Verwaltung von Fahrschulen, Buchungen und Rechnungen zur Verfügung. Der Leistungsumfang richtet sich nach dem gebuchten Tarif. Simy behält sich vor, den Leistungsumfang jederzeit anzupassen.',
+    content: 'Simy stellt dem Nutzer eine webbasierte Software für Terminbuchung, Kundenverwaltung und Abrechnung für Dienstleistungsbetriebe zur Verfügung. Der Leistungsumfang richtet sich nach dem gebuchten Tarif. Simy behält sich vor, den Leistungsumfang jederzeit anzupassen.',
   },
   {
     title: '4. Preise und Zahlung',
@@ -67,7 +81,7 @@ const sections = [
   },
   {
     title: '9. Kontakt',
-    content: 'Simy GmbH · support@simy.ch · +41 44 000 00 00',
+    content: 'Simy IT Systems · support@simy.ch · +41 79 715 70 27',
   },
 ]
 </script>

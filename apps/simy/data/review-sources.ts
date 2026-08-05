@@ -6,34 +6,16 @@ export type ReviewPlace = {
 }
 
 /**
- * Only attach places whose Google reviews are legitimate social proof for that
- * vertical. Driving Team locations → driving_school. Add customer Place IDs
- * here as new verticals go live with reference tenants.
+ * Only attach places whose Google reviews are legitimate social proof for
+ * *Simy* (product / reference customers), not unrelated business reviews.
+ *
+ * Do not put Driving Team (or other non-Simy) Place IDs here — those are
+ * school/customer reviews, not Simy product reviews.
+ *
+ * Add live Simy customer Place IDs per vertical as they go live.
  */
 export const REVIEW_PLACES_BY_TYPE: Record<string, ReviewPlace[]> = {
-  driving_school: [
-    {
-      label: 'zuerich',
-      placeId: 'ChIJU29cFMgLkEcRzMfDub2bh9s',
-      mapsUrl: 'https://maps.app.goo.gl/drivingteam-zuerich',
-    },
-    {
-      label: 'lachen',
-      placeId: 'ChIJqdlnJXTJmkcRAgI05nvPXFU',
-      mapsUrl: 'https://maps.app.goo.gl/drivingteam-lachen',
-    },
-    {
-      label: 'birmensdorf',
-      placeId: 'ChIJa6ZxPk8PkEcRmC3lYOQJZgo',
-      mapsUrl: 'https://maps.app.goo.gl/drivingteam-birmensdorf',
-    },
-    {
-      label: 'uster',
-      placeId: 'ChIJtRgKpBClmkcRxXQxbtz0uBA',
-      mapsUrl: 'https://maps.app.goo.gl/drivingteam-uster',
-    },
-  ],
-  // Placeholder — wire Place IDs of live Simy customers per vertical
+  driving_school: [],
   mental_coach: [],
   consulting: [],
   fitness: [],
@@ -62,7 +44,7 @@ export function placesForBusinessType(businessType: string): ReviewPlace[] {
 export const REVIEW_KEYWORDS_BY_TYPE: Record<string, RegExp | null> = {
   driving_school:
     /fahrschule|fahrlehrer|fahrstunde|prüfung|führerschein|motorrad|anhänger|auto|theorie|vku|grundkurs|simy/i,
-  mental_coach: /coach|coaching|sitzung|mental|klient|simy/i,
+  mental_coach: /coach|coaching|sitzung|mental|kunde|simy/i,
   consulting: /berat|consult|workshop|projekt|simy/i,
   fitness: /training|trainer|fitness|workout|personal.?train|simy/i,
   tutoring: /nachhilfe|tutor|lektion|mathe|deutsch|schule|simy/i,

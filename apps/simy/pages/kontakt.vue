@@ -58,7 +58,7 @@
           <div class="rounded-xl border border-gray-100 p-5">
             <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Lieber direkt starten?</p>
             <p class="text-sm text-gray-500 mb-4 leading-relaxed">30 Tage kostenlos testen — Keine Kreditkarte, in 5 Minuten bereit.</p>
-            <a href="https://app.simy.ch/tenant-register?type=driving_school"
+            <a href="https://app.simy.ch/tenant-register"
               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-bold transition-all hover:opacity-90"
               style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
               Kostenlos starten →
@@ -132,7 +132,7 @@
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Lieber direkt einsteigen?</h2>
         <p class="text-white mb-8 text-sm">30 Tage kostenlos testen — Keine Kreditkarte, keine Kündigung nötig.</p>
-        <a href="https://app.simy.ch/tenant-register?type=driving_school"
+        <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-base transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Kostenlos starten →
@@ -150,9 +150,9 @@ import { ref, reactive } from 'vue'
 const { gtag } = useGtag()
 
 useHead({
-  title: 'Kontakt – Simy | Fahrschulsoftware Schweiz',
+  title: 'Kontakt – Simy | Terminsoftware Schweiz',
   meta: [
-    { name: 'description', content: 'Kontaktiere Simy IT Systems bei Fragen zu Fahrschulsoftware, Support oder Partnerships. Antwort innerhalb von 24h.' },
+    { name: 'description', content: 'Kontaktiere Simy IT Systems bei Fragen zu Terminsoftware, Support oder Partnerships. Antwort innerhalb von 24h.' },
     { property: 'og:title', content: 'Kontakt – Simy' },
     { property: 'og:description', content: 'Schreib uns — wir antworten innerhalb von 24 Stunden.' },
     { property: 'og:url', content: 'https://simy.ch/kontakt' },

@@ -116,7 +116,8 @@ const { data, pending } = await useAsyncData(
 
 const reviews = computed(() => data.value?.reviews || [])
 const averageRating = computed(() => data.value?.averageRating ?? null)
-const showSection = computed(() => pending.value || reviews.value.length > 0)
+/** Hide entirely when empty — no skeleton flash for verticals without Simy reviews yet. */
+const showSection = computed(() => !pending.value && reviews.value.length > 0)
 </script>
 
 <style scoped>

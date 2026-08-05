@@ -7,6 +7,11 @@
 
 <script setup lang="ts">
 import '~/assets/css/main.css'
+import { SIMY_ORG, SIMY_WEBSITE, ldScripts } from '~/utils/schema'
+
+useHead({
+  script: ldScripts(SIMY_ORG, SIMY_WEBSITE),
+})
 
 const DEFAULT_PRIMARY   = '#6000BD'
 const DEFAULT_SECONDARY = '#8B2FE8'

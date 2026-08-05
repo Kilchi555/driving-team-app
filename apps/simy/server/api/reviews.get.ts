@@ -31,6 +31,8 @@ export default defineCachedEventHandler(
     const config = useRuntimeConfig()
     const apiKey = String(config.googleMapsApiKey || '')
 
+    // Only real Places (or explicit fallback bag). Empty places + empty fallback
+    // → empty list → UI hides the section (Simy has no product reviews yet).
     let raw = apiKey ? await fetchPlacesReviews(apiKey, businessType) : []
     if (!raw.length) {
       raw = fallbackReviews(businessType)

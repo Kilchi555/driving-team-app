@@ -46,11 +46,25 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, ldScripts, webPageLd } from '~/utils/schema'
+
 useHead({
   title: 'Partner – Simy | Technologie & Integrationspartner',
   meta: [
     { name: 'description', content: 'Simy arbeitet mit Wallee, asa.ch und weiteren Partnern zusammen. Erfahre mehr über unsere Integrationen und werde selbst Partner.' },
   ],
+  link: [{ rel: 'canonical', href: 'https://simy.ch/partner' }],
+  script: ldScripts(
+    webPageLd({
+      name: 'Simy Partner',
+      description: 'Technologie- und Integrationspartner von Simy — Wallee, asa.ch und mehr.',
+      url: 'https://simy.ch/partner',
+    }),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Partner', url: 'https://simy.ch/partner' },
+    ]),
+  ),
 })
 
 const techPartners = [

@@ -151,6 +151,8 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, ldScripts, serviceLd } from '~/utils/schema'
+
 useHead({
   title: 'Marketing für Terminbetriebe – Google Ads & SEO | Simy',
   meta: [
@@ -161,6 +163,17 @@ useHead({
     { property: 'og:url', content: 'https://simy.ch/marketing' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/marketing' }],
+  script: ldScripts(
+    serviceLd({
+      name: 'Simy Marketing für Terminbetriebe',
+      description: 'Google Ads und lokales SEO für Schweizer Terminbetriebe — verbunden mit dem Simy-Buchungssystem.',
+      url: 'https://simy.ch/marketing',
+    }),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Marketing', url: 'https://simy.ch/marketing' },
+    ]),
+  ),
 })
 
 const valueProps = [

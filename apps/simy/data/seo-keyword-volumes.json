@@ -66,7 +66,7 @@
   "per_url": {
     "/coaching": {
       "primary": "online terminbuchung coaches",
-      "secondary": ["coaching software", "terminbuchung software", "klientenverwaltung"]
+      "secondary": ["coaching software", "terminbuchung software", "kundenverwaltung"]
     },
     "/consulting": {
       "primary": "online terminbuchung berater",
@@ -95,6 +95,22 @@
     "/fahrschule": {
       "primary": "fahrschulsoftware",
       "secondary": ["online terminbuchung", "buchungssystem fahrschule"]
+    },
+    "/vergleich/calendly-alternative": {
+      "primary": "calendly alternative",
+      "secondary": ["calendly alternative schweiz", "calendly vs simy"]
+    },
+    "/vergleich/terminli": {
+      "primary": "terminli alternative",
+      "secondary": ["simy vs terminli", "terminsoftware schweiz"]
+    },
+    "/vergleich/klara": {
+      "primary": "klara terminbuchung alternative",
+      "secondary": ["simy vs klara", "online terminbuchung schweiz"]
+    },
+    "/vergleich/simplybook": {
+      "primary": "simplybook alternative",
+      "secondary": ["simplybook alternative schweiz", "buchungssystem schweiz"]
     }
   }
 }

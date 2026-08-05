@@ -69,6 +69,8 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, ldScripts, webPageLd } from '~/utils/schema'
+
 useHead({
   title: 'Über Simy – Fahrschulsoftware von Fahrlehrern, für Fahrlehrer',
   meta: [
@@ -78,6 +80,18 @@ useHead({
     { property: 'og:url', content: 'https://simy.ch/ueber-uns' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/ueber-uns' }],
+  script: ldScripts(
+    webPageLd({
+      name: 'Über Simy',
+      description: 'Simy — Terminsoftware aus der Schweiz, gebaut von einem Fahrlehrer für Dienstleister und Fahrschulen.',
+      url: 'https://simy.ch/ueber-uns',
+      type: 'AboutPage',
+    }),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Über uns', url: 'https://simy.ch/ueber-uns' },
+    ]),
+  ),
 })
 
 const facts = [

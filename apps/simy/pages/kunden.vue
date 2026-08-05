@@ -92,7 +92,7 @@
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Werde Teil der Simy-Familie</h2>
         <p class="text-white mb-8">Starte kostenlos und erlebe selbst, was andere schon täglich nutzen.</p>
-        <a href="https://app.simy.ch/tenant-register?type=driving_school"
+        <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           30 Tage kostenlos starten →
@@ -105,6 +105,8 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, itemListLd, ldScripts } from '~/utils/schema'
+
 useHead({
   title: 'Kundenstories – Simy | Erfahrungen aus der Praxis',
   meta: [
@@ -114,18 +116,21 @@ useHead({
     { property: 'og:url', content: 'https://simy.ch/kunden' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/kunden' }],
-  script: [{
-    type: 'application/ld+json',
-    children: JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'ItemList',
+  script: ldScripts(
+    itemListLd({
       name: 'Simy Kundenstories',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Driving Team Zürich – Pascal Kilchenmann' },
-        { '@type': 'ListItem', position: 2, name: 'Fahrschule Rapperswil – Marco R.' },
+      description: 'Erfahrungsberichte von Schweizer Betrieben, die Simy nutzen.',
+      url: 'https://simy.ch/kunden',
+      items: [
+        { name: 'Driving Team Zürich – Pascal Kilchenmann', url: 'https://simy.ch/kunden' },
+        { name: 'Fahrschule Rapperswil – Marco R.', url: 'https://simy.ch/kunden' },
       ],
     }),
-  }],
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Kunden', url: 'https://simy.ch/kunden' },
+    ]),
+  ),
 })
 
 const stats = [

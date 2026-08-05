@@ -22,9 +22,23 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, ldScripts, webPageLd } from '~/utils/schema'
+
 useHead({
   title: 'Impressum – Simy IT Systems',
   meta: [{ name: 'robots', content: 'noindex' }],
+  link: [{ rel: 'canonical', href: 'https://simy.ch/impressum' }],
+  script: ldScripts(
+    webPageLd({
+      name: 'Impressum – Simy',
+      description: 'Impressum und Firmenangaben der Simy IT Systems.',
+      url: 'https://simy.ch/impressum',
+    }),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Impressum', url: 'https://simy.ch/impressum' },
+    ]),
+  ),
 })
 
 const blocks = [

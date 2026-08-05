@@ -109,7 +109,7 @@
       <!-- Section 3 — Simy CTA Block -->
       <section :id="toc[2].id">
         <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Simy — Die beste Fahrschulsoftware für die Schweiz</h2>
-        <p class="text-gray-600 leading-relaxed mb-8">Simy ist speziell für den Schweizer Markt entwickelt. Mit TWINT-Integration, Schweizer Datenschutz und auf Deutsch verfügbar — Simy ist die einzige All-in-One Lösung, die auch Website und Marketing einschliesst.</p>
+        <p class="text-gray-600 leading-relaxed mb-8">Simy ist speziell für den Schweizer Markt entwickelt. Mit TWINT-Integration, Schweizer Datenschutz und auf Deutsch verfügbar — All-in-One mit Website und Marketing inklusive.</p>
         <div class="grid sm:grid-cols-3 gap-5 mb-8">
           <div v-for="usp in usps" :key="usp.title"
             class="rounded-2xl p-6 text-center border border-gray-100 hover:border-gray-200 transition-all">
@@ -175,6 +175,8 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, faqPageLd, ldScripts, softwareAppLd } from '~/utils/schema'
+
 useHead({
   title: 'Fahrschulsoftware Schweiz 2026 – Der komplette Ratgeber | Simy',
   meta: [
@@ -185,28 +187,22 @@ useHead({
     { property: 'og:url', content: 'https://simy.ch/fahrschule/software' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule/software' }],
-  script: [{
-    type: 'application/ld+json',
-    children: JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
-        { '@type': 'ListItem', position: 2, name: 'Fahrschule', item: 'https://simy.ch/fahrschule' },
-        { '@type': 'ListItem', position: 3, name: 'Fahrschulsoftware' },
-      ],
+  script: ldScripts(
+    softwareAppLd({
+      name: 'Simy Fahrschulsoftware',
+      description: 'All-in-One Fahrschulsoftware Schweiz: Terminbuchung, Rechnungen, Fahrlehrer-App und Verwaltung.',
+      url: 'https://simy.ch/fahrschule/software',
     }),
-  }, {
-    type: 'application/ld+json',
-    children: JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: [
-        { '@type': 'Question', name: 'Was kostet Fahrschulsoftware?', acceptedAnswer: { '@type': 'Answer', text: 'Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. Simy bietet Pläne ab CHF 49/Monat mit 30 Tagen kostenlosem Test.' } },
-        { '@type': 'Question', name: 'Welche Fahrschulsoftware ist die beste?', acceptedAnswer: { '@type': 'Answer', text: 'Simy ist die einzige All-in-One Lösung für Schweizer Fahrschulen mit Terminbuchung, automatischen Rechnungen, Fahrlehrer-App und integriertem Website-Generator.' } },
-      ],
-    }),
-  }],
+    faqPageLd([
+      { q: 'Was kostet Fahrschulsoftware?', a: 'Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. Simy bietet Pläne ab CHF 49/Monat mit 30 Tagen kostenlosem Test.' },
+      { q: 'Welche Fahrschulsoftware ist die beste?', a: 'Simy ist eine All-in-One Lösung für Schweizer Fahrschulen mit Terminbuchung, automatischen Rechnungen, Fahrlehrer-App und Website-Generator.' },
+    ]),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Fahrschule', url: 'https://simy.ch/fahrschule' },
+      { name: 'Fahrschulsoftware', url: 'https://simy.ch/fahrschule/software' },
+    ]),
+  ),
 })
 
 const toc = [

@@ -25,10 +25,10 @@
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mb-10 leading-relaxed">
-          Immer aktuell, automatisch synchronisiert. Simy zeigt dir und deinen Schülern genau, wann wer wo fährt — ohne manuelles Pflegen.
+          Immer aktuell, automatisch synchronisiert. Simy zeigt dir und deinen Kunden genau, wann wer wo gebucht ist — ohne manuelles Pflegen.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
-          <a href="https://app.simy.ch/tenant-register?type=driving_school"
+          <a href="https://app.simy.ch/tenant-register"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
             style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             Kostenlos testen →
@@ -77,7 +77,7 @@
             </div>
           </div>
         </div>
-        <p class="text-xs text-center text-gray-400 mt-3">Alle Fahrlehrer auf einen Blick — live synchronisiert</p>
+        <p class="text-xs text-center text-gray-400 mt-3">Alle Mitarbeiter auf einen Blick — live synchronisiert</p>
       </div>
     </section>
 
@@ -108,7 +108,7 @@
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Den Kalender heute noch ausprobieren</h2>
         <p class="text-white mb-8">30 Tage kostenlos — Keine Kreditkarte.</p>
-        <a href="https://app.simy.ch/tenant-register?type=driving_school"
+        <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Jetzt starten →
@@ -121,16 +121,35 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, ldScripts, softwareAppLd, webPageLd } from '~/utils/schema'
+
 useHead({
-  title: 'Kalender & Terminplanung – Simy | Fahrlehrer Kalender App',
+  title: 'Kalender & Terminplanung – Simy | Online-Buchung Schweiz',
   meta: [
-    { name: 'description', content: 'Der Simy Kalender synchronisiert alle Fahrlehrer automatisch. Online-Buchung, iCal-Sync, Push-Benachrichtigungen. Für iOS, Android und Browser. 30 Tage kostenlos.' },
-    { name: 'keywords', content: 'fahrlehrer kalender app, fahrschule kalender, terminplanung fahrschule' },
+    { name: 'description', content: 'Der Simy Kalender synchronisiert alle Mitarbeiter automatisch. Online-Buchung, iCal-Sync, Erinnerungen. Für iOS, Android und Browser. 30 Tage kostenlos.' },
+    { name: 'keywords', content: 'terminplanung software schweiz, online buchungskalender, kalender app dienstleister' },
     { property: 'og:title', content: 'Kalender & Terminplanung – Simy | Stundenplan auf Autopilot' },
-    { property: 'og:description', content: 'Multi-Fahrlehrer Kalender, iCal-Sync, automatische Erinnerungen. Alles synchronisiert.' },
+    { property: 'og:description', content: 'Multi-Mitarbeiter-Kalender, iCal-Sync, automatische Erinnerungen. Alles synchronisiert.' },
     { property: 'og:url', content: 'https://simy.ch/features/kalender' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/features/kalender' }],
+  script: ldScripts(
+    webPageLd({
+      name: 'Kalender & Terminplanung – Simy',
+      description: 'Multi-Mitarbeiter-Kalender mit Online-Buchung, iCal-Sync und Erinnerungen.',
+      url: 'https://simy.ch/features/kalender',
+    }),
+    softwareAppLd({
+      name: 'Simy Kalender',
+      description: 'Terminplanung und Kalender-Sync für Schweizer Selbständige und KMUs.',
+      url: 'https://simy.ch/features/kalender',
+    }),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Features', url: 'https://simy.ch/features/kalender' },
+      { name: 'Kalender', url: 'https://simy.ch/features/kalender' },
+    ]),
+  ),
 })
 
 const days = [
@@ -150,11 +169,11 @@ const calendarSlots = [
   [
     { empty: true },
     { time: '10:00', name: 'Tom B.', color: '#059669', empty: false },
-    { time: '15:00', name: 'Prüfung', color: '#DC2626', empty: false },
+    { time: '15:00', name: 'Workshop', color: '#DC2626', empty: false },
   ],
   [
     { time: '09:00', name: 'Lisa M.', color: '#0891B2', empty: false },
-    { time: '11:00', name: 'VKU', color: '#EA580C', empty: false },
+    { time: '11:00', name: 'Kurs', color: '#EA580C', empty: false },
     { empty: true },
   ],
   [
@@ -170,14 +189,14 @@ const calendarSlots = [
 ]
 
 const calFeatures = [
-  { icon: '🔄', title: 'Echtzeit-Synchronisation', desc: 'Änderungen sind sofort sichtbar — für dich, alle Fahrlehrer und deine Schüler.' },
-  { icon: '📲', title: 'Simy-Termine im privaten Kalender', desc: 'Jede Fahrstunde erscheint automatisch in deinem Google Calendar, Apple Calendar oder Outlook. Du siehst deinen ganzen Tag in einer App — ohne manuelles Übertragen.' },
-  { icon: '🪄', title: 'Privatkalender blockiert Verfügbarkeit automatisch', desc: 'Du hast Zahnarzt, Ferien oder einen privaten Termin im Kalender? Simy erkennt das und zeigt Schülern in dieser Zeit gar keine freien Slots an. Du musst nichts extra einstellen — dein Kalender erledigt das für dich.' },
-  { icon: '👥', title: 'Multi-Fahrlehrer Ansicht', desc: 'Alle Fahrlehrer auf einem Bildschirm — perfekt für den Überblick als Schulinhaber.' },
-  { icon: '🎨', title: 'Farbcodierung', desc: 'Verschiedene Kategorien (Fahrstunde, VKU, Prüfung) in verschiedenen Farben.' },
+  { icon: '🔄', title: 'Echtzeit-Synchronisation', desc: 'Änderungen sind sofort sichtbar — für dich, alle Mitarbeiter und deine Kunden.' },
+  { icon: '📲', title: 'Simy-Termine im privaten Kalender', desc: 'Jeder Termin erscheint automatisch in deinem Google Calendar, Apple Calendar oder Outlook. Du siehst deinen ganzen Tag in einer App — ohne manuelles Übertragen.' },
+  { icon: '🪄', title: 'Privatkalender blockiert Verfügbarkeit automatisch', desc: 'Zahnarzt, Ferien oder ein privater Termin? Simy erkennt das und zeigt Kunden in dieser Zeit keine freien Slots. Du musst nichts extra einstellen.' },
+  { icon: '👥', title: 'Multi-Mitarbeiter-Ansicht', desc: 'Alle Teammitglieder auf einem Bildschirm — klarer Überblick für Inhaber und Admin.' },
+  { icon: '🎨', title: 'Farbcodierung', desc: 'Verschiedene Kategorien (Sitzung, Kurs, Workshop) in verschiedenen Farben.' },
   { icon: '📍', title: 'Standort-Info', desc: 'Treffpunkt direkt im Termin — ein Klick öffnet die Navigation.' },
   { icon: '🔔', title: 'Automatische Erinnerungen', desc: '24h vor jedem Termin: E-Mail zuerst, SMS nur wenn keine E-Mail — Segmente inkl. im Plan.' },
-  { icon: '🔒', title: 'Verfügbarkeits-Regeln', desc: 'Definiere Pufferzeit, maximale Tages-Buchungen und Vorlaufzeit pro Fahrlehrer.' },
-  { icon: '📊', title: 'Auslastungs-Ansicht', desc: 'Sieh auf einen Blick, welcher Fahrlehrer wann noch freie Kapazität hat.' },
+  { icon: '🔒', title: 'Verfügbarkeits-Regeln', desc: 'Definiere Pufferzeit, maximale Tages-Buchungen und Vorlaufzeit pro Mitarbeiter.' },
+  { icon: '📊', title: 'Auslastungs-Ansicht', desc: 'Sieh auf einen Blick, wer wann noch freie Kapazität hat.' },
 ]
 </script>

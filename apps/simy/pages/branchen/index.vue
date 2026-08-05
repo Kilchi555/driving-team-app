@@ -68,6 +68,12 @@
 
 <script setup lang="ts">
 import { VERTICALS } from '~/data/verticals'
+import { breadcrumbLd, itemListLd, ldScripts } from '~/utils/schema'
+
+const branchenItems = [
+  { name: 'Fahrschule', url: 'https://simy.ch/fahrschule' },
+  ...VERTICALS.map((v) => ({ name: v.navLabel, url: `https://simy.ch/${v.slug}` })),
+]
 
 useHead({
   title: 'Branchen – Online-Terminbuchung & Software Schweiz | Simy',
@@ -81,5 +87,17 @@ useHead({
     { property: 'og:url', content: 'https://simy.ch/branchen' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/branchen' }],
+  script: ldScripts(
+    itemListLd({
+      name: 'Simy Branchen – Online-Terminbuchung Schweiz',
+      description: 'Branchenspezifische Terminsoftware und Online-Buchung für Schweizer Dienstleister.',
+      url: 'https://simy.ch/branchen',
+      items: branchenItems,
+    }),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Branchen', url: 'https://simy.ch/branchen' },
+    ]),
+  ),
 })
 </script>

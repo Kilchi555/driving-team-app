@@ -140,6 +140,7 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
+import { breadcrumbLd, ldScripts, webPageLd } from '~/utils/schema'
 
 const { gtag } = useGtag()
 
@@ -153,6 +154,18 @@ useHead({
     { name: 'robots', content: 'noindex, follow' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/marketing/seo-anfrage' }],
+  script: ldScripts(
+    webPageLd({
+      name: 'Kostenlose SEO-Analyse',
+      description: 'Anfrageformular für eine kostenlose SEO-Analyse für Terminbetriebe.',
+      url: 'https://simy.ch/marketing/seo-anfrage',
+    }),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Marketing', url: 'https://simy.ch/marketing' },
+      { name: 'SEO-Analyse', url: 'https://simy.ch/marketing/seo-anfrage' },
+    ]),
+  ),
 })
 
 const form = reactive({

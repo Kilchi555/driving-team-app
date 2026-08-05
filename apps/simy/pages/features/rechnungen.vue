@@ -25,10 +25,10 @@
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mb-10 leading-relaxed">
-          Simy erstellt Rechnungen automatisch und versendet sie per E-Mail. Bei Online-Zahlung (TWINT/Kreditkarte) werden Zahlungserinnerungen vollautomatisch verschickt. Bezahlt der Schüler per Rechnung, kannst du Mahnungen mit wenigen Klicks versenden. Du siehst jederzeit, wer was bezahlt hat.
+          Simy erstellt Rechnungen automatisch und versendet sie per E-Mail. Bei Online-Zahlung (TWINT/Kreditkarte) laufen Erinnerungen vollautomatisch. Bezahlt der Kunde per Rechnung, versendest du Mahnungen mit wenigen Klicks. Du siehst jederzeit, wer was bezahlt hat.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
-          <a href="https://app.simy.ch/tenant-register?type=driving_school"
+          <a href="https://app.simy.ch/tenant-register"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
             style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             Kostenlos testen →
@@ -44,7 +44,7 @@
           <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
             <div>
               <p class="font-bold text-gray-900 text-sm">Rechnung #2026-0148</p>
-              <p class="text-xs text-gray-400">Fahrschule Driving Team · 20.05.2026</p>
+              <p class="text-xs text-gray-400">Studio Nord · 20.05.2026</p>
             </div>
             <span class="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700">Bezahlt ✓</span>
           </div>
@@ -109,7 +109,7 @@
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Nie mehr Rechnungen manuell schreiben</h2>
         <p class="text-white mb-8">30 Tage kostenlos — Keine Kreditkarte.</p>
-        <a href="https://app.simy.ch/tenant-register?type=driving_school"
+        <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Jetzt starten →
@@ -122,20 +122,39 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, ldScripts, softwareAppLd, webPageLd } from '~/utils/schema'
+
 useHead({
-  title: 'Rechnungen & Kasse Fahrschule – Simy | Automatische Abrechnung',
+  title: 'Rechnungen & Kasse – Simy | TWINT, QR-Rechnung, Automatik',
   meta: [
-    { name: 'description', content: 'Simy automatisiert die Rechnungsstellung für Fahrschulen. TWINT, QR-Rechnung, Kreditkarte. Zahlungseingang automatisch erfasst. 30 Tage kostenlos testen.' },
-    { name: 'keywords', content: 'rechnung fahrschule, fahrschule abrechnung software, twint fahrschule, qr rechnung fahrschule' },
-    { property: 'og:title', content: 'Rechnungen & Kasse – Simy | Automatische Abrechnung für Fahrschulen' },
+    { name: 'description', content: 'Simy automatisiert Rechnungen für Schweizer Dienstleister. TWINT, QR-Rechnung, Kreditkarte. Zahlungseingang automatisch erfasst. 30 Tage kostenlos testen.' },
+    { name: 'keywords', content: 'rechnung software schweiz, twint online zahlung, qr rechnung software, kasse terminbuchung' },
+    { property: 'og:title', content: 'Rechnungen & Kasse – Simy | Automatische Abrechnung' },
     { property: 'og:description', content: 'Rechnungen automatisch erstellt, versendet und eingetrieben. TWINT, QR-Rechnung, Kreditkarte.' },
     { property: 'og:url', content: 'https://simy.ch/features/rechnungen' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/features/rechnungen' }],
+  script: ldScripts(
+    webPageLd({
+      name: 'Rechnungen & Kasse – Simy',
+      description: 'Automatische Rechnungen mit TWINT, QR-Rechnung und Kreditkarte für Schweizer Betriebe.',
+      url: 'https://simy.ch/features/rechnungen',
+    }),
+    softwareAppLd({
+      name: 'Simy Rechnungen & Kasse',
+      description: 'Schweizer Abrechnung: TWINT, QR-IBAN, PostFinance und automatische Reminder.',
+      url: 'https://simy.ch/features/rechnungen',
+    }),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Features', url: 'https://simy.ch/features/rechnungen' },
+      { name: 'Rechnungen & Kasse', url: 'https://simy.ch/features/rechnungen' },
+    ]),
+  ),
 })
 
 const invoiceLines = [
-  { desc: '4× Fahrstunde 45 Min', amount: '340.–' },
+  { desc: '4× Sitzung 45 Min', amount: '340.–' },
 ]
 
 const paymentMethods = [
@@ -146,12 +165,12 @@ const paymentMethods = [
 ]
 
 const invoiceFeatures = [
-  { icon: '⚡', title: 'Automatische Erstellung', desc: 'Nach jeder Fahrstunde erstellt Simy automatisch die Rechnung — ohne dein Zutun.' },
-  { icon: '📧', title: 'Direktversand per E-Mail', desc: 'Rechnung direkt per E-Mail an den Schüler — mit Zahlungslink und PDF-Anhang.' },
+  { icon: '⚡', title: 'Automatische Erstellung', desc: 'Nach jedem Termin erstellt Simy automatisch die Rechnung — ohne dein Zutun.' },
+  { icon: '📧', title: 'Direktversand per E-Mail', desc: 'Rechnung direkt per E-Mail an den Kunden — mit Zahlungslink und PDF-Anhang.' },
   { icon: '🔔', title: 'Zahlungserinnerungen', desc: 'Mit Online-Zahlung: vollautomatisch. Bei E-Mail-Rechnung: Mahnung mit wenigen Klicks versenden — schnell und einfach.' },
-  { icon: '💳', title: 'TWINT & Online-Zahlung', desc: 'Schüler zahlen per TWINT, Kreditkarte oder QR-Rechnung — alles ohne Extra-Setup.' },
+  { icon: '💳', title: 'TWINT & Online-Zahlung', desc: 'Kunden zahlen per TWINT, Kreditkarte oder QR-Rechnung — alles ohne Extra-Setup.' },
   { icon: '📊', title: 'Einnahmen-Übersicht', desc: 'Tages-, Wochen- und Monatsumsatz auf einen Blick. Offene und bezahlte Rechnungen sortiert.' },
-  { icon: '🎟️', title: 'Guthaben-System', desc: 'Schüler kaufen Stunden-Pakete im Voraus. Guthaben wird automatisch abgezogen.' },
+  { icon: '🎟️', title: 'Guthaben-System', desc: 'Kunden kaufen Pakete im Voraus. Guthaben wird automatisch abgezogen.' },
   { icon: '📋', title: 'Steuer-Export', desc: 'Alle Transaktionen als CSV exportieren — direkt für die Steuererklärung oder den Treuhänder.' },
   { icon: '🏷️', title: 'Rabatte & Sonderpreise', desc: 'Schnupper-Angebot, Frühbucher-Rabatt oder individuelle Preise — flexibel konfigurierbar.' },
 ]

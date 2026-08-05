@@ -1,6 +1,6 @@
 /** Short founder transfer blurbs for Final-CTA (not long About copy). */
 export const FOUNDER_BLURB_HOME =
-  'Genervt von Tool-Chaos und Handarbeit hat er 2025 Simy gebaut — damit Fahrlehrer unterrichten statt administrieren. Seit Juni 2026 für alle Fahrschulen in der Schweiz.'
+  'Genervt von Tool-Chaos und Handarbeit hat er 2025 Simy gebaut — damit Dienstleister arbeiten statt administrieren. Seit 2026 für Fahrschulen und weitere Branchen in der Schweiz.'
 
 export const FOUNDER_BLURB_BY_SLUG: Record<string, string> = {
   coaching:
@@ -16,7 +16,7 @@ export const FOUNDER_BLURB_BY_SLUG: Record<string, string> = {
   hundeschule:
     'Was in der Fahrschule funktioniert — Kurse, Termine, weniger Admin — funktioniert genauso in der Hundeschule. Seit 2026 auch für Hundeschulen.',
   consulting:
-    'Was in der Fahrschule funktioniert — Termine, Klienten, Automatisierung — funktioniert genauso im Consulting. Seit 2026 auch für Berater.',
+    'Was in der Fahrschule funktioniert — Termine, Kunden, Automatisierung — funktioniert genauso im Consulting. Seit 2026 auch für Berater.',
 }
 
 export function founderBlurbForSlug(slug: string): string {

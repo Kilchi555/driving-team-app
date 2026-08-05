@@ -140,6 +140,8 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, ldScripts, serviceLd } from '~/utils/schema'
+
 useHead({
   title: 'SEO für Terminbetriebe – Organisch auf Platz 1 bei Google | Simy',
   meta: [
@@ -150,18 +152,18 @@ useHead({
     { property: 'og:url', content: 'https://simy.ch/marketing/seo' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/marketing/seo' }],
-  script: [{
-    type: 'application/ld+json',
-    children: JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
-        { '@type': 'ListItem', position: 2, name: 'Marketing', item: 'https://simy.ch/marketing' },
-        { '@type': 'ListItem', position: 3, name: 'SEO für Terminbetriebe' },
-      ],
+  script: ldScripts(
+    serviceLd({
+      name: 'Lokales SEO für Terminbetriebe',
+      description: 'Organische Sichtbarkeit bei Google Maps und lokaler Suche für Schweizer Terminbetriebe.',
+      url: 'https://simy.ch/marketing/seo',
     }),
-  }],
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Marketing', url: 'https://simy.ch/marketing' },
+      { name: 'SEO für Terminbetriebe', url: 'https://simy.ch/marketing/seo' },
+    ]),
+  ),
 })
 
 const seoProps = [

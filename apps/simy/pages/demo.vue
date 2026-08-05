@@ -28,7 +28,7 @@
           </span>
         </div>
 
-        <a href="https://app.simy.ch/tenant-register?type=driving_school"
+        <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-3 px-10 py-5 rounded-2xl text-white font-black text-lg transition-all hover:opacity-90 hover:-translate-y-0.5"
           style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 12px 40px rgba(var(--brand-rgb),0.35)">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -77,8 +77,8 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Bereit loszulegen?</h2>
-        <p class="text-white mb-8">Hunderte Benutzer lieben Simy.</p>
-        <a href="https://app.simy.ch/tenant-register?type=driving_school"
+        <p class="text-white mb-8">Über 50 Betriebe arbeiten bereits mit Simy.</p>
+        <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Kostenlos starten →
@@ -91,15 +91,34 @@
 </template>
 
 <script setup lang="ts">
+import { breadcrumbLd, ldScripts, softwareAppLd, webPageLd } from '~/utils/schema'
+
 useHead({
   title: 'Demo & Gratis-Test – Simy | 30 Tage kostenlos testen',
   meta: [
-    { name: 'description', content: 'Simy 30 Tage kostenlos testen. Keine Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar. Jetzt Fahrschulsoftware Demo starten.' },
+    { name: 'description', content: 'Simy 30 Tage kostenlos testen. Keine Kreditkarte nötig. In 5 Minuten startklar. Jetzt Terminsoftware Demo starten.' },
     { property: 'og:title', content: 'Demo & Gratis-Test – Simy | 30 Tage kostenlos' },
-    { property: 'og:description', content: 'Simy 30 Tage kostenlos testen — keine Kreditkarte, keine Kündigung.' },
+    { property: 'og:description', content: 'Simy 30 Tage kostenlos testen — keine Kreditkarte, monatlich kündbar.' },
     { property: 'og:url', content: 'https://simy.ch/demo' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/demo' }],
+  script: ldScripts(
+    webPageLd({
+      name: 'Simy Demo & 30-Tage-Test',
+      description: 'Simy 30 Tage kostenlos testen — keine Kreditkarte, alle Kernfeatures freigeschaltet.',
+      url: 'https://simy.ch/demo',
+    }),
+    softwareAppLd({
+      name: 'Simy',
+      description: 'Terminsoftware Schweiz – 30 Tage gratis testen.',
+      url: 'https://simy.ch/demo',
+      price: 0,
+    }),
+    breadcrumbLd([
+      { name: 'Simy', url: 'https://simy.ch/' },
+      { name: 'Demo', url: 'https://simy.ch/demo' },
+    ]),
+  ),
 })
 
 const checks = ['Keine Kreditkarte nötig', '30 Tage vollständig kostenlos', 'Alle Features freigeschaltet (ausser Online-Zahlung)', 'Jederzeit kündbar', 'In 5 Min. eingerichtet']
