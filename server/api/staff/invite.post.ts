@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
-import { sendTenantSMS } from '~/server/utils/sms'
+import { sendTenantSMS, normalizePhoneNumber } from '~/server/utils/sms'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
@@ -142,22 +142,111 @@ export default defineEventHandler(async (event) => {
 
     // ✅ LAYER 4: XSS Protection - Sanitize all string inputs
     const sanitizedFirstName = sanitizeString(firstName, 100)
-    const sanitizedPhone = sanitizeString(phone, 20)
+    const rawPhone = sanitizeString(phone, 30)
+    const sanitizedPhone = normalizePhoneNumber(rawPhone) || rawPhone
+    if (!normalizePhoneNumber(rawPhone)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Ungültige Telefonnummer'
+      })
+    }
 
-    // Check: existiert bereits eine offene Einladung für diese Telefonnummer?
-    const { data: existingInvite } = await serviceSupabase
+    // Generate invitation link base URL early (needed for resend + create)
+    const envBase = process.env.NUXT_PUBLIC_BASE_URL || process.env.BASE_URL
+    const forwardedHost = getHeader(event, 'x-forwarded-host')
+    const host = forwardedHost || getHeader(event, 'host')
+    const proto = getHeader(event, 'x-forwarded-proto') || 'https'
+    let baseUrl: string
+    if (envBase) {
+      baseUrl = envBase
+    } else if (host && !host.includes('localhost')) {
+      baseUrl = `${proto}://${host}`
+    } else {
+      baseUrl = 'https://app.simy.ch'
+    }
+
+    const { data: tenant } = await serviceSupabase
+      .from('tenants')
+      .select('name, contact_email, twilio_from_sender, slug, business_type')
+      .eq('id', userProfile.tenant_id)
+      .single()
+
+    const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+    const terms = getTerminologyDefaults(tenant?.business_type)
+    const tenantName = tenant?.name || terms.businessNoun
+    const smsSenderName = tenant?.twilio_from_sender || tenantName
+    const loginLink = tenant?.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
+
+    // Existing pending invite for this phone (any formatting) → resend SMS instead of 409
+    const { data: pendingInvites } = await serviceSupabase
       .from('staff_invitations')
-      .select('id, status')
-      .eq('phone', sanitizedPhone)
+      .select('id, status, phone, invitation_token, first_name, expires_at')
       .eq('tenant_id', userProfile.tenant_id)
       .eq('status', 'pending')
-      .maybeSingle()
+
+    const existingInvite = (pendingInvites || []).find((inv: any) => {
+      const invNorm = normalizePhoneNumber(inv.phone || '') || inv.phone
+      return invNorm === sanitizedPhone
+    })
 
     if (existingInvite) {
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Für diese Telefonnummer existiert bereits eine offene Einladung.'
-      })
+      // Extend expiry on resend
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + 30)
+      await serviceSupabase
+        .from('staff_invitations')
+        .update({
+          first_name: sanitizedFirstName || existingInvite.first_name,
+          phone: sanitizedPhone,
+          expires_at: expiresAt.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingInvite.id)
+
+      const inviteLink = `${baseUrl}/register/staff?token=${existingInvite.invitation_token}`
+      const nameForSms = sanitizedFirstName || existingInvite.first_name || ''
+      // Prefer GSM-7 (no umlauts) so the invite stays in fewer segments
+      const smsMessage = `Hallo ${nameForSms}! Du wurdest als ${terms.staff} bei ${tenantName} eingeladen. Registrierung: ${inviteLink}\nLogin: ${loginLink}`
+
+      try {
+        const smsResult = await sendTenantSMS({
+          tenantId: userProfile.tenant_id,
+          to: sanitizedPhone,
+          message: smsMessage,
+          purpose: 'staff_invite',
+          senderName: smsSenderName,
+        })
+        await logAudit({
+          action: 'staff_invitation_resent',
+          user_id: user.id,
+          tenant_id: userProfile.tenant_id,
+          resource_type: 'staff_invitation',
+          resource_id: existingInvite.id,
+          ip_address: ipAddress,
+          status: 'success',
+          details: { invited_phone: sanitizedPhone, resent: true, duration_ms: Date.now() - startTime }
+        }).catch(() => {})
+
+        return {
+          success: true,
+          resent: true,
+          sentVia: 'sms',
+          phone: sanitizedPhone,
+          inviteLink,
+          smsId: smsResult?.messageSid,
+          message: 'Einladung erneut per SMS gesendet'
+        }
+      } catch (smsError: any) {
+        console.error('❌ SMS resend failed:', smsError)
+        return {
+          success: true,
+          resent: true,
+          sentVia: 'sms_failed',
+          phone: sanitizedPhone,
+          inviteLink,
+          message: 'Offene Einladung vorhanden, SMS fehlgeschlagen. Link: ' + inviteLink
+        }
+      }
     }
 
     // Generate invitation token
@@ -215,45 +304,13 @@ export default defineEventHandler(async (event) => {
       }
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
-    // Generate invitation link
-    // Priority: 1. Environment variable, 2. Production domain (simy.ch), 3. Request host
-    const envBase = process.env.NUXT_PUBLIC_BASE_URL || process.env.BASE_URL
-    const forwardedHost = getHeader(event, 'x-forwarded-host')
-    const host = forwardedHost || getHeader(event, 'host')
-    const proto = getHeader(event, 'x-forwarded-proto') || 'https'
-    
-    // Prefer production URL over localhost
-    let baseUrl: string
-    if (envBase) {
-      baseUrl = envBase
-    } else if (host && !host.includes('localhost')) {
-      // Use request host only if it's NOT localhost
-      baseUrl = `${proto}://${host}`
-    } else {
-      // Default to production domain
-      baseUrl = 'https://app.simy.ch'
-    }
-    
     const inviteLink = `${baseUrl}/register/staff?token=${token}`
-
-    // Get tenant info for branding using service role
-    const { data: tenant } = await serviceSupabase
-      .from('tenants')
-      .select('name, contact_email, twilio_from_sender, slug, business_type')
-      .eq('id', userProfile.tenant_id)
-      .single()
-
-    const { getTerminologyDefaults } = await import('~/composables/useTerminology')
-    const terms = getTerminologyDefaults(tenant?.business_type)
-    const tenantName = tenant?.name || terms.businessNoun
-    const smsSenderName = tenant?.twilio_from_sender || tenantName
-    const loginLink = tenant?.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
 
     // Send invitation via SMS
     logger.debug(`📱 Sending SMS to ${sanitizedPhone} with link: ${inviteLink}`)
 
     try {
-      const smsMessage = `Hallo ${sanitizedFirstName}! Sie wurden als ${terms.staff} bei ${tenantName} eingeladen. Registrierung: ${inviteLink}\nLogin nach Registrierung: ${loginLink}`
+      const smsMessage = `Hallo ${sanitizedFirstName}! Du wurdest als ${terms.staff} bei ${tenantName} eingeladen. Registrierung: ${inviteLink}\nLogin: ${loginLink}`
 
       const smsResult = await sendTenantSMS({
         tenantId: userProfile.tenant_id,
