@@ -267,8 +267,8 @@ export function getComparison(slug: string) {
   return COMPARISONS.find((c) => c.slug === slug)
 }
 
-export function comparisonRegisterUrl() {
-  return registerUrl()
+export function comparisonRegisterUrl(refCode?: string) {
+  return registerUrl(undefined, refCode)
 }
 
 export function comparisonPath(slug: string) {

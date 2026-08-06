@@ -1762,6 +1762,23 @@ const registerUrl = computed(() => {
     accent_color: accentColor.value,
   })
   if (logoToken.value) params.set('logo_url', logoToken.value)
+  // Platform invite (?ref=) from URL or localStorage
+  try {
+    const route = useRoute()
+    const fromQuery = typeof route.query.ref === 'string' ? route.query.ref : ''
+    let fromStore = ''
+    if (import.meta.client) {
+      const raw = localStorage.getItem('platform_ref')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed?.code && parsed?.expires && Date.now() <= parsed.expires) {
+          fromStore = String(parsed.code)
+        }
+      }
+    }
+    const ref = (fromQuery || fromStore).trim().toUpperCase()
+    if (ref) params.set('ref', ref)
+  } catch { /* ignore */ }
   return `https://app.simy.ch/tenant-register?${params.toString()}`
 })
 

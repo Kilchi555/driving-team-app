@@ -181,7 +181,6 @@
 
 <script setup lang="ts">
 import { VERTICALS } from '~/data/verticals'
-import { registerUrl } from '~/data/pricing'
 import {
   SIMY_BRAND,
   SIMY_BRAND_STORAGE_KEY,
@@ -202,7 +201,7 @@ const props = defineProps<{
   secondaryColor?: string
 }>()
 
-const registerCta = registerUrl()
+const { registerCta } = useRegisterCta()
 
 const branchenLinks = [
   { href: '/fahrschule', label: 'Fahrschule', icon: VERTICAL_ICON_BY_SLUG.fahrschule as SimyIconName },

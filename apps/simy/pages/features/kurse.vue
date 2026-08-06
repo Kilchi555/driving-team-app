@@ -27,7 +27,7 @@
           Theorie, Welpenkurs, Intensivwoche oder Workshop: Kunden melden sich selbst an, zahlen online — du behältst Plätze, Warteliste und Rechnung im Griff.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
-          <a href="https://app.simy.ch/tenant-register"
+          <a :href="registerCta"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
             style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             Kostenlos testen →
@@ -111,7 +111,7 @@
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Kurse und Termine in einer Plattform</h2>
         <p class="text-white/80 mb-8">Im Pro-Plan inklusive. 30 Tage kostenlos testen — keine Kreditkarte.</p>
-        <a href="https://app.simy.ch/tenant-register"
+        <a :href="registerCta"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Jetzt starten →
@@ -126,6 +126,7 @@
 <script setup lang="ts">
 import { VERTICAL_ICON_BY_SLUG } from '~/utils/icons'
 import { breadcrumbLd, ldScripts, softwareAppLd, webPageLd } from '~/utils/schema'
+const { registerCta } = useRegisterCta()
 
 useHead({
   title: 'Kursbuchungsseite – Gruppenkurse online verkaufen | Simy',

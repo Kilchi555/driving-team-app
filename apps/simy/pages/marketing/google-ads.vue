@@ -28,7 +28,7 @@
           Wenn jemand dein Angebot in deiner Stadt googelt, erscheinst du zuoberst. Simy erstellt und optimiert deine Kampagnen — du konzentrierst dich auf deine Kunden.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
-          <a href="https://app.simy.ch/tenant-register"
+          <a :href="registerCta"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
             style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             Kostenlose Beratung anfragen →
@@ -123,7 +123,7 @@
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Mehr Kunden ab sofort?</h2>
         <p class="text-white mb-8">Jetzt kostenloses Erstgespräch buchen — wir zeigen dir, was in deiner Region möglich ist.</p>
-        <a href="https://app.simy.ch/tenant-register"
+        <a :href="registerCta"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Beratungsgespräch buchen →
@@ -138,6 +138,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { breadcrumbLd, ldScripts, serviceLd } from '~/utils/schema'
+const { registerCta } = useRegisterCta()
 
 useHead({
   title: 'Google Ads für Terminbetriebe – Sofort mehr Kunden | Simy',

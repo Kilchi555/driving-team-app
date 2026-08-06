@@ -17,7 +17,7 @@
             All-in-One Software für Dienstleister: Terminbuchung, Rechnungen, Website und Marketing — mit Branchen-Vorlagen.
           </p>
           <div class="mt-5">
-            <a href="https://app.simy.ch/tenant-register"
+            <a :href="registerCta"
               class="inline-block text-sm font-bold px-5 py-2.5 rounded-xl text-white transition-all hover:opacity-90"
               style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
               30 Tage gratis →
@@ -108,6 +108,8 @@ const props = defineProps<{
   logoSrc?: string | null
   primaryColor?: string
 }>()
+
+const { registerCta } = useRegisterCta()
 
 const storedBrand = ref<{ primary?: string; logo?: string }>({})
 

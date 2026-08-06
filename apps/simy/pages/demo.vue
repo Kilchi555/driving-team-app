@@ -28,7 +28,7 @@
           </span>
         </div>
 
-        <a href="https://app.simy.ch/tenant-register"
+        <a :href="registerCta"
           class="inline-flex items-center gap-3 px-10 py-5 rounded-2xl text-white font-black text-lg transition-all hover:opacity-90 hover:-translate-y-0.5"
           style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 12px 40px rgba(var(--brand-rgb),0.35)">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -75,7 +75,7 @@
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Bereit loszulegen?</h2>
         <p class="text-white mb-8">Über 50 Betriebe arbeiten bereits mit Simy.</p>
-        <a href="https://app.simy.ch/tenant-register"
+        <a :href="registerCta"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Kostenlos starten →
@@ -89,6 +89,7 @@
 
 <script setup lang="ts">
 import { breadcrumbLd, ldScripts, softwareAppLd, webPageLd } from '~/utils/schema'
+const { registerCta } = useRegisterCta()
 
 useHead({
   title: 'Demo & Gratis-Test – Simy | 30 Tage kostenlos testen',
