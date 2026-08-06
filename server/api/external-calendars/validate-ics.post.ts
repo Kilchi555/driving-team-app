@@ -40,15 +40,25 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  if (result.veventCount === 0) {
+    return {
+      success: false,
+      ok: false,
+      url: result.url,
+      bytes: result.bytes,
+      vevent_count: 0,
+      code: 'empty_calendar',
+      message: 'Dieser Kalender-Feed enthält keine Termine.',
+      tip: 'Du hast vermutlich einen leeren Kalender geteilt (z.B. einen neu erstellten „Simy“-Kalender). Teile in iCloud/Apple Calendar den Kalender, in dem deine echten Termine stehen, und verwende den neuen öffentlichen Link.',
+    }
+  }
+
   return {
     success: true,
     ok: true,
     url: result.url,
     bytes: result.bytes,
     vevent_count: result.veventCount,
-    message:
-      result.veventCount > 0
-        ? `Kalender-Feed OK — ${result.veventCount} Termin(e) im Feed erkannt.`
-        : 'Kalender-Feed OK — derzeit keine Termine im Feed (das ist in Ordnung).',
+    message: `Kalender-Feed OK — ${result.veventCount} Termin(e) im Feed erkannt.`,
   }
 })

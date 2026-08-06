@@ -1,15 +1,15 @@
 // server/api/cron/send-course-reminders.get.ts
 // ============================================================
-// Queues course session reminder emails for next-day sessions.
+// Queues course session reminder emails/SMS for next-day sessions.
 //
 // Schedule: daily at 07:00 UTC (09:00 Zürich summer / 08:00 winter)
 // Window:   course_sessions starting between NOW()+20h and NOW()+28h
 //
-// Participant email:
+// Participant notification (email / SMS / both via customer_notification_channel):
 //  - Course name, date, time, location, dashboard link
 //  - Skipped if participant has swapped out this session (custom_sessions)
 //
-// Staff/admin email (1 per session):
+// Staff/admin email (1 per session) — email only:
 //  - Internal staff: looked up via staff_id → users.email
 //  - External instructor: external_instructor_email
 //  - Full participant list: name, address, phone, email
@@ -147,7 +147,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenants } = await supabase
     .from('tenants')
-    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url')
+    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, booking_policy')
     .in('id', tenantIds)
   const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
 
@@ -206,14 +206,27 @@ export default defineEventHandler(async (event) => {
   const toInsert: any[] = []
   let skipped = 0
 
+  const { resolveCustomerChannels } = await import('~/server/utils/customer-notification-channel')
+  const { buildCourseReminderSms } = await import('~/server/utils/sms-templates')
+
   for (const item of registrations) {
     const { session } = item
     const courseName = item.course?.name || 'Kurs'
     const tenantId = item.tenant_id || item.course?.tenant_id
     const tenant = tenantMap.get(tenantId)
+    const policy = (tenant as any)?.booking_policy || {}
 
-    const recipientEmail = testEmail || item.email
-    if (!recipientEmail) { skipped++; continue }
+    const hasEmail = !!(testEmail || (item.email && String(item.email).trim()))
+    const hasPhone = !!(item.phone && String(item.phone).trim())
+    const channels = resolveCustomerChannels({
+      channel: policy.customer_notification_channel,
+      hasEmail,
+      hasPhone,
+      emailEnabled: true,
+      smsEnabled: policy.course_reminder_sms_enabled !== false,
+    })
+
+    if (!channels.sendEmail && !channels.sendSms) { skipped++; continue }
 
     const dedupKey = `${item.id}:${session.id}`
     if (!testRegistrationId && alreadyQueuedParticipant.has(dedupKey)) { skipped++; continue }
@@ -223,25 +236,55 @@ export default defineEventHandler(async (event) => {
     const logoUrl      = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
     const dashboardLink = tenant?.slug ? `https://app.simy.ch/${tenant.slug}/customer` : 'https://app.simy.ch'
     const { dateStr, timeRange } = formatSession(session)
+    const smsLength = policy.sms_message_length === 'long' ? 'long' : 'short'
+    const contextData = {
+      stage: 'course_reminder',
+      registration_id: item.id,
+      session_id: session.id,
+      course_name: courseName,
+      tenant_name: tenantName,
+    }
 
-    toInsert.push({
-      tenant_id:       tenantId,
-      channel:         'email',
-      recipient_email: recipientEmail,
-      subject:         `Erinnerung: ${courseName} morgen, ${dateStr}`,
-      body:            buildParticipantReminderEmail({
-        firstName: item.first_name || 'Hallo',
-        courseName, dateStr, timeRange,
-        location: session.custom_location || null,
-        tenantName, primaryColor, logoUrl, dashboardLink,
-      }),
-      status:   'pending',
-      send_at:  now.toISOString(),
-      context_data: {
-        stage: 'course_reminder', registration_id: item.id,
-        session_id: session.id, course_name: courseName, tenant_name: tenantName,
-      }
-    })
+    if (channels.sendEmail) {
+      const recipientEmail = testEmail || item.email
+      toInsert.push({
+        tenant_id:       tenantId,
+        channel:         'email',
+        recipient_email: recipientEmail,
+        subject:         `Erinnerung: ${courseName} morgen, ${dateStr}`,
+        body:            buildParticipantReminderEmail({
+          firstName: item.first_name || 'Hallo',
+          courseName, dateStr, timeRange,
+          location: session.custom_location || null,
+          tenantName, primaryColor, logoUrl, dashboardLink,
+        }),
+        status:   'pending',
+        send_at:  now.toISOString(),
+        context_data: contextData,
+      })
+    }
+
+    if (channels.sendSms) {
+      toInsert.push({
+        tenant_id:       tenantId,
+        channel:         'sms',
+        recipient_phone: item.phone,
+        body:            buildCourseReminderSms({
+          firstName: item.first_name || 'du',
+          courseName,
+          dateLabel: dateStr,
+          timeLabel: timeRange,
+          locationLabel: session.custom_location || null,
+          appLink: dashboardLink,
+          length: smsLength,
+        }),
+        status:   'pending',
+        send_at:  now.toISOString(),
+        context_data: contextData,
+      })
+    }
+
+    alreadyQueuedParticipant.add(dedupKey)
   }
 
   // ── 7. Build staff + admin queue entries (1 per session) ───────

@@ -221,14 +221,17 @@ export async function syncOneExternalCalendar(
   })
 
   if (windowEvents.length === 0) {
-    logger.debug(`ℹ️ No events in sync window for ${calendar.calendar_name}`)
+    logger.warn(`⚠️ Empty ICS feed (0 events) for ${calendar.calendar_name || calendar.id}`)
+    // Soft warning — feed is reachable but has no appointments. Do not bump
+    // consecutive_failures (URL itself is fine), but surface it in the UI.
     await supabase
       .from('external_calendars')
       .update({
         last_sync_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         consecutive_failures: 0,
-        last_fetch_error: null,
+        last_fetch_error:
+          'EMPTY_CALENDAR: Kalender-Feed enthält keine Termine. Vermutlich wurde ein leerer Kalender geteilt — bitte den Kalender mit den echten Terminen öffentlich teilen und den neuen Link verbinden.',
       })
       .eq('id', calendar.id)
     return { status: 'synced', events: 0 }

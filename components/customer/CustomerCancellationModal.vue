@@ -208,7 +208,7 @@ import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
 import { calculateCancellationCharges } from '~/utils/policyCalculations'
 
 const { primaryColor } = useTenantBranding()
-const { t } = useTerminology()
+const { t, eventTypeLabel } = useTerminology()
 const { defaultPolicy, fetchPolicies } = useCancellationPolicies()
 
 const props = defineProps<{
@@ -462,13 +462,7 @@ const close = () => {
 }
 
 const getAppointmentTitle = (appointment: any) => {
-  const EVENT_LABELS: Record<string, string> = {
-    lesson: t.value.appointment,
-    exam: 'Prüfung',
-    theory: 'Theorie',
-    other: 'Termin',
-  }
-  const eventLabel = EVENT_LABELS[appointment.event_type_code] || t.value.appointment
+  const eventLabel = eventTypeLabel(appointment.event_type_code, { detailed: false }) || t.value.appointment
   const category = appointment.type || ''
   return category ? `${eventLabel} • ${category}` : eventLabel
 }

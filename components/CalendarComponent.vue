@@ -391,7 +391,7 @@ const isInitialLoad = ref(true) // Flag für ersten Load
 const showDatePicker = ref(false) // Für Monatskalender-Dropdown
 const currentYear = ref(new Date().getFullYear())
 const tenantName = ref('') // Tenant name for SMS/Email
-const { t } = useTerminology()
+const { t, eventTypeLabel } = useTerminology()
 tenantName.value = t.value.businessNoun
 let syncInterval: NodeJS.Timeout | null = null // Interval für Auto-Sync
 
@@ -1558,28 +1558,41 @@ const handleEventDrop = async (dropInfo: any) => {
       //   logger.debug('⚠️ No phone number available for SMS')
       // }
       
-      // Email versenden
-      if (studentEmail) {
-        logger.debug('📧 Sending Email notification for rescheduled appointment...')
-        try {
-          const result = await $fetch('/api/email/send-appointment-notification', {
-            method: 'POST',
-            body: {
-              email: studentEmail,
-              studentName: firstName,
-              oldTime: oldStartTime,
-              newTime: newTime,
-              staffName: instructorName,
-              type: 'rescheduled',
-              tenantId: props.currentUser?.tenant_id
-            }
-          })
-          logger.debug('✅ Email sent successfully:', result)
-        } catch (emailError: any) {
-          console.error('❌ Failed to send Email:', emailError)
+      // Email / SMS versenden (channel policy)
+      logger.debug('📧 Sending notification for rescheduled appointment...')
+      try {
+        const result = await $fetch('/api/appointments/notify-change', {
+          method: 'POST',
+          body: {
+            appointmentId: dropInfo.event.id,
+            userId: dropInfo.event.extendedProps?.user_id || dropInfo.event.extendedProps?.userId,
+            type: 'rescheduled',
+            appointmentTimeIso: dropInfo.event.startStr,
+            appointmentTimeLabel: newTime,
+            newTime,
+            oldTime: oldStartTime,
+            staffName: instructorName,
+          }
+        })
+        logger.debug('✅ Reschedule notification sent:', result)
+      } catch (notifyError: any) {
+        console.error('❌ Failed to send reschedule notification:', notifyError)
+        if (studentEmail) {
+          try {
+            await $fetch('/api/email/send-appointment-notification', {
+              method: 'POST',
+              body: {
+                email: studentEmail,
+                studentName: firstName,
+                oldTime: oldStartTime,
+                newTime: newTime,
+                staffName: instructorName,
+                type: 'rescheduled',
+                tenantId: props.currentUser?.tenant_id
+              }
+            })
+          } catch { /* ignore */ }
         }
-      } else {
-        logger.debug('⚠️ No email address available for email notification')
       }
       
       // Modal aktualisieren falls offen
@@ -2313,15 +2326,8 @@ const pasteAppointmentDirectly = async () => {
     }
 
     // Map event_type_code → lesbarer Name
-    const eventTypeLabels: Record<string, string> = {
-      lesson: t.value.appointment,
-      exam: 'Prüfung',
-      theory: 'Theorie',
-      vku: 'VKU',
-      nfa: 'NFA',
-      other: 'Sonstiges',
-    }
-    const eventTypeName = eventTypeLabels[clipboardAppointment.value?.event_type_code || 'lesson'] || t.value.appointment
+    const eventTypeName = eventTypeLabel(clipboardAppointment.value?.event_type_code || 'lesson', { detailed: false })
+      || t.value.appointment
     
     if (studentEmail) {
       logger.debug('📧 Sending confirmation email for pasted appointment...')

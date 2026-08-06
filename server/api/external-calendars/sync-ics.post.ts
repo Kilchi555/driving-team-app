@@ -145,10 +145,24 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     })
 
     if (windowEvents.length === 0) {
+      logger.warn(`⚠️ Empty ICS feed (0 events) for calendar ${calendar_id}`)
+      await supabase
+        .from('external_calendars')
+        .update({
+          last_sync_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          consecutive_failures: 0,
+          last_fetch_error:
+            'EMPTY_CALENDAR: Kalender-Feed enthält keine Termine. Vermutlich wurde ein leerer Kalender geteilt — bitte den Kalender mit den echten Terminen öffentlich teilen und den neuen Link verbinden.',
+        })
+        .eq('id', calendar_id)
+
       return {
-        success: true,
-        message: 'No events in the next year',
-        imported_events: 0
+        success: false,
+        message: 'Kalender-Feed enthält keine Termine',
+        tip: 'Du hast vermutlich einen leeren Kalender geteilt. Teile in iCloud den Kalender mit deinen echten Terminen und verbinde den neuen Link.',
+        imported_events: 0,
+        code: 'empty_calendar',
       }
     }
 

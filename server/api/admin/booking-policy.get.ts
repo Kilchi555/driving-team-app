@@ -62,14 +62,29 @@ export interface BookingPolicy {
   registration_reminder_sms_enabled: boolean
   onboarding_sms_enabled: boolean
   onboarding_email_enabled: boolean
-  /** SMS confirmation when customer has phone but no email (default true) */
+  /** SMS confirmation (gated further by customer_notification_channel) */
   confirmation_sms_enabled: boolean
-  /** SMS reminder when customer has phone but no email (default true) */
+  /** SMS reminder (gated further by customer_notification_channel) */
   reminder_sms_enabled: boolean
+  /**
+   * How to pick email vs SMS for customer appointment/payment notifications.
+   * - email_first: email when available, else SMS (legacy default)
+   * - sms_first: SMS when available, else email
+   * - both: send every enabled channel that has a destination
+   */
+  customer_notification_channel: 'email_first' | 'sms_first' | 'both'
   /** short = ~1 segment, long = ~2 segments with link/extra text */
   sms_message_length: 'short' | 'long'
   /** When true, stop billable SMS once included segments are used */
   sms_hard_stop_on_quota: boolean
+  /** SMS on appointment cancellation (default true) */
+  cancellation_sms_enabled: boolean
+  /** SMS on appointment reschedule (default true) */
+  reschedule_sms_enabled: boolean
+  /** SMS for payment reminders (default true) */
+  payment_reminder_sms_enabled: boolean
+  /** SMS for course session reminders to participants (default true) */
+  course_reminder_sms_enabled: boolean
   // ── Staff permissions ──────────────────────────────────────────────────────
   staff_refund_permission: 'hidden' | 'request' | 'allowed'
   staff_invoice_permission: 'hidden' | 'create_only' | 'create_and_send'
@@ -147,8 +162,13 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   onboarding_email_enabled: false,
   confirmation_sms_enabled: true,
   reminder_sms_enabled: true,
+  customer_notification_channel: 'email_first',
   sms_message_length: 'short',
   sms_hard_stop_on_quota: false,
+  cancellation_sms_enabled: true,
+  reschedule_sms_enabled: true,
+  payment_reminder_sms_enabled: true,
+  course_reminder_sms_enabled: true,
   staff_refund_permission: 'hidden',
   staff_invoice_permission: 'create_and_send',
   auto_invoice_on_complete: false,

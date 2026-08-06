@@ -134,7 +134,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenants } = await supabase
     .from('tenants')
-    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, contact_email, business_type')
+    .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, contact_email, business_type, booking_policy')
     .in('id', tenantIds)
 
   const userMap   = new Map((users   || []).map((u: any) => [u.id, u]))
@@ -168,7 +168,23 @@ export default defineEventHandler(async (event) => {
 
   for (const [userId, userPayments] of paymentsByUser) {
     const user = userMap.get(userId)
-    if (!user || !user.email) continue
+    if (!user) continue
+
+    const hasEmail = !!(user.email && String(user.email).trim())
+    const hasPhone = !!(user.phone && String(user.phone).trim())
+    if (!hasEmail && !hasPhone) continue
+
+    const tenant = tenantMap.get(userPayments[0].tenant_id)
+    const policy = (tenant as any)?.booking_policy || {}
+    const { resolveCustomerChannels } = await import('~/server/utils/customer-notification-channel')
+    const channels = resolveCustomerChannels({
+      channel: policy.customer_notification_channel,
+      hasEmail,
+      hasPhone,
+      emailEnabled: true,
+      smsEnabled: policy.payment_reminder_sms_enabled !== false,
+    })
+    if (!channels.sendEmail && !channels.sendSms) continue
 
     // Find oldest unpaid appointment to base the reminder schedule on
     const appointmentDates = userPayments
@@ -179,12 +195,12 @@ export default defineEventHandler(async (event) => {
     const oldestAppointmentTime = Math.min(...appointmentDates)
     const daysSinceOldest = (now.getTime() - oldestAppointmentTime) / (1000 * 60 * 60 * 24)
 
-    const tenant    = tenantMap.get(userPayments[0].tenant_id)
     const terms     = termsMap.get(userPayments[0].tenant_id) || getTerminologyDefaults(tenant?.business_type)
     const tenantName = tenant?.name || `Ihre ${terms.businessNoun}`
     const tenantSlug = tenant?.slug || ''
     const primaryColor = tenant?.primary_color || '#2563eb'
     const logoUrl    = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+    const smsLength = policy.sms_message_length === 'long' ? 'long' : 'short'
 
     // Guest bookings can leave a user "pending" (no password ever set) — a
     // plain login link is a dead end for them, so route them through their
@@ -297,24 +313,51 @@ export default defineEventHandler(async (event) => {
 </body>
 </html>`
 
-      toInsert.push({
-        tenant_id:       userPayments[0].tenant_id,
-        channel:         'email',
-        recipient_email: user.email,
-        subject:         subjectPrefix,
-        body:            emailBody,
-        status:          'pending',
-        send_at:         now.toISOString(),
-        context_data: {
-          stage:          'payment_reminder',
-          user_id:        userId,
-          reminder_day:   reminderDay,
-          reminder_number: reminderNumber,
-          payment_ids:    userPayments.map((p: any) => p.id),
-          total_chf:      totalCHF,
-          tenant_name:    tenantName,
-        },
-      })
+      const contextData = {
+        stage:          'payment_reminder',
+        user_id:        userId,
+        reminder_day:   reminderDay,
+        reminder_number: reminderNumber,
+        payment_ids:    userPayments.map((p: any) => p.id),
+        total_chf:      totalCHF,
+        tenant_name:    tenantName,
+      }
+
+      if (channels.sendEmail) {
+        toInsert.push({
+          tenant_id:       userPayments[0].tenant_id,
+          channel:         'email',
+          recipient_email: user.email,
+          subject:         subjectPrefix,
+          body:            emailBody,
+          status:          'pending',
+          send_at:         now.toISOString(),
+          context_data:    contextData,
+        })
+      }
+
+      if (channels.sendSms) {
+        const { buildPaymentReminderSms } = await import('~/server/utils/sms-templates')
+        const smsBody = buildPaymentReminderSms({
+          firstName: user.first_name || 'du',
+          amountChf: totalCHF,
+          count: userPayments.length,
+          appLink: loginLink,
+          length: smsLength,
+        })
+        toInsert.push({
+          tenant_id:       userPayments[0].tenant_id,
+          channel:         'sms',
+          recipient_phone: user.phone,
+          body:            smsBody,
+          status:          'pending',
+          send_at:         now.toISOString(),
+          context_data:    contextData,
+        })
+      }
+
+      // Mark as queued so email+SMS for same day don't double-count as separate reminders
+      alreadyQueued.add(key)
     }
   }
 

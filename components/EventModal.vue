@@ -1296,7 +1296,7 @@ const {
 const { loadProducts, activeProducts, isLoading: isLoadingProducts } = useProducts()
 const priceDisplayRef = ref()
 const savedCompanyBillingAddressId = ref<string | null>(null) // ✅ NEU: Company Billing Address ID
-const { t } = useTerminology()
+const { t, eventTypeLabel } = useTerminology()
 const tenantName = ref(t.value.businessNoun) // Tenant name for SMS/Email
 const evaluationCriteria = ref<EvaluationCriteria[]>([]) // ✅ NEU: Evaluationskriterien
 
@@ -1483,37 +1483,15 @@ const isOtherEventType = computed(() => {
 // Helper function für Lesson Type Text
 const getLessonTypeText = (appointmentType: string): string => {
   logger.debug('🔍 getLessonTypeText called with:', appointmentType)
-  switch (appointmentType) {
-    case 'lesson':
-      return t.value.appointment
-    case 'exam':
-      return 'Prüfungsfahrt inkl. WarmUp und Rückfahrt'
-    case 'theory':
-      return 'Theorielektion'
-    case 'consultation':
-      return 'Beratung'
-    case 'vku':
-      return 'VKU'
-    case 'nothelfer':
-      return 'Nothelfer-Begrüssung'
-    case 'meeting':
-      return 'Meeting'
-    case 'break':
-      return 'Pause'
-    case 'training':
-      return 'Training'
-    case 'maintenance':
-      return 'Wartung'
-    case 'admin':
-      return 'Administration'
-    case 'team_invite':
-      return 'Team-Einladung'
-    case 'other':
-      return 'Sonstiges'
-    default:
-      logger.debug('⚠️ Unknown appointment type, using default')
-      return t.value.appointment
+  if (appointmentType === 'nothelfer') return 'Nothelfer-Begrüssung'
+  if (appointmentType === 'team_invite') return 'Team-Einladung'
+  if (appointmentType === 'admin') return 'Administration'
+  const label = eventTypeLabel(appointmentType)
+  if (appointmentType && label === t.value.appointment && !['lesson', 'practical', ''].includes(appointmentType)) {
+    // Unknown codes: keep previous default behavior
+    logger.debug('⚠️ Unknown appointment type, using default')
   }
+  return label || t.value.appointment
 }
 
 // ✅ Ermittelt den Standort-Text für die Titel-Generierung.
@@ -2006,32 +1984,33 @@ const handleSaveAppointment = async () => {
         const oldTime = `${formatDate(originalDateStr)} ${originalTimeStr || ''}`.trim()
         const newTime = `${formatDate(newDateStr)} ${newTimeStr || ''}`.trim()
 
-        logger.debug('📧 Time/date changed in edit mode – sending reschedule email', { oldTime, newTime, studentEmail })
+        logger.debug('📧 Time/date changed in edit mode – sending reschedule notification', { oldTime, newTime, studentEmail })
 
-        if (studentEmail) {
+        const studentUserId = originalAppointmentData.user_id || selectedStudent.value?.id
+        if (studentUserId || studentEmail) {
           Promise.resolve().then(async () => {
             try {
-              await $fetch('/api/email/send-appointment-notification', {
+              await $fetch('/api/appointments/notify-change', {
                 method: 'POST',
                 body: {
-                  email: studentEmail,
-                  studentName: firstName,
-                  oldTime,
-                  newTime,
-                  staffName: instructorName,
+                  userId: studentUserId,
+                  appointmentId: originalAppointmentData.id || (formData.value as any).id,
                   type: 'rescheduled',
-                  tenantId: props.currentUser?.tenant_id
+                  appointmentTimeLabel: newTime,
+                  newTime,
+                  oldTime,
+                  staffName: instructorName,
                 }
               })
-              logger.debug('✅ Reschedule email sent successfully (edit mode)')
-              showSuccess(`${firstName} wurde per E-Mail über die Terminänderung informiert.`)
-            } catch (emailError: any) {
-              console.error('❌ Failed to send reschedule email (edit mode):', emailError)
-              showError('E-Mail fehlgeschlagen', `${firstName} konnte nicht per E-Mail informiert werden.`)
+              logger.debug('✅ Reschedule notification sent successfully (edit mode)')
+              showSuccess(`${firstName} wurde über die Terminänderung informiert.`)
+            } catch (notifyError: any) {
+              console.error('❌ Failed to send reschedule notification (edit mode):', notifyError)
+              showError('Benachrichtigung fehlgeschlagen', `${firstName} konnte nicht informiert werden.`)
             }
           })
         } else {
-          logger.warn('⚠️ No student email available for reschedule notification')
+          logger.warn('⚠️ No student contact available for reschedule notification')
         }
       }
     }
@@ -2664,13 +2643,7 @@ watch(
 
 // ✅ NEU: Hilfsfunktion zur Übersetzung von event_type_code
 const translateEventTypeCode = (code: string): string => {
-  const translations: { [key: string]: string } = {
-    'lesson': t.value.appointment,
-    'theory': 'Theorielektion',
-    'exam': 'Prüfung',
-    'consultation': 'Beratung'
-  }
-  return translations[code] || code || 'Termin'
+  return eventTypeLabel(code, { detailed: false }) || code || 'Termin'
 }
 
 const eventTypeForTitle = computed((): 'lesson' | 'staff_meeting' | 'other' | 'meeting' | 'break' | 'training' | 'maintenance' | 'admin' | 'team_invite' | 'nothelfer' | 'vku' => {
@@ -3960,7 +3933,7 @@ const useCreditForCurrentLesson = async () => {
       user_id: selectedStudent.value.id,
       amount_rappen: Math.min(studentCredit.value.balance_rappen, totalPrice),
       appointment_id: props.eventData?.id || 'temp_' + Date.now(),
-      notes: `Guthaben für Lektion: ${formData.value.title || t.value.appointment}`
+      notes: `Guthaben für ${t.value.appointment}: ${formData.value.title || t.value.appointment}`
     }
     
     logger.debug('💳 Using credit for lesson:', creditData)

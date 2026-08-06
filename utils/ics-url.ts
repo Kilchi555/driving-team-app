@@ -152,6 +152,12 @@ export function humanizeIcsFetchError(codeOrMessage: string): { message: string;
       tip: 'Oft wurde versehentlich die Web-Adresse statt der ICS-Adresse eingefügt. Anleitung oben im Formular beachten.',
     }
   }
+  if (lower.includes('empty_calendar') || lower.includes('keine termine')) {
+    return {
+      message: 'Dieser Kalender-Feed enthält keine Termine.',
+      tip: 'Vermutlich wurde ein leerer Kalender geteilt (z.B. ein neu erstellter „Simy“-Kalender). Teile den Kalender, in dem deine echten Termine stehen, und verbinde den neuen öffentlichen Link.',
+    }
+  }
   if (lower.includes('invalid') || lower.includes('empty')) {
     return {
       message: 'Die URL liefert keine gültigen Kalender-Daten.',
