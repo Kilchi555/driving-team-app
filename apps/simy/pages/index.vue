@@ -2036,7 +2036,7 @@ const features = computed(() => [
   { icon: 'chart', title: 'Auswertungen & Statistiken', desc: 'Umsatz, Auslastung, No-Show-Rate, Top-Kunden – alle wichtigen Kennzahlen auf einen Blick.', alpha: 0.09, link: '/branchen' },
   { icon: 'graduate', title: 'Fortschritt & Dokumentation', desc: 'Sessions dokumentieren, Ziele tracken und Bewertungen erfassen. Alles an einem Ort.', alpha: 0.12, link: '/branchen' },
   { icon: 'label', title: 'Ressourcen-Management', desc: 'Räume, Geräte oder Fahrzeuge verwalten und Verfügbarkeiten übersichtlich planen.', alpha: 0.07, link: '/branchen' },
-  { icon: 'school', title: 'Kursbuchungsseite', desc: 'Kunden buchen und bezahlen Kurse und Pakete direkt online – mit eigenem Link, Branding und integrierter Zahlung.', alpha: 0.08, link: '/features/kalender' },
+  { icon: 'school', title: 'Kursbuchungsseite', desc: 'Kunden buchen und bezahlen Kurse und Pakete direkt online – mit eigenem Link, Branding und integrierter Zahlung.', alpha: 0.08, link: '/features/kurse' },
 ])
 
 const automations = [

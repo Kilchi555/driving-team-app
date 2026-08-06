@@ -115,7 +115,7 @@ export const VERTICALS: SimyVertical[] = [
     painCloser: 'Simy automatisiert Buchung, Erinnerung und Rechnung für dich.',
     featuresEyebrow: 'Features',
     featuresTitle: 'Alles, was deine Praxis braucht',
-    featuresSub: 'Vom Erstgespräch bis zur bezahlten Sitzung — ein Workflow.',
+    featuresSub: 'Vom Erstgespräch bis zur bezahlten Sitzung — Workshops optional dazu.',
     features: [
       {
         icon: 'calendar',
@@ -136,6 +136,11 @@ export const VERTICALS: SimyVertical[] = [
         icon: 'package',
         title: 'Sitzungspakete',
         desc: '10er-Pakete und Abos verkaufen — Simy zählt die Einheiten mit.',
+      },
+      {
+        icon: 'school',
+        title: 'Workshops (optional)',
+        desc: 'Gruppenformate über die Kursbuchungsseite — klar getrennt vom 1:1-Kalender.',
       },
       {
         icon: 'users',
@@ -214,6 +219,10 @@ export const VERTICALS: SimyVertical[] = [
       {
         q: 'Unterstützt Simy Sitzungspakete (z. B. 10er)?',
         a: 'Ja. Du verkaufst Pakete; Simy zählt Einheiten mit — ohne Excel-Nebenrechnung.',
+      },
+      {
+        q: 'Kann ich Workshops oder Gruppenformate anbieten?',
+        a: 'Ja, optional. Neben dem 1:1-Kalender verkaufst du Workshops über die Kursbuchungsseite mit Platzkontingent.',
       },
       {
         q: 'Gibt es QR-Rechnungen für Coaching?',
@@ -423,7 +432,7 @@ export const VERTICALS: SimyVertical[] = [
     painCloser: 'Simy hält Kalender, Pakete und Zahlung zusammen.',
     featuresEyebrow: 'Für Trainer',
     featuresTitle: 'Vom Probe-Training zur Stammkundschaft',
-    featuresSub: 'Vorlage Personal Training mit sinnvollen Defaults.',
+    featuresSub: 'Vorlage Personal Training — 1:1 plus optional Kleingruppen über die Kursseite.',
     features: [
       {
         icon: 'handshake',
@@ -439,6 +448,11 @@ export const VERTICALS: SimyVertical[] = [
         icon: 'package',
         title: 'Trainingspakete',
         desc: 'Mehrere Einheiten verkaufen und abbuchen.',
+      },
+      {
+        icon: 'school',
+        title: 'Kleingruppen / Bootcamps',
+        desc: 'Optional über die Kursbuchungsseite — Plätze und Anmeldung online, neben 1:1.',
       },
       {
         icon: 'phone',
@@ -478,6 +492,10 @@ export const VERTICALS: SimyVertical[] = [
       {
         q: 'Kann ich 10er-Pakete verkaufen?',
         a: 'Ja. Packages sind für Personal Training vorgesehen — ideal für Mehrfach-Einheiten.',
+      },
+      {
+        q: 'Geht auch Gruppen-Training?',
+        a: 'Ja, optional. Bootcamps und Kleingruppen kannst du über die Kursbuchungsseite mit Platzlimit anbieten.',
       },
       {
         q: 'Geht Simy auch für Boutique-Studios mit mehreren Trainern?',
@@ -539,7 +557,7 @@ export const VERTICALS: SimyVertical[] = [
     painCloser: 'Simy macht aus Lektionen einen klaren Ablauf.',
     featuresEyebrow: 'Für Nachhilfe',
     featuresTitle: 'Unterricht organisieren, nicht improvisieren',
-    featuresSub: 'Vorlage mit Probestunde und Nachhilfe-Lektion.',
+    featuresSub: 'Vorlage mit Probestunde und Nachhilfe-Lektion — Kurse optional dazu.',
     features: [
       {
         icon: 'handshake',
@@ -550,6 +568,11 @@ export const VERTICALS: SimyVertical[] = [
         icon: 'book',
         title: 'Nachhilfe 45′',
         desc: 'Default-Preis ca. CHF 60 — jederzeit anpassbar.',
+      },
+      {
+        icon: 'school',
+        title: 'Kursbuchungsseite',
+        desc: 'Intensivwochen und Gruppenkurse online verkaufen — Plätze und Anmeldung inklusive.',
       },
       {
         icon: 'calculator',
@@ -565,11 +588,6 @@ export const VERTICALS: SimyVertical[] = [
         icon: 'wallet',
         title: 'Rechnungen an Eltern',
         desc: 'QR-Rechnung Schweiz — klar und nachvollziehbar.',
-      },
-      {
-        icon: 'bell',
-        title: 'Erinnerungen',
-        desc: 'Weniger verpasste Lektionen dank Reminder.',
       },
     ],
     highlightsTitle: 'Gebaut wie Unterricht',
@@ -598,6 +616,10 @@ export const VERTICALS: SimyVertical[] = [
       {
         q: 'Geht Online-Nachhilfe (Zoom)?',
         a: 'Ja. Du kannst Online-Standorte/Kanäle nutzen und den Link in der Bestätigung mitgeben.',
+      },
+      {
+        q: 'Kann ich Intensivkurse oder Gruppen anbieten?',
+        a: 'Ja. Über die Kursbuchungsseite verkaufst du Gruppenformate mit Platzkontingent — neben den 1:1-Lektionen.',
       },
       {
         q: 'Was kostet Simy?',
@@ -655,7 +677,7 @@ export const VERTICALS: SimyVertical[] = [
     painCloser: 'Simy orchestriert Buchung und Billing.',
     featuresEyebrow: 'Für Musikschulen',
     featuresTitle: 'Unterricht im Takt',
-    featuresSub: 'Vorlage mit Probestunde und Musikstunde.',
+    featuresSub: 'Vorlage mit Probestunde und Musikstunde — Gruppenkurse über die Kursbuchungsseite.',
     features: [
       {
         icon: 'handshake',
@@ -666,6 +688,11 @@ export const VERTICALS: SimyVertical[] = [
         icon: 'music',
         title: 'Musikstunde 45′',
         desc: 'Default ca. CHF 70 — frei anpassbar.',
+      },
+      {
+        icon: 'school',
+        title: 'Kursbuchungsseite',
+        desc: 'Gruppenunterricht und Workshops mit Platzlimit — Anmeldung und Zahlung online.',
       },
       {
         icon: 'music',
@@ -681,11 +708,6 @@ export const VERTICALS: SimyVertical[] = [
         icon: 'package',
         title: 'Pakete',
         desc: '10er oder Semesterblöcke verkaufen.',
-      },
-      {
-        icon: 'invoice',
-        title: 'QR-Rechnung',
-        desc: 'Professionell an Eltern und Erwachsene.',
       },
     ],
     highlightsTitle: 'Privatschule oder Solo-Lehrer',
@@ -714,6 +736,10 @@ export const VERTICALS: SimyVertical[] = [
       {
         q: 'Ist Simy für Einzel-Musiklehrer sinnvoll?',
         a: 'Ja — Solo-Lehrer starten in Minuten mit Probestunde und Musikstunde.',
+      },
+      {
+        q: 'Kann ich Gruppenunterricht verkaufen?',
+        a: 'Ja. Die Kursbuchungsseite eignet sich für Ensemble, Workshops oder Ferienkurse mit begrenzten Plätzen.',
       },
       {
         q: 'Gibt es eine App für Lehrpersonen?',
@@ -791,7 +817,7 @@ export const VERTICALS: SimyVertical[] = [
       {
         icon: 'graduate',
         title: 'Kurse',
-        desc: 'Gruppenformate über das Kurs-Feature (Plan abhängig).',
+        desc: 'Gruppenformate über die Kursbuchungsseite (Plan abhängig).',
       },
       {
         icon: 'bell',

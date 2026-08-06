@@ -101,6 +101,7 @@ export default defineNuxtConfig({
         '/fahrschule/app',
         '/features/kalender',
         '/features/rechnungen',
+        '/features/kurse',
         '/marketing',
         '/marketing/google-ads',
         '/marketing/seo',
