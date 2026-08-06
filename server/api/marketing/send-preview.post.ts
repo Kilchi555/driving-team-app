@@ -44,8 +44,8 @@ export default defineEventHandler(async (event) => {
       .eq('id', tenantId)
       .single()
 
-    const { getTerminologyDefaults } = await import('~/composables/useTerminology')
-    const terms = getTerminologyDefaults(tenant?.business_type)
+    const { getTenantTerminology } = await import('~/server/utils/tenant-terminology')
+    const terms = await getTenantTerminology(supabase, tenantId)
     const tenantName = tenant?.name ?? terms.businessNoun
     const tenantSlug = tenant?.slug ?? ''
     const primaryColor = tenant?.primary_color || '#1e293b'
@@ -75,6 +75,8 @@ export default defineEventHandler(async (event) => {
         tenant_slug: tenantSlug,
         primary_color: primaryColor,
         discount_code: (campaign as any).segment_filter?.discount_code || '',
+        appointment: terms.appointment,
+        business_noun: terms.businessNoun,
       }, offerVars)
       const rendered = renderTemplate(template.html_body, vars)
       const baseSubject = renderTemplate(

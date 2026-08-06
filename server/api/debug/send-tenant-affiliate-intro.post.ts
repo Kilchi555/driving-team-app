@@ -8,6 +8,8 @@
 import { defineEventHandler, createError, readBody, getHeader } from 'h3'
 import { sendEmail } from '~/server/utils/email'
 import { buildTenantAffiliateIntroEmail } from '~/server/utils/tenant-affiliate-intro-email'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -23,10 +25,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'recipient_email is required' })
   }
 
+  const supabase = getSupabaseAdmin()
+  const tenantId = typeof body?.tenant_id === 'string' ? body.tenant_id.trim() : null
+  const terms = tenantId
+    ? await getTenantTerminology(supabase, tenantId)
+    : undefined
+
   const { subject, html } = buildTenantAffiliateIntroEmail({
     firstName: body?.first_name || 'Pascal',
     tenantName: body?.tenant_name || null,
     ctaUrl: body?.cta_url || null,
+    terms,
   })
 
   const testSubject = subject.startsWith('[TEST]') ? subject : `[TEST] ${subject}`

@@ -64,8 +64,11 @@ function escapeHtml(str: string): string {
 export function generateEvaluationPdfHtml(
   data: EvaluationPdfData,
   branding: ExtendedTenantBranding,
-  logoDataUrl: string | null
+  logoDataUrl: string | null,
+  labels?: { appointment?: string; appointmentsPlural?: string }
 ): string {
+  const appointment = labels?.appointment || 'Termin'
+  const appointmentsPlural = labels?.appointmentsPlural || 'Termine'
   const primary = branding.primaryColor
   const primaryDark = darken(primary, 40)
   const primaryRgb = hexToRgb(primary)
@@ -137,7 +140,7 @@ export function generateEvaluationPdfHtml(
   }).join('')
 
   const emptyState = evaluatedLessons.length === 0
-    ? `<div class="empty-state">Noch keine bewerteten Lektionen vorhanden</div>`
+    ? `<div class="empty-state">Noch keine bewerteten ${escapeHtml(appointmentsPlural)} vorhanden</div>`
     : ''
 
   return `<!DOCTYPE html>
@@ -395,8 +398,8 @@ export function generateEvaluationPdfHtml(
       </div>
     </div>
 
-    <!-- Lektionen -->
-    <div class="section-title">Lektionen chronologisch</div>
+    <!-- Termine -->
+    <div class="section-title">${escapeHtml(appointmentsPlural)} chronologisch</div>
 
     ${emptyState}
     ${lessonBlocks}

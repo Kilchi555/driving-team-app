@@ -4,6 +4,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import type { PriceAdjustmentResult } from './appointment-price-adjustment'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 interface AdjustmentEmailData {
   userId: string
@@ -26,7 +27,7 @@ export async function sendAdjustmentNotificationEmail(
     // 1. Get user details
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('email, first_name, last_name')
+      .select('email, first_name, last_name, tenant_id')
       .eq('id', userId)
       .single()
 
@@ -34,6 +35,15 @@ export async function sendAdjustmentNotificationEmail(
       logger.error('AdjustmentEmail', 'User not found:', userId)
       return { success: false, error: 'User not found' }
     }
+
+    const terms = await getTenantTerminology(supabase, user.tenant_id)
+    const appointment = terms.appointment || 'Termin'
+    const { data: tenantRow } = await supabase
+      .from('tenants')
+      .select('name')
+      .eq('id', user.tenant_id)
+      .maybeSingle()
+    const teamSignoff = tenantRow?.name ? `Ihr ${tenantRow.name}-Team` : 'Ihr Team'
 
     // 2. Get updated credit balance
     const { data: credits } = await supabase
@@ -82,7 +92,7 @@ export async function sendAdjustmentNotificationEmail(
               📊 <strong>Ihr neues Guthaben:</strong> CHF ${creditBalanceCHF}
             </p>
             <p style="margin: 10px 0 0 0; font-size: 12px; color: #999;">
-              Dieses Guthaben wird automatisch bei Ihrer nächsten Lektion verrechnet.
+              Dieses Guthaben wird automatisch bei Ihrer nächsten ${appointment} verrechnet.
             </p>
           </div>
           
@@ -92,7 +102,7 @@ export async function sendAdjustmentNotificationEmail(
           
           <p style="margin-top: 30px; color: #999; font-size: 12px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
             Beste Grüsse<br>
-            Ihr Fahrschul-Team
+            ${teamSignoff}
           </p>
         </div>
       `
@@ -109,12 +119,12 @@ Ursprünglicher Preis: CHF ${oldPriceCHF}
 Neuer Preis: CHF ${newPriceCHF}
 
 Ihr neues Guthaben: CHF ${creditBalanceCHF}
-Dieses Guthaben wird automatisch bei Ihrer nächsten Lektion verrechnet.
+Dieses Guthaben wird automatisch bei Ihrer nächsten ${appointment} verrechnet.
 
 Bei Fragen stehen wir Ihnen gerne zur Verfügung.
 
 Beste Grüsse
-Ihr Fahrschul-Team
+${teamSignoff}
       `
     } else {
       // BELASTUNG - Zeit erhöht
@@ -162,7 +172,7 @@ Ihr Fahrschul-Team
           
           <p style="margin-top: 30px; color: #999; font-size: 12px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
             Beste Grüsse<br>
-            Ihr Fahrschul-Team
+            ${teamSignoff}
           </p>
         </div>
       `
@@ -184,7 +194,7 @@ ${isNegative ? 'Dieser Betrag wird bei Ihrer nächsten Zahlung automatisch verre
 Bei Fragen stehen wir Ihnen gerne zur Verfügung.
 
 Beste Grüsse
-Ihr Fahrschul-Team
+${teamSignoff}
       `
     }
 
@@ -228,13 +238,20 @@ export async function sendNegativeCreditsReminderEmail(
     // Get user details
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('email, first_name, last_name')
+      .select('email, first_name, last_name, tenant_id')
       .eq('id', userId)
       .single()
 
     if (userError || !user) {
       return { success: false, error: 'User not found' }
     }
+
+    const { data: tenantRow } = await supabase
+      .from('tenants')
+      .select('name')
+      .eq('id', user.tenant_id)
+      .maybeSingle()
+    const teamSignoff = tenantRow?.name ? `Ihr ${tenantRow.name}-Team` : 'Ihr Team'
 
     const debtAmountCHF = (debtAmount / 100).toFixed(2)
 
@@ -265,7 +282,7 @@ export async function sendNegativeCreditsReminderEmail(
         
         <p style="margin-top: 30px; color: #999; font-size: 12px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
           Beste Grüsse<br>
-          Ihr Fahrschul-Team
+          ${teamSignoff}
         </p>
       </div>
     `
@@ -285,7 +302,7 @@ Alternativ können Sie den Betrag auch vorab überweisen.
 Bei Fragen stehen wir Ihnen gerne zur Verfügung.
 
 Beste Grüsse
-Ihr Fahrschul-Team
+${teamSignoff}
     `
 
     const { error: emailError } = await supabase.functions.invoke('send-email', {

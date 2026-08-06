@@ -4,6 +4,7 @@ import { setHeader, send, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 let puppeteer: any
 async function getPuppeteer() {
@@ -1090,11 +1091,15 @@ export default defineEventHandler(async (event) => {
     const primary = tenant?.primary_color || '#2563eb'
     const secondary = tenant?.secondary_color || '#6b7280'
 
+    const terms = await getTenantTerminology(supabase, tenantId)
+    const appointment = terms.appointment || 'Termin'
+    const appointmentsPlural = terms.appointmentsPlural || 'Termine'
+
     // Translation helper function (needs to be passed to generateReceiptHTML)
     const translateFn = (key: string, params?: Record<string, any>) => {
       const translations: Record<string, any> = {
         'receipt.title': 'Quittung',
-        'receipt.customer': 'Kunde',
+        'receipt.customer': terms.client || 'Kunde',
         'receipt.date': 'Datum',
         'receipt.paidDate': 'Bezahlt am',
         'receipt.serviceDetails': 'Leistungsdetails',
@@ -1116,11 +1121,11 @@ export default defineEventHandler(async (event) => {
         'receipt.yes': 'Ja',
         'receipt.no': 'Nein',
         'receipt.footer': `Bei Fragen wenden Sie sich bitte an ${tenant?.contact_email || 'den Support'}.`,
-        'receipt.lessonsOverview': 'Lektionsübersicht',
+        'receipt.lessonsOverview': `${appointmentsPlural}-Übersicht`,
         'receipt.summary': 'Zusammenfassung',
-        'receipt.lessonCount': 'Anzahl Lektionen',
+        'receipt.lessonCount': `Anzahl ${appointmentsPlural}`,
         'receipt.period': 'Zeitraum',
-        'receipt.totalLessons': 'Total Lektionen',
+        'receipt.totalLessons': `Total ${appointmentsPlural}`,
         'receipt.totalAdminFees': 'Total Administrationsgebühren',
         'receipt.totalProducts': 'Total Produkte',
         'receipt.totalDiscounts': 'Total Rabatte',
@@ -1138,7 +1143,7 @@ export default defineEventHandler(async (event) => {
         'receipt.recentTransactions': 'Guthaben-Transaktionen',
         'receipt.transactionType': 'Typ',
         'receipt.amount': 'Betrag',
-        'eventType.lesson': 'Termin',
+        'eventType.lesson': appointment,
         'eventType.course': 'Kurs',
         'status.pending': 'Ausstehend',
         'status.authorized': 'Reserviert',

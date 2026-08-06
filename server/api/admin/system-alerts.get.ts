@@ -4,6 +4,7 @@
  */
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -17,6 +18,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const supabase = getSupabaseAdmin()
+  const terms = await getTenantTerminology(supabase, tid)
+  const clientLabel = terms.client || 'Kunde'
+  const clientsPlural = terms.clientsPlural || 'Kunden'
 
   const [
     refundsRes,
@@ -130,7 +134,7 @@ export default defineEventHandler(async (event) => {
     link: '/admin/medical-certificate-reviews',
     items: medCerts.map(r => ({
       id: r.id,
-      text: r.student_name || 'Schüler',
+      text: r.student_name || clientLabel,
       date: r.medical_certificate_uploaded_at,
     })),
   })
@@ -202,7 +206,7 @@ export default defineEventHandler(async (event) => {
     link: '/admin/student-credits',
     items: [{
       id: 'total',
-      text: `CHF ${(totalWithdrawalRappen / 100).toFixed(2)} ausstehend (${credits.length} Schüler)`,
+      text: `CHF ${(totalWithdrawalRappen / 100).toFixed(2)} ausstehend (${credits.length} ${clientsPlural})`,
     }],
   })
 

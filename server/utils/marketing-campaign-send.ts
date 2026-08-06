@@ -18,6 +18,8 @@ export interface QueueCampaignSendOptions {
   batchLimit?: number
   /** When true, keep campaign in recurring state and advance next_run_at */
   fromSchedule?: boolean
+  /** Optional base time for day-0 batch (ISO string or Date). Defaults to now. */
+  startAt?: string | Date
 }
 
 export interface QueueCampaignSendResult {
@@ -46,6 +48,11 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
     typeof opts.dailyLimit === 'number' && opts.dailyLimit > 0 ? opts.dailyLimit : MAX_DAILY,
   )
   const batchLimit = typeof opts.batchLimit === 'number' && opts.batchLimit > 0 ? opts.batchLimit : null
+  const queueStartMs = (() => {
+    if (opts.startAt == null) return Date.now()
+    const t = opts.startAt instanceof Date ? opts.startAt.getTime() : new Date(opts.startAt).getTime()
+    return Number.isFinite(t) ? t : Date.now()
+  })()
 
   const { data: campaign, error: campaignErr } = await supabase
     .from('email_campaigns')
@@ -88,6 +95,9 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
     .select('name, slug, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
     .eq('id', tenantId)
     .single()
+
+  const { getTenantTerminology } = await import('~/server/utils/tenant-terminology')
+  const terms = await getTenantTerminology(supabase, tenantId)
 
   const tenantName = tenant?.name ?? 'Unternehmen'
   const tenantSlug = tenant?.slug ?? ''
@@ -270,7 +280,6 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
 
   const queueRows: any[] = []
   const campaignLeadRows: any[] = []
-  const now = Date.now()
   let globalIndex = 0
 
   for (const bucket of buckets) {
@@ -280,7 +289,7 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
 
     for (const lead of bucketLeads) {
       const dayOffset = batchSize500 > 0 ? Math.floor(globalIndex / batchSize500) : 0
-      const sendAt = new Date(now + dayOffset * 24 * 60 * 60 * 1000).toISOString()
+      const sendAt = new Date(queueStartMs + dayOffset * 24 * 60 * 60 * 1000).toISOString()
       globalIndex++
 
       const unsubscribeLink = buildUnsubscribeLink(baseUrl, lead.id, lead.unsubscribe_token)
@@ -297,6 +306,8 @@ export async function queueCampaignSend(opts: QueueCampaignSendOptions): Promise
         tenant_slug: tenantSlug,
         primary_color: primaryColor,
         discount_code: discountCode,
+        appointment: terms.appointment,
+        business_noun: terms.businessNoun,
       }, offerVars)
 
       const renderedHtml = renderTemplate(template.html_body, baseVars)

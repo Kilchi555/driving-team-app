@@ -195,7 +195,7 @@ export default defineEventHandler(async (event) => {
       duration_minutes: apt?.duration_minutes || null,
       staff_name: staffName,
       amount_rappen: p.total_amount_rappen || 0,
-      unit: isCoursePayment ? 'Kurs' : 'Lektion',
+      unit: isCoursePayment ? 'Kurs' : appointmentFallback,
       payment_method: p.payment_method,
       status: p.payment_status,
       user_id: p.user_id,
