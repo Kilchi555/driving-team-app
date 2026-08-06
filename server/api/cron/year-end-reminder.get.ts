@@ -14,6 +14,7 @@ import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
+import { getTenantsWithMultipleStaff } from '~/server/utils/tenant-staff-notify'
 
 export default defineEventHandler(async (event) => {
   const secret = event.node.req.headers.authorization?.replace('Bearer ', '')
@@ -60,10 +61,15 @@ export default defineEventHandler(async (event) => {
     .eq('salary_type', 'monthly')
     .in('tenant_id', tenantIds)
 
+  // Solo tenants (≤1 active staff): admin copy only — skip personal staff reminders
+  const multiStaffTenants = await getTenantsWithMultipleStaff(supabase, tenantIds)
+
   // Merge: admins get "admin" copy, staff get personalised copy
   const recipients: Array<{ email: string; first_name: string; tenant_id: string; tenant: any; isAdmin: boolean }> = [
     ...(admins || []).map((u: any) => ({ ...u, tenant: u.tenants, isAdmin: true })),
-    ...(staffUsers || []).map((u: any) => ({ ...u, tenant: u.tenants, isAdmin: false })),
+    ...(staffUsers || [])
+      .filter((u: any) => multiStaffTenants.has(u.tenant_id))
+      .map((u: any) => ({ ...u, tenant: u.tenants, isAdmin: false })),
   ]
 
   let emailsSent = 0

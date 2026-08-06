@@ -10,6 +10,7 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { sendTenantEmail, sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
+import { shouldNotifyAssignedStaff } from '~/server/utils/tenant-staff-notify'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -203,6 +204,12 @@ export async function notifyStaffAssigned(
   course: CourseForNotification,
   sessions: CourseSessionForNotification[],
 ) {
+  // Solo tenants already get admin-side course emails — skip duplicate staff assign mail
+  if (!(await shouldNotifyAssignedStaff(supabase, course.tenant_id))) {
+    logger.debug(`⏭️ Skipping staff assignment email — tenant ${course.tenant_id} has ≤1 active staff`)
+    return
+  }
+
   const { data: staffUser } = await supabase
     .from('users')
     .select('first_name, last_name, email')

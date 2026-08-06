@@ -12,6 +12,7 @@ import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { shouldNotifyAssignedStaff } from '~/server/utils/tenant-staff-notify'
 
 export default defineEventHandler(async (event) => {
   // ── Auth (Bearer + httpOnly cookie + refresh fallback) ───────────────────
@@ -79,6 +80,7 @@ export default defineEventHandler(async (event) => {
 
   let totalSent = 0
   const sentTo: string[] = []
+  const notifyInternalStaff = await shouldNotifyAssignedStaff(supabase, me.tenant_id)
 
   for (const session of sessions as any[]) {
     // Load participants for this session
@@ -104,11 +106,12 @@ export default defineEventHandler(async (event) => {
     })
     const subject = `Teilnehmerliste: ${courseName} — ${dateStr} (${participants.length} Teilnehmer)`
 
-    // Collect recipients: instructor + admins (deduped)
+    // Collect recipients: instructor + admins (deduped).
+    // Solo tenants: skip internal staff — admins only (external instructors still get mail).
     const recipientSet = new Map<string, string>()
     if (session.instructor_type === 'external' && session.external_instructor_email) {
       recipientSet.set(session.external_instructor_email, session.external_instructor_name || 'Kursleiter')
-    } else if (session.staff_id && staffEmailMap.has(session.staff_id)) {
+    } else if (notifyInternalStaff && session.staff_id && staffEmailMap.has(session.staff_id)) {
       const s = staffEmailMap.get(session.staff_id)!
       recipientSet.set(s.email, s.name)
     }
