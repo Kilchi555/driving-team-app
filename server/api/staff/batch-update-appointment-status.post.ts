@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { triggerAutoInvoiceOnComplete } from '~/server/utils/auto-invoice-on-complete'
 import logger from '~/utils/logger'
 
 async function triggerAffiliateRewards(
@@ -68,7 +69,7 @@ export default defineEventHandler(async (event) => {
     // Get user from users table to get tenant_id
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, tenant_id, role')
+      .select('id, tenant_id, role, first_name, last_name, email')
       .eq('auth_user_id', authUser.id)
       .single()
 
@@ -155,13 +156,19 @@ export default defineEventHandler(async (event) => {
       newStatus: status
     })
 
-    // ✅ 6. AFFILIATE REWARD HOOK – fire-and-forget, never blocks the response
+    // ✅ 6. AFFILIATE + AUTO-INVOICE HOOKS – fire-and-forget, never block the response
     if (status === 'completed' && updated?.length) {
-      triggerAffiliateRewards(
-        updated.map((a: any) => a.id),
-        tenantId
-      ).catch((err: any) =>
+      const ids = updated.map((a: any) => a.id)
+      triggerAffiliateRewards(ids, tenantId).catch((err: any) =>
         logger.error('❌ Affiliate reward hook error:', err?.message)
+      )
+      triggerAutoInvoiceOnComplete({
+        supabase,
+        tenantId,
+        appointmentIds: ids,
+        actor: user,
+      }).catch((err: any) =>
+        logger.error('❌ Auto-invoice hook error:', err?.message)
       )
     }
 

@@ -1366,6 +1366,123 @@
             </div>
           </div>
 
+          <!-- Auto Invoice -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900">Automatische Rechnungen</h2>
+            <p class="text-sm text-gray-500 mt-1 mb-5">
+              Optional: Rechnungen mit Zahlungsart «Rechnung» automatisch erstellen und versenden.
+              Standardmässig ausgeschaltet — je nach Branche oft nicht nötig.
+            </p>
+
+            <div class="space-y-5">
+              <!-- On complete -->
+              <div class="flex items-center justify-between gap-4 p-4 bg-gray-50 rounded-lg">
+                <div class="flex-1">
+                  <h3 class="text-sm font-medium text-gray-900">Nach Terminabschluss</h3>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    Sofort nach Bewertung oder Prüfungsergebnis (Status «completed»).
+                  </p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                  <input type="checkbox" v-model="autoInvoiceOnComplete" class="sr-only peer" />
+                  <div class="tenant-toggle w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                </label>
+              </div>
+
+              <!-- Schedule -->
+              <div>
+                <h3 class="text-sm font-medium text-gray-900 mb-1">Zeitplan für vergangene Termine</h3>
+                <p class="text-xs text-gray-500 mb-3">
+                  Verrechnet offene Rechnungs-Zahlungen vergangener Termine automatisch (Sammelrechnung pro {{ t.client }}).
+                  Ändert den Termin-Status nicht.
+                </p>
+                <div class="space-y-2">
+                  <label
+                    v-for="opt in autoInvoiceScheduleOptions"
+                    :key="opt.value"
+                    class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                    :class="autoInvoiceSchedule === opt.value ? '' : 'border-gray-200'"
+                    :style="autoInvoiceSchedule === opt.value ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
+                  >
+                    <input type="radio" v-model="autoInvoiceSchedule" :value="opt.value" class="mt-1 mr-3" />
+                    <div>
+                      <div class="font-medium text-gray-900">{{ opt.label }}</div>
+                      <div class="text-sm text-gray-600">{{ opt.hint }}</div>
+                    </div>
+                  </label>
+                </div>
+
+                <div v-if="autoInvoiceSchedule === 'weekly'" class="mt-3 max-w-xs">
+                  <label class="block text-sm font-medium text-gray-900 mb-1">Wochentag</label>
+                  <select
+                    v-model.number="autoInvoiceScheduleWeekday"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm tenant-focus focus:outline-none focus:ring-2"
+                  >
+                    <option v-for="d in weekdayOptions" :key="d.value" :value="d.value">{{ d.label }}</option>
+                  </select>
+                </div>
+
+                <div v-if="autoInvoiceSchedule === 'monthly'" class="mt-3 max-w-xs">
+                  <label class="block text-sm font-medium text-gray-900 mb-1">Tag im Monat</label>
+                  <select
+                    v-model.number="autoInvoiceScheduleDay"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm tenant-focus focus:outline-none focus:ring-2"
+                  >
+                    <option v-for="n in 28" :key="n" :value="n">{{ n }}.</option>
+                  </select>
+                  <p class="text-xs text-gray-500 mt-1">Max. 28., damit jeder Monat abgedeckt ist.</p>
+                </div>
+              </div>
+
+              <!-- Recipient (when any mode on) -->
+              <div v-if="autoInvoiceOnComplete || autoInvoiceSchedule !== 'off'" class="border-t pt-5 space-y-4">
+                <div>
+                  <h3 class="text-sm font-medium text-gray-900 mb-2">Empfänger der Rechnungs-E-Mail</h3>
+                  <div class="space-y-2">
+                    <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                           :class="autoInvoiceRecipient === 'customer' ? '' : 'border-gray-200'"
+                           :style="autoInvoiceRecipient === 'customer' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
+                      <input type="radio" v-model="autoInvoiceRecipient" value="customer" class="mt-1 mr-3" />
+                      <div>
+                        <div class="font-medium text-gray-900">An {{ t.client }}</div>
+                        <div class="text-sm text-gray-600">PDF geht an die Rechnungs-E-Mail. Fehlt eine Adresse, erhält der Admin eine Meldung.</div>
+                      </div>
+                    </label>
+                    <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                           :class="autoInvoiceRecipient === 'office' ? '' : 'border-gray-200'"
+                           :style="autoInvoiceRecipient === 'office' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
+                      <input type="radio" v-model="autoInvoiceRecipient" value="office" class="mt-1 mr-3" />
+                      <div>
+                        <div class="font-medium text-gray-900">An Büro-Adresse</div>
+                        <div class="text-sm text-gray-600">Zum Ausdrucken und manuellen Versand per Post. Die Rechnung bleibt auf den {{ t.client }} ausgestellt.</div>
+                      </div>
+                    </label>
+                    <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                           :class="autoInvoiceRecipient === 'both' ? '' : 'border-gray-200'"
+                           :style="autoInvoiceRecipient === 'both' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
+                      <input type="radio" v-model="autoInvoiceRecipient" value="both" class="mt-1 mr-3" />
+                      <div>
+                        <div class="font-medium text-gray-900">An {{ t.client }} und Büro</div>
+                        <div class="text-sm text-gray-600">Beide Adressen erhalten das PDF.</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div v-if="autoInvoiceRecipient === 'office' || autoInvoiceRecipient === 'both'">
+                  <label class="block text-sm font-medium text-gray-900 mb-1">Büro-E-Mail</label>
+                  <input
+                    v-model="autoInvoiceOfficeEmail"
+                    type="email"
+                    placeholder="z.B. buchhaltung@firma.ch"
+                    class="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg text-sm tenant-focus focus:outline-none focus:ring-2"
+                  />
+                  <p class="text-xs text-gray-500 mt-1">An diese Adresse wird die Rechnung zum Ausdrucken gesendet.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Cash Payment Settings -->
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Barzahlungs-Einstellungen</h2>
@@ -1513,8 +1630,8 @@
                   <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
                 </svg>
                 <div class="text-sm text-yellow-800">
-                  <strong>Hinweis:</strong> Die Rechnung selbst wird nicht automatisch erstellt — Mitarbeiter müssen
-                  sie weiterhin manuell erstellen und versenden (siehe Rechnungs-Berechtigungen oben).
+                  <strong>Hinweis:</strong> «Rechnung» als Zahlungsart bedeutet nicht automatisch, dass eine Rechnung erstellt wird.
+                  Das geschieht manuell durch Mitarbeiter — oder automatisch, falls oben «Automatische Rechnungen» aktiviert ist.
                   Für Kurse gilt die Option zusätzlich nur, wenn ein Kurs explizit auf "Rechnung" gestellt ist.
                 </div>
               </div>
@@ -2570,6 +2687,27 @@ const paymentSettings = ref({
 })
 
 const staffInvoicePermission = ref<'hidden' | 'create_only' | 'create_and_send'>('create_and_send')
+const autoInvoiceOnComplete = ref(false)
+const autoInvoiceRecipient = ref<'customer' | 'office' | 'both'>('customer')
+const autoInvoiceOfficeEmail = ref('')
+const autoInvoiceSchedule = ref<'off' | 'daily' | 'weekly' | 'monthly'>('off')
+const autoInvoiceScheduleWeekday = ref(1)
+const autoInvoiceScheduleDay = ref(1)
+const autoInvoiceScheduleOptions = [
+  { value: 'off', label: 'Aus', hint: 'Keine zeitgesteuerte Verrechnung' },
+  { value: 'daily', label: 'Täglich', hint: 'Jeden Tag offene Posten vergangener Termine verrechnen' },
+  { value: 'weekly', label: 'Wöchentlich', hint: 'Einmal pro Woche Sammelrechnung pro Kunde' },
+  { value: 'monthly', label: 'Monatlich', hint: 'Einmal pro Monat Sammelrechnung pro Kunde' },
+] as const
+const weekdayOptions = [
+  { value: 1, label: 'Montag' },
+  { value: 2, label: 'Dienstag' },
+  { value: 3, label: 'Mittwoch' },
+  { value: 4, label: 'Donnerstag' },
+  { value: 5, label: 'Freitag' },
+  { value: 6, label: 'Samstag' },
+  { value: 7, label: 'Sonntag' },
+]
 const paymentTermsTextarea = ref<HTMLTextAreaElement | null>(null)
 
 const insertPlaceholder = (el: HTMLTextAreaElement | null, obj: string, field: string, placeholder: string) => {
@@ -3292,11 +3430,25 @@ const loadPaymentSettings = async (tenantId: string) => {
       logger.debug('✅ Payment settings loaded:', paymentSettings.value)
     }
 
-    // Booking policy für Staff-Rechnungsberechtigungen laden
+    // Booking policy für Staff-Rechnungsberechtigungen + Auto-Invoice laden
     try {
       const policyData = await $fetch<{ success: boolean; policy: any }>('/api/admin/booking-policy')
       if (policyData?.policy?.staff_invoice_permission) {
         staffInvoicePermission.value = policyData.policy.staff_invoice_permission
+      }
+      autoInvoiceOnComplete.value = policyData?.policy?.auto_invoice_on_complete === true
+      if (['customer', 'office', 'both'].includes(policyData?.policy?.auto_invoice_recipient)) {
+        autoInvoiceRecipient.value = policyData.policy.auto_invoice_recipient
+      }
+      autoInvoiceOfficeEmail.value = policyData?.policy?.auto_invoice_office_email || ''
+      if (['off', 'daily', 'weekly', 'monthly'].includes(policyData?.policy?.auto_invoice_schedule)) {
+        autoInvoiceSchedule.value = policyData.policy.auto_invoice_schedule
+      }
+      if (policyData?.policy?.auto_invoice_schedule_weekday) {
+        autoInvoiceScheduleWeekday.value = Number(policyData.policy.auto_invoice_schedule_weekday) || 1
+      }
+      if (policyData?.policy?.auto_invoice_schedule_day) {
+        autoInvoiceScheduleDay.value = Number(policyData.policy.auto_invoice_schedule_day) || 1
       }
     } catch (policyErr) {
       console.warn('Could not load booking policy:', policyErr)
@@ -4163,6 +4315,72 @@ watch(staffInvoicePermission, async (newVal, oldVal) => {
     console.error('Error saving staff invoice permission:', e)
     showAutoSaveError('Fehler beim Speichern')
   }
+})
+
+async function saveAutoInvoicePolicy(partial: Record<string, unknown>, successMsg: string) {
+  if (isInitialLoad.value) return
+  try {
+    await $fetch('/api/admin/booking-policy', {
+      method: 'POST',
+      body: partial,
+    })
+    showAutoSaveSuccess(successMsg)
+  } catch (e) {
+    console.error('Error saving auto-invoice policy:', e)
+    showAutoSaveError('Fehler beim Speichern')
+  }
+}
+
+watch(autoInvoiceOnComplete, async (newVal, oldVal) => {
+  if (isInitialLoad.value || newVal === oldVal) return
+  await saveAutoInvoicePolicy(
+    { auto_invoice_on_complete: newVal },
+    newVal ? 'Nach Abschluss aktiviert' : 'Nach Abschluss deaktiviert'
+  )
+})
+
+watch(autoInvoiceSchedule, async (newVal, oldVal) => {
+  if (isInitialLoad.value || newVal === oldVal) return
+  await saveAutoInvoicePolicy(
+    { auto_invoice_schedule: newVal },
+    'Zeitplan gespeichert'
+  )
+})
+
+watch(autoInvoiceScheduleWeekday, async (newVal, oldVal) => {
+  if (isInitialLoad.value || newVal === oldVal) return
+  await saveAutoInvoicePolicy(
+    { auto_invoice_schedule_weekday: newVal },
+    'Wochentag gespeichert'
+  )
+})
+
+watch(autoInvoiceScheduleDay, async (newVal, oldVal) => {
+  if (isInitialLoad.value || newVal === oldVal) return
+  await saveAutoInvoicePolicy(
+    { auto_invoice_schedule_day: newVal },
+    'Monatstag gespeichert'
+  )
+})
+
+watch(autoInvoiceRecipient, async (newVal, oldVal) => {
+  if (isInitialLoad.value || newVal === oldVal) return
+  await saveAutoInvoicePolicy(
+    { auto_invoice_recipient: newVal },
+    'Empfänger gespeichert'
+  )
+})
+
+let autoInvoiceOfficeEmailTimeout: ReturnType<typeof setTimeout> | null = null
+watch(autoInvoiceOfficeEmail, (newVal) => {
+  if (isInitialLoad.value) return
+  if (autoInvoiceOfficeEmailTimeout) clearTimeout(autoInvoiceOfficeEmailTimeout)
+  autoInvoiceOfficeEmailTimeout = setTimeout(() => {
+    saveAutoInvoicePolicy(
+      { auto_invoice_office_email: newVal.trim() || null },
+      'Büro-E-Mail gespeichert'
+    )
+  }, 800)
 })
 
 // Watch Template (auto-save after 2 seconds for typing)

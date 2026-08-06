@@ -1,7 +1,15 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import type { BookingPolicy } from './booking-policy.get'
-import { DEFAULT_BOOKING_POLICY, VALID_REGISTRATION_FIELD_MODES, VALID_REGISTRATION_ACCOUNT_MODES } from './booking-policy.get'
+import {
+  DEFAULT_BOOKING_POLICY,
+  VALID_AUTO_INVOICE_RECIPIENTS,
+  VALID_AUTO_INVOICE_SCHEDULES,
+  VALID_REGISTRATION_FIELD_MODES,
+  VALID_REGISTRATION_ACCOUNT_MODES,
+  normalizeAutoInvoiceMonthDay,
+  normalizeAutoInvoiceWeekday,
+} from './booking-policy.get'
 
 const VALID_FIELDS = new Set([
   'first_name', 'last_name', 'phone', 'email',
@@ -81,6 +89,38 @@ export default defineEventHandler(async (event) => {
     !VALID_REGISTRATION_ACCOUNT_MODES.includes(body.registration_account_mode)
   ) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid registration_account_mode' })
+  }
+
+  if (
+    body.auto_invoice_recipient !== undefined &&
+    !VALID_AUTO_INVOICE_RECIPIENTS.includes(body.auto_invoice_recipient)
+  ) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid auto_invoice_recipient' })
+  }
+  if (body.auto_invoice_on_complete !== undefined && typeof body.auto_invoice_on_complete !== 'boolean') {
+    throw createError({ statusCode: 400, statusMessage: 'auto_invoice_on_complete must be a boolean' })
+  }
+  if (body.auto_invoice_office_email !== undefined && body.auto_invoice_office_email !== null) {
+    if (typeof body.auto_invoice_office_email !== 'string') {
+      throw createError({ statusCode: 400, statusMessage: 'auto_invoice_office_email must be a string or null' })
+    }
+    const email = body.auto_invoice_office_email.trim()
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid auto_invoice_office_email' })
+    }
+    body.auto_invoice_office_email = email || null
+  }
+
+  if (body.auto_invoice_schedule !== undefined) {
+    if (!VALID_AUTO_INVOICE_SCHEDULES.includes(body.auto_invoice_schedule)) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid auto_invoice_schedule' })
+    }
+  }
+  if (body.auto_invoice_schedule_weekday !== undefined) {
+    body.auto_invoice_schedule_weekday = normalizeAutoInvoiceWeekday(body.auto_invoice_schedule_weekday)
+  }
+  if (body.auto_invoice_schedule_day !== undefined) {
+    body.auto_invoice_schedule_day = normalizeAutoInvoiceMonthDay(body.auto_invoice_schedule_day)
   }
 
   // Load current policy and merge
