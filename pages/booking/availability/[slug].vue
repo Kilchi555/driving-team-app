@@ -570,7 +570,7 @@
           <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
               <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Welches Fahrzeug?</h2>
-              <p class="text-sm text-gray-500">Wähle die passende Fahrzeugkombination für deine Lektion.</p>
+              <p class="text-sm text-gray-500">Wähle die passende Fahrzeugkombination für deine {{ bookingLabels.appointment }}.</p>
             </div>
 
             <div :class="`grid grid-cols-1 ${(effectiveVehicleSettings?.options?.length ?? 0) > 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-' + (effectiveVehicleSettings?.options?.length ?? 1)} gap-4`">
@@ -1052,7 +1052,7 @@
               <template v-if="previewPriceRappen > 0">
                 <div class="border-t border-gray-200 pt-2 mt-1"></div>
                 <div class="flex justify-between items-start text-sm">
-                  <span class="text-gray-600">Lektion:</span>
+                  <span class="text-gray-600">{{ bookingLabels.appointment }}:</span>
                   <span class="font-medium text-gray-900 text-right">
                     CHF {{ (previewPriceRappen / 100).toFixed(2) }}
                   </span>
@@ -1062,7 +1062,7 @@
                     Administrationsgebühr
                     <span
                       class="text-xs text-gray-400 cursor-help"
-                      :title="`Lektion ${previewAdminFeeReason === 'applied' ? (previewAppointmentNumber ?? '') + ' – einmalig für die gesamte Ausbildung in dieser Kategorie' : 'Einmalige Gebühr ab der 2. Lektion pro Kategorie'}`"
+                      :title="`${bookingLabels.appointment} ${previewAdminFeeReason === 'applied' ? (previewAppointmentNumber ?? '') + ' – einmalig für die gesamte Ausbildung in dieser Kategorie' : 'Einmalige Gebühr ab der 2. ' + bookingLabels.appointment + ' pro Kategorie'}`"
                     >ⓘ</span>
                   </span>
                   <span class="font-medium text-gray-900 text-right">
@@ -1514,7 +1514,9 @@
           <div class="border-b border-gray-200 pb-4">
             <p class="text-xs text-gray-500 mb-1">Art</p>
             <p class="text-md font-medium text-gray-900">
-              {{ selectedServiceType === 'theorie' ? 'Theorielektion' : selectedServiceType === 'beratung' ? 'Beratung' : bookingLabels.appointment }}
+              {{ selectedServiceType === 'theorie' || selectedServiceType === 'beratung'
+                ? resolveEventTypeLabel(selectedServiceType === 'theorie' ? 'theory' : 'consultation', bookingLabels)
+                : bookingLabels.appointment }}
             </p>
           </div>
           <div class="border-b border-gray-200 pb-4">
@@ -1699,7 +1701,7 @@ import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
-import { mergeTerminology, isDrivingSchoolBusinessType } from '~/composables/useTerminology'
+import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
 
 const { primaryColor } = useTenantBranding()
 const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer', () => route.params.slug as string)
@@ -2645,9 +2647,13 @@ const loadLocationsForAllStaff = async (generateTimeSlots: boolean = false) => {
     logger.debug(`📍 API returned ${allLocations.length} total locations`)
     
     // ✅ Filter ALL locations for the category
+    // Empty available_categories = no location-level restriction (per-staff categories)
     const categoryLocations = (allLocations || []).filter((location: any) => {
-      // Check if category is available
       const availableCategories = location.available_categories || []
+      if (availableCategories.length === 0) {
+        logger.debug(`✅ Including location "${location.name}" (no location-level category restriction)`)
+        return true
+      }
       const hasCategory = availableCategories.includes(filters.value.category_code)
       
       if (!hasCategory) {
@@ -3176,7 +3182,8 @@ const selectMainCategory = async (category: any) => {
       availableStaff.value.forEach((staff: any) => {
         if (staff.available_locations && Array.isArray(staff.available_locations)) {
           staff.available_locations.forEach((location: any) => {
-            // Filter: Only include locations that have the selected category
+            // API already filtered via staff_locations. Empty location.available_categories
+            // means no location-level restriction (categories may be set per-staff only).
             const supportedCategories = location.available_categories || []
             const categoryCode = selectedCategory.value?.code
             
@@ -3185,7 +3192,7 @@ const selectMainCategory = async (category: any) => {
               return
             }
             
-            if (!supportedCategories.includes(categoryCode)) {
+            if (supportedCategories.length > 0 && !supportedCategories.includes(categoryCode)) {
               logger.debug(`⏭️ Skipping location "${location.name}" - doesn't support category ${categoryCode}`)
               return
             }
@@ -3373,6 +3380,8 @@ const selectSubcategory = async (category: any) => {
     availableStaff.value.forEach((staff: any) => {
       if (staff.available_locations && Array.isArray(staff.available_locations)) {
         staff.available_locations.forEach((location: any) => {
+          // API already filtered via staff_locations. Empty location.available_categories
+          // means no location-level restriction (categories may be set per-staff only).
           const supportedCategories = location.available_categories || []
           const categoryCode = selectedCategory.value?.code
           
@@ -3381,7 +3390,7 @@ const selectSubcategory = async (category: any) => {
             return
           }
           
-          if (!supportedCategories.includes(categoryCode)) {
+          if (supportedCategories.length > 0 && !supportedCategories.includes(categoryCode)) {
             logger.debug(`⏭️ Skipping location "${location.name}" - doesn't support category ${categoryCode}`)
             return
           }

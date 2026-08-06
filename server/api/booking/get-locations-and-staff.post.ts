@@ -170,7 +170,19 @@ export default defineEventHandler(async (event) => {
           id: location.id,
           name: location.name,
           address: location.address,
-          available_categories: location.available_categories || [],
+          // Prefer location-level categories; if empty, derive from staff_locations
+          // so clients that still filter on available_categories keep working.
+          available_categories: (() => {
+            const locCats = Array.isArray(location.available_categories) ? location.available_categories : []
+            if (locCats.length > 0) return locCats
+            const fromStaff = new Set<string>()
+            for (const sl of staffLocations || []) {
+              if (sl.location_id !== location.id) continue
+              const cats = Array.isArray(sl.available_categories) ? sl.available_categories : []
+              cats.forEach((c: string) => fromStaff.add(c))
+            }
+            return fromStaff.size > 0 ? Array.from(fromStaff) : [category_code]
+          })(),
           category_pickup_settings: categoryPickupSettings,
           time_windows: timeWindows,
           pickup_enabled: location.pickup_enabled || false,
