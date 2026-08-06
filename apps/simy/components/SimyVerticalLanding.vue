@@ -87,7 +87,7 @@
             class="rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1"
             style="background: rgba(var(--brand-rgb),0.04); border-color: rgba(var(--brand-rgb),0.15)"
           >
-            <div class="text-3xl mb-3">{{ pain.icon }}</div>
+            <SimyIconTile :name="pain.icon" :size="48" class="mb-3" />
             <h3 class="font-bold text-gray-900 mb-2">{{ pain.title }}</h3>
             <p class="text-sm text-gray-500 leading-relaxed">{{ pain.text }}</p>
           </div>
@@ -109,14 +109,9 @@
           <div
             v-for="feature in v.features"
             :key="feature.title"
-            class="bg-white rounded-3xl p-7 border border-gray-100 hover:border-purple-100 hover:-translate-y-1 transition-all duration-300"
+            class="bg-white rounded-3xl p-7 border border-gray-100 hover:border-gray-200 hover:-translate-y-1 transition-all duration-300"
           >
-            <div
-              class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 text-2xl"
-              style="background: rgba(var(--brand-rgb),0.08)"
-            >
-              {{ feature.icon }}
-            </div>
+            <SimyIconTile :name="feature.icon" :size="48" class="mb-5" />
             <h3 class="font-bold text-gray-900 mb-2 text-lg">{{ feature.title }}</h3>
             <p class="text-sm text-gray-500 leading-relaxed">{{ feature.desc }}</p>
           </div>
@@ -138,10 +133,10 @@
             :class="i % 2 === 1 ? 'md:flex-row-reverse' : ''"
           >
             <div
-              class="flex-shrink-0 w-full md:w-64 h-48 rounded-2xl flex items-center justify-center text-6xl"
-              style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.06), rgba(var(--brand-2-rgb),0.1));"
+              class="flex-shrink-0 w-full md:w-64 h-48 rounded-2xl flex items-center justify-center"
+              style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.06), rgba(var(--brand-2-rgb),0.1)); color: var(--brand-primary);"
             >
-              {{ h.visual }}
+              <SimyIcon :name="h.visual" :size="56" stroke-width="1.5" />
             </div>
             <div class="flex-1">
               <h3 class="text-xl font-extrabold text-gray-900 mb-3">{{ h.title }}</h3>
@@ -173,15 +168,15 @@
         <div class="mt-10 flex flex-wrap gap-3">
           <a
             href="/vergleich/calendly-alternative"
-            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200 transition-all"
+            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-all"
           >Calendly Alternative</a>
           <a
             href="/vergleich"
-            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200 transition-all"
+            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-all"
           >Alle Vergleiche</a>
           <a
             href="/fahrschule/software"
-            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200 transition-all"
+            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-all"
           >Fahrschulsoftware</a>
         </div>
       </div>
@@ -196,7 +191,7 @@
             v-for="link in related"
             :key="link.href"
             :href="link.href"
-            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200 hover:text-gray-900 transition-all"
+            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-all"
           >
             {{ link.label }}
           </a>
@@ -244,7 +239,7 @@
       <div class="max-w-2xl mx-auto text-center">
         <SimyFounderNote :blurb="founderBlurb" compact />
         <h2 class="text-3xl md:text-4xl font-black text-white mb-5">{{ v.finalTitle }}</h2>
-        <p class="text-purple-100 text-lg mb-10">{{ v.finalSub }}</p>
+        <p class="text-white/80 text-lg mb-10">{{ v.finalSub }}</p>
         <a
           :href="ctaUrl"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90 hover:-translate-y-1"
@@ -252,7 +247,7 @@
         >
           {{ v.ctaPrimary }}
         </a>
-        <p class="text-purple-200 text-sm mt-5">{{ v.finalNote }}</p>
+        <p class="text-white/70 text-sm mt-5">{{ v.finalNote }}</p>
       </div>
     </section>
 

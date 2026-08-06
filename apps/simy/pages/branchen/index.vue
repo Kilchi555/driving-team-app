@@ -23,27 +23,21 @@
     <section class="pb-24 px-6">
       <div class="max-w-5xl mx-auto grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
         <a
-          href="/fahrschule"
-          class="group rounded-3xl border border-gray-100 bg-white p-7 hover:-translate-y-1 hover:border-purple-100 transition-all"
+          v-for="item in branchenCards"
+          :key="item.href"
+          :href="item.href"
+          class="group rounded-3xl border border-gray-100 bg-white p-7 hover:-translate-y-1 hover:border-gray-200 transition-all"
         >
-          <div class="text-3xl mb-4">🚗</div>
-          <h2 class="text-lg font-bold text-gray-900 mb-2 group-hover:underline">Fahrschule</h2>
-          <p class="text-sm text-gray-500 leading-relaxed">
-            Kategorien, Prüfungen, Fahrlehrer-App und Kurse — die tiefste Vertical.
-          </p>
-        </a>
-
-        <a
-          v-for="v in VERTICALS"
-          :key="v.slug"
-          :href="`/${v.slug}`"
-          class="group rounded-3xl border border-gray-100 bg-white p-7 hover:-translate-y-1 hover:border-purple-100 transition-all"
-        >
-          <div class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--brand-primary)">
-            {{ v.badge }}
+          <SimyIconTile :name="item.icon" :size="48" class="mb-4" />
+          <div
+            v-if="item.badge"
+            class="text-xs font-bold uppercase tracking-wider mb-3"
+            style="color: var(--brand-primary)"
+          >
+            {{ item.badge }}
           </div>
-          <h2 class="text-lg font-bold text-gray-900 mb-2 group-hover:underline">{{ v.navLabel }}</h2>
-          <p class="text-sm text-gray-500 leading-relaxed line-clamp-3">{{ v.heroSub }}</p>
+          <h2 class="text-lg font-bold text-gray-900 mb-2 group-hover:underline">{{ item.label }}</h2>
+          <p class="text-sm text-gray-500 leading-relaxed line-clamp-3">{{ item.desc }}</p>
         </a>
       </div>
     </section>
@@ -51,7 +45,7 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center text-white">
         <h2 class="text-3xl font-black mb-4">Nicht sicher, welche Vorlage?</h2>
-        <p class="text-purple-100 mb-8">Starte den Setup-Wizard — du wählst die Branche in 30 Sekunden.</p>
+        <p class="text-white/80 mb-8">Starte den Setup-Wizard — du wählst die Branche in 30 Sekunden.</p>
         <a
           href="https://app.simy.ch/tenant-register"
           class="inline-flex px-8 py-4 rounded-2xl bg-white font-black"
@@ -68,12 +62,30 @@
 
 <script setup lang="ts">
 import { VERTICALS } from '~/data/verticals'
+import { VERTICAL_ICON_BY_SLUG } from '~/utils/icons'
 import { breadcrumbLd, itemListLd, ldScripts } from '~/utils/schema'
 
-const branchenItems = [
-  { name: 'Fahrschule', url: 'https://simy.ch/fahrschule' },
-  ...VERTICALS.map((v) => ({ name: v.navLabel, url: `https://simy.ch/${v.slug}` })),
+const branchenCards = [
+  {
+    href: '/fahrschule',
+    label: 'Fahrschule',
+    badge: 'Für Fahrschulen',
+    icon: VERTICAL_ICON_BY_SLUG.fahrschule,
+    desc: 'Kategorien, Prüfungen, App und Kurse — die tiefste Vertical.',
+  },
+  ...VERTICALS.map((v) => ({
+    href: `/${v.slug}`,
+    label: v.navLabel,
+    badge: v.badge,
+    icon: VERTICAL_ICON_BY_SLUG[v.slug] || 'spark',
+    desc: v.heroSub,
+  })),
 ]
+
+const branchenItems = branchenCards.map((c) => ({
+  name: c.label,
+  url: `https://simy.ch${c.href}`,
+}))
 
 useHead({
   title: 'Branchen – Online-Terminbuchung & Software Schweiz | Simy',
@@ -90,7 +102,7 @@ useHead({
   script: ldScripts(
     itemListLd({
       name: 'Simy Branchen – Online-Terminbuchung Schweiz',
-      description: 'Branchenspezifische Terminsoftware und Online-Buchung für Schweizer Dienstleister.',
+      description: 'Branchenspezifische All-in-One Software und Online-Buchung für Schweizer Dienstleister.',
       url: 'https://simy.ch/branchen',
       items: branchenItems,
     }),

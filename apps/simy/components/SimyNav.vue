@@ -8,7 +8,7 @@
       <a href="/" class="flex-shrink-0">
         <img
           :src="effectiveLogo || '/simy-logo.png'"
-          alt="Simy – Terminsoftware Schweiz"
+          alt="Simy – All-in-One Software Schweiz"
           class="h-8 max-w-[120px] object-contain transition-all duration-500"
           :style="{ filter: logoColorFilter }"
         />
@@ -17,7 +17,7 @@
       <!-- Desktop nav: Branchen · Features · Preise · Kunden -->
       <div class="hidden md:flex items-center gap-1 text-sm font-medium">
 
-        <!-- Branchen dropdown (Fahrschule featured) -->
+        <!-- Branchen dropdown -->
         <div class="relative group">
           <button class="flex items-center gap-1 px-3 py-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all">
             Branchen
@@ -27,35 +27,21 @@
           </button>
           <div class="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
             <div class="bg-white border border-gray-100 rounded-2xl shadow-xl p-2 min-w-[280px]">
-              <!-- Featured: Fahrschule -->
-              <div class="rounded-xl p-2 mb-1" style="background: rgba(96,0,189,0.04)">
-                <a href="/fahrschule" class="nav-dropdown-item font-semibold">
-                  <span class="nav-dropdown-icon">🚗</span><span>Fahrschule</span>
-                </a>
-                <a href="/fahrschule/software" class="nav-dropdown-item pl-9 text-gray-500 !text-[13px]">
-                  Fahrschulsoftware
-                </a>
-                <a href="/fahrschule/buchungssystem" class="nav-dropdown-item pl-9 text-gray-500 !text-[13px]">
-                  Buchungssystem
-                </a>
-                <a href="/fahrschule/app" class="nav-dropdown-item pl-9 text-gray-500 !text-[13px]">
-                  Fahrlehrer App
-                </a>
-              </div>
-
               <a
-                v-for="v in VERTICALS"
-                :key="v.slug"
-                :href="`/${v.slug}`"
+                v-for="v in branchenLinks"
+                :key="v.href"
+                :href="v.href"
                 class="nav-dropdown-item"
               >
-                <span class="nav-dropdown-icon">{{ verticalIcon(v.slug) }}</span>
-                <span>{{ v.navLabel }}</span>
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)">
+                  <SimyIcon :name="v.icon" :size="16" />
+                </span>
+                <span>{{ v.label }}</span>
               </a>
 
               <div class="border-t border-gray-100 mt-1 pt-1">
-                <a href="/branchen" class="nav-dropdown-item font-semibold" style="color: #6000BD">
-                  <span class="nav-dropdown-icon">✨</span><span>Alle Branchen</span>
+                <a href="/branchen" class="nav-dropdown-item font-semibold" style="color: var(--brand-primary)">
+                  <span class="nav-dropdown-icon"><SimyIcon name="spark" :size="16" /></span><span>Alle Branchen</span>
                 </a>
               </div>
             </div>
@@ -73,27 +59,27 @@
           <div class="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
             <div class="bg-white border border-gray-100 rounded-2xl shadow-xl p-2 min-w-[220px]">
               <a href="/features/kalender" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon">📅</span><span>Kalender & Planung</span>
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="calendar" :size="16" /></span><span>Kalender & Planung</span>
               </a>
               <a href="/features/rechnungen" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon">💶</span><span>Rechnungen & Kasse</span>
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="wallet" :size="16" /></span><span>Rechnungen & Kasse</span>
               </a>
-              <a href="/fahrschule/buchungssystem" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon">🔗</span><span>Online-Buchung</span>
+              <a href="/features/kalender" class="nav-dropdown-item">
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="link" :size="16" /></span><span>Online-Buchung</span>
               </a>
               <div class="border-t border-gray-100 my-1" />
               <a href="/marketing" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon">🚀</span><span>Marketing</span>
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="rocket" :size="16" /></span><span>Marketing</span>
               </a>
               <a href="/marketing/google-ads" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon">📢</span><span>Google Ads</span>
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="megaphone" :size="16" /></span><span>Google Ads</span>
               </a>
               <a href="/marketing/seo" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon">🔍</span><span>SEO</span>
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="search" :size="16" /></span><span>SEO</span>
               </a>
               <div class="border-t border-gray-100 my-1" />
               <a href="/vergleich" class="nav-dropdown-item font-semibold">
-                <span class="nav-dropdown-icon">⚖️</span><span>Vergleiche</span>
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="shuffle" :size="16" /></span><span>Vergleiche</span>
               </a>
               <a href="/vergleich/calendly-alternative" class="nav-dropdown-item pl-9 text-gray-500 !text-[13px]">
                 Calendly Alternative
@@ -143,7 +129,7 @@
           :class="activeSection === link.href.slice(1) ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-600'"
           :style="activeSection === link.href.slice(1) ? activePillStyle : {}"
           @click.prevent="scrollTo(link.href); mobileOpen = false"
-          @mouseenter="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { background: `${effectivePrimary.value}20`, color: effectivePrimary.value })"
+          @mouseenter="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { background: `rgba(var(--brand-rgb), 0.12)`, color: effectivePrimary })"
           @mouseleave="(e) => activeSection !== link.href.slice(1) && Object.assign((e.currentTarget as HTMLElement).style, { background: '', color: '' })"
         >
           {{ link.label }}
@@ -155,23 +141,19 @@
     <Transition name="slide-down">
       <div v-if="mobileOpen" class="md:hidden border-t border-gray-100 bg-white px-6 py-4 space-y-1 overflow-y-auto" style="max-height: calc(100dvh - 64px)">
         <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-2 pb-1">Branchen</p>
-        <a href="/fahrschule" class="mobile-nav-link" @click="mobileOpen=false">Fahrschule</a>
-        <a href="/fahrschule/software" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Fahrschulsoftware</a>
-        <a href="/fahrschule/buchungssystem" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Buchungssystem</a>
-        <a href="/fahrschule/app" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Fahrlehrer App</a>
         <a
-          v-for="v in VERTICALS"
-          :key="v.slug"
-          :href="`/${v.slug}`"
+          v-for="v in branchenLinks"
+          :key="v.href"
+          :href="v.href"
           class="mobile-nav-link"
           @click="mobileOpen=false"
-        >{{ v.navLabel }}</a>
-        <a href="/branchen" class="mobile-nav-link font-semibold" style="color: #6000BD" @click="mobileOpen=false">Alle Branchen</a>
+        >{{ v.label }}</a>
+        <a href="/branchen" class="mobile-nav-link font-semibold" style="color: var(--brand-primary)" @click="mobileOpen=false">Alle Branchen</a>
 
         <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-3 pb-1">Features</p>
         <a href="/features/kalender" class="mobile-nav-link" @click="mobileOpen=false">Kalender & Planung</a>
         <a href="/features/rechnungen" class="mobile-nav-link" @click="mobileOpen=false">Rechnungen & Kasse</a>
-        <a href="/fahrschule/buchungssystem" class="mobile-nav-link" @click="mobileOpen=false">Online-Buchung</a>
+        <a href="/features/kalender" class="mobile-nav-link" @click="mobileOpen=false">Online-Buchung</a>
         <a href="/marketing" class="mobile-nav-link" @click="mobileOpen=false">Marketing</a>
         <a href="/marketing/google-ads" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Google Ads</a>
         <a href="/marketing/seo" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">SEO</a>
@@ -196,6 +178,12 @@
 <script setup lang="ts">
 import { VERTICALS } from '~/data/verticals'
 import { registerUrl } from '~/data/pricing'
+import {
+  SIMY_BRAND,
+  SIMY_BRAND_STORAGE_KEY,
+  simyLogoColorFilter,
+} from '~/utils/brand'
+import { VERTICAL_ICON_BY_SLUG, type SimyIconName } from '~/utils/icons'
 
 interface ScrollLink {
   label: string
@@ -212,66 +200,32 @@ const props = defineProps<{
 
 const registerCta = registerUrl()
 
-const DEFAULT_PRIMARY = '#6000BD'
-const DEFAULT_SECONDARY = '#8B2FE8'
-const BRAND_STORAGE_KEY = 'simy_brand_preview'
-
-const VERTICAL_ICONS: Record<string, string> = {
-  coaching: '🧠',
-  consulting: '💼',
-  'personal-training': '💪',
-  nachhilfe: '📚',
-  musikschule: '🎹',
-  hundeschule: '🐕',
-  massage: '🌿',
-}
-
-function verticalIcon(slug: string) {
-  return VERTICAL_ICONS[slug] || '✨'
-}
+const branchenLinks = [
+  { href: '/fahrschule', label: 'Fahrschule', icon: VERTICAL_ICON_BY_SLUG.fahrschule as SimyIconName },
+  ...VERTICALS.map((v) => ({
+    href: `/${v.slug}`,
+    label: v.navLabel,
+    icon: (VERTICAL_ICON_BY_SLUG[v.slug] || 'spark') as SimyIconName,
+  })),
+]
 
 // Effective branding: prop takes priority, then localStorage, then default
 const storedBrand = ref<{ primary?: string; secondary?: string; logo?: string }>({})
 
 onMounted(() => {
   try {
-    const raw = localStorage.getItem(BRAND_STORAGE_KEY)
+    const raw = localStorage.getItem(SIMY_BRAND_STORAGE_KEY)
     if (raw) storedBrand.value = JSON.parse(raw) as { primary?: string; secondary?: string; logo?: string }
   } catch { /* ignore */ }
 })
 
-const effectivePrimary = computed(() => props.primaryColor || storedBrand.value.primary || DEFAULT_PRIMARY)
-const effectiveSecondary = computed(() => props.secondaryColor || storedBrand.value.secondary || DEFAULT_SECONDARY)
+const effectivePrimary = computed(() => props.primaryColor || storedBrand.value.primary || SIMY_BRAND.primary)
+const effectiveSecondary = computed(() => props.secondaryColor || storedBrand.value.secondary || SIMY_BRAND.secondary)
 const effectiveLogo = computed(() => props.logoSrc || storedBrand.value.logo || null)
 
-function hexToHsl(hex: string): [number, number, number] {
-  const r = parseInt(hex.slice(1, 3), 16) / 255
-  const g = parseInt(hex.slice(3, 5), 16) / 255
-  const b = parseInt(hex.slice(5, 7), 16) / 255
-  const max = Math.max(r, g, b), min = Math.min(r, g, b)
-  let h = 0, s = 0
-  const l = (max + min) / 2
-  if (max !== min) {
-    const d = max - min
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
-    else if (max === g) h = ((b - r) / d + 2) / 6
-    else h = ((r - g) / d + 4) / 6
-  }
-  return [h * 360, s * 100, l * 100]
-}
-
-const logoColorFilter = computed(() => {
-  if (effectiveLogo.value) return 'none'
-  const color = effectivePrimary.value
-  if (color === DEFAULT_PRIMARY) return 'none'
-  const [tH, tS, tL] = hexToHsl(color)
-  const [oH, oS, oL] = hexToHsl(DEFAULT_PRIMARY)
-  const hRot = Math.round(tH - oH)
-  const sat  = Math.round(oS > 0 ? (tS / oS) * 100 : 100)
-  const bri  = Math.round(oL > 0 ? (tL / oL) * 100 : 100)
-  return `hue-rotate(${hRot}deg) saturate(${sat}%) brightness(${bri}%)`
-})
+const logoColorFilter = computed(() =>
+  simyLogoColorFilter(effectivePrimary.value, { hasCustomLogo: !!effectiveLogo.value }),
+)
 
 const mobileOpen = ref(false)
 const activeSection = ref('')
@@ -323,7 +277,11 @@ onMounted(() => {
   text-decoration: none; transition: background 0.15s;
 }
 .nav-dropdown-item:hover { background: #f9fafb; }
-.nav-dropdown-icon { font-size: 1rem; width: 1.25rem; text-align: center; }
+.nav-dropdown-icon {
+  font-size: 1rem; width: 1.25rem; height: 1.25rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--brand-primary);
+}
 .mobile-nav-link {
   display: block; padding: 0.5rem 0.75rem; border-radius: 0.5rem;
   font-size: 0.9rem; font-weight: 500; color: #374151; text-decoration: none;

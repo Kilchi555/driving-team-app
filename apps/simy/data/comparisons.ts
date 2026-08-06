@@ -61,7 +61,7 @@ export const COMPARISONS: SimyComparison[] = [
       { feature: 'Mitarbeiter-App', competitor: 'Eingeschränkt', simy: 'Ja (iOS/Android)', winner: 'simy' },
       { feature: 'SMS-Erinnerungen', competitor: 'Ja (Plan)', simy: 'Ja', winner: 'tie' },
       { feature: 'Hosting / Datenschutz CH', competitor: 'US/EU-fokussiert', simy: 'Schweizer Fokus', winner: 'simy' },
-      { feature: 'Branchen-Vorlagen', competitor: 'Generisch', simy: 'Fahrschule, Coaching, …', winner: 'simy' },
+      { feature: 'Branchen-Vorlagen', competitor: 'Generisch', simy: 'Coaching, Consulting, Fahrschule, …', winner: 'simy' },
       { feature: 'Preis Einstieg', competitor: 'Freemium / Pläne', simy: `ab CHF ${STARTING_PRICE_CHF}/Mt.`, winner: 'tie' },
     ],
     prosCompetitor: [
@@ -101,7 +101,7 @@ export const COMPARISONS: SimyComparison[] = [
     description:
       'Simy oder Terminli? Vergleich der Schweizer Terminbuchung: All-in-One mit Rechnungen, Team-App und TWINT vs. schlanke Solo-Buchung. 30 Tage gratis testen.',
     keywords:
-      'terminli alternative, simy vs terminli, terminli vergleich, online terminbuchung schweiz, terminsoftware schweiz',
+      'terminli alternative, simy vs terminli, terminli vergleich, online terminbuchung schweiz, online buchungssystem schweiz',
     badge: 'Vergleich · Simy vs Terminli',
     h1: 'Simy vs Terminli',
     h1Highlight: 'Welches passt?',
@@ -119,7 +119,7 @@ export const COMPARISONS: SimyComparison[] = [
       { feature: 'QR-Rechnung / TWINT', competitor: 'Begrenzt / Fokus Buchung', simy: 'Integriert', winner: 'simy' },
       { feature: 'Kundenverwaltung & Historie', competitor: 'Basis', simy: 'Voll', winner: 'simy' },
       { feature: 'Team / mehrere Mitarbeiter', competitor: 'Team-Pläne', simy: 'Seats + App', winner: 'simy' },
-      { feature: 'Branchen-Workflows', competitor: 'Generisch', simy: 'Vorlagen (u. a. Fahrschule)', winner: 'simy' },
+      { feature: 'Branchen-Workflows', competitor: 'Generisch', simy: 'Vorlagen pro Branche', winner: 'simy' },
       { feature: 'Marketing / SEO Add-on', competitor: 'Nein', simy: 'Optional', winner: 'simy' },
       { feature: 'Einstiegspreis', competitor: 'ca. CHF 35/Mt.', simy: `ab CHF ${STARTING_PRICE_CHF}/Mt.`, winner: 'competitor' },
     ],
@@ -176,7 +176,7 @@ export const COMPARISONS: SimyComparison[] = [
       { feature: 'Online-Terminbuchung', competitor: 'Ja (Modul)', simy: 'Kernprodukt', winner: 'tie' },
       { feature: 'Vollständige Buchhaltung', competitor: 'Ja (Suite)', simy: 'Export / Treuhänder', winner: 'competitor' },
       { feature: 'QR-Rechnung & Online-Zahlung', competitor: 'Über Suite', simy: 'Im Produkt', winner: 'tie' },
-      { feature: 'Branchenspezifische Workflows', competitor: 'Breit/generisch', simy: 'Stark (u. a. Fahrschule)', winner: 'simy' },
+      { feature: 'Branchenspezifische Workflows', competitor: 'Breit/generisch', simy: 'Stark (Branchen-Vorlagen)', winner: 'simy' },
       { feature: 'Mitarbeiter-App unterwegs', competitor: 'myKLARA App', simy: 'Native Ops-App', winner: 'tie' },
       { feature: 'Marketing / Ads Add-on', competitor: 'Partner-Ökosystem', simy: 'Optional integriert', winner: 'simy' },
       { feature: 'Fokus', competitor: 'Suite für KMU', simy: 'Terminbetrieb auf Autopilot', winner: 'tie' },

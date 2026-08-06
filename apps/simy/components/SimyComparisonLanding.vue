@@ -165,19 +165,19 @@
             v-for="other in others"
             :key="other.slug"
             :to="`/vergleich/${other.slug}`"
-            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200 hover:text-gray-900 transition-all"
+            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-900 transition-all"
           >
             vs {{ other.competitorName }}
           </NuxtLink>
           <NuxtLink
             to="/branchen"
-            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200 transition-all"
+            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-all"
           >
             Branchen →
           </NuxtLink>
           <NuxtLink
             to="/fahrschule/software"
-            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200 transition-all"
+            class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300 transition-all"
           >
             Fahrschulsoftware →
           </NuxtLink>

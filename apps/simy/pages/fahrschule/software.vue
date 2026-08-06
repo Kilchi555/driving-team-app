@@ -88,7 +88,7 @@
         <div class="space-y-4">
           <div v-for="cat in featureCats" :key="cat.title" class="rounded-2xl border border-gray-100 overflow-hidden">
             <div class="px-6 py-4 flex items-center gap-3" :style="{ background: cat.color + '0A', borderBottom: `1px solid ${cat.color}20` }">
-              <span class="text-lg">{{ cat.icon }}</span>
+              <SimyIconTile :name="cat.icon" :size="36" rounded="xl" />
               <h3 class="font-bold text-gray-900">{{ cat.title }}</h3>
               <span class="ml-auto text-xs font-bold px-2.5 py-1 rounded-full" :style="{ background: cat.color + '15', color: cat.color }">{{ cat.tag }}</span>
             </div>
@@ -113,7 +113,7 @@
         <div class="grid sm:grid-cols-3 gap-5 mb-8">
           <div v-for="usp in usps" :key="usp.title"
             class="rounded-2xl p-6 text-center border border-gray-100 hover:border-gray-200 transition-all">
-            <div class="text-3xl mb-3">{{ usp.icon }}</div>
+            <SimyIconTile :name="usp.icon" :size="48" class="mb-3" />
             <h3 class="font-bold text-gray-900 mb-2 text-sm">{{ usp.title }}</h3>
             <p class="text-xs text-gray-500">{{ usp.desc }}</p>
           </div>
@@ -223,27 +223,27 @@ const whatIs = [
 
 const featureCats = [
   {
-    title: 'Terminverwaltung & Buchung', icon: '📅', color: 'var(--brand-primary)', tag: 'Must-Have',
+    title: 'Terminverwaltung & Buchung', icon: 'calendar', color: 'var(--brand-primary)', tag: 'Must-Have',
     features: ['Online-Buchungslink für Schüler', 'Echtzeit-Kalender pro Fahrlehrer', 'Automatische Terminbestätigung', 'Absage-Verwaltung', 'Mehrtagesansicht', 'iCal-Sync'],
   },
   {
-    title: 'Rechnungen & Kasse', icon: '💶', color: '#059669', tag: 'Must-Have',
+    title: 'Rechnungen & Kasse', icon: 'wallet', color: '#059669', tag: 'Must-Have',
     features: ['Automatische Rechnungserstellung', 'TWINT & Online-Zahlung (CH)', 'Automatische Erinnerungen bei Online-Zahlung', 'Guthaben-System', 'QR-Rechnung', 'Exportfunktion'],
   },
   {
-    title: 'Schülerverwaltung', icon: '🎓', color: '#0891B2', tag: 'Must-Have',
+    title: 'Schülerverwaltung', icon: 'graduate', color: '#0891B2', tag: 'Must-Have',
     features: ['Schülerprofil mit Geschichte', 'Fahrstunden-Counter', 'Prüfungsdaten', 'Dokumente & Notizen', 'Massenkommunikation', 'Filterfunktionen'],
   },
   {
-    title: 'Website & Marketing', icon: '🌐', color: '#EA580C', tag: 'Empfohlen',
+    title: 'Website & Marketing', icon: 'globe', color: '#EA580C', tag: 'Empfohlen',
     features: ['Automatisch generierte Website', 'SEO-optimierte Seiten', 'Google Ads Integration', 'Lead-Erfassung', 'Bewertungs-Management', 'Social Media Links'],
   },
 ]
 
 const usps = [
-  { icon: '🇨🇭', title: 'Swiss Made', desc: 'Server in der Schweiz, DSGVO-konform, TWINT & QR-Rechnung inklusive' },
-  { icon: '⚡', title: 'Schnell startklar', desc: 'In 15 Minuten vollständig eingerichtet — mit Wizard und Vorlagen' },
-  { icon: '🌐', title: 'Website inklusive', desc: 'Simy generiert automatisch eine professionelle Website für deine Fahrschule' },
+  { icon: 'swiss', title: 'Swiss Made', desc: 'Server in der Schweiz, DSGVO-konform, TWINT & QR-Rechnung inklusive' },
+  { icon: 'zap', title: 'Schnell startklar', desc: 'In 15 Minuten vollständig eingerichtet — mit Wizard und Vorlagen' },
+  { icon: 'globe', title: 'Website inklusive', desc: 'Simy generiert automatisch eine professionelle Website für deine Fahrschule' },
 ]
 
 const pricingTable = [

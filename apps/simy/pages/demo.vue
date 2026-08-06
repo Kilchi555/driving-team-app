@@ -62,10 +62,7 @@
         <div class="grid md:grid-cols-3 gap-5">
           <div v-for="f in trialFeatures" :key="f.title"
             class="rounded-2xl p-6 border border-gray-100 hover:border-gray-200 transition-all group">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-all group-hover:scale-110"
-              style="background: rgba(var(--brand-rgb),0.08)">
-              <span class="text-xl">{{ f.icon }}</span>
-            </div>
+            <SimyIconTile :name="f.icon" :size="40" class="mb-4 group-hover:scale-110 transition-transform" rounded="xl" />
             <h3 class="font-bold text-gray-900 mb-1 text-sm">{{ f.title }}</h3>
             <p class="text-xs text-gray-500 leading-relaxed">{{ f.desc }}</p>
           </div>
@@ -96,7 +93,7 @@ import { breadcrumbLd, ldScripts, softwareAppLd, webPageLd } from '~/utils/schem
 useHead({
   title: 'Demo & Gratis-Test – Simy | 30 Tage kostenlos testen',
   meta: [
-    { name: 'description', content: 'Simy 30 Tage kostenlos testen. Keine Kreditkarte nötig. In 5 Minuten startklar. Jetzt Terminsoftware Demo starten.' },
+    { name: 'description', content: 'Simy 30 Tage kostenlos testen. Keine Kreditkarte nötig. In 5 Minuten startklar. Jetzt All-in-One Software Demo starten.' },
     { property: 'og:title', content: 'Demo & Gratis-Test – Simy | 30 Tage kostenlos' },
     { property: 'og:description', content: 'Simy 30 Tage kostenlos testen — keine Kreditkarte, monatlich kündbar.' },
     { property: 'og:url', content: 'https://simy.ch/demo' },
@@ -110,7 +107,7 @@ useHead({
     }),
     softwareAppLd({
       name: 'Simy',
-      description: 'Terminsoftware Schweiz – 30 Tage gratis testen.',
+      description: 'All-in-One Software Schweiz – 30 Tage gratis testen.',
       url: 'https://simy.ch/demo',
       price: 0,
     }),
@@ -124,18 +121,18 @@ useHead({
 const checks = ['Keine Kreditkarte nötig', '30 Tage vollständig kostenlos', 'Alle Features freigeschaltet (ausser Online-Zahlung)', 'Jederzeit kündbar', 'In 5 Min. eingerichtet']
 
 const steps = [
-  { title: 'Registrieren', desc: 'Angaben von der Fahrschule und Fahrlehrer eingeben — fertig. Keine weiteren Angaben nötig.' },
+  { title: 'Registrieren', desc: 'Angaben zu deinem Betrieb und Team eingeben — fertig. Keine weiteren Angaben nötig.' },
   { title: 'Einrichten', desc: 'Setup-Wizard führt dich durch Kategorien, Preise und Standorte.' },
   { title: 'Ausprobieren', desc: '30 Tage alle Features nutzen — Terminbuchung, Rechnungen, App, Website.' },
   { title: 'Entscheiden', desc: 'Nach 30 Tagen ab CHF 49/Mt. oder gratis kündigen — ohne Diskussion.' },
 ]
 
 const trialFeatures = [
-  { icon: '📅', title: 'Online-Terminbuchung', desc: 'Sofort Schüler einladen und mit echten Terminen testen.' },
-  { icon: '💶', title: 'Einfache Rechnungsstellung', desc: 'Erste Rechnung in 2 Minuten erstellen und per Mail versenden.' },
-  { icon: '📱', title: 'Fahrlehrer-App', desc: 'iOS und Android — sofort installieren und Kalender im Griff haben.' },
-  { icon: '💵', title: 'Barzahlungen erfassen', desc: 'Barzahlungen direkt eingeben und jederzeit den aktuellen Stand im Überblick behalten.' },
-  { icon: '🎨', title: 'Eigenes Branding', desc: 'Logo hochladen, Farben anpassen — Simy sieht innerhalb der App wie deine eigene App aus.' },
-  { icon: '📊', title: 'Statistiken & Berichte', desc: 'Alle Einnahmen, Fahrstunden und Schüler auf einen Blick sehen.' },
+  { icon: 'calendar', title: 'Online-Terminbuchung', desc: 'Sofort Kunden einladen und mit echten Terminen testen.' },
+  { icon: 'wallet', title: 'Einfache Rechnungsstellung', desc: 'Erste Rechnung in 2 Minuten erstellen und per Mail versenden.' },
+  { icon: 'phone', title: 'Mitarbeiter-App', desc: 'iOS und Android — sofort installieren und Kalender im Griff haben.' },
+  { icon: 'wallet', title: 'Barzahlungen erfassen', desc: 'Barzahlungen direkt eingeben und jederzeit den aktuellen Stand im Überblick behalten.' },
+  { icon: 'palette', title: 'Eigenes Branding', desc: 'Logo hochladen, Farben anpassen — Simy sieht innerhalb der App wie deine eigene App aus.' },
+  { icon: 'chart', title: 'Statistiken & Berichte', desc: 'Alle Einnahmen, Termine und Kunden auf einen Blick sehen.' },
 ]
 </script>

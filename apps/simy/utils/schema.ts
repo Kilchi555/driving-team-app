@@ -31,7 +31,7 @@ export const SIMY_WEBSITE: Record<string, unknown> = {
   inLanguage: 'de-CH',
   publisher: { '@id': `${SIMY_BASE}/#organization` },
   description:
-    'Terminsoftware aus der Schweiz: Online-Buchung, Abrechnung, Kundenverwaltung und App für Selbständige und KMUs.',
+    'All-in-One Software aus der Schweiz: Online-Buchung, Abrechnung, Kundenverwaltung und App für Selbständige und KMUs.',
 }
 
 export type BreadcrumbItem = { name: string; url: string }

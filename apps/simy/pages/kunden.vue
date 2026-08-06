@@ -14,7 +14,7 @@
           Kundenstories
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-5 leading-tight">Was unsere Kunden sagen</h1>
-        <p class="text-xl text-gray-500 max-w-xl mx-auto">Echte Fahrschulen. Echte Zahlen. Echte Ergebnisse.</p>
+        <p class="text-xl text-gray-500 max-w-xl mx-auto">Echte Betriebe. Echte Zahlen. Echte Ergebnisse.</p>
       </div>
     </section>
 
@@ -41,7 +41,7 @@
               </svg>
             </div>
             <blockquote class="text-2xl font-bold text-gray-900 leading-relaxed mb-6">
-              "Simy hat unsere gesamte Administration digitalisiert. Wir sparen täglich über 2 Stunden — das sind <span style="color: var(--brand-primary)">40+ Fahrstunden pro Monat</span>, die wir früher mit Papierkram verloren haben."
+              "Simy hat unsere gesamte Administration digitalisiert. Wir sparen täglich über 2 Stunden — das sind <span style="color: var(--brand-primary)">40+ Termine pro Monat</span>, die wir früher mit Papierkram verloren haben."
             </blockquote>
             <div class="grid md:grid-cols-3 gap-4 mb-8">
               <div v-for="m in drivingTeamMetrics" :key="m.label" class="rounded-xl p-4 bg-white border border-gray-100 text-center">
@@ -50,11 +50,17 @@
               </div>
             </div>
             <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg"
-                style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">P</div>
+              <img
+                src="/pascal-business-2-round.png"
+                alt="Pascal Kilchenmann"
+                class="w-12 h-12 rounded-full object-cover"
+                width="48"
+                height="48"
+                loading="lazy"
+              />
               <div>
                 <p class="font-bold text-gray-900">Pascal Kilchenmann</p>
-                <p class="text-sm text-gray-400">Driving Team, Zürich — 3 Standorte, 4 Fahrlehrer</p>
+                <p class="text-sm text-gray-400">Driving Team, Zürich — 3 Standorte, 4 Mitarbeitende</p>
               </div>
             </div>
           </div>
@@ -110,9 +116,9 @@ import { breadcrumbLd, itemListLd, ldScripts } from '~/utils/schema'
 useHead({
   title: 'Kundenstories – Simy | Erfahrungen aus der Praxis',
   meta: [
-    { name: 'description', content: 'Erfahrungsberichte von Fahrschulen, die Simy nutzen. Echte Zahlen: weniger Verwaltungsaufwand, mehr Buchungen, höherer Umsatz. 50+ Fahrschulen in der Schweiz.' },
+    { name: 'description', content: 'Erfahrungsberichte von Betrieben, die Simy nutzen. Echte Zahlen: weniger Verwaltungsaufwand, mehr Buchungen, höherer Umsatz. 50+ Betriebe in der Schweiz.' },
     { property: 'og:title', content: 'Kundenstories – Simy | Erfahrungen aus der Praxis' },
-    { property: 'og:description', content: '50+ Schweizer Fahrschulen vertrauen simy. Echte Erfahrungsberichte.' },
+    { property: 'og:description', content: '50+ Schweizer Betriebe vertrauen Simy. Echte Erfahrungsberichte.' },
     { property: 'og:url', content: 'https://simy.ch/kunden' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/kunden' }],
@@ -123,7 +129,7 @@ useHead({
       url: 'https://simy.ch/kunden',
       items: [
         { name: 'Driving Team Zürich – Pascal Kilchenmann', url: 'https://simy.ch/kunden' },
-        { name: 'Fahrschule Rapperswil – Marco R.', url: 'https://simy.ch/kunden' },
+        { name: 'Betrieb Rapperswil – Marco R.', url: 'https://simy.ch/kunden' },
       ],
     }),
     breadcrumbLd([
@@ -134,7 +140,7 @@ useHead({
 })
 
 const stats = [
-  { value: '50+', label: 'Fahrschulen in der Schweiz' },
+  { value: '50+', label: 'Betriebe in der Schweiz' },
   { value: '2–3h', label: 'Admin täglich gespart' },
   { value: '4.9★', label: 'Durchschnittsbewertung' },
   { value: '95%', label: 'würden Simy weiterempfehlen' },
@@ -142,14 +148,14 @@ const stats = [
 
 const drivingTeamMetrics = [
   { value: '2+ Std.', label: 'täglich gespart' },
-  { value: '40+', label: 'Fahrstunden/Monat mehr' },
-  { value: '4 FahrlehrerInnen', label: 'nahtlos koordiniert' },
+  { value: '40+', label: 'Termine/Monat mehr' },
+  { value: '4 Mitarbeitende', label: 'nahtlos koordiniert' },
 ]
 
 const testimonials = [
-  { name: 'Sandra M.', school: 'Fahrschule Muster, Bern', quote: 'Endlich kein Excel mehr. Simy erinnert unsere Schüler automatisch an Termine und versendet Rechnungen von selbst. Ich kann mich wieder aufs Unterrichten konzentrieren.' },
-  { name: 'Marco R.', school: 'Fahrschule Rapperswil', quote: 'Die Online-Buchung hat alles verändert. Früher haben wir Termine per WhatsApp koordiniert — heute buchen Schüler selbst und ich werde nur noch informiert.' },
-  { name: 'Rahel S.', school: 'Lachen SZ', quote: 'Der Website-Generator war ein echtes Highlight. In einer Stunde hatte ich eine professionelle Website, die meine Preise und Kurse zeigt. Hätte ich sonst tausende Franken bezahlt.' },
-  { name: 'Thomas B.', school: 'Fahrschule Winterthur', quote: 'Als jemand, der nicht technikaffin ist, war die Einrichtung überraschend einfach. Der Setup-Wizard führt durch alles — nach 20 Minuten war ich komplett startklar.' },
+  { name: 'Sandra M.', school: 'Coaching Praxis, Bern', quote: 'Endlich kein Excel mehr. Simy erinnert unsere Kunden automatisch an Termine und versendet Rechnungen von selbst. Ich kann mich wieder auf die eigentliche Arbeit konzentrieren.' },
+  { name: 'Marco R.', school: 'Beratung Rapperswil', quote: 'Die Online-Buchung hat alles verändert. Früher haben wir Termine per WhatsApp koordiniert — heute buchen Kunden selbst und ich werde nur noch informiert.' },
+  { name: 'Rahel S.', school: 'Studio Lachen SZ', quote: 'Der Website-Generator war ein echtes Highlight. In einer Stunde hatte ich eine professionelle Website, die meine Preise und Angebote zeigt. Hätte ich sonst tausende Franken bezahlt.' },
+  { name: 'Thomas B.', school: 'Training Winterthur', quote: 'Als jemand, der nicht technikaffin ist, war die Einrichtung überraschend einfach. Der Setup-Wizard führt durch alles — nach 20 Minuten war ich komplett startklar.' },
 ]
 </script>

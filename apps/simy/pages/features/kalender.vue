@@ -90,10 +90,7 @@
         <div class="grid md:grid-cols-2 gap-6">
           <div v-for="f in calFeatures" :key="f.title"
             class="flex gap-5 p-6 rounded-2xl border border-gray-100 hover:border-gray-200 transition-all group">
-            <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-all"
-              style="background: rgba(var(--brand-rgb),0.08)">
-              <span class="text-xl">{{ f.icon }}</span>
-            </div>
+            <SimyIconTile :name="f.icon" :size="44" class="group-hover:scale-110 transition-transform" />
             <div>
               <h3 class="font-bold text-gray-900 mb-1">{{ f.title }}</h3>
               <p class="text-sm text-gray-500 leading-relaxed">{{ f.desc }}</p>
@@ -189,14 +186,14 @@ const calendarSlots = [
 ]
 
 const calFeatures = [
-  { icon: '🔄', title: 'Echtzeit-Synchronisation', desc: 'Änderungen sind sofort sichtbar — für dich, alle Mitarbeiter und deine Kunden.' },
-  { icon: '📲', title: 'Simy-Termine im privaten Kalender', desc: 'Jeder Termin erscheint automatisch in deinem Google Calendar, Apple Calendar oder Outlook. Du siehst deinen ganzen Tag in einer App — ohne manuelles Übertragen.' },
-  { icon: '🪄', title: 'Privatkalender blockiert Verfügbarkeit automatisch', desc: 'Zahnarzt, Ferien oder ein privater Termin? Simy erkennt das und zeigt Kunden in dieser Zeit keine freien Slots. Du musst nichts extra einstellen.' },
-  { icon: '👥', title: 'Multi-Mitarbeiter-Ansicht', desc: 'Alle Teammitglieder auf einem Bildschirm — klarer Überblick für Inhaber und Admin.' },
-  { icon: '🎨', title: 'Farbcodierung', desc: 'Verschiedene Kategorien (Sitzung, Kurs, Workshop) in verschiedenen Farben.' },
-  { icon: '📍', title: 'Standort-Info', desc: 'Treffpunkt direkt im Termin — ein Klick öffnet die Navigation.' },
-  { icon: '🔔', title: 'Automatische Erinnerungen', desc: '24h vor jedem Termin: E-Mail zuerst, SMS nur wenn keine E-Mail — Segmente inkl. im Plan.' },
-  { icon: '🔒', title: 'Verfügbarkeits-Regeln', desc: 'Definiere Pufferzeit, maximale Tages-Buchungen und Vorlaufzeit pro Mitarbeiter.' },
-  { icon: '📊', title: 'Auslastungs-Ansicht', desc: 'Sieh auf einen Blick, wer wann noch freie Kapazität hat.' },
+  { icon: 'refresh', title: 'Echtzeit-Synchronisation', desc: 'Änderungen sind sofort sichtbar — für dich, alle Mitarbeiter und deine Kunden.' },
+  { icon: 'phone', title: 'Simy-Termine im privaten Kalender', desc: 'Jeder Termin erscheint automatisch in deinem Google Calendar, Apple Calendar oder Outlook. Du siehst deinen ganzen Tag in einer App — ohne manuelles Übertragen.' },
+  { icon: 'spark', title: 'Privatkalender blockiert Verfügbarkeit automatisch', desc: 'Zahnarzt, Ferien oder ein privater Termin? Simy erkennt das und zeigt Kunden in dieser Zeit keine freien Slots. Du musst nichts extra einstellen.' },
+  { icon: 'users', title: 'Multi-Mitarbeiter-Ansicht', desc: 'Alle Teammitglieder auf einem Bildschirm — klarer Überblick für Inhaber und Admin.' },
+  { icon: 'palette', title: 'Farbcodierung', desc: 'Verschiedene Kategorien (Sitzung, Kurs, Workshop) in verschiedenen Farben.' },
+  { icon: 'map-pin', title: 'Standort-Info', desc: 'Treffpunkt direkt im Termin — ein Klick öffnet die Navigation.' },
+  { icon: 'bell', title: 'Automatische Erinnerungen', desc: '24h vor jedem Termin: E-Mail zuerst, SMS nur wenn keine E-Mail — Segmente inkl. im Plan.' },
+  { icon: 'settings', title: 'Verfügbarkeits-Regeln', desc: 'Definiere Pufferzeit, maximale Tages-Buchungen und Vorlaufzeit pro Mitarbeiter.' },
+  { icon: 'chart', title: 'Auslastungs-Ansicht', desc: 'Sieh auf einen Blick, wer wann noch freie Kapazität hat.' },
 ]
 </script>

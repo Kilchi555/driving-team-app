@@ -43,7 +43,7 @@
     </section>
 
     <!-- Device Mockup Showcase -->
-    <section class="py-20 px-4 overflow-hidden" style="background: linear-gradient(180deg, #faf8ff 0%, #f3f0ff 100%)">
+    <section class="py-20 px-4 overflow-hidden" style="background: linear-gradient(180deg, rgba(var(--brand-rgb),0.04) 0%, rgba(var(--brand-2-rgb),0.06) 100%)">
       <div class="max-w-5xl mx-auto">
         <div class="text-center mb-12">
           <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-4 border"
@@ -153,10 +153,7 @@
         <div class="grid md:grid-cols-3 gap-6">
           <div v-for="f in appFeatures" :key="f.title"
             class="bg-white rounded-3xl p-7 border border-gray-100 hover:border-gray-200 hover:-translate-y-1 transition-all group">
-            <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-all group-hover:scale-110"
-              style="background: rgba(var(--brand-rgb),0.08)">
-              <span class="text-2xl">{{ f.icon }}</span>
-            </div>
+            <SimyIconTile :name="f.icon" :size="48" class="mb-5 group-hover:scale-110 transition-transform" />
             <h3 class="font-bold text-gray-900 mb-2">{{ f.title }}</h3>
             <p class="text-sm text-gray-500 leading-relaxed">{{ f.desc }}</p>
           </div>
@@ -267,12 +264,12 @@ useHead({
 })
 
 const appFeatures = [
-  { icon: '📅', title: 'Tageskalender & Kalender-Sync', desc: 'Alle Termine des Tages auf einen Blick. Simy-Fahrstunden erscheinen automatisch in Google/Apple/Outlook. Trägst du dort einen privaten Termin ein, sperrt Simy diese Zeit automatisch für Buchungen.' },
-  { icon: '👤', title: 'Schülerprofil unterwegs', desc: 'Fahrstunden-History, Notizen, Kontaktdaten — alles griffbereit, immer aktuell.' },
-  { icon: '💶', title: 'Einnahmen-Übersicht', desc: 'Tages-, Wochen- und Monatseinnahmen auf einen Blick. Offene Rechnungen sofort sichtbar.' },
-  { icon: '🔔', title: 'Push-Benachrichtigungen', desc: 'Neue Buchungen, Absagen, Zahlungseingänge — du wirst sofort benachrichtigt.' },
-  { icon: '📍', title: 'Navigation aus der App', desc: 'Tippe auf eine Adresse und die Navigation startet direkt. Kein Copy-Paste mehr.' },
-  { icon: '✍️', title: 'Fahrstunden dokumentieren', desc: 'Notizen, Fortschritt und Bewertung direkt nach der Fahrstunde eingeben — dauert 30 Sekunden.' },
+  { icon: 'calendar', title: 'Tageskalender & Kalender-Sync', desc: 'Alle Termine des Tages auf einen Blick. Simy-Fahrstunden erscheinen automatisch in Google/Apple/Outlook. Trägst du dort einen privaten Termin ein, sperrt Simy diese Zeit automatisch für Buchungen.' },
+  { icon: 'users', title: 'Schülerprofil unterwegs', desc: 'Fahrstunden-History, Notizen, Kontaktdaten — alles griffbereit, immer aktuell.' },
+  { icon: 'wallet', title: 'Einnahmen-Übersicht', desc: 'Tages-, Wochen- und Monatseinnahmen auf einen Blick. Offene Rechnungen sofort sichtbar.' },
+  { icon: 'bell', title: 'Push-Benachrichtigungen', desc: 'Neue Buchungen, Absagen, Zahlungseingänge — du wirst sofort benachrichtigt.' },
+  { icon: 'map-pin', title: 'Navigation aus der App', desc: 'Tippe auf eine Adresse und die Navigation startet direkt. Kein Copy-Paste mehr.' },
+  { icon: 'pen', title: 'Fahrstunden dokumentieren', desc: 'Notizen, Fortschritt und Bewertung direkt nach der Fahrstunde eingeben — dauert 30 Sekunden.' },
 ]
 
 const comparison = [

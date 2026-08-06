@@ -150,9 +150,9 @@ import { ref, reactive } from 'vue'
 const { gtag } = useGtag()
 
 useHead({
-  title: 'Kontakt – Simy | Terminsoftware Schweiz',
+  title: 'Kontakt – Simy | All-in-One Software Schweiz',
   meta: [
-    { name: 'description', content: 'Kontaktiere Simy IT Systems bei Fragen zu Terminsoftware, Support oder Partnerships. Antwort innerhalb von 24h.' },
+    { name: 'description', content: 'Kontaktiere Simy IT Systems bei Fragen zu Simy, Support oder Partnerships. Antwort innerhalb von 24h.' },
     { property: 'og:title', content: 'Kontakt – Simy' },
     { property: 'og:description', content: 'Schreib uns — wir antworten innerhalb von 24 Stunden.' },
     { property: 'og:url', content: 'https://simy.ch/kontakt' },

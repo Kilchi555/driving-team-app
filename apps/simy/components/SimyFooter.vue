@@ -5,8 +5,13 @@
 
         <!-- Brand -->
         <div class="col-span-2">
-          <a href="/">
-            <img :src="'/simy-logo.png'" alt="Simy – Terminsoftware Schweiz" class="h-7 mb-4 opacity-90" style="filter: brightness(0) invert(1)" />
+          <a href="/" class="inline-block mb-4">
+            <img
+              :src="effectiveLogo || '/simy-logo.png'"
+              alt="Simy – All-in-One Software Schweiz"
+              class="h-8 max-w-[140px] object-contain"
+              :style="{ filter: logoColorFilter }"
+            />
           </a>
           <p class="text-sm leading-relaxed max-w-xs">
             All-in-One Software für Dienstleister: Terminbuchung, Rechnungen, Website und Marketing — mit Branchen-Vorlagen.
@@ -60,7 +65,7 @@
             <li><a href="/kunden" class="footer-link">Kundenstories</a></li>
             <li><a href="/ueber-uns" class="footer-link">Über uns</a></li>
             <li><a href="/partner" class="footer-link">Partner</a></li>
-            <li><a href="/fahrschule/software" class="footer-link">Fahrschulsoftware</a></li>
+            <li><a href="/branchen" class="footer-link">Branchen-Übersicht</a></li>
             <li><a href="/kontakt" class="footer-link">Kontakt</a></li>
             <li><a href="https://app.simy.ch/login" class="footer-link">Login</a></li>
           </ul>
@@ -90,6 +95,35 @@
     </div>
   </footer>
 </template>
+
+<script setup lang="ts">
+import {
+  SIMY_BRAND,
+  SIMY_BRAND_STORAGE_KEY,
+  simyLogoColorFilter,
+} from '~/utils/brand'
+
+const props = defineProps<{
+  logoSrc?: string | null
+  primaryColor?: string
+}>()
+
+const storedBrand = ref<{ primary?: string; logo?: string }>({})
+
+onMounted(() => {
+  try {
+    const raw = localStorage.getItem(SIMY_BRAND_STORAGE_KEY)
+    if (raw) storedBrand.value = JSON.parse(raw) as { primary?: string; logo?: string }
+  } catch { /* ignore */ }
+})
+
+const effectiveLogo = computed(() => props.logoSrc || storedBrand.value.logo || null)
+const effectivePrimary = computed(() => props.primaryColor || storedBrand.value.primary || SIMY_BRAND.primary)
+
+const logoColorFilter = computed(() =>
+  simyLogoColorFilter(effectivePrimary.value, { hasCustomLogo: !!effectiveLogo.value }),
+)
+</script>
 
 <style scoped>
 .footer-link { font-size: 0.875rem; color: #9ca3af; text-decoration: none; transition: color 0.15s; }

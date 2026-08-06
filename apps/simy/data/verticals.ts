@@ -97,17 +97,17 @@ export const VERTICALS: SimyVertical[] = [
       'Viele Coaches jonglieren Kalender, WhatsApp, PDF-Rechnungen und Erinnerungen — und verlieren Fokus auf die eigentliche Arbeit.',
     pains: [
       {
-        icon: '📱',
+        icon: 'phone',
         title: 'Termin-Pingpong',
         text: 'Termine per WhatsApp und Mail hin und her — Absagen kommen zu spät, Lücken bleiben leer.',
       },
       {
-        icon: '🧾',
+        icon: 'invoice',
         title: 'Rechnungen manuell',
         text: 'Jede Sitzung einzeln abrechnen, PDFs suchen, Zahlungseingänge nachverfolgen.',
       },
       {
-        icon: '🔕',
+        icon: 'bell-off',
         title: 'No-Shows',
         text: 'Ohne automatische Erinnerungen bleiben Stühle leer — und Umsatz liegt brach.',
       },
@@ -118,41 +118,41 @@ export const VERTICALS: SimyVertical[] = [
     featuresSub: 'Vom Erstgespräch bis zur bezahlten Sitzung — ein Workflow.',
     features: [
       {
-        icon: '📅',
+        icon: 'calendar',
         title: 'Online-Terminbuchung',
         desc: 'Kunden buchen freie Slots selbst — rund um die Uhr, mit deinen Arbeitszeiten und Puffern.',
       },
       {
-        icon: '💬',
+        icon: 'message',
         title: 'SMS- & E-Mail-Erinnerungen',
         desc: 'Weniger No-Shows: Bestätigungen und Reminder laufen automatisch.',
       },
       {
-        icon: '💶',
+        icon: 'wallet',
         title: 'QR-Rechnungen Schweiz',
         desc: 'Rechnungen mit QR-IBAN, korrekt für den Schweizer Zahlungsverkehr.',
       },
       {
-        icon: '📦',
+        icon: 'package',
         title: 'Sitzungspakete',
         desc: '10er-Pakete und Abos verkaufen — Simy zählt die Einheiten mit.',
       },
       {
-        icon: '🧑‍💼',
+        icon: 'users',
         title: 'Kundenverwaltung',
         desc: 'Kontakte, Historie und Notizen an einem Ort — DSG-konform.',
       },
       {
-        icon: '🎨',
+        icon: 'palette',
         title: 'Dein Branding',
         desc: 'Farben, Logo und Buchungslink in deinem Look — nicht wie ein Marktplatz.',
       },
     ],
     highlightsTitle: 'Gebaut für Coaching-Alltag',
-    highlightsSub: 'Nicht generische Terminsoftware — Workflows, die zu Sitzungen passen.',
+    highlightsSub: 'Nicht generische Buchungssoftware — Workflows, die zu Sitzungen passen.',
     highlights: [
       {
-        visual: '🤝',
+        visual: 'handshake',
         title: 'Gratis Erstgespräch + bezahlte Sitzung',
         desc: 'Zwei Terminarten out of the box: Kennenlernen ohne Hürde, danach klare Bezahlung.',
         points: [
@@ -162,7 +162,7 @@ export const VERTICALS: SimyVertical[] = [
         ],
       },
       {
-        visual: '🧠',
+        visual: 'brain',
         title: 'Themenbereiche statt Chaos',
         desc: 'Strukturiere Angebote nach Fokus — z. B. Stress, Fokus, Performance.',
         points: [
@@ -174,7 +174,7 @@ export const VERTICALS: SimyVertical[] = [
     ],
     proofTitle: 'Bewährt in der Schweiz',
     proofSub:
-      'Dieselbe Plattform, auf der Fahrschulen und Beratungsunternehmen Termine, Rechnungen und Kunden führen — jetzt mit Coaching-Vorlagen.',
+      'Dieselbe Plattform, auf der Dienstleister und Beratungsunternehmen Termine, Rechnungen und Kunden führen — jetzt mit Coaching-Vorlagen.',
     guide: {
       title: 'Online-Terminbuchung für Coaches in der Schweiz — Ratgeber',
       intro:
@@ -258,17 +258,17 @@ export const VERTICALS: SimyVertical[] = [
       'Zwischen Calls, Offers und Rechnungen geht Überblick verloren. Simy hält Buchung und Billing zusammen.',
     pains: [
       {
-        icon: '📅',
+        icon: 'calendar',
         title: 'Überbuchte Wochen',
         text: 'Discovery und Delivery im selben Kalender ohne klare Slot-Typen.',
       },
       {
-        icon: '💼',
+        icon: 'briefcase',
         title: 'Rechnungen verzögert',
         text: 'Abrechnung nach dem Call — oft Tage später, Cashflow leidet.',
       },
       {
-        icon: '🔀',
+        icon: 'shuffle',
         title: 'Zu viele Tools',
         text: 'Calendly + Excel + Word + Banking-App — Kontext geht verloren.',
       },
@@ -279,32 +279,32 @@ export const VERTICALS: SimyVertical[] = [
     featuresSub: 'Vorlagen für IT-, Strategie- und Projektberatung.',
     features: [
       {
-        icon: '🤝',
+        icon: 'handshake',
         title: 'Erstgespräch gratis',
         desc: 'Öffentlich buchbares Discovery — ohne Zahlungshürde.',
       },
       {
-        icon: '💼',
+        icon: 'briefcase',
         title: 'Beratungsslots',
         desc: 'Bezahlte 60-Minuten-Beratung mit klarer Preisregel.',
       },
       {
-        icon: '🗂️',
+        icon: 'folder',
         title: 'Leistungsbereiche',
         desc: 'Cloud, Security, DevOps, Strategie — strukturierte Angebote.',
       },
       {
-        icon: '🏢',
+        icon: 'building',
         title: 'Firmenkunden',
         desc: 'Rechnungen an Unternehmen mit Kontaktperson und Adresse.',
       },
       {
-        icon: '💶',
+        icon: 'wallet',
         title: 'QR-Rechnung',
         desc: 'Schweizer Standard — zahlbar per Banking-App.',
       },
       {
-        icon: '📝',
+        icon: 'pen',
         title: 'Session-Notizen',
         desc: 'Dokumentation nach dem Call, damit Follow-ups nicht versanden.',
       },
@@ -313,13 +313,13 @@ export const VERTICALS: SimyVertical[] = [
     highlightsSub: 'Eine Buchungsseite, ein Kundenstamm, ein Rechnungsfluss.',
     highlights: [
       {
-        visual: '🚀',
+        visual: 'rocket',
         title: 'Schneller Onboarding-Pfad',
         desc: 'Branche «Consulting» wählen — Vorlagen für Terminarten und Preise sind da.',
         points: ['Discovery + Beratung', 'Vier Leistungsbereiche', 'Mo–Fr Bürozeiten'],
       },
       {
-        visual: '🇨🇭',
+        visual: 'swiss',
         title: 'Schweiz-first Billing',
         desc: 'QR-IBAN und korrekte Rechnungsadresse — ready for Treuhänder.',
         points: ['Zahlungsfrist konfigurierbar', 'Offene Posten im Blick', 'Kein Marktplatz'],
@@ -405,17 +405,17 @@ export const VERTICALS: SimyVertical[] = [
     painSub: 'Wenn der Kalender im Chat lebt, verlierst du Slots, Zahlungen und Überblick.',
     pains: [
       {
-        icon: '⏰',
+        icon: 'clock',
         title: 'Leere Morgen-Slots',
         text: 'Absagen ohne System — der nächste Kunde erfährt es zu spät.',
       },
       {
-        icon: '💳',
+        icon: 'credit-card',
         title: 'Offene 10er-Karten',
         text: 'Wer hat noch wie viele Einheiten? Excel lügt oft.',
       },
       {
-        icon: '📉',
+        icon: 'chart-down',
         title: 'No-Shows',
         text: 'Ohne Reminder bleibt die Matte leer — du hast den Slot blockiert.',
       },
@@ -426,32 +426,32 @@ export const VERTICALS: SimyVertical[] = [
     featuresSub: 'Vorlage Personal Training mit sinnvollen Defaults.',
     features: [
       {
-        icon: '🤝',
+        icon: 'handshake',
         title: 'Probe-Training',
         desc: 'Kostenloses Kennenlernen — öffentlich buchbar.',
       },
       {
-        icon: '💪',
+        icon: 'activity',
         title: '60′-Training',
         desc: 'Bezahlte Einheit mit Default-Preis CHF 120 (anpassbar).',
       },
       {
-        icon: '📦',
+        icon: 'package',
         title: 'Trainingspakete',
         desc: 'Mehrere Einheiten verkaufen und abbuchen.',
       },
       {
-        icon: '📱',
+        icon: 'phone',
         title: 'Erinnerungen',
         desc: 'SMS/E-Mail vor dem Termin — weniger No-Shows.',
       },
       {
-        icon: '🏷️',
+        icon: 'label',
         title: 'Trainingsbereiche',
         desc: 'Kraft, Ausdauer, Mobility, Abnehmen — klar strukturiert.',
       },
       {
-        icon: '💶',
+        icon: 'wallet',
         title: 'QR-Rechnung',
         desc: 'Schweizer Standard für Studios und Solo-PTs.',
       },
@@ -460,19 +460,19 @@ export const VERTICALS: SimyVertical[] = [
     highlightsSub: 'Frühe und späte Slots, Samstagvormittag — wie im echten PT-Alltag.',
     highlights: [
       {
-        visual: '🏋️',
+        visual: 'activity',
         title: 'Arbeitszeiten für Trainer',
         desc: 'Defaults von 06:30–21:00, Samstag kürzer — sofort nutzbar.',
         points: ['Anpassbar pro Trainer', 'Online-Buchung respektiert Pausen', 'Mehrere Standorte möglich'],
       },
       {
-        visual: '🎯',
+        visual: 'target',
         title: 'Kein Fitness-Marktplatz',
         desc: 'Deine Kunden, dein Link, deine Marke — ohne Provision an Plattformen.',
         points: ['Eigene Buchungsseite', 'Branding mit Logo/Farben', 'Direkte Kundenbeziehung'],
       },
     ],
-    proofTitle: 'Dieselbe Engine wie bei Fahrschulen',
+    proofTitle: 'Dieselbe Engine für Terminbetriebe',
     proofSub: 'Termin, Kunde, Zahlung — in der Schweiz schon produktiv im Einsatz.',
     faqs: [
       {
@@ -521,17 +521,17 @@ export const VERTICALS: SimyVertical[] = [
     painSub: 'Schüler wollen Flexibilität — du brauchst Verlässlichkeit und Zahlung.',
     pains: [
       {
-        icon: '📚',
+        icon: 'book',
         title: 'Fach-Mix ohne System',
         text: 'Mathe, Deutsch, Englisch im selben Chat — niemand weiss, was gebucht ist.',
       },
       {
-        icon: '👨‍👩‍👧',
+        icon: 'users-family',
         title: 'Eltern-Kommunikation',
         text: 'Absagen, Umbuchungen und Rechnungen landen in drei Kanälen.',
       },
       {
-        icon: '🧾',
+        icon: 'invoice',
         title: 'Monatsende-Stress',
         text: 'Stunden zusammenzählen und manuell fakturieren.',
       },
@@ -542,32 +542,32 @@ export const VERTICALS: SimyVertical[] = [
     featuresSub: 'Vorlage mit Probestunde und Nachhilfe-Lektion.',
     features: [
       {
-        icon: '🤝',
+        icon: 'handshake',
         title: 'Probestunde',
         desc: 'Kostenloses Kennenlernen — Hürde für Neukunden senken.',
       },
       {
-        icon: '📖',
+        icon: 'book',
         title: 'Nachhilfe 45′',
         desc: 'Default-Preis ca. CHF 60 — jederzeit anpassbar.',
       },
       {
-        icon: '🧮',
+        icon: 'calculator',
         title: 'Fächer',
         desc: 'Mathematik, Deutsch, Englisch, Französisch vorbereitet.',
       },
       {
-        icon: '🕒',
+        icon: 'clock',
         title: 'Nachmittags-Slots',
         desc: 'Defaults 14–20 Uhr, Samstag vormittags.',
       },
       {
-        icon: '💶',
+        icon: 'wallet',
         title: 'Rechnungen an Eltern',
         desc: 'QR-Rechnung Schweiz — klar und nachvollziehbar.',
       },
       {
-        icon: '🔔',
+        icon: 'bell',
         title: 'Erinnerungen',
         desc: 'Weniger verpasste Lektionen dank Reminder.',
       },
@@ -576,20 +576,20 @@ export const VERTICALS: SimyVertical[] = [
     highlightsSub: 'Schüler, Tutor, Lektion — Terminologie stimmt von Anfang an.',
     highlights: [
       {
-        visual: '🎓',
+        visual: 'graduate',
         title: 'Schul-ähnlicher Flow',
-        desc: 'Dieselbe DNA wie Fahrschul-Lektionen: wiederkehrend, personalisiert, verrechenbar.',
+        desc: 'Dieselbe DNA wie wiederkehrende Termine: personalisiert, verrechenbar.',
         points: ['Öffentliche Buchung', 'Staff-Kalender für Tutoren', 'Pakete für 10er-Blöcke'],
       },
       {
-        visual: '🇨🇭',
+        visual: 'swiss',
         title: 'Schweizer Eltern erwarten Klarheit',
         desc: 'Professionelle Rechnung statt Twint-Pingpong ohne Beleg.',
         points: ['QR-IBAN', 'Offene Posten', 'Kein Marktplatz'],
       },
     ],
     proofTitle: 'Von Ausbildern für Ausbilder',
-    proofSub: 'Simy kommt aus dem Fahrschul-Alltag — Unterrichtsorganisation steckt in der DNA.',
+    proofSub: 'Simy kommt aus dem Praxis-Alltag — Terminorganisation steckt in der DNA.',
     faqs: [
       {
         q: 'Können mehrere Tutoren in einer Schule arbeiten?',
@@ -637,17 +637,17 @@ export const VERTICALS: SimyVertical[] = [
     painSub: 'Zwischen Zimmern, Lehrpersonen und Eltern braucht es System — nicht einen Gruppenchat.',
     pains: [
       {
-        icon: '🎹',
+        icon: 'music',
         title: 'Instrumente vermischt',
         text: 'Klavier und Gitarre im selben Chaos — Schüler buchen das Falsche.',
       },
       {
-        icon: '👩‍🏫',
+        icon: 'users',
         title: 'Lehrer-Überschneidungen',
         text: 'Zwei Stunden zur gleichen Zeit, ein Raum — Klassiker ohne Software.',
       },
       {
-        icon: '💶',
+        icon: 'wallet',
         title: 'Semester-Abrechnung',
         text: 'Manuelles Zusammensuchen von Stunden für Elternrechnungen.',
       },
@@ -658,32 +658,32 @@ export const VERTICALS: SimyVertical[] = [
     featuresSub: 'Vorlage mit Probestunde und Musikstunde.',
     features: [
       {
-        icon: '🤝',
+        icon: 'handshake',
         title: 'Probestunde',
         desc: 'Kostenloses Kennenlernen für neue Schüler.',
       },
       {
-        icon: '🎹',
+        icon: 'music',
         title: 'Musikstunde 45′',
         desc: 'Default ca. CHF 70 — frei anpassbar.',
       },
       {
-        icon: '🎸',
+        icon: 'music',
         title: 'Instrumente',
         desc: 'Klavier, Gitarre, Gesang, Schlagzeug vorbereitet.',
       },
       {
-        icon: '📅',
+        icon: 'calendar',
         title: 'Lehrer-Kalender',
         desc: 'Mehrere Lehrpersonen ohne Doppelbuchung.',
       },
       {
-        icon: '📦',
+        icon: 'package',
         title: 'Pakete',
         desc: '10er oder Semesterblöcke verkaufen.',
       },
       {
-        icon: '🧾',
+        icon: 'invoice',
         title: 'QR-Rechnung',
         desc: 'Professionell an Eltern und Erwachsene.',
       },
@@ -692,13 +692,13 @@ export const VERTICALS: SimyVertical[] = [
     highlightsSub: 'Skalierbar vom Einzelunterricht bis zum kleinen Team.',
     highlights: [
       {
-        visual: '🎼',
+        visual: 'music',
         title: 'Nachmittags- und Abendunterricht',
         desc: 'Defaults 13–20 Uhr unter der Woche, Samstag vormittags.',
         points: ['Arbeitszeiten pro Lehrperson', 'Online-Buchung', 'Erinnerungen'],
       },
       {
-        visual: '🏫',
+        visual: 'school',
         title: 'Deine Marke, nicht ein Marktplatz',
         desc: 'Schüler buchen bei dir — nicht neben der Konkurrenz.',
         points: ['Eigener Link', 'Logo & Farben', 'Keine Provision'],
@@ -753,17 +753,17 @@ export const VERTICALS: SimyVertical[] = [
     painSub: 'Zwischen Platz, Wetter und Absagen brauchst du ein System, das Halter mitzieht.',
     pains: [
       {
-        icon: '🐕',
+        icon: 'paw',
         title: 'Chat statt Kalender',
         text: 'Trainingstermine per WhatsApp — Übersicht über Hunde und Halter fehlt.',
       },
       {
-        icon: '🌦️',
+        icon: 'compass',
         title: 'Absagen & Umbuchen',
         text: 'Wetterbedingt verschieben ohne automatische Info an die Gruppe.',
       },
       {
-        icon: '💳',
+        icon: 'credit-card',
         title: 'Kursgebühren',
         text: 'Wer hat den Welpenkurs bezahlt? Manuelles Nachhaken kostet Zeit.',
       },
@@ -774,54 +774,54 @@ export const VERTICALS: SimyVertical[] = [
     featuresSub: 'Vorlage mit Erstberatung und Einzeltraining; Kurse über das Kursmodul.',
     features: [
       {
-        icon: '🤝',
+        icon: 'handshake',
         title: 'Erstberatung',
         desc: 'Kostenloses Kennenlernen für Hundehalter.',
       },
       {
-        icon: '🦮',
+        icon: 'paw',
         title: 'Einzeltraining 60′',
         desc: 'Default ca. CHF 90 — anpassbar.',
       },
       {
-        icon: '🐾',
+        icon: 'paw',
         title: 'Trainingsbereiche',
         desc: 'Welpen, Grundgehorsam, Alltag, Sport.',
       },
       {
-        icon: '🎓',
+        icon: 'graduate',
         title: 'Kurse',
         desc: 'Gruppenformate über das Kurs-Feature (Plan abhängig).',
       },
       {
-        icon: '🔔',
+        icon: 'bell',
         title: 'Erinnerungen',
         desc: 'SMS/Mail an Halter vor dem Termin.',
       },
       {
-        icon: '💶',
+        icon: 'wallet',
         title: 'QR-Rechnung',
         desc: 'Kurs und Training sauber verrechnen.',
       },
     ],
     highlightsTitle: 'Pet-Business, Profi-Tools',
-    highlightsSub: 'Dieselbe Kurs-DNA wie bei Fahrschulen — ideal für Welpenkurse.',
+    highlightsSub: 'Dieselbe Kurs-DNA wie bei Gruppenkursen — ideal für Welpenkurse.',
     highlights: [
       {
-        visual: '🏕️',
+        visual: 'camp',
         title: 'Platz & Outdoor-Alltag',
         desc: 'Arbeitszeiten inkl. Samstag — typisch für Hundeschulen.',
         points: ['Staff-Kalender', 'Öffentliche Buchung', 'Standorte'],
       },
       {
-        visual: '📋',
+        visual: 'clipboard',
         title: 'Halter im Fokus',
         desc: 'Terminologie «Hundehalter» / «Hundetrainer» von Tag eins.',
         points: ['Klare Labels', 'Historie pro Kunde', 'Keine Marktplatz-Provision'],
       },
     ],
     proofTitle: 'Kurskompetenz inklusive',
-    proofSub: 'Simy kennt Gruppenkurse aus dem Fahrschul-Geschäft — übertragbar auf Welpenkurse.',
+    proofSub: 'Simy kennt Gruppenkurse aus dem Praxis-Alltag — übertragbar auf Welpenkurse.',
     faqs: [
       {
         q: 'Kann ich Welpenkurse mit Teilnehmerlimit anbieten?',
@@ -869,17 +869,17 @@ export const VERTICALS: SimyVertical[] = [
     painSub: 'Jede manuelle Terminabsprache kostet Behandlungszeit — und Nerven.',
     pains: [
       {
-        icon: '☎️',
+        icon: 'phone',
         title: 'Telefon-Unterbruch',
         text: 'Während der Massage klingelt das Handy wegen Terminfragen.',
       },
       {
-        icon: '🕳️',
+        icon: 'clock',
         title: 'Löcher im Tag',
         text: 'Absagen ohne Warteliste — Umsatz weg.',
       },
       {
-        icon: '🧾',
+        icon: 'invoice',
         title: 'Belege nachziehen',
         text: 'Quittungen und Rechnungen am Abend statt Feierabend.',
       },
@@ -890,32 +890,32 @@ export const VERTICALS: SimyVertical[] = [
     featuresSub: 'Selbstzahler-fokussiert — ohne KK-Tarifmodul.',
     features: [
       {
-        icon: '🤝',
+        icon: 'handshake',
         title: 'Ersttermin',
         desc: 'Kurzes Kennenlernen / Anamnese kostenlos buchbar.',
       },
       {
-        icon: '🌿',
+        icon: 'leaf',
         title: 'Behandlung 60′',
         desc: 'Default ca. CHF 130 — pro Praxis anpassbar.',
       },
       {
-        icon: '🕯️',
+        icon: 'flame',
         title: 'Behandlungsarten',
         desc: 'Klassisch, Sport, Shiatsu, Hot Stone.',
       },
       {
-        icon: '🔔',
+        icon: 'bell',
         title: 'Automatische Reminder',
         desc: 'SMS und E-Mail gegen No-Shows.',
       },
       {
-        icon: '💶',
+        icon: 'wallet',
         title: 'QR-Rechnung',
         desc: 'Schweizer Zahlung ohne Umwege.',
       },
       {
-        icon: '🎨',
+        icon: 'palette',
         title: 'Eigenes Branding',
         desc: 'Buchungsseite in deinem Look — kein Treatwell-Feeling.',
       },
@@ -924,19 +924,19 @@ export const VERTICALS: SimyVertical[] = [
     highlightsSub: 'Kein schweres Kassensystem — Fokus auf Termine und Kunden.',
     highlights: [
       {
-        visual: '🧘',
+        visual: 'spa',
         title: 'Selbstzahler klar positioniert',
         desc: 'Ideal für Wellness und Massage ohne Krankenkassen-Abrechnung.',
         points: ['Schneller Start', 'Klare Preise', 'Pakete möglich'],
       },
       {
-        visual: '🇨🇭',
+        visual: 'swiss',
         title: 'Schweizer Erwartung',
         desc: 'Pünktliche Reminder und saubere Belege gehören zum Service.',
         points: ['DSG-konform', 'QR-IBAN', 'Support auf Deutsch'],
       },
     ],
-    proofTitle: 'Terminsoftware mit Billing',
+    proofTitle: 'All-in-One Software mit Billing',
     proofSub: 'Viele Massage-Tools stoppen bei Buchung — Simy liefert die Rechnung gleich mit.',
     guide: {
       title: 'Online-Terminbuchung für Massagepraxen — ohne Marktplatzgebühr',

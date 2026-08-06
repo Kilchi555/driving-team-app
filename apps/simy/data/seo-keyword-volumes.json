@@ -59,9 +59,10 @@
     }
   ],
   "title_strategy": {
-    "primary": "Online-Terminbuchung / Terminbuchung + Branche + Schweiz",
-    "secondary": "Software, Buchungssystem, QR-Rechnung, Kundenverwaltung",
-    "h1": "Lead with Online-Terminbuchung für [Branche]; keep conversion highlight short"
+    "primary": "Online-Terminbuchung / Online-Buchungssystem + Branche + Schweiz",
+    "secondary": "All-in-One Software, Fahrschulsoftware, QR-Rechnung, Kundenverwaltung",
+    "branding": "All-in-One Software / Software für Dienstleister — not Terminsoftware",
+    "h1": "Lead with Online-Terminbuchung für [Branche] or All-in-One Software; keep conversion highlight short"
   },
   "per_url": {
     "/coaching": {
@@ -102,7 +103,7 @@
     },
     "/vergleich/terminli": {
       "primary": "terminli alternative",
-      "secondary": ["simy vs terminli", "terminsoftware schweiz"]
+      "secondary": ["simy vs terminli", "online buchungssystem schweiz"]
     },
     "/vergleich/klara": {
       "primary": "klara terminbuchung alternative",

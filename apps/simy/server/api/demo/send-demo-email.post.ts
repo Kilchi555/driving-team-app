@@ -3,6 +3,7 @@
 // Rate limited to 3 emails per IP per hour using Nitro storage.
 
 import { sendEmail } from '~/server/utils/email'
+import { SIMY_BRAND } from '~/utils/brand'
 
 type TemplateType = 'reminder' | 'invoice' | 'welcome'
 
@@ -23,12 +24,12 @@ function getReminderHtml(school: string, primary: string): string {
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.10);margin:0 auto;">
         <tr><td style="background:${primary};padding:36px 30px;text-align:center;">
-          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 6px 0;letter-spacing:1px;text-transform:uppercase;">Lektionserinnerung</p>
+          <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:0 0 6px 0;letter-spacing:1px;text-transform:uppercase;">Terminerinnerung</p>
           <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;">${school}</h1>
         </td></tr>
         <tr><td style="padding:32px 30px;">
           <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px 0;">Hallo <strong>Anna</strong>,</p>
-          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 24px 0;">Wir möchten dich an deine Fahrstunde <strong>morgen</strong> erinnern:</p>
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 24px 0;">Wir möchten dich an deinen Termin <strong>morgen</strong> erinnern:</p>
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;margin-bottom:24px;">
             <tr><td style="padding:20px 24px;">
               <table width="100%" cellpadding="0" cellspacing="0">
@@ -37,7 +38,7 @@ function getReminderHtml(school: string, primary: string): string {
                   <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Morgen, 09:00 Uhr</td>
                 </tr>
                 <tr>
-                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">👤 Fahrlehrer</td>
+                  <td style="color:#6b7280;font-size:14px;padding:6px 0;">👤 Mitarbeiter</td>
                   <td style="color:#111827;font-size:14px;font-weight:600;padding:6px 0;">Thomas Meier</td>
                 </tr>
                 <tr>
@@ -58,7 +59,7 @@ function getReminderHtml(school: string, primary: string): string {
               </a>
             </td></tr>
           </table>
-          <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">Diese Erinnerung wurde automatisch von Simy erstellt – ohne dass dein Fahrlehrer einen Finger rühren musste.</p>
+          <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">Diese Erinnerung wurde automatisch von Simy erstellt – ohne dass dein Team einen Finger rühren musste.</p>
         </td></tr>
         <tr><td style="background:#f9fafb;padding:20px 30px;text-align:center;border-top:1px solid #e5e7eb;">
           <p style="color:#9ca3af;font-size:12px;margin:0;">${school} · Powered by <strong style="color:${primary}">Simy</strong></p>
@@ -82,12 +83,12 @@ function getInvoiceHtml(school: string, primary: string): string {
         </td></tr>
         <tr><td style="padding:32px 30px;">
           <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px 0;">Hallo <strong>Anna</strong>,</p>
-          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 24px 0;">Vielen Dank für deine Fahrstunde. Hier ist deine Rechnung:</p>
+          <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 24px 0;">Vielen Dank für deinen Termin. Hier ist deine Rechnung:</p>
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;margin-bottom:8px;">
             <tr><td style="padding:16px 24px 8px 24px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="color:#374151;font-size:14px;padding:8px 0;border-bottom:1px solid #e5e7eb;">Fahrstunde (90 Min.)</td>
+                  <td style="color:#374151;font-size:14px;padding:8px 0;border-bottom:1px solid #e5e7eb;">Termin (90 Min.)</td>
                   <td align="right" style="color:#374151;font-size:14px;padding:8px 0;border-bottom:1px solid #e5e7eb;">CHF 115.–</td>
                 </tr>
                 <tr>
@@ -109,7 +110,7 @@ function getInvoiceHtml(school: string, primary: string): string {
               </a>
             </td></tr>
           </table>
-          <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">Diese Rechnung wurde automatisch nach der Fahrstunde erstellt – du hast dafür keinen Aufwand.</p>
+          <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">Diese Rechnung wurde automatisch nach dem Termin erstellt – du hast dafür keinen Aufwand.</p>
         </td></tr>
         <tr><td style="background:#f9fafb;padding:20px 30px;text-align:center;border-top:1px solid #e5e7eb;">
           <p style="color:#9ca3af;font-size:12px;margin:0;">${school} · Powered by <strong style="color:${primary}">Simy</strong></p>
@@ -172,9 +173,9 @@ function getWelcomeHtml(school: string, primary: string): string {
 }
 
 const SUBJECTS: Record<TemplateType, (school: string) => string> = {
-  reminder: (school) => `Demo: So sieht deine Lektionserinnerung aus – ${school}`,
+  reminder: (school) => `Demo: So sieht deine Terminerinnerung aus – ${school}`,
   invoice: (school) => `Demo: So sieht deine Rechnung aus – ${school}`,
-  welcome: (school) => `Demo: So begrüsst ${school} neue Schüler`,
+  welcome: (school) => `Demo: So begrüsst ${school} neue Kunden`,
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -192,8 +193,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Unbekannter Template-Typ.' })
   }
 
-  const school = (schoolName || 'Fahrschule Muster AG').slice(0, 80)
-  const primary = /^#[0-9A-Fa-f]{6}$/.test(primaryColor) ? primaryColor : '#6000BD'
+  const school = (schoolName || 'Muster AG').slice(0, 80)
+  const primary = /^#[0-9A-Fa-f]{6}$/.test(primaryColor) ? primaryColor : SIMY_BRAND.primary
 
   // ─── Rate limiting: max 3 per IP per hour ─────────────────────────────────
   const ip = getRequestHeader(event, 'x-forwarded-for')?.split(',')[0]?.trim()
