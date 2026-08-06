@@ -16,8 +16,10 @@ import { logAudit } from '~/server/utils/audit'
 import { logger } from '~/utils/logger'
 import {
   buildStaffInviteEmailHtml,
+  isFirstStaffOnboarding,
   isPlaceholderStaffInviteEmail,
 } from '~/server/utils/staff-invite-email'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 async function verifySuperAdmin(event: any) {
   const authUser = await getAuthenticatedUser(event)
@@ -141,11 +143,11 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
-      const { getTerminologyDefaults } = await import('~/composables/useTerminology')
-      const terms = getTerminologyDefaults(tenant.business_type)
+      const terms = await getTenantTerminology(supabase, tenantId)
       const tenantName = tenant.name || terms.businessNoun
       const loginLink = tenant.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
       const firstName = invitation.first_name || 'Hallo'
+      const showDualLoginHint = await isFirstStaffOnboarding(supabase, tenantId, invitation.id)
 
       const { data: adminRow } = await supabase
         .from('users')
@@ -164,8 +166,10 @@ export default defineEventHandler(async (event) => {
           tenantName,
           inviteLink,
           staffLabel: terms.staff,
+          clientsLabel: terms.clientsPlural,
           loginUrl: loginLink,
           adminEmail: adminRow?.email || null,
+          showDualLoginHint,
           primaryColor: tenant.primary_color || '#6000BD',
         }),
         fromName: tenantName,

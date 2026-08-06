@@ -9,7 +9,11 @@ import { normalizePhoneNumber } from '~/server/utils/sms'
 import { sendEmail } from '~/server/utils/email'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { getPlanById } from '~/utils/planFeatures'
-import { buildStaffInviteEmailHtml } from '~/server/utils/staff-invite-email'
+import {
+  buildStaffInviteEmailHtml,
+  isFirstStaffOnboarding,
+} from '~/server/utils/staff-invite-email'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import {
   checkEmailAvailableForStaff,
   emailConflictMessage,
@@ -51,13 +55,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Tenant nicht gefunden' })
   }
 
-  const { getTerminologyDefaults } = await import('~/composables/useTerminology')
-  const terms = getTerminologyDefaults(tenant.business_type)
+  const terms = await getTenantTerminology(supabase, tenant_id)
   const tenantName = tenant.name || terms.businessNoun
   const staffLabel = terms.staff
   const primaryColor = tenant.primary_color || '#6000BD'
   const rawLogo = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
   const logoUrl = rawLogo?.startsWith('data:') ? null : rawLogo
+  // Only the very first invite in this batch (and tenant) gets the dual-login explainer
+  let showDualLoginHint = await isFirstStaffOnboarding(supabase, tenant_id)
 
   const tenantAge = Date.now() - new Date(tenant.created_at).getTime()
   if (tenantAge > 30 * 60 * 1000) {
@@ -216,6 +221,8 @@ export default defineEventHandler(async (event) => {
     if (phone) pendingPhoneSet.add(phone)
 
     const inviteLink = `${baseUrl}/register/staff?token=${token}`
+    const includeDualLogin = showDualLoginHint
+    showDualLoginHint = false
 
     try {
       await sendEmail({
@@ -226,8 +233,10 @@ export default defineEventHandler(async (event) => {
           tenantName,
           inviteLink,
           staffLabel,
+          clientsLabel: terms.clientsPlural,
           loginUrl,
           adminEmail,
+          showDualLoginHint: includeDualLogin,
           primaryColor,
           logoUrl,
         }),

@@ -8,7 +8,10 @@ import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { getPlanById } from '~/utils/planFeatures'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
-import { buildStaffInviteEmailHtml } from '~/server/utils/staff-invite-email'
+import {
+  buildStaffInviteEmailHtml,
+  isFirstStaffOnboarding,
+} from '~/server/utils/staff-invite-email'
 import {
   checkEmailAvailableForStaff,
   emailConflictMessage,
@@ -189,6 +192,8 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    const showDualLoginHint = await isFirstStaffOnboarding(serviceSupabase, userProfile.tenant_id)
+
     const token = generateToken()
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 30)
@@ -257,8 +262,7 @@ export default defineEventHandler(async (event) => {
       .eq('id', userProfile.tenant_id)
       .single()
 
-    const { getTerminologyDefaults } = await import('~/composables/useTerminology')
-    const terms = getTerminologyDefaults(tenant?.business_type)
+    const terms = await getTenantTerminology(serviceSupabase, userProfile.tenant_id)
     const tenantName = tenant?.name || terms.businessNoun
     const loginLink = tenant?.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
     const primaryColor = tenant?.primary_color || '#6000BD'
@@ -274,8 +278,10 @@ export default defineEventHandler(async (event) => {
           tenantName,
           inviteLink,
           staffLabel: terms.staff,
+          clientsLabel: terms.clientsPlural,
           loginUrl: loginLink,
           adminEmail,
+          showDualLoginHint,
           primaryColor,
           logoUrl,
         }),

@@ -2,7 +2,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { isPlaceholderStaffInviteEmail } from '~/server/utils/staff-invite-email'
+import { isFirstStaffOnboarding, isPlaceholderStaffInviteEmail } from '~/server/utils/staff-invite-email'
 
 /**
  * Get staff invitation details
@@ -160,6 +160,11 @@ export default defineEventHandler(async (event) => {
     const inviteEmail = invitation.email as string | null
     const email_is_placeholder = isPlaceholderStaffInviteEmail(inviteEmail)
     const email_locked = !email_is_placeholder && !!inviteEmail
+    const show_dual_login_hint = await isFirstStaffOnboarding(
+      getSupabaseAdmin(),
+      invitation.tenant_id,
+      invitation.id,
+    )
 
     return {
       success: true,
@@ -174,6 +179,7 @@ export default defineEventHandler(async (event) => {
       admin_email,
       email_locked,
       email_is_placeholder,
+      show_dual_login_hint,
     }
 
   } catch (error: any) {

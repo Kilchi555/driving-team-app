@@ -7,8 +7,10 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import {
   buildStaffInviteEmailHtml,
+  isFirstStaffOnboarding,
   isPlaceholderStaffInviteEmail,
 } from '~/server/utils/staff-invite-email'
+import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -165,14 +167,18 @@ export default defineEventHandler(async (event) => {
       .eq('id', userProfile.tenant_id)
       .single()
 
-    const { getTerminologyDefaults } = await import('~/composables/useTerminology')
-    const terms = getTerminologyDefaults(tenant?.business_type)
+    const terms = await getTenantTerminology(supabase, userProfile.tenant_id)
     const tenantName = tenant?.name || terms.businessNoun
     const loginLink = tenant?.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
     const firstName = invitation.first_name || 'Hallo'
     const primaryColor = tenant?.primary_color || '#6000BD'
     const rawLogo = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
     const logoUrl = rawLogo?.startsWith('data:') ? null : rawLogo
+    const showDualLoginHint = await isFirstStaffOnboarding(
+      supabase,
+      userProfile.tenant_id,
+      invitation.id,
+    )
 
     await logAudit({
       action: 'staff_invitation_resend',
@@ -199,8 +205,10 @@ export default defineEventHandler(async (event) => {
           tenantName,
           inviteLink,
           staffLabel: terms.staff,
+          clientsLabel: terms.clientsPlural,
           loginUrl: loginLink,
           adminEmail: adminRow?.email || null,
+          showDualLoginHint,
           primaryColor,
           logoUrl,
         }),
