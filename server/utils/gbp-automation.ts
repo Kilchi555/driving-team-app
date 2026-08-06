@@ -48,6 +48,9 @@ export interface GenerateGbpAiTextParams {
   reviewerName?: string | null
   starRating?: number | null
   reviewText?: string | null
+  /** Optional image for photo_caption vision (raw base64, no data: prefix) */
+  imageBase64?: string | null
+  imageMediaType?: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' | null
 }
 
 const TONE_LABELS: Record<GbpAiTextTone, string> = {
@@ -56,14 +59,43 @@ const TONE_LABELS: Record<GbpAiTextTone, string> = {
   cta_focus: 'Mit starker Handlungsaufforderung',
 }
 
-async function callAnthropic(prompt: string, maxTokens: number): Promise<string> {
+/** Customer-facing GBP copy: High German only — never Swiss dialect. */
+const HOCHDEUTSCH_RULE = `Sprache: ausschliesslich Hochdeutsch (Standarddeutsch).
+VERBOTEN: Schweizerdeutsch/Mundart — keine Dialektwörter wie Grüezi, Merci vielmal, isch, nöd, guet, mer, chönd, ässe, luege, schaffe, etc.
+Schweizer Schreibweise ist erlaubt (ss statt ß).`
+
+type AnthropicImageMediaType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+
+async function callAnthropic(
+  prompt: string,
+  maxTokens: number,
+  image?: { base64: string; mediaType: AnthropicImageMediaType } | null,
+): Promise<string> {
   const apiKey = requireAnthropicApiKey()
   const Anthropic = (await import('@anthropic-ai/sdk')).default
   const client = new Anthropic({ apiKey })
+
+  const content: Array<
+    | { type: 'text'; text: string }
+    | { type: 'image'; source: { type: 'base64'; media_type: AnthropicImageMediaType; data: string } }
+  > = []
+
+  if (image?.base64) {
+    content.push({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: image.mediaType,
+        data: image.base64,
+      },
+    })
+  }
+  content.push({ type: 'text', text: prompt })
+
   const message = await client.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: maxTokens,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [{ role: 'user', content }],
   })
   return message.content[0].type === 'text' ? message.content[0].text.trim() : ''
 }
@@ -114,7 +146,8 @@ Bewertung von ${params.reviewerName || 'einem Kunden'} (${stars}/5):
 ${modeBlock}
 
 Regeln:
-- Max. 3 Sätze, Schweizer Hochdeutsch
+- ${HOCHDEUTSCH_RULE}
+- Max. 3 Sätze
 - Persönlich, authentisch, nicht defensiv
 - Signatur: "${params.tenantName}"
 - Nur den Antworttext, kein JSON`
@@ -136,16 +169,29 @@ Anforderungen:
   }
 
   if (params.context === 'photo_caption') {
+    const hasImage = !!params.imageBase64
     prompt = `Du schreibst eine Google Business Profile Foto-Beschreibung für "${params.tenantName}" ${branchTag}.${loc}${voice}${kw}
 Ton: ${tone}.
+${hasImage ? '\nDir liegt das Foto als Bild bei. Erkenne zuerst klar das Motiv (Fahrzeug, Ort, Personen, Innen/Aussen, Situation) und schreibe die Caption DANACH passend dazu — nicht generisch.' : '\nKein Bild übermittelt — nutze Stichworte und Standort.'}
 ${modeBlock}
 
 Anforderungen:
+- ${HOCHDEUTSCH_RULE}
 - 80–220 Zeichen
-- Local SEO: Ort, Leistung, Nutzen — natürlich formuliert
+- Beschreibe konkret, was auf dem Foto zu sehen ist (Marke/Modell nur wenn klar erkennbar; nichts erfinden)
+- Local SEO: Ort und Leistung natürlich einbauen, passend zum Motiv
 - Kein Hashtag-Spam
 - Nur den Beschreibungstext`
-    return callAnthropic(prompt, 200)
+    return callAnthropic(
+      prompt,
+      200,
+      hasImage && params.imageBase64
+        ? {
+            base64: params.imageBase64,
+            mediaType: (params.imageMediaType || 'image/jpeg') as AnthropicImageMediaType,
+          }
+        : null,
+    )
   }
 
   // post
@@ -230,13 +276,14 @@ export async function generateGbpReviewSuggestion(params: {
   const voice = params.brandVoice ? `\nMarkenstimme: ${params.brandVoice}` : ''
 
   const prompt = `Du bist der Inhaber von "${params.tenantName}", einem ${businessNoun}-Betrieb in der Schweiz.${voice}
-Antworte auf folgende Google-Bewertung professionell auf Deutsch (Schweizer Hochdeutsch).
+Antworte auf folgende Google-Bewertung professionell.
 
 Bewertung von ${params.reviewerName || 'einem Kunden'} (${stars}/5 Sterne):
 "${params.reviewText || '(Kein Kommentar)'}"
 
 Schreibe eine kurze, ${tone}e Antwort (max. 3 Sätze).
 Regeln:
+- ${HOCHDEUTSCH_RULE}
 - Persönlich ansprechen (Vorname falls bekannt)
 - Authentisch, nicht übertrieben
 - Bei negativen Reviews: konkreten Lösungsweg erwähnen
