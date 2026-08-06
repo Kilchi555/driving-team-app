@@ -212,7 +212,7 @@ export default defineEventHandler(async (event) => {
           { text: 'Online Termin buchen' },
           { text: 'Fahrstunde ab CHF 95' },
           { text: 'Flexibel & professionell' },
-          { text: 'Jetzt Probestunde sichern' },
+          { text: 'Jetzt Termin sichern' },
           { text: 'Kat. B Automatik & Schaltung' },
         ],
         descriptions: [
