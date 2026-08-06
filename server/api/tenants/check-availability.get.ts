@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const result: {
     slug?: { available: boolean; reason?: 'invalid' | 'reserved' | 'taken' }
-    email?: { available: boolean }
+    email?: { available: boolean; reason?: 'invalid' | 'taken' | 'admin' | 'auth' }
   } = {}
 
   if (slug) {
@@ -53,16 +53,31 @@ export default defineEventHandler(async (event) => {
   if (email) {
     const normalized = String(email).toLowerCase().trim()
     if (!validateEmail(normalized).valid) {
-      result.email = { available: false }
+      result.email = { available: false, reason: 'invalid' }
     } else {
-      // Check both tenant contact emails and existing user accounts.
-      // Supabase Auth is global — an email already in auth.users cannot be
-      // registered again regardless of tenant, so we check the users table globally.
       const [{ data: existingTenant }, { data: existingUser }] = await Promise.all([
         supabase.from('tenants').select('id').eq('contact_email', normalized).maybeSingle(),
-        supabase.from('users').select('id').eq('email', normalized).maybeSingle()
+        supabase.from('users').select('id, role').eq('email', normalized).maybeSingle()
       ])
-      result.email = { available: !existingTenant && !existingUser }
+
+      if (existingTenant || existingUser) {
+        result.email = {
+          available: false,
+          reason: existingUser?.role === 'admin' ? 'admin' : 'taken',
+        }
+      } else {
+        // Also block emails that exist only in Auth (no public.users row yet)
+        let authTaken = false
+        try {
+          const { data: byEmail, error } = await supabase.auth.admin.getUserByEmail(normalized)
+          authTaken = !error && !!byEmail?.user
+        } catch {
+          authTaken = false
+        }
+        result.email = authTaken
+          ? { available: false, reason: 'auth' }
+          : { available: true }
+      }
     }
   }
 

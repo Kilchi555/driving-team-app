@@ -1,14 +1,19 @@
 // server/api/tenants/invite-staff-batch.post.ts
 // Batch-Einladung von Mitarbeitern (staff) direkt im Onboarding-Flow.
-// Kein JWT erforderlich – stattdessen wird geprüft, ob der Tenant
-// in den letzten 30 Minuten erstellt wurde (Anti-Abuse-Check).
+// Kein JWT erforderlich – Tenant muss in den letzten 30 Minuten erstellt worden sein.
+// Versand nur per E-Mail (kein SMS).
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { sendTenantSMS, normalizePhoneNumber } from '~/server/utils/sms'
+import { normalizePhoneNumber } from '~/server/utils/sms'
 import { sendEmail } from '~/server/utils/email'
-import { sanitizeString } from '~/server/utils/validators'
+import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { getPlanById } from '~/utils/planFeatures'
+import { buildStaffInviteEmailHtml } from '~/server/utils/staff-invite-email'
+import {
+  checkEmailAvailableForStaff,
+  emailConflictMessage,
+} from '~/server/utils/email-availability'
 
 interface StaffEntry {
   first_name: string
@@ -36,10 +41,9 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
-  // ─── Anti-Abuse: Tenant muss in den letzten 30 Min erstellt worden sein ───
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
-    .select('id, name, slug, twilio_from_sender, created_at, business_type')
+    .select('id, name, slug, created_at, business_type, primary_color, logo_wide_url, logo_url, logo_square_url, from_email, resend_domain_verified')
     .eq('id', tenant_id)
     .single()
 
@@ -51,7 +55,9 @@ export default defineEventHandler(async (event) => {
   const terms = getTerminologyDefaults(tenant.business_type)
   const tenantName = tenant.name || terms.businessNoun
   const staffLabel = terms.staff
-  const senderName = tenant.twilio_from_sender || tenantName
+  const primaryColor = tenant.primary_color || '#6000BD'
+  const rawLogo = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
+  const logoUrl = rawLogo?.startsWith('data:') ? null : rawLogo
 
   const tenantAge = Date.now() - new Date(tenant.created_at).getTime()
   if (tenantAge > 30 * 60 * 1000) {
@@ -61,9 +67,6 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // ─── Seat-limit check ────────────────────────────────────────────────────
-  // During onboarding (trial), allow up to 3 seats total (admin + 2 staff).
-  // Starter/Professional/Enterprise use their plan definitions.
   const { data: tenantSub } = await supabase
     .from('tenants')
     .select('subscription_plan, addon_seats')
@@ -76,43 +79,41 @@ export default defineEventHandler(async (event) => {
     const includedSeats = plan === 'trial' ? 3 : (planDef?.includedSeats ?? null)
 
     if (includedSeats !== null) {
+      // Seats = staff only (admin is always included free)
       const totalAllowedSeats = includedSeats + (tenantSub.addon_seats || 0)
       const requestedCount = staff_list.length
-      // +1 for the admin user who was already created
-      if (requestedCount + 1 > totalAllowedSeats) {
-        const allowed = Math.max(0, totalAllowedSeats - 1)
+      if (requestedCount > totalAllowedSeats) {
         throw createError({
           statusCode: 402,
-          statusMessage: `Seat-Limit erreicht. Du kannst maximal ${allowed} Mitarbeiter einladen.`
+          statusMessage: `Seat-Limit erreicht. Du kannst maximal ${totalAllowedSeats} Mitarbeiter einladen.`
         })
       }
     }
   }
 
-  // Fetch the tenant admin to use as invited_by (admin is created before staff invitations)
   const { data: adminUser } = await supabase
     .from('users')
-    .select('id, phone')
+    .select('id, phone, email')
     .eq('tenant_id', tenant_id)
     .eq('role', 'admin')
     .limit(1)
     .maybeSingle()
   const invitedBy: string | null = adminUser?.id ?? null
+  const adminEmail = adminUser?.email?.toLowerCase()?.trim() || null
 
-  // Einladungs-Link Basis-URL
   const envBase = process.env.NUXT_PUBLIC_BASE_URL || process.env.BASE_URL
   const host    = getHeader(event, 'x-forwarded-host') || getHeader(event, 'host')
   const proto   = getHeader(event, 'x-forwarded-proto') || 'https'
-  let baseUrl   = envBase || (host && !host.includes('localhost') ? `${proto}://${host}` : 'https://app.simy.ch')
+  const baseUrl = envBase || (host && !host.includes('localhost') ? `${proto}://${host}` : 'https://app.simy.ch')
+  const loginUrl = tenant.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
 
   const results: Array<{
     name: string
-    status: 'sms_sent' | 'email_sent' | 'invited' | 'failed'
+    status: 'email_sent' | 'invited' | 'failed'
     message: string
     invite_link?: string
   }> = []
 
-  // Load pending invites once for format-agnostic phone duplicate checks
   const { data: existingPendingInvites } = await supabase
     .from('staff_invitations')
     .select('id, phone, email')
@@ -124,24 +125,44 @@ export default defineEventHandler(async (event) => {
       .map((inv) => normalizePhoneNumber(inv.phone || '') || '')
       .filter(Boolean)
   )
+  const pendingEmailSet = new Set(
+    (existingPendingInvites || [])
+      .map((inv) => (inv.email || '').toLowerCase().trim())
+      .filter(Boolean)
+  )
 
   for (const entry of staff_list) {
     const firstName = sanitizeString(entry.first_name?.trim() || '', 100)
     const lastName  = sanitizeString(entry.last_name?.trim()  || '', 100)
     const rawPhone  = entry.phone?.trim() || null
     const phone     = rawPhone ? normalizePhoneNumber(rawPhone) : null
-    const email     = entry.email?.trim().toLowerCase() || null
+    const emailRaw  = entry.email?.trim().toLowerCase() || null
+    const email     = emailRaw && validateEmail(emailRaw).valid ? emailRaw : null
 
     if (!firstName) {
       results.push({ name: firstName || '?', status: 'failed', message: 'Vorname erforderlich' })
       continue
     }
-    if (!phone && !email) {
+    if (!email) {
       results.push({
         name: `${firstName} ${lastName}`,
         status: 'failed',
-        message: rawPhone ? 'Ungültige Telefonnummer' : 'Telefon oder E-Mail erforderlich',
+        message: emailRaw ? 'Ungültige E-Mail' : 'E-Mail für Staff-Login erforderlich',
       })
+      continue
+    }
+
+    if (adminEmail && email === adminEmail) {
+      results.push({
+        name: `${firstName} ${lastName}`,
+        status: 'failed',
+        message: emailConflictMessage({ available: false, reason: 'admin_login' }, staffLabel),
+      })
+      continue
+    }
+
+    if (pendingEmailSet.has(email)) {
+      results.push({ name: `${firstName} ${lastName}`, status: 'failed', message: 'Offene Einladung für diese E-Mail existiert bereits' })
       continue
     }
 
@@ -150,52 +171,33 @@ export default defineEventHandler(async (event) => {
       continue
     }
 
-    // Doppelten User oder offene Einladung prüfen (nur wenn E-Mail vorhanden)
-    if (email) {
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id, role')
-        .eq('email', email)
-        .eq('tenant_id', tenant_id)
-        .eq('is_active', true)
-        .maybeSingle()
-
-      if (existingUser) {
-        results.push({ name: `${firstName} ${lastName}`, status: 'failed', message: `E-Mail bereits als ${existingUser.role} registriert` })
-        continue
-      }
-
-      const { data: existingInvite } = await supabase
-        .from('staff_invitations')
-        .select('id')
-        .eq('email', email)
-        .eq('tenant_id', tenant_id)
-        .eq('status', 'pending')
-        .maybeSingle()
-
-      if (existingInvite) {
-        results.push({ name: `${firstName} ${lastName}`, status: 'failed', message: 'Offene Einladung für diese E-Mail existiert bereits' })
-        continue
-      }
+    const availability = await checkEmailAvailableForStaff({
+      supabase,
+      email,
+      adminEmail,
+      tenantId: tenant_id,
+    })
+    if (!availability.available) {
+      results.push({
+        name: `${firstName} ${lastName}`,
+        status: 'failed',
+        message: emailConflictMessage(availability, staffLabel),
+      })
+      continue
     }
 
-    // Einladungs-Token generieren
     const token = generateToken()
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 30)
 
-    // Placeholder-E-Mail falls keine angegeben (DB-Constraint erfordert E-Mail)
-    const inviteEmail = email || `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${Date.now()}@onboarding.simy.ch`
-
-    // Staff-Invitation anlegen
-    const { data: invitation, error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .from('staff_invitations')
       .insert({
         tenant_id,
         first_name: firstName,
         last_name:  lastName,
-        email:      inviteEmail,
-        phone:      phone,
+        email,
+        phone,
         invitation_token: token,
         invited_by: invitedBy,
         expires_at: expiresAt.toISOString(),
@@ -210,48 +212,39 @@ export default defineEventHandler(async (event) => {
       continue
     }
 
+    pendingEmailSet.add(email)
     if (phone) pendingPhoneSet.add(phone)
 
     const inviteLink = `${baseUrl}/register/staff?token=${token}`
 
-    // ─── SMS senden ────────────────────────────────────────────────────────
-    if (phone) {
-      try {
-        const smsText = `Hallo ${firstName}! Willkommen bei ${tenantName}. Bitte vervollständige deine Registrierung als ${staffLabel}: ${inviteLink}`
-        await sendTenantSMS({
-          tenantId: tenant_id,
-          to: phone,
-          message: smsText,
-          purpose: 'staff_invite',
-          senderName,
-        })
-        results.push({ name: `${firstName} ${lastName}`, status: 'sms_sent', message: 'SMS gesendet', invite_link: inviteLink })
-        logger.debug('✅ Onboarding-SMS gesendet an:', phone)
-        continue
-      } catch (smsErr: any) {
-        logger.warn('⚠️ SMS fehlgeschlagen für', phone, smsErr.message)
-        // Fallback: nur Einladungs-Link zurückgeben
-        results.push({ name: `${firstName} ${lastName}`, status: 'invited', message: `SMS fehlgeschlagen. Link: ${inviteLink}`, invite_link: inviteLink })
-        continue
-      }
-    }
-
-    // ─── E-Mail senden (falls keine Telefon-Nr.) ───────────────────────────
-    if (email) {
-      try {
-        await sendEmail({
-          to: email,
-          subject: `Einladung als ${staffLabel} – ${tenantName}`,
-          html: buildInviteEmailHtml({ firstName, lastName, tenantName, inviteLink, staffLabel }),
-          senderName: tenantName
-        })
-        results.push({ name: `${firstName} ${lastName}`, status: 'email_sent', message: 'E-Mail gesendet', invite_link: inviteLink })
-        logger.debug('✅ Onboarding-E-Mail gesendet an:', email)
-      } catch (emailErr: any) {
-        logger.warn('⚠️ E-Mail fehlgeschlagen für', email, emailErr.message)
-        results.push({ name: `${firstName} ${lastName}`, status: 'invited', message: `E-Mail fehlgeschlagen. Link: ${inviteLink}`, invite_link: inviteLink })
-      }
-      continue
+    try {
+      await sendEmail({
+        to: email,
+        subject: `Einladung als ${staffLabel} – ${tenantName}`,
+        html: buildStaffInviteEmailHtml({
+          firstName,
+          tenantName,
+          inviteLink,
+          staffLabel,
+          loginUrl,
+          adminEmail,
+          primaryColor,
+          logoUrl,
+        }),
+        fromName: tenantName,
+        fromEmail: tenant.from_email,
+        domainVerified: !!tenant.resend_domain_verified,
+      })
+      results.push({ name: `${firstName} ${lastName}`, status: 'email_sent', message: 'E-Mail gesendet', invite_link: inviteLink })
+      logger.debug('✅ Onboarding-E-Mail gesendet an:', email)
+    } catch (emailErr: any) {
+      logger.warn('⚠️ E-Mail fehlgeschlagen für', email, emailErr.message)
+      results.push({
+        name: `${firstName} ${lastName}`,
+        status: 'invited',
+        message: `E-Mail fehlgeschlagen. Link: ${inviteLink}`,
+        invite_link: inviteLink,
+      })
     }
   }
 
@@ -264,23 +257,4 @@ function generateToken(): string {
   crypto.getRandomValues(array)
   return btoa(String.fromCharCode(...array))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
-}
-
-function buildInviteEmailHtml({ firstName, lastName, tenantName, inviteLink, staffLabel }: {
-  firstName: string; lastName: string; tenantName: string; inviteLink: string; staffLabel: string
-}): string {
-  return `<!DOCTYPE html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#f4f4f4;padding:40px 0">
-<table width="600" style="background:#fff;border-radius:8px;margin:0 auto;padding:40px">
-  <tr><td style="background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:30px;border-radius:8px 8px 0 0;text-align:center">
-    <h1 style="color:#fff;margin:0">Willkommen im Team!</h1></td></tr>
-  <tr><td style="padding:30px">
-    <p>Hallo <strong>${firstName} ${lastName}</strong>,</p>
-    <p>Sie wurden als ${staffLabel} bei <strong>${tenantName}</strong> eingeladen.</p>
-    <p style="text-align:center">
-      <a href="${inviteLink}" style="background:#2563eb;color:#fff;padding:14px 36px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600">Jetzt registrieren</a>
-    </p>
-    <p style="font-size:13px;color:#666">Oder Link kopieren: <a href="${inviteLink}">${inviteLink}</a></p>
-    <p style="font-size:12px;color:#999">Einladung gültig 30 Tage.</p>
-  </td></tr>
-</table></body></html>`
 }

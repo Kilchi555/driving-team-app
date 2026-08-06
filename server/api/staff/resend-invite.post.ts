@@ -1,10 +1,14 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
-import { sendTenantSMS, normalizePhoneNumber } from '~/server/utils/sms'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { sendEmail } from '~/server/utils/email'
+import {
+  buildStaffInviteEmailHtml,
+  isPlaceholderStaffInviteEmail,
+} from '~/server/utils/staff-invite-email'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -16,6 +20,7 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
     const invitationId = String(body?.invitationId || '').trim()
+    const emailOverride = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
     if (!invitationId) {
       throw createError({ statusCode: 400, statusMessage: 'invitationId ist erforderlich' })
     }
@@ -51,7 +56,7 @@ export default defineEventHandler(async (event) => {
 
     const { data: invitation, error: inviteError } = await supabase
       .from('staff_invitations')
-      .select('id, tenant_id, first_name, last_name, phone, status, invitation_token, expires_at')
+      .select('id, tenant_id, first_name, last_name, phone, email, status, invitation_token, expires_at')
       .eq('id', invitationId)
       .eq('tenant_id', userProfile.tenant_id)
       .single()
@@ -65,13 +70,58 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Diese Einladung kann nicht erneut gesendet werden',
       })
     }
-    if (!invitation.phone) {
-      throw createError({ statusCode: 400, statusMessage: 'Einladung hat keine Telefonnummer' })
+
+    const { validateEmail } = await import('~/server/utils/validators')
+    const {
+      checkEmailAvailableForStaff,
+      emailConflictMessage,
+    } = await import('~/server/utils/email-availability')
+
+    const hasRealEmail = invitation.email && !isPlaceholderStaffInviteEmail(invitation.email)
+    let sendToEmail = hasRealEmail ? invitation.email!.toLowerCase().trim() : ''
+
+    // Allow setting/updating email on resend (needed for old SMS-only invites)
+    if (emailOverride) {
+      if (!validateEmail(emailOverride).valid) {
+        throw createError({ statusCode: 400, statusMessage: 'Ungültige E-Mail-Adresse' })
+      }
+      sendToEmail = emailOverride
     }
 
-    const normalizedPhone = normalizePhoneNumber(invitation.phone)
-    if (!normalizedPhone) {
-      throw createError({ statusCode: 400, statusMessage: `Ungültige Telefonnummer: ${invitation.phone}` })
+    if (!sendToEmail) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Keine Staff-E-Mail hinterlegt. Bitte E-Mail angeben oder neue Einladung erstellen.',
+      })
+    }
+
+    const { data: adminRow } = await supabase
+      .from('users')
+      .select('email')
+      .eq('tenant_id', userProfile.tenant_id)
+      .eq('role', 'admin')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle()
+
+    // Reusing the same invite email is OK; only block if another user/auth/invite owns it
+    if (!hasRealEmail || sendToEmail !== invitation.email?.toLowerCase().trim()) {
+      const availability = await checkEmailAvailableForStaff({
+        supabase,
+        email: sendToEmail,
+        adminEmail: adminRow?.email || null,
+        tenantId: userProfile.tenant_id,
+        ignoreInvitationId: invitation.id,
+      })
+      if (!availability.available) {
+        const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+        const { data: tenantBt } = await supabase.from('tenants').select('business_type').eq('id', userProfile.tenant_id).single()
+        const terms = getTerminologyDefaults(tenantBt?.business_type)
+        throw createError({
+          statusCode: 409,
+          statusMessage: emailConflictMessage(availability, terms.staff || 'Mitarbeiter'),
+        })
+      }
     }
 
     const token = generateToken()
@@ -84,7 +134,7 @@ export default defineEventHandler(async (event) => {
         invitation_token: token,
         expires_at: expiresAt.toISOString(),
         status: 'pending',
-        phone: normalizedPhone,
+        email: sendToEmail,
       })
       .eq('id', invitation.id)
       .eq('tenant_id', userProfile.tenant_id)
@@ -111,16 +161,18 @@ export default defineEventHandler(async (event) => {
 
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, twilio_from_sender, slug, business_type')
+      .select('name, slug, business_type, primary_color, logo_wide_url, logo_url, logo_square_url, from_email, resend_domain_verified')
       .eq('id', userProfile.tenant_id)
       .single()
 
     const { getTerminologyDefaults } = await import('~/composables/useTerminology')
     const terms = getTerminologyDefaults(tenant?.business_type)
     const tenantName = tenant?.name || terms.businessNoun
-    const smsSenderName = tenant?.twilio_from_sender || tenantName
     const loginLink = tenant?.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
     const firstName = invitation.first_name || 'Hallo'
+    const primaryColor = tenant?.primary_color || '#6000BD'
+    const rawLogo = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+    const logoUrl = rawLogo?.startsWith('data:') ? null : rawLogo
 
     await logAudit({
       action: 'staff_invitation_resend',
@@ -131,38 +183,47 @@ export default defineEventHandler(async (event) => {
       ip_address: ipAddress,
       status: 'success',
       details: {
-        invited_phone: normalizedPhone,
+        invited_email: sendToEmail,
         invited_name: firstName,
+        send_via: 'email',
         duration_ms: Date.now() - startTime,
       },
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
     try {
-      const smsMessage = `Hallo ${firstName}! Sie wurden als ${terms.staff} bei ${tenantName} eingeladen. Registrierung: ${inviteLink}\nLogin nach Registrierung: ${loginLink}`
-      const smsResult = await sendTenantSMS({
-        tenantId: userProfile.tenant_id,
-        to: normalizedPhone,
-        message: smsMessage,
-        purpose: 'staff_invite',
-        senderName: smsSenderName,
+      await sendEmail({
+        to: sendToEmail,
+        subject: `Einladung als ${terms.staff} – ${tenantName}`,
+        html: buildStaffInviteEmailHtml({
+          firstName,
+          tenantName,
+          inviteLink,
+          staffLabel: terms.staff,
+          loginUrl: loginLink,
+          adminEmail: adminRow?.email || null,
+          primaryColor,
+          logoUrl,
+        }),
+        fromName: tenantName,
+        fromEmail: tenant?.from_email,
+        domainVerified: !!tenant?.resend_domain_verified,
       })
 
       return {
         success: true,
-        sentVia: 'sms',
-        phone: normalizedPhone,
+        sentVia: 'email',
+        email: sendToEmail,
         inviteLink,
-        smsId: smsResult?.messageSid,
-        message: 'Einladung per SMS erneut gesendet',
+        message: 'Einladung per E-Mail erneut gesendet',
       }
-    } catch (smsError: any) {
-      logger.warn('⚠️ Staff invite resend SMS failed:', smsError?.message || smsError)
+    } catch (emailErr: any) {
+      logger.warn('⚠️ Staff invite resend email failed:', emailErr?.message || emailErr)
       return {
         success: true,
-        sentVia: 'sms_failed',
-        phone: normalizedPhone,
+        sentVia: 'email_failed',
+        email: sendToEmail,
         inviteLink,
-        message: 'Einladung erneuert, aber SMS konnte nicht gesendet werden. Link: ' + inviteLink,
+        message: 'Einladung erneuert, aber E-Mail konnte nicht gesendet werden. Link: ' + inviteLink,
       }
     }
   } catch (error: any) {

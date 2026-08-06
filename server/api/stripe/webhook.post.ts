@@ -64,12 +64,15 @@ export default defineEventHandler(async (event) => {
         break
       }
 
+      // Stripe emits both invoice.paid and invoice.payment_succeeded for the same
+      // charge — handle subscription sync on both, but send the email only once
+      // (on invoice.paid) with an idempotency guard for webhook retries.
       case 'invoice.paid':
       case 'invoice.payment_succeeded': {
         const invoice = stripeEvent.data.object as Stripe.Invoice
         const subscriptionId = (invoice as any).subscription as string | null | undefined
         const customerId = invoice.customer as string
-        console.log(`🧾 invoice.paid: id=${invoice.id} subscription=${subscriptionId} customer=${customerId} amount=${invoice.amount_paid}`)
+        console.log(`🧾 ${stripeEvent.type}: id=${invoice.id} subscription=${subscriptionId} customer=${customerId} amount=${invoice.amount_paid}`)
 
         let sub: Stripe.Subscription | null = null
 
@@ -83,7 +86,7 @@ export default defineEventHandler(async (event) => {
             stripe.subscriptions.list({ customer: customerId, status: 'trialing', limit: 1 }),
           ])
           sub = active.data[0] || trialing.data[0] || null
-          console.log(`🔄 invoice.paid fallback: found sub via customer=${customerId} → ${sub?.id ?? 'none'}`)
+          console.log(`🔄 invoice fallback: found sub via customer=${customerId} → ${sub?.id ?? 'none'}`)
         }
 
         if (sub) {
@@ -99,9 +102,9 @@ export default defineEventHandler(async (event) => {
                 setting_value: JSON.stringify({ status: 'active' }),
               }, { onConflict: 'tenant_id,setting_key' })
 
-            // Only send a confirmation for real charges (skip $0 trial invoices)
-            if (invoice.amount_paid > 0) {
-              await sendPaymentConfirmationEmail(supabase, invoice, tenantId).catch(
+            // Email only on invoice.paid (not payment_succeeded) to avoid duplicates
+            if (stripeEvent.type === 'invoice.paid' && invoice.amount_paid > 0) {
+              await sendPaymentConfirmationEmail(supabase, stripe, invoice, tenantId).catch(
                 e => console.error('⚠️ Payment confirmation email failed (non-fatal):', e.message)
               )
             }
@@ -453,20 +456,80 @@ function parseAddonSeats(sub: Stripe.Subscription): number {
   return 0
 }
 
+function formatChf(amountCents: number): string {
+  return (amountCents / 100).toFixed(2)
+}
+
+/** Translate common Stripe English proration/line phrases to German for the email. */
+function localizeInvoiceLineDescription(description: string | null | undefined): string {
+  if (!description) return 'Position'
+  let d = description
+  d = d.replace(/^Unused time on /i, 'Nicht genutzte Zeit: ')
+  d = d.replace(/^Remaining time on /i, 'Anteilige Restzeit: ')
+  d = d.replace(/ after (\d{1,2} \w+ \d{4})/i, ' ab $1')
+  d = d.replace(/\b1 Fahrlehrer Login\b/gi, 'Extra Fahrlehrer-Seat')
+  d = d.replace(/\bGoogle Business Profile Add-on\b/gi, 'Google Business Profile')
+  d = d.replace(/\bEnterprise\b/g, 'Enterprise')
+  d = d.replace(/\bProfessional\b/g, 'Professional')
+  d = d.replace(/\bStarter\b/g, 'Starter')
+  d = d.replace(/\(at CHF ([\d.]+) \/ month\)/gi, '(CHF $1 / Mt.)')
+  d = d.replace(/^(\d+) × /g, '$1 × ')
+  return d
+}
+
+function isProrationLine(line: Stripe.InvoiceLineItem): boolean {
+  if ((line as any).proration === true) return true
+  const parent = (line as any).parent
+  if (parent?.invoice_item_details?.proration === true) return true
+  if (parent?.subscription_item_details?.proration === true) return true
+  const desc = (line.description || '').toLowerCase()
+  return desc.startsWith('unused time') || desc.startsWith('remaining time')
+    || desc.startsWith('nicht genutzte zeit') || desc.startsWith('anteilige restzeit')
+}
+
+async function collectInvoiceLines(
+  stripe: Stripe,
+  invoice: Stripe.Invoice
+): Promise<Stripe.InvoiceLineItem[]> {
+  const existing = invoice.lines?.data || []
+  const hasMore = invoice.lines?.has_more === true
+  if (!hasMore && existing.length > 0) return existing
+
+  const all: Stripe.InvoiceLineItem[] = []
+  for await (const line of stripe.invoices.listLineItems(invoice.id, { limit: 100 })) {
+    all.push(line)
+  }
+  return all.length > 0 ? all : existing
+}
+
 async function sendPaymentConfirmationEmail(
   supabase: ReturnType<typeof getSupabaseAdmin>,
+  stripe: Stripe,
   invoice: Stripe.Invoice,
   tenantId: string
 ) {
+  // Idempotency: skip if we already sent for this invoice (webhook retries)
+  const { data: alreadySent } = await supabase
+    .from('tenant_settings')
+    .select('setting_value')
+    .eq('tenant_id', tenantId)
+    .eq('setting_key', 'last_payment_email_invoice_id')
+    .maybeSingle()
+
+  if (alreadySent?.setting_value === invoice.id) {
+    console.log(`📧 Payment confirmation already sent for ${invoice.id} — skipping`)
+    return
+  }
+
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, contact_email, subscription_plan, current_period_end, addon_seats')
+    .select('name, contact_email, subscription_plan, current_period_end, addon_seats, addon_courses_enabled, addon_affiliate_enabled, addon_gbp_enabled')
     .eq('id', tenantId)
     .single()
 
   if (!tenant?.contact_email) return
 
-  const amountCHF = (invoice.amount_paid / 100).toFixed(2)
+  const amountCHF = formatChf(invoice.amount_paid)
   const tenantName = tenant.name || tenantId
   const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 
@@ -480,7 +543,53 @@ async function sendPaymentConfirmationEmail(
     enterprise: 'Enterprise',
   }
   const plan = planLabel[tenant.subscription_plan ?? ''] ?? tenant.subscription_plan ?? '–'
-  const seats = tenant.addon_seats ?? 0
+
+  const addonParts: string[] = []
+  if ((tenant.addon_seats ?? 0) > 0) {
+    addonParts.push(`${tenant.addon_seats} Extra-Seat${tenant.addon_seats === 1 ? '' : 's'}`)
+  }
+  if (tenant.addon_courses_enabled) addonParts.push('Kursbuchungsseite')
+  if (tenant.addon_affiliate_enabled) addonParts.push('Affiliate-System')
+  if (tenant.addon_gbp_enabled) addonParts.push('Google Business Profile')
+  const addonsSummary = addonParts.length > 0 ? addonParts.join(', ') : null
+
+  const lines = await collectInvoiceLines(stripe, invoice)
+  const recurringLines = lines.filter(l => !isProrationLine(l))
+  const prorationLines = lines.filter(l => isProrationLine(l))
+
+  const renderAmountCell = (amountCents: number) => {
+    const color = amountCents < 0 ? '#15803d' : '#111827'
+    const prefix = amountCents < 0 ? '−' : ''
+    return `<td style="padding:10px 16px;font-size:14px;color:${color};font-weight:600;border-bottom:1px solid #f3f4f6;text-align:right;white-space:nowrap">${prefix}CHF ${formatChf(Math.abs(amountCents))}</td>`
+  }
+
+  const renderLineRows = (items: Stripe.InvoiceLineItem[]) =>
+    items.map(line => {
+      const label = localizeInvoiceLineDescription(line.description)
+      const qty = line.quantity && line.quantity > 1 ? ` × ${line.quantity}` : ''
+      return `<tr>
+                <td style="padding:10px 16px;font-size:14px;color:#374151;border-bottom:1px solid #f3f4f6">${label}${qty}</td>
+                ${renderAmountCell(line.amount)}
+              </tr>`
+    }).join('')
+
+  const positionsHtml = lines.length > 0 ? `
+            <table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 16px">
+              <tr style="background:#f9fafb">
+                <td style="padding:10px 16px;font-size:13px;font-weight:600;color:#6b7280;border-bottom:1px solid #e5e7eb">POSITION</td>
+                <td style="padding:10px 16px;font-size:13px;font-weight:600;color:#6b7280;border-bottom:1px solid #e5e7eb;text-align:right">BETRAG</td>
+              </tr>
+              ${renderLineRows(recurringLines)}
+              ${prorationLines.length > 0 ? `
+              <tr style="background:#fffbeb">
+                <td style="padding:8px 16px;font-size:12px;font-weight:600;color:#92400e;border-bottom:1px solid #fde68a" colspan="2">Anteilige Verrechnung (Plan-/Add-on-Änderung)</td>
+              </tr>
+              ${renderLineRows(prorationLines)}` : ''}
+              <tr style="background:#f9fafb">
+                <td style="padding:12px 16px;font-size:14px;font-weight:700;color:#111827">Total bezahlt</td>
+                <td style="padding:12px 16px;font-size:14px;font-weight:700;color:#111827;text-align:right;white-space:nowrap">CHF ${amountCHF}</td>
+              </tr>
+            </table>` : ''
 
   await sendEmail({
     to: tenant.contact_email,
@@ -502,21 +611,22 @@ async function sendPaymentConfirmationEmail(
             <p style="color:#4b5563;font-size:15px;line-height:1.6;margin:0 0 24px">
               deine Simy-Abonnementzahlung von <strong>CHF ${amountCHF}</strong> wurde erfolgreich verarbeitet. Danke!
             </p>
+            ${positionsHtml}
             <table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 24px">
               <tr style="background:#f9fafb">
-                <td style="padding:10px 16px;font-size:13px;font-weight:600;color:#6b7280;border-bottom:1px solid #e5e7eb" colspan="2">ZAHLUNGSDETAILS</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 16px;font-size:14px;color:#6b7280;border-bottom:1px solid #f3f4f6">Betrag</td>
-                <td style="padding:10px 16px;font-size:14px;color:#111827;font-weight:600;border-bottom:1px solid #f3f4f6">CHF ${amountCHF}</td>
+                <td style="padding:10px 16px;font-size:13px;font-weight:600;color:#6b7280;border-bottom:1px solid #e5e7eb" colspan="2">ABO</td>
               </tr>
               <tr>
                 <td style="padding:10px 16px;font-size:14px;color:#6b7280;border-bottom:1px solid #f3f4f6">Plan</td>
-                <td style="padding:10px 16px;font-size:14px;color:#111827;border-bottom:1px solid #f3f4f6">${plan}${seats > 0 ? ` + ${seats} zusätzliche Accounts` : ''}</td>
+                <td style="padding:10px 16px;font-size:14px;color:#111827;border-bottom:1px solid #f3f4f6">${plan}</td>
               </tr>
+              ${addonsSummary ? `<tr>
+                <td style="padding:10px 16px;font-size:14px;color:#6b7280;border-bottom:1px solid #f3f4f6">Add-ons</td>
+                <td style="padding:10px 16px;font-size:14px;color:#111827;border-bottom:1px solid #f3f4f6">${addonsSummary}</td>
+              </tr>` : ''}
               <tr>
                 <td style="padding:10px 16px;font-size:14px;color:#6b7280;border-bottom:1px solid #f3f4f6">Rechnungs-ID</td>
-                <td style="padding:10px 16px;font-size:14px;color:#111827;border-bottom:1px solid #f3f4f6">${invoice.id}</td>
+                <td style="padding:10px 16px;font-size:13px;color:#111827;border-bottom:1px solid #f3f4f6;word-break:break-all">${invoice.id}</td>
               </tr>
               ${nextBillingDate ? `<tr>
                 <td style="padding:10px 16px;font-size:14px;color:#6b7280">Nächste Abrechnung</td>
@@ -542,7 +652,17 @@ async function sendPaymentConfirmationEmail(
   </table>
 </body></html>`,
   })
-  console.log(`📧 Payment confirmation email sent to ${tenant.contact_email} (tenant ${tenantId}, CHF ${amountCHF})`)
+
+  await supabase
+    .from('tenant_settings')
+    .upsert({
+      tenant_id: tenantId,
+      category: 'billing',
+      setting_key: 'last_payment_email_invoice_id',
+      setting_value: invoice.id,
+    }, { onConflict: 'tenant_id,setting_key' })
+
+  console.log(`📧 Payment confirmation email sent to ${tenant.contact_email} (tenant ${tenantId}, CHF ${amountCHF}, ${lines.length} lines)`)
 }
 
 async function handleWalleeWelcomeEmail(
