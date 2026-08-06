@@ -685,7 +685,7 @@
                       {{ poolFiles.length === 0 ? 'Bilder auswählen' : poolFiles.length === 1 ? poolFiles[0].name : `${poolFiles.length} Bilder ausgewählt` }}
                     </span>
                     <span class="block text-xs text-gray-400 truncate">
-                      {{ poolFiles.length === 0 ? 'JPEG, PNG oder WebP — Mehrfachauswahl möglich' : formatFileSize(poolFilesTotalBytes) }}
+                      {{ poolFiles.length === 0 ? 'JPEG, PNG oder WebP — grosse Fotos werden automatisch komprimiert' : formatFileSize(poolFilesTotalBytes) }}
                     </span>
                   </span>
                   <button
@@ -1090,6 +1090,7 @@
 
 <script setup lang="ts">
 import { useTerminology } from '~/composables/useTerminology'
+import { compressPhotoForUpload } from '~/utils/imageCompression'
 
 definePageMeta({ layout: 'admin' })
 useHead({ title: 'Google Business Profile' })
@@ -1642,8 +1643,9 @@ async function uploadToPool() {
     for (let i = 0; i < files.length; i++) {
       poolUploadProgress.value = { done: i, total: files.length }
       try {
+        const compressed = await compressPhotoForUpload(files[i])
         const fd = new FormData()
-        fd.append('file', files[i])
+        fd.append('file', compressed)
         fd.append('category', poolCategory.value)
         fd.append('locationId', selectedLocationId.value)
         fd.append('approved', poolApprovedOnUpload.value ? 'true' : 'false')
@@ -1651,7 +1653,11 @@ async function uploadToPool() {
         await $fetch('/api/gbp/media/upload', { method: 'POST', body: fd })
         ok++
       } catch (e: any) {
-        errors.push(`${files[i].name}: ${e?.data?.statusMessage || 'fehlgeschlagen'}`)
+        const status = e?.statusCode || e?.status || e?.data?.statusCode
+        const msg = status === 413
+          ? 'Datei zu gross (auch nach Kompression)'
+          : (e?.data?.statusMessage || e?.message || 'fehlgeschlagen')
+        errors.push(`${files[i].name}: ${msg}`)
       }
       poolUploadProgress.value = { done: i + 1, total: files.length }
     }

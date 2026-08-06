@@ -175,3 +175,85 @@ export function getFileSizeKB(base64String: string): string {
   return `${sizeKB}KB`
 }
 
+export interface PhotoUploadCompressionOptions {
+  /** Longest side in px (default 2048 — sharp enough for GBP, small enough for API limits) */
+  maxEdge?: number
+  /** Target max file size in bytes (default ~1.8 MB — stays under typical 4.5 MB body limits) */
+  maxBytes?: number
+  minQuality?: number
+}
+
+/**
+ * Compress a photo for multipart upload while keeping aspect ratio (no crop).
+ * Returns a JPEG File ready for FormData.
+ */
+export async function compressPhotoForUpload(
+  file: File,
+  options: PhotoUploadCompressionOptions = {}
+): Promise<File> {
+  if (!file.type.startsWith('image/')) {
+    throw new Error('Bitte eine Bilddatei wählen')
+  }
+
+  const maxEdge = options.maxEdge ?? 2048
+  const maxBytes = options.maxBytes ?? Math.round(1.8 * 1024 * 1024)
+  const minQuality = options.minQuality ?? 0.5
+
+  const bitmap = await createImageBitmap(file)
+  try {
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
+    const width = Math.max(1, Math.round(bitmap.width * scale))
+    const height = Math.max(1, Math.round(bitmap.height * scale))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Canvas context not available')
+    ctx.drawImage(bitmap, 0, 0, width, height)
+
+    const encode = (quality: number) =>
+      new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality)
+      })
+
+    let quality = 0.85
+    let blob = await encode(quality)
+    while (blob && blob.size > maxBytes && quality > minQuality) {
+      quality = Math.max(minQuality, quality - 0.1)
+      blob = await encode(quality)
+    }
+
+    // Still too large: shrink dimensions and re-encode from the original bitmap
+    let outW = width
+    let outH = height
+    while (blob && blob.size > maxBytes && Math.max(outW, outH) > 800) {
+      outW = Math.max(1, Math.round(outW * 0.8))
+      outH = Math.max(1, Math.round(outH * 0.8))
+      canvas.width = outW
+      canvas.height = outH
+      ctx.drawImage(bitmap, 0, 0, outW, outH)
+      quality = Math.max(minQuality, 0.75)
+      blob = await encode(quality)
+    }
+
+    if (!blob) throw new Error('Bild konnte nicht komprimiert werden')
+
+    const baseName = (file.name.replace(/\.[^.]+$/, '') || 'photo').slice(0, 80)
+    const out = new File([blob], `${baseName}.jpg`, {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    })
+
+    logger.debug('🖼️ Photo upload compression:', {
+      original: `${(file.size / 1024).toFixed(0)}KB ${bitmap.width}x${bitmap.height}`,
+      compressed: `${(out.size / 1024).toFixed(0)}KB ${canvas.width}x${canvas.height}`,
+      quality: quality.toFixed(2),
+    })
+
+    return out
+  } finally {
+    bitmap.close()
+  }
+}
+
