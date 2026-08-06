@@ -1494,10 +1494,21 @@
                     required
                     :placeholder="staffAdminIsSelf && index === 0 ? 'z.B. vorname@gmail.com' : 'max@example.com'"
                     :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-white text-sm transition-colors',
-                      staffEmailInvalid(staff, index) ? 'border-red-200 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-500']"
+                      staffEmailFieldClass(staff, index)]"
+                    @input="onStaffEmailInput(index, staff.email)"
+                    @blur="checkStaffEmail(index, staff.email)"
                   >
-                  <p v-if="staffAdminIsSelf && index === 0 && staffEmailMatchesAdmin(staff)" class="text-xs text-red-600 mt-1">
+                  <p v-if="staffEmailMatchesAdmin(staff)" class="text-xs text-red-600 mt-1">
                     Das ist deine Admin-E-Mail — für den {{ labels.staff }}-Login eine andere Adresse wählen.
+                  </p>
+                  <p v-else-if="staffEmailChecks[index] === 'checking'" class="text-xs text-gray-400 mt-1">
+                    Wird geprüft…
+                  </p>
+                  <p v-else-if="staffEmailChecks[index] === 'available'" class="text-xs text-green-600 mt-1">
+                    E-Mail ist verfügbar
+                  </p>
+                  <p v-else-if="staffEmailChecks[index] === 'taken'" class="text-xs text-red-600 mt-1">
+                    {{ staffEmailTakenMsgs[index] || 'Diese E-Mail ist bereits registriert. Bitte eine andere Adresse wählen.' }}
                   </p>
                 </div>
                 <div class="sm:col-span-2">
@@ -1525,9 +1536,14 @@
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
             </svg>
-            Bitte Vorname und {{ labels.staff }}-E-Mail
-            <template v-if="staffAdminIsSelf"> (≠ Admin)</template>
-            für jeden {{ labels.staff }} erfassen.
+            <template v-if="staffEmailChecks.some(c => c === 'taken')">
+              Mindestens eine {{ labels.staff }}-E-Mail ist bereits registriert — bitte eine andere wählen.
+            </template>
+            <template v-else>
+              Bitte Vorname und {{ labels.staff }}-E-Mail
+              <template v-if="staffAdminIsSelf"> (≠ Admin)</template>
+              für jeden {{ labels.staff }} erfassen.
+            </template>
           </p>
         </div>
 
@@ -2505,10 +2521,26 @@ const prefillFirstLocation = () => {
 
 // ─── Staff ─────────────────────────────────────────────────────────────────
 interface StaffEntry { first_name: string; last_name: string; phone: string; email: string }
+type CheckState = 'idle' | 'checking' | 'available' | 'taken' | 'reserved' | 'error'
 
 const staffList = ref<StaffEntry[]>([{ first_name: '', last_name: '', phone: '', email: '' }])
-const addStaff = () => staffList.value.push({ first_name: '', last_name: '', phone: '', email: '' })
-const removeStaff = (index: number) => staffList.value.splice(index, 1)
+const staffEmailChecks = ref<CheckState[]>(['idle'])
+const staffEmailTakenMsgs = ref<string[]>([''])
+const staffEmailDebouncers: Array<ReturnType<typeof setTimeout> | null> = [null]
+
+const addStaff = () => {
+  staffList.value.push({ first_name: '', last_name: '', phone: '', email: '' })
+  staffEmailChecks.value.push('idle')
+  staffEmailTakenMsgs.value.push('')
+  staffEmailDebouncers.push(null)
+}
+const removeStaff = (index: number) => {
+  staffList.value.splice(index, 1)
+  staffEmailChecks.value.splice(index, 1)
+  staffEmailTakenMsgs.value.splice(index, 1)
+  if (staffEmailDebouncers[index]) clearTimeout(staffEmailDebouncers[index]!)
+  staffEmailDebouncers.splice(index, 1)
+}
 const staffAdminIsSelf = ref(false)
 
 const adminEmailForStaffCompare = computed(() =>
@@ -2520,22 +2552,83 @@ const staffEmailMatchesAdmin = (staff: StaffEntry) => {
   return !!e && !!adminEmailForStaffCompare.value && e === adminEmailForStaffCompare.value
 }
 
-const staffEmailInvalid = (staff: StaffEntry, index: number) => {
+const staffEmailFieldClass = (staff: StaffEntry, index: number) => {
+  if (staffEmailMatchesAdmin(staff) || staffEmailChecks.value[index] === 'taken') {
+    return 'border-red-300 focus:ring-red-400'
+  }
+  if (staffEmailChecks.value[index] === 'available') {
+    return 'border-green-300 focus:ring-green-400'
+  }
   const e = (staff.email || '').trim()
-  if (!e || !e.includes('@')) return true
-  if (staffEmailMatchesAdmin(staff)) return true
-  return false
+  if (!e || !e.includes('@')) return 'border-red-200 focus:ring-red-400'
+  return 'border-gray-200 focus:ring-blue-500'
 }
 
 const staffStepValid = computed(() =>
-  staffList.value.every((s) => {
+  staffList.value.every((s, i) => {
     if (!s.first_name.trim()) return false
     const e = (s.email || '').trim()
     if (!e.includes('@')) return false
     if (staffEmailMatchesAdmin(s)) return false
+    if (staffEmailChecks.value[i] === 'taken') return false
+    if (staffEmailChecks.value[i] === 'checking') return false
     return true
   })
 )
+
+const checkStaffEmail = (index: number, val: string) => {
+  if (staffEmailDebouncers[index]) clearTimeout(staffEmailDebouncers[index]!)
+  const email = val.trim()
+  if (!email.includes('@') || email.length < 5) {
+    staffEmailChecks.value[index] = 'idle'
+    staffEmailTakenMsgs.value[index] = ''
+    return
+  }
+  if (staffEmailMatchesAdmin(staffList.value[index])) {
+    staffEmailChecks.value[index] = 'idle'
+    staffEmailTakenMsgs.value[index] = ''
+    return
+  }
+  // Duplicate within the current staff list
+  const normalized = email.toLowerCase()
+  const dupIndex = staffList.value.findIndex(
+    (s, i) => i !== index && (s.email || '').trim().toLowerCase() === normalized
+  )
+  if (dupIndex >= 0) {
+    staffEmailChecks.value[index] = 'taken'
+    staffEmailTakenMsgs.value[index] = `Diese E-Mail wird bereits für ${labels.value.staff} ${dupIndex + 1} verwendet.`
+    return
+  }
+  staffEmailChecks.value[index] = 'checking'
+  staffEmailDebouncers[index] = setTimeout(async () => {
+    try {
+      const res = await $fetch<{ email?: { available: boolean; reason?: string } }>(
+        '/api/tenants/check-availability',
+        { query: { email } }
+      )
+      if (res.email?.available) {
+        staffEmailChecks.value[index] = 'available'
+        staffEmailTakenMsgs.value[index] = ''
+      } else {
+        staffEmailChecks.value[index] = 'taken'
+        staffEmailTakenMsgs.value[index] =
+          res.email?.reason === 'admin'
+            ? `Das ist eine Admin-E-Mail — für den ${labels.value.staff}-Login eine andere Adresse wählen.`
+            : res.email?.reason === 'auth'
+              ? 'Diese E-Mail ist bereits registriert. Bitte eine andere Adresse wählen.'
+              : 'Diese E-Mail ist bereits registriert. Bitte eine andere Adresse wählen.'
+      }
+    } catch {
+      staffEmailChecks.value[index] = 'error'
+    }
+  }, 500)
+}
+
+const onStaffEmailInput = (index: number, val: string) => {
+  staffEmailChecks.value[index] = 'idle'
+  staffEmailTakenMsgs.value[index] = ''
+  checkStaffEmail(index, val)
+}
 
 const applyAdminToStaff = () => {
   if (staffAdminIsSelf.value) {
@@ -2548,6 +2641,12 @@ const applyAdminToStaff = () => {
     }
   } else {
     staffList.value[0] = { first_name: '', last_name: '', phone: '', email: '' }
+  }
+  staffEmailChecks.value[0] = 'idle'
+  staffEmailTakenMsgs.value[0] = ''
+  if (staffEmailDebouncers[0]) {
+    clearTimeout(staffEmailDebouncers[0]!)
+    staffEmailDebouncers[0] = null
   }
 }
 const staffInviteResults = ref<Array<{ name: string; status: string; message: string; invite_link?: string }> | null>(null)
@@ -2770,8 +2869,6 @@ const previousStep = () => {
 }
 
 // ─── Availability Checks ───────────────────────────────────────────────────
-type CheckState = 'idle' | 'checking' | 'available' | 'taken' | 'reserved' | 'error'
-
 const slugCheck  = ref<CheckState>('idle')
 const emailCheck = ref<CheckState>('idle')
 
@@ -3363,6 +3460,13 @@ const loadFromStorage = () => {
         phone: s.phone || '',
         email: s.email || '',
       }))
+      staffEmailChecks.value = staffList.value.map(() => 'idle' as CheckState)
+      staffEmailTakenMsgs.value = staffList.value.map(() => '')
+      while (staffEmailDebouncers.length < staffList.value.length) staffEmailDebouncers.push(null)
+      staffEmailDebouncers.length = staffList.value.length
+      staffList.value.forEach((s, i) => {
+        if ((s.email || '').includes('@')) checkStaffEmail(i, s.email)
+      })
     }
     if (typeof d.staffAdminIsSelf === 'boolean') staffAdminIsSelf.value = d.staffAdminIsSelf
     if (d.locationsList) locationsList.value = d.locationsList
