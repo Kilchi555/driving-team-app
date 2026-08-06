@@ -11,8 +11,8 @@
                !showAccountStep ? 'Anfrage senden' :
                !isDrivingSchool ? 'Registrierung' :
                serviceType === 'fahrlektion' ? `Registrierung für ${labels.appointmentsPlural}` :
-               serviceType === 'theorie' ? 'Registrierung für Theorielektion' :
-               serviceType === 'beratung' ? 'Registrierung für Beratung' : 'Unverbindlich registrieren' }}
+               serviceType === 'theorie' ? `Registrierung für ${resolveEventTypeLabel('theory', labels)}` :
+               serviceType === 'beratung' ? `Registrierung für ${resolveEventTypeLabel('consultation', labels)}` : 'Unverbindlich registrieren' }}
           </h1>
         </div>
       </div>
@@ -1154,7 +1154,7 @@ import { logger } from '~/utils/logger'
 import { useAffiliateRef } from '~/composables/useAffiliateRef'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
-import { mergeTerminology, isDrivingSchoolBusinessType } from '~/composables/useTerminology'
+import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
 
 const { primaryColor, accentColor } = useTenantBranding()
 

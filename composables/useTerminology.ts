@@ -25,7 +25,7 @@
 import { computed } from 'vue'
 
 export interface Terminology {
-  /** Singular: ein Kunde/Schüler/Klient (z.B. "Schüler") */
+  /** Singular: ein Kunde/Schüler (z.B. "Schüler") */
   client: string
   /** Plural: mehrere Kunden (z.B. "Schüler") */
   clientsPlural: string
@@ -84,9 +84,9 @@ const TERMS: Record<string, Terminology> = {
   // 'mental_coach' is the actual business_type code used by business_types /
   // tenant-register.vue. 'coaching' is kept as an alias for any legacy data.
   mental_coach: {
-    client: 'Klient',
-    clientsPlural: 'Klienten',
-    clientPossessive: 'Klient',
+    client: 'Kunde',
+    clientsPlural: 'Kunden',
+    clientPossessive: 'Kunde',
     staff: 'Coach',
     staffPlural: 'Coaches',
     appointment: 'Sitzung',
@@ -112,9 +112,9 @@ const TERMS: Record<string, Terminology> = {
     progressLabel: 'Verlauf'
   },
   coaching: {
-    client: 'Klient',
-    clientsPlural: 'Klienten',
-    clientPossessive: 'Klient',
+    client: 'Kunde',
+    clientsPlural: 'Kunden',
+    clientPossessive: 'Kunde',
     staff: 'Coach',
     staffPlural: 'Coaches',
     appointment: 'Session',
@@ -258,6 +258,70 @@ export function isDrivingSchoolBusinessType(businessType: string | undefined | n
   return (businessType || FALLBACK_BUSINESS_TYPE) === 'driving_school'
 }
 
+/**
+ * Canonical event-type → display label map.
+ * `lesson` follows tenant appointment terminology; theory/exam/etc. are shared codes.
+ */
+export function eventTypeLabelMap(
+  terms?: Terminology | null,
+  opts?: { detailedExam?: boolean },
+): Record<string, string> {
+  const appointment = terms?.appointment || 'Fahrstunde'
+  const examLabel = opts?.detailedExam
+    ? 'Prüfungsfahrt inkl. WarmUp und Rückfahrt'
+    : 'Prüfung'
+  return {
+    lesson: appointment,
+    exam: examLabel,
+    theory: 'Theorieunterricht',
+    consultation: 'Beratung',
+    course: 'Kurs',
+    staff_meeting: 'Team-Meeting',
+    meeting: 'Meeting',
+    vku: 'VKU',
+    haltbar: 'Haltbarkeitsprüfung',
+    nothelfer: 'Nothelfer',
+    break: 'Pause',
+    training: 'Training',
+    maintenance: 'Wartung',
+    admin: 'Verwaltung',
+    other: 'Sonstiges',
+    nfa: 'NFA',
+    practical: appointment,
+  }
+}
+
+/**
+ * Resolve a display label for an event_type_code.
+ * Prefers DB name when provided, then exact map keys, then fuzzy matches.
+ */
+export function resolveEventTypeLabel(
+  code: string | null | undefined,
+  terms?: Terminology | null,
+  opts?: { detailedExam?: boolean; dbName?: string | null },
+): string {
+  const dbName = opts?.dbName?.trim()
+  if (dbName) return dbName
+
+  const map = eventTypeLabelMap(terms, { detailedExam: opts?.detailedExam })
+  if (!code) return map.lesson
+
+  if (map[code]) return map[code]
+
+  const key = String(code).toLowerCase()
+  if (map[key]) return map[key]
+  if (key.includes('exam') || key.includes('prüf') || key.includes('pruef')) return map.exam
+  if (key.includes('theor')) return map.theory
+  if (key.includes('consult') || key.includes('berat')) return map.consultation
+  if (key.includes('course') || key.includes('kurs')) return map.course
+  if (key.includes('vku')) return map.vku
+  if (key.includes('haltbar')) return map.haltbar
+  if (key.includes('lesson') || key.includes('fahr') || key === 'practical') return map.lesson
+  if (key.includes('meeting')) return map.meeting
+
+  return map.lesson
+}
+
 export function useTerminology() {
   const { currentTenantBranding } = useTenantBranding()
 
@@ -275,5 +339,18 @@ export function useTerminology() {
 
   const isDrivingSchool = computed(() => isDrivingSchoolBusinessType(businessType.value))
 
-  return { t, businessType, isDrivingSchool }
+  const eventTypeLabels = computed(() =>
+    eventTypeLabelMap(t.value, { detailedExam: isDrivingSchool.value }),
+  )
+
+  const eventTypeLabel = (
+    code: string | null | undefined,
+    opts?: { detailed?: boolean; dbName?: string | null },
+  ) =>
+    resolveEventTypeLabel(code, t.value, {
+      detailedExam: opts?.detailed ?? isDrivingSchool.value,
+      dbName: opts?.dbName,
+    })
+
+  return { t, businessType, isDrivingSchool, eventTypeLabels, eventTypeLabel }
 }
