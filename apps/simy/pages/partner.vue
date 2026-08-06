@@ -13,14 +13,14 @@
           Partner
         </div>
         <h1 class="text-4xl font-black text-gray-900 mb-5 leading-tight">Unsere Partner</h1>
-        <p class="text-xl text-gray-500 max-w-2xl mb-16">Simy arbeitet mit den besten Anbietern zusammen, um Fahrschulen eine vollständige, integrierte Lösung zu bieten.</p>
+        <p class="text-xl text-gray-500 max-w-2xl mb-16">Simy arbeitet mit den besten Anbietern zusammen, um Dienstleistern eine vollständige, integrierte Lösung zu bieten.</p>
 
         <!-- Technology Partners -->
         <h2 class="text-lg font-bold text-gray-900 mb-6">Technologie-Partner</h2>
         <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-5 mb-16">
           <div v-for="p in techPartners" :key="p.name"
             class="rounded-2xl p-6 border border-gray-100 hover:border-gray-200 transition-all">
-            <div class="text-3xl mb-3">{{ p.icon }}</div>
+            <SimyIconTile :name="p.icon" :size="48" class="mb-3" />
             <h3 class="font-bold text-gray-900 mb-1">{{ p.name }}</h3>
             <p class="text-xs text-gray-400 mb-2">{{ p.category }}</p>
             <p class="text-sm text-gray-500 leading-relaxed">{{ p.desc }}</p>
@@ -31,7 +31,7 @@
         <div class="rounded-3xl p-10 border border-gray-100 text-center"
           style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04), rgba(var(--brand-2-rgb),0.06))">
           <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Partner werden?</h2>
-          <p class="text-gray-500 mb-6 max-w-lg mx-auto">Wenn du ein Produkt oder eine Dienstleistung für Fahrschulen anbietest, lass uns sprechen. Wir bauen gemeinsam die beste Lösung für den Schweizer Markt.</p>
+          <p class="text-gray-500 mb-6 max-w-lg mx-auto">Wenn du ein Produkt oder eine Dienstleistung für Schweizer Dienstleister anbietest, lass uns sprechen. Wir bauen gemeinsam die beste Lösung für den Schweizer Markt.</p>
           <a href="mailto:partner@simy.ch"
             class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90"
             style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
@@ -68,11 +68,11 @@ useHead({
 })
 
 const techPartners = [
-  { icon: '💳', name: 'Wallee', category: 'Zahlungsabwicklung', desc: 'Schweizer Zahlungsgateway für TWINT, Kreditkarte und PostFinance. Nahtlos in Simy integriert.' },
-  { icon: '📋', name: 'asa.ch', category: 'Branchenverband', desc: 'Der Verband Schweizerischer Fahrlehrerinnen und Fahrlehrer — Referenzpartner für Schweizer Standards.' },
-  { icon: '📧', name: 'Resend', category: 'E-Mail Delivery', desc: 'Professioneller E-Mail-Versand für automatische Rechnungen, Erinnerungen und Bestätigungen.' },
-  { icon: '☁️', name: 'Supabase', category: 'Datenbank & Auth', desc: 'Sichere, skalierbare Datenbankinfrastruktur für alle Simy-Kundendaten. DSGVO-konform.' },
-  { icon: '🌐', name: 'Vercel', category: 'Hosting', desc: 'Website und App werden auf Vercel gehostet — für maximale Performance und Verfügbarkeit.' },
-  { icon: '🗺️', name: 'Google Maps', category: 'Standorte & Navigation', desc: 'Standortkarten und Adressvalidierung in der Simy-App und auf generierten Websites.' },
+  { icon: 'credit-card', name: 'Wallee', category: 'Zahlungsabwicklung', desc: 'Schweizer Zahlungsgateway für TWINT, Kreditkarte und PostFinance. Nahtlos in Simy integriert.' },
+  { icon: 'clipboard', name: 'asa.ch', category: 'Branchenverband', desc: 'Der Verband Schweizerischer Fahrlehrerinnen und Fahrlehrer — einer unserer Branchenpartner für Schweizer Standards.' },
+  { icon: 'mail', name: 'Resend', category: 'E-Mail Delivery', desc: 'Professioneller E-Mail-Versand für automatische Rechnungen, Erinnerungen und Bestätigungen.' },
+  { icon: 'cloud', name: 'Supabase', category: 'Datenbank & Auth', desc: 'Sichere, skalierbare Datenbankinfrastruktur für alle Simy-Kundendaten. DSGVO-konform.' },
+  { icon: 'globe', name: 'Vercel', category: 'Hosting', desc: 'Website und App werden auf Vercel gehostet — für maximale Performance und Verfügbarkeit.' },
+  { icon: 'map-pin', name: 'Google Maps', category: 'Standorte & Navigation', desc: 'Standortkarten und Adressvalidierung in der Simy-App und auf generierten Websites.' },
 ]
 </script>

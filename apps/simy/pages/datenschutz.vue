@@ -49,7 +49,7 @@ const sections = [
   },
   {
     title: '2. Welche Daten wir erheben',
-    content: 'Kontodaten: Name, E-Mail-Adresse, Telefonnummer, Adresse\nNutzungsdaten: Login-Zeitpunkte, verwendete Features, Seitenaufrufe\nGeschäftsdaten: Schülerdaten, Termine, Rechnungen (werden im Auftrag verarbeitet)\nTechnische Daten: IP-Adresse, Browser, Gerät (anonymisiert)',
+    content: 'Kontodaten: Name, E-Mail-Adresse, Telefonnummer, Adresse\nNutzungsdaten: Login-Zeitpunkte, verwendete Features, Seitenaufrufe\nGeschäftsdaten: Kundendaten, Termine, Rechnungen (werden im Auftrag verarbeitet)\nTechnische Daten: IP-Adresse, Browser, Gerät (anonymisiert)',
   },
   {
     title: '3. Zweck der Datenverarbeitung',

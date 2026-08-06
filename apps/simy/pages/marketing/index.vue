@@ -41,8 +41,8 @@
     <!-- Value Prop -->
     <section class="py-14 px-6 border-y border-gray-100 bg-gray-50">
       <div class="max-w-4xl mx-auto grid md:grid-cols-3 gap-8">
-        <div v-for="vp in valueProps" :key="vp.title" class="text-center">
-          <div class="text-4xl mb-3">{{ vp.icon }}</div>
+          <div v-for="vp in valueProps" :key="vp.title" class="text-center">
+          <SimyIconTile :name="vp.icon" :size="56" class="mx-auto mb-3" />
           <h3 class="font-bold text-gray-900 mb-1">{{ vp.title }}</h3>
           <p class="text-sm text-gray-500">{{ vp.desc }}</p>
         </div>
@@ -62,8 +62,7 @@
           <!-- Google Ads Card -->
           <div class="rounded-3xl border-2 p-8 hover:-translate-y-1 transition-all group"
             style="border-color: rgba(var(--brand-rgb),0.2); background: rgba(var(--brand-rgb),0.02)">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-3xl"
-              style="background: rgba(var(--brand-rgb),0.08)">📢</div>
+            <SimyIconTile name="megaphone" :size="56" class="mb-6" />
             <div class="flex items-center gap-3 mb-3">
               <h3 class="text-xl font-black text-gray-900">Google Ads</h3>
               <span class="text-xs font-bold px-3 py-1 rounded-full text-white" style="background: var(--brand-primary)">Sofortige Leads</span>
@@ -86,7 +85,7 @@
 
           <!-- SEO Card -->
           <div class="rounded-3xl border-2 p-8 hover:-translate-y-1 transition-all group border-gray-100 bg-white">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-3xl bg-gray-50">🔍</div>
+            <SimyIconTile name="search" :size="56" class="mb-6" />
             <div class="flex items-center gap-3 mb-3">
               <h3 class="text-xl font-black text-gray-900">Lokales SEO</h3>
               <span class="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700">Nachhaltiges Wachstum</span>
@@ -122,7 +121,7 @@
           <div v-for="benefit in whySimy" :key="benefit.title"
             class="rounded-2xl p-6 border border-gray-800">
             <div class="flex items-start gap-4">
-              <span class="text-2xl">{{ benefit.icon }}</span>
+              <SimyIconTile :name="benefit.icon" :size="44" />
               <div>
                 <h3 class="font-bold text-white mb-2">{{ benefit.title }}</h3>
                 <p class="text-sm text-gray-400 leading-relaxed">{{ benefit.desc }}</p>
@@ -137,7 +136,7 @@
     <section class="py-24 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-4xl font-black text-white mb-5">Bereit, mehr Kunden zu gewinnen?</h2>
-        <p class="text-purple-200 text-lg mb-10">Starte kostenlos mit der Software und frage uns nach unserem Marketing-Paket.</p>
+        <p class="text-white/70 text-lg mb-10">Starte kostenlos mit der Software und frage uns nach unserem Marketing-Paket.</p>
         <a href="https://app.simy.ch/tenant-register"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary); box-shadow: 0 12px 40px rgba(0,0,0,0.2)">
@@ -177,9 +176,9 @@ useHead({
 })
 
 const valueProps = [
-  { icon: '⚡', title: 'Sofort messbar', desc: 'Jede Anfrage wird erfasst. Du siehst genau, welche Kampagne Kunden bringt.' },
-  { icon: '🎯', title: 'Lokal & präzise', desc: 'Wir schalten Werbung nur in deinem Einzugsgebiet — kein Geld verschwenden.' },
-  { icon: '🔄', title: 'Closed Loop', desc: 'Von der Google-Suche bis zur Buchung in Simy — alles ist verbunden.' },
+  { icon: 'zap', title: 'Sofort messbar', desc: 'Jede Anfrage wird erfasst. Du siehst genau, welche Kampagne Kunden bringt.' },
+  { icon: 'target', title: 'Lokal & präzise', desc: 'Wir schalten Werbung nur in deinem Einzugsgebiet — kein Geld verschwenden.' },
+  { icon: 'refresh', title: 'Closed Loop', desc: 'Von der Google-Suche bis zur Buchung in Simy — alles ist verbunden.' },
 ]
 
 const adsHighlights = [
@@ -199,9 +198,9 @@ const seoHighlights = [
 ]
 
 const whySimy = [
-  { icon: '🔗', title: 'Alles aus einer Hand', desc: 'Website, Buchungssystem und Marketing kommen von Simy — perfekt abgestimmt.' },
-  { icon: '📊', title: 'Echter ROI', desc: 'Du siehst direkt in Simy, welche Marketing-Massnahmen Buchungen generieren.' },
-  { icon: '🇨🇭', title: 'Schweizer Marktkenntnis', desc: 'Wir kennen den Schweizer Markt für lokale Terminbetriebe — keine generischen Kampagnen.' },
-  { icon: '🤝', title: 'Persönlicher Ansprechpartner', desc: 'Kein anonymes Support-Ticket. Du hast einen festen Ansprechpartner bei simy.' },
+  { icon: 'link', title: 'Alles aus einer Hand', desc: 'Website, Buchungssystem und Marketing kommen von Simy — perfekt abgestimmt.' },
+  { icon: 'chart', title: 'Echter ROI', desc: 'Du siehst direkt in Simy, welche Marketing-Massnahmen Buchungen generieren.' },
+  { icon: 'swiss', title: 'Schweizer Marktkenntnis', desc: 'Wir kennen den Schweizer Markt für lokale Terminbetriebe — keine generischen Kampagnen.' },
+  { icon: 'handshake', title: 'Persönlicher Ansprechpartner', desc: 'Kein anonymes Support-Ticket. Du hast einen festen Ansprechpartner bei simy.' },
 ]
 </script>

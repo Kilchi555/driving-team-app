@@ -7,11 +7,11 @@
       :primary-color="primaryColor"
       :secondary-color="secondaryColor"
       :scroll-links="[
-        { label: 'Branding', href: '#branding-preview', icon: '🎨' },
-        { label: 'Features', href: '#features',         icon: '⚡' },
-        { label: 'Rechner',  href: '#rechner',          icon: '📊' },
-        { label: 'Preise',   href: '#preise',           icon: '💶' },
-        { label: 'FAQ',      href: '#faq',              icon: '❓' },
+        { label: 'Branding', href: '#branding-preview', icon: 'palette' },
+        { label: 'Features', href: '#features',         icon: 'zap' },
+        { label: 'Rechner',  href: '#rechner',          icon: 'chart' },
+        { label: 'Preise',   href: '#preise',           icon: 'wallet' },
+        { label: 'FAQ',      href: '#faq',              icon: 'spark' },
       ]"
     />
 
@@ -37,8 +37,8 @@
         </h1>
 
         <p class="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto mb-8 leading-relaxed">
-          Online-Buchung, automatische Abrechnung und Kundenverwaltung für Schweizer Fahrschulen,
-          Coaching, Consulting und mehr — damit du wieder arbeitest statt administrierst.
+          Online-Buchung, automatische Abrechnung und Kundenverwaltung für Schweizer Dienstleister —
+          Coaching, Consulting, Fahrschule und mehr. Damit du wieder arbeitest statt administrierst.
         </p>
 
         <div class="flex flex-col sm:flex-row gap-4 justify-center mb-4">
@@ -67,9 +67,10 @@
           <SimyDashboardShowcase
             :primary-color="primaryColor"
             :secondary-color="secondaryColor"
+            :logo-src="logoPreview"
           />
           <p class="relative mt-8 md:mt-10 text-base md:text-lg text-gray-500 max-w-xl mx-auto leading-relaxed">
-            Ob am Schreibtisch, im Auto oder auf dem Handy zwischen zwei Lektionen —
+            Ob am Schreibtisch, unterwegs oder auf dem Handy zwischen zwei Terminen —
             <span class="font-semibold text-gray-800">Simy läuft überall gleich flüssig.</span>
             Desktop, Tablet und Smartphone: ein System, das sich an dich anpasst — nicht umgekehrt.
           </p>
@@ -90,7 +91,7 @@
           <div v-for="pain in pains" :key="pain.title"
             class="rounded-2xl p-6 border transition-colors duration-500"
             :style="{ background: `rgba(var(--brand-rgb), 0.06)`, borderColor: `rgba(var(--brand-rgb), 0.2)` }">
-            <div class="text-3xl mb-3">{{ pain.icon }}</div>
+            <SimyIconTile :name="pain.icon" :size="48" class="mb-3" />
             <h3 class="font-bold text-gray-900 mb-1">{{ pain.title }}</h3>
             <p class="text-sm text-gray-500">{{ pain.text }}</p>
           </div>
@@ -102,9 +103,9 @@
           </div>
           <p class="text-sm text-gray-500 max-w-xl mx-auto">
             Sieh dir an, wie unsere
-            <NuxtLink to="/fahrschule/software" class="underline-offset-4 hover:underline font-semibold" :style="{ color: primaryColor }">Fahrschulsoftware aus der Schweiz</NuxtLink>
+            <NuxtLink to="/branchen" class="underline-offset-4 hover:underline font-semibold" :style="{ color: primaryColor }">Software für Schweizer Dienstleister</NuxtLink>
             das Admin-Chaos löst – oder lies, was
-            <NuxtLink to="/kunden" class="underline-offset-4 hover:underline font-semibold" :style="{ color: primaryColor }">über 50 Fahrschulen</NuxtLink>
+            <NuxtLink to="/kunden" class="underline-offset-4 hover:underline font-semibold" :style="{ color: primaryColor }">über 50 Betriebe</NuxtLink>
             mit Simy erreicht haben.
           </p>
         </div>
@@ -113,8 +114,8 @@
 
     <SimyReviewsSection
       business-type="driving_school"
-      title="Fahrschulen, die Simy nutzen — und ihre Schüler"
-      subtitle="Echte Google-Bewertungen von Fahrschulen mit Simy. Beweis statt Behauptung."
+      title="Betriebe, die Simy nutzen — und ihre Kunden"
+      subtitle="Echte Google-Bewertungen von Betrieben mit Simy. Beweis statt Behauptung."
       :limit="6"
     />
 
@@ -124,17 +125,14 @@
         <div class="text-center mb-14">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Features</p>
           <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Alles was dein Betrieb braucht</h2>
-          <p class="text-gray-500 text-lg max-w-xl mx-auto">Von der Online-Lektionsbuchung bis zur TWINT-Abrechnung – in einer einzigen Schweizer Plattform.</p>
+          <p class="text-gray-500 text-lg max-w-xl mx-auto">Von der Online-Terminbuchung bis zur TWINT-Abrechnung – in einer einzigen Schweizer Plattform.</p>
         </div>
 
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <NuxtLink v-for="feat in features" :key="feat.title" :to="feat.link"
             class="group rounded-2xl p-6 border border-gray-100 bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300 block focus:outline-none focus-visible:ring-2"
             :style="`--tw-ring-color: ${primaryColor}`">
-            <div class="w-11 h-11 rounded-xl flex items-center justify-center mb-4 text-xl transition-colors duration-500"
-              :style="{ background: `rgba(var(--brand-rgb), ${feat.alpha})` }">
-              {{ feat.icon }}
-            </div>
+            <SimyIconTile :name="feat.icon" :size="44" :alpha="feat.alpha" class="mb-4" />
             <h3 class="font-bold text-gray-900 mb-1 group-hover:text-gray-800">{{ feat.title }}</h3>
             <p class="text-sm text-gray-500 leading-relaxed mb-3">{{ feat.desc }}</p>
             <span class="inline-flex items-center gap-1 text-xs font-bold transition-all group-hover:gap-2"
@@ -146,10 +144,10 @@
         </div>
 
         <div class="text-center mt-12">
-          <NuxtLink to="/fahrschule/software"
+          <NuxtLink to="/branchen"
             class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm border-2 transition-all hover:scale-105"
             :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }">
-            Alle Funktionen der Software ansehen
+            Alle Branchen & Funktionen ansehen
             <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
           </NuxtLink>
         </div>
@@ -301,44 +299,42 @@
       </div>
     </section>
 
-    <!-- ── Use-Case Hubs (Fahrschule Money-Pages) ──────────────────────────── -->
+    <!-- ── Use-Case Hubs ──────────────────────────────────────────────────── -->
     <section class="py-20 px-6" :style="{ background: `linear-gradient(180deg, #FFFFFF 0%, rgba(var(--brand-rgb), 0.04) 100%)` }">
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-14">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Drei Wege zu Simy</p>
           <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Was suchst du für deinen Betrieb?</h2>
-          <p class="text-gray-500 text-lg max-w-2xl mx-auto">Egal ob Online-Buchung, App für unterwegs oder die komplette Betriebssoftware — wir haben den passenden Einstieg. Besonders stark bei Fahrschulen, offen für weitere Branchen.</p>
+          <p class="text-gray-500 text-lg max-w-2xl mx-auto">Egal ob Online-Buchung, App für unterwegs oder die komplette Betriebssoftware — wir haben den passenden Einstieg für dein Unternehmen.</p>
         </div>
 
         <div class="grid md:grid-cols-3 gap-6">
-          <NuxtLink to="/fahrschule/software"
+          <NuxtLink to="/branchen"
             class="group rounded-3xl p-8 border-2 bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
             :style="{ borderColor: `rgba(var(--brand-rgb), 0.2)` }">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-5"
-              :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, color: 'white' }">💻</div>
-            <h3 class="font-extrabold text-xl text-gray-900 mb-2">Komplette Fahrschulsoftware</h3>
-            <p class="text-sm text-gray-500 leading-relaxed mb-5 flex-1">Die All-in-One-Lösung für deine Fahrschule: Verwaltung, Buchung, Rechnungen, App und Marketing in einer Plattform. Speziell für die Schweiz.</p>
+            <SimyIconTile name="monitor" :size="56" :alpha="0.12" class="mb-5" />
+            <h3 class="font-extrabold text-xl text-gray-900 mb-2">Komplette Betriebssoftware</h3>
+            <p class="text-sm text-gray-500 leading-relaxed mb-5 flex-1">Die All-in-One-Lösung für deinen Betrieb: Verwaltung, Buchung, Rechnungen, App und Marketing in einer Plattform. Speziell für die Schweiz.</p>
             <ul class="space-y-1.5 mb-5 text-sm text-gray-600">
               <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Alle Funktionen inklusive</li>
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Beste Wahl für Schulinhaber</li>
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Skaliert vom Einzelfahrlehrer bis 10+ Lehrer</li>
+              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Beste Wahl für Inhaber</li>
+              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Skaliert vom Solo bis 10+ Mitarbeitende</li>
             </ul>
             <span class="inline-flex items-center gap-1 text-sm font-bold group-hover:gap-2 transition-all" :style="{ color: primaryColor }">
-              Software-Ratgeber lesen
+              Branchen ansehen
               <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
             </span>
           </NuxtLink>
 
-          <NuxtLink to="/fahrschule/buchungssystem"
+          <NuxtLink to="/features/kalender"
             class="group rounded-3xl p-8 border-2 bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
             :style="{ borderColor: `rgba(var(--brand-rgb), 0.2)` }">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-5"
-              :style="{ background: `rgba(var(--brand-rgb), 0.12)`, color: primaryColor }">📅</div>
+            <SimyIconTile name="calendar" :size="56" :alpha="0.12" class="mb-5" />
             <h3 class="font-extrabold text-xl text-gray-900 mb-2">Online-Buchungssystem</h3>
-            <p class="text-sm text-gray-500 leading-relaxed mb-5 flex-1">Schluss mit WhatsApp-Chaos: Deine Schüler buchen freie Termine selbst – inklusive Bestätigung, Erinnerungen und automatischer Kalender-Synchronisation.</p>
+            <p class="text-sm text-gray-500 leading-relaxed mb-5 flex-1">Schluss mit WhatsApp-Chaos: Deine Kunden buchen freie Termine selbst – inklusive Bestätigung, Erinnerungen und automatischer Kalender-Synchronisation.</p>
             <ul class="space-y-1.5 mb-5 text-sm text-gray-600">
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> 24/7 Buchung für Schüler</li>
-              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Multi-Fahrlehrer-Sync</li>
+              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> 24/7 Buchung für Kunden</li>
+              <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Multi-Mitarbeiter-Sync</li>
               <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Erinnerungen reduzieren No-Shows</li>
             </ul>
             <span class="inline-flex items-center gap-1 text-sm font-bold group-hover:gap-2 transition-all" :style="{ color: primaryColor }">
@@ -347,38 +343,37 @@
             </span>
           </NuxtLink>
 
-          <NuxtLink to="/fahrschule/app"
+          <NuxtLink to="/features/rechnungen"
             class="group rounded-3xl p-8 border-2 bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
             :style="{ borderColor: `rgba(var(--brand-rgb), 0.2)` }">
-            <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-5"
-              :style="{ background: `rgba(var(--brand-rgb), 0.12)`, color: primaryColor }">📱</div>
-            <h3 class="font-extrabold text-xl text-gray-900 mb-2">Fahrlehrer-App</h3>
-            <p class="text-sm text-gray-500 leading-relaxed mb-5 flex-1">Native iOS- und Android-App: Kalender, Schülerinfos, Rechnungen und Push-Erinnerungen – alles direkt auf dem Smartphone.</p>
+            <SimyIconTile name="phone" :size="56" :alpha="0.12" class="mb-5" />
+            <h3 class="font-extrabold text-xl text-gray-900 mb-2">Mitarbeiter-App</h3>
+            <p class="text-sm text-gray-500 leading-relaxed mb-5 flex-1">Native iOS- und Android-App: Kalender, Kundeninfos, Rechnungen und Push-Erinnerungen – alles direkt auf dem Smartphone.</p>
             <ul class="space-y-1.5 mb-5 text-sm text-gray-600">
               <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> iOS & Android (nativ)</li>
               <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Immer aktuell & synchronisiert</li>
               <li class="flex items-center gap-2"><span :style="{ color: primaryColor }">✓</span> Optional als deine eigene Branded App</li>
             </ul>
             <span class="inline-flex items-center gap-1 text-sm font-bold group-hover:gap-2 transition-all" :style="{ color: primaryColor }">
-              App-Details ansehen
+              Mehr erfahren
               <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
             </span>
           </NuxtLink>
         </div>
 
         <div class="mt-12 text-center">
-          <p class="text-sm text-gray-500 mb-4">Nicht nur Fahrschulen — Simy hat Vorlagen für weitere Branchen.</p>
+          <p class="text-sm text-gray-500 mb-4">Simy hat Vorlagen für Fahrschule, Coaching, Consulting und weitere Branchen.</p>
           <div class="flex flex-wrap justify-center gap-3">
             <NuxtLink
               to="/branchen"
-              class="inline-flex items-center gap-2 text-sm font-bold px-5 py-3 rounded-xl border border-gray-200 hover:border-purple-200 transition-all"
+              class="inline-flex items-center gap-2 text-sm font-bold px-5 py-3 rounded-xl border border-gray-200 hover:border-gray-300 transition-all"
               :style="{ color: primaryColor }"
             >
               Alle Branchen ansehen →
             </NuxtLink>
             <NuxtLink
               to="/vergleich"
-              class="inline-flex items-center gap-2 text-sm font-bold px-5 py-3 rounded-xl border border-gray-200 hover:border-purple-200 transition-all text-gray-700"
+              class="inline-flex items-center gap-2 text-sm font-bold px-5 py-3 rounded-xl border border-gray-200 hover:border-gray-300 transition-all text-gray-700"
             >
               Software vergleichen →
             </NuxtLink>
@@ -403,7 +398,7 @@
             v-for="cmp in comparisonTeasers"
             :key="cmp.to"
             :to="cmp.to"
-            class="rounded-2xl border border-gray-100 p-5 hover:border-purple-200 hover:shadow-md transition-all"
+            class="rounded-2xl border border-gray-100 p-5 transition-all hover:shadow-md hover:border-[color:rgba(var(--brand-rgb),0.3)]"
           >
             <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">vs</p>
             <h3 class="font-extrabold text-gray-900 mb-2">{{ cmp.name }}</h3>
@@ -418,16 +413,16 @@
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);">
       <div class="max-w-5xl mx-auto text-center">
         <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: rgba(255,255,255,0.65);">Automatisierung</p>
-        <h2 class="text-4xl font-extrabold text-white mb-4">Simy arbeitet. Du unterrichtest.</h2>
+        <h2 class="text-4xl font-extrabold text-white mb-4">Simy arbeitet. Du bedienst deine Kunden.</h2>
         <p class="text-lg max-w-2xl mx-auto mb-14" style="color: rgba(255,255,255,0.65);">Diese Aufgaben erledigt Simy <strong class="text-white">jeden Tag automatisch</strong> für dich – ohne dass du einen Finger rühren musst.</p>
 
         <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div v-for="auto in automations" :key="auto.label"
             class="rounded-2xl p-5 border text-left"
             style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15);">
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-lg"
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-white"
               style="background: rgba(255,255,255,0.15);">
-              {{ auto.icon }}
+              <SimyIcon :name="auto.icon" :size="20" />
             </div>
             <p class="text-white font-bold text-sm mb-1">{{ auto.label }}</p>
             <p class="text-xs leading-relaxed" style="color: rgba(255,255,255,0.65);">{{ auto.desc }}</p>
@@ -443,7 +438,7 @@
         <!-- Header -->
         <div class="text-center mb-8 md:mb-12">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Live Demo</p>
-          <h2 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-3 md:mb-4">So kommuniziert Simy mit deinen Schülern</h2>
+          <h2 class="text-2xl md:text-4xl font-extrabold text-gray-900 mb-3 md:mb-4">So kommuniziert Simy mit deinen Kunden</h2>
           <p class="text-base md:text-lg text-gray-500 max-w-xl mx-auto">Gib deinen Firmennamen ein – und sieh sofort, wie die E-Mails deines Unternehmens aussehen werden.</p>
         </div>
 
@@ -476,9 +471,9 @@
               <div class="space-y-2">
                 <button
                   v-for="tab in [
-                    { id: 'reminder', icon: '📅', label: 'Lektionserinnerung', desc: '24h vor jeder Stunde automatisch versendet' },
-                    { id: 'invoice', icon: '🧾', label: 'Rechnung', desc: 'Nach jeder Lektion mit Zahlungslink' },
-                    { id: 'welcome', icon: '🎉', label: 'Willkommen', desc: 'Sobald ein neuer Schüler erfasst wird' },
+                    { id: 'reminder', icon: 'calendar', label: 'Terminerinnerung', desc: '24h vor jedem Termin automatisch versendet' },
+                    { id: 'invoice', icon: 'invoice', label: 'Rechnung', desc: 'Nach jedem Termin mit Zahlungslink' },
+                    { id: 'welcome', icon: 'spark', label: 'Willkommen', desc: 'Sobald ein neuer Kunde erfasst wird' },
                   ]"
                   :key="tab.id"
                   @click="activeTemplate = (tab.id as 'reminder' | 'invoice' | 'welcome')"
@@ -487,7 +482,7 @@
                     ? { borderColor: primaryColor, background: `rgba(var(--brand-rgb), 0.05)` }
                     : { borderColor: 'transparent', background: '#f9fafb' }"
                 >
-                  <span class="text-lg md:text-xl flex-shrink-0">{{ tab.icon }}</span>
+                  <span class="flex-shrink-0" style="color: var(--brand-primary)"><SimyIcon :name="tab.icon" :size="20" /></span>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold" :style="activeTemplate === tab.id ? { color: primaryColor } : { color: '#374151' }">{{ tab.label }}</p>
                     <p class="text-xs text-gray-400 truncate">{{ tab.desc }}</p>
@@ -518,7 +513,7 @@
               </div>
               <!-- Subject line -->
               <div class="bg-white px-3 md:px-5 py-2.5 md:py-3 border-b border-gray-100 flex items-center gap-2 md:gap-3">
-                <span class="text-base md:text-lg flex-shrink-0">{{ activeTemplate === 'reminder' ? '📅' : activeTemplate === 'invoice' ? '🧾' : '🎉' }}</span>
+                <span class="flex-shrink-0" style="color: var(--brand-primary)"><SimyIcon :name="activeTemplate === 'reminder' ? 'calendar' : activeTemplate === 'invoice' ? 'invoice' : 'spark'" :size="18" /></span>
                 <span class="text-xs md:text-sm font-semibold text-gray-700 truncate">
                   <template v-if="activeTemplate === 'reminder'">Erinnerung: Dein Termin morgen um 09:00 Uhr</template>
                   <template v-else-if="activeTemplate === 'invoice'">Deine Rechnung: CHF 295.– fällig bis 15.05.2025</template>
@@ -529,11 +524,13 @@
               <div class="bg-gray-50 overflow-hidden" ref="previewContainer" :style="{ height: previewContainerHeight }">
                 <div :style="previewWrapStyle">
                   <iframe
+                    ref="previewIframe"
                     :srcdoc="demoEmailHtml"
                     class="border-0 block"
-                    style="width: 560px; height: 500px; pointer-events: none;"
+                    :style="{ width: `${EMAIL_WIDTH}px`, height: `${emailContentHeight}px`, pointerEvents: 'none' }"
                     sandbox="allow-same-origin"
                     title="E-Mail Vorschau"
+                    @load="onPreviewIframeLoad"
                   ></iframe>
                 </div>
               </div>
@@ -655,7 +652,7 @@
               ? { borderColor: primaryColor, color: primaryColor, background: `rgba(var(--brand-rgb), 0.08)` }
               : { borderColor: 'transparent', color: '#6b7280', background: '#f9fafb' }"
           >
-            <span>{{ tab.icon }}</span>
+            <SimyIcon :name="tab.icon" :size="16" />
             <span class="hidden sm:inline">{{ tab.label }}</span>
           </button>
         </div>
@@ -694,7 +691,7 @@
                   ? { backgroundColor: `rgba(var(--brand-rgb), 0.1)`, color: primaryColor, fontWeight: '600' }
                   : { color: '#6b7280' }"
               >
-                <span>{{ item.icon }}</span>
+                <SimyIcon :name="item.icon" :size="16" />
                 <span>{{ item.label }}</span>
               </button>
             </div>
@@ -746,14 +743,14 @@
                   </div>
                 </div>
                 <div class="rounded-xl p-4 mb-4 flex items-start gap-3" :style="{ background: `rgba(var(--brand-rgb), 0.06)`, border: `1px solid rgba(var(--brand-rgb), 0.15)` }">
-                  <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg flex-shrink-0" :style="{ backgroundColor: primaryColor }">📅</div>
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0" :style="{ backgroundColor: primaryColor }"><SimyIcon name="calendar" :size="18" /></div>
                   <div>
                     <p class="text-xs font-semibold uppercase tracking-wide mb-0.5" :style="{ color: primaryColor }">Nächster Termin</p>
                     <p class="font-bold text-gray-900 text-sm">Morgen, 09:00 Uhr · 90 Min</p>
                     <p class="text-xs text-gray-500">Termin · Thomas Meier · Bahnhof Uster</p>
                   </div>
                 </div>
-                <div class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Aktive Schüler</div>
+                <div class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Aktive Kunden</div>
                 <div class="space-y-1">
                   <div v-for="student in dashboardStudents" :key="student.name" class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors">
                     <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" :style="{ backgroundColor: student.color }">{{ student.initials }}</div>
@@ -777,7 +774,7 @@
                   >{{ f }}</span>
                 </div>
                 <div class="hidden md:grid grid-cols-4 gap-2 text-xs font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">
-                  <span>Schüler</span><span>Datum</span><span>Betrag</span><span>Status</span>
+                  <span>Kunde</span><span>Datum</span><span>Betrag</span><span>Status</span>
                 </div>
                 <div class="space-y-1.5">
                   <div v-for="pay in paymentsMock" :key="pay.name" class="grid grid-cols-2 md:grid-cols-4 gap-2 items-center bg-gray-50 hover:bg-gray-100 transition-colors rounded-xl px-3 py-2.5">
@@ -808,7 +805,7 @@
                   </div>
                 </div>
                 <div class="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-3 mb-4 border border-gray-100">
-                  <span class="text-xs text-gray-500 flex-1 truncate font-mono">simy.ch/ref/{{ (schoolNameDemo || 'fahrschule-muster').toLowerCase().replace(/\s+/g, '-') }}</span>
+                  <span class="text-xs text-gray-500 flex-1 truncate font-mono">simy.ch/ref/{{ (schoolNameDemo || 'muster-gmbh').toLowerCase().replace(/\s+/g, '-') }}</span>
                   <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white flex-shrink-0" :style="{ backgroundColor: primaryColor }">Kopieren</button>
                 </div>
                 <div class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Meine Empfehlungen</div>
@@ -902,7 +899,7 @@
             <button @click="appDemoView = 'student'"
               class="px-4 md:px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
               :style="appDemoView === 'student' ? { backgroundColor: primaryColor, color: 'white', boxShadow: `0 2px 8px rgba(var(--brand-rgb), 0.35)` } : { color: '#6b7280' }">
-              🧑‍🎓 Schüler
+              🧑‍🎓 Kunde
             </button>
           </div>
         </div>
@@ -956,7 +953,7 @@
           <div class="md:col-span-2 rounded-2xl border border-gray-200 overflow-hidden">
             <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between" :style="{ backgroundColor: `rgba(var(--brand-rgb), 0.04)` }">
               <span class="font-bold text-gray-900 text-sm">Mein Kalender · KW 18</span>
-              <span class="text-xs font-semibold px-2.5 py-1 rounded-lg text-white" :style="{ backgroundColor: primaryColor }">12 Lektionen</span>
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-lg text-white" :style="{ backgroundColor: primaryColor }">12 Termine</span>
             </div>
             <!-- Day pills -->
             <div class="flex border-b border-gray-100 bg-gray-50">
@@ -998,7 +995,7 @@
               </div>
             </div>
             <div class="rounded-2xl border border-gray-200 p-5">
-              <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Nächste Lektion</p>
+              <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Nächster Termin</p>
               <p class="font-bold text-gray-900 text-sm">Morgen, 08:30</p>
               <p class="text-xs text-gray-500 mt-0.5">Sara Klein · Termin</p>
               <p class="text-xs text-gray-400 mt-0.5">📍 Bahnhof Uster, Gleis 1</p>
@@ -1042,7 +1039,7 @@
               <div class="mx-4 mb-4 rounded-xl p-3 flex items-center justify-between bg-amber-50 border border-amber-200">
                 <div>
                   <p class="text-xs font-bold text-amber-800">Offene Zahlung</p>
-                  <p class="text-xs text-amber-600">CHF 95.– · Lektion 14</p>
+                  <p class="text-xs text-amber-600">CHF 95.– · Termin 14</p>
                 </div>
                 <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white" :style="{ backgroundColor: primaryColor }">Zahlen →</button>
               </div>
@@ -1071,7 +1068,7 @@
             class="rounded-3xl p-7 border-2 flex flex-col relative"
             :style="plan.highlighted
               ? `background: linear-gradient(145deg, ${primaryColor}, ${secondaryColor}); border-color: transparent; box-shadow: 0 25px 50px rgba(var(--brand-rgb), 0.3);`
-              : 'border-color: #EEE8FF; background: white;'">
+              : 'border-color: rgba(var(--brand-rgb), 0.18); background: white;'">
             <div v-if="plan.highlighted"
               class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wide whitespace-nowrap"
               style="background: rgba(255,255,255,0.92); color: inherit;"
@@ -1117,7 +1114,7 @@
     <section class="py-12 px-6" :style="{ background: `rgba(var(--brand-rgb), 0.04)` }">
       <div class="max-w-3xl mx-auto text-center">
         <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Optional: Wachstum</p>
-        <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Mehr Schüler? Google Ads &amp; lokales SEO</h2>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Mehr Kunden? Google Ads &amp; lokales SEO</h2>
         <p class="text-gray-500 mb-6">Zusätzlich zur Software — Managed Ads und SEO für Schweizer Dienstleistungsbetriebe.</p>
         <div class="flex flex-wrap justify-center gap-3">
           <NuxtLink to="/marketing/google-ads"
@@ -1248,13 +1245,13 @@
           <!-- Brand column -->
           <div class="col-span-2 md:col-span-3 lg:col-span-2">
             <NuxtLink to="/" class="inline-flex items-center mb-4" aria-label="Simy Startseite">
-              <img :src="logoPreview || '/simy-logo.png'" alt="Simy – Terminsoftware Schweiz" loading="lazy"
+              <img :src="logoPreview || '/simy-logo.png'" alt="Simy – All-in-One Software Schweiz" loading="lazy"
                 class="h-8 max-w-[120px] object-contain transition-all duration-500"
                 :style="{ filter: logoColorFilter }" />
             </NuxtLink>
             <p class="text-sm text-gray-500 leading-relaxed mb-4 max-w-xs">
-              Die <NuxtLink to="/fahrschule/software" class="font-semibold hover:underline" :style="{ color: primaryColor }">Schweizer Terminsoftware</NuxtLink>
-              für Online-Buchung, Abrechnung und Wachstum. Für Fahrschulen und weitere Branchen.
+              Die <NuxtLink to="/fahrschule/software" class="font-semibold hover:underline" :style="{ color: primaryColor }">Schweizer All-in-One Software</NuxtLink>
+              für Online-Buchung, Abrechnung und Wachstum. Für Dienstleister und KMU.
             </p>
             <div class="flex flex-col gap-1.5 text-xs text-gray-400">
               <a href="mailto:info@simy.ch" class="hover:text-gray-600 transition-colors inline-flex items-center gap-1.5">
@@ -1276,12 +1273,12 @@
           <div>
             <h3 class="text-xs font-bold uppercase tracking-widest text-gray-900 mb-4">Software</h3>
             <ul class="space-y-2.5 text-sm">
-              <li><NuxtLink to="/fahrschule/software" class="text-gray-500 hover:text-gray-900 transition-colors">Fahrschulsoftware</NuxtLink></li>
-              <li><NuxtLink to="/fahrschule/buchungssystem" class="text-gray-500 hover:text-gray-900 transition-colors">Buchungssystem</NuxtLink></li>
-              <li><NuxtLink to="/fahrschule/app" class="text-gray-500 hover:text-gray-900 transition-colors">Fahrlehrer-App</NuxtLink></li>
-              <li><NuxtLink to="/features/kalender" class="text-gray-500 hover:text-gray-900 transition-colors">Kalender</NuxtLink></li>
+              <li><NuxtLink to="/branchen" class="text-gray-500 hover:text-gray-900 transition-colors">Alle Branchen</NuxtLink></li>
+              <li><NuxtLink to="/features/kalender" class="text-gray-500 hover:text-gray-900 transition-colors">Kalender & Buchung</NuxtLink></li>
               <li><NuxtLink to="/features/rechnungen" class="text-gray-500 hover:text-gray-900 transition-colors">Rechnungen & TWINT</NuxtLink></li>
-              <li><NuxtLink to="/fahrschule" class="text-gray-500 hover:text-gray-900 transition-colors">Alle Funktionen</NuxtLink></li>
+              <li><NuxtLink to="/demo" class="text-gray-500 hover:text-gray-900 transition-colors">Demo</NuxtLink></li>
+              <li><NuxtLink to="/fahrschule" class="text-gray-500 hover:text-gray-900 transition-colors">Fahrschule</NuxtLink></li>
+              <li><NuxtLink to="/coaching" class="text-gray-500 hover:text-gray-900 transition-colors">Coaching</NuxtLink></li>
             </ul>
           </div>
 
@@ -1349,7 +1346,7 @@
 
         <!-- Bottom: copyright + legal -->
         <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
-          <span>© {{ currentYear }} Simy · Terminsoftware aus der Schweiz</span>
+          <span>© {{ currentYear }} Simy · All-in-One Software aus der Schweiz</span>
           <div class="flex flex-wrap items-center justify-center gap-4">
             <NuxtLink to="/impressum" class="hover:text-gray-700 transition-colors">Impressum</NuxtLink>
             <NuxtLink to="/agb" class="hover:text-gray-700 transition-colors">AGB</NuxtLink>
@@ -1513,6 +1510,7 @@ import { useHead, useAsyncData } from 'nuxt/app'
 import { $fetch } from 'ofetch'
 import { getDemoReminderHtml, getDemoInvoiceHtml, getDemoWelcomeHtml } from '../utils/demo-email-templates'
 import { FOUNDER_BLURB_HOME } from '~/data/founder'
+import { SIMY_BRAND, SIMY_BRAND_STORAGE_KEY, hexToRgb, simyLogoColorFilter } from '~/utils/brand'
 
 const founderBlurbHome = FOUNDER_BLURB_HOME
 
@@ -1525,30 +1523,30 @@ definePageMeta({ layout: false })
 const currentYear = new Date().getFullYear()
 
 useHead({
-  title: 'Simy – Terminsoftware Schweiz | Buchung, Abrechnung & App',
+  title: 'Simy – Online-Buchungssystem & All-in-One Software Schweiz',
   htmlAttrs: { lang: 'de' },
   meta: [
-    { name: 'description', content: 'Terminsoftware aus der Schweiz: Online-Buchung, automatische Rechnungen mit TWINT, Mitarbeiter-App, Marketing & SEO. Für Fahrschulen und weitere Branchen. 30 Tage kostenlos.' },
-    { name: 'keywords', content: 'Terminsoftware Schweiz, Fahrschulsoftware, Buchungssystem, Online-Terminbuchung, Kundenverwaltung, Marketing Software Schweiz' },
+    { name: 'description', content: 'All-in-One Software aus der Schweiz: Online-Buchung, automatische Rechnungen mit TWINT, Mitarbeiter-App, Marketing & SEO. Für Dienstleister und KMU. 30 Tage kostenlos.' },
+    { name: 'keywords', content: 'Online-Buchungssystem Schweiz, Online-Terminbuchung, All-in-One Software, Kundenverwaltung, Rechnungssoftware Schweiz, Marketing Software Schweiz' },
     { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
     { name: 'author', content: 'Simy' },
     // Open Graph
-    { property: 'og:title', content: 'Simy – Terminsoftware Schweiz | Buchung, Abrechnung & App' },
-    { property: 'og:description', content: 'Online-Buchung, Abrechnung & Kundenverwaltung für Fahrschulen und Dienstleister. 30 Tage kostenlos testen.' },
+    { property: 'og:title', content: 'Simy – Online-Buchungssystem & All-in-One Software Schweiz' },
+    { property: 'og:description', content: 'Online-Buchung, Abrechnung & Kundenverwaltung für Schweizer Dienstleister und KMU. 30 Tage kostenlos testen.' },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: 'https://simy.ch/' },
     { property: 'og:image', content: 'https://simy.ch/og-image.png' },
     { property: 'og:image:width', content: '1200' },
     { property: 'og:image:height', content: '630' },
-    { property: 'og:image:alt', content: 'Simy Terminsoftware – Dashboard Screenshot' },
+    { property: 'og:image:alt', content: 'Simy All-in-One Software – Dashboard Screenshot' },
     { property: 'og:locale', content: 'de_CH' },
     { property: 'og:site_name', content: 'Simy' },
     // Twitter / X Card
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'Simy – Terminsoftware Schweiz | Buchung, Abrechnung & App' },
-    { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Kundenverwaltung für Fahrschulen und Dienstleister. 30 Tage kostenlos testen.' },
+    { name: 'twitter:title', content: 'Simy – Online-Buchungssystem & All-in-One Software Schweiz' },
+    { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Kundenverwaltung für Schweizer Dienstleister und KMU. 30 Tage kostenlos testen.' },
     { name: 'twitter:image', content: 'https://simy.ch/og-image.png' },
-    { name: 'twitter:image:alt', content: 'Simy Terminsoftware – Dashboard Screenshot' },
+    { name: 'twitter:image:alt', content: 'Simy All-in-One Software – Dashboard Screenshot' },
   ],
   link: [
     { rel: 'canonical', href: 'https://simy.ch/' },
@@ -1565,7 +1563,7 @@ useHead({
         url: 'https://simy.ch',
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web, iOS, Android',
-        description: 'Terminsoftware für die Schweiz: Online-Buchung, automatische Abrechnung, Kundenverwaltung & Kommunikation.',
+        description: 'All-in-One Software für die Schweiz: Online-Buchung, automatische Abrechnung, Kundenverwaltung & Kommunikation.',
         softwareVersion: '2.0',
         datePublished: '2023-01-01',
         screenshot: 'https://simy.ch/og-image.png',
@@ -1677,16 +1675,16 @@ useHead({
 })
 
 // ─── Brand Color Live Preview ────────────────────────────────────────────────
-const DEFAULT_PRIMARY = '#6000BD'
-const DEFAULT_SECONDARY = '#8B2FE8'
-const DEFAULT_ACCENT = '#BEA3FF'
+const DEFAULT_PRIMARY = SIMY_BRAND.primary
+const DEFAULT_SECONDARY = SIMY_BRAND.secondary
+const DEFAULT_ACCENT = SIMY_BRAND.accent
 
 const primaryColor = ref(DEFAULT_PRIMARY)
 const secondaryColor = ref(DEFAULT_SECONDARY)
 const accentColor = ref(DEFAULT_ACCENT)
 
 // ─── Branding persistence (localStorage) ────────────────────────────────────
-const BRAND_STORAGE_KEY = 'simy_brand_preview'
+const BRAND_STORAGE_KEY = SIMY_BRAND_STORAGE_KEY
 
 function saveBrandToStorage() {
   try {
@@ -1719,65 +1717,35 @@ function debouncedSaveBrand() {
 }
 
 // Also update CSS vars on :root immediately so the whole app reflects the new colors
-watch([primaryColor, secondaryColor, accentColor], ([p, s]) => {
+watch([primaryColor, secondaryColor, accentColor], ([p, s, a]) => {
   if (typeof document === 'undefined') return
-  const r = (hex: string) => { const n = parseInt(hex.slice(1,3),16)+','+parseInt(hex.slice(3,5),16)+','+parseInt(hex.slice(5,7),16); return n }
   document.documentElement.style.setProperty('--brand-primary', p)
   document.documentElement.style.setProperty('--brand-secondary', s)
-  document.documentElement.style.setProperty('--brand-rgb', r(p))
-  document.documentElement.style.setProperty('--brand-2-rgb', r(s))
+  document.documentElement.style.setProperty('--brand-accent', a)
+  document.documentElement.style.setProperty('--brand-rgb', hexToRgb(p))
+  document.documentElement.style.setProperty('--brand-2-rgb', hexToRgb(s))
   debouncedSaveBrand()
 })
 const showColorPicker = ref(false)
 const navSoftware = [
-  { to: '/fahrschule/software', icon: '💻', title: 'Fahrschulsoftware', desc: 'Die komplette All-in-One-Lösung' },
-  { to: '/fahrschule/buchungssystem', icon: '📅', title: 'Online-Buchungssystem', desc: 'Schüler buchen Fahrstunden selbst' },
-  { to: '/fahrschule/app', icon: '📱', title: 'Fahrlehrer-App', desc: 'iOS & Android für unterwegs' },
-  { to: '/features/kalender', icon: '🗓️', title: 'Kalender & Terminplanung', desc: 'Multi-Mitarbeiter-Sync & Erinnerungen' },
-  { to: '/features/rechnungen', icon: '💳', title: 'Rechnungen & TWINT', desc: 'Automatisierte Schweizer Abrechnung' },
-  { to: '/fahrschule', icon: '🚗', title: 'Alle Funktionen ansehen →', desc: 'Übersicht für deine Fahrschule' },
+  { to: '/branchen', icon: 'monitor', title: 'Betriebssoftware', desc: 'Die komplette All-in-One-Lösung' },
+  { to: '/features/kalender', icon: 'calendar', title: 'Online-Buchungssystem', desc: 'Kunden buchen Termine selbst' },
+  { to: '/features/rechnungen', icon: 'phone', title: 'Mitarbeiter-App', desc: 'iOS & Android für unterwegs' },
+  { to: '/features/kalender', icon: 'calendar', title: 'Kalender & Terminplanung', desc: 'Multi-Mitarbeiter-Sync & Erinnerungen' },
+  { to: '/features/rechnungen', icon: 'credit-card', title: 'Rechnungen & TWINT', desc: 'Automatisierte Schweizer Abrechnung' },
+  { to: '/branchen', icon: 'spark', title: 'Alle Branchen ansehen →', desc: 'Vorlagen für dein Unternehmen' },
 ]
 
 const navMarketing = [
-  { to: '/marketing', icon: '📈', title: 'Marketing für Fahrschulen', desc: 'So bekommst du mehr Schüler' },
-  { to: '/marketing/google-ads', icon: '🎯', title: 'Google Ads für Fahrschulen', desc: 'Sofort gefunden werden' },
-  { to: '/marketing/seo', icon: '🔍', title: 'SEO für Fahrschulen', desc: 'Lokal organisch auf Platz 1' },
+  { to: '/marketing', icon: 'chart', title: 'Marketing für Betriebe', desc: 'So bekommst du mehr Kunden' },
+  { to: '/marketing/google-ads', icon: 'target', title: 'Google Ads', desc: 'Sofort gefunden werden' },
+  { to: '/marketing/seo', icon: 'search', title: 'Lokales SEO', desc: 'Lokal organisch auf Platz 1' },
 ]
 
-function hexToRgb(hex: string): string {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  if (!result) return '96, 0, 189'
-  return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
-}
 
-function hexToHsl(hex: string): [number, number, number] {
-  const r = parseInt(hex.slice(1, 3), 16) / 255
-  const g = parseInt(hex.slice(3, 5), 16) / 255
-  const b = parseInt(hex.slice(5, 7), 16) / 255
-  const max = Math.max(r, g, b), min = Math.min(r, g, b)
-  const l = (max + min) / 2
-  let h = 0, s = 0
-  if (max !== min) {
-    const d = max - min
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6
-    else if (max === g) h = ((b - r) / d + 2) / 6
-    else h = ((r - g) / d + 4) / 6
-  }
-  return [h * 360, s * 100, l * 100]
-}
-
-// CSS filter to shift the Simy logo from its original purple to any target color
-const logoColorFilter = computed(() => {
-  if (logoPreview.value) return 'none'
-  if (primaryColor.value === DEFAULT_PRIMARY) return 'none'
-  const [tH, tS, tL] = hexToHsl(primaryColor.value)
-  const [oH, oS, oL] = hexToHsl(DEFAULT_PRIMARY)
-  const hRot = Math.round(tH - oH)
-  const sat  = Math.round(oS > 0 ? (tS / oS) * 100 : 100)
-  const bri  = Math.round(oL > 0 ? (tL / oL) * 100 : 100)
-  return `hue-rotate(${hRot}deg) saturate(${sat}%) brightness(${bri}%)`
-})
+const logoColorFilter = computed(() =>
+  simyLogoColorFilter(primaryColor.value, { hasCustomLogo: !!logoPreview.value }),
+)
 
 const brandCssVars = computed(() => ({
   '--brand-primary': primaryColor.value,
@@ -2054,32 +2022,32 @@ const comparisonTeasers = [
 ]
 
 const pains = [
-  { icon: '⏰', title: 'Manuelle Terminverwaltung', text: 'Zeitraubendes Planen von Lektionen – alles per Whatsapp, SMS oder Telefon.' },
-  { icon: '💸', title: 'Vergessene Rechnungen', text: 'Offene Posten, die durch die Lappen gehen. Mahnungen manuell schreiben. Zahlungen mühsam nachverfolgen. Quittungen schreiben etc.' },
-  { icon: '📱', title: 'Chaotische Kommunikation', text: 'WhatsApp, SMS, E-Mail – Schüler fragen überall und ständig an, Termine verpasst, No-Shows die man nicht verrechnen kann, Missverständnisse und Diskussionen häufen sich.' },
+  { icon: 'clock', title: 'Manuelle Terminverwaltung', text: 'Zeitraubendes Planen von Terminen – alles per WhatsApp, SMS oder Telefon.' },
+  { icon: 'wallet', title: 'Vergessene Rechnungen', text: 'Offene Posten, die durch die Lappen gehen. Mahnungen manuell schreiben. Zahlungen mühsam nachverfolgen. Quittungen schreiben etc.' },
+  { icon: 'phone', title: 'Chaotische Kommunikation', text: 'WhatsApp, SMS, E-Mail – Kunden fragen überall und ständig an, Termine verpasst, No-Shows die man nicht verrechnen kann, Missverständnisse und Diskussionen häufen sich.' },
 ]
 
 const features = computed(() => [
-  { icon: '📅', title: 'Kalender & Terminplanung', desc: 'Simy-Termine erscheinen in Google/Apple/Outlook. Private Termine dort blockieren automatisch deine Verfügbarkeit — Kunden sehen dort keine freien Slots.', alpha: 0.10, link: '/features/kalender' },
-  { icon: '💳', title: 'Rechnungen & TWINT-Zahlungen', desc: 'Online-Zahlung mit TWINT, Debit- und Kreditkarte inkl. PostFinance, Rechnungen mit 2 Klicks erstellt und versendet, Mahnungen und Gutschriften einfach erstellt.', alpha: 0.07, link: '/features/rechnungen' },
-  { icon: '👥', title: 'Kundenverwaltung', desc: 'Alle Schülerdaten, Lernfortschritte, Dokumente und Notizen zentral an einem Ort.', alpha: 0.13, link: '/fahrschule/software' },
-  { icon: '📱', title: 'Fahrlehrer-App (iOS & Android)', desc: 'Native App für unterwegs – Kalender, Schüler, Rechnungen und Push-Erinnerungen immer griffbereit.', alpha: 0.10, link: '/fahrschule/app' },
-  { icon: '🌐', title: 'Online-Buchungssystem', desc: 'Schüler buchen freie Termine selbstständig – mit Bestätigung, Erinnerungen und Multi-Fahrlehrer-Sync.', alpha: 0.12, link: '/fahrschule/buchungssystem' },
-  { icon: '📊', title: 'Auswertungen & Statistiken', desc: 'Umsatz, Auslastung, No-Show-Rate, Top-Schüler – alle wichtigen Kennzahlen auf einen Blick.', alpha: 0.09, link: '/fahrschule/software' },
-  { icon: '🎓', title: 'Prüfungsverwaltung', desc: 'Prüfungsdaten erfassen, Experten zuweisen und bewerten, Ergebnisse tracken. Alles dokumentiert.', alpha: 0.12, link: '/fahrschule/software' },
-  { icon: '🚗', title: 'Fahrzeug-Management', desc: 'Fahrzeuge verwalten, Revisionsdaten tracken, Fahrtenbuch führen – automatisch und übersichtlich.', alpha: 0.07, link: '/fahrschule/software' },
-  { icon: '🏫', title: 'Kursbuchungsseite', desc: 'Deine Schüler buchen und bezahlen Kurse (VKU, Nothelfer) direkt online – mit eigenem Link, Branding und integrierter Zahlung.', alpha: 0.08, link: '/fahrschule/buchungssystem' },
+  { icon: 'calendar', title: 'Kalender & Terminplanung', desc: 'Simy-Termine erscheinen in Google/Apple/Outlook. Private Termine dort blockieren automatisch deine Verfügbarkeit — Kunden sehen dort keine freien Slots.', alpha: 0.10, link: '/features/kalender' },
+  { icon: 'credit-card', title: 'Rechnungen & TWINT-Zahlungen', desc: 'Online-Zahlung mit TWINT, Debit- und Kreditkarte inkl. PostFinance, Rechnungen mit 2 Klicks erstellt und versendet, Mahnungen und Gutschriften einfach erstellt.', alpha: 0.07, link: '/features/rechnungen' },
+  { icon: 'users', title: 'Kundenverwaltung', desc: 'Alle Kundendaten, Fortschritte, Dokumente und Notizen zentral an einem Ort.', alpha: 0.13, link: '/branchen' },
+  { icon: 'phone', title: 'Mitarbeiter-App (iOS & Android)', desc: 'Native App für unterwegs – Kalender, Kunden, Rechnungen und Push-Erinnerungen immer griffbereit.', alpha: 0.10, link: '/features/rechnungen' },
+  { icon: 'globe', title: 'Online-Buchungssystem', desc: 'Kunden buchen freie Termine selbstständig – mit Bestätigung, Erinnerungen und Multi-Mitarbeiter-Sync.', alpha: 0.12, link: '/features/kalender' },
+  { icon: 'chart', title: 'Auswertungen & Statistiken', desc: 'Umsatz, Auslastung, No-Show-Rate, Top-Kunden – alle wichtigen Kennzahlen auf einen Blick.', alpha: 0.09, link: '/branchen' },
+  { icon: 'graduate', title: 'Fortschritt & Dokumentation', desc: 'Sessions dokumentieren, Ziele tracken und Bewertungen erfassen. Alles an einem Ort.', alpha: 0.12, link: '/branchen' },
+  { icon: 'label', title: 'Ressourcen-Management', desc: 'Räume, Geräte oder Fahrzeuge verwalten und Verfügbarkeiten übersichtlich planen.', alpha: 0.07, link: '/branchen' },
+  { icon: 'school', title: 'Kursbuchungsseite', desc: 'Kunden buchen und bezahlen Kurse und Pakete direkt online – mit eigenem Link, Branding und integrierter Zahlung.', alpha: 0.08, link: '/features/kalender' },
 ])
 
 const automations = [
-  { icon: '📧', label: 'Lektionserinnerungen', desc: 'Automatisch E-Mail mindestens 24h vor der Lektion.' },
-  { icon: '🧾', label: 'Rechnungsversand', desc: 'Rechnung wird direkt bei der Buchung erstellt und per E-Mail versendet.' },
-  { icon: '🔁', label: 'Mahnungen', desc: 'Mit Online-Zahlung vollautomatisch. Bei E-Mail-Rechnung mit wenigen Klicks — einfach und schnell.' },
-  { icon: '📈', label: 'Wochenbericht', desc: 'Jeden Montag dein persönlicher Bericht mit Umsatz, Lektionen und Auslastung.' },
-  { icon: '🎯', label: 'Zieltracking', desc: 'Fortschrittsziele für Schüler werden automatisch aktualisiert und gemeldet.' },
-  { icon: '🗓️', label: 'Verfügbarkeit', desc: 'Schüler sehen nur freie Slots und buchen direkt online.' },
-  { icon: '💬', label: 'Willkommensnachrichten', desc: 'Neue Schüler erhalten sofort alle Infos – ohne dein Zutun.' },
-  { icon: '🏆', label: 'Prüfungsbestätigung', desc: 'Bestandene Prüfungen dokumentiert und dem Schüler gemeldet.' },
+  { icon: 'mail', label: 'Terminerinnerungen', desc: 'Automatisch E-Mail mindestens 24h vor dem Termin.' },
+  { icon: 'invoice', label: 'Rechnungsversand', desc: 'Rechnung wird direkt bei der Buchung erstellt und per E-Mail versendet.' },
+  { icon: 'refresh', label: 'Mahnungen', desc: 'Mit Online-Zahlung vollautomatisch. Bei E-Mail-Rechnung mit wenigen Klicks — einfach und schnell.' },
+  { icon: 'chart', label: 'Wochenbericht', desc: 'Jeden Montag dein persönlicher Bericht mit Umsatz, Terminen und Auslastung.' },
+  { icon: 'target', label: 'Zieltracking', desc: 'Fortschrittsziele für Kunden werden automatisch aktualisiert und gemeldet.' },
+  { icon: 'calendar', label: 'Verfügbarkeit', desc: 'Kunden sehen nur freie Slots und buchen direkt online.' },
+  { icon: 'message', label: 'Willkommensnachrichten', desc: 'Neue Kunden erhalten sofort alle Infos – ohne dein Zutun.' },
+  { icon: 'award', label: 'Status-Updates', desc: 'Wichtige Meilensteine dokumentiert und dem Kunden gemeldet.' },
 ]
 
 const { data: stripePrices } = await useAsyncData('landing-prices', () =>
@@ -2146,64 +2114,64 @@ const staffDayApts = computed(() => {
   const c = primaryColor.value
   return ({
     Mo: [
-      { time: '09:00', student: 'Luca Pfister', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: c },
-      { time: '11:00', student: 'Jana Meier', type: 'Überlandfahrt', location: 'Autobahn A3', confirmed: true, color: c },
-      { time: '15:00', student: 'Tobias Roth', type: 'Nachtfahrt', location: 'Treff Schulhaus', confirmed: false, color: '#f59e0b' },
+      { time: '09:00', student: 'Luca Pfister', type: 'Termin', location: 'Bahnhof Uster', confirmed: true, color: c },
+      { time: '11:00', student: 'Jana Meier', type: 'Vor-Ort-Termin', location: 'Online', confirmed: true, color: c },
+      { time: '15:00', student: 'Tobias Roth', type: 'Abendtermin', location: 'Treff Schulhaus', confirmed: false, color: '#f59e0b' },
     ],
     Di: [
-      { time: '08:00', student: 'Sara Klein', type: 'Prüfungsvorbereitung', location: 'Strassenverkehrsamt', confirmed: true, color: c },
-      { time: '14:00', student: 'Nico Brunner', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
+      { time: '08:00', student: 'Sara Klein', type: 'Vorbereitung', location: 'Büro Zürich', confirmed: true, color: c },
+      { time: '14:00', student: 'Nico Brunner', type: 'Termin', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
     ],
     Mi: [
-      { time: '08:30', student: 'Sara Klein', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: c },
-      { time: '11:00', student: 'Luca Pfister', type: 'Prüfung B', location: 'Strassenverkehrsamt', confirmed: true, color: c },
-      { time: '14:00', student: 'Anna Müller', type: 'Fahrstunde B', location: 'Schulhaus Küsnacht', confirmed: false, color: '#f59e0b' },
-      { time: '16:30', student: 'Tobias Roth', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
+      { time: '08:30', student: 'Sara Klein', type: 'Termin', location: 'Bahnhof Uster', confirmed: true, color: c },
+      { time: '11:00', student: 'Luca Pfister', type: 'Abschluss', location: 'Büro Zürich', confirmed: true, color: c },
+      { time: '14:00', student: 'Anna Müller', type: 'Termin', location: 'Schulhaus Küsnacht', confirmed: false, color: '#f59e0b' },
+      { time: '16:30', student: 'Tobias Roth', type: 'Termin', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
     ],
     Do: [
-      { time: '09:00', student: 'Jana Meier', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: true, color: c },
-      { time: '11:30', student: 'Nico Brunner', type: 'Überlandfahrt', location: 'Autobahn A3', confirmed: true, color: c },
-      { time: '15:00', student: 'Sara Klein', type: 'Fahrstunde B', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
+      { time: '09:00', student: 'Jana Meier', type: 'Termin', location: 'Bahnhof Uster', confirmed: true, color: c },
+      { time: '11:30', student: 'Nico Brunner', type: 'Vor-Ort-Termin', location: 'Online', confirmed: true, color: c },
+      { time: '15:00', student: 'Sara Klein', type: 'Termin', location: 'Bahnhof Uster', confirmed: false, color: '#f59e0b' },
     ],
     Fr: [
-      { time: '10:00', student: 'Anna Müller', type: 'Prüfungsvorbereitung', location: 'Strassenverkehrsamt', confirmed: true, color: c },
-      { time: '14:00', student: 'Tobias Roth', type: 'Fahrstunde B', location: 'Schulhaus Küsnacht', confirmed: true, color: c },
+      { time: '10:00', student: 'Anna Müller', type: 'Vorbereitung', location: 'Büro Zürich', confirmed: true, color: c },
+      { time: '14:00', student: 'Tobias Roth', type: 'Termin', location: 'Schulhaus Küsnacht', confirmed: true, color: c },
     ],
   }[staffActiveDay.value] ?? [])
 })
 
 const staffWeekStats = computed(() => [
-  { label: 'Lektionen', value: '12' },
+  { label: 'Termine', value: '12' },
   { label: 'Termine', value: '18 Std.' },
   { label: 'Bestätigungsrate', value: '83%', highlight: true },
-  { label: 'Prüfungen', value: '1' },
+  { label: 'Abschlüsse', value: '1' },
 ])
 
 const appTabUrl = computed(() => {
   const urls: Record<string, string> = {
     calendar: 'app.simy.ch/kalender',
-    dashboard: 'app.simy.ch/schüler',
+    dashboard: 'app.simy.ch/kunden',
     payments: 'app.simy.ch/zahlungen',
     affiliate: 'app.simy.ch/affiliate',
-    booking: 'simy.ch/customer/courses/fahrschule-muster',
+    booking: 'simy.ch/customer/courses/muster-gmbh',
   }
   return urls[activeAppTab.value]
 })
 
 const appTabs = [
-  { id: 'calendar', icon: '📅', label: 'Kalender' },
-  { id: 'dashboard', icon: '👥', label: 'Schüler' },
-  { id: 'payments', icon: '💳', label: 'Zahlungen' },
-  { id: 'affiliate', icon: '📣', label: 'Affiliate' },
-  { id: 'booking', icon: '🏫', label: 'Buchungsseite' },
+  { id: 'calendar', icon: 'calendar', label: 'Kalender' },
+  { id: 'dashboard', icon: 'users', label: 'Kunden' },
+  { id: 'payments', icon: 'credit-card', label: 'Zahlungen' },
+  { id: 'affiliate', icon: 'megaphone', label: 'Affiliate' },
+  { id: 'booking', icon: 'school', label: 'Buchungsseite' },
 ] as const
 
 const sidebarItems = [
-  { id: 'calendar', icon: '📅', label: 'Kalender' },
-  { id: 'dashboard', icon: '👥', label: 'Schüler' },
-  { id: 'payments', icon: '💳', label: 'Zahlungen' },
-  { id: 'affiliate', icon: '📣', label: 'Affiliate' },
-  { id: 'booking', icon: '🏫', label: 'Buchungsseite' },
+  { id: 'calendar', icon: 'calendar', label: 'Kalender' },
+  { id: 'dashboard', icon: 'users', label: 'Kunden' },
+  { id: 'payments', icon: 'credit-card', label: 'Zahlungen' },
+  { id: 'affiliate', icon: 'megaphone', label: 'Affiliate' },
+  { id: 'booking', icon: 'school', label: 'Buchungsseite' },
 ] as const
 
 const calendarMockDays = [
@@ -2212,12 +2180,12 @@ const calendarMockDays = [
     { time: '14:00', label: 'Tobias R.', type: 'lesson' },
   ]},
   { name: 'Di', date: '29.4', today: false, appointments: [
-    { time: '10:00', label: 'Theorie', type: 'theory' },
+    { time: '10:00', label: 'Workshop', type: 'theory' },
     { time: '15:30', label: 'Max B.', type: 'lesson' },
   ]},
   { name: 'Mi', date: '30.4', today: true, appointments: [
     { time: '08:30', label: 'Sara K.', type: 'lesson' },
-    { time: '11:00', label: 'Prüfung', type: 'exam' },
+    { time: '11:00', label: 'Abschluss', type: 'exam' },
     { time: '14:00', label: 'Anna M.', type: 'lesson' },
   ]},
   { name: 'Do', date: '1.5', today: false, appointments: [
@@ -2231,16 +2199,16 @@ const calendarMockDays = [
 ]
 
 const dashboardStats = [
-  { value: '24', label: 'Aktive Schüler' },
-  { value: '8', label: 'Lektionen / Woche' },
+  { value: '24', label: 'Aktive Kunden' },
+  { value: '8', label: 'Termine / Woche' },
   { value: '98%', label: 'Zahlungsquote' },
 ]
 
 const dashboardStudents = computed(() => [
-  { name: 'Anna Müller', initials: 'AM', status: 'Lektion 14 · Kat. B', payStatus: 'paid', color: primaryColor.value },
-  { name: 'Max Berger', initials: 'MB', status: 'Lektion 7 · Kat. B', payStatus: 'pending', color: '#6b7280' },
-  { name: 'Sara Klein', initials: 'SK', status: 'Prüfungsanmeldung offen', payStatus: 'paid', color: '#8b5cf6' },
-  { name: 'Tobias Roth', initials: 'TR', status: 'Lektion 3 · Kat. B', payStatus: 'pending', color: '#f59e0b' },
+  { name: 'Anna Müller', initials: 'AM', status: 'Termin 14 · Paket A', payStatus: 'paid', color: primaryColor.value },
+  { name: 'Max Berger', initials: 'MB', status: 'Termin 7 · Paket A', payStatus: 'pending', color: '#6b7280' },
+  { name: 'Sara Klein', initials: 'SK', status: 'Abschlussplanung offen', payStatus: 'paid', color: secondaryColor.value },
+  { name: 'Tobias Roth', initials: 'TR', status: 'Termin 3 · Paket A', payStatus: 'pending', color: '#f59e0b' },
 ])
 
 const paymentsMock = [
@@ -2267,7 +2235,7 @@ const affiliateMock = [
 
 const bookingMockCourses = computed(() => [
   {
-    name: 'VKU Zürich',
+    name: 'Einstiegspaket Zürich',
     location: 'Zürich-Altstetten',
     price: '190.–',
     slots: 4,
@@ -2277,7 +2245,7 @@ const bookingMockCourses = computed(() => [
     ],
   },
   {
-    name: 'Motorrad Grundkurs',
+    name: 'Intensivkurs Gruppe',
     location: 'Lachen SZ',
     price: '380.–',
     slots: 2,
@@ -2289,15 +2257,15 @@ const bookingMockCourses = computed(() => [
 ])
 
 const adminTodayApts = computed(() => [
-  { time: '08:30', student: 'Sara Klein', type: 'Fahrstunde B', location: 'Bahnhof Uster', payStatus: 'paid', amount: '95.–' },
-  { time: '11:00', student: 'Luca Pfister', type: 'Prüfung B', location: 'Strassenverkehrsamt', payStatus: 'paid', amount: '0.–' },
-  { time: '14:00', student: 'Anna Müller', type: 'Fahrstunde B', location: 'Schulhaus Küsnacht', payStatus: 'pending', amount: '95.–' },
-  { time: '16:30', student: 'Tobias Roth', type: 'Fahrstunde B', location: 'Bahnhof Uster', payStatus: 'pending', amount: '95.–' },
+  { time: '08:30', student: 'Sara Klein', type: 'Termin', location: 'Bahnhof Uster', payStatus: 'paid', amount: '95.–' },
+  { time: '11:00', student: 'Luca Pfister', type: 'Abschluss', location: 'Büro Zürich', payStatus: 'paid', amount: '0.–' },
+  { time: '14:00', student: 'Anna Müller', type: 'Termin', location: 'Schulhaus Küsnacht', payStatus: 'pending', amount: '95.–' },
+  { time: '16:30', student: 'Tobias Roth', type: 'Termin', location: 'Bahnhof Uster', payStatus: 'pending', amount: '95.–' },
 ])
 
 const adminWeekStats = computed(() => [
-  { label: 'Lektionen', value: '18' },
-  { label: 'Schüler aktiv', value: '24' },
+  { label: 'Termine', value: '18' },
+  { label: 'Kunden aktiv', value: '24' },
   { label: 'No-Shows', value: '0' },
   { label: 'Umsatz', value: `CHF 1'710.–`, highlight: true },
 ])
@@ -2314,9 +2282,12 @@ const demoSentCurrent = computed(() => demoSentTemplates.value.has(activeTemplat
 
 // ─── Email Preview Scaling ────────────────────────────────────────────────────
 const EMAIL_WIDTH = 560
-const EMAIL_HEIGHT = 500
+/** Fallback until iframe content height is measured */
+const EMAIL_HEIGHT_FALLBACK = 720
 const previewContainer = ref<HTMLElement | null>(null)
+const previewIframe = ref<HTMLIFrameElement | null>(null)
 const previewScale = ref(1)
+const emailContentHeight = ref(EMAIL_HEIGHT_FALLBACK)
 
 // The wrapper holds the full-size iframe and is visually scaled via CSS transform.
 // transform: scale() does NOT affect layout, so we set the wrapper's natural dimensions
@@ -2325,13 +2296,40 @@ const previewWrapStyle = computed(() => ({
   transform: `scale(${previewScale.value})`,
   transformOrigin: 'top left',
   width: `${EMAIL_WIDTH}px`,
-  height: `${EMAIL_HEIGHT}px`,
+  height: `${emailContentHeight.value}px`,
 }))
 
-// Container height = visual height after scaling (no empty gap below the iframe)
+// Container height = visual height after scaling (no empty gap / no clipping)
 const previewContainerHeight = computed(() =>
-  `${Math.round(EMAIL_HEIGHT * previewScale.value)}px`
+  `${Math.round(emailContentHeight.value * previewScale.value)}px`
 )
+
+function measurePreviewHeight() {
+  const iframe = previewIframe.value
+  if (!iframe) return
+  try {
+    const doc = iframe.contentDocument
+    if (!doc?.body) return
+    // Full document height including outer email padding
+    const h = Math.max(
+      doc.body.scrollHeight,
+      doc.documentElement?.scrollHeight ?? 0,
+    )
+    if (h > 0) emailContentHeight.value = Math.ceil(h)
+  } catch {
+    /* cross-origin / sandbox — keep fallback */
+  }
+}
+
+function onPreviewIframeLoad() {
+  // Double rAF so layout inside srcdoc has settled
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      measurePreviewHeight()
+      updatePreviewScale()
+    })
+  })
+}
 
 function updatePreviewScale() {
   if (previewContainer.value) {
@@ -2343,7 +2341,10 @@ function updatePreviewScale() {
 let resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null
 const debouncedResize = () => {
   if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer)
-  resizeDebounceTimer = setTimeout(updatePreviewScale, 150)
+  resizeDebounceTimer = setTimeout(() => {
+    updatePreviewScale()
+    measurePreviewHeight()
+  }, 150)
 }
 
 onMounted(() => {
@@ -2364,6 +2365,15 @@ const demoEmailHtml = computed(() => {
   if (activeTemplate.value === 'reminder') return getDemoReminderHtml(school, primary)
   if (activeTemplate.value === 'invoice') return getDemoInvoiceHtml(school, primary)
   return getDemoWelcomeHtml(school, primary)
+})
+
+watch(demoEmailHtml, async () => {
+  await nextTick()
+  // srcdoc updates sometimes skip a reliable load event — remeasure shortly after
+  setTimeout(() => {
+    measurePreviewHeight()
+    updatePreviewScale()
+  }, 50)
 })
 
 async function sendDemoEmail() {

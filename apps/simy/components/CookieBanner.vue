@@ -21,7 +21,7 @@
           <button
             @click="accept"
             class="px-4 py-2 text-sm rounded-lg text-white font-semibold transition-opacity hover:opacity-90"
-            style="background: var(--brand-primary, #6000BD)"
+            style="background: var(--brand-primary)"
           >
             Akzeptieren
           </button>

@@ -83,7 +83,7 @@
         <div class="grid md:grid-cols-2 gap-5">
           <div v-for="item in included" :key="item.title"
             class="bg-white rounded-2xl p-6 border border-gray-100 flex gap-4">
-            <span class="text-2xl flex-shrink-0">{{ item.icon }}</span>
+            <SimyIconTile :name="item.icon" :size="44" />
             <div>
               <h3 class="font-bold text-gray-900 mb-1">{{ item.title }}</h3>
               <p class="text-sm text-gray-500 leading-relaxed">{{ item.desc }}</p>
@@ -173,12 +173,12 @@ const process = [
 ]
 
 const included = [
-  { icon: '🔍', title: 'Keyword-Recherche', desc: 'Wir identifizieren alle relevanten Suchbegriffe in deiner Region mit hohem Buchungsabsicht.' },
-  { icon: '✍️', title: 'Anzeigentexte', desc: 'Professionelle, getestete Texte, die Klicks und Anfragen generieren.' },
-  { icon: '🎯', title: 'Geo-Targeting', desc: 'Anzeigen nur für Nutzer in deinem Einzugsgebiet — kein Budget verschwenden.' },
-  { icon: '📊', title: 'Monatliches Reporting', desc: 'Klares Report mit Kosten, Klicks, Anfragen und ROI — keine Blackbox.' },
-  { icon: '🔗', title: 'Integration mit Simy', desc: 'Anfragen aus Google Ads landen direkt im Simy-Dashboard als Lead.' },
-  { icon: '📞', title: 'Persönliche Betreuung', desc: 'Du hast einen festen Ansprechpartner — erreichbar per E-Mail und Telefon.' },
+  { icon: 'search', title: 'Keyword-Recherche', desc: 'Wir identifizieren alle relevanten Suchbegriffe in deiner Region mit hohem Buchungsabsicht.' },
+  { icon: 'pen', title: 'Anzeigentexte', desc: 'Professionelle, getestete Texte, die Klicks und Anfragen generieren.' },
+  { icon: 'target', title: 'Geo-Targeting', desc: 'Anzeigen nur für Nutzer in deinem Einzugsgebiet — kein Budget verschwenden.' },
+  { icon: 'chart', title: 'Monatliches Reporting', desc: 'Klares Report mit Kosten, Klicks, Anfragen und ROI — keine Blackbox.' },
+  { icon: 'link', title: 'Integration mit Simy', desc: 'Anfragen aus Google Ads landen direkt im Simy-Dashboard als Lead.' },
+  { icon: 'phone', title: 'Persönliche Betreuung', desc: 'Du hast einen festen Ansprechpartner — erreichbar per E-Mail und Telefon.' },
 ]
 
 const faqs = [

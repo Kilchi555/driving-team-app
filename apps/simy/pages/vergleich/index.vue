@@ -21,7 +21,7 @@
         </h1>
         <p class="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
           Ehrliche Gegenüberstellungen zu Calendly, Terminli, KLARA und SimplyBook —
-          damit Schweizer Selbständige und KMUs die passende Terminsoftware wählen.
+          damit Schweizer Selbständige und KMUs das passende Online-Buchungssystem wählen.
         </p>
       </div>
     </section>
@@ -51,11 +51,11 @@
       <div class="max-w-3xl mx-auto text-center">
         <p class="text-sm text-gray-500 mb-4">Oder direkt nach Branche starten</p>
         <div class="flex flex-wrap justify-center gap-3">
-          <NuxtLink to="/fahrschule/software" class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200">Fahrschulsoftware</NuxtLink>
-          <NuxtLink to="/coaching" class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200">Coaching</NuxtLink>
-          <NuxtLink to="/consulting" class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200">Consulting</NuxtLink>
-          <NuxtLink to="/massage" class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200">Massage</NuxtLink>
-          <NuxtLink to="/branchen" class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-purple-200">Alle Branchen</NuxtLink>
+          <NuxtLink to="/fahrschule/software" class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300">Fahrschule</NuxtLink>
+          <NuxtLink to="/coaching" class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300">Coaching</NuxtLink>
+          <NuxtLink to="/consulting" class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300">Consulting</NuxtLink>
+          <NuxtLink to="/massage" class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300">Massage</NuxtLink>
+          <NuxtLink to="/branchen" class="text-sm font-semibold px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:border-gray-300">Alle Branchen</NuxtLink>
         </div>
       </div>
     </section>
@@ -75,14 +75,14 @@ useHead({
     {
       name: 'description',
       content:
-        'Vergleiche Simy mit Calendly, Terminli, KLARA und SimplyBook. Welche Terminsoftware passt zu Schweizer Selbständigen und KMUs?',
+        'Vergleiche Simy mit Calendly, Terminli, KLARA und SimplyBook. Welches Online-Buchungssystem passt zu Schweizer Selbständigen und KMUs?',
     },
     {
       name: 'keywords',
       content:
-        'terminsoftware vergleich schweiz, calendly alternative, terminli alternative, klara terminbuchung, simplybook alternative',
+        'online buchungssystem vergleich schweiz, calendly alternative, terminli alternative, klara terminbuchung, simplybook alternative',
     },
-    { property: 'og:title', content: 'Simy Vergleich – Terminsoftware Schweiz' },
+    { property: 'og:title', content: 'Simy Vergleich – Online-Buchungssystem Schweiz' },
     { property: 'og:url', content: 'https://simy.ch/vergleich' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/vergleich' }],

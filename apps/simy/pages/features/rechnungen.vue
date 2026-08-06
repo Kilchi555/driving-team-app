@@ -76,7 +76,7 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div v-for="pm in paymentMethods" :key="pm.name"
             class="rounded-2xl p-5 border border-gray-100 text-center hover:border-gray-200 transition-all">
-            <div class="text-2xl mb-2">{{ pm.icon }}</div>
+            <SimyIconTile :name="pm.icon" :size="48" class="mx-auto mb-2" />
             <p class="font-bold text-gray-900 text-sm">{{ pm.name }}</p>
             <p class="text-xs text-gray-400 mt-0.5">{{ pm.desc }}</p>
           </div>
@@ -91,10 +91,7 @@
         <div class="grid md:grid-cols-2 gap-6">
           <div v-for="f in invoiceFeatures" :key="f.title"
             class="flex gap-5 p-6 rounded-2xl border border-gray-100 hover:border-gray-200 transition-all group">
-            <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-all"
-              style="background: rgba(var(--brand-rgb),0.08)">
-              <span class="text-xl">{{ f.icon }}</span>
-            </div>
+            <SimyIconTile :name="f.icon" :size="44" class="group-hover:scale-110 transition-transform" />
             <div>
               <h3 class="font-bold text-gray-900 mb-1">{{ f.title }}</h3>
               <p class="text-sm text-gray-500 leading-relaxed">{{ f.desc }}</p>
@@ -158,20 +155,20 @@ const invoiceLines = [
 ]
 
 const paymentMethods = [
-  { icon: '📱', name: 'TWINT', desc: 'Schweizer Standard' },
-  { icon: '💳', name: 'Kreditkarte', desc: 'Visa / Mastercard' },
-  { icon: '🏦', name: 'QR-Rechnung', desc: 'Swiss QR Bill' },
-  { icon: '🟡', name: 'PostFinance', desc: 'E-Finance' },
+  { icon: 'phone', name: 'TWINT', desc: 'Schweizer Standard' },
+  { icon: 'credit-card', name: 'Kreditkarte', desc: 'Visa / Mastercard' },
+  { icon: 'building', name: 'QR-Rechnung', desc: 'Swiss QR Bill' },
+  { icon: 'credit-card', name: 'PostFinance', desc: 'E-Finance' },
 ]
 
 const invoiceFeatures = [
-  { icon: '⚡', title: 'Automatische Erstellung', desc: 'Nach jedem Termin erstellt Simy automatisch die Rechnung — ohne dein Zutun.' },
-  { icon: '📧', title: 'Direktversand per E-Mail', desc: 'Rechnung direkt per E-Mail an den Kunden — mit Zahlungslink und PDF-Anhang.' },
-  { icon: '🔔', title: 'Zahlungserinnerungen', desc: 'Mit Online-Zahlung: vollautomatisch. Bei E-Mail-Rechnung: Mahnung mit wenigen Klicks versenden — schnell und einfach.' },
-  { icon: '💳', title: 'TWINT & Online-Zahlung', desc: 'Kunden zahlen per TWINT, Kreditkarte oder QR-Rechnung — alles ohne Extra-Setup.' },
-  { icon: '📊', title: 'Einnahmen-Übersicht', desc: 'Tages-, Wochen- und Monatsumsatz auf einen Blick. Offene und bezahlte Rechnungen sortiert.' },
-  { icon: '🎟️', title: 'Guthaben-System', desc: 'Kunden kaufen Pakete im Voraus. Guthaben wird automatisch abgezogen.' },
-  { icon: '📋', title: 'Steuer-Export', desc: 'Alle Transaktionen als CSV exportieren — direkt für die Steuererklärung oder den Treuhänder.' },
-  { icon: '🏷️', title: 'Rabatte & Sonderpreise', desc: 'Schnupper-Angebot, Frühbucher-Rabatt oder individuelle Preise — flexibel konfigurierbar.' },
+  { icon: 'zap', title: 'Automatische Erstellung', desc: 'Nach jedem Termin erstellt Simy automatisch die Rechnung — ohne dein Zutun.' },
+  { icon: 'mail', title: 'Direktversand per E-Mail', desc: 'Rechnung direkt per E-Mail an den Kunden — mit Zahlungslink und PDF-Anhang.' },
+  { icon: 'bell', title: 'Zahlungserinnerungen', desc: 'Mit Online-Zahlung: vollautomatisch. Bei E-Mail-Rechnung: Mahnung mit wenigen Klicks versenden — schnell und einfach.' },
+  { icon: 'credit-card', title: 'TWINT & Online-Zahlung', desc: 'Kunden zahlen per TWINT, Kreditkarte oder QR-Rechnung — alles ohne Extra-Setup.' },
+  { icon: 'chart', title: 'Einnahmen-Übersicht', desc: 'Tages-, Wochen- und Monatsumsatz auf einen Blick. Offene und bezahlte Rechnungen sortiert.' },
+  { icon: 'package', title: 'Guthaben-System', desc: 'Kunden kaufen Pakete im Voraus. Guthaben wird automatisch abgezogen.' },
+  { icon: 'clipboard', title: 'Steuer-Export', desc: 'Alle Transaktionen als CSV exportieren — direkt für die Steuererklärung oder den Treuhänder.' },
+  { icon: 'label', title: 'Rabatte & Sonderpreise', desc: 'Schnupper-Angebot, Frühbucher-Rabatt oder individuelle Preise — flexibel konfigurierbar.' },
 ]
 </script>

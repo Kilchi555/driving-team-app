@@ -42,7 +42,7 @@
             :href="review.link"
             target="_blank"
             rel="nofollow noopener noreferrer"
-            class="snap-start shrink-0 w-[85vw] sm:w-[48vw] md:w-[32vw] max-w-[340px] block rounded-2xl p-6 bg-white border border-gray-100 no-underline transition-all duration-300 hover:-translate-y-1 hover:border-purple-100"
+            class="snap-start shrink-0 w-[85vw] sm:w-[48vw] md:w-[32vw] max-w-[340px] block rounded-2xl p-6 bg-white border border-gray-100 no-underline transition-all duration-300 hover:-translate-y-1 hover:border-gray-200"
           >
             <div class="flex gap-0.5 text-amber-400 text-base mb-4">
               <span v-for="n in Math.round(review.rating || 5)" :key="n">★</span>

@@ -93,7 +93,7 @@
           <div v-for="pain in pains" :key="pain.title"
             class="rounded-2xl p-6 border transition-all duration-300 hover:-translate-y-1"
             style="background: rgba(var(--brand-rgb),0.04); border-color: rgba(var(--brand-rgb),0.15)">
-            <div class="text-3xl mb-3">{{ pain.icon }}</div>
+            <SimyIconTile :name="pain.icon" :size="48" class="mb-3" />
             <h3 class="font-bold text-gray-900 mb-2">{{ pain.title }}</h3>
             <p class="text-sm text-gray-500 leading-relaxed">{{ pain.text }}</p>
           </div>
@@ -115,11 +115,8 @@
 
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div v-for="feature in features" :key="feature.title"
-            class="bg-white rounded-3xl p-7 border border-gray-100 hover:border-purple-100 hover:-translate-y-1 transition-all duration-300 group">
-            <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 transition-all group-hover:scale-110"
-              style="background: rgba(var(--brand-rgb),0.08)">
-              <span class="text-2xl">{{ feature.icon }}</span>
-            </div>
+            class="bg-white rounded-3xl p-7 border border-gray-100 hover:-translate-y-1 transition-all duration-300 group hover:border-[color:rgba(var(--brand-rgb),0.25)]">
+            <SimyIconTile :name="feature.icon" :size="48" class="mb-5 group-hover:scale-110 transition-transform" />
             <h3 class="font-bold text-gray-900 mb-2 text-lg">{{ feature.title }}</h3>
             <p class="text-sm text-gray-500 leading-relaxed mb-4">{{ feature.desc }}</p>
             <a v-if="feature.link" :href="feature.link" class="text-xs font-semibold transition-colors" style="color: var(--brand-primary)">
@@ -133,8 +130,8 @@
     <!-- ── Website Generator Highlight ─────────────────────────────────────── -->
     <section class="py-24 px-6">
       <div class="max-w-5xl mx-auto">
-        <div class="rounded-3xl p-10 md:p-14 relative overflow-hidden border border-purple-100"
-          style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04) 0%, rgba(var(--brand-2-rgb),0.06) 100%)">
+        <div class="rounded-3xl p-10 md:p-14 relative overflow-hidden border"
+          style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04) 0%, rgba(var(--brand-2-rgb),0.06) 100%); border-color: rgba(var(--brand-rgb),0.15)">
           <div class="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 pointer-events-none"
             style="background: radial-gradient(circle, var(--brand-secondary), transparent); transform: translate(30%, -30%)"></div>
           <div class="relative grid md:grid-cols-2 gap-10 items-center">
@@ -188,13 +185,13 @@
     <!-- ── Marketing Add-on ────────────────────────────────────────────────── -->
     <section class="py-16 px-6 bg-gray-950">
       <div class="max-w-4xl mx-auto text-center">
-        <p class="text-xs font-bold uppercase tracking-widest mb-4 text-purple-400">Marketing</p>
+        <p class="text-xs font-bold uppercase tracking-widest mb-4" style="color: var(--brand-accent)">Marketing</p>
         <h2 class="text-3xl font-extrabold text-white mb-4">Mehr Schüler durch Google Ads & SEO</h2>
         <p class="text-gray-400 max-w-xl mx-auto mb-8">Simy ist mehr als Software — wir bringen dir auch neue Kunden. Mit gezielten Google Ads und lokalem SEO, das wirklich funktioniert.</p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="/marketing/google-ads"
-            class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-white font-bold text-sm border border-purple-500/30 hover:border-purple-500/60 transition-all"
-            style="background: rgba(var(--brand-rgb),0.2)">
+            class="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-white font-bold text-sm border transition-all hover:opacity-90"
+            style="background: rgba(var(--brand-rgb),0.2); border-color: rgba(var(--brand-rgb),0.35)">
             Google Ads für Fahrschulen →
           </a>
           <a href="/marketing/seo"
@@ -214,7 +211,7 @@
         </div>
         <div class="grid md:grid-cols-2 gap-6">
           <div v-for="t in testimonials" :key="t.name"
-            class="rounded-2xl p-7 border border-gray-100 bg-white hover:border-purple-100 transition-all">
+            class="rounded-2xl p-7 border border-gray-100 bg-white transition-all hover:border-[color:rgba(var(--brand-rgb),0.25)]">
             <div class="flex gap-1 mb-4">
               <svg v-for="i in 5" :key="i" class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
@@ -275,7 +272,7 @@
       <div class="max-w-2xl mx-auto text-center">
         <SimyFounderNote :blurb="founderBlurbHome" compact />
         <h2 class="text-4xl font-black text-white mb-5">Bereit, deine Fahrschule auf Autopilot zu stellen?</h2>
-        <p class="text-purple-200 text-lg mb-10">30 Tage kostenlos testen. Keine Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar.</p>
+        <p class="text-white/70 text-lg mb-10">30 Tage kostenlos testen. Keine Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar.</p>
         <a href="https://app.simy.ch/tenant-register?type=driving_school"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90 hover:-translate-y-1"
           style="color: var(--brand-primary); box-shadow: 0 12px 40px rgba(0,0,0,0.2)">
@@ -284,7 +281,7 @@
           </svg>
           Jetzt kostenlos starten
         </a>
-        <p class="text-purple-300 text-sm mt-5">Bereits über 50 Fahrschulen vertrauen Simy</p>
+        <p class="text-white/50 text-sm mt-5">Bereits über 50 Fahrschulen vertrauen Simy</p>
       </div>
     </section>
 
@@ -359,18 +356,18 @@ const stats = [
 ]
 
 const pains = [
-  { icon: '📱', title: 'WhatsApp-Chaos', text: 'Termine per WhatsApp koordinieren, Absagen vergessen, doppelte Buchungen — das kennen alle Fahrlehrer.' },
-  { icon: '📊', title: 'Excel & Papier', text: 'Stundenlisten auf Papier, Rechnungen in Word, Zahlungseingänge manuell prüfen. Ineffizient und fehleranfällig.' },
-  { icon: '🔁', title: 'Kein Überblick', text: 'Wer hat was bezahlt? Welcher Schüler braucht wie viele Stunden noch? Diese Fragen kosten täglich wertvolle Zeit.' },
+  { icon: 'phone', title: 'WhatsApp-Chaos', text: 'Termine per WhatsApp koordinieren, Absagen vergessen, doppelte Buchungen — das kennen alle Fahrlehrer.' },
+  { icon: 'chart', title: 'Excel & Papier', text: 'Stundenlisten auf Papier, Rechnungen in Word, Zahlungseingänge manuell prüfen. Ineffizient und fehleranfällig.' },
+  { icon: 'refresh', title: 'Kein Überblick', text: 'Wer hat was bezahlt? Welcher Schüler braucht wie viele Stunden noch? Diese Fragen kosten täglich wertvolle Zeit.' },
 ]
 
 const features = [
-  { icon: '📅', title: 'Online-Terminbuchung', desc: 'Schüler buchen selbst — per Link, rund um die Uhr. Simy-Termine synchronisieren mit deinem privaten Kalender. Private Termine dort blockieren automatisch deine Verfügbarkeit.', link: '/fahrschule/buchungssystem' },
-  { icon: '💶', title: 'Einfache Rechnungsstellung', desc: 'Rechnungen automatisch erstellt und per E-Mail versendet. Mit Online-Zahlung laufen Erinnerungen vollautomatisch — bei Rechnungsversand ist das Mahnen mit wenigen Klicks erledigt.', link: null },
-  { icon: '📱', title: 'Fahrlehrer-App', desc: 'Dein Kalender, deine Schüler, deine Einnahmen — alles auf dem Smartphone, immer aktuell.', link: '/fahrschule/app' },
-  { icon: '🌐', title: 'Website-Generator', desc: 'Simy erstellt eine SEO-starke Landingpage mit Online-Terminbuchung, Preisen und Bewertungen — live unter /s/dein-slug.', link: 'https://app.simy.ch/admin/website/setup' },
-  { icon: '📊', title: 'Statistiken & Berichte', desc: 'Einnahmen, Fahrstunden, Prüfungsquote — alle Zahlen auf einen Blick.', link: null },
-  { icon: '🎨', title: 'Dein Branding', desc: 'Simy läuft in deinen Farben und mit deinem Logo — für deine Schüler sieht es aus wie deine eigene App.', link: null },
+  { icon: 'calendar', title: 'Online-Terminbuchung', desc: 'Schüler buchen selbst — per Link, rund um die Uhr. Simy-Termine synchronisieren mit deinem privaten Kalender. Private Termine dort blockieren automatisch deine Verfügbarkeit.', link: '/fahrschule/buchungssystem' },
+  { icon: 'wallet', title: 'Einfache Rechnungsstellung', desc: 'Rechnungen automatisch erstellt und per E-Mail versendet. Mit Online-Zahlung laufen Erinnerungen vollautomatisch — bei Rechnungsversand ist das Mahnen mit wenigen Klicks erledigt.', link: null },
+  { icon: 'phone', title: 'Fahrlehrer-App', desc: 'Dein Kalender, deine Schüler, deine Einnahmen — alles auf dem Smartphone, immer aktuell.', link: '/fahrschule/app' },
+  { icon: 'globe', title: 'Website-Generator', desc: 'Simy erstellt eine SEO-starke Landingpage mit Online-Terminbuchung, Preisen und Bewertungen — live unter /s/dein-slug.', link: 'https://app.simy.ch/admin/website/setup' },
+  { icon: 'chart', title: 'Statistiken & Berichte', desc: 'Einnahmen, Fahrstunden, Prüfungsquote — alle Zahlen auf einen Blick.', link: null },
+  { icon: 'palette', title: 'Dein Branding', desc: 'Simy läuft in deinen Farben und mit deinem Logo — für deine Schüler sieht es aus wie deine eigene App.', link: null },
 ]
 
 const websiteFeatures = [

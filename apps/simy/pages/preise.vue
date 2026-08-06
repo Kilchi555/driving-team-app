@@ -97,7 +97,7 @@
             <div class="flex items-start justify-between mb-3">
               <div>
                 <p class="font-bold text-gray-900 text-sm">Kursbuchungsseite</p>
-                <p class="text-xs text-gray-400 mt-0.5">Online-Buchung für Kurse & Lektionen</p>
+                <p class="text-xs text-gray-400 mt-0.5">Online-Buchung für Kurse & Termine</p>
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary);">Add-on</span>
             </div>
@@ -337,20 +337,20 @@ const faqs = [
 ]
 
 useHead(() => ({
-  title: `Preise – Simy | Terminsoftware ab CHF ${STARTING_PRICE_CHF}/Monat`,
+  title: `Preise – Simy | All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat`,
   meta: [
-    { name: 'description', content: `Simy Preise: Terminsoftware ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.` },
-    { name: 'keywords', content: 'Simy preis, terminsoftware kosten, online buchungssystem preis schweiz' },
-    { property: 'og:title', content: `Preise – Simy | Terminsoftware ab CHF ${STARTING_PRICE_CHF}/Monat` },
+    { name: 'description', content: `Simy Preise: All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.` },
+    { name: 'keywords', content: 'Simy preis, all-in-one software kosten, online buchungssystem preis schweiz' },
+    { property: 'og:title', content: `Preise – Simy | All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat` },
     { property: 'og:description', content: `Simy Preise: ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar.` },
     { property: 'og:url', content: 'https://simy.ch/preise' },
-    { name: 'twitter:title', content: `Preise – Simy | Terminsoftware ab CHF ${STARTING_PRICE_CHF}/Monat` },
+    { name: 'twitter:title', content: `Preise – Simy | All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat` },
     { name: 'twitter:description', content: `Simy Preise: ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen.` },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/preise' }],
   script: ldScripts(
     productOffersLd({
-      name: 'Simy Terminsoftware',
+      name: 'Simy All-in-One Software',
       description: 'Online-Buchung, Abrechnung und App für Schweizer Selbständige und KMUs.',
       url: 'https://simy.ch/preise',
       plans: plans.value.map((p) => ({

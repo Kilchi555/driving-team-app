@@ -1,0 +1,160 @@
+/** Named line icons used across Simy marketing pages. */
+export type SimyIconName =
+  | 'activity'
+  | 'bell'
+  | 'bell-off'
+  | 'book'
+  | 'brain'
+  | 'briefcase'
+  | 'building'
+  | 'calculator'
+  | 'calendar'
+  | 'camp'
+  | 'car'
+  | 'chart'
+  | 'chart-down'
+  | 'check'
+  | 'clipboard'
+  | 'clock'
+  | 'cloud'
+  | 'compass'
+  | 'credit-card'
+  | 'folder'
+  | 'globe'
+  | 'graduate'
+  | 'handshake'
+  | 'invoice'
+  | 'label'
+  | 'leaf'
+  | 'link'
+  | 'map-pin'
+  | 'megaphone'
+  | 'message'
+  | 'monitor'
+  | 'music'
+  | 'package'
+  | 'palette'
+  | 'paw'
+  | 'pen'
+  | 'phone'
+  | 'refresh'
+  | 'rocket'
+  | 'school'
+  | 'search'
+  | 'settings'
+  | 'shuffle'
+  | 'spark'
+  | 'swiss'
+  | 'target'
+  | 'users'
+  | 'users-family'
+  | 'wallet'
+  | 'zap'
+  | 'award'
+  | 'mail'
+  | 'flame'
+  | 'spa'
+
+/** Map legacy emoji strings → icon keys (migration helper). */
+export const EMOJI_TO_ICON: Record<string, SimyIconName> = {
+  '📱': 'phone',
+  '📲': 'phone',
+  '☎️': 'phone',
+  '🧾': 'invoice',
+  '🔕': 'bell-off',
+  '🔔': 'bell',
+  '📅': 'calendar',
+  '🗓️': 'calendar',
+  '💬': 'message',
+  '💶': 'wallet',
+  '💳': 'credit-card',
+  '💸': 'wallet',
+  '📦': 'package',
+  '🧑‍💼': 'users',
+  '👤': 'users',
+  '👥': 'users',
+  '👨‍👩‍👧': 'users-family',
+  '🎨': 'palette',
+  '🤝': 'handshake',
+  '🧠': 'brain',
+  '💼': 'briefcase',
+  '🔀': 'shuffle',
+  '🗂️': 'folder',
+  '🏢': 'building',
+  '📝': 'pen',
+  '✍️': 'pen',
+  '🚀': 'rocket',
+  '🇨🇭': 'swiss',
+  '⏰': 'clock',
+  '🕒': 'clock',
+  '📉': 'chart-down',
+  '📊': 'chart',
+  '📈': 'chart',
+  '💪': 'activity',
+  '🏋️': 'activity',
+  '🏷️': 'label',
+  '🎯': 'target',
+  '📚': 'book',
+  '📖': 'book',
+  '🧮': 'calculator',
+  '🎓': 'graduate',
+  '🎹': 'music',
+  '🎸': 'music',
+  '🎼': 'music',
+  '👩‍🏫': 'users',
+  '🏫': 'school',
+  '🐕': 'paw',
+  '🦮': 'paw',
+  '🐾': 'paw',
+  '🌦️': 'compass',
+  '🏕️': 'camp',
+  '📋': 'clipboard',
+  '🕳️': 'clock',
+  '🌿': 'leaf',
+  '🕯️': 'flame',
+  '🧘': 'spa',
+  '🚗': 'car',
+  '💻': 'monitor',
+  '🌐': 'globe',
+  '🔗': 'link',
+  '🔄': 'refresh',
+  '🔁': 'refresh',
+  '⚙️': 'settings',
+  '📍': 'map-pin',
+  '🪄': 'spark',
+  '✨': 'spark',
+  '🔒': 'settings',
+  '📣': 'megaphone',
+  '📢': 'megaphone',
+  '🔍': 'search',
+  '⚡': 'zap',
+  '❓': 'spark',
+  '🏆': 'award',
+  '📧': 'mail',
+  '💵': 'wallet',
+  '💰': 'wallet',
+  '☁️': 'cloud',
+  '🗺️': 'map-pin',
+  '🗺': 'map-pin',
+  '🟡': 'credit-card',
+  '🎟️': 'package',
+  '🎫': 'package',
+  '📞': 'phone',
+}
+
+export function resolveIconName(value: string): SimyIconName {
+  if (EMOJI_TO_ICON[value]) return EMOJI_TO_ICON[value]
+  // already a key
+  return (value as SimyIconName) || 'spark'
+}
+
+export const VERTICAL_ICON_BY_SLUG: Record<string, SimyIconName> = {
+  fahrschule: 'car',
+  coaching: 'brain',
+  consulting: 'briefcase',
+  'personal-training': 'activity',
+  nachhilfe: 'book',
+  musikschule: 'music',
+  hundeschule: 'paw',
+  massage: 'leaf',
+}

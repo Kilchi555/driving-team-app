@@ -42,11 +42,13 @@
 </template>
 
 <script setup lang="ts">
+import { SIMY_BRAND } from '~/utils/brand'
+
 const props = withDefaults(defineProps<{
   primaryColor?: string
   className?: string
 }>(), {
-  primaryColor: '#6000BD',
+  primaryColor: SIMY_BRAND.primary,
   className: 'h-8'
 })
 </script>

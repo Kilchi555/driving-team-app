@@ -71,10 +71,7 @@
         <div class="grid md:grid-cols-2 gap-6">
           <div v-for="f in bookingFeatures" :key="f.title"
             class="flex gap-5 p-6 rounded-2xl border border-gray-100 hover:border-gray-200 transition-all group">
-            <div class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-110"
-              style="background: rgba(var(--brand-rgb),0.08)">
-              <span class="text-xl">{{ f.icon }}</span>
-            </div>
+            <SimyIconTile :name="f.icon" :size="44" class="group-hover:scale-110 transition-transform" />
             <div>
               <h3 class="font-bold text-gray-900 mb-1">{{ f.title }}</h3>
               <p class="text-sm text-gray-500 leading-relaxed">{{ f.desc }}</p>
@@ -140,13 +137,13 @@ const steps = [
 ]
 
 const bookingFeatures = [
-  { icon: '🔗', title: 'Persönlicher Buchungslink', desc: 'Jede Fahrschule und jeder Fahrlehrer erhält einen eigenen Buchungslink — direkt teilbar per WhatsApp, QR-Code oder auf der Website.' },
-  { icon: '📱', title: 'Funktioniert auf jedem Gerät', desc: 'Schüler buchen auf dem Smartphone, Tablet oder Desktop — ohne App-Download. Direkt im Browser.' },
-  { icon: '🔔', title: 'Automatische Erinnerungen', desc: 'Simy sendet 24h vor dem Termin automatisch eine E-Mail — SMS nur ohne E-Mail-Adresse. SMS-Segmente sind im Plan inklusive.' },
-  { icon: '📅', title: 'Zwei-Wege-Kalender-Sync', desc: 'Simy-Termine erscheinen automatisch in deinem Google Calendar, Apple Calendar oder Outlook. Und umgekehrt: Hast du dort einen privaten Termin eingetragen, blockiert Simy diese Zeit automatisch — Schüler können dann genau dort keinen Slot buchen.' },
-  { icon: '🔄', title: 'Stornierung & Umbuchung', desc: 'Schüler können Termine selbst absagen oder umbuchen — innerhalb der von dir definierten Fristen.' },
-  { icon: '🏫', title: 'Multi-Fahrlehrer', desc: 'Jeder Fahrlehrer hat seinen eigenen Kalender. Die Admin-Ansicht zeigt alle Fahrlehrer auf einen Blick.' },
-  { icon: '⚙️', title: 'Regeln & Puffer', desc: 'Du definierst Mindestvorlaufzeiten, Puffer zwischen Terminen und maximale Buchungen pro Tag.' },
-  { icon: '📊', title: 'Auslastungs-Statistik', desc: 'Sieh wie ausgelastet jeder Fahrlehrer ist — und optimiere deine Kapazitäten.' },
+  { icon: 'link', title: 'Persönlicher Buchungslink', desc: 'Jede Fahrschule und jeder Fahrlehrer erhält einen eigenen Buchungslink — direkt teilbar per WhatsApp, QR-Code oder auf der Website.' },
+  { icon: 'phone', title: 'Funktioniert auf jedem Gerät', desc: 'Schüler buchen auf dem Smartphone, Tablet oder Desktop — ohne App-Download. Direkt im Browser.' },
+  { icon: 'bell', title: 'Automatische Erinnerungen', desc: 'Simy sendet 24h vor dem Termin automatisch eine E-Mail — SMS nur ohne E-Mail-Adresse. SMS-Segmente sind im Plan inklusive.' },
+  { icon: 'calendar', title: 'Zwei-Wege-Kalender-Sync', desc: 'Simy-Termine erscheinen automatisch in deinem Google Calendar, Apple Calendar oder Outlook. Und umgekehrt: Hast du dort einen privaten Termin eingetragen, blockiert Simy diese Zeit automatisch — Schüler können dann genau dort keinen Slot buchen.' },
+  { icon: 'refresh', title: 'Stornierung & Umbuchung', desc: 'Schüler können Termine selbst absagen oder umbuchen — innerhalb der von dir definierten Fristen.' },
+  { icon: 'school', title: 'Multi-Fahrlehrer', desc: 'Jeder Fahrlehrer hat seinen eigenen Kalender. Die Admin-Ansicht zeigt alle Fahrlehrer auf einen Blick.' },
+  { icon: 'settings', title: 'Regeln & Puffer', desc: 'Du definierst Mindestvorlaufzeiten, Puffer zwischen Terminen und maximale Buchungen pro Tag.' },
+  { icon: 'chart', title: 'Auslastungs-Statistik', desc: 'Sieh wie ausgelastet jeder Fahrlehrer ist — und optimiere deine Kapazitäten.' },
 ]
 </script>

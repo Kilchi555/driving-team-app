@@ -12,7 +12,13 @@
             >
               <aside class="side" :style="sideStyle">
                 <div class="brand-chip">
-                  <img src="/simy-logo.png" alt="" width="140" height="32" />
+                  <img
+                    :src="logoSrc || '/simy-logo.png'"
+                    alt=""
+                    width="140"
+                    height="32"
+                    :style="{ filter: logoColorFilter }"
+                  />
                 </div>
                 <p class="lab">Hauptbereich</p>
                 <div
@@ -82,13 +88,13 @@
                     <div class="ph">Umsatz-Verlauf</div>
                     <div class="bars">
                       <div v-for="b in bars" :key="b.l" class="bc">
-                        <div class="bar" :class="{ on: b.on }" :style="{ height: b.h, background: b.on ? primaryColor : '#d4b8f5' }" />
+                        <div class="bar" :class="{ on: b.on }" :style="{ height: b.h, background: b.on ? primaryColor : `${primaryColor}40` }" />
                         <span>{{ b.l }}</span>
                       </div>
                     </div>
                   </div>
                   <div class="panel">
-                    <div class="ph">Offene Rechnungen · 8 Schüler</div>
+                    <div class="ph">Offene Rechnungen · 8 Kunden</div>
                     <div v-for="s in students" :key="s.name" class="stu">
                       <span class="sav" :style="{ color: primaryColor, background: `${primaryColor}1a` }">{{ s.ini }}</span>
                       <div class="smeta">
@@ -116,17 +122,23 @@
             :style="{ transform: `scale(${phoneScale})` }"
           >
             <div class="m-top">
-              <img src="/simy-logo.png" alt="" width="110" height="26" />
+              <img
+                :src="logoSrc || '/simy-logo.png'"
+                alt=""
+                width="110"
+                height="26"
+                :style="{ filter: logoColorFilter }"
+              />
               <span>Mo., 03.08.</span>
             </div>
             <div class="m-h">
               <strong>Heute</strong>
               <span>8 Termine</span>
             </div>
-            <div class="m-next" :style="gradStyle">
+            <div class="m-next" :style="nextCardStyle">
               <p>Nächster Termin</p>
               <strong>09:00 · Lena Meier</strong>
-              <span>Kat. B · 45 Min</span>
+              <span>Kat. Coaching · 45 Min</span>
             </div>
             <div class="m-stats">
               <div><b>14.5h</b><span>Heute</span></div>
@@ -152,20 +164,32 @@
 </template>
 
 <script setup lang="ts">
+import { SIMY_BRAND, simyLogoColorFilter } from '~/utils/brand'
+
 const props = withDefaults(defineProps<{
   primaryColor?: string
   secondaryColor?: string
+  logoSrc?: string | null
 }>(), {
-  primaryColor: '#6000BD',
-  secondaryColor: '#8B2FE8',
+  primaryColor: SIMY_BRAND.primary,
+  secondaryColor: SIMY_BRAND.secondary,
+  logoSrc: null,
 })
 
+const logoColorFilter = computed(() =>
+  simyLogoColorFilter(props.primaryColor, { hasCustomLogo: !!props.logoSrc }),
+)
 const sideStyle = computed(() => ({
   background: `linear-gradient(180deg, ${props.primaryColor}, ${props.secondaryColor})`,
 }))
 
 const gradStyle = computed(() => ({
   background: `linear-gradient(135deg, ${props.primaryColor}, ${props.secondaryColor})`,
+}))
+
+const nextCardStyle = computed(() => ({
+  ...gradStyle.value,
+  boxShadow: `0 12px 28px ${props.primaryColor}47`,
 }))
 
 const desktopVp = ref<HTMLElement | null>(null)
@@ -188,8 +212,8 @@ onMounted(() => {
   onBeforeUnmount(() => cleanups.forEach((fn) => fn()))
 })
 
-const navMain = ['Dashboard', 'Zahlungen', 'Rechnungen', 'Schüler']
-const navAdmin = ['Kurse', 'Stunden', 'Erinnerungen']
+const navMain = ['Dashboard', 'Zahlungen', 'Rechnungen', 'Kunden']
+const navAdmin = ['Kurse', 'Termine', 'Erinnerungen']
 const bars = [
   { l: 'Mai', h: '48%', on: false },
   { l: 'Jun', h: '62%', on: false },
@@ -203,11 +227,11 @@ const students = [
   { ini: 'NG', name: 'Noah Graf', meta: '1 Rechnung', amt: 'CHF 310' },
 ]
 const agenda = [
-  { t: '10:00', ini: 'JF', name: 'Jonas Frei', meta: 'Autobahn' },
-  { t: '11:30', ini: 'MW', name: 'Mia Weber', meta: 'Parkieren' },
-  { t: '14:00', ini: 'NG', name: 'Noah Graf', meta: 'Kat. B' },
-  { t: '15:30', ini: 'SK', name: 'Sara Kunz', meta: 'Theorie' },
-  { t: '16:30', ini: 'TB', name: 'Tim Berger', meta: 'Kat. A' },
+  { t: '10:00', ini: 'JF', name: 'Jonas Frei', meta: 'Vor Ort' },
+  { t: '11:30', ini: 'MW', name: 'Mia Weber', meta: 'Online' },
+  { t: '14:00', ini: 'NG', name: 'Noah Graf', meta: 'Paket A' },
+  { t: '15:30', ini: 'SK', name: 'Sara Kunz', meta: 'Workshop' },
+  { t: '16:30', ini: 'TB', name: 'Tim Berger', meta: 'Follow-up' },
 ]
 </script>
 
@@ -231,7 +255,7 @@ const agenda = [
   transform: rotateY(-11deg) rotateX(5deg);
   transform-style: preserve-3d;
   animation: rise-laptop 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
-  filter: drop-shadow(0 18px 32px rgba(40, 8, 70, 0.22));
+  filter: drop-shadow(0 18px 32px rgba(0, 0, 0, 0.18));
 }
 
 .lid {
@@ -309,7 +333,7 @@ const agenda = [
   margin-bottom: 22px;
   display: flex;
   justify-content: center;
-  box-shadow: 0 8px 20px rgba(20, 0, 50, 0.18);
+  box-shadow: 0 8px 20px rgba(var(--brand-rgb), 0.18);
 }
 
 .brand-chip img {
@@ -356,7 +380,7 @@ const agenda = [
   height: 36px;
   border-radius: 12px;
   background: #fff;
-  color: #6000BD;
+  color: var(--brand-primary);
   display: grid;
   place-items: center;
   font-size: 12px;
@@ -418,7 +442,7 @@ const agenda = [
 
 .pend {
   background: #fff;
-  border: 1px solid #ebe4f5;
+  border: 1px solid rgba(var(--brand-rgb), 0.12);
   border-radius: 16px;
   padding: 14px 16px;
   margin-bottom: 12px;
@@ -471,7 +495,7 @@ const agenda = [
 
 .kpi {
   background: #fff;
-  border: 1px solid #ebe4f5;
+  border: 1px solid rgba(var(--brand-rgb), 0.12);
   border-radius: 16px;
   padding: 14px;
 }
@@ -535,7 +559,7 @@ const agenda = [
 
 .panel {
   background: #fff;
-  border: 1px solid #ebe4f5;
+  border: 1px solid rgba(var(--brand-rgb), 0.12);
   border-radius: 16px;
   padding: 14px 16px;
 }
@@ -631,7 +655,7 @@ const agenda = [
   transform: rotateY(-12deg) rotateX(4deg);
   transform-style: preserve-3d;
   animation: rise-phone 0.95s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
-  filter: drop-shadow(0 14px 28px rgba(40, 8, 70, 0.26));
+  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.22));
   z-index: 3;
 }
 
@@ -714,7 +738,6 @@ const agenda = [
   border-radius: 18px;
   padding: 16px;
   margin-bottom: 12px;
-  box-shadow: 0 12px 28px rgba(96, 0, 189, 0.28);
 }
 
 .m-next p {
@@ -746,7 +769,7 @@ const agenda = [
 
 .m-stats > div {
   background: #fff;
-  border: 1px solid #ebe4f5;
+  border: 1px solid rgba(var(--brand-rgb), 0.12);
   border-radius: 14px;
   padding: 12px 8px;
   text-align: center;
@@ -775,7 +798,7 @@ const agenda = [
 .m-list {
   flex: 1;
   background: #fff;
-  border: 1px solid #ebe4f5;
+  border: 1px solid rgba(var(--brand-rgb), 0.12);
   border-radius: 18px;
   padding: 4px 12px;
 }
@@ -861,7 +884,7 @@ const agenda = [
     right: auto;
     top: auto;
     transform: none !important;
-    filter: drop-shadow(0 16px 28px rgba(40, 8, 70, 0.18));
+    filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.16));
     animation: none;
   }
 
