@@ -59,7 +59,6 @@ export default defineEventHandler(async (event) => {
 
   const clientAccusative =
     terms.client === 'Kunde' ? 'Kunden'
-    : terms.client === 'Klient' ? 'Klienten'
     : terms.client === 'Patient' ? 'Patienten'
     : terms.client
 

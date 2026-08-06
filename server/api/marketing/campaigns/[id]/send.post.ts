@@ -4,7 +4,7 @@ import { queueCampaignSend } from '~/server/utils/marketing-campaign-send'
 export default defineEventHandler(async (event) => {
   const campaignId = getRouterParam(event, 'id')
   const body = await readBody(event)
-  const { tenantId, dailyLimit, pilotLimit } = body
+  const { tenantId, dailyLimit, pilotLimit, startAt } = body
 
   if (!tenantId || !campaignId) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId and campaignId are required' })
@@ -19,5 +19,6 @@ export default defineEventHandler(async (event) => {
     dailyLimit: typeof dailyLimit === 'number' ? dailyLimit : undefined,
     batchLimit: isPilot ? pilotLimit : undefined,
     fromSchedule: false,
+    startAt: typeof startAt === 'string' ? startAt : undefined,
   })
 })

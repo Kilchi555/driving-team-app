@@ -285,7 +285,10 @@ export default defineEventHandler(async (event) => {
   const logoDataUrl = await loadLogoDataUrl(branding.logoUrl, supabase)
 
   // ── Render HTML → PDF via Puppeteer ──────────────────────────────────────
-  const html = generateEvaluationPdfHtml(pdfData, branding, logoDataUrl)
+  const html = generateEvaluationPdfHtml(pdfData, branding, logoDataUrl, {
+    appointment: terms.appointment,
+    appointmentsPlural: terms.appointmentsPlural,
+  })
 
   const { default: Puppeteer } = await getPuppeteer()
   const isProduction = !!(process.env.NODE_ENV === 'production' || process.env.VERCEL || process.env.USE_SPARTICUZ_CHROMIUM)

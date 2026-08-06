@@ -7,6 +7,8 @@
  * course_categories (VKU, Motorradkurse, …) and license categories.
  */
 
+import { getTerminologyDefaults } from '~/composables/useTerminology'
+
 export type ThemeKey = 'discount_promo' | 'course' | 'category' | 'affiliate'
 export type ThemeFeature = 'courses_enabled' | 'affiliate_enabled' | 'discounts_enabled'
 
@@ -221,7 +223,7 @@ ${ctaButton('Beratung / Termin')}
   <tr><td style="height:8px"></td></tr>
   <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
     <p style="margin:0;font-size:14px;color:#374151;font-weight:600">③ Prämie erhalten</p>
-    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund eine Fahrstunde bezahlt, wird die Prämie automatisch gutgeschrieben – Auszahlung jederzeit möglich.</p>
+    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund eine {{appointment}} bezahlt, wird die Prämie automatisch gutgeschrieben – Auszahlung jederzeit möglich.</p>
   </td></tr>
 </table>
 <h2>Was du verdienst</h2>
@@ -262,7 +264,7 @@ ${ctaButton('Jetzt kostenlos Partner werden →')}
   <tr><td style="height:8px"></td></tr>
   <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
     <p style="margin:0;font-size:14px;color:#374151;font-weight:600">② Freund bucht</p>
-    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund eine Fahrstunde bezahlt, wird die Prämie automatisch gutgeschrieben.</p>
+    <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Sobald dein Freund eine {{appointment}} bezahlt, wird die Prämie automatisch gutgeschrieben.</p>
   </td></tr>
   <tr><td style="height:8px"></td></tr>
   <tr><td style="padding:12px;background:#f0fdf4;border-radius:8px;border-left:4px solid #22c55e">
@@ -384,7 +386,7 @@ export function buildThemeSuggestions(ctx: TenantThemeContext): ThemeSuggestion[
         id: `license_${cat.code}`,
         themeKey: 'category',
         title: `Kategorie ${label} bewerben`,
-        description: `Fahrstunden / Ausbildung Kat. ${label}`,
+        description: `${getTerminologyDefaults('driving_school').appointmentsPlural} / Ausbildung Kat. ${label}`,
         categoryCode: cat.code,
         categoryLabel: cat.name || cat.code,
         kind: 'license_category',

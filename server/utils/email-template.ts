@@ -20,6 +20,9 @@ export interface TemplateVariables {
   course_price?: string
   category_label?: string
   affiliate_signup_url?: string
+  /** Tenant terminology — e.g. Fahrstunde / Beratung */
+  appointment?: string
+  business_noun?: string
 }
 
 export type OfferCtaType = 'booking' | 'course' | 'ref' | 'partner' | 'custom'
@@ -77,6 +80,8 @@ export function renderTemplate(template: string, variables: TemplateVariables): 
     .replace(/\{\{course_price\}\}/g, variables.course_price || '')
     .replace(/\{\{category_label\}\}/g, variables.category_label || '')
     .replace(/\{\{affiliate_signup_url\}\}/g, variables.affiliate_signup_url || variables.cta_url || '#')
+    .replace(/\{\{appointment\}\}/g, variables.appointment || 'Termin')
+    .replace(/\{\{business_noun\}\}/g, variables.business_noun || '')
 }
 
 export function buildUnsubscribeLink(baseUrl: string, leadId: string, token: string): string {

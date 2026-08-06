@@ -1,7 +1,12 @@
 /**
  * Intro email for tenants: what Simy's client affiliate / referral program is,
- * how it works, and why it benefits the driving school.
+ * how it works, and why it benefits the business.
  */
+
+import {
+  getTerminologyDefaults,
+  type Terminology,
+} from '~/composables/useTerminology'
 
 const BASE_URL = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 
@@ -9,13 +14,22 @@ export function buildTenantAffiliateIntroEmail(opts?: {
   firstName?: string | null
   tenantName?: string | null
   ctaUrl?: string | null
+  terms?: Partial<Terminology> | null
 }): { subject: string; html: string } {
   const firstName = (opts?.firstName || '').trim() || 'du'
   const tenantName = (opts?.tenantName || '').trim()
+  const terms = {
+    ...getTerminologyDefaults('generic'),
+    ...(opts?.terms || {}),
+  }
+  const clientsPlural = terms.clientsPlural || 'Kunden'
+  const categoryLabel = terms.categoryLabel || 'Kategorie'
+  const appointment = terms.appointment || 'Termin'
+
   const greeting = firstName === 'du' ? 'Hallo,' : `Hallo ${firstName},`
   const schoolLine = tenantName
-    ? `Bei <strong>${tenantName}</strong> liegt ungenutztes Potenzial in euren bestehenden Schüler:innen.`
-    : `In euren bestehenden Schüler:innen liegt ungenutztes Potenzial.`
+    ? `Bei <strong>${tenantName}</strong> liegt ungenutztes Potenzial in euren bestehenden ${clientsPlural}.`
+    : `In euren bestehenden ${clientsPlural} liegt ungenutztes Potenzial.`
   const ctaUrl = opts?.ctaUrl || `${BASE_URL}/admin/affiliate`
 
   const subject = 'Neue Kunden durch Empfehlungen – so funktioniert Simy Affiliate'
@@ -32,7 +46,7 @@ export function buildTenantAffiliateIntroEmail(opts?: {
           <div style="background:linear-gradient(135deg,#6000BD,#8B2FE8);padding:36px 32px;text-align:center">
             <div style="font-size:36px;margin-bottom:10px">🤝</div>
             <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;line-height:1.3">
-              Neue Kunden – dank euren Schüler:innen
+              Neue Kunden – dank euren ${clientsPlural}
             </h1>
             <p style="margin:10px 0 0;color:rgba(255,255,255,.85);font-size:14px">
               Das Empfehlungsprogramm in Simy
@@ -48,7 +62,7 @@ export function buildTenantAffiliateIntroEmail(opts?: {
 
             <h2 style="margin:28px 0 12px;color:#111827;font-size:16px;font-weight:700">Was ist das?</h2>
             <p style="margin:0 0 16px;color:#4b5563;font-size:15px;line-height:1.65">
-              Eure Schüler:innen (und optional Staff) erhalten einen persönlichen Empfehlungslink.
+              Eure ${clientsPlural} (und optional Staff) erhalten einen persönlichen Empfehlungslink.
               Teilen sie ihn mit Freunden und Bekannten, und jemand bucht und bezahlt den ersten Termin bei euch,
               erhält die empfehlende Person eine <strong>Gutschrift</strong> – die sie später auszahlen lassen kann.
             </p>
@@ -59,7 +73,7 @@ export function buildTenantAffiliateIntroEmail(opts?: {
                 <td style="padding:14px 16px;background:#f9f7ff;border-radius:8px;border-left:4px solid #6000BD">
                   <p style="margin:0;font-size:14px;color:#111827;font-weight:700">① Einmal einrichten</p>
                   <p style="margin:4px 0 0;font-size:13px;color:#6b7280;line-height:1.5">
-                    Im Admin unter «Affiliate» aktivieren und pro Kategorie (B, A, BE, …) den Reward-Betrag festlegen.
+                    Im Admin unter «Affiliate» aktivieren und pro ${categoryLabel} den Reward-Betrag festlegen.
                   </p>
                 </td>
               </tr>
@@ -68,7 +82,7 @@ export function buildTenantAffiliateIntroEmail(opts?: {
                 <td style="padding:14px 16px;background:#f9f7ff;border-radius:8px;border-left:4px solid #6000BD">
                   <p style="margin:0;font-size:14px;color:#111827;font-weight:700">② Link teilen</p>
                   <p style="margin:4px 0 0;font-size:13px;color:#6b7280;line-height:1.5">
-                    Schüler aktivieren ihren Link in der App und teilen ihn per WhatsApp, Mail oder Social Media.
+                    ${clientsPlural} aktivieren ihren Link in der App und teilen ihn per WhatsApp, Mail oder Social Media.
                   </p>
                 </td>
               </tr>
@@ -77,7 +91,7 @@ export function buildTenantAffiliateIntroEmail(opts?: {
                 <td style="padding:14px 16px;background:#f9f7ff;border-radius:8px;border-left:4px solid #6000BD">
                   <p style="margin:0;font-size:14px;color:#111827;font-weight:700">③ Freund wird Kunde</p>
                   <p style="margin:4px 0 0;font-size:13px;color:#6b7280;line-height:1.5">
-                    Sobald der erste bezahlte Termin gebucht ist, wird die Gutschrift automatisch ausgelöst.
+                    Sobald die erste bezahlte ${appointment} gebucht ist, wird die Gutschrift automatisch ausgelöst.
                   </p>
                 </td>
               </tr>
@@ -95,15 +109,15 @@ export function buildTenantAffiliateIntroEmail(opts?: {
             <h2 style="margin:28px 0 12px;color:#111827;font-size:16px;font-weight:700">Was bringt's euch?</h2>
             <ul style="margin:0 0 20px;padding:0 0 0 18px;color:#4b5563;font-size:15px;line-height:1.7">
               <li style="margin-bottom:6px"><strong>Organische Neukunden</strong> – Empfehlungen von Menschen, die euch schon kennen und vertrauen</li>
-              <li style="margin-bottom:6px"><strong>Erfolgsbasiert</strong> – Reward nur, wenn wirklich ein bezahlter Termin zustande kommt</li>
-              <li style="margin-bottom:6px"><strong>Wenig Aufwand</strong> – Einrichtung in Minuten, danach läuft vieles automatisch (inkl. Mails an Absolvent:innen)</li>
-              <li style="margin-bottom:6px"><strong>Motivierte Botschafter</strong> – Schüler und Staff haben einen klaren Anreiz, euch weiterzuempfehlen</li>
+              <li style="margin-bottom:6px"><strong>Erfolgsbasiert</strong> – Reward nur, wenn wirklich eine bezahlte ${appointment} zustande kommt</li>
+              <li style="margin-bottom:6px"><strong>Wenig Aufwand</strong> – Einrichtung in Minuten, danach läuft vieles automatisch</li>
+              <li style="margin-bottom:6px"><strong>Motivierte Botschafter</strong> – ${clientsPlural} und Staff haben einen klaren Anreiz, euch weiterzuempfehlen</li>
             </ul>
 
             <div style="background:#fef3c7;border-left:4px solid #f59e0b;border-radius:4px;padding:14px 16px;margin:20px 0">
               <p style="margin:0;color:#92400e;font-size:14px;line-height:1.55">
-                <strong>Tipp:</strong> Nach bestandener Prüfung verschickt Simy automatisch Follow-up-Mails mit Bewertung und Empfehlungs-Hinweis.
-                So bleibt das Programm auch bei Absolvent:innen präsent.
+                <strong>Tipp:</strong> Simy kann Follow-up-Mails mit Bewertung und Empfehlungs-Hinweis verschicken.
+                So bleibt das Programm auch bei ehemaligen ${clientsPlural} präsent.
               </p>
             </div>
 
@@ -121,7 +135,7 @@ export function buildTenantAffiliateIntroEmail(opts?: {
             </p>
             <p style="margin:16px 0 0;color:#555;font-size:14px">Liebe Grüsse,</p>
             <p style="margin:6px 0 0;color:#333;font-size:14px;font-weight:600">Pascal<br>
-              <span style="color:#888;font-weight:400">Simy – Fahrschulsoftware</span>
+              <span style="color:#888;font-weight:400">Simy</span>
             </p>
           </div>
 

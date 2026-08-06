@@ -87,14 +87,14 @@ const TEMPLATES: Record<string, (data: any) => { subject: string; html: string }
   admin_new_withdrawal: (data) => ({
     subject: `💸 Neuer Auszahlungsantrag: CHF ${data.amountChf}`,
     html: baseLayout('Neuer Auszahlungsantrag', `
-      <p style="color:#374151;font-size:15px;line-height:1.6;">Ein Schüler hat einen Auszahlungsantrag gestellt:</p>
+      <p style="color:#374151;font-size:15px;line-height:1.6;">Ein ${data.clientLabel || 'Kunde'} hat einen Auszahlungsantrag gestellt:</p>
       <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:16px;margin:16px 0;">
         <p style="margin:0;color:#92400e;font-size:14px;"><strong>Name:</strong> ${data.studentName}</p>
         <p style="margin:6px 0 0 0;color:#92400e;font-size:14px;"><strong>E-Mail:</strong> ${data.studentEmail}</p>
         <p style="margin:6px 0 0 0;color:#92400e;font-size:15px;"><strong>Betrag:</strong> CHF ${data.amountChf}</p>
         <p style="margin:6px 0 0 0;color:#92400e;font-size:14px;"><strong>IBAN:</strong> ****${data.ibanLast4}</p>
       </div>
-      <p style="color:#374151;font-size:14px;">Bitte exportiere das Zahlungsfile im Admin-Bereich unter <strong>Schüler-Guthaben → Ausstehende Auszahlungen</strong>.</p>
+      <p style="color:#374151;font-size:14px;">Bitte exportiere das Zahlungsfile im Admin-Bereich unter <strong>${data.clientsPlural || 'Kunden'}-Guthaben → Ausstehende Auszahlungen</strong>.</p>
     `)
   })
 }
@@ -107,6 +107,15 @@ export default defineEventHandler(async (event) => {
     const template = TEMPLATES[type]
     if (!template) {
       return { success: false, error: `Unknown email type: ${type}` }
+    }
+
+    if (type === 'admin_new_withdrawal' && data.tenantId) {
+      try {
+        const { getTenantTerminology } = await import('~/server/utils/tenant-terminology')
+        const terms = await getTenantTerminology(getSupabaseAdmin(), data.tenantId)
+        data.clientLabel = terms.client
+        data.clientsPlural = terms.clientsPlural
+      } catch { /* keep defaults */ }
     }
 
     const { subject, html } = template(data)
