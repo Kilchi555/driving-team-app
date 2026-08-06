@@ -1,11 +1,13 @@
-// server/utils/tenant-terminology.ts
-// Load branch terminology for a tenant at send time (emails / SMS / push).
-
 import {
   getTerminologyDefaults,
   mergeTerminology,
+  eventTypeLabelMap,
+  resolveEventTypeLabel,
   type Terminology,
 } from '~/composables/useTerminology'
+
+export { eventTypeLabelMap, resolveEventTypeLabel }
+export type { Terminology }
 
 type SupabaseLike = {
   from: (table: string) => any
@@ -55,18 +57,6 @@ export function terminologyFromTenant(tenant: {
   ui_labels?: Record<string, string> | null
 } | null | undefined): Terminology {
   return mergeTerminology(tenant?.business_type, tenant?.ui_labels)
-}
-
-/** Event-type → display label map; `lesson` follows tenant appointment term. */
-export function eventTypeLabelMap(terms?: Terminology | null): Record<string, string> {
-  const appointment = terms?.appointment || 'Fahrstunde'
-  return {
-    lesson: appointment,
-    exam: 'Prüfung',
-    theory: 'Theorieunterricht',
-    vku: 'VKU',
-    haltbar: 'Haltbarkeitsprüfung',
-  }
 }
 
 /** e.g. "1 Beratung" / "3 Beratungen" — never throws. */

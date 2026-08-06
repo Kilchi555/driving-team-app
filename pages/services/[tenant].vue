@@ -86,7 +86,7 @@
             <div class="flex items-center space-x-4">
               <div class="text-4xl">📚</div>
               <div class="flex-1">
-                <h3 class="text-xl font-semibold text-gray-900">Theorielektionen</h3>
+                <h3 class="text-xl font-semibold text-gray-900">{{ resolveEventTypeLabel('theory', labels) }}</h3>
               </div>
               <div class="text-2xl text-gray-400">→</div>
             </div>
@@ -131,7 +131,7 @@ import { ref, computed, onMounted } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { useTenant } from '~/composables/useTenant'
 import { logger } from '~/utils/logger'
-import { mergeTerminology, isDrivingSchoolBusinessType } from '~/composables/useTerminology'
+import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
 
 // Ensure no auth middleware runs on this page
 definePageMeta({
