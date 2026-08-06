@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
  * Capture real Play Store screenshots for 7" tablet, 10" tablet and desktop.
- * Uses apple-review demo accounts on app.simy.ch.
+ * Tablets are captured in LANDSCAPE (portrait leaves huge empty gaps with this UI).
  *
- * Usage: node scripts/capture-real-play-screenshots-devices.mjs
+ * Usage: DEMO_PASSWORD=... node scripts/capture-real-play-screenshots-devices.mjs
  */
 import puppeteer from 'puppeteer'
 import { mkdirSync } from 'fs'
@@ -20,30 +20,27 @@ const PASS = process.env.DEMO_PASSWORD || 'PlayShot2026!Review'
 const DEVICES = [
   {
     id: 'tablet-7',
-    label: '7" Tablet',
-    width: 1200,
-    height: 1920,
-    scale: 1,
+    label: '7" Tablet landscape',
+    width: 1920,
+    height: 1200,
     isMobile: true,
     hasTouch: true,
     ua: 'Mozilla/5.0 (Linux; Android 13; Pixel Tablet) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
   },
   {
     id: 'tablet-10',
-    label: '10" Tablet',
-    width: 1800,
-    height: 2560,
-    scale: 1,
+    label: '10" Tablet landscape',
+    width: 2560,
+    height: 1600,
     isMobile: true,
     hasTouch: true,
     ua: 'Mozilla/5.0 (Linux; Android 13; Pixel Tablet) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
   },
   {
     id: 'desktop',
-    label: 'Desktop / ChromeOS',
+    label: 'Desktop 16:9',
     width: 1920,
     height: 1080,
-    scale: 1,
     isMobile: false,
     hasTouch: false,
     ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -51,16 +48,8 @@ const DEVICES = [
 ]
 
 const SCREENS = [
-  {
-    file: '01-login',
-    email: null,
-    urls: [`${APP}/login?tenant=apple-review`],
-  },
-  {
-    file: '02-client',
-    email: 'apple-review@simy.ch',
-    urls: [`${APP}/customer-dashboard`, `${APP}/customer-dashboard?tenant=apple-review`],
-  },
+  { file: '01-login', email: null, urls: [`${APP}/login?tenant=apple-review`] },
+  { file: '02-client', email: 'apple-review@simy.ch', urls: [`${APP}/customer-dashboard`] },
   {
     file: '03-staff',
     email: 'demo-instructor@simy.ch',
@@ -68,17 +57,13 @@ const SCREENS = [
     afterNav: async (page) => {
       await page.evaluate(() => {
         const btns = [...document.querySelectorAll('button, a')]
-        const tag = btns.find((b) => (b.textContent || '').trim() === 'Tag')
-        if (tag) tag.click()
+        const woche = btns.find((b) => (b.textContent || '').trim() === 'Woche')
+        if (woche) woche.click()
       })
-      await new Promise((r) => setTimeout(r, 1000))
+      await new Promise((r) => setTimeout(r, 1200))
     },
   },
-  {
-    file: '04-admin',
-    email: 'demo-admin@simy.ch',
-    urls: [`${APP}/admin`],
-  },
+  { file: '04-admin', email: 'demo-admin@simy.ch', urls: [`${APP}/admin`] },
 ]
 
 async function wait(page, ms = 1500) {
@@ -97,17 +82,15 @@ async function login(page, email) {
   await wait(page)
   await page.waitForSelector('input[type="email"]', { timeout: 30000 })
   await page.click('input[type="email"]', { clickCount: 3 })
-  await page.type('input[type="email"]', email, { delay: 8 })
+  await page.type('input[type="email"]', email, { delay: 6 })
   await page.click('input[type="password"]', { clickCount: 3 })
-  await page.type('input[type="password"]', PASS, { delay: 8 })
+  await page.type('input[type="password"]', PASS, { delay: 6 })
   await Promise.all([
     page.click('button[type="submit"]'),
     page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 90000 }).catch(() => {}),
   ])
   await wait(page, 2000)
-  if (page.url().includes('/login')) {
-    throw new Error(`Login failed for ${email}`)
-  }
+  if (page.url().includes('/login')) throw new Error(`Login failed for ${email}`)
 }
 
 async function gotoFirst(page, urls) {
@@ -128,14 +111,14 @@ try {
   for (const device of DEVICES) {
     const outDir = join(baseOut, device.id)
     mkdirSync(outDir, { recursive: true })
-    console.log(`\n📱 ${device.label} (${device.width}×${device.height})`)
+    console.log(`\n🖥  ${device.label} (${device.width}×${device.height})`)
 
     const page = await browser.newPage()
     await page.setUserAgent(device.ua)
     await page.setViewport({
       width: device.width,
       height: device.height,
-      deviceScaleFactor: device.scale,
+      deviceScaleFactor: 1,
       isMobile: device.isMobile,
       hasTouch: device.hasTouch,
     })
@@ -150,16 +133,15 @@ try {
       }
       if (screen.afterNav) await screen.afterNav(page)
       const path = join(outDir, `${screen.file}.png`)
-      await page.screenshot({ path, type: 'png' })
-      console.log(`  ✅ ${device.id}/${screen.file}.png ← ${page.url()}`)
+      await page.screenshot({ path, type: 'png', fullPage: false })
+      console.log(`  ✅ ${device.id}/${screen.file}.png`)
     }
-
     await page.close()
   }
-  console.log('\nDone. Upload folders:')
-  console.log('  tablet-7/   → Play Console 7-Zoll-Tablets')
-  console.log('  tablet-10/  → Play Console 10-Zoll-Tablets')
-  console.log('  desktop/    → Play Console Desktop / ChromeOS')
+  console.log('\nDone. Upload:')
+  console.log('  tablet-7/   1920×1200 landscape → 7-Zoll')
+  console.log('  tablet-10/  2560×1600 landscape → 10-Zoll')
+  console.log('  desktop/    1920×1080           → Desktop')
 } catch (e) {
   console.error('❌', e)
   process.exitCode = 1
