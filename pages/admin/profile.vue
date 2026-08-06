@@ -2550,6 +2550,7 @@ import { ref, computed, onMounted, markRaw, watch, onUnmounted, h, nextTick } fr
 import { navigateTo, useRoute, useRouter } from '#app'
 import { logger } from '~/utils/logger'
 import { compressImage, validateImageFile } from '~/utils/imageCompression'
+import { extractColorsFromLogo } from '~/utils/logoUtils'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { usePrimaryColor } from '~/composables/usePrimaryColor'
 import { useUIStore } from '~/stores/ui'
@@ -3992,9 +3993,28 @@ const handleLogoUpload = async (event: Event, logoType: 'square' | 'wide') => {
       brandingForm.value.logos.wide = publicUrl
     }
 
+    // Derive brand colors from the newly uploaded logo (same as registration flow)
+    let colorsApplied = false
+    try {
+      const colors = await extractColorsFromLogo(compressedBase64)
+      if (colors) {
+        brandingForm.value.colors.primary = colors[0]
+        brandingForm.value.colors.secondary = colors[1]
+        brandingForm.value.colors.accent = colors[2]
+        await updateTenantBranding(tenantId, {
+          colors: { ...brandingForm.value.colors },
+        })
+        colorsApplied = true
+      }
+    } catch (colorErr) {
+      logger.warn('Could not extract colors from logo:', colorErr)
+    }
+
     // upload-logo already wrote tenants.* — no base64 auto-save needed
     showSuccess(
-      `${logoType === 'square' ? 'Quadratisches' : 'Breites'} Logo in Storage gespeichert`
+      colorsApplied
+        ? `${logoType === 'square' ? 'Quadratisches' : 'Breites'} Logo gespeichert — Farben angepasst`
+        : `${logoType === 'square' ? 'Quadratisches' : 'Breites'} Logo in Storage gespeichert`
     )
     
     isLoading.value = wasLoading
