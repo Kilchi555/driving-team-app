@@ -2247,9 +2247,9 @@
             <!-- SMS Bestätigung / Erinnerung / Kontingent -->
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div class="px-5 py-4 border-b border-gray-50">
-                <h2 class="text-sm font-semibold text-gray-800">SMS (ohne E-Mail)</h2>
+                <h2 class="text-sm font-semibold text-gray-800">Kunden-Benachrichtigungen (E-Mail / SMS)</h2>
                 <p class="text-xs text-gray-400 mt-0.5">
-                  Fallback wenn der Kunde nur Telefon hat. Inklusiv-Segmente gemäss Plan; Überzug CHF {{ smsOverageRate.toFixed(2) }}/Segment.
+                  Wähle, über welchen Kanal Kunden erreicht werden. Inklusiv-SMS-Segmente gemäss Plan; Überzug CHF {{ smsOverageRate.toFixed(2) }}/Segment.
                 </p>
                 <p v-if="smsUsage" class="text-xs text-gray-600 mt-2">
                   Verbrauch diesen Monat: <span class="font-semibold">{{ smsUsage.used }} / {{ smsUsage.included }}</span> Segmente
@@ -2257,10 +2257,26 @@
                 </p>
               </div>
               <div class="px-5 py-4 space-y-4">
+                <div>
+                  <p class="text-sm font-medium text-gray-800 mb-2">Kanal-Priorität</p>
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button type="button"
+                      v-for="opt in customerChannelOptions"
+                      :key="opt.value"
+                      @click="bpPolicy.customer_notification_channel = opt.value"
+                      class="text-left rounded-xl border p-3 transition-colors"
+                      :class="bpPolicy.customer_notification_channel === opt.value ? 'border-transparent' : 'border-gray-100 hover:border-gray-200'"
+                      :style="bpPolicy.customer_notification_channel === opt.value ? { borderColor: 'var(--color-primary, #3B82F6)', background: 'var(--color-primary-bg, #EFF6FF)' } : {}">
+                      <p class="text-sm font-semibold text-gray-800">{{ opt.label }}</p>
+                      <p class="text-xs text-gray-500 mt-1">{{ opt.description }}</p>
+                    </button>
+                  </div>
+                </div>
+
                 <div class="flex items-center justify-between gap-4">
                   <div>
                     <p class="text-sm font-medium text-gray-800">Bestätigung per SMS</p>
-                    <p class="text-xs text-gray-400">Wenn keine E-Mail vorhanden</p>
+                    <p class="text-xs text-gray-400">Gemäss Kanal-Priorität oben</p>
                   </div>
                   <button type="button" @click="bpPolicy.confirmation_sms_enabled = !bpPolicy.confirmation_sms_enabled"
                     class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
@@ -2272,13 +2288,61 @@
                 <div class="flex items-center justify-between gap-4">
                   <div>
                     <p class="text-sm font-medium text-gray-800">Erinnerung per SMS</p>
-                    <p class="text-xs text-gray-400">Tages vorher, wenn keine E-Mail</p>
+                    <p class="text-xs text-gray-400">Tages vorher, gemäss Kanal-Priorität</p>
                   </div>
                   <button type="button" @click="bpPolicy.reminder_sms_enabled = !bpPolicy.reminder_sms_enabled"
                     class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
                     :style="bpPolicy.reminder_sms_enabled ? primaryBg : { background: '#e5e7eb' }">
                     <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
                       :class="bpPolicy.reminder_sms_enabled ? 'translate-x-6' : 'translate-x-1'"/>
+                  </button>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Absage per SMS</p>
+                    <p class="text-xs text-gray-400">Bei Termin-Stornierung</p>
+                  </div>
+                  <button type="button" @click="bpPolicy.cancellation_sms_enabled = !bpPolicy.cancellation_sms_enabled"
+                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                    :style="bpPolicy.cancellation_sms_enabled ? primaryBg : { background: '#e5e7eb' }">
+                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                      :class="bpPolicy.cancellation_sms_enabled ? 'translate-x-6' : 'translate-x-1'"/>
+                  </button>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Verschiebung per SMS</p>
+                    <p class="text-xs text-gray-400">Bei Termin-Verschiebung</p>
+                  </div>
+                  <button type="button" @click="bpPolicy.reschedule_sms_enabled = !bpPolicy.reschedule_sms_enabled"
+                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                    :style="bpPolicy.reschedule_sms_enabled ? primaryBg : { background: '#e5e7eb' }">
+                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                      :class="bpPolicy.reschedule_sms_enabled ? 'translate-x-6' : 'translate-x-1'"/>
+                  </button>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Zahlungserinnerung per SMS</p>
+                    <p class="text-xs text-gray-400">Offene Beträge nach dem Termin</p>
+                  </div>
+                  <button type="button" @click="bpPolicy.payment_reminder_sms_enabled = !bpPolicy.payment_reminder_sms_enabled"
+                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                    :style="bpPolicy.payment_reminder_sms_enabled ? primaryBg : { background: '#e5e7eb' }">
+                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                      :class="bpPolicy.payment_reminder_sms_enabled ? 'translate-x-6' : 'translate-x-1'"/>
+                  </button>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Kurs-Erinnerung per SMS</p>
+                    <p class="text-xs text-gray-400">Teilnehmer, Tag vor der Kurssession</p>
+                  </div>
+                  <button type="button" @click="bpPolicy.course_reminder_sms_enabled = !bpPolicy.course_reminder_sms_enabled"
+                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                    :style="bpPolicy.course_reminder_sms_enabled ? primaryBg : { background: '#e5e7eb' }">
+                    <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                      :class="bpPolicy.course_reminder_sms_enabled ? 'translate-x-6' : 'translate-x-1'"/>
                   </button>
                 </div>
                 <div class="flex items-center justify-between gap-4">
@@ -3104,10 +3168,33 @@ const bpPolicy = ref({
   onboarding_email_enabled: false,
   confirmation_sms_enabled: true,
   reminder_sms_enabled: true,
+  customer_notification_channel: 'email_first' as 'email_first' | 'sms_first' | 'both',
   sms_message_length: 'short' as 'short' | 'long',
   sms_hard_stop_on_quota: false,
+  cancellation_sms_enabled: true,
+  reschedule_sms_enabled: true,
+  payment_reminder_sms_enabled: true,
+  course_reminder_sms_enabled: true,
   staff_refund_permission: 'hidden' as 'hidden' | 'request' | 'allowed',
 })
+
+const customerChannelOptions = [
+  {
+    value: 'email_first' as const,
+    label: 'E-Mail zuerst',
+    description: 'E-Mail wenn vorhanden, sonst SMS. Bisheriges Verhalten.',
+  },
+  {
+    value: 'sms_first' as const,
+    label: 'SMS zuerst',
+    description: 'SMS wenn Telefon vorhanden, sonst E-Mail.',
+  },
+  {
+    value: 'both' as const,
+    label: 'Beides',
+    description: 'E-Mail und SMS, sofern Kontakt vorhanden.',
+  },
+]
 
 const bpRegistrationModeOptions = [
   { value: 'hidden' as const, label: 'Aus' },

@@ -700,30 +700,27 @@ export default defineEventHandler(async (event) => {
         logger.debug('✅ Staff cancellation notification queued for:', staffEmail)
       }
 
-      // 2. Notify customer (using the existing cancelled template in send-appointment-notification)
-      if (userProfile.email) {
-        await $fetch('/api/email/send-appointment-notification', {
-          method: 'POST',
-          body: {
-            email: userProfile.email,
-            studentName: customerName,
-            appointmentTime: appointmentDateTime,
-            type: 'cancelled',
-            cancellationReason: reason.name_de,
-            staffName,
-            tenantName,
-            tenantId,
-            tenantSlug,
-            customerDashboard: `https://app.simy.ch/${tenantSlug}`,
-            wasPaid,
-            chargePercentage,
-            refundAmount: refundAmountFormatted,
-            chargeAmount: chargeAmountFormatted,
-            userId: userProfile.id,
-          },
-        })
-        logger.debug('✅ Customer cancellation confirmation sent to:', userProfile.email)
-      }
+      // 2. Notify customer (email / SMS per channel policy)
+      const { notifyCustomerAppointmentChange } = await import(
+        '~/server/utils/notify-customer-appointment-change'
+      )
+      await notifyCustomerAppointmentChange({
+        tenantId,
+        userId: userProfile.id,
+        type: 'cancelled',
+        appointmentTimeIso: appointment.start_time,
+        appointmentTimeLabel: appointmentDateTime,
+        cancellationReason: reason.name_de,
+        emailExtras: {
+          staffName,
+          customerDashboard: `https://app.simy.ch/${tenantSlug}`,
+          wasPaid,
+          chargePercentage,
+          refundAmount: refundAmountFormatted,
+          chargeAmount: chargeAmountFormatted,
+        },
+      })
+      logger.debug('✅ Customer cancellation notification attempted for:', userProfile.id)
     } catch (notifyErr: any) {
       logger.warn('⚠️ Cancellation notification failed (non-critical):', notifyErr.message)
     }

@@ -168,7 +168,12 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
     .single()
 
   const policy = (tenant?.booking_policy as Record<string, any>) || {}
-  const hardStop = opts.hardStop ?? policy.sms_hard_stop_on_quota === true
+  // Soft-cap by default. Hard-stop only when tenant explicitly enables it.
+  // Trial / no payment method: keep sending + counting; overage billed only once Stripe exists.
+  const canBillOverage = !!(tenant?.stripe_subscription_id && tenant?.stripe_customer_id)
+  const hardStop = opts.hardStop !== undefined
+    ? opts.hardStop
+    : policy.sms_hard_stop_on_quota === true
   const resolvedSender = senderName || tenant?.twilio_from_sender || tenant?.name || undefined
 
   let usedBefore = 0
@@ -204,7 +209,7 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
     const overageAfter = Math.max(0, usedAfter - included)
     const overageDelta = overageAfter - overageBefore
 
-    if (overageDelta > 0 && tenant?.stripe_subscription_id) {
+    if (overageDelta > 0 && canBillOverage) {
       try {
         // Keep metered price on the subscription (invoice line item)
         await ensureSmsOverageSubscriptionItem({
@@ -213,21 +218,23 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
           tenantId,
           cachedItemId: tenant.stripe_sms_subscription_item_id,
         })
-        if (tenant.stripe_customer_id) {
-          await reportSmsOverageUsage({
-            customerId: tenant.stripe_customer_id,
-            overageSegments: overageDelta,
-            idempotencyKey: messageSid,
-          })
-        } else {
-          logger.warn('⚠️ SMS overage not reported — tenant missing stripe_customer_id', { tenantId })
-        }
+        await reportSmsOverageUsage({
+          customerId: tenant.stripe_customer_id,
+          overageSegments: overageDelta,
+          idempotencyKey: messageSid,
+        })
       } catch (err: any) {
         logger.warn('⚠️ SMS overage Stripe report failed (non-critical):', err?.message)
       }
+    } else if (overageDelta > 0 && !canBillOverage) {
+      logger.warn('⚠️ SMS overage not billed — tenant has no Stripe subscription/customer', {
+        tenantId,
+        overageDelta,
+      })
     }
 
     // Soft alerts at 80% / 100% of included quota (once per calendar month)
+    // → tenant contact + Simy super-admins. Soft-cap continues sending.
     try {
       await maybeSendSmsQuotaAlert({
         supabase,
@@ -236,7 +243,10 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
         tenantName: tenant?.name || 'Simy',
         usedAfter,
         included,
+        overageSegments: Math.max(0, usedAfter - included),
         overageChf: Math.max(0, usedAfter - included) * SMS_OVERAGE_CHF_PER_SEGMENT,
+        canBillOverage,
+        plan: tenant?.subscription_plan || 'trial',
       })
     } catch (alertErr: any) {
       logger.warn('⚠️ SMS quota alert failed (non-critical):', alertErr?.message)
@@ -258,9 +268,12 @@ async function maybeSendSmsQuotaAlert(opts: {
   tenantName: string
   usedAfter: number
   included: number
+  overageSegments: number
   overageChf: number
+  canBillOverage: boolean
+  plan: string
 }) {
-  if (!opts.contactEmail || opts.included <= 0) return
+  if (opts.included <= 0) return
   const ratio = opts.usedAfter / opts.included
   if (ratio < 0.8) return
 
@@ -287,26 +300,65 @@ async function maybeSendSmsQuotaAlert(opts: {
   }
 
   let subject: string | null = null
-  let body: string | null = null
+  let tenantBody: string | null = null
+  let adminBody: string | null = null
+
   if (ratio >= 1 && !state.warned100) {
     state.warned100 = true
     state.warned80 = true
     subject = `SMS-Kontingent aufgebraucht – ${opts.tenantName}`
-    body = `Euer Inklusiv-Kontingent (${opts.included} Segmente) ist aufgebraucht (${opts.usedAfter} verwendet). Weitere SMS werden mit CHF 0.15/Segment verrechnet. Aktueller Überzug ca. CHF ${opts.overageChf.toFixed(2)}.`
+    if (opts.canBillOverage) {
+      tenantBody = `Euer Inklusiv-Kontingent (${opts.included} Segmente) ist aufgebraucht (${opts.usedAfter} verwendet). Weitere SMS werden mit CHF 0.15/Segment verrechnet. Aktueller Überzug ca. CHF ${opts.overageChf.toFixed(2)}.`
+      adminBody = `Tenant <strong>${opts.tenantName}</strong> (${opts.tenantId}) hat das SMS-Kontingent überschritten. Plan: ${opts.plan}. Verbrauch: ${opts.usedAfter}/${opts.included}. Überzug: ${opts.overageSegments} Segmente (ca. CHF ${opts.overageChf.toFixed(2)}) — Metered Billing aktiv.`
+    } else {
+      tenantBody = `Euer Inklusiv-Kontingent (${opts.included} Segmente) ist aufgebraucht (${opts.usedAfter} verwendet). SMS werden weiter zugestellt (Soft-Cap). Sobald eine Zahlungsmethode hinterlegt ist, werden Überzüge mit CHF 0.15/Segment verrechnet.`
+      adminBody = `Tenant <strong>${opts.tenantName}</strong> (${opts.tenantId}) hat das SMS-Kontingent überschritten <em>ohne</em> verrechenbare Zahlungsmethode. Plan: ${opts.plan}. Verbrauch: ${opts.usedAfter}/${opts.included}. Soft-Cap Überzug: ${opts.overageSegments} Segmente (noch nicht verrechnet).`
+    }
   } else if (ratio >= 0.8 && !state.warned80) {
     state.warned80 = true
     subject = `SMS-Kontingent bei 80% – ${opts.tenantName}`
-    body = `Ihr habt ${opts.usedAfter} von ${opts.included} SMS-Segmenten in diesem Monat verbraucht. Überzug: CHF 0.15/Segment.`
+    tenantBody = `Ihr habt ${opts.usedAfter} von ${opts.included} SMS-Segmenten in diesem Monat verbraucht.${opts.canBillOverage ? ' Überzug: CHF 0.15/Segment.' : ' Soft-Cap: SMS laufen weiter; Verrechnung erst nach Hinterlegen einer Zahlungsmethode.'}`
+    adminBody = `Tenant <strong>${opts.tenantName}</strong> bei 80% SMS-Kontingent (${opts.usedAfter}/${opts.included}). Plan: ${opts.plan}. Verrechenbar: ${opts.canBillOverage ? 'ja' : 'nein (Trial/ohne Zahlungsmethode)'}.`
   }
 
-  if (!subject || !body) return
+  if (!subject || !tenantBody || !adminBody) return
 
   const { sendEmail } = await import('~/server/utils/email')
-  await sendEmail({
-    to: opts.contactEmail,
-    subject,
-    html: `<p>${body}</p><p style="color:#6b7280;font-size:13px">Soft-Cap: SMS werden weiter gesendet, sofern Hard-Stop nicht aktiviert ist.</p>`,
-  })
+
+  const recipients = new Set<string>()
+  if (opts.contactEmail?.trim()) recipients.add(opts.contactEmail.trim().toLowerCase())
+
+  // Super-admins + guaranteed platform inbox
+  try {
+    const { data: supers } = await opts.supabase
+      .from('users')
+      .select('email')
+      .eq('role', 'super_admin')
+      .not('email', 'is', null)
+      .limit(20)
+    for (const u of supers || []) {
+      if (u.email) recipients.add(String(u.email).trim().toLowerCase())
+    }
+  } catch {
+    // non-critical
+  }
+  recipients.add('info@simy.ch')
+
+  const softCapNote = opts.canBillOverage
+    ? 'Soft-Cap: SMS werden weiter gesendet, sofern Hard-Stop nicht aktiviert ist. Überzug wird metered verrechnet.'
+    : 'Soft-Cap (Trial/ohne Zahlungsmethode): SMS werden weiter gesendet und gezählt. Verrechnung startet automatisch, sobald ein Stripe-Abo mit Zahlungsmethode existiert.'
+
+  await Promise.allSettled(
+    [...recipients].map((to) => {
+      const isTenant = opts.contactEmail && to === opts.contactEmail.trim().toLowerCase()
+      const body = isTenant ? tenantBody! : adminBody!
+      return sendEmail({
+        to,
+        subject,
+        html: `<p>${body}</p><p style="color:#6b7280;font-size:13px">${softCapNote}</p>`,
+      })
+    }),
+  )
 
   const value = JSON.stringify(state)
   if (existing?.id) {

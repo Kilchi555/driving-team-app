@@ -53,26 +53,13 @@ export default defineEventHandler(async (event) => {
 
     const policy = (tenantForPolicy?.booking_policy as any) || {}
     const confirmationEmailEnabled = policy.confirmation_email_enabled !== false
-    // Tenant-controlled: when to send the customer confirmation.
+    // Tenant-controlled: when to send the customer confirmation email.
     // Default 'always' — registration/login is optional unless registration_required.
     const confirmationEmailMode: 'always' | 'after_registration' | 'never' =
       policy.confirmation_email_mode === 'after_registration' || policy.confirmation_email_mode === 'never'
         ? policy.confirmation_email_mode
         : 'always'
-
-    // 2a. Admin disabled confirmation emails entirely
-    if (!confirmationEmailEnabled || confirmationEmailMode === 'never') {
-      logger.debug('⏭️ Confirmation emails disabled by tenant policy', {
-        confirmationEmailEnabled,
-        confirmationEmailMode
-      })
-      return {
-        success: true,
-        skipped: true,
-        reason: confirmationEmailMode === 'never' ? 'policy_mode_never' : 'policy_disabled',
-        message: 'Confirmation emails disabled by admin'
-      }
-    }
+    const confirmationSmsEnabled = policy.confirmation_sms_enabled !== false
 
     // 4. Get appointment data with payment
     const { data: appointment, error: appointmentError } = await supabase
@@ -114,25 +101,47 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 2b/3. Customer-facing confirmation skip rules (tenant policy driven):
-    // - Always skip when no email address (nothing to send to)
-    // - If mode === 'after_registration': hold until onboarding_status is completed
-    //   (backfilled in students/complete-onboarding.post.ts)
-    // - mode === 'always' (default): send even for pending guests — login/registration
-    //   is optional unless the tenant sets registration_required / after_registration
+    // 2b/3. Customer-facing confirmation channel rules (tenant policy driven):
+    // - mode === 'after_registration': hold email until onboarding_status is completed
+    // - customer_notification_channel decides email vs SMS vs both
     const hasEmail = !!(user.email && user.email.trim())
+    const hasPhone = !!(user.phone && String(user.phone).trim())
     const holdForRegistration =
       confirmationEmailMode === 'after_registration' &&
       user.onboarding_status === 'pending'
-    const skipCustomerEmail = !hasEmail || holdForRegistration
+
+    const { resolveCustomerChannels, normalizeCustomerNotificationChannel } = await import(
+      '~/server/utils/customer-notification-channel'
+    )
+    const notifChannel = normalizeCustomerNotificationChannel(policy.customer_notification_channel)
+    const channels = resolveCustomerChannels({
+      channel: notifChannel,
+      hasEmail,
+      hasPhone,
+      emailEnabled:
+        confirmationEmailEnabled &&
+        confirmationEmailMode !== 'never' &&
+        !holdForRegistration,
+      smsEnabled: confirmationSmsEnabled,
+    })
+    // Legacy: while holding email for registration, don't SMS-fallback on email_first
+    if (holdForRegistration && notifChannel === 'email_first') {
+      channels.sendSms = false
+    }
+
+    const skipCustomerEmail = !channels.sendEmail
     const skipCustomerEmailReason = !hasEmail
       ? 'user_email_missing'
       : holdForRegistration
         ? 'waiting_for_registration'
-        : undefined
+        : !confirmationEmailEnabled || confirmationEmailMode === 'never'
+          ? 'policy_disabled'
+          : notifChannel === 'sms_first'
+            ? 'sms_preferred'
+            : undefined
 
     if (holdForRegistration) {
-      logger.debug('⏭️ Holding confirmation until customer completes registration', {
+      logger.debug('⏭️ Holding confirmation email until customer completes registration', {
         appointmentId,
         userId,
         confirmationEmailMode,
@@ -303,16 +312,10 @@ export default defineEventHandler(async (event) => {
       logger.debug(`⏭️ Skipping customer confirmation email (${skipCustomerEmailReason}) — staff notification still proceeds`)
     }
 
-    // SMS fallback: phone present, no email, policy allows
+    // SMS: channel preference + policy toggle
     let smsSent = false
-    const confirmationSmsEnabled = policy.confirmation_sms_enabled !== false
     const smsLength = policy.sms_message_length === 'long' ? 'long' : 'short'
-    const hasPhone = !!(user.phone && String(user.phone).trim())
-    if (
-      confirmationSmsEnabled &&
-      hasPhone &&
-      skipCustomerEmailReason === 'user_email_missing'
-    ) {
+    if (channels.sendSms) {
       try {
         const { sendTenantSMS } = await import('~/server/utils/sms')
         const { buildAppointmentConfirmationSms } = await import('~/server/utils/sms-templates')

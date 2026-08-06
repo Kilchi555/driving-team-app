@@ -582,10 +582,20 @@ const connectCalendar = async () => {
           }
         })
         if (syncResponse.success) {
-          success.value = `Kalender verbunden und synchronisiert — ${syncResponse.imported_events || 0} Termin(e) importiert.`
+          const imported = syncResponse.imported_events || 0
+          if (imported === 0) {
+            error.value =
+              'Kalender verbunden, aber der Feed enthält keine Termine. Vermutlich wurde ein leerer Kalender geteilt — bitte den Kalender mit den echten Terminen teilen und den neuen Link verbinden.'
+            success.value = null
+          } else {
+            success.value = `Kalender verbunden und synchronisiert — ${imported} Termin(e) importiert.`
+          }
         } else {
-          success.value = response.message
-          error.value = syncResponse.message || 'Verbunden, aber Sync fehlgeschlagen. Bitte Sync erneut versuchen.'
+          success.value = null
+          error.value =
+            (syncResponse as any).tip
+              ? `${syncResponse.message || 'Sync fehlgeschlagen'}. ${(syncResponse as any).tip}`
+              : (syncResponse.message || 'Verbunden, aber Sync fehlgeschlagen. Bitte Sync erneut versuchen.')
         }
       } catch (syncErr: any) {
         success.value = response.message
@@ -653,13 +663,21 @@ const syncCalendar = async (calendarId: string) => {
       logger.debug('📡 API Response:', response)
 
       if (response.success) {
-        const successMsg = `Kalender synchronisiert! ${response.imported_events || 0} Termine importiert.`
-        success.value = successMsg
-        addDebugLog(`✅ ${successMsg}`, 'success')
+        const imported = response.imported_events || 0
+        if (imported === 0) {
+          const warnMsg =
+            'Sync ok, aber 0 Termine im Feed. Vermutlich wurde ein leerer Kalender geteilt — bitte den Kalender mit den echten Terminen teilen.'
+          error.value = warnMsg
+          addDebugLog(`⚠️ ${warnMsg}`, 'error')
+        } else {
+          const successMsg = `Kalender synchronisiert! ${imported} Termine importiert.`
+          success.value = successMsg
+          addDebugLog(`✅ ${successMsg}`, 'success')
+        }
         await loadExternalCalendars()
         addDebugLog('✅ Kalender neu geladen', 'success')
       } else {
-        const errorMsg = `${response.message}${response.error ? ' - ' + response.error : ''}`
+        const errorMsg = `${response.message}${response.error ? ' - ' + response.error : ''}${(response as any).tip ? ' — ' + (response as any).tip : ''}`
         addDebugLog(`❌ Sync fehlgeschlagen: ${errorMsg}`, 'error')
         error.value = errorMsg
         await loadExternalCalendars()

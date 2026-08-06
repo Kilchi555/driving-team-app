@@ -87,7 +87,7 @@ export function buildAppointmentReminderSms(
 
 export function previewAppointmentSms(
   length: SmsMessageLength,
-  kind: 'confirmation' | 'reminder' = 'confirmation',
+  kind: 'confirmation' | 'reminder' | 'cancelled' | 'rescheduled' = 'confirmation',
 ): { message: string; segments: number } {
   const sample: AppointmentSmsTemplateData = {
     firstName: 'Max',
@@ -96,8 +96,129 @@ export function previewAppointmentSms(
     locationLabel: 'Bahnhofplatz 1, Bern',
     appLink: 'https://app.simy.ch/onboarding/beispiel-token',
   }
-  const message = kind === 'reminder'
-    ? buildAppointmentReminderSms(sample, length)
-    : buildAppointmentConfirmationSms(sample, length)
+  let message: string
+  if (kind === 'reminder') message = buildAppointmentReminderSms(sample, length)
+  else if (kind === 'cancelled') message = buildAppointmentCancelledSms(sample, length)
+  else if (kind === 'rescheduled') message = buildAppointmentRescheduledSms(sample, length)
+  else message = buildAppointmentConfirmationSms(sample, length)
   return { message, segments: countSmsSegments(message) }
 }
+
+/** Cancellation SMS */
+export function buildAppointmentCancelledSms(
+  data: AppointmentSmsTemplateData & { reason?: string | null },
+  length: SmsMessageLength = 'short',
+): string {
+  const name = cleanName(data.firstName)
+  const when = `${data.dateLabel} ${data.timeLabel}`.trim()
+  const reason = (data.reason || '').replace(/\s+/g, ' ').trim()
+
+  if (length === 'long') {
+    const link = data.appLink?.trim()
+    const lines = [
+      `Hallo ${name},`,
+      `Termin ${when} abgesagt.`,
+      reason ? `Grund: ${reason}` : null,
+      link || null,
+    ].filter(Boolean)
+    return lines.join('\n')
+  }
+
+  const lines = [
+    `Hallo ${name},`,
+    `Termin ${when} abgesagt.`,
+    reason ? `Grund: ${reason}` : null,
+  ].filter(Boolean) as string[]
+  return fitShort(lines.join('\n'))
+}
+
+/** Reschedule SMS — timeLabel should be the new time */
+export function buildAppointmentRescheduledSms(
+  data: AppointmentSmsTemplateData,
+  length: SmsMessageLength = 'short',
+): string {
+  const name = cleanName(data.firstName)
+  const when = `${data.dateLabel} ${data.timeLabel}`.trim()
+  const loc = cleanLocation(data.locationLabel)
+
+  if (length === 'long') {
+    const link = data.appLink?.trim()
+    const lines = [
+      `Hallo ${name},`,
+      `Termin verschoben auf ${when}.`,
+      loc ? `Ort: ${loc}` : null,
+      link || null,
+    ].filter(Boolean)
+    return lines.join('\n')
+  }
+
+  const lines = [
+    `Hallo ${name},`,
+    `Termin neu: ${when}.`,
+    loc ? `Ort: ${loc}` : null,
+  ].filter(Boolean) as string[]
+  return fitShort(lines.join('\n'))
+}
+
+/** Course session reminder SMS (participant) */
+export function buildCourseReminderSms(opts: {
+  firstName: string
+  courseName: string
+  dateLabel: string
+  timeLabel?: string | null
+  locationLabel?: string | null
+  appLink?: string | null
+  length?: SmsMessageLength
+}): string {
+  const name = cleanName(opts.firstName)
+  const length = opts.length || 'short'
+  const course = (opts.courseName || 'Kurs').replace(/\s+/g, ' ').trim()
+  const when = [opts.dateLabel, opts.timeLabel].filter(Boolean).join(' ').trim()
+  const loc = cleanLocation(opts.locationLabel)
+
+  if (length === 'long') {
+    const link = opts.appLink?.trim()
+    const lines = [
+      `Hallo ${name},`,
+      `Erinnerung: ${course} morgen ${when}.`.trim(),
+      loc ? `Ort: ${loc}` : null,
+      link || null,
+    ].filter(Boolean)
+    return lines.join('\n')
+  }
+
+  return fitShort(
+    [`Hallo ${name},`, `Kurs morgen: ${course}${when ? ` ${when}` : ''}.`, loc ? `Ort: ${loc}` : null]
+      .filter(Boolean)
+      .join('\n'),
+  )
+}
+
+/** Payment reminder SMS (open balance after appointment) */
+export function buildPaymentReminderSms(opts: {
+  firstName: string
+  amountChf: string
+  count?: number
+  appLink?: string | null
+  length?: SmsMessageLength
+}): string {
+  const name = cleanName(opts.firstName)
+  const length = opts.length || 'short'
+  const count = opts.count && opts.count > 1 ? opts.count : 1
+  const amount = (opts.amountChf || '').trim() || '0.00'
+
+  if (length === 'long') {
+    const link = opts.appLink?.trim()
+    const lines = [
+      `Hallo ${name},`,
+      count > 1
+        ? `${count} offene Zahlungen: CHF ${amount}.`
+        : `Offene Zahlung: CHF ${amount}.`,
+      link || null,
+    ].filter(Boolean)
+    return lines.join('\n')
+  }
+
+  return fitShort(`Hallo ${name}, offene Zahlung CHF ${amount}.`)
+}
+

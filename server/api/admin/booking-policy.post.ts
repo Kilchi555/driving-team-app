@@ -10,6 +10,10 @@ import {
   normalizeAutoInvoiceMonthDay,
   normalizeAutoInvoiceWeekday,
 } from './booking-policy.get'
+import {
+  VALID_CUSTOMER_NOTIFICATION_CHANNELS,
+  normalizeCustomerNotificationChannel,
+} from '~/server/utils/customer-notification-channel'
 
 const VALID_FIELDS = new Set([
   'first_name', 'last_name', 'phone', 'email',
@@ -121,6 +125,15 @@ export default defineEventHandler(async (event) => {
   }
   if (body.auto_invoice_schedule_day !== undefined) {
     body.auto_invoice_schedule_day = normalizeAutoInvoiceMonthDay(body.auto_invoice_schedule_day)
+  }
+
+  if (body.customer_notification_channel !== undefined) {
+    if (!VALID_CUSTOMER_NOTIFICATION_CHANNELS.includes(body.customer_notification_channel)) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid customer_notification_channel' })
+    }
+    body.customer_notification_channel = normalizeCustomerNotificationChannel(
+      body.customer_notification_channel,
+    )
   }
 
   // Load current policy and merge

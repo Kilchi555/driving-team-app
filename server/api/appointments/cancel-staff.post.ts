@@ -245,73 +245,51 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // ============ LAYER 10: SEND CANCELLATION EMAIL TO CUSTOMER ============
+    // ============ LAYER 10: NOTIFY CUSTOMER (email / SMS per policy) ============
     try {
-      logger.debug('📧 Sending cancellation email to customer...')
-      
-      // Get customer data
-      const { data: customer, error: customerError } = await supabaseAdmin
-        .from('users')
-        .select('first_name, last_name, email')
-        .eq('id', appointment.user_id)
-        .single()
+      logger.debug('📧 Sending cancellation notification to customer...')
 
-      if (customer && customer.email) {
-        // Get tenant data
-        const { data: tenant, error: tenantError } = await supabaseAdmin
-          .from('tenants')
-          .select('name, slug')
-          .eq('id', tenantId)
-          .single()
+      const startTime = new Date(appointment.start_time)
+      const appointmentDateTime = startTime.toLocaleString('de-CH', {
+        timeZone: 'Europe/Zurich',
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
 
-        // Format appointment time
-        const startTime = new Date(appointment.start_time)
-        const appointmentDateTime = startTime.toLocaleString('de-CH', {
-          timeZone: 'Europe/Zurich',
-          weekday: 'long',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })
+      const wasPaid = payment?.payment_status === 'completed'
+      const refundAmount = cancellationResult?.creditGrantedRappen
+        ? `CHF ${(cancellationResult.creditGrantedRappen / 100).toFixed(2)}`
+        : null
+      const chargeAmount = chargePercentage > 0
+        ? `CHF ${((payment?.total_amount_rappen || 0) * chargePercentage / 100 / 100).toFixed(2)}`
+        : null
 
-        // ✅ Prepare payment and refund details for email
-        const wasPaid = payment?.payment_status === 'completed'
-        const refundAmount = cancellationResult?.creditGrantedRappen 
-          ? `CHF ${(cancellationResult.creditGrantedRappen / 100).toFixed(2)}`
-          : null
-        const chargeAmount = chargePercentage > 0 
-          ? `CHF ${((payment?.total_amount_rappen || 0) * chargePercentage / 100 / 100).toFixed(2)}`
-          : null
+      const { notifyCustomerAppointmentChange } = await import(
+        '~/server/utils/notify-customer-appointment-change'
+      )
+      const result = await notifyCustomerAppointmentChange({
+        tenantId,
+        userId: appointment.user_id,
+        type: 'cancelled',
+        appointmentTimeIso: appointment.start_time,
+        appointmentTimeLabel: appointmentDateTime,
+        cancellationReason: deletionReason,
+        emailExtras: {
+          wasPaid,
+          chargePercentage,
+          refundAmount,
+          chargeAmount,
+        },
+      })
 
-        // Send cancellation email
-        await $fetch('/api/email/send-appointment-notification', {
-          method: 'POST',
-          body: {
-            email: customer.email,
-            studentName: `${customer.first_name} ${customer.last_name}`,
-            appointmentTime: appointmentDateTime,
-            type: 'cancelled',
-            cancellationReason: deletionReason,
-            tenantName: tenant?.name,
-            tenantId,
-            tenantSlug: tenant?.slug,
-            // ✅ NEW: Payment & refund details
-            wasPaid,
-            chargePercentage,
-            refundAmount,
-            chargeAmount
-          }
-        })
-
-        logger.debug('✅ Cancellation email sent to customer:', customer.email)
-      } else {
-        logger.debug('⏭️ No customer email found, skipping cancellation notification')
-      }
+      logger.debug('✅ Cancellation notification:', result)
     } catch (emailError: any) {
-      logger.warn('⚠️ Failed to send cancellation email (non-critical):', emailError.message)
-      // Don't fail the whole cancellation if email fails
+      logger.warn('⚠️ Failed to send cancellation notification (non-critical):', emailError.message)
+      // Don't fail the whole cancellation if notification fails
     }
 
     const duration = Date.now() - startTime

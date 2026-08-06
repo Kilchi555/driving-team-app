@@ -233,6 +233,14 @@ export default defineEventHandler(async (event) => {
     const policy = (tenant as any)?.booking_policy || {}
     const reminderSmsEnabled = policy.reminder_sms_enabled !== false
     const smsLength = policy.sms_message_length === 'long' ? 'long' : 'short'
+    const { resolveCustomerChannels } = await import('~/server/utils/customer-notification-channel')
+    const channels = resolveCustomerChannels({
+      channel: policy.customer_notification_channel,
+      hasEmail,
+      hasPhone,
+      emailEnabled: true,
+      smsEnabled: reminderSmsEnabled,
+    })
     const terms = termsMap.get(apt.tenant_id) || getTerminologyDefaults(tenant?.business_type)
     const tenantName   = tenant?.name || terms.businessNoun
     const primaryColor = tenant?.primary_color || '#2563eb'
@@ -299,7 +307,7 @@ export default defineEventHandler(async (event) => {
     const payment = isBillable ? (paymentMap.get(apt.id) || null) : null
     const paymentHtml = payment ? buildPaymentSection(payment, primaryColor, loginLink, isActivationLink) : ''
 
-    if (hasEmail) {
+    if (channels.sendEmail) {
       const html = buildEmailHtml({
         firstName:    user.first_name || 'Hallo',
         dateStr,
@@ -335,7 +343,8 @@ export default defineEventHandler(async (event) => {
           tenant_name:    tenantName,
         }
       })
-    } else if (hasPhone && reminderSmsEnabled) {
+    }
+    if (channels.sendSms) {
       const { buildAppointmentReminderSms } = await import('~/server/utils/sms-templates')
       const smsBody = buildAppointmentReminderSms(
         {
@@ -358,10 +367,12 @@ export default defineEventHandler(async (event) => {
           stage:          'appointment_reminder',
           appointment_id: apt.id,
           user_id:        user.id,
-          tenant_name:    (tenant as any)?.twilio_from_sender || tenantName,
+          tenant_name:    tenantName,
         }
       })
-    } else {
+    }
+
+    if (!channels.sendEmail && !channels.sendSms) {
       skipped++
     }
   }
