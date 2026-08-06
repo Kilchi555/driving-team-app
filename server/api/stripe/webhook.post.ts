@@ -107,6 +107,18 @@ export default defineEventHandler(async (event) => {
               await sendPaymentConfirmationEmail(supabase, stripe, invoice, tenantId).catch(
                 e => console.error('⚠️ Payment confirmation email failed (non-fatal):', e.message)
               )
+              // Platform tenant→tenant referral: reward on 2nd paid plan invoice
+              try {
+                const { handlePlatformReferralInvoicePaid } = await import('~/server/utils/platform-referral')
+                await handlePlatformReferralInvoicePaid({
+                  supabase,
+                  stripe,
+                  tenantId,
+                  invoice,
+                })
+              } catch (refErr: any) {
+                console.error('⚠️ Platform referral handling failed (non-fatal):', refErr?.message)
+              }
             }
           }
         }

@@ -2836,11 +2836,14 @@ const canProceed = computed(() => {
 
 const canSubmit = computed(() => acceptTerms.value && canProceed.value)
 
-const tenantUrl = computed(() =>
-  createdTenantSlug.value
-    ? `https://app.simy.ch/${createdTenantSlug.value}`
-    : ''
-)
+const tenantUrl = computed(() => {
+  const slug = (createdTenantSlug.value || formData.value.slug || '').trim()
+  if (!slug) return ''
+  if (import.meta.client && typeof window !== 'undefined') {
+    return `${window.location.origin}/${slug}`
+  }
+  return `https://app.simy.ch/${slug}`
+})
 
 // ─── Navigation ───────────────────────────────────────────────────────────
 const nextStep = async () => {
@@ -3156,6 +3159,16 @@ const submitRegistration = async () => {
     if (logoFile.value) fd.append('logo_file', logoFile.value)
     if (logoSquareFile.value) fd.append('logo_square_file', logoSquareFile.value)
 
+    // Platform tenant→tenant invite (?ref= stored by middleware)
+    try {
+      const { getStoredPlatformRefCode, clearPlatformRefCode } = usePlatformRef()
+      const platformRef = getStoredPlatformRefCode()
+      if (platformRef) {
+        fd.append('platform_referral_code', platformRef)
+        clearPlatformRefCode()
+      }
+    } catch { /* ignore */ }
+
     // 1. Register tenant + copy templates + create locations
     // Backend catches validation errors and returns HTTP 200 with { success: false, error }
     // so we must surface response.error directly — throwing new Error() loses status
@@ -3319,9 +3332,14 @@ const submitRegistration = async () => {
 }
 
 const goToLogin = () => {
-  if (createdTenantSlug.value) {
-    window.location.href = `https://app.simy.ch/${createdTenantSlug.value}`
+  const slug = (createdTenantSlug.value || formData.value.slug || '').trim()
+  // Relative path so preview/local work too; absolute app.simy.ch broke silently
+  // when slug was empty (old handler did nothing).
+  if (slug) {
+    window.location.assign(`/${encodeURIComponent(slug)}`)
+    return
   }
+  window.location.assign('/login')
 }
 
 // ─── Watchers ─────────────────────────────────────────────────────────────

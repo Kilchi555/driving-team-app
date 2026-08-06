@@ -48,6 +48,8 @@ interface TenantRegistrationData {
   working_days_template?: string // JSON string
   locations_json?: string        // JSON array of LocationEntry objects
   pricing_json?: string          // JSON array of PricingItem objects
+  /** Platform tenant→tenant referral code (?ref= on tenant-register) */
+  platform_referral_code?: string
 }
 
 interface RegistrationResponse {
@@ -128,7 +130,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       locations_json: '',
       pricing_json: '',
       custom_categories_json: '',
-      staff_json: ''
+      staff_json: '',
+      platform_referral_code: '',
     }
 
     let logoFile: File | null = null
@@ -361,6 +364,28 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         statusCode: 500,
         statusMessage: 'Tenant-Erstellung fehlgeschlagen. Bitte versuche es erneut.'
       })
+    }
+
+    // 5b. Platform tenant→tenant referral attribution (non-blocking)
+    try {
+      const platformCode = (data.platform_referral_code || '').trim()
+      if (platformCode) {
+        const { attributePlatformReferral } = await import('~/server/utils/platform-referral')
+        const result = await attributePlatformReferral({
+          supabase,
+          referredTenantId: tenantId,
+          code: platformCode,
+          referredContactEmail: data.contact_email,
+          referredUidNumber: data.uid_number,
+        })
+        if (result.ok) {
+          logger.debug('✅ Platform referral attributed:', result.referralId)
+        } else {
+          logger.debug('ℹ️ Platform referral not attributed:', result.reason)
+        }
+      }
+    } catch (refErr: any) {
+      console.warn('⚠️ Platform referral attribution failed (non-critical):', refErr?.message)
     }
 
     // 6. Standard-Kategorien und Templates kopieren (optional)
@@ -1030,41 +1055,72 @@ async function copyDefaultDataToTenant(
 
 /** Copies business-type-agnostic templates (cancellation policies/reasons, payment methods). */
 async function copyGenericTemplates(supabase: ReturnType<typeof getSupabaseAdmin>, tenantId: string, now: string): Promise<void> {
-  // ── Cancellation Policies ─────────────────────────────────────────────────
+  // ── Cancellation Policies (+ Rules) ───────────────────────────────────────
   try {
     const { data: policies, error: polErr } = await supabase
       .from('cancellation_policies')
       .select('*')
       .is('tenant_id', null)
 
-    if (!polErr && policies?.length) {
+    if (polErr) {
+      logger.warn('⚠️ Failed to load cancellation policies:', polErr)
+    } else if (policies?.length) {
       const polIdMap = new Map<string, string>()
       for (const p of policies) polIdMap.set(p.id, crypto.randomUUID())
 
-      await supabase.from('cancellation_policies').insert(
+      const { error: polInsertErr } = await supabase.from('cancellation_policies').insert(
         policies.map(p => ({ ...p, id: polIdMap.get(p.id)!, tenant_id: tenantId, created_at: now, updated_at: now }))
       )
-      logger.debug(`✅ Copied ${policies.length} cancellation policies`)
+      if (polInsertErr) {
+        logger.warn('⚠️ Cancellation policies insert failed:', polInsertErr)
+      } else {
+        logger.debug(`✅ Copied ${policies.length} cancellation policies`)
 
-      // ── 4a. Cancellation Reasons ───────────────────────────────────────
-      const { data: reasons, error: reasErr } = await supabase
-        .from('cancellation_reasons')
-        .select('*')
-        .is('tenant_id', null)
+        // Copy rules belonging to the global policies, remapped to the new policy IDs
+        const { data: rules, error: rulesErr } = await supabase
+          .from('cancellation_rules')
+          .select('*')
+          .in('policy_id', policies.map(p => p.id))
 
-      if (!reasErr && reasons?.length) {
-        await supabase.from('cancellation_reasons').insert(
-          reasons.map(r => ({
-            ...r,
-            id: crypto.randomUUID(),
-            tenant_id: tenantId,
-            policy_id: r.policy_id ? (polIdMap.get(r.policy_id) ?? r.policy_id) : null,
-            created_at: now,
-            updated_at: now,
-          }))
-        )
-        logger.debug(`✅ Copied ${reasons.length} cancellation reasons`)
+        if (rulesErr) {
+          logger.warn('⚠️ Failed to load cancellation rules:', rulesErr)
+        } else if (rules?.length) {
+          const { error: rulesInsertErr } = await supabase.from('cancellation_rules').insert(
+            rules.map(r => ({
+              ...r,
+              id: crypto.randomUUID(),
+              policy_id: polIdMap.get(r.policy_id) ?? r.policy_id,
+              tenant_id: tenantId,
+              created_at: now,
+              updated_at: now,
+            }))
+          )
+          if (rulesInsertErr) logger.warn('⚠️ Cancellation rules insert failed:', rulesInsertErr)
+          else logger.debug(`✅ Copied ${rules.length} cancellation rules`)
+        }
       }
+    }
+
+    // Reasons are independent of policies (no policy_id column on cancellation_reasons)
+    const { data: reasons, error: reasErr } = await supabase
+      .from('cancellation_reasons')
+      .select('*')
+      .is('tenant_id', null)
+
+    if (reasErr) {
+      logger.warn('⚠️ Failed to load cancellation reasons:', reasErr)
+    } else if (reasons?.length) {
+      const { error: reasInsertErr } = await supabase.from('cancellation_reasons').insert(
+        reasons.map(r => ({
+          ...r,
+          id: crypto.randomUUID(),
+          tenant_id: tenantId,
+          created_at: now,
+          updated_at: now,
+        }))
+      )
+      if (reasInsertErr) logger.warn('⚠️ Cancellation reasons insert failed:', reasInsertErr)
+      else logger.debug(`✅ Copied ${reasons.length} cancellation reasons`)
     }
   } catch (err) { logger.warn('⚠️ Cancellation copy failed:', err) }
 
@@ -1075,11 +1131,14 @@ async function copyGenericTemplates(supabase: ReturnType<typeof getSupabaseAdmin
       .select('*')
       .is('tenant_id', null)
 
-    if (!pmErr && payMethods?.length) {
-      await supabase.from('payment_methods').insert(
+    if (pmErr) {
+      logger.warn('⚠️ Failed to load payment methods:', pmErr)
+    } else if (payMethods?.length) {
+      const { error: pmInsertErr } = await supabase.from('payment_methods').insert(
         payMethods.map(pm => ({ ...pm, id: crypto.randomUUID(), tenant_id: tenantId, created_at: now, updated_at: now }))
       )
-      logger.debug(`✅ Copied ${payMethods.length} payment methods`)
+      if (pmInsertErr) logger.warn('⚠️ Payment methods insert failed:', pmInsertErr)
+      else logger.debug(`✅ Copied ${payMethods.length} payment methods`)
     }
   } catch (err) { logger.warn('⚠️ Payment methods copy failed:', err) }
 }

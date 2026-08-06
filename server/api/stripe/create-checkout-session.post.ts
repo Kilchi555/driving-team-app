@@ -100,16 +100,18 @@ export default defineEventHandler(async (event) => {
   // Failures here are tolerated: we fall back to a transient customer below.
   let stripeCustomerId: string | undefined
   let wallleeAlreadyActive = false
+  let referredByCode: string | null = null
 
   try {
     const supabase = getSupabaseAdmin()
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('stripe_customer_id, name, contact_email, wallee_onboarding_status, stripe_subscription_id')
+      .select('stripe_customer_id, name, contact_email, wallee_onboarding_status, stripe_subscription_id, referred_by_code')
       .eq('id', tenantId)
       .single()
 
     wallleeAlreadyActive = tenant?.wallee_onboarding_status === 'active'
+    referredByCode = tenant?.referred_by_code || null
 
     // Prevent a second full subscription when the tenant already pays via Stripe.
     // Mid-cycle plan/seat changes go through /api/stripe/update-subscription (proration).
@@ -232,9 +234,10 @@ export default defineEventHandler(async (event) => {
     lineItems.push({ price: gbpPriceId, quantity: 1 })
   }
 
-  // Metered SMS overage (CHF 0.15/segment above plan included quota) — no quantity
-  const { smsOverageCheckoutLineItem } = await import('~/server/utils/sms-stripe')
-  const smsLine = smsOverageCheckoutLineItem()
+  // Metered SMS overage (CHF 0.15/segment above plan included quota) — no quantity.
+  // Skip if price is missing in current Stripe mode (common: live price + sk_test locally).
+  const { smsOverageCheckoutLineItemSafe } = await import('~/server/utils/sms-stripe')
+  const smsLine = await smsOverageCheckoutLineItemSafe()
   if (smsLine) lineItems.push(smsLine)
 
   // ── Create Checkout Session ───────────────────────────────────────────────
@@ -262,6 +265,7 @@ export default defineEventHandler(async (event) => {
           with_wallee: String(withWallee),
           ...(staffToDeactivate.length > 0 ? { staff_to_deactivate: staffToDeactivate.join(',') } : {}),
           ...(tenantId ? { tenant_id: tenantId } : {}),
+          ...(referredByCode ? { referred_by_code: referredByCode } : {}),
         },
       },
       ...(needsWalleeTrial ? {
