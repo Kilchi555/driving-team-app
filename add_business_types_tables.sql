@@ -43,7 +43,7 @@ values
   (
     'mental_coach',
     '{"booking_public_enabled": true, "invoices_enabled": true, "packages_enabled": true, "product_sales_enabled": false}',
-    '{"client":"Klient","clientsPlural":"Klienten","clientPossessive":"Klient","staff":"Coach","staffPlural":"Coaches","appointment":"Sitzung","appointmentsPlural":"Sitzungen","bookAction":"Sitzung buchen","categoriesLabel":"Themenbereiche","categoryLabel":"Themenbereich","businessNoun":"Coaching-Praxis","label_event_type_header":"Sitzungsart"}',
+    '{"client":"Kunde","clientsPlural":"Kunden","clientPossessive":"Kunde","staff":"Coach","staffPlural":"Coaches","appointment":"Sitzung","appointmentsPlural":"Sitzungen","bookAction":"Sitzung buchen","categoriesLabel":"Themenbereiche","categoryLabel":"Themenbereich","businessNoun":"Coaching-Praxis","label_event_type_header":"Sitzungsart"}',
     '{"working_days_template":{"days":[1,2,3,4,5],"start_time":"08:00","end_time":"18:00","schedule":{"1":{"start":"08:00","end":"18:00"},"2":{"start":"08:00","end":"18:00"},"3":{"start":"08:00","end":"18:00"},"4":{"start":"08:00","end":"18:00"},"5":{"start":"08:00","end":"18:00"}}}}'
   ),
   (

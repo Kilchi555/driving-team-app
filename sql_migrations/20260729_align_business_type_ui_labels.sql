@@ -28,9 +28,9 @@ WHERE business_type_code = 'driving_school';
 
 UPDATE business_type_presets
 SET ui_labels = '{
-  "client": "Klient",
-  "clientsPlural": "Klienten",
-  "clientPossessive": "Klient",
+  "client": "Kunde",
+  "clientsPlural": "Kunden",
+  "clientPossessive": "Kunde",
   "staff": "Coach",
   "staffPlural": "Coaches",
   "appointment": "Sitzung",
