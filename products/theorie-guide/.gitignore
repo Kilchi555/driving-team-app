@@ -1,0 +1,10 @@
+# Generated build output
+/build/
+
+# Raw Keynote unpack / large exports (curated assets live under assets/)
+/source/keynote/extracted/
+/source/keynote/exports/*.pdf
+
+# Python
+scripts/__pycache__/
+*.pyc

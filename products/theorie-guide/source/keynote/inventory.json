@@ -1,0 +1,60 @@
+{
+  "source": "/Users/pascalkilchenmann/Desktop/Driving Team/Online Theoriekurs.key",
+  "exportedAt": "2026-07-29",
+  "slideCount": 78,
+  "exports": {
+    "pdf": "products/theorie-guide/source/keynote/exports/Online-Theoriekurs-from-keynote.pdf",
+    "text": "products/theorie-guide/source/keynote/exports/slides-text.txt"
+  },
+  "chapters": [
+    { "id": "intro", "slides": "1-4", "title": "Intro & Lernziele" },
+    { "id": "vortrittshierarchie", "slides": "5-10", "title": "Vortrittshierarchie", "visuals": ["hierarchy-stairs", "animated-build"] },
+    { "id": "rechtsvortritt", "slides": "11-17", "title": "Rechtsvortritt", "visuals": ["intersection-diagrams-yes-no", "stop-sign", "trottoir", "regenrinne"] },
+    { "id": "gegenverkehr", "slides": "18-21", "title": "Gegenverkehr vor Linksabbieger", "visuals": ["left-turn-intersection"] },
+    { "id": "lichtsignale", "slides": "22-31", "title": "Lichtsignale", "visuals": ["traffic-lights", "arrow-green", "warning-lamp", "dual-lanes"] },
+    { "id": "tram-bus", "slides": "33-37", "title": "Tram, Bus & Haltestellen", "visuals": ["tram-bus-lanes", "bus-stop-photo"] },
+    { "id": "autobahn", "slides": "38-45", "title": "Autobahn", "visuals": ["highway-topdown", "do-dont", "onramp-steps", "offramp-steps"] },
+    { "id": "halten-parkieren", "slides": "46-53", "title": "Halten & Parkieren", "visuals": ["signs-markings", "distance-rules"] },
+    { "id": "geschwindigkeit", "slides": "54-57", "title": "Geschwindigkeit", "visuals": ["sight-distance-curves", "conditions-icons"] },
+    { "id": "ueberholen", "slides": "58-60", "title": "Überholen", "visuals": ["tractor-photo", "overtaking-rules"] },
+    { "id": "spezielle-strassen", "slides": "61-62", "title": "Spezielle Strassen", "visuals": ["pedestrian-zone"] },
+    { "id": "tunnel", "slides": "63-70", "title": "Tunnel", "visuals": ["tunnel-checklist"] },
+    { "id": "partner", "slides": "71-72", "title": "Spezielle Verkehrspartner", "visuals": ["children-photo", "elderly-photo"] },
+    { "id": "anhalteweg", "slides": "73-76", "title": "Anhalteweg", "visuals": ["reaction-braking-diagram", "formula"] },
+    { "id": "abschluss", "slides": "77-78", "title": "Fragen & Abschluss", "visuals": [] }
+  ],
+  "visualLibraryNeeded": [
+    "intersection-classic",
+    "intersection-guidelines",
+    "intersection-gutter",
+    "intersection-sidewalk-double",
+    "intersection-stop",
+    "intersection-yield-shark",
+    "traffic-light-round-green",
+    "traffic-light-arrow-solo",
+    "traffic-light-arrow-warn",
+    "highway-lanes",
+    "highway-onramp-numbered",
+    "highway-offramp-numbered",
+    "sight-full-half-curve",
+    "stopping-distance-bar",
+    "hierarchy-stairs"
+  ],
+  "photosNeeded": [
+    "children-crosswalk",
+    "elderly-crosswalk",
+    "tractor-rural-road"
+  ],
+  "canvaPageTypes": [
+    "cover",
+    "chapter-opener",
+    "rule",
+    "compare-yes-no",
+    "steps",
+    "memory",
+    "check",
+    "fachbox",
+    "photo-spread",
+    "recap"
+  ]
+}

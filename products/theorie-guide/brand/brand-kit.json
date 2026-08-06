@@ -1,0 +1,87 @@
+{
+  "name": "Driving Team Fahrschule",
+  "version": "1.0",
+  "updated": "2026-07-29",
+  "colors": {
+    "primary": { "hex": "#019ee5", "name": "Driving Blue", "usage": "Headlines, CTAs, links, primary brand" },
+    "primaryDeep": { "hex": "#006b9c", "name": "Deep Blue", "usage": "Dark backgrounds, footer gradients" },
+    "primarySoft": { "hex": "#e6f6fd", "name": "Blue Mist", "usage": "Light backgrounds, info boxes" },
+    "accentGreen": { "hex": "#5ec32a", "name": "Signal Green", "usage": "Success, yes-rules, positive highlights" },
+    "accentGreenDeep": { "hex": "#2f9e1e", "name": "Forest Green", "usage": "Secondary accent, gradients" },
+    "ink": { "hex": "#081018", "name": "Ink", "usage": "Body text on light backgrounds" },
+    "muted": { "hex": "#3d4f5f", "name": "Muted", "usage": "Secondary text" },
+    "paper": { "hex": "#f7fbfe", "name": "Paper", "usage": "Page background tint" },
+    "white": { "hex": "#ffffff", "name": "White", "usage": "Cards, clean areas" },
+    "danger": { "hex": "#e11d48", "name": "Danger Red", "usage": "No-rules, pitfalls, warnings" },
+    "success": { "hex": "#15803d", "name": "Success Green", "usage": "Correct answers, do-rules" },
+    "warn": { "hex": "#c2410c", "name": "Warning Orange", "usage": "Check questions, caution" },
+    "asphalt": { "hex": "#0b1620", "name": "Asphalt", "usage": "Dark memory blocks, premium cover" }
+  },
+  "typography": {
+    "display": { "family": "Space Grotesk", "fallback": "Arial, sans-serif", "weight": "700", "usage": "Titles, chapter numbers, cover — switched from Syne (too playful/rounded) for a more premium, editorial feel" },
+    "body": { "family": "Manrope", "fallback": "Helvetica, Arial, sans-serif", "weight": "500-700", "usage": "Body text, bullets, captions" }
+  },
+  "iconSources": {
+    "tablerIcons": {
+      "license": "MIT",
+      "url": "https://github.com/tabler/tabler-icons",
+      "usage": "Car, octagon (Stop sign), pedestrian glyphs recolored to brand palette and composed into custom road-scene diagrams in scripts/diagrams.py — not copied from Keynote, all diagrams newly composed."
+    }
+  },
+  "logos": {
+    "wideWebp": "https://drivingteam.ch/images/logo.webp",
+    "altWebp": "https://drivingteam.ch/images/driving-team-logo.webp",
+    "localSvg": "products/theorie-guide/assets/svg/logo.svg",
+    "appIcon": "clients/driving-team/icon.png"
+  },
+  "canva": {
+    "brandKitId": "kAHQvM6EUGY",
+    "brandKitName": "Driving Team",
+    "logoAssetId": "MAHQvCLUbkA",
+    "logoAssetName": "Driving Team Logo Wide",
+    "logoSourceUrl": "https://drivingteam.ch/images/logo.webp",
+    "brandKitsListed": 2,
+    "note": "Connected to Canva Pro account. Use brand_kit_id kAHQvM6EUGY for on-brand designs.",
+    "designs": {
+      "masterPageTypes_v1_deprecated": {
+        "id": "DAHQvDjfH7c",
+        "editUrl": "https://www.canva.com/d/u2LwcC9ZQC4FWI0",
+        "note": "Rejected — serif, cropped logo"
+      },
+      "chapter01_v1_deprecated": {
+        "id": "DAHQvIeoLP4",
+        "editUrl": "https://www.canva.com/d/dKUHRVzIUfBjSex",
+        "note": "Rejected — serif, cropped logo"
+      },
+      "masterPageTypes_v2": {
+        "id": "DAHQvI0d9ww",
+        "title": "Präsentation - Theorie verstehen",
+        "editUrl": "https://www.canva.com/d/p4Y50kpuXA6fd9w",
+        "pageCount": 5
+      },
+      "chapter01_v2": {
+        "id": "DAHQvM0rMMI",
+        "title": "Präsentation - Vortrittshierarchie",
+        "editUrl": "https://www.canva.com/d/9IBID-HKPlhVbQD",
+        "pageCount": 7
+      }
+    }
+  },
+  "canvaManualSetup": {
+    "brandName": "Driving Team Fahrschule",
+    "steps": [
+      "Canva → Brand → Brand Kit → Create",
+      "Upload logo (wide + square if available)",
+      "Add brand colors in order: #019ee5, #5ec32a, #2f9e1e, #081018, #ffffff, #e11d48",
+      "Set fonts: Syne (headings) + Manrope or clean sans (body)",
+      "Save as default brand kit for Theorie PDF project"
+    ],
+    "note": "Canva MCP can list/use brand kits but cannot create them via API. One-time manual setup in Canva UI required (~5 min)."
+  },
+  "pdfProduct": {
+    "format": "A4 portrait",
+    "title": "Theorie verstehen",
+    "subtitle": "Der Driving Team Guide zur Schweizer Strassenverkehrstheorie",
+    "tagline": "Verstehen statt auswendig lernen"
+  }
+}
