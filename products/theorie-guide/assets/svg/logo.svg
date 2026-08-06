@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 56" fill="none" class="logo">
+  <g>
+    <path d="M6 12c16-5 32-5 48 0" stroke="#019ee5" stroke-width="4" stroke-linecap="round"/>
+    <path d="M6 21c16-5 32-5 48 0" stroke="#5ec32a" stroke-width="4" stroke-linecap="round"/>
+    <path d="M6 30c16-5 32-5 48 0" stroke="#2f9e1e" stroke-width="4" stroke-linecap="round"/>
+    <path d="M12 39h36" stroke="#2f9e1e" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M16 45h28" stroke="#5ec32a" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M20 51h20" stroke="#019ee5" stroke-width="2.8" stroke-linecap="round"/>
+  </g>
+  <g font-family="Arial Black, Helvetica, sans-serif">
+    <text x="68" y="28" font-size="18" font-weight="800" fill="#111827" letter-spacing="0.4">DRIVING TEAM</text>
+    <text x="68" y="46" font-size="10" font-weight="700" fill="#374151" letter-spacing="2.2">FAHRSCHULE</text>
+  </g>
+  <rect x="236" y="10" width="36" height="36" rx="3" fill="#019ee5"/>
+  <text x="254" y="37" text-anchor="middle" font-family="Arial Black, Helvetica, sans-serif" font-size="24" font-weight="800" fill="#fff">L</text>
+</svg>

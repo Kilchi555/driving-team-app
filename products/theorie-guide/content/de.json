@@ -1,0 +1,766 @@
+{
+  "meta": {
+    "title": "Theorie verstehen",
+    "subtitle": "Der Driving Team Guide zur Schweizer Strassenverkehrstheorie",
+    "tagline": "Verstehen statt auswendig lernen",
+    "author": "Pascal Kilchenmann",
+    "brand": "Driving Team Fahrschule",
+    "version": "1.0",
+    "lang": "de",
+    "legalNote": "Inhalt basiert auf dem Driving-Team Online-Theoriekurs und ergänzt mit SVG, VRV, SSV sowie asa-Prüfungsinhalten. Rechtliche Angaben ohne Gewähr — massgebend ist das aktuelle Schweizer Recht."
+  },
+  "chapters": [
+    {
+      "id": "einleitung",
+      "number": "00",
+      "title": "Willkommen",
+      "goal": "Du weisst, wie dieser Guide aufgebaut ist und worauf die Theorieprüfung abzielt.",
+      "sections": [
+        {
+          "type": "intro",
+          "headline": "Wir fördern das Verständnis für die Strassenverkehrsregeln",
+          "body": "Dieser Guide übersetzt den Online-Theoriekurs in ein klares Lernbuch. Jedes Kapitel folgt dem gleichen Rhythmus: Situation sehen → Regel verstehen → Ausnahme erkennen → typische Prüfungsfalle vermeiden."
+        },
+        {
+          "type": "learningGoals",
+          "items": [
+            "Du verstehst das Prinzip des Vortrittsrechts.",
+            "Du erhältst eine Übersicht über die wichtigsten Verkehrsregeln.",
+            "Du siehst ein, dass Verständnis Sicherheit erhöht — nicht nur Prüfungspunkte."
+          ]
+        },
+        {
+          "type": "roadmap",
+          "title": "Dein Lernweg",
+          "items": [
+            "Vortrittshierarchie",
+            "Rechtsvortritt",
+            "Lichtsignale",
+            "Tram & Bus",
+            "Autobahn",
+            "Halten & Parkieren",
+            "Geschwindigkeit & Überholen",
+            "Tunnel & spezielle Partner",
+            "Anhalteweg"
+          ]
+        },
+        {
+          "type": "examBox",
+          "title": "Theorieprüfung Schweiz — kurz & klar",
+          "body": "Kategorie B: 50 Fragen, 45 Minuten, max. 15 Fehlerpunkte. Grundlage ist der asa-Kompetenzenkatalog. Seit Juli 2025 sind auch Fahrerassistenz- und Automatisierungssysteme prüfungsrelevant. Voraussetzungen: Nothelferkurs (max. 6 Jahre) und Sehtest.",
+          "source": "asa / TCS / ASTRA"
+        }
+      ]
+    },
+    {
+      "id": "vortrittshierarchie",
+      "number": "01",
+      "title": "Vortrittshierarchie",
+      "goal": "Du kannst in jeder Situation sagen, wer «trumpft» — und warum.",
+      "sections": [
+        {
+          "type": "hook",
+          "headline": "Nicht alles gilt gleichzeitig",
+          "body": "Schweizer Vortritt ist eine Treppe: Was oben steht, schlägt was unten steht. Merke die Reihenfolge — dann lösen sich 80 % der Vortrittsfragen von selbst."
+        },
+        {
+          "type": "hierarchy",
+          "title": "Die Vortrittstreppe",
+          "levels": [
+            {
+              "rank": 5,
+              "name": "Blaulichtfahrzeuge",
+              "note": "Haben den absoluten Vortritt",
+              "examples": ["Polizei", "Krankenwagen", "Feuerwehr etc."],
+              "color": "orange"
+            },
+            {
+              "rank": 4,
+              "name": "Verkehrsdienst",
+              "examples": ["Baustellenarbeiter", "Sicherheitsdienst", "Polizei"],
+              "color": "magenta"
+            },
+            {
+              "rank": 3,
+              "name": "Lichtsignale",
+              "examples": ["Rot / Gelb / Grün", "Voll- & Pfeilgrün", "Warnlampe"],
+              "color": "teal"
+            },
+            {
+              "rank": 2,
+              "name": "Signale & Markierungen",
+              "examples": ["Kein Vortritt", "Stop"],
+              "color": "green"
+            },
+            {
+              "rank": 1,
+              "name": "Grundregeln",
+              "examples": ["Rechtsvortritt", "Gegenverkehr vor Linksabbieger"],
+              "color": "blue"
+            }
+          ]
+        },
+        {
+          "type": "memory",
+          "title": "Eselsbrücke",
+          "body": "Blaulicht → Person → Ampel → Schild → Grundregel. Oder: «B-P-A-S-G»."
+        },
+        {
+          "type": "check",
+          "question": "An einer Kreuzung zeigt die Ampel Grün, ein Polizist winkt dich aber zum Anhalten. Was gilt?",
+          "answer": "Der Verkehrsdienst (Person) steht über den Lichtsignalen. Du folgst den Weisungen der Person."
+        },
+        {
+          "type": "fachbox",
+          "title": "Rechtlicher Anker",
+          "body": "Weisungen der Polizei und des Verkehrsdienstes gehen den allgemeinen Regeln und der Signalisation vor. Blaulichtfahrzeuge mit eingeschaltetem Blaulicht (und oft Folgetonhorn) haben besonderen Vortritt — du musst Platz machen, ohne andere zu gefährden."
+        }
+      ]
+    },
+    {
+      "id": "rechtsvortritt",
+      "number": "02",
+      "title": "Rechtsvortritt",
+      "goal": "Du erkennst, wann Rechtsvortritt gilt — und wann er klar nicht gilt.",
+      "sections": [
+        {
+          "type": "hook",
+          "headline": "Die wichtigste Grundregel",
+          "body": "Ohne Signale, ohne Ampel, ohne Person: Wer von rechts kommt, hat Vortritt. Klingt einfach — die Prüfungsfallen stecken in den Ausnahmen."
+        },
+        {
+          "type": "compare",
+          "title": "Rechtsvortritt — ja oder nein?",
+          "yesTitle": "Rechtsvortritte",
+          "noTitle": "Keine Rechtsvortritte",
+          "yes": [
+            {
+              "id": "klassisch",
+              "title": "Klassischer Rechtsvortritt",
+              "body": "Normale Kreuzung ohne Vortrittssignale. Das Fahrzeug von rechts hat Vortritt."
+            },
+            {
+              "id": "fuehrungslinien",
+              "title": "Rechtsvortritt mit Führungslinien",
+              "body": "Gestrichelte Führungslinien in der Kreuzung ändern den Vortritt nicht."
+            },
+            {
+              "id": "regenrinne",
+              "title": "Rechtsvortritt mit Regenrinne",
+              "body": "Eine Regenrinne allein hebt den Rechtsvortritt nicht auf."
+            }
+          ],
+          "no": [
+            {
+              "id": "trottoir",
+              "title": "Trottoirüberfahrt mit klarer doppelter Trennung",
+              "body": "Wer ein Trottoir überquert (klare doppelte Trennung), hat keinen Rechtsvortritt."
+            },
+            {
+              "id": "stop",
+              "title": "Stop-Signal inkl. Markierung",
+              "body": "Stop schlägt die Grundregel. Vollständig anhalten, dann Vortritt beachten."
+            },
+            {
+              "id": "kein-vortritt",
+              "title": "Kein-Vortritt-Signal inkl. Markierung",
+              "body": "Vortrittsberechtigte Strasse / Haifischzähne: Rechtsvortritt entfällt."
+            }
+          ]
+        },
+        {
+          "type": "pitfall",
+          "title": "Prüfungsfalle: Regenrinne",
+          "body": "Viele denken: «Regenrinne = ich muss warten.» Falsch — ohne klare Trottoirüberfahrt / Signal gilt weiterhin Rechtsvortritt."
+        }
+      ]
+    },
+    {
+      "id": "gegenverkehr",
+      "number": "03",
+      "title": "Gegenverkehr vor Linksabbieger",
+      "goal": "Du kennst die 2. Grundregel und weisst, wann sie gilt.",
+      "sections": [
+        {
+          "type": "rule",
+          "headline": "2. Grundregel",
+          "body": "Gegenverkehr vor Linksabbieger. Wer links abbiegt, lässt den entgegenkommenden Verkehr zuerst."
+        },
+        {
+          "type": "points",
+          "items": [
+            {
+              "title": "Auch bei Stop",
+              "body": "Die 2. Grundregel gilt auch, wenn du am Stop stehst und danach links abbiegen willst — Gegenverkehr zuerst."
+            },
+            {
+              "title": "Nie bei aktivem Lichtsignal",
+              "body": "Bei aktiviertem Lichtsignal gilt NIE Rechtsvortritt. Die Ampel regelt — nicht die Grundregeln untereinander."
+            },
+            {
+              "title": "POTS / Signale",
+              "body": "Signale und Markierungen (z. B. Stop, Kein Vortritt) stehen über den Grundregeln — ausser eine höhere Stufe greift (Ampel, Person, Blaulicht)."
+            }
+          ]
+        },
+        {
+          "type": "check",
+          "question": "Du willst links abbiegen, Gegenverkehr kommt geradeaus, Ampel ist ausser Betrieb. Wer hat Vortritt?",
+          "answer": "Der Gegenverkehr. Ohne funktionierende Ampel gelten wieder Signale/Markierungen bzw. Grundregeln — und beim Linksabbiegen hat Gegenverkehr Vortritt."
+        }
+      ]
+    },
+    {
+      "id": "lichtsignale",
+      "number": "04",
+      "title": "Lichtsignale",
+      "goal": "Du beherrschst Vollgrün, Pfeilgrün und die gelbe Warnlampe.",
+      "sections": [
+        {
+          "type": "basics",
+          "title": "Ampel-Basics",
+          "items": [
+            {
+              "title": "Grün geradeaus",
+              "body": "Immer Vortritt (im Rahmen der Ampelphase) — trotzdem vorsichtig und bereit zu reagieren."
+            },
+            {
+              "title": "Wechsel auf Gelb",
+              "body": "Anhalten, wenn möglich — sonst durchfahren."
+            },
+            {
+              "title": "Rot",
+              "body": "Hinter der Linie stoppen. Bei zwei Haltelinien: an der ersten Linie."
+            },
+            {
+              "title": "Wieder Gelb nach Rot",
+              "body": "Vorbereiten zum Losfahren."
+            }
+          ]
+        },
+        {
+          "type": "split",
+          "title": "Beim runden Flächengrün",
+          "left": {
+            "title": "Linksabbiegen",
+            "body": "Gegenverkehr und Fussgänger auf der linken Seite haben Vortritt. Gegebenenfalls vor der Mitte der Kreuzung anhalten."
+          },
+          "right": {
+            "title": "Rechtsabbiegen",
+            "body": "Velo und Fussgänger auf der rechten Seite haben Vortritt."
+          }
+        },
+        {
+          "type": "compare",
+          "title": "Pfeil-Grün: mit vs. ohne gelbe Warnlampe",
+          "yesTitle": "Mit gelb blickender Warnlampe",
+          "noTitle": "Ohne gelbe Warnlampe",
+          "yes": [
+            {
+              "title": "Linksabbiegen",
+              "body": "Gegenverkehr und Fussgänger links können Vortritt haben. Evtl. vor Kreuzungsmitte anhalten."
+            },
+            {
+              "title": "Rechtsabbiegen",
+              "body": "Das geradeaus fahrende Velo rechts und Fussgänger können Vortritt haben. Fussgänger können rot haben — trotzdem prüfen!"
+            }
+          ],
+          "no": [
+            {
+              "title": "Linksabbieger allein",
+              "body": "Bei Pfeil-Grün ohne gelbe Warnlampe hat der Linksabbieger Vortritt. Gegenverkehr und Fussgänger haben rot."
+            },
+            {
+              "title": "Rechtsabbiegen",
+              "body": "Trotzdem: Geradeaus fahrendes Velo rechts und Fussgänger können relevant sein — Situation lesen."
+            }
+          ]
+        },
+        {
+          "type": "memory",
+          "title": "Merksatz fürs Abbiegen",
+          "body": "«Grüner Pfeil allein, ich allein!» — Gegenverkehr und Fussgänger haben rot. Bei Pfeil-Grün mit gelb blickender Warnlampe oder rundem Vollgrün: besonders vorsichtig abbiegen. Alle, die parallel zu dir fahren oder gehen, können gleichzeitig grün und somit Vortritt haben!"
+        }
+      ]
+    },
+    {
+      "id": "tram-bus",
+      "number": "05",
+      "title": "Tram, Bus & Haltestellen",
+      "goal": "Du weisst, wie du dich bei ÖV und Haltestellen korrekt und vorausschauend verhältst.",
+      "sections": [
+        {
+          "type": "points",
+          "title": "Links abbiegen bei Tram & Bus",
+          "items": [
+            {
+              "title": "Kurz halten erlaubt",
+              "body": "Ein kurzzeitiges Anhalten auf der Tram- und Busspur ist erlaubt."
+            },
+            {
+              "title": "Nicht behindern",
+              "body": "Weder ein Tram noch ein Bus darf behindert werden."
+            },
+            {
+              "title": "Leitlinien",
+              "body": "Wenn die Leitlinien unterbrochen sind, darf auf einer Tramspur eingespurt und bei einer Busspur überquert werden."
+            },
+            {
+              "title": "Sicherheitslinien",
+              "body": "Grundsätzlich verboten zu überfahren. Bei kurzfristigem Halten warten, bis Weiterfahrt möglich ist. In Notfällen ist Überfahren erlaubt."
+            }
+          ]
+        },
+        {
+          "type": "points",
+          "title": "Verhalten bei Haltestellen",
+          "items": [
+            {
+              "title": "Bus blinkt",
+              "body": "Wenn der Bus blinkt, müssen wir ihm nach Möglichkeit die Wegfahrt ermöglichen."
+            },
+            {
+              "title": "Ein-/Ausstieg vorbei",
+              "body": "Wenn die Fussgänger bereits aus- und eingestiegen sind, macht ein Vorbeifahren keinen Sinn mehr."
+            },
+            {
+              "title": "Unaufmerksame Fussgänger",
+              "body": "Bei Haltestellen immer mit unaufmerksamen Fussgängern rechnen — sehr vorsichtig fahren."
+            }
+          ]
+        },
+        {
+          "type": "fachbox",
+          "title": "Ergänzung aus der Praxis",
+          "body": "Trams haben oft besonderen Vortritt und können nicht ausweichen. Plane früh, bleib sichtbar, und blockiere nie Schienen «nur kurz» wenn ein Tram naht."
+        }
+      ]
+    },
+    {
+      "id": "autobahn",
+      "number": "06",
+      "title": "Autobahnfahren",
+      "goal": "Du fährst auf der Autobahn vorausschauend, rechts und mit Plan für Einfahrt, Ausfahrt und Notfall.",
+      "sections": [
+        {
+          "type": "dosDonts",
+          "title": "Autobahn — Mache das / Mache das NICHT",
+          "dos": [
+            { "label": "Abstand", "text": "min. 2 Sekunden" },
+            { "label": "Fahrspur", "text": "Rechte Spur" },
+            { "label": "Überholspur", "text": "Linke Spur" },
+            { "label": "Bei starkem Bremsen", "text": "Warnblinker einschalten" },
+            { "label": "Im Stau", "text": "Rettungsgasse bilden" },
+            { "label": "Bei einer Panne", "text": "Auf Pannenstreifen anhalten" },
+            { "label": "Bei einem Unfall", "text": "Unfallstelle sichern & Unfall melden" },
+            { "label": "Im Tunnel", "text": "Sonnenbrille runter" }
+          ],
+          "donts": [
+            { "label": "Aufhocken", "text": "Unfallursache Nr. 1" },
+            { "label": "Links fahren", "text": "Verboten!" },
+            { "label": "Rechtsüberholen", "text": "Nur in klar definierten Fällen erlaubt (siehe Fachbox)" },
+            { "label": "Starkes Bremsen", "text": "Nur im Notfall" },
+            { "label": "Pannenstreifen benutzen", "text": "Nur im Notfall" },
+            { "label": "Bei Panne im Auto bleiben", "text": "Sehr gefährlich" },
+            { "label": "Bei Unfall sich in Gefahr bringen", "text": "Oft passieren so weitere Unfälle" },
+            { "label": "Im Tunnel ohne Licht", "text": "Licht bringt Sicherheit" }
+          ]
+        },
+        {
+          "type": "fachbox",
+          "title": "Rechtsüberholen ≠ Rechtsvorbeifahren (Art. 36 Abs. 5 VRV)",
+          "body": "Klassisches Rechtsüberholen (ausschwenken – vorbeifahren – wiedereinbiegen) ist verboten. Erlaubt ist unter Vorsicht das Rechtsvorbeifahren u. a. bei Kolonnenverkehr links/mitte, auf Einspurstrecken mit unterschiedlichen Fahrzielen, auf dem Beschleunigungsstreifen bis Ende der Sicherheitslinie sowie auf dem Verzögerungsstreifen der Ausfahrt."
+        },
+        {
+          "type": "steps",
+          "title": "Autobahn-Einfahrt — 8 Schritte",
+          "items": [
+            "Vorausschauen, alles frei?",
+            "Auf Autobahngeschwindigkeit beschleunigen.",
+            "Blicksystematik.",
+            "Wenn frei, blinken.",
+            "Wenn erlaubt und frei, Spur wechseln.",
+            "Wenn nicht frei, evtl. Pannenstreifen benutzen.",
+            "Blinker ausschalten.",
+            "Geschwindigkeit und Abstände anpassen."
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "Autobahn-Ausfahrt — 8 Schritte",
+          "items": [
+            "Spätestens bei 1000 m rechte Spur nehmen.",
+            "Nicht mehr überholen.",
+            "Bei ca. 300 m Blicksystematik machen.",
+            "Dann blinken.",
+            "Geschwindigkeit und Abstand beibehalten.",
+            "Nachbeobachten.",
+            "Spur wechseln und erst dann verlangsamen.",
+            "Geschwindigkeit anpassen, Blinker aus."
+          ]
+        },
+        {
+          "type": "fachbox",
+          "title": "Rettungsgasse (Art. 36 Abs. 7 VRV)",
+          "body": "Bei Schrittgeschwindigkeit oder Stillstand auf Autobahnen/Autostrassen mit mind. zwei Fahrstreifen: Gasse bilden zwischen dem äussersten linken und dem unmittelbar rechts danebenliegenden Fahrstreifen."
+        }
+      ]
+    },
+    {
+      "id": "halten-parkieren",
+      "number": "07",
+      "title": "Halten & Parkieren",
+      "goal": "Du unterscheidest verkehrsbedingtes Anhalten, freiwilliges Anhalten und Parkieren.",
+      "sections": [
+        {
+          "type": "hook",
+          "headline": "Drei Stufen denken",
+          "body": "1) Wo nicht einmal verkehrsbedingt gehalten werden darf. 2) Wo zusätzlich freiwilliges Anhalten verboten ist. 3) Wo Parkieren verboten ist."
+        },
+        {
+          "type": "points",
+          "title": "Verkehrsbedingtes Anhalten verboten",
+          "items": [
+            {
+              "title": "Fussgängerstreifen",
+              "body": "Auf Fussgängerstreifen (ausgenommen direkt vor Verzweigungen)."
+            },
+            {
+              "title": "Verzweigungsflächen",
+              "body": "Auf Verzweigungsflächen (Fahrbahnen, die quer verlaufen)."
+            },
+            {
+              "title": "Fahrradstreifen",
+              "body": "Auf Fahrradstreifen ist generelles Halteverbot."
+            },
+            {
+              "title": "Abstände",
+              "body": "5 m vor Fussgängerstreifen oder der Länge der Halteverbotslinie; 5 m vor Verzweigungsflächen."
+            }
+          ]
+        },
+        {
+          "type": "points",
+          "title": "Zusätzlich freiwilliges Anhalten verboten",
+          "items": [
+            {
+              "title": "Unübersichtliche Stellen",
+              "body": "Namentlich im Bereich von Kurven und Kuppen."
+            },
+            {
+              "title": "Engpässe",
+              "body": "In Engpässen und neben Hindernissen in der Fahrbahn."
+            },
+            {
+              "title": "Linien & Durchfahrt",
+              "body": "Auf Einspurstrecken sowie neben Sicherheitslinien, ununterbrochenen Längslinien und Doppellinien, wenn nicht wenigstens 3 m Durchfahrt frei bleibt."
+            },
+            {
+              "title": "Bahn & Unterführung",
+              "body": "Auf Bahnübergängen und in Unterführungen."
+            },
+            {
+              "title": "Signale",
+              "body": "Vor Signalen, wenn sie verdeckt würden."
+            }
+          ]
+        },
+        {
+          "type": "points",
+          "title": "Parkieren verboten",
+          "items": [
+            {
+              "title": "Basis",
+              "body": "Parkieren ist untersagt, wo Halten verboten ist."
+            },
+            {
+              "title": "Hauptstrassen",
+              "body": "Ausserorts auf Hauptstrassen verboten. Innerorts auf Hauptstrassen verboten, wenn nicht genug Platz für zwei Fahrzeuge bleibt."
+            },
+            {
+              "title": "Bahnübergänge",
+              "body": "Verbotszone: 50 m ausserorts, 20 m innerorts."
+            },
+            {
+              "title": "Brücken & Zufahrten",
+              "body": "Auf Brücken verboten. Vor Zufahrten zu fremden Gebäuden verboten."
+            },
+            {
+              "title": "Eng & Trottoir",
+              "body": "In Engpässen nur auf einer Seite parken. Auf dem Trottoir nur wenn signalisiert/markiert; sonst Halten nur für Güterumschlag oder Ein-/Aussteigen, mind. 1,50 m für Fussgänger."
+            },
+            {
+              "title": "Ohne Kontrollschilder",
+              "body": "Fahrzeuge ohne Kontrollschilder dürfen nicht öffentlich abgestellt werden (gemäss Kursinhalt / geltendem Recht prüfen)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "geschwindigkeit",
+      "number": "08",
+      "title": "Geschwindigkeit",
+      "goal": "Du passt Tempo an Sicht, Strasse und Verkehr an — nicht nur an das Schild.",
+      "sections": [
+        {
+          "type": "law",
+          "cite": "Art. 4 Abs. 1 VRV",
+          "body": "Fahrzeugführerinnen und -führer dürfen nur so schnell fahren, wie sie innerhalb der überblickbaren Strecke halten können. Wo das Kreuzen schwierig ist, müssen sie auf halbe Sichtweite halten können."
+        },
+        {
+          "type": "compare",
+          "title": "Sichtweite verstehen",
+          "yesTitle": "Ganze Sichtweite",
+          "noTitle": "Halbe Sichtweite",
+          "yes": [
+            {
+              "title": "Normalfall",
+              "body": "Auf ganze Sichtweite anhalten können — z. B. in übersichtlichen Kurven mit genügend Platz zum Kreuzen."
+            }
+          ],
+          "no": [
+            {
+              "title": "Schwieriges Kreuzen",
+              "body": "Auf halbe Sichtweite anhalten können — damit beide Richtungen vor einem möglichen Treffpunkt stehen bleiben können."
+            }
+          ]
+        },
+        {
+          "type": "law",
+          "cite": "Art. 32 Abs. 2 SVG",
+          "body": "Die allgemeine Höchstgeschwindigkeit gilt unter günstigen Strassen-, Verkehrs- und Sichtverhältnissen. Bei unübersichtlicher Kurve, rutschiger Strasse oder hohem Verkehrsaufkommen musst du freiwillig langsamer fahren."
+        },
+        {
+          "type": "memory",
+          "title": "Merke",
+          "body": "Das Schild ist das Maximum — nie die Pflicht, so schnell zu fahren."
+        }
+      ]
+    },
+    {
+      "id": "ueberholen",
+      "number": "09",
+      "title": "Überholen",
+      "goal": "Du überholst nur, wenn es sicher, erlaubt und nötig ist.",
+      "sections": [
+        {
+          "type": "memory",
+          "title": "Goldene Regel",
+          "body": "Überholen im Zweifel NIE!"
+        },
+        {
+          "type": "points",
+          "items": [
+            {
+              "title": "Links überholen",
+              "body": "Es ist links zu überholen."
+            },
+            {
+              "title": "Markierungen & Signale",
+              "body": "Markierungen und Signale beachten!"
+            },
+            {
+              "title": "Langsamfahrer-Ausnahme",
+              "body": "Wenn ein Fahrzeug nicht schneller als 30 km/h fahren kann, ist das Überholen trotz Überholverbot erlaubt."
+            },
+            {
+              "title": "Spezifische Verbote",
+              "body": "Spezifische Überholverbote beachten, z. B. «Überholverbot für Lastwagen»."
+            },
+            {
+              "title": "Fussgängerstreifen",
+              "body": "Fahrzeuge, welche vor Fussgängerstreifen gestoppt haben, dürfen nicht überholt werden."
+            },
+            {
+              "title": "Linksabbieger",
+              "body": "An Fahrzeugen, die zum Abbiegen nach links eingespurt haben, darf man nur rechts vorbeifahren."
+            },
+            {
+              "title": "Bahnübergang ohne Schranken",
+              "body": "Auf Bahnübergängen ohne Schranken darf niemand überholt werden, ausgenommen Fussgänger und Radfahrer bei guter Übersicht."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spezielle-strassen",
+      "number": "10",
+      "title": "Spezielle Strassen",
+      "goal": "Du erkennst Sonderzonen und passt Verhalten sofort an.",
+      "sections": [
+        {
+          "type": "split",
+          "title": "Zwei Klassiker",
+          "left": {
+            "title": "Weisungen der Chauffeure",
+            "body": "Weisungen der Chauffeure folgen und allgemeines Parkverbot — typisch z. B. bei bestimmten Betriebsarealen / speziellen Anlagen."
+          },
+          "right": {
+            "title": "Fussgängerzone / Begegnungszonen-Logik",
+            "body": "Fussgänger haben überall Vortritt — Tempo und Vorsicht anpassen."
+          }
+        }
+      ]
+    },
+    {
+      "id": "tunnel",
+      "number": "11",
+      "title": "Tunnel",
+      "goal": "Du hast vor, im und nach dem Tunnel sowie im Notfall einen klaren Ablauf.",
+      "sections": [
+        {
+          "type": "steps",
+          "title": "Vor dem Tunnel",
+          "items": [
+            "Signalisation beachten",
+            "Licht kontrollieren und allenfalls einschalten",
+            "Sonnenbrille abnehmen",
+            "Warnlampen kontrollieren",
+            "Frische Luft reinlassen",
+            "Auf Umluft einstellen",
+            "Geschwindigkeit einhalten",
+            "Abstand einhalten"
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "Im Tunnel",
+          "items": [
+            "Signalisation beachten",
+            "Rechtsfahrgebot einhalten",
+            "Nach Notausgängen Ausschau halten",
+            "SOS-Stellen beachten",
+            "Geschwindigkeit beachten",
+            "Abstand halten"
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "Im Notfall",
+          "items": [
+            "Warnblinker einschalten",
+            "Wenn möglich aus Tunnel rausfahren",
+            "Ansonsten rechts anhalten, wenn möglich auf Pannenstreifen oder Notfallbucht",
+            "Verkehr beachten",
+            "Warnweste anziehen",
+            "Über Notrufsäule alarmieren",
+            "Bei Rauch/Feuer Tunnel über Notausgänge verlassen"
+          ]
+        },
+        {
+          "type": "steps",
+          "title": "Nach dem Tunnel",
+          "items": [
+            "Umluft ausschalten",
+            "Sonnenbrille anziehen",
+            "Geschwindigkeit einhalten",
+            "Abstand einhalten"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "partner",
+      "number": "12",
+      "title": "Spezielle Verkehrspartner",
+      "goal": "Du schützt schwächere Verkehrsteilnehmende mit dem richtigen Verhalten.",
+      "sections": [
+        {
+          "type": "compare",
+          "title": "Kinder vs. ältere / eingeschränkte Personen",
+          "yesTitle": "Kinder",
+          "noTitle": "Ältere / eingeschränkte Personen",
+          "yes": [
+            {
+              "title": "Verhalten",
+              "body": "Sind unberechenbar. Hupen, wenn nötig. Verlangsamen, bremsbereit sein. Anhalten, wenn nötig. Kein Handzeichen."
+            }
+          ],
+          "no": [
+            {
+              "title": "Verhalten",
+              "body": "Sind langsam und vorsichtig unterwegs. Handzeichen, wenn nötig. Verlangsamen und bremsbereit sein. Anhalten, wenn in der Nähe."
+            }
+          ]
+        },
+        {
+          "type": "pitfall",
+          "title": "Warum kein Handzeichen bei Kindern?",
+          "body": "Kinder können das Handzeichen falsch verstehen und loslaufen, ohne den restlichen Verkehr zu prüfen. Du bleibst bereit — gibst aber kein «Komm!»-Signal."
+        }
+      ]
+    },
+    {
+      "id": "anhalteweg",
+      "number": "13",
+      "title": "Anhalteweg",
+      "goal": "Du verstehst Reaktionsweg, Bremsweg und den Einfluss der Geschwindigkeit.",
+      "sections": [
+        {
+          "type": "formula",
+          "title": "Die Formel",
+          "body": "Anhalteweg = Reaktionsweg + Bremsweg"
+        },
+        {
+          "type": "points",
+          "items": [
+            {
+              "title": "Bremsbereitschaft",
+              "body": "Mit Bremsbereitschaft nur noch 1/3 Reaktionsweg."
+            },
+            {
+              "title": "Tempo verdoppeln",
+              "body": "Doppelte Geschwindigkeit = 4-facher Bremsweg."
+            },
+            {
+              "title": "Nasse Fahrbahn",
+              "body": "Auf trockener Fahrbahn noch 3/4 vom Bremsweg — nass wird der Bremsweg deutlich länger (Faustregeln im Kurs beachten)."
+            }
+          ]
+        },
+        {
+          "type": "check",
+          "question": "Warum ist Aufhocken auf der Autobahn so gefährlich?",
+          "answer": "Weil der Anhalteweg mit dem Tempo stark wächst. Fehlt der 2-Sekunden-Abstand, reicht der Reaktions- plus Bremsweg oft nicht mehr."
+        }
+      ]
+    },
+    {
+      "id": "abschluss",
+      "number": "14",
+      "title": "Abschluss & nächste Schritte",
+      "goal": "Du weisst, wie du weiterlernst und prüfungsreif wirst.",
+      "sections": [
+        {
+          "type": "points",
+          "title": "So bleibts hängen",
+          "items": [
+            {
+              "title": "Täglich 20–30 Minuten",
+              "body": "Lieber kurz und oft als einmal 4 Stunden."
+            },
+            {
+              "title": "Situationen erklären",
+              "body": "Erzähle einer zweiten Person die Vortrittstreppe und die Ampel-Merksätze."
+            },
+            {
+              "title": "Fragen üben",
+              "body": "Offizielle / lizenzierte Lern-Apps mit asa-Fragenkatalog nutzen."
+            },
+            {
+              "title": "Mit der Fahrschule verbinden",
+              "body": "Theorie im Kopf, Praxis auf der Strasse — beides verstärkt sich."
+            }
+          ]
+        },
+        {
+          "type": "cta",
+          "headline": "Bereit für die Prüfung?",
+          "body": "Driving Team begleitet dich von der Theorie bis zur praktischen Prüfung. Fragen? Melde dich bei deinem Fahrlehrer oder unter drivingteam.ch."
+        }
+      ]
+    }
+  ]
+}
