@@ -455,6 +455,7 @@ export async function handlePlatformReferralInvoicePaid(opts: {
 }
 
 export function buildPlatformReferralShareUrl(code: string): string {
-  const base = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
-  return `${base.replace(/\/$/, '')}/tenant-register?ref=${encodeURIComponent(code)}`
+  // Land on marketing site first so vertical landings / CTAs keep ?ref=
+  const marketing = (process.env.NUXT_PUBLIC_MARKETING_URL || 'https://simy.ch').replace(/\/$/, '')
+  return `${marketing}/?ref=${encodeURIComponent(code)}`
 }

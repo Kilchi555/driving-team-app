@@ -28,7 +28,7 @@
           Schüler buchen ihren Fahrstunden-Termin selbst — per Link, rund um die Uhr. Du siehst alles in einem übersichtlichen Kalender. Keine WhatsApp-Koordination mehr.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
-          <a href="https://app.simy.ch/tenant-register?type=driving_school"
+          <a :href="registerCta"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
             style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             Kostenlos testen →
@@ -86,7 +86,7 @@
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Bereit, Termine zu automatisieren?</h2>
         <p class="text-white mb-8">30 Tage kostenlos. Keine Kreditkarte.</p>
-        <a href="https://app.simy.ch/tenant-register?type=driving_school"
+        <a :href="registerCta"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Jetzt kostenlos starten →
@@ -100,6 +100,7 @@
 
 <script setup lang="ts">
 import { breadcrumbLd, faqPageLd, ldScripts, softwareAppLd } from '~/utils/schema'
+const { registerCta } = useRegisterCta('driving_school')
 
 useHead({
   title: 'Buchungssystem Fahrschule – Online-Terminbuchung | Simy',

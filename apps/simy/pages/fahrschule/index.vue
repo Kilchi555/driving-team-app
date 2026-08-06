@@ -22,17 +22,17 @@
         </div>
 
         <h1 class="text-5xl md:text-6xl font-black text-gray-900 mb-6 leading-[1.1] tracking-tight">
-          Online-Terminbuchung für<br />
+          Fahrschulsoftware für<br />
           <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-            Fahrschulen
+            die Schweiz
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Fahrschulsoftware mit Buchungssystem, automatischen Rechnungen, Fahrlehrer-App und Website — alles in Simy. Keine Insellösungen, kein Excel.
+          Online-Buchungssystem, automatische Rechnungen, Fahrlehrer-App und Website — alles in Simy. Keine Insellösungen, kein Excel.
         </p>
 
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="https://app.simy.ch/tenant-register?type=driving_school"
+          <a :href="registerCta"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold text-base transition-all hover:opacity-90 hover:-translate-y-0.5"
             style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 30px rgba(var(--brand-rgb),0.3);">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -273,7 +273,7 @@
         <SimyFounderNote :blurb="founderBlurbHome" compact />
         <h2 class="text-4xl font-black text-white mb-5">Bereit, deine Fahrschule auf Autopilot zu stellen?</h2>
         <p class="text-white/70 text-lg mb-10">30 Tage kostenlos testen. Keine Kreditkarte, keine Kündigung nötig. In 5 Minuten startklar.</p>
-        <a href="https://app.simy.ch/tenant-register?type=driving_school"
+        <a :href="registerCta"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90 hover:-translate-y-1"
           style="color: var(--brand-primary); box-shadow: 0 12px 40px rgba(0,0,0,0.2)">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -292,19 +292,20 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { FOUNDER_BLURB_HOME } from '~/data/founder'
+const { registerCta } = useRegisterCta('driving_school')
 
 const founderBlurbHome = FOUNDER_BLURB_HOME
 
 useHead({
-  title: 'Online-Terminbuchung für Fahrschulen – App, Buchung & Website | Simy',
+  title: 'Fahrschulsoftware Schweiz – Buchung, App & Website | Simy',
   meta: [
-    { name: 'description', content: 'Online-Terminbuchung für Fahrschulen in der Schweiz: Buchungssystem, automatische Rechnungen, Fahrlehrer-App und Website — alles in Simy. 30 Tage kostenlos.' },
-    { name: 'keywords', content: 'online terminbuchung fahrschule, buchungssystem fahrschule, fahrlehrer app, website fahrschule, terminplaner fahrschule schweiz' },
-    { property: 'og:title', content: 'Online-Terminbuchung für Fahrschulen – App, Buchung & Website | Simy' },
-    { property: 'og:description', content: 'Buchungssystem, Rechnungen, App und Website für Fahrschulen — alles in Simy. 30 Tage kostenlos testen.' },
+    { name: 'description', content: 'Fahrschulsoftware für die Schweiz: Online-Buchungssystem, automatische Rechnungen, Fahrlehrer-App und Website — alles in Simy. 30 Tage kostenlos.' },
+    { name: 'keywords', content: 'fahrschulsoftware, fahrschulsoftware schweiz, buchungssystem fahrschule, fahrlehrer app, website fahrschule, online terminbuchung fahrschule' },
+    { property: 'og:title', content: 'Fahrschulsoftware Schweiz – Buchung, App & Website | Simy' },
+    { property: 'og:description', content: 'Fahrschulsoftware mit Online-Buchung, Rechnungen, App und Website — alles in Simy. 30 Tage kostenlos testen.' },
     { property: 'og:url', content: 'https://simy.ch/fahrschule' },
-    { name: 'twitter:title', content: 'Online-Terminbuchung für Fahrschulen | Simy' },
-    { name: 'twitter:description', content: 'Online-Terminbuchung, Rechnungen, App und Website für Fahrschulen. 30 Tage gratis.' },
+    { name: 'twitter:title', content: 'Fahrschulsoftware Schweiz | Simy' },
+    { name: 'twitter:description', content: 'Fahrschulsoftware mit Buchung, Rechnungen, App und Website. 30 Tage gratis.' },
   ],
   link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule' }],
   script: [
@@ -316,7 +317,7 @@ useHead({
         name: 'Simy',
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
-        description: 'Online-Terminbuchung und Verwaltung für Fahrschulen in der Schweiz',
+        description: 'Fahrschulsoftware Schweiz: Online-Buchung, Rechnungen, Fahrlehrer-App und Website',
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'CHF', description: '30 Tage kostenlos testen' },
       }),
     },

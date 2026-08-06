@@ -206,13 +206,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { SimyComparison } from '~/data/comparisons'
-import { COMPARISONS, comparisonRegisterUrl } from '~/data/comparisons'
+import { COMPARISONS } from '~/data/comparisons'
 import { STARTING_PRICE_CHF } from '~/data/pricing'
 
 const props = defineProps<{ comparison: SimyComparison }>()
 
 const c = computed(() => props.comparison)
-const ctaUrl = comparisonRegisterUrl()
+const { registerCta: ctaUrl } = useRegisterCta()
 const openFaq = ref<number | null>(0)
 const others = computed(() => COMPARISONS.filter((x) => x.slug !== props.comparison.slug))
 const canonical = computed(() => `https://simy.ch/vergleich/${props.comparison.slug}`)

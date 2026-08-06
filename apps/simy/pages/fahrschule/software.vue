@@ -118,7 +118,7 @@
             <p class="text-xs text-gray-500">{{ usp.desc }}</p>
           </div>
         </div>
-        <a href="https://app.simy.ch/tenant-register?type=driving_school"
+        <a :href="registerCta"
           class="flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
           style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.25)">
           30 Tage kostenlos testen →
@@ -162,7 +162,7 @@
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Simy 30 Tage kostenlos testen</h2>
         <p class="text-white mb-8">Überzeuge dich selbst. Keine Kreditkarte, keine Kündigung nötig.</p>
-        <a href="https://app.simy.ch/tenant-register?type=driving_school"
+        <a :href="registerCta"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Jetzt kostenlos starten →
@@ -176,6 +176,7 @@
 
 <script setup lang="ts">
 import { breadcrumbLd, faqPageLd, ldScripts, softwareAppLd } from '~/utils/schema'
+const { registerCta } = useRegisterCta('driving_school')
 
 useHead({
   title: 'Fahrschulsoftware Schweiz 2026 – Der komplette Ratgeber | Simy',

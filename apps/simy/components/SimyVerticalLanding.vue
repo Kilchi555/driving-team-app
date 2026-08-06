@@ -258,13 +258,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { SimyVertical } from '~/data/verticals'
-import { registerUrl, VERTICALS } from '~/data/verticals'
+import { VERTICALS } from '~/data/verticals'
 import { founderBlurbForSlug } from '~/data/founder'
 
 const props = defineProps<{ vertical: SimyVertical }>()
 
 const v = computed(() => props.vertical)
-const ctaUrl = computed(() => registerUrl(props.vertical.businessType))
+const { registerCta: ctaUrl } = useRegisterCta(() => props.vertical.businessType)
 const founderBlurb = computed(() => founderBlurbForSlug(props.vertical.slug))
 const openFaq = ref<number | null>(0)
 const trust = ['Keine Kreditkarte nötig', 'In Minuten startklar', 'Swiss Made', 'DSG-konform']

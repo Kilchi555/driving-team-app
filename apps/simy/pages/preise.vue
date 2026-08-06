@@ -50,7 +50,7 @@
                 <span>{{ f.text }}<span v-if="f.new" class="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded" :style="plan.highlighted ? 'background: rgba(255,255,255,0.15)' : 'background: rgba(var(--brand-rgb),0.1); color: var(--brand-primary)'">NEU</span></span>
               </li>
             </ul>
-            <a href="https://app.simy.ch/tenant-register"
+            <a :href="registerCta"
               class="block text-center py-3.5 rounded-xl font-bold text-sm transition-all hover:opacity-90"
               :style="plan.highlighted
                 ? 'background: rgba(255,255,255,0.92); color: var(--brand-primary)'
@@ -233,7 +233,7 @@
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Kostenlos starten — heute noch</h2>
         <p class="text-white mb-8">30 Tage gratis. Keine Kreditkarte. In 5 Minuten eingerichtet.</p>
-        <a href="https://app.simy.ch/tenant-register"
+        <a :href="registerCta"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary)">
           Jetzt kostenlos starten →
@@ -249,6 +249,7 @@
 import { ref, computed } from 'vue'
 import { breadcrumbLd, faqPageLd, ldScripts, productOffersLd } from '~/utils/schema'
 import { STARTING_PRICE_CHF } from '~/data/pricing'
+const { registerCta } = useRegisterCta()
 
 const openFaq = ref<number | null>(null)
 

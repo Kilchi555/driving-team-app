@@ -47,7 +47,7 @@
         <h2 class="text-3xl font-black mb-4">Nicht sicher, welche Vorlage?</h2>
         <p class="text-white/80 mb-8">Starte den Setup-Wizard — du wählst die Branche in 30 Sekunden.</p>
         <a
-          href="https://app.simy.ch/tenant-register"
+          :href="registerCta"
           class="inline-flex px-8 py-4 rounded-2xl bg-white font-black"
           style="color: var(--brand-primary)"
         >
@@ -64,6 +64,7 @@
 import { VERTICALS } from '~/data/verticals'
 import { VERTICAL_ICON_BY_SLUG } from '~/utils/icons'
 import { breadcrumbLd, itemListLd, ldScripts } from '~/utils/schema'
+const { registerCta } = useRegisterCta()
 
 const COURSE_BRANCHE_HINT: Record<string, string> = {
   hundeschule: 'Einzeltraining und Welpenkurse — Kursbuchungsseite mit Platzlimit inklusive.',

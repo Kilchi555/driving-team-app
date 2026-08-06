@@ -30,7 +30,7 @@
             style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); box-shadow: 0 8px 24px rgba(var(--brand-rgb),0.3)">
             Marketing-Angebote entdecken →
           </a>
-          <a href="https://app.simy.ch/tenant-register"
+          <a :href="registerCta"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl font-bold border border-gray-200 text-gray-700 hover:bg-gray-50 transition-all">
             Software gratis testen
           </a>
@@ -137,7 +137,7 @@
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-4xl font-black text-white mb-5">Bereit, mehr Kunden zu gewinnen?</h2>
         <p class="text-white/70 text-lg mb-10">Starte kostenlos mit der Software und frage uns nach unserem Marketing-Paket.</p>
-        <a href="https://app.simy.ch/tenant-register"
+        <a :href="registerCta"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
           style="color: var(--brand-primary); box-shadow: 0 12px 40px rgba(0,0,0,0.2)">
           Kostenlos starten →
@@ -151,6 +151,7 @@
 
 <script setup lang="ts">
 import { breadcrumbLd, ldScripts, serviceLd } from '~/utils/schema'
+const { registerCta } = useRegisterCta()
 
 useHead({
   title: 'Marketing für Terminbetriebe – Google Ads & SEO | Simy',
