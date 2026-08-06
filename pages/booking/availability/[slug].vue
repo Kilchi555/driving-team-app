@@ -1698,12 +1698,10 @@ import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
-import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
 import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
 
-const { primaryColor } = useTenantBranding()
 const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer', () => route.params.slug as string)
 const { invoiceVisible: invoiceVisibleForCustomer } = useInvoicePaymentSettings(() => route.params.slug as string)
 // 'wallee' stays the default so nothing changes for tenants that haven't opted in to invoice.
@@ -5183,6 +5181,8 @@ const getBrandPrimary = (fallback = '#2563EB') => {
   const isValid = /^#([0-9a-fA-F]{6})$/.test(hex)
   return isValid ? hex : fallback
 }
+/** Reactive brand primary for template bindings (pickup box, payment UI, etc.) */
+const primaryColor = computed(() => getBrandPrimary())
 const getBrandSecondary = (fallback = '#374151') => {
   const hex = currentTenant.value?.secondary_color || fallback
   const isValid = /^#([0-9a-fA-F]{6})$/.test(hex)
