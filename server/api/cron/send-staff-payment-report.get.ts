@@ -22,6 +22,7 @@ import { logger } from '~/utils/logger'
 import { getHeader, getQuery } from 'h3'
 import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { getTenantsWithMultipleStaff } from '~/server/utils/tenant-staff-notify'
 
 const RESEND_DAYS = 7
 
@@ -98,8 +99,11 @@ export default defineEventHandler(async (event) => {
   // ── 2b. Filter by tenant-configured reminder settings (report on/off + methods) ─
   const candidateTenantIds = [...new Set(withStaffPayments.map((p: any) => p.tenant_id).filter(Boolean))]
   const reminderSettingsByTenant = await loadPaymentReminderSettingsByTenant(supabase, candidateTenantIds)
+  // Solo tenants (≤1 active staff): admin report only — skip staff report entirely
+  const multiStaffTenants = await getTenantsWithMultipleStaff(supabase, candidateTenantIds)
 
   const eligiblePayments = withStaffPayments.filter((p: any) => {
+    if (!multiStaffTenants.has(p.tenant_id)) return false
     const settings = reminderSettingsByTenant.get(p.tenant_id)
     return settings?.staff_report?.enabled === true && settings.staff_report[p.payment_method] === true
   })

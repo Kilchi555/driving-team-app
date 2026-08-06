@@ -14,6 +14,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { sendTenantEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { getHeader } from 'h3'
+import { getTenantsWithMultipleStaff } from '~/server/utils/tenant-staff-notify'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -197,10 +198,17 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── 2. STAFF DIGEST – only their own assigned proposals ──────────────────
+  // Solo tenants (≤1 active staff) get admin digest only — skip staff emails.
+  const multiStaffTenants = await getTenantsWithMultipleStaff(
+    supabase,
+    [...byTenant.keys()],
+  )
+
   // Group proposals by staff_id (skip unassigned ones here)
   const byStaff = new Map<string, { tenantId: string; tenant: any; proposals: any[] }>()
   for (const p of proposals) {
     if (!p.staff_id) continue
+    if (!multiStaffTenants.has(p.tenant_id)) continue
     if (!byStaff.has(p.staff_id)) {
       byStaff.set(p.staff_id, { tenantId: p.tenant_id, tenant: p.tenant as any, proposals: [] })
     }

@@ -5,6 +5,7 @@ import { defineEventHandler, readBody, createError, getRequestHeaders } from 'h3
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { shouldNotifyAssignedStaff } from '~/server/utils/tenant-staff-notify'
 import {
   buildBrandedEmailShell,
   displayName,
@@ -94,6 +95,9 @@ export default defineEventHandler(async (event) => {
     const formattedTimeSlots = formatTimeSlots(proposal.preferred_time_slots)
     const isGeneralInquiry = intakeMode === 'general'
     const staffNotificationEnabled = (tenant?.booking_policy as any)?.staff_booking_notification_enabled !== false
+    const multiStaff = staffNotificationEnabled
+      ? await shouldNotifyAssignedStaff(supabase, tenant_id)
+      : false
 
     let customerEmail: any
     let staffEmail: any = null
@@ -104,7 +108,7 @@ export default defineEventHandler(async (event) => {
       tenantEmail = buildDynamicTenantEmail(proposal, location, staff, tenant, formattedTimeSlots, terms, intakeMode)
     } else {
       customerEmail = buildCustomerEmail(proposal, location, staff, tenant, formattedTimeSlots, terms, intakeMode)
-      if (staff?.email && staffNotificationEnabled) {
+      if (staff?.email && staffNotificationEnabled && multiStaff) {
         staffEmail = buildStaffEmail(proposal, location, staff, tenant, formattedTimeSlots, terms, intakeMode)
       }
       tenantEmail = buildDynamicTenantEmail(proposal, location, staff, tenant, formattedTimeSlots, terms, intakeMode)

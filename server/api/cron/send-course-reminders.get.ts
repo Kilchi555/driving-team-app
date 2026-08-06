@@ -28,6 +28,7 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { getTenantsWithMultipleStaff } from '~/server/utils/tenant-staff-notify'
 import { getQuery } from 'h3'
 
 export default defineEventHandler(async (event) => {
@@ -150,6 +151,7 @@ export default defineEventHandler(async (event) => {
     .select('id, name, slug, primary_color, logo_wide_url, logo_url, logo_square_url, booking_policy')
     .in('id', tenantIds)
   const tenantMap = new Map((tenants || []).map((t: any) => [t.id, t]))
+  const multiStaffTenants = await getTenantsWithMultipleStaff(supabase, tenantIds)
 
   // ── 3. Load internal staff emails ─────────────────────────────
   const staffIds = [...new Set(
@@ -302,12 +304,17 @@ export default defineEventHandler(async (event) => {
     const { dateStr, timeRange } = formatSession(session)
     const participants = sessionParticipants.get(sessionId) || []
 
-    // Collect all recipients: instructor + admins (deduped by email)
+    // Collect recipients: instructor + admins (deduped by email).
+    // Solo tenants (≤1 active staff): skip internal staff — admin mail only.
     const recipientSet = new Map<string, string>() // email → name
 
     if (session.instructor_type === 'external' && session.external_instructor_email) {
       recipientSet.set(session.external_instructor_email, session.external_instructor_name || 'Kursleiter')
-    } else if (session.staff_id && staffEmailMap.has(session.staff_id)) {
+    } else if (
+      multiStaffTenants.has(tenantId) &&
+      session.staff_id &&
+      staffEmailMap.has(session.staff_id)
+    ) {
       const s = staffEmailMap.get(session.staff_id)!
       recipientSet.set(s.email, s.name)
     }
