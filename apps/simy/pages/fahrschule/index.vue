@@ -363,11 +363,11 @@ const pains = [
 
 const features = [
   { icon: 'calendar', title: 'Online-Terminbuchung', desc: 'Schüler buchen selbst — per Link, rund um die Uhr. Simy-Termine synchronisieren mit deinem privaten Kalender. Private Termine dort blockieren automatisch deine Verfügbarkeit.', link: '/fahrschule/buchungssystem' },
+  { icon: 'school', title: 'Kursbuchungsseite', desc: 'Theorie, VKU und Nothelfer online verkaufen: Plätze, Anmeldung und Zahlung auf einer Kursseite — neben den Fahrstunden.', link: '/features/kurse' },
   { icon: 'wallet', title: 'Einfache Rechnungsstellung', desc: 'Rechnungen automatisch erstellt und per E-Mail versendet. Mit Online-Zahlung laufen Erinnerungen vollautomatisch — bei Rechnungsversand ist das Mahnen mit wenigen Klicks erledigt.', link: null },
   { icon: 'phone', title: 'Fahrlehrer-App', desc: 'Dein Kalender, deine Schüler, deine Einnahmen — alles auf dem Smartphone, immer aktuell.', link: '/fahrschule/app' },
   { icon: 'globe', title: 'Website-Generator', desc: 'Simy erstellt eine SEO-starke Landingpage mit Online-Terminbuchung, Preisen und Bewertungen — live unter /s/dein-slug.', link: 'https://app.simy.ch/admin/website/setup' },
   { icon: 'chart', title: 'Statistiken & Berichte', desc: 'Einnahmen, Fahrstunden, Prüfungsquote — alle Zahlen auf einen Blick.', link: null },
-  { icon: 'palette', title: 'Dein Branding', desc: 'Simy läuft in deinen Farben und mit deinem Logo — für deine Schüler sieht es aus wie deine eigene App.', link: null },
 ]
 
 const websiteFeatures = [
@@ -387,6 +387,7 @@ const faqs = [
   { q: 'Was kostet Simy für Fahrschulen?', a: 'Simy bietet verschiedene Pläne ab CHF 49/Monat. Du kannst 30 Tage vollständig kostenlos testen — ohne Kreditkarte.' },
   { q: 'Wie lange dauert die Einrichtung?', a: 'In der Regel bist du in unter 15 Minuten startklar. Der Setup-Wizard führt dich durch alle Schritte: Kategorien, Preise, Standorte und Fahrlehrer.' },
   { q: 'Können meine Schüler selbst Termine buchen?', a: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink, den du auf deiner Website oder in WhatsApp teilen kannst.' },
+  { q: 'Kann ich Theorie- und VKU-Kurse online verkaufen?', a: 'Ja. Mit der Kursbuchungsseite melden sich Schüler selbst an, freie Plätze sind sichtbar — ideal für Theorie, VKU und Nothelfer neben den Fahrstunden.' },
   { q: 'Funktioniert Simy auch auf dem Smartphone?', a: 'Ja. Die Fahrlehrer-App läuft auf iOS und Android. Deine Schüler können den Buchungslink direkt im Browser öffnen.' },
   { q: 'Sind meine Daten in der Schweiz gespeichert?', a: 'Ja. Simy speichert alle Daten auf Schweizer Servern und ist vollständig DSGVO-konform.' },
   { q: 'Kann ich Simy zusammen mit meiner bestehenden Website nutzen?', a: 'Ja. Du kannst einfach den Buchungslink auf deiner Website einbinden. Optional generiert Simy auch eine komplette Website für dich.' },

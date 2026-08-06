@@ -28,6 +28,7 @@ export default defineEventHandler((event) => {
     { path: '/marketing/seo',              priority: '0.8', changefreq: 'monthly', lastmod: today },
     { path: '/features/kalender',          priority: '0.7', changefreq: 'monthly', lastmod: today },
     { path: '/features/rechnungen',        priority: '0.7', changefreq: 'monthly', lastmod: today },
+    { path: '/features/kurse',             priority: '0.7', changefreq: 'monthly', lastmod: today },
     { path: '/kunden',                     priority: '0.7', changefreq: 'monthly', lastmod: today },
     { path: '/kontakt',                    priority: '0.6', changefreq: 'monthly', lastmod: today },
     { path: '/ueber-uns',                  priority: '0.6', changefreq: 'monthly', lastmod: today },

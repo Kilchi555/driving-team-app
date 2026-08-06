@@ -96,12 +96,12 @@
           <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
             <div class="flex items-start justify-between mb-3">
               <div>
-                <p class="font-bold text-gray-900 text-sm">Kursbuchungsseite</p>
-                <p class="text-xs text-gray-400 mt-0.5">Online-Buchung für Kurse & Termine</p>
+                <NuxtLink to="/features/kurse" class="font-bold text-gray-900 text-sm hover:underline" style="color: inherit;">Kursbuchungsseite</NuxtLink>
+                <p class="text-xs text-gray-400 mt-0.5">Online-Buchung für Kurse & Gruppen</p>
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary);">Add-on</span>
             </div>
-            <p class="text-xs text-gray-500 leading-relaxed">Im <strong>Professional</strong> und <strong>Enterprise</strong>-Plan inklusive. Für Starter als Add-on zubuchbar.</p>
+            <p class="text-xs text-gray-500 leading-relaxed">Im <strong>Professional</strong> und <strong>Enterprise</strong>-Plan inklusive. Für Starter als Add-on zubuchbar. <NuxtLink to="/features/kurse" class="underline" style="color: var(--brand-primary);">Mehr erfahren</NuxtLink></p>
           </div>
 
           <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">

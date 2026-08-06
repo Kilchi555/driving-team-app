@@ -227,6 +227,10 @@ const featureCats = [
     features: ['Online-Buchungslink für Schüler', 'Echtzeit-Kalender pro Fahrlehrer', 'Automatische Terminbestätigung', 'Absage-Verwaltung', 'Mehrtagesansicht', 'iCal-Sync'],
   },
   {
+    title: 'Kurse & Theorie', icon: 'school', color: 'var(--brand-primary)', tag: 'Must-Have',
+    features: ['Kursbuchungsseite mit Branding', 'Platzkontingente & Restplätze', 'Online-Anmeldung für Theorie/VKU', 'Warteliste bei ausgebuchten Kursen', 'Zahlung bei Anmeldung', 'Neben Fahrstunden nutzbar'],
+  },
+  {
     title: 'Rechnungen & Kasse', icon: 'wallet', color: '#059669', tag: 'Must-Have',
     features: ['Automatische Rechnungserstellung', 'TWINT & Online-Zahlung (CH)', 'Automatische Erinnerungen bei Online-Zahlung', 'Guthaben-System', 'QR-Rechnung', 'Exportfunktion'],
   },

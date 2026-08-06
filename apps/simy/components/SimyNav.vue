@@ -64,6 +64,9 @@
               <a href="/features/rechnungen" class="nav-dropdown-item">
                 <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="wallet" :size="16" /></span><span>Rechnungen & Kasse</span>
               </a>
+              <a href="/features/kurse" class="nav-dropdown-item">
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="school" :size="16" /></span><span>Kursbuchungsseite</span>
+              </a>
               <a href="/features/kalender" class="nav-dropdown-item">
                 <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="link" :size="16" /></span><span>Online-Buchung</span>
               </a>
@@ -153,6 +156,7 @@
         <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-3 pb-1">Features</p>
         <a href="/features/kalender" class="mobile-nav-link" @click="mobileOpen=false">Kalender & Planung</a>
         <a href="/features/rechnungen" class="mobile-nav-link" @click="mobileOpen=false">Rechnungen & Kasse</a>
+        <a href="/features/kurse" class="mobile-nav-link" @click="mobileOpen=false">Kursbuchungsseite</a>
         <a href="/features/kalender" class="mobile-nav-link" @click="mobileOpen=false">Online-Buchung</a>
         <a href="/marketing" class="mobile-nav-link" @click="mobileOpen=false">Marketing</a>
         <a href="/marketing/google-ads" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Google Ads</a>

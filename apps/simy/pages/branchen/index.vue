@@ -65,20 +65,28 @@ import { VERTICALS } from '~/data/verticals'
 import { VERTICAL_ICON_BY_SLUG } from '~/utils/icons'
 import { breadcrumbLd, itemListLd, ldScripts } from '~/utils/schema'
 
+const COURSE_BRANCHE_HINT: Record<string, string> = {
+  hundeschule: 'Einzeltraining und Welpenkurse — Kursbuchungsseite mit Platzlimit inklusive.',
+  musikschule: 'Einzelstunden und Gruppenunterricht — Terminplaner plus Kursverwaltung.',
+  nachhilfe: 'Lektionen und Intensivkurse — Online-Anmeldung für Gruppenformate.',
+  'personal-training': '1:1-Training und optional Bootcamps / Kleingruppen über die Kursseite.',
+  coaching: 'Sitzungen und optional Workshops — Kursbuchung als Add-on neben 1:1.',
+}
+
 const branchenCards = [
   {
     href: '/fahrschule',
     label: 'Fahrschule',
     badge: 'Für Fahrschulen',
     icon: VERTICAL_ICON_BY_SLUG.fahrschule,
-    desc: 'Kategorien, Prüfungen, App und Kurse — die tiefste Vertical.',
+    desc: 'Fahrstunden, Prüfungen, App — plus Kursbuchungsseite für Theorie & VKU.',
   },
   ...VERTICALS.map((v) => ({
     href: `/${v.slug}`,
     label: v.navLabel,
     badge: v.badge,
     icon: VERTICAL_ICON_BY_SLUG[v.slug] || 'spark',
-    desc: v.heroSub,
+    desc: COURSE_BRANCHE_HINT[v.slug] || v.heroSub,
   })),
 ]
 
