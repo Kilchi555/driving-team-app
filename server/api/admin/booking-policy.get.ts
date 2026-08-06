@@ -73,6 +73,56 @@ export interface BookingPolicy {
   // ── Staff permissions ──────────────────────────────────────────────────────
   staff_refund_permission: 'hidden' | 'request' | 'allowed'
   staff_invoice_permission: 'hidden' | 'create_only' | 'create_and_send'
+  // ── Auto-invoice after appointment completion (default OFF) ────────────────
+  /**
+   * When true, completing an appointment with payment_method=invoice
+   * automatically creates and emails a formal invoice.
+   */
+  auto_invoice_on_complete: boolean
+  /**
+   * Who receives the invoice PDF email.
+   * - customer: student's billing email
+   * - office: predefined office/admin email (for print + postal)
+   * - both: customer and office
+   */
+  auto_invoice_recipient: 'customer' | 'office' | 'both'
+  /** Predefined email for office/print workflow (required when recipient is office|both) */
+  auto_invoice_office_email: string | null
+  /**
+   * Scheduled auto-invoice for past uninvoiced invoice-payments (default off).
+   * Cron runs daily and invoices only tenants whose schedule matches today (Europe/Zurich).
+   * Groups open items into one Sammelrechnung per customer.
+   */
+  auto_invoice_schedule: 'off' | 'daily' | 'weekly' | 'monthly'
+  /** ISO weekday 1=Mon … 7=Sun — used when schedule is weekly (default Monday) */
+  auto_invoice_schedule_weekday: number
+  /** Day of month 1–28 — used when schedule is monthly (default 1) */
+  auto_invoice_schedule_day: number
+}
+
+export type AutoInvoiceRecipient = BookingPolicy['auto_invoice_recipient']
+export const VALID_AUTO_INVOICE_RECIPIENTS: AutoInvoiceRecipient[] = ['customer', 'office', 'both']
+
+export type AutoInvoiceSchedule = BookingPolicy['auto_invoice_schedule']
+export const VALID_AUTO_INVOICE_SCHEDULES: AutoInvoiceSchedule[] = ['off', 'daily', 'weekly', 'monthly']
+
+export function normalizeAutoInvoiceSchedule(value: unknown): AutoInvoiceSchedule {
+  if (VALID_AUTO_INVOICE_SCHEDULES.includes(value as AutoInvoiceSchedule)) {
+    return value as AutoInvoiceSchedule
+  }
+  return 'off'
+}
+
+export function normalizeAutoInvoiceWeekday(value: unknown): number {
+  const n = Number(value)
+  if (Number.isInteger(n) && n >= 1 && n <= 7) return n
+  return 1
+}
+
+export function normalizeAutoInvoiceMonthDay(value: unknown): number {
+  const n = Number(value)
+  if (Number.isInteger(n) && n >= 1 && n <= 28) return n
+  return 1
 }
 
 export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
@@ -101,6 +151,12 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   sms_hard_stop_on_quota: false,
   staff_refund_permission: 'hidden',
   staff_invoice_permission: 'create_and_send',
+  auto_invoice_on_complete: false,
+  auto_invoice_recipient: 'customer',
+  auto_invoice_office_email: null,
+  auto_invoice_schedule: 'off',
+  auto_invoice_schedule_weekday: 1,
+  auto_invoice_schedule_day: 1,
 }
 
 export type LocationIntakeMode = 'locations' | 'pickup_address' | 'callback'
@@ -194,6 +250,19 @@ export default defineEventHandler(async (event) => {
       DEFAULT_BOOKING_POLICY.registration_account_mode
     ),
     staff_booking_notification_enabled: merged.staff_booking_notification_enabled !== false,
+    auto_invoice_on_complete: merged.auto_invoice_on_complete === true,
+    auto_invoice_recipient: VALID_AUTO_INVOICE_RECIPIENTS.includes(
+      merged.auto_invoice_recipient as AutoInvoiceRecipient
+    )
+      ? (merged.auto_invoice_recipient as AutoInvoiceRecipient)
+      : DEFAULT_BOOKING_POLICY.auto_invoice_recipient,
+    auto_invoice_office_email:
+      typeof merged.auto_invoice_office_email === 'string' && merged.auto_invoice_office_email.trim()
+        ? merged.auto_invoice_office_email.trim()
+        : null,
+    auto_invoice_schedule: normalizeAutoInvoiceSchedule(merged.auto_invoice_schedule),
+    auto_invoice_schedule_weekday: normalizeAutoInvoiceWeekday(merged.auto_invoice_schedule_weekday),
+    auto_invoice_schedule_day: normalizeAutoInvoiceMonthDay(merged.auto_invoice_schedule_day),
   }
 
   return { success: true, policy }

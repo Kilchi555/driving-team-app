@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { triggerAutoInvoiceOnComplete } from '~/server/utils/auto-invoice-on-complete'
 import logger from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
@@ -36,7 +37,7 @@ export default defineEventHandler(async (event) => {
     // Get user from users table to get tenant_id
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, tenant_id, role')
+      .select('id, tenant_id, role, first_name, last_name, email')
       .eq('auth_user_id', authUser.id)
       .single()
 
@@ -141,6 +142,15 @@ export default defineEventHandler(async (event) => {
       appointmentId: appointment_id,
       examResultId: examResult.id
     })
+
+    triggerAutoInvoiceOnComplete({
+      supabase,
+      tenantId,
+      appointmentIds: [appointment_id],
+      actor: user,
+    }).catch((err: any) =>
+      logger.error('❌ Auto-invoice hook error (exam):', err?.message)
+    )
 
     // ✅ 6. UPDATE exam_passed_categories ON USER (only if passed)
     if (passed && appointment.type) {
