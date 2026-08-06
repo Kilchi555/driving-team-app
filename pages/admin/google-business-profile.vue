@@ -28,7 +28,7 @@
         <h2 class="text-lg font-bold text-gray-900 mb-2">Mehr Reichweite, Anfragen und Umsatz</h2>
         <p class="text-sm text-gray-500 mb-5 leading-relaxed">
           Ein aktives Google-Profil bringt dich bei lokalen Suchen weiter nach oben —
-          mehr Sichtbarkeit, mehr Anfragen, mehr neue Schüler. Simy hält dein Profil
+          mehr Sichtbarkeit, mehr Anfragen, mehr neue {{ t.clientsPlural }}. Simy hält dein Profil
           automatisch aktuell, während du dich um den Unterricht kümmerst.
         </p>
         <ul class="space-y-2.5 mb-6">
@@ -658,11 +658,12 @@
 
             <div class="space-y-3">
               <div>
-                <span class="text-xs font-medium text-gray-600 mb-1.5 block">Datei</span>
+                <span class="text-xs font-medium text-gray-600 mb-1.5 block">Dateien</span>
                 <input
                   ref="poolFileInput"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
+                  multiple
                   class="hidden"
                   @change="onPoolFile"
                 />
@@ -681,24 +682,44 @@
                   </span>
                   <span class="min-w-0 flex-1">
                     <span class="block text-sm font-medium text-gray-900 truncate">
-                      {{ poolFile ? poolFile.name : 'Bild auswählen' }}
+                      {{ poolFiles.length === 0 ? 'Bilder auswählen' : poolFiles.length === 1 ? poolFiles[0].name : `${poolFiles.length} Bilder ausgewählt` }}
                     </span>
                     <span class="block text-xs text-gray-400 truncate">
-                      {{ poolFile ? formatFileSize(poolFile.size) : 'JPEG, PNG oder WebP' }}
+                      {{ poolFiles.length === 0 ? 'JPEG, PNG oder WebP — Mehrfachauswahl möglich' : formatFileSize(poolFilesTotalBytes) }}
                     </span>
                   </span>
                   <button
-                    v-if="poolFile"
+                    v-if="poolFiles.length"
                     type="button"
-                    @click.stop="clearPoolFile"
+                    @click.stop="clearPoolFiles"
                     class="shrink-0 rounded-lg p-1.5 text-gray-400 hover:bg-white hover:text-gray-600"
-                    aria-label="Datei entfernen"
+                    aria-label="Auswahl leeren"
                   >
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                   </button>
                 </div>
+                <ul v-if="poolFiles.length > 1" class="mt-2 max-h-36 overflow-y-auto space-y-1">
+                  <li
+                    v-for="(file, idx) in poolFiles"
+                    :key="`${file.name}-${file.size}-${idx}`"
+                    class="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-600"
+                  >
+                    <span class="min-w-0 flex-1 truncate">{{ file.name }}</span>
+                    <span class="shrink-0 text-gray-400">{{ formatFileSize(file.size) }}</span>
+                    <button
+                      type="button"
+                      @click="removePoolFile(idx)"
+                      class="shrink-0 rounded p-0.5 text-gray-400 hover:text-gray-700"
+                      aria-label="Entfernen"
+                    >
+                      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  </li>
+                </ul>
               </div>
 
               <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -720,8 +741,9 @@
                 context="photo_caption"
                 :location-id="selectedLocationId"
                 :default-keywords="settingsKeywords"
+                :image-files="poolFiles"
                 label="Foto-Beschreibung (optional, für Google SEO)"
-                placeholder="Stichworte oder Rohtext — KI macht daraus eine Caption…"
+                placeholder="Stichworte oder Rohtext — KI erkennt das Motiv und schreibt die Caption…"
                 :max-length="250"
                 :rows="3"
               />
@@ -729,10 +751,10 @@
               <button
                 type="button"
                 @click="uploadToPool"
-                :disabled="!poolFile || poolUploading"
+                :disabled="!poolFiles.length || poolUploading"
                 class="w-full px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
               >
-                {{ poolUploading ? 'Upload…' : 'In Pool laden' }}
+                {{ poolUploadLabel }}
               </button>
             </div>
 
@@ -1040,7 +1062,7 @@
             </label>
             <label class="block space-y-1">
               <span class="text-xs font-medium text-gray-600">Brand Voice</span>
-              <textarea v-model="settingsForm.brand_voice" rows="2" placeholder="z.B. freundlich, Schweizer Hochdeutsch, short & klar" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2 resize-none" />
+              <textarea v-model="settingsForm.brand_voice" rows="2" placeholder="z.B. freundlich, klar, professionell — immer Hochdeutsch" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2 resize-none" />
             </label>
             <label class="block space-y-1">
               <span class="text-xs font-medium text-gray-600">Keywords (kommagetrennt)</span>
@@ -1067,8 +1089,12 @@
 </template>
 
 <script setup lang="ts">
+import { useTerminology } from '~/composables/useTerminology'
+
 definePageMeta({ layout: 'admin' })
 useHead({ title: 'Google Business Profile' })
+
+const { t } = useTerminology()
 
 const tabs = [
   { id: 'insights', label: 'Insights' },
@@ -1077,8 +1103,8 @@ const tabs = [
   { id: 'reviews', label: 'Bewertungen' },
   { id: 'posts', label: 'Posts' },
   { id: 'photos', label: 'Fotos' },
-  { id: 'automation', label: 'Automation' },
-  { id: 'settings', label: 'Einstellungen' },
+  { id: 'automation', label: 'Freigaben' },
+  { id: 'settings', label: 'Automation' },
 ]
 const activeTab = ref('insights')
 
@@ -1549,22 +1575,40 @@ const photoResult = ref('')
 const mediaAssets = ref<any[]>([])
 const approvedMediaAssets = computed(() => mediaAssets.value.filter((a) => a.approved))
 const mediaLoading = ref(false)
-const poolFile = ref<File | null>(null)
+const poolFiles = ref<File[]>([])
 const poolFileInput = ref<HTMLInputElement | null>(null)
 const poolCategory = ref<'EXTERIOR' | 'INTERIOR' | 'PRODUCT' | 'LOGO' | 'COVER'>('INTERIOR')
 const poolNotes = ref('')
 const poolApprovedOnUpload = ref(true)
 const poolUploading = ref(false)
+const poolUploadProgress = ref({ done: 0, total: 0 })
 const publishingAssetId = ref<string | null>(null)
+
+const poolFilesTotalBytes = computed(() => poolFiles.value.reduce((sum, f) => sum + f.size, 0))
+const poolUploadLabel = computed(() => {
+  if (!poolUploading.value) {
+    return poolFiles.value.length > 1
+      ? `${poolFiles.value.length} Fotos in Pool laden`
+      : 'In Pool laden'
+  }
+  const { done, total } = poolUploadProgress.value
+  if (total > 1) return `Upload ${done}/${total}…`
+  return 'Upload…'
+})
 
 function onPoolFile(e: Event) {
   const input = e.target as HTMLInputElement
-  poolFile.value = input.files?.[0] ?? null
+  poolFiles.value = input.files ? Array.from(input.files) : []
 }
 
-function clearPoolFile() {
-  poolFile.value = null
+function clearPoolFiles() {
+  poolFiles.value = []
   if (poolFileInput.value) poolFileInput.value.value = ''
+}
+
+function removePoolFile(index: number) {
+  poolFiles.value = poolFiles.value.filter((_, i) => i !== index)
+  if (!poolFiles.value.length && poolFileInput.value) poolFileInput.value.value = ''
 }
 
 function formatFileSize(bytes: number): string {
@@ -1585,25 +1629,48 @@ async function loadMedia() {
 }
 
 async function uploadToPool() {
-  if (!poolFile.value || !selectedLocationId.value) return
+  if (!poolFiles.value.length || !selectedLocationId.value) return
   poolUploading.value = true
   photoResult.value = ''
+  const files = [...poolFiles.value]
+  const notes = poolNotes.value.trim()
+  poolUploadProgress.value = { done: 0, total: files.length }
+  let ok = 0
+  const errors: string[] = []
+
   try {
-    const fd = new FormData()
-    fd.append('file', poolFile.value)
-    fd.append('category', poolCategory.value)
-    fd.append('locationId', selectedLocationId.value)
-    fd.append('approved', poolApprovedOnUpload.value ? 'true' : 'false')
-    if (poolNotes.value.trim()) fd.append('notes', poolNotes.value.trim())
-    await $fetch('/api/gbp/media/upload', { method: 'POST', body: fd })
-    clearPoolFile()
-    poolNotes.value = ''
-    photoResult.value = 'Foto im Pool gespeichert'
+    for (let i = 0; i < files.length; i++) {
+      poolUploadProgress.value = { done: i, total: files.length }
+      try {
+        const fd = new FormData()
+        fd.append('file', files[i])
+        fd.append('category', poolCategory.value)
+        fd.append('locationId', selectedLocationId.value)
+        fd.append('approved', poolApprovedOnUpload.value ? 'true' : 'false')
+        if (notes) fd.append('notes', notes)
+        await $fetch('/api/gbp/media/upload', { method: 'POST', body: fd })
+        ok++
+      } catch (e: any) {
+        errors.push(`${files[i].name}: ${e?.data?.statusMessage || 'fehlgeschlagen'}`)
+      }
+      poolUploadProgress.value = { done: i + 1, total: files.length }
+    }
+
+    clearPoolFiles()
+    if (ok) poolNotes.value = ''
     await loadMedia()
-  } catch (e: any) {
-    alert(e?.data?.statusMessage || 'Pool-Upload fehlgeschlagen')
+
+    if (ok && !errors.length) {
+      photoResult.value = ok === 1 ? 'Foto im Pool gespeichert' : `${ok} Fotos im Pool gespeichert`
+    } else if (ok && errors.length) {
+      photoResult.value = `${ok} von ${files.length} Fotos gespeichert`
+      alert(`Teilweise fehlgeschlagen:\n${errors.join('\n')}`)
+    } else {
+      alert(errors[0] || 'Pool-Upload fehlgeschlagen')
+    }
   } finally {
     poolUploading.value = false
+    poolUploadProgress.value = { done: 0, total: 0 }
   }
 }
 

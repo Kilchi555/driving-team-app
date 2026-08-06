@@ -27,6 +27,9 @@ export default defineEventHandler(async (event) => {
       starRating?: number
       reviewText?: string
     }
+    /** Raw base64 (no data: prefix) for photo_caption vision */
+    imageBase64?: string | null
+    imageMediaType?: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' | null
   }>(event)
 
   if (!body?.context) throw createError({ statusCode: 400, statusMessage: 'context required' })
@@ -55,6 +58,25 @@ export default defineEventHandler(async (event) => {
     ...(body.keywords ?? []),
   ])].filter(Boolean)
 
+  let imageBase64 = body.imageBase64?.trim() || null
+  let imageMediaType = body.imageMediaType || null
+  if (imageBase64) {
+    // Strip accidental data-URL prefix
+    const dataUrlMatch = imageBase64.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/i)
+    if (dataUrlMatch) {
+      imageMediaType = dataUrlMatch[1].toLowerCase() as typeof imageMediaType
+      imageBase64 = dataUrlMatch[2]
+    }
+    // ~1.5MB base64 ≈ ~1.1MB binary — keep under Vercel body limits
+    if (imageBase64.length > 2_000_000) {
+      throw createError({ statusCode: 413, statusMessage: 'Bild zu gross für KI-Analyse — bitte kleineres Foto wählen' })
+    }
+    if (body.context !== 'photo_caption') {
+      imageBase64 = null
+      imageMediaType = null
+    }
+  }
+
   try {
     const text = await generateGbpAiText({
       context: body.context,
@@ -73,6 +95,8 @@ export default defineEventHandler(async (event) => {
       reviewerName: body.reviewContext?.reviewerName,
       starRating: body.reviewContext?.starRating,
       reviewText: body.reviewContext?.reviewText,
+      imageBase64,
+      imageMediaType,
     })
 
     if (!text) throw createError({ statusCode: 502, statusMessage: 'KI lieferte keinen Text' })

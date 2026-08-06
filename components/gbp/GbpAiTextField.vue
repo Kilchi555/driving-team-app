@@ -10,6 +10,8 @@ const props = withDefaults(defineProps<{
   rows?: number
   placeholder?: string
   label?: string
+  /** For photo_caption: image(s) the AI should recognize */
+  imageFiles?: File[]
   reviewContext?: {
     reviewerName?: string
     starRating?: number
@@ -21,6 +23,7 @@ const props = withDefaults(defineProps<{
   rows: 4,
   placeholder: 'Text eingeben oder Stichworte unten — dann KI optimieren…',
   label: 'Text',
+  imageFiles: () => [],
 })
 
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
@@ -39,6 +42,11 @@ const error = ref('')
 
 const showKeywords = computed(() => props.context !== 'review_reply')
 const showTone = computed(() => true)
+const visionImage = computed(() =>
+  props.context === 'photo_caption' && props.imageFiles?.length
+    ? props.imageFiles[0]
+    : null,
+)
 const charHint = computed(() => {
   if (props.context === 'photo_caption') return 'Ziel: 80–220 Zeichen'
   if (props.context === 'review_reply') return 'Max. 3 Sätze empfohlen'
@@ -75,11 +83,38 @@ function onKeywordKeydown(e: KeyboardEvent) {
   }
 }
 
+/** Resize/compress for vision API — max edge 1280, JPEG ~0.75 */
+async function fileToVisionPayload(file: File): Promise<{ imageBase64: string; imageMediaType: 'image/jpeg' }> {
+  const bitmap = await createImageBitmap(file)
+  const maxEdge = 1280
+  const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
+  const w = Math.max(1, Math.round(bitmap.width * scale))
+  const h = Math.max(1, Math.round(bitmap.height * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas nicht verfügbar')
+  ctx.drawImage(bitmap, 0, 0, w, h)
+  bitmap.close()
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.75)
+  const base64 = dataUrl.split(',')[1] || ''
+  if (!base64) throw new Error('Bild konnte nicht gelesen werden')
+  return { imageBase64: base64, imageMediaType: 'image/jpeg' }
+}
+
 async function runAi(mode: 'generate' | 'regenerate' | 'shorter' | 'more_cta' = 'generate') {
   loading.value = true
   error.value = ''
   try {
     if (text.value.trim()) previousText.value = text.value
+
+    let imagePayload: { imageBase64?: string; imageMediaType?: string } = {}
+    if (visionImage.value && (mode === 'generate' || mode === 'regenerate')) {
+      imagePayload = await fileToVisionPayload(visionImage.value)
+    }
+
     const res = await $fetch<{ text: string }>('/api/gbp/ai-text', {
       method: 'POST',
       body: {
@@ -90,6 +125,7 @@ async function runAi(mode: 'generate' | 'regenerate' | 'shorter' | 'more_cta' = 
         tone: tone.value,
         mode,
         reviewContext: props.reviewContext,
+        ...imagePayload,
       },
     })
     text.value = res.text
@@ -119,6 +155,17 @@ function restorePrevious() {
       :maxlength="maxLength"
       class="block w-full min-w-0 text-sm rounded-xl border border-gray-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
     />
+
+    <p v-if="context === 'photo_caption'" class="text-xs text-gray-400">
+      <template v-if="visionImage">
+        KI erkennt das Motiv im Bild
+        <span v-if="imageFiles.length > 1"> (erstes von {{ imageFiles.length }})</span>
+        und schreibt die Caption danach.
+      </template>
+      <template v-else>
+        Zuerst ein Bild auswählen — dann erkennt die KI das Motiv für den SEO-Text.
+      </template>
+    </p>
 
     <div v-if="showKeywords" class="space-y-2">
       <p class="text-xs text-gray-500">Stichworte (Orte, Leistungen, Namen — für Local SEO)</p>
@@ -153,11 +200,11 @@ function restorePrevious() {
       </select>
       <button
         type="button"
-        :disabled="loading"
+        :disabled="loading || (context === 'photo_caption' && !visionImage)"
         class="w-full sm:w-auto px-3 py-2 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700 disabled:opacity-50"
         @click="runAi('generate')"
       >
-        {{ loading ? 'KI schreibt…' : '✦ SEO-Text generieren' }}
+        {{ loading ? 'KI analysiert…' : (context === 'photo_caption' ? '✦ SEO-Text aus Bild' : '✦ SEO-Text generieren') }}
       </button>
       <button
         v-if="text.trim()"
