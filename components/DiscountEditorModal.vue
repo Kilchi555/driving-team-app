@@ -73,7 +73,7 @@
                 <option value="">Bitte wählen...</option>
                 <option value="percentage">Prozentual (%)</option>
                 <option value="fixed">Fester Betrag (CHF)</option>
-                <option value="free_lesson">Kostenlose Lektion</option>
+                <option value="free_lesson">Kostenlose {{ t.appointment }}</option>
                 <option value="free_product">Kostenloses Produkt</option>
               </select>
             </div>

@@ -182,6 +182,9 @@ import { ref, computed, watch } from 'vue'
 // import { getSupabase } from '~/utils/supabase'
 import { formatDateTime } from '~/utils/dateUtils'
 import { toLocalTimeString } from '~/utils/dateUtils'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 // Props
 interface Props {
@@ -244,7 +247,7 @@ const initializeForm = () => {
 
 const getStudentName = () => {
   const extendedProps = props.appointment?.extendedProps
-  return extendedProps?.student || extendedProps?.user_name || 'Unbekannter Schüler'
+  return extendedProps?.student || extendedProps?.user_name || `Unbekannter ${t.value.client}`
 }
 
 const formatNewDateTime = () => {

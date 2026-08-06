@@ -931,7 +931,7 @@ const loadStudents = async (loadAppointments = true) => {
 
   } catch (err: any) {
     console.error('❌ Error loading students:', err)
-    error.value = err.message || 'Fehler beim Laden der Schüler'
+    error.value = err.message || `Fehler beim Laden der ${t.value.clientsPlural}`
     // Only clear if we never got a successful list this call
     if (!students.value.length) {
       students.value = []

@@ -190,7 +190,7 @@
                       {{ t.staff }}: {{ customer.assignedInstructor || '-' }}
                     </span>
                     <span>
-                      Lektionen: {{ customer.completedLessonsCount || '-' }}
+                      {{ t.appointmentsPlural }}: {{ customer.completedLessonsCount || '-' }}
                     </span>
                   </div>
                   

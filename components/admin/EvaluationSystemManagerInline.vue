@@ -384,7 +384,7 @@
                   </span>
                 </label>
                 <p class="text-xs text-gray-500 mt-1">
-                  Diese Kategorie wird nur bei Theorielektionen angezeigt
+                  Diese Kategorie wird nur bei {{ eventTypeLabel('theory', { detailed: false }) }} angezeigt
                 </p>
               </div>
 
@@ -511,7 +511,7 @@
                 />
                 <label for="always_visible" class="cursor-pointer">
                   <span class="text-sm font-medium text-emerald-800">Immer im Lernbereich anzeigen</span>
-                  <p class="text-xs text-emerald-600 mt-0.5">Dieses Thema wird Schülern im Lernbereich angezeigt, auch wenn noch keine Bewertung vorhanden ist.</p>
+                  <p class="text-xs text-emerald-600 mt-0.5">Dieses Thema wird {{ t.clientsPlural }} im Lernbereich angezeigt, auch wenn noch keine Bewertung vorhanden ist.</p>
                 </label>
               </div>
 
@@ -744,7 +744,7 @@
             <button
               @click="educationalEditorTab = 'student'"
               :class="['px-3 py-1.5 rounded-md text-sm font-medium transition-colors', educationalEditorTab === 'student' ? 'bg-white text-blue-700' : 'text-blue-100 hover:bg-blue-500']"
-            >📘 Schülerinhalt</button>
+            >📘 {{ t.client }}inhalt</button>
             <button
               @click="educationalEditorTab = 'staff'"
               :class="['px-3 py-1.5 rounded-md text-sm font-medium transition-colors', educationalEditorTab === 'staff' ? 'bg-white text-blue-700' : 'text-blue-100 hover:bg-blue-500']"
@@ -1062,7 +1062,7 @@ import { useTerminology } from '~/composables/useTerminology'
 
 // Initialize UI store for toast notifications
 const uiStore = useUIStore()
-const { t } = useTerminology()
+const { t, eventTypeLabel } = useTerminology()
 
 // Types
 interface EvaluationCategory {

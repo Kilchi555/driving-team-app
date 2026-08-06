@@ -6,7 +6,7 @@
         <div class="flex justify-between items-center py-6">
           <div>
             <h1 class="text-3xl font-bold text-gray-900">Preise</h1>
-            <p class="mt-1 text-sm text-gray-600">Lektionspreise nach Kategorie und Fahrzeugmietpreise</p>
+            <p class="mt-1 text-sm text-gray-600">{{ t.appointment }}-Preise nach {{ t.categoryLabel }} und Fahrzeugmietpreise</p>
           </div>
         </div>
         <!-- Tab navigation -->
@@ -105,7 +105,7 @@
                     Name
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Lektionsdauern (Min)
+                    {{ t.appointment }}-Dauern (Min)
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Prüfungsdauer (Min)
@@ -364,7 +364,7 @@
             
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">
-                Lektionsdauern (Min)
+                {{ t.appointment }}-Dauern (Min)
               </label>
               <div class="space-y-3">
                 <!-- Display current durations as tags -->
@@ -397,7 +397,7 @@
                       type="number"
                       step="5"
                       class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:border-transparent"
-                      placeholder="Neue Lektionsdauer eingeben..."
+                      :placeholder="`Neue ${t.appointment}-Dauer eingeben...`"
                     />
                   </div>
                   <span class="text-sm text-gray-500 whitespace-nowrap">Minuten</span>
@@ -485,7 +485,7 @@
               <!-- Theorielektion Preise -->
               <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div class="flex items-center justify-between mb-3">
-                  <h5 class="text-md font-medium text-green-900">Theorielektion</h5>
+                  <h5 class="text-md font-medium text-green-900">{{ eventTypeLabel('theory', { detailed: false }) }}</h5>
                   <label class="relative inline-flex items-center cursor-pointer">
                     <input
                       v-model="categoryForm.theory_enabled"
@@ -850,7 +850,7 @@
                       {{ template.description || 'Keine Beschreibung' }}
                     </div>
                     <div class="text-xs text-gray-500 mt-1 hidden sm:block">
-                      Lektion: {{ template.lesson_duration_minutes?.join(', ') || 'N/A' }} Min | 
+                      {{ t.appointment }}: {{ template.lesson_duration_minutes?.join(', ') || 'N/A' }} Min | 
                       Prüfung: {{ template.exam_duration_minutes || 'N/A' }} Min
                     </div>
                     <div class="text-xs text-gray-500 mt-1 sm:hidden">
@@ -951,7 +951,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
 const { primaryColor } = useTenantBranding()
-const { t } = useTerminology()
+const { t, eventTypeLabel } = useTerminology()
 import LoadingLogo from '~/components/LoadingLogo.vue'
 import SkeletonLoader from '~/components/SkeletonLoader.vue'
 

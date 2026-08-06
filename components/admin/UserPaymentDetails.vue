@@ -170,7 +170,7 @@
                   class="flex items-center justify-between p-2 bg-gray-50 rounded-md text-sm"
                 >
                   <div class="text-gray-700 min-w-0">
-                    <div class="font-medium text-xs sm:text-sm truncate">{{ getAppointmentById(appointmentId)?.event_type_code ? getEventTypeLabel(getAppointmentById(appointmentId)?.event_type_code) : 'Lektion' }}</div>
+                    <div class="font-medium text-xs sm:text-sm truncate">{{ getAppointmentById(appointmentId)?.event_type_code ? getEventTypeLabel(getAppointmentById(appointmentId)?.event_type_code) : t.appointment }}</div>
                     <div class="text-xs text-gray-600 truncate">Mit {{ getAppointmentById(appointmentId)?.staff?.first_name || 'Unknown' }} • {{ getAppointmentById(appointmentId)?.type || 'N/A' }}</div>
                   </div>
                   <span class="text-gray-500">
@@ -226,7 +226,7 @@
                             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                               <div class="flex-1 min-w-0">
                                 <h4 class="text-xs sm:text-sm font-medium text-gray-900 truncate">
-                                  {{ getAppointmentById(appointmentId)?.event_type_code ? getEventTypeLabel(getAppointmentById(appointmentId)?.event_type_code) : 'Lektion' }}
+                                  {{ getAppointmentById(appointmentId)?.event_type_code ? getEventTypeLabel(getAppointmentById(appointmentId)?.event_type_code) : t.appointment }}
                                 </h4>
                                 <div class="mt-1 text-xs sm:text-sm text-gray-500 space-y-0.5">
                                   <div class="truncate">Mit {{ getAppointmentById(appointmentId)?.staff?.first_name || 'Unknown' }} • {{ getAppointmentById(appointmentId)?.type || 'N/A' }}</div>
@@ -336,7 +336,7 @@
                           >
                             <div class="min-w-0 flex-1">
                               <p class="text-sm font-medium text-gray-900 truncate">
-                                {{ getAppointmentById(appointmentId)?.event_type_code ? getEventTypeLabel(getAppointmentById(appointmentId)?.event_type_code) : 'Lektion' }}
+                                {{ getAppointmentById(appointmentId)?.event_type_code ? getEventTypeLabel(getAppointmentById(appointmentId)?.event_type_code) : t.appointment }}
                               </p>
                               <p class="text-xs text-gray-500 truncate">
                                 {{ formatDate(getAppointmentById(appointmentId)?.start_time) }} · {{ getAppointmentById(appointmentId)?.duration_minutes }} Min.
@@ -587,7 +587,7 @@
                 <div class="flex items-start justify-between gap-2">
                   <div>
                     <p class="text-sm font-semibold text-gray-900 leading-tight">
-                      {{ appointment.event_type_code ? getEventTypeLabel(appointment.event_type_code) : 'Lektion' }}
+                      {{ appointment.event_type_code ? getEventTypeLabel(appointment.event_type_code) : t.appointment }}
                     </p>
                     <p class="text-xs text-gray-500">Mit {{ appointment.staff?.first_name || '—' }} · {{ appointment.duration_minutes }}min</p>
                   </div>
@@ -655,7 +655,7 @@ v-for="appointment in filteredAppointments" :key="appointment.id"
                   </td>
                   <td class="px-6 py-4 text-sm text-gray-900">
                     <div class="max-w-xs">
-                      <div class="truncate font-medium">{{ appointment.event_type_code ? getEventTypeLabel(appointment.event_type_code) : 'Lektion' }}</div>
+                      <div class="truncate font-medium">{{ appointment.event_type_code ? getEventTypeLabel(appointment.event_type_code) : t.appointment }}</div>
                       <div class="text-xs text-gray-600 truncate">Mit {{ appointment.staff?.first_name || 'Unknown' }} • {{ appointment.type || 'N/A' }}</div>
                     </div>
                   </td>
@@ -708,7 +708,7 @@ v-if="appointment.payment_method"
                         <div
 v-if="(appointment.lesson_price || 0) > 0" 
                              class="flex justify-between text-xs text-gray-600">
-                          <span>Lektion:</span>
+                          <span>{{ t.appointment }}:</span>
                           <span>{{ formatCurrency(appointment.lesson_price || 0) }}</span>
                         </div>
                         
@@ -2583,7 +2583,7 @@ const getPriceDetailsText = (appointment: Appointment): string => {
   const details = []
   
   if (appointment.lesson_price && appointment.lesson_price > 0) {
-    details.push('Lektion')
+    details.push(t.value.appointment)
   }
   if (appointment.admin_fee && appointment.admin_fee > 0) {
     details.push('Admin-Pauschale')
@@ -2603,7 +2603,7 @@ const getPriceDetailsTooltip = (appointment: Appointment): string => {
   
   // Lektion-Preis
   if (appointment.lesson_price && appointment.lesson_price > 0) {
-    tooltip += `• Lektion: ${formatCurrency(appointment.lesson_price)}\n`
+    tooltip += `• ${t.value.appointment}: ${formatCurrency(appointment.lesson_price)}\n`
   }
   
   // Admin-Pauschale (prominent anzeigen)

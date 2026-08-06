@@ -18,7 +18,7 @@
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <!-- Schüler-Information -->
         <div class="bg-gray-50 p-3 rounded-lg">
-          <p class="text-sm text-gray-600">Schüler</p>
+          <p class="text-sm text-gray-600">{{ t.client }}</p>
           <p class="font-medium">{{ studentName }}</p>
         </div>
 
@@ -149,6 +149,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useHybridDiscounts } from '~/composables/useHybridDiscounts'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 interface Props {
   appointmentId: string

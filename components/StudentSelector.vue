@@ -23,7 +23,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
         </svg>
         <span class="text-sm font-medium text-gray-700">
-          Alle Schüler anzeigen
+          Alle {{ t.clientsPlural }} anzeigen
         </span>
       </div>
       
@@ -85,7 +85,7 @@
           @focus="handleSearchFocus"
           @input="filterStudents"
           type="text"
-          placeholder="Schüler suchen (Name, E-Mail oder Telefon)..."
+          :placeholder="`${t.client} suchen (Name, E-Mail oder Telefon)...`"
           autocomplete="off"
           class="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 !bg-white !text-black"
         />
@@ -98,7 +98,7 @@
           class="w-full px-4 py-3 rounded-xl transition-colors font-medium text-sm"
           :style="primaryBg"
         >
-          Schüler laden
+          {{ t.clientsPlural }} laden
         </button>
       </div>
 
@@ -112,7 +112,7 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
           </svg>
-          Neuer Schüler erstellen
+          Neuer {{ t.client }} erstellen
         </button>
       </div>
 
@@ -121,14 +121,18 @@
         <!-- Loading State -->
         <div v-if="isLoading" class="text-center py-8">
           <div class="animate-spin rounded-full h-6 w-6 border-b-2 mx-auto mb-2" :style="primaryBorder"></div>
-          <p class="text-sm text-gray-600">Schüler werden geladen...</p>
+          <p class="text-sm text-gray-600">{{ t.clientsPlural }} werden geladen...</p>
         </div>
 
         <!-- No Students State -->
         <div v-else-if="studentList.length === 0" class="text-center py-8 text-gray-500">
           <span class="text-3xl mb-2 block">👨‍🎓</span>
           <p class="text-sm">
-            {{ searchQuery ? 'Keine Schüler gefunden' : (!shouldAutoLoadComputed ? 'Klicken Sie "Schüler laden" um die Liste anzuzeigen' : 'Keine Schüler verfügbar') }}
+            {{ searchQuery
+              ? `Keine ${t.clientsPlural} gefunden`
+              : (!shouldAutoLoadComputed
+                ? `Klicken Sie "${t.clientsPlural} laden" um die Liste anzuzeigen`
+                : `Keine ${t.clientsPlural} verfügbar`) }}
           </p>
         </div>
 
@@ -172,7 +176,7 @@
         <!-- Liste Statistiken -->
         <div v-if="!isLoading && studentList.length > 0" class="bg-gray-50 border-t border-gray-200 px-3 py-2">
           <div class="text-xs text-gray-500 text-center">
-            {{ studentList.length }} von {{ availableStudents.length }} Schüler
+            {{ studentList.length }} von {{ availableStudents.length }} {{ t.clientsPlural }}
             <span v-if="searchQuery">• Gefiltert nach "{{ searchQuery }}"</span>
           </div>
         </div>
@@ -193,7 +197,9 @@
 import { logger } from '~/utils/logger'
 import { filterByStudentSearch } from '~/utils/student-search'
 import { ref, computed, watch, onMounted } from 'vue'
+import { useTerminology } from '~/composables/useTerminology'
 const { primaryBg, primaryText, primaryBorder, primaryBgLight } = usePrimaryColor()
+const { t } = useTerminology()
 // import { getSupabase } from '~/utils/supabase'
 import AddStudentModal from '~/components/AddStudentModal.vue'
 
@@ -236,7 +242,7 @@ const clicksEnabled = ref(false)
 const props = withDefaults(defineProps<Props>(), {
   modelValue: null,
   disabled: false,
-  placeholder: 'Schüler suchen (Name, E-Mail oder Telefon)...',
+  placeholder: '',
   autoLoad: true,
   showAllStudents: false,
   isFreeslotMode: false,
@@ -303,7 +309,7 @@ const loadStudents = async (editStudentId?: string | null) => {
     await loadStudentsFromDB()
   } catch (err: any) {
     console.error('❌ Error in loadStudents:', err)
-    error.value = err.message || 'Fehler beim Laden der Schüler'
+    error.value = err.message || `Fehler beim Laden der ${t.value.clientsPlural}`
     availableStudents.value = []
   } finally {
     isLoading.value = false

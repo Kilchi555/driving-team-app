@@ -109,7 +109,7 @@
               <!-- Student & Appointment Info -->
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3">
                 <div>
-                  <p class="text-xs sm:text-sm font-medium text-gray-900">Schüler</p>
+                  <p class="text-xs sm:text-sm font-medium text-gray-900">{{ t.clientsPlural }}</p>
                   <p class="text-sm text-gray-600">{{ transaction.student_name }}</p>
                 </div>
                 <div>

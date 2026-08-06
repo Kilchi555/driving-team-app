@@ -43,7 +43,7 @@
             ]"
           >
             <div class="text-3xl mb-2">👨‍🎓</div>
-            <div class="font-medium">Schüler</div>
+            <div class="font-medium">{{ t.client }}</div>
           </button>
           <button
             @click="selectCancellationType('staff')"
@@ -141,7 +141,7 @@
       <!-- Charge Decision Modal (für Student < 24h) -->
       <div v-if="showChargeDecision" class="mb-6">
         <p class="text-sm text-gray-600 mb-4">
-          Der Termin wird in weniger als 24 Stunden abgesagt. Wähle, ob der Schüler belastet werden soll:
+          Der Termin wird in weniger als 24 Stunden abgesagt. Wähle, ob der {{ t.client }} belastet werden soll:
         </p>
 
         <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-6">

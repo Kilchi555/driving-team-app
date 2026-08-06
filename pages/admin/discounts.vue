@@ -126,7 +126,7 @@
             <option value="">Alle Typen</option>
             <option value="percentage">Prozentual</option>
             <option value="fixed">Fester Betrag</option>
-            <option value="free_lesson">Kostenlose Lektion</option>
+            <option value="free_lesson">Kostenlose {{ t.appointment }}</option>
             <option value="free_product">Kostenloses Produkt</option>
           </select>
         </div>
@@ -647,9 +647,11 @@ import { ref, computed, onMounted } from 'vue'
 import { navigateTo } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { useDiscounts } from '~/composables/useDiscounts'
+import { useTerminology } from '~/composables/useTerminology'
 import type { Discount } from '~/types/payment'
 
 // Composables
+const { t } = useTerminology()
 const { 
   discounts, 
   isLoading, 
@@ -806,7 +808,7 @@ const getTypeLabel = (type: string) => {
   const labels: Record<string, string> = {
     percentage: 'Prozentual',
     fixed: 'Fester Betrag',
-    free_lesson: 'Kostenlose Lektion',
+    free_lesson: `Kostenlose ${t.value.appointment}`,
     free_product: 'Kostenloses Produkt'
   }
   return labels[type] || type

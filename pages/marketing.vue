@@ -178,7 +178,7 @@
           </div>
           <div class="flex items-center gap-2 mt-3">
             <div class="w-2 h-2 rounded-full shrink-0" :style="{ background: primaryColor }"></div>
-            <p class="text-xs text-gray-400">Marketing-Kanäle · grau = bestehende Schüler / nicht zuordenbar</p>
+            <p class="text-xs text-gray-400">Marketing-Kanäle · grau = bestehende {{ t.clientsPlural }} / nicht zuordenbar</p>
           </div>
         </div>
 
@@ -559,11 +559,13 @@
 import { navigateTo } from '#app'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 import LoadingLogo from '~/components/LoadingLogo.vue'
 
 definePageMeta({ middleware: 'auth' })
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 const { currentUser, isLoading, fetchCurrentUser } = useCurrentUser()
 
 const days = ref(30)

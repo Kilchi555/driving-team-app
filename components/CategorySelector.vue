@@ -1,7 +1,7 @@
 <template>
   <div>
     <label class="block text-sm font-medium text-gray-700 mb-2">
-      🚗 Kategorie
+      {{ t.categoryLabel }}
     </label>
     
     <select
@@ -16,7 +16,7 @@
       ]"
     >
       <option value="" class="text-black bg-white">
-        {{ isLoading ? 'Kategorien laden...' : 'Kategorie wählen' }}
+        {{ isLoading ? `${t.categoriesLabel} laden...` : `${t.categoryLabel} wählen` }}
       </option>
       <option 
         v-for="category in availableCategoriesForUser" 
@@ -42,6 +42,9 @@ import { useAuthStore } from '~/stores/auth'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import { useCategoryWithFallback } from '~/composables/useCategoryWithFallback'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 interface Category {
   id: number
@@ -354,7 +357,7 @@ const loadCategories = async () => {
 
   } catch (err: any) {
     console.error('❌ Error loading categories (switching to offline mode):', err)
-    error.value = err.message || 'Offline-Modus: Verwende lokale Kategorien'
+    error.value = err.message || `Offline-Modus: Verwende lokale ${t.value.categoriesLabel}`
     
     // ✅ SOFORTIGER OFFLINE-FALLBACK (CategorySelector hat kein dynamicPricing/formData!)
     logger.debug('🔄 Using complete offline fallback categories')

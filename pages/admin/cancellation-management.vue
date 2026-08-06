@@ -132,8 +132,8 @@
                   <div>
                     <p class="font-medium text-gray-900">{{ reason.reason_name }}</p>
                     <p class="text-sm text-gray-500">
-                      {{ reason.cancellation_type === 'student' ? '👨‍🎓 Schüler' : 
-                         reason.cancellation_type === 'staff' ? `👨‍🏫 ${t.staff}` : '❓ Unbekannt' }} • 
+                      {{ reason.cancellation_type === 'student' ? `👨‍🎓 ${t.client}` :
+                         reason.cancellation_type === 'staff' ? `👨‍🏫 ${t.staff}` : '❓ Unbekannt' }} •
                       Letzte Absage: {{ formatDate(reason.last_cancellation) }}
                     </p>
                   </div>
@@ -363,7 +363,7 @@
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-blue-100 text-blue-800'
                     ]">
-                      {{ reason.cancellation_type === 'student' ? '👨‍🎓 Schüler' : `👨‍🏫 ${t.staff}` }}
+                      {{ reason.cancellation_type === 'student' ? `👨‍🎓 ${t.client}` : `👨‍🏫 ${t.staff}` }}
                     </span>
                   </td>
                     <td class="px-6 py-4">
@@ -390,7 +390,7 @@
                         <span 
                           v-else-if="reason.cancellation_type === 'student' && !(reason as any).requires_proof"
                           class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800"
-                          title="Schüler-Absage: Policy-Regeln gelten (>24h = 0%, <24h = 100%)"
+                          :title="`${t.client}-Absage: Policy-Regeln gelten (>24h = 0%, <24h = 100%)`"
                         >
                           ⏰ Policy-Regeln
                         </span>
@@ -463,7 +463,7 @@
               required
               class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
             >
-              <option value="student">👨‍🎓 Schüler</option>
+              <option value="student">👨‍🎓 {{ t.client }}</option>
               <option value="staff">👨‍🏫 {{ t.staff }}</option>
             </select>
               
@@ -473,7 +473,7 @@
                 <p class="text-xs" :style="{ color: primaryColor }">
                   <strong>Automatische Regelung:</strong>
                   <span v-if="reasonForm.cancellation_type === 'staff'"> {{ t.staff }}-Gründe sind immer kostenlos für Kunde</span>
-                  <span v-else> Schüler-Gründe folgen Policy-Regeln (>24h = 0%, <24h = 100%)</span>
+                  <span v-else> {{ t.client }}-Gründe folgen Policy-Regeln (>24h = 0%, <24h = 100%)</span>
                 </p>
               </div>
             </div>

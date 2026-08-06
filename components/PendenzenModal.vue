@@ -188,7 +188,7 @@
             <div class="text-center px-4">
               <div class="text-6xl mb-4">✅</div>
               <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Bewertungen ausstehend!</h3>
-              <p class="text-gray-600 mb-4">Alle Lektionen bewertet</p>
+              <p class="text-gray-600 mb-4">Alle {{ t.appointmentsPlural }} bewertet</p>
             </div>
           </div>
 
@@ -542,7 +542,7 @@ import CancellationReasonModal from '~/components/CancellationReasonModal.vue'
 import { useTerminology } from '~/composables/useTerminology'
 import { useFeatures } from '~/composables/useFeatures'
 
-const { isDrivingSchool } = useTerminology()
+const { t, isDrivingSchool, eventTypeLabel } = useTerminology()
 const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
 
 const evaluationsEnabled = computed(() =>
@@ -1110,21 +1110,11 @@ const getEventTypeClass = (eventType: string) => {
 }
 
 const getEventTypeText = (eventType: string) => {
-  const texts: Record<string, string> = {
-    'exam': 'Prüfung',
-    'lesson': 'Fahren',
-    'theory': 'Theorie',
-    'practical': 'Fahren',
-    'meeting': 'Meeting',
-    'other': 'Andere'
-  }
-  
-  // Fallback: Wenn eventType null/undefined ist, versuche es aus dem type Feld
+  // Fallback: Wenn eventType null/undefined ist
   if (!eventType) {
     return '?'
   }
-  
-  return texts[eventType] || eventType || '?'
+  return eventTypeLabel(eventType, { detailed: false })
 }
 
 const onEvaluationSaved = async (appointmentId: string) => {

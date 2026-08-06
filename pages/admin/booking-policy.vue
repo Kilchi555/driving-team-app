@@ -35,15 +35,15 @@
         </div>
         <div>
           <p class="text-xs font-semibold text-gray-700 uppercase tracking-widest">Staff & Onboarding</p>
-          <p class="text-xs text-gray-400">Einstellungen für das interne Anlegen und Onboarding von Schülern</p>
+          <p class="text-xs text-gray-400">Einstellungen für das interne Anlegen und Onboarding von {{ t.clientsPlural }}</p>
         </div>
       </div>
 
       <!-- Felder bei Schüler-Erstellung -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-50">
-          <h2 class="text-sm font-semibold text-gray-800">Felder bei Schüler-Erstellung</h2>
-          <p class="text-xs text-gray-400 mt-0.5">Welche Angaben muss der Staff beim Anlegen eines neuen Schülers erfassen? Klicke ein Feld mehrfach, um zwischen «aus», «optional» und «Pflicht» zu wechseln.</p>
+          <h2 class="text-sm font-semibold text-gray-800">Felder bei {{ t.client }}-Erstellung</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Welche Angaben muss der Staff beim Anlegen eines neuen {{ t.clientPossessive }} erfassen? Klicke ein Feld mehrfach, um zwischen «aus», «optional» und «Pflicht» zu wechseln.</p>
         </div>
 
         <div class="px-5 pt-3 flex items-center gap-4">
@@ -98,7 +98,7 @@
         <div class="px-5 py-4 flex items-center justify-between">
           <div>
             <h2 class="text-sm font-semibold text-gray-800">Onboarding-SMS versenden</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Schüler erhalten beim Erstellen durch den Staff automatisch einen SMS-Link zur Kontoaktivierung.</p>
+            <p class="text-xs text-gray-400 mt-0.5">{{ t.clientsPlural }} erhalten beim Erstellen durch den Staff automatisch einen SMS-Link zur Kontoaktivierung.</p>
           </div>
           <button
             type="button"
@@ -119,7 +119,7 @@
         <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
           <div>
             <h2 class="text-sm font-semibold text-gray-800">Registrierungs-Erinnerung</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Schüler, die sich noch nicht registriert haben, erhalten automatisch eine Erinnerung.</p>
+            <p class="text-xs text-gray-400 mt-0.5">{{ t.clientsPlural }}, die sich noch nicht registriert haben, erhalten automatisch eine Erinnerung.</p>
           </div>
           <button
             type="button"
@@ -469,7 +469,7 @@
         <div class="px-5 py-4 flex items-center justify-between">
           <div>
             <h2 class="text-sm font-semibold text-gray-800">Terminbestätigungen versenden</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Schüler erhalten nach jeder Buchung eine Bestätigungs-E-Mail — sofern eine E-Mail-Adresse bekannt ist.</p>
+            <p class="text-xs text-gray-400 mt-0.5">{{ t.clientsPlural }} erhalten nach jeder Buchung eine Bestätigungs-E-Mail — sofern eine E-Mail-Adresse bekannt ist.</p>
           </div>
           <button
             type="button"
@@ -593,7 +593,7 @@ definePageMeta({ layout: 'admin', middleware: 'admin' })
 
 const { primaryBg, primaryText, primaryBgLight } = usePrimaryColor()
 const uiStore = useUIStore()
-const { isDrivingSchool } = useTerminology()
+const { t, isDrivingSchool } = useTerminology()
 
 const isLoading = ref(true)
 const isSaving = ref(false)

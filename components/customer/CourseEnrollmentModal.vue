@@ -714,7 +714,7 @@
               <span v-if="v.location_address">📍 {{ v.location_address }}</span>
             </div>
             <div v-if="v.pricing_tiers?.lesson || v.hourly_rate_rappen" class="mt-1.5 text-sm font-semibold" :style="{ color: getTenantPrimaryColor() }">
-              <span v-if="v.pricing_tiers?.lesson">CHF {{ (v.pricing_tiers.lesson / 100).toFixed(2) }} pro Lektion</span>
+              <span v-if="v.pricing_tiers?.lesson">CHF {{ (v.pricing_tiers.lesson / 100).toFixed(2) }} pro {{ t.appointment }}</span>
               <span v-else-if="v.hourly_rate_rappen">CHF {{ (v.hourly_rate_rappen / 100).toFixed(2) }}/h</span>
             </div>
           </div>
@@ -788,6 +788,7 @@ const promoCodeInitial = computed(() => {
 
 // Tenant hooks
 const { tenantPrimaryColor } = useTenant()
+const { t } = useTerminology()
 const { walleeEnabled: walleeEnabledFromStore, loadWalleeStatus } = useWalleeStatus()
 const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer', () => props.tenantSlug)
 const { invoiceEnabled } = useInvoicePaymentSettings(() => props.tenantSlug)

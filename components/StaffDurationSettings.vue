@@ -1,11 +1,11 @@
 <template>
   <div class="bg-white p-6 rounded-lg border border-gray-200">
     <h3 class="text-lg font-medium text-gray-900 mb-4">
-      ⏱️ Lektionsdauern pro Kategorie
+      ⏱️ {{ t.appointment }}-Dauern pro {{ t.categoryLabel }}
     </h3>
     
     <p class="text-sm text-gray-600 mb-6">
-      Konfigurieren Sie für jede Fahrzeugkategorie die verfügbaren Lektionsdauern. 
+      Konfigurieren Sie für jede {{ t.categoryLabel }} die verfügbaren {{ t.appointment }}-Dauern. 
       Diese werden bei der Terminbuchung zur Auswahl angezeigt.
     </p>
 
@@ -78,7 +78,7 @@
 
         <!-- Info für diese Kategorie -->
         <div class="mt-2 text-xs text-gray-500">
-          Standard-Lektionsdauer: {{ category.lesson_duration_minutes || 45 }}min
+          Standard-{{ t.appointment }}-Dauer: {{ category.lesson_duration_minutes || 45 }}min
         </div>
       </div>
     </div>
@@ -112,7 +112,7 @@
 
     <!-- Save feedback -->
     <div v-if="saveSuccess" class="mt-3 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-600">
-      ✅ Lektionsdauern erfolgreich gespeichert!
+      ✅ {{ t.appointment }}-Dauern erfolgreich gespeichert!
     </div>
     
     <div v-if="saveError" class="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
@@ -136,6 +136,9 @@
 
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStaffCategoryDurations } from '~/composables/useStaffCategoryDurations'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 interface Props {
   currentUser: any

@@ -79,7 +79,7 @@
           </div>
 
           <p class="text-center text-xs text-gray-400 mt-10">
-            Bereits Schüler oder Mitarbeiter?
+            Bereits {{ t.client }} oder Mitarbeiter?
             <NuxtLink :to="`/${tenant.slug}`" class="text-gray-500 underline hover:text-gray-700 transition">Direkt einloggen →</NuxtLink>
           </p>
         </div>
@@ -235,6 +235,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { getTerminologyDefaults } from '~/composables/useTerminology'
 
 definePageMeta({ 
   layout: false,
@@ -273,7 +274,7 @@ const tenantError = computed(() => {
 
 const tenant = computed(() => {
   const d = brandingData.value?.data
-  if (!d) return { id: '', name: 'Driving Team', slug: slug.value, primaryColor: '#6366f1', logo: '', affiliateEnabled: false }
+  if (!d) return { id: '', name: 'Driving Team', slug: slug.value, primaryColor: '#6366f1', logo: '', affiliateEnabled: false, businessType: 'driving_school' }
   return {
     id: d.id,
     name: d.brand_name || d.name || 'Driving Team',
@@ -281,8 +282,11 @@ const tenant = computed(() => {
     primaryColor: d.primary_color || '#6366f1',
     logo: d.logo_square_url || d.logo_url || '',
     affiliateEnabled: d.features?.affiliate_enabled === true,
+    businessType: d.business_type || 'driving_school',
   }
 })
+
+const t = computed(() => getTerminologyDefaults(tenant.value.businessType))
 
 // Set favicon once data is available (client-side only)
 if (process.client && tenant.value.logo) {

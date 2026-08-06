@@ -84,8 +84,8 @@
                     </svg>
                   </div>
                   <div>
-                    <div class="font-medium text-gray-900 text-sm">Aus bestehenden Schülern</div>
-                    <div class="text-xs text-gray-500">Registrierte Schüler übernehmen</div>
+                    <div class="font-medium text-gray-900 text-sm">Aus bestehenden {{ t.clientsPlural }}</div>
+                    <div class="text-xs text-gray-500">Registrierte {{ t.clientsPlural }} übernehmen</div>
                   </div>
                 </button>
                 <div class="border-t border-gray-100 my-1" />
@@ -331,7 +331,7 @@
     <div v-if="showImportFromUsers" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
       <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[92vh] flex flex-col">
         <div class="flex items-center justify-between p-5 border-b shrink-0">
-          <h2 class="text-lg font-semibold text-gray-900">Aus bestehenden Schülern</h2>
+          <h2 class="text-lg font-semibold text-gray-900">Aus bestehenden {{ t.clientsPlural }}</h2>
           <button @click="showImportFromUsers = false" class="text-gray-400 hover:text-gray-600 p-1">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -363,7 +363,7 @@
           <!-- Form -->
           <template v-else>
             <div class="bg-purple-50 border border-purple-200 rounded-xl p-4 text-sm text-purple-800 leading-relaxed">
-              Alle Schüler mit Email werden ohne Duplikate als Leads übernommen. Jeder erhält automatisch eine <strong>Consent-Einladung per Email</strong>.
+              Alle {{ t.clientsPlural }} mit Email werden ohne Duplikate als Leads übernommen. Jeder erhält automatisch eine <strong>Consent-Einladung per Email</strong>.
             </div>
             <MarketingCategoryDropdown
               v-model="importUsersCategories"
@@ -510,12 +510,14 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Leads - Marketing - Admin' })
 
 const authStore = useAuthStore()
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 const COLOR_PRESETS = [
   '#6366f1', '#3b82f6', '#10b981', '#f59e0b',
