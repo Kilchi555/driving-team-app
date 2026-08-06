@@ -179,6 +179,80 @@
         </div>
       </div>
 
+      <!-- ── Simy empfehlen (platform referral) ─────────────────────────────── -->
+      <div class="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Simy empfehlen</p>
+            <h2 class="text-lg font-bold text-gray-900">Andere Betriebe einladen</h2>
+            <p class="text-sm text-gray-500 mt-1">
+              Nach dem <strong>2. bezahlten Monatsabo</strong> erhältst du
+              <strong>50&nbsp;% des Planpreises</strong> als Guthaben auf deine nächste Simy-Rechnung
+              (ohne Add-ons).
+            </p>
+          </div>
+        </div>
+
+        <div v-if="platformReferralLoading" class="h-20 rounded-xl bg-gray-100 animate-pulse" />
+        <template v-else-if="platformReferral">
+          <div class="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 mb-4">
+            <p class="text-xs text-gray-400 font-medium mb-1">Dein Einladungslink</p>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                readonly
+                :value="platformReferral.share_url"
+                class="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-800 font-mono"
+              />
+              <button
+                type="button"
+                class="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                :style="{ background: primaryColor }"
+                @click="copyPlatformReferralLink"
+              >
+                {{ platformReferralCopied ? 'Kopiert' : 'Kopieren' }}
+              </button>
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Code: <span class="font-mono font-semibold text-gray-600">{{ platformReferral.code }}</span></p>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mb-4">
+            <div class="rounded-xl border border-gray-100 px-3 py-2 text-center">
+              <p class="text-lg font-bold text-gray-900">{{ platformReferral.stats.total }}</p>
+              <p class="text-[11px] text-gray-400">Einladungen</p>
+            </div>
+            <div class="rounded-xl border border-gray-100 px-3 py-2 text-center">
+              <p class="text-lg font-bold text-gray-900">{{ platformReferral.stats.pending_second }}</p>
+              <p class="text-[11px] text-gray-400">Warten auf 2. Zahlung</p>
+            </div>
+            <div class="rounded-xl border border-gray-100 px-3 py-2 text-center">
+              <p class="text-lg font-bold text-gray-900">
+                CHF {{ ((platformReferral.stats.total_reward_rappen || 0) / 100).toFixed(2) }}
+              </p>
+              <p class="text-[11px] text-gray-400">Gutgeschrieben</p>
+            </div>
+          </div>
+
+          <div v-if="platformReferral.referrals.length" class="space-y-2">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Letzte Empfehlungen</p>
+            <div
+              v-for="row in platformReferral.referrals.slice(0, 8)"
+              :key="row.id"
+              class="flex items-center justify-between gap-3 text-sm py-2 border-b border-gray-50 last:border-0"
+            >
+              <div class="min-w-0">
+                <p class="font-medium text-gray-800 truncate">{{ row.referred_name }}</p>
+                <p class="text-xs text-gray-400">{{ platformReferralStatusLabel(row.status) }}</p>
+              </div>
+              <p v-if="row.reward_rappen" class="text-sm font-semibold text-gray-700 whitespace-nowrap">
+                CHF {{ (row.reward_rappen / 100).toFixed(2) }}
+              </p>
+            </div>
+          </div>
+        </template>
+        <p v-else class="text-sm text-gray-400">Einladungslink konnte nicht geladen werden.</p>
+      </div>
+
       <!-- ── Danger Zone ─────────────────────────────────────────────────────── -->
       <div v-if="!billing?.is_trial && billing?.has_stripe_subscription && !billing?.subscription_cancel_at"
         class="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
@@ -265,6 +339,29 @@ const showUpdatedBanner = ref(route.query.updated === '1')
 const smsUsage = ref<{ used: number; included: number; overage: number } | null>(null)
 const smsOverageChf = SMS_OVERAGE_CHF_PER_SEGMENT
 
+interface PlatformReferralResponse {
+  code: string
+  share_url: string
+  reward_rate: number
+  stats: {
+    attributed: number
+    pending_second: number
+    rewarded: number
+    total_reward_rappen: number
+    total: number
+  }
+  referrals: Array<{
+    id: string
+    status: string
+    referred_name: string
+    reward_rappen: number | null
+  }>
+}
+
+const platformReferral = ref<PlatformReferralResponse | null>(null)
+const platformReferralLoading = ref(false)
+const platformReferralCopied = ref(false)
+
 if (import.meta.client && showUpdatedBanner.value) {
   // Clean the query param without a full navigation
   const url = new URL(window.location.href)
@@ -318,8 +415,42 @@ const authHeaders = async (): Promise<Record<string, string>> => {
 }
 
 onMounted(async () => {
-  await Promise.all([loadBillingStatus(), loadPrices(), loadSmsUsage()])
+  await Promise.all([loadBillingStatus(), loadPrices(), loadSmsUsage(), loadPlatformReferral()])
 })
+
+async function loadPlatformReferral() {
+  platformReferralLoading.value = true
+  try {
+    platformReferral.value = await $fetch<PlatformReferralResponse>('/api/admin/platform-referral', {
+      headers: await authHeaders(),
+    })
+  } catch {
+    platformReferral.value = null
+  } finally {
+    platformReferralLoading.value = false
+  }
+}
+
+function platformReferralStatusLabel(status: string): string {
+  switch (status) {
+    case 'attributed': return 'Registriert (Trial)'
+    case 'pending_second': return '1. Zahlung erhalten — warte auf 2.'
+    case 'qualified': return 'Qualifiziert'
+    case 'rewarded': return 'Gutschrift erfolgt'
+    case 'failed': return 'Gutschrift fehlgeschlagen'
+    case 'cancelled': return 'Abgebrochen'
+    default: return status
+  }
+}
+
+async function copyPlatformReferralLink() {
+  if (!platformReferral.value?.share_url) return
+  try {
+    await navigator.clipboard.writeText(platformReferral.value.share_url)
+    platformReferralCopied.value = true
+    setTimeout(() => { platformReferralCopied.value = false }, 2000)
+  } catch { /* ignore */ }
+}
 
 async function loadSmsUsage() {
   try {

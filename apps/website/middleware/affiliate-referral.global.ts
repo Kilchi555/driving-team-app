@@ -17,6 +17,7 @@ export default defineNuxtRouteMiddleware((to) => {
         expires: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30 days
       })
       localStorage.setItem('affiliate_ref', payload)
+      localStorage.setItem('platform_ref', payload)
     } catch {
       // localStorage not available (SSR or privacy mode) – silently ignore
     }

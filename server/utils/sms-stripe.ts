@@ -155,3 +155,27 @@ export function smsOverageCheckoutLineItem(): Stripe.Checkout.SessionCreateParam
   if (!priceId) return null
   return { price: priceId }
 }
+
+/**
+ * Like smsOverageCheckoutLineItem, but verifies the price exists in the current
+ * Stripe mode (test vs live). Prevents checkout 502 when .env has a live SMS
+ * price while STRIPE_SECRET_KEY is sk_test_… (or vice versa).
+ */
+export async function smsOverageCheckoutLineItemSafe(): Promise<Stripe.Checkout.SessionCreateParams.LineItem | null> {
+  const line = smsOverageCheckoutLineItem()
+  if (!line?.price || typeof line.price !== 'string') return null
+
+  const stripe = getStripe()
+  if (!stripe) return null
+
+  try {
+    await stripe.prices.retrieve(line.price)
+    return line
+  } catch (err: any) {
+    logger.warn('⚠️ Skipping SMS overage checkout line — price not available in current Stripe mode:', {
+      priceId: line.price,
+      message: err?.message,
+    })
+    return null
+  }
+}

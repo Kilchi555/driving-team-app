@@ -177,9 +177,17 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Metered SMS overage — always attach when price configured (usage billed only on overage)
+  // Metered SMS overage — attach when price exists in current Stripe mode
   const { getSmsOveragePriceId } = await import('~/utils/planFeatures')
-  const smsOveragePriceId = getSmsOveragePriceId()
+  let smsOveragePriceId = getSmsOveragePriceId()
+  if (smsOveragePriceId) {
+    try {
+      await stripe.prices.retrieve(smsOveragePriceId)
+    } catch (err: any) {
+      console.warn('⚠️ Skipping SMS overage item — price not in current Stripe mode:', err?.message)
+      smsOveragePriceId = undefined
+    }
+  }
   if (smsOveragePriceId) {
     const currentSmsItem = findItem(smsOveragePriceId)
     if (!currentSmsItem) {
