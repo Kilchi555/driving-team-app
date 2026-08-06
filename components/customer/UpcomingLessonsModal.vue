@@ -9,7 +9,7 @@
           <div class="flex justify-between items-center">
             <div>
               <h3 class="text-2xl font-bold text-white">
-                Kommende Lektionen
+                Kommende {{ t.appointmentsPlural }}
               </h3>
           
             </div>
@@ -215,7 +215,7 @@ import { logger } from '~/utils/logger'
 import { useCalendarSync } from '~/composables/useCalendarSync'
 import CustomerCancellationModal from './CustomerCancellationModal.vue'
 
-const { t } = useTerminology()
+const { t, eventTypeLabel } = useTerminology()
 
 // Props & Emits
 interface Props {
@@ -406,14 +406,8 @@ const getLessonTypeTitle = (eventTypeCode: string, lesson?: any): string => {
     // Remove date pattern like " - 27.01.2026" or " - 31.01.2026" from name
     return lesson.course_name.replace(/\s*-\s*\d{2}\.\d{2}\.\d{4}$/, '')
   }
-  
-  const titles: Record<string, string> = {
-    'exam': 'Prüfungsfahrt inkl. WarmUp und Rückfahrt',
-    'theory': 'Theorielektion',
-    'lesson': t.value.appointment,
-    'course': 'Kurs'
-  }
-  return titles[eventTypeCode] || t.value.appointment
+
+  return eventTypeLabel(eventTypeCode) || t.value.appointment
 }
 
 const formatLocationAddress = (locationDetails: any): string => {
@@ -534,11 +528,11 @@ const toggleSort = () => {
 const getEmptyStateMessage = () => {
   switch (filterStatus.value) {
     case 'today':
-      return 'Heute sind keine Lektionen geplant.'
+      return `Heute sind keine ${t.value.appointmentsPlural} geplant.`
     case 'this_week':
-      return 'Diese Woche sind keine Lektionen mehr geplant.'
+      return `Diese Woche sind keine ${t.value.appointmentsPlural} mehr geplant.`
     default:
-      return 'Es sind aktuell keine Lektionen geplant.'
+      return `Es sind aktuell keine ${t.value.appointmentsPlural} geplant.`
   }
 }
 

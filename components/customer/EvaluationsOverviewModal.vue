@@ -196,7 +196,7 @@ const emit = defineEmits(['close'])
 
 // Tenant branding colors
 const { primaryColor, accentColor } = useTenantBranding()
-const { t } = useTerminology()
+const { t, eventTypeLabel } = useTerminology()
 
 // State
 const sortBy = ref('date') // 'date' oder 'rating'
@@ -453,7 +453,7 @@ const groupedByLesson = computed(() => {
       grouped[lessonId] = {
         lesson_id: lessonId,
         lesson_date: evaluation.lesson_date,
-        lesson_title: evaluation.lesson_title || (evaluation.is_exam ? 'Prüfungsfahrt' : t.value.appointment),
+        lesson_title: evaluation.lesson_title || (evaluation.is_exam ? eventTypeLabel('exam') : t.value.appointment),
         location_name: evaluation.location_name || 'Treffpunkt nicht definiert',
         driving_category: evaluation.driving_category || lesson?.type || '',
         start_time: lesson?.start_time || evaluation.lesson_date,

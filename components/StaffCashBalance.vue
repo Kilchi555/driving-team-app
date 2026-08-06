@@ -77,6 +77,9 @@ import { ref, computed, onMounted } from 'vue'
 import { formatDate, formatDateTime } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import Toast from '~/components/Toast.vue'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 // Props
 const props = defineProps({
@@ -349,7 +352,7 @@ const getItemTitle = (item) => {
   if (item.type === 'movement') {
     return getMovementTypeText(item.data.movement_type)
   } else if (item.type === 'transaction') {
-    return item.data.student_name || 'Unbekannter Schüler'
+    return item.data.student_name || `Unbekannter ${t.value.client}`
   }
   return item.data.title || 'Unbekannter Eintrag'
 }

@@ -34,7 +34,7 @@
     
     <!-- Hinweis wenn keine Dauern verfügbar -->
     <div v-if="!isLoading && formattedDurations.length === 0" class="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
-      ⚠️ Keine Lektionsdauern für diese Kategorie konfiguriert. 
+      ⚠️ Keine {{ t.appointment }}-Dauern für diese {{ t.categoryLabel }} konfiguriert. 
       <br>Bitte in den Profileinstellungen Dauern hinzufügen.
     </div>
     
@@ -55,8 +55,11 @@
 import { computed, watch, onMounted, ref } from 'vue'
 import { useDurationManager } from '~/composables/useDurationManager'
 import { useAuthStore } from '~/stores/auth'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 const { primaryBg } = usePrimaryColor()
-// import { getSupabase } from '~/utils/supabase' 
+// import { getSupabase } from '~/utils/supabase'
 
 interface Props {
   modelValue: number

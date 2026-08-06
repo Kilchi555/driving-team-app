@@ -194,7 +194,7 @@
             <div class="text-4xl mb-2">📝</div>
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Bewertungspunkte hinzufügen</h3>
             <p class="text-gray-600">
-              Suchen Sie oben nach Bewertungspunkten und klicken Sie diese an, um die Lektion zu bewerten.
+              Suchen Sie oben nach Bewertungspunkten und klicken Sie diese an, um die {{ t.appointment }} zu bewerten.
             </p>
           </div>
         </div>

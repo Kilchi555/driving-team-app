@@ -173,15 +173,15 @@
             <strong>Fehler:</strong> {{ registrationError }}
           </div>
 
-          <!-- Dual-login banner (always on step 0) -->
+          <!-- Dual-login banner: only for the first staff member of this tenant -->
           <div
-            v-if="currentStep === 0"
+            v-if="currentStep === 0 && showDualLoginHint"
             class="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-900"
           >
             <p class="font-semibold mb-1">Zwei getrennte Logins</p>
             <p class="text-xs leading-relaxed mb-2">
               Der <strong>{{ labels.staff }}-Login</strong> ist dein Arbeits-Login im Berufsalltag
-              (Kalender, Termine, Kunden). Der <strong>Admin-Login</strong> ist für Einstellungen,
+              (Kalender, Termine, {{ labels.clientsPlural }}). Der <strong>Admin-Login</strong> ist für Einstellungen,
               Auswertungen und Rechnungen.
             </p>
             <p v-if="adminEmail" class="text-xs leading-relaxed">
@@ -828,6 +828,7 @@ const tenantLocations      = ref<any[]>([])
 const tenantExamLocations  = ref<any[]>([]) // global exam locations (tenant_id = null)
 const affiliateEnabled     = ref(false)
 const adminEmail           = ref<string | null>(null)
+const showDualLoginHint    = ref(false)
 const emailLocked          = ref(false)
 
 const isAdminEmailChosen = computed(() => {
@@ -1149,6 +1150,7 @@ const loadInvitation = async () => {
     const isPlaceholderEmail = inv.email?.includes('@onboarding.simy.ch') || (inv.email?.startsWith('pending_') && inv.email?.includes('@invite.simy.ch'))
     emailLocked.value = !!response.email_locked && !isPlaceholderEmail
     adminEmail.value = response.admin_email || null
+    showDualLoginHint.value = !!response.show_dual_login_hint
     form.email = (inv.email && !isPlaceholderEmail) ? inv.email : ''
     if (form.email) checkStaffEmail(form.email)
     form.phone     = inv.phone      || ''

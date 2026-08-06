@@ -982,7 +982,7 @@
           <div v-if="searchResults.lessonSummary" class="bg-white rounded-lg shadow-sm border px-4 py-3 flex items-center gap-2" :style="{ borderLeftWidth: '3px', borderLeftColor: primaryColor }">
             <span class="text-2xl font-bold" :style="{ color: primaryColor }">{{ searchResults.lessonSummary.lektionen45 }}</span>
             <div class="text-sm text-gray-500 leading-tight">
-              <div>Lektionen à 45 min</div>
+              <div>{{ t.appointmentsPlural }} à 45 min</div>
               <div class="text-xs text-gray-400">{{ searchResults.lessonSummary.count }} Termine · {{ searchResults.lessonSummary.totalMinutes }} min</div>
             </div>
           </div>
@@ -1028,7 +1028,7 @@
               <thead class="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
                 <tr>
                   <th class="px-6 py-2 text-left">Auftragsnr.</th>
-                  <th class="px-6 py-2 text-left">Schüler/in</th>
+                  <th class="px-6 py-2 text-left">{{ t.client }}</th>
                   <th class="px-6 py-2 text-left">Datum</th>
                   <th class="px-6 py-2 text-left">Status</th>
                   <th class="px-6 py-2 text-right">Total</th>
@@ -1309,7 +1309,7 @@
                   v-model="generalSearch"
                   @keyup.enter="performGeneralSearch"
                   type="text"
-                  placeholder="Sucht in allen Spalten (Schüler, Institution, E-Mail, Titel, Auftragsnummer)..."
+                  :placeholder="`Sucht in allen Spalten (${t.client}, Institution, E-Mail, Titel, Auftragsnummer)...`"
                   class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent"
                 />
                 <p class="text-xs text-gray-500">
@@ -1560,6 +1560,7 @@ import { definePageMeta, useHead } from '#imports'
 import { useAuthStore } from '~/stores/auth'
 import { formatDateTime } from '~/utils/dateUtils'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 import * as XLSX from 'xlsx'
 
 const ACCEPTED_EXTENSIONS = ['.csv', '.tsv', '.xlsx']
@@ -1590,6 +1591,7 @@ function validateFileType(file: File): string | null {
 }
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 definePageMeta({ 
   layout: 'admin',

@@ -4,9 +4,9 @@
       <!-- Header with Tabs -->
       <div class="px-2 sm:px-4 py-4 sm:py-6 sm:px-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Schüler-Guthaben</h1>
+          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">{{ t.clientsPlural }}-Guthaben</h1>
           <p class="mt-2 text-sm text-gray-600">
-            Verwalten Sie das Guthaben aller Schüler für Vorauszahlungen
+            Verwalten Sie das Guthaben aller {{ t.clientsPlural }} für Vorauszahlungen
           </p>
         </div>
         <!-- Tabs -->
@@ -21,7 +21,7 @@
             ]"
             :style="activeTab === 'students' ? { borderColor: primaryColor, color: primaryColor } : {}"
           >
-            Alle Schüler
+            Alle {{ t.clientsPlural }}
           </button>
           <button
             @click="activeTab = 'withdrawals'"
@@ -53,7 +53,7 @@
               </div>
               <div class="ml-4 sm:ml-5 w-0 flex-1">
                 <dl>
-                  <dt class="text-xs sm:text-sm font-medium text-gray-500 truncate">Aktive Schüler</dt>
+                  <dt class="text-xs sm:text-sm font-medium text-gray-500 truncate">Aktive {{ t.clientsPlural }}</dt>
                   <dd class="text-base sm:text-lg font-medium text-gray-900">{{ statistics.activeStudents }}</dd>
                 </dl>
               </div>
@@ -107,7 +107,7 @@
               </div>
               <div class="ml-4 sm:ml-5 w-0 flex-1">
                 <dl>
-                  <dt class="text-xs sm:text-sm font-medium text-gray-500 truncate">Alle Schüler</dt>
+                  <dt class="text-xs sm:text-sm font-medium text-gray-500 truncate">Alle {{ t.clientsPlural }}</dt>
                   <dd class="text-base sm:text-lg font-medium text-gray-900">{{ statistics.totalCredits }}</dd>
                 </dl>
               </div>
@@ -166,16 +166,16 @@
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <p class="mt-2 text-sm text-gray-500">Lade Schüler...</p>
+            <p class="mt-2 text-sm text-gray-500">Lade {{ t.clientsPlural }}...</p>
           </div>
 
           <div v-else-if="filteredStudents.length === 0" class="text-center py-8">
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900">Keine Schüler gefunden</h3>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Keine {{ t.clientsPlural }} gefunden</h3>
             <p class="mt-1 text-sm text-gray-500">
-              {{ searchQuery ? 'Versuchen Sie einen anderen Suchbegriff.' : 'Es wurden noch keine Schüler angelegt.' }}
+              {{ searchQuery ? 'Versuchen Sie einen anderen Suchbegriff.' : `Es wurden noch keine ${t.clientsPlural} angelegt.` }}
             </p>
           </div>
 
@@ -184,7 +184,7 @@
               <thead class="bg-gray-50">
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Schüler
+                    {{ t.client }}
                   </th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Guthaben
@@ -310,7 +310,7 @@
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Schüler
+                  {{ t.client }}
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Betrag
@@ -568,6 +568,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useStudentCredits } from '~/composables/useStudentCredits'
 import StudentCreditManager from '~/components/StudentCreditManager.vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 import type { CreditTransactionWithDetails } from '~/types/studentCredits'
 import { filterByStudentSearch } from '~/utils/student-search'
 
@@ -577,6 +578,7 @@ definePageMeta({
 })
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 // Composables
 const {

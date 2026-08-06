@@ -20,7 +20,7 @@
       </div>
       <h1 class="text-xl font-bold text-gray-900 mb-2">Neue Kunden durch Empfehlungen</h1>
       <p class="text-sm text-gray-500 mb-5 leading-relaxed">
-        Lass zufriedene Schüler:innen Freunde empfehlen — und belohne sie mit einer Gutschrift,
+        Lass zufriedene {{ t.clientsPlural }} Freunde empfehlen — und belohne sie mit einer Gutschrift,
         sobald die erste {{ t.appointment }} bezahlt ist. Erfolgsbasiert, wenig Aufwand, organische Neukunden.
       </p>
       <ul class="space-y-2.5 mb-6">
@@ -663,8 +663,8 @@ const affiliateCtaLabel = computed(() =>
 )
 const affiliateFeatures = computed(() => [
   `Erfolgsbasiert: Reward nur bei bezahlter erster ${t.value.appointment}`,
-  'Persönliche Links für Schüler:innen und Staff',
-  'Rewards pro Fahrkategorie und Kurs konfigurierbar',
+  `Persönliche Links für ${t.value.clientsPlural} und Staff`,
+  `Rewards pro ${t.value.categoryLabel} und Kurs konfigurierbar`,
   'Auszahlungen prüfen und freigeben im Admin',
 ])
 

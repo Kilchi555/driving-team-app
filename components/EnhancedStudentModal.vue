@@ -3718,7 +3718,7 @@ async function submitCashDeposit() {
 
   const userId = props.selectedStudent?.id
   if (!userId) {
-    cashDepositError.value = 'Schüler-ID fehlt'
+    cashDepositError.value = `${t.value.client}-ID fehlt`
     return
   }
 

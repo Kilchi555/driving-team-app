@@ -105,7 +105,7 @@
             <li>Anwendbare Datenschutzgesetze (insbesondere DSG/DSGVO) einzuhalten.</li>
           </ul>
           <div class="bg-amber-50 border border-amber-100 rounded-lg p-4 text-sm text-amber-800">
-            <p><strong>Wichtig:</strong> Du bist nicht berechtigt, Schülerdaten ausserhalb der Plattform zu speichern oder an Dritte weiterzugeben, ausser dies ist für die Erbringung deiner Fahrausbildungsdienstleistungen notwendig.</p>
+            <p><strong>Wichtig:</strong> Du bist nicht berechtigt, {{ t.client }}daten ausserhalb der Plattform zu speichern oder an Dritte weiterzugeben, ausser dies ist für die Erbringung deiner Dienstleistungen notwendig.</p>
           </div>
         </section>
 

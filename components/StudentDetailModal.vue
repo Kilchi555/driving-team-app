@@ -51,7 +51,7 @@
       <div class="flex h-[70vh]">
         <!-- Left Side - Student Info -->
         <div class="w-1/3 p-6 border-r bg-gray-50 overflow-y-auto">
-          <h3 class="font-semibold text-gray-900 mb-4">Schüler-Informationen</h3>
+          <h3 class="font-semibold text-gray-900 mb-4">{{ t.client }}-Informationen</h3>
           
           <!-- Personal Info -->
           <div class="space-y-3">

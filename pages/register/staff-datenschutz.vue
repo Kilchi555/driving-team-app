@@ -121,7 +121,7 @@
           <ul class="list-disc pl-5 space-y-2">
             <li><strong>Verwaltung deines Kontos</strong> und Authentifizierung</li>
             <li><strong>Terminverwaltung</strong>: Zuweisung von {{ t.appointmentsPlural }} und Buchungen durch deine Organisation</li>
-            <li><strong>{{ t.clientsPlural }}verwaltung</strong>: Anzeige der dir zugewiesenen Schüler</li>
+            <li><strong>{{ t.clientsPlural }}verwaltung</strong>: Anzeige der dir zugewiesenen {{ t.clientsPlural }}</li>
             <li><strong>Kommunikation</strong> über die Plattform (Benachrichtigungen, Bestätigungen)</li>
             <li><strong>Sicherheit</strong>: Schutz vor unbefugtem Zugriff und Missbrauch</li>
             <li><strong>Gesetzliche Pflichten</strong>: Aufbewahrung von Daten gemäss Schweizer Recht</li>
@@ -153,7 +153,7 @@
           <p class="mb-3">Deine Daten werden nur in folgenden Fällen weitergegeben:</p>
           <ul class="list-disc pl-5 space-y-2 mb-3">
             <li><strong>Deine Organisation</strong>: {{ t.businessNoun }}, die dich eingeladen hat, hat Zugriff auf deine Profil- und Buchungsdaten.</li>
-            <li><strong>{{ t.clientsPlural }}</strong>: Name, Foto (falls hinterlegt) und Kontaktinfos können deinen zugewiesenen Schülern sichtbar sein.</li>
+            <li><strong>{{ t.clientsPlural }}</strong>: Name, Foto (falls hinterlegt) und Kontaktinfos können deinen zugewiesenen {{ t.clientsPlural }} sichtbar sein.</li>
             <li><strong>Technische Dienstleister</strong>: Supabase (Datenbankhosting, in der EU) als Auftragsverarbeiter.</li>
             <li><strong>Behörden</strong>: Nur wenn gesetzlich vorgeschrieben.</li>
           </ul>

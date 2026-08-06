@@ -213,7 +213,7 @@
             <div class="flex items-start justify-between mb-4">
               <div>
                 <p class="font-bold text-gray-900 text-sm">Kursbuchungsseite</p>
-                <p class="text-xs text-gray-400 mt-0.5">Online-Buchung für Schüler</p>
+                <p class="text-xs text-gray-400 mt-0.5">Online-Buchung für {{ t.clientsPlural }}</p>
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
                 style="background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);">
@@ -330,7 +330,7 @@
               <span v-if="withWallee">
                 ✅ <strong>Mit Online-Zahlungen:</strong> Wir richten dein Wallee-Konto ein (ca. 5 Werktage).
                 Die Abrechnung startet erst wenn alles aktiv ist — du hast 30 Tage Zeit.
-                Es fällt eine Transaktionsgebühr von <strong>1.7%</strong> pro Zahlung deiner Schüler an.
+                Es fällt eine Transaktionsgebühr von <strong>1.7%</strong> pro Zahlung deiner {{ t.clientsPlural }} an.
               </span>
               <span v-else>
                 ℹ️ <strong>Ohne Online-Zahlungen:</strong> Nur Bar- und Rechnungszahlung.

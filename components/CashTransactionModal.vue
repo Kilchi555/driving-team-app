@@ -18,13 +18,13 @@
         <form @submit.prevent="submitTransaction" class="space-y-4">
           <!-- Student Selection -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Schüler *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">{{ t.client }} *</label>
             <select
               v-model="formData.student_id"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="">Schüler auswählen...</option>
+              <option value="">{{ t.client }} auswählen...</option>
               <option
                 v-for="student in availableStudents"
                 :key="student.id"
@@ -85,7 +85,7 @@
           <div v-if="formData.student_id && formData.appointment_id && formData.amount" class="bg-gray-50 p-3 rounded-lg">
             <h4 class="text-sm font-medium text-gray-900 mb-2">Zusammenfassung:</h4>
             <div class="text-sm text-gray-600 space-y-1">
-              <p><strong>Schüler:</strong> {{ getStudentName(formData.student_id) }}</p>
+              <p><strong>{{ t.client }}:</strong> {{ getStudentName(formData.student_id) }}</p>
               <p><strong>Termin:</strong> {{ getAppointmentInfo(formData.appointment_id) }}</p>
               <p><strong>Betrag:</strong> CHF {{ parseFloat(formData.amount).toFixed(2) }}</p>
             </div>
@@ -123,6 +123,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { formatDateTime } from '~/utils/dateUtils'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 // Props
 interface Props {
@@ -171,7 +174,7 @@ const loadStudents = async () => {
     availableStudents.value = data || []
   } catch (err: any) {
     console.error('Error loading students:', err)
-    error.value = 'Fehler beim Laden der Schüler'
+    error.value = `Fehler beim Laden der ${t.value.clientsPlural}`
   }
 }
 

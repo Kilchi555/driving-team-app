@@ -55,7 +55,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-const { t, isDrivingSchool } = useTerminology()
+const { t, isDrivingSchool, eventTypeLabel, eventTypeLabels } = useTerminology()
 
 // State
 const currentSuggestion = ref('')
@@ -226,12 +226,12 @@ const suggestions = computed(() => {
         suggestions.push(`${props.selectedSpecialType} - ${location}`)
       }
       
-      suggestions.push('Beratung')
-      suggestions.push('Theorieunterricht')
+      suggestions.push(eventTypeLabels.value.consultation)
+      suggestions.push(eventTypeLabels.value.theory)
       suggestions.push('Fahrzeugwartung')
-      suggestions.push('Prüfung')
-      suggestions.push('Verwaltung')
-      suggestions.push('Pause')
+      suggestions.push(eventTypeLabels.value.exam)
+      suggestions.push(eventTypeLabels.value.admin)
+      suggestions.push(eventTypeLabels.value.break)
     }
   }
   

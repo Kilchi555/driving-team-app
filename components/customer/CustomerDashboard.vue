@@ -242,7 +242,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-900">Absolvierte Lektionen</h3>
+                <h3 class="text-lg font-semibold text-gray-900">Absolvierte {{ t.appointmentsPlural }}</h3>
               </div>
               <div class="bg-gray-100 px-3 py-1 rounded-full">
                 <span class="text-sm font-semibold text-gray-700">{{ completedLessonsCount }}</span>
@@ -1088,7 +1088,7 @@ import { useCalendarSync } from '~/composables/useCalendarSync'
 const authStore = useAuthStore()
 const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
 const { loadTenantBrandingById, primaryColor, secondaryColor, accentColor, currentTenantBranding } = useTenantBranding()
-const { t, isDrivingSchool } = useTerminology()
+const { t, isDrivingSchool, eventTypeLabel } = useTerminology()
 
 useStatusBar({
   backgroundColor: () => primaryColor.value,
@@ -1881,12 +1881,7 @@ const loadAllData = async () => {
 
 // Helper: Event Type Label
 const getEventTypeLabel = (code: string | null | undefined) => {
-  if (!code) return t.value.appointment
-  const c = String(code).toLowerCase()
-  if (c.includes('exam') || c === 'prüfung') return 'Prüfung'
-  if (c.includes('theor')) return 'Theorielektion'
-  if (c.includes('lesson') || c === 'fahrlektion') return t.value.appointment
-  return t.value.appointment
+  return eventTypeLabel(code, { detailed: false })
 }
 
 const getInstructorName = (appointment: any) => {

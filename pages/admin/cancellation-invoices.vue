@@ -131,7 +131,7 @@
                   Termin
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Schüler
+                  {{ t.client }}
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Datum
@@ -243,7 +243,7 @@
               <p class="mt-1 text-sm text-gray-900">{{ selectedInvoice.appointment_title }}</p>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Schüler</label>
+              <label class="block text-sm font-medium text-gray-700">{{ t.client }}</label>
               <p class="mt-1 text-sm text-gray-900">{{ selectedInvoice.student_name }}</p>
             </div>
             <div>
@@ -285,8 +285,10 @@
 
 import { ref, onMounted, computed } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 const isLoading = ref(false)
 const cancellationInvoices = ref<any[]>([])

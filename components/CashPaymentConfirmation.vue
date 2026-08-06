@@ -22,7 +22,7 @@
           
           <!-- Preisaufschlüsselung (falls verfügbar) -->
           <div v-if="payment.metadata?.price_breakdown" class="mt-3 text-xs text-gray-500 space-y-1">
-            <div>Lektion: CHF {{ (payment.metadata.price_breakdown.lesson_price_rappen / 100).toFixed(2) }}</div>
+            <div>{{ t.appointment }}: CHF {{ (payment.metadata.price_breakdown.lesson_price_rappen / 100).toFixed(2) }}</div>
             <div v-if="payment.metadata.price_breakdown.products_price_rappen > 0">
               Produkte: CHF {{ (payment.metadata.price_breakdown.products_price_rappen / 100).toFixed(2) }}
             </div>
@@ -68,6 +68,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 // Props
 interface Props {

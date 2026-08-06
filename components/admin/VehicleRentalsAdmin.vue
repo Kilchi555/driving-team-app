@@ -365,7 +365,7 @@
         <p class="text-xs text-gray-500 mb-4">Wird angewendet wenn kein Per-User-Override gesetzt ist.</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Kunden (Schüler)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Kunden ({{ t.clientsPlural }})</label>
             <select v-model="defaultPaymentClient" @change="saveRentalSettings"
               class="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-blue-400">
               <option value="invoice">Monatsrechnung</option>
@@ -546,16 +546,16 @@ const editingVehicle = ref<any>(null)
 const isSavingVehicle = ref(false)
 const vehicleError = ref('')
 // Default pricing tier definitions (used when creating/editing a vehicle)
-const TIER_DEFS = [
+const TIER_DEFS = computed(() => [
   { type: 'hourly',   label: 'Stundenweise',  unit: '/ Std.',       description: 'Mieter wählt Start und Ende frei — Preis pro Stunde.' },
-  { type: 'lesson',   label: 'Pro Lektion',   unit: 'pauschal',     description: 'Fixer Einmalpreis für die Lektionsdauer.' },
+  { type: 'lesson',   label: `Pro ${t.value.appointment}`, unit: 'pauschal', description: `Fixer Einmalpreis für die ${t.value.appointment}-Dauer.` },
   { type: 'half_day', label: 'Halbtages',     unit: 'bis 4 Std.',   description: 'Fixpreis für Morgen (07–13h) oder Nachmittag (13–19h).' },
   { type: 'full_day', label: 'Ganztages',     unit: 'bis 12 Std.',  description: 'Fixpreis für den ganzen Tag (07–19h).' },
-]
+])
 
 function makePricingTiers(existing: any[] = []): any[] {
-  return TIER_DEFS.map(def => {
-    const found = existing.find((t: any) => t.type === def.type)
+  return TIER_DEFS.value.map(def => {
+    const found = existing.find((tier: any) => tier.type === def.type)
     return {
       ...def,
       enabled: found?.enabled ?? (def.type === 'hourly'),
@@ -568,17 +568,17 @@ function makePricingTiers(existing: any[] = []): any[] {
 function enabledTiers(v: any): { type: string; label: string; rate_chf: string }[] {
   const tiers: any[] = v.pricing_tiers ?? []
   return tiers
-    .filter((t: any) => t.enabled)
-    .map((t: any) => ({
-      type: t.type,
-      label: t.type === 'hourly'
-        ? `CHF ${(t.rate_rappen / 100).toFixed(2)}/h`
-        : t.type === 'lesson'
-          ? `CHF ${(t.rate_rappen / 100).toFixed(2)} Lektion`
-          : t.type === 'half_day'
-            ? `CHF ${(t.rate_rappen / 100).toFixed(2)} halbtags`
-            : `CHF ${(t.rate_rappen / 100).toFixed(2)} ganztags`,
-      rate_chf: (t.rate_rappen / 100).toFixed(2),
+    .filter((tier: any) => tier.enabled)
+    .map((tier: any) => ({
+      type: tier.type,
+      label: tier.type === 'hourly'
+        ? `CHF ${(tier.rate_rappen / 100).toFixed(2)}/h`
+        : tier.type === 'lesson'
+          ? `CHF ${(tier.rate_rappen / 100).toFixed(2)} ${t.value.appointment}`
+          : tier.type === 'half_day'
+            ? `CHF ${(tier.rate_rappen / 100).toFixed(2)} halbtags`
+            : `CHF ${(tier.rate_rappen / 100).toFixed(2)} ganztags`,
+      rate_chf: (tier.rate_rappen / 100).toFixed(2),
     }))
 }
 

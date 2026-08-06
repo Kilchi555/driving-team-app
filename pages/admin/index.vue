@@ -146,7 +146,7 @@
           <div class="flex items-center justify-between mb-4">
             <div>
               <h3 class="text-sm font-bold text-gray-900">Ausstehend</h3>
-              <p class="text-xs text-gray-400 mt-0.5">{{ pendingStudents.length }} Schüler</p>
+              <p class="text-xs text-gray-400 mt-0.5">{{ pendingStudents.length }} {{ t.clientsPlural }}</p>
             </div>
             <button v-if="pendingStudents.length > 3" @click="showPendingStudentsModal = true"
               class="text-xs font-semibold text-orange-600 hover:text-orange-800 transition-colors px-3 py-1.5 rounded-xl hover:bg-orange-50">
@@ -255,11 +255,11 @@
             </div>
             <p class="text-xl font-bold text-gray-900">CHF {{ (creditsStats.totalCredit / 100).toFixed(0) }}</p>
             <div class="mt-2 flex justify-between text-xs">
-              <span class="text-gray-400">Schüler</span>
+              <span class="text-gray-400">{{ t.clientsPlural }}</span>
               <span class="font-semibold text-indigo-600">{{ creditsStats.studentsWithCredit }}</span>
             </div>
             <div class="mt-1 flex justify-between text-xs">
-              <span class="text-gray-400">Ø pro Schüler</span>
+              <span class="text-gray-400">Ø pro {{ t.client }}</span>
               <span class="font-semibold text-purple-600">
                 CHF {{ creditsStats.studentsWithCredit > 0 ? ((creditsStats.totalCredit / creditsStats.studentsWithCredit) / 100).toFixed(0) : '0' }}
               </span>
@@ -303,7 +303,7 @@
           <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <div>
               <h2 class="text-base font-bold text-gray-900">Ausstehende Zahlungen</h2>
-              <p class="text-xs text-gray-400 mt-0.5">{{ pendingStudents.length }} Schüler · CHF {{ (totalPendingAmount / 100).toFixed(0) }} gesamt</p>
+              <p class="text-xs text-gray-400 mt-0.5">{{ pendingStudents.length }} {{ t.clientsPlural }} · CHF {{ (totalPendingAmount / 100).toFixed(0) }} gesamt</p>
             </div>
             <button @click="showPendingStudentsModal = false" class="w-8 h-8 rounded-xl hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -313,7 +313,7 @@
           <!-- Summary pills -->
           <div class="flex gap-3 px-6 py-3 bg-gray-50 border-b border-gray-100">
             <div class="flex items-center gap-2 bg-blue-50 rounded-xl px-3 py-1.5">
-              <span class="text-xs text-blue-600 font-medium">Schüler</span>
+              <span class="text-xs text-blue-600 font-medium">{{ t.clientsPlural }}</span>
               <span class="text-sm font-bold text-blue-800">{{ pendingStudents.length }}</span>
             </div>
             <div class="flex items-center gap-2 bg-orange-50 rounded-xl px-3 py-1.5">
@@ -474,6 +474,7 @@ import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useAuthStore } from '~/stores/auth'
 import { useUIStore } from '~/stores/ui'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 import { logger } from '~/utils/logger'
 
 definePageMeta({
@@ -486,6 +487,7 @@ const { currentUser } = useCurrentUser()
 const authStore = useAuthStore()
 const uiStore = useUIStore()
 const { primaryColor } = useTenantBranding()
+const { t } = useTerminology()
 
 // Types
 interface DashboardStats {
@@ -763,7 +765,7 @@ const openMonthDetail = (month: RevenueMonth) => {
 }
 
 // Quick Actions
-const quickActions = [
+const quickActions = computed(() => [
   { to: '/admin/invoices',             label: 'Rechnungen',    color: '#2563EB', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { to: '/admin/payment-overview',     label: 'Zahlungen',     color: '#059669', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
   { to: '/admin/privatkunden',          label: 'Privatkunden',  color: '#7C3AED', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
@@ -773,10 +775,10 @@ const quickActions = [
   { to: '/admin/cancellation-management', label: 'Absagen',   color: '#9333EA', icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' },
   { to: '/admin/staff-hours',          label: 'Stunden',       color: '#0284C7', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
   { to: '/admin/pricing',              label: 'Preise',        color: '#16A34A', icon: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' },
-  { to: '/admin/categories',           label: 'Kategorien',    color: '#6366F1', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
+  { to: '/admin/categories',           label: t.value.categoriesLabel, color: '#6366F1', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
   { to: '/admin/products',             label: 'Produkte',      color: '#F59E0B', icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z' },
   { to: '/admin/profile',             label: 'Einstellungen', color: '#64748B', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
-]
+])
 
 // Watch for modal opening
 watch(showRevenueModal, (isOpen) => {

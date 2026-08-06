@@ -200,6 +200,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { logger } from '~/utils/logger'
+import { useTerminology } from '~/composables/useTerminology'
+
+const { t } = useTerminology()
 
 interface Props {
   isOpen: boolean
@@ -320,7 +323,7 @@ watch(
 
 async function saveChanges() {
   if (!props.student?.id) {
-    saveError.value = 'Schüler-ID fehlt'
+    saveError.value = `${t.value.client}-ID fehlt`
     return
   }
 

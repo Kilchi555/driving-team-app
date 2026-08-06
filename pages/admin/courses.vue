@@ -93,7 +93,7 @@
           <div class="flex-1 text-sm text-amber-900">
             <p class="font-semibold mb-1">Online-Zahlungen sind nicht aktiviert</p>
             <p>
-              Solange Wallee in deinem Profil nicht aktiviert ist, werden <strong>alle</strong> Kursanmeldungen automatisch auf Barzahlung umgestellt — auch für Städte, in denen sonst online bezahlt würde. Schüler bezahlen den Betrag dann direkt vor Ort am ersten Kurstag.
+              Solange Wallee in deinem Profil nicht aktiviert ist, werden <strong>alle</strong> Kursanmeldungen automatisch auf Barzahlung umgestellt — auch für Städte, in denen sonst online bezahlt würde. {{ t.clientsPlural }} bezahlen den Betrag dann direkt vor Ort am ersten Kurstag.
             </p>
             <NuxtLink
               to="/admin/profile?tab=payments"
@@ -4436,8 +4436,10 @@ import { navigateTo, useNuxtApp } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { useTerminology } from '~/composables/useTerminology'
 
 const { primaryColor, brandName, getLogo } = useTenantBranding()
+const { t } = useTerminology()
 import { useCourseCategories } from '~/composables/useCourseCategories'
 import { useInstructorInvitations } from '~/composables/useInstructorInvitations'
 import { useRoomReservations } from '~/composables/useRoomReservations'

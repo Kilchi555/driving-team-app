@@ -648,6 +648,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
+import { mergeTerminology } from '~/composables/useTerminology'
 
 const route = useRoute()
 const slug = route.params.slug as string
@@ -726,6 +727,7 @@ async function handleLogout() {
 
 const tenant = ref<any>(null)
 const primaryColor = computed(() => tenant.value?.primary_color || '#2563eb')
+const terms = computed(() => mergeTerminology(tenant.value?.business_type))
 
 async function loadTenantBranding() {
   try {
@@ -859,7 +861,7 @@ function vehicleEnabledTiers(v: any): TierBadge[] {
       const chf = (t.rate_rappen / 100).toFixed(2)
       const badge =
         t.type === 'hourly' ? `CHF ${chf}/h`
-        : t.type === 'lesson' ? `CHF ${chf} Lektion`
+        : t.type === 'lesson' ? `CHF ${chf} ${terms.value.appointment}`
         : t.type === 'half_day' ? `CHF ${chf} halbtags`
         : `CHF ${chf} ganztags`
       return { type: t.type, badge }
@@ -895,7 +897,7 @@ const modalAvailableTiers = computed<TierOption[]>(() => {
   }
   const LABELS: Record<string, { label: string; description: string }> = {
     hourly:   { label: 'Stundenweise',  description: 'Frei wählbare Zeit — Preis pro Stunde' },
-    lesson:   { label: 'Pro Lektion',   description: 'Pauschalpreis für die Lektionsdauer' },
+    lesson:   { label: `Pro ${terms.value.appointment}`,   description: `Pauschalpreis für die ${terms.value.appointment}-Dauer` },
     half_day: { label: 'Halbtages',     description: 'Morgen (07–13h) oder Nachmittag (13–19h)' },
     full_day: { label: 'Ganztages',     description: 'Ganzer Tag 07:00–19:00' },
   }
@@ -952,7 +954,7 @@ const bookingPriceLabel = computed(() => {
   const tierDef = modalAvailableTiers.value.find(t => t.type === tier)
   if (!tierDef) return ''
   if (tier === 'hourly') return `${durationHours.value.toFixed(2)} h × CHF ${tierDef.rate_chf}`
-  if (tier === 'lesson') return `Pauschal Lektion`
+  if (tier === 'lesson') return `Pauschal ${terms.value.appointment}`
   if (tier === 'half_day') return halfDayBlock.value === 'morning' ? 'Morgen (07–13h)' : 'Nachmittag (13–19h)'
   return 'Ganztages (07–19h)'
 })

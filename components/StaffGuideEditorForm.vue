@@ -151,7 +151,7 @@
 
         <!-- Tipps Staff -->
         <template v-else-if="section.key === 'tipps_fahrlehrer'">
-          <GuideList v-model="form.tipps_fahrlehrer!.unterrichtstipps" label="Unterrichtstipps" placeholder="Tipp für die Lektion..."/>
+          <GuideList v-model="form.tipps_fahrlehrer!.unterrichtstipps" label="Unterrichtstipps" :placeholder="`Tipp für die ${t.appointment}...`"/>
           <GuideList v-model="form.tipps_fahrlehrer!.typische_schuelermeinungen" :label="`Typische ${t.client}-Aussagen`" placeholder="z.B. «Das hab ich doch schon gewusst!»"/>
           <GuideList v-model="form.tipps_fahrlehrer!.geeignete_fragen" label="Geeignete Fragen" placeholder="z.B. Was fällt dir an dieser Situation auf?"/>
           <GuideList v-model="form.tipps_fahrlehrer!.korrekturansaetze" label="Korrekturansätze" placeholder="z.B. Lass uns gemeinsam wiederholen..."/>
