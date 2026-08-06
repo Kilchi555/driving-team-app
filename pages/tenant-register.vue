@@ -1434,10 +1434,11 @@
             <div class="text-sm text-amber-800">
               <p class="font-semibold mb-0.5">Zwei separate Logins</p>
               <p class="text-xs leading-relaxed">
-                Du erhältst eine <strong>Einladungs-SMS</strong> auf die eingetragene Telefonnummer.
-                Beim {{ labels.staff }}-Onboarding musst du eine <strong>andere E-Mail</strong> als
-                <span class="font-mono">{{ adminForm.email }}</span> verwenden — das sind zwei getrennte Accounts.
-                Falls die SMS fehlt: unter Admin → Mitarbeiter → «SMS erneut» erneut senden.
+                Der <strong>{{ labels.staff }}-Login</strong> ist für den Berufsalltag (Kalender, Termine).
+                Der <strong>Admin-Login</strong> (<span class="font-mono">{{ adminForm.email || adminEmailEarly }}</span>)
+                bleibt für Einstellungen &amp; Auswertungen.
+                Trage unten eine <strong>andere E-Mail</strong> für den {{ labels.staff }}-Login ein —
+                dorthin senden wir die Einladung.
               </p>
             </div>
           </div>
@@ -1446,7 +1447,7 @@
             <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
             </svg>
-            <span>{{ labels.staffPlural }} mit Telefonnummer erhalten nach der Registrierung eine Einladungs-SMS.</span>
+            <span>{{ labels.staffPlural }} erhalten die Einladung per E-Mail (nicht per SMS).</span>
           </div>
 
           <div class="space-y-3">
@@ -1483,12 +1484,29 @@
                 </div>
                 <div class="sm:col-span-2">
                   <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                    Telefon *
-                    <span class="normal-case font-normal text-blue-500 ml-1">für Einladungs-SMS</span>
+                    E-Mail für {{ labels.staff }}-Login *
+                    <span v-if="staffAdminIsSelf && index === 0" class="normal-case font-normal text-amber-600 ml-1">andere als Admin</span>
+                    <span v-else class="normal-case font-normal text-blue-500 ml-1">für Einladungs-E-Mail</span>
+                  </label>
+                  <input
+                    v-model="staff.email"
+                    type="email"
+                    required
+                    :placeholder="staffAdminIsSelf && index === 0 ? 'z.B. vorname@gmail.com' : 'max@example.com'"
+                    :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-white text-sm transition-colors',
+                      staffEmailInvalid(staff, index) ? 'border-red-200 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-500']"
+                  >
+                  <p v-if="staffAdminIsSelf && index === 0 && staffEmailMatchesAdmin(staff)" class="text-xs text-red-600 mt-1">
+                    Das ist deine Admin-E-Mail — für den {{ labels.staff }}-Login eine andere Adresse wählen.
+                  </p>
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                    Telefon
+                    <span class="normal-case font-normal text-gray-400 ml-1">optional</span>
                   </label>
                   <input v-model="staff.phone" type="tel" placeholder="+41 79 123 45 67"
-                    :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-white text-sm transition-colors',
-                      !staff.phone.trim() ? 'border-red-200 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-500']">
+                    class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
                 </div>
               </div>
             </div>
@@ -1502,12 +1520,14 @@
             Weiteren {{ labels.staff }} hinzufügen
           </button>
 
-          <p v-if="!staffList.every(s => s.first_name.trim() && s.phone.trim())"
+          <p v-if="!staffStepValid"
             class="flex items-center gap-1.5 text-xs text-red-500 font-medium">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
             </svg>
-            Bitte Vorname und Telefonnummer für jeden {{ labels.staff }} erfassen.
+            Bitte Vorname und {{ labels.staff }}-E-Mail
+            <template v-if="staffAdminIsSelf"> (≠ Admin)</template>
+            für jeden {{ labels.staff }} erfassen.
           </p>
         </div>
 
@@ -1597,11 +1617,11 @@
             </div>
 
             <!-- Fahrlehrer -->
-            <div v-if="staffList.some(s => s.first_name && s.phone)"
+            <div v-if="staffList.some(s => s.first_name && s.email)"
               class="sm:col-span-2 rounded-2xl bg-gray-50 border border-gray-100 p-4">
               <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2.5">Einladungen</p>
               <div class="flex flex-wrap gap-2">
-                <span v-for="(s, i) in staffList.filter(s => s.first_name && s.phone)" :key="i"
+                <span v-for="(s, i) in staffList.filter(s => s.first_name && s.email)" :key="i"
                   class="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border border-gray-200 text-sm text-gray-700">
                   <span class="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center">
                     <svg class="w-2.5 h-2.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1609,7 +1629,7 @@
                     </svg>
                   </span>
                   {{ s.first_name }} {{ s.last_name }}
-                  <span v-if="s.phone" class="text-blue-500 text-xs">{{ s.phone }}</span>
+                  <span class="text-blue-500 text-xs">{{ s.email }}</span>
                 </span>
               </div>
             </div>
@@ -1670,7 +1690,7 @@
                 { done: true, label: 'Preise & Dauern konfiguriert' },
                 { done: true, label: 'Termintypen & Bewertungsvorlagen importiert' },
                 { done: true, label: 'Verfügbarkeit Mo–Sa 08:00–18:00 eingerichtet' },
-                { done: (staffInviteResults?.filter(r => ['sms_sent','email_sent','invited'].includes(r.status))?.length ?? 0) > 0, label: `${labels.staffPlural} eingeladen (${staffInviteResults?.filter(r => ['sms_sent','email_sent','invited'].includes(r.status))?.length ?? 0})` },
+                { done: (staffInviteResults?.filter(r => ['email_sent','invited'].includes(r.status))?.length ?? 0) > 0, label: `${labels.staffPlural} eingeladen (${staffInviteResults?.filter(r => ['email_sent','invited'].includes(r.status))?.length ?? 0})` },
               ]" :key="item.label"
               class="flex items-center gap-3 px-4 py-2.5">
                 <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
@@ -1741,8 +1761,8 @@
             <div class="space-y-2">
               <div v-for="r in staffInviteResults" :key="r.name" class="flex items-center gap-3">
                 <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                  :class="['sms_sent', 'email_sent'].includes(r.status) ? 'bg-green-100' : r.status === 'invited' ? 'bg-amber-100' : 'bg-red-100'">
-                  <svg v-if="['sms_sent', 'email_sent'].includes(r.status)" class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  :class="['email_sent'].includes(r.status) ? 'bg-green-100' : r.status === 'invited' ? 'bg-amber-100' : 'bg-red-100'">
+                  <svg v-if="['email_sent'].includes(r.status)" class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
                   </svg>
                   <svg v-else-if="r.status === 'invited'" class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1755,7 +1775,7 @@
                 <div>
                   <span class="text-sm font-medium text-gray-800">{{ r.name }}</span>
                   <span class="text-xs ml-2" :class="r.status === 'invited' ? 'text-amber-600' : 'text-gray-500'">{{ r.message }}</span>
-                  <span v-if="r.status === 'invited'" class="block text-xs text-amber-600 mt-0.5">SMS fehlgeschlagen – bitte Link manuell senden</span>
+                  <span v-if="r.status === 'invited'" class="block text-xs text-amber-600 mt-0.5">E-Mail fehlgeschlagen – bitte Link manuell senden</span>
                 </div>
               </div>
             </div>
@@ -2484,12 +2504,38 @@ const prefillFirstLocation = () => {
 }
 
 // ─── Staff ─────────────────────────────────────────────────────────────────
-interface StaffEntry { first_name: string; last_name: string; phone: string }
+interface StaffEntry { first_name: string; last_name: string; phone: string; email: string }
 
-const staffList = ref<StaffEntry[]>([{ first_name: '', last_name: '', phone: '' }])
-const addStaff = () => staffList.value.push({ first_name: '', last_name: '', phone: '' })
+const staffList = ref<StaffEntry[]>([{ first_name: '', last_name: '', phone: '', email: '' }])
+const addStaff = () => staffList.value.push({ first_name: '', last_name: '', phone: '', email: '' })
 const removeStaff = (index: number) => staffList.value.splice(index, 1)
 const staffAdminIsSelf = ref(false)
+
+const adminEmailForStaffCompare = computed(() =>
+  (adminForm.value.email || adminEmailEarly.value || '').trim().toLowerCase()
+)
+
+const staffEmailMatchesAdmin = (staff: StaffEntry) => {
+  const e = (staff.email || '').trim().toLowerCase()
+  return !!e && !!adminEmailForStaffCompare.value && e === adminEmailForStaffCompare.value
+}
+
+const staffEmailInvalid = (staff: StaffEntry, index: number) => {
+  const e = (staff.email || '').trim()
+  if (!e || !e.includes('@')) return true
+  if (staffEmailMatchesAdmin(staff)) return true
+  return false
+}
+
+const staffStepValid = computed(() =>
+  staffList.value.every((s) => {
+    if (!s.first_name.trim()) return false
+    const e = (s.email || '').trim()
+    if (!e.includes('@')) return false
+    if (staffEmailMatchesAdmin(s)) return false
+    return true
+  })
+)
 
 const applyAdminToStaff = () => {
   if (staffAdminIsSelf.value) {
@@ -2497,9 +2543,11 @@ const applyAdminToStaff = () => {
       first_name: adminForm.value.first_name || formData.value.contact_person_first_name,
       last_name:  adminForm.value.last_name  || formData.value.contact_person_last_name,
       phone:      adminForm.value.phone      || formData.value.contact_phone,
+      // Never copy admin email — staff login needs a different address
+      email: '',
     }
   } else {
-    staffList.value[0] = { first_name: '', last_name: '', phone: '' }
+    staffList.value[0] = { first_name: '', last_name: '', phone: '', email: '' }
   }
 }
 const staffInviteResults = ref<Array<{ name: string; status: string; message: string; invite_link?: string }> | null>(null)
@@ -2680,7 +2728,7 @@ const canProceed = computed(() => {
                 !passwordMismatch.value && hibpStatus.value !== 'pwned' && hibpStatus.value !== 'checking' &&
                 (emailCheck.value === 'available' || emailCheck.value === 'error'))
     case 6: {
-      return staffList.value.every(s => s.first_name.trim() && s.phone.trim())
+      return staffStepValid.value
     }
     default:
       return true
@@ -3090,9 +3138,18 @@ const submitRegistration = async () => {
     }
 
     // 3. Invite staff (non-critical)
-    const filledStaff = staffList.value.filter(s =>
-      s.first_name.trim() && s.phone.trim()
-    )
+    const filledStaff = staffList.value.filter((s) => {
+      if (!s.first_name.trim()) return false
+      const e = (s.email || '').trim().toLowerCase()
+      if (!e.includes('@')) return false
+      if (e === adminEmailForStaffCompare.value) return false
+      return true
+    }).map(s => ({
+      first_name: s.first_name.trim(),
+      last_name: s.last_name.trim(),
+      phone: s.phone.trim() || undefined,
+      email: (s.email || '').trim(),
+    }))
     if (filledStaff.length > 0) {
       try {
         const inviteRes = await $fetch('/api/tenants/invite-staff-batch', {
@@ -3299,7 +3356,14 @@ const loadFromStorage = () => {
     if (logoSquarePreview.value) {
       logoSquareFile.value = base64ToFile(logoSquarePreview.value, `logo-square-${Date.now()}.webp`)
     }
-    if (d.staffList)    staffList.value    = d.staffList
+    if (d.staffList) {
+      staffList.value = (d.staffList as any[]).map((s) => ({
+        first_name: s.first_name || '',
+        last_name: s.last_name || '',
+        phone: s.phone || '',
+        email: s.email || '',
+      }))
+    }
     if (typeof d.staffAdminIsSelf === 'boolean') staffAdminIsSelf.value = d.staffAdminIsSelf
     if (d.locationsList) locationsList.value = d.locationsList
     if (d.meetingChannels && typeof d.meetingChannels === 'object') {

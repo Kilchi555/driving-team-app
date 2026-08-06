@@ -141,6 +141,13 @@
             <span :class="seatsAtLimit ? 'text-red-600 font-bold' : 'text-gray-600'">
               {{ usedSeats }} / {{ totalSeats }} Seats
             </span>
+            <span
+              v-if="(billingInfo?.addon_seats ?? currentTenant?.addon_seats ?? 0) > 0"
+              class="text-xs font-medium"
+              :style="{ color: primaryColor }"
+            >
+              · +{{ billingInfo?.addon_seats ?? currentTenant?.addon_seats }} extra
+            </span>
             <span v-if="seatsAtLimit" class="text-red-500 text-xs font-semibold">· Limit erreicht</span>
           </div>
           <button
@@ -202,7 +209,7 @@
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
               <th v-if="activeTab === 'staff'" class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 <span class="flex items-center gap-1.5">
-                  Aktionen
+                  Unterrichts-Guide bearbeiten
                 </span>
               </th>
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">E-Mail</th>
@@ -236,7 +243,12 @@
                       {{ user.first_name }} {{ user.last_name }}
                       <span v-if="user.is_invitation" class="font-normal text-xs text-gray-400 ml-1">(Eingeladen)</span>
                     </p>
-                    <p class="text-xs text-gray-400 mt-0.5">{{ user.email }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">
+                      <template v-if="user.is_invitation && isPlaceholderInviteEmail(user.email)">
+                        Noch keine Staff-E-Mail
+                      </template>
+                      <template v-else>{{ user.email || '—' }}</template>
+                    </p>
                   </div>
                 </div>
               </td>
@@ -275,28 +287,28 @@
                   @click="resendStaffInvitation(user)"
                   :disabled="resendingInvitationId === user.id"
                   class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 disabled:opacity-50"
-                  title="Einladungs-SMS erneut senden"
+                  title="Einladung per E-Mail erneut senden"
                 >
                   <svg v-if="resendingInvitationId === user.id" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
                   </svg>
-                  <span>{{ resendingInvitationId === user.id ? 'Senden…' : 'SMS erneut' }}</span>
+                  <span>{{ resendingInvitationId === user.id ? 'Senden…' : 'E-Mail erneut' }}</span>
                 </button>
                 <button
                   v-else-if="user.is_invitation && user.invitation_status === 'expired'"
                   @click="resendStaffInvitation(user)"
                   :disabled="resendingInvitationId === user.id"
                   class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
-                  title="Abgelaufene Einladung erneuern und per SMS senden"
+                  title="Abgelaufene Einladung erneuern und per E-Mail senden"
                 >
-                  <span>{{ resendingInvitationId === user.id ? 'Senden…' : 'Erneuern + SMS' }}</span>
+                  <span>{{ resendingInvitationId === user.id ? 'Senden…' : 'Erneuern + E-Mail' }}</span>
                 </button>
                 <button
                   v-else-if="!user.is_invitation && !user.deleted_at"
                   @click="toggleGuideEdit(user)"
                   :disabled="togglingGuideEdit === user.id"
-                  :title="user.can_edit_guide ? 'Zugriff entziehen' : 'Zugriff gewähren'"
+                  :title="user.can_edit_guide ? 'Unterrichts-Guide-Zugriff entziehen' : 'Unterrichts-Guide bearbeiten erlauben'"
                   class="flex items-center gap-2 group"
                 >
                   <!-- Toggle pill -->
@@ -321,7 +333,12 @@
               </td>
 
               <td class="px-5 py-3.5">
-                <p class="text-sm text-gray-700">{{ user.email || '—' }}</p>
+                <p class="text-sm text-gray-700">
+                  <template v-if="user.is_invitation && isPlaceholderInviteEmail(user.email)">
+                    <span class="text-amber-700">Noch keine Staff-E-Mail</span>
+                  </template>
+                  <template v-else>{{ user.email || '—' }}</template>
+                </p>
                 <p v-if="user.is_invitation && user.invitation_expires_at" class="text-xs text-gray-400 mt-0.5">
                   Läuft ab: {{ formatExpiryDate(user.invitation_expires_at) }}
                 </p>
@@ -364,7 +381,10 @@
         </div>
         
         <form @submit.prevent="sendStaffInvitation" class="px-6 py-4 space-y-4">
-          <p class="text-sm text-gray-500">Der {{ t.staff }} erhält einen SMS-Link und füllt den Rest selbst aus.</p>
+          <p class="text-sm text-gray-500">
+            Der {{ t.staff }} erhält die Einladung <strong>per E-Mail</strong>.
+            Für dich selbst: eine <strong>andere E-Mail</strong> als den Admin-Login eintragen.
+          </p>
 
           <!-- First Name -->
           <div>
@@ -378,16 +398,33 @@
             />
           </div>
 
-          <!-- Phone -->
+          <!-- Email for staff login -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Telefonnummer *</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              E-Mail für {{ t.staff }}-Login *
+            </label>
+            <input
+              v-model="inviteForm.email"
+              type="email"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              placeholder="z.B. vorname@gmail.com"
+            />
+            <p class="text-xs text-gray-500 mt-1">Nicht die Admin-E-Mail — sonst kann der Account nicht erstellt werden.</p>
+          </div>
+
+          <!-- Phone optional -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Telefonnummer
+              <span class="text-gray-400 font-normal">(optional)</span>
+            </label>
             <input
               v-model="inviteForm.phone"
               type="tel"
-              required
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               placeholder="+41 79 123 45 67"
-              @blur="inviteForm.phone = normalizeSwissPhone(inviteForm.phone)"
+              @blur="inviteForm.phone = inviteForm.phone ? normalizeSwissPhone(inviteForm.phone) : ''"
             />
           </div>
 
@@ -917,9 +954,10 @@ const totalSeats = computed(() => {
   return included + addonSeats
 })
 
+// Seats = staff (+ pending invites). Admin is always included free (required account).
 const usedSeats = computed(() => {
   return users.value.filter(u =>
-    (u.role === 'staff' || u.role === 'admin') &&
+    (u.role === 'staff' || u.is_invitation) &&
     (u.is_active !== false || u.is_invitation)
   ).length
 })
@@ -939,6 +977,7 @@ const resendingInvitationId = ref<string | null>(null)
 const inviteForm = ref({
   firstName: '',
   phone: '',
+  email: '',
   sendVia: 'sms'
 })
 
@@ -1553,23 +1592,45 @@ const handleDrop = (event: DragEvent, type: 'front' | 'back') => {
 }
 
 // Staff Invitation Functions
+const isPlaceholderInviteEmail = (email?: string | null) => {
+  if (!email) return true
+  const e = email.toLowerCase()
+  return e.includes('@onboarding.simy.ch') || (e.startsWith('pending_') && e.includes('@invite.simy.ch'))
+}
+
 const resendStaffInvitation = async (user: User) => {
   if (!user?.id || !user.is_invitation) return
   resendingInvitationId.value = user.id
   try {
+    let emailForResend: string | undefined
+    if (isPlaceholderInviteEmail(user.email)) {
+      const entered = window.prompt(
+        `Für ${user.first_name} ist noch keine Staff-E-Mail hinterlegt.\nBitte E-Mail für den ${t.value.staff}-Login eingeben (nicht die Admin-E-Mail):`,
+        ''
+      )
+      if (!entered?.trim() || !entered.includes('@')) {
+        inviteStaffError.value = 'E-Mail erforderlich für den erneuten Versand'
+        showInviteStaffModal.value = true
+        return
+      }
+      emailForResend = entered.trim().toLowerCase()
+    } else {
+      emailForResend = user.email || undefined
+    }
+
     const data = await $fetch<any>('/api/staff/resend-invite', {
       method: 'POST',
-      body: { invitationId: user.id },
+      body: { invitationId: user.id, email: emailForResend },
     })
 
-    if (data?.sentVia === 'sms_failed') {
+    if (data?.sentVia === 'email_failed' || data?.sentVia === 'failed') {
       inviteManualLink.value = data.inviteLink || ''
       showInviteManualLink.value = true
       showInviteStaffModal.value = true
-      inviteStaffError.value = data.message || 'SMS konnte nicht gesendet werden'
+      inviteStaffError.value = data.message || 'E-Mail konnte nicht gesendet werden'
     } else {
       showInviteSuccessToast.value = true
-      inviteSuccessMessage.value = `Einladung per SMS an ${data.phone || user.phone} erneut gesendet!`
+      inviteSuccessMessage.value = `Einladung per E-Mail an ${data.email || emailForResend || ''} erneut gesendet!`
     }
     await loadUsers()
   } catch (error: any) {
@@ -1595,8 +1656,8 @@ const sendStaffInvitation = async () => {
       },
       body: JSON.stringify({
         firstName: inviteForm.value.firstName,
-        phone: inviteForm.value.phone,
-        sendVia: 'sms'
+        phone: inviteForm.value.phone || undefined,
+        email: inviteForm.value.email,
       })
     })
 
@@ -1614,7 +1675,7 @@ const sendStaffInvitation = async () => {
     logger.debug('✅ Invitation sent successfully:', data)
     
     // Show appropriate message based on result (UI panel for manual link)
-    if (data.sentVia === 'email_failed' || data.sentVia === 'sms_failed') {
+    if (data.sentVia === 'email_failed') {
       // Keep modal open, show inline fallback panel with copy link
       inviteManualLink.value = data.inviteLink
       showInviteManualLink.value = true
@@ -1623,17 +1684,15 @@ const sendStaffInvitation = async () => {
       inviteManualLink.value = data.inviteLink
       showInviteManualLink.value = true
     } else {
-      // Success via email or SMS -> show success toast
       showInviteSuccessToast.value = true
-      inviteSuccessMessage.value = data.sentVia === 'email'
-        ? `Einladung per E-Mail an ${data.email} gesendet!`
-        : `Einladung per SMS an ${data.phone} gesendet!`
+      inviteSuccessMessage.value = `Einladung per E-Mail an ${data.email} gesendet!`
     }
     
     // Reset form
     inviteForm.value = {
       firstName: '',
       phone: '',
+      email: '',
       sendVia: 'sms'
     }
     

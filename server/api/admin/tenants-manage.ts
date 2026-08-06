@@ -80,9 +80,29 @@ export default defineEventHandler(async (event) => {
   // ── PATCH: bestehenden Tenant aktualisieren ──────────────────────────
   if (method === 'PATCH') {
     const body = await readBody(event)
-    const { id, ...updates } = body
+    const { id, ...raw } = body
 
     if (!id) throw createError({ statusCode: 400, message: 'Tenant-ID fehlt' })
+
+    const ALLOWED = [
+      'name', 'slug', 'contact_email', 'contact_phone', 'address',
+      'business_type', 'brand_name', 'legal_company_name',
+      'contact_person_first_name', 'contact_person_last_name',
+      'subscription_plan', 'subscription_status',
+      'is_active', 'is_trial', 'trial_ends_at',
+      'twilio_from_sender', 'from_email',
+      'addon_seats', 'addon_courses_enabled', 'addon_affiliate_enabled', 'addon_gbp_enabled',
+    ] as const
+
+    const updates: Record<string, any> = {}
+    for (const key of ALLOWED) {
+      if (Object.prototype.hasOwnProperty.call(raw, key)) {
+        updates[key] = raw[key]
+      }
+    }
+    if (Object.keys(updates).length === 0) {
+      throw createError({ statusCode: 400, message: 'Keine erlaubten Felder zum Aktualisieren' })
+    }
 
     const { data, error } = await supabase
       .from('tenants')

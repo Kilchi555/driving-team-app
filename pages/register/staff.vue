@@ -173,6 +173,27 @@
             <strong>Fehler:</strong> {{ registrationError }}
           </div>
 
+          <!-- Dual-login banner (always on step 0) -->
+          <div
+            v-if="currentStep === 0"
+            class="rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-900"
+          >
+            <p class="font-semibold mb-1">Zwei getrennte Logins</p>
+            <p class="text-xs leading-relaxed mb-2">
+              Der <strong>{{ labels.staff }}-Login</strong> ist dein Arbeits-Login im Berufsalltag
+              (Kalender, Termine, Kunden). Der <strong>Admin-Login</strong> ist für Einstellungen,
+              Auswertungen und Rechnungen.
+            </p>
+            <p v-if="adminEmail" class="text-xs leading-relaxed">
+              Verwende hier <strong>nicht</strong>
+              <span class="font-mono">{{ adminEmail }}</span>
+              — das ist der Admin-Account. Nimm z.B. eine private E-Mail (Gmail, iCloud, …).
+            </p>
+            <p v-else class="text-xs leading-relaxed">
+              Verwende eine eigene E-Mail für diesen {{ labels.staff }}-Account — nicht denselben Login wie Admin.
+            </p>
+          </div>
+
           <!-- ═══ STEP 0: Basisdaten ═══ -->
           <template v-if="currentStep === 0">
             <h2 class="text-lg font-semibold text-gray-900">Persönliche Daten</h2>
@@ -186,23 +207,48 @@
                 <input v-model="form.lastName" type="text" class="input" placeholder="Mustermann">
               </div>
               <div class="col-span-2">
-                <label class="label">E-Mail *</label>
-                <input v-model="form.email" type="email" autocomplete="username" name="username" id="staff-wizard-email" class="input" placeholder="max@example.com"
+                <label class="label">E-Mail für {{ labels.staff }}-Login *</label>
+                <input
+                  v-model="form.email"
+                  type="email"
+                  autocomplete="username"
+                  name="username"
+                  id="staff-wizard-email"
+                  class="input"
+                  :placeholder="adminEmail ? 'z.B. vorname@gmail.com' : 'max@example.com'"
+                  :readonly="emailLocked"
+                  :class="{
+                    '!border-red-300': staffEmailCheck === 'taken' || isAdminEmailChosen,
+                    '!border-green-300': staffEmailCheck === 'available' && !isAdminEmailChosen,
+                    'bg-gray-50 text-gray-700': emailLocked,
+                  }"
                   @input="onStaffEmailInput(form.email)"
                   @blur="checkStaffEmail(form.email)"
-                  :class="{ '!border-red-300': staffEmailCheck === 'taken', '!border-green-300': staffEmailCheck === 'available' }"
                 >
-                <p v-if="staffEmailCheck === 'checking'" class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                <p v-if="emailLocked" class="text-xs text-gray-500 mt-1">
+                  Diese E-Mail wurde bei der Einladung festgelegt und kann hier nicht geändert werden.
+                </p>
+                <p v-else-if="isAdminEmailChosen" class="text-xs text-red-600 mt-1 leading-relaxed">
+                  Das ist dein <strong>Admin-Login</strong>. Für den {{ labels.staff }}-Login (Berufsalltag)
+                  brauchst du eine <strong>andere E-Mail</strong> — z.B. Gmail oder iCloud.
+                </p>
+                <p v-else-if="staffEmailCheck === 'checking'" class="text-xs text-gray-400 mt-1 flex items-center gap-1">
                   <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                   Wird geprüft…
                 </p>
                 <p v-else-if="staffEmailCheck === 'available'" class="text-xs text-green-600 mt-1 flex items-center gap-1">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                  E-Mail ist verfügbar
+                  E-Mail ist verfügbar für den {{ labels.staff }}-Login
                 </p>
-                <p v-else-if="staffEmailCheck === 'taken'" class="text-xs text-red-500 mt-1 flex items-center gap-2">
-                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-                  <span>Diese E-Mail ist bereits registriert — <a href="/login" class="underline font-medium">Jetzt einloggen</a></span>
+                <p v-else-if="staffEmailCheck === 'taken'" class="text-xs text-red-600 mt-1 leading-relaxed">
+                  Diese E-Mail ist bereits registriert.
+                  <template v-if="adminEmail">
+                    Für den {{ labels.staff }}-Login brauchst du eine <strong>andere</strong> Adresse
+                    (nicht {{ adminEmail }}).
+                  </template>
+                  <template v-else>
+                    Bitte eine andere E-Mail für den {{ labels.staff }}-Login verwenden.
+                  </template>
                 </p>
                 <p v-else-if="staffEmailCheck === 'error'" class="text-xs text-amber-600 mt-1 flex items-center gap-1">
                   <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
@@ -781,6 +827,13 @@ const availableCategories  = ref<any[]>([])
 const tenantLocations      = ref<any[]>([])
 const tenantExamLocations  = ref<any[]>([]) // global exam locations (tenant_id = null)
 const affiliateEnabled     = ref(false)
+const adminEmail           = ref<string | null>(null)
+const emailLocked          = ref(false)
+
+const isAdminEmailChosen = computed(() => {
+  if (!adminEmail.value || !form.email) return false
+  return form.email.trim().toLowerCase() === adminEmail.value.trim().toLowerCase()
+})
 
 // Branch-aware wording (staff / categories / appointments …)
 const isDrivingSchool = computed(() => businessType.value === 'driving_school')
@@ -953,6 +1006,10 @@ const checkStaffEmail = (val: string) => {
   if (staffEmailDebounce) clearTimeout(staffEmailDebounce)
   const email = val.trim()
   if (!email.includes('@') || email.length < 5) { staffEmailCheck.value = 'idle'; return }
+  if (adminEmail.value && email.toLowerCase() === adminEmail.value.toLowerCase()) {
+    staffEmailCheck.value = 'taken'
+    return
+  }
   staffEmailCheck.value = 'checking'
   staffEmailDebounce = setTimeout(async () => {
     try {
@@ -967,6 +1024,10 @@ const onStaffEmailInput = (val: string) => {
   if (staffEmailDebounce) clearTimeout(staffEmailDebounce)
   const email = val.trim()
   if (!email.includes('@') || email.length < 5) return
+  if (adminEmail.value && email.toLowerCase() === adminEmail.value.toLowerCase()) {
+    staffEmailCheck.value = 'taken'
+    return
+  }
   staffEmailCheck.value = 'checking'
   staffEmailDebounce = setTimeout(async () => {
     try {
@@ -1028,6 +1089,7 @@ const canProceed = computed(() => {
         form.streetNr &&
         form.zip &&
         form.city &&
+        !isAdminEmailChosen.value &&
         staffEmailCheck.value === 'available'
       )
     case 1:
@@ -1085,7 +1147,9 @@ const loadInvitation = async () => {
     form.lastName  = inv.last_name  || ''
     // Don't pre-fill placeholder emails generated by the system
     const isPlaceholderEmail = inv.email?.includes('@onboarding.simy.ch') || (inv.email?.startsWith('pending_') && inv.email?.includes('@invite.simy.ch'))
-    form.email     = (inv.email && !isPlaceholderEmail) ? inv.email : ''
+    emailLocked.value = !!response.email_locked && !isPlaceholderEmail
+    adminEmail.value = response.admin_email || null
+    form.email = (inv.email && !isPlaceholderEmail) ? inv.email : ''
     if (form.email) checkStaffEmail(form.email)
     form.phone     = inv.phone      || ''
 

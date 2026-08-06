@@ -100,9 +100,10 @@
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
               E-Mail ist verfügbar
             </p>
-            <p v-else-if="emailCheck === 'taken'" class="text-xs text-red-500 mt-1 flex items-center gap-2">
-              <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-              <span>Diese E-Mail ist bereits registriert — <a href="/login" class="underline font-medium">Jetzt einloggen</a></span>
+            <p v-else-if="emailCheck === 'taken'" class="text-xs text-red-600 mt-1 leading-relaxed">
+              Diese E-Mail ist bereits registriert. Für den {{ labels.staff }}-Login brauchst du eine
+              <strong>andere E-Mail</strong> als den Admin-Login (z.B. Gmail/iCloud) —
+              nicht «einloggen» mit dem Admin-Konto.
             </p>
           </div>
 
@@ -658,6 +659,12 @@ const register = async () => {
 
 // Load invitation on mount
 onMounted(() => {
+  // Legacy route — always use the current /register/staff flow
+  const token = route.query.token
+  if (token) {
+    navigateTo(`/register/staff?token=${encodeURIComponent(String(token))}`, { replace: true })
+    return
+  }
   loadInvitation()
 })
 

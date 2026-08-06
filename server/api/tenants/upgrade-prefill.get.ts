@@ -18,12 +18,13 @@ export default defineEventHandler(async (event) => {
   const tenantId = authUser.tenant_id
 
   const [staffRes, coursesRes, affiliateRes, tenantRes] = await Promise.all([
+    // Seat conflict UI: staff only (admin does not consume a paid seat)
     supabase
       .from('users')
       .select('id, first_name, last_name, role, email')
       .eq('tenant_id', tenantId)
-      .in('role', ['staff', 'admin'])
-      .order('role', { ascending: false }) // admins first
+      .eq('role', 'staff')
+      .eq('is_active', true)
       .order('first_name'),
 
     supabase

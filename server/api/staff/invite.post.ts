@@ -1,102 +1,98 @@
-import { getSupabaseAdmin } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
-import { sendTenantSMS, normalizePhoneNumber } from '~/server/utils/sms'
+import { normalizePhoneNumber } from '~/server/utils/sms'
+import { sendEmail } from '~/server/utils/email'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
-import { sanitizeString } from '~/server/utils/validators'
+import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { getPlanById } from '~/utils/planFeatures'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { buildStaffInviteEmailHtml } from '~/server/utils/staff-invite-email'
+import {
+  checkEmailAvailableForStaff,
+  emailConflictMessage,
+} from '~/server/utils/email-availability'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
   try {
-    // ✅ LAYER 1: Get client IP for audit logging
-    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 
-                      getHeader(event, 'x-real-ip') || 
-                      event.node.req.socket.remoteAddress || 
-                      'unknown'
+    const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim()
+      || getHeader(event, 'x-real-ip')
+      || event.node.req.socket.remoteAddress
+      || 'unknown'
 
     const body = await readBody(event)
-    const { firstName, phone, sendVia } = body
+    const { firstName, phone, email: rawEmail } = body
 
-    // Validate required fields
-    if (!firstName || !phone) {
+    if (!firstName || !rawEmail) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Vorname und Telefonnummer sind erforderlich'
+        statusMessage: 'Vorname und E-Mail sind erforderlich',
       })
     }
 
-    // Get current user and tenant
-    const supabase = getSupabaseAdmin()
+    const emailCandidate = String(rawEmail).trim().toLowerCase()
+    if (!validateEmail(emailCandidate).valid) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Ungültige E-Mail-Adresse',
+      })
+    }
+    const staffEmail = emailCandidate
 
     const user = await getAuthenticatedUser(event)
     if (!user) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Authentication required'
+        statusMessage: 'Authentication required',
       })
     }
 
     logger.debug('✅ User authenticated:', user.email, 'User ID:', user.id)
 
-    // ✅ LAYER 3: Rate limiting (10 invitations per hour per admin user)
     const rateLimit = await checkRateLimit(user.id, 'staff_invite', 10, 3600)
     if (!rateLimit.allowed) {
       logger.warn('⚠️ Rate limit exceeded for staff invitation:', user.email)
       throw createError({
         statusCode: 429,
-        statusMessage: `Zu viele Einladungen. Bitte warten Sie ${rateLimit.retryAfter} Sekunden.`
+        statusMessage: `Zu viele Einladungen. Bitte warten Sie ${rateLimit.retryAfter} Sekunden.`,
       })
     }
-    logger.debug('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
 
-    // Create service role client to bypass RLS
     const { createClient } = await import('@supabase/supabase-js')
     const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    
+
     if (!serviceRoleKey) {
-      console.error('❌ SUPABASE_SERVICE_ROLE_KEY not configured')
       throw createError({
         statusCode: 500,
-        statusMessage: 'Server configuration error'
+        statusMessage: 'Server configuration error',
       })
     }
-    
+
     const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // Get user's tenant_id using service role
     const { data: userProfile, error: profileError } = await serviceSupabase
       .from('users')
       .select('tenant_id, role')
       .eq('auth_user_id', user.id)
       .single()
 
-    logger.debug('👤 User profile query result:', { userProfile, profileError })
-
     if (profileError || !userProfile?.tenant_id) {
-      console.error('❌ Profile error:', profileError)
-      console.error('❌ User profile data:', userProfile)
       throw createError({
         statusCode: 403,
-        statusMessage: `Kein Tenant gefunden für User: ${user.email}`
+        statusMessage: `Kein Tenant gefunden für User: ${user.email}`,
       })
     }
 
-    logger.debug('✅ User profile found:', userProfile)
-
-    // Check if user is admin
     if (userProfile.role !== 'admin') {
       throw createError({
         statusCode: 403,
-        statusMessage: 'Nur Admins können Einladungen versenden'
+        statusMessage: 'Nur Admins können Einladungen versenden',
       })
     }
 
-    // ✅ SEAT LIMIT CHECK: Verify tenant has room for another staff member
     const { data: tenantSub } = await serviceSupabase
       .from('tenants')
       .select('subscription_plan, addon_seats, is_trial')
@@ -106,21 +102,19 @@ export default defineEventHandler(async (event) => {
     if (tenantSub) {
       const plan = tenantSub.subscription_plan || 'trial'
       const planDef = getPlanById(plan)
-      // Trial gets 3 seats (enough to test multi-staff), paid plans use their definition
       const includedSeats = plan === 'trial' ? 3 : (planDef?.includedSeats ?? null)
 
       if (includedSeats !== null) {
         const totalAllowedSeats = includedSeats + (tenantSub.addon_seats || 0)
 
-        // Count active staff + admins
+        // Seats count staff only — 1 admin is always included free
         const { count: activeStaff } = await serviceSupabase
           .from('users')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', userProfile.tenant_id)
-          .in('role', ['staff', 'admin'])
+          .eq('role', 'staff')
           .eq('is_active', true)
 
-        // Count pending invitations (they'll use a seat once accepted)
         const { count: pendingInvites } = await serviceSupabase
           .from('staff_invitations')
           .select('id', { count: 'exact', head: true })
@@ -134,65 +128,83 @@ export default defineEventHandler(async (event) => {
           const staffLabel = terms.staff || 'Mitarbeiter'
           throw createError({
             statusCode: 402,
-            statusMessage: `Seat-Limit erreicht (${usedSeats}/${totalAllowedSeats}). Bitte buchen Sie einen zusätzlichen ${staffLabel}-Seat unter /upgrade.`
+            statusMessage: `Seat-Limit erreicht (${usedSeats}/${totalAllowedSeats}). Bitte buchen Sie einen zusätzlichen ${staffLabel}-Seat unter /upgrade.`,
           })
         }
       }
     }
 
-    // ✅ LAYER 4: XSS Protection - Sanitize all string inputs
     const sanitizedFirstName = sanitizeString(firstName, 100)
-    const normalizedPhone = normalizePhoneNumber(String(phone || ''))
-    if (!normalizedPhone) {
+    const rawPhone = phone ? String(phone).trim() : ''
+    const sanitizedPhone = rawPhone ? normalizePhoneNumber(rawPhone) : null
+    if (rawPhone && !sanitizedPhone) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Ungültige Telefonnummer. Bitte im Format +41… oder 07x… eingeben.'
+        statusMessage: 'Ungültige Telefonnummer. Bitte im Format +41… oder 07x… eingeben.',
       })
     }
-    const sanitizedPhone = normalizedPhone
 
-    // Check: offene Einladung für dieselbe Nummer (Format-agnostisch)
-    const { data: pendingInvites } = await serviceSupabase
-      .from('staff_invitations')
-      .select('id, phone, status')
+    const { data: adminRow } = await serviceSupabase
+      .from('users')
+      .select('email')
       .eq('tenant_id', userProfile.tenant_id)
-      .eq('status', 'pending')
+      .eq('role', 'admin')
+      .eq('is_active', true)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    const adminEmail = adminRow?.email?.toLowerCase()?.trim() || user.email?.toLowerCase()?.trim() || null
 
-    const existingInvite = (pendingInvites || []).find((inv) => {
-      const invNorm = normalizePhoneNumber(inv.phone || '')
-      return invNorm && invNorm === sanitizedPhone
+    const availability = await checkEmailAvailableForStaff({
+      supabase: serviceSupabase,
+      email: staffEmail,
+      adminEmail,
+      tenantId: userProfile.tenant_id,
     })
-
-    if (existingInvite) {
+    if (!availability.available) {
+      const terms = await getTenantTerminology(serviceSupabase, userProfile.tenant_id)
       throw createError({
-        statusCode: 409,
-        statusMessage: 'Für diese Telefonnummer existiert bereits eine offene Einladung. Bitte nutze «SMS erneut senden».'
+        statusCode: availability.reason === 'pending_invite' || availability.reason === 'user_exists' || availability.reason === 'auth_exists' ? 409 : 400,
+        statusMessage: emailConflictMessage(availability, terms.staff || 'Mitarbeiter'),
       })
     }
 
-    // Generate invitation token
+    if (sanitizedPhone) {
+      const { data: pendingInvites } = await serviceSupabase
+        .from('staff_invitations')
+        .select('id, phone, status')
+        .eq('tenant_id', userProfile.tenant_id)
+        .eq('status', 'pending')
+
+      const existingInvite = (pendingInvites || []).find((inv) => {
+        const invNorm = normalizePhoneNumber(inv.phone || '')
+        return invNorm && invNorm === sanitizedPhone
+      })
+
+      if (existingInvite) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Für diese Telefonnummer existiert bereits eine offene Einladung. Bitte «E-Mail erneut» nutzen.',
+        })
+      }
+    }
+
     const token = generateToken()
     const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 30) // 30 days expiration
+    expiresAt.setDate(expiresAt.getDate() + 30)
 
-    logger.debug('🎫 Creating invitation with token:', token.substring(0, 10) + '...')
-
-    // Placeholder email & last_name – instructor fills in real data via onboarding link
-    const placeholderEmail = `pending_${token.slice(0, 16)}@invite.simy.ch`
-
-    // Create invitation in database using service role to bypass RLS
     const { data: invitation, error: inviteError } = await serviceSupabase
       .from('staff_invitations')
       .insert({
         tenant_id: userProfile.tenant_id,
         first_name: sanitizedFirstName,
         last_name: '',
-        email: placeholderEmail,
+        email: staffEmail,
         phone: sanitizedPhone,
         invitation_token: token,
         invited_by: user.id,
         expires_at: expiresAt.toISOString(),
-        status: 'pending'
+        status: 'pending',
       })
       .select()
       .single()
@@ -201,13 +213,10 @@ export default defineEventHandler(async (event) => {
       console.error('❌ Error creating invitation:', inviteError)
       throw createError({
         statusCode: 500,
-        statusMessage: 'Fehler beim Erstellen der Einladung'
+        statusMessage: 'Fehler beim Erstellen der Einladung',
       })
     }
 
-    logger.debug('✅ Invitation created:', invitation.id)
-
-    // ✅ LAYER 5: Audit logging - Invitation created
     await logAudit({
       action: 'staff_invitation_created',
       user_id: user.id,
@@ -218,87 +227,85 @@ export default defineEventHandler(async (event) => {
       status: 'success',
       details: {
         invited_phone: sanitizedPhone,
+        invited_email: staffEmail,
         invited_name: sanitizedFirstName,
-        send_via: sendVia || 'sms',
+        send_via: 'email',
         expires_at: expiresAt.toISOString(),
-        duration_ms: Date.now() - startTime
-      }
+        duration_ms: Date.now() - startTime,
+      },
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
-    // Generate invitation link
-    // Priority: 1. Environment variable, 2. Production domain (simy.ch), 3. Request host
     const envBase = process.env.NUXT_PUBLIC_BASE_URL || process.env.BASE_URL
     const forwardedHost = getHeader(event, 'x-forwarded-host')
     const host = forwardedHost || getHeader(event, 'host')
     const proto = getHeader(event, 'x-forwarded-proto') || 'https'
-    
-    // Prefer production URL over localhost
+
     let baseUrl: string
     if (envBase) {
       baseUrl = envBase
     } else if (host && !host.includes('localhost')) {
-      // Use request host only if it's NOT localhost
       baseUrl = `${proto}://${host}`
     } else {
-      // Default to production domain
       baseUrl = 'https://app.simy.ch'
     }
-    
+
     const inviteLink = `${baseUrl}/register/staff?token=${token}`
 
-    // Get tenant info for branding using service role
     const { data: tenant } = await serviceSupabase
       .from('tenants')
-      .select('name, contact_email, twilio_from_sender, slug, business_type')
+      .select('name, slug, business_type, primary_color, logo_wide_url, logo_url, logo_square_url, from_email, resend_domain_verified')
       .eq('id', userProfile.tenant_id)
       .single()
 
     const { getTerminologyDefaults } = await import('~/composables/useTerminology')
     const terms = getTerminologyDefaults(tenant?.business_type)
     const tenantName = tenant?.name || terms.businessNoun
-    const smsSenderName = tenant?.twilio_from_sender || tenantName
     const loginLink = tenant?.slug ? `${baseUrl}/${tenant.slug}` : baseUrl
-
-    // Send invitation via SMS
-    logger.debug(`📱 Sending SMS to ${sanitizedPhone} with link: ${inviteLink}`)
+    const primaryColor = tenant?.primary_color || '#6000BD'
+    const rawLogo = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
+    const logoUrl = rawLogo?.startsWith('data:') ? null : rawLogo
 
     try {
-      const smsMessage = `Hallo ${sanitizedFirstName}! Sie wurden als ${terms.staff} bei ${tenantName} eingeladen. Registrierung: ${inviteLink}\nLogin nach Registrierung: ${loginLink}`
-
-      const smsResult = await sendTenantSMS({
-        tenantId: userProfile.tenant_id,
-        to: sanitizedPhone,
-        message: smsMessage,
-        purpose: 'staff_invite',
-        senderName: smsSenderName,
+      await sendEmail({
+        to: staffEmail,
+        subject: `Einladung als ${terms.staff} – ${tenantName}`,
+        html: buildStaffInviteEmailHtml({
+          firstName: sanitizedFirstName,
+          tenantName,
+          inviteLink,
+          staffLabel: terms.staff,
+          loginUrl: loginLink,
+          adminEmail,
+          primaryColor,
+          logoUrl,
+        }),
+        fromName: tenantName,
+        fromEmail: tenant?.from_email,
+        domainVerified: !!tenant?.resend_domain_verified,
       })
 
-      logger.debug('✅ SMS sent via Twilio:', smsResult)
-
       return {
         success: true,
-        sentVia: 'sms',
-        phone: sanitizedPhone,
+        sentVia: 'email',
+        phone: sanitizedPhone || undefined,
+        email: staffEmail,
         inviteLink,
-        smsId: smsResult?.messageSid,
-        message: 'Einladung per SMS gesendet'
+        message: 'Einladung per E-Mail gesendet',
       }
-
-    } catch (smsError: any) {
-      console.error('❌ SMS sending failed:', smsError)
+    } catch (emailErr: any) {
+      logger.warn('⚠️ Staff invite email failed:', emailErr?.message || emailErr)
       return {
         success: true,
-        sentVia: 'sms_failed',
-        phone: sanitizedPhone,
+        sentVia: 'email_failed',
+        phone: sanitizedPhone || undefined,
+        email: staffEmail,
         inviteLink,
-        message: 'Einladung erstellt, aber SMS konnte nicht gesendet werden. Link: ' + inviteLink
+        message: 'Einladung erstellt, aber E-Mail konnte nicht gesendet werden. Link: ' + inviteLink,
       }
     }
-
   } catch (error: any) {
     console.error('Error in staff invitation:', error)
 
-    // ✅ LAYER 5: Audit logging - Failure
     const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown'
     await logAudit({
       action: 'staff_invitation_created',
@@ -309,26 +316,22 @@ export default defineEventHandler(async (event) => {
       error_message: error.statusMessage || error.message,
       details: {
         invited_email: (error as any).email,
-        duration_ms: Date.now() - startTime
-      }
+        duration_ms: Date.now() - startTime,
+      },
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
 
     throw createError({
       statusCode: error.statusCode || 500,
-      statusMessage: error.statusMessage || 'Interner Serverfehler'
+      statusMessage: error.statusMessage || 'Interner Serverfehler',
     })
   }
 })
 
-// Helper function to generate a cryptographically secure random token
 function generateToken(): string {
-  // Use Web Crypto API for cryptographically secure randomness (ESM compatible)
   const array = new Uint8Array(24)
   crypto.getRandomValues(array)
-  // Convert to base64url (URL-safe)
   return btoa(String.fromCharCode(...array))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '')
 }
-

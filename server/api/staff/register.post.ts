@@ -138,30 +138,51 @@ export default defineEventHandler(async (event) => {
     const sanitizedStreetNr = streetNr ? sanitizeString(streetNr, 10) : null
     const sanitizedCity = city ? sanitizeString(city, 100) : null
 
-    // ✅ LAYER 7: Block only if this email is already a staff member in this tenant
-    const { data: existingUser } = await serviceSupabase
+    // ✅ LAYER 7: Email must not already exist in users or Auth
+    const normalizedEmail = email.toLowerCase().trim()
+    const { checkEmailAvailableForStaff, emailConflictMessage } = await import('~/server/utils/email-availability')
+
+    const { data: adminRow } = await serviceSupabase
       .from('users')
-      .select('id')
-      .eq('email', email.toLowerCase().trim())
+      .select('email')
       .eq('tenant_id', invitation.tenant_id)
-      .eq('role', 'staff')
+      .eq('role', 'admin')
+      .eq('is_active', true)
+      .limit(1)
       .maybeSingle()
 
-    if (existingUser) {
-      logger.warn('⚠️ Duplicate staff email detected for tenant:', email)
+    const availability = await checkEmailAvailableForStaff({
+      supabase: serviceSupabase,
+      email: normalizedEmail,
+      adminEmail: adminRow?.email || null,
+      tenantId: invitation.tenant_id,
+      ignoreInvitationId: invitation.id,
+    })
+    if (!availability.available) {
       const terms = await getTenantTerminology(serviceSupabase, invitation.tenant_id)
-      const staffLabel = terms.staff || 'Mitarbeiter'
-      const businessNoun = terms.businessNoun || 'Unternehmen'
       throw createError({
         statusCode: 409,
-        statusMessage: `Diese E-Mail-Adresse ist bereits als ${staffLabel} bei ${businessNoun} registriert.`
+        statusMessage: emailConflictMessage(availability, terms.staff || 'Mitarbeiter'),
+      })
+    }
+
+    // If invitation stored a real (non-placeholder) email, require matching it
+    const { isPlaceholderStaffInviteEmail } = await import('~/server/utils/staff-invite-email')
+    if (
+      invitation.email &&
+      !isPlaceholderStaffInviteEmail(invitation.email) &&
+      invitation.email.toLowerCase().trim() !== normalizedEmail
+    ) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Bitte die eingeladene E-Mail verwenden: ${invitation.email}`,
       })
     }
 
     // 2. Create Supabase Auth user
     logger.debug('🔐 Creating auth user for staff:', email)
     const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       password: password,
       email_confirm: true, // Auto-confirm email
       user_metadata: {
@@ -176,7 +197,9 @@ export default defineEventHandler(async (event) => {
       // Translate common Supabase auth errors to German
       let errorMessage = 'Fehler beim Erstellen des Accounts'
       if (authError.message.includes('already been registered') || authError.message.includes('User already registered')) {
-        errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwenden Sie eine andere E-Mail oder kontaktieren Sie Ihren Administrator.'
+        const terms = await getTenantTerminology(serviceSupabase, invitation.tenant_id)
+        const staffLabel = terms.staff || 'Mitarbeiter'
+        errorMessage = `Diese E-Mail ist bereits registriert. Für den ${staffLabel}-Login brauchst du eine andere E-Mail (nicht den Admin-Login).`
       } else if (authError.message.includes('Invalid email')) {
         errorMessage = 'Ungültige E-Mail-Adresse'
       } else if (authError.message.includes('Password')) {

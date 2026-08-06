@@ -1,6 +1,8 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { isPlaceholderStaffInviteEmail } from '~/server/utils/staff-invite-email'
 
 /**
  * Get staff invitation details
@@ -138,6 +140,27 @@ export default defineEventHandler(async (event) => {
 
     const affiliateEnabled = affiliateSetting?.setting_value === 'true'
 
+    // Admin email for dual-login guidance (service role — no auth on invite page)
+    let admin_email: string | null = null
+    try {
+      const { data: adminUser } = await getSupabaseAdmin()
+        .from('users')
+        .select('email')
+        .eq('tenant_id', invitation.tenant_id)
+        .eq('role', 'admin')
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      admin_email = adminUser?.email?.toLowerCase()?.trim() || null
+    } catch (err: any) {
+      logger.warn('⚠️ Could not load admin email for invitation:', err?.message)
+    }
+
+    const inviteEmail = invitation.email as string | null
+    const email_is_placeholder = isPlaceholderStaffInviteEmail(inviteEmail)
+    const email_locked = !email_is_placeholder && !!inviteEmail
+
     return {
       success: true,
       invitation,
@@ -147,7 +170,10 @@ export default defineEventHandler(async (event) => {
       examLocations,
       affiliateEnabled,
       ui_labels,
-      working_days_defaults
+      working_days_defaults,
+      admin_email,
+      email_locked,
+      email_is_placeholder,
     }
 
   } catch (error: any) {
