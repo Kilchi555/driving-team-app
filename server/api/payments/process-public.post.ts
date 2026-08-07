@@ -216,31 +216,67 @@ export default defineEventHandler(async (event) => {
         if (partialPrice > 0) effectiveBasePrice = partialPrice
       }
 
-      // Re-validate discount against DB when a code is provided
+      // Re-validate discount against the same sources as enroll-wallee
+      // (voucher_codes → gift-card vouchers → discounts). Never trust client amount.
       let discountAmount = 0
       const discountCode = typeof metadata?.discount_code === 'string' ? metadata.discount_code.trim() : ''
       if (discountCode) {
-        const { data: discountRow } = await supabase
-          .from('discounts')
-          .select('id, discount_type, discount_value, discount_amount_rappen, max_discount_rappen, is_active, valid_until, tenant_id')
+        let discountRow: any = null
+
+        const { data: voucherCode } = await supabase
+          .from('voucher_codes')
+          .select('*')
+          .ilike('code', discountCode)
           .eq('tenant_id', tenantId)
-          .eq('code', discountCode)
           .eq('is_active', true)
-          .is('deleted_at', null)
           .maybeSingle()
 
-        if (discountRow && (!discountRow.valid_until || new Date(discountRow.valid_until) >= new Date())) {
-          if (discountRow.discount_type === 'percentage' && discountRow.discount_value != null) {
-            discountAmount = Math.round(effectiveBasePrice * (Number(discountRow.discount_value) / 100))
-            if (discountRow.max_discount_rappen != null) {
-              discountAmount = Math.min(discountAmount, Number(discountRow.max_discount_rappen))
+        if (voucherCode) {
+          discountRow = voucherCode
+        } else {
+          const { data: giftCard } = await supabase
+            .from('vouchers')
+            .select('*')
+            .ilike('code', discountCode)
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .maybeSingle()
+          if (giftCard && !giftCard.redeemed_at) {
+            discountRow = {
+              ...giftCard,
+              discount_type: 'fixed',
+              discount_value: giftCard.amount_rappen,
+              is_gift_card: true
             }
-          } else {
-            discountAmount = Number(
-              discountRow.discount_amount_rappen ?? discountRow.discount_value ?? 0
-            )
           }
-          discountAmount = Math.max(0, Math.min(discountAmount, effectiveBasePrice))
+        }
+
+        if (!discountRow) {
+          const { data: discountData } = await supabase
+            .from('discounts')
+            .select('*')
+            .ilike('code', discountCode)
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .maybeSingle()
+          if (discountData) discountRow = discountData
+        }
+
+        if (discountRow) {
+          const now = new Date()
+          const validUntil = discountRow.valid_until ? new Date(discountRow.valid_until) : null
+          if (!validUntil || now <= validUntil) {
+            // Mirror enroll-wallee amount math so recompute stays consistent
+            if (discountRow.discount_type === 'percentage') {
+              discountAmount = Math.round((effectiveBasePrice * Number(discountRow.discount_value || 0)) / 100)
+              if (discountRow.max_discount_rappen) {
+                discountAmount = Math.min(discountAmount, Number(discountRow.max_discount_rappen))
+              }
+            } else if (discountRow.discount_type === 'fixed') {
+              discountAmount = Number(discountRow.discount_value || 0)
+            }
+            discountAmount = Math.max(0, Math.min(discountAmount, effectiveBasePrice))
+          }
         }
       }
 
@@ -253,7 +289,8 @@ export default defineEventHandler(async (event) => {
           clientAmount: amount,
           serverAmount,
           courseId,
-          tenantId
+          tenantId,
+          discountCode: discountCode || null
         })
       }
       // Override client amount for all downstream inserts / Wallee line items
