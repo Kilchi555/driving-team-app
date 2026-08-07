@@ -378,7 +378,13 @@
                     {{ duration }} <span class="text-base font-medium">Min.</span>
                   </div>
                   <div v-if="durationPrices.get(duration)" class="mt-2 text-sm font-semibold" :style="{ color: getBrandPrimary() }">
-                    CHF {{ durationPrices.get(duration)?.price_chf }}
+                    <template v-if="durationPrices.get(duration)?.discounted_price_chf">
+                      <span class="mr-1.5 font-medium text-gray-400 line-through">CHF {{ durationPrices.get(duration)?.price_chf }}</span>
+                      CHF {{ durationPrices.get(duration)?.discounted_price_chf }}
+                    </template>
+                    <template v-else>
+                      CHF {{ durationPrices.get(duration)?.price_chf }}
+                    </template>
                   </div>
                 </div>
 
@@ -2198,7 +2204,12 @@ const availableInstructors = ref<any[]>([])
 const availableTimeSlots = ref<any[]>([])
 const durationOptions = ref<number[]>([])
 const selectedDuration = ref<number | null>(null)
-const durationPrices = ref<Map<number, { price_rappen: number; price_chf: string }>>(new Map()) // Price per duration
+const durationPrices = ref<Map<number, {
+  price_rappen: number
+  price_chf: string
+  discounted_price_rappen?: number
+  discounted_price_chf?: string
+}>>(new Map()) // Price per duration (optional promo from ?code=)
 const categoryAdminFeeRappen = ref(0)
 const categoryAdminFeeAppliesFrom = ref(2)
 const currentWeek = ref(1)
@@ -3087,10 +3098,48 @@ const loadPricingForDuration = async (duration: number) => {
     })
 
     if ((response as any)?.success && (response as any)?.price_chf) {
-      durationPrices.value.set(duration, {
-        price_rappen: (response as any).price_rappen,
+      const priceRappen = Number((response as any).price_rappen) || 0
+      const entry: {
+        price_rappen: number
+        price_chf: string
+        discounted_price_rappen?: number
+        discounted_price_chf?: string
+      } = {
+        price_rappen: priceRappen,
         price_chf: (response as any).price_chf
-      })
+      }
+
+      // Deep-link promo (?code=): show net price already on duration step
+      const promoCode = typeof route.query.code === 'string' ? route.query.code.trim() : ''
+      if (promoCode && currentTenant.value?.id && selectedCategory.value?.code && priceRappen > 0) {
+        try {
+          const validation = await $fetch<{
+            isValid: boolean
+            discount_amount_rappen?: number
+          }>('/api/discounts/validate', {
+            method: 'POST',
+            body: {
+              code: promoCode,
+              amount_rappen: priceRappen,
+              categoryCode: selectedCategory.value.code,
+              tenant_id: currentTenant.value.id,
+              context: 'appointment'
+            }
+          })
+          const discountRappen = Number(validation?.discount_amount_rappen) || 0
+          if (validation?.isValid && discountRappen > 0) {
+            const discountedRappen = Math.max(0, priceRappen - discountRappen)
+            entry.discounted_price_rappen = discountedRappen
+            entry.discounted_price_chf = (discountedRappen / 100).toFixed(2)
+          }
+        } catch (promoErr: any) {
+          logger.debug('Promo preview skipped for duration:', duration, promoErr?.message)
+        }
+      }
+
+      durationPrices.value.set(duration, entry)
+      // Ensure Map mutation triggers template update
+      durationPrices.value = new Map(durationPrices.value)
       // Store admin fee info (same for all durations within a category)
       const pricing = (response as any).pricing
       if (pricing?.admin_fee_rappen !== undefined) {
@@ -3101,7 +3150,8 @@ const loadPricingForDuration = async (duration: number) => {
       }
       logger.debug('✅ Pricing loaded:', {
         duration,
-        price_chf: (response as any).price_chf
+        price_chf: (response as any).price_chf,
+        discounted_price_chf: entry.discounted_price_chf
       })
     }
   } catch (err: any) {

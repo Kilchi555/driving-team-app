@@ -228,15 +228,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // Check first-lesson-only restriction
-    if (discount.first_lesson_only) {
-      if (!authUser) {
-        return {
-          isValid: false,
-          discount_amount_rappen: 0,
-          error: 'Bitte melde dich an, um diesen Rabattcode zu verwenden'
-        }
-      }
-      // Look up the internal user profile to get user_id
+    // Guests: allow for price preview (hard check runs at create-appointment after login)
+    if (discount.first_lesson_only && authUser) {
       const { data: userProfile } = await supabaseAdmin
         .from('users')
         .select('id')

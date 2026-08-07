@@ -1,13 +1,15 @@
-import { defineEventHandler, createError } from 'h3'
+import { defineEventHandler, createError, getQuery } from 'h3'
 import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
 import logger from '~/utils/logger'
 
 /**
  * ✅ GET /api/staff/get-discounts
- * 
- * Secure API to fetch available discounts (fixed type)
- * 
+ *
+ * Secure API to fetch available discounts
+ * - default: fixed type (event modal)
+ * - ?with_code=1: active discounts that have a promo code (staff Links sheet)
+ *
  * Security Layers:
  *   1. Bearer Token Authentication
  *   2. Tenant Isolation
@@ -45,15 +47,32 @@ export default defineEventHandler(async (event) => {
     }
 
     const tenantId = userProfile.tenant_id
+    const query = getQuery(event)
+    const withCode = query.with_code === '1' || query.with_code === 'true'
 
-    // ✅ LAYER 3: DATABASE QUERY - Only fixed discounts
-    const { data: discounts, error } = await supabaseAdmin
+    // ✅ LAYER 3: DATABASE QUERY
+    let discountsQuery = supabaseAdmin
       .from('discounts')
-      .select('*')
+      .select(withCode
+        ? 'id, name, code, discount_type, discount_value, category_filter, first_lesson_only, staff_id, valid_from, valid_until'
+        : '*'
+      )
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
-      .eq('discount_type', 'fixed')
-      .order('discount_value', { ascending: true })
+      .is('deleted_at', null)
+
+    if (withCode) {
+      discountsQuery = discountsQuery
+        .not('code', 'is', null)
+        .neq('code', '')
+        .order('name', { ascending: true })
+    } else {
+      discountsQuery = discountsQuery
+        .eq('discount_type', 'fixed')
+        .order('discount_value', { ascending: true })
+    }
+
+    const { data: discounts, error } = await discountsQuery
 
     if (error) {
       logger.error('❌ Error fetching discounts:', error)
@@ -63,16 +82,32 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    let result = discounts || []
+
+    if (withCode) {
+      const now = Date.now()
+      result = result.filter((d: any) => {
+        const code = String(d.code || '').trim()
+        if (!code) return false
+        // Tenant-wide or assigned to this staff member
+        if (d.staff_id && d.staff_id !== userProfile.id) return false
+        if (d.valid_from && new Date(d.valid_from).getTime() > now) return false
+        if (d.valid_until && new Date(d.valid_until).getTime() < now) return false
+        return true
+      })
+    }
+
     // ✅ LAYER 4: AUDIT LOGGING
     logger.debug('✅ Discounts fetched:', {
       userId: userProfile.id,
       tenantId,
-      count: discounts?.length || 0
+      withCode,
+      count: result.length
     })
 
     return {
       success: true,
-      data: discounts || []
+      data: result
     }
 
   } catch (error: any) {
@@ -88,4 +123,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-
