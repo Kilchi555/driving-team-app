@@ -408,6 +408,7 @@
           <p class="text-sm text-gray-600 mb-3">
             Diese Aktion ist unwiderruflich. Dein Konto und deine persönlichen Daten werden gelöscht.
             Rechnungen, Zahlungen und Audit-Logs bleiben aus gesetzlichen Gründen (CH Buchhaltungspflicht) 10 Jahre erhalten.
+            Offene Beträge müssen vorher beglichen sein — sonst ist die Löschung nicht möglich.
           </p>
           <button
             v-if="!showDeleteConfirm"
@@ -590,8 +591,14 @@ const handleDeleteAccount = async () => {
     await navigateTo(slug ? `/${slug}` : '/login', { replace: true })
   } catch (err: any) {
     console.error('❌ Account deletion failed:', err)
-    deleteError.value = err?.data?.statusMessage || err?.message || 'Fehler beim Löschen des Kontos'
-    showError('Fehler', deleteError.value)
+    const msg =
+      err?.data?.statusMessage ||
+      err?.statusMessage ||
+      err?.message ||
+      'Fehler beim Löschen des Kontos'
+    deleteError.value = msg
+    showError('Konto löschen nicht möglich', msg)
+  } finally {
     isDeletingAccount.value = false
   }
 }

@@ -12,6 +12,9 @@ import { logger } from '~/utils/logger'
  *   - Deletes the Supabase Auth account (sign-in is no longer possible).
  *   - Removes the auth-user link so the row stops appearing in queries.
  *
+ * Blocked when the customer still has open financial obligations
+ * (pending/partial/invoiced payments, unpaid invoices, or negative credit).
+ *
  * What this DOES NOT delete (intentionally, due to legal retention):
  *   - Payments, invoices, payment_audit_logs (10-year Swiss bookkeeping duty)
  *   - Already-completed appointments (audit trail, instructor records)
@@ -22,6 +25,24 @@ import { logger } from '~/utils/logger'
  *   - All personal data (name, address, phone, email, birthdate, profession) is anonymized
  *   - Auth row is removed → no way to recover
  */
+
+/** Payment statuses that represent money still owed / not settled */
+const OPEN_PAYMENT_STATUSES = [
+  'pending',
+  'partial',
+  'authorized',
+  'invoiced',
+  'invoice',
+]
+
+/** Invoice statuses that are not fully settled */
+const OPEN_INVOICE_STATUSES = [
+  'draft',
+  'pdf_created',
+  'sent',
+  'overdue',
+]
+
 export default defineEventHandler(async (event) => {
   try {
     logger.debug('🗑️ [delete-account] Handler started')
@@ -72,6 +93,95 @@ export default defineEventHandler(async (event) => {
     }
 
     const userId = userRow.id
+
+    // ── Block deletion while open receivables exist ──────────────────────────
+    const { data: openPayments, error: openPaymentsError } = await serviceSupabase
+      .from('payments')
+      .select('id, payment_status, total_amount_rappen, amount_paid_rappen, credit_used_rappen')
+      .eq('user_id', userId)
+      .eq('tenant_id', userRow.tenant_id)
+      .in('payment_status', OPEN_PAYMENT_STATUSES)
+
+    if (openPaymentsError) {
+      logger.error('❌ [delete-account] Failed to check open payments:', openPaymentsError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Offene Zahlungen konnten nicht geprüft werden. Bitte versuche es später erneut.'
+      })
+    }
+
+    const blockingPayments = (openPayments || []).filter((p) => {
+      const total = p.total_amount_rappen || 0
+      const paid = (p.amount_paid_rappen || 0) + (p.credit_used_rappen || 0)
+      // Ignore zero-amount leftovers; block anything with a remaining balance
+      return total > 0 && paid < total
+    })
+
+    const { data: openInvoices, error: openInvoicesError } = await serviceSupabase
+      .from('invoices')
+      .select('id, status, total_amount_rappen')
+      .eq('user_id', userId)
+      .eq('tenant_id', userRow.tenant_id)
+      .in('status', OPEN_INVOICE_STATUSES)
+
+    if (openInvoicesError) {
+      logger.error('❌ [delete-account] Failed to check open invoices:', openInvoicesError)
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Offene Rechnungen konnten nicht geprüft werden. Bitte versuche es später erneut.'
+      })
+    }
+
+    const blockingInvoices = (openInvoices || []).filter(
+      (inv) => (inv.total_amount_rappen || 0) > 0
+    )
+
+    let negativeCreditRappen = 0
+    const { data: creditRow, error: creditError } = await serviceSupabase
+      .from('student_credits')
+      .select('balance_rappen')
+      .eq('user_id', userId)
+      .eq('tenant_id', userRow.tenant_id)
+      .maybeSingle()
+
+    if (creditError) {
+      // Table/row may be missing for some tenants — treat as no credit debt
+      logger.warn('⚠️ [delete-account] Credit check skipped:', creditError.message)
+    } else if ((creditRow?.balance_rappen || 0) < 0) {
+      negativeCreditRappen = Math.abs(creditRow!.balance_rappen)
+    }
+
+    if (blockingPayments.length > 0 || blockingInvoices.length > 0 || negativeCreditRappen > 0) {
+      const openChf = blockingPayments.reduce((sum, p) => {
+        const remaining = Math.max(
+          0,
+          (p.total_amount_rappen || 0) - (p.amount_paid_rappen || 0) - (p.credit_used_rappen || 0)
+        )
+        return sum + remaining
+      }, 0)
+      const invoiceChf = blockingInvoices.reduce(
+        (sum, inv) => sum + (inv.total_amount_rappen || 0),
+        0
+      )
+      const debtChf = ((openChf + invoiceChf + negativeCreditRappen) / 100).toFixed(2)
+
+      logger.warn('🚫 [delete-account] Blocked due to open receivables:', {
+        userId,
+        payments: blockingPayments.length,
+        invoices: blockingInvoices.length,
+        negativeCreditRappen,
+        debtChf
+      })
+
+      throw createError({
+        statusCode: 409,
+        statusMessage:
+          `Dein Konto kann nicht gelöscht werden, solange offene Beträge bestehen (ca. CHF ${debtChf}). ` +
+          'Bitte begleiche offene Zahlungen/Rechnungen oder kontaktiere deine Fahrschule. ' +
+          'Danach kannst du dein Konto löschen.'
+      })
+    }
+
     const originalEmail = userRow.email
     const anonymizedEmail = `deleted_${userId}@simy.local`
 
