@@ -39,6 +39,11 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, message: 'User not found' })
     }
 
+    // ✅ ROLE CHECK — only staff/admin may create payment records via this endpoint
+    if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(user.role)) {
+      throw createError({ statusCode: 403, message: 'Insufficient permissions – staff or admin role required' })
+    }
+
     // ✅ 2. INPUT VALIDATION
     const body = await readBody(event)
     const paymentData = body
@@ -58,10 +63,22 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ 3. ADD TENANT_ID FOR SECURITY
+    // Whitelist insertable fields — never allow caller to force completed status
+    const allowedInsertFields = [
+      'appointment_id', 'user_id', 'staff_id', 'lesson_price_rappen', 'admin_fee_rappen',
+      'products_price_rappen', 'discount_amount_rappen', 'credit_used_rappen',
+      'total_amount_rappen', 'payment_method', 'currency', 'description', 'metadata'
+    ] as const
+    const sanitized: Record<string, any> = {}
+    for (const key of allowedInsertFields) {
+      if (paymentData[key] !== undefined) sanitized[key] = paymentData[key]
+    }
+
+    // ✅ 3. ADD TENANT_ID FOR SECURITY + force pending status
     const paymentToInsert = {
-      ...paymentData,
-      tenant_id: user.tenant_id
+      ...sanitized,
+      tenant_id: user.tenant_id,
+      payment_status: 'pending'
     }
 
     // ✅ 4. INSERT PAYMENT
