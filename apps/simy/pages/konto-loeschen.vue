@@ -26,6 +26,8 @@
             <p class="mt-4 text-sm text-gray-500">
               Danach wird dein Konto anonymisiert bzw. gelöscht. Gesetzlich vorgeschriebene Buchhaltungsdaten können
               gemäss Schweizer Recht für die vorgeschriebene Aufbewahrungsfrist erhalten bleiben.
+              Solange offene Zahlungen oder Rechnungen bestehen, ist die Löschung nicht möglich — bitte zuerst begleichen
+              oder deine Fahrschule kontaktieren.
             </p>
           </section>
 
