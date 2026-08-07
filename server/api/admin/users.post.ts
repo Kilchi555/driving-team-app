@@ -6,17 +6,36 @@ import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 
 // Allowed columns per update action to prevent mass assignment
-const ADMIN_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'role'] as const
+// NOTE: `role` is intentionally excluded from tenant-admin whitelists — see sanitizeRoleChange()
+const ADMIN_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active'] as const
 const STAFF_UPDATE_WHITELIST = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'can_edit_guide'] as const
 const USER_UPDATE_WHITELIST = [
-  'first_name', 'last_name', 'email', 'phone', 'is_active', 'role', 'category',
+  'first_name', 'last_name', 'email', 'phone', 'is_active', 'category',
   'birthdate', 'street', 'street_nr', 'zip', 'city', 'profession', 'faberid'
 ] as const
+
+const TENANT_ASSIGNABLE_ROLES = new Set(['admin', 'staff', 'client', 'customer'])
 
 function pickFields<T extends object>(data: T, allowed: readonly string[]): Partial<T> {
   return Object.fromEntries(
     Object.entries(data).filter(([k]) => allowed.includes(k))
   ) as Partial<T>
+}
+
+/** Only super_admin may assign super_admin; tenant admins may only set tenant-local roles. */
+function sanitizeRoleChange(callerRole: string, requestedRole: unknown): string | undefined {
+  if (requestedRole === undefined || requestedRole === null || requestedRole === '') return undefined
+  const role = String(requestedRole)
+  if (role === 'super_admin') {
+    if (callerRole !== 'super_admin') {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden: cannot assign super_admin' })
+    }
+    return role
+  }
+  if (callerRole !== 'super_admin' && !TENANT_ASSIGNABLE_ROLES.has(role)) {
+    throw createError({ statusCode: 403, statusMessage: `Forbidden: cannot assign role ${role}` })
+  }
+  return role
 }
 
 export default defineEventHandler(async (event) => {
@@ -64,10 +83,22 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'create-admin') {
-      // Create new admin user
+      // Create new admin user — force caller tenant + admin role (never accept super_admin from tenant admins)
+      const insertTenantId = authUser.role === 'super_admin'
+        ? (tenant_id || user_data?.tenant_id || authUser.tenant_id)
+        : authUser.tenant_id
+      if (!insertTenantId) {
+        throw createError({ statusCode: 400, statusMessage: 'tenant_id required' })
+      }
+      const insertData = {
+        ...pickFields(user_data || {}, ['first_name', 'last_name', 'email', 'phone', 'is_active']),
+        role: 'admin',
+        tenant_id: insertTenantId
+      }
+
       const { data, error } = await supabase
         .from('users')
-        .insert([user_data])
+        .insert([insertData])
         .select()
         .single()
 
@@ -77,11 +108,23 @@ export default defineEventHandler(async (event) => {
 
     if (action === 'update-admin') {
       // Update admin user — whitelist fields to prevent mass assignment
-      const safeData = pickFields(user_data || {}, ADMIN_UPDATE_WHITELIST)
-      const { data, error } = await supabase
+      const safeData: Record<string, any> = pickFields(user_data || {}, ADMIN_UPDATE_WHITELIST)
+      if (user_data?.role !== undefined) {
+        const nextRole = sanitizeRoleChange(authUser.role || '', user_data.role)
+        if (nextRole) safeData.role = nextRole
+      }
+
+      let query = supabase
         .from('users')
         .update(safeData)
         .eq('id', user_id)
+
+      // Tenant isolation for non-super_admin
+      if (authUser.role !== 'super_admin') {
+        query = query.eq('tenant_id', authUser.tenant_id)
+      }
+
+      const { data, error } = await query
         .select('*, auth_user_id')
         .single()
 
@@ -218,7 +261,11 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 403, statusMessage: 'Forbidden: Tenant mismatch' })
       }
 
-      const safeData = pickFields(user_data || {}, USER_UPDATE_WHITELIST)
+      const safeData: Record<string, any> = pickFields(user_data || {}, USER_UPDATE_WHITELIST)
+      if (user_data?.role !== undefined) {
+        const nextRole = sanitizeRoleChange(authUser.role || '', user_data.role)
+        if (nextRole) safeData.role = nextRole
+      }
 
       // Normalize empty strings to null for optional personalien
       for (const key of ['birthdate', 'street', 'street_nr', 'zip', 'city', 'profession', 'faberid', 'phone', 'email'] as const) {
@@ -231,6 +278,7 @@ export default defineEventHandler(async (event) => {
         .from('users')
         .update(safeData)
         .eq('id', user_id)
+        .eq('tenant_id', existing.tenant_id)
         .select('*, auth_user_id')
         .single()
 
