@@ -2,45 +2,23 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Layer 1: Authentication
-    const authHeader = getHeader(event, 'authorization')
-    if (!authHeader) {
+    // Layer 1: Authentication — verify JWT via Supabase (never trust decoded payload alone)
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser) {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    // Use admin client which already has correct credentials
     const supabase = getSupabaseAdmin()
-    
-    const token = authHeader.replace('Bearer ', '')
-    
-    // Extract user_id from JWT token
-    let requestingUserId: string | null = null
-    try {
-      const parts = token.split('.')
-      if (parts.length === 3) {
-        // Pad base64 string if necessary
-        let padded = parts[1]
-        padded += '='.repeat((4 - padded.length % 4) % 4)
-        const decoded = JSON.parse(Buffer.from(padded, 'base64').toString())
-        requestingUserId = decoded.sub
-      }
-    } catch (e) {
-      logger.warn('Failed to parse JWT token:', e)
-    }
-    
-    if (!requestingUserId) {
-      logger.error('Could not extract user ID from token')
-      throw createError({ statusCode: 401, statusMessage: 'Invalid token format' })
-    }
 
     // Get requesting user's profile (to check role and tenant)
     const { data: requestingUser, error: reqUserError } = await supabase
       .from('users')
       .select('id, role, tenant_id, auth_user_id')
-      .eq('auth_user_id', requestingUserId)
+      .eq('auth_user_id', authUser.id)
       .single()
 
     if (reqUserError || !requestingUser) {
@@ -48,8 +26,8 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 403, statusMessage: 'User profile not found' })
     }
 
-    // Layer 4: Authorization - Only admin/staff/superadmin
-    if (!['admin', 'staff', 'superadmin'].includes(requestingUser.role)) {
+    // Layer 4: Authorization - Only admin/staff/super_admin
+    if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(requestingUser.role)) {
       logger.warn(`Insufficient permissions for role: ${requestingUser.role}`)
       throw createError({ statusCode: 403, statusMessage: 'Insufficient permissions' })
     }
@@ -64,9 +42,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // Layer 4: Ownership - User must be in same tenant
+    // Do NOT return onboarding_token — it is an account-takeover secret
     const { data: targetUser, error: targetError } = await supabase
       .from('users')
-      .select('id, email, first_name, last_name, phone, category, birthdate, faberid, tenant_id, preferred_payment_method, role, auth_user_id, onboarding_token, street, street_nr, zip, city, profession')
+      .select('id, email, first_name, last_name, phone, category, birthdate, faberid, tenant_id, preferred_payment_method, role, auth_user_id, street, street_nr, zip, city, profession')
       .eq('id', userId)
       .eq('tenant_id', requestingUser.tenant_id)
       .single()
