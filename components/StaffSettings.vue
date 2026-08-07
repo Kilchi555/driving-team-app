@@ -210,7 +210,7 @@
           <div class="grid grid-cols-2 gap-2">
             <!-- Links -->
             <button
-              @click="showLinksSheet = true; ensureTenantSlug()"
+              @click="openLinksSheet()"
               class="bg-white rounded-2xl px-3 py-2 flex items-center gap-2.5 active:opacity-60 transition-opacity shadow-sm"
             >
               <div class="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -743,6 +743,25 @@
                 <div class="flex-1 text-left">
                   <div class="text-sm font-medium text-gray-800">Buchungsseite</div>
                   <div class="text-xs text-gray-400">Online-Buchungsseite für {{ t.clientsPlural }}</div>
+                </div>
+                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+              </button>
+
+              <!-- Promo booking links from active discount codes -->
+              <button
+                v-for="promo in promoBookingLinks"
+                :key="promo.id"
+                @click="openLinkAction({ url: promo.url, title: promo.title })"
+                class="w-full bg-gray-50 rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity"
+              >
+                <div class="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                  </svg>
+                </div>
+                <div class="flex-1 text-left min-w-0">
+                  <div class="text-sm font-medium text-gray-800 truncate">{{ promo.title }}</div>
+                  <div class="text-xs text-gray-400 truncate">{{ promo.subtitle }}</div>
                 </div>
                 <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
               </button>
@@ -2431,6 +2450,53 @@ const showCalendarIntegration = ref(false)
 
 // Links Sheet
 const showLinksSheet = ref(false)
+const promoBookingLinks = ref<{
+  id: string
+  title: string
+  subtitle: string
+  url: string
+}[]>([])
+
+const buildPromoBookingUrl = (discount: { code: string; category_filter?: string | null }) => {
+  const params = new URLSearchParams()
+  params.set('code', String(discount.code).trim())
+  const category = discount.category_filter && discount.category_filter !== 'all'
+    ? discount.category_filter
+    : null
+  if (category) params.set('category', category)
+  return `${bookingPageLink.value}?${params.toString()}`
+}
+
+const loadPromoBookingLinks = async () => {
+  try {
+    const response = await $fetch<{ success: boolean; data: any[] }>('/api/staff/get-discounts', {
+      query: { with_code: '1' }
+    })
+    if (!response?.success || !Array.isArray(response.data)) {
+      promoBookingLinks.value = []
+      return
+    }
+    promoBookingLinks.value = response.data
+      .filter((d) => String(d?.code || '').trim())
+      .map((d) => {
+        const code = String(d.code).trim().toUpperCase()
+        return {
+          id: d.id,
+          title: d.name || code,
+          subtitle: `Code ${code} · Aktions-Buchungslink`,
+          url: buildPromoBookingUrl({ code, category_filter: d.category_filter })
+        }
+      })
+  } catch {
+    promoBookingLinks.value = []
+  }
+}
+
+const openLinksSheet = async () => {
+  showLinksSheet.value = true
+  await ensureTenantSlug()
+  await loadPromoBookingLinks()
+}
 
 // Settings section sheets
 const showExternalCalendarsSheet = ref(false)
