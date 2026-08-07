@@ -198,6 +198,13 @@
 
         <!-- Drawer Footer -->
         <div class="border-t border-white/10 p-3 space-y-1">
+          <button type="button" @click="showMobileMenu = false; openHelp()"
+            class="drawer-link" :class="isActive('/help') ? 'drawer-active' : ''">
+            <svg class="w-4 h-4 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Hilfe
+          </button>
           <NuxtLink to="/admin/billing" @click="showMobileMenu = false"
             class="drawer-link" :class="isActive('/admin/billing') ? 'drawer-active' : ''">
             <svg class="w-4 h-4 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -305,6 +312,13 @@
 
         <!-- Sidebar Footer -->
         <div class="border-t border-white/10 p-3 space-y-1">
+          <button type="button" @click="openHelp()"
+            class="drawer-link" :class="isActive('/help') ? 'drawer-active' : ''">
+            <svg class="w-4 h-4 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Hilfe
+          </button>
           <NuxtLink to="/admin/billing"
             class="drawer-link" :class="isActive('/admin/billing') ? 'drawer-active' : ''">
             <svg class="w-4 h-4 mr-2 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -353,7 +367,9 @@ import GlobalNotifications from '~/components/GlobalNotifications.vue'
 import { useRoute } from '#app'
 import { useStatusBar } from '~/composables/useStatusBar'
 import { useTerminology } from '~/composables/useTerminology'
+import { useHelpModal } from '~/composables/useHelpModal'
 
+const { openHelp } = useHelpModal()
 const { t, isDrivingSchool } = useTerminology()
 
 const route = useRoute()

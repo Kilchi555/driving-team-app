@@ -25,6 +25,7 @@ export default defineNuxtConfig({
   ignore: [
     '**/*.sql',
     '**/*.md',
+    '!content/help/**',
     '**/*.backup',
     '**/*.txt',
     '**/*.tar.gz',

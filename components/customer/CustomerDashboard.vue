@@ -418,7 +418,7 @@
 
       </div>
 
-      <!-- Mein Profil + Kontakt: halbe Breite, nebeneinander -->
+      <!-- Mein Profil + Kontakt + Hilfe -->
       <div class="grid grid-cols-2 gap-4 mb-4">
 
         <!-- Mein Profil Card -->
@@ -457,6 +457,27 @@
               <h3 class="text-lg font-semibold text-gray-900">
                 Kontakt
               </h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hilfe -->
+        <div
+          @click="handleClickWithDelay('help', () => openHelp())"
+          class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer transform col-span-2"
+          :class="{ 'scale-95 opacity-80': activeClickDiv === 'help' }"
+        >
+          <div class="p-4 flex items-center">
+            <div class="flex items-center">
+              <div class="w-10 h-10 rounded-lg mr-3 flex items-center justify-center" :style="{ background: buttonColorLight }">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" :style="{ color: buttonColor }">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-semibold text-gray-900">Hilfe</h3>
+                <p class="text-xs text-gray-500">Anleitungen zur App</p>
+              </div>
             </div>
           </div>
         </div>
@@ -1083,8 +1104,10 @@ import { checkFeatureFlag } from '~/utils/featureFlags'
 import { useFeatures } from '~/composables/useFeatures'
 import ProfileModal from './ProfileModal.vue'
 import { useCalendarSync } from '~/composables/useCalendarSync'
+import { useHelpModal } from '~/composables/useHelpModal'
 
 // Composables
+const { openHelp } = useHelpModal()
 const authStore = useAuthStore()
 const { user: currentUser, userRole, isClient } = storeToRefs(authStore)
 const { loadTenantBrandingById, primaryColor, secondaryColor, accentColor, currentTenantBranding } = useTenantBranding()

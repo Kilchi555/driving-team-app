@@ -237,17 +237,34 @@
             </button>
           </div>
 
-          <button
-            @click="handleLogout"
-            class="w-full bg-white rounded-2xl px-4 py-3.5 flex items-center gap-3 active:opacity-60 transition-opacity shadow-sm"
-          >
-            <div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-              </svg>
-            </div>
-            <span class="text-sm font-medium text-red-600 flex-1 text-left">Abmelden</span>
-          </button>
+          <!-- Hilfe + Abmelden nebeneinander -->
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              @click="openHelp()"
+              class="bg-white rounded-2xl px-3 py-2 flex items-center gap-2.5 active:opacity-60 transition-opacity shadow-sm"
+            >
+              <div class="w-7 h-7 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <span class="text-xs font-medium text-gray-700">Hilfe</span>
+            </button>
+
+            <button
+              type="button"
+              @click="handleLogout"
+              class="bg-white rounded-2xl px-3 py-2 flex items-center gap-2.5 active:opacity-60 transition-opacity shadow-sm"
+            >
+              <div class="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+              </div>
+              <span class="text-xs font-medium text-red-600">Abmelden</span>
+            </button>
+          </div>
         </div>
 
       </div><!-- end space-y-2 settings -->
@@ -2078,7 +2095,9 @@ import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useAuthStore } from '~/stores/auth'
 import { useFeatures } from '~/composables/useFeatures'
 import { useTerminology } from '~/composables/useTerminology'
+import { useHelpModal } from '~/composables/useHelpModal'
 
+const { openHelp } = useHelpModal()
 const { primaryColor, currentTenantBranding } = useTenantBranding()
 const { isEnabled, load: loadFeatures } = useFeatures()
 const { t, isDrivingSchool } = useTerminology()
