@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 function parseList(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -11,6 +12,8 @@ function parseList(value: unknown): string[] {
 }
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
+
   const query = getQuery(event)
   const {
     tenantId,
@@ -25,13 +28,18 @@ export default defineEventHandler(async (event) => {
     limit = '50',
   } = query as Record<string, string | string[]>
 
-  if (!tenantId || typeof tenantId !== 'string') {
+  // Force tenant from authenticated profile — ignore cross-tenant tenantId
+  const effectiveTenantId = profile.role === 'super_admin' && typeof tenantId === 'string'
+    ? tenantId
+    : profile.tenant_id
+
+  if (!effectiveTenantId) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId is required' })
   }
 
   const supabase = getSupabaseAdmin()
   const pageNum = Math.max(1, parseInt(String(page)))
-  const pageSize = Math.min(10000, Math.max(1, parseInt(String(limit))))
+  const pageSize = Math.min(100, Math.max(1, parseInt(String(limit))))
   const offset = (pageNum - 1) * pageSize
 
   const includeCats = parseList(categories?.length ? categories : category)
@@ -40,7 +48,7 @@ export default defineEventHandler(async (event) => {
   const needsClientFilter = excludeCats.length > 0 || requireTags.length > 0
 
   const applyFilters = (q: any) => {
-    let next = q.eq('tenant_id', tenantId)
+    let next = q.eq('tenant_id', effectiveTenantId)
     if (status && status !== 'all') {
       if (status === 'not_unsubscribed') next = next.neq('status', 'unsubscribed')
       else next = next.eq('status', String(status))
@@ -86,7 +94,10 @@ export default defineEventHandler(async (event) => {
   }
 
   let q = applyFilters(
-    supabase.from('leads').select('*', { count: 'exact' })
+    supabase.from('leads').select(
+      'id, tenant_id, email, first_name, last_name, phone, status, categories, tags, notes, source, created_at, updated_at, consented_at, unsubscribed_at',
+      { count: 'exact' }
+    )
   )
     .order('created_at', { ascending: false })
     .range(offset, offset + pageSize - 1)
