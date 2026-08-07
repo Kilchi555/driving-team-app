@@ -3,12 +3,16 @@
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+    <ClientOnly>
+      <HelpModal />
+    </ClientOnly>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 import { initializeOfflineSupport } from '~/utils/offlineQueue'
+import HelpModal from '~/components/help/HelpModal.vue'
 
 let appUrlOpenListener: any = null
 
