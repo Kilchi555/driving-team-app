@@ -16,6 +16,7 @@ import { logFallbackUsed } from '~/server/utils/log-fallback'
 import { recordAndSendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { isChargeableEventType } from '~/server/utils/event-type-charge'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { assertStaffCanApplyManualDiscount } from '~/server/utils/staff-manual-discount'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -36,6 +37,7 @@ export default defineEventHandler(async (event) => {
       adminFeeRappen = 0,
       productsPriceRappen = 0,
       discountAmountRappen = 0,
+      isManualDiscount = false,
       // ✅ NEW: Company billing address ID for invoice payments
       companyBillingAddressId = null,
       // ✅ NEW: Cash already paid flag (staff marks as paid on create)
@@ -76,6 +78,12 @@ export default defineEventHandler(async (event) => {
     ) {
       throw createError({ statusCode: 400, statusMessage: 'Invalid price: discount exceeds total price' })
     }
+
+    await assertStaffCanApplyManualDiscount({
+      tenantId: callerProfile.tenant_id,
+      role: callerProfile.role,
+      isManualDiscount: Boolean(isManualDiscount && discountAmountRappen > 0)
+    })
 
     // ============ TENANT ISOLATION ============
     // Ensure the appointment belongs to the caller's own tenant.

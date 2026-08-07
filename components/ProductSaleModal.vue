@@ -100,7 +100,7 @@
           </div>
 
           <!-- Discount Section -->
-          <div v-if="productSale.hasProducts.value">
+          <div v-if="productSale.hasProducts.value && canApplyManualDiscount">
             <label class="block text-sm font-medium text-gray-700 mb-2">
               🏷️ Rabatt (optional)
             </label>
@@ -126,7 +126,7 @@
                 v-model="discountReason"
                 type="text"
                 class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Grund für Rabatt (optional)"
+                placeholder="Vermerk / Papiercode (optional)"
               />
             </div>
           </div>
@@ -173,7 +173,7 @@
               <span class="text-lg font-medium text-gray-900">Gesamtpreis:</span>
               <span class="text-xl font-bold text-gray-900">CHF {{ totalPrice.toFixed(2) }}</span>
             </div>
-            <div v-if="discountAmount > 0" class="flex justify-between items-center mt-2 text-sm text-green-600">
+            <div v-if="canApplyManualDiscount && discountAmount > 0" class="flex justify-between items-center mt-2 text-sm text-green-600">
               <span>Rabatt:</span>
               <span>- CHF {{ discountAmount.toFixed(2) }}</span>
             </div>
@@ -255,14 +255,36 @@ const discountReason = ref('')
 const { cashVisible } = useCashPaymentSettings('staff')
 const paymentMethod = ref('invoice')
 
+const isAdminRole = computed(() =>
+  ['admin', 'superadmin', 'super_admin', 'tenant_admin'].includes(props.currentUser?.role ?? '')
+)
+const bookingPolicy = ref<{ staff_manual_discount_permission?: 'hidden' | 'allowed' } | null>(null)
+const canApplyManualDiscount = computed(() => {
+  if (isAdminRole.value) return true
+  return bookingPolicy.value?.staff_manual_discount_permission === 'allowed'
+})
+
+const loadBookingPolicy = async () => {
+  if (bookingPolicy.value) return
+  try {
+    const res = await $fetch<{ success: boolean; policy?: { staff_manual_discount_permission?: 'hidden' | 'allowed' } }>(
+      '/api/admin/booking-policy'
+    )
+    bookingPolicy.value = res?.policy ?? null
+  } catch {
+    bookingPolicy.value = { staff_manual_discount_permission: 'hidden' }
+  }
+}
+
 // Computed
 const totalPrice = computed(() => {
   const basePrice = productSale.totalProductsValue.value
-  if (discountAmount.value > 0) {
+  const amount = canApplyManualDiscount.value ? discountAmount.value : 0
+  if (amount > 0) {
     if (discountType.value === 'percentage') {
-      return basePrice * (1 - discountAmount.value / 100)
+      return basePrice * (1 - amount / 100)
     } else {
-      return Math.max(0, basePrice - discountAmount.value)
+      return Math.max(0, basePrice - amount)
     }
   }
   return basePrice
@@ -290,6 +312,13 @@ const saveProductSale = async () => {
 
   try {
     logger.debug('💾 Saving product sale...')
+
+    const effectiveDiscountAmount = canApplyManualDiscount.value ? discountAmount.value : 0
+    const effectiveDiscountReason = canApplyManualDiscount.value ? discountReason.value : null
+
+    if (effectiveDiscountAmount > 0 && !canApplyManualDiscount.value) {
+      throw new Error('Manuelle Rabatte sind für Staff nicht aktiviert.')
+    }
     
     const saleData = {
       user_id: selectedStudent.value.id,
@@ -300,9 +329,9 @@ const saveProductSale = async () => {
         unit_price_rappen: Math.round(item.product.price * 100),
         total_price_rappen: Math.round(item.total * 100)
       })),
-      discount_amount_rappen: discountAmount.value > 0 ? Math.round(discountAmount.value * 100) : 0,
+      discount_amount_rappen: effectiveDiscountAmount > 0 ? Math.round(effectiveDiscountAmount * 100) : 0,
       discount_type: discountType.value,
-      discount_reason: discountReason.value || null,
+      discount_reason: effectiveDiscountReason || null,
       payment_method: paymentMethod.value,
       notes: `Produktverkauf ohne Termin - ${new Date().toLocaleDateString('de-CH')}`
     }
@@ -331,6 +360,7 @@ watch(() => props.isVisible, (isVisible) => {
     discountType.value = 'fixed'
     discountReason.value = ''
     paymentMethod.value = cashVisible.value ? 'cash' : 'invoice'
+    loadBookingPolicy()
   }
 })
 </script>

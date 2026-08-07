@@ -168,7 +168,7 @@
             <NuxtLink v-if="shouldShowNavLink('data_management_enabled')" to="/admin/data-management" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/data-management') ? 'drawer-active' : ''">Datenverwaltung</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/discounts" @click="showMobileMenu = false"
-              class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte</NuxtLink>
+              class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte & Gutscheine</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">{{ t.categoriesLabel }} & Infrastruktur</NuxtLink>
             <NuxtLink to="/admin/student-credits" @click="showMobileMenu = false"
@@ -275,7 +275,7 @@
             <NuxtLink v-if="shouldShowNavLink('data_management_enabled')" to="/admin/data-management"
               class="drawer-link" :class="isActive('/admin/data-management') ? 'drawer-active' : ''">Datenverwaltung</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('discounts_enabled')" to="/admin/discounts"
-              class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte</NuxtLink>
+              class="drawer-link" :class="isActive('/admin/discounts') ? 'drawer-active' : ''">Rabatte & Gutscheine</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('categories_enabled')" to="/admin/categories"
               class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">{{ t.categoriesLabel }} & Infrastruktur</NuxtLink>
             <NuxtLink to="/admin/student-credits"

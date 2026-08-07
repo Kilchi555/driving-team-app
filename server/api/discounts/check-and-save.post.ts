@@ -34,7 +34,33 @@ export default defineEventHandler(async (event) => {
     if (appointment.staff_id !== user.id) {
       throw new Error('Unauthorized to manage discount for this appointment')
     }
-    
+
+    const isManualDiscount = Boolean(
+      discountData?.is_manual_discount &&
+      (discountData?.discount_amount_rappen || 0) > 0
+    )
+    if (isManualDiscount) {
+      const { data: dbUser } = await supabaseAdmin
+        .from('users')
+        .select('id, tenant_id, role')
+        .eq('auth_user_id', user.id)
+        .maybeSingle()
+
+      if (!dbUser?.tenant_id) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+      }
+
+      const { assertStaffCanApplyManualDiscount } = await import('~/server/utils/staff-manual-discount')
+      await assertStaffCanApplyManualDiscount({
+        tenantId: dbUser.tenant_id,
+        role: dbUser.role,
+        isManualDiscount: true
+      })
+    }
+
+    // Strip client-only flag before DB write
+    const { is_manual_discount: _manualFlag, ...persistDiscountData } = discountData || {}
+
     // Check if discount already exists
     const { data: existingDiscount, error: checkError } = await supabaseAdmin
       .from('discount_sales')
@@ -55,7 +81,7 @@ export default defineEventHandler(async (event) => {
       
       const { data: updated, error: updateError } = await supabaseAdmin
         .from('discount_sales')
-        .update(discountData)
+        .update(persistDiscountData)
         .eq('id', existingDiscount.id)
         .select()
         .single()
@@ -73,7 +99,7 @@ export default defineEventHandler(async (event) => {
       
       const { data: created, error: insertError } = await supabaseAdmin
         .from('discount_sales')
-        .insert(discountData)
+        .insert(persistDiscountData)
         .select()
         .single()
       

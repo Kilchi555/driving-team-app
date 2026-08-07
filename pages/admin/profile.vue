@@ -2421,6 +2421,30 @@
               </div>
             </div>
 
+            <!-- Manuelle Rabatte / Papiergutscheine -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div class="px-5 py-4 border-b border-gray-50">
+                <h2 class="text-sm font-semibold text-gray-800">Manuelle Rabatte durch Staff</h2>
+                <p class="text-xs text-gray-400 mt-0.5">Erlaubt Staff, Betrag frei zu wählen und einen Vermerk zu setzen (z.B. Papiergutschein-Code).</p>
+              </div>
+              <div class="px-5 py-4 space-y-2">
+                <label v-for="option in bpManualDiscountPermissionOptions" :key="option.value"
+                  class="flex items-start gap-3 px-3.5 py-3 rounded-xl border cursor-pointer transition-colors"
+                  :class="bpPolicy.staff_manual_discount_permission === option.value ? 'border-transparent' : 'border-gray-100 hover:border-gray-200'"
+                  :style="bpPolicy.staff_manual_discount_permission === option.value ? { borderColor: 'var(--color-primary, #3B82F6)', background: 'var(--color-primary-bg, #EFF6FF)' } : {}"
+                  @click="bpPolicy.staff_manual_discount_permission = option.value as 'hidden' | 'allowed'">
+                  <span class="mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors"
+                    :style="bpPolicy.staff_manual_discount_permission === option.value ? { borderColor: 'var(--color-primary, #3B82F6)' } : { borderColor: '#d1d5db' }">
+                    <span v-if="bpPolicy.staff_manual_discount_permission === option.value" class="w-2 h-2 rounded-full" :style="{ background: 'var(--color-primary, #3B82F6)' }"/>
+                  </span>
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">{{ option.label }}</p>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ option.description }}</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <!-- Auto-Save Info -->
             <div class="flex items-center justify-end gap-3 pt-1">
               <p v-if="bpSaveSuccess" class="text-sm text-green-600 font-medium flex items-center gap-1.5">
@@ -3177,6 +3201,7 @@ const bpPolicy = ref({
   payment_reminder_sms_enabled: true,
   course_reminder_sms_enabled: true,
   staff_refund_permission: 'hidden' as 'hidden' | 'request' | 'allowed',
+  staff_manual_discount_permission: 'hidden' as 'hidden' | 'allowed',
 })
 
 const customerChannelOptions = [
@@ -3260,6 +3285,11 @@ const bpRefundPermissionOptions = [
   { value: 'hidden',  label: 'Nicht sichtbar',  description: 'Staff sieht keine Rückerstattungs-Option. Nur Admins können Rückerstattungen auslösen.' },
   { value: 'request', label: 'Antrag stellen',  description: 'Staff kann einen Antrag stellen. Der Admin wird benachrichtigt und muss genehmigen.' },
   { value: 'allowed', label: 'Direkt erstatten', description: 'Staff kann Rückerstattungen direkt und ohne Admin-Genehmigung auslösen.' },
+]
+
+const bpManualDiscountPermissionOptions = [
+  { value: 'hidden',  label: 'Nicht erlaubt', description: 'Staff sieht nur vordefinierte Rabatte und Codes. Kein freier Betrag.' },
+  { value: 'allowed', label: 'Betrag frei wählen', description: 'Staff darf Betrag und Vermerk eingeben — z.B. für Papiergutscheine.' },
 ]
 
 const bpAvailableFields = [

@@ -13,6 +13,7 @@
           </p>
         </div>
         <button
+          v-if="activeTab !== 'usage'"
           @click="openCreateModal"
           class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex-shrink-0"
         >
@@ -23,11 +24,11 @@
 
     <!-- ✅ NEW: Tab Navigation -->
     <div class="bg-white rounded-lg shadow-sm border mb-6">
-      <div class="flex border-b">
+      <div class="flex border-b overflow-x-auto">
         <button
           @click="activeTab = 'discounts'"
           :class="[
-            'flex-1 px-6 py-3 text-sm font-medium transition-colors',
+            'flex-1 min-w-[140px] px-6 py-3 text-sm font-medium transition-colors',
             activeTab === 'discounts'
               ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -38,13 +39,24 @@
         <button
           @click="activeTab = 'vouchers'"
           :class="[
-            'flex-1 px-6 py-3 text-sm font-medium transition-colors',
+            'flex-1 min-w-[140px] px-6 py-3 text-sm font-medium transition-colors',
             activeTab === 'vouchers'
               ? 'text-green-600 border-b-2 border-green-600 bg-green-50'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
           ]"
         >
           💰 Guthaben-Gutscheine
+        </button>
+        <button
+          @click="switchToUsageTab"
+          :class="[
+            'flex-1 min-w-[140px] px-6 py-3 text-sm font-medium transition-colors',
+            activeTab === 'usage'
+              ? 'text-amber-700 border-b-2 border-amber-600 bg-amber-50'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+          ]"
+        >
+          📋 Verwendet
         </button>
       </div>
     </div>
@@ -472,6 +484,204 @@
     </div>
     <!-- End of Vouchers Tab -->
 
+    <!-- ============================================ -->
+    <!-- TAB 3: USAGE HISTORY -->
+    <!-- ============================================ -->
+    <div v-if="activeTab === 'usage'">
+      <!-- Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+          <p class="text-sm text-gray-600">Einträge (gefiltert)</p>
+          <p class="text-2xl font-bold text-gray-900">{{ usageTotal }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+          <p class="text-sm text-gray-600">Summe Rabatte</p>
+          <p class="text-2xl font-bold text-amber-700">CHF {{ (usageTotalAmountRappen / 100).toFixed(2) }}</p>
+        </div>
+        <div class="bg-white rounded-lg shadow-sm border p-6">
+          <p class="text-sm text-gray-600">Seite</p>
+          <p class="text-2xl font-bold text-gray-900">{{ usagePage }} / {{ usageTotalPages }}</p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="bg-white rounded-lg shadow-sm border p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div class="xl:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Suche</label>
+            <input
+              v-model="usageSearch"
+              type="text"
+              placeholder="Vermerk, Kunde, Staff…"
+              class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2"
+              @keydown.enter.prevent="reloadUsage(1)"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Art</label>
+            <select v-model="usageKind" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2">
+              <option value="">Alle</option>
+              <option value="manual">Manuell / Vermerk</option>
+              <option value="code">Rabattcode</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Typ</label>
+            <select v-model="usageType" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2">
+              <option value="">Alle</option>
+              <option value="fixed">Fixbetrag</option>
+              <option value="percentage">Prozent</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Von</label>
+            <input v-model="usageDateFrom" type="date" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Bis</label>
+            <input v-model="usageDateTo" type="date" class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2" />
+          </div>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-600">Sortierung</label>
+            <select v-model="usageSortBy" class="tenant-focus px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2" @change="reloadUsage(1)">
+              <option value="created_at">Datum</option>
+              <option value="discount_amount_rappen">Betrag</option>
+              <option value="discount_reason">Vermerk</option>
+              <option value="status">Status</option>
+            </select>
+            <button
+              type="button"
+              class="px-3 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
+              @click="flipUsageSortDir"
+              :title="usageSortDir === 'desc' ? 'Absteigend' : 'Aufsteigend'"
+            >
+              {{ usageSortDir === 'desc' ? '↓ Neueste zuerst' : '↑ Älteste zuerst' }}
+            </button>
+          </div>
+          <button
+            type="button"
+            class="ml-auto px-4 py-2 rounded-md text-sm font-medium text-white"
+            style="background: var(--color-primary, #1E40AF)"
+            @click="reloadUsage(1)"
+          >
+            Filtern
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-50"
+            @click="resetUsageFilters"
+          >
+            Zurücksetzen
+          </button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-gray-900">Verwendete Rabatte</h2>
+          <button
+            type="button"
+            class="text-sm text-gray-600 hover:text-gray-900"
+            :disabled="isLoadingUsage"
+            @click="reloadUsage()"
+          >
+            {{ isLoadingUsage ? 'Lädt…' : 'Aktualisieren' }}
+          </button>
+        </div>
+
+        <div v-if="isLoadingUsage" class="p-8 text-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-4 border-amber-500 border-t-transparent mx-auto"></div>
+          <p class="mt-4 text-gray-600">Einträge werden geladen...</p>
+        </div>
+
+        <div v-else-if="usageItems.length === 0" class="p-8 text-center text-gray-500">
+          Keine verwendeten Rabatte für diese Filter.
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" @click="toggleUsageSort('created_at')">
+                  Datum {{ usageSortBy === 'created_at' ? (usageSortDir === 'desc' ? '↓' : '↑') : '' }}
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kunde</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" @click="toggleUsageSort('discount_amount_rappen')">
+                  Betrag {{ usageSortBy === 'discount_amount_rappen' ? (usageSortDir === 'desc' ? '↓' : '↑') : '' }}
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none" @click="toggleUsageSort('discount_reason')">
+                  Vermerk {{ usageSortBy === 'discount_reason' ? (usageSortDir === 'desc' ? '↓' : '↑') : '' }}
+                </th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Art</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staff</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Termin</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="item in usageItems" :key="item.id" class="hover:bg-gray-50">
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  {{ formatDateTime(item.created_at) }}
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-900">
+                  <div class="font-medium">{{ item.customer?.name || '—' }}</div>
+                  <div v-if="item.customer?.email" class="text-xs text-gray-500">{{ item.customer.email }}</div>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-amber-700">
+                  − CHF {{ (item.discount_amount_rappen / 100).toFixed(2) }}
+                  <span v-if="item.discount_type === 'percentage'" class="text-xs font-normal text-gray-500 ml-1">(%)</span>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700 max-w-xs">
+                  <span class="break-words">{{ item.discount_reason || '—' }}</span>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm">
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                    :class="item.kind === 'code' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'"
+                  >
+                    {{ item.kind === 'code' ? 'Code' : 'Manuell' }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                  {{ item.staff?.name || '—' }}
+                </td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                  <template v-if="item.appointment">
+                    <div>{{ formatDateTime(item.appointment.start_time) }}</div>
+                    <div class="text-xs text-gray-400">{{ item.appointment.type || item.appointment.title || '' }}</div>
+                  </template>
+                  <span v-else>—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div v-if="usageTotalPages > 1" class="px-6 py-4 border-t border-gray-200 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            class="px-3 py-1.5 border border-gray-300 rounded-md text-sm disabled:opacity-40"
+            :disabled="usagePage <= 1 || isLoadingUsage"
+            @click="reloadUsage(usagePage - 1)"
+          >
+            Zurück
+          </button>
+          <span class="text-sm text-gray-600">Seite {{ usagePage }} von {{ usageTotalPages }}</span>
+          <button
+            type="button"
+            class="px-3 py-1.5 border border-gray-300 rounded-md text-sm disabled:opacity-40"
+            :disabled="usagePage >= usageTotalPages || isLoadingUsage"
+            @click="reloadUsage(usagePage + 1)"
+          >
+            Weiter
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- End of Usage Tab -->
+
     <!-- Create/Edit Modal (Discounts) -->
     <DiscountEditorModal
       v-if="showModal && activeTab === 'discounts'"
@@ -661,7 +871,7 @@ const {
 } = useDiscounts()
 
 // ✅ NEW: Tab state
-const activeTab = ref<'discounts' | 'vouchers'>('discounts')
+const activeTab = ref<'discounts' | 'vouchers' | 'usage'>('discounts')
 
 // Additional State (Discounts)
 const searchTerm = ref('')
@@ -686,6 +896,35 @@ const voucherFormData = ref({
   max_redemptions: 1,
   is_active: true
 })
+
+// Usage history state
+interface UsageItem {
+  id: string
+  created_at: string | null
+  discount_amount_rappen: number
+  discount_type: string
+  discount_reason: string
+  status: string | null
+  kind: 'code' | 'manual'
+  customer: { id: string; name: string; email: string | null } | null
+  staff: { id: string; name: string } | null
+  appointment: { id: string; start_time: string | null; title: string | null; type: string | null } | null
+}
+const usageItems = ref<UsageItem[]>([])
+const isLoadingUsage = ref(false)
+const usageLoaded = ref(false)
+const usageSearch = ref('')
+const usageKind = ref('')
+const usageType = ref('')
+const usageDateFrom = ref('')
+const usageDateTo = ref('')
+const usageSortBy = ref<'created_at' | 'discount_amount_rappen' | 'discount_reason' | 'status'>('created_at')
+const usageSortDir = ref<'asc' | 'desc'>('desc')
+const usagePage = ref(1)
+const usagePageSize = ref(50)
+const usageTotal = ref(0)
+const usageTotalAmountRappen = ref(0)
+const usageTotalPages = computed(() => Math.max(1, Math.ceil(usageTotal.value / usagePageSize.value)))
 
 // Computed
 const totalDiscounts = computed(() => discounts.value.length)
@@ -942,6 +1181,98 @@ const formatDate = (dateString: string | null | undefined) => {
     console.warn('Error formatting date:', dateString, error)
     return 'Datum Fehler'
   }
+}
+
+const formatDateTime = (dateString: string | null | undefined) => {
+  if (!dateString) return '—'
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return '—'
+    return date.toLocaleString('de-CH', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch {
+    return '—'
+  }
+}
+
+const loadUsage = async (page = usagePage.value) => {
+  isLoadingUsage.value = true
+  try {
+    const res = await $fetch<{
+      success: boolean
+      items: UsageItem[]
+      total: number
+      page: number
+      page_size: number
+      total_amount_rappen: number
+    }>('/api/admin/discount-usage', {
+      query: {
+        search: usageSearch.value || undefined,
+        kind: usageKind.value || undefined,
+        discount_type: usageType.value || undefined,
+        date_from: usageDateFrom.value || undefined,
+        date_to: usageDateTo.value || undefined,
+        sort_by: usageSortBy.value,
+        sort_dir: usageSortDir.value,
+        page,
+        page_size: usagePageSize.value
+      }
+    })
+    usageItems.value = res.items || []
+    usageTotal.value = res.total || 0
+    usagePage.value = res.page || page
+    usageTotalAmountRappen.value = res.total_amount_rappen || 0
+    usageLoaded.value = true
+  } catch (error) {
+    console.error('❌ Error loading discount usage:', error)
+    usageItems.value = []
+    usageTotal.value = 0
+    usageTotalAmountRappen.value = 0
+  } finally {
+    isLoadingUsage.value = false
+  }
+}
+
+const reloadUsage = async (page?: number) => {
+  await loadUsage(page ?? usagePage.value)
+}
+
+const switchToUsageTab = async () => {
+  activeTab.value = 'usage'
+  if (!usageLoaded.value) {
+    await loadUsage(1)
+  }
+}
+
+const resetUsageFilters = async () => {
+  usageSearch.value = ''
+  usageKind.value = ''
+  usageType.value = ''
+  usageDateFrom.value = ''
+  usageDateTo.value = ''
+  usageSortBy.value = 'created_at'
+  usageSortDir.value = 'desc'
+  await loadUsage(1)
+}
+
+const toggleUsageSort = async (field: typeof usageSortBy.value) => {
+  if (usageSortBy.value === field) {
+    usageSortDir.value = usageSortDir.value === 'desc' ? 'asc' : 'desc'
+  } else {
+    usageSortBy.value = field
+    usageSortDir.value = field === 'created_at' ? 'desc' : 'asc'
+  }
+  await loadUsage(1)
+}
+
+const flipUsageSortDir = async () => {
+  usageSortDir.value = usageSortDir.value === 'desc' ? 'asc' : 'desc'
+  await loadUsage(1)
 }
 
 // Auth check

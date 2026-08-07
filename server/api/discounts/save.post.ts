@@ -106,6 +106,19 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const isManualDiscount = Boolean(
+      discountData?.is_manual_discount &&
+      (discountData?.discount_amount_rappen || 0) > 0
+    )
+    if (isManualDiscount) {
+      const { assertStaffCanApplyManualDiscount } = await import('~/server/utils/staff-manual-discount')
+      await assertStaffCanApplyManualDiscount({
+        tenantId: requestingUser.tenant_id,
+        role: requestingUser.role,
+        isManualDiscount: true
+      })
+    }
+
     // LAYER 7: PREPARE DISCOUNT DATA
     const finalDiscountData = {
       appointment_id: appointmentId,

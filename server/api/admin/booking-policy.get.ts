@@ -88,6 +88,8 @@ export interface BookingPolicy {
   // ── Staff permissions ──────────────────────────────────────────────────────
   staff_refund_permission: 'hidden' | 'request' | 'allowed'
   staff_invoice_permission: 'hidden' | 'create_only' | 'create_and_send'
+  /** Staff may enter a free-amount discount + note (e.g. paper voucher). Default off. */
+  staff_manual_discount_permission: 'hidden' | 'allowed'
   // ── Auto-invoice after appointment completion (default OFF) ────────────────
   /**
    * When true, completing an appointment with payment_method=invoice
@@ -171,6 +173,7 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   course_reminder_sms_enabled: true,
   staff_refund_permission: 'hidden',
   staff_invoice_permission: 'create_and_send',
+  staff_manual_discount_permission: 'hidden',
   auto_invoice_on_complete: false,
   auto_invoice_recipient: 'customer',
   auto_invoice_office_email: null,
@@ -283,6 +286,8 @@ export default defineEventHandler(async (event) => {
     auto_invoice_schedule: normalizeAutoInvoiceSchedule(merged.auto_invoice_schedule),
     auto_invoice_schedule_weekday: normalizeAutoInvoiceWeekday(merged.auto_invoice_schedule_weekday),
     auto_invoice_schedule_day: normalizeAutoInvoiceMonthDay(merged.auto_invoice_schedule_day),
+    staff_manual_discount_permission:
+      merged.staff_manual_discount_permission === 'allowed' ? 'allowed' : 'hidden',
   }
 
   return { success: true, policy }
