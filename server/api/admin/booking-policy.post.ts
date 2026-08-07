@@ -136,6 +136,14 @@ export default defineEventHandler(async (event) => {
     )
   }
 
+  const validManualDiscountPerms = ['hidden', 'allowed']
+  if (
+    body.staff_manual_discount_permission !== undefined &&
+    !validManualDiscountPerms.includes(body.staff_manual_discount_permission)
+  ) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid staff_manual_discount_permission' })
+  }
+
   // Load current policy and merge
   const { data: current } = await supabase
     .from('tenants')

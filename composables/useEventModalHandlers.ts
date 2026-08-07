@@ -494,11 +494,12 @@ const handleCategorySelected = async (category: any) => {
   /**
    * Handles discount changes.
    */
-  const handleDiscountChanged = (discount: number, discountType: string, reason: string) => {
-    logger.debug('💰 Discount changed:', { discount, discountType, reason })
+  const handleDiscountChanged = (discount: number, discountType: string, reason: string, isManual = false) => {
+    logger.debug('💰 Discount changed:', { discount, discountType, reason, isManual })
     formData.value.discount = discount
     formData.value.discount_type = discountType
     formData.value.discount_reason = reason
+    formData.value.is_manual_discount = Boolean(isManual && discount > 0)
   }
 
   // ============ TEAM HANDLERS ============

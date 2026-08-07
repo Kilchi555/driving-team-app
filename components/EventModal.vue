@@ -4257,17 +4257,19 @@ const handleDurationChangeRejected = (originalDuration: number) => {
   calculateEndTime()
 }
 
-const handleDiscountChanged = (discount: number, discountType: "fixed" | "percentage", reason: string) => {
-  logger.debug('💰 Discount changed:', { discount, discountType, reason })
+const handleDiscountChanged = (discount: number, discountType: "fixed" | "percentage", reason: string, isManual = false) => {
+  logger.debug('💰 Discount changed:', { discount, discountType, reason, isManual })
   formData.value.discount = discount
   formData.value.discount_type = discountType
   formData.value.discount_reason = reason
+  formData.value.is_manual_discount = Boolean(isManual && discount > 0)
   
   // ✅ DEBUG: Überprüfe ob formData korrekt aktualisiert wurde
   logger.debug('✅ formData updated:', {
     discount: formData.value.discount,
     discount_type: formData.value.discount_type,
-    discount_reason: formData.value.discount_reason
+    discount_reason: formData.value.discount_reason,
+    is_manual_discount: formData.value.is_manual_discount
   })
 }
 
@@ -4579,6 +4581,7 @@ const resetForm = () => {
     discount: 0,
     discount_type: 'fixed' as const,
     discount_reason: '',
+    is_manual_discount: false,
     // payment_method und payment_data entfernt - werden in der payments Tabelle gespeichert
   }
   
@@ -6561,6 +6564,7 @@ const initializePastedAppointment = async () => {
       formData.value.discount = 0
       formData.value.discount_type = 'fixed'
       formData.value.discount_reason = ''
+      formData.value.is_manual_discount = false
       logger.debug('🛒 Products and discounts cleared for pasted appointment')
       
       logger.debug('📋 initializePastedAppointment - formData after setting:', {
@@ -7121,6 +7125,7 @@ onMounted(async () => {
     formData.value.discount = 0
     formData.value.discount_type = 'fixed'
     formData.value.discount_reason = ''
+    formData.value.is_manual_discount = false
   }
   
   // ✅ Load discount fields for existing appointments

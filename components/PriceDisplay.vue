@@ -351,6 +351,43 @@
                 </p>
               </div>
 
+              <!-- Manueller Betrag (Papiergutschein etc.) — nur wenn Admin erlaubt -->
+              <div v-if="canApplyManualDiscount" class="border-t border-gray-200 pt-3 space-y-2">
+                <p class="text-xs font-medium text-gray-500">Betrag frei wählen</p>
+                <div class="flex gap-2">
+                  <div class="flex flex-1 min-w-0 items-stretch rounded-lg border border-gray-300 overflow-hidden bg-white focus-within:ring-2 focus-within:ring-gray-400">
+                    <span class="inline-flex items-center px-3 text-xs font-medium text-gray-500 bg-gray-50 border-r border-gray-200 shrink-0">
+                      CHF
+                    </span>
+                    <input
+                      v-model.number="manualDiscountAmount"
+                      type="number"
+                      min="0"
+                      step="0.05"
+                      placeholder="0.00"
+                      class="flex-1 min-w-0 px-3 py-2 text-sm border-0 focus:outline-none focus:ring-0"
+                      @keydown.enter.prevent="applyManualDiscount"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    @click="applyManualDiscount"
+                    :disabled="!manualDiscountAmount || manualDiscountAmount <= 0"
+                    class="px-3 py-2 text-sm font-medium rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+                    :style="{ background: 'var(--color-primary, #111827)' }"
+                  >
+                    Anwenden
+                  </button>
+                </div>
+                <input
+                  v-model="manualDiscountReason"
+                  type="text"
+                  placeholder="Vermerk / Papiercode (optional)"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  @keydown.enter.prevent="applyManualDiscount"
+                />
+              </div>
+
               <div class="flex justify-end space-x-3 pt-2 border-t border-gray-300">
                 <button
                   @click="closeDiscountSelector"
@@ -772,7 +809,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits
 const emit = defineEmits<{
-  'discount-changed': [discount: number, discountType: "fixed", reason: string]
+  'discount-changed': [discount: number, discountType: "fixed", reason: string, isManual?: boolean]
   'product-removed': [productId: string]
   'product-added': [product: any]
   'payment-method-changed': [method: string]
@@ -799,6 +836,37 @@ const isStaffUser = computed(() => {
   // Prüfe ob der aktuelle Benutzer Staff oder Admin ist
   return props.currentUser?.role === 'staff' || props.currentUser?.role === 'admin'
 })
+
+const isAdminRole = computed(() =>
+  ['admin', 'superadmin', 'super_admin', 'tenant_admin'].includes(props.currentUser?.role ?? '')
+)
+
+const bookingPolicy = ref<{ staff_manual_discount_permission?: 'hidden' | 'allowed' } | null>(null)
+
+const canApplyManualDiscount = computed(() => {
+  if (isAdminRole.value) return true
+  return bookingPolicy.value?.staff_manual_discount_permission === 'allowed'
+})
+
+const loadBookingPolicy = async () => {
+  if (bookingPolicy.value || !props.allowDiscountEdit) return
+  try {
+    const res = await $fetch<{ success: boolean; policy?: { staff_manual_discount_permission?: 'hidden' | 'allowed' } }>(
+      '/api/admin/booking-policy'
+    )
+    bookingPolicy.value = res?.policy ?? null
+  } catch {
+    bookingPolicy.value = { staff_manual_discount_permission: 'hidden' }
+  }
+}
+
+watch(
+  () => props.allowDiscountEdit,
+  (allowed) => {
+    if (allowed) loadBookingPolicy()
+  },
+  { immediate: true }
+)
 
 // State
 const showProductSelector = ref(false)
@@ -964,7 +1032,7 @@ const formatStudentBillingAddress = (): string => {
 }
 
 // ✅ NEU: Manueller Rabatt State
-const manualDiscountAmount = ref<number>(0)
+const manualDiscountAmount = ref<number | null>(null)
 const manualDiscountReason = ref<string>('')
 
 // ✅ Manuelle Preiseingabe, wenn die automatische Berechnung fehlgeschlagen ist (Fallback aktiv)
@@ -1263,7 +1331,7 @@ const loadAvailableDiscounts = async () => {
 const applyVoucher = (discount: any) => {
   const discountValue = parseFloat(discount.discount_value) || 0
   if (discountValue > 0) {
-    emit('discount-changed', discountValue, discount.discount_type || 'fixed', discount.name)
+    emit('discount-changed', discountValue, discount.discount_type || 'fixed', discount.name, false)
     showDiscountSelector.value = false
     logger.debug('✅ Applied voucher:', discount.name, 'Value:', discountValue)
   }
@@ -1271,24 +1339,25 @@ const applyVoucher = (discount: any) => {
 
 // ✅ NEUE METHODE: Manuellen Rabatt anwenden
 const applyManualDiscount = () => {
+  if (!canApplyManualDiscount.value) return
   if (!manualDiscountAmount.value || manualDiscountAmount.value <= 0) return
-  
-  const reason = manualDiscountReason.value || 'Manueller Rabatt'
-  emit('discount-changed', manualDiscountAmount.value, 'fixed', reason)
-  
-  // Reset form
-  manualDiscountAmount.value = 0
+
+  const amount = manualDiscountAmount.value
+  const reason = manualDiscountReason.value.trim() || 'Manueller Rabatt'
+  emit('discount-changed', amount, 'fixed', reason, true)
+
+  manualDiscountAmount.value = null
   manualDiscountReason.value = ''
   showDiscountSelector.value = false
-  
-  logger.debug('✅ Applied manual discount:', manualDiscountAmount.value, 'Reason:', reason)
+
+  logger.debug('✅ Applied manual discount:', amount, 'Reason:', reason)
 }
 
 // ✅ NEUE METHODE: Gutschein-Selector schließen
 const closeDiscountSelector = () => {
   showDiscountSelector.value = false
   // Reset manual discount form
-  manualDiscountAmount.value = 0
+  manualDiscountAmount.value = null
   manualDiscountReason.value = ''
   // Reset code input
   discountCodeInput.value = ''
@@ -1316,7 +1385,7 @@ const applyDiscountCode = async () => {
 
     if (res.isValid && res.discount_amount_rappen > 0) {
       const discountChf = res.discount_amount_rappen / 100
-      emit('discount-changed', discountChf, 'fixed', `Code: ${code.toUpperCase()}`)
+      emit('discount-changed', discountChf, 'fixed', `Code: ${code.toUpperCase()}`, false)
       showDiscountSelector.value = false
       discountCodeInput.value = ''
       codeError.value = null
@@ -1331,7 +1400,7 @@ const applyDiscountCode = async () => {
 }
 
 const removeDiscount = () => {
-  emit('discount-changed', 0, 'fixed', '')
+  emit('discount-changed', 0, 'fixed', '', false)
 }
 
 const removeProduct = (productId: string) => {

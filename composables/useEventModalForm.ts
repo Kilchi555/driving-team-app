@@ -34,6 +34,7 @@ interface AppointmentData {
   discount?: number
   discount_type?: string
   discount_reason?: string
+  is_manual_discount?: boolean
   // ✅ Additional missing fields
   custom_location_address?: any
   custom_location_name?: string
@@ -254,7 +255,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
       // ✅ is_paid removed - not in appointments table
       discount: 0,
       discount_type: 'fixed',
-      discount_reason: ''
+      discount_reason: '',
+      is_manual_discount: false
     }
     
     selectedStudent.value = null
@@ -385,6 +387,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
       discount: appointment.discount || appointment.extendedProps?.discount || 0,
       discount_type: appointment.discount_type || appointment.extendedProps?.discount_type || 'fixed',
       discount_reason: appointment.discount_reason || appointment.extendedProps?.discount_reason || '',
+      is_manual_discount: false,
       // ✅ Additional missing fields
       custom_location_address: appointment.custom_location_address || appointment.extendedProps?.custom_location_address || null,
       custom_location_name: appointment.custom_location_name || appointment.extendedProps?.custom_location_name || null,
@@ -502,6 +505,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         return
       }
       formData.value.discount_reason = `Code: ${udc.code} (automatisch)`
+      formData.value.is_manual_discount = false
       logger.debug('🎁 Auto-discount applied for student:', studentUserId, 'code:', udc.code)
     } catch (err: any) {
       logger.debug('ℹ️ No auto-discount found for student (non-critical):', err.message)
@@ -538,6 +542,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
         formData.value.discount = discountAmount
         formData.value.discount_type = discount.discount_type
         formData.value.discount_reason = discount.discount_reason || ''
+        formData.value.is_manual_discount = false
         
         logger.debug('✅ Discount data populated into form:', {
           amount: discountAmount,
@@ -649,7 +654,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         discount_type: formData.value.discount_type || 'fixed',
         discount_reason: formData.value.discount_reason || '',
         payment_method: refs?.selectedPaymentMethod?.value || 'pending',
-        status: 'pending'
+        status: 'pending',
+        is_manual_discount: Boolean(formData.value.is_manual_discount)
       }
       
       logger.debug('💰 Saving discount data:', discountData)
@@ -699,7 +705,8 @@ const useEventModalForm = (currentUser?: any, refs?: {
         discount_reason: formData.value.discount_reason || '',
         staff_id: formData.value.staff_id || null,
         payment_method: refs?.selectedPaymentMethod?.value || null,
-        status: 'pending'
+        status: 'pending',
+        is_manual_discount: Boolean(formData.value.is_manual_discount)
       }
       
       logger.debug('💰 Saving discount via API:', discountData)
@@ -1091,6 +1098,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
             adminFeeRappen,
             productsPriceRappen,
             discountAmountRappen,
+            isManualDiscount: Boolean(formData.value.is_manual_discount),
             // ✅ Send credit used (if any)
             creditUsedRappen: creditUsedRappenForPayment,
             // ✅ Send company billing address ID for invoice payments
