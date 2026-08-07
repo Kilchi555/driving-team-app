@@ -459,7 +459,18 @@
                   </div>
                   <div>
                     <label class="sa-label">Business-Type</label>
-                    <input v-model="editForm.business_type" class="sa-input" placeholder="driving_school" />
+                    <select v-model="editForm.business_type" class="sa-input">
+                      <option value="">— wählen —</option>
+                      <option
+                        v-for="bt in businessTypeOptions"
+                        :key="bt.code"
+                        :value="bt.code"
+                      >{{ bt.name }} ({{ bt.code }}){{ bt.is_active === false ? ' · inaktiv' : '' }}</option>
+                      <option
+                        v-if="editForm.business_type && !businessTypeOptions.some(b => b.code === editForm.business_type)"
+                        :value="editForm.business_type"
+                      >{{ editForm.business_type }} (aktuell, nicht in Liste)</option>
+                    </select>
                   </div>
                   <div>
                     <label class="sa-label">SMS-Sender</label>
@@ -500,6 +511,215 @@
                   </button>
                   <p v-if="detailActionMsg" class="sa-hint">{{ detailActionMsg }}</p>
                 </div>
+              </template>
+
+              <!-- ═══ SETUP ═══ -->
+              <template v-else-if="detailTab === 'setup'">
+                <div v-if="!detail.setup" class="sa-hint">Setup-Daten nicht verfügbar</div>
+                <template v-else>
+                  <!-- Ampel checklist -->
+                  <div class="sa-check-grid">
+                    <div
+                      v-for="item in setupChecklistItems"
+                      :key="item.key"
+                      :class="['sa-check-pill', item.ok ? 'sa-check-ok' : 'sa-check-bad']"
+                    >
+                      <span class="sa-check-dot" />
+                      {{ item.label }}
+                    </div>
+                  </div>
+
+                  <div class="sa-info-row mt-3">
+                    <span class="sa-info-label">Seats</span>
+                    <span class="sa-info-val">
+                      {{ detail.setup.seats.used }}
+                      /
+                      {{ detail.setup.seats.limit ?? '∞' }}
+                      <span class="sa-hint">({{ detail.setup.seats.active_staff }} Staff + {{ detail.setup.seats.pending_invites }} Invites)</span>
+                    </span>
+                    <span class="sa-info-label">Zahlung</span>
+                    <span class="sa-info-val">
+                      Stripe {{ detail.setup.readiness.payments.stripe ? '✓' : '—' }}
+                      · Wallee {{ detail.setup.readiness.payments.wallee ? '✓' : '—' }}
+                    </span>
+                    <span class="sa-info-label">Comms</span>
+                    <span class="sa-info-val">
+                      Domain {{ detail.setup.readiness.comms.domain_verified ? '✓' : '—' }}
+                      · SMS {{ detail.setup.readiness.comms.sms_sender ? '✓' : '—' }}
+                    </span>
+                  </div>
+
+                  <h4 class="sa-section-title">Onboarding-Timeline</h4>
+                  <div class="sa-timeline">
+                    <div v-for="step in setupTimelineItems" :key="step.label" class="sa-timeline-row">
+                      <span :class="['sa-check-dot', step.at ? 'sa-dot-ok' : 'sa-dot-muted']" />
+                      <span class="sa-timeline-label">{{ step.label }}</span>
+                      <span class="sa-timeline-val">{{ step.at ? formatDateTime(step.at) : '—' }}</span>
+                    </div>
+                  </div>
+
+                  <h4 class="sa-section-title">Availability</h4>
+                  <div class="sa-stat-grid">
+                    <div class="sa-stat"><div class="sa-stat-val">{{ detail.setup.availability.slots_next_7d }}</div><div class="sa-stat-label">Slots 7d</div></div>
+                    <div class="sa-stat"><div class="sa-stat-val">{{ detail.setup.availability.slots_next_14d }}</div><div class="sa-stat-label">Slots 14d</div></div>
+                    <div class="sa-stat"><div class="sa-stat-val">{{ detail.setup.availability.slots_next_30d }}</div><div class="sa-stat-label">Slots 30d</div></div>
+                    <div class="sa-stat"><div class="sa-stat-val">{{ detail.setup.availability.queue_pending }}</div><div class="sa-stat-label">Queue</div></div>
+                  </div>
+                  <p class="sa-hint">Letzter Recalc: {{ formatDateTime(detail.setup.availability.last_calculated_at) }}</p>
+                  <div v-if="detail.setup.availability.why_empty?.length" class="sa-warn-box mt-2">
+                    <div class="sa-warn-title">Warum evtl. keine Slots?</div>
+                    <ul class="sa-warn-list">
+                      <li v-for="(w, i) in detail.setup.availability.why_empty" :key="i">{{ w }}</li>
+                    </ul>
+                  </div>
+                  <div class="flex gap-2 mt-2 flex-wrap">
+                    <button type="button" class="sa-action-btn" :disabled="!!actionLoading" @click="runRecalc()">
+                      {{ actionLoading === 'recalc' ? '…' : 'Recalc für Tenant' }}
+                    </button>
+                    <button type="button" class="sa-action-btn" :disabled="!!actionLoading" @click="runSyncCalendars()">
+                      {{ actionLoading === 'sync-all' ? '…' : 'Alle Kalender syncen' }}
+                    </button>
+                  </div>
+
+                  <h4 class="sa-section-title">Staff ({{ detail.setup.staff.length }})</h4>
+                  <div v-if="!detail.setup.staff.length" class="sa-hint">Kein Staff vorhanden</div>
+                  <div v-for="s in detail.setup.staff" :key="s.id" class="sa-staff-card">
+                    <div class="sa-staff-head">
+                      <div class="min-w-0">
+                        <div class="sa-tenant-name">
+                          {{ s.first_name }} {{ s.last_name }}
+                          <span :class="['sa-badge', s.is_active ? 'sa-badge-green' : 'sa-badge-red']">{{ s.is_active ? 'Aktiv' : 'Inaktiv' }}</span>
+                        </div>
+                        <div class="sa-tenant-slug">{{ s.email || '—' }} · {{ s.phone || '—' }}</div>
+                      </div>
+                      <div class="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                        <button type="button" class="sa-action-btn" :disabled="!!actionLoading" @click="runRecalc(s.id)">Recalc</button>
+                        <button type="button" class="sa-action-btn" :disabled="!!actionLoading || !s.has_calendar" @click="runSyncCalendars(s.id)">Sync</button>
+                        <button type="button" class="sa-action-btn" :disabled="!!actionLoading" @click="toggleStaffActive(s)">
+                          {{ s.is_active ? 'Deakt.' : 'Aktiv.' }}
+                        </button>
+                      </div>
+                    </div>
+                    <div class="sa-staff-meta">
+                      <span :class="s.has_locations ? 'text-emerald-400' : 'text-rose-400'">Loc {{ s.locations_count }}/{{ s.bookable_locations_count }} bookable</span>
+                      <span :class="s.has_hours ? 'text-emerald-400' : 'text-rose-400'">Hours {{ s.working_hours_count }}</span>
+                      <span :class="calendarStatusClass(s)">Cal {{ calendarStatusLabel(s) }}</span>
+                      <span :class="s.has_future_slots ? 'text-emerald-400' : 'text-amber-400'">Slots 14d {{ s.slots_next_14d }}</span>
+                    </div>
+                    <p v-if="s.calendar?.last_fetch_error" class="sa-error-line">{{ s.calendar.last_fetch_error }}</p>
+                    <p v-if="s.calendar?.last_sync_at" class="sa-hint">Letzter Sync: {{ formatDateTime(s.calendar.last_sync_at) }}</p>
+                  </div>
+
+                  <h4 class="sa-section-title">Kalender ({{ detail.setup.calendars.length }})</h4>
+                  <div v-if="!detail.setup.calendars.length" class="sa-hint">Keine externen Kalender verbunden</div>
+                  <div v-for="c in detail.setup.calendars" :key="c.id" class="sa-list-row">
+                    <div class="min-w-0">
+                      <div class="sa-tenant-name">
+                        {{ c.calendar_name || c.provider }}
+                        <span :class="['sa-badge', c.ok ? 'sa-badge-green' : 'sa-badge-red']">
+                          {{ c.ok ? 'OK' : `${c.consecutive_failures} Fails` }}
+                        </span>
+                      </div>
+                      <div class="sa-tenant-slug">
+                        {{ c.staff_name || '—' }} · {{ c.provider }}/{{ c.connection_type }}
+                        · Busy {{ c.busy_times_future }}
+                        · Sync {{ formatDateTime(c.last_sync_at) }}
+                      </div>
+                      <p v-if="c.last_fetch_error" class="sa-error-line">{{ c.last_fetch_error }}</p>
+                    </div>
+                    <button type="button" class="sa-action-btn flex-shrink-0" :disabled="!!actionLoading" @click="runSyncCalendars(c.staff_id, c.id)">Sync</button>
+                  </div>
+
+                  <h4 class="sa-section-title">Tenant Pickup Defaults</h4>
+                  <div class="sa-form-grid">
+                    <label class="sa-check-label">
+                      <input v-model="pickupEdit.allow_pickup_mode" type="checkbox" class="sa-check" />
+                      Pickup-Modus erlaubt
+                    </label>
+                    <div>
+                      <label class="sa-label">Default Radius (Min.)</label>
+                      <input v-model.number="pickupEdit.default_pickup_radius_minutes" type="number" min="0" max="120" class="sa-input" />
+                    </div>
+                  </div>
+                  <button type="button" class="sa-action-btn mt-2" :disabled="!!actionLoading" @click="saveTenantPickup">
+                    {{ actionLoading === 'pickup' ? '…' : 'Pickup Defaults speichern' }}
+                  </button>
+
+                  <h4 class="sa-section-title">Locations ({{ detail.setup.locations.length }})</h4>
+                  <div v-if="!detail.setup.locations.length" class="sa-hint">
+                    Keine Locations — bitte im Tenant unter Admin → Locations anlegen.
+                    <a class="sa-action-btn inline-flex mt-2" :href="`/${detail.tenant.slug}`" target="_blank" rel="noopener">Tenant öffnen</a>
+                  </div>
+                  <template v-else>
+                    <div class="sa-form-grid mb-2">
+                      <div class="sa-form-span-2">
+                        <input v-model="locationFilter" class="sa-input" placeholder="Locations filtern (Name, PLZ, Ort)…" />
+                      </div>
+                      <label class="sa-check-label">
+                        <input v-model="locationOnlyActive" type="checkbox" class="sa-check" /> Nur aktive
+                      </label>
+                      <label class="sa-check-label">
+                        <input v-model="locationOnlyPickup" type="checkbox" class="sa-check" /> Nur Pickup
+                      </label>
+                    </div>
+                    <p class="sa-hint mb-2">{{ filteredLocationEdits.length }} angezeigt · max. {{ locationEditLimit }} editierbar</p>
+                    <div v-for="loc in visibleLocationEdits" :key="loc.id" class="sa-loc-card">
+                      <div class="sa-staff-head">
+                        <div class="min-w-0">
+                          <input v-model="loc.name" class="sa-input mb-1" />
+                          <div class="sa-tenant-slug">
+                            {{ loc.postal_code || '—' }} {{ loc.city || '' }}
+                            · {{ loc.location_type || 'standard' }}
+                            · {{ loc.has_coords ? 'Coords ✓' : 'keine Coords' }}
+                          </div>
+                        </div>
+                        <label class="sa-check-label flex-shrink-0">
+                          <input v-model="loc.is_active" type="checkbox" class="sa-check" /> Aktiv
+                        </label>
+                      </div>
+                      <div class="sa-form-grid mt-2">
+                        <label class="sa-check-label">
+                          <input v-model="loc.pickup_enabled" type="checkbox" class="sa-check" /> Pickup erlaubt
+                        </label>
+                        <div>
+                          <label class="sa-label">Pickup Radius (Min.)</label>
+                          <input v-model.number="loc.pickup_radius_minutes" type="number" min="0" max="120" class="sa-input" />
+                        </div>
+                        <div class="sa-form-span-2">
+                          <label class="sa-label">Adresse</label>
+                          <input v-model="loc.address" class="sa-input" />
+                        </div>
+                        <div>
+                          <label class="sa-label">PLZ</label>
+                          <input v-model="loc.postal_code" class="sa-input" />
+                        </div>
+                        <div>
+                          <label class="sa-label">Ort</label>
+                          <input v-model="loc.city" class="sa-input" />
+                        </div>
+                        <div class="sa-form-span-2">
+                          <label class="sa-label">Kategorien (kommagetrennt)</label>
+                          <input v-model="loc.categories_text" class="sa-input" placeholder="B, A, BE" />
+                        </div>
+                        <div class="sa-form-span-2">
+                          <label class="sa-label">category_pickup_settings (JSON)</label>
+                          <textarea v-model="loc.category_pickup_json" rows="3" class="sa-input font-mono text-xs" />
+                        </div>
+                      </div>
+                      <button type="button" class="sa-action-btn mt-2" :disabled="!!actionLoading" @click="saveLocation(loc)">
+                        {{ actionLoading === `loc-${loc.id}` ? '…' : 'Location speichern' }}
+                      </button>
+                    </div>
+                    <button
+                      v-if="filteredLocationEdits.length > locationEditLimit"
+                      type="button"
+                      class="sa-action-btn"
+                      @click="locationEditLimit += 25"
+                    >Mehr anzeigen</button>
+                  </template>
+
+                  <p v-if="detailActionMsg" class="sa-hint mt-4">{{ detailActionMsg }}</p>
+                </template>
               </template>
 
               <!-- ═══ BILLING ═══ -->
@@ -573,7 +793,7 @@
               </template>
 
               <!-- ═══ SUPPORT ═══ -->
-              <template v-else>
+              <template v-else-if="detailTab === 'support'">
                 <h4 class="sa-section-title">Schnellaktionen</h4>
                 <div class="flex flex-wrap gap-2">
                   <a class="sa-action-btn" :href="`/login/${detail.tenant.slug}`" target="_blank" rel="noopener">Tenant-Login öffnen</a>
@@ -626,7 +846,7 @@
 
 <script setup lang="ts">
 definePageMeta({ layout: 'tenant-admin' })
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const API = '/api/admin/tenants-manage'
 
@@ -639,6 +859,26 @@ const tenantForm = ref({
   business_type: '', subscription_plan: 'trial',
   subscription_status: 'active', is_active: true, is_trial: true
 })
+
+const businessTypeOptions = ref<Array<{ code: string; name: string; is_active?: boolean }>>([])
+
+const loadBusinessTypes = async () => {
+  try {
+    const res = await $fetch<{ businessTypes: Array<{ code: string; name: string; is_active?: boolean }> }>(
+      '/api/tenant-admin/business-types',
+    )
+    businessTypeOptions.value = res.businessTypes || []
+  } catch {
+    try {
+      const res = await $fetch<{ businessTypes: Array<{ code: string; name: string }> }>(
+        '/api/tenants/business-types',
+      )
+      businessTypeOptions.value = (res.businessTypes || []).map((bt) => ({ ...bt, is_active: true }))
+    } catch {
+      businessTypeOptions.value = [{ code: 'driving_school', name: 'Fahrschule', is_active: true }]
+    }
+  }
+}
 
 const planOptions = [
   { label: 'Trial', value: 'trial' },
@@ -657,15 +897,124 @@ const showDetailDrawer = ref(false)
 const detailLoading = ref(false)
 const detailError = ref('')
 const detail = ref<any>(null)
-const detailTab = ref<'overview' | 'billing' | 'support'>('overview')
+const detailTab = ref<'overview' | 'setup' | 'billing' | 'support'>('overview')
 const detailTabs = [
   { id: 'overview' as const, label: 'Übersicht' },
+  { id: 'setup' as const, label: 'Setup' },
   { id: 'billing' as const, label: 'Billing' },
   { id: 'support' as const, label: 'Support' },
 ]
 const detailActionMsg = ref('')
 const actionLoading = ref<string | false>(false)
 const copiedInviteLink = ref('')
+const locationEdits = ref<any[]>([])
+const locationFilter = ref('')
+const locationOnlyActive = ref(true)
+const locationOnlyPickup = ref(false)
+const locationEditLimit = ref(25)
+const pickupEdit = ref({
+  allow_pickup_mode: false,
+  default_pickup_radius_minutes: 10,
+})
+
+const syncSetupEditsFromDetail = () => {
+  const setup = detail.value?.setup
+  if (!setup) {
+    locationEdits.value = []
+    return
+  }
+  pickupEdit.value = {
+    allow_pickup_mode: !!setup.tenant_pickup?.allow_pickup_mode,
+    default_pickup_radius_minutes: Number(setup.tenant_pickup?.default_pickup_radius_minutes ?? 10),
+  }
+  locationEdits.value = (setup.locations || []).map((loc: any) => ({
+    ...loc,
+    address: loc.address || '',
+    postal_code: loc.postal_code || '',
+    city: loc.city || '',
+    categories_text: Array.isArray(loc.available_categories)
+      ? loc.available_categories.join(', ')
+      : '',
+    category_pickup_json: JSON.stringify(loc.category_pickup_settings || {}, null, 2),
+  }))
+  locationEditLimit.value = 25
+}
+
+watch(
+  () => detail.value?.setup,
+  () => syncSetupEditsFromDetail(),
+  { immediate: true },
+)
+
+const filteredLocationEdits = computed(() => {
+  const q = locationFilter.value.trim().toLowerCase()
+  return locationEdits.value.filter((loc) => {
+    if (locationOnlyActive.value && !loc.is_active) return false
+    if (locationOnlyPickup.value && !loc.pickup_enabled) return false
+    if (!q) return true
+    const hay = `${loc.name || ''} ${loc.postal_code || ''} ${loc.city || ''} ${loc.address || ''}`.toLowerCase()
+    return hay.includes(q)
+  })
+})
+
+const visibleLocationEdits = computed(() => filteredLocationEdits.value.slice(0, locationEditLimit.value))
+
+const setupChecklistItems = computed(() => {
+  const c = detail.value?.setup?.checklist
+  if (!c) return []
+  return [
+    { key: 'seats', label: 'Seats OK', ok: !!c.seats_ok },
+    { key: 'staff', label: '≥1 Staff', ok: !!c.has_active_staff },
+    { key: 'locs', label: 'Locations', ok: !!c.has_locations },
+    { key: 'hours', label: 'Hours', ok: !!c.has_hours },
+    { key: 'cal', label: 'Kalender OK', ok: !!c.calendars_ok },
+    { key: 'slots', label: 'Slots', ok: !!c.has_slots },
+    { key: 'pickup', label: 'Pickup konsistent', ok: !!c.pickup_consistent },
+  ]
+})
+
+const setupTimelineItems = computed(() => {
+  const t = detail.value?.setup?.timeline
+  if (!t) return []
+  return [
+    { label: 'Tenant erstellt', at: t.tenant_created_at },
+    { label: 'Erster Admin', at: t.first_admin_at },
+    { label: 'Erster Staff', at: t.first_staff_at },
+    { label: 'Kalender-Sync', at: t.first_calendar_sync_at },
+    { label: 'Erste Slots', at: t.first_slots_at },
+    { label: 'Erster Termin', at: t.first_appointment_at },
+  ]
+})
+
+const formatDateTime = (iso?: string | null) => {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleString('de-CH', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return iso
+  }
+}
+
+const calendarStatusLabel = (s: any) => {
+  if (!s.has_calendar) return 'fehlt'
+  if (s.calendar?.failing) return `Fail ${s.calendar.consecutive_failures}`
+  if (s.calendar?.ok) return 'OK'
+  return 'warn'
+}
+
+const calendarStatusClass = (s: any) => {
+  if (!s.has_calendar) return 'text-rose-400'
+  if (s.calendar?.failing) return 'text-rose-400'
+  if (s.calendar?.ok) return 'text-emerald-400'
+  return 'text-amber-400'
+}
+
 const editForm = ref({
   name: '',
   slug: '',
@@ -844,6 +1193,99 @@ const copyInviteLink = async (invitationId: string) => {
 const openWalleeFromDetail = () => {
   if (!detail.value?.tenant) return
   openWalleeActivation(detail.value.tenant)
+}
+
+const runRecalc = async (staffId?: string) => {
+  const key = staffId ? `recalc-${staffId}` : 'recalc'
+  const res = await runAction('recalc_availability', staffId ? { staff_id: staffId } : {}, key)
+  if (!res) return
+  detailActionMsg.value = res.message || 'Recalc gestartet'
+  await reloadDetail()
+}
+
+const runSyncCalendars = async (staffId?: string, calendarId?: string) => {
+  const key = calendarId ? `sync-${calendarId}` : staffId ? `sync-${staffId}` : 'sync-all'
+  const extra: Record<string, any> = {}
+  if (staffId) extra.staff_id = staffId
+  if (calendarId) extra.calendar_id = calendarId
+  const res = await runAction('sync_calendars', extra, key)
+  if (!res) return
+  detailActionMsg.value = res.message || 'Sync fertig'
+  await reloadDetail()
+}
+
+const toggleStaffActive = async (staff: any) => {
+  const next = !staff.is_active
+  if (!next && !confirm(`Staff „${staff.first_name} ${staff.last_name}“ deaktivieren?`)) return
+  const res = await runAction(
+    'toggle_staff_active',
+    { staff_id: staff.id, is_active: next },
+    `staff-${staff.id}`,
+  )
+  if (!res) return
+  detailActionMsg.value = res.message
+  await reloadDetail()
+}
+
+const saveTenantPickup = async () => {
+  if (!detail.value?.tenant?.id) return
+  actionLoading.value = 'pickup'
+  detailActionMsg.value = ''
+  try {
+    await $fetch(`/api/admin/tenants/${detail.value.tenant.id}/locations`, {
+      method: 'PATCH',
+      body: { tenant_pickup: { ...pickupEdit.value } },
+    })
+    detailActionMsg.value = 'Pickup Defaults gespeichert'
+    await reloadDetail()
+  } catch (e: any) {
+    detailActionMsg.value = e?.data?.message || e?.message || 'Speichern fehlgeschlagen'
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+const saveLocation = async (loc: any) => {
+  if (!detail.value?.tenant?.id) return
+  actionLoading.value = `loc-${loc.id}`
+  detailActionMsg.value = ''
+  try {
+    let category_pickup_settings = {}
+    try {
+      category_pickup_settings = loc.category_pickup_json
+        ? JSON.parse(loc.category_pickup_json)
+        : {}
+    } catch {
+      detailActionMsg.value = 'category_pickup_settings: ungültiges JSON'
+      return
+    }
+    const available_categories = String(loc.categories_text || '')
+      .split(',')
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+
+    await $fetch(`/api/admin/tenants/${detail.value.tenant.id}/locations`, {
+      method: 'PATCH',
+      body: {
+        location_id: loc.id,
+        name: loc.name,
+        is_active: !!loc.is_active,
+        pickup_enabled: !!loc.pickup_enabled,
+        pickup_radius_minutes: Number(loc.pickup_radius_minutes) || 0,
+        address: loc.address || null,
+        postal_code: loc.postal_code || null,
+        city: loc.city || null,
+        available_categories,
+        category_pickup_settings,
+      },
+    })
+    detailActionMsg.value = `Location „${loc.name}“ gespeichert`
+    await reloadDetail()
+  } catch (e: any) {
+    detailActionMsg.value = e?.data?.message || e?.message || 'Speichern fehlgeschlagen'
+  } finally {
+    actionLoading.value = false
+  }
 }
 
 const showWalleeModal    = ref(false)
@@ -1147,7 +1589,10 @@ const isTrialExpiring = (d: string) => {
   return days >= 0 && days <= 7
 }
 
-onMounted(() => loadTenants())
+onMounted(() => {
+  loadTenants()
+  loadBusinessTypes()
+})
 </script>
 
 <style scoped>
@@ -1307,7 +1752,7 @@ onMounted(() => loadTenants())
   display:flex; justify-content:flex-end;
 }
 .sa-drawer {
-  width:min(560px, 100vw); height:100%;
+  width:min(720px, 100vw); height:100%;
   background:#0f172a; border-left:1px solid rgba(255,255,255,0.08);
   display:flex; flex-direction:column; box-shadow:-20px 0 60px rgba(0,0,0,0.4);
 }
@@ -1354,4 +1799,48 @@ onMounted(() => loadTenants())
 .drawer-enter-from, .drawer-leave-to { opacity:0; }
 .drawer-enter-from .sa-drawer, .drawer-leave-to .sa-drawer { transform:translateX(24px); }
 .drawer-enter-active .sa-drawer, .drawer-leave-active .sa-drawer { transition: transform 0.22s ease; }
+
+.sa-check-grid {
+  display:flex; flex-wrap:wrap; gap:0.4rem;
+}
+.sa-check-pill {
+  display:inline-flex; align-items:center; gap:0.35rem;
+  padding:0.3rem 0.55rem; border-radius:999px; font-size:0.72rem; font-weight:600;
+  border:1px solid transparent;
+}
+.sa-check-ok { background:rgba(16,185,129,0.12); color:#6ee7b7; border-color:rgba(16,185,129,0.25); }
+.sa-check-bad { background:rgba(244,63,94,0.12); color:#fda4af; border-color:rgba(244,63,94,0.25); }
+.sa-check-dot {
+  width:0.45rem; height:0.45rem; border-radius:999px; background:currentColor; flex-shrink:0;
+}
+.sa-dot-ok { background:#34d399; }
+.sa-dot-muted { background:#475569; }
+.sa-timeline { display:flex; flex-direction:column; gap:0.35rem; }
+.sa-timeline-row {
+  display:grid; grid-template-columns:0.55rem 1fr auto; gap:0.55rem; align-items:center;
+  font-size:0.78rem;
+}
+.sa-timeline-label { color:#94a3b8; }
+.sa-timeline-val { color:#cbd5e1; font-variant-numeric:tabular-nums; }
+.sa-warn-box {
+  background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25);
+  border-radius:10px; padding:0.75rem 0.9rem;
+}
+.sa-warn-title { font-size:0.75rem; font-weight:700; color:#fcd34d; margin-bottom:0.35rem; }
+.sa-warn-list { margin:0; padding-left:1.1rem; color:#fde68a; font-size:0.75rem; }
+.sa-staff-card, .sa-loc-card {
+  background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07);
+  border-radius:12px; padding:0.85rem; margin-bottom:0.65rem;
+}
+.sa-staff-head {
+  display:flex; align-items:flex-start; justify-content:space-between; gap:0.75rem;
+}
+.sa-staff-meta {
+  display:flex; flex-wrap:wrap; gap:0.65rem; margin-top:0.55rem;
+  font-size:0.72rem; font-weight:600;
+}
+.sa-error-line {
+  margin-top:0.4rem; font-size:0.72rem; color:#fda4af; word-break:break-word;
+}
+textarea.sa-input { resize:vertical; min-height:4rem; }
 </style>

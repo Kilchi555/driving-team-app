@@ -52,16 +52,16 @@
     <div v-else-if="!brandingError" class="w-full max-w-md">
       <!-- Logo außerhalb - oberhalb des farbigen Bereichs -->
       <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center bg-white rounded-2xl shadow-lg px-4 py-3 min-w-[56px] min-h-[56px]">
+        <div class="inline-flex items-center justify-center bg-white rounded-2xl shadow-lg px-4 py-3 min-w-[72px] min-h-[72px]">
           <img 
             v-if="headerLogo" 
             :src="headerLogo" 
-            class="h-10 w-auto max-w-[180px] object-contain" 
+            class="h-16 w-auto max-w-[220px] object-contain" 
             :alt="`${brandName} Logo`"
           >
           <span 
             v-else
-            class="text-xl font-bold" 
+            class="text-2xl font-bold" 
             :style="{ color: primaryColor }"
           >{{ getInitials(brandName) }}</span>
         </div>

@@ -7,6 +7,9 @@
  *  - copy_invite_link { invitationId }  → renews token, returns link (no email)
  *  - extend_trial { days?: number }     → extends trial_ends_at (+ Stripe if present)
  *  - set_active { is_active: boolean }
+ *  - recalc_availability { staff_id?: string }
+ *  - sync_calendars { staff_id?: string, calendar_id?: string }
+ *  - toggle_staff_active { staff_id: string, is_active: boolean }
  */
 import { defineEventHandler, readBody, createError, getRouterParam, getHeader } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
@@ -20,6 +23,7 @@ import {
   isPlaceholderStaffInviteEmail,
 } from '~/server/utils/staff-invite-email'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { syncOneExternalCalendar } from '~/server/utils/sync-external-calendars-job'
 
 async function verifySuperAdmin(event: any) {
   const authUser = await getAuthenticatedUser(event)
@@ -255,6 +259,211 @@ export default defineEventHandler(async (event) => {
     }).catch(() => {})
 
     return { success: true, is_active: isActive }
+  }
+
+  // ── toggle_staff_active ────────────────────────────────────────────────
+  if (action === 'toggle_staff_active') {
+    const staffId = String(body?.staff_id || '').trim()
+    if (!staffId) throw createError({ statusCode: 400, message: 'staff_id fehlt' })
+    const isActive = body?.is_active === true
+
+    const { data: staff, error: staffErr } = await supabase
+      .from('users')
+      .select('id, role, first_name, last_name')
+      .eq('id', staffId)
+      .eq('tenant_id', tenantId)
+      .eq('role', 'staff')
+      .is('deleted_at', null)
+      .single()
+
+    if (staffErr || !staff) {
+      throw createError({ statusCode: 404, message: 'Staff nicht gefunden' })
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({ is_active: isActive })
+      .eq('id', staffId)
+      .eq('tenant_id', tenantId)
+
+    if (error) throw createError({ statusCode: 500, message: error.message })
+
+    await logAudit({
+      action: isActive ? 'sa_staff_activate' : 'sa_staff_deactivate',
+      user_id: authUser.id,
+      tenant_id: tenantId,
+      resource_type: 'user',
+      resource_id: staffId,
+      ip_address: ipAddress,
+      status: 'success',
+      details: { name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim() },
+    }).catch(() => {})
+
+    return {
+      success: true,
+      staff_id: staffId,
+      is_active: isActive,
+      message: isActive ? 'Staff aktiviert' : 'Staff deaktiviert',
+    }
+  }
+
+  // ── recalc_availability ────────────────────────────────────────────────
+  if (action === 'recalc_availability') {
+    const staffIdFilter = body?.staff_id ? String(body.staff_id).trim() : null
+
+    let staffIds: string[] = []
+    if (staffIdFilter) {
+      const { data: staff } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', staffIdFilter)
+        .eq('tenant_id', tenantId)
+        .eq('role', 'staff')
+        .is('deleted_at', null)
+        .maybeSingle()
+      if (!staff) throw createError({ statusCode: 404, message: 'Staff nicht gefunden' })
+      staffIds = [staff.id]
+    } else {
+      const { data: staffRows } = await supabase
+        .from('users')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('role', 'staff')
+        .eq('is_active', true)
+        .is('deleted_at', null)
+      staffIds = (staffRows || []).map((s) => s.id)
+    }
+
+    if (staffIds.length === 0) {
+      return { success: true, queued: 0, message: 'Kein Staff zum Recalc' }
+    }
+
+    const now = new Date().toISOString()
+    const rows = staffIds.map((staff_id) => ({
+      staff_id,
+      tenant_id: tenantId,
+      trigger: 'settings_change' as const,
+      queued_at: now,
+      processed: false,
+    }))
+
+    const { error: queueError } = await supabase
+      .from('availability_recalc_queue')
+      .upsert(rows, { onConflict: 'staff_id,tenant_id' })
+
+    if (queueError) {
+      throw createError({ statusCode: 500, message: queueError.message })
+    }
+
+    const cronSecret = process.env.CRON_SECRET
+    $fetch('/api/cron/process-recalc-queue', {
+      method: 'GET',
+      headers: cronSecret && cronSecret.trim() !== ''
+        ? { 'Content-Type': 'application/json', Authorization: `Bearer ${cronSecret}` }
+        : { 'Content-Type': 'application/json' },
+    }).catch((err: any) => {
+      logger.warn('SA recalc background cron failed:', err?.message)
+    })
+
+    await logAudit({
+      action: 'sa_recalc_availability',
+      user_id: authUser.id,
+      tenant_id: tenantId,
+      resource_type: 'tenant',
+      resource_id: tenantId,
+      ip_address: ipAddress,
+      status: 'success',
+      details: { staff_ids: staffIds, count: staffIds.length },
+    }).catch(() => {})
+
+    return {
+      success: true,
+      queued: staffIds.length,
+      message: `${staffIds.length} Staff für Recalc eingereiht`,
+    }
+  }
+
+  // ── sync_calendars ─────────────────────────────────────────────────────
+  if (action === 'sync_calendars') {
+    const staffIdFilter = body?.staff_id ? String(body.staff_id).trim() : null
+    const calendarIdFilter = body?.calendar_id ? String(body.calendar_id).trim() : null
+
+    let query = supabase
+      .from('external_calendars')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('sync_enabled', true)
+
+    if (calendarIdFilter) query = query.eq('id', calendarIdFilter)
+    if (staffIdFilter) query = query.eq('staff_id', staffIdFilter)
+
+    const { data: calendars, error: calErr } = await query
+    if (calErr) throw createError({ statusCode: 500, message: calErr.message })
+    if (!calendars?.length) {
+      return { success: true, synced: 0, failed: 0, skipped: 0, message: 'Keine Kalender zum Sync' }
+    }
+
+    // Force retry: clear backoff so SA can re-test broken calendars
+    const calIds = calendars.map((c) => c.id)
+    await supabase
+      .from('external_calendars')
+      .update({
+        consecutive_failures: 0,
+        last_failure_at: null,
+      })
+      .in('id', calIds)
+
+    const anonymizeCache = new Map<string, boolean>()
+    const results = {
+      synced: 0,
+      failed: 0,
+      skipped: 0,
+      details: [] as Array<{ id: string; status: string; error?: string; events?: number }>,
+    }
+
+    for (const calendar of calendars) {
+      const calForSync = {
+        ...calendar,
+        consecutive_failures: 0,
+        last_failure_at: null,
+      }
+      const result = await syncOneExternalCalendar(supabase, calForSync, anonymizeCache, {
+        notifyOnFailure: false,
+      })
+      if (result.status === 'synced') {
+        results.synced += 1
+        results.details.push({ id: calendar.id, status: 'synced', events: result.events })
+      } else if (result.status === 'failed') {
+        results.failed += 1
+        results.details.push({ id: calendar.id, status: 'failed', error: result.error })
+      } else {
+        results.skipped += 1
+        results.details.push({ id: calendar.id, status: 'skipped', error: result.reason })
+      }
+    }
+
+    await logAudit({
+      action: 'sa_sync_calendars',
+      user_id: authUser.id,
+      tenant_id: tenantId,
+      resource_type: 'tenant',
+      resource_id: tenantId,
+      ip_address: ipAddress,
+      status: 'success',
+      details: {
+        synced: results.synced,
+        failed: results.failed,
+        skipped: results.skipped,
+        staff_id: staffIdFilter,
+        calendar_id: calendarIdFilter,
+      },
+    }).catch(() => {})
+
+    return {
+      success: true,
+      ...results,
+      message: `Sync: ${results.synced} ok, ${results.failed} fehlgeschlagen, ${results.skipped} übersprungen`,
+    }
   }
 
   throw createError({ statusCode: 400, message: `Unbekannte action: ${action}` })
