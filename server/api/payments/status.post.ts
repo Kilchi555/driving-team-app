@@ -116,8 +116,23 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
 
     logger.debug('✅ Payment found:', payment.id)
 
-    // 2. Status aktualisieren falls angegeben
+    // 2. Status aktualisieren — only staff/admin; never allow clients to mark paid
     if (body.status) {
+      const role = authUser.role || ''
+      if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(role)) {
+        // Clients may only poll status — ignore mutation attempts
+        logger.warn('🚫 Ignoring client payment status mutation', {
+          userId: userData.id,
+          paymentId: payment.id,
+          attemptedStatus: body.status
+        })
+      } else if (body.status === 'completed' || body.status === 'authorized') {
+        // Even staff should not forge Wallee completions via this endpoint
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Completed/authorized status may only be set by verified payment webhooks'
+        })
+      } else {
       const updateData: any = {
         payment_status: body.status,
         updated_at: toLocalTimeString(new Date())
@@ -130,11 +145,6 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
       
       if (body.walleeTransactionState) {
         updateData.wallee_transaction_state = body.walleeTransactionState
-      }
-
-      // Completion timestamp setzen
-      if (body.status === 'completed') {
-        updateData.paid_at = toLocalTimeString(new Date())
       }
 
       const { error: updateError } = await supabase
@@ -168,67 +178,16 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
           duration_ms: Date.now() - startTime
         }
       })
-    }
-
-    // 3. Appointment Status aktualisieren falls Payment completed
-    if (body.status === 'completed' && payment.appointment_id) {
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .update({
-          payment_status: 'paid',
-          updated_at: toLocalTimeString(new Date())
-        })
-        .eq('id', payment.appointment_id)
-
-      if (appointmentError) {
-        console.warn('⚠️ Could not update appointment:', appointmentError)
-      } else {
-        logger.debug('✅ Appointment marked as paid')
-      }
-
-      // ✅ AFFILIATE REWARD HOOK – trigger after first completed payment
-      if (payment.user_id) {
-        // Fetch driving category from appointment or course
-        let drivingCategory: string | null = null
-        let courseId: string | null = null
-        try {
-          if (payment.appointment_id) {
-            const { data: appt } = await supabase
-              .from('appointments')
-              .select('type')
-              .eq('id', payment.appointment_id)
-              .maybeSingle()
-            drivingCategory = appt?.type ?? null
-          } else if (payment.course_registration_id) {
-            const { data: reg } = await supabase
-              .from('course_registrations')
-              .select('course_id, courses(category)')
-              .eq('id', payment.course_registration_id)
-              .maybeSingle()
-            drivingCategory = (reg as any)?.courses?.category ?? null
-            courseId = (reg as any)?.course_id ?? null
-          }
-        } catch { /* non-fatal */ }
-
-        $fetch('/api/affiliate/process-reward', {
-          method: 'POST',
-          headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
-          body: {
-            appointment_id: payment.appointment_id || undefined,
-            course_registration_id: payment.course_registration_id || undefined,
-            course_id: courseId || undefined,
-            user_id: payment.user_id,
-            tenant_id: payment.tenant_id,
-            driving_category: drivingCategory,
-          }
-        }).catch((err: any) =>
-          logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
-        )
       }
     }
 
-    // 4. Status History erstellen (optional)
-    if (body.status) {
+    // 3. Status History — only when a privileged mutation actually occurred
+    if (
+      body.status &&
+      ['admin', 'staff', 'super_admin', 'tenant_admin'].includes(authUser.role || '') &&
+      body.status !== 'completed' &&
+      body.status !== 'authorized'
+    ) {
       try {
         const { error: historyError } = await supabase
           .from('payment_status_history')
@@ -251,7 +210,7 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
       }
     }
 
-    // 5. Aktualisierten Payment zurückgeben
+    // 4. Aktualisierten Payment zurückgeben
     const { data: updatedPayment, error: refetchError } = await supabase
       .from('payments')
       .select(`
