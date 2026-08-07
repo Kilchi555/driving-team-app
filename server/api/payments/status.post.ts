@@ -117,6 +117,7 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
     logger.debug('✅ Payment found:', payment.id)
 
     // 2. Status aktualisieren — only staff/admin; never allow clients to mark paid
+    let statusMutated = false
     if (body.status) {
       const role = authUser.role || ''
       if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(role)) {
@@ -133,61 +134,57 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
           statusMessage: 'Completed/authorized status may only be set by verified payment webhooks'
         })
       } else {
-      const updateData: any = {
-        payment_status: body.status,
-        updated_at: toLocalTimeString(new Date())
-      }
-
-      // Wallee-spezifische Updates
-      if (body.walleeTransactionId) {
-        updateData.wallee_transaction_id = body.walleeTransactionId
-      }
-      
-      if (body.walleeTransactionState) {
-        updateData.wallee_transaction_state = body.walleeTransactionState
-      }
-
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update(updateData)
-        .eq('id', body.paymentId)
-
-      if (updateError) {
-        logger.error('❌ Error updating payment status:', updateError)
-        throw createError({
-          statusCode: 500,
-          statusMessage: 'Failed to update payment status'
-        })
-      }
-
-      logger.debug('✅ Payment status updated to:', body.status)
-      
-      // ✅ AUDIT LOG for status change
-      await logAudit({
-        action: 'payment_status_updated',
-        user_id: userData.id,
-        tenant_id: userData.tenant_id,
-        resource_type: 'payment',
-        resource_id: payment.id,
-        status: 'success',
-        details: {
-          previous_status: payment.payment_status,
-          new_status: body.status,
-          transaction_id: body.walleeTransactionId || body.transactionId,
-          transaction_state: body.walleeTransactionState,
-          duration_ms: Date.now() - startTime
+        const updateData: any = {
+          payment_status: body.status,
+          updated_at: toLocalTimeString(new Date())
         }
-      })
+
+        // Wallee-spezifische Updates
+        if (body.walleeTransactionId) {
+          updateData.wallee_transaction_id = body.walleeTransactionId
+        }
+
+        if (body.walleeTransactionState) {
+          updateData.wallee_transaction_state = body.walleeTransactionState
+        }
+
+        const { error: updateError } = await supabase
+          .from('payments')
+          .update(updateData)
+          .eq('id', payment.id)
+
+        if (updateError) {
+          logger.error('❌ Error updating payment status:', updateError)
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Failed to update payment status'
+          })
+        }
+
+        statusMutated = true
+        logger.debug('✅ Payment status updated to:', body.status)
+
+        // ✅ AUDIT LOG for status change
+        await logAudit({
+          action: 'payment_status_updated',
+          user_id: userData.id,
+          tenant_id: userData.tenant_id,
+          resource_type: 'payment',
+          resource_id: payment.id,
+          status: 'success',
+          details: {
+            previous_status: payment.payment_status,
+            new_status: body.status,
+            transaction_id: body.walleeTransactionId || body.transactionId,
+            transaction_state: body.walleeTransactionState,
+            duration_ms: Date.now() - startTime
+          }
+        })
       }
     }
 
     // 3. Status History — only when a privileged mutation actually occurred
-    if (
-      body.status &&
-      ['admin', 'staff', 'super_admin', 'tenant_admin'].includes(authUser.role || '') &&
-      body.status !== 'completed' &&
-      body.status !== 'authorized'
-    ) {
+    if (statusMutated) {
       try {
         const { error: historyError } = await supabase
           .from('payment_status_history')
@@ -210,7 +207,8 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
       }
     }
 
-    // 4. Aktualisierten Payment zurückgeben
+    // 4. Aktualisierten Payment zurückgeben — always use resolved payment.id
+    // (body.paymentId may be absent when looking up by transactionId)
     const { data: updatedPayment, error: refetchError } = await supabase
       .from('payments')
       .select(`
@@ -229,7 +227,7 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
           email
         )
       `)
-      .eq('id', body.paymentId)
+      .eq('id', payment.id)
       .single()
 
     if (refetchError) throw refetchError
@@ -237,7 +235,9 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
     return {
       success: true,
       payment: updatedPayment,
-      message: body.status ? `Payment status updated to ${body.status}` : 'Payment status retrieved'
+      message: statusMutated
+        ? `Payment status updated to ${body.status}`
+        : 'Payment status retrieved'
     }
 
   } catch (error: any) {

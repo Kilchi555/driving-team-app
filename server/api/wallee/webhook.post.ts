@@ -415,7 +415,9 @@ export default defineEventHandler(async (event) => {
         const verifiedTx = await fetchWalleeTransaction(transactionId, spaceId)
         if (!verifiedTx?.state) {
           logger.error('❌ Rejecting anonymous-sale webhook: Wallee verification failed', { transactionId })
-          return { success: false, error: 'Could not verify transaction with Wallee', transactionId }
+          // 503 so Wallee retries after transient API/config outages
+          setResponseStatus(event, 503)
+          return { success: false, error: 'Could not verify transaction with Wallee', transactionId, retry: true }
         }
         const verifiedStatus = STATUS_MAPPING[verifiedTx.state] || 'pending'
         return await processAnonymousSale(anonymousSale, verifiedStatus)
@@ -467,16 +469,18 @@ export default defineEventHandler(async (event) => {
           try {
             await supabase.from('webhook_logs').update({
               success: false,
-              error_message: 'Rejected: Wallee API verification failed',
+              error_message: 'Rejected: Wallee API verification failed (will retry)',
               processing_duration_ms: Date.now() - startTime
             }).eq('id', webhookLogId)
           } catch { /* non-fatal */ }
         }
-        // 200 so Wallee does not infinite-retry poisoned payloads; ops can replay after fix
+        // 503 so Wallee retries — verification failures are often transient (API/SDK/config)
+        setResponseStatus(event, 503)
         return {
           success: false,
           error: 'Could not verify transaction with Wallee',
-          transactionId
+          transactionId,
+          retry: true
         }
       }
 

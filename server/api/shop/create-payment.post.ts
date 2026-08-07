@@ -190,8 +190,57 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Client discounts are capped; product unit prices always come from DB (except bounded custom vouchers)
-    const safeDiscount = Math.max(0, Math.min(Number(discount_amount_rappen) || 0, serverProductsPrice))
+    // Recompute discounts from DB records referenced in metadata — never trust client discount totals
+    let safeDiscount = 0
+    const rawDiscounts = Array.isArray(metadata?.discounts) ? metadata.discounts : []
+    if (rawDiscounts.length > 0) {
+      const discountIds = [...new Set(
+        rawDiscounts.map((d: any) => d?.id).filter((id: any) => typeof id === 'string' && id.length > 0)
+      )] as string[]
+
+      if (discountIds.length > 0) {
+        const [{ data: dbDiscounts }, { data: dbVoucherCodes }] = await Promise.all([
+          supabase
+            .from('discounts')
+            .select('id, discount_type, discount_value, max_discount_rappen, is_active, valid_until, tenant_id')
+            .in('id', discountIds)
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true),
+          supabase
+            .from('voucher_codes')
+            .select('id, discount_type, discount_value, max_discount_rappen, is_active, valid_until, tenant_id, type')
+            .in('id', discountIds)
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+        ])
+
+        const byId = new Map<string, any>()
+        for (const row of dbDiscounts || []) byId.set(row.id, row)
+        for (const row of dbVoucherCodes || []) byId.set(row.id, row)
+
+        const now = new Date()
+        for (const id of discountIds) {
+          const row = byId.get(id)
+          if (!row) continue
+          if (row.valid_until && new Date(row.valid_until) < now) continue
+          // Credit-type vouchers are wallet top-ups, not checkout discounts
+          if (row.type === 'credit') continue
+
+          let amount = 0
+          if (row.discount_type === 'percentage') {
+            amount = Math.round(serverProductsPrice * (Number(row.discount_value || 0) / 100))
+            if (row.max_discount_rappen != null) {
+              amount = Math.min(amount, Number(row.max_discount_rappen))
+            }
+          } else {
+            amount = Number(row.discount_value || 0)
+          }
+          safeDiscount += Math.max(0, amount)
+        }
+      }
+    }
+    safeDiscount = Math.max(0, Math.min(safeDiscount, serverProductsPrice))
+
     const safeAdminFee = Math.max(0, Number(admin_fee_rappen) || 0)
     const serverTotal = serverProductsPrice - safeDiscount + safeAdminFee
     if (serverTotal <= 0 || serverTotal > MAX_TOTAL_AMOUNT_RAPPEN) {
@@ -202,6 +251,8 @@ export default defineEventHandler(async (event) => {
       logger.warn('🚫 shop/create-payment: client total mismatch, using server total', {
         clientTotal: total_amount_rappen,
         serverTotal,
+        clientDiscount: discount_amount_rappen,
+        serverDiscount: safeDiscount,
         tenantId
       })
     }

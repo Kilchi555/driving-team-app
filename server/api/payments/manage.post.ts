@@ -45,13 +45,29 @@ export default defineEventHandler(async (event) => {
 
       logger.debug('➕ Creating payment')
 
+      const method = String(body.paymentData.payment_method || 'cash')
+      const offlineCompletable = ['cash', 'twint', 'bank_transfer', 'card_terminal', 'invoice'].includes(method)
+      // Never allow creating an already-completed online/Wallee payment via this API
+      let paymentStatus = body.paymentData.payment_status || 'pending'
+      if (paymentStatus === 'completed' && !offlineCompletable) {
+        paymentStatus = 'pending'
+      }
+      if (['wallee', 'online'].includes(method) && paymentStatus === 'completed') {
+        paymentStatus = 'pending'
+      }
+
+      const insertPayload: Record<string, any> = {
+        ...body.paymentData,
+        tenant_id: dbUser.tenant_id,
+        payment_status: paymentStatus
+      }
+      if (paymentStatus === 'completed' && !insertPayload.paid_at) {
+        insertPayload.paid_at = new Date().toISOString()
+      }
+
       const { data, error } = await supabaseAdmin
         .from('payments')
-        .insert({
-          ...body.paymentData,
-          tenant_id: dbUser.tenant_id,
-          payment_status: body.paymentData.payment_status === 'completed' ? 'pending' : (body.paymentData.payment_status || 'pending')
-        })
+        .insert(insertPayload)
         .select()
         .single()
 
@@ -68,9 +84,54 @@ export default defineEventHandler(async (event) => {
     }
 
     // ========== MARK AS COMPLETED ==========
+    // Staff may complete offline payments (cash/invoice). Online completions require webhooks.
     if (action === 'mark-completed') {
       if (!isPrivileged) throw new Error('Unauthorized: role')
-      throw new Error('mark-completed is disabled — use verified payment webhooks')
+      if (!body.paymentId) {
+        throw new Error('Payment ID required')
+      }
+
+      logger.debug('✅ Marking payment as completed:', body.paymentId)
+
+      const { data: existing, error: loadError } = await supabaseAdmin
+        .from('payments')
+        .select('id, tenant_id, payment_method, payment_status')
+        .eq('id', body.paymentId)
+        .eq('tenant_id', dbUser.tenant_id)
+        .maybeSingle()
+
+      if (loadError || !existing) {
+        throw new Error('Payment not found')
+      }
+
+      const method = String(existing.payment_method || '')
+      const offlineCompletable = ['cash', 'twint', 'bank_transfer', 'card_terminal', 'invoice'].includes(method)
+      if (!offlineCompletable) {
+        throw new Error('Online payments can only be completed by verified payment webhooks')
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from('payments')
+        .update({
+          payment_status: 'completed',
+          paid_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', body.paymentId)
+        .eq('tenant_id', dbUser.tenant_id)
+        .select()
+        .single()
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      logger.debug('✅ Payment marked as completed')
+
+      return {
+        success: true,
+        data
+      }
     }
 
     // ========== DELETE PAYMENT ==========
