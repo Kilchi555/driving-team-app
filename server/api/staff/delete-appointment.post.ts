@@ -58,6 +58,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // ✅ ROLE CHECK — only staff/admin may soft-delete appointments
+    if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(userProfile.role)) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Insufficient permissions – staff or admin role required'
+      })
+    }
+
     const tenantId = userProfile.tenant_id
 
     // ✅ LAYER 3: INPUT VALIDATION

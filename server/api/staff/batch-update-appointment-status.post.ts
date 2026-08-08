@@ -77,6 +77,14 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, message: 'User not found' })
     }
 
+    // ✅ ROLE CHECK — only staff/admin may batch-complete appointments (+ affiliate side-effects)
+    if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(user.role)) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Insufficient permissions – staff or admin role required'
+      })
+    }
+
     const tenantId = user.tenant_id
 
     // ✅ 2. INPUT VALIDATION
