@@ -95,7 +95,7 @@ export default defineEventHandler(async (event) => {
 
   let q = applyFilters(
     supabase.from('leads').select(
-      'id, tenant_id, email, first_name, last_name, phone, status, categories, tags, notes, source, created_at, updated_at, consented_at, unsubscribed_at',
+      'id, tenant_id, email, first_name, last_name, phone, status, categories, tags, notes, source, created_at, consent_given_at, last_emailed_at, source_label',
       { count: 'exact' }
     )
   )
