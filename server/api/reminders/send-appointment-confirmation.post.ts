@@ -8,6 +8,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { sendPushToUser } from '~/server/utils/push'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 
 const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https://app.simy.ch').replace(/\/$/, '')
 
@@ -269,6 +270,7 @@ export default defineEventHandler(async (event) => {
       try {
         const emailResponse = await $fetch('/api/email/send-appointment-notification', {
           method: 'POST',
+          headers: internalSecretHeaders(),
           body: {
             email: user.email,
             studentName: `${user.first_name} ${user.last_name}`,
@@ -372,6 +374,7 @@ export default defineEventHandler(async (event) => {
       try {
         await $fetch('/api/email/send-appointment-notification', {
           method: 'POST',
+          headers: internalSecretHeaders(),
           body: {
             email: staff.email,
             studentName: `${user.first_name} ${user.last_name}`,

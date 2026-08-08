@@ -6,6 +6,11 @@ import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wal
 import { Wallee as WalleeSDK } from 'wallee'
 import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import {
+  STAFF_ADMIN_ROLES,
+  internalSecretHeaders,
+} from '~/server/utils/require-staff-or-internal'
 
 interface ConvertToOnlineRequest {
   paymentId: string
@@ -15,6 +20,15 @@ interface ConvertToOnlineRequest {
 export default defineEventHandler(async (event) => {
   try {
     logger.debug('🔄 convert-to-online.post called')
+
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser?.id) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized - Authentication required'
+      })
+    }
+
     const body = await readBody<ConvertToOnlineRequest>(event)
     const { paymentId, customerEmail } = body
 
@@ -42,6 +56,26 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 404,
         statusMessage: 'Payment not found'
+      })
+    }
+
+    // Authz: staff/admin in same tenant, or payment owner (customer self-serve)
+    const role = authUser.role || ''
+    const isPrivileged = (STAFF_ADMIN_ROLES as readonly string[]).includes(role)
+    const callerDbId = authUser.db_user_id || authUser.profile?.id
+    const callerTenantId = authUser.tenant_id || authUser.profile?.tenant_id
+
+    if (isPrivileged) {
+      if (callerTenantId && payment.tenant_id && callerTenantId !== payment.tenant_id && role !== 'super_admin') {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Forbidden – payment belongs to another tenant'
+        })
+      }
+    } else if (!callerDbId || payment.user_id !== callerDbId) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden – you can only convert your own payments'
       })
     }
 
@@ -200,6 +234,7 @@ export default defineEventHandler(async (event) => {
       try {
         await $fetch('/api/email/send-wallee-payment-link', {
           method: 'POST',
+          headers: internalSecretHeaders(),
           body: {
             email,
             subject: `Zahlung erforderlich - ${businessFallback}`,

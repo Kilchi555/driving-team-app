@@ -8,6 +8,7 @@ import { sendPushToUser } from '~/server/utils/push'
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { displayName } from '~/server/utils/branded-email'
+import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
 
 interface AppointmentNotificationBody {
   email: string
@@ -398,6 +399,8 @@ const TEMPLATES = {
 
 export default defineEventHandler(async (event) => {
   try {
+    await requireStaffOrInternal(event)
+
     let body = await readBody(event) as AppointmentNotificationBody
     
     const { email, studentName, type, tenantId } = body

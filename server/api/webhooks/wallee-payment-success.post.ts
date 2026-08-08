@@ -5,13 +5,11 @@
  * When a payment succeeds, create the actual appointment and link it to the reserved slots.
  * 
  * TRIGGERED BY:
- * - Wallee webhook when payment_state = COMPLETED
- * - We look for reserved slots with matching metadata
- * - Create appointment and mark slots as booked
+ * - Trusted internal callers after a verified payment (x-internal-secret)
+ * - NOT a public Wallee webhook — the live handler is /api/wallee/webhook
  * 
  * USAGE:
  * POST /api/webhooks/wallee-payment-success
- * (Called by Wallee, not by frontend)
  */
 
 import { defineEventHandler, readBody, createError } from 'h3'
@@ -19,6 +17,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { logAudit } from '~/server/utils/audit'
+import { assertInternalSecret } from '~/server/utils/require-staff-or-internal'
 
 interface WalleePaymentSuccessRequest {
   paymentId: string
@@ -32,6 +31,10 @@ interface WalleePaymentSuccessRequest {
 
 export default defineEventHandler(async (event) => {
   try {
+    // Legacy endpoint is not signature-verified by Wallee — require internal secret
+    // and prove the payment is already completed before creating appointments.
+    assertInternalSecret(event)
+
     const body = await readBody(event) as WalleePaymentSuccessRequest
     const { paymentId, slotId, sessionId, userId, tenantId, appointmentType, notes } = body
 
@@ -52,6 +55,34 @@ export default defineEventHandler(async (event) => {
     const supabase = getSupabaseAdmin()
     const now = new Date().toISOString()
     const nowLocal = toLocalTimeString(new Date())
+
+    // Verify payment exists, belongs to tenant/user, and is actually paid
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select('id, tenant_id, user_id, payment_status')
+      .eq('id', paymentId)
+      .single()
+
+    if (paymentError || !payment) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Payment not found'
+      })
+    }
+
+    if (payment.tenant_id !== tenantId || payment.user_id !== userId) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Payment does not match tenant/user'
+      })
+    }
+
+    if (!['completed', 'authorized'].includes(payment.payment_status || '')) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: `Payment is not paid (status=${payment.payment_status})`
+      })
+    }
 
     // ============ STEP 1: Get the reserved slot ============
     const { data: slot, error: slotError } = await supabase
