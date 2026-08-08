@@ -1,6 +1,8 @@
 // server/api/admin/upload-license.post.ts
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { STAFF_ADMIN_ROLES } from '~/server/utils/require-staff-or-internal'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -39,6 +41,41 @@ export default defineEventHandler(async (event) => {
         }
       }
     )
+
+    const { data: targetUser, error: targetErr } = await supabaseAdmin
+      .from('users')
+      .select('id, tenant_id, created_at, role, onboarding_status')
+      .eq('id', userId)
+      .single()
+
+    if (targetErr || !targetUser) {
+      throw createError({ statusCode: 404, statusMessage: 'User not found' })
+    }
+
+    const authUser = await getAuthenticatedUser(event).catch(() => null)
+    const role = authUser?.role || ''
+    const isPrivileged = (STAFF_ADMIN_ROLES as readonly string[]).includes(role)
+    const isOwner = !!authUser?.db_user_id && authUser.db_user_id === userId
+
+    let allowRegistrationWindow = false
+    if (!authUser) {
+      const createdAt = targetUser.created_at ? new Date(targetUser.created_at).getTime() : 0
+      const ageMs = Date.now() - createdAt
+      allowRegistrationWindow = ageMs >= 0 && ageMs <= 30 * 60 * 1000
+    }
+
+    if (isPrivileged) {
+      if (
+        role !== 'super_admin' &&
+        authUser?.tenant_id &&
+        targetUser.tenant_id &&
+        authUser.tenant_id !== targetUser.tenant_id
+      ) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
+      }
+    } else if (!isOwner && !allowRegistrationWindow) {
+      throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
+    }
 
     // Test storage access first
     const { data: buckets, error: bucketError } = await supabaseAdmin.storage.listBuckets()
