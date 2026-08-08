@@ -267,6 +267,34 @@ export async function notifyStaffRemoved(
   course: CourseForNotification,
   sessions: CourseSessionForNotification[],
 ) {
+  await sendStaffCourseRemovalEmail(supabase, staffId, course, sessions, {
+    header: '❌ Kurs-Zuteilung entfernt',
+    intro: 'Deine Zuteilung als Instruktor/in für den folgenden Kurs wurde aufgehoben:',
+    subjectPrefix: 'Kurs-Zuteilung aufgehoben',
+  })
+}
+
+/** Notify staff that a whole course was cancelled and their calendar blocks were removed. */
+export async function notifyStaffCourseCancelled(
+  supabase: SupabaseClient,
+  staffId: string,
+  course: CourseForNotification,
+  sessions: CourseSessionForNotification[],
+) {
+  await sendStaffCourseRemovalEmail(supabase, staffId, course, sessions, {
+    header: '❌ Kurs abgesagt',
+    intro: 'Der folgende Kurs, für den du als Instruktor/in eingetragen warst, wurde abgesagt:',
+    subjectPrefix: 'Kurs abgesagt',
+  })
+}
+
+async function sendStaffCourseRemovalEmail(
+  supabase: SupabaseClient,
+  staffId: string,
+  course: CourseForNotification,
+  sessions: CourseSessionForNotification[],
+  copy: { header: string; intro: string; subjectPrefix: string },
+) {
   const { data: staffUser } = await supabase
     .from('users')
     .select('first_name, last_name, email')
@@ -286,9 +314,9 @@ export async function notifyStaffRemoved(
   const rows = sessionTable(sessions)
 
   const html = emailWrapper(
-    '❌ Kurs-Zuteilung entfernt',
+    copy.header,
     `<p>Hallo ${staffUser.first_name},</p>
-    <p>Deine Zuteilung als Instruktor/in für den folgenden Kurs wurde aufgehoben:</p>
+    <p>${copy.intro}</p>
     <p style="font-size:18px;font-weight:700;color:#dc2626;margin:16px 0">${courseLabel}</p>
     <table><thead><tr>
       <th>Datum</th><th>Zeit</th>
@@ -301,15 +329,15 @@ export async function notifyStaffRemoved(
   try {
     await sendEmail({
       to: staffUser.email,
-      subject: `Kurs-Zuteilung aufgehoben: ${courseLabel}`,
+      subject: `${copy.subjectPrefix}: ${courseLabel}`,
       html,
       fromName: tenant?.name ?? undefined,
       fromEmail: tenant?.from_email ?? null,
       domainVerified: tenant?.resend_domain_verified ?? false,
     })
-    logger.debug(`✅ Removal email sent to ${staffUser.email}`)
+    logger.debug(`✅ Staff course email sent to ${staffUser.email} (${copy.subjectPrefix})`)
   } catch (e: any) {
-    logger.warn(`⚠️ Could not send removal email to ${staffUser.email}:`, e.message)
+    logger.warn(`⚠️ Could not send staff course email to ${staffUser.email}:`, e.message)
   }
 }
 

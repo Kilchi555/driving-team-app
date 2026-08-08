@@ -806,7 +806,7 @@
                     : (isInvoicedPayment(payment))
                     ? 'border-l-blue-400 bg-blue-50 cursor-pointer hover:shadow-md'
                     : 'hover:shadow-md cursor-pointer',
-                  selectedPayments.includes(payment.id) && !isInvoicedPayment(payment) && payment.appointment?.status !== 'cancelled' && payment.payment_status !== 'completed'
+                  selectedPayments.includes(payment.id) && !isInvoicedPayment(payment) && payment.payment_status !== 'completed' && (payment.appointment?.status !== 'cancelled' || isBillableCancelledPayment(payment))
                     ? 'ring-2 ring-offset-0'
                     : selectedPayments.includes(payment.id) && isInvoicedPayment(payment)
                     ? 'ring-2 ring-blue-400 ring-offset-0'
@@ -816,6 +816,10 @@
                   ...(payment.appointment?.status !== 'cancelled' && !isInvoicedPayment(payment) && payment.payment_status !== 'completed' ? { 
                     borderLeftColor: primaryColor,
                     backgroundColor: selectedPayments.includes(payment.id) ? primaryColor + '20' : primaryColor + '08'
+                  } : {}),
+                  ...(selectedPayments.includes(payment.id) && isBillableCancelledPayment(payment) && !isInvoicedPayment(payment) ? {
+                    backgroundColor: primaryColor + '18',
+                    '--tw-ring-color': primaryColor
                   } : {}),
                   ...(selectedPayments.includes(payment.id) && payment.appointment?.status !== 'cancelled' && !isInvoicedPayment(payment) && payment.payment_status !== 'completed' ? {
                     '--tw-ring-color': primaryColor
@@ -849,13 +853,30 @@
                           </template>
                         </template>
                         <template v-else>
-                          <span :class="[
-                            'text-xl font-bold leading-none',
-                            payment.appointment?.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'
-                          ]">
-                            {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
-                          </span>
-                          <span class="text-xs font-semibold text-gray-500">CHF</span>
+                          <template v-if="isBillableCancelledPayment(payment) && (payment.appointment.cancellation_charge_percentage ?? 100) < 100">
+                            <span class="text-sm font-semibold text-gray-400 line-through leading-none">
+                              {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
+                            </span>
+                            <span class="text-xl font-bold leading-none text-orange-700">
+                              {{ (getPaymentDueAmountRappen(payment) / 100).toFixed(2) }}
+                            </span>
+                            <span class="text-xs font-semibold text-orange-600">CHF Storno</span>
+                          </template>
+                          <template v-else-if="isBillableCancelledPayment(payment)">
+                            <span class="text-xl font-bold leading-none text-orange-700">
+                              {{ (getPaymentDueAmountRappen(payment) / 100).toFixed(2) }}
+                            </span>
+                            <span class="text-xs font-semibold text-orange-600">CHF</span>
+                          </template>
+                          <template v-else>
+                            <span :class="[
+                              'text-xl font-bold leading-none',
+                              payment.appointment?.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'
+                            ]">
+                              {{ ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2) }}
+                            </span>
+                            <span class="text-xs font-semibold text-gray-500">CHF</span>
+                          </template>
                         </template>
                       </div>
 
@@ -2554,6 +2575,26 @@ const calculateCancelledPayment = (payment: any) => {
   }
 }
 
+/** Abgesagter Termin mit Stornogebühr > 0 und noch offenem Betrag */
+const isBillableCancelledPayment = (payment: any) => {
+  if (payment?.appointment?.status !== 'cancelled') return false
+  if (['completed', 'cancelled', 'refunded'].includes(payment.payment_status)) return false
+  const chargePercentage = payment.appointment.cancellation_charge_percentage ?? 100
+  return chargePercentage > 0
+}
+
+/** Offener Betrag in Rappen (inkl. Stornogebühr bei Absagen) */
+const getPaymentDueAmountRappen = (payment: any) => {
+  if (!payment) return 0
+  if (payment.appointment?.status === 'cancelled') {
+    if (!isBillableCancelledPayment(payment)) return 0
+    return Math.max(0, calculateCancelledPayment(payment)?.totalCost ?? 0)
+  }
+  const base = (payment.total_amount_rappen || 0) - (payment.credit_used_rappen || 0)
+  const alreadyPaid = payment.payment_status === 'partial' ? (payment.amount_paid_rappen || 0) : 0
+  return Math.max(0, base - alreadyPaid)
+}
+
 // Kategorien für das Edit-Modal (ohne 'alle')
 const availableCategoriesForEdit = computed(() => {
   const lessonsOnly = lessons.value.filter(lesson => !isExam(lesson))
@@ -2644,7 +2685,9 @@ const partialPaymentMethod = ref<'cash' | 'online'>('cash')
 const hasOpenSelectedPayments = computed(() =>
   selectedPayments.value.some(id => {
     const p = payments.value.find(p => p.id === id)
-    return p && !isInvoicedPayment(p) && p.payment_status !== 'completed' && p.appointment?.status !== 'cancelled'
+    if (!p || isInvoicedPayment(p) || p.payment_status === 'completed') return false
+    if (p.appointment?.status === 'cancelled') return isBillableCancelledPayment(p)
+    return true
   })
 )
 
@@ -2772,13 +2815,7 @@ const paymentsCount = computed(() => payments.value.length)
 const totalSelectedAmount = computed(() => {
   return selectedPayments.value.reduce((total, paymentId) => {
     const payment = payments.value.find(p => p.id === paymentId)
-    if (payment?.appointment?.status === 'cancelled') {
-      return total
-    }
-    const base = (payment?.total_amount_rappen || 0) - (payment?.credit_used_rappen || 0)
-    // For partial payments, only count the remaining balance
-    const alreadyPaid = payment?.payment_status === 'partial' ? (payment?.amount_paid_rappen || 0) : 0
-    return total + Math.max(0, base - alreadyPaid)
+    return total + getPaymentDueAmountRappen(payment)
   }, 0)
 })
 
@@ -2816,9 +2853,8 @@ const partialPaymentPreview = computed(() => {
     .map(id => payments.value.find(p => p.id === id))
     .filter(Boolean)
     .map((p: any) => {
-      const base = Math.max(0, (p.total_amount_rappen || 0) - (p.credit_used_rappen || 0))
+      const due = getPaymentDueAmountRappen(p)
       const alreadyPaid = p.payment_status === 'partial' ? (p.amount_paid_rappen || 0) : 0
-      const due = Math.max(0, base - alreadyPaid)
       const date = p.appointment?.start_time ? new Date(p.appointment.start_time).toLocaleDateString('de-CH') : 'Termin'
       const history: { amount_rappen: number; paid_at: string }[] = p.metadata?.partial_payments || []
       return { id: p.id, label: date, due, alreadyPaid, history }
@@ -2858,12 +2894,12 @@ const handlePaymentCardClick = (payment: any) => {
       expandedCancelledPayments.value.add(payment.id)
     }
     
-    // ✅ NEW: Also allow selection if there's a charge (chargePercentage > 0)
-    const chargePercentage = payment.appointment.cancellation_charge_percentage ?? 100
-    if (chargePercentage > 0 && payment.payment_status === 'pending') {
+    // ✅ Also allow selection if there's a charge (chargePercentage > 0)
+    if (isBillableCancelledPayment(payment) && payment.payment_status === 'pending') {
       logger.debug('💳 Cancelled payment with charge can be selected - toggling selection', {
-        chargePercentage,
-        paymentStatus: payment.payment_status
+        chargePercentage: payment.appointment.cancellation_charge_percentage ?? 100,
+        paymentStatus: payment.payment_status,
+        dueRappen: getPaymentDueAmountRappen(payment)
       })
       togglePaymentSelection(payment.id)
     }
