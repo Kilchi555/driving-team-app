@@ -10,11 +10,21 @@ export default defineEventHandler(async (event) => {
 
   const { data: userProfile } = await supabase
     .from('users')
-    .select('id, tenant_id')
+    .select('id, tenant_id, role')
     .eq('auth_user_id', authUser.id)
     .single()
 
   if (!userProfile) throw createError({ statusCode: 403, statusMessage: 'User profile not found' })
+
+  // ✅ ROLE CHECK — only staff/admin may debit another student's credit via this endpoint
+  // (mirrors /api/credit/use-for-appointment). Prevents any auth client from draining
+  // arbitrary user_id balances in the same tenant.
+  if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(userProfile.role || '')) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Insufficient permissions – staff or admin role required'
+    })
+  }
 
   // Read and validate body
   const body = await readBody(event)
@@ -24,6 +34,37 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 400,
       message: 'Missing or invalid required fields: user_id, appointment_id, amount_rappen (must be > 0)'
+    })
+  }
+
+  // Target student + appointment must belong to caller's tenant
+  const { data: targetStudent } = await supabase
+    .from('users')
+    .select('id, tenant_id')
+    .eq('id', user_id)
+    .eq('tenant_id', userProfile.tenant_id)
+    .maybeSingle()
+
+  if (!targetStudent) {
+    throw createError({ statusCode: 404, statusMessage: 'Student not found in your tenant' })
+  }
+
+  const { data: appointment } = await supabase
+    .from('appointments')
+    .select('id, user_id, tenant_id')
+    .eq('id', appointment_id)
+    .eq('tenant_id', userProfile.tenant_id)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (!appointment) {
+    throw createError({ statusCode: 404, statusMessage: 'Appointment not found in your tenant' })
+  }
+
+  if (appointment.user_id !== user_id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Appointment does not belong to the given student'
     })
   }
 
