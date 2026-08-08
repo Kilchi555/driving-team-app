@@ -22,6 +22,8 @@ export const MAX_BUSY_EVENT_MS = 14 * 24 * 60 * 60 * 1000 // 14 days
 export const UPSERT_BATCH_SIZE = 100
 /** Booking-relevant window — shorter than 1y to limit RRULE expansion / memory. */
 export const SYNC_HORIZON_DAYS = 180
+/** Keep recent past events (e.g. calendar history / completed external hours). */
+export const SYNC_LOOKBACK_DAYS = 90
 
 export type SyncCalendarResult =
   | { status: 'synced'; events: number }
@@ -198,12 +200,14 @@ export async function syncOneExternalCalendar(
   let icsData = probe.body
 
   const now = new Date()
+  const windowStart = new Date(now)
+  windowStart.setDate(windowStart.getDate() - SYNC_LOOKBACK_DAYS)
   const horizon = new Date(now)
   horizon.setDate(horizon.getDate() + SYNC_HORIZON_DAYS)
 
   let rawEvents
   try {
-    rawEvents = parseIcsBusyEvents(icsData, { start: now, end: horizon })
+    rawEvents = parseIcsBusyEvents(icsData, { start: windowStart, end: horizon })
   } finally {
     // Help GC: drop the raw feed before building DB rows
     icsData = ''

@@ -8,6 +8,7 @@ import {
 } from '~/server/utils/external-calendar-privacy'
 import { probeIcsUrl } from '~/server/utils/probe-ics-url'
 import { humanizeIcsFetchError } from '~/utils/ics-url'
+import { SYNC_LOOKBACK_DAYS } from '~/server/utils/sync-external-calendars-job'
 import { logger } from '~/utils/logger'
 
 interface ICSImportRequest {
@@ -123,12 +124,14 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       }
     }
     
-    // Only sync relevant time window: now .. now + 1 year (RRULEs expanded inside)
+    // Sync window: last 3 months .. now + 1 year (RRULEs expanded inside)
     const now = new Date()
+    const windowStart = new Date(now)
+    windowStart.setDate(windowStart.getDate() - SYNC_LOOKBACK_DAYS)
     const horizon = new Date(now)
     horizon.setFullYear(horizon.getFullYear() + 1)
 
-    const rawEvents = parseIcsBusyEvents(icsData, { start: now, end: horizon })
+    const rawEvents = parseIcsBusyEvents(icsData, { start: windowStart, end: horizon })
 
     // ✅ SAFETY NET: Discard implausibly long events (e.g. accidental multi-month
     // entries from a mis-dragged end date in Apple Calendar). A single busy block
@@ -171,7 +174,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       .from('external_busy_times')
       .delete()
       .eq('external_calendar_id', calendar_id)
-      .gte('start_time', now.toISOString())
+      .gte('start_time', windowStart.toISOString())
       .lte('start_time', horizon.toISOString())
     if (clearError) {
       throw createError({ statusCode: 500, statusMessage: `Failed to clear busy times: ${clearError.message}` })
