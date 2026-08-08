@@ -402,34 +402,38 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
 
-    // ✅ CHECK: If payment already has a Wallee transaction, check if it's already completed
+    // ✅ CHECK: Existing Wallee transaction — never create a second open charge
     if (payment.wallee_transaction_id) {
       logger.info('🔍 Payment already has wallee_transaction_id:', payment.wallee_transaction_id, '- checking status at Wallee...')
-      
+
       try {
         const existingTxResponse = await transactionService.read(spaceId, parseInt(payment.wallee_transaction_id))
         const existingTx = existingTxResponse?.body || existingTxResponse
-        
+
         if (existingTx?.state) {
           const COMPLETED_STATES = ['FULFILL', 'COMPLETED', 'SUCCESSFUL']
-          
+          const AUTHORIZED_STATES = ['AUTHORIZED']
+          const OPEN_STATES = ['PENDING', 'CONFIRMED', 'PROCESSING']
+          const FAILURE_STATES = ['FAILED', 'CANCELED', 'DECLINE', 'VOIDED']
+
           if (COMPLETED_STATES.includes(existingTx.state)) {
             logger.info('✅ Existing Wallee transaction is already', existingTx.state, '- marking payment as completed')
-            
+
             const now = new Date().toISOString()
             await supabaseAdmin.from('payments').update({
               payment_status: 'completed',
               paid_at: now,
-              updated_at: now
+              updated_at: now,
+              wallee_transaction_state: existingTx.state
             }).eq('id', payment.id)
-            
+
             if (payment.appointments?.id) {
               await supabaseAdmin.from('appointments').update({
                 payment_status: 'paid',
                 updated_at: now
               }).eq('id', payment.appointments.id)
             }
-            
+
             return {
               success: true,
               paymentId: payment.id,
@@ -437,14 +441,81 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
               message: 'Payment was already completed via existing Wallee transaction'
             }
           }
-          
-          logger.info(`📋 Existing transaction state: ${existingTx.state} - will create new transaction`)
+
+          if (AUTHORIZED_STATES.includes(existingTx.state)) {
+            const now = new Date().toISOString()
+            await supabaseAdmin.from('payments').update({
+              payment_status: 'authorized',
+              updated_at: now,
+              wallee_transaction_state: existingTx.state
+            }).eq('id', payment.id)
+
+            return {
+              success: true,
+              paymentId: payment.id,
+              paymentStatus: 'authorized',
+              message: 'Payment already authorized via existing Wallee transaction'
+            }
+          }
+
+          if (OPEN_STATES.includes(existingTx.state)) {
+            // Reuse the open transaction — creating another one caused double charges
+            // when the first later fulfilled while a second was also paid.
+            logger.info(`♻️ Reusing open Wallee transaction ${payment.wallee_transaction_id} (state=${existingTx.state})`)
+
+            let paymentPageUrl: string | undefined =
+              (existingTx?.paymentPageUrl as string | undefined) ||
+              (existingTx?.paymentPageEndpoint as string | undefined)
+
+            if (!paymentPageUrl) {
+              try {
+                const paymentService: Wallee.api.TransactionPaymentPageService = new Wallee.api.TransactionPaymentPageService(config)
+                const urlResponse = await paymentService.paymentPageUrl(spaceId, parseInt(payment.wallee_transaction_id))
+                paymentPageUrl = urlResponse?.body || urlResponse
+              } catch (urlError: any) {
+                logger.warn('⚠️ Could not get payment page URL for reuse:', urlError.message)
+                paymentPageUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${payment.wallee_transaction_id}`
+              }
+            }
+
+            // Keep/restore processing lock while the open tx is still live
+            await supabaseAdmin.from('payments').update({
+              payment_status: 'processing',
+              updated_at: new Date().toISOString(),
+              wallee_transaction_state: existingTx.state
+            }).eq('id', payment.id)
+
+            return {
+              success: true,
+              paymentId: payment.id,
+              transactionId: String(payment.wallee_transaction_id),
+              paymentUrl: paymentPageUrl,
+              reused: true,
+              message: 'Existing open Wallee transaction reused'
+            }
+          }
+
+          if (!FAILURE_STATES.includes(existingTx.state)) {
+            logger.warn(`⚠️ Unexpected Wallee state ${existingTx.state} — refusing to create a second transaction`)
+            throw createError({
+              statusCode: 409,
+              statusMessage: 'Zahlung wird noch verarbeitet. Bitte warte einen Moment und versuche es erneut.'
+            })
+          }
+
+          logger.info(`📋 Existing transaction failed (${existingTx.state}) - creating new transaction`)
         }
       } catch (checkErr: any) {
+        if (checkErr?.statusCode) throw checkErr
         logger.warn('⚠️ Could not check existing Wallee transaction:', checkErr.message)
+        // Fail closed: do not create a parallel charge if we cannot verify the old one
+        throw createError({
+          statusCode: 503,
+          statusMessage: 'Zahlungsstatus konnte nicht geprüft werden. Bitte versuche es in wenigen Sekunden erneut.'
+        })
       }
-      
-      // Save old transaction ID to history before overwriting
+
+      // Save old (failed) transaction ID to history before overwriting
       try {
         const { error: historyError } = await supabaseAdmin.from('payment_wallee_transactions').insert({
           payment_id: payment.id,

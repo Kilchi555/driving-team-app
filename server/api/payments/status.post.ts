@@ -83,14 +83,46 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
         )
       `)
     
-    // ✅ Support both paymentId and transactionId lookup
+    // ✅ Support paymentId and transactionId lookup.
+    // Redirect URLs often pass our payment UUID as transaction_id — try id first,
+    // then fall back to wallee_transaction_id.
+    let payment: any = null
+    let findError: any = null
+
     if (body.paymentId) {
-      query = query.eq('id', body.paymentId)
+      const res = await query.eq('id', body.paymentId).maybeSingle()
+      payment = res.data
+      findError = res.error
     } else if (body.transactionId) {
-      query = query.eq('wallee_transaction_id', body.transactionId)
+      const byId = await query.eq('id', body.transactionId).maybeSingle()
+      if (byId.data) {
+        payment = byId.data
+      } else {
+        // Rebuild query for wallee_transaction_id lookup
+        let walleeQuery = supabase
+          .from('payments')
+          .select(`
+            *,
+            appointments (
+              id,
+              title,
+              start_time,
+              payment_status,
+              is_paid
+            ),
+            users!payments_user_id_fkey (
+              id,
+              first_name,
+              last_name,
+              email
+            )
+          `)
+          .eq('wallee_transaction_id', body.transactionId)
+        const byWallee = await walleeQuery.maybeSingle()
+        payment = byWallee.data
+        findError = byWallee.error
+      }
     }
-    
-    const { data: payment, error: findError } = await query.maybeSingle()
 
     if (findError || !payment) {
       logger.warn('⚠️ Payment not found:', body.paymentId || body.transactionId)
@@ -116,125 +148,141 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
 
     logger.debug('✅ Payment found:', payment.id)
 
-    // 2. Status aktualisieren falls angegeben
+    // 2. Status aktualisieren — never allow forging paid; clients may only release locks
+    let statusMutated = false
+    let appliedStatus: string | undefined
     if (body.status) {
-      const updateData: any = {
-        payment_status: body.status,
-        updated_at: toLocalTimeString(new Date())
-      }
+      const role = authUser.role || ''
+      const isPrivileged = ['admin', 'staff', 'super_admin', 'tenant_admin'].includes(role)
 
-      // Wallee-spezifische Updates
-      if (body.walleeTransactionId) {
-        updateData.wallee_transaction_id = body.walleeTransactionId
-      }
-      
-      if (body.walleeTransactionState) {
-        updateData.wallee_transaction_state = body.walleeTransactionState
-      }
-
-      // Completion timestamp setzen
-      if (body.status === 'completed') {
-        updateData.paid_at = toLocalTimeString(new Date())
-      }
-
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update(updateData)
-        .eq('id', body.paymentId)
-
-      if (updateError) {
-        logger.error('❌ Error updating payment status:', updateError)
+      if (body.status === 'completed' || body.status === 'authorized') {
+        // Completions only via verified Wallee webhooks
         throw createError({
-          statusCode: 500,
-          statusMessage: 'Failed to update payment status'
+          statusCode: 403,
+          statusMessage: 'Completed/authorized status may only be set by verified payment webhooks'
         })
       }
 
-      logger.debug('✅ Payment status updated to:', body.status)
-      
-      // ✅ AUDIT LOG for status change
-      await logAudit({
-        action: 'payment_status_updated',
-        user_id: userData.id,
-        tenant_id: userData.tenant_id,
-        resource_type: 'payment',
-        resource_id: payment.id,
-        status: 'success',
-        details: {
-          previous_status: payment.payment_status,
-          new_status: body.status,
-          transaction_id: body.walleeTransactionId || body.transactionId,
-          transaction_state: body.walleeTransactionState,
-          duration_ms: Date.now() - startTime
-        }
-      })
-    }
-
-    // 3. Appointment Status aktualisieren falls Payment completed
-    if (body.status === 'completed' && payment.appointment_id) {
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .update({
-          payment_status: 'paid',
-          updated_at: toLocalTimeString(new Date())
-        })
-        .eq('id', payment.appointment_id)
-
-      if (appointmentError) {
-        console.warn('⚠️ Could not update appointment:', appointmentError)
-      } else {
-        logger.debug('✅ Appointment marked as paid')
-      }
-
-      // ✅ AFFILIATE REWARD HOOK – trigger after first completed payment
-      if (payment.user_id) {
-        // Fetch driving category from appointment or course
-        let drivingCategory: string | null = null
-        let courseId: string | null = null
-        try {
-          if (payment.appointment_id) {
-            const { data: appt } = await supabase
-              .from('appointments')
-              .select('type')
-              .eq('id', payment.appointment_id)
-              .maybeSingle()
-            drivingCategory = appt?.type ?? null
-          } else if (payment.course_registration_id) {
-            const { data: reg } = await supabase
-              .from('course_registrations')
-              .select('course_id, courses(category)')
-              .eq('id', payment.course_registration_id)
-              .maybeSingle()
-            drivingCategory = (reg as any)?.courses?.category ?? null
-            courseId = (reg as any)?.course_id ?? null
-          }
-        } catch { /* non-fatal */ }
-
-        $fetch('/api/affiliate/process-reward', {
-          method: 'POST',
-          headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
-          body: {
-            appointment_id: payment.appointment_id || undefined,
-            course_registration_id: payment.course_registration_id || undefined,
-            course_id: courseId || undefined,
-            user_id: payment.user_id,
+      if (!isPrivileged) {
+        // After abort/failure redirect: sync with Wallee first — never blind-release
+        // while Confirmed/open (that caused double charges historically).
+        const wantsRelease = ['failed', 'cancelled', 'pending'].includes(body.status)
+        if (!wantsRelease) {
+          logger.warn('🚫 Ignoring client payment status mutation', {
+            userId: userData.id,
+            paymentId: payment.id,
+            currentStatus: payment.payment_status,
+            attemptedStatus: body.status
+          })
+        } else {
+          const { syncAndResolvePayment } = await import('~/server/utils/wallee-payment-sync')
+          const resolved = await syncAndResolvePayment({
+            id: payment.id,
             tenant_id: payment.tenant_id,
-            driving_category: drivingCategory,
+            payment_status: payment.payment_status,
+            wallee_transaction_id: payment.wallee_transaction_id,
+            wallee_space_id: payment.wallee_space_id
+          })
+
+          if (resolved.changed && (resolved.decision === 'release_pending' || resolved.decision === 'no_transaction')) {
+            statusMutated = true
+            appliedStatus = 'pending'
+            logger.info('🔓 Client sync released processing lock → pending', {
+              paymentId: payment.id,
+              walleeState: resolved.walleeState
+            })
+          } else if (resolved.changed && (resolved.decision === 'mark_completed' || resolved.decision === 'mark_authorized')) {
+            statusMutated = true
+            appliedStatus = resolved.newStatus
+            logger.info('✅ Client sync found payment already paid', {
+              paymentId: payment.id,
+              newStatus: resolved.newStatus,
+              walleeState: resolved.walleeState
+            })
+          } else {
+            logger.info('⏳ Client sync kept payment open (no blind release)', {
+              paymentId: payment.id,
+              decision: resolved.decision,
+              walleeState: resolved.walleeState
+            })
           }
-        }).catch((err: any) =>
-          logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
-        )
+
+          if (statusMutated) {
+            await logAudit({
+              action: 'payment_processing_lock_synced',
+              user_id: userData.id,
+              tenant_id: userData.tenant_id,
+              resource_type: 'payment',
+              resource_id: payment.id,
+              status: 'success',
+              details: {
+                previous_status: payment.payment_status,
+                new_status: appliedStatus,
+                decision: resolved.decision,
+                wallee_state: resolved.walleeState,
+                transaction_id: body.walleeTransactionId || body.transactionId,
+                duration_ms: Date.now() - startTime
+              }
+            })
+          }
+        }
+      } else {
+        const updateData: any = {
+          payment_status: body.status,
+          updated_at: toLocalTimeString(new Date())
+        }
+
+        if (body.walleeTransactionId) {
+          updateData.wallee_transaction_id = body.walleeTransactionId
+        }
+
+        if (body.walleeTransactionState) {
+          updateData.wallee_transaction_state = body.walleeTransactionState
+        }
+
+        const { error: updateError } = await supabase
+          .from('payments')
+          .update(updateData)
+          .eq('id', payment.id)
+
+        if (updateError) {
+          logger.error('❌ Error updating payment status:', updateError)
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Failed to update payment status'
+          })
+        }
+
+        statusMutated = true
+        appliedStatus = body.status
+        logger.debug('✅ Payment status updated to:', body.status)
+
+        await logAudit({
+          action: 'payment_status_updated',
+          user_id: userData.id,
+          tenant_id: userData.tenant_id,
+          resource_type: 'payment',
+          resource_id: payment.id,
+          status: 'success',
+          details: {
+            previous_status: payment.payment_status,
+            new_status: body.status,
+            transaction_id: body.walleeTransactionId || body.transactionId,
+            transaction_state: body.walleeTransactionState,
+            duration_ms: Date.now() - startTime
+          }
+        })
       }
     }
 
-    // 4. Status History erstellen (optional)
-    if (body.status) {
+    // 3. Status History — only when a mutation actually occurred
+    if (statusMutated) {
       try {
         const { error: historyError } = await supabase
           .from('payment_status_history')
           .insert({
             payment_id: payment.id,
-            status: body.status,
+            status: appliedStatus || body.status,
             wallee_transaction_state: body.walleeTransactionState,
             metadata: {
               updated_at: new Date().toISOString(),
@@ -251,7 +299,8 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
       }
     }
 
-    // 5. Aktualisierten Payment zurückgeben
+    // 4. Aktualisierten Payment zurückgeben — always use resolved payment.id
+    // (body.paymentId may be absent when looking up by transactionId)
     const { data: updatedPayment, error: refetchError } = await supabase
       .from('payments')
       .select(`
@@ -270,7 +319,7 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
           email
         )
       `)
-      .eq('id', body.paymentId)
+      .eq('id', payment.id)
       .single()
 
     if (refetchError) throw refetchError
@@ -278,7 +327,9 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
     return {
       success: true,
       payment: updatedPayment,
-      message: body.status ? `Payment status updated to ${body.status}` : 'Payment status retrieved'
+      message: statusMutated
+        ? `Payment status updated to ${appliedStatus || body.status}`
+        : 'Payment status retrieved'
     }
 
   } catch (error: any) {
