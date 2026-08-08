@@ -24,6 +24,7 @@ import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wal
 import { z } from 'zod'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
+import { escapeLikePattern } from '~/server/utils/sql-helpers'
 
 const ProcessPublicPaymentSchema = z.object({
   enrollmentId:  z.string().uuid().optional(),
@@ -221,12 +222,13 @@ export default defineEventHandler(async (event) => {
       let discountAmount = 0
       const discountCode = typeof metadata?.discount_code === 'string' ? metadata.discount_code.trim() : ''
       if (discountCode) {
+        const escapedDiscountCode = escapeLikePattern(discountCode)
         let discountRow: any = null
 
         const { data: voucherCode } = await supabase
           .from('voucher_codes')
           .select('*')
-          .ilike('code', discountCode)
+          .ilike('code', escapedDiscountCode)
           .eq('tenant_id', tenantId)
           .eq('is_active', true)
           .maybeSingle()
@@ -237,7 +239,7 @@ export default defineEventHandler(async (event) => {
           const { data: giftCard } = await supabase
             .from('vouchers')
             .select('*')
-            .ilike('code', discountCode)
+            .ilike('code', escapedDiscountCode)
             .eq('tenant_id', tenantId)
             .eq('is_active', true)
             .maybeSingle()
@@ -255,7 +257,7 @@ export default defineEventHandler(async (event) => {
           const { data: discountData } = await supabase
             .from('discounts')
             .select('*')
-            .ilike('code', discountCode)
+            .ilike('code', escapedDiscountCode)
             .eq('tenant_id', tenantId)
             .eq('is_active', true)
             .maybeSingle()
