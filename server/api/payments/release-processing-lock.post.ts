@@ -1,12 +1,13 @@
 // POST /api/payments/release-processing-lock
-// After a cancelled/failed Wallee redirect, release the caller's optimistic
-// processing locks back to pending so "Jetzt bezahlen" is available again.
-// Never marks payments completed — webhook-only for paid status.
+// After a cancelled/failed Wallee redirect: sync with Wallee first, then act.
+// Never blindly release to pending while an open/Confirmed transaction exists —
+// that re-enabled "Jetzt bezahlen" and caused double charges in the past.
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { logAudit } from '~/server/utils/audit'
+import { syncAndResolvePayment } from '~/server/utils/wallee-payment-sync'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -27,10 +28,7 @@ export default defineEventHandler(async (event) => {
 
   let query = supabase
     .from('payments')
-    .update({
-      payment_status: 'pending',
-      updated_at: new Date().toISOString()
-    })
+    .select('id, tenant_id, payment_status, wallee_transaction_id, wallee_space_id')
     .eq('user_id', userId)
     .eq('tenant_id', tenantId)
     .eq('payment_status', 'processing')
@@ -39,34 +37,87 @@ export default defineEventHandler(async (event) => {
     query = query.eq('id', paymentId)
   }
 
-  const { data, error } = await query.select('id')
+  const { data: payments, error } = await query
 
   if (error) {
-    logger.error('❌ release-processing-lock failed:', error)
-    throw createError({ statusCode: 500, statusMessage: 'Failed to release processing lock' })
+    logger.error('❌ release-processing-lock load failed:', error)
+    throw createError({ statusCode: 500, statusMessage: 'Failed to load processing payments' })
   }
 
-  const releasedIds = (data || []).map((p: any) => p.id)
-  if (releasedIds.length > 0) {
-    logger.info('🔓 Released processing locks after payment abort', {
-      userId,
-      count: releasedIds.length,
-      paymentIds: releasedIds
-    })
+  const results: Array<{
+    paymentId: string
+    decision: string
+    newStatus: string
+    walleeState: string | null
+    changed: boolean
+  }> = []
+
+  let released = 0
+  let completed = 0
+  let keptOpen = 0
+
+  for (const payment of payments || []) {
+    try {
+      const resolved = await syncAndResolvePayment(payment)
+      results.push({
+        paymentId: payment.id,
+        decision: resolved.decision,
+        newStatus: resolved.newStatus,
+        walleeState: resolved.walleeState,
+        changed: resolved.changed
+      })
+
+      if (resolved.decision === 'release_pending' || resolved.decision === 'no_transaction') {
+        if (resolved.changed) released++
+      } else if (resolved.decision === 'mark_completed' || resolved.decision === 'mark_authorized') {
+        if (resolved.changed) completed++
+      } else {
+        keptOpen++
+      }
+    } catch (err: any) {
+      logger.warn('⚠️ syncAndResolvePayment failed for', payment.id, err?.message)
+      keptOpen++
+      results.push({
+        paymentId: payment.id,
+        decision: 'unknown',
+        newStatus: payment.payment_status,
+        walleeState: null,
+        changed: false
+      })
+    }
+  }
+
+  if (released + completed > 0) {
     await logAudit({
-      action: 'payment_processing_lock_released',
+      action: 'payment_processing_lock_synced',
       user_id: userId,
       tenant_id: tenantId,
       resource_type: 'payment',
-      resource_id: releasedIds[0],
+      resource_id: results[0]?.paymentId,
       status: 'success',
-      details: { released_ids: releasedIds, source: 'client_abort' }
+      details: {
+        source: 'client_abort_sync',
+        released,
+        completed,
+        kept_open: keptOpen,
+        results
+      }
     }).catch(() => {})
   }
 
+  logger.info('🔓 release-processing-lock sync complete', {
+    userId,
+    released,
+    completed,
+    keptOpen,
+    total: results.length
+  })
+
   return {
     success: true,
-    released: releasedIds.length,
-    paymentIds: releasedIds
+    released,
+    completed,
+    keptOpen,
+    results
   }
 })

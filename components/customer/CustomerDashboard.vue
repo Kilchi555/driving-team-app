@@ -2403,11 +2403,11 @@ onMounted(async () => {
     }
 
     if (paymentFailed) {
-      logger.debug('💳 Payment failed/aborted — releasing processing locks')
+      logger.debug('💳 Payment failed/aborted — syncing processing locks with Wallee')
       try {
         await $fetch('/api/payments/release-processing-lock', { method: 'POST' })
       } catch (err: any) {
-        console.warn('⚠️ Could not release processing lock:', err?.message)
+        console.warn('⚠️ Could not sync processing lock:', err?.message)
       }
     }
     
