@@ -74,6 +74,7 @@ export default defineEventHandler(async (event) => {
         staff_id,
         created_by,
         description,
+        notes,
         tenant_id,
         vehicle_id,
         vehicle_mode,

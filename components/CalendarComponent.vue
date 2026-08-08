@@ -14,6 +14,8 @@ import type { CalendarOptions } from '@fullcalendar/core'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import EventModal from './EventModal.vue'
 import EnhancedStudentModal from './EnhancedStudentModal.vue'
+import CourseSessionRosterModal from './CourseSessionRosterModal.vue'
+import { parseCourseIdFromAppointmentNotes } from '~/utils/course-appointment'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
@@ -269,6 +271,12 @@ interface Props {
 const props = defineProps<Props>()
 
 const isModalVisible = ref(false)
+const isCourseRosterVisible = ref(false)
+const courseRosterAppointmentId = ref<string | null>(null)
+const courseRosterCourseId = ref<string | null>(null)
+const courseRosterTitle = ref<string | null>(null)
+const courseRosterStart = ref<string | null>(null)
+const courseRosterEnd = ref<string | null>(null)
 const modalEventData = ref<any>(null)
 const modalMode = ref<'view' | 'edit' | 'create'>('create')
 
@@ -1197,6 +1205,8 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
           vehicle_id: (apt as any).vehicle_id ?? null,
           vehicle_mode: (apt as any).vehicle_mode ?? null,
           room_id: (apt as any).room_id ?? null,
+          notes: (apt as any).notes || null,
+          courseId: parseCourseIdFromAppointmentNotes((apt as any).notes) || null,
         }
       }
       
@@ -1917,9 +1927,21 @@ eventClick: (clickInfo) => {
     // Type Assertion verwenden
     const extendedProps = appointmentData?.extendedProps as any
 
-    // Course appointments are managed through the courses page — skip EventModal
+    // Course appointments → roster modal (participants + PDF)
     if (extendedProps?.eventType === 'course' || (appointmentData as any)?.event_type_code === 'course') {
-      showToast('📅 Kurs-Termin – in der Kursverwaltung bearbeiten')
+      const notes = extendedProps?.notes || (appointmentData as any)?.notes || ''
+      courseRosterAppointmentId.value = String(appointmentData.id)
+      courseRosterCourseId.value = parseCourseIdFromAppointmentNotes(notes) || extendedProps?.courseId || null
+      courseRosterTitle.value = clickInfo.event.title || appointmentData.title || null
+      const startDate = clickInfo.event.start
+      const endDate = clickInfo.event.end
+      courseRosterStart.value = startDate instanceof Date
+        ? startDate.toISOString()
+        : ((appointmentData as any).start || null)
+      courseRosterEnd.value = endDate instanceof Date
+        ? endDate.toISOString()
+        : ((appointmentData as any).end || null)
+      isCourseRosterVisible.value = true
       return
     }
     
@@ -2818,6 +2840,16 @@ defineExpose({
   @appointment-updated="refreshCalendar"   
   @appointment-deleted="refreshCalendar"
 />
+
+  <CourseSessionRosterModal
+    :is-visible="isCourseRosterVisible"
+    :appointment-id="courseRosterAppointmentId"
+    :course-id="courseRosterCourseId"
+    :appointment-title="courseRosterTitle"
+    :appointment-start="courseRosterStart"
+    :appointment-end="courseRosterEnd"
+    @close="isCourseRosterVisible = false"
+  />
 
   <!-- Confirmation Dialog -->
   <ConfirmationDialog
