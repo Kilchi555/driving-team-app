@@ -4,6 +4,8 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { STAFF_ADMIN_ROLES } from '~/server/utils/require-staff-or-internal'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -57,7 +59,7 @@ export default defineEventHandler(async (event) => {
     // Verify user exists and belongs to the provided tenant
     const { data: user, error: userError } = await serviceSupabase
       .from('users')
-      .select('id, tenant_id')
+      .select('id, tenant_id, created_at, onboarding_status, auth_user_id')
       .eq('id', userId)
       .single()
 
@@ -75,6 +77,32 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 403,
         statusMessage: 'Zugriff verweigert: Tenant-Isolation verletzt'
+      })
+    }
+
+    // Authz: staff/admin in tenant, owner, OR freshly registered user (≤30min, onboarding not done)
+    const authUser = await getAuthenticatedUser(event).catch(() => null)
+    const role = authUser?.role || ''
+    const isPrivileged = (STAFF_ADMIN_ROLES as readonly string[]).includes(role)
+    const isOwner =
+      !!authUser?.db_user_id && authUser.db_user_id === userId
+
+    let allowRegistrationWindow = false
+    if (!authUser) {
+      const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0
+      const ageMs = Date.now() - createdAt
+      const onboardingOpen = !user.onboarding_status || ['pending', 'pending_documents', 'incomplete'].includes(user.onboarding_status)
+      allowRegistrationWindow = ageMs >= 0 && ageMs <= 30 * 60 * 1000 && onboardingOpen
+    }
+
+    if (isPrivileged) {
+      if (role !== 'super_admin' && authUser?.tenant_id && authUser.tenant_id !== user.tenant_id) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
+      }
+    } else if (!isOwner && !allowRegistrationWindow) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Authentication required'
       })
     }
 

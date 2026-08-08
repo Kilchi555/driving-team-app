@@ -4,12 +4,30 @@
  */
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendConsentEmail } from '~/server/utils/send-consent-email'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
+
   const { tenantId, email, first_name, last_name, phone, categories, notes } = await readBody(event)
 
-  if (!tenantId || !email) {
-    throw createError({ statusCode: 400, statusMessage: 'tenantId and email required' })
+  if (!email) {
+    throw createError({ statusCode: 400, statusMessage: 'email required' })
+  }
+
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenantId ? tenantId : profile.tenant_id
+
+  if (!effectiveTenantId) {
+    throw createError({ statusCode: 400, statusMessage: 'tenantId required' })
+  }
+
+  if (
+    profile.role !== 'super_admin' &&
+    tenantId &&
+    tenantId !== profile.tenant_id
+  ) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
   }
 
   const supabase = getSupabaseAdmin()
@@ -19,7 +37,7 @@ export default defineEventHandler(async (event) => {
       .from('leads')
       .upsert(
         {
-          tenant_id: tenantId,
+          tenant_id: effectiveTenantId,
           email: email.toLowerCase().trim(),
           first_name: first_name?.trim() || null,
           last_name: last_name?.trim() || null,
@@ -36,7 +54,7 @@ export default defineEventHandler(async (event) => {
     supabase
       .from('tenants')
       .select('name, primary_color')
-      .eq('id', tenantId)
+      .eq('id', effectiveTenantId)
       .single(),
   ])
 
@@ -49,7 +67,7 @@ export default defineEventHandler(async (event) => {
       token: lead.unsubscribe_token,
       email: lead.email,
       firstName: lead.first_name,
-      tenantId,
+      tenantId: effectiveTenantId,
       tenantName: tenant?.name || 'Unternehmen',
       primaryColor: tenant?.primary_color || '#1e293b',
     })
@@ -57,5 +75,6 @@ export default defineEventHandler(async (event) => {
     console.error('Consent email failed:', e)
   }
 
+  // Never return unsubscribe_token to the client
   return { success: true, lead: { id: lead.id, email: lead.email, status: lead.status } }
 })

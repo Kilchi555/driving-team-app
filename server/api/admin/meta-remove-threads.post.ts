@@ -1,16 +1,12 @@
 /**
  * Removes Threads from all ad set placements in the Meta ad account.
  *
- * For each ad set:
- *  - If publisher_platforms is set and includes 'threads' → remove it
- *  - If publisher_platforms is not set (Advantage+ / automatic) → explicitly
- *    set all platforms except 'threads' so Meta keeps the rest unchanged
- *
  * POST /api/admin/meta-remove-threads
  * Body: { dry_run?: boolean }
  */
 
 import { metaGet, metaPost, getMetaCredentials } from '~/server/utils/meta-ads-api'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 
 const ALL_PLATFORMS_EXCEPT_THREADS = ['facebook', 'instagram', 'audience_network', 'messenger']
 
@@ -22,6 +18,16 @@ const DEFAULT_POSITIONS: Record<string, string[]> = {
 }
 
 export default defineEventHandler(async (event) => {
+  // Platform-level Meta tooling — admin / super_admin only (no tenant required)
+  const authUser = await getAuthenticatedUser(event)
+  if (!authUser) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+  const role = authUser.role || authUser.profile?.role || ''
+  if (!['admin', 'super_admin'].includes(role)) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – insufficient role' })
+  }
+
   const body = await readBody(event).catch(() => ({}))
   const dryRun: boolean = body?.dry_run ?? false
 

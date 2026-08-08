@@ -4,6 +4,8 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { STAFF_ADMIN_ROLES } from '~/server/utils/require-staff-or-internal'
 
 interface DocumentFile {
   id: string
@@ -21,6 +23,11 @@ interface DocumentFile {
 
 export default defineEventHandler(async (event) => {
   try {
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser?.id) {
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    }
+
     const query = getQuery(event)
     const userId = query.userId as string
     const tenantId = query.tenantId as string
@@ -32,7 +39,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    logger.debug('📂 Listing documents for user:', userId)
+    const role = authUser.role || ''
+    const isPrivileged = (STAFF_ADMIN_ROLES as readonly string[]).includes(role)
+    const callerDbId = authUser.db_user_id || authUser.profile?.id
+    const callerTenant = authUser.tenant_id || authUser.profile?.tenant_id
+
+    if (!isPrivileged && callerDbId !== userId) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden – can only list your own documents'
+      })
+    }
 
     const supabaseUrl = process.env.SUPABASE_URL!
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -46,9 +63,26 @@ export default defineEventHandler(async (event) => {
 
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
+    // Staff may only list documents for users in their tenant
+    if (isPrivileged && role !== 'super_admin') {
+      const { data: targetUser } = await supabase
+        .from('users')
+        .select('id, tenant_id')
+        .eq('id', userId)
+        .maybeSingle()
+      if (!targetUser || targetUser.tenant_id !== callerTenant) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Forbidden – user not in your tenant'
+        })
+      }
+    }
+
+    logger.debug('📂 Listing documents for user:', userId)
+
     // List all files in user-documents/{userId}/ folder
     logger.debug(`📂 Listing files in bucket 'user-documents' folder '${userId}/'`)
-    
+
     const { data: files, error: listError } = await supabase.storage
       .from('user-documents')
       .list(userId, {

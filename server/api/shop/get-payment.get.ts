@@ -1,13 +1,53 @@
 // server/api/shop/get-payment.get.ts
-// Public endpoint to check payment status after checkout.
-// Uses the admin client so guest users (no session) can also read their payment.
-// Only returns non-sensitive fields; the caller must supply the payment UUID
-// or wallee_transaction_id that was embedded in the success redirect URL.
+// Public success-page helper. Callers must supply payment_id / transaction_id from
+// the checkout redirect (capability URL). Voucher codes are only returned for
+// completed payments and never for pending/failed states.
 
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { validateUUID } from '~/server/utils/validators'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { STAFF_ADMIN_ROLES } from '~/server/utils/require-staff-or-internal'
+
+function sanitizePayment(row: any) {
+  return {
+    id: row.id,
+    payment_status: row.payment_status,
+    total_amount_rappen: row.total_amount_rappen,
+    tenant_id: row.tenant_id,
+    wallee_transaction_id: row.wallee_transaction_id,
+    // Only expose product flags needed by the success page — never raw PII blobs
+    metadata: row.metadata
+      ? {
+          products: Array.isArray(row.metadata?.products)
+            ? row.metadata.products.map((p: any) => ({
+                is_voucher: !!p?.is_voucher,
+                name: p?.name || null,
+                quantity: p?.quantity || null,
+              }))
+            : undefined,
+        }
+      : null,
+  }
+}
+
+function sanitizeVouchers(vouchers: any[], includeFullCode: boolean) {
+  return (vouchers || []).map((v) => ({
+    id: v.id,
+    name: v.name,
+    description: v.description,
+    amount_rappen: v.amount_rappen,
+    recipient_name: v.recipient_name,
+    valid_until: v.valid_until,
+    tenant_id: v.tenant_id,
+    code: includeFullCode
+      ? v.code
+      : v.code
+        ? `${String(v.code).slice(0, 2)}••••${String(v.code).slice(-4)}`
+        : null,
+  }))
+}
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -21,10 +61,9 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // ── 1. Look in payments table (regular shop/booking payments) ──────────
     let dbQuery = supabase
       .from('payments')
-      .select('id, payment_status, total_amount_rappen, metadata, tenant_id, wallee_transaction_id')
+      .select('id, payment_status, total_amount_rappen, metadata, tenant_id, wallee_transaction_id, user_id')
 
     if (paymentId && validateUUID(paymentId)) {
       dbQuery = dbQuery.eq('id', paymentId)
@@ -39,14 +78,29 @@ export default defineEventHandler(async (event) => {
     const { data, error } = await dbQuery.maybeSingle()
 
     if (data) {
-      const { data: voucherData } = await supabase
-        .from('vouchers')
-        .select('id, code, name, description, amount_rappen, recipient_name, valid_until, tenant_id')
-        .eq('payment_id', data.id)
-      return { data, vouchers: voucherData || [] }
+      const authUser = await getAuthenticatedUser(event).catch(() => null)
+      const role = authUser?.role || ''
+      const isPrivileged = (STAFF_ADMIN_ROLES as readonly string[]).includes(role)
+      const isOwner =
+        !!authUser?.db_user_id && data.user_id && authUser.db_user_id === data.user_id
+
+      const paid = ['completed', 'authorized'].includes(data.payment_status || '')
+      // Full voucher codes only for paid payments (success page) or staff/owner.
+      // Pending payments never expose redeemable codes.
+      const includeFullCode = paid || isPrivileged || isOwner
+
+      let vouchers: any[] = []
+      if (paid || isPrivileged || isOwner) {
+        const { data: voucherData } = await supabase
+          .from('vouchers')
+          .select('id, code, name, description, amount_rappen, recipient_name, valid_until, tenant_id')
+          .eq('payment_id', data.id)
+        vouchers = sanitizeVouchers(voucherData || [], includeFullCode && paid)
+      }
+
+      return { data: sanitizePayment(data), vouchers }
     }
 
-    // ── 2. Fallback: look in product_sales table (staff POS sales) ─────────
     const saleId = paymentId || transactionId
     if (saleId && validateUUID(saleId)) {
       const { data: saleData } = await supabase
@@ -56,14 +110,18 @@ export default defineEventHandler(async (event) => {
         .maybeSingle()
 
       if (saleData) {
-        // Map product_sale fields to the shape the success page expects
         const mapped = {
           id: saleData.id,
-          payment_status: saleData.status === 'completed' ? 'completed' : saleData.status === 'pending' ? 'pending' : 'failed',
+          payment_status:
+            saleData.status === 'completed'
+              ? 'completed'
+              : saleData.status === 'pending'
+                ? 'pending'
+                : 'failed',
           total_amount_rappen: saleData.total_amount_rappen,
           tenant_id: saleData.tenant_id,
           metadata: null,
-          wallee_transaction_id: null
+          wallee_transaction_id: null,
         }
         return { data: mapped, vouchers: [] }
       }
