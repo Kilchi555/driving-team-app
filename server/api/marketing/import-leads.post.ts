@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 interface LeadRow {
   email: string
@@ -12,11 +13,18 @@ function isValidEmail(email: string): boolean {
 }
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
   const body = await readBody(event)
   const { tenantId, createdBy, leads, sourceLabel, defaultCategories = [] } = body
 
-  if (!tenantId || !leads || !Array.isArray(leads)) {
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenantId ? tenantId : profile.tenant_id
+
+  if (!effectiveTenantId || !leads || !Array.isArray(leads)) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId and leads array are required' })
+  }
+  if (profile.role !== 'super_admin' && tenantId && tenantId !== profile.tenant_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
   }
 
   if (leads.length > 10000) {
@@ -29,7 +37,7 @@ export default defineEventHandler(async (event) => {
   const { data: job, error: jobError } = await supabase
     .from('lead_import_jobs')
     .insert({
-      tenant_id: tenantId,
+      tenant_id: effectiveTenantId,
       source_label: sourceLabel || 'CSV Import',
       status: 'processing',
       total_rows: leads.length,
@@ -56,7 +64,7 @@ export default defineEventHandler(async (event) => {
     }
 
     validRows.push({
-      tenant_id: tenantId,
+      tenant_id: effectiveTenantId,
       email,
       first_name: lead.first_name?.trim() || null,
       last_name: lead.last_name?.trim() || null,

@@ -9,8 +9,10 @@ import { sendTenantSMS, generateAppointmentDeletedSMS } from '~/server/utils/sms
 import { logger } from '~/utils/logger'
 import { sendPushToUser } from '~/server/utils/push'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
 
 export default defineEventHandler(async (event) => {
+  await requireStaffOrInternal(event)
   try {
     const body = await readBody(event)
     const { appointmentId, userId, staffId, tenantId, type } = body

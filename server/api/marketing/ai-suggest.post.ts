@@ -1,21 +1,29 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getTerminologyDefaults } from '~/composables/useTerminology'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 const client = new Anthropic()
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
   const { tenantId, topic, categories, tenantName, offerContext } = await readBody(event)
 
-  if (!tenantId || !topic) {
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenantId ? tenantId : profile.tenant_id
+
+  if (!effectiveTenantId || !topic) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId and topic are required' })
+  }
+  if (profile.role !== 'super_admin' && tenantId && tenantId !== profile.tenant_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
   }
 
   const supabase = getSupabaseAdmin()
   const { data: tenant } = await supabase
     .from('tenants')
     .select('name, business_type')
-    .eq('id', tenantId)
+    .eq('id', effectiveTenantId)
     .single()
 
   const terms = getTerminologyDefaults(tenant?.business_type)

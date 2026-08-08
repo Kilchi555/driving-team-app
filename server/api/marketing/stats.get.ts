@@ -1,9 +1,16 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
   const { tenantId } = getQuery(event) as { tenantId: string }
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenantId ? tenantId : profile.tenant_id
 
-  if (!tenantId) throw createError({ statusCode: 400, statusMessage: 'tenantId is required' })
+  if (!effectiveTenantId) throw createError({ statusCode: 400, statusMessage: 'tenantId is required' })
+  if (profile.role !== 'super_admin' && tenantId && tenantId !== profile.tenant_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
+  }
 
   const supabase = getSupabaseAdmin()
 
@@ -11,13 +18,13 @@ export default defineEventHandler(async (event) => {
     totalRes, activeRes, pendingRes, unsubRes, bouncedRes,
     campaignsRes, templatesRes,
   ] = await Promise.all([
-    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'active'),
-    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'pending_consent'),
-    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'unsubscribed'),
-    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'bounced'),
-    supabase.from('email_campaigns').select('status, sent_count, bounce_count, unsubscribe_count, open_count, click_count').eq('tenant_id', tenantId),
-    supabase.from('email_templates').select('id', { count: 'exact', head: true }).eq('tenant_id', tenantId),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', effectiveTenantId),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', effectiveTenantId).eq('status', 'active'),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', effectiveTenantId).eq('status', 'pending_consent'),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', effectiveTenantId).eq('status', 'unsubscribed'),
+    supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', effectiveTenantId).eq('status', 'bounced'),
+    supabase.from('email_campaigns').select('status, sent_count, bounce_count, unsubscribe_count, open_count, click_count').eq('tenant_id', effectiveTenantId),
+    supabase.from('email_templates').select('id', { count: 'exact', head: true }).eq('tenant_id', effectiveTenantId),
   ])
 
   const campaigns = campaignsRes.data ?? []

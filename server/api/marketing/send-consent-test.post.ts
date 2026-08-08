@@ -5,12 +5,20 @@
  */
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendConsentEmail } from '~/server/utils/send-consent-email'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
   const { tenantId, email } = await readBody(event)
 
-  if (!tenantId || !email) {
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenantId ? tenantId : profile.tenant_id
+
+  if (!effectiveTenantId || !email) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId and email required' })
+  }
+  if (profile.role !== 'super_admin' && tenantId && tenantId !== profile.tenant_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
   }
 
   const supabase = getSupabaseAdmin()
@@ -19,7 +27,7 @@ export default defineEventHandler(async (event) => {
   const { data: existing } = await supabase
     .from('leads')
     .select('id, unsubscribe_token, status, first_name')
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', effectiveTenantId)
     .eq('email', email.toLowerCase())
     .maybeSingle()
 
@@ -38,7 +46,7 @@ export default defineEventHandler(async (event) => {
     const { data: newLead, error } = await supabase
       .from('leads')
       .insert({
-        tenant_id: tenantId,
+        tenant_id: effectiveTenantId,
         email: email.toLowerCase(),
         categories: [],
         status: 'pending_consent',
@@ -61,7 +69,7 @@ export default defineEventHandler(async (event) => {
     token,
     email,
     firstName: existing?.first_name ?? null,
-    tenantId,
+    tenantId: effectiveTenantId,
     tenantName: '',   // sendConsentEmail fetches from DB
     primaryColor: '', // sendConsentEmail fetches from DB
   })

@@ -3,6 +3,7 @@
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
@@ -110,6 +111,7 @@ export default defineEventHandler(async (event) => {
       try {
         await $fetch('/api/email/send-withdrawal-notification', {
           method: 'POST',
+              headers: internalSecretHeaders(),
           body: {
             type: 'withdrawal_completed',
             email: u.email,

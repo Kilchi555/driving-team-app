@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
 import {
   validateAppointmentData,
@@ -799,6 +800,7 @@ export default defineEventHandler(async (event) => {
           try {
             await $fetch('/api/reminders/send-appointment-confirmation', {
               method: 'POST',
+              headers: internalSecretHeaders(),
               body: { appointmentId: result.id, userId: appointmentData.user_id, tenantId: appointmentData.tenant_id }
             })
           } catch (err: any) {
@@ -809,6 +811,7 @@ export default defineEventHandler(async (event) => {
           // Fallback: send email anyway
           $fetch('/api/reminders/send-appointment-confirmation', {
             method: 'POST',
+              headers: internalSecretHeaders(),
             body: { appointmentId: result.id, userId: appointmentData.user_id, tenantId: appointmentData.tenant_id }
           }).catch((emailErr: any) => {
             logger.warn('⚠️ Confirmation email fallback failed:', emailErr.message)
@@ -820,6 +823,7 @@ export default defineEventHandler(async (event) => {
           try {
             await $fetch('/api/reminders/send-appointment-confirmation', {
               method: 'POST',
+              headers: internalSecretHeaders(),
               body: { appointmentId: result.id, userId: appointmentData.user_id, tenantId: appointmentData.tenant_id }
             })
           } catch (err: any) {

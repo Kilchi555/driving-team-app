@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { checkPasswordPwned } from '~/server/utils/hibp-checker'
@@ -446,6 +447,7 @@ export default defineEventHandler(async (event) => {
           try {
             await $fetch('/api/reminders/send-payment-confirmation', {
               method: 'POST',
+              headers: internalSecretHeaders(),
               body: {
                 paymentId: payment.id,
                 userId: user.id,
@@ -483,6 +485,7 @@ export default defineEventHandler(async (event) => {
         try {
           await $fetch('/api/reminders/send-appointment-confirmation', {
             method: 'POST',
+              headers: internalSecretHeaders(),
             // Staff were already notified immediately at booking time — this backfill call
             // exists purely to send the customer confirmation that was held back while
             // onboarding was pending. Don't notify staff a second time.

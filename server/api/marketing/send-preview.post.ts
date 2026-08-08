@@ -7,27 +7,43 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { renderTemplate, buildUnsubscribeLink, buildConsentLink, wrapMarketingEmail } from '~/server/utils/email-template'
 import { mergeOfferVars, resolveOfferTemplateVars } from '~/server/utils/marketing-offer-vars'
 import { sendEmail } from '~/server/utils/email'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
+
   const body = await readBody(event)
   const { to, subject, html, campaignId, tenantId } = body
 
   if (!to) throw createError({ statusCode: 400, statusMessage: 'to is required' })
 
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenantId ? tenantId : profile.tenant_id
+
+  if (
+    profile.role !== 'super_admin' &&
+    tenantId &&
+    tenantId !== profile.tenant_id
+  ) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
+  }
+
   // Mode B: render from campaign
-  if (campaignId && tenantId) {
+  if (campaignId) {
+    if (!effectiveTenantId) {
+      throw createError({ statusCode: 400, statusMessage: 'tenantId is required' })
+    }
     const supabase = getSupabaseAdmin()
 
     const { data: campaign } = await supabase
       .from('email_campaigns')
       .select('*, email_templates:email_templates!template_id(*)')
       .eq('id', campaignId)
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', effectiveTenantId)
       .single()
 
     if (!campaign) throw createError({ statusCode: 404, statusMessage: 'Campaign not found' })
 
-    // Load variants (new system) or fall back to single template
     const { data: variantRows } = await supabase
       .from('email_campaign_variants')
       .select('*, email_templates(*)')
@@ -41,11 +57,11 @@ export default defineEventHandler(async (event) => {
     const { data: tenant } = await supabase
       .from('tenants')
       .select('name, slug, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url, business_type')
-      .eq('id', tenantId)
+      .eq('id', effectiveTenantId)
       .single()
 
     const { getTenantTerminology } = await import('~/server/utils/tenant-terminology')
-    const terms = await getTenantTerminology(supabase, tenantId)
+    const terms = await getTenantTerminology(supabase, effectiveTenantId)
     const tenantName = tenant?.name ?? terms.businessNoun
     const tenantSlug = tenant?.slug ?? ''
     const primaryColor = tenant?.primary_color || '#1e293b'
@@ -57,7 +73,7 @@ export default defineEventHandler(async (event) => {
     const consentLink = buildConsentLink(baseUrl, fakeLeadId, fakeToken)
 
     const offerVars = await resolveOfferTemplateVars(supabase, {
-      tenantId,
+      tenantId: effectiveTenantId,
       tenantSlug,
       baseUrl,
       segmentFilter: (campaign as any).segment_filter,
@@ -85,12 +101,12 @@ export default defineEventHandler(async (event) => {
       )
       const labelSuffix = templates.length > 1 ? ` - Variante ${label.toUpperCase()}` : ''
       const previewSubject = `[TEST${labelSuffix}] ${baseSubject}`
-      const html = wrapMarketingEmail(
+      const htmlOut = wrapMarketingEmail(
         rendered, tenantName, unsubscribeLink, primaryColor,
         tenant?.logo_wide_url || tenant?.logo_url || null, tenant?.logo_square_url || null,
-        null, tenantId,
+        null, effectiveTenantId,
       )
-      return { subject: previewSubject, html }
+      return { subject: previewSubject, html: htmlOut }
     }
 
     const previews = templates.map(t => buildPreview(t.template, t.label, t.subjectOverride))
@@ -109,7 +125,6 @@ export default defineEventHandler(async (event) => {
     return { success: true, sent: previews.length, variants: previews.map((p, i) => ({ subject: p.subject, messageId: results[i].messageId })) }
   }
 
-  // Mode A: raw HTML
   if (!subject || !html) throw createError({ statusCode: 400, statusMessage: 'subject and html are required for raw mode' })
 
   const result = await sendEmail({ to, subject, html, fromName: 'Ihr Unternehmen' })

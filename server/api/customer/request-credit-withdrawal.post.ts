@@ -8,6 +8,7 @@
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
@@ -154,6 +155,7 @@ export default defineEventHandler(async (event) => {
         try {
           await $fetch('/api/email/send-withdrawal-notification', {
             method: 'POST',
+              headers: internalSecretHeaders(),
             body: {
               type: 'withdrawal_completed',
               email: userProfile.email,
@@ -248,6 +250,7 @@ export default defineEventHandler(async (event) => {
     try {
       await $fetch('/api/email/send-withdrawal-notification', {
         method: 'POST',
+              headers: internalSecretHeaders(),
         body: {
           type: 'withdrawal_requested',
           email: userProfile.email,
@@ -263,6 +266,7 @@ export default defineEventHandler(async (event) => {
     try {
       await $fetch('/api/email/send-withdrawal-notification', {
         method: 'POST',
+              headers: internalSecretHeaders(),
         body: {
           type: 'admin_new_withdrawal',
           tenantId: userProfile.tenant_id,

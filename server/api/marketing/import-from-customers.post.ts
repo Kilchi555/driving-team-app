@@ -5,12 +5,20 @@
  * into the leads table. Does NOT send any consent emails.
  */
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
   const { tenantId, categories = [] } = await readBody(event)
 
-  if (!tenantId) {
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenantId ? tenantId : profile.tenant_id
+
+  if (!effectiveTenantId) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId required' })
+  }
+  if (profile.role !== 'super_admin' && tenantId && tenantId !== profile.tenant_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
   }
 
   const supabase = getSupabaseAdmin()
@@ -24,7 +32,7 @@ export default defineEventHandler(async (event) => {
     const { data, error } = await supabase
       .from('imported_customers')
       .select('raw_json')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', effectiveTenantId)
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
     if (error) throw createError({ statusCode: 500, statusMessage: error.message })
@@ -54,7 +62,7 @@ export default defineEventHandler(async (event) => {
     const last_name = parts.length > 1 ? parts.slice(1).join(' ') : null
     const first_name = parts[0] || null
     return {
-      tenant_id: tenantId,
+      tenant_id: effectiveTenantId,
       email,
       first_name,
       last_name,

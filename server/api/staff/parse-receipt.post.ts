@@ -14,10 +14,33 @@ export interface ReceiptParseResult {
 export default defineEventHandler(async (event) => {
   const user = await getAuthenticatedUser(event)
   if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  const role = user.role || user.profile?.role || ''
+  if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(role)) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – staff role required' })
+  }
 
   const { receipt_url } = await readBody<{ receipt_url: string }>(event)
   if (!receipt_url) {
     throw createError({ statusCode: 400, statusMessage: 'receipt_url is required' })
+  }
+
+  // SSRF guard: only allow http(s) URLs to known storage hosts
+  let parsedUrl: URL
+  try {
+    parsedUrl = new URL(receipt_url)
+  } catch {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid receipt_url' })
+  }
+  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+    throw createError({ statusCode: 400, statusMessage: 'receipt_url must be http(s)' })
+  }
+  const allowedHosts = [
+    'unyjaetebnaexaflpyoc.supabase.co',
+    new URL(process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co').host,
+  ].filter(Boolean)
+  const hostOk = allowedHosts.some((h) => parsedUrl.host === h || parsedUrl.host.endsWith('.supabase.co'))
+  if (!hostOk) {
+    throw createError({ statusCode: 400, statusMessage: 'receipt_url host not allowed' })
   }
 
   const apiKey = process.env.NUXT_OPENAI_API_KEY || process.env.OPENAI_API_KEY
@@ -31,10 +54,16 @@ export default defineEventHandler(async (event) => {
   // regardless of whether the Supabase bucket is publicly readable.
   let imageContent: { type: 'image_url'; image_url: { url: string; detail: 'low' } }
   try {
-    const imgRes = await fetch(receipt_url)
+    const imgRes = await fetch(parsedUrl.toString(), {
+      redirect: 'error',
+      signal: AbortSignal.timeout(10000),
+    })
     if (!imgRes.ok) throw new Error(`HTTP ${imgRes.status}`)
     const contentType = imgRes.headers.get('content-type') || 'image/jpeg'
     const buffer = await imgRes.arrayBuffer()
+    if (buffer.byteLength > 8 * 1024 * 1024) {
+      throw createError({ statusCode: 400, statusMessage: 'Receipt image too large' })
+    }
     const base64 = Buffer.from(buffer).toString('base64')
     const mimeType = contentType.split(';')[0].trim()
     // For PDFs, OpenAI Vision doesn't support them — skip and return empty result
@@ -43,6 +72,7 @@ export default defineEventHandler(async (event) => {
     }
     imageContent = { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'low' } }
   } catch (fetchErr: any) {
+    if (fetchErr?.statusCode) throw fetchErr
     throw createError({ statusCode: 502, statusMessage: `Could not fetch receipt image: ${fetchErr.message}` })
   }
 

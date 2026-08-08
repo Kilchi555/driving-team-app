@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { computeNextRunAt, type ScheduleFrequency } from '~/server/utils/campaign-schedule'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 interface VariantInput {
   templateId: string
@@ -19,6 +20,8 @@ interface ScheduleInput {
 }
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
+
   const body = await readBody(event)
   const { tenantId, createdBy, name, subject_override, segment_filter = {}, variants, schedule } = body as {
     tenantId?: string
@@ -30,8 +33,19 @@ export default defineEventHandler(async (event) => {
     schedule?: ScheduleInput
   }
 
-  if (!tenantId || !name) {
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenantId ? tenantId : profile.tenant_id
+
+  if (!effectiveTenantId || !name) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId and name are required' })
+  }
+
+  if (
+    profile.role !== 'super_admin' &&
+    tenantId &&
+    tenantId !== profile.tenant_id
+  ) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
   }
 
   const variantList: VariantInput[] = Array.isArray(variants) && variants.length > 0
@@ -63,8 +77,8 @@ export default defineEventHandler(async (event) => {
     : 30
 
   const insertRow: Record<string, any> = {
-    tenant_id: tenantId,
-    created_by: createdBy || null,
+    tenant_id: effectiveTenantId,
+    created_by: createdBy || profile.id || null,
     name,
     template_id: primaryTemplateId,
     subject_override: subject_override || null,
