@@ -1,18 +1,35 @@
 import { createClient } from '@supabase/supabase-js'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   try {
+    const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
+
     const body = await readBody(event)
     const { email, first_name, last_name, tenant_id } = body
 
-    if (!email || !first_name || !last_name || !tenant_id) {
+    if (!email || !first_name || !last_name) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Missing required fields'
       })
     }
 
-    // Create Supabase admin client
+    const effectiveTenantId =
+      profile.role === 'super_admin' && tenant_id ? tenant_id : profile.tenant_id
+
+    if (!effectiveTenantId) {
+      throw createError({ statusCode: 400, statusMessage: 'tenant_id is required' })
+    }
+
+    if (
+      profile.role !== 'super_admin' &&
+      tenant_id &&
+      tenant_id !== profile.tenant_id
+    ) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
+    }
+
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -30,12 +47,11 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // Check if user already exists
     const { data: existingUser } = await supabase
       .from('users')
       .select('id, email')
       .eq('email', email)
-      .eq('tenant_id', tenant_id)
+      .eq('tenant_id', effectiveTenantId)
       .single()
 
     if (existingUser) {
@@ -45,7 +61,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Create auth user
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       email_confirm: true,
@@ -63,7 +78,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Create user profile
     const { data: userData, error: userError } = await supabase
       .from('users')
       .insert({
@@ -72,14 +86,13 @@ export default defineEventHandler(async (event) => {
         last_name,
         email,
         role: 'externer_instruktor',
-        tenant_id,
+        tenant_id: effectiveTenantId,
         is_active: true
       })
-      .select()
+      .select('id, email, first_name, last_name, role, tenant_id, is_active')
       .single()
 
     if (userError) {
-      // Clean up auth user if profile creation fails
       await supabase.auth.admin.deleteUser(authData.user.id)
       throw createError({
         statusCode: 400,
@@ -87,7 +100,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Send invitation email
     const { error: inviteError } = await supabase.auth.admin.generateLink({
       type: 'invite',
       email,
@@ -102,20 +114,13 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      user: userData,
-      message: 'External instructor created and invitation sent'
+      user: userData
     }
-
   } catch (error: any) {
-    console.error('Error creating external instructor:', error)
-    
-    if (error.statusCode) {
-      throw error
-    }
-    
+    if (error?.statusCode) throw error
     throw createError({
       statusCode: 500,
-      statusMessage: 'Internal server error'
+      statusMessage: error.message || 'Failed to invite instructor'
     })
   }
 })

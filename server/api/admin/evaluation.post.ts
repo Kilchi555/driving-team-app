@@ -4,10 +4,18 @@
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
+import { requireAdminProfile } from '~/server/utils/auth'
+
+const SAFE_TENANT_FIELDS =
+  'id, name, slug, primary_color, secondary_color, logo_url, logo_wide_url, logo_square_url, business_type'
+const SAFE_USER_FIELDS =
+  'id, first_name, last_name, email, phone, role, tenant_id, category, is_active, created_at'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
+
   const body = await readBody(event)
-  const { 
+  const {
     action,
     tenant_id,
     user_id,
@@ -15,6 +23,17 @@ export default defineEventHandler(async (event) => {
     criteria_data,
     scale_data
   } = body
+
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenant_id ? tenant_id : profile.tenant_id
+
+  if (
+    profile.role !== 'super_admin' &&
+    tenant_id &&
+    tenant_id !== profile.tenant_id
+  ) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
+  }
 
   const supabase = createClient(
     process.env.SUPABASE_URL || '',
@@ -30,15 +49,14 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-evaluation-categories') {
-      // Get all evaluation categories for tenant (tenant-specific + global defaults)
-      if (!tenant_id) {
+      if (!effectiveTenantId) {
         return { success: true, data: [] }
       }
-      
+
       const { data, error } = await supabase
         .from('evaluation_categories')
-        .select('*')
-        .or(`tenant_id.eq.${tenant_id},tenant_id.is.null`)
+        .select('id, tenant_id, name, description, display_order, category_code, is_active, created_at')
+        .or(`tenant_id.eq.${effectiveTenantId},tenant_id.is.null`)
         .order('display_order', { ascending: true })
 
       if (error) throw error
@@ -46,10 +64,13 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'create-evaluation-category') {
-      // Create new evaluation category
+      const payload = {
+        ...(category_data || {}),
+        tenant_id: effectiveTenantId,
+      }
       const { data, error } = await supabase
         .from('evaluation_categories')
-        .insert([category_data])
+        .insert([payload])
         .select()
         .single()
 
@@ -58,11 +79,14 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'update-evaluation-category') {
-      // Update evaluation category
+      if (!category_data?.id) {
+        throw createError({ statusCode: 400, message: 'category_data.id required' })
+      }
       const { data, error } = await supabase
         .from('evaluation_categories')
         .update(category_data)
         .eq('id', category_data.id)
+        .eq('tenant_id', effectiveTenantId)
         .select()
         .single()
 
@@ -71,23 +95,25 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'delete-evaluation-category') {
-      // Delete evaluation category
+      if (!category_data?.id) {
+        throw createError({ statusCode: 400, message: 'category_data.id required' })
+      }
       const { error } = await supabase
         .from('evaluation_categories')
         .delete()
         .eq('id', category_data.id)
+        .eq('tenant_id', effectiveTenantId)
 
       if (error) throw error
       return { success: true, message: 'Deleted' }
     }
 
     if (action === 'get-evaluation-criteria') {
-      // Get evaluation criteria for category (tenant-specific + global defaults)
       const { data, error } = await supabase
         .from('evaluation_criteria')
-        .select('*')
+        .select('id, category_id, tenant_id, name, description, display_order, is_active, created_at')
         .eq('category_id', category_data?.id)
-        .or(`tenant_id.eq.${category_data?.tenant_id},tenant_id.is.null`)
+        .or(`tenant_id.eq.${category_data?.tenant_id || effectiveTenantId},tenant_id.is.null`)
         .order('display_order', { ascending: true })
 
       if (error) throw error
@@ -95,10 +121,13 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'create-evaluation-criteria') {
-      // Create evaluation criteria
+      const payload = {
+        ...(criteria_data || {}),
+        tenant_id: effectiveTenantId,
+      }
       const { data, error } = await supabase
         .from('evaluation_criteria')
-        .insert([criteria_data])
+        .insert([payload])
         .select()
         .single()
 
@@ -107,11 +136,14 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'update-evaluation-criteria') {
-      // Update evaluation criteria
+      if (!criteria_data?.id) {
+        throw createError({ statusCode: 400, message: 'criteria_data.id required' })
+      }
       const { data, error } = await supabase
         .from('evaluation_criteria')
         .update(criteria_data)
         .eq('id', criteria_data.id)
+        .eq('tenant_id', effectiveTenantId)
         .select()
         .single()
 
@@ -120,22 +152,24 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'delete-evaluation-criteria') {
-      // Delete evaluation criteria
+      if (!criteria_data?.id) {
+        throw createError({ statusCode: 400, message: 'criteria_data.id required' })
+      }
       const { error } = await supabase
         .from('evaluation_criteria')
         .delete()
         .eq('id', criteria_data.id)
+        .eq('tenant_id', effectiveTenantId)
 
       if (error) throw error
       return { success: true, message: 'Deleted' }
     }
 
     if (action === 'get-evaluation-scales') {
-      // Get evaluation scales
       const { data, error } = await supabase
         .from('evaluation_scale')
-        .select('*')
-        .eq('tenant_id', tenant_id)
+        .select('id, tenant_id, label, min_score, max_score, color, display_order')
+        .eq('tenant_id', effectiveTenantId)
         .order('min_score')
 
       if (error) throw error
@@ -143,10 +177,13 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'create-evaluation-scale') {
-      // Create evaluation scale
+      const payload = {
+        ...(scale_data || {}),
+        tenant_id: effectiveTenantId,
+      }
       const { data, error } = await supabase
         .from('evaluation_scale')
-        .insert([scale_data])
+        .insert([payload])
         .select()
         .single()
 
@@ -155,11 +192,14 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'update-evaluation-scale') {
-      // Update evaluation scale
+      if (!scale_data?.id) {
+        throw createError({ statusCode: 400, message: 'scale_data.id required' })
+      }
       const { data, error } = await supabase
         .from('evaluation_scale')
         .update(scale_data)
         .eq('id', scale_data.id)
+        .eq('tenant_id', effectiveTenantId)
         .select()
         .single()
 
@@ -168,22 +208,24 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'delete-evaluation-scale') {
-      // Delete evaluation scale
+      if (!scale_data?.id) {
+        throw createError({ statusCode: 400, message: 'scale_data.id required' })
+      }
       const { error } = await supabase
         .from('evaluation_scale')
         .delete()
         .eq('id', scale_data.id)
+        .eq('tenant_id', effectiveTenantId)
 
       if (error) throw error
       return { success: true, message: 'Deleted' }
     }
 
     if (action === 'get-tenant-info') {
-      // Get tenant info
       const { data, error } = await supabase
         .from('tenants')
-        .select('*')
-        .eq('id', tenant_id)
+        .select(SAFE_TENANT_FIELDS)
+        .eq('id', effectiveTenantId)
         .single()
 
       if (error) throw error
@@ -191,22 +233,24 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-categories') {
-      // Get all categories for tenant
       const { data, error } = await supabase
         .from('categories')
-        .select('*')
-        .eq('tenant_id', tenant_id)
+        .select('id, tenant_id, name, code, description, is_active')
+        .eq('tenant_id', effectiveTenantId)
 
       if (error) throw error
       return { success: true, data: data || [] }
     }
 
     if (action === 'get-user-info') {
-      // Get user info
+      if (!user_id) {
+        throw createError({ statusCode: 400, message: 'user_id required' })
+      }
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select(SAFE_USER_FIELDS)
         .eq('id', user_id)
+        .eq('tenant_id', effectiveTenantId)
         .single()
 
       if (error) throw error
@@ -220,6 +264,7 @@ export default defineEventHandler(async (event) => {
 
   } catch (err: any) {
     console.error('❌ Evaluation API error:', err)
+    if (err?.statusCode) throw err
     throw createError({
       statusCode: err.statusCode || 500,
       message: err.message || 'Evaluation operation failed'

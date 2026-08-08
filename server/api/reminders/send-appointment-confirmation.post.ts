@@ -8,11 +8,12 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { sendPushToUser } from '~/server/utils/push'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
-import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
+import { requireStaffOrInternal, internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 
 const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https://app.simy.ch').replace(/\/$/, '')
 
 export default defineEventHandler(async (event) => {
+  await requireStaffOrInternal(event)
   try {
     const body = await readBody(event)
     const { appointmentId, userId, tenantId, skipStaffNotification } = body

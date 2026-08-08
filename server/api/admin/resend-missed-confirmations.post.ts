@@ -6,6 +6,7 @@
  */
 import { defineEventHandler } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { logger } from '~/utils/logger'
 
 // Affected appointments: created during the bug window, non-cancelled, with user
@@ -29,6 +30,7 @@ export default defineEventHandler(async (event) => {
     try {
       await $fetch('/api/reminders/send-appointment-confirmation', {
         method: 'POST',
+              headers: internalSecretHeaders(),
         body: {
           appointmentId: entry.appointmentId,
           userId: entry.userId,

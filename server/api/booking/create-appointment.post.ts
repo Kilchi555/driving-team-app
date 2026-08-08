@@ -28,6 +28,7 @@
 
 import { defineEventHandler, readBody, createError, getHeader, H3Event } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { roundToNearest5Rappen } from '~/utils/rounding'
@@ -1049,6 +1050,7 @@ export default defineEventHandler(async (event: H3Event) => {
     try {
       await $fetch('/api/reminders/send-appointment-confirmation', {
         method: 'POST',
+              headers: internalSecretHeaders(),
         body: {
           appointmentId: newAppointment.id,
           userId: userData.id,

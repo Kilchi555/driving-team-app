@@ -9,6 +9,8 @@ import { defineEventHandler, readBody } from 'h3'
 import { sendEmail } from '~/server/utils/email'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { getAuthenticatedUser } from '~/server/utils/auth'
+import { isInternalSecretRequest } from '~/server/utils/require-staff-or-internal'
 
 const PRIMARY_COLOR = '#16a34a' // green-700
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || 'info@drivingteam.ch' // last-resort fallback
@@ -100,6 +102,14 @@ const TEMPLATES: Record<string, (data: any) => { subject: string; html: string }
 }
 
 export default defineEventHandler(async (event) => {
+  // Block unauthenticated phishing; allow internal secret or any logged-in user
+  // (customers trigger iban/withdrawal emails from their own session).
+  if (!isInternalSecretRequest(event)) {
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser?.id) {
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    }
+  }
   try {
     const body = await readBody(event)
     const { type, ...data } = body

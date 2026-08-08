@@ -21,6 +21,7 @@
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { DEFAULT_BOOKING_POLICY } from '~/server/api/admin/booking-policy.get'
 import { mergeAttributionFields } from '~/server/utils/marketing-attribution-merge'
 import { sendTenantSMS } from '~/server/utils/sms'
@@ -734,6 +735,7 @@ export default defineEventHandler(async (event) => {
       logger.debug('📧 Triggering confirmation email for guest appointment:', newAppointment.id)
       await $fetch('/api/reminders/send-appointment-confirmation', {
         method: 'POST',
+              headers: internalSecretHeaders(),
         body: {
           appointmentId: newAppointment.id,
           userId: newUserId,

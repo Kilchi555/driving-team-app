@@ -1,15 +1,22 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
   const { tenantId } = getQuery(event) as { tenantId: string }
-  if (!tenantId) throw createError({ statusCode: 400, statusMessage: 'tenantId is required' })
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenantId ? tenantId : profile.tenant_id
+  if (!effectiveTenantId) throw createError({ statusCode: 400, statusMessage: 'tenantId is required' })
+  if (profile.role !== 'super_admin' && tenantId && tenantId !== profile.tenant_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
+  }
 
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('email_campaigns')
     // Explicit FK hint to avoid PostgREST 300 "ambiguous relationship"
     .select('*, email_template:email_templates!template_id(name, subject), variants:email_campaign_variants(id, label, split_pct, subject_override, sent_count, open_count, click_count, template_id, subject_snapshots, email_template:email_templates(name, subject))')
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', effectiveTenantId)
     .order('created_at', { ascending: false })
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })

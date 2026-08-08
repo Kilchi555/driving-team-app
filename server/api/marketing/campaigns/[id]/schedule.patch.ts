@@ -1,11 +1,13 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { computeNextRunAt, type ScheduleFrequency } from '~/server/utils/campaign-schedule'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 /**
  * PATCH /api/marketing/campaigns/:id/schedule
  * Enable, update, or pause a recurring campaign schedule.
  */
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
   const campaignId = getRouterParam(event, 'id')
   const body = await readBody(event)
   const {
@@ -28,8 +30,14 @@ export default defineEventHandler(async (event) => {
     repeatIntervalDays?: number
   }
 
-  if (!tenantId || !campaignId) {
-    throw createError({ statusCode: 400, statusMessage: 'tenantId and campaignId are required' })
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenantId ? tenantId : profile.tenant_id
+
+  if (!campaignId || !effectiveTenantId) {
+    throw createError({ statusCode: 400, statusMessage: 'campaign id and tenantId are required' })
+  }
+  if (profile.role !== 'super_admin' && tenantId && tenantId !== profile.tenant_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
   }
 
   const supabase = getSupabaseAdmin()
@@ -38,7 +46,7 @@ export default defineEventHandler(async (event) => {
     .from('email_campaigns')
     .select('id, status, schedule_enabled, schedule_frequency, schedule_day_of_week, schedule_hour, schedule_batch_size, schedule_repeat_mode, schedule_repeat_interval_days')
     .eq('id', campaignId)
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', effectiveTenantId)
     .single()
 
   if (error || !campaign) {
@@ -98,7 +106,7 @@ export default defineEventHandler(async (event) => {
     .from('email_campaigns')
     .update(patch)
     .eq('id', campaignId)
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', effectiveTenantId)
     .select()
     .single()
 

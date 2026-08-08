@@ -77,9 +77,43 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 4: Build select query
+    // ✅ LAYER 4: Build select query (allowlist only — never secrets)
+    const ALLOWED_FIELDS = new Set([
+      'id', 'first_name', 'last_name', 'email', 'phone', 'role', 'tenant_id',
+      'category', 'is_active', 'created_at', 'assigned_staff_ids', 'onboarding_status',
+      'auth_user_id', 'address', 'city', 'zip', 'date_of_birth', 'notes',
+    ])
+    const BLOCKED_FIELDS = new Set([
+      'onboarding_token', 'password', 'encrypted_iban', 'iban', 'totp_secret',
+      'backup_codes', 'stripe_customer_id',
+    ])
     const defaultFields = 'id, first_name, last_name, email, phone, role, tenant_id'
-    const selectFields = fieldsParam || defaultFields
+    let selectFields = defaultFields
+    if (fieldsParam) {
+      const requested = String(fieldsParam)
+        .split(',')
+        .map((f) => f.trim())
+        .filter(Boolean)
+      const unsafe = requested.filter((f) => BLOCKED_FIELDS.has(f) || !ALLOWED_FIELDS.has(f))
+      if (unsafe.length) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: `Forbidden fields requested: ${unsafe.join(', ')}`,
+        })
+      }
+      selectFields = requested.join(', ') || defaultFields
+    }
+
+    // ✅ ROLE: staff/admin for arbitrary user lookup; clients only self
+    const role = authUser.role || ''
+    const callerDbId = authUser.db_user_id || authUser.profile?.id
+    const isStaff = ['admin', 'staff', 'super_admin', 'tenant_admin'].includes(role)
+    if (!isStaff && callerDbId !== userId) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden – can only view your own profile',
+      })
+    }
 
     // ✅ LAYER 5: DATABASE QUERY with Tenant Isolation
     const { data: user, error } = await supabaseAdmin

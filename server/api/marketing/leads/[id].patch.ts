@@ -1,12 +1,20 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireAdminProfile } from '~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
   const id = getRouterParam(event, 'id')
   const body = await readBody(event)
   const { tenantId, status, categories, tags, notes, first_name, last_name, phone } = body
 
-  if (!tenantId || !id) {
+  const effectiveTenantId =
+    profile.role === 'super_admin' && tenantId ? tenantId : profile.tenant_id
+
+  if (!effectiveTenantId || !id) {
     throw createError({ statusCode: 400, statusMessage: 'tenantId and id are required' })
+  }
+  if (profile.role !== 'super_admin' && tenantId && tenantId !== profile.tenant_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
   }
 
   const allowed = ['pending_consent', 'active', 'unsubscribed', 'bounced', 'inactive']
@@ -33,8 +41,8 @@ export default defineEventHandler(async (event) => {
     .from('leads')
     .update(updates)
     .eq('id', id)
-    .eq('tenant_id', tenantId)
-    .select()
+    .eq('tenant_id', effectiveTenantId)
+    .select('id, email, first_name, last_name, phone, status, categories, tags, notes, source, created_at, consent_given_at')
     .single()
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
