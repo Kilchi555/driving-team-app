@@ -83,14 +83,46 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
         )
       `)
     
-    // ✅ Support both paymentId and transactionId lookup
+    // ✅ Support paymentId and transactionId lookup.
+    // Redirect URLs often pass our payment UUID as transaction_id — try id first,
+    // then fall back to wallee_transaction_id.
+    let payment: any = null
+    let findError: any = null
+
     if (body.paymentId) {
-      query = query.eq('id', body.paymentId)
+      const res = await query.eq('id', body.paymentId).maybeSingle()
+      payment = res.data
+      findError = res.error
     } else if (body.transactionId) {
-      query = query.eq('wallee_transaction_id', body.transactionId)
+      const byId = await query.eq('id', body.transactionId).maybeSingle()
+      if (byId.data) {
+        payment = byId.data
+      } else {
+        // Rebuild query for wallee_transaction_id lookup
+        let walleeQuery = supabase
+          .from('payments')
+          .select(`
+            *,
+            appointments (
+              id,
+              title,
+              start_time,
+              payment_status,
+              is_paid
+            ),
+            users!payments_user_id_fkey (
+              id,
+              first_name,
+              last_name,
+              email
+            )
+          `)
+          .eq('wallee_transaction_id', body.transactionId)
+        const byWallee = await walleeQuery.maybeSingle()
+        payment = byWallee.data
+        findError = byWallee.error
+      }
     }
-    
-    const { data: payment, error: findError } = await query.maybeSingle()
 
     if (findError || !payment) {
       logger.warn('⚠️ Payment not found:', body.paymentId || body.transactionId)
@@ -116,30 +148,81 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
 
     logger.debug('✅ Payment found:', payment.id)
 
-    // 2. Status aktualisieren — only staff/admin; never allow clients to mark paid
+    // 2. Status aktualisieren — never allow forging paid; clients may only release locks
     let statusMutated = false
+    let appliedStatus: string | undefined
     if (body.status) {
       const role = authUser.role || ''
-      if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(role)) {
-        // Clients may only poll status — ignore mutation attempts
-        logger.warn('🚫 Ignoring client payment status mutation', {
-          userId: userData.id,
-          paymentId: payment.id,
-          attemptedStatus: body.status
-        })
-      } else if (body.status === 'completed' || body.status === 'authorized') {
-        // Even staff should not forge Wallee completions via this endpoint
+      const isPrivileged = ['admin', 'staff', 'super_admin', 'tenant_admin'].includes(role)
+
+      if (body.status === 'completed' || body.status === 'authorized') {
+        // Completions only via verified Wallee webhooks
         throw createError({
           statusCode: 403,
           statusMessage: 'Completed/authorized status may only be set by verified payment webhooks'
         })
+      }
+
+      if (!isPrivileged) {
+        // After abort/failure redirect: client may release processing → pending only
+        const wantsRelease = ['failed', 'cancelled', 'pending'].includes(body.status)
+        const canRelease =
+          wantsRelease &&
+          (payment.payment_status === 'processing' || payment.payment_status === 'failed')
+
+        if (!canRelease) {
+          logger.warn('🚫 Ignoring client payment status mutation', {
+            userId: userData.id,
+            paymentId: payment.id,
+            currentStatus: payment.payment_status,
+            attemptedStatus: body.status
+          })
+        } else {
+          const { error: updateError } = await supabase
+            .from('payments')
+            .update({
+              payment_status: 'pending',
+              updated_at: toLocalTimeString(new Date())
+            })
+            .eq('id', payment.id)
+            .in('payment_status', ['processing', 'failed'])
+
+          if (updateError) {
+            logger.error('❌ Error releasing processing lock:', updateError)
+            throw createError({
+              statusCode: 500,
+              statusMessage: 'Failed to update payment status'
+            })
+          }
+
+          statusMutated = true
+          appliedStatus = 'pending'
+          logger.info('🔓 Client released processing lock → pending', {
+            paymentId: payment.id,
+            previous: payment.payment_status
+          })
+
+          await logAudit({
+            action: 'payment_processing_lock_released',
+            user_id: userData.id,
+            tenant_id: userData.tenant_id,
+            resource_type: 'payment',
+            resource_id: payment.id,
+            status: 'success',
+            details: {
+              previous_status: payment.payment_status,
+              new_status: 'pending',
+              transaction_id: body.walleeTransactionId || body.transactionId,
+              duration_ms: Date.now() - startTime
+            }
+          })
+        }
       } else {
         const updateData: any = {
           payment_status: body.status,
           updated_at: toLocalTimeString(new Date())
         }
 
-        // Wallee-spezifische Updates
         if (body.walleeTransactionId) {
           updateData.wallee_transaction_id = body.walleeTransactionId
         }
@@ -162,9 +245,9 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
         }
 
         statusMutated = true
+        appliedStatus = body.status
         logger.debug('✅ Payment status updated to:', body.status)
 
-        // ✅ AUDIT LOG for status change
         await logAudit({
           action: 'payment_status_updated',
           user_id: userData.id,
@@ -183,14 +266,14 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
       }
     }
 
-    // 3. Status History — only when a privileged mutation actually occurred
+    // 3. Status History — only when a mutation actually occurred
     if (statusMutated) {
       try {
         const { error: historyError } = await supabase
           .from('payment_status_history')
           .insert({
             payment_id: payment.id,
-            status: body.status,
+            status: appliedStatus || body.status,
             wallee_transaction_state: body.walleeTransactionState,
             metadata: {
               updated_at: new Date().toISOString(),
@@ -236,7 +319,7 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
       success: true,
       payment: updatedPayment,
       message: statusMutated
-        ? `Payment status updated to ${body.status}`
+        ? `Payment status updated to ${appliedStatus || body.status}`
         : 'Payment status retrieved'
     }
 

@@ -1422,6 +1422,14 @@ onMounted(async () => {
     displayToast('success', 'Zahlung erfolgreich!', 'Deine Zahlung wurde erfolgreich verarbeitet.')
     useRouter().replace({ path: '/customer/payments' })
   } else if (route.query.payment_failed === 'true') {
+    // Release optimistic processing lock immediately so "Jetzt bezahlen" returns
+    // (webhook may be delayed; do not wait for cron)
+    try {
+      await $fetch('/api/payments/release-processing-lock', { method: 'POST' })
+      await loadCustomerPayments()
+    } catch (err: any) {
+      console.warn('⚠️ Could not release processing lock:', err?.message)
+    }
     displayToast('error', 'Zahlung fehlgeschlagen', 'Die Zahlung konnte nicht verarbeitet werden. Bitte versuche es erneut.')
     useRouter().replace({ path: '/customer/payments' })
   }
