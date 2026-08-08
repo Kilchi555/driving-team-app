@@ -259,13 +259,37 @@
             
             <!-- Action Buttons -->
             <!-- Hide "Jetzt bezahlen" button only if appointment is cancelled with 0% charge (free cancellation) -->
-            <!-- Processing spinner — shown while payment is being initiated server-side -->
-            <div v-if="payment.payment_status === 'processing'" class="flex items-center gap-2 text-sm text-gray-500">
-              <svg class="animate-spin h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-              Zahlung wird verarbeitet…
+            <!-- Processing: open Wallee tx still live (Confirmed) — resume same checkout, never start a second charge -->
+            <div v-if="payment.payment_status === 'processing'" class="space-y-3">
+              <div class="flex items-start gap-2 text-sm text-gray-600">
+                <svg class="animate-spin h-4 w-4 flex-shrink-0 mt-0.5 text-gray-400" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+                <span>
+                  Zahlung ist beim Anbieter noch offen. Bitte fortsetzen — eine neue Zahlung würde doppelt belasten.
+                </span>
+              </div>
+              <div class="flex flex-row flex-wrap justify-end items-center gap-2">
+                <button
+                  type="button"
+                  @click="syncProcessingPayment(payment)"
+                  :disabled="processingPaymentIds.has(payment.id)"
+                  class="text-xs text-gray-500 hover:text-gray-700 underline disabled:opacity-50"
+                >
+                  Status prüfen
+                </button>
+                <button
+                  v-if="walleeEnabled"
+                  type="button"
+                  @click="payIndividual(payment)"
+                  :disabled="processingPaymentIds.has(payment.id)"
+                  class="text-white px-3 py-2 sm:px-4 rounded-lg transition-colors font-medium disabled:opacity-50 text-sm sm:text-base hover:opacity-90"
+                  :style="{ background: primaryColor }"
+                >
+                  {{ processingPaymentIds.has(payment.id) ? 'Wird geöffnet…' : 'Zahlung fortsetzen' }}
+                </button>
+              </div>
             </div>
 
             <div v-else-if="payment.payment_status === 'pending' && (!isAppointmentCancelled(payment) || (isAppointmentCancelled(payment) && getCancellationChargePercentage(payment) > 0))">
@@ -656,6 +680,35 @@ const payAllUnpaid = async () => {
     alert('Fehler beim Initialisieren der Zahlung. Bitte versuchen Sie es erneut.')
   } finally {
     isProcessingPayment.value = false
+  }
+}
+
+/** Sync one processing payment with Wallee (complete / release / keep open). */
+const syncProcessingPayment = async (payment: any) => {
+  if (!payment?.id) return
+  processingPaymentIds.value.add(payment.id)
+  try {
+    const syncRes: any = await $fetch('/api/payments/release-processing-lock', {
+      method: 'POST',
+      body: { paymentId: payment.id }
+    })
+    await loadCustomerPayments()
+    if (syncRes?.completed > 0) {
+      displayToast('success', 'Zahlung erfolgreich!', 'Deine Zahlung wurde erfolgreich verarbeitet.')
+    } else if (syncRes?.released > 0) {
+      displayToast('info', 'Zahlung freigegeben', 'Du kannst die Zahlung erneut starten.')
+    } else {
+      displayToast(
+        'info',
+        'Zahlung noch offen',
+        'Beim Zahlungsanbieter ist die Transaktion noch aktiv. Tippe auf «Zahlung fortsetzen».'
+      )
+    }
+  } catch (err: any) {
+    console.warn('⚠️ syncProcessingPayment failed:', err?.message)
+    displayToast('error', 'Statusprüfung fehlgeschlagen', 'Bitte versuche es in wenigen Sekunden erneut.')
+  } finally {
+    processingPaymentIds.value.delete(payment.id)
   }
 }
 
@@ -1431,7 +1484,11 @@ onMounted(async () => {
       } else if (syncRes?.released > 0) {
         displayToast('error', 'Zahlung fehlgeschlagen', 'Die Zahlung konnte nicht verarbeitet werden. Bitte versuche es erneut.')
       } else {
-        displayToast('info', 'Zahlung wird noch geprüft', 'Der Zahlungsanbieter meldet die Transaktion noch als offen. Bitte warte kurz.')
+        displayToast(
+          'info',
+          'Zahlung noch offen',
+          'Die Transaktion ist beim Anbieter noch aktiv. Tippe auf «Zahlung fortsetzen», um sie abzuschliessen.'
+        )
       }
     } catch (err: any) {
       console.warn('⚠️ Could not sync processing lock:', err?.message)

@@ -2,12 +2,16 @@
 // After a cancelled/failed Wallee redirect: sync with Wallee first, then act.
 // Never blindly release to pending while an open/Confirmed transaction exists —
 // that re-enabled "Jetzt bezahlen" and caused double charges in the past.
+//
+// Optional body:
+//   paymentId?: string — limit to one payment
+//   action?: 'sync' | 'abandon' — abandon tries void (AUTHORIZED only); Confirmed stays resume-only
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { logAudit } from '~/server/utils/audit'
-import { syncAndResolvePayment } from '~/server/utils/wallee-payment-sync'
+import { abandonOrResumePayment, syncAndResolvePayment } from '~/server/utils/wallee-payment-sync'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -23,6 +27,7 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event).catch(() => ({} as any))
   const paymentId = typeof body?.paymentId === 'string' ? body.paymentId : null
+  const action = body?.action === 'abandon' ? 'abandon' : 'sync'
 
   const supabase = getSupabaseAdmin()
 
@@ -50,24 +55,35 @@ export default defineEventHandler(async (event) => {
     newStatus: string
     walleeState: string | null
     changed: boolean
+    paymentUrl?: string | null
+    message?: string
   }> = []
 
   let released = 0
   let completed = 0
   let keptOpen = 0
+  let abandoned = 0
 
   for (const payment of payments || []) {
     try {
-      const resolved = await syncAndResolvePayment(payment)
+      const resolved = action === 'abandon'
+        ? await abandonOrResumePayment(payment)
+        : await syncAndResolvePayment(payment)
+
       results.push({
         paymentId: payment.id,
         decision: resolved.decision,
         newStatus: resolved.newStatus,
         walleeState: resolved.walleeState,
-        changed: resolved.changed
+        changed: resolved.changed,
+        paymentUrl: resolved.paymentUrl,
+        message: (resolved as any).message
       })
 
-      if (resolved.decision === 'release_pending' || resolved.decision === 'no_transaction') {
+      if (resolved.decision === 'abandoned') {
+        if (resolved.changed) abandoned++
+        if (resolved.changed) released++
+      } else if (resolved.decision === 'release_pending' || resolved.decision === 'no_transaction') {
         if (resolved.changed) released++
       } else if (resolved.decision === 'mark_completed' || resolved.decision === 'mark_authorized') {
         if (resolved.changed) completed++
@@ -87,7 +103,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  if (released + completed > 0) {
+  if (released + completed + abandoned > 0) {
     await logAudit({
       action: 'payment_processing_lock_synced',
       user_id: userId,
@@ -96,27 +112,38 @@ export default defineEventHandler(async (event) => {
       resource_id: results[0]?.paymentId,
       status: 'success',
       details: {
-        source: 'client_abort_sync',
+        source: action === 'abandon' ? 'client_abandon_sync' : 'client_abort_sync',
         released,
         completed,
+        abandoned,
         kept_open: keptOpen,
-        results
+        results: results.map(r => ({
+          paymentId: r.paymentId,
+          decision: r.decision,
+          newStatus: r.newStatus,
+          walleeState: r.walleeState,
+          changed: r.changed
+        }))
       }
     }).catch(() => {})
   }
 
   logger.info('🔓 release-processing-lock sync complete', {
     userId,
+    action,
     released,
     completed,
+    abandoned,
     keptOpen,
     total: results.length
   })
 
   return {
     success: true,
+    action,
     released,
     completed,
+    abandoned,
     keptOpen,
     results
   }

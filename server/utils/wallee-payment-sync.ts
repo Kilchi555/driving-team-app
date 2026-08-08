@@ -237,7 +237,8 @@ export async function syncAndResolvePayment(payment: {
     tenantId: payment.tenant_id,
     walleeTransactionId: payment.wallee_transaction_id,
     walleeSpaceId: payment.wallee_space_id,
-    includePaymentUrl: false
+    // Resume URL needed when checkout is still open (Confirmed/Pending)
+    includePaymentUrl: true
   })
 
   // Unknown (API error): keep lock — never open a double-charge window
@@ -246,7 +247,8 @@ export async function syncAndResolvePayment(payment: {
       decision: 'unknown',
       walleeState: sync.walleeState,
       newStatus: payment.payment_status,
-      changed: false
+      changed: false,
+      paymentUrl: sync.paymentUrl
     }
   }
 
@@ -263,5 +265,98 @@ export async function syncAndResolvePayment(payment: {
     newStatus: applied.newStatus,
     changed: applied.changed,
     paymentUrl: sync.paymentUrl
+  }
+}
+
+/**
+ * Attempt to abandon an open Wallee transaction so the customer can start fresh.
+ * - Completed/authorized → sync into DB, do not abandon
+ * - Terminal failure → release to pending
+ * - AUTHORIZED → void, then release
+ * - PENDING/CONFIRMED/PROCESSING → cannot safely create a second charge; return resume URL
+ */
+export async function abandonOrResumePayment(payment: {
+  id: string
+  tenant_id: string
+  payment_status: string
+  wallee_transaction_id?: string | null
+  wallee_space_id?: number | null
+}): Promise<{
+  decision: WalleeSyncDecision | 'abandoned'
+  walleeState: string | null
+  newStatus: string
+  changed: boolean
+  paymentUrl?: string | null
+  message?: string
+}> {
+  const synced = await syncAndResolvePayment(payment)
+  if (synced.decision === 'mark_completed' || synced.decision === 'mark_authorized') {
+    return {
+      ...synced,
+      message: 'Zahlung wurde inzwischen bestätigt.'
+    }
+  }
+  if (synced.decision === 'release_pending' || synced.decision === 'no_transaction') {
+    return {
+      ...synced,
+      message: 'Zahlung freigegeben — du kannst erneut bezahlen.'
+    }
+  }
+
+  if (!payment.wallee_transaction_id) {
+    return synced
+  }
+
+  // Only AUTHORIZED can be voided reliably; Confirmed stays open until paid/expired.
+  if (synced.walleeState === 'AUTHORIZED') {
+    try {
+      const walleeConfig = payment.wallee_space_id
+        ? await getWalleeConfigBySpace(payment.tenant_id, payment.wallee_space_id)
+        : await getWalleeConfigForTenant(payment.tenant_id)
+      const sdkConfig = getWalleeSDKConfig(walleeConfig.spaceId, walleeConfig.userId, walleeConfig.apiSecret)
+      const voidService = new Wallee.api.TransactionVoidService(sdkConfig)
+      await voidService.voidOnline(walleeConfig.spaceId, parseInt(payment.wallee_transaction_id, 10))
+
+      const after = await readWalleeTransactionState({
+        tenantId: payment.tenant_id,
+        walleeTransactionId: payment.wallee_transaction_id,
+        walleeSpaceId: payment.wallee_space_id
+      })
+      if (after.decision === 'release_pending' || WALLEE_TERMINAL_FAILURE_STATES.has(after.walleeState || '')) {
+        const applied = await applyWalleeSyncDecision({
+          paymentId: payment.id,
+          currentStatus: payment.payment_status,
+          decision: 'release_pending',
+          walleeState: after.walleeState
+        })
+        return {
+          decision: 'abandoned',
+          walleeState: after.walleeState,
+          newStatus: applied.newStatus,
+          changed: applied.changed,
+          message: 'Offene Autorisierung storniert — du kannst erneut bezahlen.'
+        }
+      }
+    } catch (err: any) {
+      logger.warn('⚠️ abandon void failed:', { paymentId: payment.id, error: err?.message })
+    }
+  }
+
+  // Still open (typically CONFIRMED): resume same checkout — never start a parallel charge
+  const resume = await readWalleeTransactionState({
+    tenantId: payment.tenant_id,
+    walleeTransactionId: payment.wallee_transaction_id,
+    walleeSpaceId: payment.wallee_space_id,
+    includePaymentUrl: true
+  })
+
+  return {
+    decision: 'keep_open',
+    walleeState: resume.walleeState || synced.walleeState,
+    newStatus: payment.payment_status,
+    changed: false,
+    paymentUrl: resume.paymentUrl || synced.paymentUrl,
+    message:
+      'Die Transaktion ist beim Zahlungsanbieter noch offen. Bitte Zahlung fortsetzen — eine neue Zahlung würde doppelt belasten.'
   }
 }
