@@ -39,6 +39,11 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, message: 'User not found' })
     }
 
+    // ✅ ROLE CHECK — only staff/admin may create payment records via this endpoint
+    if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(user.role)) {
+      throw createError({ statusCode: 403, message: 'Insufficient permissions – staff or admin role required' })
+    }
+
     // ✅ 2. INPUT VALIDATION
     const body = await readBody(event)
     const paymentData = body
@@ -58,10 +63,37 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Whitelist insertable fields — never allow forging online (Wallee) completions
+    const allowedInsertFields = [
+      'appointment_id', 'user_id', 'staff_id', 'lesson_price_rappen', 'admin_fee_rappen',
+      'products_price_rappen', 'discount_amount_rappen', 'credit_used_rappen',
+      'total_amount_rappen', 'payment_method', 'currency', 'description', 'metadata'
+    ] as const
+    const sanitized: Record<string, any> = {}
+    for (const key of allowedInsertFields) {
+      if (paymentData[key] !== undefined) sanitized[key] = paymentData[key]
+    }
+
+    // Offline staff methods may be created as completed (cash register flows).
+    // Online/Wallee completions must come from verified webhooks only.
+    const method = String(sanitized.payment_method || 'cash')
+    const offlineCompletable = ['cash', 'twint', 'bank_transfer', 'card_terminal'].includes(method)
+    const requestedStatus = String(paymentData.payment_status || 'pending')
+    let paymentStatus = 'pending'
+    if (requestedStatus === 'completed' && offlineCompletable) {
+      paymentStatus = 'completed'
+    } else if (requestedStatus === 'pending' || requestedStatus === 'processing') {
+      paymentStatus = requestedStatus
+    }
+
     // ✅ 3. ADD TENANT_ID FOR SECURITY
-    const paymentToInsert = {
-      ...paymentData,
-      tenant_id: user.tenant_id
+    const paymentToInsert: Record<string, any> = {
+      ...sanitized,
+      tenant_id: user.tenant_id,
+      payment_status: paymentStatus
+    }
+    if (paymentStatus === 'completed') {
+      paymentToInsert.paid_at = paymentData.paid_at || new Date().toISOString()
     }
 
     // ✅ 4. INSERT PAYMENT

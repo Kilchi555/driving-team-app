@@ -24,6 +24,7 @@ import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wal
 import { z } from 'zod'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
+import { escapeLikePattern } from '~/server/utils/sql-helpers'
 
 const ProcessPublicPaymentSchema = z.object({
   enrollmentId:  z.string().uuid().optional(),
@@ -49,7 +50,6 @@ export default defineEventHandler(async (event) => {
     }
     const { 
       enrollmentId, 
-      amount, 
       currency,
       customerEmail, 
       customerName,
@@ -58,6 +58,8 @@ export default defineEventHandler(async (event) => {
       userId: passedUserId,
       metadata = {}
     } = parseResult.data
+    // Amount is recomputed server-side below; keep a mutable binding
+    let amount = parseResult.data.amount
 
     logger.debug('💳 Public payment process request:', {
       enrollmentId,
@@ -171,6 +173,134 @@ export default defineEventHandler(async (event) => {
         statusCode: 500,
         statusMessage: 'Zahlung konnte nicht gestartet werden, da das Unternehmen nicht eindeutig ermittelt werden konnte. Bitte versuche es erneut oder kontaktiere den Support.'
       })
+    }
+
+    // 2.6 Recompute payable amount from DB — never trust client amount for Wallee charge
+    {
+      const { data: pricedCourse, error: priceErr } = await supabase
+        .from('courses')
+        .select(`
+          id,
+          price_per_participant_rappen,
+          is_partial_only,
+          course_category:course_categories (
+            partial_price_rappen
+          ),
+          course_sessions (
+            session_number,
+            allow_individual_booking,
+            individual_price_rappen
+          )
+        `)
+        .eq('id', courseId)
+        .eq('tenant_id', tenantId)
+        .single()
+
+      if (priceErr || !pricedCourse) {
+        throw createError({ statusCode: 404, statusMessage: 'Course not found for pricing' })
+      }
+
+      const individualSessionNumber = metadata?.individual_session_number ?? null
+      const isPartialEnrollment = !!metadata?.is_partial_enrollment
+      let effectiveBasePrice = Number(pricedCourse.price_per_participant_rappen || 0)
+
+      if (individualSessionNumber != null) {
+        const sessions = Array.isArray(pricedCourse.course_sessions) ? pricedCourse.course_sessions : []
+        const targetSession = sessions.find(
+          (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
+        )
+        if (targetSession?.individual_price_rappen) {
+          effectiveBasePrice = Number(targetSession.individual_price_rappen)
+        }
+      } else if (isPartialEnrollment && !pricedCourse.is_partial_only) {
+        const partialPrice = Number((pricedCourse.course_category as any)?.partial_price_rappen || 0)
+        if (partialPrice > 0) effectiveBasePrice = partialPrice
+      }
+
+      // Re-validate discount against the same sources as enroll-wallee
+      // (voucher_codes → gift-card vouchers → discounts). Never trust client amount.
+      let discountAmount = 0
+      const discountCode = typeof metadata?.discount_code === 'string' ? metadata.discount_code.trim() : ''
+      if (discountCode) {
+        const escapedDiscountCode = escapeLikePattern(discountCode)
+        let discountRow: any = null
+
+        const { data: voucherCode } = await supabase
+          .from('voucher_codes')
+          .select('*')
+          .ilike('code', escapedDiscountCode)
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .maybeSingle()
+
+        if (voucherCode) {
+          discountRow = voucherCode
+        } else {
+          const { data: giftCard } = await supabase
+            .from('vouchers')
+            .select('*')
+            .ilike('code', escapedDiscountCode)
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .maybeSingle()
+          if (giftCard && !giftCard.redeemed_at) {
+            discountRow = {
+              ...giftCard,
+              discount_type: 'fixed',
+              discount_value: giftCard.amount_rappen,
+              is_gift_card: true
+            }
+          }
+        }
+
+        if (!discountRow) {
+          const { data: discountData } = await supabase
+            .from('discounts')
+            .select('*')
+            .ilike('code', escapedDiscountCode)
+            .eq('tenant_id', tenantId)
+            .eq('is_active', true)
+            .maybeSingle()
+          if (discountData) discountRow = discountData
+        }
+
+        if (discountRow) {
+          const now = new Date()
+          const validUntil = discountRow.valid_until ? new Date(discountRow.valid_until) : null
+          if (!validUntil || now <= validUntil) {
+            // Mirror enroll-wallee amount math so recompute stays consistent
+            if (discountRow.discount_type === 'percentage') {
+              discountAmount = Math.round((effectiveBasePrice * Number(discountRow.discount_value || 0)) / 100)
+              if (discountRow.max_discount_rappen) {
+                discountAmount = Math.min(discountAmount, Number(discountRow.max_discount_rappen))
+              }
+            } else if (discountRow.discount_type === 'fixed') {
+              discountAmount = Number(discountRow.discount_value || 0)
+            }
+            discountAmount = Math.max(0, Math.min(discountAmount, effectiveBasePrice))
+          }
+        }
+      }
+
+      const serverAmount = Math.max(0, effectiveBasePrice - discountAmount)
+      if (!(serverAmount > 0)) {
+        throw createError({ statusCode: 400, statusMessage: 'Berechneter Kurspreis ist ungültig' })
+      }
+      if (Math.abs(serverAmount - amount) > 1) {
+        logger.warn('🚫 process-public: client amount mismatch, using server amount', {
+          clientAmount: amount,
+          serverAmount,
+          courseId,
+          tenantId,
+          discountCode: discountCode || null
+        })
+      }
+      // Override client amount for all downstream inserts / Wallee line items
+      amount = serverAmount
+      if (metadata && typeof metadata === 'object') {
+        ;(metadata as any).discount_amount_rappen = discountAmount
+        ;(metadata as any).original_price_rappen = effectiveBasePrice
+      }
     }
 
     // 3. Get Wallee config for tenant

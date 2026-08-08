@@ -14,6 +14,9 @@ export default defineEventHandler(async (event) => {
     if (!authUser?.tenant_id) {
       throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     }
+    if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(authUser.role || '')) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden – admin or staff role required' })
+    }
 
     const body = await readBody(event)
     const { id, action, ...discountFields } = body

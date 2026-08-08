@@ -24,17 +24,50 @@ export default defineEventHandler(async (event) => {
       throw new Error('Unauthorized')
     }
 
+    const { data: dbUser } = await supabaseAdmin
+      .from('users')
+      .select('id, tenant_id, role')
+      .eq('auth_user_id', user.id)
+      .single()
+
+    if (!dbUser) {
+      throw new Error('Unauthorized')
+    }
+
+    const isPrivileged = ['admin', 'staff', 'super_admin', 'tenant_admin'].includes(dbUser.role)
+
     // ========== CREATE PAYMENT ==========
     if (action === 'create') {
+      if (!isPrivileged) throw new Error('Unauthorized: role')
       if (!body.paymentData) {
         throw new Error('Payment data required')
       }
 
       logger.debug('➕ Creating payment')
 
+      const method = String(body.paymentData.payment_method || 'cash')
+      const offlineCompletable = ['cash', 'twint', 'bank_transfer', 'card_terminal', 'invoice'].includes(method)
+      // Never allow creating an already-completed online/Wallee payment via this API
+      let paymentStatus = body.paymentData.payment_status || 'pending'
+      if (paymentStatus === 'completed' && !offlineCompletable) {
+        paymentStatus = 'pending'
+      }
+      if (['wallee', 'online'].includes(method) && paymentStatus === 'completed') {
+        paymentStatus = 'pending'
+      }
+
+      const insertPayload: Record<string, any> = {
+        ...body.paymentData,
+        tenant_id: dbUser.tenant_id,
+        payment_status: paymentStatus
+      }
+      if (paymentStatus === 'completed' && !insertPayload.paid_at) {
+        insertPayload.paid_at = new Date().toISOString()
+      }
+
       const { data, error } = await supabaseAdmin
         .from('payments')
-        .insert(body.paymentData)
+        .insert(insertPayload)
         .select()
         .single()
 
@@ -51,17 +84,41 @@ export default defineEventHandler(async (event) => {
     }
 
     // ========== MARK AS COMPLETED ==========
+    // Staff may complete offline payments (cash/invoice). Online completions require webhooks.
     if (action === 'mark-completed') {
+      if (!isPrivileged) throw new Error('Unauthorized: role')
       if (!body.paymentId) {
         throw new Error('Payment ID required')
       }
 
       logger.debug('✅ Marking payment as completed:', body.paymentId)
 
+      const { data: existing, error: loadError } = await supabaseAdmin
+        .from('payments')
+        .select('id, tenant_id, payment_method, payment_status')
+        .eq('id', body.paymentId)
+        .eq('tenant_id', dbUser.tenant_id)
+        .maybeSingle()
+
+      if (loadError || !existing) {
+        throw new Error('Payment not found')
+      }
+
+      const method = String(existing.payment_method || '')
+      const offlineCompletable = ['cash', 'twint', 'bank_transfer', 'card_terminal', 'invoice'].includes(method)
+      if (!offlineCompletable) {
+        throw new Error('Online payments can only be completed by verified payment webhooks')
+      }
+
       const { data, error } = await supabaseAdmin
         .from('payments')
-        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .update({
+          payment_status: 'completed',
+          paid_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
         .eq('id', body.paymentId)
+        .eq('tenant_id', dbUser.tenant_id)
         .select()
         .single()
 
@@ -79,6 +136,7 @@ export default defineEventHandler(async (event) => {
 
     // ========== DELETE PAYMENT ==========
     if (action === 'delete') {
+      if (!isPrivileged) throw new Error('Unauthorized: role')
       if (!body.paymentId) {
         throw new Error('Payment ID required')
       }
@@ -89,6 +147,7 @@ export default defineEventHandler(async (event) => {
         .from('payments')
         .delete()
         .eq('id', body.paymentId)
+        .eq('tenant_id', dbUser.tenant_id)
 
       if (error) {
         throw new Error(error.message)
@@ -108,13 +167,24 @@ export default defineEventHandler(async (event) => {
         throw new Error('User ID required')
       }
 
+      // Clients may only load their own payments
+      if (!isPrivileged && body.userId !== dbUser.id) {
+        throw new Error('Unauthorized')
+      }
+
       logger.debug('💳 Loading payments for user:', body.userId)
 
-      const { data, error } = await supabaseAdmin
+      let query = supabaseAdmin
         .from('payments')
         .select('*, payment_items(*)')
         .eq('user_id', body.userId)
         .order('created_at', { ascending: false })
+
+      if (isPrivileged) {
+        query = query.eq('tenant_id', dbUser.tenant_id)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         throw new Error(error.message)
@@ -130,6 +200,7 @@ export default defineEventHandler(async (event) => {
 
     // ========== LOAD APPOINTMENT PAYMENTS ==========
     if (action === 'load-appointment') {
+      if (!isPrivileged) throw new Error('Unauthorized: role')
       if (!body.appointmentId) {
         throw new Error('Appointment ID required')
       }
@@ -140,6 +211,7 @@ export default defineEventHandler(async (event) => {
         .from('payments')
         .select('*, payment_items(*)')
         .eq('appointment_id', body.appointmentId)
+        .eq('tenant_id', dbUser.tenant_id)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -165,12 +237,6 @@ export default defineEventHandler(async (event) => {
         .single()
 
       if (!payment) throw new Error('Payment not found')
-
-      const { data: dbUser } = await supabaseAdmin
-        .from('users')
-        .select('tenant_id, role')
-        .eq('auth_user_id', user.id)
-        .single()
 
       if (!dbUser || (payment.tenant_id && dbUser.tenant_id !== payment.tenant_id)) throw new Error('Unauthorized: tenant mismatch')
       if (!['admin', 'staff'].includes(dbUser.role)) throw new Error('Unauthorized: role')

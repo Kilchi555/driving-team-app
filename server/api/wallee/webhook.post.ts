@@ -176,14 +176,10 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    // ============ LAYER 2: MAP STATUS ============
+    // ============ LAYER 2: MAP STATUS (provisional from body; verified via Wallee API below) ============
+    // Do NOT trust body.state alone — Wallee does not sign webhooks. Layer 5.5 overwrites
+    // paymentStatus with the live Wallee transaction state before any mutation.
     let paymentStatus = STATUS_MAPPING[walleeState] || 'pending'
-    
-    // Trust FULFILL immediately - this is the final state
-    if (walleeState === 'FULFILL') {
-      paymentStatus = 'completed'
-      logger.info('✅ FULFILL state - payment is completed')
-    }
     
     // ============ LAYER 3: FIND PAYMENT BY TRANSACTION ID ============
     // Note: supabase is already initialized at the top of the handler
@@ -341,12 +337,16 @@ export default defineEventHandler(async (event) => {
             
             if (posRecord) {
               logger.info('✅ Found product_sale via pos-merchantRef fallback:', posRecord.id)
+              // Prefer live Wallee state over webhook body (already fetched above)
+              const posStatus = walleeTransaction.state
+                ? (STATUS_MAPPING[walleeTransaction.state] || paymentStatus)
+                : paymentStatus
               // Also save the transaction ID so future webhooks find it directly
               await supabase
                 .from('product_sales')
                 .update({ wallee_transaction_id: transactionId })
                 .eq('id', productSaleId)
-              return await processAnonymousSale(posRecord, paymentStatus)
+              return await processAnonymousSale(posRecord, posStatus)
             }
           }
 
@@ -411,7 +411,16 @@ export default defineEventHandler(async (event) => {
       
       if (anonymousSale) {
         logger.debug('✅ Found anonymous sale:', anonymousSale.id)
-        return await processAnonymousSale(anonymousSale, paymentStatus)
+        // Verify with Wallee before mutating product_sales status
+        const verifiedTx = await fetchWalleeTransaction(transactionId, spaceId)
+        if (!verifiedTx?.state) {
+          logger.error('❌ Rejecting anonymous-sale webhook: Wallee verification failed', { transactionId })
+          // 503 so Wallee retries after transient API/config outages
+          setResponseStatus(event, 503)
+          return { success: false, error: 'Could not verify transaction with Wallee', transactionId, retry: true }
+        }
+        const verifiedStatus = STATUS_MAPPING[verifiedTx.state] || 'pending'
+        return await processAnonymousSale(anonymousSale, verifiedStatus)
       }
 
       // ⚠️ FULFILL with no payment record — alert loudly so admins can investigate
@@ -444,6 +453,89 @@ export default defineEventHandler(async (event) => {
     }
     
     logger.info('✅ Found payments:', payments.length)
+
+    // ============ LAYER 5.5: ALWAYS VERIFY TRANSACTION STATE VIA WALLEE API ============
+    // Never trust webhook body.state alone — Wallee does not sign webhooks.
+    // Completion/authorization must be confirmed by reading the live transaction.
+    {
+      const verifiedTx = await fetchWalleeTransaction(transactionId, spaceId)
+      if (!verifiedTx?.state) {
+        logger.error('❌ Rejecting webhook: could not verify transaction with Wallee API', {
+          transactionId,
+          claimedState: walleeState,
+          paymentIds: payments.map((p: any) => p.id)
+        })
+        if (webhookLogId) {
+          try {
+            await supabase.from('webhook_logs').update({
+              success: false,
+              error_message: 'Rejected: Wallee API verification failed (will retry)',
+              processing_duration_ms: Date.now() - startTime
+            }).eq('id', webhookLogId)
+          } catch { /* non-fatal */ }
+        }
+        // 503 so Wallee retries — verification failures are often transient (API/SDK/config)
+        setResponseStatus(event, 503)
+        return {
+          success: false,
+          error: 'Could not verify transaction with Wallee',
+          transactionId,
+          retry: true
+        }
+      }
+
+      const verifiedMapped = STATUS_MAPPING[verifiedTx.state] || 'pending'
+      if (verifiedMapped !== paymentStatus) {
+        logger.warn('⚠️ Webhook body state disagreed with Wallee API; using API state', {
+          bodyState: walleeState,
+          bodyMapped: paymentStatus,
+          apiState: verifiedTx.state,
+          apiMapped: verifiedMapped
+        })
+      }
+      paymentStatus = verifiedMapped
+
+      // Amount integrity: refuse completion if captured amount is materially below payment total
+      if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
+        const capturedChf = Number(
+          verifiedTx.completedAmount ??
+          verifiedTx.authorizationAmount ??
+          verifiedTx.authorizationAmountIncludingTax ??
+          NaN
+        )
+        if (Number.isFinite(capturedChf)) {
+          const underpaid = payments.filter((p: any) => {
+            const expectedChf = Number(p.total_amount_rappen || 0) / 100
+            // Allow 1 rappen tolerance for float rounding
+            return expectedChf > 0 && capturedChf + 0.01 < expectedChf
+          })
+          if (underpaid.length > 0) {
+            logger.error('❌ Rejecting webhook: Wallee captured amount below payment total', {
+              transactionId,
+              capturedChf,
+              underpaid: underpaid.map((p: any) => ({
+                id: p.id,
+                total_amount_rappen: p.total_amount_rappen
+              }))
+            })
+            if (webhookLogId) {
+              try {
+                await supabase.from('webhook_logs').update({
+                  success: false,
+                  error_message: `Rejected: captured CHF ${capturedChf} below payment total`,
+                  processing_duration_ms: Date.now() - startTime
+                }).eq('id', webhookLogId)
+              } catch { /* non-fatal */ }
+            }
+            return {
+              success: false,
+              error: 'Captured amount does not match payment total',
+              transactionId
+            }
+          }
+        }
+      }
+    }
     
     // 🔍 Update webhook log with payment info
     if (webhookLogId && payments.length > 0) {
