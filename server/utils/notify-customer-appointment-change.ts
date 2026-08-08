@@ -13,6 +13,7 @@ import {
 } from '~/server/utils/sms-templates'
 import { getAccountAccessLink } from '~/server/utils/account-access-link'
 import { DEFAULT_BOOKING_POLICY } from '~/server/api/admin/booking-policy.get'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 
 export async function notifyCustomerAppointmentChange(opts: {
   tenantId: string
@@ -79,6 +80,7 @@ export async function notifyCustomerAppointmentChange(opts: {
     try {
       await $fetch('/api/email/send-appointment-notification', {
         method: 'POST',
+        headers: internalSecretHeaders(),
         body: {
           email: user.email,
           studentName: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Kunde',

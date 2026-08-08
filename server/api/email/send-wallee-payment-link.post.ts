@@ -3,6 +3,7 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
 
 interface SendEmailRequest {
   email: string
@@ -13,6 +14,8 @@ interface SendEmailRequest {
 
 export default defineEventHandler(async (event) => {
   try {
+    await requireStaffOrInternal(event)
+
     const body = await readBody<SendEmailRequest>(event)
     const { email, subject, html, paymentLink } = body
 
@@ -59,4 +62,3 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
-

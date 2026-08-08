@@ -4,9 +4,11 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
 
 export default defineEventHandler(async (event) => {
   try {
+    const auth = await requireStaffOrInternal(event)
     const supabase = getSupabaseAdmin()
     const { appointmentId, newDurationMinutes, oldDurationMinutes, pricePerMinute } = await readBody(event)
 
@@ -30,6 +32,19 @@ export default defineEventHandler(async (event) => {
       .single()
 
     if (aptError) throw new Error(`Appointment not found: ${aptError.message}`)
+
+    if (
+      auth.mode === 'staff' &&
+      auth.profile?.tenant_id &&
+      appointment.tenant_id &&
+      auth.profile.role !== 'super_admin' &&
+      appointment.tenant_id !== auth.profile.tenant_id
+    ) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden – appointment belongs to another tenant'
+      })
+    }
 
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
@@ -110,6 +125,8 @@ export default defineEventHandler(async (event) => {
       )
     }
   } catch (error: any) {
+    // Preserve HTTP auth/validation errors (do not flatten to 200)
+    if (error?.statusCode) throw error
     console.error('❌ Error adjusting appointment duration:', error)
     return { success: false, error: error.message }
   }

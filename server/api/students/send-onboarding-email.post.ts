@@ -8,9 +8,12 @@ import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildOnboardingEmailHtml } from '~/server/utils/onboarding-email'
+import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
 
 export default defineEventHandler(async (event) => {
   try {
+    const auth = await requireStaffOrInternal(event)
+
     const body = await readBody(event)
     const { email, firstName, lastName, onboardingLink, tenantId } = body
 
@@ -21,6 +24,18 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         message: 'Missing required fields: email, onboardingLink, tenantId'
+      })
+    }
+
+    if (
+      auth.mode === 'staff' &&
+      auth.profile?.tenant_id &&
+      auth.profile.role !== 'super_admin' &&
+      auth.profile.tenant_id !== tenantId
+    ) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden – tenant mismatch'
       })
     }
 
