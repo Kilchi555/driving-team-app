@@ -107,7 +107,7 @@ const loadFailureDetails = async () => {
     logger.debug('❌ Payment failed:', { transactionId, errorCode, errorMessage })
 
     if (transactionId) {
-      // ✅ SECURITY FIX: Use existing secure API instead of direct DB update
+      // Release processing lock after abort/failure — never marks paid
       try {
         const result = await $fetch('/api/payments/status', {
           method: 'POST',
@@ -122,9 +122,16 @@ const loadFailureDetails = async () => {
           failedPayment.value = result.payment
         }
       } catch (apiError: any) {
+        // Fallback: release any processing locks for this user
+        try {
+          await $fetch('/api/payments/release-processing-lock', { method: 'POST' })
+        } catch { /* non-critical */ }
         logger.warn('⚠️ Could not mark payment as failed via API:', apiError.message)
-        // Non-critical - continue to show error page
       }
+    } else {
+      try {
+        await $fetch('/api/payments/release-processing-lock', { method: 'POST' })
+      } catch { /* non-critical */ }
     }
 
     // Set error details

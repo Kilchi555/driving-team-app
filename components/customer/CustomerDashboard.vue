@@ -2424,6 +2424,15 @@ onMounted(async () => {
       // Small delay to ensure webhook processed
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
+
+    if (paymentFailed) {
+      logger.debug('💳 Payment failed/aborted — syncing processing locks with Wallee')
+      try {
+        await $fetch('/api/payments/release-processing-lock', { method: 'POST' })
+      } catch (err: any) {
+        console.warn('⚠️ Could not sync processing lock:', err?.message)
+      }
+    }
     
     // Einfacher: Warte auf Auth-Store Initialisierung
     let attempts = 0

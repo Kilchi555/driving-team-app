@@ -355,48 +355,13 @@ export default defineEventHandler(async (event) => {
                 } catch {}
               }
             } else if (mappedStatus === 'processing' || mappedStatus === 'pending') {
-              // Wallee is still in CONFIRMED/PROCESSING/PENDING — normally in-flight.
-              // BUT: if the Wallee transaction has been in-flight for more than 2 hours
-              // (based on when the payment was last updated, i.e. when the transaction
-              // was created), it's safe to assume Wallee will never complete it.
-              // Release the lock back to pending so the customer can retry.
-              //
-              // NOTE: We intentionally use `updated_at` (when the transaction was last set)
-              // rather than `created_at` (original payment creation, potentially months old).
-              // Using `created_at` would cause every old payment with a brand-new transaction
-              // to be incorrectly flagged as long-stuck on the very first cron cycle.
-              const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-              const isLongStuck = payment.updated_at < twoHoursAgo
-
-              if (isLongStuck) {
-                logger.info(`⏰ Payment ${payment.id} stuck in processing/Wallee-${walleeState} for >2h (updated_at: ${payment.updated_at}) — releasing to pending`)
-                const { error: timeoutReleaseErr } = await supabase
-                  .from('payments')
-                  .update({ payment_status: 'pending', updated_at: new Date().toISOString() })
-                  .eq('id', payment.id)
-                  .eq('payment_status', 'processing')
-
-                if (timeoutReleaseErr) {
-                  logger.error(`❌ Error releasing timeout lock for payment ${payment.id}:`, timeoutReleaseErr)
-                } else {
-                  processingReleased++
-                  try {
-                    await supabase.from('webhook_logs').insert({
-                      transaction_id: payment.wallee_transaction_id,
-                      payment_id: payment.id,
-                      wallee_state: walleeState,
-                      payment_status_before: 'processing',
-                      payment_status_after: 'pending',
-                      success: true,
-                      error_message: `Processing lock released via cron after 2h timeout (Wallee still ${walleeState}, updated_at: ${payment.updated_at})`,
-                      raw_payload: { recovery: true, wallee_state: walleeState, phase: 'processing_timeout_release' }
-                    })
-                  } catch {}
-                }
-              } else {
-                logger.debug(`⏳ Payment ${payment.id} still in-flight (Wallee: ${walleeState}), updated_at: ${payment.updated_at} — waiting for 2h timeout`)
-              }
-              // If not yet 2 hours old, leave alone and check again next cycle.
+              // Wallee still open (CONFIRMED/PROCESSING/PENDING).
+              // Do NOT release to pending — that re-enabled "pay again" while the
+              // first transaction could still FULFILL (historical double-charge).
+              // process.post now reuses open transactions; keep the lock here.
+              logger.debug(
+                `⏳ Payment ${payment.id} still in-flight (Wallee: ${walleeState}), updated_at: ${payment.updated_at} — keeping processing lock`
+              )
             }
           } catch (stuckErr: any) {
             logger.error(`❌ Error checking stuck processing payment ${payment.id}:`, stuckErr.message)

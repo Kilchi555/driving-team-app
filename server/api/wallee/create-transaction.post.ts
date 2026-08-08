@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
     }
     const {
       orderId,
-      amount,
+      amount: clientAmount,
       currency,
       customerEmail,
       customerName,
@@ -47,23 +47,45 @@ export default defineEventHandler(async (event) => {
       failedUrl
     } = parseResult.data
 
-    // (manual basic checks removed – Zod handles them above)
+    // Load payment server-side — never trust client amount for an existing payment.
+    const { data: paymentRow, error: paymentLookupError } = await supabase
+      .from('payments')
+      .select('id, tenant_id, total_amount_rappen, payment_status, currency, wallee_transaction_id, wallee_space_id')
+      .eq('id', orderId)
+      .maybeSingle()
+
+    if (paymentLookupError || !paymentRow) {
+      throw createError({ statusCode: 404, message: 'Zahlung nicht gefunden' })
+    }
+
+    if (!['pending', 'processing', 'failed'].includes(paymentRow.payment_status)) {
+      throw createError({ statusCode: 409, message: 'Zahlung kann in diesem Status nicht erneut gestartet werden' })
+    }
+
+    const serverAmountChf = Number(paymentRow.total_amount_rappen || 0) / 100
+    if (!(serverAmountChf > 0)) {
+      throw createError({ statusCode: 400, message: 'Ungültiger Zahlungsbetrag' })
+    }
+
+    // Reject obvious underpayment attempts; always charge the DB amount
+    if (Math.abs(clientAmount - serverAmountChf) > 0.01) {
+      logger.warn('🚫 create-transaction: client amount mismatch, using DB amount', {
+        orderId,
+        clientAmount,
+        serverAmountChf
+      })
+    }
+    const amount = serverAmountChf
+    const currencyResolved = (paymentRow.currency as 'CHF' | 'EUR' | 'USD') || currency
 
     // Keep endpoint resilient for public callers:
     // if tenantId is missing in client payload, derive it from the payment record.
-    let resolvedTenantId = tenantId
+    let resolvedTenantId = tenantId || paymentRow.tenant_id
     if (!resolvedTenantId) {
-      const { data: paymentData, error: paymentLookupError } = await supabase
-        .from('payments')
-        .select('tenant_id')
-        .eq('id', orderId)
-        .maybeSingle()
-
-      if (paymentLookupError || !paymentData?.tenant_id) {
-        throw createError({ statusCode: 400, message: 'tenantId fehlt und konnte nicht aus payment ermittelt werden' })
-      }
-      resolvedTenantId = paymentData.tenant_id
-      logger.debug('ℹ️ Resolved tenantId from payment:', { orderId, tenantId: resolvedTenantId })
+      throw createError({ statusCode: 400, message: 'tenantId fehlt und konnte nicht aus payment ermittelt werden' })
+    }
+    if (tenantId && paymentRow.tenant_id && tenantId !== paymentRow.tenant_id) {
+      throw createError({ statusCode: 403, message: 'Tenant mismatch' })
     }
 
     // ── Wallee config for this tenant ─────────────────────
@@ -78,6 +100,61 @@ export default defineEventHandler(async (event) => {
     const sdkConfig = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     const transactionService = new Wallee.api.TransactionService(sdkConfig)
     const paymentPageService = new Wallee.api.TransactionPaymentPageService(sdkConfig)
+
+    // Reuse open Wallee transactions — never create a parallel charge
+    if (paymentRow.wallee_transaction_id) {
+      try {
+        const existingTxResponse = await transactionService.read(spaceId, parseInt(paymentRow.wallee_transaction_id, 10))
+        const existingTx = (existingTxResponse as any)?.body || existingTxResponse
+        const state = existingTx?.state ? String(existingTx.state) : null
+        const COMPLETED = ['FULFILL', 'COMPLETED', 'SUCCESSFUL']
+        const OPEN = ['PENDING', 'CONFIRMED', 'PROCESSING']
+        const FAIL = ['FAILED', 'CANCELED', 'DECLINE', 'VOIDED']
+
+        if (state && COMPLETED.includes(state)) {
+          await supabase.from('payments').update({
+            payment_status: 'completed',
+            paid_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            wallee_transaction_state: state
+          }).eq('id', orderId)
+          throw createError({ statusCode: 409, message: 'Zahlung wurde bereits abgeschlossen' })
+        }
+
+        if (state && OPEN.includes(state)) {
+          let paymentUrl: string =
+            existingTx?.paymentPageUrl ||
+            existingTx?.paymentPageEndpoint ||
+            ''
+          if (!paymentUrl) {
+            try {
+              const urlResponse = await paymentPageService.paymentPageUrl(spaceId, parseInt(paymentRow.wallee_transaction_id, 10))
+              paymentUrl = (urlResponse as any)?.body || urlResponse
+            } catch {
+              paymentUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${paymentRow.wallee_transaction_id}`
+            }
+          }
+          await supabase.from('payments').update({
+            payment_status: 'processing',
+            updated_at: new Date().toISOString(),
+            wallee_transaction_state: state
+          }).eq('id', orderId)
+          return {
+            success: true,
+            transactionId: String(paymentRow.wallee_transaction_id),
+            paymentUrl,
+            reused: true
+          }
+        }
+
+        if (state && !FAIL.includes(state)) {
+          throw createError({ statusCode: 409, message: 'Zahlung wird noch verarbeitet. Bitte warte kurz.' })
+        }
+      } catch (e: any) {
+        if (e?.statusCode) throw e
+        throw createError({ statusCode: 503, message: 'Zahlungsstatus konnte nicht geprüft werden' })
+      }
+    }
 
     // ── Base URL for redirects ─────────────────────────────
     const forwardedHost = getHeader(event, 'x-forwarded-host')
@@ -107,7 +184,7 @@ export default defineEventHandler(async (event) => {
         }
       ],
       spaceViewId: null,
-      currency,
+      currency: currencyResolved,
       autoConfirmationEnabled: true,
       chargeRetryEnabled: false,
       customersEmailAddress: customerEmail,
