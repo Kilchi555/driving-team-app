@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     // Load payment server-side — never trust client amount for an existing payment.
     const { data: paymentRow, error: paymentLookupError } = await supabase
       .from('payments')
-      .select('id, tenant_id, total_amount_rappen, payment_status, currency')
+      .select('id, tenant_id, total_amount_rappen, payment_status, currency, wallee_transaction_id, wallee_space_id')
       .eq('id', orderId)
       .maybeSingle()
 
@@ -100,6 +100,61 @@ export default defineEventHandler(async (event) => {
     const sdkConfig = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     const transactionService = new Wallee.api.TransactionService(sdkConfig)
     const paymentPageService = new Wallee.api.TransactionPaymentPageService(sdkConfig)
+
+    // Reuse open Wallee transactions — never create a parallel charge
+    if (paymentRow.wallee_transaction_id) {
+      try {
+        const existingTxResponse = await transactionService.read(spaceId, parseInt(paymentRow.wallee_transaction_id, 10))
+        const existingTx = (existingTxResponse as any)?.body || existingTxResponse
+        const state = existingTx?.state ? String(existingTx.state) : null
+        const COMPLETED = ['FULFILL', 'COMPLETED', 'SUCCESSFUL']
+        const OPEN = ['PENDING', 'CONFIRMED', 'PROCESSING']
+        const FAIL = ['FAILED', 'CANCELED', 'DECLINE', 'VOIDED']
+
+        if (state && COMPLETED.includes(state)) {
+          await supabase.from('payments').update({
+            payment_status: 'completed',
+            paid_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            wallee_transaction_state: state
+          }).eq('id', orderId)
+          throw createError({ statusCode: 409, message: 'Zahlung wurde bereits abgeschlossen' })
+        }
+
+        if (state && OPEN.includes(state)) {
+          let paymentUrl: string =
+            existingTx?.paymentPageUrl ||
+            existingTx?.paymentPageEndpoint ||
+            ''
+          if (!paymentUrl) {
+            try {
+              const urlResponse = await paymentPageService.paymentPageUrl(spaceId, parseInt(paymentRow.wallee_transaction_id, 10))
+              paymentUrl = (urlResponse as any)?.body || urlResponse
+            } catch {
+              paymentUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${paymentRow.wallee_transaction_id}`
+            }
+          }
+          await supabase.from('payments').update({
+            payment_status: 'processing',
+            updated_at: new Date().toISOString(),
+            wallee_transaction_state: state
+          }).eq('id', orderId)
+          return {
+            success: true,
+            transactionId: String(paymentRow.wallee_transaction_id),
+            paymentUrl,
+            reused: true
+          }
+        }
+
+        if (state && !FAIL.includes(state)) {
+          throw createError({ statusCode: 409, message: 'Zahlung wird noch verarbeitet. Bitte warte kurz.' })
+        }
+      } catch (e: any) {
+        if (e?.statusCode) throw e
+        throw createError({ statusCode: 503, message: 'Zahlungsstatus konnte nicht geprüft werden' })
+      }
+    }
 
     // ── Base URL for redirects ─────────────────────────────
     const forwardedHost = getHeader(event, 'x-forwarded-host')

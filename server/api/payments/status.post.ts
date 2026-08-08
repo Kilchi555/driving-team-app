@@ -164,13 +164,10 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
       }
 
       if (!isPrivileged) {
-        // After abort/failure redirect: client may release processing → pending only
+        // After abort/failure redirect: sync with Wallee first — never blind-release
+        // while Confirmed/open (that caused double charges historically).
         const wantsRelease = ['failed', 'cancelled', 'pending'].includes(body.status)
-        const canRelease =
-          wantsRelease &&
-          (payment.payment_status === 'processing' || payment.payment_status === 'failed')
-
-        if (!canRelease) {
+        if (!wantsRelease) {
           logger.warn('🚫 Ignoring client payment status mutation', {
             userId: userData.id,
             paymentId: payment.id,
@@ -178,44 +175,56 @@ export default defineEventHandler(async (event): Promise<PaymentStatusResponse> 
             attemptedStatus: body.status
           })
         } else {
-          const { error: updateError } = await supabase
-            .from('payments')
-            .update({
-              payment_status: 'pending',
-              updated_at: toLocalTimeString(new Date())
-            })
-            .eq('id', payment.id)
-            .in('payment_status', ['processing', 'failed'])
+          const { syncAndResolvePayment } = await import('~/server/utils/wallee-payment-sync')
+          const resolved = await syncAndResolvePayment({
+            id: payment.id,
+            tenant_id: payment.tenant_id,
+            payment_status: payment.payment_status,
+            wallee_transaction_id: payment.wallee_transaction_id,
+            wallee_space_id: payment.wallee_space_id
+          })
 
-          if (updateError) {
-            logger.error('❌ Error releasing processing lock:', updateError)
-            throw createError({
-              statusCode: 500,
-              statusMessage: 'Failed to update payment status'
+          if (resolved.changed && (resolved.decision === 'release_pending' || resolved.decision === 'no_transaction')) {
+            statusMutated = true
+            appliedStatus = 'pending'
+            logger.info('🔓 Client sync released processing lock → pending', {
+              paymentId: payment.id,
+              walleeState: resolved.walleeState
+            })
+          } else if (resolved.changed && (resolved.decision === 'mark_completed' || resolved.decision === 'mark_authorized')) {
+            statusMutated = true
+            appliedStatus = resolved.newStatus
+            logger.info('✅ Client sync found payment already paid', {
+              paymentId: payment.id,
+              newStatus: resolved.newStatus,
+              walleeState: resolved.walleeState
+            })
+          } else {
+            logger.info('⏳ Client sync kept payment open (no blind release)', {
+              paymentId: payment.id,
+              decision: resolved.decision,
+              walleeState: resolved.walleeState
             })
           }
 
-          statusMutated = true
-          appliedStatus = 'pending'
-          logger.info('🔓 Client released processing lock → pending', {
-            paymentId: payment.id,
-            previous: payment.payment_status
-          })
-
-          await logAudit({
-            action: 'payment_processing_lock_released',
-            user_id: userData.id,
-            tenant_id: userData.tenant_id,
-            resource_type: 'payment',
-            resource_id: payment.id,
-            status: 'success',
-            details: {
-              previous_status: payment.payment_status,
-              new_status: 'pending',
-              transaction_id: body.walleeTransactionId || body.transactionId,
-              duration_ms: Date.now() - startTime
-            }
-          })
+          if (statusMutated) {
+            await logAudit({
+              action: 'payment_processing_lock_synced',
+              user_id: userData.id,
+              tenant_id: userData.tenant_id,
+              resource_type: 'payment',
+              resource_id: payment.id,
+              status: 'success',
+              details: {
+                previous_status: payment.payment_status,
+                new_status: appliedStatus,
+                decision: resolved.decision,
+                wallee_state: resolved.walleeState,
+                transaction_id: body.walleeTransactionId || body.transactionId,
+                duration_ms: Date.now() - startTime
+              }
+            })
+          }
         }
       } else {
         const updateData: any = {

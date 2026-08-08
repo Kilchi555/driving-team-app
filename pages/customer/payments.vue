@@ -352,7 +352,7 @@
 <script setup lang="ts">
 
 import { logger } from '~/utils/logger'
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import { openPdf } from '~/utils/openPdf'
 import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
@@ -1422,17 +1422,44 @@ onMounted(async () => {
     displayToast('success', 'Zahlung erfolgreich!', 'Deine Zahlung wurde erfolgreich verarbeitet.')
     useRouter().replace({ path: '/customer/payments' })
   } else if (route.query.payment_failed === 'true') {
-    // Release optimistic processing lock immediately so "Jetzt bezahlen" returns
-    // (webhook may be delayed; do not wait for cron)
+    // Sync with Wallee first (no blind release — avoids double charge)
+    try {
+      const syncRes: any = await $fetch('/api/payments/release-processing-lock', { method: 'POST' })
+      await loadCustomerPayments()
+      if (syncRes?.completed > 0) {
+        displayToast('success', 'Zahlung erfolgreich!', 'Deine Zahlung wurde erfolgreich verarbeitet.')
+      } else if (syncRes?.released > 0) {
+        displayToast('error', 'Zahlung fehlgeschlagen', 'Die Zahlung konnte nicht verarbeitet werden. Bitte versuche es erneut.')
+      } else {
+        displayToast('info', 'Zahlung wird noch geprüft', 'Der Zahlungsanbieter meldet die Transaktion noch als offen. Bitte warte kurz.')
+      }
+    } catch (err: any) {
+      console.warn('⚠️ Could not sync processing lock:', err?.message)
+      displayToast('error', 'Zahlung fehlgeschlagen', 'Die Zahlung konnte nicht verarbeitet werden. Bitte versuche es erneut.')
+    }
+    useRouter().replace({ path: '/customer/payments' })
+  }
+
+  // While any payment is processing, poll Wallee sync every 4s (max ~2 min)
+  let processingPollCount = 0
+  const processingPollTimer = window.setInterval(async () => {
+    const hasProcessing = (customerPayments.value || []).some((p: any) => p.payment_status === 'processing')
+    if (!hasProcessing || processingPollCount >= 30) {
+      window.clearInterval(processingPollTimer)
+      return
+    }
+    processingPollCount++
     try {
       await $fetch('/api/payments/release-processing-lock', { method: 'POST' })
       await loadCustomerPayments()
-    } catch (err: any) {
-      console.warn('⚠️ Could not release processing lock:', err?.message)
+    } catch {
+      // non-fatal
     }
-    displayToast('error', 'Zahlung fehlgeschlagen', 'Die Zahlung konnte nicht verarbeitet werden. Bitte versuche es erneut.')
-    useRouter().replace({ path: '/customer/payments' })
-  }
+  }, 4000)
+
+  onUnmounted(() => {
+    window.clearInterval(processingPollTimer)
+  })
 })
 </script>
 
