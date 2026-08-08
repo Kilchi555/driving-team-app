@@ -8,6 +8,7 @@ import {
   groupProductSalesByAppointment,
 } from '~/server/utils/invoice-product-lines'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -68,16 +69,28 @@ export default defineEventHandler(async (event) => {
     .filter(Boolean)
 
   let appointmentStartTimes: Record<string, string> = {}
-  let appointmentEventTypes: Record<string, { event_type_code: string | null, type: string | null, staffFirstName: string | null }> = {}
+  let appointmentEventTypes: Record<string, {
+    event_type_code: string | null
+    type: string | null
+    staffFirstName: string | null
+    status: string | null
+    cancellation_charge_percentage: number | null
+  }> = {}
   if (appointmentIds.length > 0) {
     const { data: appointments } = await supabase
       .from('appointments')
-      .select('id, start_time, event_type_code, type, staff:users!staff_id(first_name)')
+      .select('id, start_time, event_type_code, type, status, cancellation_charge_percentage, staff:users!staff_id(first_name)')
       .in('id', appointmentIds)
     if (appointments) {
       for (const apt of appointments) {
         appointmentStartTimes[apt.id] = apt.start_time
-        appointmentEventTypes[apt.id] = { event_type_code: apt.event_type_code, type: apt.type, staffFirstName: (apt.staff as any)?.first_name || null }
+        appointmentEventTypes[apt.id] = {
+          event_type_code: apt.event_type_code,
+          type: apt.type,
+          staffFirstName: (apt.staff as any)?.first_name || null,
+          status: apt.status,
+          cancellation_charge_percentage: apt.cancellation_charge_percentage ?? null,
+        }
       }
     }
   }
@@ -144,15 +157,22 @@ export default defineEventHandler(async (event) => {
     const aptData = item.appointment_id ? appointmentEventTypes[item.appointment_id] : null
     const eventTypeCode = aptData?.event_type_code
     const eventLabel = eventTypeCode ? (eventTypeMap[eventTypeCode] || eventTypeCode) : null
-    const category = aptData?.type ? `Kat. ${aptData.type}` : null
     const staffFirstName = aptData?.staffFirstName || null
-    const baseLabel = eventLabel || item.product_name
     const breakdown = item.appointment_id ? (paymentBreakdown[item.appointment_id] || null) : null
     return {
       ...item,
       appointment_start_time: item.appointment_id ? (appointmentStartTimes[item.appointment_id] || null) : null,
-      product_name: staffFirstName ? `${baseLabel} mit ${staffFirstName}` : baseLabel,
-      product_description: category || item.product_description,
+      product_name: buildInvoiceServiceLineLabel({
+        eventLabel: eventLabel || item.product_name,
+        staffFirstName,
+        appointmentStatus: aptData?.status,
+        cancellationChargePercentage: aptData?.cancellation_charge_percentage,
+      }),
+      product_description: buildInvoiceServiceDescription({
+        categoryType: aptData?.type,
+        appointmentStatus: aptData?.status,
+        existingDescription: item.product_description,
+      }),
       ...(breakdown ? {
         lesson_price_rappen: breakdown.lesson_price_rappen,
         admin_fee_rappen: breakdown.admin_fee_rappen,

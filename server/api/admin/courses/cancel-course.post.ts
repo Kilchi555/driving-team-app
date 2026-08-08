@@ -4,6 +4,10 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUnenrollBlockedMessage } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { cancelResourceBookingsForCourse } from '~/server/utils/resource-bookings'
+import {
+  deleteStaffCourseAppointments,
+  notifyStaffCourseCancelled,
+} from '~/server/utils/course-staff-notifications'
 import { logger } from '~/utils/logger'
 
 /**
@@ -13,15 +17,17 @@ import { logger } from '~/utils/logger'
  *
  * Body:
  *   courseId      – id of the course to cancel
- *   notifyByEmail – boolean (send cancellation email via Resend)
+ *   notifyByEmail – boolean (send cancellation email to participants)
+ *   notifyStaff   – boolean (email assigned instructors; calendar blocks always removed)
  *   participants  – array of { user_id, email, first_name, last_name }
  */
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
   const body = await readBody(event)
-  const { courseId, notifyByEmail, participants, reason } = body as {
+  const { courseId, notifyByEmail, notifyStaff, participants, reason } = body as {
     courseId: string
     notifyByEmail?: boolean
+    notifyStaff?: boolean
     reason?: string
     participants?: Array<{ user_id: string; email?: string; first_name?: string; last_name?: string }>
   }
@@ -79,6 +85,53 @@ export default defineEventHandler(async (event) => {
 
   // Release vehicle/room reservations tied to this course's sessions
   await cancelResourceBookingsForCourse(supabase, courseId, profile.tenant_id)
+
+  // ── Staff calendar blocks: always remove; email only if admin opted in ──
+  let staffAppointmentsRemoved = 0
+  let staffNotified = 0
+  try {
+    const { data: staffSessions } = await supabase
+      .from('course_sessions')
+      .select('id, start_time, end_time, description, staff_id')
+      .eq('course_id', courseId)
+      .not('staff_id', 'is', null)
+
+    const byStaff = new Map<string, Array<{ id: string; start_time: string; end_time: string; description?: string | null }>>()
+    for (const s of staffSessions || []) {
+      if (!s.staff_id) continue
+      if (!byStaff.has(s.staff_id)) byStaff.set(s.staff_id, [])
+      byStaff.get(s.staff_id)!.push(s)
+    }
+
+    const courseForNotify = {
+      id: course.id,
+      name: course.name,
+      tenant_id: profile.tenant_id,
+    }
+
+    for (const [staffId, sessions] of byStaff) {
+      await deleteStaffCourseAppointments(supabase, staffId, courseId)
+      staffAppointmentsRemoved++
+      if (notifyStaff) {
+        await notifyStaffCourseCancelled(supabase, staffId, courseForNotify, sessions)
+        staffNotified++
+      }
+    }
+
+    // Catch orphan course appointments (staff_id cleared on sessions but notes remain)
+    const { data: leftover } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('notes', `course:${courseId}`)
+      .select('id')
+
+    if (leftover?.length) {
+      staffAppointmentsRemoved += leftover.length
+      logger.debug(`🧹 Removed ${leftover.length} leftover course appointment(s) for ${courseId}`)
+    }
+  } catch (staffCleanupErr: any) {
+    logger.warn('⚠️ Staff appointment cleanup after course cancel failed:', staffCleanupErr.message)
+  }
 
   // ── SARI: Unenroll all participants ──────────────────────────────────────
   const tenant = (course as any).tenants
@@ -226,6 +279,10 @@ export default defineEventHandler(async (event) => {
 
   return {
     success: true,
+    staff: {
+      instructorsCleared: staffAppointmentsRemoved,
+      notified: staffNotified,
+    },
     sari: isSariManaged
       ? {
           unenrolled: sariUnenrolled,

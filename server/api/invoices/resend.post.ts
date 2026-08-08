@@ -13,6 +13,7 @@ import {
   groupProductSalesByAppointment,
 } from '~/server/utils/invoice-product-lines'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
 export default defineEventHandler(async (event) => {
   try {
     const { invoiceId } = await readBody(event)
@@ -73,7 +74,7 @@ export default defineEventHandler(async (event) => {
     if (appointmentIds.length > 0) {
       const { data: apts } = await supabase
         .from('appointments')
-        .select('id, start_time, event_type_code, type, duration_minutes, staff:users!staff_id(first_name)')
+        .select('id, start_time, event_type_code, type, duration_minutes, status, cancellation_charge_percentage, staff:users!staff_id(first_name)')
         .in('id', appointmentIds)
       if (apts) for (const apt of apts) appointmentMap[apt.id] = apt
     }
@@ -93,14 +94,22 @@ export default defineEventHandler(async (event) => {
       const apt = item.appointment_id ? appointmentMap[item.appointment_id] : null
       const eventLabel = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
       const staffFirstName = (apt?.staff as any)?.first_name || null
-      const baseLabel = eventLabel || item.product_name
-      const productName = staffFirstName ? `${baseLabel} mit ${staffFirstName}` : baseLabel
+      const productName = buildInvoiceServiceLineLabel({
+        eventLabel: eventLabel || item.product_name,
+        staffFirstName,
+        appointmentStatus: apt?.status,
+        cancellationChargePercentage: apt?.cancellation_charge_percentage,
+      })
       return {
         ...item,
         product_name: productName,
         appointment_start_time: apt?.start_time || null,
         appointment_duration_minutes: apt?.duration_minutes ?? item.appointment_duration_minutes ?? null,
-        product_description: apt?.type ? `Kat. ${apt.type}` : (item.product_description || null),
+        product_description: buildInvoiceServiceDescription({
+          categoryType: apt?.type,
+          appointmentStatus: apt?.status,
+          existingDescription: item.product_description,
+        }),
       }
     })
 

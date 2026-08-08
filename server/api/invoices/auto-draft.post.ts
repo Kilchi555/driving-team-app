@@ -9,6 +9,7 @@ import { computeInvoiceDueDate } from '~/server/utils/invoice-due-date'
 import { computeVatAmountRappen, getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 import { groupProductSalesByAppointment } from '~/server/utils/invoice-product-lines'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -55,6 +56,8 @@ export default defineEventHandler(async (event) => {
       duration_minutes,
       type,
       event_type_code,
+      status,
+      cancellation_charge_percentage,
       staff:users!staff_id (first_name)
     )
   `
@@ -249,9 +252,18 @@ export default defineEventHandler(async (event) => {
     const apt = p.appointments as any
     const label = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
     const staffFirstName = apt?.staff?.first_name || null
-    const serviceName = staffFirstName
-      ? `${label || apt?.title || appointmentFallback} mit ${staffFirstName}`
-      : (label || apt?.title || appointmentFallback)
+    const serviceName = buildInvoiceServiceLineLabel({
+      eventLabel: label,
+      title: apt?.title,
+      fallback: appointmentFallback,
+      staffFirstName,
+      appointmentStatus: apt?.status,
+      cancellationChargePercentage: apt?.cancellation_charge_percentage,
+    })
+    const serviceDescription = buildInvoiceServiceDescription({
+      categoryType: apt?.type,
+      appointmentStatus: apt?.status,
+    })
 
     const products = (p.appointment_id && productsByApt[p.appointment_id]) || []
     const productsTotal = products.reduce((sum, pd) => sum + (pd.price_rappen || 0), 0)
@@ -263,7 +275,7 @@ export default defineEventHandler(async (event) => {
       appointment_id: p.appointment_id,
       product_id: null as string | null,
       product_name: serviceName,
-      product_description: apt?.type ? `Kat. ${apt.type}` : null,
+      product_description: serviceDescription,
       appointment_title: apt?.title || null,
       appointment_date: apt?.start_time || null,
       appointment_start_time: apt?.start_time || null,
