@@ -275,7 +275,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'get-staff-for-category') {
-      // ✅ Get all staff available for a category
+      // ✅ Get all staff available for a category (or event type code)
       const { category_code } = body
       if (!category_code || !tenant_id) {
         throw createError({ statusCode: 400, message: 'Missing category_code or tenant_id' })
@@ -283,6 +283,7 @@ export default defineEventHandler(async (event) => {
 
       const [
         { data: category, error: catErr },
+        { data: eventType, error: etErr },
         { data: staff, error: staffErr },
         { data: locations, error: locErr }
       ] = await Promise.all([
@@ -292,7 +293,15 @@ export default defineEventHandler(async (event) => {
           .eq('tenant_id', tenant_id)
           .eq('code', category_code)
           .eq('is_active', true)
-          .single(),
+          .maybeSingle(),
+        supabase
+          .from('event_types')
+          .select('id')
+          .eq('tenant_id', tenant_id)
+          .eq('code', category_code)
+          .eq('is_active', true)
+          .eq('public_bookable', true)
+          .maybeSingle(),
         supabase
           .from('staff')
           .select('id, first_name, last_name, email, image_url')
@@ -306,7 +315,12 @@ export default defineEventHandler(async (event) => {
           .eq('location_type', 'standard')
       ])
 
+      // Category lookup may miss for event-type bookings — only hard-fail unexpected DB errors
       if (catErr) throw catErr
+      if (etErr) throw etErr
+      if (!category && !eventType) {
+        throw createError({ statusCode: 404, message: `Unknown category/event type: ${category_code}` })
+      }
       if (staffErr) throw staffErr
       if (locErr) throw locErr
 

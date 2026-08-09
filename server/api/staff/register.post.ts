@@ -35,6 +35,8 @@ export default defineEventHandler(async (event) => {
       workingHours,
       // Location assignments: array of location IDs
       selectedLocationIds,
+      /** Optional per-location online-bookable overrides (defaults from locations.public_bookable) */
+      locationBookableMap,
       selectedExamLocationIds,
       // New meetup locations created by staff during registration
       newLocations
@@ -360,11 +362,16 @@ export default defineEventHandler(async (event) => {
     // Dual-write: locations.staff_ids + staff_locations must stay in sync for online booking
     if (Array.isArray(selectedLocationIds) && selectedLocationIds.length > 0) {
       const staffCategories: string[] = Array.isArray(selectedCategories) ? selectedCategories : []
+      const bookableOverrides =
+        locationBookableMap && typeof locationBookableMap === 'object'
+          ? (locationBookableMap as Record<string, boolean>)
+          : {}
       const assignedLocationIds: string[] = []
+      const bookableByLocationId = new Map<string, boolean>()
       for (const locId of selectedLocationIds) {
         try {
           const { data: loc } = await serviceSupabase
-            .from('locations').select('staff_ids').eq('id', locId).single()
+            .from('locations').select('staff_ids, public_bookable').eq('id', locId).single()
           if (loc) {
             const current: string[] = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
             if (!current.includes(newUser.id)) {
@@ -374,6 +381,11 @@ export default defineEventHandler(async (event) => {
                 .eq('id', locId)
             }
             assignedLocationIds.push(locId)
+            const fromClient = bookableOverrides[locId]
+            bookableByLocationId.set(
+              locId,
+              typeof fromClient === 'boolean' ? fromClient : loc.public_bookable !== false,
+            )
           }
         } catch (locErr) {
           console.warn('⚠️ Location assignment failed (non-fatal):', locErr)
@@ -385,7 +397,7 @@ export default defineEventHandler(async (event) => {
           staff_id: newUser.id,
           location_id: locId,
           tenant_id: invitation.tenant_id,
-          is_online_bookable: true,
+          is_online_bookable: bookableByLocationId.get(locId) !== false,
           is_active: true,
           available_categories: staffCategories,
         }))
@@ -429,10 +441,11 @@ export default defineEventHandler(async (event) => {
             available_categories: staffCategories,
             location_type:       'standard',
             is_active:           true,
+            public_bookable:     l.public_bookable !== false,
           }))
         if (locationRows.length > 0) {
           const { data: insertedLocs, error: insertLocErr } = await serviceSupabase
-            .from('locations').insert(locationRows).select('id')
+            .from('locations').insert(locationRows).select('id, public_bookable')
           if (insertLocErr) throw insertLocErr
           logger.debug('✅ New meetup locations created:', locationRows.length)
           // Create staff_locations entries for newly created locations
@@ -441,7 +454,7 @@ export default defineEventHandler(async (event) => {
               staff_id: newUser.id,
               location_id: loc.id,
               tenant_id: invitation.tenant_id,
-              is_online_bookable: true,
+              is_online_bookable: loc.public_bookable !== false,
               is_active: true,
               available_categories: staffCategories,
             }))
@@ -542,6 +555,21 @@ export default defineEventHandler(async (event) => {
         duration_ms: Date.now() - startTime
       }
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
+
+    // 11. Queue availability recalc so online-bookable slots appear without waiting for nightly cron
+    try {
+      await $fetch('/api/availability/queue-recalc', {
+        method: 'POST',
+        body: {
+          staff_id: newUser.id,
+          tenant_id: invitation.tenant_id,
+          trigger: 'settings_change',
+        },
+      })
+      logger.debug('✅ Availability recalc queued for new staff')
+    } catch (recalcErr: any) {
+      logger.warn('⚠️ Availability recalc queue failed (non-critical):', recalcErr?.message || recalcErr)
+    }
 
     // Get tenant slug for redirect
     const { data: tenantData } = await serviceSupabase

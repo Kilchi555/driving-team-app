@@ -1020,6 +1020,21 @@
                     <input v-model="loc.city" type="text" placeholder="Zürich"
                       class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-colors">
                   </div>
+                  <div class="sm:col-span-2 flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-gray-800">Online buchbar</p>
+                      <p class="text-xs text-gray-500 mt-0.5">Kunden können hier selbst Termine buchen (Default für {{ labels.staffPlural }}).</p>
+                    </div>
+                    <button type="button"
+                      @click="loc.public_bookable = !loc.public_bookable"
+                      class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                      :style="loc.public_bookable ? { background: formData.primary_color || '#2563EB' } : {}"
+                      :class="!loc.public_bookable ? 'bg-gray-200' : ''"
+                      :title="loc.public_bookable ? 'Online buchbar' : 'Nur intern'">
+                      <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                        :class="loc.public_bookable ? 'translate-x-3' : 'translate-x-0'" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2560,6 +2575,8 @@ interface LocationEntry {
   city: string
   phone: string
   email: string
+  /** Admin default → staff_locations.is_online_bookable when staff is assigned */
+  public_bookable: boolean
 }
 
 const isDrivingSchool = computed(() => formData.value.business_type === 'driving_school')
@@ -2576,12 +2593,14 @@ const REMOTE_LOCATION_DEFS = [
   { key: 'onlineCall' as const, name: 'Online Call', address: 'Remote / Video (Zoom, Teams, …)' },
 ]
 
-const locationsList = ref<LocationEntry[]>([
-  { name: '', address: '', zip: '', city: '', phone: '', email: '' }
-])
+const emptyLocation = (): LocationEntry => ({
+  name: '', address: '', zip: '', city: '', phone: '', email: '', public_bookable: true,
+})
+
+const locationsList = ref<LocationEntry[]>([emptyLocation()])
 
 const addLocation = () => {
-  locationsList.value.push({ name: '', address: '', zip: '', city: '', phone: '', email: '' })
+  locationsList.value.push(emptyLocation())
 }
 
 const removeLocation = (index: number) => {
@@ -2605,7 +2624,15 @@ const locationsForSubmit = computed((): LocationEntry[] => {
   for (const def of REMOTE_LOCATION_DEFS) {
     if (!meetingChannels.value[def.key]) continue
     if (locs.some(l => l.name === def.name)) continue
-    locs.push({ name: def.name, address: def.address, zip: '', city: '', phone: '', email: '' })
+    locs.push({
+      name: def.name,
+      address: def.address,
+      zip: '',
+      city: '',
+      phone: '',
+      email: '',
+      public_bookable: true,
+    })
   }
   return locs
 })
@@ -2633,6 +2660,7 @@ const prefillFirstLocation = () => {
     city: formData.value.city || '',
     phone: formData.value.contact_phone || '',
     email: formData.value.contact_email || '',
+    public_bookable: true,
   }
 }
 

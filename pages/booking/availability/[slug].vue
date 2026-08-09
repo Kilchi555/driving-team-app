@@ -2657,7 +2657,10 @@ const loadLocationsForAllStaff = async (generateTimeSlots: boolean = false) => {
     
     // ✅ Filter ALL locations for the category
     // Empty available_categories = no location-level restriction (per-staff categories)
+    // Non-FS event-type booking: available_categories holds topic codes, not event codes — skip filter
+    const isEventTypeBooking = currentTenant.value?.business_type !== 'driving_school'
     const categoryLocations = (allLocations || []).filter((location: any) => {
+      if (isEventTypeBooking) return true
       const availableCategories = location.available_categories || []
       if (availableCategories.length === 0) {
         logger.debug(`✅ Including location "${location.name}" (no location-level category restriction)`)
@@ -3232,15 +3235,17 @@ const selectMainCategory = async (category: any) => {
           staff.available_locations.forEach((location: any) => {
             // API already filtered via staff_locations. Empty location.available_categories
             // means no location-level restriction (categories may be set per-staff only).
+            // Non-FS: available_categories are topic codes, not event type codes — skip filter.
             const supportedCategories = location.available_categories || []
             const categoryCode = selectedCategory.value?.code
+            const isEventTypeBooking = currentTenant.value?.business_type !== 'driving_school'
             
             if (!categoryCode) {
               logger.warn('⚠️ No category code selected')
               return
             }
             
-            if (supportedCategories.length > 0 && !supportedCategories.includes(categoryCode)) {
+            if (!isEventTypeBooking && supportedCategories.length > 0 && !supportedCategories.includes(categoryCode)) {
               logger.debug(`⏭️ Skipping location "${location.name}" - doesn't support category ${categoryCode}`)
               return
             }
@@ -3430,15 +3435,17 @@ const selectSubcategory = async (category: any) => {
         staff.available_locations.forEach((location: any) => {
           // API already filtered via staff_locations. Empty location.available_categories
           // means no location-level restriction (categories may be set per-staff only).
+          // Non-FS: available_categories are topic codes, not event type codes — skip filter.
           const supportedCategories = location.available_categories || []
           const categoryCode = selectedCategory.value?.code
+          const isEventTypeBooking = currentTenant.value?.business_type !== 'driving_school'
           
           if (!categoryCode) {
             logger.warn('⚠️ No category code selected')
             return
           }
           
-          if (supportedCategories.length > 0 && !supportedCategories.includes(categoryCode)) {
+          if (!isEventTypeBooking && supportedCategories.length > 0 && !supportedCategories.includes(categoryCode)) {
             logger.debug(`⏭️ Skipping location "${location.name}" - doesn't support category ${categoryCode}`)
             return
           }
@@ -5194,9 +5201,9 @@ const loadCategories = async () => {
     }
 
     // Only load categories if business_type is driving_school
+    // Non-FS tenants get event types shaped as categories from booking-init.
     if (currentTenant.value.business_type !== 'driving_school') {
-      logger.debug('🚫 Categories not available for business_type:', currentTenant.value.business_type)
-      categories.value = []
+      logger.debug('ℹ️ Non-driving-school tenant — using booking-init event-type categories')
       return
     }
 

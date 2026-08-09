@@ -77,6 +77,47 @@ export default defineEventHandler(async (event) => {
     if (ruleTypes.has('base_price')) availableServiceTypes.push('fahrstunde')
     if (ruleTypes.has('theory')) availableServiceTypes.push('theorie')
     if (ruleTypes.has('consultation')) availableServiceTypes.push('beratung')
+  } else {
+    // per_event_type (and other non-FS): expose public_bookable event types as
+    // selectable "categories" so the existing booking UI can reuse the leaf path
+    // (no children → selectMainCategory uses the item directly).
+    const [eventTypesResult, locationsResult] = await Promise.all([
+      supabase
+        .from('event_types')
+        .select('id, code, name, description, default_duration_minutes, default_color, emoji, public_bookable, require_payment, display_order')
+        .eq('tenant_id', tenant.id)
+        .eq('is_active', true)
+        .eq('public_bookable', true)
+        .gt('default_duration_minutes', 0)
+        .order('display_order', { ascending: true }),
+      supabase
+        .from('locations')
+        .select('id')
+        .eq('tenant_id', tenant.id)
+        .eq('is_active', true),
+    ])
+
+    if (eventTypesResult.error) throw eventTypesResult.error
+    if (locationsResult.error) throw locationsResult.error
+
+    categories = (eventTypesResult.data || []).map((et: any) => ({
+      id: et.id,
+      code: et.code,
+      name: et.name,
+      description: et.description || '',
+      lesson_duration_minutes: [Number(et.default_duration_minutes)],
+      tenant_id: tenant.id,
+      parent_category_id: null,
+      color: et.default_color || null,
+      icon_svg: null,
+      children: [],
+      _source: 'event_type',
+      require_payment: et.require_payment !== false,
+    }))
+
+    locationsCount = locationsResult.data?.length ?? 0
+    // Booking UI always includes "fahrstunde" as the generic appointment path
+    availableServiceTypes = ['fahrstunde']
   }
 
   // Expose only the customer-facing policy fields (not internal staff settings)

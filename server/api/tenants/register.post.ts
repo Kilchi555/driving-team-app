@@ -486,6 +486,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
               postal_code: l.zip?.trim() || l.postal_code?.trim() || null,
               is_active: true,
               location_type: 'standard',
+              // Admin default for staff assignment → staff_locations.is_online_bookable
+              public_bookable: l.public_bookable !== false,
               created_at: now,
               updated_at: now,
             }))

@@ -502,22 +502,41 @@
 
               <!-- Bestehende Tenant-Treffpunkte -->
               <div v-if="tenantLocations.length" class="space-y-2 mb-3">
-                <label
+                <div
                   v-for="loc in tenantLocations"
                   :key="loc.id"
-                  class="flex items-start gap-2 p-3 border rounded-lg cursor-pointer transition-all"
-                  :class="!form.selectedLocationIds.includes(loc.id) ? 'border-gray-200 hover:border-gray-300' : ''"
+                  class="rounded-lg border transition-all overflow-hidden"
+                  :class="!form.selectedLocationIds.includes(loc.id) ? 'border-gray-200' : ''"
                   :style="form.selectedLocationIds.includes(loc.id)
                     ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' }
                     : {}"
                 >
-                  <input type="checkbox" :value="loc.id" v-model="form.selectedLocationIds" class="mt-0.5"
-                    @change="onPhysicalLocationToggle">
-                  <div>
-                    <div class="text-sm font-medium">{{ loc.name }}</div>
-                    <div class="text-xs text-gray-500">{{ loc.address }}</div>
+                  <label class="flex items-start gap-2 p-3 cursor-pointer">
+                    <input type="checkbox" :value="loc.id" v-model="form.selectedLocationIds" class="mt-0.5"
+                      @change="onPhysicalLocationToggle(loc)">
+                    <div class="min-w-0 flex-1">
+                      <div class="text-sm font-medium">{{ loc.name }}</div>
+                      <div class="text-xs text-gray-500">{{ loc.address }}</div>
+                    </div>
+                  </label>
+                  <div
+                    v-if="form.selectedLocationIds.includes(loc.id)"
+                    class="flex items-center justify-between gap-3 px-3 pb-3 pt-0 border-t border-black/5 mx-3"
+                  >
+                    <div class="min-w-0">
+                      <p class="text-xs font-medium text-gray-800">Online buchbar</p>
+                      <p class="text-xs text-gray-500">Kunden können hier selbst Termine buchen</p>
+                    </div>
+                    <button type="button"
+                      @click="toggleLocationBookable(loc.id)"
+                      class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
+                      :style="isLocationBookable(loc.id) ? { background: tenantColor } : {}"
+                      :class="!isLocationBookable(loc.id) ? 'bg-gray-200' : ''">
+                      <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
+                        :class="isLocationBookable(loc.id) ? 'translate-x-3' : 'translate-x-0'" />
+                    </button>
                   </div>
-                </label>
+                </div>
               </div>
 
               <!-- Eigene neue Treffpunkte als Tags (ohne Remote-Kanäle, die oben stehen) -->
@@ -1136,7 +1155,7 @@ const addRemoteChannel = (channel: { name: string; address: string }) => {
     return
   }
   form.remoteOnly = false
-  form.newLocations.push({ name: channel.name, address: channel.address })
+  form.newLocations.push({ name: channel.name, address: channel.address, public_bookable: true })
 }
 
 const onRemoteOnlyChange = () => {
@@ -1147,13 +1166,14 @@ const onRemoteOnlyChange = () => {
   form.newLocations = form.newLocations.filter(l => isRemoteChannelName(l.name))
   for (const channel of remoteChannels) {
     if (!hasRemoteChannel(channel.name)) {
-      form.newLocations.push({ name: channel.name, address: channel.address })
+      form.newLocations.push({ name: channel.name, address: channel.address, public_bookable: true })
     }
   }
 }
 
-const onPhysicalLocationToggle = () => {
+const onPhysicalLocationToggle = (loc?: { id: string; public_bookable?: boolean | null }) => {
   if (form.selectedLocationIds.length > 0) form.remoteOnly = false
+  if (loc?.id) seedLocationBookableDefault(loc)
 }
 
 const addNewLocation = () => {
@@ -1161,7 +1181,7 @@ const addNewLocation = () => {
   const address = newLocationAddress.value.trim()
   if (!name || !address) return
   form.remoteOnly = false
-  form.newLocations.push({ name, address })
+  form.newLocations.push({ name, address, public_bookable: true })
   newLocationName.value    = ''
   newLocationAddress.value = ''
   showNewLocationForm.value = false
@@ -1229,15 +1249,29 @@ const form = reactive({
   // Step 3
   remoteOnly: false,
   selectedLocationIds: [] as string[],
+  /** Per existing location: online-bookable override (seeded from locations.public_bookable) */
+  locationOnlineBookable: {} as Record<string, boolean>,
   selectedExamLocationIds: [] as string[], // kept for backward compat
   selectedExamLocations: [] as any[],      // full objects for global exam locations
-  newLocations: [] as { name: string; address: string }[], // new meetup locations added by staff
+  newLocations: [] as { name: string; address: string; public_bookable?: boolean }[],
   // Step 4
   externalCalendarProvider: '' as string,
   externalCalendarUrl: '',
   // Step 6
   password: '', confirmPassword: '', acceptedTerms: false,
 })
+
+const isLocationBookable = (locId: string) => form.locationOnlineBookable[locId] !== false
+
+const toggleLocationBookable = (locId: string) => {
+  form.locationOnlineBookable[locId] = !isLocationBookable(locId)
+}
+
+const seedLocationBookableDefault = (loc: { id: string; public_bookable?: boolean | null }) => {
+  if (form.locationOnlineBookable[loc.id] === undefined) {
+    form.locationOnlineBookable[loc.id] = loc.public_bookable !== false
+  }
+}
 
 // ─── Computed ────────────────────────────────────────────────────────────────
 const zxcvbnScore    = ref<0 | 1 | 2 | 3 | 4 | null>(null)
@@ -1466,6 +1500,11 @@ const loadInvitation = async () => {
     tenantExamLocations.value = response.examLocations || []
     affiliateEnabled.value    = response.affiliateEnabled || false
 
+    // Seed online-bookable defaults from admin location flags
+    for (const loc of tenantLocations.value) {
+      seedLocationBookableDefault(loc)
+    }
+
     // Apply working hours: tenant template (set at registration from the
     // business_type preset) wins; otherwise fall back to the branch default.
     const tpl = response.tenant?.working_days_template
@@ -1528,9 +1567,14 @@ const submit = async () => {
       locationIds = []
       for (const channel of remoteChannels) {
         if (!locationsToCreate.some(l => l.name === channel.name)) {
-          locationsToCreate.push({ name: channel.name, address: channel.address })
+          locationsToCreate.push({ name: channel.name, address: channel.address, public_bookable: true })
         }
       }
+    }
+
+    const locationBookableMap: Record<string, boolean> = {}
+    for (const id of locationIds) {
+      locationBookableMap[id] = form.locationOnlineBookable[id] !== false
     }
 
     const response = await $fetch<any>('/api/staff/register', {
@@ -1551,6 +1595,7 @@ const submit = async () => {
         acceptedTerms:         form.acceptedTerms,
         workingHours,
         selectedLocationIds:      locationIds,
+        locationBookableMap,
         newLocations:             locationsToCreate,
         selectedExamLocationIds:  form.selectedExamLocations.map((l: any) => l.id),
       }

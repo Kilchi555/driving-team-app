@@ -302,12 +302,23 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Parallel: pricing + marketing attribution + location name ────────────
-  const [pricingResult, attrResult, locationResult] = await Promise.all([
+  const [pricingResult, eventPricingResult, attrResult, locationResult] = await Promise.all([
     supabase
       .from('pricing_rules')
       .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier, admin_fee_rappen, admin_fee_applies_from')
       .eq('tenant_id', tenantId)
       .eq('category_code', body.category_code)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+
+    supabase
+      .from('pricing_rules')
+      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier, admin_fee_rappen, admin_fee_applies_from')
+      .eq('tenant_id', tenantId)
+      .eq('event_type_code', body.category_code)
+      .eq('rule_type', 'event_price')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -328,7 +339,7 @@ export default defineEventHandler(async (event) => {
       .maybeSingle(),
   ])
 
-  const pricingRule = pricingResult.data
+  const pricingRule = pricingResult.data || eventPricingResult.data
   let marketingAttr = body.marketing_attribution ?? null
   if (body.marketing_session_id) {
     if (attrResult.data) {
@@ -397,6 +408,12 @@ export default defineEventHandler(async (event) => {
   const sanitizedNotes = body.notes ? sanitizeString(body.notes) : ''
 
   // ── Create appointment ────────────────────────────────────────────────────
+  // FS: type = category (B), event_type_code = lesson
+  // Event-type tenants: slot.category_code is the event type code
+  const resolvedEventTypeCode = eventPricingResult.data
+    ? body.category_code
+    : 'lesson'
+
   const { data: newAppointment, error: apptErr } = await supabase
     .from('appointments')
     .insert({
@@ -408,7 +425,7 @@ export default defineEventHandler(async (event) => {
       end_time: slot.end_time,
       duration_minutes: slot.duration_minutes,
       type: body.category_code,
-      event_type_code: 'lesson',
+      event_type_code: resolvedEventTypeCode,
       title: appointmentTitle,
       description: sanitizedNotes,
       status: 'confirmed',

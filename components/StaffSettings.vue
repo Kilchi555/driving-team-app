@@ -2817,7 +2817,7 @@ const newLocationForm = ref({
   canton: '',
   postal_code: '',
   available_categories: [] as string[],
-  make_bookable: false
+  make_bookable: true
 })
 
 // Address autocomplete
@@ -3675,7 +3675,7 @@ const resetLocationForm = () => {
     canton: '',
     postal_code: '',
     available_categories: [],
-    make_bookable: false
+    make_bookable: true
   }
 }
 
