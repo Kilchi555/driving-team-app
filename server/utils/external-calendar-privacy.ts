@@ -3,7 +3,7 @@ import { logger } from '~/utils/logger'
 
 /**
  * Tenant setting: whether external calendar event titles are stored as "Privat".
- * Default true (privacy-preserving) when the setting is missing.
+ * Default false (show real titles) when the setting is missing.
  *
  * category: calendar
  * setting_key: anonymize_external_event_titles
@@ -25,10 +25,10 @@ export async function shouldAnonymizeExternalEventTitles(
     .maybeSingle()
 
   if (error) {
-    logger.warn('⚠️ Could not load anonymize_external_event_titles, defaulting to true:', error.message)
+    logger.warn('⚠️ Could not load anonymize_external_event_titles, defaulting to false:', error.message)
   }
 
-  let anonymize = true
+  let anonymize = false
   if (data?.setting_value != null) {
     const raw = String(data.setting_value).trim().toLowerCase()
     // Accept plain "true"/"false" and JSON-quoted booleans / 0/1

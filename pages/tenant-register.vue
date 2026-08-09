@@ -1,8 +1,8 @@
 <!-- pages/tenant-register.vue -->
 <template>
-  <div class="min-h-screen flex items-center justify-center p-3 sm:p-6"
+  <div class="min-h-[100svh] flex items-start justify-center p-3 sm:p-6"
     :style="{ background: pageBackground }">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden">
+    <div ref="registerCardEl" class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden">
 
       <!-- Header -->
       <div class="relative text-white px-6 py-6 sm:px-10 sm:py-8 overflow-hidden"
@@ -219,15 +219,6 @@
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-4">Weitere Angaben</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Sprache</label>
-                <select v-model="formData.language"
-                  class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
-                  <option value="de">Deutsch</option>
-                  <option value="fr">Français</option>
-                  <option value="it">Italiano</option>
-                </select>
-              </div>
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">UID-Nummer</label>
                 <input v-model="formData.uid_number" type="text" placeholder="CHE-123.456.789"
@@ -908,31 +899,37 @@
         <div v-if="currentStep === 3" class="space-y-5">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">
-              {{ isDrivingSchool ? `Wo bietest du deine ${labels.appointmentsPlural} an?` : 'Wo triffst du Kunden?' }}
+              Wie können Kunden Termine bei dir buchen?
             </h2>
             <p class="text-sm text-gray-500">
-              {{ isDrivingSchool
-                ? `Mindestens ein Standort – als Treffpunkt für deine ${labels.appointmentsPlural}.`
-                : 'Kunden-Treffpunkt, Telefon und/oder Online Call — mindestens eine Option.' }}
+              Lege fest, welche Buchungsarten verfügbar sind: vor Ort, per Telefonanruf
+              oder als Online-Call (z.B. Zoom, Google Meet, Teams).
+              {{ isDrivingSchool ? ` Bei Fahrschulen ist mindestens ein Treffpunkt nötig.` : ' Mindestens eine Option.' }}
             </p>
           </div>
 
           <!-- Meeting channels -->
           <div class="rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100">
             <div class="flex items-center justify-between gap-3 px-4 py-3">
-              <p class="text-sm font-medium text-gray-800">Kunden-Treffpunkt</p>
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-800">Vor Ort / Treffpunkt</p>
+                <p class="text-xs text-gray-500 mt-0.5">Kunde kommt zu dir oder ihr trefft euch an einem Ort</p>
+              </div>
               <button type="button"
                 @click="toggleMeetingPoint"
                 class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
                 :style="meetingChannels.meetingPoint ? { background: formData.primary_color || '#2563EB' } : {}"
                 :class="!meetingChannels.meetingPoint ? 'bg-gray-200' : ''"
-                :title="isDrivingSchool ? 'Bei Fahrschulen ist ein Treffpunkt nötig' : 'Kunden-Treffpunkt an/aus'">
+                :title="isDrivingSchool ? 'Bei Fahrschulen ist ein Treffpunkt nötig' : 'Vor-Ort-Termine an/aus'">
                 <span class="block w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 mx-0.5"
                   :class="meetingChannels.meetingPoint ? 'translate-x-3' : 'translate-x-0'" />
               </button>
             </div>
             <div class="flex items-center justify-between gap-3 px-4 py-3">
-              <p class="text-sm font-medium text-gray-800">Telefon</p>
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-800">Telefonanruf</p>
+                <p class="text-xs text-gray-500 mt-0.5">Kunde kann einen Anruf-Termin buchen</p>
+              </div>
               <button type="button"
                 @click="meetingChannels.phone = !meetingChannels.phone"
                 class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
@@ -943,7 +940,10 @@
               </button>
             </div>
             <div class="flex items-center justify-between gap-3 px-4 py-3">
-              <p class="text-sm font-medium text-gray-800">Online Call</p>
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-800">Online-Call</p>
+                <p class="text-xs text-gray-500 mt-0.5">Video-Termin via Zoom, Google Meet, Teams o.ä.</p>
+              </div>
               <button type="button"
                 @click="meetingChannels.onlineCall = !meetingChannels.onlineCall"
                 class="flex-shrink-0 w-8 h-5 rounded-full transition-colors duration-200 focus:outline-none"
@@ -960,14 +960,14 @@
             <span v-if="meetingChannels.phone"
               class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white"
               :style="{ background: formData.primary_color || '#2563EB' }">
-              Telefon
+              Telefonanruf
             </span>
             <span v-if="meetingChannels.onlineCall"
               class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white"
               :style="{ background: formData.primary_color || '#2563EB' }">
-              Online Call
+              Online-Call
             </span>
-            <span class="text-xs text-gray-400 self-center">wird als buchbarer Ort angelegt</span>
+            <span class="text-xs text-gray-400 self-center">als buchbare Option für Kunden verfügbar</span>
           </div>
 
           <!-- Physical meeting points -->
@@ -977,7 +977,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
               </svg>
-              <span>{{ labels.staffPlural }} wählen beim Erstellen von Terminen einen Standort aus. Weitere können später hinzugefügt werden.</span>
+              <span>Trage hier deine physischen Treffpunkte ein. {{ labels.staffPlural }} wählen beim Termin einen davon aus. Weitere Orte kannst du später ergänzen.</span>
             </div>
 
             <div class="space-y-3">
@@ -1038,8 +1038,8 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/>
             </svg>
             {{ meetingChannels.meetingPoint && !validLocations.length
-              ? 'Bitte mindestens einen Standort mit Bezeichnung erfassen.'
-              : 'Bitte mindestens eine Option wählen: Kunden-Treffpunkt, Telefon oder Online Call.' }}
+              ? 'Bitte mindestens einen Treffpunkt mit Bezeichnung erfassen.'
+              : 'Bitte mindestens eine Buchungsart wählen: Vor Ort, Telefonanruf oder Online-Call.' }}
           </p>
         </div>
 
@@ -1372,8 +1372,8 @@
               <input v-model="adminForm.phone" type="tel"
                 class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
             </div>
-            <!-- Passwörter: immer nebeneinander, auch auf Mobile -->
-            <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Passwörter: gestapelt wie Staff-Register, damit iOS Strong Password beide Felder trifft -->
+            <div class="sm:col-span-2 space-y-4">
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort *</label>
                 <input
@@ -1384,6 +1384,7 @@
                   autocomplete="new-password"
                   name="new-password"
                   id="admin-password"
+                  @input="onAdminPasswordInput"
                   :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
                     adminForm.password && !passwordValid ? 'border-red-300 focus:ring-red-500' :
                     adminForm.password && passwordValid ? 'border-green-300 focus:ring-green-500' :
@@ -1601,17 +1602,9 @@
             <p class="text-sm text-gray-500">Überprüfe deine Angaben vor der Registrierung.</p>
           </div>
 
-          <!-- iOS/Android credential inputs: visible to password manager at submit time,
-               clipped to 0px so they don't affect the visual layout -->
-          <input type="email" name="username" autocomplete="username" :value="adminForm.email"
-            tabindex="-1" readonly
-            style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;border:0">
-          <input type="password" name="password" autocomplete="new-password" :value="adminForm.password"
-            tabindex="-1" readonly
-            style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;border:0">
-          <input type="password" name="confirm-password" autocomplete="new-password" :value="adminForm.passwordConfirm"
-            tabindex="-1" readonly
-            style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;border:0">
+          <!-- iOS/Android credential save happens via the form-level mirrors below
+               (same pattern as staff register). Do not duplicate password fields here —
+               a second confirm-password steals iOS Strong Password from the Admin step. -->
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <!-- Firma -->
@@ -1984,13 +1977,18 @@
           </button>
         </div>
 
-        <!-- iOS Password Autofill: credential mirrors always present in DOM so Safari
-             can offer to save them when the registration form submits.
-             Use visually-hidden (clip, NOT aria-hidden) so the password manager still reads them. -->
-        <div style="clip:rect(0,0,0,0);position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;white-space:nowrap;border:0">
+        <!-- Password-manager mirrors for "Passwort speichern" on submit.
+             Hidden while Admin-step (5) is active so iOS Strong Password only sees
+             the two real fields — a second confirm-password was stealing the fill.
+             Names match staff register: password + new-password (not confirm-password). -->
+        <div
+          v-if="currentStep !== 5"
+          aria-hidden="true"
+          class="pm-mirror"
+        >
           <input type="email" name="username" autocomplete="username" :value="adminForm.email" tabindex="-1" id="ios-mirror-email">
           <input type="password" name="password" autocomplete="new-password" :value="adminForm.password" tabindex="-1" id="ios-mirror-password">
-          <input type="password" name="confirm-password" autocomplete="new-password" :value="adminForm.passwordConfirm" tabindex="-1" id="ios-mirror-confirm">
+          <input type="password" name="new-password" autocomplete="new-password" :value="adminForm.passwordConfirm" tabindex="-1" id="ios-mirror-confirm">
         </div>
       </form>
 
@@ -2000,7 +1998,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { navigateTo, useRoute } from '#app'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
@@ -2062,7 +2060,6 @@ const formData = ref({
   uid_number: '',
   website_url: '',
   staff_count: '',
-  language: 'de',
   qr_iban: '',
   instagram_url: '',
   facebook_url: '',
@@ -2871,6 +2868,22 @@ const createdTenantId      = ref('')
 const createdCustomerNumber = ref('')
 const logoInput = ref<HTMLInputElement>()
 const logoSquareInput = ref<HTMLInputElement>()
+const registerCardEl = ref<HTMLElement | null>(null)
+
+/** After step changes, jump to top — otherwise mobile keeps the previous scroll mid-page. */
+const scrollRegisterToTop = () => {
+  if (!import.meta.client) return
+  nextTick(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
+    registerCardEl.value?.scrollIntoView({ block: 'start', behavior: 'auto' })
+  })
+}
+
+watch(currentStep, () => {
+  scrollRegisterToTop()
+})
 
 const companyInitials = computed(() => {
   const name = (formData.value.name || '').trim()
@@ -3066,6 +3079,7 @@ const nextStep = async () => {
   if (next === 2) loadEventTypeTemplates()
   if (next === 3) prefillFirstLocation()
   currentStep.value = next
+  scrollRegisterToTop()
 }
 
 const previousStep = () => {
@@ -3073,6 +3087,7 @@ const previousStep = () => {
   let prev = currentStep.value - 1
   if (prev === 1 && pricingMode.value === 'per_event_type') prev = 0
   currentStep.value = prev
+  scrollRegisterToTop()
 }
 
 // ─── Availability Checks ───────────────────────────────────────────────────
@@ -3592,16 +3607,29 @@ watch(() => formData.value.name, (newName: string) => {
 })
 
 watch(() => adminSameAsCompany.value, () => applyAdminFromCompany())
-watch(() => adminForm.value.password, (pw, oldPw) => {
-  checkPasswordStrength(pw)
-  // Nur bei Autofill / Passwort-Manager (Wert springt um >1 Zeichen), nicht beim Tippen —
-  // sonst wäre die Bestätigung sinnlos gegen Tippfehler.
-  const prev = oldPw || ''
+
+/** Sync confirm field when iOS/password-manager bulk-fills the password. */
+const syncPasswordConfirmFromAutofill = (pw: string, prev = '') => {
   const next = pw || ''
   const isBulkFill = Math.abs(next.length - prev.length) > 1
-  if (isBulkFill && next && (!adminForm.value.passwordConfirm || adminForm.value.passwordConfirm === prev)) {
+  if (!next || !isBulkFill) return
+  if (!adminForm.value.passwordConfirm || adminForm.value.passwordConfirm === prev) {
     adminForm.value.passwordConfirm = next
   }
+}
+
+let lastKnownAdminPassword = ''
+const onAdminPasswordInput = (e: Event) => {
+  const next = (e.target as HTMLInputElement)?.value || ''
+  // Native input can fire with the autofilled value before the Vue watch runs
+  syncPasswordConfirmFromAutofill(next, lastKnownAdminPassword)
+  lastKnownAdminPassword = next
+}
+
+watch(() => adminForm.value.password, (pw, oldPw) => {
+  checkPasswordStrength(pw)
+  syncPasswordConfirmFromAutofill(pw || '', oldPw || '')
+  lastKnownAdminPassword = pw || ''
 })
 
 // Wenn der Geschäftstyp geändert wird (z.B. User geht von Step 1+ zurück zu
@@ -3863,3 +3891,17 @@ onMounted(async () => {
   if (currentStep.value >= 2) await loadEventTypeTemplates()
 })
 </script>
+
+<style scoped>
+/* Off-screen password-manager mirrors — avoid display:none / visibility:hidden / readonly */
+.pm-mirror {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0.01;
+  pointer-events: none;
+}
+</style>

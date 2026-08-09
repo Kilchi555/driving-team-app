@@ -69,10 +69,10 @@ export default defineEventHandler(async (event) => {
 
   const steps = [
     { id: 'account',  label: 'Konto erstellt', done: true, href: null },
-    { id: 'branding', label: 'Logo hochgeladen', done: hasBranding, href: '/admin/profile?tab=branding' },
-    { id: 'staff',    label: `Ersten ${terms.staff} hinzugefügt`, done: hasStaff, href: '/admin/staff' },
-    { id: 'student',  label: `Ersten ${clientAccusative} hinzugefügt`, done: hasStudent, href: '/admin/users' },
-    { id: 'lesson',   label: appointmentDoneLabel, done: hasLesson, href: '/admin/calendar' },
+    { id: 'branding', label: 'Logo hochgeladen', done: hasBranding, href: '/admin/profile?tab=logos' },
+    { id: 'staff',    label: `Ersten ${terms.staff} hinzugefügt`, done: hasStaff, href: '/admin/users' },
+    { id: 'student',  label: `Ersten ${clientAccusative} hinzugefügt`, done: hasStudent, href: '/admin/privatkunden' },
+    { id: 'lesson',   label: appointmentDoneLabel, done: hasLesson, href: '/dashboard' },
     { id: 'payments', label: 'Zahlungen einrichten (Wallee)', done: hasPayments, href: '/admin/profile?tab=payments' },
     { id: 'upgrade',  label: 'Plan wählen', done: isPaid, href: '/upgrade' },
   ]

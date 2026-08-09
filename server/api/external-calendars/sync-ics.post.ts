@@ -185,7 +185,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       calendar.tenant_id,
     )
 
-    // Insert new busy times (titles anonymized per tenant setting, default: Privat)
+    // Insert new busy times (titles anonymized only if tenant setting is on; default: real titles)
     const busyTimes = windowEvents.map(event => {
       // Convert to UTC for consistent storage with appointments
       // ICS events can be in various formats (local or UTC)
