@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
     // Get tenant standard locations (Treffpunkte)
     const { data: locations } = await supabase
       .from('locations')
-      .select('id, name, address, location_type')
+      .select('id, name, address, location_type, public_bookable')
       .eq('tenant_id', invitation.tenant_id)
       .eq('location_type', 'standard')
       .eq('is_active', true)

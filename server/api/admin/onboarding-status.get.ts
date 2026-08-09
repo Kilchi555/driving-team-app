@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { probeBookingSlots } from '~/server/utils/booking-slot-probe'
 
 export default defineEventHandler(async (event) => {
   const auth = await getAuthenticatedUser(event)
@@ -14,9 +15,8 @@ export default defineEventHandler(async (event) => {
     { data: tenant },
     { count: staffCount },
     { count: studentCount },
-    { count: lessonCount },
-    { count: courseCount },
     terms,
+    bookingProbe,
   ] = await Promise.all([
     supabase
       .from('tenants')
@@ -33,28 +33,16 @@ export default defineEventHandler(async (event) => {
       .select('id', { count: 'exact', head: true })
       .eq('tenant_id', tenant_id)
       .eq('role', 'client'),
-    supabase
-      .from('appointments')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenant_id),
-    supabase
-      .from('courses')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', tenant_id)
-      .eq('is_active', true)
-      .eq('sari_managed', false),
     getTenantTerminology(supabase, tenant_id),
+    probeBookingSlots(supabase, tenant_id, { days: 28 }),
   ])
 
   const hasLogo = !!(tenant?.logo_url || tenant?.logo_square_url)
-  const hasWebsite = !!tenant?.website_url
   const hasBranding = hasLogo
   const hasStaff = (staffCount ?? 0) > 0
   const hasStudent = (studentCount ?? 0) > 0
-  const hasLesson = (lessonCount ?? 0) > 0
-  const hasCourse = (courseCount ?? 0) > 0
+  const hasBookingSlots = bookingProbe.ready
   const hasPayments = !!tenant?.wallee_enabled || tenant?.wallee_onboarding_status === 'active'
-  const hasEmail = !!(tenant?.from_email && tenant?.resend_domain_verified)
   const isPaid = tenant?.subscription_plan !== 'trial'
 
   const clientAccusative =
@@ -62,25 +50,24 @@ export default defineEventHandler(async (event) => {
     : terms.client === 'Patient' ? 'Patienten'
     : terms.client
 
-  // "Erste Beratung/Sitzung" (fem.) vs "Ersten Termin" — appointment terms are mostly feminine
-  const appointmentDoneLabel = ['Fahrstunde', 'Beratung', 'Sitzung', 'Session'].includes(terms.appointment)
-    ? `Erste ${terms.appointment} erstellt`
-    : `Ersten ${terms.appointment} erstellt`
-
   const steps = [
-    { id: 'account',  label: 'Konto erstellt', done: true, href: null },
-    { id: 'branding', label: 'Logo hochgeladen', done: hasBranding, href: '/admin/profile?tab=logos' },
-    { id: 'staff',    label: `Ersten ${terms.staff} hinzugefügt`, done: hasStaff, href: '/admin/users' },
-    { id: 'student',  label: `Ersten ${clientAccusative} hinzugefügt`, done: hasStudent, href: '/admin/privatkunden' },
-    { id: 'lesson',   label: appointmentDoneLabel, done: hasLesson, href: '/dashboard' },
-    { id: 'payments', label: 'Zahlungen einrichten (Wallee)', done: hasPayments, href: '/admin/profile?tab=payments' },
-    { id: 'upgrade',  label: 'Plan wählen', done: isPaid, href: '/upgrade' },
+    { id: 'account',  label: 'Konto erstellt', done: true, href: null, action: null },
+    { id: 'branding', label: 'Logo hochgeladen', done: hasBranding, href: '/admin/profile?tab=logos', action: null },
+    { id: 'staff',    label: `Ersten ${terms.staff} hinzugefügt`, done: hasStaff, href: '/admin/users', action: null },
+    {
+      id: 'booking',
+      label: 'Online-Buchung prüfen',
+      done: hasBookingSlots,
+      href: null,
+      action: 'booking-readiness',
+    },
+    { id: 'student',  label: `Ersten ${clientAccusative} hinzugefügt`, done: hasStudent, href: '/admin/privatkunden', action: null },
+    { id: 'payments', label: 'Zahlungen einrichten (Wallee)', done: hasPayments, href: '/admin/profile?tab=payments', action: null },
+    { id: 'upgrade',  label: 'Plan wählen', done: isPaid, href: '/upgrade', action: null },
   ]
 
   const completedCount = steps.filter(s => s.done).length
   const totalCount = steps.length
-
-  // Hide checklist once all done (except upgrade) or tenant is on paid plan for > 7 days
   const allCoreStepsDone = steps.filter(s => s.id !== 'upgrade').every(s => s.done)
 
   return {
@@ -92,5 +79,7 @@ export default defineEventHandler(async (event) => {
     isPaid,
     trialEndsAt: tenant?.trial_ends_at ?? null,
     subscriptionPlan: tenant?.subscription_plan ?? 'trial',
+    bookingReady: hasBookingSlots,
+    bookingSlotsFound: bookingProbe.slotsFound,
   }
 })

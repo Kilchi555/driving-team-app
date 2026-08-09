@@ -359,7 +359,7 @@ export default defineEventHandler(async (event: H3Event) => {
       tenant_id: tenantId
     })
 
-    const [pricingRuleRes, adminFeeRuleRes, locationSettingsRes, categorySettingsRes] = await Promise.all([
+    const [pricingRuleRes, adminFeeRuleRes, locationSettingsRes, categorySettingsRes, eventPriceRes, eventTypeRes] = await Promise.all([
       supabase
         .from('pricing_rules')
         .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
@@ -389,10 +389,32 @@ export default defineEventHandler(async (event: H3Event) => {
         .eq('code', body.category_code)
         .eq('tenant_id', tenantId)
         .maybeSingle(),
+      // per_event_type fallback: event_price keyed by event_type_code
+      supabase
+        .from('pricing_rules')
+        .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
+        .eq('event_type_code', body.category_code)
+        .eq('tenant_id', tenantId)
+        .eq('rule_type', 'event_price')
+        .eq('is_active', true)
+        .lte('valid_from', new Date().toISOString())
+        .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
+        .maybeSingle(),
+      supabase
+        .from('event_types')
+        .select('code, require_payment, public_bookable')
+        .eq('tenant_id', tenantId)
+        .eq('code', body.category_code)
+        .eq('is_active', true)
+        .maybeSingle(),
     ])
 
-    const pricingRule = pricingRuleRes.data
+    const pricingRule = pricingRuleRes.data || eventPriceRes.data
     const pricingError = pricingRuleRes.error
+    const freePublicEvent =
+      !!eventTypeRes.data &&
+      eventTypeRes.data.require_payment === false &&
+      eventTypeRes.data.public_bookable !== false
     const adminFeeRuleRappen = Number(adminFeeRuleRes.data?.admin_fee_rappen || 0)
     const adminFeeAppliesFromRule = adminFeeRuleRes.data?.admin_fee_applies_from != null
       ? Number(adminFeeRuleRes.data.admin_fee_applies_from)
@@ -451,6 +473,10 @@ export default defineEventHandler(async (event: H3Event) => {
       }
 
       logger.debug('💰 Price calculated:', { totalAmountRappen, vehicle_mode: body.vehicle_mode, pricingRule })
+    } else if (freePublicEvent) {
+      // Free public event type (e.g. Erstgespräch) — intentional zero price
+      totalAmountRappen = 0
+      logger.debug('💰 Free public event type — price 0', { category_code: body.category_code })
     } else {
       // ✅ No silent price fallback for real bookings: a request without a person
       // present to notice a wrong price must fail safely instead of charging 0.
@@ -498,8 +524,8 @@ export default defineEventHandler(async (event: H3Event) => {
       start_time: slot.start_time,
       end_time: slot.end_time,
       duration_minutes: slot.duration_minutes,
-      type: body.category_code,  // Category code (B, A, C, etc.)
-      event_type_code: 'lesson',  // The appointment type
+      type: body.category_code,  // Category or event type code
+      event_type_code: eventTypeRes.data?.code || body.appointment_type || 'lesson',
       title: appointmentTitle, // "{Vorname} {Name} - {Ort}"
       description: sanitizedNotes || '', // Use notes as description, or empty string
       status: 'confirmed', // Status: confirmed (not booked)
@@ -561,8 +587,8 @@ export default defineEventHandler(async (event: H3Event) => {
         start_time: slot.start_time,
         end_time: slot.end_time,
         duration_minutes: slot.duration_minutes,
-        type: body.category_code,  // Category code (B, A, C, etc.)
-        event_type_code: 'lesson',  // The appointment type
+        type: body.category_code,  // Category or event type code
+        event_type_code: eventTypeRes.data?.code || body.appointment_type || 'lesson',
         title: appointmentTitle, // "{Vorname} {Name} - {Ort}"
         description: sanitizedNotes || '', // Use notes as description, or empty string
         status: 'confirmed', // Status: confirmed (not booked)

@@ -32,8 +32,31 @@
     <!-- Steps -->
     <div class="space-y-2">
       <template v-for="step in steps" :key="step.id">
+        <!-- Booking readiness: always openable (also when already done → re-check) -->
+        <button
+          v-if="step.action === 'booking-readiness'"
+          type="button"
+          class="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all text-sm group text-left"
+          :class="step.done
+            ? 'bg-white/60 text-gray-500 hover:bg-white hover:text-gray-700 hover:shadow-sm'
+            : 'bg-white hover:bg-white shadow-sm cursor-pointer hover:shadow-md text-gray-700'"
+          @click="showBookingModal = true"
+        >
+          <div
+            class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center"
+            :class="step.done ? 'bg-emerald-100' : 'bg-blue-50 border-2 border-blue-200'"
+          >
+            <svg v-if="step.done" class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <span class="flex-1 font-medium" :class="step.done ? 'line-through' : ''">{{ step.label }}</span>
+          <span class="text-xs font-semibold text-blue-600 group-hover:underline flex-shrink-0">
+            {{ step.done ? 'Erneut prüfen' : 'Prüfen' }}
+          </span>
+        </button>
         <NuxtLink
-          v-if="!step.done && step.href"
+          v-else-if="!step.done && step.href"
           :to="step.href"
           class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all text-sm group bg-white hover:bg-white shadow-sm cursor-pointer hover:shadow-md text-gray-700"
         >
@@ -77,6 +100,12 @@
     </div>
 
   </div>
+
+  <AdminBookingReadinessModal
+    :open="showBookingModal"
+    @close="showBookingModal = false"
+    @updated="onBookingUpdated"
+  />
 </template>
 
 <script setup lang="ts">
@@ -89,6 +118,7 @@ interface OnboardingStep {
   label: string
   done: boolean
   href: string | null
+  action?: string | null
 }
 
 interface OnboardingStatus {
@@ -100,10 +130,12 @@ interface OnboardingStatus {
   isPaid: boolean
   trialEndsAt: string | null
   subscriptionPlan: string
+  bookingReady?: boolean
 }
 
 const status = ref<OnboardingStatus | null>(null)
 const dismissed = ref(false)
+const showBookingModal = ref(false)
 
 const steps = computed(() => status.value?.steps ?? [])
 const completedCount = computed(() => status.value?.completedCount ?? 0)
@@ -117,9 +149,6 @@ const trialDaysLeft = computed(() => {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
 })
 
-// Show the checklist unless:
-// - manually dismissed
-// - all steps including upgrade are done
 const show = computed(() => {
   if (dismissed.value) return false
   if (!status.value) return false
@@ -132,15 +161,7 @@ const dismiss = () => {
   try { sessionStorage.setItem(DISMISS_KEY, '1') } catch { /* ignore */ }
 }
 
-onMounted(async () => {
-  // Restore dismissed state for this session
-  try {
-    if (sessionStorage.getItem(DISMISS_KEY) === '1') {
-      dismissed.value = true
-      return
-    }
-  } catch { /* ignore */ }
-
+const loadStatus = async () => {
   try {
     const { getSupabase } = await import('~/utils/supabase')
     const { data: { session } } = await getSupabase().auth.getSession()
@@ -150,5 +171,26 @@ onMounted(async () => {
       headers: { Authorization: `Bearer ${session.access_token}` }
     })
   } catch { /* non-critical */ }
+}
+
+const onBookingUpdated = (ready: boolean) => {
+  if (!status.value) return
+  const step = status.value.steps.find(s => s.id === 'booking')
+  if (step) step.done = ready
+  status.value.completedCount = status.value.steps.filter(s => s.done).length
+  status.value.progressPercent = Math.round((status.value.completedCount / status.value.totalCount) * 100)
+  status.value.bookingReady = ready
+  status.value.allCoreStepsDone = status.value.steps.filter(s => s.id !== 'upgrade').every(s => s.done)
+}
+
+onMounted(async () => {
+  try {
+    if (sessionStorage.getItem(DISMISS_KEY) === '1') {
+      dismissed.value = true
+      return
+    }
+  } catch { /* ignore */ }
+
+  await loadStatus()
 })
 </script>

@@ -36,6 +36,30 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('📍 Fetching locations and staff:', { tenant_id, category_code })
 
+    // Detect event-type booking: code is a public_bookable event type, not a category.
+    // In that mode staff_locations.available_categories hold topic codes — must not filter
+    // by the event type code or the booking page gets zero locations.
+    const [{ data: categoryRow }, { data: eventTypeRow }] = await Promise.all([
+      supabase
+        .from('categories')
+        .select('id')
+        .eq('tenant_id', tenant_id)
+        .eq('code', category_code)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('event_types')
+        .select('id, code')
+        .eq('tenant_id', tenant_id)
+        .eq('code', category_code)
+        .eq('is_active', true)
+        .eq('public_bookable', true)
+        .limit(1)
+        .maybeSingle(),
+    ])
+    const isEventTypeBooking = !categoryRow && !!eventTypeRow
+
     // ✅ PARALLEL: Run all 3 independent queries at once instead of sequentially
     const [staffLocResult, allStandardLocResult, allStaffResult] = await Promise.all([
       // 1. staff_locations with is_online_bookable: true (incl. per-staff categories)
@@ -127,15 +151,23 @@ export default defineEventHandler(async (event) => {
     }
 
     // Locations that have at least one online-bookable staff offering this category
+    // (or any online-bookable staff for event-type bookings)
     const matchingLocationIds = new Set<string>()
     for (const sl of staffLocations || []) {
+      if (isEventTypeBooking) {
+        matchingLocationIds.add(sl.location_id)
+        continue
+      }
       const effective = getEffectiveCategories(sl.staff_id, sl.location_id)
       if (effective.includes(category_code)) {
         matchingLocationIds.add(sl.location_id)
       }
     }
 
-    logger.debug('📍 Locations matching category via staff_locations:', matchingLocationIds.size)
+    logger.debug('📍 Locations matching category via staff_locations:', {
+      count: matchingLocationIds.size,
+      isEventTypeBooking,
+    })
 
     const locations = (allStandardLocations || []).filter((loc: any) => matchingLocationIds.has(loc.id))
     logger.debug('📍 Loaded locations:', locations.length)
@@ -215,7 +247,7 @@ export default defineEventHandler(async (event) => {
         if (!isOnlineBookable) return
 
         const effectiveCats = getEffectiveCategories(staffId, locationId)
-        if (!effectiveCats.includes(category_code)) return
+        if (!isEventTypeBooking && !effectiveCats.includes(category_code)) return
 
         locationEntry.available_staff.push({
           id: staff.id,

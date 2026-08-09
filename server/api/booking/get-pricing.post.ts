@@ -106,6 +106,22 @@ export default defineEventHandler(async (event) => {
         }
       }
 
+      // per_event_type tenants: price by event_type_code (category_code is null on those rules)
+      if (rawRules.length === 0) {
+        const { data: eventRules, error: eventErr } = await supabase
+          .from('pricing_rules')
+          .select('*')
+          .eq('tenant_id', tenant_id)
+          .eq('event_type_code', category_code)
+          .eq('rule_type', 'event_price')
+          .eq('is_active', true)
+          .order('valid_from', { ascending: false })
+
+        if (!eventErr && eventRules && eventRules.length > 0) {
+          rawRules = eventRules
+        }
+      }
+
       if (rawRules.length === 0) {
         logger.warn('⚠️ No pricing rules found for category (including fallback):', category_code)
         return {
@@ -142,6 +158,15 @@ export default defineEventHandler(async (event) => {
 
       // Theory / consultation rules – treated like base_price for price calculation
       if (rule.rule_type === 'theory' || rule.rule_type === 'consultation') {
+        if (rule.price_per_minute_rappen !== undefined) combined.price_per_minute_rappen = rule.price_per_minute_rappen
+        if (rule.base_duration_minutes) combined.base_duration_minutes = rule.base_duration_minutes
+        if (rule.rule_name) combined.rule_name = rule.rule_name
+        if (rule.valid_from) combined.valid_from = rule.valid_from
+        if (rule.valid_until) combined.valid_until = rule.valid_until
+      }
+
+      // per_event_type pricing (session/package/etc.)
+      if (rule.rule_type === 'event_price') {
         if (rule.price_per_minute_rappen !== undefined) combined.price_per_minute_rappen = rule.price_per_minute_rappen
         if (rule.base_duration_minutes) combined.base_duration_minutes = rule.base_duration_minutes
         if (rule.rule_name) combined.rule_name = rule.rule_name

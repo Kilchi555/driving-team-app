@@ -37,12 +37,14 @@ interface Staff {
 }
 
 interface Category {
-  id: number
+  id: number | string
   code: string
   name: string
   lesson_duration_minutes: number[]
   is_active: boolean
   tenant_id: string
+  /** category = subcategory durations; event_type = public_bookable fallback when no usable categories */
+  _source?: 'category' | 'event_type'
 }
 
 interface TimeWindow {
@@ -162,7 +164,7 @@ export class AvailabilityCalculator {
     try {
       // 1. Load all required data
       const staff = await this.loadStaff(options.tenantId, options.staffId)
-      const categories = await this.loadCategories(options.tenantId)
+      const categories = await this.loadSlotDimensions(options.tenantId)
       const locations = await this.loadLocations(options.tenantId, staff.map(s => s.id))
       
       // NEW: Get staff IDs that have bookable locations
@@ -303,6 +305,35 @@ export class AvailabilityCalculator {
   }
 
   /**
+   * Slot dimensions: usable subcategories with durations, OR (if none exist at all)
+   * public_bookable event types with default_duration_minutes.
+   * Never both — avoids double slots for driving schools.
+   * If subcategories exist but have empty durations, do NOT fall back to event types
+   * (that would invent wrong slots for FS tenants).
+   */
+  private async loadSlotDimensions(tenantId?: string): Promise<Category[]> {
+    const categories = await this.loadCategories(tenantId)
+    const usable = categories.filter(
+      (c) => Array.isArray(c.lesson_duration_minutes) && c.lesson_duration_minutes.length > 0,
+    )
+    if (usable.length > 0) {
+      return usable.map((c) => ({ ...c, _source: 'category' as const }))
+    }
+
+    // Subcategories present but no durations → keep empty (same as pre-OR behaviour)
+    if (categories.length > 0) {
+      logger.debug('⚠️ Subcategories exist but none have lesson_duration_minutes — not falling back to event types')
+      return []
+    }
+
+    const eventTypes = await this.loadPublicBookableEventTypes(tenantId)
+    if (eventTypes.length > 0) {
+      logger.debug(`📅 No categories — using ${eventTypes.length} public_bookable event type(s) as slot dimensions`)
+    }
+    return eventTypes
+  }
+
+  /**
    * Load categories (only subcategories with parent_category_id)
    */
   private async loadCategories(tenantId?: string): Promise<Category[]> {
@@ -320,7 +351,37 @@ export class AvailabilityCalculator {
     if (error) throw error
 
     logger.debug(`📚 Loaded ${data?.length || 0} subcategories (filtered by parent_category_id)`)
-    return data || []
+    return (data || []).map((c: any) => ({ ...c, _source: 'category' as const }))
+  }
+
+  /** Fallback slot dimensions for per_event_type tenants without subcategory durations. */
+  private async loadPublicBookableEventTypes(tenantId?: string): Promise<Category[]> {
+    let query = this.supabase
+      .from('event_types')
+      .select('id, code, name, default_duration_minutes, is_active, tenant_id, public_bookable')
+      .eq('is_active', true)
+      .eq('public_bookable', true)
+      .gt('default_duration_minutes', 0)
+
+    if (tenantId) {
+      query = query.eq('tenant_id', tenantId)
+    }
+
+    const { data, error } = await query
+    if (error) {
+      logger.warn('⚠️ Could not load public_bookable event types for slots:', error.message)
+      return []
+    }
+
+    return (data || []).map((et: any) => ({
+      id: et.id,
+      code: et.code,
+      name: et.name,
+      lesson_duration_minutes: [Number(et.default_duration_minutes)],
+      is_active: true,
+      tenant_id: et.tenant_id,
+      _source: 'event_type' as const,
+    }))
   }
 
   /**
@@ -593,10 +654,12 @@ export class AvailabilityCalculator {
         continue
       }
 
-      // Get staff's categories
+      // Get staff's categories / event-type dimensions
       // NEW: Support both parent and child categories
       // If staff has "B", should match any subcategory of B (B Schaltung, B Automatik)
+      // Event-type dimensions skip staff.category filters (those hold topic codes, not event codes).
       const staffCategories = params.categories.filter(cat => {
+        if (cat._source === 'event_type') return true
         // If staff has specific category, only allow those
         if (staff.category) {
           // staff.category can be an array ["A", "B"], a JSON string '["A","B"]', or a CSV "A,B"
@@ -700,21 +763,28 @@ export class AvailabilityCalculator {
         for (const location of staffLocations) {
           // For each category the staff offers (deduped to avoid duplicates)
           for (const category of deduplicatedCategories) {
-            // Prefer per-staff categories at this location; fall back to location-level
-            const perStaffCats = location._staff_categories?.[staff.id]
-            if (Array.isArray(perStaffCats)) {
-              // Explicit per-staff list (may be empty = no categories at this location)
-              if (!perStaffCats.includes(category.code)) {
+            // Prefer per-staff categories at this location; fall back to location-level.
+            // Skip for event-type dimensions — available_categories holds topic/category codes,
+            // not event type codes like "session" / "discovery".
+            if (category._source !== 'event_type') {
+              const perStaffCats = location._staff_categories?.[staff.id]
+              if (Array.isArray(perStaffCats)) {
+                // Explicit per-staff list (may be empty = no categories at this location)
+                if (!perStaffCats.includes(category.code)) {
+                  continue
+                }
+              } else if (location.available_categories && location.available_categories.length > 0
+                  && !location.available_categories.includes(category.code)) {
+                // Legacy fallback: location-level categories
                 continue
               }
-            } else if (location.available_categories && location.available_categories.length > 0
-                && !location.available_categories.includes(category.code)) {
-              // Legacy fallback: location-level categories
-              continue
             }
             
             // For each lesson duration
-            for (const durationMinutes of category.lesson_duration_minutes) {
+            const durations = Array.isArray(category.lesson_duration_minutes)
+              ? category.lesson_duration_minutes.filter((d) => Number(d) > 0)
+              : []
+            for (const durationMinutes of durations) {
               // Generate slots for each working hour block
               for (const hours of dayHours) {
                 // ✅ NEW: Now async/await for travel time checking
