@@ -2,9 +2,11 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { probeIcsUrl } from '~/server/utils/probe-ics-url'
+import { syncOneExternalCalendar } from '~/server/utils/sync-external-calendars-job'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
+  let action: string | undefined
   try {
     // ============ LAYER 1: AUTHENTICATION (Server-side) ============
     const authUser = await getAuthenticatedUser(event)
@@ -16,7 +18,8 @@ export default defineEventHandler(async (event) => {
     }
 
     const body = await readBody(event)
-    const { action, data } = body
+    action = body?.action
+    const { data } = body
 
     if (!action) {
       throw createError({
@@ -97,8 +100,9 @@ export default defineEventHandler(async (event) => {
         staff_id: userData.id,
         provider,
         account_identifier: account_identifier || probe.url,
-        calendar_name,
-        connection_type: provider === 'ics' ? 'ics_url' : 'oauth',
+        calendar_name: calendar_name || null,
+        // ICS share links are always ics_url — even for apple/google/microsoft providers
+        connection_type: 'ics_url',
         ics_url: probe.url,
         sync_enabled: true,
         consecutive_failures: 0,
@@ -111,28 +115,70 @@ export default defineEventHandler(async (event) => {
         .upsert(calendarData, {
           onConflict: 'tenant_id,staff_id,provider,account_identifier'
         })
-        .select('id')
+        .select('*')
         .single()
 
-      if (upsertError) throw upsertError
+      let calendarRow = upserted
+      if (upsertError || !calendarRow?.id) {
+        // Fallback: some PostgREST configs return no row on upsert — fetch explicitly
+        const { data: existing, error: fetchErr } = await supabase
+          .from('external_calendars')
+          .select('*')
+          .eq('tenant_id', userData.tenant_id)
+          .eq('staff_id', userData.id)
+          .eq('provider', provider)
+          .eq('account_identifier', calendarData.account_identifier)
+          .maybeSingle()
+        if (fetchErr || !existing?.id) {
+          throw upsertError || fetchErr || new Error('Kalender konnte nicht gespeichert werden')
+        }
+        calendarRow = existing
+      }
+
+      // Immediate first sync so busy times / last_sync_at are set right away
+      // (registration + settings both rely on this — client-side sync often raced auth)
+      let syncResult: { status: string; events?: number; error?: string; reason?: string } | null = null
+      try {
+        syncResult = await syncOneExternalCalendar(
+          supabase,
+          calendarRow,
+          new Map(),
+          { notifyOnFailure: false },
+        )
+      } catch (syncErr: any) {
+        logger.warn('⚠️ External calendar connected but initial sync failed', {
+          calendarId: calendarRow.id,
+          error: syncErr?.message || syncErr,
+        })
+        syncResult = { status: 'failed', error: syncErr?.message || 'Sync fehlgeschlagen' }
+      }
 
       logger.info('📅 External calendar connected', {
         provider,
         staffId: userData.id,
         tenantId: userData.tenant_id,
-        calendarId: upserted?.id,
+        calendarId: calendarRow.id,
         veventCount: probe.veventCount,
+        syncStatus: syncResult?.status,
+        syncedEvents: syncResult?.status === 'synced' ? syncResult.events : undefined,
       })
+
+      const syncedOk = syncResult?.status === 'synced'
+      const syncedEvents = syncedOk ? (syncResult.events ?? 0) : 0
 
       return {
         success: true,
-        message:
-          probe.veventCount > 0
-            ? `Kalender verbunden — Feed OK (${probe.veventCount} Termin(e) erkannt).`
+        message: syncedOk
+          ? syncedEvents > 0
+            ? `Kalender verbunden und synchronisiert (${syncedEvents} Termin(e)).`
+            : 'Kalender verbunden — Feed OK (noch keine Termine im Feed).'
+          : probe.veventCount > 0
+            ? `Kalender verbunden — Feed OK (${probe.veventCount} Termin(e) erkannt). Sync bitte manuell erneut versuchen.`
             : 'Kalender verbunden — Feed OK (noch keine Termine im Feed).',
-        calendar_id: upserted?.id,
+        calendar_id: calendarRow.id,
         normalized_url: probe.url,
         vevent_count: probe.veventCount,
+        sync: syncResult,
       }
     } else if (action === 'disconnect') {
       // ============ LAYER 2: AUTHORIZATION FOR DISCONNECT ============

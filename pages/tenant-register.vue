@@ -1726,15 +1726,52 @@
         </div>
 
         <!-- Loading State -->
-        <div v-if="currentStep === LOADING_STEP" class="flex flex-col items-center justify-center py-16 gap-4">
-          <div class="relative w-16 h-16">
+        <div v-if="currentStep === LOADING_STEP" class="flex flex-col items-center justify-center py-10 gap-5">
+          <div class="relative w-14 h-14">
             <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
             <div class="absolute inset-0 rounded-full border-4 border-t-transparent animate-spin"
               :style="{ borderColor: `${formData.primary_color || '#3B82F6'} transparent transparent transparent` }"></div>
           </div>
-          <div class="text-center">
+          <div class="text-center px-2">
             <h2 class="text-lg font-semibold text-gray-900 mb-1">{{ labels.businessNoun }} wird eingerichtet…</h2>
-            <p class="text-sm text-gray-500">{{ labels.categoriesLabel }}, Vorlagen und Benutzer werden erstellt.</p>
+            <p class="text-sm text-gray-500 transition-opacity duration-300">{{ setupProgressDetail }}</p>
+          </div>
+          <div class="w-full max-w-sm rounded-2xl border border-gray-200 overflow-hidden">
+            <div class="divide-y divide-gray-100">
+              <div
+                v-for="step in setupProgressSteps"
+                :key="step.id"
+                class="flex items-center gap-3 px-4 py-2.5"
+              >
+                <div
+                  class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                  :class="{
+                    'bg-green-500': step.status === 'done',
+                    'bg-transparent': step.status === 'active',
+                    'bg-gray-200': step.status === 'pending',
+                  }"
+                >
+                  <svg v-if="step.status === 'done'" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <div
+                    v-else-if="step.status === 'active'"
+                    class="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
+                    :style="{ borderColor: `${formData.primary_color || '#3B82F6'} transparent transparent transparent` }"
+                  />
+                </div>
+                <p
+                  class="text-sm leading-snug"
+                  :class="{
+                    'text-gray-900 font-medium': step.status === 'active',
+                    'text-gray-700': step.status === 'done',
+                    'text-gray-400': step.status === 'pending',
+                  }"
+                >
+                  {{ step.label }}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2734,6 +2771,90 @@ const applyAdminToStaff = () => {
 }
 const staffInviteResults = ref<Array<{ name: string; status: string; message: string; invite_link?: string }> | null>(null)
 
+// ─── Setup progress (loading screen) ───────────────────────────────────────
+type SetupProgressStatus = 'pending' | 'active' | 'done'
+interface SetupProgressStep {
+  id: string
+  label: string
+  status: SetupProgressStatus
+}
+const setupProgressSteps = ref<SetupProgressStep[]>([])
+const setupProgressDetail = ref('')
+let registerSubProgressTimer: ReturnType<typeof setInterval> | null = null
+
+const clearRegisterSubProgress = () => {
+  if (registerSubProgressTimer) {
+    clearInterval(registerSubProgressTimer)
+    registerSubProgressTimer = null
+  }
+}
+
+const initSetupProgress = (hasStaff: boolean) => {
+  clearRegisterSubProgress()
+  const L = labels.value
+  const steps: SetupProgressStep[] = [
+    { id: 'register', label: `${L.businessNoun} wird registriert`, status: 'active' },
+    {
+      id: 'templates',
+      label: skipsCategories.value
+        ? 'Leistungen & Vorlagen werden erstellt'
+        : `${L.categoriesLabel} & Vorlagen werden erstellt`,
+      status: 'pending',
+    },
+    { id: 'locations', label: 'Standorte & Preise werden eingerichtet', status: 'pending' },
+    { id: 'admin', label: 'Admin-Konto wird erstellt', status: 'pending' },
+  ]
+  if (hasStaff) {
+    steps.push({ id: 'staff', label: `${L.staffPlural} werden eingeladen`, status: 'pending' })
+  }
+  steps.push({ id: 'welcome', label: 'Willkommens-E-Mail wird gesendet', status: 'pending' })
+  setupProgressSteps.value = steps
+  setupProgressDetail.value = steps[0]?.label || ''
+}
+
+const markProgressDone = (id: string) => {
+  setupProgressSteps.value = setupProgressSteps.value.map((s) =>
+    s.id === id ? { ...s, status: 'done' as const } : s
+  )
+}
+
+const setProgressActive = (id: string) => {
+  setupProgressSteps.value = setupProgressSteps.value.map((s) => {
+    if (s.id === id) return { ...s, status: 'active' as const }
+    if (s.status === 'active') return { ...s, status: 'done' as const }
+    return s
+  })
+  const step = setupProgressSteps.value.find((s) => s.id === id)
+  if (step) setupProgressDetail.value = step.label
+}
+
+/** Soft progress while the long /register call runs (tenant + templates + locations). */
+const startRegisterSubProgress = () => {
+  clearRegisterSubProgress()
+  const softIds = ['register', 'templates', 'locations']
+  let i = 0
+  registerSubProgressTimer = setInterval(() => {
+    if (i >= softIds.length - 1) {
+      clearRegisterSubProgress()
+      return
+    }
+    markProgressDone(softIds[i])
+    i += 1
+    setProgressActive(softIds[i])
+  }, 2400)
+}
+
+const finishRegisterSubProgress = () => {
+  clearRegisterSubProgress()
+  for (const id of ['register', 'templates', 'locations']) {
+    markProgressDone(id)
+  }
+}
+
+onBeforeUnmount(() => {
+  clearRegisterSubProgress()
+})
+
 // ─── State ─────────────────────────────────────────────────────────────────
 const currentStep = ref(0)
 const acceptTerms = ref(false)
@@ -3126,6 +3247,16 @@ const submitRegistration = async () => {
   currentStep.value = LOADING_STEP
   error.value = null
 
+  const filledStaffPreview = staffList.value.filter((s) => {
+    if (!s.first_name.trim()) return false
+    const e = (s.email || '').trim().toLowerCase()
+    if (!e.includes('@')) return false
+    if (e === adminEmailForStaffCompare.value) return false
+    return true
+  })
+  initSetupProgress(filledStaffPreview.length > 0)
+  startRegisterSubProgress()
+
   try {
     const fd = new FormData()
 
@@ -3276,6 +3407,7 @@ const submitRegistration = async () => {
     const response = await $fetch('/api/tenants/register', { method: 'POST', body: fd }) as any
 
     if (!response.success) {
+      clearRegisterSubProgress()
       const msg = response.error || 'Unbekannter Fehler'
       if (/URL-Kennung|reserviert|bereits vergeben/i.test(msg)) {
         slugCheck.value = /reserviert/i.test(msg) ? 'reserved' : 'taken'
@@ -3289,6 +3421,9 @@ const submitRegistration = async () => {
       error.value = msg
       return
     }
+
+    finishRegisterSubProgress()
+    setProgressActive('admin')
 
     createdTenantSlug.value     = response.tenant.slug
     createdCustomerNumber.value = response.tenant.customer_number
@@ -3348,19 +3483,14 @@ const submitRegistration = async () => {
     }
 
     // 3. Invite staff (non-critical)
-    const filledStaff = staffList.value.filter((s) => {
-      if (!s.first_name.trim()) return false
-      const e = (s.email || '').trim().toLowerCase()
-      if (!e.includes('@')) return false
-      if (e === adminEmailForStaffCompare.value) return false
-      return true
-    }).map(s => ({
+    const filledStaff = filledStaffPreview.map(s => ({
       first_name: s.first_name.trim(),
       last_name: s.last_name.trim(),
       phone: s.phone.trim() || undefined,
       email: (s.email || '').trim(),
     }))
     if (filledStaff.length > 0) {
+      setProgressActive('staff')
       try {
         const inviteRes = await $fetch('/api/tenants/invite-staff-batch', {
           method: 'POST',
@@ -3375,9 +3505,11 @@ const submitRegistration = async () => {
           message: inviteErr?.data?.statusMessage || inviteErr?.message || 'Einladung konnte nicht gesendet werden'
         }))
       }
+      markProgressDone('staff')
     }
 
     // 4. Send welcome email (non-critical)
+    setProgressActive('welcome')
     try {
       await $fetch('/api/tenants/send-welcome-email', {
         method: 'POST',
@@ -3386,6 +3518,8 @@ const submitRegistration = async () => {
     } catch (welcomeErr) {
       console.warn('Welcome email failed (non-critical):', welcomeErr)
     }
+    markProgressDone('welcome')
+    setupProgressDetail.value = 'Fast fertig…'
 
     // Offer to save credentials — never block the success screen (Chrome's
     // PasswordCredential.store can hang until the user dismisses a prompt).
@@ -3399,6 +3533,7 @@ const submitRegistration = async () => {
     localStorage.removeItem(STORAGE_KEY)
 
   } catch (err: any) {
+    clearRegisterSubProgress()
     console.error('Registration failed:', err)
     const statusCode = err.status || err.statusCode || err.data?.statusCode
     const knownMessage =

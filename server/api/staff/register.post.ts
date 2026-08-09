@@ -513,21 +513,21 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Calendar token generation failed (non-critical):', calErr.message)
     }
 
-    // 10. Send welcome email
-    try {
-      await sendWelcomeEmail({
-        role: 'staff',
-        to: email.toLowerCase().trim(),
-        firstName: sanitizedFirstName,
-        tenantId: invitation.tenant_id,
-      })
+    // 10. Send welcome email (non-blocking — don't hold the registration response)
+    void sendWelcomeEmail({
+      role: 'staff',
+      to: email.toLowerCase().trim(),
+      firstName: sanitizedFirstName,
+      tenantId: invitation.tenant_id,
+    }).then(() => {
       logger.debug('✅ Welcome email sent to new staff member')
-    } catch (emailErr: any) {
-      logger.warn('⚠️ Welcome email failed (non-critical):', emailErr.message)
-    }
+    }).catch((emailErr: any) => {
+      logger.warn('⚠️ Welcome email failed (non-critical):', emailErr?.message || emailErr)
+    })
 
     // ✅ LAYER 8: Audit logging - Success
     await logAudit({
+      action: 'staff_registration',
       user_id: newUser.id,
       tenant_id: invitation.tenant_id,
       resource_type: 'user',

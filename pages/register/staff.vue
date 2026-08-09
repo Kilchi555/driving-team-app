@@ -27,10 +27,55 @@
       <div class="bg-white rounded-xl shadow-md overflow-hidden">
 
         <!-- ── Loading ── -->
-        <div v-if="currentStep === STEP_LOADING" class="p-12 text-center">
-          <div class="animate-spin rounded-full h-14 w-14 border-b-2 mx-auto mb-4" :style="{ borderColor: tenantColor }"></div>
-          <p class="text-gray-600 font-medium">Konto wird erstellt…</p>
-          <p class="text-sm text-gray-400 mt-1">Bitte warten Sie einen Moment.</p>
+        <div v-if="currentStep === STEP_LOADING" class="flex flex-col items-center justify-center py-10 px-6 gap-5">
+          <div class="relative w-14 h-14">
+            <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+            <div
+              class="absolute inset-0 rounded-full border-4 border-t-transparent animate-spin"
+              :style="{ borderColor: `${tenantColor} transparent transparent transparent` }"
+            ></div>
+          </div>
+          <div class="text-center px-2">
+            <h2 class="text-lg font-semibold text-gray-900 mb-1">Konto wird eingerichtet…</h2>
+            <p class="text-sm text-gray-500 transition-opacity duration-300">{{ setupProgressDetail }}</p>
+          </div>
+          <div class="w-full max-w-sm rounded-2xl border border-gray-200 overflow-hidden">
+            <div class="divide-y divide-gray-100">
+              <div
+                v-for="step in setupProgressSteps"
+                :key="step.id"
+                class="flex items-center gap-3 px-4 py-2.5"
+              >
+                <div
+                  class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                  :class="{
+                    'bg-green-500': step.status === 'done',
+                    'bg-transparent': step.status === 'active',
+                    'bg-gray-200': step.status === 'pending',
+                  }"
+                >
+                  <svg v-if="step.status === 'done'" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <div
+                    v-else-if="step.status === 'active'"
+                    class="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
+                    :style="{ borderColor: `${tenantColor} transparent transparent transparent` }"
+                  />
+                </div>
+                <p
+                  class="text-sm leading-snug"
+                  :class="{
+                    'text-gray-900 font-medium': step.status === 'active',
+                    'text-gray-700': step.status === 'done',
+                    'text-gray-400': step.status === 'pending',
+                  }"
+                >
+                  {{ step.label }}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- ── Success ── -->
@@ -879,7 +924,7 @@
 <script setup lang="ts">
 definePageMeta({ name: 'register-staff-invite' })
 
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
@@ -918,6 +963,86 @@ const isLoading          = ref(true)
 const loadError          = ref('')
 const registrationError  = ref('')
 const autoLoginFailed    = ref(false)
+
+// ─── Setup progress (loading screen) ───────────────────────────────────────
+type SetupProgressStatus = 'pending' | 'active' | 'done'
+interface SetupProgressStep {
+  id: string
+  label: string
+  status: SetupProgressStatus
+}
+const setupProgressSteps = ref<SetupProgressStep[]>([])
+const setupProgressDetail = ref('')
+let registerSubProgressTimer: ReturnType<typeof setInterval> | null = null
+
+const clearRegisterSubProgress = () => {
+  if (registerSubProgressTimer) {
+    clearInterval(registerSubProgressTimer)
+    registerSubProgressTimer = null
+  }
+}
+
+const initSetupProgress = (opts: { hasLicense: boolean; hasExternalCalendar: boolean }) => {
+  clearRegisterSubProgress()
+  const staffLabel = labels.value.staff
+  const steps: SetupProgressStep[] = [
+    { id: 'register', label: `${staffLabel}-Konto wird erstellt`, status: 'active' },
+    { id: 'profile', label: 'Profil & Arbeitszeiten werden eingerichtet', status: 'pending' },
+  ]
+  if (opts.hasLicense) {
+    steps.push({ id: 'license', label: 'Ausweis wird hochgeladen', status: 'pending' })
+  }
+  steps.push({ id: 'login', label: 'Anmeldung wird vorbereitet', status: 'pending' })
+  steps.push({
+    id: 'calendar',
+    label: opts.hasExternalCalendar ? 'Kalender wird verbunden' : 'Kalender-Link wird erstellt',
+    status: 'pending',
+  })
+  setupProgressSteps.value = steps
+  setupProgressDetail.value = steps[0]?.label || ''
+}
+
+const markProgressDone = (id: string) => {
+  setupProgressSteps.value = setupProgressSteps.value.map((s) =>
+    s.id === id ? { ...s, status: 'done' as const } : s
+  )
+}
+
+const setProgressActive = (id: string) => {
+  setupProgressSteps.value = setupProgressSteps.value.map((s) => {
+    if (s.id === id) return { ...s, status: 'active' as const }
+    if (s.status === 'active') return { ...s, status: 'done' as const }
+    return s
+  })
+  const step = setupProgressSteps.value.find((s) => s.id === id)
+  if (step) setupProgressDetail.value = step.label
+}
+
+const startRegisterSubProgress = () => {
+  clearRegisterSubProgress()
+  const softIds = ['register', 'profile']
+  let i = 0
+  registerSubProgressTimer = setInterval(() => {
+    if (i >= softIds.length - 1) {
+      clearRegisterSubProgress()
+      return
+    }
+    markProgressDone(softIds[i])
+    i += 1
+    setProgressActive(softIds[i])
+  }, 2200)
+}
+
+const finishRegisterSubProgress = () => {
+  clearRegisterSubProgress()
+  for (const id of ['register', 'profile']) {
+    markProgressDone(id)
+  }
+}
+
+onBeforeUnmount(() => {
+  clearRegisterSubProgress()
+})
 const tenantName         = ref('')
 const tenantSlugRef      = ref('')
 const tenantColor        = ref('#7C3AED')
@@ -1385,6 +1510,11 @@ const submit = async () => {
   registrationError.value = ''
   currentStep.value = STEP_LOADING
 
+  const hasLicense = !!(licenseFrontFile.value || licenseBackFile.value)
+  const hasExternalCalendar = !!(form.externalCalendarProvider && form.externalCalendarUrl)
+  initSetupProgress({ hasLicense, hasExternalCalendar })
+  startRegisterSubProgress()
+
   try {
     // Build working hours array from selected days
     const workingHours = Object.entries(form.workingDays)
@@ -1428,11 +1558,14 @@ const submit = async () => {
 
     if (!response.success) throw new Error('Registrierung fehlgeschlagen')
 
+    finishRegisterSubProgress()
+
     const userId = response.userId
     if (response.tenantSlug) tenantSlugRef.value = response.tenantSlug
 
     // Upload license files
-    if (userId && (licenseFrontFile.value || licenseBackFile.value)) {
+    if (userId && hasLicense) {
+      setProgressActive('license')
       try {
         const fd = new FormData()
         fd.append('userId', userId)
@@ -1440,9 +1573,11 @@ const submit = async () => {
         if (licenseBackFile.value)  fd.append('backFile',  licenseBackFile.value)
         await $fetch('/api/admin/upload-license', { method: 'POST', body: fd })
       } catch { /* non-fatal */ }
+      markProgressDone('license')
     }
 
     // Auto-login
+    setProgressActive('login')
     const loginOk = await authStore.login(form.email, form.password).catch(() => false)
     if (!loginOk) autoLoginFailed.value = true
 
@@ -1453,8 +1588,10 @@ const submit = async () => {
       `${form.firstName} ${form.lastName}`.trim(),
       'new-password'
     )
+    markProgressDone('login')
 
     // Generate ICS URL after login
+    setProgressActive('calendar')
     if (loginOk) {
       try {
         const tokenRes = await $fetch<any>('/api/calendar/generate-token', { method: 'POST' })
@@ -1464,7 +1601,9 @@ const submit = async () => {
       }
     }
 
-    // Connect external calendar after login (only if URL shape looks like an ICS feed)
+    // Connect external calendar after login (only if URL shape looks like an ICS feed).
+    // Connect endpoint now runs the first sync server-side so last_sync_at is set
+    // even if a follow-up client sync would race auth cookies.
     if (loginOk && form.externalCalendarProvider && form.externalCalendarUrl) {
       try {
         const normalizedUrl = normalizeIcsUrl(form.externalCalendarUrl)
@@ -1473,6 +1612,7 @@ const submit = async () => {
           const connectRes = await $fetch<{
             success: boolean
             calendar_id?: string
+            sync?: { status: string; events?: number; error?: string }
           }>('/api/staff/external-calendars', {
             method: 'POST',
             body: {
@@ -1480,12 +1620,18 @@ const submit = async () => {
               data: {
                 provider: form.externalCalendarProvider === 'outlook' ? 'microsoft' : form.externalCalendarProvider,
                 ics_url: shape.url,
+                calendar_name:
+                  form.externalCalendarProvider === 'apple' ? 'Apple Calendar'
+                  : form.externalCalendarProvider === 'google' ? 'Google Kalender'
+                  : form.externalCalendarProvider === 'outlook' ? 'Outlook'
+                  : 'Externer Kalender',
               }
             }
           })
 
-          // Immediate first sync so busy times are available right away
-          if (connectRes?.calendar_id) {
+          // Fallback client sync only if server-side sync did not complete
+          const syncStatus = connectRes?.sync?.status
+          if (connectRes?.calendar_id && syncStatus !== 'synced') {
             try {
               await $fetch('/api/external-calendars/sync-ics', {
                 method: 'POST',
@@ -1499,8 +1645,12 @@ const submit = async () => {
             }
           }
         }
-      } catch { /* non-fatal — user can reconnect in settings */ }
+      } catch (calConnectErr) {
+        console.warn('External calendar connect during registration failed:', calConnectErr)
+      }
     }
+    markProgressDone('calendar')
+    setupProgressDetail.value = 'Fast fertig…'
 
     currentStep.value = STEP_SUCCESS
 
@@ -1510,6 +1660,7 @@ const submit = async () => {
     }
 
   } catch (err: any) {
+    clearRegisterSubProgress()
     console.error('Registration error:', err)
     registrationError.value = err.data?.statusMessage || err.statusMessage || err.message || 'Ein Fehler ist aufgetreten'
     currentStep.value = 6
