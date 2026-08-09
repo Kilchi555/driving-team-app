@@ -510,10 +510,12 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
           // price_chf may be 0 (e.g. free Beratung) — still persist the rule so
           // duration + zero price show correctly in EventModal / booking.
           // free_event rows are toggles only (no pricing_rules insert).
+          // admin_fee rows are handled separately (fields live on admin_fee_*).
           const pricingRows = pricingItems
             .filter((p: any) =>
               p.rule_type &&
               p.rule_type !== 'free_event' &&
+              p.rule_type !== 'admin_fee' &&
               p.duration_minutes > 0 &&
               Number(p.price_chf) >= 0
             )
@@ -536,10 +538,37 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
               created_at: now,
               updated_at: now,
             }))
-          if (pricingRows.length > 0) {
-            const { error: priceErr } = await supabase.from('pricing_rules').insert(pricingRows)
+
+          const adminFeeRows = pricingItems
+            .filter((p: any) =>
+              p.rule_type === 'admin_fee' &&
+              p.category_code &&
+              Number(p.admin_fee_chf) > 0
+            )
+            .map((p: any) => ({
+              tenant_id: tenantId,
+              rule_type: 'admin_fee',
+              rule_name: p.label || `Kategorie ${p.category_code} - Versicherung`,
+              category_code: p.category_code,
+              event_type_code: null,
+              price_per_minute_rappen: 0,
+              base_duration_minutes: Number(p.duration_minutes) > 0 ? Number(p.duration_minutes) : 45,
+              admin_fee_rappen: Math.round(Number(p.admin_fee_chf) * 100),
+              admin_fee_applies_from: Number(p.admin_fee_applies_from) > 0
+                ? Number(p.admin_fee_applies_from)
+                : 2,
+              is_active: true,
+              valid_from: now,
+              valid_until: null,
+              created_at: now,
+              updated_at: now,
+            }))
+
+          const allPricingRows = [...pricingRows, ...adminFeeRows]
+          if (allPricingRows.length > 0) {
+            const { error: priceErr } = await supabase.from('pricing_rules').insert(allPricingRows)
             if (priceErr) logger.warn('⚠️ Pricing rules creation failed (non-critical):', priceErr)
-            else logger.debug(`✅ Created ${pricingRows.length} pricing rule(s)`)
+            else logger.debug(`✅ Created ${allPricingRows.length} pricing rule(s)`)
           }
 
           // Apply Online-buchbar + Dauer + App-Preis from registration onto tenant event_types.
