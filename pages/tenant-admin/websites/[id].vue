@@ -18,7 +18,7 @@
         <span :class="['sa-badge', statusBadgeClass(tenant?.website_status)]">
           {{ statusLabel(tenant?.website_status) }}
         </span>
-        <a :href="`/website-preview/${tenant?.slug}`" target="_blank" class="sa-btn-ghost">
+        <a :href="`/s/${tenant?.slug}?preview=1`" target="_blank" class="sa-btn-ghost">
           👁 Vorschau öffnen
         </a>
         <button v-if="tenant?.website_status === 'pending_review'" @click="showApproveModal = true"
@@ -196,11 +196,39 @@
           </div>
         </div>
 
+        <!-- Add-on Pages Unlock -->
+        <div class="sa-card p-5">
+          <p class="cms-sidebar-title">Add-on Seiten</p>
+          <p class="text-xs text-slate-500 mt-2 mb-3">
+            Standort / Kategorie / Preise freischalten (Billing später).
+          </p>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              class="rounded border-slate-600"
+              :checked="addonPagesEnabled"
+              :disabled="addonToggleBusy"
+              @change="toggleAddonPages(($event.target as HTMLInputElement).checked)"
+            />
+            <span class="text-sm text-slate-200">Add-on-Seiten freigeschaltet</span>
+          </label>
+          <ul v-if="addonPages.length" class="mt-3 space-y-1">
+            <li v-for="p in addonPages" :key="p.id" class="text-xs text-slate-400">
+              {{ p.title }}
+              <a
+                :href="`/s/${tenant.slug}/${p.slug}?preview=1`"
+                target="_blank"
+                class="text-sky-400 ml-1"
+              >Preview</a>
+            </li>
+          </ul>
+        </div>
+
         <!-- Quick Actions -->
         <div class="sa-card p-5">
           <p class="cms-sidebar-title">Schnellzugriff</p>
           <div class="space-y-2 mt-3">
-            <a :href="`/website-preview/${tenant.slug}`" target="_blank" class="sa-quick-link">
+            <a :href="`/s/${tenant.slug}?preview=1`" target="_blank" class="sa-quick-link">
               🌐 Website-Vorschau öffnen
             </a>
             <NuxtLink :to="`/tenant-admin/tenants`" class="sa-quick-link">
@@ -235,7 +263,7 @@
               <div class="sa-info-card">
                 <p class="text-sm text-slate-300"><strong>Kunde:</strong> {{ tenant?.name }}</p>
                 <p class="text-sm text-slate-300 mt-1"><strong>E-Mail:</strong> {{ tenant?.contact_email }}</p>
-                <p class="text-sm text-slate-300 mt-1"><strong>Website:</strong> /website-preview/{{ tenant?.slug }}</p>
+                <p class="text-sm text-slate-300 mt-1"><strong>Website:</strong> /s/{{ tenant?.slug }}?preview=1</p>
               </div>
               <div>
                 <label class="sa-label">Persönliche Nachricht (optional)</label>
@@ -274,6 +302,9 @@ const approving = ref(false)
 const showApproveModal = ref(false)
 const approveMessage = ref('Deine Website-Demo ist bereit! Schau sie dir an und lass mich wissen, was du anpassen möchtest.')
 const activeTab = ref('contact')
+const addonPagesEnabled = ref(false)
+const addonToggleBusy = ref(false)
+const addonPages = ref<any[]>([])
 
 const tabs = [
   { id: 'contact', icon: '📋', label: 'Kontakt' },
@@ -352,8 +383,42 @@ onMounted(async () => {
   }
 
   useHead({ title: `${t.name} – Website bearbeiten` })
+
+  // Load website add-on unlock + pages
+  const { data: websiteRow } = await supabase
+    .from('website_tenants')
+    .select('id, addon_pages_enabled, subdomain')
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  addonPagesEnabled.value = !!websiteRow?.addon_pages_enabled
+  if (websiteRow?.id) {
+    const { data: pages } = await supabase
+      .from('website_pages')
+      .select('id, title, slug, page_type, is_published')
+      .eq('website_id', websiteRow.id)
+      .neq('page_type', 'home')
+      .order('updated_at', { ascending: false })
+    addonPages.value = pages || []
+  }
+
   loading.value = false
 })
+
+const toggleAddonPages = async (enabled: boolean) => {
+  addonToggleBusy.value = true
+  try {
+    const res = await $fetch<any>(`/api/tenant-admin/websites/${tenantId}/addon-unlock`, {
+      method: 'POST',
+      body: { enabled },
+    })
+    addonPagesEnabled.value = !!res.addon_pages_enabled
+    showSuccess(enabled ? 'Add-ons freigeschaltet' : 'Add-ons deaktiviert')
+  } catch (err: any) {
+    showError('Fehler', err?.data?.statusMessage || err?.message || 'Toggle fehlgeschlagen')
+  } finally {
+    addonToggleBusy.value = false
+  }
+}
 
 const save = async () => {
   saving.value = true

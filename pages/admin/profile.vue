@@ -1078,57 +1078,207 @@
 
         <!-- Logos Tab -->
         <div v-show="activeTab === 'logos'" class="space-y-6">
-          <div class="bg-white rounded-lg shadow-sm border p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">Logo-Verwaltung</h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Square Logo -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Quadratisches Logo</label>
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <div v-if="brandingForm.logos.square" class="mb-4 space-y-2">
-                    <img :src="brandingForm.logos.square" class="w-16 h-16 mx-auto object-contain">
-                    <button
-                      type="button"
-                      class="text-xs text-red-600 hover:text-red-800 font-medium"
-                      @click="removeLogo('square')"
-                    >
-                      Entfernen
-                    </button>
-                  </div>
-                  <input 
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-                    @change="handleLogoUpload($event, 'square')"
-                    class="tenant-file block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
-                  >
-                  <p class="text-xs text-gray-500 mt-1">Empfohlen: 1:1 Format, max. 5MB · wird in Storage gespeichert</p>
-                </div>
-              </div>
-              
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 pt-6 pb-4 border-b border-gray-100">
+              <h2 class="text-xl font-semibold text-gray-900">Logo-Verwaltung</h2>
+              <p class="text-sm text-gray-500 mt-1">
+                Ziehe eine Datei hinein oder klicke zum Auswählen. PNG, JPG, WebP oder GIF — max. 5&nbsp;MB.
+              </p>
+            </div>
+
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
               <!-- Wide Logo -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Breites Logo</label>
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <div v-if="brandingForm.logos.wide" class="mb-4 space-y-2">
-                    <img :src="brandingForm.logos.wide" class="w-32 h-16 mx-auto object-contain">
-                    <button
-                      type="button"
-                      class="text-xs text-red-600 hover:text-red-800 font-medium"
-                      @click="removeLogo('wide')"
-                    >
-                      Entfernen
-                    </button>
+              <div class="rounded-2xl border border-gray-100 bg-gray-50/60 p-4 space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="text-sm font-semibold text-gray-900">Breites Logo</p>
+                    <p class="text-xs text-gray-500 mt-0.5">3:1 / 4:1 · Header, E-Mails, Banner</p>
                   </div>
-                  <input 
+                  <span
+                    class="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full"
+                    :style="{ background: `${primaryColor}18`, color: primaryColor }"
+                  >breit</span>
+                </div>
+
+                <div
+                  class="relative group rounded-xl border-2 border-dashed transition-all duration-200 overflow-hidden"
+                  :class="logoDropClass('wide')"
+                  :style="logoDropStyle('wide')"
+                  @dragenter.prevent="onLogoDragEnter('wide')"
+                  @dragover.prevent="onLogoDragOver('wide')"
+                  @dragleave.prevent="onLogoDragLeave('wide')"
+                  @drop.prevent="onLogoDrop($event, 'wide')"
+                >
+                  <input
+                    ref="wideLogoInput"
                     type="file"
                     accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                    class="sr-only"
                     @change="handleLogoUpload($event, 'wide')"
-                    class="tenant-file block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold"
                   >
-                  <p class="text-xs text-gray-500 mt-1">Empfohlen: 3:1 oder 4:1 Format, max. 5MB · wird in Storage gespeichert</p>
+
+                  <div v-if="logoUploading.wide" class="flex flex-col items-center justify-center py-12 px-4">
+                    <div
+                      class="h-9 w-9 rounded-full border-2 border-t-transparent animate-spin mb-3"
+                      :style="{ borderColor: `${primaryColor}33`, borderTopColor: primaryColor }"
+                    />
+                    <p class="text-sm font-medium text-gray-700">Wird hochgeladen…</p>
+                  </div>
+
+                  <div v-else-if="brandingForm.logos.wide" class="p-5">
+                    <div
+                      class="mx-auto flex items-center justify-center rounded-xl border border-gray-200/80 shadow-sm px-4"
+                      style="width: 100%; max-width: 18rem; height: 5.5rem; background-image: linear-gradient(45deg, #f3f4f6 25%, transparent 25%), linear-gradient(-45deg, #f3f4f6 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f3f4f6 75%), linear-gradient(-45deg, transparent 75%, #f3f4f6 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0; background-color: #fff;"
+                    >
+                      <img
+                        :src="brandingForm.logos.wide"
+                        alt="Breites Logo"
+                        class="max-w-full max-h-[4.5rem] object-contain"
+                        @error="handleImageError('wide')"
+                      >
+                    </div>
+                    <div class="mt-4 flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
+                        :style="{ background: primaryColor }"
+                        @click="wideLogoInput?.click()"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        </svg>
+                        Ersetzen
+                      </button>
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 bg-white border border-red-100 hover:bg-red-50 transition-colors"
+                        @click="removeLogo('wide')"
+                      >
+                        Entfernen
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    v-else
+                    type="button"
+                    class="w-full py-10 px-4 text-center focus:outline-none"
+                    @click="wideLogoInput?.click()"
+                  >
+                    <div
+                      class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
+                      :style="{ background: `${primaryColor}14`, color: primaryColor }"
+                    >
+                      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                      </svg>
+                    </div>
+                    <p class="text-sm font-semibold text-gray-800">
+                      <span :style="{ color: primaryColor }">Datei wählen</span>
+                      <span class="font-normal text-gray-500"> oder hierher ziehen</span>
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1.5">Empfohlen 3:1 oder 4:1 · max. 5&nbsp;MB</p>
+                  </button>
                 </div>
               </div>
+              <!-- Square Logo -->
+              <div class="rounded-2xl border border-gray-100 bg-gray-50/60 p-4 space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="text-sm font-semibold text-gray-900">Quadratisches Logo</p>
+                    <p class="text-xs text-gray-500 mt-0.5">1:1 · Favicon, App-Icon, Avatare</p>
+                  </div>
+                  <span
+                    class="shrink-0 text-[10px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full"
+                    :style="{ background: `${primaryColor}18`, color: primaryColor }"
+                  >1:1</span>
+                </div>
+
+                <div
+                  class="relative group rounded-xl border-2 border-dashed transition-all duration-200 overflow-hidden"
+                  :class="logoDropClass('square')"
+                  :style="logoDropStyle('square')"
+                  @dragenter.prevent="onLogoDragEnter('square')"
+                  @dragover.prevent="onLogoDragOver('square')"
+                  @dragleave.prevent="onLogoDragLeave('square')"
+                  @drop.prevent="onLogoDrop($event, 'square')"
+                >
+                  <input
+                    ref="squareLogoInput"
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                    class="sr-only"
+                    @change="handleLogoUpload($event, 'square')"
+                  >
+
+                  <!-- Uploading -->
+                  <div v-if="logoUploading.square" class="flex flex-col items-center justify-center py-12 px-4">
+                    <div
+                      class="h-9 w-9 rounded-full border-2 border-t-transparent animate-spin mb-3"
+                      :style="{ borderColor: `${primaryColor}33`, borderTopColor: primaryColor }"
+                    />
+                    <p class="text-sm font-medium text-gray-700">Wird hochgeladen…</p>
+                  </div>
+
+                  <!-- Preview -->
+                  <div v-else-if="brandingForm.logos.square" class="p-5">
+                    <div
+                      class="mx-auto flex items-center justify-center rounded-xl border border-gray-200/80 shadow-sm"
+                      style="width: 7.5rem; height: 7.5rem; background-image: linear-gradient(45deg, #f3f4f6 25%, transparent 25%), linear-gradient(-45deg, #f3f4f6 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f3f4f6 75%), linear-gradient(-45deg, transparent 75%, #f3f4f6 75%); background-size: 16px 16px; background-position: 0 0, 0 8px, 8px -8px, -8px 0; background-color: #fff;"
+                    >
+                      <img
+                        :src="brandingForm.logos.square"
+                        alt="Quadratisches Logo"
+                        class="max-w-[85%] max-h-[85%] object-contain"
+                        @error="handleImageError('square')"
+                      >
+                    </div>
+                    <div class="mt-4 flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
+                        :style="{ background: primaryColor }"
+                        @click="squareLogoInput?.click()"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        </svg>
+                        Ersetzen
+                      </button>
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 bg-white border border-red-100 hover:bg-red-50 transition-colors"
+                        @click="removeLogo('square')"
+                      >
+                        Entfernen
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Empty dropzone -->
+                  <button
+                    v-else
+                    type="button"
+                    class="w-full py-10 px-4 text-center focus:outline-none"
+                    @click="squareLogoInput?.click()"
+                  >
+                    <div
+                      class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
+                      :style="{ background: `${primaryColor}14`, color: primaryColor }"
+                    >
+                      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                      </svg>
+                    </div>
+                    <p class="text-sm font-semibold text-gray-800">
+                      <span :style="{ color: primaryColor }">Datei wählen</span>
+                      <span class="font-normal text-gray-500"> oder hierher ziehen</span>
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1.5">PNG, JPG, WebP, GIF · max. 5&nbsp;MB</p>
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -1225,7 +1375,15 @@
                   step="0.1"
                   class="w-32 px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm"
                 />
-                <p class="text-xs text-gray-400 mt-1">Wird als Standardwert beim Erstellen neuer Rechnungspositionen verwendet. CH-Normalsatz: 8.1%, reduzierter Satz: 2.6%</p>
+                <p class="text-xs text-gray-400 mt-1">
+                  Wird als Standardwert beim Erstellen neuer Rechnungspositionen verwendet.
+                  <template v-if="isDrivingSchool || isEducationVatExempt">
+                    Ausbildungsleistungen in der Schweiz sind typischerweise MwSt-befreit → Standard <strong>0%</strong>.
+                  </template>
+                  <template v-else>
+                    CH-Normalsatz: 8.1%, reduzierter Satz: 2.6%.
+                  </template>
+                </p>
               </div>
 
               <!-- Zahlungsfrist -->
@@ -2581,7 +2739,10 @@ import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
 
 const { primaryColor } = useTenantBranding()
-const { t, isDrivingSchool } = useTerminology()
+const { t, isDrivingSchool, businessType } = useTerminology()
+const isEducationVatExempt = computed(() =>
+  ['driving_school', 'tutoring', 'music_school'].includes(businessType.value)
+)
 const { primaryBg, primaryText, primaryBgLight } = usePrimaryColor()
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
 import { useFeatures } from '~/composables/useFeatures'
@@ -3977,37 +4138,80 @@ const applySelectedFont = () => {
   }
 }
 
+const squareLogoInput = ref<HTMLInputElement | null>(null)
+const wideLogoInput = ref<HTMLInputElement | null>(null)
+const logoUploading = ref({ square: false, wide: false })
+const logoDragOver = ref({ square: false, wide: false })
+const logoDragDepth = ref({ square: 0, wide: 0 })
+
+const logoDropClass = (type: 'square' | 'wide') => {
+  if (logoUploading.value[type]) return 'border-gray-200 bg-white cursor-wait'
+  if (logoDragOver.value[type]) return 'border-transparent bg-white scale-[1.01] shadow-md'
+  if (brandingForm.value.logos[type]) return 'border-gray-200 bg-white hover:border-gray-300'
+  return 'border-gray-300 bg-white hover:border-gray-400 cursor-pointer'
+}
+
+const logoDropStyle = (type: 'square' | 'wide') => {
+  if (!logoDragOver.value[type]) return undefined
+  return {
+    borderColor: primaryColor.value,
+    boxShadow: `0 0 0 3px ${primaryColor.value}22`,
+  }
+}
+
+const onLogoDragEnter = (type: 'square' | 'wide') => {
+  logoDragDepth.value[type] += 1
+  logoDragOver.value[type] = true
+}
+const onLogoDragOver = (type: 'square' | 'wide') => {
+  logoDragOver.value[type] = true
+}
+const onLogoDragLeave = (type: 'square' | 'wide') => {
+  logoDragDepth.value[type] = Math.max(0, logoDragDepth.value[type] - 1)
+  if (logoDragDepth.value[type] === 0) logoDragOver.value[type] = false
+}
+const onLogoDrop = (event: DragEvent, type: 'square' | 'wide') => {
+  logoDragDepth.value[type] = 0
+  logoDragOver.value[type] = false
+  const file = event.dataTransfer?.files?.[0]
+  if (file) void processLogoFile(file, type)
+}
+
 const handleLogoUpload = async (event: Event, logoType: 'square' | 'wide') => {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
-  
   if (!file) return
+  try {
+    await processLogoFile(file, logoType)
+  } finally {
+    if (input) input.value = ''
+  }
+}
 
+const processLogoFile = async (file: File, logoType: 'square' | 'wide') => {
   const tenantId = currentTenantBranding.value?.id
   if (!tenantId) {
     showError('Tenant nicht geladen')
     return
   }
-  
-  // Validate file
+
   const validation = validateImageFile(file, 5)
   if (!validation.valid) {
     showError(validation.error || 'Fehler bei der Validierung')
     return
   }
-  
+
+  logoUploading.value[logoType] = true
   try {
     logger.debug('🖼️ Starting logo upload to storage:', { logoType, fileName: file.name, fileSize: file.size })
-    
-    const wasLoading = isLoading.value
-    isLoading.value = true
-    
-    // Compress to WebP, then upload via Storage API (never save base64 to DB)
+
     const compressedBase64 = await compressImage(file, logoType)
-    const webpFile = base64ToFile(compressedBase64, `${logoType}-${Date.now()}.webp`)
+    const mime = compressedBase64.match(/^data:([^;]+);/)?.[1] || 'image/webp'
+    const ext = mime.includes('png') ? 'png' : mime.includes('jpeg') || mime.includes('jpg') ? 'jpg' : 'webp'
+    const uploadFile = base64ToFile(compressedBase64, `${logoType}-${Date.now()}.${ext}`)
 
     const formData = new FormData()
-    formData.append('file', webpFile)
+    formData.append('file', uploadFile)
     formData.append('assetType', logoType === 'wide' ? 'logo_wide' : 'logo_square')
     formData.append('tenantId', tenantId)
 
@@ -4023,7 +4227,6 @@ const handleLogoUpload = async (event: Event, logoType: 'square' | 'wide') => {
       brandingForm.value.logos.wide = publicUrl
     }
 
-    // Derive brand colors from the newly uploaded logo (same as registration flow)
     let colorsApplied = false
     try {
       const colors = await extractColorsFromLogo(compressedBase64)
@@ -4040,20 +4243,16 @@ const handleLogoUpload = async (event: Event, logoType: 'square' | 'wide') => {
       logger.warn('Could not extract colors from logo:', colorErr)
     }
 
-    // upload-logo already wrote tenants.* — no base64 auto-save needed
     showSuccess(
       colorsApplied
         ? `${logoType === 'square' ? 'Quadratisches' : 'Breites'} Logo gespeichert — Farben angepasst`
         : `${logoType === 'square' ? 'Quadratisches' : 'Breites'} Logo in Storage gespeichert`
     )
-    
-    isLoading.value = wasLoading
   } catch (error: any) {
     console.error('❌ Logo upload error:', error)
     showError(error?.data?.statusMessage || error?.message || 'Fehler beim Hochladen des Logos')
-    isLoading.value = false
   } finally {
-    if (input) input.value = ''
+    logoUploading.value[logoType] = false
   }
 }
 

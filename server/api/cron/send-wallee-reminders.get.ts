@@ -36,6 +36,7 @@ export default defineEventHandler(async (event) => {
     .select('id, name, contact_email, wallee_trial_started_at, wallee_onboarding_status')
     .not('wallee_trial_started_at', 'is', null)
     .neq('wallee_onboarding_status', 'active')
+    .neq('wallee_onboarding_status', 'skipped')
 
   for (const tenant of tenants || []) {
     if (!tenant.contact_email || !tenant.wallee_trial_started_at) continue

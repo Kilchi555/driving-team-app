@@ -77,6 +77,7 @@ export default defineEventHandler(async (event) => {
     title: 'Home',
     slug: 'index',
     is_home: true,
+    page_type: 'home',
     blocks: [],
   })
 

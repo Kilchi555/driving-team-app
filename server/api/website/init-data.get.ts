@@ -47,6 +47,26 @@ export default defineEventHandler(async (event) => {
       .eq('tenant_id', tenant_id)
       .maybeSingle()
 
+    let formalAddress: 'sie' | 'du' = 'sie'
+    let existingSeo: { title?: string; description?: string; keywords?: string } | null = null
+    if (website?.id) {
+      const { data: homePage } = await supabase
+        .from('website_pages')
+        .select('blocks, seo_title, seo_description, seo_keywords')
+        .eq('website_id', website.id)
+        .eq('is_home', true)
+        .maybeSingle()
+      const landing = homePage?.blocks as any
+      if (landing?.brand?.formal_address === 'du') formalAddress = 'du'
+      if (landing?.seo || homePage?.seo_title) {
+        existingSeo = {
+          title: landing?.seo?.title || homePage?.seo_title || undefined,
+          description: landing?.seo?.description || homePage?.seo_description || undefined,
+          keywords: landing?.seo?.keywords || homePage?.seo_keywords || undefined,
+        }
+      }
+    }
+
     // ============ 2. GET STAFF MEMBERS (for testimonials/team info) ============
     const { data: staffMembers } = await supabase
       .from('users')
@@ -191,9 +211,10 @@ export default defineEventHandler(async (event) => {
           bio: suggestedBio,
           headline: `Online-Terminbuchung für ${terms.appointmentsPlural}`,
           cta_text: terms.bookAction,
-          seo_title: `Online-Terminbuchung ${tenant?.name || ''}${city}`.trim().slice(0, 60),
-          seo_description: `${tenant?.name || terms.businessNoun}: ${terms.bookAction} online${city}. Erinnerungen, klare Preise, Schweizer Service.`.slice(0, 160),
-          seo_keywords: `online terminbuchung, ${terms.bookAction.toLowerCase()}, ${terms.businessNoun.toLowerCase()}, buchungssystem schweiz`
+          seo_title: (existingSeo?.title || `Online-Terminbuchung ${tenant?.name || ''}${city}`.trim()).slice(0, 60),
+          seo_description: (existingSeo?.description || `${tenant?.name || terms.businessNoun}: ${terms.bookAction} online${city}. Erinnerungen, klare Preise, Schweizer Service.`).slice(0, 160),
+          seo_keywords: existingSeo?.keywords || `online terminbuchung, ${terms.bookAction.toLowerCase()}, ${terms.businessNoun.toLowerCase()}, buchungssystem schweiz`,
+          formal_address: formalAddress,
         }
       }
     }

@@ -11,18 +11,41 @@
           <img v-if="landing.brand.logo_url" :src="landing.brand.logo_url" :alt="landing.brand.name" class="lp-logo" width="36" height="36" />
           <span class="lp-brand-name">{{ landing.brand.name }}</span>
         </div>
+        <nav v-if="navLinks.length" class="lp-nav-links" aria-label="Seiten">
+          <NuxtLink v-for="n in navLinks" :key="n.slug" :to="n.href">{{ n.title }}</NuxtLink>
+        </nav>
         <a class="lp-nav-cta" :href="landing.bookingUrl">{{ bookLabel }}</a>
       </div>
     </header>
 
     <template v-for="(block, idx) in renderBlocks" :key="idx">
       <!-- HERO -->
-      <section v-if="block.type === 'hero'" class="lp-hero" :class="{ 'lp-hero--photo': !!heroImage(block) }">
-        <div
-          class="lp-hero-bg"
-          aria-hidden="true"
-          :style="heroImage(block) ? { backgroundImage: `url(${heroImage(block)})` } : undefined"
-        />
+      <section v-if="block.type === 'hero'" class="lp-hero" :class="{ 'lp-hero--photo': !!heroImage(block) || !!heroVideo(block) }">
+        <div class="lp-hero-media" aria-hidden="true">
+          <video
+            v-if="heroVideo(block)"
+            class="lp-hero-video"
+            :src="heroVideo(block)!"
+            :poster="heroImage(block) || undefined"
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="metadata"
+          />
+          <picture v-else-if="heroImage(block)">
+            <source v-if="heroAvif(block)" type="image/avif" :srcset="heroAvif(block)!" />
+            <img
+              class="lp-hero-img"
+              :src="heroImage(block)!"
+              alt=""
+              width="1600"
+              height="900"
+              fetchpriority="high"
+              decoding="async"
+            />
+          </picture>
+        </div>
         <div class="lp-hero-inner">
           <p class="lp-brand-signal">{{ block.content.brand }}</p>
           <h1 class="lp-h1">{{ block.content.headline }}</h1>
@@ -35,6 +58,9 @@
           </div>
           <ul v-if="heroTrust(block).length" class="lp-trust">
             <li v-for="(item, i) in heroTrust(block)" :key="i">
+              <span class="lp-trust-icon" aria-hidden="true">
+                <WebsiteIcon :name="trustIcon(item, i)" :size="16" />
+              </span>
               <strong>{{ item.value }}</strong>
               <span>{{ item.label }}</span>
             </li>
@@ -148,6 +174,11 @@
 </template>
 
 <script setup lang="ts">
+import '~/assets/css/website-landing-fonts.css'
+import WebsiteIcon from '~/components/website/WebsiteIcon.vue'
+import { isWebsiteIconKey, trustIconForLabel, type WebsiteIconKey } from '~/utils/website-icons'
+import { heroAvifCandidate } from '~/utils/website-landing-head'
+
 definePageMeta({
   layout: 'site',
   ssr: true,
@@ -200,6 +231,11 @@ const landing = computed(() => {
   const raw = data.value?.landing
   if (raw && typeof raw === 'object' && Array.isArray((raw as any).blocks)) return raw as any
   return null
+})
+
+const navLinks = computed(() => {
+  const items = (data.value as any)?.nav || []
+  return items.filter((n: any) => !n.is_home && n.slug !== 'index').slice(0, 6)
 })
 
 // On app.simy.ch/s/... prefer verified custom domain (SEO)
@@ -257,12 +293,18 @@ const heroTrust = (block: any) => {
     const ratingItem = {
       value: `${googleReviews.value.averageRating}★`,
       label: 'Google',
+      icon: 'star' as WebsiteIconKey,
     }
-    const ratingIdx = items.findIndex((i: any) => /bewertung|★/i.test(`${i.value}${i.label}`))
-    if (ratingIdx >= 0) items[ratingIdx] = ratingItem
+    const ratingIdx = items.findIndex((i: any) => /bewertung|★|google/i.test(`${i.value}${i.label}`))
+    if (ratingIdx >= 0) items[ratingIdx] = { ...items[ratingIdx], ...ratingItem }
     else items.splice(1, 0, ratingItem)
   }
   return items
+}
+
+const trustIcon = (item: any, index: number): WebsiteIconKey => {
+  if (isWebsiteIconKey(item?.icon)) return item.icon
+  return trustIconForLabel(String(item?.label || ''), index)
 }
 
 const bookLabel = computed(() => {
@@ -276,12 +318,39 @@ const heroImage = (block: any) =>
   data.value?.website?.hero_image_url ||
   null
 
-const ogImage = computed(
-  () =>
+const heroVideo = (block: any) =>
+  block?.content?.video_url || landing.value?.brand?.hero_video_url || null
+
+const heroAvif = (block: any) => heroAvifCandidate(heroImage(block))
+
+const ogImage = computed(() => {
+  // Dedicated 1200×630 card (sharp) — absolute URL for crawlers
+  if (subdomain.value) {
+    const path = `/api/public/website/${encodeURIComponent(subdomain.value)}/og.png`
+    if (import.meta.server) {
+      const headers = useRequestHeaders(['x-forwarded-host', 'host', 'x-forwarded-proto'])
+      const host = String(headers['x-forwarded-host'] || headers.host || 'app.simy.ch').split(',')[0]
+      const proto = String(headers['x-forwarded-proto'] || 'https')
+      return `${proto}://${host}${path}`
+    }
+    if (import.meta.client && typeof window !== 'undefined') {
+      return `${window.location.origin}${path}`
+    }
+    return `https://app.simy.ch${path}`
+  }
+  return (
     landing.value?.brand?.hero_image_url ||
     data.value?.website?.hero_image_url ||
     landing.value?.brand?.logo_url ||
     data.value?.website?.logo_url ||
+    ''
+  )
+})
+
+const heroPreload = computed(
+  () =>
+    landing.value?.brand?.hero_image_url ||
+    data.value?.website?.hero_image_url ||
     '',
 )
 
@@ -310,8 +379,9 @@ const seoDescription = computed(
 const canonical = computed(() => {
   const custom = data.value?.website?.custom_domain
   const verified = data.value?.website?.custom_domain_verified
+  // Only use custom domain as canonical when DNS/verify is complete —
+  // otherwise Google may index a host that does not resolve yet.
   if (custom && verified) return `https://${custom}`
-  if (custom) return `https://${custom}`
   return landing.value?.siteUrl || `https://app.simy.ch/s/${subdomain.value}`
 })
 
@@ -361,12 +431,24 @@ useHead(() => ({
   ],
   link: [
     { rel: 'canonical', href: canonical.value },
-    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
     {
-      rel: 'stylesheet',
-      href: 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Syne:wght@600;700;800&display=swap',
+      rel: 'preload',
+      href: '/fonts/website/manrope-latin.woff2',
+      as: 'font',
+      type: 'font/woff2',
+      crossorigin: 'anonymous',
     },
+    {
+      rel: 'preload',
+      href: '/fonts/website/syne-latin.woff2',
+      as: 'font',
+      type: 'font/woff2',
+      crossorigin: 'anonymous',
+    },
+    ...(heroPreload.value
+      ? [{ rel: 'preload', as: 'image', href: heroPreload.value, fetchpriority: 'high' } as any]
+      : []),
+    { rel: 'alternate', type: 'application/xml', href: `/s/${subdomain.value}/sitemap.xml`, title: 'Sitemap' },
   ],
   script: jsonLd.value
     ? [
@@ -377,6 +459,22 @@ useHead(() => ({
       ]
     : [],
 }))
+
+// Pageview analytics (skip preview / SSR)
+onMounted(() => {
+  if (preview.value || !data.value?.website?.id) return
+  const websiteId = data.value.website.id
+  $fetch('/api/website/analytics/track', {
+    method: 'POST',
+    body: {
+      website_id: websiteId,
+      event_type: 'pageview',
+      event_url: typeof window !== 'undefined' ? window.location.href : undefined,
+      referrer: typeof document !== 'undefined' ? document.referrer || null : null,
+      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+    },
+  }).catch(() => {})
+})
 </script>
 
 <style scoped>
@@ -440,6 +538,26 @@ useHead(() => ({
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.lp-nav-links {
+  display: none;
+  gap: 1rem;
+  flex: 1;
+  justify-content: center;
+}
+.lp-nav-links a {
+  color: var(--lp-muted);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.lp-nav-links a:hover {
+  color: var(--lp-ink);
+}
+@media (min-width: 860px) {
+  .lp-nav-links {
+    display: flex;
+  }
+}
 .lp-nav-cta {
   flex-shrink: 0;
   background: var(--lp-primary);
@@ -459,7 +577,8 @@ useHead(() => ({
   overflow: hidden;
   color: #fff;
 }
-.lp-hero-bg {
+.lp-hero-bg,
+.lp-hero-media {
   position: absolute;
   inset: 0;
   background:
@@ -468,19 +587,24 @@ useHead(() => ({
   background-size: cover;
   background-position: center;
 }
-.lp-hero--photo .lp-hero-bg {
+.lp-hero--photo .lp-hero-bg,
+.lp-hero--photo .lp-hero-media {
   background-color: var(--lp-secondary);
-  background-repeat: no-repeat;
+  background-image: none;
 }
-.lp-hero-bg::after {
+.lp-hero-bg::after,
+.lp-hero-media::after {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: 1;
   background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
   background-size: 18px 18px;
   opacity: 0.35;
+  pointer-events: none;
 }
-.lp-hero--photo .lp-hero-bg::after {
+.lp-hero--photo .lp-hero-bg::after,
+.lp-hero--photo .lp-hero-media::after {
   background:
     linear-gradient(
       180deg,
@@ -491,6 +615,18 @@ useHead(() => ({
     radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
   background-size: auto, 18px 18px;
   opacity: 1;
+}
+.lp-hero-media picture,
+.lp-hero-media video {
+  position: absolute;
+  inset: 0;
+}
+.lp-hero-img,
+.lp-hero-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .lp-hero-inner {
   position: relative;
@@ -569,6 +705,11 @@ useHead(() => ({
 .lp-trust li {
   display: grid;
   gap: 0.15rem;
+}
+.lp-trust-icon {
+  display: inline-flex;
+  color: var(--lp-accent);
+  margin-bottom: 0.15rem;
 }
 .lp-trust strong {
   font-family: Syne, sans-serif;

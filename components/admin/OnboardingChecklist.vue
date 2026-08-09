@@ -55,6 +55,28 @@
             {{ step.done ? 'Erneut prüfen' : 'Prüfen' }}
           </span>
         </button>
+        <!-- Payments: skip or set up (match by step id so UI always shows even if action is missing) -->
+        <div
+          v-else-if="step.id === 'payments' && !step.done"
+          class="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all text-sm bg-white shadow-sm text-gray-700"
+        >
+          <div class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center bg-blue-50 border-2 border-blue-200" />
+          <span class="flex-1 font-medium min-w-0">{{ step.label }}</span>
+          <button
+            type="button"
+            class="text-xs font-semibold text-gray-600 hover:text-gray-900 px-2.5 py-1 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 flex-shrink-0 disabled:opacity-50"
+            :disabled="skippingPayments"
+            @click="skipPayments"
+          >
+            {{ skippingPayments ? '…' : 'Nicht nötig' }}
+          </button>
+          <NuxtLink
+            :to="step.href || '/admin/profile?tab=payments'"
+            class="text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded-lg flex-shrink-0"
+          >
+            Einrichten
+          </NuxtLink>
+        </div>
         <NuxtLink
           v-else-if="!step.done && step.href"
           :to="step.href"
@@ -136,6 +158,7 @@ interface OnboardingStatus {
 const status = ref<OnboardingStatus | null>(null)
 const dismissed = ref(false)
 const showBookingModal = ref(false)
+const skippingPayments = ref(false)
 
 const steps = computed(() => status.value?.steps ?? [])
 const completedCount = computed(() => status.value?.completedCount ?? 0)
@@ -181,6 +204,36 @@ const onBookingUpdated = (ready: boolean) => {
   status.value.progressPercent = Math.round((status.value.completedCount / status.value.totalCount) * 100)
   status.value.bookingReady = ready
   status.value.allCoreStepsDone = status.value.steps.filter(s => s.id !== 'upgrade').every(s => s.done)
+}
+
+const skipPayments = async () => {
+  if (skippingPayments.value) return
+  skippingPayments.value = true
+  try {
+    const { getSupabase } = await import('~/utils/supabase')
+    const { data: { session } } = await getSupabase().auth.getSession()
+    if (!session?.access_token) return
+
+    await $fetch('/api/tenants/wallee-onboarding-skip', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+
+    if (status.value) {
+      const step = status.value.steps.find(s => s.id === 'payments')
+      if (step) {
+        step.done = true
+        step.action = null
+      }
+      status.value.completedCount = status.value.steps.filter(s => s.done).length
+      status.value.progressPercent = Math.round((status.value.completedCount / status.value.totalCount) * 100)
+      status.value.allCoreStepsDone = status.value.steps.filter(s => s.id !== 'upgrade').every(s => s.done)
+    }
+  } catch {
+    await loadStatus()
+  } finally {
+    skippingPayments.value = false
+  }
 }
 
 onMounted(async () => {

@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { content, content_type, optimization_type } = await readBody(event)
+  const { content, content_type, optimization_type, formal_address } = await readBody(event)
 
   if (!content || content.length < 5) {
     throw createError({
@@ -36,6 +36,8 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'Content must be at least 5 characters long'
     })
   }
+
+  const formal = formal_address === 'du' ? 'du' : 'sie'
 
   const supabase = getSupabaseAdmin()
 
@@ -62,6 +64,7 @@ export default defineEventHandler(async (event) => {
     optimization_type,
     terms,
     businessType,
+    formal,
   )
 
   try {
@@ -80,15 +83,26 @@ export default defineEventHandler(async (event) => {
       message.content[0].type === 'text' ? message.content[0].text : ''
     const suggestions = parseAIResponse(responseText)
 
-    if (userProfile?.id) {
-      await supabase.from('website_ai_history').insert({
-        tenant_id: userProfile.tenant_id,
-        content_type,
-        original_content: content,
-        ai_suggestions: suggestions,
-        tokens_used: message.usage.input_tokens + message.usage.output_tokens,
-        optimization_type
-      })
+    if (userProfile?.tenant_id) {
+      const { data: websiteRow } = await supabase
+        .from('website_tenants')
+        .select('id')
+        .eq('tenant_id', userProfile.tenant_id)
+        .maybeSingle()
+
+      if (websiteRow?.id) {
+        const { error: historyError } = await supabase.from('website_ai_history').insert({
+          website_id: websiteRow.id,
+          content_type,
+          original_content: content,
+          ai_suggestions: suggestions,
+          tokens_used: message.usage.input_tokens + message.usage.output_tokens,
+          optimization_type,
+        })
+        if (historyError) {
+          console.warn('website_ai_history insert failed:', historyError.message)
+        }
+      }
     }
 
     return {
@@ -125,14 +139,20 @@ function buildOptimizationPrompt(
   optimizationType: string,
   terms: Terminology,
   businessType: string,
+  formal: 'sie' | 'du' = 'sie',
 ): string {
   const keywords = industryKeywords(terms, businessType)
+  const addressRule =
+    formal === 'du'
+      ? 'Always use "du" for informal address (du/dein/dir), not "Sie"'
+      : 'Always use "Sie" for formal address, not "du"'
+  const ctaAddress = formal === 'du' ? 'use du form' : 'use Sie form'
   const basePrompt = `You are an expert SEO copywriter and marketing specialist for ${terms.businessNoun} businesses in German-speaking countries (Switzerland).
 
 IMPORTANT INSTRUCTIONS:
 - Write ONLY in Swiss/German High German (Schweizer Hochdeutsch)
 - Use professional but friendly tone
-- Always use "Sie" for formal address, not "du"
+- ${addressRule}
 - Use branch terminology: business="${terms.businessNoun}", appointment="${terms.appointment}", client="${terms.client}", staff="${terms.staff}"
 - Do NOT default to Fahrschule/Fahrstunde/Fahrlehrer unless the business type is driving_school
 - Keep language simple and clear, no jargon
@@ -163,7 +183,7 @@ ${
     ? `Make it more persuasive and action-oriented:
 - Include unique value proposition
 - Address customer pain points
-- Strong call-to-action (use Sie form)
+- Strong call-to-action (${ctaAddress})
 - Trust signals (experience, qualifications, success rate)
 - Emotional benefits, not just features`
     : ''

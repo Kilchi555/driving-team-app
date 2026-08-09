@@ -5,6 +5,100 @@
 import { defineEventHandler, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import {
+  buildBrandedEmailShell,
+  displayName,
+  emailCtaButton,
+  emailDetailBox,
+  emailDetailRow,
+  emailSignature,
+  emailStatusBox,
+  escapeHtml,
+} from '~/server/utils/branded-email'
+
+const SIMY_PRIMARY = '#6000BD'
+const ADMIN_TENANTS_URL = 'https://app.simy.ch/tenant-admin/tenants'
+
+function buildTeamNotifyHtml(opts: {
+  tenantName: string
+  contactEmail: string
+  contactPhone: string
+  address: string
+  tenantId: string
+  receivedAt: string
+}): string {
+  const detailRows = [
+    emailDetailRow('Unternehmen', escapeHtml(opts.tenantName)),
+    emailDetailRow(
+      'E-Mail',
+      `<a href="mailto:${escapeHtml(opts.contactEmail)}" style="color:${SIMY_PRIMARY};text-decoration:none">${escapeHtml(opts.contactEmail)}</a>`,
+    ),
+    emailDetailRow('Telefon', escapeHtml(opts.contactPhone || '—')),
+    emailDetailRow('Adresse', escapeHtml(opts.address || '—')),
+    emailDetailRow('Tenant ID', `<code style="font-size:12px;background:#eef2ff;padding:2px 6px;border-radius:4px">${escapeHtml(opts.tenantId)}</code>`),
+    emailDetailRow('Eingegangen', escapeHtml(opts.receivedAt)),
+  ].join('')
+
+  const bodyHtml = `
+    <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 8px">
+      <strong>${displayName(opts.tenantName)}</strong> möchte Online-Zahlungen freischalten.
+    </p>
+    ${emailDetailBox(SIMY_PRIMARY, detailRows)}
+    ${emailStatusBox({
+      bg: '#fef3c7',
+      border: '#f59e0b',
+      titleColor: '#92400e',
+      bodyColor: '#78350f',
+      title: 'Nächster Schritt',
+      bodyHtml: 'Wallee-Anmeldelink an den Tenant schicken, damit das Konto eingerichtet werden kann.',
+    })}
+    ${emailCtaButton(ADMIN_TENANTS_URL, 'Tenant in der Verwaltung öffnen', SIMY_PRIMARY)}
+    <p style="color:#6b7280;font-size:13px;line-height:1.5;margin:0;text-align:center">
+      Oder direkt antworten an
+      <a href="mailto:${escapeHtml(opts.contactEmail)}" style="color:${SIMY_PRIMARY}">${escapeHtml(opts.contactEmail)}</a>
+    </p>
+  `
+
+  return buildBrandedEmailShell({
+    title: 'Online-Zahlungen',
+    subtitle: 'Neuer Onboarding-Wunsch',
+    tenantName: 'Simy',
+    primaryColor: SIMY_PRIMARY,
+    documentTitle: `Wallee-Anfrage: ${opts.tenantName}`,
+    bodyHtml,
+  })
+}
+
+function buildTenantConfirmHtml(tenantName: string): string {
+  const bodyHtml = `
+    <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px">Hallo,</p>
+    <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px">
+      wir haben deine Anfrage für <strong>${displayName(tenantName)}</strong> erhalten.
+    </p>
+    ${emailStatusBox({
+      bg: '#ecfdf5',
+      border: '#10b981',
+      titleColor: '#065f46',
+      bodyColor: '#047857',
+      title: 'Was passiert als Nächstes?',
+      bodyHtml: 'Unser Team meldet sich in Kürze per E-Mail mit dem Anmeldelink, damit du Online-Zahlungen (TWINT, Karte, Apple&nbsp;&amp;&nbsp;Google&nbsp;Pay) freischalten kannst.',
+    })}
+    <p style="color:#4b5563;font-size:14px;line-height:1.6;margin:0 0 8px">
+      Bei Fragen erreichst du uns unter
+      <a href="mailto:info@simy.ch" style="color:${SIMY_PRIMARY};font-weight:600">info@simy.ch</a>.
+    </p>
+    ${emailSignature('Pascal · Simy', 'info@simy.ch', SIMY_PRIMARY)}
+  `
+
+  return buildBrandedEmailShell({
+    title: 'Anfrage erhalten',
+    subtitle: `Online-Zahlungen · ${displayName(tenantName)}`,
+    tenantName: 'Simy',
+    primaryColor: SIMY_PRIMARY,
+    documentTitle: 'Online-Zahlungen – Anfrage erhalten',
+    bodyHtml,
+  })
+}
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -29,11 +123,11 @@ export default defineEventHandler(async (event) => {
   if (tenant.wallee_onboarding_status === 'active') {
     throw createError({ statusCode: 409, statusMessage: 'Online-Zahlungen sind bereits aktiv.' })
   }
-  if (tenant.wallee_onboarding_status === 'pending') {
+  if (tenant.wallee_onboarding_status === 'pending' || tenant.wallee_onboarding_status === 'pending_uid') {
     throw createError({ statusCode: 409, statusMessage: 'Dein Antrag wurde bereits eingereicht.' })
   }
+  // not_started / skipped → allow new application
 
-  // Set status to pending
   await supabase
     .from('tenants')
     .update({
@@ -43,6 +137,8 @@ export default defineEventHandler(async (event) => {
     })
     .eq('id', tenantId)
 
+  const receivedAt = new Date().toLocaleString('de-CH', { timeZone: 'Europe/Zurich' })
+
   // Notify simy team
   try {
     const { Resend } = await import('resend')
@@ -50,19 +146,16 @@ export default defineEventHandler(async (event) => {
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || 'noreply@simy.ch',
       to: 'info@simy.ch',
-      subject: `🏦 Wallee-Anfrage: ${tenant.name}`,
-      html: `
-        <h2>Neuer Wallee Onboarding-Wunsch</h2>
-        <p><strong>Unternehmen:</strong> ${tenant.name}</p>
-        <p><strong>E-Mail:</strong> ${tenant.contact_email}</p>
-        <p><strong>Telefon:</strong> ${tenant.contact_phone || '—'}</p>
-        <p><strong>Adresse:</strong> ${tenant.address || '—'}</p>
-        <p><strong>Tenant ID:</strong> ${tenantId}</p>
-        <p><strong>Eingegangen:</strong> ${new Date().toLocaleString('de-CH', { timeZone: 'Europe/Zurich' })}</p>
-        <hr/>
-        <p>→ Bitte dem Tenant den Wallee-Anmeldelink per E-Mail schicken.</p>
-        <p>→ <a href="https://app.simy.ch/tenant-admin/tenants">Tenant in der Verwaltung öffnen</a></p>
-      `,
+      replyTo: tenant.contact_email || undefined,
+      subject: `Online-Zahlungen: ${tenant.name}`,
+      html: buildTeamNotifyHtml({
+        tenantName: tenant.name,
+        contactEmail: tenant.contact_email || '',
+        contactPhone: tenant.contact_phone || '',
+        address: tenant.address || '',
+        tenantId,
+        receivedAt,
+      }),
     })
   } catch (e: any) {
     console.error('⚠️ Team-E-Mail fehlgeschlagen (non-fatal):', e.message)
@@ -74,34 +167,8 @@ export default defineEventHandler(async (event) => {
     await sendEmail({
       to: tenant.contact_email,
       fromName: 'Simy',
-      subject: '✅ Online-Zahlungen – wir melden uns in Kürze',
-      html: `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px">
-  <tr><td align="center">
-    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
-      <tr><td style="background:#fff;border-radius:12px;overflow:hidden">
-        <div style="background:linear-gradient(135deg,#1e293b,#334155);padding:32px;text-align:center">
-          <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700">Anfrage erhalten</h1>
-          <p style="margin:6px 0 0;color:rgba(255,255,255,.7);font-size:14px">Online-Zahlungen für ${tenant.name}</p>
-        </div>
-        <div style="padding:32px">
-          <p style="color:#111827;font-size:15px;margin:0 0 16px">Hallo,</p>
-          <p style="color:#4b5563;font-size:15px;line-height:1.6;margin:0 0 16px">
-            wir haben deine Anfrage erhalten. Unser Team wird sich in Kürze per E-Mail mit dem Wallee-Anmeldelink bei dir melden, damit du dein Konto direkt bei Wallee einrichten kannst.
-          </p>
-          <p style="color:#4b5563;font-size:14px;line-height:1.6">
-            Bei Fragen erreichst du uns unter <a href="mailto:info@simy.ch" style="color:#6000BD">info@simy.ch</a>.
-          </p>
-        </div>
-        <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">
-          <p style="margin:0;font-size:12px;color:#9ca3af">Powered by <a href="https://simy.ch" style="color:#9ca3af">Simy.ch</a></p>
-        </div>
-      </td></tr>
-    </table>
-  </td></tr>
-</table>
-</body></html>`,
+      subject: 'Online-Zahlungen – wir melden uns in Kürze',
+      html: buildTenantConfirmHtml(tenant.name),
     })
   } catch (e: any) {
     console.error('⚠️ Tenant-Bestätigung fehlgeschlagen (non-fatal):', e.message)

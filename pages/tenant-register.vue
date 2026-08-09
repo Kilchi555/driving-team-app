@@ -66,7 +66,7 @@
       </div>
 
       <!-- Form Content -->
-      <form @submit.prevent="submitRegistration" class="px-6 sm:px-10 py-6 sm:py-8">
+      <form v-if="currentStep !== SUCCESS_STEP" @submit.prevent="submitRegistration" class="px-6 sm:px-10 py-6 sm:py-8">
 
         <!-- ═══ STEP 0: Grunddaten ═══ -->
         <div v-if="currentStep === 0" class="space-y-8">
@@ -1783,8 +1783,73 @@
           </div>
         </div>
 
+
+        <!-- Error Display -->
+        <div v-if="error" class="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl p-4 mb-5">
+          <svg class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-red-800">Fehler bei der Registrierung</p>
+            <p class="text-sm text-red-700 mt-0.5">{{ error }}</p>
+            <a v-if="emailCheck === 'taken'" href="/login"
+              class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-red-800 underline underline-offset-2 hover:text-red-900">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+              </svg>
+              Jetzt einloggen →
+            </a>
+          </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex items-center gap-3 pt-6 border-t border-gray-100 mt-6" v-if="currentStep < LOADING_STEP">
+          <button v-if="currentStep > 0" @click="previousStep" type="button"
+            class="flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 font-semibold text-sm transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Zurück
+          </button>
+          <div v-else class="flex-shrink-0 w-0"></div>
+
+          <button v-if="currentStep < 7" @click="nextStep" type="button" :disabled="!canProceed"
+            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:bg-gray-200 disabled:text-gray-400"
+            :style="canProceed ? { background: `linear-gradient(135deg, ${formData.primary_color || '#2563EB'}, ${formData.secondary_color || '#4F46E5'})` } : {}">
+            Weiter
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+          <button v-else-if="currentStep === 7" type="submit" :disabled="!canSubmit"
+            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl disabled:from-gray-300 disabled:to-gray-300 disabled:text-gray-400 text-white font-bold text-sm transition-all shadow-sm"
+            :style="canSubmit ? { background: 'linear-gradient(135deg, #10B981, #059669)' } : {}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            einrichten
+          </button>
+        </div>
+
+        <!-- Password-manager mirrors for "Passwort speichern" on submit.
+             Hidden while Admin-step (5) is active so iOS Strong Password only sees
+             the two real fields — a second confirm-password was stealing the fill.
+             Names match staff register: password + new-password (not confirm-password). -->
+        <div
+          v-if="currentStep !== 5"
+          aria-hidden="true"
+          class="pm-mirror"
+        >
+          <input type="email" name="username" autocomplete="username" :value="adminForm.email" tabindex="-1" id="ios-mirror-email">
+          <input type="password" name="password" autocomplete="new-password" :value="adminForm.password" tabindex="-1" id="ios-mirror-password">
+          <input type="password" name="new-password" autocomplete="new-password" :value="adminForm.passwordConfirm" tabindex="-1" id="ios-mirror-confirm">
+        </div>
+      </form>
+
+      <!-- Success outside register form (no nested form — required for iOS Keychain) -->
+      <div v-if="currentStep === SUCCESS_STEP" class="px-6 sm:px-10 py-6 sm:py-8">
         <!-- Success State + Checkliste -->
-        <div v-if="currentStep === SUCCESS_STEP" class="py-4">
+        <div class="py-4">
           <!-- Hero -->
           <div class="text-center mb-8">
             <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl shadow-lg mb-4">
@@ -1919,13 +1984,56 @@
             </a>
           </div>
 
-          <button @click="goToLogin"
-            class="w-full text-white font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm hover:opacity-90"
-            :style="{ background: `linear-gradient(135deg, ${formData.primary_color || '#3B82F6'}, ${formData.secondary_color || '#6366F1'})` }">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
-            </svg>
-            Zum Admin-Login
+          <!--
+            iOS/Android Passwortspeicher: native form POST (kein @submit.prevent).
+            Muss AUSSERHALB des Registrierungs-Forms liegen (kein nested form).
+            Safari bietet dann «Passwort speichern / aktualisieren» an.
+          -->
+          <form
+            method="POST"
+            action="/api/auth/credential-save-ack"
+            autocomplete="on"
+            class="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-left space-y-3 mb-4"
+          >
+            <input type="hidden" name="redirect" :value="credentialSaveRedirect">
+            <p class="text-sm font-semibold text-gray-900">Zugangsdaten speichern</p>
+            <p class="text-xs text-gray-500">
+              Tippe auf den Button unten. Wenn dein Handy fragt, ob es Benutzername und Passwort speichern oder aktualisieren soll — bitte bestätigen.
+            </p>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1" for="tenant-success-username">E-Mail</label>
+              <input
+                id="tenant-success-username"
+                name="username"
+                type="email"
+                autocomplete="username"
+                :value="adminForm.email"
+                class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900"
+              >
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1" for="tenant-success-password">Passwort</label>
+              <input
+                id="tenant-success-password"
+                name="password"
+                type="password"
+                autocomplete="new-password"
+                :value="adminForm.password"
+                class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900"
+              >
+            </div>
+            <button
+              type="submit"
+              class="w-full text-white font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 text-sm hover:opacity-90"
+              :style="{ background: `linear-gradient(135deg, ${formData.primary_color || '#3B82F6'}, ${formData.secondary_color || '#6366F1'})` }"
+            >
+              Passwort speichern &amp; zum Login
+            </button>
+          </form>
+
+          <button type="button" @click="goToLogin"
+            class="w-full text-sm text-gray-500 hover:text-gray-700 underline py-2">
+            Ohne Speichern zum Login
           </button>
           <p class="text-xs text-center text-gray-400 mt-2.5 font-mono">{{ tenantUrl }}</p>
 
@@ -1945,67 +2053,7 @@
           </div>
         </div>
 
-        <!-- Error Display -->
-        <div v-if="error" class="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl p-4 mb-5">
-          <svg class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
-          </svg>
-          <div class="flex-1">
-            <p class="text-sm font-semibold text-red-800">Fehler bei der Registrierung</p>
-            <p class="text-sm text-red-700 mt-0.5">{{ error }}</p>
-            <a v-if="emailCheck === 'taken'" href="/login"
-              class="inline-flex items-center gap-1.5 mt-2 text-sm font-semibold text-red-800 underline underline-offset-2 hover:text-red-900">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
-              </svg>
-              Jetzt einloggen →
-            </a>
-          </div>
-        </div>
-
-        <!-- Navigation Buttons -->
-        <div class="flex items-center gap-3 pt-6 border-t border-gray-100 mt-6" v-if="currentStep < LOADING_STEP">
-          <button v-if="currentStep > 0" @click="previousStep" type="button"
-            class="flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 font-semibold text-sm transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Zurück
-          </button>
-          <div v-else class="flex-shrink-0 w-0"></div>
-
-          <button v-if="currentStep < 7" @click="nextStep" type="button" :disabled="!canProceed"
-            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:bg-gray-200 disabled:text-gray-400"
-            :style="canProceed ? { background: `linear-gradient(135deg, ${formData.primary_color || '#2563EB'}, ${formData.secondary_color || '#4F46E5'})` } : {}">
-            Weiter
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
-          </button>
-          <button v-else-if="currentStep === 7" type="submit" :disabled="!canSubmit"
-            class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl disabled:from-gray-300 disabled:to-gray-300 disabled:text-gray-400 text-white font-bold text-sm transition-all shadow-sm"
-            :style="canSubmit ? { background: 'linear-gradient(135deg, #10B981, #059669)' } : {}">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-            </svg>
-            einrichten
-          </button>
-        </div>
-
-        <!-- Password-manager mirrors for "Passwort speichern" on submit.
-             Hidden while Admin-step (5) is active so iOS Strong Password only sees
-             the two real fields — a second confirm-password was stealing the fill.
-             Names match staff register: password + new-password (not confirm-password). -->
-        <div
-          v-if="currentStep !== 5"
-          aria-hidden="true"
-          class="pm-mirror"
-        >
-          <input type="email" name="username" autocomplete="username" :value="adminForm.email" tabindex="-1" id="ios-mirror-email">
-          <input type="password" name="password" autocomplete="new-password" :value="adminForm.password" tabindex="-1" id="ios-mirror-password">
-          <input type="password" name="new-password" autocomplete="new-password" :value="adminForm.passwordConfirm" tabindex="-1" id="ios-mirror-confirm">
-        </div>
-      </form>
+      </div>
 
 
     </div>
@@ -3090,6 +3138,12 @@ const tenantUrl = computed(() => {
   return `https://app.simy.ch/${slug}`
 })
 
+/** Relative path for credential-save-ack after iOS Keychain prompt. */
+const credentialSaveRedirect = computed(() => {
+  const slug = (createdTenantSlug.value || formData.value.slug || '').trim()
+  return slug ? `/${encodeURIComponent(slug)}` : '/login'
+})
+
 // ─── Navigation ───────────────────────────────────────────────────────────
 const nextStep = async () => {
   if (!canProceed.value || currentStep.value >= 7) return
@@ -3207,7 +3261,9 @@ const handleLogoSelect = async (event: Event) => {
   if (file.size > 5 * 1024 * 1024) { logoError.value = 'Datei zu gross — Maximum 5 MB'; return }
   try {
     logoPreview.value = await compressImage(file, 'wide')
-    logoFile.value = base64ToFile(logoPreview.value, `logo-${Date.now()}.webp`)
+    const mime = logoPreview.value.match(/^data:([^;]+);/)?.[1] || 'image/webp'
+    const ext = mime.includes('png') ? 'png' : mime.includes('jpeg') ? 'jpg' : 'webp'
+    logoFile.value = base64ToFile(logoPreview.value, `logo-${Date.now()}.${ext}`)
     // Extract colors from logo
     const colors = await extractColorsFromLogo(logoPreview.value)
     if (colors) {
@@ -3230,7 +3286,9 @@ const handleLogoSquareSelect = async (event: Event) => {
   if (file.size > 5 * 1024 * 1024) { logoSquareError.value = 'Datei zu gross — Maximum 5 MB'; return }
   try {
     logoSquarePreview.value = await compressImage(file, 'square')
-    logoSquareFile.value = base64ToFile(logoSquarePreview.value, `logo-square-${Date.now()}.webp`)
+    const mime = logoSquarePreview.value.match(/^data:([^;]+);/)?.[1] || 'image/webp'
+    const ext = mime.includes('png') ? 'png' : mime.includes('jpeg') ? 'jpg' : 'webp'
+    logoSquareFile.value = base64ToFile(logoSquarePreview.value, `logo-square-${Date.now()}.${ext}`)
     // Extract colors from square logo only if wide logo hasn't already set them
     if (!logoPreview.value) {
       const colors = await extractColorsFromLogo(logoSquarePreview.value)

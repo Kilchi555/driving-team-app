@@ -1,16 +1,22 @@
 // server/api/website/analytics/track.post.ts
 // Track website analytics events
 
+import { createHash } from 'node:crypto'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+
 export default defineEventHandler(async (event) => {
   const { website_id, event_type, event_url, referrer, user_agent } =
     await readBody(event)
+
+  if (!website_id || !event_type) {
+    throw createError({ statusCode: 400, statusMessage: 'website_id and event_type required' })
+  }
 
   const supabase = getSupabaseAdmin()
 
   // Hash IP for privacy
   const clientIP = getClientIP(event) || 'unknown'
-  const crypto = require('crypto')
-  const ipHash = crypto.createHash('sha256').update(clientIP).digest('hex')
+  const ipHash = createHash('sha256').update(clientIP).digest('hex')
 
   // Insert event
   const { error } = await supabase.from('website_analytics_events').insert({
@@ -19,7 +25,7 @@ export default defineEventHandler(async (event) => {
     event_url,
     referrer: referrer || null,
     user_agent: user_agent || null,
-    ip_hash: ipHash
+    ip_hash: ipHash,
   })
 
   if (error) {

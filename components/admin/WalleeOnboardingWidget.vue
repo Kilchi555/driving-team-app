@@ -20,6 +20,9 @@
         <span v-else-if="status === 'pending_uid'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
           <span class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span> UID ausstehend
         </span>
+        <span v-else-if="status === 'skipped'" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+          <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Nicht eingerichtet
+        </span>
         <span v-else class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">
           <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Nicht eingerichtet
         </span>
@@ -90,11 +93,33 @@
       <p class="text-xs text-gray-400 text-center">Bei Fragen: <a href="mailto:info@simy.ch" class="underline">info@simy.ch</a></p>
     </div>
 
+    <!-- SKIPPED -->
+    <div v-else-if="status === 'skipped'" class="space-y-4">
+      <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-700">
+        Online-Zahlungen sind aktuell nicht eingerichtet. Du kannst sie jederzeit hier beantragen — TWINT, Karte, Apple&nbsp;&amp;&nbsp;Google&nbsp;Pay.
+      </div>
+      <button
+        type="button"
+        class="w-full py-2.5 px-4 rounded-xl font-semibold text-sm text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+        @click="status = 'not_started'"
+      >
+        Jetzt einrichten
+      </button>
+    </div>
+
     <!-- NOT STARTED → Application Form -->
     <div v-else class="space-y-4">
       <p class="text-sm text-gray-600">
         Fülle das Formular aus um Online-Zahlungen zu aktivieren. Wir richten dein Wallee-Konto innerhalb von 2–5 Werktagen ein.
       </p>
+      <button
+        type="button"
+        class="text-xs font-semibold text-gray-500 hover:text-gray-800"
+        :disabled="skipping"
+        @click="skipForNow"
+      >
+        {{ skipping ? '…' : 'Vorerst nicht nötig' }}
+      </button>
 
       <!-- UID fehlt → Hinweis auf Einzelfirma-Eintragung -->
       <div v-if="!hasUid" class="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
@@ -181,11 +206,12 @@
 import { ref, onMounted } from 'vue'
 
 const loading = ref(true)
-const status = ref<'not_started' | 'pending_uid' | 'pending' | 'active'>('not_started')
+const status = ref<'not_started' | 'pending_uid' | 'pending' | 'active' | 'skipped'>('not_started')
 const enabled = ref(false)
 const appliedAt = ref<string | null>(null)
 const submitting = ref(false)
 const toggling = ref(false)
+const skipping = ref(false)
 const submitError = ref('')
 const hasUid = ref(true)
 
@@ -271,6 +297,20 @@ const toggleWallee = async () => {
     console.error('Wallee toggle failed:', e)
   } finally {
     toggling.value = false
+  }
+}
+
+const skipForNow = async () => {
+  if (skipping.value) return
+  skipping.value = true
+  submitError.value = ''
+  try {
+    await $fetch('/api/tenants/wallee-onboarding-skip', { method: 'POST' })
+    status.value = 'skipped'
+  } catch (e: any) {
+    submitError.value = e?.data?.statusMessage || e?.message || 'Überspringen fehlgeschlagen'
+  } finally {
+    skipping.value = false
   }
 }
 </script>

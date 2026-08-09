@@ -71,6 +71,12 @@ interface DashboardSummary {
     thisWeek: number
     thisMonth: number
   }
+
+  // Week revenue (paid payments, calendar week Mon–Sun)
+  weekRevenue: {
+    thisWeek: number
+    lastWeek: number
+  }
 }
 
 export default defineEventHandler(async (event) => {
@@ -112,7 +118,8 @@ export default defineEventHandler(async (event) => {
       coursesStatsData,
       creditsStatsData,
       cancellationsStatsData,
-      hoursStatsData
+      hoursStatsData,
+      weekRevenueData,
     ] = await Promise.all([
       loadRevenueMonths(supabase, tenantId, now),
       loadPendingStudents(supabase, tenantId),
@@ -121,7 +128,8 @@ export default defineEventHandler(async (event) => {
       loadCoursesStats(supabase, tenantId),
       loadCreditsStats(supabase, tenantId),
       loadCancellationsStats(supabase, tenantId, now),
-      loadHoursStats(supabase, tenantId, now)
+      loadHoursStats(supabase, tenantId, now),
+      loadWeekRevenue(supabase, tenantId, now),
     ])
 
     const summary: DashboardSummary = {
@@ -132,7 +140,8 @@ export default defineEventHandler(async (event) => {
       coursesStats: coursesStatsData,
       creditsStats: creditsStatsData,
       cancellationsStats: cancellationsStatsData,
-      hoursStats: hoursStatsData
+      hoursStats: hoursStatsData,
+      weekRevenue: weekRevenueData,
     }
 
     logger.debug('✅ Dashboard summary loaded successfully')
@@ -566,6 +575,57 @@ async function loadHoursStats(supabase: any, tenantId: string, now: Date) {
   } catch (error) {
     logger.error('Error loading hours stats:', error)
     return { today: 0, thisWeek: 0, thisMonth: 0 }
+  }
+}
+
+function startOfWeekMonday(d: Date): Date {
+  const x = new Date(d)
+  const day = x.getDay() // 0=Sun … 6=Sat
+  const diff = day === 0 ? -6 : 1 - day
+  x.setDate(x.getDate() + diff)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
+
+async function loadWeekRevenue(supabase: any, tenantId: string, now: Date) {
+  try {
+    const thisWeekStart = startOfWeekMonday(now)
+    const nextWeekStart = new Date(thisWeekStart)
+    nextWeekStart.setDate(nextWeekStart.getDate() + 7)
+    const lastWeekStart = new Date(thisWeekStart)
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7)
+
+    const thisStart = toLocalTimeString(thisWeekStart)
+    const thisEnd = toLocalTimeString(new Date(nextWeekStart.getTime() - 1))
+    const lastStart = toLocalTimeString(lastWeekStart)
+    const lastEnd = toLocalTimeString(new Date(thisWeekStart.getTime() - 1))
+
+    const paidStatuses = ['completed', 'paid', 'cash']
+
+    const [{ data: thisWeekPayments }, { data: lastWeekPayments }] = await Promise.all([
+      supabase
+        .from('payments')
+        .select('total_amount_rappen')
+        .eq('tenant_id', tenantId)
+        .in('payment_status', paidStatuses)
+        .gte('created_at', thisStart)
+        .lte('created_at', thisEnd),
+      supabase
+        .from('payments')
+        .select('total_amount_rappen')
+        .eq('tenant_id', tenantId)
+        .in('payment_status', paidStatuses)
+        .gte('created_at', lastStart)
+        .lte('created_at', lastEnd),
+    ])
+
+    return {
+      thisWeek: thisWeekPayments?.reduce((sum: number, p: any) => sum + (p.total_amount_rappen || 0), 0) || 0,
+      lastWeek: lastWeekPayments?.reduce((sum: number, p: any) => sum + (p.total_amount_rappen || 0), 0) || 0,
+    }
+  } catch (error) {
+    logger.error('Error loading week revenue:', error)
+    return { thisWeek: 0, lastWeek: 0 }
   }
 }
 

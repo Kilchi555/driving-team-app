@@ -46,6 +46,8 @@ export type LandingBuildInput = {
   seo_title?: string
   seo_description?: string
   seo_keywords?: string
+  /** Customer-facing address form on the landing page */
+  formal_address?: 'sie' | 'du'
   services: LandingService[]
   testimonials: LandingTestimonial[]
   stats?: {
@@ -78,6 +80,7 @@ export type LandingPagePayload = {
     accent: string
     logo_url: string | null
     hero_image_url: string | null
+    formal_address: 'sie' | 'du'
   }
   bookingUrl: string
   siteUrl: string
@@ -99,19 +102,40 @@ function cityHint(tenant: LandingTenantInput) {
   return tenant.city?.trim() || null
 }
 
-function defaultFaqs(t: Terminology, name: string) {
+function defaultFaqs(t: Terminology, name: string, formal: 'sie' | 'du' = 'sie') {
+  if (formal === 'du') {
+    return [
+      {
+        q: `Wie buche ich eine ${t.appointment}?`,
+        a: `Über die Online-Terminbuchung auf dieser Seite wählst du einen freien Slot und buchst direkt. ${name} bestätigt den Termin automatisch.`,
+      },
+      {
+        q: `Kann ich eine ${t.appointment} absagen oder umbuchen?`,
+        a: `Ja — innerhalb der von ${name} hinterlegten Fristen kannst du Termine online absagen oder verschieben.`,
+      },
+      {
+        q: 'Wie funktioniert die Bezahlung?',
+        a: 'Je nach Angebot zahlst du vor Ort, per Rechnung oder online. Schweizer QR-Rechnungen sind möglich.',
+      },
+      {
+        q: `Für wen ist ${name} geeignet?`,
+        a: `${name} richtet sich an ${t.clientsPlural}, die unkompliziert ${t.appointmentsPlural} online buchen und klar kommunizieren möchten.`,
+      },
+    ]
+  }
+
   return [
     {
       q: `Wie buche ich eine ${t.appointment}?`,
-      a: `Über die Online-Terminbuchung auf dieser Seite wählst du einen freien Slot und buchst direkt. ${name} bestätigt den Termin automatisch.`,
+      a: `Über die Online-Terminbuchung auf dieser Seite wählen Sie einen freien Slot und buchen direkt. ${name} bestätigt den Termin automatisch.`,
     },
     {
       q: `Kann ich eine ${t.appointment} absagen oder umbuchen?`,
-      a: `Ja — innerhalb der von ${name} hinterlegten Fristen kannst du Termine online absagen oder verschieben.`,
+      a: `Ja — innerhalb der von ${name} hinterlegten Fristen können Sie Termine online absagen oder verschieben.`,
     },
     {
       q: 'Wie funktioniert die Bezahlung?',
-      a: 'Je nach Angebot zahlst du vor Ort, per Rechnung oder online. Schweizer QR-Rechnungen sind möglich.',
+      a: 'Je nach Angebot zahlen Sie vor Ort, per Rechnung oder online. Schweizer QR-Rechnungen sind möglich.',
     },
     {
       q: `Für wen ist ${name} geeignet?`,
@@ -125,6 +149,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
   const name = input.tenant.name?.trim() || 'Unser Angebot'
   const city = cityHint(input.tenant)
   const locationBit = city ? ` in ${city}` : ' Schweiz'
+  const formal = input.formal_address === 'du' ? 'du' : 'sie'
   const bio =
     input.bio?.trim() ||
     input.tenant.description?.trim() ||
@@ -176,6 +201,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
     }))
 
   const rating = input.stats?.avg_rating && input.stats.avg_rating > 0 ? input.stats.avg_rating : null
+  const faqs = defaultFaqs(t, name, formal)
 
   const blocks: LandingBlock[] = [
     {
@@ -190,9 +216,9 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
         cta_secondary_text: 'Angebot ansehen',
         cta_secondary_url: '#angebot',
         trust: [
-          { value: '24/7', label: 'Online buchbar' },
-          { value: rating ? `${rating}★` : 'CH', label: rating ? 'Bewertung' : 'Schweiz' },
-          { value: 'SMS', label: 'Erinnerungen' },
+          { value: '24/7', label: 'Online buchbar', icon: 'clock' },
+          { value: rating ? `${rating}★` : 'CH', label: rating ? 'Bewertung' : 'Schweiz', icon: rating ? 'star' : 'shield' },
+          { value: 'SMS', label: 'Erinnerungen', icon: 'chat' },
         ],
       },
     },
@@ -201,7 +227,10 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
       content: {
         eyebrow: 'Angebot',
         title: `Unsere ${t.appointmentsPlural}`,
-        description: `Wähle dein Format — Preise transparent, Buchung in wenigen Klicks.`,
+        description:
+          formal === 'du'
+            ? `Wähle dein Format — Preise transparent, Buchung in wenigen Klicks.`
+            : `Wählen Sie Ihr Format — Preise transparent, Buchung in wenigen Klicks.`,
         services,
       },
     },
@@ -237,15 +266,21 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
     content: {
       eyebrow: 'FAQ',
       title: 'Häufige Fragen',
-      items: defaultFaqs(t, name),
+      items: faqs,
     },
   })
 
   blocks.push({
     type: 'cta',
     content: {
-      headline: `Bereit für deine nächste ${t.appointment}?`,
-      subheadline: `Buche online — ${name} kümmert sich um den Rest.`,
+      headline:
+        formal === 'du'
+          ? `Bereit für deine nächste ${t.appointment}?`
+          : `Bereit für Ihre nächste ${t.appointment}?`,
+      subheadline:
+        formal === 'du'
+          ? `Buche online — ${name} kümmert sich um den Rest.`
+          : `Buchen Sie online — ${name} kümmert sich um den Rest.`,
       cta_text: t.bookAction,
       cta_url: input.bookingUrl,
     },
@@ -310,7 +345,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
       {
         '@type': 'FAQPage',
         '@id': `${input.siteUrl}#faq`,
-        mainEntity: defaultFaqs(t, name).map((f) => ({
+        mainEntity: faqs.map((f) => ({
           '@type': 'Question',
           name: f.q,
           acceptedAnswer: { '@type': 'Answer', text: f.a },
@@ -332,6 +367,8 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
       accent,
       logo_url: input.tenant.logo_url || null,
       hero_image_url: input.tenant.hero_image_url || null,
+      hero_video_url: null,
+      formal_address: formal,
     },
     bookingUrl: input.bookingUrl,
     siteUrl: input.siteUrl,

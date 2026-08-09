@@ -47,6 +47,9 @@
             {{ new Date().toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: '2-digit' }) }}
           </span>
 
+          <!-- Links (always present) -->
+          <AdminPortalLinks />
+
           <!-- Settings shortcut -->
           <NuxtLink to="/admin/profile" title="Einstellungen"
             class="flex w-8 h-8 rounded-lg items-center justify-center hover:bg-white/20 transition-colors"
@@ -161,7 +164,7 @@
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Weitere</p>
             <NuxtLink to="/admin/marketing" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/marketing') ? 'drawer-active' : ''">Marketing</NuxtLink>
-            <NuxtLink to="/admin/website/setup" @click="showMobileMenu = false"
+            <NuxtLink to="/admin/website/editor" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/website') ? 'drawer-active' : ''">Website</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('product_sales_enabled')" to="/admin/products" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin/products') ? 'drawer-active' : ''">Produkte</NuxtLink>
@@ -277,6 +280,8 @@
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-4 pb-1">Weitere</p>
             <NuxtLink to="/admin/marketing"
               class="drawer-link" :class="isActive('/admin/marketing') ? 'drawer-active' : ''">Marketing</NuxtLink>
+            <NuxtLink to="/admin/website/editor"
+              class="drawer-link" :class="isActive('/admin/website') ? 'drawer-active' : ''">Website</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('product_sales_enabled')" to="/admin/products"
               class="drawer-link" :class="isActive('/admin/products') ? 'drawer-active' : ''">Produkte</NuxtLink>
             <NuxtLink v-if="shouldShowNavLink('data_management_enabled')" to="/admin/data-management"
@@ -364,6 +369,7 @@
 <script setup>
 import { ref, watch, watchEffect, nextTick } from 'vue'
 import GlobalNotifications from '~/components/GlobalNotifications.vue'
+import AdminPortalLinks from '~/components/admin/AdminPortalLinks.vue'
 import { useRoute } from '#app'
 import { useStatusBar } from '~/composables/useStatusBar'
 import { useTerminology } from '~/composables/useTerminology'
