@@ -308,22 +308,31 @@ async function maybeSendSmsQuotaAlert(opts: {
     state.warned80 = true
     subject = `SMS-Kontingent aufgebraucht – ${opts.tenantName}`
     if (opts.canBillOverage) {
-      tenantBody = `Euer Inklusiv-Kontingent (${opts.included} Segmente) ist aufgebraucht (${opts.usedAfter} verwendet). Weitere SMS werden mit CHF 0.15/Segment verrechnet. Aktueller Überzug ca. CHF ${opts.overageChf.toFixed(2)}.`
-      adminBody = `Tenant <strong>${opts.tenantName}</strong> (${opts.tenantId}) hat das SMS-Kontingent überschritten. Plan: ${opts.plan}. Verbrauch: ${opts.usedAfter}/${opts.included}. Überzug: ${opts.overageSegments} Segmente (ca. CHF ${opts.overageChf.toFixed(2)}) — Metered Billing aktiv.`
+      tenantBody = `Euer Inklusiv-Kontingent (${opts.included} Segmente) ist aufgebraucht (${opts.usedAfter} verwendet). Weitere SMS werden mit <strong>CHF 0.15/Segment</strong> verrechnet. Aktueller Überzug ca. <strong>CHF ${opts.overageChf.toFixed(2)}</strong>.`
+      adminBody = `Das SMS-Kontingent ist aufgebraucht. Metered Billing ist aktiv — Überzüge werden verrechnet.`
     } else {
       tenantBody = `Euer Inklusiv-Kontingent (${opts.included} Segmente) ist aufgebraucht (${opts.usedAfter} verwendet). SMS werden weiter zugestellt (Soft-Cap). Sobald eine Zahlungsmethode hinterlegt ist, werden Überzüge mit CHF 0.15/Segment verrechnet.`
-      adminBody = `Tenant <strong>${opts.tenantName}</strong> (${opts.tenantId}) hat das SMS-Kontingent überschritten <em>ohne</em> verrechenbare Zahlungsmethode. Plan: ${opts.plan}. Verbrauch: ${opts.usedAfter}/${opts.included}. Soft-Cap Überzug: ${opts.overageSegments} Segmente (noch nicht verrechnet).`
+      adminBody = `Das SMS-Kontingent ist aufgebraucht — aktuell <em>ohne</em> verrechenbare Zahlungsmethode (Soft-Cap).`
     }
   } else if (ratio >= 0.8 && !state.warned80) {
     state.warned80 = true
     subject = `SMS-Kontingent bei 80% – ${opts.tenantName}`
-    tenantBody = `Ihr habt ${opts.usedAfter} von ${opts.included} SMS-Segmenten in diesem Monat verbraucht.${opts.canBillOverage ? ' Überzug: CHF 0.15/Segment.' : ' Soft-Cap: SMS laufen weiter; Verrechnung erst nach Hinterlegen einer Zahlungsmethode.'}`
-    adminBody = `Tenant <strong>${opts.tenantName}</strong> bei 80% SMS-Kontingent (${opts.usedAfter}/${opts.included}). Plan: ${opts.plan}. Verrechenbar: ${opts.canBillOverage ? 'ja' : 'nein (Trial/ohne Zahlungsmethode)'}.`
+    tenantBody = `Ihr habt <strong>${opts.usedAfter} von ${opts.included}</strong> SMS-Segmenten in diesem Monat verbraucht.${opts.canBillOverage ? ' Überzug: CHF 0.15/Segment.' : ' Soft-Cap: SMS laufen weiter; Verrechnung erst nach Hinterlegen einer Zahlungsmethode.'}`
+    adminBody = `Dieses Unternehmen hat 80&nbsp;% des monatlichen SMS-Kontingents erreicht.`
   }
 
   if (!subject || !tenantBody || !adminBody) return
 
   const { sendEmail } = await import('~/server/utils/email')
+  const appBase = (process.env.NUXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://app.simy.ch').replace(/\/$/, '')
+  // Always go through login with returnTo so deep links work when the session expired
+  const billingUrl = `${appBase}/login?returnTo=${encodeURIComponent('/admin/billing')}`
+  const pct = Math.min(100, Math.round((opts.usedAfter / opts.included) * 100))
+  const isExhausted = pct >= 100
+
+  const softCapNote = opts.canBillOverage
+    ? 'Soft-Cap: SMS werden weiter gesendet, sofern Hard-Stop nicht aktiviert ist. Überzug wird metered verrechnet.'
+    : 'Soft-Cap (Trial/ohne Zahlungsmethode): SMS werden weiter gesendet und gezählt. Verrechnung startet automatisch, sobald ein Stripe-Abo mit Zahlungsmethode existiert.'
 
   const recipients = new Set<string>()
   if (opts.contactEmail?.trim()) recipients.add(opts.contactEmail.trim().toLowerCase())
@@ -344,19 +353,26 @@ async function maybeSendSmsQuotaAlert(opts: {
   }
   recipients.add('info@simy.ch')
 
-  const softCapNote = opts.canBillOverage
-    ? 'Soft-Cap: SMS werden weiter gesendet, sofern Hard-Stop nicht aktiviert ist. Überzug wird metered verrechnet.'
-    : 'Soft-Cap (Trial/ohne Zahlungsmethode): SMS werden weiter gesendet und gezählt. Verrechnung startet automatisch, sobald ein Stripe-Abo mit Zahlungsmethode existiert.'
-
   await Promise.allSettled(
     [...recipients].map((to) => {
       const isTenant = opts.contactEmail && to === opts.contactEmail.trim().toLowerCase()
-      const body = isTenant ? tenantBody! : adminBody!
-      return sendEmail({
-        to,
-        subject,
-        html: `<p>${body}</p><p style="color:#6b7280;font-size:13px">${softCapNote}</p>`,
+      const html = buildSmsQuotaAlertHtml({
+        isTenant: !!isTenant,
+        tenantName: opts.tenantName,
+        tenantId: opts.tenantId,
+        plan: opts.plan,
+        usedAfter: opts.usedAfter,
+        included: opts.included,
+        pct,
+        isExhausted,
+        canBillOverage: opts.canBillOverage,
+        overageSegments: opts.overageSegments,
+        overageChf: opts.overageChf,
+        bodyText: isTenant ? tenantBody! : adminBody!,
+        softCapNote,
+        billingUrl,
       })
+      return sendEmail({ to, subject, html })
     }),
   )
 
@@ -375,6 +391,93 @@ async function maybeSendSmsQuotaAlert(opts: {
       setting_type: 'json',
     })
   }
+}
+
+function buildSmsQuotaAlertHtml(opts: {
+  isTenant: boolean
+  tenantName: string
+  tenantId: string
+  plan: string
+  usedAfter: number
+  included: number
+  pct: number
+  isExhausted: boolean
+  canBillOverage: boolean
+  overageSegments: number
+  overageChf: number
+  bodyText: string
+  softCapNote: string
+  billingUrl: string
+}): string {
+  const accent = opts.isExhausted ? '#dc2626' : '#d97706'
+  const accentBg = opts.isExhausted ? '#fef2f2' : '#fffbeb'
+  const accentBorder = opts.isExhausted ? '#fecaca' : '#fde68a'
+  const barColor = opts.isExhausted ? '#ef4444' : '#f59e0b'
+  const title = opts.isExhausted ? 'SMS-Kontingent aufgebraucht' : 'SMS-Kontingent bei 80 %'
+  const badge = opts.isExhausted ? 'Aufgebraucht' : `${opts.pct} % verbraucht`
+  const greeting = opts.isTenant
+    ? `Hallo ${opts.tenantName},`
+    : 'Hallo Simy-Team,'
+
+  const ctaBlock = opts.isTenant
+    ? `<div style="text-align:center;margin:28px 0 8px">
+        <a href="${opts.billingUrl}" style="display:inline-block;background:${accent};color:#fff;text-decoration:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700">
+          Abrechnung ansehen
+        </a>
+      </div>
+      <p style="text-align:center;font-size:12px;color:#9ca3af;margin:0">
+        oder unter Einstellungen → Abrechnung
+      </p>`
+    : `<div style="background:#f9fafb;border-radius:12px;padding:14px 16px;margin-top:20px;font-size:13px;color:#4b5563">
+        <div><strong>Tenant:</strong> ${opts.tenantName}</div>
+        <div><strong>ID:</strong> <span style="font-family:ui-monospace,monospace;font-size:12px">${opts.tenantId}</span></div>
+        <div><strong>Plan:</strong> ${opts.plan}</div>
+        <div><strong>Verrechenbar:</strong> ${opts.canBillOverage ? 'ja' : 'nein (Trial/ohne Zahlungsmethode)'}</div>
+        ${opts.overageSegments > 0 ? `<div><strong>Überzug:</strong> ${opts.overageSegments} Segmente (ca. CHF ${opts.overageChf.toFixed(2)})</div>` : ''}
+      </div>`
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${title}</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)">
+    <div style="background:linear-gradient(135deg,#1e293b,#334155);padding:28px 32px">
+      <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8">Simy · SMS</p>
+      <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;line-height:1.25">${title}</h1>
+    </div>
+
+    <div style="padding:28px 32px 32px">
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.55;color:#374151">${greeting}</p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#374151">${opts.bodyText}</p>
+
+      <div style="background:${accentBg};border:1px solid ${accentBorder};border-radius:14px;padding:18px 20px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+          <span style="font-size:13px;font-weight:600;color:#92400e">${badge}</span>
+          <span style="font-size:18px;font-weight:800;color:${accent}">${opts.usedAfter}<span style="font-size:13px;font-weight:600;color:#78716c"> / ${opts.included}</span></span>
+        </div>
+        <div style="height:10px;background:#fff;border-radius:999px;overflow:hidden;border:1px solid ${accentBorder}">
+          <div style="height:100%;width:${Math.min(100, opts.pct)}%;background:${barColor};border-radius:999px"></div>
+        </div>
+        <p style="margin:10px 0 0;font-size:12px;color:#78716c">SMS-Segmente in diesem Abrechnungsmonat</p>
+      </div>
+
+      ${ctaBlock}
+
+      <p style="margin:28px 0 0;padding-top:20px;border-top:1px solid #f3f4f6;font-size:12px;line-height:1.5;color:#9ca3af">
+        ${opts.softCapNote}
+      </p>
+    </div>
+
+    <div style="border-top:1px solid #f3f4f6;padding:18px 32px;font-size:12px;color:#9ca3af;text-align:center">
+      ${opts.isTenant ? opts.tenantName : 'Simy'} · Powered by <a href="https://simy.ch" style="color:#9ca3af">Simy.ch</a>
+    </div>
+  </div>
+</body>
+</html>`
 }
 
 // ============================================

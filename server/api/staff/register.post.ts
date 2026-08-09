@@ -133,10 +133,20 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 6: XSS Protection - Sanitize all string inputs
     const sanitizedFirstName = sanitizeString(firstName, 100)
     const sanitizedLastName = sanitizeString(lastName, 100)
-    const sanitizedPhone = phone ? sanitizeString(phone, 20) : null
     const sanitizedStreet = street ? sanitizeString(street, 100) : null
     const sanitizedStreetNr = streetNr ? sanitizeString(streetNr, 10) : null
     const sanitizedCity = city ? sanitizeString(city, 100) : null
+
+    // Normalize phone to E.164 (+41…) so unique checks match stored values
+    const { normalizePhoneNumber } = await import('~/server/utils/sms')
+    const rawPhone = phone ? String(phone).trim() : ''
+    if (rawPhone && !normalizePhoneNumber(rawPhone)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Ungültige Telefonnummer. Bitte im Format +41 79 123 45 67 eingeben.',
+      })
+    }
+    const sanitizedPhone = rawPhone ? normalizePhoneNumber(rawPhone) : null
 
     // ✅ LAYER 7: Email must not already exist in users or Auth
     const normalizedEmail = email.toLowerCase().trim()
@@ -164,6 +174,21 @@ export default defineEventHandler(async (event) => {
         statusCode: 409,
         statusMessage: emailConflictMessage(availability, terms.staff || 'Mitarbeiter'),
       })
+    }
+
+    // ✅ LAYER 7b: Phone must not already exist for this tenant (users_phone_tenant_unique)
+    if (sanitizedPhone) {
+      const { findExistingUserByContact } = await import('~/server/utils/user-matching')
+      const existingByPhone = await findExistingUserByContact(serviceSupabase, {
+        phone: sanitizedPhone,
+        tenantId: invitation.tenant_id,
+      })
+      if (existingByPhone) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Diese Telefonnummer ist bereits registriert. Bitte eine andere Nummer verwenden.',
+        })
+      }
     }
 
     // If invitation stored a real (non-placeholder) email, require matching it
@@ -251,6 +276,27 @@ export default defineEventHandler(async (event) => {
       console.error('❌ Profile creation error:', profileError)
       // Try to clean up auth user
       await serviceSupabase.auth.admin.deleteUser(authData.user.id)
+
+      const msg = profileError.message || ''
+      if (profileError.code === '23505') {
+        if (msg.includes('users_phone_tenant_unique') || msg.includes('(phone, tenant_id)')) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Diese Telefonnummer ist bereits registriert. Bitte eine andere Nummer verwenden.',
+          })
+        }
+        if (msg.includes('users_email_tenant_unique') || msg.includes('(email, tenant_id)')) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Diese E-Mail ist bereits registriert. Bitte eine andere E-Mail verwenden.',
+          })
+        }
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Ein Konto mit diesen Daten existiert bereits.',
+        })
+      }
+
       throw createError({
         statusCode: 500,
         statusMessage: 'Fehler beim Erstellen des Profils'

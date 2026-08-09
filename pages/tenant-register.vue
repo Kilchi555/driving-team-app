@@ -1345,12 +1345,20 @@
             <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort *</label>
-                <input v-model="adminForm.password" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="step5-password" id="admin-password"
+                <input
+                  v-model="adminForm.password"
+                  :type="showPw ? 'text' : 'password'"
+                  required
+                  minlength="12"
+                  autocomplete="new-password"
+                  name="new-password"
+                  id="admin-password"
                   :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
                     adminForm.password && !passwordValid ? 'border-red-300 focus:ring-red-500' :
                     adminForm.password && passwordValid ? 'border-green-300 focus:ring-green-500' :
                     'border-gray-200 focus:ring-blue-500']"
-                  placeholder="Mindestens 12 Zeichen">
+                  placeholder="Mindestens 12 Zeichen"
+                >
                 <div class="flex items-center justify-between mt-1.5">
                   <button type="button" @click="useGeneratedPassword" class="text-xs font-semibold text-blue-600 underline">
                     Sicheres Passwort vorschlagen
@@ -1385,12 +1393,20 @@
               </div>
               <div>
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort bestätigen *</label>
-                <input v-model="adminForm.passwordConfirm" :type="showPw ? 'text' : 'password'" required minlength="12" autocomplete="new-password" name="step5-confirm-password" id="admin-password-confirm"
+                <input
+                  v-model="adminForm.passwordConfirm"
+                  :type="showPw ? 'text' : 'password'"
+                  required
+                  minlength="12"
+                  autocomplete="new-password"
+                  name="confirm-password"
+                  id="admin-password-confirm"
                   :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
                     adminForm.passwordConfirm && passwordMismatch ? 'border-red-300 focus:ring-red-500' :
                     adminForm.passwordConfirm && !passwordMismatch && passwordValid ? 'border-green-300 focus:ring-green-500' :
                     'border-gray-200 focus:ring-blue-500']"
-                  placeholder="Passwort wiederholen">
+                  placeholder="Passwort wiederholen"
+                >
                 <p v-if="passwordMismatch" class="text-xs text-red-600 mt-1">Passwörter stimmen nicht überein.</p>
                 <p v-else-if="adminForm.passwordConfirm && !passwordMismatch && passwordValid" class="text-xs text-green-600 mt-1">Passwörter stimmen überein</p>
               </div>
@@ -1636,17 +1652,25 @@
             <div v-if="staffList.some(s => s.first_name && s.email)"
               class="sm:col-span-2 rounded-2xl bg-gray-50 border border-gray-100 p-4">
               <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2.5">Einladungen</p>
-              <div class="flex flex-wrap gap-2">
-                <span v-for="(s, i) in staffList.filter(s => s.first_name && s.email)" :key="i"
-                  class="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border border-gray-200 text-sm text-gray-700">
-                  <span class="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center">
-                    <svg class="w-2.5 h-2.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+              <div class="space-y-2">
+                <div
+                  v-for="(s, i) in staffList.filter(s => s.first_name && s.email)"
+                  :key="i"
+                  class="flex items-start gap-3 w-full bg-white rounded-xl border border-gray-200 px-3.5 py-3"
+                >
+                  <span class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                     </svg>
                   </span>
-                  {{ s.first_name }} {{ s.last_name }}
-                  <span class="text-blue-500 text-xs">{{ s.email }}</span>
-                </span>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-semibold text-gray-900 leading-snug">
+                      {{ s.first_name }} {{ s.last_name }}
+                    </p>
+                    <p class="text-xs text-blue-600 mt-0.5 break-all">{{ s.email }}</p>
+                    <p v-if="s.phone" class="text-xs text-gray-400 mt-0.5">{{ s.phone }}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1720,6 +1744,10 @@
               <div class="px-4 py-2 bg-amber-50">
                 <p class="text-xs font-semibold text-amber-600 mb-2">Nach dem Login noch offen:</p>
                 <div class="space-y-1.5">
+                  <div class="flex items-center gap-2 text-sm text-amber-800">
+                    <div class="w-4 h-4 rounded-full border-2 border-amber-400 flex-shrink-0"></div>
+                    {{ labels.staff }}-Account erstellen
+                  </div>
                   <div class="flex items-center gap-2 text-sm text-amber-800">
                     <div class="w-4 h-4 rounded-full border-2 border-amber-400 flex-shrink-0"></div>
                     {{ labels.bookAction }}
@@ -3357,7 +3385,17 @@ watch(() => formData.value.name, (newName: string) => {
 })
 
 watch(() => adminSameAsCompany.value, () => applyAdminFromCompany())
-watch(() => adminForm.value.password, (pw) => checkPasswordStrength(pw))
+watch(() => adminForm.value.password, (pw, oldPw) => {
+  checkPasswordStrength(pw)
+  // Nur bei Autofill / Passwort-Manager (Wert springt um >1 Zeichen), nicht beim Tippen —
+  // sonst wäre die Bestätigung sinnlos gegen Tippfehler.
+  const prev = oldPw || ''
+  const next = pw || ''
+  const isBulkFill = Math.abs(next.length - prev.length) > 1
+  if (isBulkFill && next && (!adminForm.value.passwordConfirm || adminForm.value.passwordConfirm === prev)) {
+    adminForm.value.passwordConfirm = next
+  }
+})
 
 // Wenn der Geschäftstyp geändert wird (z.B. User geht von Step 1+ zurück zu
 // Step 0 und wählt eine andere Branche), waren bereits geladene Kategorien/
@@ -3543,7 +3581,17 @@ onMounted(async () => {
   // localStorage draft from a possibly-abandoned earlier attempt (which may
   // even be for a different business type). Validated against the loaded
   // list so a typo'd/unknown code can't silently "select" a non-existent type.
-  const typeParam = typeof q.type === 'string' ? q.type : (typeof q.business_type === 'string' ? q.business_type : '')
+  const rawType = typeof q.type === 'string' ? q.type : (typeof q.business_type === 'string' ? q.business_type : '')
+  // Marketing URLs may use the path slug (`fahrschule`) instead of the DB code
+  const typeAliases: Record<string, string> = {
+    fahrschule: 'driving_school',
+    coaching: 'mental_coach',
+    'personal-training': 'fitness',
+    nachhilfe: 'tutoring',
+    musikschule: 'music_school',
+    hundeschule: 'dog_training',
+  }
+  const typeParam = typeAliases[rawType] || rawType
   if (typeParam && businessTypes.value.some(bt => bt.code === typeParam)) {
     formData.value.business_type = typeParam
   }

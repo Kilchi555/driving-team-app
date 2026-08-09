@@ -185,8 +185,7 @@
               Auswertungen und Rechnungen.
             </p>
             <p v-if="adminEmail" class="text-xs leading-relaxed">
-              Verwende hier <strong>nicht</strong>
-              <span class="font-mono">{{ adminEmail }}</span>
+              Verwende hier <strong>nicht</strong>&nbsp;<span class="font-mono">{{ adminEmail }}</span>
               — das ist der Admin-Account. Nimm z.B. eine private E-Mail (Gmail, iCloud, …).
             </p>
             <p v-else class="text-xs leading-relaxed">
@@ -257,7 +256,36 @@
               </div>
               <div class="col-span-2">
                 <label class="label">Telefon *</label>
-                <input v-model="form.phone" type="tel" class="input" placeholder="+41 79 123 45 67">
+                <input
+                  v-model="form.phone"
+                  type="tel"
+                  class="input"
+                  placeholder="+41 79 123 45 67"
+                  :class="{
+                    '!border-red-300': staffPhoneCheck === 'taken' || staffPhoneCheck === 'invalid',
+                    '!border-green-300': staffPhoneCheck === 'available',
+                  }"
+                  @input="onStaffPhoneInput(form.phone)"
+                  @blur="checkStaffPhone(form.phone)"
+                >
+                <p v-if="staffPhoneCheck === 'checking'" class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                  <svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  Wird geprüft…
+                </p>
+                <p v-else-if="staffPhoneCheck === 'available'" class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                  Telefonnummer ist verfügbar
+                </p>
+                <p v-else-if="staffPhoneCheck === 'taken'" class="text-xs text-red-600 mt-1 leading-relaxed">
+                  Diese Telefonnummer ist bereits registriert. Bitte eine andere Nummer verwenden.
+                </p>
+                <p v-else-if="staffPhoneCheck === 'invalid'" class="text-xs text-red-600 mt-1">
+                  Ungültige Telefonnummer. Bitte im Format +41 79 123 45 67 eingeben.
+                </p>
+                <p v-else-if="staffPhoneCheck === 'error'" class="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                  Telefon-Prüfung fehlgeschlagen — bitte erneut versuchen
+                </p>
               </div>
               <div>
                 <label class="label">Geburtsdatum *</label>
@@ -292,21 +320,34 @@
             <!-- Kategorien (nur Fahrschule / wenn Templates vorhanden) -->
             <div v-if="availableCategories.length">
               <label class="label mb-2">Unterrichtete {{ labels.categoriesLabel }}</label>
-              <div class="grid grid-cols-2 gap-2">
+              <div class="space-y-2">
                 <label
                   v-for="cat in availableCategories"
                   :key="cat.code"
-                  class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-all text-sm"
+                  class="flex items-center gap-3 p-3.5 border rounded-xl cursor-pointer transition-all"
                   :class="form.selectedCategories.includes(cat.code)
-                    ? 'text-gray-800'
-                    : 'border-gray-200 hover:border-gray-300'"
+                    ? 'shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'"
                   :style="form.selectedCategories.includes(cat.code)
                     ? { borderColor: tenantColor, backgroundColor: tenantColor + '14' }
                     : {}"
                 >
-                  <input type="checkbox" :value="cat.code" v-model="form.selectedCategories">
-                  <span class="font-medium">{{ cat.code }}</span>
-                  <span class="text-gray-400 text-xs truncate">{{ cat.description || cat.name }}</span>
+                  <input
+                    type="checkbox"
+                    :value="cat.code"
+                    v-model="form.selectedCategories"
+                    class="h-4 w-4 rounded border-gray-300 flex-shrink-0"
+                    :style="form.selectedCategories.includes(cat.code) ? { accentColor: tenantColor } : {}"
+                  >
+                  <span
+                    class="inline-flex items-center justify-center min-w-[2.25rem] h-9 px-2 rounded-lg text-sm font-bold flex-shrink-0"
+                    :style="form.selectedCategories.includes(cat.code)
+                      ? { backgroundColor: tenantColor, color: '#fff' }
+                      : { backgroundColor: '#f3f4f6', color: '#111827' }"
+                  >{{ cat.code }}</span>
+                  <span v-if="categoryDisplayName(cat)" class="text-sm text-gray-700 font-medium leading-snug">
+                    {{ categoryDisplayName(cat) }}
+                  </span>
                 </label>
               </div>
             </div>
@@ -733,9 +774,19 @@
                 <input type="checkbox" v-model="form.acceptedTerms" class="mt-0.5">
                 <span class="text-sm text-gray-700">
                   Ich akzeptiere die
-                  <a :href="`/register/staff-agb?business_type=${encodeURIComponent(businessType)}`" target="_blank" class="hover:underline" :style="{ color: tenantColor }">Nutzungsbedingungen</a>
+                  <button
+                    type="button"
+                    class="hover:underline font-medium"
+                    :style="{ color: tenantColor }"
+                    @click.prevent="openLegalModal('agb')"
+                  >Nutzungsbedingungen</button>
                   und die
-                  <a :href="`/register/staff-datenschutz?business_type=${encodeURIComponent(businessType)}`" target="_blank" class="hover:underline" :style="{ color: tenantColor }">Datenschutzerklärung</a>.
+                  <button
+                    type="button"
+                    class="hover:underline font-medium"
+                    :style="{ color: tenantColor }"
+                    @click.prevent="openLegalModal('datenschutz')"
+                  >Datenschutzerklärung</button>.
                 </span>
               </label>
             </div>
@@ -760,7 +811,7 @@
                 :disabled="!canProceed"
                 class="px-6 py-3 text-sm text-white rounded-xl transition-opacity font-medium disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
                 :style="{ background: tenantColor }"
-              >{{ currentStep === 6 ? 'Registrierung abschliessen' : 'Weiter →' }}</button>
+              >{{ currentStep === 6 ? 'Registrieren' : 'Weiter →' }}</button>
             </div>
           </div>
 
@@ -776,6 +827,53 @@
       </div>
     </div>
   </div>
+
+  <!-- Legal modal (AGB / Datenschutz) -->
+  <Teleport to="body">
+    <div
+      v-if="legalModal"
+      class="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="legalModalTitle"
+    >
+      <div class="absolute inset-0 bg-black/50" @click="legalModal = null" />
+      <div class="relative bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+        <div class="sticky top-0 z-10 bg-white border-b px-5 py-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold text-gray-900">{{ legalModalTitle }}</h2>
+            <p class="text-xs text-gray-500 mt-0.5">Simy · Stand: Mai 2026</p>
+          </div>
+          <button
+            type="button"
+            class="text-gray-400 hover:text-gray-700 text-2xl leading-none p-1"
+            aria-label="Schliessen"
+            @click="legalModal = null"
+          >×</button>
+        </div>
+        <div class="overflow-y-auto px-5 py-5 flex-1">
+          <StaffLegalAgbContent
+            v-if="legalModal === 'agb'"
+            :business-type="businessType"
+            id-prefix="modal-agb"
+          />
+          <StaffLegalDatenschutzContent
+            v-else-if="legalModal === 'datenschutz'"
+            :business-type="businessType"
+            id-prefix="modal-privacy"
+          />
+        </div>
+        <div class="border-t bg-gray-50 px-5 py-3 flex justify-end">
+          <button
+            type="button"
+            class="px-5 py-2.5 text-sm font-medium text-white rounded-xl"
+            :style="{ background: tenantColor }"
+            @click="legalModal = null"
+          >Schliessen</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -788,6 +886,8 @@ import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { saveCredentials } from '~/utils/save-credentials'
 import { getTerminologyDefaults, mergeTerminology, type Terminology } from '~/composables/useTerminology'
 import { getWorkingDaysTemplateDefaults, workingDaysTemplateToForm } from '~/utils/workingDaysTemplate'
+import StaffLegalAgbContent from '~/components/register/StaffLegalAgbContent.vue'
+import StaffLegalDatenschutzContent from '~/components/register/StaffLegalDatenschutzContent.vue'
 import { inspectIcsUrlShape, normalizeIcsUrl } from '~/utils/ics-url'
 
 const route              = useRoute()
@@ -830,6 +930,12 @@ const affiliateEnabled     = ref(false)
 const adminEmail           = ref<string | null>(null)
 const showDualLoginHint    = ref(false)
 const emailLocked          = ref(false)
+const tenantId             = ref<string | null>(null)
+const legalModal           = ref<'agb' | 'datenschutz' | null>(null)
+
+const openLegalModal = (type: 'agb' | 'datenschutz') => {
+  legalModal.value = type
+}
 
 const isAdminEmailChosen = computed(() => {
   if (!adminEmail.value || !form.email) return false
@@ -841,6 +947,21 @@ const isDrivingSchool = computed(() => businessType.value === 'driving_school')
 const labels = computed((): Terminology => {
   return mergeTerminology(businessType.value, tenantUiLabels.value)
 })
+
+/** Meaningful subtitle for a category chip — skip generic "Kategorie" labels. */
+const categoryDisplayName = (cat: { code?: string; name?: string; description?: string }) => {
+  const raw = String(cat.name || cat.description || '').trim()
+  if (!raw) return ''
+  if (/^kategorie$/i.test(raw)) return ''
+  if (cat.code && raw.toLowerCase() === String(cat.code).toLowerCase()) return ''
+  return raw
+}
+
+const legalModalTitle = computed(() =>
+  legalModal.value === 'datenschutz'
+    ? `Datenschutzerklärung für ${labels.value.staffPlural}`
+    : `Nutzungsbedingungen für ${labels.value.staffPlural}`
+)
 
 // Categories only for driving schools with templates; Führerausweis only for driving schools.
 const allStepDefs = computed(() => [
@@ -1038,6 +1159,58 @@ const onStaffEmailInput = (val: string) => {
   }, 700)
 }
 
+// ─── Phone availability check ───────────────────────────────────────────────
+const staffPhoneCheck = ref<'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error'>('idle')
+let staffPhoneDebounce: ReturnType<typeof setTimeout> | null = null
+
+const normalizeStaffPhone = (raw: string): string | null => {
+  let phone = raw.replace(/[^0-9+]/g, '')
+  if (phone.startsWith('0') && phone.length === 10) {
+    phone = '+41' + phone.substring(1)
+  } else if (phone.startsWith('41') && phone.length === 11) {
+    phone = '+' + phone
+  } else if (phone.startsWith('0041') && phone.length === 13) {
+    phone = '+' + phone.slice(2)
+  }
+  return /^\+41[0-9]{9}$/.test(phone) ? phone : null
+}
+
+const runStaffPhoneCheck = async (val: string) => {
+  const normalized = normalizeStaffPhone(val)
+  if (!normalized) {
+    staffPhoneCheck.value = val.trim().length >= 9 ? 'invalid' : 'idle'
+    return
+  }
+  if (!tenantId.value) {
+    staffPhoneCheck.value = 'idle'
+    return
+  }
+  staffPhoneCheck.value = 'checking'
+  try {
+    const res = await $fetch<{ exists: boolean }>('/api/auth/check-phone-exists', {
+      method: 'POST',
+      body: { phone: normalized, tenantId: tenantId.value },
+    })
+    staffPhoneCheck.value = res.exists ? 'taken' : 'available'
+  } catch {
+    staffPhoneCheck.value = 'error'
+  }
+}
+
+const checkStaffPhone = (val: string) => {
+  if (staffPhoneDebounce) clearTimeout(staffPhoneDebounce)
+  void runStaffPhoneCheck(val)
+}
+
+const onStaffPhoneInput = (val: string) => {
+  staffPhoneCheck.value = 'idle'
+  if (staffPhoneDebounce) clearTimeout(staffPhoneDebounce)
+  const digits = val.replace(/[^0-9]/g, '')
+  if (digits.length < 9) return
+  staffPhoneCheck.value = 'checking'
+  staffPhoneDebounce = setTimeout(() => { void runStaffPhoneCheck(val) }, 700)
+}
+
 let hibpDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const useGeneratedPassword = () => {
@@ -1091,7 +1264,8 @@ const canProceed = computed(() => {
         form.zip &&
         form.city &&
         !isAdminEmailChosen.value &&
-        staffEmailCheck.value === 'available'
+        staffEmailCheck.value === 'available' &&
+        staffPhoneCheck.value === 'available'
       )
     case 1:
       // At least one category selected (step is skipped when none available)
@@ -1154,6 +1328,8 @@ const loadInvitation = async () => {
     form.email = (inv.email && !isPlaceholderEmail) ? inv.email : ''
     if (form.email) checkStaffEmail(form.email)
     form.phone     = inv.phone      || ''
+    tenantId.value = response.tenant?.id || inv.tenant_id || null
+    if (form.phone) checkStaffPhone(form.phone)
 
     tenantName.value          = response.tenant?.name || ''
     tenantSlugRef.value       = response.tenant?.slug || ''
@@ -1294,7 +1470,10 @@ const submit = async () => {
         const normalizedUrl = normalizeIcsUrl(form.externalCalendarUrl)
         const shape = inspectIcsUrlShape(normalizedUrl)
         if (shape.ok) {
-          await $fetch('/api/staff/external-calendars', {
+          const connectRes = await $fetch<{
+            success: boolean
+            calendar_id?: string
+          }>('/api/staff/external-calendars', {
             method: 'POST',
             body: {
               action: 'connect',
@@ -1304,6 +1483,21 @@ const submit = async () => {
               }
             }
           })
+
+          // Immediate first sync so busy times are available right away
+          if (connectRes?.calendar_id) {
+            try {
+              await $fetch('/api/external-calendars/sync-ics', {
+                method: 'POST',
+                body: {
+                  calendar_id: connectRes.calendar_id,
+                  ics_url: shape.url,
+                }
+              })
+            } catch (syncErr) {
+              console.warn('Calendar connected but initial sync failed:', syncErr)
+            }
+          }
         }
       } catch { /* non-fatal — user can reconnect in settings */ }
     }
@@ -1337,7 +1531,7 @@ const refreshExternalCalendarUrlHint = () => {
   }
   externalCalendarUrlHint.value = {
     ok: true,
-    message: 'URL-Format OK — wird nach der Registrierung verbunden und geprüft.',
+    message: 'URL-Format OK — wird nach der Registrierung verbunden und synchronisiert.',
   }
 }
 
@@ -1410,7 +1604,16 @@ const copyAffiliateLink = () => {
   setTimeout(() => affiliateCopied.value = false, 2000)
 }
 
-watch(() => form.password, (pw) => checkPasswordStrength(pw))
+watch(() => form.password, (pw, oldPw) => {
+  checkPasswordStrength(pw)
+  // Nur Autofill / Passwort-Manager (Sprung >1 Zeichen), nicht Tippen — sonst keine Tippfehler-Prüfung
+  const prev = oldPw || ''
+  const next = pw || ''
+  const isBulkFill = Math.abs(next.length - prev.length) > 1
+  if (isBulkFill && next && (!form.confirmPassword || form.confirmPassword === prev)) {
+    form.confirmPassword = next
+  }
+})
 
 onMounted(() => loadInvitation())
 </script>
