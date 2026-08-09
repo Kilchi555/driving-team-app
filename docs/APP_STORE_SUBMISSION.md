@@ -11,6 +11,7 @@ Alle Schritte sollten der Reihe nach abgearbeitet werden. Bereits erledigte Punk
 ✅ Endpoint `POST /api/customer/delete-account`
 ✅ "Konto löschen" Button im Customer-Profil mit Bestätigungsdialog
 ✅ Anonymisiert PII, löscht Auth-Account, behält gesetzlich geforderte Buchhaltungsdaten
+✅ Blockiert Löschung bei offenen Forderungen (pending/partial/authorized/invoiced payments, unpaid invoices, negativer Credit) mit HTTP 409 — siehe `docs/CUSTOMER_ACCOUNT_DELETION.md`
 
 ### 1.2 App Transport Security (ATS)
 ✅ `NSAllowsArbitraryLoads=true` ist nur für Live-Reload während Dev gesetzt
