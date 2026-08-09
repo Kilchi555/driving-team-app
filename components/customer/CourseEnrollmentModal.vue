@@ -403,127 +403,237 @@
               <p class="text-sm text-green-700">{{ sariData?.address }}, {{ sariData?.zip }} {{ sariData?.city }}</p>
             </div>
 
-            <!-- Non-SARI: name + address input fields -->
-            <div v-else class="space-y-4 mb-6">
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Vorname *</label>
-                  <input
-                    v-model="formData.firstName"
-                    type="text"
-                    placeholder="Max"
-                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
-                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
-                  />
+            <!--
+              Real <form> + standard autocomplete tokens so iOS/Android
+              Contact Autofill can fill name, address, email, phone, birthday.
+            -->
+            <form
+              id="course-enrollment-contact-form"
+              autocomplete="on"
+              class="space-y-4 mb-6"
+              @submit.prevent
+            >
+              <template v-if="!isSariCourse">
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label for="ce-first-name" class="block text-sm font-medium text-slate-700 mb-1">Vorname *</label>
+                    <input
+                      id="ce-first-name"
+                      v-model="formData.firstName"
+                      type="text"
+                      name="given-name"
+                      autocomplete="given-name"
+                      autocapitalize="words"
+                      enterkeyhint="next"
+                      required
+                      placeholder="Max"
+                      class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                      :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                    />
+                  </div>
+                  <div>
+                    <label for="ce-last-name" class="block text-sm font-medium text-slate-700 mb-1">Nachname *</label>
+                    <input
+                      id="ce-last-name"
+                      v-model="formData.lastName"
+                      type="text"
+                      name="family-name"
+                      autocomplete="family-name"
+                      autocapitalize="words"
+                      enterkeyhint="next"
+                      required
+                      placeholder="Mustermann"
+                      class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                      :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Nachname *</label>
-                  <input
-                    v-model="formData.lastName"
-                    type="text"
-                    placeholder="Mustermann"
-                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
-                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
-                  />
-                </div>
-              </div>
-              <div class="grid grid-cols-3 gap-3">
-                <div class="col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Strasse *</label>
-                  <input
-                    v-model="formData.street"
-                    type="text"
-                    placeholder="Musterstrasse"
-                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
-                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Nr. *</label>
-                  <input
-                    v-model="formData.streetNr"
-                    type="text"
-                    placeholder="12"
-                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
-                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
-                  />
-                </div>
-              </div>
-              <div class="grid grid-cols-3 gap-3">
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">PLZ *</label>
-                  <input
-                    v-model="formData.zip"
-                    type="text"
-                    placeholder="8000"
-                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
-                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
-                  />
-                </div>
-                <div class="col-span-2">
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Ort *</label>
-                  <input
-                    v-model="formData.city"
-                    type="text"
-                    placeholder="Zürich"
-                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
-                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
-                  />
-                </div>
-              </div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Führerausweis-Nr. *</label>
-                  <input
-                    v-model="formData.licenseNumber"
-                    type="text"
-                    placeholder="123456789"
-                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
-                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 mb-1">Geburtsdatum *</label>
-                  <input
-                    v-model="formData.birthdateNonSari"
-                    type="date"
-                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
-                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
-                  />
-                </div>
-              </div>
-            </div>
 
-            <!-- Contact Details -->
-            <div class="space-y-4 mb-6">
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">E-Mail *</label>
-                <input 
-                  v-model="formData.email"
-                  type="email"
-                  placeholder="deine@email.ch"
-                  class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
-                  :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
-                  :class="{ 'border-red-300': formData.email && !isValidEmail }"
-                />
-                <p v-if="formData.email && !isValidEmail" class="text-xs text-red-500 mt-1">Bitte gib eine gültige E-Mail ein</p>
-              </div>
-              
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Telefon *</label>
-                <input 
-                  v-model="formData.phone"
-                  type="tel"
-                  placeholder="+41"
-                  class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
-                  :style="{ '--tw-ring-color': getTenantPrimaryColor(), borderColor: isPhoneFocused ? getTenantPrimaryColor() : 'rgb(203, 213, 225)' }"
-                  :class="{ 'border-red-300': formData.phone && !isValidPhone }"
-                  @focus="isPhoneFocused = true"
-                  @blur="isPhoneFocused = false; formatPhoneNumber()"
-                />
-                <p v-if="formData.phone && !isValidPhone" class="text-xs text-red-500 mt-1">Bitte gib eine gültige Telefonnummer ein</p>
-              </div>
-            </div>
+                <div>
+                  <label for="ce-email" class="block text-sm font-medium text-slate-700 mb-1">E-Mail *</label>
+                  <input
+                    id="ce-email"
+                    v-model="formData.email"
+                    type="email"
+                    name="email"
+                    autocomplete="email"
+                    inputmode="email"
+                    enterkeyhint="next"
+                    required
+                    placeholder="deine@email.ch"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                    :class="{ 'border-red-300': formData.email && !isValidEmail }"
+                  />
+                  <p v-if="formData.email && !isValidEmail" class="text-xs text-red-500 mt-1">Bitte gib eine gültige E-Mail ein</p>
+                </div>
+
+                <div>
+                  <label for="ce-phone" class="block text-sm font-medium text-slate-700 mb-1">Telefon *</label>
+                  <input
+                    id="ce-phone"
+                    v-model="formData.phone"
+                    type="tel"
+                    name="tel"
+                    autocomplete="tel"
+                    inputmode="tel"
+                    enterkeyhint="next"
+                    required
+                    placeholder="+41"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor(), borderColor: isPhoneFocused ? getTenantPrimaryColor() : 'rgb(203, 213, 225)' }"
+                    :class="{ 'border-red-300': formData.phone && !isValidPhone }"
+                    @focus="isPhoneFocused = true"
+                    @blur="isPhoneFocused = false; formatPhoneNumber()"
+                  />
+                  <p v-if="formData.phone && !isValidPhone" class="text-xs text-red-500 mt-1">Bitte gib eine gültige Telefonnummer ein</p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="col-span-2">
+                    <label for="ce-street" class="block text-sm font-medium text-slate-700 mb-1">Strasse *</label>
+                    <input
+                      id="ce-street"
+                      v-model="formData.street"
+                      type="text"
+                      name="address-line1"
+                      autocomplete="address-line1"
+                      autocapitalize="words"
+                      enterkeyhint="next"
+                      required
+                      placeholder="Musterstrasse"
+                      class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                      :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                    />
+                  </div>
+                  <div>
+                    <label for="ce-street-nr" class="block text-sm font-medium text-slate-700 mb-1">Nr. *</label>
+                    <input
+                      id="ce-street-nr"
+                      v-model="formData.streetNr"
+                      type="text"
+                      name="address-line2"
+                      autocomplete="address-line2"
+                      enterkeyhint="next"
+                      required
+                      placeholder="12"
+                      class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                      :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <label for="ce-zip" class="block text-sm font-medium text-slate-700 mb-1">PLZ *</label>
+                    <input
+                      id="ce-zip"
+                      v-model="formData.zip"
+                      type="text"
+                      name="postal-code"
+                      autocomplete="postal-code"
+                      inputmode="numeric"
+                      enterkeyhint="next"
+                      required
+                      placeholder="8000"
+                      class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                      :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                    />
+                  </div>
+                  <div class="col-span-2">
+                    <label for="ce-city" class="block text-sm font-medium text-slate-700 mb-1">Ort *</label>
+                    <input
+                      id="ce-city"
+                      v-model="formData.city"
+                      type="text"
+                      name="address-level2"
+                      autocomplete="address-level2"
+                      autocapitalize="words"
+                      enterkeyhint="next"
+                      required
+                      placeholder="Zürich"
+                      class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                      :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label for="ce-license" class="block text-sm font-medium text-slate-700 mb-1">Führerausweis-Nr. *</label>
+                    <input
+                      id="ce-license"
+                      v-model="formData.licenseNumber"
+                      type="text"
+                      name="license-number"
+                      autocomplete="off"
+                      inputmode="numeric"
+                      enterkeyhint="next"
+                      required
+                      placeholder="123456789"
+                      class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                      :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                    />
+                  </div>
+                  <div>
+                    <label for="ce-birthdate" class="block text-sm font-medium text-slate-700 mb-1">Geburtsdatum *</label>
+                    <input
+                      id="ce-birthdate"
+                      v-model="formData.birthdateNonSari"
+                      type="date"
+                      name="bday"
+                      autocomplete="bday"
+                      enterkeyhint="done"
+                      required
+                      class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                      :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                    />
+                  </div>
+                </div>
+              </template>
+
+              <template v-else>
+                <div>
+                  <label for="ce-email-sari" class="block text-sm font-medium text-slate-700 mb-1">E-Mail *</label>
+                  <input
+                    id="ce-email-sari"
+                    v-model="formData.email"
+                    type="email"
+                    name="email"
+                    autocomplete="email"
+                    inputmode="email"
+                    enterkeyhint="next"
+                    required
+                    placeholder="deine@email.ch"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor() } as any"
+                    :class="{ 'border-red-300': formData.email && !isValidEmail }"
+                  />
+                  <p v-if="formData.email && !isValidEmail" class="text-xs text-red-500 mt-1">Bitte gib eine gültige E-Mail ein</p>
+                </div>
+
+                <div>
+                  <label for="ce-phone-sari" class="block text-sm font-medium text-slate-700 mb-1">Telefon *</label>
+                  <input
+                    id="ce-phone-sari"
+                    v-model="formData.phone"
+                    type="tel"
+                    name="tel"
+                    autocomplete="tel"
+                    inputmode="tel"
+                    enterkeyhint="done"
+                    required
+                    placeholder="+41"
+                    class="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-offset-0"
+                    :style="{ '--tw-ring-color': getTenantPrimaryColor(), borderColor: isPhoneFocused ? getTenantPrimaryColor() : 'rgb(203, 213, 225)' }"
+                    :class="{ 'border-red-300': formData.phone && !isValidPhone }"
+                    @focus="isPhoneFocused = true"
+                    @blur="isPhoneFocused = false; formatPhoneNumber()"
+                  />
+                  <p v-if="formData.phone && !isValidPhone" class="text-xs text-red-500 mt-1">Bitte gib eine gültige Telefonnummer ein</p>
+                </div>
+              </template>
+            </form>
 
             <!-- Discount Code -->
             <DiscountCodeInput
@@ -864,6 +974,16 @@ const formData = ref({
   city: '',
   licenseNumber: '',
   birthdateNonSari: '',
+})
+
+// iOS Contact Autofill often puts "Musterstrasse 12" into address-line1 only —
+// split house number into Nr. when that field is still empty.
+watch(() => formData.value.street, (street) => {
+  if (!street || formData.value.streetNr.trim()) return
+  const m = street.trim().match(/^(.+?)\s+(\d+[a-zA-Z]?)$/)
+  if (!m) return
+  formData.value.street = m[1]
+  formData.value.streetNr = m[2]
 })
 
 // Computed

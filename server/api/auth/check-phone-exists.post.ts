@@ -1,5 +1,6 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { logger } from '~/utils/logger'
+import { normalizePhoneNumber } from '~/server/utils/sms'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -20,8 +21,8 @@ export default defineEventHandler(async (event) => {
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // Normalize phone to multiple possible formats for flexible matching
-    const normalized = phone.trim()
+    // Normalize to E.164; also keep common Swiss variants for historical rows
+    const normalized = normalizePhoneNumber(String(phone).trim()) || String(phone).trim()
     const withoutPlus = normalized.startsWith('+') ? normalized.slice(1) : normalized
     const withLeadingZero = normalized.startsWith('+41')
       ? '0' + normalized.slice(3)
@@ -29,12 +30,14 @@ export default defineEventHandler(async (event) => {
         ? '0' + normalized.slice(2)
         : normalized
 
+    const candidates = [...new Set([normalized, `+${withoutPlus}`, withLeadingZero, String(phone).trim()])]
+
     // Check ALL roles (client, staff, admin, tenant_admin) — no role filter
     const { data: users, error } = await supabase
       .from('users')
       .select('id, auth_user_id, first_name, onboarding_token, role')
       .eq('tenant_id', tenantId)
-      .or(`phone.eq.${normalized},phone.eq.+${withoutPlus},phone.eq.${withLeadingZero}`)
+      .in('phone', candidates)
 
     if (error) {
       logger.warn('check-phone-exists DB error:', error)

@@ -114,8 +114,22 @@
               v-model="phone"
               type="tel"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              :class="{
+                'border-red-300': phoneCheck === 'taken' || phoneCheck === 'invalid',
+                'border-green-300': phoneCheck === 'available',
+              }"
               placeholder="+41 79 123 45 67"
+              @input="onPhoneInput(phone)"
+              @blur="checkPhone(phone)"
             />
+            <p v-if="phoneCheck === 'checking'" class="text-xs text-gray-400 mt-1">Wird geprüft…</p>
+            <p v-else-if="phoneCheck === 'available'" class="text-xs text-green-600 mt-1">Telefonnummer ist verfügbar</p>
+            <p v-else-if="phoneCheck === 'taken'" class="text-xs text-red-600 mt-1">
+              Diese Telefonnummer ist bereits registriert. Bitte eine andere Nummer verwenden.
+            </p>
+            <p v-else-if="phoneCheck === 'invalid'" class="text-xs text-red-600 mt-1">
+              Ungültige Telefonnummer. Bitte im Format +41 79 123 45 67 eingeben.
+            </p>
           </div>
 
           <!-- Geburtsdatum -->
@@ -447,6 +461,51 @@ const onEmailInput = (val: string) => {
     } catch { emailCheck.value = 'error' }
   }, 700)
 }
+
+// ─── Phone availability check ───────────────────────────────────────────────
+const phoneCheck = ref<'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error'>('idle')
+let phoneDebounce: ReturnType<typeof setTimeout> | null = null
+
+const normalizeLegacyStaffPhone = (raw: string): string | null => {
+  let p = raw.replace(/[^0-9+]/g, '')
+  if (p.startsWith('0') && p.length === 10) p = '+41' + p.substring(1)
+  else if (p.startsWith('41') && p.length === 11) p = '+' + p
+  else if (p.startsWith('0041') && p.length === 13) p = '+' + p.slice(2)
+  return /^\+41[0-9]{9}$/.test(p) ? p : null
+}
+
+const runPhoneCheck = async (val: string) => {
+  const normalized = normalizeLegacyStaffPhone(val)
+  if (!normalized) {
+    phoneCheck.value = val.trim().length >= 9 ? 'invalid' : 'idle'
+    return
+  }
+  const tid = invitation.value?.tenant_id
+  if (!tid) { phoneCheck.value = 'idle'; return }
+  phoneCheck.value = 'checking'
+  try {
+    const res = await $fetch<{ exists: boolean }>('/api/auth/check-phone-exists', {
+      method: 'POST',
+      body: { phone: normalized, tenantId: tid },
+    })
+    phoneCheck.value = res.exists ? 'taken' : 'available'
+  } catch {
+    phoneCheck.value = 'error'
+  }
+}
+
+const checkPhone = (val: string) => {
+  if (phoneDebounce) clearTimeout(phoneDebounce)
+  void runPhoneCheck(val)
+}
+
+const onPhoneInput = (val: string) => {
+  phoneCheck.value = 'idle'
+  if (phoneDebounce) clearTimeout(phoneDebounce)
+  if (val.replace(/[^0-9]/g, '').length < 9) return
+  phoneCheck.value = 'checking'
+  phoneDebounce = setTimeout(() => { void runPhoneCheck(val) }, 700)
+}
 const availableCategories = ref<any[]>([])
 const selectedCategories = ref<string[]>([])
 const licenseFrontFile = ref<File | null>(null)
@@ -480,7 +539,8 @@ const canSubmit = computed(() => {
   return passwordIsValid.value && 
          password.value === confirmPassword.value &&
          password.value.length > 0 &&
-         emailCheck.value === 'available'
+         emailCheck.value === 'available' &&
+         (phoneCheck.value === 'available' || (!phone.value.trim() && phoneCheck.value === 'idle'))
 })
 
 // Load invitation
@@ -521,6 +581,7 @@ const loadInvitation = async () => {
     email.value = isPlaceholderEmail ? '' : (data.email || '')
     if (email.value) onEmailInput(email.value)
     phone.value = data.phone || ''
+    if (phone.value) checkPhone(phone.value)
     logger.debug('✅ Invitation loaded:', data)
 
     // Load categories if business type is driving_school

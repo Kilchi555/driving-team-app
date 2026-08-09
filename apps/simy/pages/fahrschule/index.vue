@@ -21,8 +21,8 @@
           Für Fahrschulen
         </div>
 
-        <h1 class="text-5xl md:text-6xl font-black text-gray-900 mb-6 leading-[1.1] tracking-tight">
-          Fahrschulsoftware für<br />
+        <h1 class="text-4xl sm:text-5xl md:text-6xl font-black text-gray-900 mb-6 leading-[1.15] tracking-tight">
+          Fahrschul&shy;software für<br />
           <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
             die Schweiz
           </span>

@@ -1020,3 +1020,16 @@ export const VERTICALS: SimyVertical[] = [
 export function getVertical(slug: string) {
   return VERTICALS.find((v) => v.slug === slug)
 }
+
+/**
+ * Map a marketing-site path to the tenant-register `?type=` code.
+ * Used so Nav/Footer CTAs keep the industry context (e.g. /fahrschule → driving_school).
+ */
+export function businessTypeFromPath(path: string): string | undefined {
+  const p = (path || '/').split('?')[0].replace(/\/+$/, '') || '/'
+  if (p === '/fahrschule' || p.startsWith('/fahrschule/')) return 'driving_school'
+  for (const v of VERTICALS) {
+    if (p === `/${v.slug}` || p.startsWith(`/${v.slug}/`)) return v.businessType
+  }
+  return undefined
+}
