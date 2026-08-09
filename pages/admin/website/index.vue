@@ -8,9 +8,17 @@
         <p class="text-gray-500 text-sm mt-0.5">Leads, Anfragen und Conversions deiner Website</p>
       </div>
       <div class="flex gap-3">
+        <NuxtLink to="/admin/website/editor"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-600 text-gray-700 hover:bg-gray-50 transition-colors">
+          Inhalte bearbeiten
+        </NuxtLink>
+        <NuxtLink to="/admin/website/addons"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-600 text-gray-700 hover:bg-gray-50 transition-colors">
+          Add-on Seiten
+        </NuxtLink>
         <NuxtLink to="/admin/website/setup"
           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-600 text-gray-700 hover:bg-gray-50 transition-colors">
-          ⚙️ Inhalte bearbeiten
+          Neu generieren
         </NuxtLink>
         <NuxtLink to="/admin/website-analytics"
           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-600 hover:opacity-90 transition-colors"

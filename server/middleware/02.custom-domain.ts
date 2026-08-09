@@ -40,14 +40,15 @@ export default defineEventHandler(async (event) => {
 
   const path = getRequestURL(event).pathname || '/'
 
-  // Never rewrite API / assets / Nuxt internals
+  // Never rewrite API / assets / Nuxt internals / SEO surfaces
   if (
     path.startsWith('/api/') ||
     path.startsWith('/_nuxt/') ||
     path.startsWith('/__nuxt') ||
     path.startsWith('/_vercel') ||
     path.startsWith('/favicon') ||
-    path.startsWith('/simy-')
+    path.startsWith('/simy-') ||
+    path.startsWith('/fonts/')
   ) {
     return
   }
@@ -75,6 +76,32 @@ export default defineEventHandler(async (event) => {
     const url = getRequestURL(event)
     event.node.req.url = `/s/${encodeURIComponent(site.subdomain)}${url.search || ''}`
     return
+  }
+
+  // Map /{page-slug} on custom domain → /s/{subdomain}/{page-slug}
+  // Keep SEO files at root (handled by server/routes/*)
+  if (
+    path === '/robots.txt' ||
+    path === '/sitemap.xml' ||
+    path === '/llms.txt' ||
+    path.startsWith('/booking') ||
+    path.startsWith('/admin')
+  ) {
+    return
+  }
+
+  if (
+    !path.startsWith('/s/') &&
+    path !== '/robots.txt' &&
+    path !== '/sitemap.xml' &&
+    path !== '/llms.txt'
+  ) {
+    const url = getRequestURL(event)
+    const clean = path.replace(/^\//, '').split('/')[0]
+    if (clean) {
+      event.node.req.url = `/s/${encodeURIComponent(site.subdomain)}/${encodeURIComponent(clean)}${url.search || ''}`
+      return
+    }
   }
 
   // Allow /s/{own-subdomain} on custom domain; redirect strangers to /

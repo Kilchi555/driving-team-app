@@ -139,6 +139,7 @@
               :original="formData.bio"
               content-type="bio"
               optimization-type="seo"
+              :formal-address="formData.formal_address"
               @apply="formData.bio = $event"
             />
           </div>
@@ -193,6 +194,43 @@
                   />
                 </label>
               </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold mb-3">Anrede auf der Website</label>
+            <p class="text-xs text-gray-500 mb-3">
+              Wie sprichst du Kunden auf der öffentlichen Seite an?
+            </p>
+            <div class="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                class="rounded-lg border px-4 py-3 text-left transition"
+                :class="
+                  formData.formal_address === 'sie'
+                    ? 'border-transparent text-white'
+                    : 'border-gray-300 hover:bg-gray-50'
+                "
+                :style="formData.formal_address === 'sie' ? { background: primaryColor } : {}"
+                @click="formData.formal_address = 'sie'"
+              >
+                <span class="block font-semibold text-sm">Sie</span>
+                <span class="block text-xs opacity-80 mt-0.5">Formell · Standard</span>
+              </button>
+              <button
+                type="button"
+                class="rounded-lg border px-4 py-3 text-left transition"
+                :class="
+                  formData.formal_address === 'du'
+                    ? 'border-transparent text-white'
+                    : 'border-gray-300 hover:bg-gray-50'
+                "
+                :style="formData.formal_address === 'du' ? { background: primaryColor } : {}"
+                @click="formData.formal_address = 'du'"
+              >
+                <span class="block font-semibold text-sm">Du</span>
+                <span class="block text-xs opacity-80 mt-0.5">Locker · persönlich</span>
+              </button>
             </div>
           </div>
 
@@ -257,6 +295,7 @@
                 :original="serviceDescriptions[service.id]"
                 content-type="service_description"
                 optimization-type="conversion"
+                :formal-address="formData.formal_address"
                 @apply="serviceDescriptions[service.id] = $event"
               />
             </div>
@@ -497,6 +536,7 @@
               :original="formData.seo_title"
               content-type="seo_title"
               optimization-type="seo"
+              :formal-address="formData.formal_address"
               @apply="formData.seo_title = $event"
             />
           </div>
@@ -518,6 +558,7 @@
               :original="formData.seo_description"
               content-type="seo_description"
               optimization-type="seo"
+              :formal-address="formData.formal_address"
               @apply="formData.seo_description = $event"
             />
           </div>
@@ -536,6 +577,7 @@
               :original="formData.seo_keywords"
               content-type="keywords"
               optimization-type="seo"
+              :formal-address="formData.formal_address"
               @apply="formData.seo_keywords = $event"
             />
           </div>
@@ -572,14 +614,22 @@
           >
             Weiter →
           </button>
-          <button
-            v-else
-            @click="saveWebsite"
-            :disabled="savingLoading"
-            class="px-8 py-2 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 disabled:opacity-50 transition"
-          >
-            {{ savingLoading ? '⏳ Speichern...' : '✅ Fertig!' }}
-          </button>
+          <template v-else>
+            <button
+              @click="saveWebsite(false)"
+              :disabled="savingLoading"
+              class="px-6 py-2 border border-gray-300 text-gray-800 font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition"
+            >
+              {{ savingLoading ? '…' : 'Als Entwurf' }}
+            </button>
+            <button
+              @click="saveWebsite(true)"
+              :disabled="savingLoading"
+              class="px-8 py-2 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 disabled:opacity-50 transition"
+            >
+              {{ savingLoading ? '⏳ Speichern...' : 'Veröffentlichen' }}
+            </button>
+          </template>
         </div>
       </div>
     </div>
@@ -614,6 +664,7 @@ const steps = [
 const formData = ref({
   name: '',
   bio: '',
+  formal_address: 'sie' as 'sie' | 'du',
   specializations: [] as string[],
   address: '',
   phone: '',
@@ -802,7 +853,7 @@ const handleAssetUpload = async (event: Event, kind: 'logo' | 'hero') => {
   }
 }
 
-const saveWebsite = async () => {
+const saveWebsite = async (publish = true) => {
   savingLoading.value = true
   try {
     // Ensure website row exists
@@ -817,15 +868,19 @@ const saveWebsite = async () => {
         services: appServices.value,
         testimonials: topTestimonials.value,
         stats: stats.value,
-        publish: true,
+        publish,
       },
     })
 
-    resultUrl.value = result?.live_url || result?.preview_url || ''
-    if (resultUrl.value) {
-      await navigateTo(result.preview_url || result.live_url)
+    resultUrl.value = result?.preview_url || result?.live_url || ''
+    if (publish) {
+      await navigateTo('/admin/website/editor')
+    } else if (result?.preview_url) {
+      await navigateTo(result.preview_url)
+    } else if (resultUrl.value) {
+      await navigateTo(resultUrl.value)
     } else {
-      alert('Website gespeichert.')
+      alert(publish ? 'Website veröffentlicht.' : 'Entwurf gespeichert.')
     }
   } catch (error: any) {
     alert('Fehler beim Speichern: ' + (error?.data?.statusMessage || error.message))
@@ -870,6 +925,9 @@ onMounted(async () => {
     if (data.suggestions?.seo_title) formData.value.seo_title = data.suggestions.seo_title
     if (data.suggestions?.seo_description) formData.value.seo_description = data.suggestions.seo_description
     if (data.suggestions?.seo_keywords) formData.value.seo_keywords = data.suggestions.seo_keywords
+    if (data.suggestions?.formal_address === 'du' || data.suggestions?.formal_address === 'sie') {
+      formData.value.formal_address = data.suggestions.formal_address
+    }
 
     await loadCustomDomain()
   } catch (error: any) {

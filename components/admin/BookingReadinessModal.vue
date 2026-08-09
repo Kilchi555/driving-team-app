@@ -64,7 +64,7 @@
             <template v-if="result.ready">
               ✓ Buchungsseite würde Termine anzeigen
               <span class="font-normal">
-                — {{ result.slotsFound }}+ freie Slot(s) in den nächsten {{ result.daysChecked }} Tagen
+                — {{ result.slotsFound }} freie Slot(s) in den nächsten {{ result.daysChecked }} Tagen
               </span>
             </template>
             <template v-else-if="!result.allowOnlineBooking">

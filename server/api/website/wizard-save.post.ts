@@ -73,6 +73,7 @@ export default defineEventHandler(async (event) => {
       title: 'Home',
       slug: 'index',
       is_home: true,
+      page_type: 'home',
       blocks: [],
     })
   }
@@ -180,6 +181,7 @@ export default defineEventHandler(async (event) => {
     seo_title: body.seo_title,
     seo_description: body.seo_description,
     seo_keywords: body.seo_keywords,
+    formal_address: body.formal_address === 'du' ? 'du' : 'sie',
     services,
     testimonials,
     stats: body.stats || undefined,
@@ -187,21 +189,8 @@ export default defineEventHandler(async (event) => {
     siteUrl,
   })
 
-  // Replace content blocks
-  await supabase.from('website_content_blocks').delete().eq('page_id', homePage.id)
-
-  const blockRows = landing.blocks.map((block, index) => ({
-    page_id: homePage.id,
-    block_type: block.type,
-    block_order: index,
-    content: block.content,
-  }))
-  if (blockRows.length) {
-    const { error: blocksError } = await supabase.from('website_content_blocks').insert(blockRows)
-    if (blocksError) {
-      throw createError({ statusCode: 500, statusMessage: blocksError.message })
-    }
-  }
+  // Source of truth for the public renderer is website_pages.blocks (JSON payload).
+  // website_content_blocks is legacy/unused by /s/[subdomain] — do not dual-write.
 
   const now = new Date().toISOString()
   const { error: pageError } = await supabase
@@ -243,13 +232,41 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: websiteError.message })
   }
 
+  const previewUrl = `${siteUrl}?preview=1`
+  const liveUrl =
+    website.custom_domain_verified && website.custom_domain
+      ? `https://${website.custom_domain}`
+      : siteUrl
+
+  if (publish) {
+    await supabase
+      .from('tenants')
+      .update({ website_status: 'live' })
+      .eq('id', user.tenant_id)
+
+    const { notifySuperadminsWebsitePublished } = await import('~/server/utils/website-publish-notify')
+    await notifySuperadminsWebsitePublished({
+      tenantId: user.tenant_id,
+      tenantName: tenant.name || website.subdomain,
+      tenantSlug: tenant.slug || website.subdomain,
+      subdomain: website.subdomain,
+      liveUrl,
+      previewUrl,
+    })
+  } else {
+    await supabase
+      .from('tenants')
+      .update({ website_status: 'draft' })
+      .eq('id', user.tenant_id)
+  }
+
   return {
     success: true,
     message: publish ? 'Website veröffentlicht' : 'Website gespeichert',
     website_id: website.id,
     subdomain: website.subdomain,
-    preview_url: `${siteUrl}?preview=1`,
-    live_url: siteUrl,
+    preview_url: previewUrl,
+    live_url: liveUrl,
     published: publish,
   }
 })

@@ -481,53 +481,238 @@
       <div class="admin-modal bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="px-6 py-4 border-b border-gray-200">
           <h3 class="text-lg font-semibold text-gray-900">
-            <span v-if="newUser.role === 'staff'">👨‍🏫 Neuen {{ t.staff }} hinzufügen</span>
-            <span v-else-if="newUser.role === 'sub_admin'">🔧 Neuen Sub-Admin hinzufügen</span>
-            <span v-else>👤 Neuen Benutzer hinzufügen</span>
+            <span v-if="newUser.role === 'staff'">Neuen {{ t.staff }} hinzufügen</span>
+            <span v-else-if="newUser.role === 'sub_admin'">Neuen Sub-Admin hinzufügen</span>
+            <span v-else-if="newUser.role === 'admin'">Neuen Admin hinzufügen</span>
+            <span v-else>Neuen {{ t.client }} hinzufügen</span>
           </h3>
         </div>
         
         <form @submit.prevent="createUser" class="px-6 py-4 space-y-4">
-          <!-- Role Selection - FIRST (Custom Dropdown) -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Rolle *</label>
-            <div class="relative">
-              <button
-                type="button"
-                @click="showRoleDropdown = !showRoleDropdown"
-                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 bg-gray-700 text-white text-left flex justify-between items-center"
-              >
-                <span v-if="newUser.role">
-                  <span v-if="newUser.role === 'staff'">👨‍🏫 {{ t.staff }}</span>
-                  <span v-else-if="newUser.role === 'sub_admin'">🔧 Sub-Admin</span>
+          <!-- Staff: invitation only -->
+          <div v-if="newUser.role === 'staff'" class="rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-900 space-y-3">
+            <p class="font-medium">{{ t.staff }} per Einladung hinzufügen</p>
+            <p class="text-xs text-violet-800/80">
+              Kein Passwort setzen — der/die {{ t.staff }} erhält einen Registrierungslink und richtet das Konto selbst ein.
+            </p>
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700"
+              @click="openStaffInviteFromCreateModal"
+            >
+              Zur Einladung
+            </button>
+          </div>
+
+          <!-- Client: Onboarding-Toggle zuerst; Felder je nach Toggle -->
+          <div v-else-if="newUser.role === 'client'" class="space-y-4">
+            <div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 space-y-2">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input
+                  v-model="sendOnboardingInvite"
+                  type="checkbox"
+                  class="mt-1 rounded border-gray-300"
+                />
+                <span class="text-sm text-gray-800">
+                  <span class="font-medium">Onboarding-Link senden</span>
+                  <span class="block text-xs text-gray-500 mt-0.5">
+                    <template v-if="sendOnboardingInvite">
+                      Ohne Passwort anlegen. Link per
+                      <template v-if="bookingPolicy.onboarding_sms_enabled">SMS</template>
+                      <template v-if="bookingPolicy.onboarding_sms_enabled && bookingPolicy.onboarding_email_enabled"> / </template>
+                      <template v-if="bookingPolicy.onboarding_email_enabled">E-Mail</template>
+                      <template v-if="!bookingPolicy.onboarding_sms_enabled && !bookingPolicy.onboarding_email_enabled">
+                        (aktuell in den Einstellungen aus)
+                      </template>
+                      wenn aktiviert.
+                    </template>
+                    <template v-else>
+                      Nur speichern — alle Felder optional, du entscheidest was du ausfüllst.
+                    </template>
+                  </span>
                 </span>
-                <span v-else class="text-gray-400">Rolle wählen</span>
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </button>
-              
-              <!-- Dropdown Options - Tab-abhängig -->
-              <div v-if="showRoleDropdown" class="absolute top-full left-0 right-0 mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-10">
-                <div
-                  v-for="role in availableRolesForTab"
-                  :key="role"
-                  @click="selectRole(role)"
-                  class="px-3 py-2 text-white hover:bg-gray-600 cursor-pointer"
-                  :class="{ 'rounded-t-lg': role === availableRolesForTab[0], 'rounded-b-lg': role === availableRolesForTab[availableRolesForTab.length-1] }"
+              </label>
+              <p class="text-xs text-gray-400 pl-7">
+                Kanäle unter Profil → Buchung &amp; Onboarding.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Vorname<span v-if="requireClientField('first_name')" class="text-red-500"> *</span>
+                </label>
+                <input
+                  v-model="newUser.first_name"
+                  type="text"
+                  :required="requireClientField('first_name')"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                  placeholder="Max"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Nachname<span v-if="requireClientField('last_name')" class="text-red-500"> *</span>
+                </label>
+                <input
+                  v-model="newUser.last_name"
+                  type="text"
+                  :required="requireClientField('last_name')"
+                  class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                  placeholder="Mustermann"
+                />
+              </div>
+            </div>
+
+            <div v-if="showClientField('email')">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                E-Mail
+                <span v-if="requireClientField('email')" class="text-red-500"> *</span>
+                <span v-else class="text-gray-400 font-normal">(oder Telefon)</span>
+              </label>
+              <input
+                v-model="newUser.email"
+                type="email"
+                class="tenant-focus w-full px-3 py-2 border rounded-lg focus:ring-2"
+                :class="clientContactBorderClass(clientEmailCheck.status)"
+                placeholder="max.mustermann@example.com"
+                @input="onClientEmailInput"
+                @blur="checkClientContact('email')"
+              />
+              <p
+                v-if="clientEmailCheck.message"
+                class="text-xs mt-1"
+                :class="clientContactMsgClass(clientEmailCheck.status)"
+              >
+                {{ clientEmailCheck.message }}
+                <button
+                  v-if="clientEmailCheck.existingUserId"
+                  type="button"
+                  class="ml-1 underline font-medium"
+                  @click="navigateToUserDetails(clientEmailCheck.existingUserId)"
                 >
-                  <span v-if="role === 'client'">👤 Kunde</span>
-                  <span v-else-if="role === 'staff'">👨‍🏫 {{ t.staff }}</span>
-                  <span v-else-if="role === 'admin'">👑 Admin</span>
-                  <span v-else-if="role === 'sub_admin'">🔧 Sub-Admin</span>
+                  Profil öffnen
+                </button>
+              </p>
+            </div>
+
+            <div v-if="showClientField('phone')">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Telefon
+                <span v-if="requireClientField('phone')" class="text-red-500"> *</span>
+                <span v-else class="text-gray-400 font-normal">(oder E-Mail)</span>
+              </label>
+              <input
+                v-model="newUser.phone"
+                type="tel"
+                class="tenant-focus w-full px-3 py-2 border rounded-lg focus:ring-2"
+                :class="clientContactBorderClass(clientPhoneCheck.status)"
+                placeholder="+41 79 123 45 67"
+                @input="onClientPhoneInput"
+                @blur="onClientPhoneBlur"
+              />
+              <p
+                v-if="clientPhoneCheck.message"
+                class="text-xs mt-1"
+                :class="clientContactMsgClass(clientPhoneCheck.status)"
+              >
+                {{ clientPhoneCheck.message }}
+                <button
+                  v-if="clientPhoneCheck.existingUserId"
+                  type="button"
+                  class="ml-1 underline font-medium"
+                  @click="navigateToUserDetails(clientPhoneCheck.existingUserId)"
+                >
+                  Profil öffnen
+                </button>
+              </p>
+            </div>
+
+            <div v-if="showClientField('birthdate')">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Geburtsdatum
+                <span v-if="requireClientField('birthdate')" class="text-red-500"> *</span>
+                <span v-else class="text-gray-400 font-normal">(opt.)</span>
+              </label>
+              <input
+                v-model="newUser.birthdate"
+                type="date"
+                :required="requireClientField('birthdate')"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+              />
+            </div>
+
+            <template v-if="showClientField('street') || showClientField('zip') || showClientField('city')">
+              <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Strasse<span v-if="requireClientField('street')" class="text-red-500"> *</span>
+                  </label>
+                  <input
+                    v-model="newUser.street"
+                    type="text"
+                    :required="requireClientField('street')"
+                    class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                    placeholder="Hauptstrasse"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Nr.</label>
+                  <input
+                    v-model="newUser.street_nr"
+                    type="text"
+                    class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                    placeholder="12"
+                  />
                 </div>
               </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    PLZ<span v-if="requireClientField('zip')" class="text-red-500"> *</span>
+                  </label>
+                  <input
+                    v-model="newUser.zip"
+                    type="text"
+                    maxlength="4"
+                    :required="requireClientField('zip')"
+                    class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                    placeholder="8000"
+                  />
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Ort<span v-if="requireClientField('city')" class="text-red-500"> *</span>
+                  </label>
+                  <input
+                    v-model="newUser.city"
+                    type="text"
+                    :required="requireClientField('city')"
+                    class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                    placeholder="Zürich"
+                  />
+                </div>
+              </div>
+            </template>
+
+            <div v-if="showClientField('profession')">
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Beruf
+                <span v-if="requireClientField('profession')" class="text-red-500"> *</span>
+                <span v-else class="text-gray-400 font-normal">(opt.)</span>
+              </label>
+              <input
+                v-model="newUser.profession"
+                type="text"
+                :required="requireClientField('profession')"
+                class="tenant-focus w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2"
+                placeholder="Kaufmann/Kauffrau"
+              />
             </div>
           </div>
 
-          <!-- Weitere Felder nur anzeigen wenn Rolle ausgewählt -->
-          <div v-if="newUser.role" class="space-y-4">
-            <!-- Name -->
+          <!-- Admin / andere Rollen -->
+          <div v-else-if="newUser.role" class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Vorname *</label>
@@ -551,7 +736,6 @@
             </div>
           </div>
 
-          <!-- Email -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">E-Mail *</label>
             <input
@@ -563,7 +747,6 @@
             />
           </div>
 
-          <!-- Phone -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Telefon *</label>
             <input
@@ -771,8 +954,8 @@
             </div>
           </div>
 
-          <!-- Passwort (Entwicklungsversion) -->
-          <div>
+          <!-- Sub-admin / other: keep password for now only if not staff/client -->
+          <div v-if="newUser.role === 'sub_admin' || newUser.role === 'admin'">
             <label class="block text-sm font-medium text-gray-700 mb-1">Passwort *</label>
             <input
               v-model="newUser.password"
@@ -787,7 +970,7 @@
           </div>
 
           <!-- Kategorien (nur für Fahrlehrer) -->
-          <div v-if="newUser.role === 'staff'">
+          <div v-if="newUser.role === 'staff'" class="hidden">
             <label class="block text-sm font-medium text-gray-700 mb-3">Unterrichtete Kategorien</label>
             <div class="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
               <div v-for="category in availableCategories" :key="category.code" 
@@ -847,12 +1030,14 @@
             </button>
             <button
               type="submit"
-              :disabled="isCreatingUser"
+              :disabled="isCreatingUser || newUser.role === 'staff' || clientContactBlocksSubmit"
               class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               :style="{ background: primaryColor }"
             >
               <span v-if="isCreatingUser">Erstelle...</span>
-              <span v-else-if="newUser.role === 'staff'">👨‍🏫 {{ t.staff }} erstellen</span>
+              <span v-else-if="newUser.role === 'client' && sendOnboardingInvite">Einladen &amp; speichern</span>
+              <span v-else-if="newUser.role === 'client'">Kunde erstellen</span>
+              <span v-else-if="newUser.role === 'staff'">Zur Einladung</span>
               <span v-else-if="newUser.role === 'sub_admin'">🔧 Sub-Admin erstellen</span>
               <span v-else>👤 Benutzer erstellen</span>
             </button>
@@ -1002,6 +1187,7 @@ const openCreateForCurrentTab = () => {
   if (activeTab.value === 'customers') newUser.value.role = 'client'
   else if (activeTab.value === 'staff') newUser.value.role = 'staff'
   else if (activeTab.value === 'admins') newUser.value.role = 'admin'
+  resetClientContactChecks()
   showCreateUserModal.value = true
 }
 
@@ -1119,6 +1305,155 @@ const isCreatingUser = ref(false)
 const createUserError = ref('')
 const createUserSuccess = ref('')
 const showRoleDropdown = ref(false)
+const sendOnboardingInvite = ref(true)
+const bookingPolicy = ref({
+  student_required_fields: ['first_name', 'last_name', 'phone'] as string[],
+  student_optional_fields: [] as string[],
+  onboarding_sms_enabled: true,
+  onboarding_email_enabled: false,
+  confirmation_email_enabled: true,
+})
+
+const isClientFieldRequired = (key: string) =>
+  bookingPolicy.value.student_required_fields.includes(key)
+const isClientFieldVisible = (key: string) =>
+  bookingPolicy.value.student_required_fields.includes(key) ||
+  bookingPolicy.value.student_optional_fields.includes(key)
+
+/** Invite ON: policy visibility. Invite OFF: show all fields so admin can fill what they want. */
+const showClientField = (key: string) => {
+  if (!sendOnboardingInvite.value) return true
+  if (key === 'email') {
+    return isClientFieldVisible('email') || bookingPolicy.value.onboarding_email_enabled || bookingPolicy.value.confirmation_email_enabled
+  }
+  if (key === 'phone') {
+    return isClientFieldVisible('phone') || bookingPolicy.value.onboarding_sms_enabled
+  }
+  return isClientFieldVisible(key)
+}
+/** Invite ON: policy + onboarding channel rules. Invite OFF: never required. */
+const requireClientField = (key: string) => {
+  if (!sendOnboardingInvite.value) return false
+  if (key === 'email') {
+    return isClientFieldRequired('email') || (bookingPolicy.value.onboarding_email_enabled && !bookingPolicy.value.onboarding_sms_enabled)
+  }
+  if (key === 'phone') {
+    return isClientFieldRequired('phone') || bookingPolicy.value.onboarding_sms_enabled
+  }
+  return isClientFieldRequired(key)
+}
+
+type ClientContactStatus = 'idle' | 'checking' | 'invalid' | 'available' | 'taken' | 'error'
+const clientEmailCheck = ref<{ status: ClientContactStatus; message: string; existingUserId: string | null }>({
+  status: 'idle', message: '', existingUserId: null,
+})
+const clientPhoneCheck = ref<{ status: ClientContactStatus; message: string; existingUserId: string | null }>({
+  status: 'idle', message: '', existingUserId: null,
+})
+let clientEmailDebounce: ReturnType<typeof setTimeout> | null = null
+let clientPhoneDebounce: ReturnType<typeof setTimeout> | null = null
+
+const clientContactBlocksSubmit = computed(() =>
+  newUser.value.role === 'client' && (
+    clientEmailCheck.value.status === 'taken' ||
+    clientEmailCheck.value.status === 'invalid' ||
+    clientPhoneCheck.value.status === 'taken' ||
+    clientPhoneCheck.value.status === 'invalid' ||
+    clientEmailCheck.value.status === 'checking' ||
+    clientPhoneCheck.value.status === 'checking'
+  )
+)
+
+const clientContactBorderClass = (status: ClientContactStatus) => {
+  if (status === 'taken' || status === 'invalid') return 'border-red-300'
+  if (status === 'available') return 'border-emerald-300'
+  if (status === 'checking') return 'border-amber-300'
+  return 'border-gray-300'
+}
+const clientContactMsgClass = (status: ClientContactStatus) => {
+  if (status === 'taken' || status === 'invalid') return 'text-red-600'
+  if (status === 'available') return 'text-emerald-600'
+  if (status === 'checking') return 'text-amber-600'
+  return 'text-gray-500'
+}
+
+const resetClientContactChecks = () => {
+  clientEmailCheck.value = { status: 'idle', message: '', existingUserId: null }
+  clientPhoneCheck.value = { status: 'idle', message: '', existingUserId: null }
+}
+
+const checkClientContact = async (field: 'email' | 'phone' | 'both' = 'both') => {
+  if (newUser.value.role !== 'client') return
+
+  const { getSupabase } = await import('~/utils/supabase')
+  const { data: { session } } = await getSupabase().auth.getSession()
+  if (!session?.access_token) return
+
+  const body: Record<string, string> = {}
+  if (field === 'email' || field === 'both') body.email = newUser.value.email || ''
+  if (field === 'phone' || field === 'both') body.phone = newUser.value.phone || ''
+  if (body.email === undefined && body.phone === undefined) return
+
+  if (field === 'email' || field === 'both') {
+    if ((newUser.value.email || '').trim()) clientEmailCheck.value = { status: 'checking', message: 'Prüfe…', existingUserId: null }
+    else clientEmailCheck.value = { status: 'idle', message: '', existingUserId: null }
+  }
+  if (field === 'phone' || field === 'both') {
+    if ((newUser.value.phone || '').trim()) clientPhoneCheck.value = { status: 'checking', message: 'Prüfe…', existingUserId: null }
+    else clientPhoneCheck.value = { status: 'idle', message: '', existingUserId: null }
+  }
+
+  try {
+    const res = await $fetch<{
+      email?: { status: ClientContactStatus; message?: string; existingUser?: { id: string } }
+      phone?: { status: ClientContactStatus; message?: string; existingUser?: { id: string } }
+    }>('/api/admin/check-client-contact', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body,
+    })
+
+    if (res.email) {
+      clientEmailCheck.value = {
+        status: res.email.status,
+        message: res.email.message || '',
+        existingUserId: res.email.existingUser?.id || null,
+      }
+    }
+    if (res.phone) {
+      clientPhoneCheck.value = {
+        status: res.phone.status,
+        message: res.phone.message || '',
+        existingUserId: res.phone.existingUser?.id || null,
+      }
+    }
+  } catch {
+    if (field === 'email' || field === 'both') {
+      clientEmailCheck.value = { status: 'error', message: '', existingUserId: null }
+    }
+    if (field === 'phone' || field === 'both') {
+      clientPhoneCheck.value = { status: 'error', message: '', existingUserId: null }
+    }
+  }
+}
+
+const onClientEmailInput = () => {
+  if (clientEmailDebounce) clearTimeout(clientEmailDebounce)
+  clientEmailCheck.value = { status: 'idle', message: '', existingUserId: null }
+  clientEmailDebounce = setTimeout(() => checkClientContact('email'), 450)
+}
+
+const onClientPhoneInput = () => {
+  if (clientPhoneDebounce) clearTimeout(clientPhoneDebounce)
+  clientPhoneCheck.value = { status: 'idle', message: '', existingUserId: null }
+  clientPhoneDebounce = setTimeout(() => checkClientContact('phone'), 450)
+}
+
+const onClientPhoneBlur = () => {
+  if (newUser.value.phone) newUser.value.phone = normalizeSwissPhone(newUser.value.phone)
+  checkClientContact('phone')
+}
+
 const newUser = ref({
   role: '',
   first_name: '',
@@ -1128,15 +1463,59 @@ const newUser = ref({
   password: '',
   admin_level: '',
   categories: [] as string[],
-  // Zusätzliche Felder für Fahrlehrer
   birthdate: '',
   street: '',
   street_nr: '',
   zip: '',
   city: '',
+  profession: '',
   licenseFrontFile: null as File | null,
   licenseBackFile: null as File | null
 })
+
+const validateClientPolicyFields = () => {
+  // Soft minimum always: name + contact (API braucht E-Mail oder Telefon)
+  if (!newUser.value.first_name?.trim() && !newUser.value.last_name?.trim()) {
+    throw new Error('Bitte Vor- oder Nachname angeben')
+  }
+  if (!newUser.value.email?.trim() && !newUser.value.phone?.trim()) {
+    throw new Error('Bitte E-Mail oder Telefonnummer angeben')
+  }
+  // Invite OFF: no policy Pflichtfelder — admin decides
+  if (!sendOnboardingInvite.value) return
+
+  const required = bookingPolicy.value.student_required_fields
+  const smsOn = bookingPolicy.value.onboarding_sms_enabled
+  const emailOn = bookingPolicy.value.onboarding_email_enabled
+
+  if (required.includes('first_name') && !newUser.value.first_name?.trim()) {
+    throw new Error('Vorname ist erforderlich')
+  }
+  if (required.includes('last_name') && !newUser.value.last_name?.trim()) {
+    throw new Error('Nachname ist erforderlich')
+  }
+  if ((required.includes('phone') || smsOn) && (!newUser.value.phone?.trim() || normalizeSwissPhone(newUser.value.phone).replace(/\D/g, '').length < 10)) {
+    throw new Error('Telefonnummer ist erforderlich')
+  }
+  if ((required.includes('email') || (emailOn && !smsOn)) && !newUser.value.email?.trim()) {
+    throw new Error('E-Mail ist erforderlich')
+  }
+  if (required.includes('birthdate') && !newUser.value.birthdate) {
+    throw new Error('Geburtsdatum ist erforderlich')
+  }
+  if (required.includes('street') && !newUser.value.street?.trim()) {
+    throw new Error('Strasse ist erforderlich')
+  }
+  if (required.includes('zip') && !newUser.value.zip?.trim()) {
+    throw new Error('PLZ ist erforderlich')
+  }
+  if (required.includes('city') && !newUser.value.city?.trim()) {
+    throw new Error('Ort ist erforderlich')
+  }
+  if (required.includes('profession') && !newUser.value.profession?.trim()) {
+    throw new Error('Beruf ist erforderlich')
+  }
+}
 
 // Available categories for selection
 const availableCategories = ref<any[]>([])
@@ -1713,6 +2092,11 @@ const sendStaffInvitation = async () => {
 }
 
 // Create User Functions
+const openStaffInviteFromCreateModal = () => {
+  showCreateUserModal.value = false
+  showInviteStaffModal.value = true
+}
+
 const createUser = async () => {
   const clientRequestId = Math.random().toString(36).substr(2, 9)
   logger.debug(`🚀 [CLIENT-${clientRequestId}] Starting user creation for:`, newUser.value.email)
@@ -1722,17 +2106,107 @@ const createUser = async () => {
   createUserSuccess.value = ''
 
   try {
-    logger.debug(`👨‍🏫 [CLIENT-${clientRequestId}] Creating new user:`, newUser.value.email)
+    if (newUser.value.role === 'staff') {
+      openStaffInviteFromCreateModal()
+      return
+    }
 
-    // Get current user's tenant_id from auth store profile (loaded at login)
     const currentUser = authStore.user
     const tenantId = authStore.userProfile?.tenant_id
     if (!tenantId) {
       throw new Error('Kein Tenant zugewiesen')
     }
 
-    // 1. Validate password
-    if (newUser.value.password.length < 8) {
+    // ── Client: pending without password / auth ───────────────────────────
+    if (newUser.value.role === 'client') {
+      const email = (newUser.value.email?.trim() || '').toLowerCase()
+      const phone = normalizeSwissPhone(newUser.value.phone || '')
+      if (!email && !phone) {
+        throw new Error('Bitte E-Mail oder Telefon angeben')
+      }
+      validateClientPolicyFields()
+      if (clientContactBlocksSubmit.value) {
+        throw new Error('Bitte E-Mail oder Telefon korrigieren — Eintrag bereits vorhanden oder ungültig')
+      }
+
+      // Re-check right before create (race / skipped blur)
+      await checkClientContact('both')
+      if (clientContactBlocksSubmit.value) {
+        throw new Error(
+          clientEmailCheck.value.status === 'taken'
+            ? (clientEmailCheck.value.message || 'E-Mail bereits vorhanden')
+            : clientPhoneCheck.value.status === 'taken'
+              ? (clientPhoneCheck.value.message || 'Telefonnummer bereits vorhanden')
+              : 'Bitte E-Mail oder Telefon korrigieren'
+        )
+      }
+
+      const { getSupabase } = await import('~/utils/supabase')
+      const { data: { session } } = await getSupabase().auth.getSession()
+      if (!session?.access_token) throw new Error('Nicht eingeloggt')
+
+      const response = await $fetch<{
+        success: boolean
+        data?: any
+        inviteSent?: boolean
+        smsSuccess?: boolean
+        emailSuccess?: boolean
+      }>('/api/admin/add-student', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: {
+          first_name: newUser.value.first_name.trim(),
+          last_name: newUser.value.last_name.trim(),
+          email: email || undefined,
+          phone: phone || undefined,
+          birthdate: newUser.value.birthdate || undefined,
+          street: newUser.value.street?.trim() || undefined,
+          street_nr: newUser.value.street_nr?.trim() || undefined,
+          zip: newUser.value.zip?.trim() || undefined,
+          city: newUser.value.city?.trim() || undefined,
+          profession: newUser.value.profession?.trim() || undefined,
+          send_invite: sendOnboardingInvite.value,
+        },
+      })
+
+      if (!response.success) throw new Error('Fehler beim Erstellen des Kunden')
+
+      const inviteBits: string[] = []
+      if (response.smsSuccess) inviteBits.push('SMS')
+      if (response.emailSuccess) inviteBits.push('E-Mail')
+      createUserSuccess.value = inviteBits.length
+        ? `${t.value.client} erfasst — Onboarding per ${inviteBits.join(' / ')} gesendet`
+        : `${t.value.client} ${newUser.value.first_name} ${newUser.value.last_name} wurde erfasst (ohne Einladung)`
+
+      newUser.value = {
+        role: 'client',
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        password: '',
+        admin_level: '',
+        categories: [],
+        birthdate: '',
+        street: '',
+        street_nr: '',
+        zip: '',
+        city: '',
+        profession: '',
+        licenseFrontFile: null,
+        licenseBackFile: null,
+      }
+      resetClientContactChecks()
+      await loadUsers()
+      setTimeout(() => {
+        showCreateUserModal.value = false
+        createUserSuccess.value = ''
+      }, 2000)
+      return
+    }
+
+    // ── Admin / sub_admin: legacy password path ───────────────────────────
+    if (newUser.value.password.length < 12) {
       throw new Error('Passwort muss mindestens 12 Zeichen lang sein')
     }
     
@@ -1742,148 +2216,39 @@ const createUser = async () => {
       throw new Error('Passwort muss mindestens einen Großbuchstaben und eine Zahl enthalten')
     }
 
-    // 2. Validate required fields for staff
-    if (newUser.value.role === 'staff') {
-      if (!newUser.value.licenseFrontFile) {
-        throw new Error('Führerausweis Vorderseite ist erforderlich')
-      }
-      if (!newUser.value.licenseBackFile) {
-        throw new Error('Führerausweis Rückseite ist erforderlich')
-      }
-      if (!newUser.value.categories || newUser.value.categories.length === 0) {
-        throw new Error('Mindestens eine Kategorie muss ausgewählt werden')
-      }
-    }
-
-    // 3. Create user via server API (has service role key access)
-    logger.debug(`🔐 [CLIENT-${clientRequestId}] Creating user via server API...`)
-    
-    // TEMP DEBUG: Check if this is even called
-    logger.debug(`🧪 [CLIENT-${clientRequestId}] About to call server API with data:`, {
-      email: newUser.value.email,
-      role: newUser.value.role,
-      tenant_id: tenantId
-    })
-    
-    // TEMP: Use direct fetch to bypass any caching issues
-    logger.debug(`🌐 [CLIENT-${clientRequestId}] Using direct fetch to bypass cache...`)
-    
-    const response = await fetch('/api/admin/create-user', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: newUser.value.email,
-        password: newUser.value.password,
-        first_name: newUser.value.first_name,
-        last_name: newUser.value.last_name,
-        phone: newUser.value.phone,
-        role: newUser.value.role,
-        admin_level: newUser.value.admin_level,
-        tenant_id: tenantId,
-        created_by: currentUser?.id,
-        // Staff-specific fields
-        categories: newUser.value.role === 'staff' ? newUser.value.categories : null,
-        birthdate: newUser.value.role === 'staff' ? newUser.value.birthdate : null,
-        street: newUser.value.role === 'staff' ? newUser.value.street : null,
-        street_nr: newUser.value.role === 'staff' ? newUser.value.street_nr : null,
-        zip: newUser.value.role === 'staff' ? newUser.value.zip : null,
-        city: newUser.value.role === 'staff' ? newUser.value.city : null
-      })
-    })
-    
-    logger.debug(`📡 [CLIENT-${clientRequestId}] Response status:`, response.status)
-    logger.debug(`📡 [CLIENT-${clientRequestId}] Response ok:`, response.ok)
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`❌ [CLIENT-${clientRequestId}] Server response error:`, errorText)
-      throw new Error(`Server error: ${response.status} - ${errorText}`)
-    }
-    
-    const userApiResponse = await response.json()
-
-    if (!userApiResponse.success) {
-      throw new Error('Fehler beim Erstellen des Benutzers')
-    }
-
-    const createdUserId = userApiResponse.user.id
-    logger.debug('✅ User created via server API:', createdUserId)
-
-    // 4. Upload license files if provided (nur für Staff)
-    if (newUser.value.role === 'staff' && (newUser.value.licenseFrontFile || newUser.value.licenseBackFile)) {
-      try {
-        logger.debug(`📄 [CLIENT-${clientRequestId}] Uploading license files for user:`, createdUserId)
-
-        const formData = new FormData()
-        formData.append('userId', createdUserId)
-        
-        if (newUser.value.licenseFrontFile) {
-          formData.append('frontFile', newUser.value.licenseFrontFile)
-          logger.debug(`📎 [CLIENT-${clientRequestId}] Adding front file:`, newUser.value.licenseFrontFile.name)
-        }
-        
-        if (newUser.value.licenseBackFile) {
-          formData.append('backFile', newUser.value.licenseBackFile)
-          logger.debug(`📎 [CLIENT-${clientRequestId}] Adding back file:`, newUser.value.licenseBackFile.name)
-        }
-
-        const uploadResponse = await $fetch<{success: boolean, uploads: any}>('/api/admin/upload-license', {
-          method: 'POST',
-          body: formData
-        })
-
-        if (uploadResponse.success) {
-          logger.debug(`✅ [CLIENT-${clientRequestId}] License files uploaded successfully`)
-        } else {
-          console.warn(`⚠️ [CLIENT-${clientRequestId}] Upload response indicates failure:`, uploadResponse)
-        }
-
-      } catch (uploadError) {
-        console.error(`❌ [CLIENT-${clientRequestId}] License upload failed:`, uploadError)
-        // Continue anyway, don't fail user creation
-      }
-    } else {
-      logger.debug(`ℹ️ [CLIENT-${clientRequestId}] No license files to upload (role: ${newUser.value.role})`)
-    }
-
-    // 5. Success feedback
-    const roleLabel = newUser.value.role === 'staff' ? t.value.staff : 
-                     newUser.value.role === 'sub_admin' ? 'Sub-Admin' : 'Benutzer'
-    createUserSuccess.value = `${roleLabel} ${newUser.value.first_name} ${newUser.value.last_name} wurde erfolgreich erstellt!`
-    
-    // 6. Reset form
-    newUser.value = {
-      role: '',
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      password: '',
-      admin_level: '',
-      categories: [],
-      birthdate: '',
-      street: '',
-      street_nr: '',
-      zip: '',
-      city: '',
-      licenseFrontFile: null,
-      licenseBackFile: null
-    }
-
-    // 7. Reload users list
-    await loadUsers()
-
-    // 8. Close modal after short delay
-    setTimeout(() => {
-      showCreateUserModal.value = false
-      createUserSuccess.value = ''
-    }, 2000)
-
+    throw new Error('Bitte Admin über die Admin-Verwaltung anlegen. Kunden ohne Passwort; Staff per Einladung.')
   } catch (error: any) {
     console.error('❌ Error creating user:', error)
-    createUserError.value = error.message || 'Unbekannter Fehler beim Erstellen des Benutzers'
+    const msg = error?.data?.statusMessage || error?.statusMessage || error?.message
+    const existing = error?.data?.data?.existingUser || error?.data?.existingUser
+    const existingName = existing
+      ? [existing.first_name, existing.last_name].filter(Boolean).join(' ')
+      : ''
+    if (msg === 'DUPLICATE_PHONE') {
+      createUserError.value = existingName
+        ? `Telefonnummer bereits vorhanden (${existingName})`
+        : 'Telefonnummer bereits vorhanden'
+      if (existing?.id) {
+        clientPhoneCheck.value = {
+          status: 'taken',
+          message: createUserError.value,
+          existingUserId: existing.id,
+        }
+      }
+    } else if (msg === 'DUPLICATE_EMAIL') {
+      createUserError.value = existingName
+        ? `E-Mail bereits vorhanden (${existingName})`
+        : 'E-Mail bereits vorhanden'
+      if (existing?.id) {
+        clientEmailCheck.value = {
+          status: 'taken',
+          message: createUserError.value,
+          existingUserId: existing.id,
+        }
+      }
+    } else {
+      createUserError.value = msg || 'Unbekannter Fehler beim Erstellen des Benutzers'
+    }
   } finally {
     isCreatingUser.value = false
   }
@@ -1895,6 +2260,7 @@ const cancelCreateUser = () => {
   showRoleDropdown.value = false
   createUserError.value = ''
   createUserSuccess.value = ''
+  resetClientContactChecks()
   
   // Reset form
   newUser.value = {
@@ -1911,6 +2277,7 @@ const cancelCreateUser = () => {
     street_nr: '',
     zip: '',
     city: '',
+    profession: '',
     licenseFrontFile: null,
     licenseBackFile: null
   }
@@ -1956,6 +2323,22 @@ onMounted(async () => {
   // Original Ansicht laden
   await loadUsers()
   await loadCategories()
+  try {
+    const res = await $fetch<{ policy: typeof bookingPolicy.value }>('/api/admin/booking-policy')
+    if (res?.policy) {
+      bookingPolicy.value = {
+        student_required_fields: res.policy.student_required_fields?.length
+          ? res.policy.student_required_fields
+          : ['first_name', 'last_name', 'phone'],
+        student_optional_fields: res.policy.student_optional_fields || [],
+        onboarding_sms_enabled: res.policy.onboarding_sms_enabled !== false,
+        onboarding_email_enabled: res.policy.onboarding_email_enabled === true,
+        confirmation_email_enabled: res.policy.confirmation_email_enabled !== false,
+      }
+      sendOnboardingInvite.value =
+        bookingPolicy.value.onboarding_sms_enabled || bookingPolicy.value.onboarding_email_enabled
+    }
+  } catch { /* non-critical */ }
   document.addEventListener('click', closeRoleDropdown)
 })
 

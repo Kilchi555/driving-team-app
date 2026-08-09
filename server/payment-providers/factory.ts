@@ -35,6 +35,7 @@ export async function getPaymentProviderConfig(tenantId: string): Promise<Paymen
     const statusMessage: Record<string, string> = {
       not_started: 'Online-Zahlungen sind noch nicht eingerichtet. Bitte richte zuerst dein Wallee-Konto ein (Einstellungen → Zahlungen).',
       pending:     'Dein Antrag für Online-Zahlungen wird gerade bearbeitet. Wir melden uns sobald dein Konto aktiviert ist.',
+      skipped:     'Online-Zahlungen sind aktuell nicht eingerichtet. Du kannst sie jederzeit unter Einstellungen → Zahlungen aktivieren.',
       active:      'Online-Zahlungen sind vorübergehend deaktiviert. Du kannst sie in den Einstellungen wieder einschalten.',
     }
     const msg = statusMessage[tenant.wallee_onboarding_status as string]

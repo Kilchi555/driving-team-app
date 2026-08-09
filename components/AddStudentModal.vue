@@ -114,7 +114,8 @@
             <span>
               Mindestens Vor- oder Nachname erforderlich.
               <template v-if="bookingPolicy.onboarding_sms_enabled"> Telefonnummer für Onboarding-SMS erforderlich.</template>
-              <template v-else> Onboarding-SMS deaktiviert – keine Telefonnummer nötig.</template>
+              <template v-if="bookingPolicy.onboarding_email_enabled"> E-Mail für Onboarding-Link erforderlich, wenn SMS aus.</template>
+              <template v-if="!bookingPolicy.onboarding_sms_enabled && !bookingPolicy.onboarding_email_enabled"> Onboarding-Einladung deaktiviert.</template>
             </span>
           </div>
 
@@ -167,10 +168,10 @@
           </div>
 
           <!-- E-Mail -->
-          <div v-if="isFieldVisible('email') || bookingPolicy.confirmation_email_enabled">
+          <div v-if="isFieldVisible('email') || bookingPolicy.confirmation_email_enabled || bookingPolicy.onboarding_email_enabled">
             <label for="email" class="block text-xs font-medium text-gray-500 mb-1">
-              E-Mail<span v-if="isFieldRequired('email')" class="text-red-400 ml-0.5">*</span>
-              <span v-else class="text-gray-400 font-normal ml-1">(für Terminbestätigung)</span>
+              E-Mail<span v-if="isFieldRequired('email') || (bookingPolicy.onboarding_email_enabled && !bookingPolicy.onboarding_sms_enabled)" class="text-red-400 ml-0.5">*</span>
+              <span v-else class="text-gray-400 font-normal ml-1">(für Onboarding / Terminbestätigung)</span>
             </label>
             <input
               id="email"
@@ -319,7 +320,7 @@
                   <span class="opacity-0" style="animation: dot-bounce 1.2s ease-in-out infinite 400ms">.</span>
                 </span>
               </span>
-              <span v-else key="idle">{{ bookingPolicy.onboarding_sms_enabled ? 'Einladen & Speichern' : `${t.client} erstellen` }}</span>
+              <span v-else key="idle">{{ (bookingPolicy.onboarding_sms_enabled || bookingPolicy.onboarding_email_enabled) ? 'Einladen & Speichern' : `${t.client} erstellen` }}</span>
             </transition>
           </button>
         </div>
@@ -348,6 +349,7 @@ const bookingPolicy = ref({
   student_required_fields: ['first_name', 'last_name', 'phone'] as string[],
   student_optional_fields: [] as string[],
   onboarding_sms_enabled: true,
+  onboarding_email_enabled: false,
   confirmation_email_enabled: true,
 })
 
@@ -472,12 +474,16 @@ const errors = ref<Record<string, string>>({})
 const isFormValid = computed(() => {
   const required = bookingPolicy.value.student_required_fields
   const smsEnabled = bookingPolicy.value.onboarding_sms_enabled
+  const emailEnabled = bookingPolicy.value.onboarding_email_enabled
 
   const hasName = form.value.first_name.trim() || form.value.last_name.trim()
   if (!hasName) return false
 
   // Phone required when SMS is enabled
   if (smsEnabled && (!form.value.phone.trim() || form.value.phone.trim().length < 10)) return false
+
+  // Email required when onboarding email is on and SMS is off
+  if (emailEnabled && !smsEnabled && !form.value.email.trim()) return false
 
   // Without SMS: need at least phone or email
   if (!smsEnabled && !form.value.phone.trim() && !form.value.email.trim()) return false
@@ -600,6 +606,7 @@ const submitForm = async () => {
       last_name: form.value.last_name.trim() || '',
       phone: form.value.phone.trim() || '',
       skip_sms: !bookingPolicy.value.onboarding_sms_enabled,
+      skip_email: !bookingPolicy.value.onboarding_email_enabled,
     }
 
     // Optional fields — send only when filled
@@ -631,10 +638,17 @@ const submitForm = async () => {
     logger.debug('🔗 Onboarding Link:', newStudent?.onboardingLink)
     
     const smsEnabled = bookingPolicy.value.onboarding_sms_enabled
+    const emailEnabled = bookingPolicy.value.onboarding_email_enabled
     const hasEmail = !!form.value.email.trim()
+    const inviteBits: string[] = []
+    if (smsEnabled && form.value.phone && newStudent?.smsSuccess) inviteBits.push('SMS')
+    if (emailEnabled && hasEmail && newStudent?.emailSuccess) inviteBits.push('E-Mail')
     let inviteMsg = `${t.value.client} wurde erfasst.`
-    if (smsEnabled && form.value.phone) inviteMsg = `Onboarding-SMS wurde an ${form.value.phone} gesendet.`
-    else if (hasEmail) inviteMsg = `${t.value.client} wurde erfasst. Bestätigungs-E-Mail folgt nach Terminerstellung.`
+    if (inviteBits.length) {
+      inviteMsg = `Onboarding-Link per ${inviteBits.join(' / ')} gesendet.`
+    } else if (hasEmail && !emailEnabled) {
+      inviteMsg = `${t.value.client} wurde erfasst (ohne Einladung).`
+    }
 
     uiStore.addNotification({
       type: 'success',

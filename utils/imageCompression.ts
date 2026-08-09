@@ -103,10 +103,27 @@ export async function compressImage(
           // Draw image centered
           ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
 
-          // Convert to Base64 with compression
-          const mimeType = `image/${format}`
+          // Convert to Base64 with compression.
+          // Safari/iOS often cannot encode WebP and silently returns PNG — detect that.
+          let effectiveFormat = format
+          let mimeType = `image/${effectiveFormat}`
           let quality = 0.8
           let base64Data = canvas.toDataURL(mimeType, quality)
+
+          const returnedMime = base64Data.match(/^data:([^;]+);/)?.[1] || ''
+          if (returnedMime && returnedMime !== mimeType) {
+            // Browser ignored the requested format (common for image/webp on Safari)
+            if (returnedMime === 'image/png' || returnedMime === 'image/jpeg') {
+              effectiveFormat = returnedMime === 'image/png' ? 'png' : 'jpeg'
+              mimeType = returnedMime
+              base64Data = canvas.toDataURL(mimeType, quality)
+            } else {
+              // Last resort: JPEG is universally supported
+              effectiveFormat = 'jpeg'
+              mimeType = 'image/jpeg'
+              base64Data = canvas.toDataURL(mimeType, quality)
+            }
+          }
 
           // Reduce quality if needed to meet target size
           while (base64Data.length > maxSizeKB * 1024 && quality > minQuality) {
@@ -123,7 +140,8 @@ export async function compressImage(
             compressedSize: `${compressedSizeKB}KB`,
             compression: `${(100 - (parseFloat(compressedSizeKB) / parseFloat(originalSizeKB)) * 100).toFixed(0)}%`,
             quality: quality.toFixed(2),
-            format,
+            format: effectiveFormat,
+            requestedFormat: format,
             imgRatio: imgRatio.toFixed(2),
             canvasRatio: canvasRatio.toFixed(2),
             drawDimensions: `${drawWidth.toFixed(0)}x${drawHeight.toFixed(0)}`

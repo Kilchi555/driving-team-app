@@ -20,7 +20,9 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 import { sendTenantSMS } from '~/server/utils/sms'
+import { sendEmail } from '~/server/utils/email'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { buildOnboardingEmailHtml } from '~/server/utils/onboarding-email'
 import { v4 as uuidv4 } from 'uuid'
 
 interface StudentData {
@@ -37,6 +39,19 @@ interface StudentData {
   category?: string
   assigned_staff_id?: string
   skip_sms?: boolean
+  skip_email?: boolean
+  send_invite?: boolean
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function normalizeSwissPhone(raw: string): string {
+  let phone = String(raw || '').trim()
+  phone = phone.replace(/[\s\-\.\(\)]/g, '')
+  if (phone.startsWith('00')) phone = '+' + phone.slice(2)
+  if (phone.startsWith('0')) phone = '+41' + phone.slice(1)
+  if (!phone.startsWith('+') && /^\d{9,}$/.test(phone)) phone = '+41' + phone
+  return phone.replace(/[^+\d]/g, '')
 }
 
 export default defineEventHandler(async (event) => {
@@ -70,37 +85,64 @@ export default defineEventHandler(async (event) => {
     // 3. INPUT VALIDATION
     const body = await readBody<StudentData>(event)
 
-    const hasName = (body.first_name?.trim() || body.last_name?.trim())
-    if (!hasName) {
+    const firstName = body.first_name?.trim() || ''
+    const lastName = body.last_name?.trim() || ''
+    const email = body.email?.trim().toLowerCase() || ''
+    const phoneRaw = body.phone?.trim() || ''
+    const phone = phoneRaw ? normalizeSwissPhone(phoneRaw) : ''
+
+    if (!firstName && !lastName) {
       throw createError({ statusCode: 400, message: 'First or last name required' })
     }
 
-    // skip_sms vom Client wird später durch die serverseitige Policy überschrieben
-
     // Need at least phone or email to contact the student
-    if (!body.phone?.trim() && !body.email?.trim()) {
+    if (!phone && !email) {
       throw createError({ statusCode: 400, message: 'Phone or email required' })
+    }
+    if (email && !EMAIL_RE.test(email)) {
+      throw createError({ statusCode: 400, message: 'Invalid email address' })
+    }
+    if (phoneRaw && phone.replace(/\D/g, '').length < 10) {
+      throw createError({ statusCode: 400, message: 'Phone number too short' })
     }
 
     logger.debug('📝 Creating student:', {
-      name: `${body.first_name} ${body.last_name}`,
-      phone: body.phone,
+      name: `${firstName} ${lastName}`,
+      phone,
       tenantId: userProfile.tenant_id
     })
 
     // 4. CHECK FOR DUPLICATES
-    const { data: existingByPhone } = body.phone?.trim() ? await supabase
-      .from('users')
-      .select('id, first_name, last_name, onboarding_status, is_active, auth_user_id')
-      .eq('phone', body.phone.trim())
-      .eq('tenant_id', userProfile.tenant_id)
-      .single() : { data: null }
+    if (phone) {
+      const { data: existingByPhone } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, onboarding_status, is_active, auth_user_id')
+        .eq('phone', phone)
+        .eq('tenant_id', userProfile.tenant_id)
+        .maybeSingle()
 
-    if (existingByPhone) {
-      const error: any = new Error('DUPLICATE_PHONE')
-      error.code = '23505'
-      error.existingUser = existingByPhone
-      throw error
+      if (existingByPhone) {
+        const error: any = new Error('DUPLICATE_PHONE')
+        error.code = '23505'
+        error.existingUser = existingByPhone
+        throw error
+      }
+    }
+
+    if (email) {
+      const { data: existingByEmail } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, onboarding_status, is_active, auth_user_id')
+        .ilike('email', email)
+        .eq('tenant_id', userProfile.tenant_id)
+        .maybeSingle()
+
+      if (existingByEmail) {
+        const error: any = new Error('DUPLICATE_EMAIL')
+        error.code = '23505'
+        error.existingUser = existingByEmail
+        throw error
+      }
     }
 
     // 5. CREATE NEW STUDENT
@@ -115,10 +157,10 @@ export default defineEventHandler(async (event) => {
       .from('users')
       .insert({
         id: newStudentId,
-        first_name: body.first_name?.trim() || '',
-        last_name: body.last_name?.trim() || '',
-        phone: body.phone?.trim() || null,
-        email: body.email?.trim() || null,
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone || null,
+        email: email || null,
         birthdate: body.birthdate || null,
         street: body.street?.trim() || null,
         street_nr: body.street_nr?.trim() || null,
@@ -170,8 +212,10 @@ export default defineEventHandler(async (event) => {
 
     // Serverseitige Policy: onboarding_sms_enabled (Standard: true)
     const onboardingSmsEnabled = (tenant?.booking_policy as any)?.onboarding_sms_enabled !== false
-    // SMS überspringen wenn Policy deaktiviert ODER kein Telefon vorhanden
-    const skipSms = !onboardingSmsEnabled || body.skip_sms === true
+    const onboardingEmailEnabled = (tenant?.booking_policy as any)?.onboarding_email_enabled === true
+    // SMS überspringen wenn Policy deaktiviert ODER kein Telefon vorhanden ODER Client skip
+    const skipSms = !onboardingSmsEnabled || body.skip_sms === true || body.send_invite === false
+    const skipEmail = !onboardingEmailEnabled || body.skip_email === true || body.send_invite === false
 
     // 7. SEND ONBOARDING INVITATION
     let smsSuccess = false
@@ -179,19 +223,16 @@ export default defineEventHandler(async (event) => {
     let onboardingLink = `https://app.simy.ch/onboarding/${onboardingToken}`
 
     // Send SMS if phone exists and policy allows it
-    if (body.phone && !skipSms) {
+    if (phone && !skipSms) {
       try {
-        logger.debug('📱 Sending onboarding SMS to:', body.phone)
-        
-        // Format phone number (ensure +41 format)
-        const formattedPhone = formatSwissPhoneNumber(body.phone)
+        logger.debug('📱 Sending onboarding SMS to:', phone)
         
         // Login link lives in the welcome email after registration — keep SMS short
-        const message = `Hallo ${body.first_name}! Willkommen bei ${tenantName}. Bitte Registrierung abschliessen (30 Tage gültig): ${onboardingLink}`
+        const message = `Hallo ${firstName || terms.client}! Willkommen bei ${tenantName}. Bitte Registrierung abschliessen (30 Tage gültig): ${onboardingLink}`
         
         await sendTenantSMS({
           tenantId: userProfile.tenant_id,
-          to: formattedPhone,
+          to: phone,
           message: message,
           purpose: 'student_onboarding',
           senderName: tenantName,
@@ -203,11 +244,37 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Send email if email exists
-    if (body.email) {
+    // Send email if email exists and policy allows it
+    if (email && !skipEmail) {
       try {
-        logger.debug('📧 Sending onboarding email to:', body.email)
-        // TODO: Implement email sending
+        logger.debug('📧 Sending onboarding email to:', email)
+        const { data: fullTenant } = await supabase
+          .from('tenants')
+          .select('name, slug, primary_color, logo_wide_url, logo_url, logo_square_url')
+          .eq('id', userProfile.tenant_id)
+          .single()
+
+        const primaryColor = fullTenant?.primary_color || '#2563eb'
+        const logoUrl = fullTenant?.logo_wide_url || fullTenant?.logo_url || fullTenant?.logo_square_url || null
+        const loginLink = fullTenant?.slug
+          ? `https://app.simy.ch/${fullTenant.slug}`
+          : 'https://app.simy.ch/login'
+        const emailHtml = buildOnboardingEmailHtml({
+          variant: 'welcome',
+          tenantName: fullTenant?.name || tenantName,
+          primaryColor,
+          logoUrl,
+          customerFirstName: firstName || terms.client,
+          onboardingLink,
+          loginLink,
+          businessNoun: terms.businessNoun,
+        })
+        await sendEmail({
+          to: email,
+          subject: `Willkommen bei ${fullTenant?.name || tenantName} — Registrierung abschliessen`,
+          html: emailHtml,
+          senderName: fullTenant?.name || tenantName,
+        })
         emailSuccess = true
       } catch (err: any) {
         logger.warn('⚠️ Error sending email:', err.message)
@@ -225,8 +292,8 @@ export default defineEventHandler(async (event) => {
         resource_id: newStudentId,
         status: 'success',
         metadata: {
-          student_name: `${body.first_name} ${body.last_name}`,
-          phone: body.phone,
+          student_name: `${firstName} ${lastName}`,
+          phone,
           sms_sent: smsSuccess,
           email_sent: emailSuccess,
           timestamp: new Date().toISOString()
@@ -241,13 +308,13 @@ export default defineEventHandler(async (event) => {
       emailSuccess
     })
 
-    if (body.email?.trim()) {
+    if (email) {
       upsertMarketingLeadSafe({
         tenantId: userProfile.tenant_id,
-        email: body.email,
-        firstName: body.first_name,
-        lastName: body.last_name,
-        phone: body.phone,
+        email,
+        firstName,
+        lastName,
+        phone,
         categories: categoriesFromUserCategory(body.category),
         tags: ['client'],
         source: 'staff_add_student',
@@ -259,10 +326,10 @@ export default defineEventHandler(async (event) => {
       success: true,
       student: {
         id: newStudentId,
-        first_name: body.first_name,
-        last_name: body.last_name,
-        phone: body.phone,
-        email: body.email,
+        first_name: firstName,
+        last_name: lastName,
+        phone,
+        email,
         onboarding_status: 'pending'
       },
       smsSuccess,
@@ -286,7 +353,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ 
         statusCode: 409, 
         message: error.message,
-        data: { existingUser: null }
+        data: { existingUser: error.existingUser ?? null }
       })
     }
 
@@ -301,25 +368,3 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-// Helper: Format Swiss phone number
-function formatSwissPhoneNumber(phone: string): string {
-  // Remove all non-numeric characters except +
-  let cleaned = phone.replace(/[^\d+]/g, '')
-
-  // If starts with 0, replace with +41
-  if (cleaned.startsWith('0')) {
-    cleaned = '+41' + cleaned.substring(1)
-  }
-
-  // If starts with 41, add +
-  if (cleaned.startsWith('41') && !cleaned.startsWith('+41')) {
-    cleaned = '+' + cleaned
-  }
-
-  // If no prefix, add +41
-  if (!cleaned.startsWith('+')) {
-    cleaned = '+41' + cleaned
-  }
-
-  return cleaned
-}

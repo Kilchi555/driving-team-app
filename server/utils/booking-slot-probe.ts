@@ -283,7 +283,7 @@ async function countAvailableSlots(
     .lte('start_time', `${opts.endDate}T23:59:59Z`)
     .gt('start_time', minBookableTime)
     .order('start_time', { ascending: true })
-    .limit(40)
+    // Exact count for readiness UI (one staff×location×service combo, ~28 days)
 
   if (error) {
     logger.warn('⚠️ booking-slot-probe slots query failed:', error.message)
@@ -565,7 +565,7 @@ export async function probeBookingSlots(
     done: slotsFound > 0,
     href: bookingUrl,
     detail: slotsFound > 0
-      ? `${slotsFound}+ Slot(s) in den nächsten ${days} Tagen (gleicher Pfad wie Booking)`
+      ? `${slotsFound} freie Slot(s) in den nächsten ${days} Tagen (gleicher Pfad wie Booking)`
       : `0 Slots über denselben Pfad wie die Buchungsseite (${days} Tage)`,
   })
 

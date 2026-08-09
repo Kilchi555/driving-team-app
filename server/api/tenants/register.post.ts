@@ -10,6 +10,7 @@ import { generateRegistrationToken } from '~/server/utils/registration-token'
 import { resolveBusinessType, applyCategoryAndEventTypeDefaults, applyEvaluationDefaults, resolveWorkingDaysTemplate } from '~/server/utils/business-type-presets'
 import { isReservedSlug } from '~/server/utils/reserved-slugs'
 import { SAAS_TRIAL_DAYS } from '~/utils/saas-trial'
+import { defaultVatRateForBusinessType } from '~/server/utils/invoice-vat'
 
 interface TenantRegistrationData {
   name: string
@@ -294,6 +295,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         contact_phone: sanitizedPhone,
         address: `${sanitizedStreet} ${sanitizedStreetNr}, ${data.zip} ${sanitizedCity}`,
         business_type: resolvedBusinessType,
+        // CH: Ausbildung (Fahrschule, Nachhilfe, Musikschule) → MwSt 0%; sonst Normalsatz 8.1%
+        default_vat_rate: defaultVatRateForBusinessType(resolvedBusinessType),
         primary_color: data.primary_color,
         secondary_color: data.secondary_color,
         // Standard-Farben setzen

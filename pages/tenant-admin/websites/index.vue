@@ -69,7 +69,7 @@
                   <NuxtLink :to="`/tenant-admin/websites/${t.id}`" class="sa-action-btn sa-action-primary">
                     {{ t.website_status === 'pending_review' ? '🔍 Prüfen' : '✏️ Bearbeiten' }}
                   </NuxtLink>
-                  <a :href="`/website-preview/${t.slug}`" target="_blank" class="sa-action-btn">
+                  <a :href="`/s/${t.slug}?preview=1`" target="_blank" class="sa-action-btn">
                     👁 Vorschau
                   </a>
                 </div>

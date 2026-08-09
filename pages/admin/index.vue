@@ -17,103 +17,203 @@
       <!-- ═══ PENDENZEN ═══ -->
       <AdminPendencies />
 
+      <!-- ═══ LAYOUT TOOLBAR ═══ -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs text-gray-400">Übersicht</p>
+        <div class="flex items-center gap-2">
+          <template v-if="!editMode">
+            <button
+              type="button"
+              class="text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+              @click="enterEditMode"
+            >
+              Dashboard anpassen
+            </button>
+          </template>
+          <template v-else>
+            <button
+              type="button"
+              class="text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+              :disabled="layoutSaving"
+              @click="resetLayout"
+            >
+              Standard
+            </button>
+            <button
+              type="button"
+              class="text-xs font-semibold px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+              :disabled="layoutSaving"
+              @click="cancelEditMode"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              class="text-xs font-semibold px-3 py-1.5 rounded-xl text-white transition-colors disabled:opacity-60"
+              :style="{ background: primaryColor || '#059669' }"
+              :disabled="layoutSaving"
+              @click="saveLayout"
+            >
+              {{ layoutSaving ? 'Speichern…' : 'Speichern' }}
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <!-- Edit panel -->
+      <div v-if="editMode" class="bg-white rounded-2xl border border-dashed border-gray-300 p-4 sm:p-5 space-y-4">
+        <div>
+          <h3 class="text-sm font-bold text-gray-900">Widgets anordnen</h3>
+          <p class="text-xs text-gray-400 mt-0.5">Ein-/ausblenden und Reihenfolge festlegen. Wird für dich gespeichert.</p>
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Sichtbar</p>
+          <div v-if="!editVisible.length" class="text-sm text-gray-400 py-2">Keine Widgets sichtbar</div>
+          <div
+            v-for="(id, idx) in editVisible"
+            :key="'on-'+id"
+            class="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-2"
+          >
+            <span class="text-sm font-medium text-gray-800 flex-1 truncate">{{ widgetLabel(id) }}</span>
+            <button type="button" class="w-8 h-8 rounded-lg hover:bg-white text-gray-500 disabled:opacity-30" :disabled="idx===0" @click="moveEdit(id, -1)">↑</button>
+            <button type="button" class="w-8 h-8 rounded-lg hover:bg-white text-gray-500 disabled:opacity-30" :disabled="idx===editVisible.length-1" @click="moveEdit(id, 1)">↓</button>
+            <button type="button" class="text-xs font-semibold text-red-600 px-2 py-1 rounded-lg hover:bg-red-50" @click="hideEdit(id)">Ausblenden</button>
+          </div>
+        </div>
+
+        <div v-if="editHidden.length" class="space-y-2 pt-2 border-t border-gray-100">
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Ausgeblendet</p>
+          <div
+            v-for="id in editHidden"
+            :key="'off-'+id"
+            class="flex items-center gap-2 rounded-xl px-3 py-2"
+          >
+            <span class="text-sm text-gray-500 flex-1 truncate">{{ widgetLabel(id) }}</span>
+            <button type="button" class="text-xs font-semibold text-emerald-700 px-2 py-1 rounded-lg hover:bg-emerald-50" @click="showEdit(id)">Einblenden</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ═══ KPI HERO ROW ═══ -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+      <div v-if="visibleInZone('kpi').length" class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
 
-        <!-- Umsatz Monat -->
-        <button
-          @click="showRevenueModal = true"
-          class="group relative col-span-2 lg:col-span-1 xl:col-span-1 rounded-2xl p-5 text-left overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 bg-gradient-to-br from-emerald-500 to-teal-600"
-        >
-          <div class="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          <p class="text-emerald-100 text-xs font-semibold uppercase tracking-widest mb-2">Umsatz (Monat)</p>
-          <p class="text-white text-2xl sm:text-3xl font-bold leading-none mb-1">
-            CHF {{ revenueMonths[0] ? (revenueMonths[0].revenue / 100).toFixed(0) : '–' }}
-          </p>
-          <p class="text-emerald-200 text-xs mt-2 flex items-center gap-1">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-            Vollbild anzeigen
-          </p>
-          <div class="absolute bottom-3 right-3 opacity-10">
-            <svg class="w-14 h-14 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-          </div>
-        </button>
+        <template v-for="id in visibleInZone('kpi')" :key="id">
+          <!-- Umsatz Monat -->
+          <button
+            v-if="id === 'revenue_month'"
+            type="button"
+            @click="!editMode && (showRevenueModal = true)"
+            class="group relative col-span-2 lg:col-span-1 xl:col-span-1 rounded-2xl p-5 text-left overflow-hidden shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 bg-gradient-to-br from-emerald-500 to-teal-600"
+            :class="editMode ? 'ring-2 ring-offset-2 ring-emerald-300' : ''"
+          >
+            <p class="text-emerald-100 text-xs font-semibold uppercase tracking-widest mb-2">Umsatz (Monat)</p>
+            <p class="text-white text-2xl sm:text-3xl font-bold leading-none mb-1">
+              CHF {{ revenueMonths[0] ? (revenueMonths[0].revenue / 100).toFixed(0) : '–' }}
+            </p>
+            <p class="text-emerald-200 text-xs mt-2 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+              Vollbild anzeigen
+            </p>
+          </button>
 
-        <!-- Diese Woche -->
-        <div class="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
-          <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Woche</p>
-          <p class="text-gray-900 text-2xl font-bold leading-none">CHF {{ (thisWeekTotal / 100).toFixed(0) }}</p>
-          <div class="mt-2 flex items-center gap-1.5">
-            <span class="text-xs text-gray-400">vs.</span>
-            <span class="text-xs font-semibold" :class="thisWeekTotal >= lastWeekTotal ? 'text-emerald-600' : 'text-red-500'">
-              CHF {{ (lastWeekTotal / 100).toFixed(0) }}
-            </span>
-            <svg v-if="thisWeekTotal >= lastWeekTotal" class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"/></svg>
-            <svg v-else class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+          <!-- Woche -->
+          <div
+            v-else-if="id === 'week'"
+            class="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm"
+            :class="editMode ? 'ring-2 ring-offset-2 ring-gray-200' : ''"
+          >
+            <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Woche</p>
+            <p class="text-gray-900 text-2xl font-bold leading-none">CHF {{ (thisWeekTotal / 100).toFixed(0) }}</p>
+            <div class="mt-2 flex items-center gap-1.5">
+              <span class="text-xs text-gray-400">vs.</span>
+              <span class="text-xs font-semibold" :class="thisWeekTotal >= lastWeekTotal ? 'text-emerald-600' : 'text-red-500'">
+                CHF {{ (lastWeekTotal / 100).toFixed(0) }}
+              </span>
+              <svg v-if="thisWeekTotal >= lastWeekTotal" class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"/></svg>
+              <svg v-else class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            </div>
           </div>
-        </div>
 
-        <!-- Ausstehende Zahlungen -->
-        <button
-          @click="showPendingStudentsModal = true"
-          class="group rounded-2xl text-left p-5 shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 overflow-hidden relative"
-          :class="totalPendingPayments > 0 ? 'bg-gradient-to-br from-orange-400 to-rose-500' : 'bg-white border border-gray-100'"
-        >
-          <p class="text-xs font-semibold uppercase tracking-widest mb-2" :class="totalPendingPayments > 0 ? 'text-orange-100' : 'text-gray-500'">Ausstehend</p>
-          <p class="text-2xl font-bold leading-none" :class="totalPendingPayments > 0 ? 'text-white' : 'text-gray-900'">
-            {{ totalPendingPayments }}
-          </p>
-          <p class="text-xs mt-1.5 font-medium" :class="totalPendingPayments > 0 ? 'text-orange-100' : 'text-gray-400'">
-            CHF {{ (totalPendingAmount / 100).toFixed(0) }} offen
-          </p>
-          <div v-if="totalPendingPayments > 0" class="absolute bottom-3 right-3 opacity-15">
-            <svg class="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
-          </div>
-        </button>
+          <!-- Ausstehend -->
+          <button
+            v-else-if="id === 'pending'"
+            type="button"
+            @click="!editMode && (showPendingStudentsModal = true)"
+            class="group rounded-2xl text-left p-5 shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 overflow-hidden relative"
+            :class="[
+              totalPendingPayments > 0 ? 'bg-gradient-to-br from-orange-400 to-rose-500' : 'bg-white border border-gray-100',
+              editMode ? 'ring-2 ring-offset-2 ring-orange-200' : ''
+            ]"
+          >
+            <p class="text-xs font-semibold uppercase tracking-widest mb-2" :class="totalPendingPayments > 0 ? 'text-orange-100' : 'text-gray-500'">Ausstehend</p>
+            <p class="text-2xl font-bold leading-none" :class="totalPendingPayments > 0 ? 'text-white' : 'text-gray-900'">
+              {{ totalPendingPayments }}
+            </p>
+            <p class="text-xs mt-1.5 font-medium" :class="totalPendingPayments > 0 ? 'text-orange-100' : 'text-gray-400'">
+              CHF {{ (totalPendingAmount / 100).toFixed(0) }} offen
+            </p>
+          </button>
 
-        <!-- Stunden Heute -->
-        <div class="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
-          <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Stunden heute</p>
-          <p class="text-gray-900 text-2xl font-bold leading-none">{{ hoursStats.today }}<span class="text-base font-normal text-gray-400">h</span></p>
-          <div class="mt-2 grid grid-cols-2 gap-1 text-xs">
-            <span class="text-gray-400">Woche</span>
-            <span class="text-right font-semibold text-blue-600">{{ hoursStats.thisWeek }}h</span>
-            <span class="text-gray-400">Monat</span>
-            <span class="text-right font-semibold text-purple-600">{{ hoursStats.thisMonth }}h</span>
+          <!-- Stunden -->
+          <div
+            v-else-if="id === 'hours'"
+            class="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm"
+            :class="editMode ? 'ring-2 ring-offset-2 ring-gray-200' : ''"
+          >
+            <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Stunden heute</p>
+            <p class="text-gray-900 text-2xl font-bold leading-none">{{ hoursStats.today }}<span class="text-base font-normal text-gray-400">h</span></p>
+            <div class="mt-2 grid grid-cols-2 gap-1 text-xs">
+              <span class="text-gray-400">Woche</span>
+              <span class="text-right font-semibold text-blue-600">{{ hoursStats.thisWeek }}h</span>
+              <span class="text-gray-400">Monat</span>
+              <span class="text-right font-semibold text-purple-600">{{ hoursStats.thisMonth }}h</span>
+            </div>
           </div>
-        </div>
 
-        <!-- Kurse -->
-        <NuxtLink to="/admin/courses" class="group rounded-2xl bg-white border border-gray-100 p-5 shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 block">
-          <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Kurse</p>
-          <p class="text-gray-900 text-2xl font-bold leading-none">{{ coursesStats.active }}</p>
-          <div class="mt-2 grid grid-cols-2 gap-1 text-xs">
-            <span class="text-gray-400">Teilnehmer</span>
-            <span class="text-right font-semibold text-indigo-600">{{ coursesStats.participants }}</span>
-            <span class="text-gray-400">Diesen Monat</span>
-            <span class="text-right font-semibold text-teal-600">{{ coursesStats.thisMonth }}</span>
-          </div>
-        </NuxtLink>
+          <!-- Kurse -->
+          <NuxtLink
+            v-else-if="id === 'courses'"
+            :to="editMode ? '#' : '/admin/courses'"
+            class="group rounded-2xl bg-white border border-gray-100 p-5 shadow-sm hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 block"
+            :class="editMode ? 'ring-2 ring-offset-2 ring-gray-200 pointer-events-none' : ''"
+            @click="editMode && $event.preventDefault()"
+          >
+            <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-2">Kurse</p>
+            <p class="text-gray-900 text-2xl font-bold leading-none">{{ coursesStats.active }}</p>
+            <div class="mt-2 grid grid-cols-2 gap-1 text-xs">
+              <span class="text-gray-400">Teilnehmer</span>
+              <span class="text-right font-semibold text-indigo-600">{{ coursesStats.participants }}</span>
+              <span class="text-gray-400">Diesen Monat</span>
+              <span class="text-right font-semibold text-teal-600">{{ coursesStats.thisMonth }}</span>
+            </div>
+          </NuxtLink>
+        </template>
       </div>
 
       <!-- ═══ REVENUE TREND + PENDING STUDENTS ═══ -->
-      <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
+      <div v-if="visibleInZone('mid').length" class="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-5">
 
-        <!-- Revenue Sparkline Card -->
-        <div class="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div
+          v-if="isVisible('revenue_chart')"
+          class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+          :class="[
+            isVisible('pending_list') ? 'lg:col-span-3' : 'lg:col-span-5',
+            editMode ? 'ring-2 ring-offset-2 ring-gray-200' : ''
+          ]"
+        >
           <div class="flex items-center justify-between mb-5">
             <div>
               <h3 class="text-sm font-bold text-gray-900">Umsatz-Verlauf</h3>
               <p class="text-xs text-gray-400 mt-0.5">Letzte {{ revenueMonths.length }} Monate</p>
             </div>
-            <button @click="showRevenueModal = true"
+            <button type="button" @click="showRevenueModal = true"
               class="tenant-link-pill text-xs font-semibold transition-colors px-3 py-1.5 rounded-xl"
               :style="{ color: primaryColor }">
               12 Monate →
             </button>
           </div>
 
-          <!-- Mini Bar Chart -->
           <div v-if="revenueMonths.length > 0" class="flex items-end gap-1.5 h-24">
             <template v-for="(month, idx) in [...revenueMonths].reverse()" :key="month.monthKey || idx">
               <div class="flex-1 flex flex-col items-center gap-1 group cursor-pointer" @click="openMonthDetail(month)">
@@ -131,7 +231,6 @@
           </div>
           <div v-else class="h-24 flex items-center justify-center text-gray-400 text-sm">Noch keine Daten</div>
 
-          <!-- Month totals under chart -->
           <div class="mt-3 flex justify-between text-xs text-gray-500">
             <span v-if="revenueMonths.length > 1">{{ [...revenueMonths].reverse()[0]?.name }}</span>
             <span class="font-semibold text-emerald-600">
@@ -141,14 +240,20 @@
           </div>
         </div>
 
-        <!-- Ausstehende Zahlungen – Top Students -->
-        <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div
+          v-if="isVisible('pending_list')"
+          class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+          :class="[
+            isVisible('revenue_chart') ? 'lg:col-span-2' : 'lg:col-span-5',
+            editMode ? 'ring-2 ring-offset-2 ring-gray-200' : ''
+          ]"
+        >
           <div class="flex items-center justify-between mb-4">
             <div>
               <h3 class="text-sm font-bold text-gray-900">Ausstehend</h3>
               <p class="text-xs text-gray-400 mt-0.5">{{ pendingStudents.length }} {{ t.clientsPlural }}</p>
             </div>
-            <button v-if="pendingStudents.length > 3" @click="showPendingStudentsModal = true"
+            <button v-if="pendingStudents.length > 3" type="button" @click="showPendingStudentsModal = true"
               class="text-xs font-semibold text-orange-600 hover:text-orange-800 transition-colors px-3 py-1.5 rounded-xl hover:bg-orange-50">
               Alle →
             </button>
@@ -165,6 +270,7 @@
             <button
               v-for="student in pendingStudents.slice(0, 4)"
               :key="student.id"
+              type="button"
               @click="navigateToStudentPayments(student.id)"
               class="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left group"
             >
@@ -184,7 +290,7 @@
       </div>
 
       <!-- ═══ QUICK ACTIONS ═══ -->
-      <div>
+      <div v-if="isVisible('quick_actions')" :class="editMode ? 'ring-2 ring-offset-2 ring-gray-200 rounded-2xl' : ''">
         <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-0.5">Schnellzugriff</h3>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           <NuxtLink
@@ -205,10 +311,16 @@
       </div>
 
       <!-- ═══ ACTIVITY + STATS ROW ═══ -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+      <div v-if="visibleInZone('bottom').length" class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
 
-        <!-- Recent Activity -->
-        <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div
+          v-if="isVisible('activities')"
+          class="bg-white rounded-2xl border border-gray-100 shadow-sm"
+          :class="[
+            (isVisible('credits') || isVisible('cancellations')) ? 'lg:col-span-2' : 'lg:col-span-3',
+            editMode ? 'ring-2 ring-offset-2 ring-gray-200' : ''
+          ]"
+        >
           <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50">
             <h3 class="text-sm font-bold text-gray-900">Letzte Aktivitäten</h3>
             <NuxtLink to="/admin/payment-overview"
@@ -244,11 +356,12 @@
           </div>
         </div>
 
-        <!-- Stats sidebar -->
         <div class="space-y-3">
-
-          <!-- Guthaben -->
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div
+            v-if="isVisible('credits')"
+            class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+            :class="editMode ? 'ring-2 ring-offset-2 ring-gray-200' : ''"
+          >
             <div class="flex items-center justify-between mb-3">
               <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Guthaben</h4>
               <NuxtLink to="/admin/student-credits" class="text-xs hover:opacity-70 transition-opacity" :style="{ color: primaryColor }">→</NuxtLink>
@@ -266,8 +379,11 @@
             </div>
           </div>
 
-          <!-- Absagen -->
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div
+            v-if="isVisible('cancellations')"
+            class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
+            :class="editMode ? 'ring-2 ring-offset-2 ring-gray-200' : ''"
+          >
             <div class="flex items-center justify-between mb-3">
               <h4 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Absagen</h4>
               <NuxtLink to="/admin/cancellation-management" class="text-xs hover:opacity-70 transition-opacity" :style="{ color: primaryColor }">→</NuxtLink>
@@ -287,7 +403,6 @@
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -462,6 +577,7 @@
       </div>
     </Transition>
   </Teleport>
+
 </template>
 
 <script setup lang="ts">
@@ -476,6 +592,14 @@ import { useUIStore } from '~/stores/ui'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useTerminology } from '~/composables/useTerminology'
 import { logger } from '~/utils/logger'
+import {
+  DASHBOARD_WIDGETS,
+  DEFAULT_DASHBOARD_LAYOUT,
+  normalizeDashboardLayout,
+  widgetDef,
+  type DashboardWidgetId,
+  type DashboardWidgetZone,
+} from '~/utils/admin-dashboard-widgets'
 
 definePageMeta({
   middleware: 'admin',
@@ -604,6 +728,100 @@ const hoursStats = ref({
   thisMonth: 0
 })
 
+const weekRevenue = ref({ thisWeek: 0, lastWeek: 0 })
+
+// Dashboard layout (per admin user, stored in users.metadata)
+const layoutWidgets = ref<DashboardWidgetId[]>([...DEFAULT_DASHBOARD_LAYOUT])
+const editMode = ref(false)
+const editVisible = ref<DashboardWidgetId[]>([])
+const layoutSaving = ref(false)
+
+const editHidden = computed(() => {
+  const on = new Set(editVisible.value)
+  return DASHBOARD_WIDGETS.map(w => w.id).filter(id => !on.has(id))
+})
+
+const activeLayout = computed(() => (editMode.value ? editVisible.value : layoutWidgets.value))
+
+const isVisible = (id: DashboardWidgetId) => activeLayout.value.includes(id)
+
+const visibleInZone = (zone: DashboardWidgetZone) =>
+  activeLayout.value.filter(id => widgetDef(id)?.zone === zone)
+
+const widgetLabel = (id: DashboardWidgetId) => widgetDef(id)?.label || id
+
+const enterEditMode = () => {
+  editVisible.value = [...layoutWidgets.value]
+  editMode.value = true
+}
+
+const cancelEditMode = () => {
+  editMode.value = false
+  editVisible.value = []
+}
+
+const moveEdit = (id: DashboardWidgetId, dir: -1 | 1) => {
+  const arr = [...editVisible.value]
+  const i = arr.indexOf(id)
+  const j = i + dir
+  if (i < 0 || j < 0 || j >= arr.length) return
+  ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  editVisible.value = arr
+}
+
+const hideEdit = (id: DashboardWidgetId) => {
+  editVisible.value = editVisible.value.filter(x => x !== id)
+}
+
+const showEdit = (id: DashboardWidgetId) => {
+  if (!editVisible.value.includes(id)) editVisible.value = [...editVisible.value, id]
+}
+
+const loadDashboardLayout = async () => {
+  try {
+    const res = await $fetch<{ success: boolean; widgets: DashboardWidgetId[] }>('/api/admin/dashboard-layout')
+    if (res?.widgets) layoutWidgets.value = normalizeDashboardLayout(res.widgets, { fillMissingDefaults: false })
+  } catch (e) {
+    logger.warn('Dashboard layout load failed, using defaults', e)
+    layoutWidgets.value = [...DEFAULT_DASHBOARD_LAYOUT]
+  }
+}
+
+const saveLayout = async () => {
+  layoutSaving.value = true
+  try {
+    const widgets = normalizeDashboardLayout(editVisible.value, { fillMissingDefaults: false })
+    const res = await $fetch<{ success: boolean; widgets: DashboardWidgetId[] }>('/api/admin/dashboard-layout', {
+      method: 'POST',
+      body: { widgets },
+    })
+    layoutWidgets.value = res.widgets || widgets
+    editMode.value = false
+    uiStore.showSuccess('Gespeichert', 'Dashboard-Ansicht aktualisiert')
+  } catch (e: any) {
+    uiStore.showError('Fehler', e?.data?.statusMessage || e?.message || 'Speichern fehlgeschlagen')
+  } finally {
+    layoutSaving.value = false
+  }
+}
+
+const resetLayout = async () => {
+  layoutSaving.value = true
+  try {
+    const res = await $fetch<{ success: boolean; widgets: DashboardWidgetId[] }>('/api/admin/dashboard-layout', {
+      method: 'POST',
+      body: { reset: true },
+    })
+    layoutWidgets.value = res.widgets || [...DEFAULT_DASHBOARD_LAYOUT]
+    editVisible.value = [...layoutWidgets.value]
+    uiStore.showSuccess('Zurückgesetzt', 'Standard-Dashboard wiederhergestellt')
+  } catch (e: any) {
+    uiStore.showError('Fehler', e?.data?.statusMessage || e?.message || 'Zurücksetzen fehlgeschlagen')
+  } finally {
+    layoutSaving.value = false
+  }
+}
+
 // Function to load all dashboard data from single API
 const loadDashboardSummary = async () => {
   try {
@@ -644,6 +862,8 @@ const loadDashboardSummary = async () => {
     // Update hours stats
     hoursStats.value = summary.hoursStats || { today: 0, thisWeek: 0, thisMonth: 0 }
 
+    weekRevenue.value = summary.weekRevenue || { thisWeek: 0, lastWeek: 0 }
+
     logger.debug('✅ Dashboard summary loaded successfully')
   } catch (error: any) {
     logger.error('❌ Error loading dashboard summary:', error)
@@ -674,32 +894,9 @@ const isLoadingPendingStudents = ref(false)
 const pendingStudents = ref<PendingStudent[]>([])
 const showPendingStudentsModal = ref(false)
 
-// Computed properties for invoices
-const thisWeekInvoices = computed(() => {
-  const now = new Date()
-  const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-  return recentInvoices.value.filter(invoice => 
-    new Date(invoice.created_at) >= weekStart
-  )
-})
-
-const lastWeekInvoices = computed(() => {
-  const now = new Date()
-  const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
-  return recentInvoices.value.filter(invoice => {
-    const invoiceDate = new Date(invoice.created_at)
-    return invoiceDate >= twoWeeksAgo && invoiceDate < weekStart
-  })
-})
-
-const thisWeekTotal = computed(() => 
-  thisWeekInvoices.value.reduce((sum, invoice) => sum + invoice.total_amount_rappen, 0)
-)
-
-const lastWeekTotal = computed(() => 
-  lastWeekInvoices.value.reduce((sum, invoice) => sum + invoice.total_amount_rappen, 0)
-)
+// Computed: week revenue from paid payments (calendar week)
+const thisWeekTotal = computed(() => weekRevenue.value.thisWeek || 0)
+const lastWeekTotal = computed(() => weekRevenue.value.lastWeek || 0)
 
 // Computed properties for pending students
 const totalPendingPayments = computed(() => 
@@ -799,6 +996,7 @@ const loadAllDashboardData = () => {
   
   if (tenantId) {
     logger.debug('✅ Tenant ID available, loading data:', tenantId)
+    loadDashboardLayout()
     loadDashboardSummary()
   } else {
     console.warn('⚠️ No tenant_id found, retrying in 500ms...')

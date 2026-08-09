@@ -42,7 +42,10 @@ export default defineEventHandler(async (event) => {
   const hasStaff = (staffCount ?? 0) > 0
   const hasStudent = (studentCount ?? 0) > 0
   const hasBookingSlots = bookingProbe.ready
-  const hasPayments = !!tenant?.wallee_enabled || tenant?.wallee_onboarding_status === 'active'
+  const hasPayments =
+    !!tenant?.wallee_enabled
+    || tenant?.wallee_onboarding_status === 'active'
+    || tenant?.wallee_onboarding_status === 'skipped'
   const isPaid = tenant?.subscription_plan !== 'trial'
 
   const clientAccusative =
@@ -62,7 +65,7 @@ export default defineEventHandler(async (event) => {
       action: 'booking-readiness',
     },
     { id: 'student',  label: `Ersten ${clientAccusative} hinzugefügt`, done: hasStudent, href: '/admin/privatkunden', action: null },
-    { id: 'payments', label: 'Zahlungen einrichten (Wallee)', done: hasPayments, href: '/admin/profile?tab=payments', action: null },
+    { id: 'payments', label: 'Online Zahlungen (Twint, EC- oder Kreditkarte, Apple und Google Pay)', done: hasPayments, href: '/admin/profile?tab=payments', action: hasPayments ? null : 'skip-payments' },
     { id: 'upgrade',  label: 'Plan wählen', done: isPaid, href: '/upgrade', action: null },
   ]
 

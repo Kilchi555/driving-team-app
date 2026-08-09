@@ -36,6 +36,18 @@ const MAGIC_BYTES: Record<string, number[][]> = {
   'gif':  [[0x47, 0x49, 0x46, 0x38]], // GIF8
 }
 
+function detectImageExt(data: Buffer): string | null {
+  if (data.length >= 4 && data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4E && data[3] === 0x47) return 'png'
+  if (data.length >= 3 && data[0] === 0xFF && data[1] === 0xD8 && data[2] === 0xFF) return 'jpg'
+  if (data.length >= 12
+    && data[0] === 0x52 && data[1] === 0x49 && data[2] === 0x46 && data[3] === 0x46
+    && data[8] === 0x57 && data[9] === 0x45 && data[10] === 0x42 && data[11] === 0x50) {
+    return 'webp'
+  }
+  if (data.length >= 4 && data[0] === 0x47 && data[1] === 0x49 && data[2] === 0x46 && data[3] === 0x38) return 'gif'
+  return null
+}
+
 function validateMagicBytes(data: Buffer, ext: string): boolean {
   const signatures = MAGIC_BYTES[ext]
   if (!signatures) return true // no known signature, skip
@@ -112,8 +124,27 @@ export default defineEventHandler(async (event) => {
     }
 
     // Extract and validate file format
-    const ext = fileName.split('.').pop()?.toLowerCase()
-    if (!ext || !ALLOWED_FORMATS.includes(ext)) {
+    let ext = fileName.split('.').pop()?.toLowerCase() || ''
+    if (ext === 'jpeg') ext = 'jpg'
+
+    // Prefer actual content over filename — Safari often encodes PNG/JPEG while
+    // the client still names the file .webp after canvas compression.
+    const detectedExt = detectImageExt(Buffer.from(fileData))
+    if (detectedExt) {
+      ext = detectedExt === 'jpg' ? 'jpg' : detectedExt
+    } else if (!ext || !ALLOWED_FORMATS.includes(ext)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Invalid file format. Allowed formats: ${ALLOWED_FORMATS.join(', ')}`
+      })
+    } else if (!validateMagicBytes(fileData, ext === 'jpg' ? 'jpg' : ext)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'File content does not match its extension'
+      })
+    }
+
+    if (!ALLOWED_FORMATS.includes(ext)) {
       throw createError({
         statusCode: 400,
         statusMessage: `Invalid file format. Allowed formats: ${ALLOWED_FORMATS.join(', ')}`
@@ -121,14 +152,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const mimeType = MIME_TYPES[ext] || 'image/png'
-
-    // Verify the actual file content matches the claimed extension (prevents renamed exploits)
-    if (!validateMagicBytes(fileData, ext)) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'File content does not match its extension'
-      })
-    }
 
     // Construct storage path
     // Format: {tenant_id}/{asset_type}.{ext} in tenant-logos bucket

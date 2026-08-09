@@ -70,10 +70,27 @@ export default defineEventHandler(async (event) => {
     .eq('id', website.tenant_id)
     .maybeSingle()
 
+  const { data: navPages } = await supabase
+    .from('website_pages')
+    .select('title, slug, page_type, is_home')
+    .eq('website_id', website.id)
+    .eq('is_published', true)
+    .order('page_type', { ascending: true })
+
+  const { applyLivePricesToLanding } = await import('~/server/utils/website-live-prices')
+  const landing = await applyLivePricesToLanding(website.tenant_id, page.blocks || null)
+
   return {
     website,
     page,
     tenant: tenant || null,
-    landing: page.blocks || null,
+    landing,
+    nav: (navPages || []).map((p) => ({
+      title: p.title,
+      slug: p.slug,
+      page_type: p.page_type || (p.is_home ? 'home' : 'addon'),
+      is_home: !!p.is_home,
+      href: p.is_home || p.slug === 'index' ? `/s/${subdomain}` : `/s/${subdomain}/${p.slug}`,
+    })),
   }
 })

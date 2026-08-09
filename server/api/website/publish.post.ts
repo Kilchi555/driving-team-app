@@ -3,6 +3,7 @@
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { notifySuperadminsWebsitePublished } from '~/server/utils/website-publish-notify'
 
 function appBaseUrl(event: any) {
   const fromEnv = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL
@@ -40,6 +41,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Website not found' })
   }
 
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('id, name, slug')
+    .eq('id', user.tenant_id)
+    .maybeSingle()
+
   const now = new Date().toISOString()
 
   await supabase
@@ -61,18 +68,32 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: error.message })
   }
 
+  await supabase
+    .from('tenants')
+    .update({ website_status: 'live' })
+    .eq('id', user.tenant_id)
+
   const base = appBaseUrl(event)
-  const liveUrl = website.custom_domain_verified && website.custom_domain
-    ? `https://${website.custom_domain}`
-    : website.custom_domain
+  const liveUrl =
+    website.custom_domain_verified && website.custom_domain
       ? `https://${website.custom_domain}`
       : `${base}/s/${encodeURIComponent(website.subdomain)}`
+  const previewUrl = `${base}/s/${encodeURIComponent(website.subdomain)}?preview=1`
+
+  await notifySuperadminsWebsitePublished({
+    tenantId: user.tenant_id,
+    tenantName: tenant?.name || website.subdomain,
+    tenantSlug: tenant?.slug || website.subdomain,
+    subdomain: website.subdomain,
+    liveUrl,
+    previewUrl,
+  })
 
   return {
     success: true,
     website: updatedWebsite,
     message: 'Website published successfully',
     live_url: liveUrl,
-    preview_url: `${base}/s/${encodeURIComponent(website.subdomain)}?preview=1`,
+    preview_url: previewUrl,
   }
 })

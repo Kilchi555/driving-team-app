@@ -111,9 +111,11 @@
                 <td>
                   <span :class="['sa-badge',
                     tenant.wallee_onboarding_status === 'active' ? 'sa-badge-green' :
-                    tenant.wallee_onboarding_status === 'pending' ? 'sa-badge-amber' : 'sa-badge-neutral']">
+                    tenant.wallee_onboarding_status === 'pending' || tenant.wallee_onboarding_status === 'pending_uid' ? 'sa-badge-amber' :
+                    tenant.wallee_onboarding_status === 'skipped' ? 'sa-badge-neutral' : 'sa-badge-neutral']">
                     {{ tenant.wallee_onboarding_status === 'active' ? 'Aktiv' :
-                       tenant.wallee_onboarding_status === 'pending' ? 'Ausstehend' : '—' }}
+                       tenant.wallee_onboarding_status === 'pending' || tenant.wallee_onboarding_status === 'pending_uid' ? 'Ausstehend' :
+                       tenant.wallee_onboarding_status === 'skipped' ? 'Übersprungen' : '—' }}
                   </span>
                 </td>
                 <td class="sa-cell-muted">{{ formatDate(tenant.created_at) }}</td>

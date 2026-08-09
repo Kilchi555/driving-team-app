@@ -57,6 +57,7 @@ const props = defineProps<{
   original: string
   contentType: string
   optimizationType: 'seo' | 'conversion' | 'readability'
+  formalAddress?: 'sie' | 'du'
 }>()
 
 const emit = defineEmits<{
@@ -82,7 +83,8 @@ const loadSuggestions = async () => {
       body: {
         content: props.original,
         content_type: props.contentType,
-        optimization_type: props.optimizationType
+        optimization_type: props.optimizationType,
+        formal_address: props.formalAddress === 'du' ? 'du' : 'sie',
       }
     })
 
@@ -105,7 +107,8 @@ const generateMoreVersions = async (baseSuggestion: string, index: number) => {
       body: {
         content: baseSuggestion,
         content_type: props.contentType,
-        optimization_type: props.optimizationType
+        optimization_type: props.optimizationType,
+        formal_address: props.formalAddress === 'du' ? 'du' : 'sie',
       }
     })
 
