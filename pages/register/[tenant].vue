@@ -3,7 +3,7 @@
   <div class="min-h-screen flex items-center justify-center p-4" :style="{ background: `linear-gradient(to bottom right, ${primaryColor}, ${accentColor || primaryColor})` }">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
       <!-- Header -->
-      <div v-if="!registrationComplete" class="bg-gray-100 text-white rounded-t-xl overflow-hidden">
+      <div v-if="!registrationComplete && !isSubmitting" class="bg-gray-100 text-white rounded-t-xl overflow-hidden">
         <div class="text-center pt-8">
           <LoadingLogo size="3xl" :tenant-id="activeTenantId || undefined" :tenant-slug="tenantSlug" />
           <h1 class="text-xl font-bold text-gray-700 py-8">
@@ -18,7 +18,7 @@
       </div>
       
       <!-- Navigation Back -->
-      <div v-if="!registrationComplete" class="px-6 py-3 bg-gray-50 border-b">
+      <div v-if="!registrationComplete && !isSubmitting" class="px-6 py-3 bg-gray-50 border-b">
         <button
           @click="goBack"
           class="text-gray-600 hover:text-gray-800 flex items-center text-sm"
@@ -28,7 +28,7 @@
       </div>
 
       <!-- Progress Steps -->
-      <div v-if="!registrationComplete" class="px-6 py-4 bg-gray-50 border-b">
+      <div v-if="!registrationComplete && !isSubmitting" class="px-6 py-4 bg-gray-50 border-b">
         <div class="flex items-center justify-center space-x-4">
           <div :class="currentStep >= 1 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'" 
                class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold">
@@ -65,8 +65,62 @@
 
       <!-- Step Content -->
       <div class="p-6">
+        <!-- Submitting progress -->
+        <div v-if="isSubmitting" class="flex flex-col items-center justify-center py-10 gap-5">
+          <div class="relative w-14 h-14">
+            <div class="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+            <div
+              class="absolute inset-0 rounded-full border-4 border-t-transparent animate-spin"
+              :style="{ borderColor: `${primaryColor} transparent transparent transparent` }"
+            ></div>
+          </div>
+          <div class="text-center px-2">
+            <h2 class="text-lg font-semibold text-gray-900 mb-1">
+              {{ showAccountStep ? 'Konto wird eingerichtet…' : 'Anfrage wird gesendet…' }}
+            </h2>
+            <p class="text-sm text-gray-500 transition-opacity duration-300">{{ setupProgressDetail }}</p>
+          </div>
+          <div class="w-full max-w-sm rounded-2xl border border-gray-200 overflow-hidden">
+            <div class="divide-y divide-gray-100">
+              <div
+                v-for="step in setupProgressSteps"
+                :key="step.id"
+                class="flex items-center gap-3 px-4 py-2.5"
+              >
+                <div
+                  class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                  :class="{
+                    'bg-green-500': step.status === 'done',
+                    'bg-transparent': step.status === 'active',
+                    'bg-gray-200': step.status === 'pending',
+                  }"
+                >
+                  <svg v-if="step.status === 'done'" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <div
+                    v-else-if="step.status === 'active'"
+                    class="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin"
+                    :style="{ borderColor: `${primaryColor} transparent transparent transparent` }"
+                  />
+                </div>
+                <p
+                  class="text-sm leading-snug"
+                  :class="{
+                    'text-gray-900 font-medium': step.status === 'active',
+                    'text-gray-700': step.status === 'done',
+                    'text-gray-400': step.status === 'pending',
+                  }"
+                >
+                  {{ step.label }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Registration Complete Screen -->
-        <div v-if="registrationComplete" class="space-y-4 sm:space-y-6 text-center py-8 sm:py-12">
+        <div v-else-if="registrationComplete" class="space-y-4 sm:space-y-6 text-center py-8 sm:py-12">
           <!-- Success Icon -->
           <div class="flex justify-center">
             <div class="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full flex items-center justify-center">
@@ -133,7 +187,7 @@
         
         <!-- Form Steps - only show if not registration complete -->
         <!-- Step 1: Personal Data -->
-        <div v-if="!registrationComplete && currentStep === 1" class="space-y-6">
+        <div v-if="!registrationComplete && !isSubmitting && currentStep === 1" class="space-y-6">
           
           <!-- Admin Registration Header -->
           <div v-if="isAdminRegistration" class="text-center mb-6">
@@ -581,7 +635,7 @@
         </div>
 
         <!-- Step 2: Lernfahrausweis Upload -->
-        <div v-if="!registrationComplete && currentStep === 2 && requiresLernfahrausweis" class="space-y-6">
+        <div v-if="!registrationComplete && !isSubmitting && currentStep === 2 && requiresLernfahrausweis" class="space-y-6">
           <div class="text-center mb-6">
             <h2 class="text-xl font-semibold text-gray-900 mb-2">
               Ausweis hochladen
@@ -687,7 +741,7 @@
         </div>
 
         <!-- Account & Registrierung -->
-        <div v-if="!registrationComplete && showAccountStep && ((currentStep === 2 && !requiresLernfahrausweis) || (currentStep === 3 && requiresLernfahrausweis))" class="space-y-6">
+        <div v-if="!registrationComplete && !isSubmitting && showAccountStep && ((currentStep === 2 && !requiresLernfahrausweis) || (currentStep === 3 && requiresLernfahrausweis))" class="space-y-6">
           <div class="text-center mb-6">
             <div class="text-4xl mb-2">🔐</div>
             <h3 class="text-xl font-semibold text-gray-900">Account erstellen</h3>
@@ -911,7 +965,7 @@
       </div>
 
       <!-- Navigation -->
-      <div v-if="!registrationComplete" class="px-6 py-4 bg-gray-50 rounded-b-xl space-y-3">
+      <div v-if="!registrationComplete && !isSubmitting" class="px-6 py-4 bg-gray-50 rounded-b-xl space-y-3">
         <p v-if="proceedBlockReason && currentStep <= maxSteps" class="text-sm text-amber-700 text-right">
           {{ proceedBlockReason }}
         </p>
@@ -965,7 +1019,7 @@
       </div>
 
       <!-- Login Link -->
-      <div v-if="!registrationComplete && showAccountStep" class="px-6 py-3 text-center border-t">
+      <div v-if="!registrationComplete && !isSubmitting && showAccountStep" class="px-6 py-3 text-center border-t">
         <p class="text-gray-600 text-sm">
           Bereits registriert?
           <button 
@@ -1250,6 +1304,87 @@ const prefilledData = ref({
 // State
 const currentStep = ref(1)
 const isSubmitting = ref(false)
+
+// ─── Setup progress (loading screen) ───────────────────────────────────────
+type SetupProgressStatus = 'pending' | 'active' | 'done'
+interface SetupProgressStep {
+  id: string
+  label: string
+  status: SetupProgressStatus
+}
+const setupProgressSteps = ref<SetupProgressStep[]>([])
+const setupProgressDetail = ref('')
+let registerSubProgressTimer: ReturnType<typeof setInterval> | null = null
+
+const clearRegisterSubProgress = () => {
+  if (registerSubProgressTimer) {
+    clearInterval(registerSubProgressTimer)
+    registerSubProgressTimer = null
+  }
+}
+
+const initSetupProgress = (opts: {
+  pendingOnly: boolean
+  hasProposal: boolean
+  hasDocuments: boolean
+}) => {
+  clearRegisterSubProgress()
+  const steps: SetupProgressStep[] = [
+    {
+      id: 'register',
+      label: opts.pendingOnly ? 'Anfrage wird übermittelt' : 'Konto wird erstellt',
+      status: 'active',
+    },
+  ]
+  if (opts.hasProposal) {
+    steps.push({ id: 'proposal', label: 'Terminwunsch wird übermittelt', status: 'pending' })
+  }
+  if (opts.hasDocuments) {
+    steps.push({ id: 'documents', label: 'Dokumente werden hochgeladen', status: 'pending' })
+  }
+  steps.push({ id: 'finish', label: 'Abschluss wird vorbereitet', status: 'pending' })
+  setupProgressSteps.value = steps
+  setupProgressDetail.value = steps[0]?.label || ''
+}
+
+const markProgressDone = (id: string) => {
+  setupProgressSteps.value = setupProgressSteps.value.map((s) =>
+    s.id === id ? { ...s, status: 'done' as const } : s
+  )
+}
+
+const setProgressActive = (id: string) => {
+  setupProgressSteps.value = setupProgressSteps.value.map((s) => {
+    if (s.id === id) return { ...s, status: 'active' as const }
+    if (s.status === 'active') return { ...s, status: 'done' as const }
+    return s
+  })
+  const step = setupProgressSteps.value.find((s) => s.id === id)
+  if (step) setupProgressDetail.value = step.label
+}
+
+const startRegisterSubProgress = () => {
+  clearRegisterSubProgress()
+  // Soft pulse on the first step detail while waiting for the API
+  const softDetails = [
+    setupProgressSteps.value[0]?.label || 'Wird verarbeitet…',
+    'Daten werden geprüft…',
+    'Profil wird angelegt…',
+  ]
+  let i = 0
+  registerSubProgressTimer = setInterval(() => {
+    i = (i + 1) % softDetails.length
+    if (setupProgressSteps.value.some((s) => s.id === 'register' && s.status === 'active')) {
+      setupProgressDetail.value = softDetails[i]
+    }
+  }, 2000)
+}
+
+const finishRegisterStep = () => {
+  clearRegisterSubProgress()
+  markProgressDone('register')
+}
+
 const uploadedImage = ref<string | null>(null)
 const uploadedFileType = ref<string | null>(null)
 // Camera toggle state
@@ -2046,6 +2181,18 @@ const submitRegistration = async () => {
   if (!canSubmit.value) return
   
   isSubmitting.value = true
+
+  const pendingOnly = !showAccountStep.value
+  const willCreateProposal =
+    showProposalSection.value &&
+    (proposalRequired.value || hasAnyProposalInput.value)
+  const hasDocuments = Object.keys(uploadedDocuments.value).length > 0
+  initSetupProgress({
+    pendingOnly,
+    hasProposal: willCreateProposal,
+    hasDocuments,
+  })
+  startRegisterSubProgress()
   
   try {
     logger.debug('🚀 Starting registration via backend API...')
@@ -2065,7 +2212,6 @@ const submitRegistration = async () => {
     logger.debug('📡 Calling backend registration API...')
     const { getStoredRefCode, clearRefCode } = useAffiliateRef()
     const refCode = getStoredRefCode()
-    const pendingOnly = !showAccountStep.value
     const response = await fetch('/api/auth/register-client', {
       method: 'POST',
       headers: {
@@ -2100,13 +2246,14 @@ const submitRegistration = async () => {
     }
     
     logger.debug('✅ User registered successfully:', data.userId)
+    finishRegisterStep()
 
     // Create booking proposal with preferred times/notes when configured
     if (
-      showProposalSection.value &&
-      data.userId &&
-      (proposalRequired.value || hasAnyProposalInput.value)
+      willCreateProposal &&
+      data.userId
     ) {
+      setProgressActive('proposal')
       try {
         const slots = buildPreferredTimeSlots()
         const notes = proposalNotes.value.trim()
@@ -2143,10 +2290,12 @@ const submitRegistration = async () => {
       } catch (proposalErr: any) {
         logger.warn('⚠️ Registration proposal failed (non-critical):', proposalErr?.message || proposalErr)
       }
+      markProgressDone('proposal')
     }
     
     // Upload Lernfahrausweis documents to Supabase Storage (one per category)
-    if (Object.keys(uploadedDocuments.value).length > 0 && data.userId) {
+    if (hasDocuments && data.userId) {
+      setProgressActive('documents')
       logger.debug('📸 Uploading documents for categories:', Object.keys(uploadedDocuments.value))
       
       const uploadErrors: string[] = []
@@ -2194,7 +2343,12 @@ const submitRegistration = async () => {
       if (uploadErrors.length > 0) {
         throw new Error('Dokument-Upload fehlgeschlagen:\n' + uploadErrors.join('\n'))
       }
+      markProgressDone('documents')
     }
+
+    setProgressActive('finish')
+    markProgressDone('finish')
+    setupProgressDetail.value = 'Fast fertig…'
     
     // Success - Show confirmation screen
     registeredEmail.value = formData.value.email
@@ -2205,6 +2359,7 @@ const submitRegistration = async () => {
     // No auto-redirect - user clicks button to proceed
     
   } catch (error: any) {
+    clearRegisterSubProgress()
     console.error('❌ Registration failed:', error)
 
     const apiMessage =
@@ -2265,6 +2420,7 @@ const submitRegistration = async () => {
     showError(errorTitle, errorMessage)
 
   } finally {
+    clearRegisterSubProgress()
     isSubmitting.value = false
   }
 }
@@ -2407,6 +2563,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  clearRegisterSubProgress()
   if (process.client) {
     document.removeEventListener('click', onCategoryDropdownClickOutside)
   }
