@@ -709,6 +709,37 @@
                   </template>
                 </div>
               </div>
+              <!-- Adminpauschale: only driving school / per-category pricing -->
+              <div
+                v-if="showAdminFeeInRegister && adminFeeByCatId[cat.id]"
+                class="px-4 py-3 border-t border-gray-100 bg-slate-50/80 space-y-3"
+              >
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0 pr-2">
+                    <p class="text-sm font-medium text-gray-700">Administration & Versicherung</p>
+                    <p class="text-xs text-gray-400 leading-snug">Einmalige Adminpauschale (0 = keine)</p>
+                  </div>
+                  <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <span class="text-xs font-medium text-gray-400">CHF</span>
+                    <input
+                      v-model.number="adminFeeByCatId[cat.id].chf"
+                      type="number" min="0" step="5"
+                      class="w-24 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                    />
+                  </div>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0 pr-2">
+                    <p class="text-sm font-medium text-gray-700">Admin-Fee ab Termin Nr.</p>
+                    <p class="text-xs text-gray-400 leading-snug">z.B. 2 = ab der 2. Fahrstunde</p>
+                  </div>
+                  <input
+                    v-model.number="adminFeeByCatId[cat.id].applies_from"
+                    type="number" min="1" max="99"
+                    class="w-24 px-2.5 py-1.5 rounded-lg border border-gray-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1623,6 +1654,13 @@
                     <span v-for="row in pricingRows.filter(r => r.catId === cat.id && r.enabled)" :key="row.type" class="text-gray-500">
                       {{ row.typeLabel }}: <strong>CHF {{ row.price_chf }}</strong> / {{ row.duration_minutes }} Min.
                     </span>
+                    <span
+                      v-if="showAdminFeeInRegister && (adminFeeByCatId[cat.id]?.chf || 0) > 0"
+                      class="text-gray-500 col-span-3"
+                    >
+                      Adminpauschale: <strong>CHF {{ adminFeeByCatId[cat.id].chf }}</strong>
+                      ab Termin {{ adminFeeByCatId[cat.id].applies_from }}
+                    </span>
                   </div>
                 </div>
                 <div v-if="customEventTypes.some(c => c.enabled)" class="pt-1">
@@ -2155,6 +2193,13 @@ const loadEventTypeTemplates = async () => {
 
 const pricingRows = ref<PricingRow[]>([])
 
+/** Driving-school default: CHF 120 from the 2nd lesson (Admin → Kategorien). */
+const DEFAULT_ADMIN_FEE = { chf: 120, applies_from: 2 }
+const adminFeeByCatId = ref<Record<number, { chf: number; applies_from: number }>>({})
+const showAdminFeeInRegister = computed(
+  () => pricingMode.value === 'per_category' && formData.value.business_type === 'driving_school'
+)
+
 const effectiveCategoryList = computed((): TemplateCategory[] => {
   const result: TemplateCategory[] = []
   for (const cat of templateCategories.value) {
@@ -2281,6 +2326,16 @@ watch([pricingGroups, eventTypeTemplates], ([groups, types]) => {
   }
   pricingRows.value = updated
 }, { immediate: true, flush: 'sync' })
+
+// Keep per-category admin fee entries in sync (defaults 120 / ab Termin 2).
+watch(pricingGroups, (groups) => {
+  if (!showAdminFeeInRegister.value) return
+  const next = { ...adminFeeByCatId.value }
+  for (const cat of groups) {
+    if (!next[cat.id]) next[cat.id] = { ...DEFAULT_ADMIN_FEE }
+  }
+  adminFeeByCatId.value = next
+}, { immediate: true })
 
 // ─── Custom event types (tenant-defined services beyond the template list) ──
 // Always priced tenant-wide via rule_type='event_price' + event_type_code
@@ -3176,7 +3231,24 @@ const submitRegistration = async () => {
         public_bookable: !!c.public_bookable,
       }))
 
-    fd.append('pricing_json', JSON.stringify([...pricingJson, ...customEventTypeJson]))
+    const adminFeeJson = showAdminFeeInRegister.value
+      ? pricingGroups.value
+          .filter((cat) => (adminFeeByCatId.value[cat.id]?.chf || 0) > 0)
+          .map((cat) => {
+            const fee = adminFeeByCatId.value[cat.id] || DEFAULT_ADMIN_FEE
+            return {
+              label: `${cat.name} – Adminpauschale`,
+              rule_type: 'admin_fee',
+              category_code: cat.code || cat.name.toUpperCase().replace(/\s+/g, '_'),
+              price_chf: 0,
+              duration_minutes: 45,
+              admin_fee_chf: fee.chf,
+              admin_fee_applies_from: fee.applies_from > 0 ? fee.applies_from : 2,
+            }
+          })
+      : []
+
+    fd.append('pricing_json', JSON.stringify([...pricingJson, ...customEventTypeJson, ...adminFeeJson]))
 
     // Locations as JSON (physical Treffpunkte + optional Telefon / Online Call)
     const locs = locationsForSubmit.value
@@ -3427,6 +3499,7 @@ watch(() => formData.value.business_type, (newType, oldType) => {
     eventTypeTemplates.value = []
     pricingRows.value = []
     customEventTypes.value = []
+    adminFeeByCatId.value = {}
     pricingMode.value = 'per_category'
   }
 
