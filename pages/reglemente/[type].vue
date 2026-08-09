@@ -129,12 +129,9 @@ onMounted(async () => {
         })
         
         if (regData?.content) {
-          // Replace {{tenant_name}} placeholder with actual tenant name
-          let content = regData.content
-          if (tenantName.value) {
-            content = content.replace(/\{\{tenant_name\}\}/g, tenantName.value)
-          }
-          reglementContent.value = content
+          // Placeholders (tenant_name, cancellation_hours_before, …) are
+          // already resolved server-side in /api/reglemente/public.
+          reglementContent.value = regData.content
         } else {
           error.value = 'Reglement nicht gefunden'
         }
