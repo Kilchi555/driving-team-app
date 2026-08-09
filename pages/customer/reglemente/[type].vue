@@ -54,7 +54,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { loadTenantData, replacePlaceholders } from '~/utils/reglementPlaceholders'
+import { replacePlaceholders } from '~/utils/reglementPlaceholders'
 import { getDefaultReglementContent } from '~/utils/defaultReglementContent'
 import DOMPurify from 'isomorphic-dompurify'
 import { logger } from '~/utils/logger'
@@ -114,19 +114,24 @@ const loadReglement = async () => {
 
     const regulation = response.data
 
-    // Build content
+    // Content is already placeholder-resolved by the API
     let content = regulation.content || getDefaultReglementContent(type.value, response.tenant?.business_type)
     
-    // Replace placeholders with tenant data from API response
     if (response.tenant) {
       tenantBusinessType.value = response.tenant.business_type || null
-      content = replacePlaceholders(content, {
-        name: response.tenant.name,
-        address: response.tenant.address,
-        email: response.tenant.email,
-        phone: response.tenant.phone,
-        website: response.tenant.website
-      })
+      if (content.includes('{{')) {
+        content = replacePlaceholders(content, {
+          name: response.tenant.name,
+          address: response.tenant.address,
+          email: response.tenant.email,
+          phone: response.tenant.phone,
+          website: response.tenant.website,
+          city: response.tenant.city,
+          zip: response.tenant.zip,
+          country: response.tenant.country,
+          cancellationHoursBefore: response.tenant.cancellationHoursBefore,
+        })
+      }
     }
     
     reglementContent.value = content

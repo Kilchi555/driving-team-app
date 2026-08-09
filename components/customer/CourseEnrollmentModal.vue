@@ -722,12 +722,12 @@
               />
               <label for="agb-checkbox" class="text-sm text-slate-600">
                 Ich habe die 
-                <a 
-                  :href="`/reglemente/agb?tenant=${props.tenantSlug}`" 
-                  target="_blank" 
-                  class="underline hover:no-underline"
+                <button
+                  type="button"
+                  class="underline hover:no-underline font-medium"
                   :style="{ color: getTenantPrimaryColor() }"
-                >AGB's</a> 
+                  @click.prevent="openAgbModal"
+                >AGB's</button>
                 gelesen und akzeptiere diese.
               </label>
             </div>
@@ -856,6 +856,39 @@
         </button>
       </div>
     </div>
+
+    <!-- AGB modal (above enrollment) -->
+    <div
+      v-if="showAgbModal"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
+      @click.self="closeAgbModal"
+    >
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <h3 class="text-lg font-semibold text-slate-800">{{ agbModalTitle }}</h3>
+          <button type="button" class="text-slate-400 hover:text-slate-600" @click="closeAgbModal">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6">
+          <div v-if="agbLoading" class="text-center py-12 text-slate-500 text-sm">Lade AGB…</div>
+          <div v-else-if="agbError" class="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">{{ agbError }}</div>
+          <div v-else class="prose prose-sm max-w-none text-slate-700" v-html="agbSanitizedContent"></div>
+        </div>
+        <div class="border-t px-6 py-4 flex justify-end">
+          <button
+            type="button"
+            class="px-5 py-2 text-white rounded-lg font-medium hover:opacity-90"
+            :style="{ background: getTenantPrimaryColor() }"
+            @click="closeAgbModal"
+          >
+            Schliessen
+          </button>
+        </div>
+      </div>
+    </div>
   </Teleport>
 </template>
 
@@ -870,6 +903,7 @@ import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
 import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
 import { getSupabase } from '~/utils/supabase'
+import DOMPurify from 'isomorphic-dompurify'
 
 interface Props {
   isOpen: boolean
@@ -1026,6 +1060,43 @@ const isValidAddress = computed(() => {
 })
 
 const agbAccepted = ref(false)
+const showAgbModal = ref(false)
+const agbLoading = ref(false)
+const agbError = ref<string | null>(null)
+const agbContent = ref('')
+const agbModalTitle = ref('Allgemeine Geschäftsbedingungen')
+
+const agbSanitizedContent = computed(() => {
+  if (!agbContent.value) return ''
+  return DOMPurify.sanitize(agbContent.value, {
+    ALLOWED_TAGS: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br', 'hr', 'ul', 'ol', 'li', 'a', 'strong', 'em', 'b', 'i', 'u', 'span', 'div', 'table', 'tr', 'td', 'th', 'thead', 'tbody'],
+    ALLOWED_ATTR: ['href', 'target', 'class', 'id', 'style'],
+  })
+})
+
+const openAgbModal = async () => {
+  showAgbModal.value = true
+  if (agbContent.value || agbLoading.value) return
+  agbLoading.value = true
+  agbError.value = null
+  try {
+    const regData = await $fetch<{ content?: string; title?: string | null }>('/api/reglemente/public', {
+      query: { tenantId: props.tenantId, type: 'agb' },
+    })
+    agbContent.value = regData?.content || ''
+    if (regData?.title) agbModalTitle.value = regData.title
+    if (!agbContent.value) agbError.value = 'AGB konnten nicht geladen werden.'
+  } catch (err: any) {
+    logger.error('Error loading AGB for course enrollment:', err)
+    agbError.value = err?.data?.statusMessage || err?.message || 'Fehler beim Laden der AGB'
+  } finally {
+    agbLoading.value = false
+  }
+}
+
+const closeAgbModal = () => {
+  showAgbModal.value = false
+}
 
 // Discount
 const appliedDiscount = ref<{ code: string; discountAmountRappen: number; discountData: any } | null>(null)
@@ -1745,6 +1816,9 @@ watch(() => props.isOpen, (isOpen) => {
     enrollmentError.value = null
     sariData.value = null
     agbAccepted.value = false
+    showAgbModal.value = false
+    agbContent.value = ''
+    agbError.value = null
     customSessions.value = {}
     showSessionCustomizer.value = false
     showSessionSwapModal.value = false

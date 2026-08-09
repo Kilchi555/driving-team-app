@@ -1776,15 +1776,19 @@ const navigateToReglement = async (type: string) => {
     })
 
     if (response?.success && response?.data) {
-      // Replace placeholders with tenant data from API response
+      // Content is already placeholder-resolved by the API
       let content = response.data.content || ''
-      if (response.tenant) {
+      if (response.tenant && content.includes('{{')) {
         content = replacePlaceholders(content, {
           name: response.tenant.name,
           address: response.tenant.address,
           email: response.tenant.email,
           phone: response.tenant.phone,
-          website: response.tenant.website
+          website: response.tenant.website,
+          city: response.tenant.city,
+          zip: response.tenant.zip,
+          country: response.tenant.country,
+          cancellationHoursBefore: response.tenant.cancellationHoursBefore,
         })
       }
       // Show in modal with content

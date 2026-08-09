@@ -106,11 +106,15 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ LAYER 7: Load Tenant Data for Placeholder Replacement
-    const { data: tenantData } = await supabaseAdmin
+    const { loadReglementTenantData, resolveReglementContent } = await import('~/server/utils/reglement-tenant-data')
+    const tenantPlaceholderData = await loadReglementTenantData(supabaseAdmin, tenantId)
+    const { data: tenantMeta } = await supabaseAdmin
       .from('tenants')
-      .select('name, address, contact_email, contact_phone, website_url, business_type')
+      .select('business_type')
       .eq('id', tenantId)
-      .single()
+      .maybeSingle()
+
+    const resolvedContent = resolveReglementContent(regulation.content || '', tenantPlaceholderData)
 
     // ✅ LAYER 8: Audit Logging
     logger.debug('✅ Reglement fetched successfully:', {
@@ -124,15 +128,20 @@ export default defineEventHandler(async (event) => {
       success: true,
       data: {
         ...regulation,
+        content: resolvedContent,
         sections: sections
       },
       tenant: {
-        name: tenantData?.name || '',
-        address: tenantData?.address || '',
-        email: tenantData?.contact_email || '',
-        phone: tenantData?.contact_phone || '',
-        website: tenantData?.website_url || '',
-        business_type: tenantData?.business_type || 'driving_school',
+        name: tenantPlaceholderData.name || '',
+        address: tenantPlaceholderData.address || '',
+        email: tenantPlaceholderData.email || '',
+        phone: tenantPlaceholderData.phone || '',
+        website: tenantPlaceholderData.website || '',
+        city: tenantPlaceholderData.city || '',
+        zip: tenantPlaceholderData.zip || '',
+        country: tenantPlaceholderData.country || '',
+        cancellationHoursBefore: tenantPlaceholderData.cancellationHoursBefore ?? 24,
+        business_type: tenantMeta?.business_type || 'driving_school',
       }
     }
   } catch (error: any) {

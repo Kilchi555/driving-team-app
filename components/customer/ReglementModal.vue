@@ -143,16 +143,22 @@ const loadReglement = async () => {
     }
 
     const regulation = response.data
+    // Content is already placeholder-resolved by /api/customer/reglements
     let content = regulation.content || getDefaultReglementContent(props.type, response.tenant?.business_type)
     
-    if (response.tenant) {
+    // Fallback for default/static content that still has placeholders
+    if (response.tenant && content.includes('{{')) {
       const { replacePlaceholders } = await import('~/utils/reglementPlaceholders')
       content = replacePlaceholders(content, {
         name: response.tenant.name,
         address: response.tenant.address,
         email: response.tenant.email,
         phone: response.tenant.phone,
-        website: response.tenant.website
+        website: response.tenant.website,
+        city: response.tenant.city,
+        zip: response.tenant.zip,
+        country: response.tenant.country,
+        cancellationHoursBefore: response.tenant.cancellationHoursBefore,
       })
     }
     
