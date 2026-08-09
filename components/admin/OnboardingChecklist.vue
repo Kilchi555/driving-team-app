@@ -31,43 +31,38 @@
 
     <!-- Steps -->
     <div class="space-y-2">
-      <component
-        :is="step.done || !step.href ? 'div' : 'a'"
-        v-for="step in steps"
-        :key="step.id"
-        :href="(!step.done && step.href) ? step.href : undefined"
-        class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all text-sm group"
-        :class="[
-          step.done
-            ? 'bg-white/40 text-gray-400'
-            : step.href
-              ? 'bg-white hover:bg-white shadow-sm cursor-pointer hover:shadow-md text-gray-700'
-              : 'bg-white/40 text-gray-400'
-        ]"
-      >
-        <!-- Status icon -->
-        <div class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center"
-          :class="step.done ? 'bg-emerald-100' : 'bg-blue-50 border-2 border-blue-200'"
+      <template v-for="step in steps" :key="step.id">
+        <NuxtLink
+          v-if="!step.done && step.href"
+          :to="step.href"
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all text-sm group bg-white hover:bg-white shadow-sm cursor-pointer hover:shadow-md text-gray-700"
         >
-          <svg v-if="step.done" class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+          <div class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center bg-blue-50 border-2 border-blue-200" />
+          <span class="flex-1 font-medium">{{ step.label }}</span>
+          <svg class="w-4 h-4 text-blue-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
           </svg>
-        </div>
-
-        <span class="flex-1 font-medium" :class="step.done ? 'line-through' : ''">{{ step.label }}</span>
-
-        <!-- Arrow for actionable steps -->
-        <svg v-if="!step.done && step.href" class="w-4 h-4 text-blue-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-        </svg>
-
-        <!-- Upgrade badge -->
-        <span v-if="step.id === 'upgrade' && !step.done"
-          class="text-xs font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 text-white"
+          <span
+            v-if="step.id === 'upgrade'"
+            class="text-xs font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 text-white"
+          >
+            Trial
+          </span>
+        </NuxtLink>
+        <div
+          v-else
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all text-sm bg-white/40 text-gray-400"
         >
-          Trial
-        </span>
-      </component>
+          <div class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center"
+            :class="step.done ? 'bg-emerald-100' : 'bg-blue-50 border-2 border-blue-200'"
+          >
+            <svg v-if="step.done" class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <span class="flex-1 font-medium" :class="step.done ? 'line-through' : ''">{{ step.label }}</span>
+        </div>
+      </template>
     </div>
 
     <!-- Trial countdown -->
@@ -76,9 +71,9 @@
     >
       <span v-if="trialDaysLeft > 0">
         Noch <strong>{{ trialDaysLeft }} Tag{{ trialDaysLeft === 1 ? '' : 'e' }}</strong> im Trial —
-        <a href="/upgrade" class="underline underline-offset-2 font-semibold">jetzt upgraden</a>
+        <NuxtLink to="/upgrade" class="underline underline-offset-2 font-semibold">jetzt upgraden</NuxtLink>
       </span>
-      <span v-else class="text-red-700 font-semibold">Trial abgelaufen — <a href="/upgrade" class="underline">Plan wählen</a></span>
+      <span v-else class="text-red-700 font-semibold">Trial abgelaufen — <NuxtLink to="/upgrade" class="underline">Plan wählen</NuxtLink></span>
     </div>
 
   </div>

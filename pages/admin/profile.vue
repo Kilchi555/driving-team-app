@@ -981,15 +981,15 @@
               </label>
             </div>
 
-            <div v-if="anonymizeExternalEventTitles" class="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-              <p class="text-sm text-slate-800">
-                <strong>Aktiv:</strong> Externe Termine werden als «Privat» gespeichert (Datenschutz-Standard).
+            <div v-if="anonymizeExternalEventTitles" class="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p class="text-sm text-amber-800">
+                <strong>Aktiv:</strong> Externe Termine werden als «Privat» gespeichert.
                 Nach dem nächsten Sync gelten die Titel neu.
               </p>
             </div>
-            <div v-else class="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p class="text-sm text-amber-800">
-                <strong>Deaktiviert:</strong> Originaltitel aus Apple/Google-Kalender werden im Team-Kalender sichtbar.
+            <div v-else class="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+              <p class="text-sm text-slate-800">
+                <strong>Deaktiviert (Standard):</strong> Originaltitel aus Apple/Google-Kalender werden im Team-Kalender sichtbar.
                 Nach dem nächsten Sync (oder manuell unter Einstellungen → Externe Kalender) werden die Titel aktualisiert.
               </p>
             </div>
@@ -2932,8 +2932,8 @@ const sariSyncResult = ref<{ success: boolean; message: string } | null>(null)
 const instructorConfirmationRequired = ref(true)
 const isSavingInstructorConfirmation = ref(false)
 
-// External calendar privacy (default: anonymize titles as "Privat")
-const anonymizeExternalEventTitles = ref(true)
+// External calendar privacy (default: show real titles)
+const anonymizeExternalEventTitles = ref(false)
 const isSavingAnonymizeExternalTitles = ref(false)
 
 const loadInstructorConfirmationSetting = async () => {
@@ -2955,11 +2955,11 @@ const loadAnonymizeExternalEventTitles = async () => {
       const raw = String(row.setting_value).trim().toLowerCase()
       anonymizeExternalEventTitles.value = raw === 'true' || raw === '1'
     } else {
-      anonymizeExternalEventTitles.value = true
+      anonymizeExternalEventTitles.value = false
     }
   } catch (err: any) {
     logger.error('Error loading external calendar privacy setting:', err)
-    anonymizeExternalEventTitles.value = true
+    anonymizeExternalEventTitles.value = false
   }
 }
 
