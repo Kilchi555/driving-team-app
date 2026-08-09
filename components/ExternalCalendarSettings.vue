@@ -20,7 +20,7 @@
               ></div>
               <div class="min-w-0 flex-1">
                 <div class="font-medium text-gray-900 truncate">
-                  {{ getProviderName(calendar.provider) }} - {{ calendar.calendar_name || calendar.account_identifier }}
+                  {{ getProviderName(calendar.provider) }}<span v-if="calendar.calendar_name"> – {{ calendar.calendar_name }}</span>
                 </div>
                 <div class="text-sm truncate" :class="calendarHasError(calendar) ? 'text-red-700' : 'text-gray-500'">
                   <template v-if="calendarHasError(calendar)">
@@ -123,26 +123,6 @@
             <option value="apple">Apple Calendar</option>
             <option value="ics">ICS-URL (Google/Outlook Export)</option>
           </select>
-        </div>
-
-        <!-- Account Identifier (für alle außer ICS) -->
-        <div v-if="newCalendar.provider && newCalendar.provider !== 'ics'" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              {{ newCalendar.provider === 'google' ? 'Google Account Email' : 
-                 newCalendar.provider === 'microsoft' ? 'Microsoft Account Email' : 
-                 'Apple ID Email' }}
-            </label>
-            <input
-              v-model="newCalendar.account_identifier"
-              type="email"
-              :placeholder="newCalendar.provider === 'google' ? 'ihre.email@gmail.com' : 
-                            newCalendar.provider === 'microsoft' ? 'ihre.email@outlook.com' : 
-                            'ihre.email@icloud.com'"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
         </div>
 
         <!-- ICS-URL (für alle Provider) -->
@@ -262,34 +242,6 @@
     <div v-if="success" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
       <p class="text-sm text-green-800 break-words">{{ success }}</p>
     </div>
-
-    <!-- Debug Log (sichtbar auf Mobile) -->
-    <div v-if="debugLogs.length > 0" class="mt-4 p-3 bg-gray-100 border border-gray-300 rounded-md">
-      <div class="flex items-center justify-between mb-2">
-        <p class="text-xs font-semibold text-gray-700">Debug-Log (für Support)</p>
-        <button 
-          @click="clearDebugLogs" 
-          class="text-xs text-gray-600 hover:text-gray-800 underline"
-        >
-          Löschen
-        </button>
-      </div>
-      <div class="space-y-1 max-h-60 overflow-y-auto">
-        <div 
-          v-for="(log, index) in debugLogs" 
-          :key="index"
-          class="text-xs font-mono break-words"
-          :class="{
-            'text-red-700': log.type === 'error',
-            'text-green-700': log.type === 'success',
-            'text-blue-700': log.type === 'info',
-            'text-gray-700': log.type === 'log'
-          }"
-        >
-          <span class="text-gray-500">{{ log.timestamp }}</span> {{ log.message }}
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -313,7 +265,6 @@ const plzSaving = ref<Record<string, boolean>>({})
 
 const newCalendar = ref({
   provider: '',
-  account_identifier: '',
   calendar_name: '',
   ics_url: ''
 })
@@ -324,33 +275,6 @@ const urlCheckMessage = ref('')
 const urlCheckTip = ref('')
 const shapeHint = ref('')
 let urlCheckTimer: ReturnType<typeof setTimeout> | null = null
-
-// Debug Logs (sichtbar auf Mobile)
-interface DebugLog {
-  timestamp: string
-  message: string
-  type: 'log' | 'info' | 'success' | 'error'
-}
-
-const debugLogs = ref<DebugLog[]>([])
-
-const addDebugLog = (message: string, type: 'log' | 'info' | 'success' | 'error' = 'log') => {
-  const timestamp = new Date().toLocaleTimeString('de-CH', { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    second: '2-digit' 
-  })
-  debugLogs.value.push({ timestamp, message, type })
-  
-  // Limitiere auf 50 Logs
-  if (debugLogs.value.length > 50) {
-    debugLogs.value.shift()
-  }
-}
-
-const clearDebugLogs = () => {
-  debugLogs.value = []
-}
 
 // Computed
 const canConnect = computed(() => {
@@ -549,7 +473,6 @@ const connectCalendar = async () => {
         data: {
           authUserId: user.id,
           provider: newCalendar.value.provider,
-          account_identifier: newCalendar.value.account_identifier,
           calendar_name: newCalendar.value.calendar_name,
           ics_url: newCalendar.value.ics_url
         }
@@ -611,7 +534,6 @@ const connectCalendar = async () => {
 
     newCalendar.value = {
       provider: '',
-      account_identifier: '',
       calendar_name: '',
       ics_url: ''
     }
@@ -635,20 +557,16 @@ const syncCalendar = async (calendarId: string) => {
   success.value = null
 
   try {
-    addDebugLog('🔄 Starte Synchronisation...', 'info')
     logger.debug('🔄 Starting calendar sync for:', calendarId)
     
     const calendar = externalCalendars.value.find(c => c.id === calendarId)
     if (!calendar) {
-      addDebugLog('❌ Kalender nicht gefunden', 'error')
       throw new Error('Kalender nicht gefunden')
     }
 
-    addDebugLog(`📅 Kalender: ${calendar.calendar_name}`, 'info')
     logger.debug('📅 Calendar found:', calendar.calendar_name, 'ICS URL:', calendar.ics_url ? 'Yes' : 'No')
 
     if (calendar.ics_url) {
-      addDebugLog('🌐 Rufe API auf...', 'info')
       logger.debug('🌐 Fetching from API: /api/external-calendars/sync-ics')
       
       const response = await $fetch<{ success: boolean, imported_events?: number, message?: string, error?: string }>('/api/external-calendars/sync-ics', {
@@ -659,43 +577,31 @@ const syncCalendar = async (calendarId: string) => {
         }
       })
 
-      addDebugLog(`📡 API Antwort: ${JSON.stringify(response)}`, 'info')
       logger.debug('📡 API Response:', response)
 
       if (response.success) {
         const imported = response.imported_events || 0
         if (imported === 0) {
-          const warnMsg =
+          error.value =
             'Sync ok, aber 0 Termine im Feed. Vermutlich wurde ein leerer Kalender geteilt — bitte den Kalender mit den echten Terminen teilen.'
-          error.value = warnMsg
-          addDebugLog(`⚠️ ${warnMsg}`, 'error')
         } else {
-          const successMsg = `Kalender synchronisiert! ${imported} Termine importiert.`
-          success.value = successMsg
-          addDebugLog(`✅ ${successMsg}`, 'success')
+          success.value = `Kalender synchronisiert! ${imported} Termine importiert.`
         }
         await loadExternalCalendars()
-        addDebugLog('✅ Kalender neu geladen', 'success')
       } else {
         const errorMsg = `${response.message}${response.error ? ' - ' + response.error : ''}${(response as any).tip ? ' — ' + (response as any).tip : ''}`
-        addDebugLog(`❌ Sync fehlgeschlagen: ${errorMsg}`, 'error')
         error.value = errorMsg
         await loadExternalCalendars()
         return
       }
     } else {
-      const errorMsg = 'Bitte eine ICS-URL hinterlegen, OAuth-Sync ist noch nicht aktiv'
-      addDebugLog(`❌ ${errorMsg}`, 'error')
-      throw new Error(errorMsg)
+      throw new Error('Bitte eine ICS-URL hinterlegen, OAuth-Sync ist noch nicht aktiv')
     }
   } catch (err: any) {
-    const errorMsg = err?.data?.statusMessage || err?.data?.message || err?.message || 'Fehler beim Synchronisieren'
-    addDebugLog(`❌ Fehler: ${errorMsg}`, 'error')
-    error.value = errorMsg
+    error.value = err?.data?.statusMessage || err?.data?.message || err?.message || 'Fehler beim Synchronisieren'
     await loadExternalCalendars()
   } finally {
     isSyncing.value = false
-    addDebugLog('🏁 Sync abgeschlossen', 'info')
     logger.debug('🏁 Sync process completed')
   }
 }
@@ -752,7 +658,6 @@ const saveDefaultPLZ = async (calendarId: string) => {
 }
 
 const onProviderChange = () => {
-  newCalendar.value.account_identifier = ''
   newCalendar.value.ics_url = ''
   newCalendar.value.calendar_name = ''
   resetUrlCheck()

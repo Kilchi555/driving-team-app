@@ -2,6 +2,7 @@
 import { defineEventHandler, createError } from 'h3'
 import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { SYNC_LOOKBACK_DAYS } from '~/server/utils/sync-external-calendars-job'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -26,8 +27,12 @@ export default defineEventHandler(async (event) => {
     
     console.log(`[${new Date().toLocaleTimeString()}] 📅 Loading external busy times for staff:`, user.id)
     
-    // Load external busy times for the next year
-    const oneYearFromNow = new Date()
+    // Match sync window: last SYNC_LOOKBACK_DAYS .. now + 1 year
+    // (previously only returned not-yet-ended events, so past ICS hours never showed)
+    const now = new Date()
+    const windowStart = new Date(now)
+    windowStart.setDate(windowStart.getDate() - SYNC_LOOKBACK_DAYS)
+    const oneYearFromNow = new Date(now)
     oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1)
     
     const { data: busyTimes, error } = await supabase
@@ -35,7 +40,7 @@ export default defineEventHandler(async (event) => {
       .select('*')
       .eq('staff_id', user.id)
       .eq('tenant_id', user.tenant_id)
-      .gte('end_time', new Date().toISOString())
+      .gte('end_time', windowStart.toISOString())
       .lte('start_time', oneYearFromNow.toISOString())
       .order('start_time')
     
