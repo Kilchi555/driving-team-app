@@ -461,16 +461,14 @@ export default defineEventHandler(async (event) => {
       }).select('id').single()
       if (dbError) console.error('⚠️ Lead DB insert error:', dbError.message)
 
-      // Server-side Google Ads inquiry conversion (fire-and-forget)
+      // Server-side Google Ads inquiry conversion — must await (Vercel freezes after response).
       const entityId = leadRow?.id ? `leadmagnet_${leadRow.id}` : `leadmagnet_${Date.now()}_${email.trim().toLowerCase()}`
-      ;(async () => {
-        await uploadInquiryConversionViaSimy(event, {
-          entity_id: entityId,
-          marketing_attribution: marketing_attribution ?? null,
-          email,
-          conversion_value_chf: LEAD_MAGNET_CONVERSION_VALUE_CHF,
-        })
-      })()
+      await uploadInquiryConversionViaSimy(event, {
+        entity_id: entityId,
+        marketing_attribution: marketing_attribution ?? null,
+        email,
+        conversion_value_chf: LEAD_MAGNET_CONVERSION_VALUE_CHF,
+      })
     }
   } catch (dbErr: any) {
     console.error('⚠️ Lead DB error (non-fatal):', dbErr.message)

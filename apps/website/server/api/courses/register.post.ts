@@ -343,20 +343,18 @@ export default defineEventHandler(async (event) => {
       data = participantRows
     }
 
-    // Server-side Google Ads inquiry conversion (fire-and-forget)
+    // Server-side Google Ads inquiry conversion — must await (Vercel freezes after response).
     const isDefinitiveRegistration = uniqueIds.length > 0
     const leadEntityId = isDefinitiveRegistration
       ? `courseregistration_${uniqueIds[0]}_${Date.now()}`
       : `courselead_${(data as Record<string, unknown>[])?.[0]?.id ?? Date.now()}`
-    ;(async () => {
-      await uploadInquiryConversionViaSimy(event, {
-        entity_id: leadEntityId,
-        marketing_attribution: body.marketing_attribution ?? null,
-        email: body.email ?? null,
-        phone: body.phone ?? null,
-        conversion_value_chf: isDefinitiveRegistration ? COURSE_REGISTRATION_VALUE_CHF : COURSE_INTEREST_VALUE_CHF,
-      })
-    })()
+    await uploadInquiryConversionViaSimy(event, {
+      entity_id: leadEntityId,
+      marketing_attribution: body.marketing_attribution ?? null,
+      email: body.email ?? null,
+      phone: body.phone ?? null,
+      conversion_value_chf: isDefinitiveRegistration ? COURSE_REGISTRATION_VALUE_CHF : COURSE_INTEREST_VALUE_CHF,
+    })
 
     try {
       const { Resend } = await import('resend')

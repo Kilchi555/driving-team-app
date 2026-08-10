@@ -18,6 +18,7 @@ import { recordAndSendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { isChargeableEventType } from '~/server/utils/event-type-charge'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { assertStaffCanApplyManualDiscount } from '~/server/utils/staff-manual-discount'
+import { attachProposalAttributionToStaffAppointment } from '~/server/utils/proposal-booking-conversion'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -632,6 +633,24 @@ export default defineEventHandler(async (event) => {
         paymentPromise,
         // 1b. Meta CAPI Purchase report (fire-and-forget, non-critical)
         capiPromise,
+        // 1c. Google Ads: attach inquiry attribution + booking conversion (LKW etc.)
+        (async () => {
+          try {
+            if (!result.user_id || !result.tenant_id) return
+            const conversionValueChf =
+              typeof totalAmountRappenForPayment === 'number' && totalAmountRappenForPayment > 0
+                ? totalAmountRappenForPayment / 100
+                : null
+            await attachProposalAttributionToStaffAppointment({
+              tenantId: result.tenant_id,
+              appointmentId: result.id,
+              userId: result.user_id,
+              conversionValueChf,
+            })
+          } catch (adsErr: any) {
+            logger.warn('⚠️ Proposal→appointment Ads attribution failed (non-critical):', adsErr?.message ?? adsErr)
+          }
+        })(),
         // 2. Mark overlapping availability slots
         (async () => {
           try {

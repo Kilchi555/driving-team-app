@@ -920,61 +920,66 @@ export default defineEventHandler(async (event) => {
               // ── Meta CAPI + Google Ads: report course purchases (webhook-confirmed only,
               // so webhook retries for an already-processed payment never re-fire —
               // `newRegs` only contains registrations created in THIS delivery).
-              // course_registrations has no FK to `appointments`, so Meta/Google both
-              // skip the appointment-FK audit tables and use order_id / synthetic ids.
+              // MUST be awaited — Vercel freezes the isolate after the response, so
+              // fire-and-forget conversions were silently dropped (root cause of
+              // Motorrad course purchases never reaching Google Ads).
               if (paymentStatus === 'completed') {
-                ;(async () => {
-                  try {
-                    const paymentsById = new Map(paymentsToUpdate.map((p: any) => [p.id, p]))
-                    for (let i = 0; i < registrationsToCreate.length && i < newRegs.length; i++) {
-                      const regData = registrationsToCreate[i] as any
-                      const newReg = newRegs[i] as any
-                      const payment = paymentsById.get(regData.payment_id)
-                      const marketingSessionId = payment?.metadata?.marketing_session_id
+                try {
+                  const { resolveMarketingAttribution } = await import('~/server/utils/resolve-marketing-attribution')
+                  const paymentsById = new Map(paymentsToUpdate.map((p: any) => [p.id, p]))
+                  for (let i = 0; i < registrationsToCreate.length && i < newRegs.length; i++) {
+                    const regData = registrationsToCreate[i] as any
+                    const newReg = newRegs[i] as any
+                    const payment = paymentsById.get(regData.payment_id)
+                    const marketingSessionId = payment?.metadata?.marketing_session_id
 
-                      const { data: attrRow } = marketingSessionId
-                        ? await supabase
-                            .from('marketing_attributions')
-                            .select('fbclid, fbc, fbp, gclid, gbraid, wbraid')
-                            .eq('session_id', marketingSessionId)
-                            .maybeSingle()
-                        : { data: null }
+                    const attrRow = await resolveMarketingAttribution(
+                      supabase,
+                      marketingSessionId,
+                      {
+                        gclid: payment?.metadata?.gclid ?? null,
+                        gbraid: payment?.metadata?.gbraid ?? null,
+                        wbraid: payment?.metadata?.wbraid ?? null,
+                        fbclid: payment?.metadata?.fbclid ?? null,
+                        fbc: payment?.metadata?.fbc ?? null,
+                        fbp: payment?.metadata?.fbp ?? null,
+                      },
+                    )
 
-                      const hashedEmail = regData.email ? await sha256Hex(String(regData.email).trim().toLowerCase()) : null
-                      const normalizedRegPhone = String(regData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
-                      const hashedPhone = normalizedRegPhone.startsWith('+') ? await sha256Hex(normalizedRegPhone) : null
-                      const valueChf = (regData.amount_paid_rappen || 0) / 100
-                      const conversionDateTime = new Date()
+                    const hashedEmail = regData.email ? await sha256Hex(String(regData.email).trim().toLowerCase()) : null
+                    const normalizedRegPhone = String(regData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+                    const hashedPhone = normalizedRegPhone.startsWith('+') ? await sha256Hex(normalizedRegPhone) : null
+                    const valueChf = (regData.amount_paid_rappen || payment?.total_amount_rappen || 0) / 100
+                    const conversionDateTime = new Date()
 
-                      await sendCapiEvent({
-                        appointment_id: `course_${newReg.id}`,
-                        tenant_id: regData.tenant_id,
-                        event_name: 'Purchase',
-                        conversion_value_chf: valueChf,
-                        conversion_date_time: conversionDateTime,
-                        fbclid: attrRow?.fbclid ?? null,
-                        fbc: attrRow?.fbc ?? null,
-                        fbp: attrRow?.fbp ?? null,
-                        hashed_email: hashedEmail,
-                        hashed_phone: hashedPhone,
-                      })
+                    await sendCapiEvent({
+                      appointment_id: `course_${newReg.id}`,
+                      tenant_id: regData.tenant_id,
+                      event_name: 'Purchase',
+                      conversion_value_chf: valueChf,
+                      conversion_date_time: conversionDateTime,
+                      fbclid: attrRow?.fbclid ?? null,
+                      fbc: attrRow?.fbc ?? null,
+                      fbp: attrRow?.fbp ?? null,
+                      hashed_email: hashedEmail,
+                      hashed_phone: hashedPhone,
+                    })
 
-                      await recordAndUploadCourseConversion({
-                        registration_id: String(newReg.id),
-                        tenant_id: regData.tenant_id ?? null,
-                        gclid: attrRow?.gclid ?? null,
-                        gbraid: attrRow?.gbraid ?? null,
-                        wbraid: attrRow?.wbraid ?? null,
-                        conversion_value_chf: valueChf,
-                        conversion_date_time: conversionDateTime,
-                        hashed_email: hashedEmail,
-                        hashed_phone: hashedPhone,
-                      })
-                    }
-                  } catch (capiErr: any) {
-                    logger.warn('⚠️ Meta/Google Ads conversion upload failed for course registration (webhook, non-critical):', capiErr?.message ?? capiErr)
+                    await recordAndUploadCourseConversion({
+                      registration_id: String(newReg.id),
+                      tenant_id: regData.tenant_id ?? null,
+                      gclid: attrRow?.gclid ?? null,
+                      gbraid: attrRow?.gbraid ?? null,
+                      wbraid: attrRow?.wbraid ?? null,
+                      conversion_value_chf: valueChf,
+                      conversion_date_time: conversionDateTime,
+                      hashed_email: hashedEmail,
+                      hashed_phone: hashedPhone,
+                    })
                   }
-                })()
+                } catch (capiErr: any) {
+                  logger.warn('⚠️ Meta/Google Ads conversion upload failed for course registration (webhook, non-critical):', capiErr?.message ?? capiErr)
+                }
               }
 
               // Increment discount usage_count for any discount codes used

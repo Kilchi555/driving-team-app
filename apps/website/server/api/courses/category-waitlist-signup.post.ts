@@ -170,15 +170,13 @@ export default defineEventHandler(async (event) => {
 
   await supabase.from('outbound_messages_queue').insert(toQueue)
 
-  // Server-side Google Ads inquiry conversion (fire-and-forget)
-  ;(async () => {
-    await uploadInquiryConversionViaSimy(event, {
-      entity_id: `waitlist_${entry.id}`,
-      marketing_attribution: (marketing_attribution ?? null) as WebsiteMarketingAttributionPayload | null,
-      email,
-      conversion_value_chf: WAITLIST_CONVERSION_VALUE_CHF,
-    })
-  })()
+  // Server-side Google Ads inquiry conversion — must await (Vercel freezes after response).
+  await uploadInquiryConversionViaSimy(event, {
+    entity_id: `waitlist_${entry.id}`,
+    marketing_attribution: (marketing_attribution ?? null) as WebsiteMarketingAttributionPayload | null,
+    email,
+    conversion_value_chf: WAITLIST_CONVERSION_VALUE_CHF,
+  })
 
   return {
     success: true,

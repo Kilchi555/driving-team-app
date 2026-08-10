@@ -697,51 +697,46 @@ export default defineEventHandler(async (event) => {
     })()
   }
 
-  // ── Google Ads + Meta CAPI conversion (fire-and-forget) ──────────────────
-  ;(async () => {
-    try {
-      const hashedEmail = email ? await sha256Hex(email.toLowerCase().trim()) : null
-      const hashedPhone = phone ? await sha256Hex(formatSwissPhoneNumber(phone)) : null
+  // ── Google Ads + Meta CAPI conversion (awaited — Vercel freezes after response)
+  try {
+    const hashedEmail = email ? await sha256Hex(email.toLowerCase().trim()) : null
+    const hashedPhone = phone ? await sha256Hex(formatSwissPhoneNumber(phone)) : null
 
-      await recordAndUploadConversion({
-        appointment_id: newAppointment.id,
-        tenant_id: tenantId,
-        gclid: marketingAttr?.gclid ?? null,
-        gbraid: marketingAttr?.gbraid ?? null,
-        wbraid: marketingAttr?.wbraid ?? null,
-        conversion_date_time: new Date(),
-        conversion_value_chf: grossAmountRappen / 100,
-        hashed_email: hashedEmail,
-        hashed_phone: hashedPhone,
-      })
-    } catch (e: any) {
-      logger.warn('⚠️ Google Ads conversion upload failed (guest):', e.message)
-    }
-  })()
+    await recordAndUploadConversion({
+      appointment_id: newAppointment.id,
+      tenant_id: tenantId,
+      gclid: marketingAttr?.gclid ?? null,
+      gbraid: marketingAttr?.gbraid ?? null,
+      wbraid: marketingAttr?.wbraid ?? null,
+      conversion_date_time: new Date(),
+      conversion_value_chf: grossAmountRappen / 100,
+      hashed_email: hashedEmail,
+      hashed_phone: hashedPhone,
+    })
+  } catch (e: any) {
+    logger.warn('⚠️ Google Ads conversion upload failed (guest):', e.message)
+  }
 
-  ;(async () => {
-    try {
-      const hashedEmail = email ? await sha256Hex(email.toLowerCase().trim()) : null
-      const hashedPhone = phone ? await sha256Hex(formatSwissPhoneNumber(phone)) : null
+  try {
+    const hashedEmail = email ? await sha256Hex(email.toLowerCase().trim()) : null
+    const hashedPhone = phone ? await sha256Hex(formatSwissPhoneNumber(phone)) : null
 
-      await recordAndSendCapiEvent({
-        appointment_id: newAppointment.id,
-        tenant_id: tenantId,
-        event_name: 'Purchase',
-        conversion_date_time: new Date(),
-        fbclid: marketingAttr?.fbclid ?? null,
-        fbc: marketingAttr?.fbc ?? null,
-        fbp: marketingAttr?.fbp ?? null,
-        conversion_value_chf: grossAmountRappen / 100,
-        hashed_email: hashedEmail,
-        hashed_phone: hashedPhone,
-        client_ip: ip,
-      })
-    } catch (e: any) {
-      logger.warn('⚠️ Meta CAPI event failed (guest):', e.message)
-    }
-  })()
-
+    await recordAndSendCapiEvent({
+      appointment_id: newAppointment.id,
+      tenant_id: tenantId,
+      event_name: 'Purchase',
+      conversion_date_time: new Date(),
+      fbclid: marketingAttr?.fbclid ?? null,
+      fbc: marketingAttr?.fbc ?? null,
+      fbp: marketingAttr?.fbp ?? null,
+      conversion_value_chf: grossAmountRappen / 100,
+      hashed_email: hashedEmail,
+      hashed_phone: hashedPhone,
+      client_ip: ip,
+    })
+  } catch (e: any) {
+    logger.warn('⚠️ Meta CAPI event failed (guest):', e.message)
+  }
   // ── Send appointment confirmation email (customer) + new-booking notification
   // (staff). AWAITED on purpose: Vercel freezes the serverless function right
   // after the response is returned, so a fire-and-forget call here was

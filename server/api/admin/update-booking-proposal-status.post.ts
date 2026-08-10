@@ -2,6 +2,7 @@ import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { uploadProposalDerivedBookingConversion } from '~/server/utils/proposal-booking-conversion'
 
 type AllowedProposalStatus = 'pending' | 'contacted' | 'accepted' | 'rejected' | 'expired'
 type OutcomeType = 'booking_confirmed' | 'consultation_only' | 'potential_customer' | 'not_interested' | 'no_show'
@@ -51,7 +52,10 @@ export default defineEventHandler(async (event) => {
     // Ensure proposal belongs to this tenant and staff can only update own assigned proposals.
     let selectQuery = supabase
       .from('booking_proposals')
-      .select('id, tenant_id, staff_id, status')
+      .select(`
+        id, tenant_id, staff_id, status, email, phone, category_code, created_by_user_id,
+        gclid, gbraid, wbraid, outcome_type
+      `)
       .eq('id', proposalId)
       .eq('tenant_id', tenantId)
 
@@ -99,9 +103,36 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'Failed to update proposal status' })
     }
 
+    // Offline close: Ads inquiry → staff confirms booking without online checkout.
+    // Upload Booking Completed once (deduped via proposal-booking-<id>).
+    let adsUpload: string | null = null
+    if (
+      outcomeType === 'booking_confirmed'
+      && existingProposal.outcome_type !== 'booking_confirmed'
+      && (existingProposal.gclid || existingProposal.gbraid || existingProposal.wbraid)
+    ) {
+      try {
+        adsUpload = await uploadProposalDerivedBookingConversion({
+          proposal: {
+            id: existingProposal.id,
+            tenant_id: existingProposal.tenant_id,
+            gclid: existingProposal.gclid,
+            gbraid: existingProposal.gbraid,
+            wbraid: existingProposal.wbraid,
+            email: existingProposal.email,
+            phone: existingProposal.phone,
+          },
+        })
+      } catch (err: any) {
+        logger.warn('⚠️ Proposal booking_confirmed Ads upload failed (non-critical):', err?.message ?? err)
+        adsUpload = 'failed'
+      }
+    }
+
     return {
       success: true,
-      data: updatedProposal
+      data: updatedProposal,
+      ...(adsUpload ? { google_ads_upload: adsUpload } : {}),
     }
   } catch (error: any) {
     logger.error('❌ Error in update-booking-proposal-status API:', error)
