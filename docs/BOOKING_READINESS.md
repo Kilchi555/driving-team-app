@@ -83,7 +83,7 @@ Availability calculator falls back to public_bookable event types only when **no
 
 ## Related SA diagnostics
 
-For cross-tenant empty calendars / support actions, see [TENANT_SETUP_DIAGNOSTICS.md](./TENANT_SETUP_DIAGNOSTICS.md) (super-admin Setup tab on `/tenant-admin/tenants`) when that runbook is merged.
+For cross-tenant empty calendars / support actions, use the super-admin **Setup** tab on `/tenant-admin/tenants` (`GET /api/admin/tenants/:id` + actions). A dedicated runbook may land separately as `TENANT_SETUP_DIAGNOSTICS.md`.
 
 ---
 
