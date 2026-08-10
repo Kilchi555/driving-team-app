@@ -53,6 +53,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Staff/admin only — clients must not create payments, mutate appointments, or dump PII
+    const STAFF_ROLES = ['admin', 'staff', 'super_admin', 'tenant_admin']
+    if (!STAFF_ROLES.includes(userProfile.role)) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Insufficient permissions – staff or admin role required'
+      })
+    }
+
     logger.debug('📋 Calendar API action:', action, 'by user:', userProfile.id)
     
     if (action === 'get-staff-meetings') {
@@ -314,10 +323,10 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // Get user data
+      // Never select('*') — onboarding_token and similar secrets must stay out of responses
       const { data: user, error } = await supabase
         .from('users')
-        .select('*')
+        .select('id, email, first_name, last_name, phone, role, tenant_id, category')
         .eq('id', user_id)
         .single()
 
@@ -351,10 +360,9 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // Get staff data
       const { data: staff, error } = await supabase
         .from('users')
-        .select('*')
+        .select('id, email, first_name, last_name, phone, role, tenant_id')
         .eq('id', staff_id)
         .eq('role', 'staff')
         .single()
@@ -369,17 +377,47 @@ export default defineEventHandler(async (event) => {
 
     if (action === 'create-payment') {
       // ✅ Verify tenant access
-      if (payment_data?.tenant_id !== userProfile.tenant_id) {
+      if (payment_data?.tenant_id && payment_data.tenant_id !== userProfile.tenant_id) {
         throw createError({
           statusCode: 403,
           statusMessage: 'Access denied to this tenant'
         })
       }
 
-      // Create payment record
+      // Whitelist insertable fields — never allow forging Wallee completions via raw payment_data
+      const allowedInsertFields = [
+        'appointment_id', 'user_id', 'staff_id', 'lesson_price_rappen', 'admin_fee_rappen',
+        'products_price_rappen', 'discount_amount_rappen', 'credit_used_rappen',
+        'total_amount_rappen', 'payment_method', 'currency', 'description', 'metadata',
+        'created_by'
+      ] as const
+      const sanitized: Record<string, any> = {}
+      for (const key of allowedInsertFields) {
+        if (payment_data?.[key] !== undefined) sanitized[key] = payment_data[key]
+      }
+
+      const method = String(sanitized.payment_method || 'invoice')
+      const offlineCompletable = ['cash', 'twint', 'bank_transfer', 'card_terminal'].includes(method)
+      const requestedStatus = String(payment_data?.payment_status || 'pending')
+      let paymentStatus = 'pending'
+      if (requestedStatus === 'completed' && offlineCompletable) {
+        paymentStatus = 'completed'
+      } else if (requestedStatus === 'pending' || requestedStatus === 'processing') {
+        paymentStatus = requestedStatus
+      }
+
+      const paymentToInsert: Record<string, any> = {
+        ...sanitized,
+        tenant_id: userProfile.tenant_id,
+        payment_status: paymentStatus
+      }
+      if (paymentStatus === 'completed') {
+        paymentToInsert.paid_at = payment_data?.paid_at || new Date().toISOString()
+      }
+
       const { data: payment, error } = await supabase
         .from('payments')
-        .insert([payment_data])
+        .insert([paymentToInsert])
         .select()
         .single()
 
@@ -449,10 +487,10 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // Get tenant data
+      // Non-secret branding fields only — never return payment/API credentials
       const { data: tenant, error } = await supabase
         .from('tenants')
-        .select('*')
+        .select('id, name, slug, primary_color, logo_url, logo_wide_url, logo_square_url, business_type')
         .eq('id', tenant_id)
         .single()
 

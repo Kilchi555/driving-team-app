@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { requireSuperAdmin } from '~/server/utils/require-super-admin'
 
 /**
  * Tenant-Admin Marketing Overview
@@ -11,10 +12,14 @@ import { logger } from '~/utils/logger'
  * Query params:
  *   - days:      Zeitfenster in Tagen (7, 30, 90). Default 30.
  *   - tenant_id: Optional, Filter auf einen Tenant. Default: alle Tenants.
+ *
+ * Auth: super_admin only (cross-tenant analytics).
  */
 export default defineEventHandler(async (event) => {
   const start = Date.now()
   try {
+    await requireSuperAdmin(event)
+
     const q = getQuery(event)
     const days = Math.min(Math.max(parseInt(String(q.days ?? '30'), 10) || 30, 1), 365)
     const tenantId = q.tenant_id ? String(q.tenant_id) : null
