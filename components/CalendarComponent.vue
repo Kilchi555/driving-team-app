@@ -3115,10 +3115,10 @@ defineExpose({
   line-height: 1;
 }
 
-/* Heute hervorheben */
+/* Heute hervorheben (Tenant-Primary) */
 .fc-col-header-cell.fc-day-today {
-  background-color: #dbeafe !important;
-  color: #1d4ed8 !important;
+  background-color: color-mix(in srgb, var(--color-primary, #111827) 12%, white) !important;
+  color: var(--color-primary, #111827) !important;
 }
 
 
@@ -3227,7 +3227,7 @@ defineExpose({
 }
 
 .fc-timegrid-col.fc-day-today {
-    color: #1d4ed8 !important;
+  color: var(--color-primary, #111827) !important;
 }
 
 /* === EVENTS === */
