@@ -157,15 +157,13 @@ export default defineEventHandler(async (event) => {
       console.warn('⚠️ Failed to send contact emails:', emailErr.message)
     }
 
-    // Server-side Google Ads inquiry conversion (fire-and-forget)
-    ;(async () => {
-      await uploadInquiryConversionViaSimy(event, {
-        proposal_id: proposal.id,
-        marketing_attribution: marketing_attribution ?? null,
-        email: email.trim(),
-        phone: phone.trim(),
-      })
-    })()
+    // Server-side Google Ads inquiry conversion — must await (Vercel freezes after response).
+    await uploadInquiryConversionViaSimy(event, {
+      proposal_id: proposal.id,
+      marketing_attribution: marketing_attribution ?? null,
+      email: email.trim(),
+      phone: phone.trim(),
+    })
 
     return { success: true, proposal_id: proposal.id }
   } catch (err: any) {

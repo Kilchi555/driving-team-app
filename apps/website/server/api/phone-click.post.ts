@@ -104,10 +104,8 @@ export default defineEventHandler(async (event) => {
 
     if (error) console.error('phone-click insert error:', error)
 
-    // Upload Google Ads conversion if this click can be attributed to an ad (fire-and-forget)
-    ;(async () => {
-      await uploadPhoneClickConversion(event, supabase, body.session_id || 'unknown', body.marketing_attribution ?? null)
-    })()
+    // Must await — Vercel freezes the isolate after the response.
+    await uploadPhoneClickConversion(event, supabase, body.session_id || 'unknown', body.marketing_attribution ?? null)
 
     return { ok: true }
   } catch (err) {

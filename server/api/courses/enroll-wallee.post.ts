@@ -65,6 +65,7 @@ const handler = defineEventHandler(async (event) => {
       partialStartPosition, // Which session position to start from (e.g. 3) — category partial mode
       individualSessionNumber, // Set when booking a single allow_individual_booking session
       marketingSessionId,   // Optional: analytics session ID from drivingteam.ch for attribution
+      marketingAttribution, // Optional: client-side gclid/UTM blob
       vehicleId,            // Optional: selected rental vehicle
     } = body
 
@@ -699,55 +700,47 @@ const handler = defineEventHandler(async (event) => {
           sourceLabel: course?.name ? `Kurs: ${course.name}` : 'Kursanmeldung (Kredit)',
         })
 
-        // Meta CAPI + Google Ads: courses aren't linked to `appointments`, so
-        // Meta bypasses the audit table FK and Google uploads with order_id
-        // `course_<registration_id>`. Fire-and-forget, never blocks the response.
-        ;(async () => {
-          try {
-            const { data: attrRow } = marketingSessionId
-              ? await supabase
-                  .from('marketing_attributions')
-                  .select('fbclid, fbc, fbp, gclid, gbraid, wbraid')
-                  .eq('session_id', marketingSessionId)
-                  .maybeSingle()
-              : { data: null }
+        // Meta CAPI + Google Ads for credit-paid course enrollments.
+        // Awaited: Vercel freezes after response; fire-and-forget was dropping uploads.
+        try {
+          const { resolveMarketingAttribution } = await import('~/server/utils/resolve-marketing-attribution')
+          const attrRow = await resolveMarketingAttribution(supabase, marketingSessionId)
 
-            const hashedEmail = finalEmail ? await sha256Hex(finalEmail.trim().toLowerCase()) : null
-            const normalizedPhone = (finalPhone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
-            const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
-            const valueChf = finalAmount / 100
-            const conversionDateTime = new Date()
+          const hashedEmail = finalEmail ? await sha256Hex(finalEmail.trim().toLowerCase()) : null
+          const normalizedPhone = (finalPhone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+          const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+          const valueChf = finalAmount / 100
+          const conversionDateTime = new Date()
 
-            await sendCapiEvent({
-              appointment_id: `course_${creditRegistration?.id ?? courseId}`,
+          await sendCapiEvent({
+            appointment_id: `course_${creditRegistration?.id ?? courseId}`,
+            tenant_id: tenantId,
+            event_name: 'Purchase',
+            conversion_value_chf: valueChf,
+            conversion_date_time: conversionDateTime,
+            fbclid: attrRow?.fbclid ?? null,
+            fbc: attrRow?.fbc ?? null,
+            fbp: attrRow?.fbp ?? null,
+            hashed_email: hashedEmail,
+            hashed_phone: hashedPhone,
+          })
+
+          if (creditRegistration?.id) {
+            await recordAndUploadCourseConversion({
+              registration_id: creditRegistration.id,
               tenant_id: tenantId,
-              event_name: 'Purchase',
+              gclid: attrRow?.gclid ?? null,
+              gbraid: attrRow?.gbraid ?? null,
+              wbraid: attrRow?.wbraid ?? null,
               conversion_value_chf: valueChf,
               conversion_date_time: conversionDateTime,
-              fbclid: attrRow?.fbclid ?? null,
-              fbc: attrRow?.fbc ?? null,
-              fbp: attrRow?.fbp ?? null,
               hashed_email: hashedEmail,
               hashed_phone: hashedPhone,
             })
-
-            if (creditRegistration?.id) {
-              await recordAndUploadCourseConversion({
-                registration_id: creditRegistration.id,
-                tenant_id: tenantId,
-                gclid: attrRow?.gclid ?? null,
-                gbraid: attrRow?.gbraid ?? null,
-                wbraid: attrRow?.wbraid ?? null,
-                conversion_value_chf: valueChf,
-                conversion_date_time: conversionDateTime,
-                hashed_email: hashedEmail,
-                hashed_phone: hashedPhone,
-              })
-            }
-          } catch (err: any) {
-            logger.warn('⚠️ Meta/Google Ads conversion upload failed for course credit enrollment (non-critical):', err?.message ?? err)
           }
-        })()
+        } catch (err: any) {
+          logger.warn('⚠️ Meta/Google Ads conversion upload failed for course credit enrollment (non-critical):', err?.message ?? err)
+        }
 
         return { success: true, paidWithCredit: true }
       }
@@ -809,6 +802,14 @@ const handler = defineEventHandler(async (event) => {
             discount_amount_rappen: validatedDiscountAmount,
             original_price_rappen: course.price_per_participant_rappen,
             marketing_session_id: marketingSessionId || null,
+            // Persist click IDs on the payment so the Wallee webhook can upload
+            // even if marketing_attributions is missing/late for this session.
+            gclid: marketingAttribution?.gclid || null,
+            gbraid: marketingAttribution?.gbraid || null,
+            wbraid: marketingAttribution?.wbraid || null,
+            fbclid: marketingAttribution?.fbclid || null,
+            fbc: marketingAttribution?.fbc || null,
+            fbp: marketingAttribution?.fbp || null,
             vehicle_id: vehicleId || null,
             ...(course.sari_managed && faberidClean ? {
               sari_validation_data: {

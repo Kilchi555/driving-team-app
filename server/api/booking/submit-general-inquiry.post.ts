@@ -527,6 +527,9 @@ export default defineEventHandler(async (event) => {
         fbclid: resolvedAttribution?.fbclid ?? null,
         fbc: resolvedAttribution?.fbc ?? null,
         fbp: resolvedAttribution?.fbp ?? null,
+        gclid: resolvedAttribution?.gclid ?? null,
+        gbraid: resolvedAttribution?.gbraid ?? null,
+        wbraid: resolvedAttribution?.wbraid ?? null,
       })
       .select()
       .single()
@@ -542,26 +545,26 @@ export default defineEventHandler(async (event) => {
     console.log('✅ General inquiry created:', proposal.id)
 
     if (resolvedAttribution?.gclid || resolvedAttribution?.gbraid || resolvedAttribution?.wbraid) {
-      ;(async () => {
-        try {
-          const normalizedEmail = fieldValues.email.toLowerCase()
-          const normalizedPhone = fieldValues.phone.replace(/\s+/g, '').replace(/^00/, '+')
-          const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
-          const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+      try {
+        const normalizedEmail = (fieldValues.email || '').toLowerCase()
+        const normalizedPhone = (fieldValues.phone || '').replace(/\s+/g, '').replace(/^00/, '+')
+        const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+        const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
 
-          await recordAndUploadInquiryConversion({
-            proposal_id: proposal.id,
-            gclid: resolvedAttribution!.gclid ?? null,
-            gbraid: resolvedAttribution!.gbraid ?? null,
-            wbraid: resolvedAttribution!.wbraid ?? null,
-            conversion_date_time: new Date(),
-            hashed_email: hashedEmail,
-            hashed_phone: hashedPhone,
-          })
-        } catch (err: any) {
-          console.warn('⚠️ Server-side Google Ads inquiry conversion upload failed (non-critical):', err?.message ?? err)
-        }
-      })()
+        // Must await — Vercel freezes the isolate after the response.
+        await recordAndUploadInquiryConversion({
+          proposal_id: proposal.id,
+          tenant_id,
+          gclid: resolvedAttribution!.gclid ?? null,
+          gbraid: resolvedAttribution!.gbraid ?? null,
+          wbraid: resolvedAttribution!.wbraid ?? null,
+          conversion_date_time: new Date(),
+          hashed_email: hashedEmail,
+          hashed_phone: hashedPhone,
+        })
+      } catch (err: any) {
+        console.warn('⚠️ Server-side Google Ads inquiry conversion upload failed (non-critical):', err?.message ?? err)
+      }
     }
 
     try {

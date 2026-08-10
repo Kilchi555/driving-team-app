@@ -71,20 +71,14 @@ export default defineEventHandler(async (event) => {
       // Don't fail the whole request if DB insert fails — still send email
     }
 
-    // Server-side Google Ads inquiry conversion (fire-and-forget). Uses the
-    // real, user-specific estimated course cost as the conversion value —
-    // instead of a flat placeholder — since the calculator already computed
-    // exactly what this lead's course would cost (CHF 499–6'500+ depending on
-    // category), so Smart Bidding can tell high-value leads apart from low ones.
     const entityId = leadRow?.id ? `pricecalc_${leadRow.id}` : `pricecalc_${Date.now()}_${body.email.trim().toLowerCase()}`
-    ;(async () => {
-      await uploadInquiryConversionViaSimy(event, {
-        entity_id: entityId,
-        marketing_attribution: body.marketing_attribution ?? null,
-        email: body.email,
-        conversion_value_chf: body.totalCost,
-      })
-    })()
+    // Must await — Vercel freezes the isolate after the response.
+    await uploadInquiryConversionViaSimy(event, {
+      entity_id: entityId,
+      marketing_attribution: body.marketing_attribution ?? null,
+      email: body.email,
+      conversion_value_chf: body.totalCost,
+    })
 
     // Send email via Resend
     try {

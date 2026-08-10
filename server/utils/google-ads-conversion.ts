@@ -25,7 +25,8 @@ import { logger } from '~/utils/logger'
 const GOOGLE_ADS_API_VERSION = 'v23'
 
 export interface ConversionUploadInput {
-  appointment_id: string
+  /** Appointment UUID when this is a booking conversion. Optional for inquiry/lead uploads. */
+  appointment_id?: string
   tenant_id?: string | null
   gclid?: string | null
   gbraid?: string | null
@@ -40,6 +41,17 @@ export interface ConversionUploadInput {
   order_id?: string
   /** Override conversion action (defaults to GOOGLE_ADS_CONVERSION_ACTION_ID). */
   conversion_action_id?: string
+  /**
+   * When true, keep the provided conversion value as-is (including small inquiry
+   * lead values). Booking uploads still use normalizeConversionValueChf().
+   */
+  skip_value_floor?: boolean
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isUuid(value: string | null | undefined): value is string {
+  return !!value && UUID_RE.test(value)
 }
 
 export interface ConversionUploadResult {
@@ -144,12 +156,23 @@ export async function uploadClickConversion(input: ConversionUploadInput): Promi
 
   const conversionAction = `customers/${creds.customerId}/conversionActions/${creds.conversionActionId}`
 
+  const conversionValue = input.skip_value_floor
+    ? (Number.isFinite(Number(input.conversion_value_chf)) && Number(input.conversion_value_chf) > 0
+        ? Number(Number(input.conversion_value_chf).toFixed(2))
+        : readInquiryDefaultValueChf())
+    : normalizeConversionValueChf(input.conversion_value_chf)
+
+  const orderId = input.order_id || input.appointment_id
+  if (!orderId) {
+    return { uploaded: false, reason: 'missing_order_id', error: 'order_id or appointment_id required' }
+  }
+
   const conversion: Record<string, any> = {
     conversionAction,
     conversionDateTime: toRfc3339(input.conversion_date_time),
-    conversionValue: Number(input.conversion_value_chf.toFixed(2)),
+    conversionValue,
     currencyCode: 'CHF',
-    orderId: input.order_id || input.appointment_id,
+    orderId,
   }
 
   if (input.gclid) conversion.gclid = input.gclid
@@ -213,6 +236,8 @@ export async function recordAndUploadConversion(input: ConversionUploadInput): P
   // actual API call already trims via readCreds(); trim here too so the audit
   // row in google_ads_conversion_uploads doesn't store a polluted id like "123\n".
   const conversionActionId = (input.conversion_action_id ?? process.env.GOOGLE_ADS_CONVERSION_ACTION_ID ?? 'unknown').trim()
+  const normalizedValue = normalizeConversionValueChf(input.conversion_value_chf)
+  const uploadInput: ConversionUploadInput = { ...input, conversion_value_chf: normalizedValue }
 
   // 1. Record the pending upload (insert immediately so we have an audit trail
   //    even if the API call hangs / never returns).
@@ -220,12 +245,13 @@ export async function recordAndUploadConversion(input: ConversionUploadInput): P
     .from('google_ads_conversion_uploads')
     .insert({
       appointment_id: input.appointment_id,
+      order_id: input.order_id || input.appointment_id || null,
       tenant_id: input.tenant_id ?? null,
       conversion_action_id: conversionActionId,
       gclid: input.gclid ?? null,
       gbraid: input.gbraid ?? null,
       wbraid: input.wbraid ?? null,
-      conversion_value_chf: input.conversion_value_chf,
+      conversion_value_chf: normalizedValue,
       conversion_date_time: typeof input.conversion_date_time === 'string'
         ? input.conversion_date_time
         : input.conversion_date_time.toISOString(),
@@ -241,7 +267,7 @@ export async function recordAndUploadConversion(input: ConversionUploadInput): P
   }
 
   // 2. Perform the upload.
-  const result = await uploadClickConversion(input)
+  const result = await uploadClickConversion(uploadInput)
 
   // 3. Update audit row with outcome.
   if (row?.id) {
@@ -263,7 +289,7 @@ export async function recordAndUploadConversion(input: ConversionUploadInput): P
   }
 
   if (result.uploaded) {
-    logger.info(`google-ads-conversion: uploaded for appointment ${input.appointment_id} (CHF ${input.conversion_value_chf})`)
+    logger.info(`google-ads-conversion: uploaded for appointment ${input.appointment_id} (CHF ${normalizedValue})`)
   } else if (result.reason === 'no_click_id') {
     // Expected/benign: this booking has no gclid/gbraid/wbraid (e.g. direct visit,
     // organic traffic, or another channel) — there is nothing to upload. Not a failure.
@@ -293,11 +319,12 @@ export async function recordAndUploadCourseConversion(input: {
   hashed_phone?: string | null
 }): Promise<void> {
   if (!input.gclid && !input.gbraid && !input.wbraid) {
-    logger.debug(`google-ads-conversion: course ${input.registration_id} — no click id, skip`)
+    logger.info(`google-ads-conversion: course ${input.registration_id} — no click id, skip (organic/direct)`)
     return
   }
 
   const conversionDateTime = input.conversion_date_time ?? new Date()
+  const normalizedValue = normalizeConversionValueChf(input.conversion_value_chf)
   const result = await uploadClickConversion({
     appointment_id: input.registration_id,
     order_id: `course_${input.registration_id}`,
@@ -305,17 +332,81 @@ export async function recordAndUploadCourseConversion(input: {
     gclid: input.gclid,
     gbraid: input.gbraid,
     wbraid: input.wbraid,
-    conversion_value_chf: input.conversion_value_chf,
+    conversion_value_chf: normalizedValue,
     conversion_date_time: conversionDateTime,
     hashed_email: input.hashed_email,
     hashed_phone: input.hashed_phone,
   })
 
   if (result.uploaded) {
-    logger.info(`google-ads-conversion: course ${input.registration_id} uploaded (CHF ${input.conversion_value_chf})`)
+    logger.info(`google-ads-conversion: course ${input.registration_id} uploaded (CHF ${normalizedValue})`)
   } else if (result.reason !== 'no_click_id') {
     logger.warn(`google-ads-conversion: course ${input.registration_id} failed — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
   }
+}
+
+/**
+ * Re-attempt a previously failed row from google_ads_conversion_uploads.
+ * Used by the hourly retry cron (and one-shot admin repairs).
+ */
+export async function retryFailedConversionUpload(row: {
+  id: number | string
+  appointment_id?: string | null
+  order_id?: string | null
+  conversion_action_id?: string | null
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
+  conversion_value_chf: number
+  conversion_date_time: string | Date
+  upload_attempts?: number | null
+}): Promise<ConversionUploadResult> {
+  const supabase = getSupabaseAdmin()
+  const inquiryActionId = (process.env.GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID || '').trim()
+  const actionId = (row.conversion_action_id || '').trim()
+  const isInquiry = !!inquiryActionId && actionId === inquiryActionId
+  const valueChf = isInquiry
+    ? (Number.isFinite(Number(row.conversion_value_chf)) && Number(row.conversion_value_chf) > 0
+        ? Number(Number(row.conversion_value_chf).toFixed(2))
+        : readInquiryDefaultValueChf())
+    : normalizeConversionValueChf(row.conversion_value_chf)
+
+  const orderId = row.order_id
+    || (row.appointment_id ? String(row.appointment_id) : null)
+    || undefined
+
+  const result = await uploadClickConversion({
+    appointment_id: row.appointment_id || undefined,
+    order_id: orderId,
+    conversion_action_id: actionId || undefined,
+    gclid: row.gclid,
+    gbraid: row.gbraid,
+    wbraid: row.wbraid,
+    conversion_value_chf: valueChf,
+    conversion_date_time: row.conversion_date_time,
+    skip_value_floor: isInquiry,
+  })
+
+  const upload_status =
+    result.uploaded ? 'success'
+      : result.reason === 'no_click_id' ? 'skipped_no_click_id'
+        : 'failed'
+
+  await supabase
+    .from('google_ads_conversion_uploads')
+    .update({
+      upload_status,
+      upload_attempts: (row.upload_attempts ?? 0) + 1,
+      last_attempt_at: new Date().toISOString(),
+      error_message: result.error || result.reason || null,
+      google_response: result.google_response ?? null,
+      conversion_value_chf: valueChf,
+      conversion_action_id: actionId || (process.env.GOOGLE_ADS_CONVERSION_ACTION_ID ?? '').trim() || row.conversion_action_id,
+      order_id: orderId ?? row.order_id ?? null,
+    })
+    .eq('id', row.id)
+
+  return result
 }
 
 /**
@@ -332,9 +423,30 @@ function readInquiryDefaultValueChf(): number {
 }
 
 /**
+ * Floor value for bookings that complete at CHF 0 (free public events /
+ * Erstgespräch / Probelektion). Uploading 0 teaches Smart Bidding that
+ * conversions are worthless. Override via GOOGLE_ADS_FALLBACK_BOOKING_VALUE_CHF.
+ */
+export function readFallbackBookingValueChf(): number {
+  const raw = process.env.GOOGLE_ADS_FALLBACK_BOOKING_VALUE_CHF?.trim()
+  const parsed = raw ? Number(raw) : NaN
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 100
+}
+
+/**
+ * Never upload conversion_value 0 for a real Google Ads click conversion.
+ * Free bookings still signal demand — use the configured floor instead.
+ */
+export function normalizeConversionValueChf(valueChf: number | null | undefined): number {
+  const n = Number(valueChf)
+  if (Number.isFinite(n) && n > 0) return Number(n.toFixed(2))
+  return readFallbackBookingValueChf()
+}
+
+/**
  * Upload a booking-proposal (inquiry) conversion to Google Ads.
  * Uses GOOGLE_ADS_INQUIRY_CONVERSION_ACTION_ID and writes an audit row to
- * google_ads_conversion_uploads (appointment_id = "proposal_<id>").
+ * google_ads_conversion_uploads (proposal_id + order_id, appointment_id null).
  */
 export async function recordAndUploadInquiryConversion(input: {
   proposal_id: string
@@ -354,20 +466,27 @@ export async function recordAndUploadInquiryConversion(input: {
   }
 
   const supabase = getSupabaseAdmin()
-  const syntheticId = `proposal_${input.proposal_id}`
+  const orderId = `inquiry-${input.proposal_id}`
+  const proposalUuid = isUuid(input.proposal_id) ? input.proposal_id : null
   const conversionDateTime = input.conversion_date_time ?? new Date()
+  const valueChf = (Number.isFinite(Number(input.conversion_value_chf)) && Number(input.conversion_value_chf) > 0)
+    ? Number(Number(input.conversion_value_chf).toFixed(2))
+    : readInquiryDefaultValueChf()
 
-  // Record pending upload for audit trail
+  // Record pending upload for audit trail + hourly retry cron.
+  // appointment_id stays null (FK to appointments); proposal_id only when it is a real booking_proposals UUID.
   const { data: row, error: insertError } = await supabase
     .from('google_ads_conversion_uploads')
     .insert({
-      appointment_id: syntheticId,
+      appointment_id: null,
+      proposal_id: proposalUuid,
+      order_id: orderId,
       tenant_id: input.tenant_id ?? null,
       conversion_action_id: conversionActionId,
       gclid: input.gclid ?? null,
       gbraid: input.gbraid ?? null,
       wbraid: input.wbraid ?? null,
-      conversion_value_chf: input.conversion_value_chf ?? readInquiryDefaultValueChf(),
+      conversion_value_chf: valueChf,
       conversion_date_time: typeof conversionDateTime === 'string'
         ? conversionDateTime
         : conversionDateTime.toISOString(),
@@ -378,23 +497,87 @@ export async function recordAndUploadInquiryConversion(input: {
     .single()
 
   if (insertError || !row) {
-    logger.warn('google-ads-conversion: could not record inquiry upload row', insertError?.message)
+    // If proposal_id FK fails (entity id looks like a UUID but isn't a proposal), retry without it.
+    if (proposalUuid && insertError) {
+      const { data: fallbackRow, error: fallbackError } = await supabase
+        .from('google_ads_conversion_uploads')
+        .insert({
+          appointment_id: null,
+          proposal_id: null,
+          order_id: orderId,
+          tenant_id: input.tenant_id ?? null,
+          conversion_action_id: conversionActionId,
+          gclid: input.gclid ?? null,
+          gbraid: input.gbraid ?? null,
+          wbraid: input.wbraid ?? null,
+          conversion_value_chf: valueChf,
+          conversion_date_time: typeof conversionDateTime === 'string'
+            ? conversionDateTime
+            : conversionDateTime.toISOString(),
+          upload_status: 'pending',
+          upload_attempts: 0,
+        })
+        .select('id')
+        .single()
+
+      if (fallbackError || !fallbackRow) {
+        logger.warn('google-ads-conversion: could not record inquiry upload row', fallbackError?.message || insertError?.message)
+      } else {
+        await finishInquiryUpload({
+          rowId: fallbackRow.id,
+          orderId,
+          conversionActionId,
+          valueChf,
+          conversionDateTime,
+          input,
+        })
+        return
+      }
+    } else {
+      logger.warn('google-ads-conversion: could not record inquiry upload row', insertError?.message)
+    }
   }
 
+  await finishInquiryUpload({
+    rowId: row?.id ?? null,
+    orderId,
+    conversionActionId,
+    valueChf,
+    conversionDateTime,
+    input,
+  })
+}
+
+async function finishInquiryUpload(params: {
+  rowId: number | string | null
+  orderId: string
+  conversionActionId: string
+  valueChf: number
+  conversionDateTime: Date | string
+  input: {
+    proposal_id: string
+    gclid?: string | null
+    gbraid?: string | null
+    wbraid?: string | null
+    hashed_email?: string | null
+    hashed_phone?: string | null
+  }
+}): Promise<void> {
+  const supabase = getSupabaseAdmin()
   const result = await uploadClickConversion({
-    appointment_id: syntheticId,
-    order_id: `inquiry-${input.proposal_id}`,
-    conversion_action_id: conversionActionId,
-    gclid: input.gclid,
-    gbraid: input.gbraid,
-    wbraid: input.wbraid,
-    conversion_value_chf: input.conversion_value_chf ?? readInquiryDefaultValueChf(),
-    conversion_date_time: conversionDateTime,
-    hashed_email: input.hashed_email,
-    hashed_phone: input.hashed_phone,
+    order_id: params.orderId,
+    conversion_action_id: params.conversionActionId,
+    gclid: params.input.gclid,
+    gbraid: params.input.gbraid,
+    wbraid: params.input.wbraid,
+    conversion_value_chf: params.valueChf,
+    conversion_date_time: params.conversionDateTime,
+    hashed_email: params.input.hashed_email,
+    hashed_phone: params.input.hashed_phone,
+    skip_value_floor: true,
   })
 
-  if (row?.id) {
+  if (params.rowId) {
     const upload_status =
       result.uploaded ? 'success'
         : result.reason === 'no_click_id' ? 'skipped_no_click_id'
@@ -409,15 +592,15 @@ export async function recordAndUploadInquiryConversion(input: {
         error_message: result.error || result.reason || null,
         google_response: result.google_response ?? null,
       })
-      .eq('id', row.id)
+      .eq('id', params.rowId)
   }
 
   if (result.uploaded) {
-    logger.info(`google-ads-conversion: inquiry uploaded for proposal ${input.proposal_id}`)
+    logger.info(`google-ads-conversion: inquiry uploaded for proposal ${params.input.proposal_id}`)
   } else if (result.reason === 'no_click_id') {
-    logger.debug(`google-ads-conversion: inquiry skipped for proposal ${input.proposal_id} — no click id (not from a Google Ads click)`)
+    logger.debug(`google-ads-conversion: inquiry skipped for proposal ${params.input.proposal_id} — no click id (not from a Google Ads click)`)
   } else {
-    logger.warn(`google-ads-conversion: inquiry upload skipped/failed for proposal ${input.proposal_id} — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
+    logger.warn(`google-ads-conversion: inquiry upload skipped/failed for proposal ${params.input.proposal_id} — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
   }
 }
 

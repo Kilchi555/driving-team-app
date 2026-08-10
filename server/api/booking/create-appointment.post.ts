@@ -1088,38 +1088,34 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // ============ LAYER 11: SERVER-SIDE GOOGLE ADS CONVERSION UPLOAD ============
-    // Fire-and-forget. Never blocks or fails the booking. If any of:
-    //   - GOOGLE_ADS_* env vars missing
-    //   - no gclid/gbraid/wbraid attached to the booking
-    //   - Google Ads API rejects
-    // then the upload is skipped/logged; the booking itself is unaffected.
+    // Awaited (not fire-and-forget): Vercel freezes the isolate after the response
+    // returns, which previously dropped some conversion uploads under load.
     if (marketingAttr?.gclid || marketingAttr?.gbraid || marketingAttr?.wbraid) {
-      ;(async () => {
-        try {
-          // Hash email/phone for Enhanced Conversions (improves match rate).
-          const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
-          const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
-          const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
-          const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+      try {
+        // Hash email/phone for Enhanced Conversions (improves match rate).
+        const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
+        const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+        const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+        const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
 
-          // Conversion value: net amount after discount, fallback to gross.
-          const conversionValueChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
+        // Conversion value: net amount after discount, fallback to gross.
+        // normalizeConversionValueChf inside the uploader floors CHF 0 free bookings.
+        const conversionValueChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
 
-          await recordAndUploadConversion({
-            appointment_id: newAppointment.id,
-            tenant_id: tenantId ?? null,
-            gclid: marketingAttr.gclid ?? null,
-            gbraid: marketingAttr.gbraid ?? null,
-            wbraid: marketingAttr.wbraid ?? null,
-            conversion_value_chf: conversionValueChf,
-            conversion_date_time: new Date(),
-            hashed_email: hashedEmail,
-            hashed_phone: hashedPhone,
-          })
-        } catch (err: any) {
-          logger.warn('⚠️ Server-side Google Ads conversion upload failed (non-critical):', err?.message ?? err)
-        }
-      })()
+        await recordAndUploadConversion({
+          appointment_id: newAppointment.id,
+          tenant_id: tenantId ?? null,
+          gclid: marketingAttr.gclid ?? null,
+          gbraid: marketingAttr.gbraid ?? null,
+          wbraid: marketingAttr.wbraid ?? null,
+          conversion_value_chf: conversionValueChf,
+          conversion_date_time: new Date(),
+          hashed_email: hashedEmail,
+          hashed_phone: hashedPhone,
+        })
+      } catch (err: any) {
+        logger.warn('⚠️ Server-side Google Ads conversion upload failed (non-critical):', err?.message ?? err)
+      }
     } else {
       logger.debug('ℹ️ Skipping Google Ads conversion upload — no click ID for this booking')
     }
