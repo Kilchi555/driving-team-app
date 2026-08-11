@@ -345,7 +345,7 @@ export const LOCATION_USTER: Location = {
   },
 
   services: [
-    { name: 'Auto Fahrschule Uster', url: 'https://drivingteam.ch/fahrschule-uster/' },
+    { name: 'Auto Fahrschule Zürich', url: 'https://drivingteam.ch/auto-fahrschule-zuerich/' },
     { name: 'Motorrad Fahrschule', url: 'https://drivingteam.ch/motorrad-fahrschule/' },
     { name: 'Motorboot Fahrschule', url: 'https://drivingteam.ch/motorboot-fahrschule/' },
     { name: 'VKU Kurs Zürich', url: 'https://drivingteam.ch/vku-kurs-zuerich/' },
@@ -354,7 +354,7 @@ export const LOCATION_USTER: Location = {
 }
 
 // ── Alle Standorte als Array (für Loops) ─────────────────────
-export const ALL_LOCATIONS = [LOCATION_ZUERICH, LOCATION_LACHEN, LOCATION_SPREITENBACH, LOCATION_USTER, LOCATION_PFAEFFIKON] as const
+export const ALL_LOCATIONS = [LOCATION_ZUERICH, LOCATION_LACHEN, LOCATION_SPREITENBACH, LOCATION_PFAEFFIKON] as const
 
 // ── Rückwärtskompatibilität: BUSINESS zeigt auf Hauptstandort ─
 // (wird in index.vue und default.vue verwendet)

@@ -90,6 +90,8 @@
 
     <!-- Reviews -->
     <ReviewsSection category="zuerich" />
+    <UpcomingSlotsSection page="fahrschule-altstetten" category="B Automatik" />
+
 
     <!-- Instructors -->
     <InstructorProfileSection :instructors="instructors" />

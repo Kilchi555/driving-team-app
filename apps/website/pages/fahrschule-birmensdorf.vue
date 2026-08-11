@@ -56,6 +56,8 @@
 
     <AusbildungsthemenSection location="Birmensdorf" />
     <ReviewsSection category="zuerich" />
+    <UpcomingSlotsSection page="fahrschule-birmensdorf" category="B Automatik" />
+
     <CtaSection title="Jetzt in Birmensdorf starten!" />
     <PriceSection />
 

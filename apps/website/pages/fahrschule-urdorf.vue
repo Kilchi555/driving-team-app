@@ -65,6 +65,8 @@
 
     <AusbildungsthemenSection location="Urdorf" />
     <ReviewsSection category="zuerich" />
+    <UpcomingSlotsSection page="fahrschule-urdorf" category="B Automatik" />
+
     <CtaSection title="Jetzt in Urdorf starten!" />
     <PriceSection />
 

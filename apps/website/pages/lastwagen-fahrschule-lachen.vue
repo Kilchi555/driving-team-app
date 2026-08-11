@@ -127,6 +127,8 @@
 
     <!-- Reviews -->
     <ReviewsSection category="lastwagen" />
+    <UpcomingSlotsSection page="lastwagen-fahrschule-lachen" category="C" />
+
 
     <!-- Kategorien & Preise -->
     <section class="section-container py-16">

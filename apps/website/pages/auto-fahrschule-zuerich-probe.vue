@@ -44,6 +44,8 @@
       </div>
     </section>
 
+    <UpcomingSlotsSection page="auto-fahrschule-zuerich-probe" category="B Automatik" />
+
     <section class="erste-body">
       <h2>So funktioniert’s</h2>
       <ul>

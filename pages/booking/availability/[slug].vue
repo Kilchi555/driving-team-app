@@ -634,9 +634,26 @@
               @mouseenter="hoveredInstructorId = instructor.id"
               @mouseleave="hoveredInstructorId = null"
             >
-              <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
-                {{ instructor.first_name }} {{ instructor.last_name }}
-              </h3>
+              <div class="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left sm:gap-4">
+                <div class="flex-shrink-0 h-14 w-14 sm:h-16 sm:w-16 rounded-full overflow-hidden flex items-center justify-center" :style="{ background: `${primaryColor}1f` }">
+                  <img
+                    v-if="instructor.photo_url"
+                    :src="instructor.photo_url"
+                    :alt="`${instructor.first_name} ${instructor.last_name}`"
+                    class="h-full w-full object-cover"
+                  />
+                  <span
+                    v-else
+                    class="text-sm sm:text-base font-semibold"
+                    :style="{ color: primaryColor }"
+                  >
+                    {{ getInitials(`${instructor.first_name || ''} ${instructor.last_name || ''}`) }}
+                  </span>
+                </div>
+                <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900">
+                  {{ instructor.first_name }} {{ instructor.last_name }}
+                </h3>
+              </div>
             </div>
           </div>
           </div>
@@ -2184,6 +2201,16 @@ const selectServiceType = (id: 'fahrstunde' | 'theorie' | 'beratung') => {
   currentStep.value = 1
   saveBookingPrefs()
 }
+
+function getInitials(name: string) {
+  return String(name || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() || '')
+    .join('') || '?'
+}
+
 const selectedMainCategory = ref<any>(null)  // NEW: Main category (B Auto, A Auto)
 const selectedCategory = ref<any>(null)      // CHANGED: Now represents selected subcategory
 const selectedLocation = ref<any>(null)
@@ -2213,6 +2240,8 @@ const durationPrices = ref<Map<number, {
 const categoryAdminFeeRappen = ref(0)
 const categoryAdminFeeAppliesFrom = ref(2)
 const currentWeek = ref(1)
+/** Optional YYYY-MM-DD from website teaser deep-link (?date=) */
+const preferredDateHint = ref<string | null>(null)
 const maxWeek = ref(4)
 
 // Vehicle selection state
@@ -2305,6 +2334,50 @@ const findCategoryById = (id: string): { cat: any; parent: any | null } | null =
     }
   }
   return null
+}
+
+/** Deep-link helper: match category code (or name) in nested main/children tree. */
+const normalizeCategoryQuery = (raw: unknown): string => {
+  const s = Array.isArray(raw) ? String(raw[0] ?? '') : String(raw ?? '')
+  // URLSearchParams encodes spaces as "+"; Vue Router often keeps "+" literal
+  return s.replace(/\+/g, ' ').trim()
+}
+
+const findCategoryByCode = (code: string): { cat: any; parent: any | null } | null => {
+  const needle = normalizeCategoryQuery(code).toLowerCase()
+  if (!needle) return null
+  const match = (c: any) => String(c?.code || '').trim().toLowerCase() === needle
+  const matchName = (c: any) => String(c?.name || '').trim().toLowerCase() === needle
+  for (const mainCat of categories.value) {
+    if (match(mainCat)) return { cat: mainCat, parent: null }
+    for (const child of mainCat.children || []) {
+      if (match(child)) return { cat: child, parent: mainCat }
+    }
+  }
+  for (const mainCat of categories.value) {
+    if (matchName(mainCat)) return { cat: mainCat, parent: null }
+    for (const child of mainCat.children || []) {
+      if (matchName(child)) return { cat: child, parent: mainCat }
+    }
+  }
+  return null
+}
+
+/** Apply ?category=… deep link (Fahrstunde). Returns true if a category was selected. */
+const applyCategoryDeepLink = async (code: string) => {
+  selectedServiceType.value = 'fahrstunde'
+  const found = findCategoryByCode(code)
+  if (!found) {
+    currentStep.value = 1
+    return false
+  }
+  if (found.parent) {
+    selectedMainCategory.value = found.parent
+    await selectSubcategory(found.cat)
+  } else {
+    await selectMainCategory(found.cat)
+  }
+  return true
 }
 
 const restoreBookingPrefs = async () => {
@@ -3886,6 +3959,21 @@ const generateTimeSlotsForSpecificCombination = async () => {
       if (firstWeekWithSlots && currentWeek.value !== firstWeekWithSlots) {
         logger.debug(`🔄 Setting currentWeek to ${firstWeekWithSlots} (first week with data)`)
         currentWeek.value = firstWeekWithSlots
+      }
+
+      // Website teaser deep-link: jump to the week that contains ?date=YYYY-MM-DD
+      if (preferredDateHint.value) {
+        const hint = preferredDateHint.value
+        const hinted = timeSlots.find(
+          (s: any) =>
+            String(s.start_time || '').slice(0, 10) === hint &&
+            s.is_available !== false &&
+            !s.has_conflict,
+        ) || timeSlots.find((s: any) => String(s.start_time || '').slice(0, 10) === hint)
+        if (hinted?.week_number) {
+          currentWeek.value = hinted.week_number
+          logger.debug(`📅 Preferred date ${hint} → week ${hinted.week_number}`)
+        }
       }
       
       // Check if this first week has any available slots
@@ -5731,8 +5819,14 @@ onMounted(async () => {
         logger.debug('✅ Tenant and categories loaded from init:', slug.value)
         logger.debug('✅ Categories loaded:', categories.value.length)
         
-        // Check for pre-fill parameters (from returning customer)
+        // Check for pre-fill parameters (from returning customer / website teaser)
         const prefill = route.query.prefill as string
+        const dateHint =
+          typeof route.query.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(route.query.date)
+            ? route.query.date
+            : null
+        if (dateHint) preferredDateHint.value = dateHint
+
         if (prefill === 'true' && route.query.category && route.query.staff && route.query.location && route.query.duration) {
           logger.debug('🎯 Pre-filling booking from previous appointment:', {
             category: route.query.category,
@@ -5740,11 +5834,13 @@ onMounted(async () => {
             location: route.query.location,
             duration: route.query.duration
           })
-          
-          // Categories are already loaded above
-          const categoryToSelect = categories.value.find(c => c.code === route.query.category)
-          
+
+          const found = findCategoryByCode(String(route.query.category))
+          const categoryToSelect = found?.cat
+
           if (categoryToSelect) {
+            if (found?.parent) selectedMainCategory.value = found.parent
+            selectedServiceType.value = 'fahrstunde'
             // Pre-select category (this loads staff and locations)
             await selectSubcategory(categoryToSelect)
             
@@ -5780,35 +5876,35 @@ onMounted(async () => {
             }
           }
         } else if (prefill === 'partial' && route.query.category) {
-          logger.debug('🎯 Partial pre-fill: category and/or staff')
-          
-          // Categories are already loaded above
-          const categoryToSelect = categories.value.find(c => c.code === route.query.category)
-          
-          if (categoryToSelect) {
-            // Pre-select category
-            await selectSubcategory(categoryToSelect)
-            currentStep.value = 2
-            logger.debug('✅ Pre-selected category, user can continue from step 2')
+          const categoryParam = normalizeCategoryQuery(route.query.category)
+          logger.debug('🎯 Partial pre-fill: category and/or staff', categoryParam)
+          const ok = await applyCategoryDeepLink(categoryParam)
+          if (ok) {
+            logger.debug('✅ Pre-selected category from website teaser')
+            // Optional location from marketing teaser (location UUID)
+            const locId = route.query.location ? String(route.query.location) : ''
+            if (locId && availableLocations.value?.length) {
+              const locationToSelect = availableLocations.value.find((l: any) => l.id === locId)
+              if (locationToSelect) {
+                selectedLocation.value = locationToSelect
+                logger.debug('✅ Pre-selected location from website teaser')
+              }
+            }
+          } else {
+            console.warn('⚠️ Category not found for partial prefill:', categoryParam)
           }
         } else if (!prefill && lockedStaffId.value && route.query.category) {
           // ?staff=<handle>&category=<code> — pre-select category, staff auto-selects after location pick
-          logger.debug('🎯 Staff-locked pre-fill with category:', route.query.category)
-          const categoryToSelect = categories.value.find(c => c.code === route.query.category)
-          if (categoryToSelect) {
-            await selectSubcategory(categoryToSelect)
-            currentStep.value = 2
-            logger.debug('✅ Category pre-selected, staff will auto-select after location')
-          }
+          const categoryParam = normalizeCategoryQuery(route.query.category)
+          logger.debug('🎯 Staff-locked pre-fill with category:', categoryParam)
+          const ok = await applyCategoryDeepLink(categoryParam)
+          if (ok) logger.debug('✅ Category pre-selected, staff will auto-select after location')
         } else if (!prefill && route.query.category) {
-          // ?category=<code> — skip service type & main category, land directly on subcategory selection
-          logger.debug('🎯 Direct category deep-link:', route.query.category)
-          const categoryToSelect = categories.value.find(c => c.code === route.query.category)
-          if (categoryToSelect) {
-            selectedServiceType.value = 'fahrstunde'
-            await selectMainCategory(categoryToSelect)
-            logger.debug('✅ Main category pre-selected, showing subcategory selection')
-          }
+          // ?category=<code> — skip service type, land on duration / subcategory flow
+          const categoryParam = normalizeCategoryQuery(route.query.category)
+          logger.debug('🎯 Direct category deep-link:', categoryParam)
+          const ok = await applyCategoryDeepLink(categoryParam)
+          if (ok) logger.debug('✅ Category deep-link applied')
         } else if (!prefill && route.query.service === 'fahrstunde') {
           // ?service=fahrstunde — skip service type selection, show category list
           logger.debug('🎯 Service deep-link: fahrstunde → go to category selection')

@@ -24,7 +24,6 @@ interface BookingParams {
 const locationMap: Record<string, string> = {
   zuerich: 'zürich-altstetten',
   lachen: 'lachen',
-  uster: 'uster',
   stgallen: 'st-gallen',
   dietikon: 'dietikon',
   aargau: 'aargau',

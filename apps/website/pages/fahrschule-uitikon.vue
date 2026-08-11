@@ -65,6 +65,8 @@
 
     <AusbildungsthemenSection location="Uitikon Waldegg" />
     <ReviewsSection category="zuerich" />
+    <UpcomingSlotsSection page="fahrschule-uitikon" category="B Automatik" />
+
     <CtaSection title="Jetzt in Uitikon starten!" />
     <PriceSection />
 

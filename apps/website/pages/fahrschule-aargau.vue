@@ -59,6 +59,8 @@
 
     <!-- 5. Reviews (grau-50) -->
     <ReviewsSection category="spreitenbach" />
+    <UpcomingSlotsSection page="fahrschule-aargau" category="B Automatik" />
+
 
     <!-- 6. CTA (primary) -->
     <CtaSection title="Jetzt in Aargau starten!" />

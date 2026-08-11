@@ -52,6 +52,8 @@
 
     <!-- 3. Reviews (grau-50) — bewusst früh für Vertrauen -->
     <ReviewsSection category="lachen" />
+    <UpcomingSlotsSection page="fahrschule-lachen" category="B Automatik" />
+
 
     <!-- 4. Übungsgebiete (weiß) -->
     <section class="py-16 bg-white">

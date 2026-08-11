@@ -42,6 +42,8 @@
       </div>
     </section>
 
+    <UpcomingSlotsSection page="auto-fahrschule-zuerich-preis" category="B Automatik" />
+
     <section class="preis-body">
       <h2>Was du zahlst</h2>
       <ul>

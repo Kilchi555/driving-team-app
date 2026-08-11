@@ -209,6 +209,8 @@
 
     <!-- Reviews -->
     <ReviewsSection category="motorrad" />
+    <UpcomingSlotsSection page="motorrad-fahrschule-zuerich" category="A" />
+
 
     <!-- ====== PRÜFUNG ALBISGÜTLI ====== -->
     <section class="py-16 bg-gray-50">

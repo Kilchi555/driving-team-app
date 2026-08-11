@@ -81,6 +81,8 @@
 
     <!-- 7. Reviews -->
     <ReviewsSection category="spreitenbach" />
+    <UpcomingSlotsSection page="fahrschule-spreitenbach" category="B Automatik" />
+
 
     <!-- 8. CTA -->
     <CtaSection title="Jetzt in Spreitenbach starten!" />
