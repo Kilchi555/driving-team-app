@@ -47,8 +47,11 @@
               <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
               <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad, Anhänger, Taxi</p>
             </div>
-            <a href="/" class="block w-full text-center bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 transition" aria-label="Mehr zu Fahrschule Zürich">
-              Fahrschule Zürich-Altstetten
+            <a href="/auto-fahrschule-zuerich/" class="block w-full text-center bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 transition" aria-label="Mehr zu Auto Fahrschule Zürich">
+              Auto Fahrschule Zürich
+            </a>
+            <a href="/fahrschule-altstetten/" class="block w-full text-center mt-2 border border-primary-600 text-primary-600 px-4 py-2 rounded hover:bg-primary-50 transition" aria-label="Mehr zu Fahrschule Altstetten">
+              Standort Altstetten
             </a>
           </div>
         </div>

@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
   // Verify course belongs to the caller's tenant
   const { data: course } = await supabase
     .from('courses')
-    .select('id, tenant_id, status, name, description, instructor_id, external_instructor_name, price_per_participant_rappen, sari_managed, course_sessions (start_time, end_time, staff_id, external_instructor_name)')
+    .select('id, tenant_id, status, name, description, instructor_id, external_instructor_name, price_per_participant_rappen, sari_managed, course_category_id, course_sessions (start_time, end_time, staff_id, external_instructor_name)')
     .eq('id', body.courseId)
     .eq('tenant_id', profile.tenant_id)
     .single()
@@ -90,6 +90,17 @@ export default defineEventHandler(async (event) => {
   if (body.notifyWaitlist && wasWaitlist && isNowActive) {
     notifyWaitlistEntries(supabase, body.courseId, course, profile.tenant_id)
       .catch((err: any) => logger.warn(`⚠️ Waitlist notification failed: ${err.message}`))
+  }
+
+  // Keep auto waitlist placeholders in sync after manual status changes
+  try {
+    const { syncAutoCategoryWaitlists } = await import('~/server/utils/auto-category-waitlist')
+    await syncAutoCategoryWaitlists(supabase, {
+      tenantId: profile.tenant_id,
+      ...(course.course_category_id ? { categoryId: course.course_category_id } : {}),
+    })
+  } catch (syncErr: any) {
+    logger.warn('⚠️ auto-category-waitlist after status update failed (non-blocking):', syncErr?.message || syncErr)
   }
 
   return { success: true, course: updated }

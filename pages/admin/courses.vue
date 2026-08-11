@@ -2055,7 +2055,9 @@
                 label="Warteliste aktivieren"
                 label-class="text-gray-900 font-medium"
               />
-              <p class="text-xs text-blue-700 mt-1 ml-1">Kunden können sich auf der Website auf eine Warteliste eintragen und werden automatisch per E-Mail benachrichtigt, sobald ein neuer Kurs dieser Art auf «Aktiv» gesetzt wird.</p>
+              <p class="text-xs text-blue-700 mt-1 ml-1">
+                Wenn aktiv: Sobald für einen Standort keine buchbaren Termine mehr vorhanden sind, erscheint automatisch eine Warteliste (Website + App). Kunden können sich eintragen und werden per E-Mail benachrichtigt, sobald wieder ein Kurs dieser Art auf «Aktiv» gesetzt wird.
+              </p>
             </div>
 
             <div>

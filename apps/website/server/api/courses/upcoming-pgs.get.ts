@@ -7,8 +7,10 @@
  */
 import { defineEventHandler, getQuery } from 'h3'
 import { useRuntimeConfig } from 'nitropack/runtime'
+import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 
 const ONE_DAY_S = 60 * 60 * 24
+const DRIVING_TEAM_TENANT_ID = '64259d68-195a-4c68-8875-f1b44d962830'
 
 function formatDateDeCh(iso: string): string {
   return new Intl.DateTimeFormat('de-CH', {
@@ -123,5 +125,22 @@ export default defineEventHandler(async (event) => {
     )
     .slice(0, 4)
 
-  return { courses }
+  let waitlistEnabled = false
+  try {
+    const supabase = createWebsiteSupabaseClient(event)
+    if (supabase && category) {
+      const { data: cat } = await supabase
+        .from('course_categories')
+        .select('waitlist_enabled')
+        .eq('tenant_id', DRIVING_TEAM_TENANT_ID)
+        .eq('code', category)
+        .eq('is_active', true)
+        .maybeSingle()
+      waitlistEnabled = !!cat?.waitlist_enabled
+    }
+  } catch {
+    // Non-blocking — empty list still falls back without waitlist if lookup fails
+  }
+
+  return { courses, waitlistEnabled }
 })

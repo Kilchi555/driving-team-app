@@ -1,15 +1,15 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Zürich | 4.9★ · 85% Prüfungserfolg | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Zürich-Altstetten mit 4.9★ (368 Reviews) und 85% Prüfungserfolg. Auto, Motorrad, Anhänger & mehr ab CHF 95.–. Treffpunkt Bahnhof Altstetten – jetzt online buchen!" />
-      <Meta name="keywords" content="Fahrschule Zürich, Fahrschule Altstetten, Fahrschule Zürich-Altstetten, Fahrstunden Zürich, Fahrlehrer Zürich, Auto Fahrschule Zürich, Motorrad Fahrschule Zürich" />
+      <Title>Driving Team | Auto Fahrschule Zürich & Lachen | 4.9★</Title>
+      <Meta name="description" content="Driving Team – Auto Fahrschule in Zürich-Altstetten & Lachen. 4.9★ (368 Reviews), 85% Prüfungserfolg, ab CHF 95.–. Jetzt online Fahrstunde buchen!" />
+      <Meta name="keywords" content="Driving Team, Auto Fahrschule Zürich, Fahrschule Lachen, Fahrstunden Zürich, Fahrlehrer Zürich, Fahrschule Altstetten" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       
       <!-- Open Graph -->
-      <Meta property="og:title" content="Fahrschule Zürich | 4.9★ · 85% Prüfungserfolg | Driving Team" />
-      <Meta property="og:description" content="Fahrschule Zürich-Altstetten mit 4.9★ und 85% Prüfungserfolg. Auto, Motorrad, Anhänger, Lastwagen, Taxi & Bus ab CHF 95.–. Treffpunkt Bahnhof Altstetten." />
+      <Meta property="og:title" content="Driving Team | Auto Fahrschule Zürich & Lachen | 4.9★" />
+      <Meta property="og:description" content="Auto Fahrschule Zürich-Altstetten & Lachen. 4.9★, 85% Prüfungserfolg, ab CHF 95.–. Jetzt online buchen." />
       <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
@@ -23,8 +23,8 @@
       
       <!-- Twitter Card -->
       <Meta name="twitter:card" content="summary_large_image" />
-      <Meta name="twitter:title" content="Fahrschule Zürich | 4.9★ · 85% Prüfungserfolg" />
-      <Meta name="twitter:description" content="Fahrschule Zürich-Altstetten – 4.9★, 85% Prüfungserfolg, ab CHF 95.–. Auto, Motorrad, Anhänger & mehr. Jetzt online buchen." />
+      <Meta name="twitter:title" content="Driving Team | Auto Fahrschule Zürich & Lachen | 4.9★" />
+      <Meta name="twitter:description" content="Auto Fahrschule Zürich-Altstetten & Lachen – 4.9★, 85% Prüfungserfolg, ab CHF 95.–. Jetzt online buchen." />
       
       <!-- Canonical & Language -->
       <Link rel="canonical" href="https://drivingteam.ch/" />
@@ -40,10 +40,10 @@
         <!-- Hero Headline -->
         <div class="mb-3">
           <h1 class="text-3xl md:text-5xl font-black text-gray-900 leading-tight mb-3 mt-6">
-            Fahrschule <span class="text-primary-600">Zürich</span>
+            Driving <span class="text-primary-600">Team</span>
           </h1>
           <p class="text-sm md:text-base text-gray-500 font-medium mb-2">
-            Zürich-Altstetten · Bahnhof · ab CHF 95.–
+            Auto Fahrschule Zürich-Altstetten &amp; Lachen · ab CHF 95.–
           </p>
           <p class="text-sm font-semibold text-primary-700 mb-4">
             4.9★ · 368 Google-Reviews · 85% Prüfungserfolg
@@ -52,21 +52,18 @@
         <!-- Trust Bar + Booking CTA -->
         <div class="flex flex-row items-center justify-center gap-3 mb-6 px-4">
           <a
-            href="https://app.simy.ch/booking/availability/driving-team"
+            href="https://app.simy.ch/booking/availability/driving-team?category=B%20Automatik"
             target="_blank"
             rel="noopener noreferrer"
             class="flex-shrink-0 inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-2.5 px-5 rounded-xl hover:bg-primary-700 active:scale-95 transition shadow-md text-sm"
           >
-            Termin buchen
+            Auto Termin buchen
           </a>
           <a
-            href="tel:+41444310033"
+            href="/auto-fahrschule-zuerich/"
             class="flex-shrink-0 inline-flex items-center gap-2 bg-white border-2 border-primary-600 text-primary-600 font-bold py-2.5 px-5 rounded-xl hover:bg-primary-50 active:scale-95 transition shadow-md text-sm"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.47 11.47 0 003.58.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.47 11.47 0 00.57 3.58 1 1 0 01-.24 1.01l-2.21 2.2z"/>
-            </svg>
-            Anrufen
+            Auto Fahrschule Zürich
           </a>
         </div>
         <p class="text-sm font-semibold text-gray-500 -mt-3 mb-4">

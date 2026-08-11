@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Lachen SZ | Auto, Lastwagen & Anhänger | Driving Team</Title>
-      <Meta name="description" content="Deine Fahrschule in Lachen SZ – Auto, Motorboot, Anhänger & Lastwagen. 85% Erfolgsquote, ab CHF 95.-/Lektion. Prüfung Pfäffikon SZ. Jetzt buchen!" />
-      <Meta name="keywords" content="Fahrschule Lachen, Fahrschule Lachen SZ, Fahrstunden Lachen, Führerschein Lachen, Auto Fahrschule Lachen, Motorrad Fahrschule Lachen, Fahrlehrer Lachen SZ" />
-      <Meta property="og:title" content="Fahrschule Lachen SZ | ab CHF 95.- | Auto, Motorrad & mehr | Driving Team" />
-      <Meta property="og:description" content="Professionelle Fahrausbildung in Lachen SZ. Auto, Motorboot, Lastwagen & Kurse. Ab CHF 95.-/Lektion. Flexible Zeiten & Treffpunkte im Kanton Schwyz." />
+      <Title>Fahrstunden Lachen | Auto fahren lernen ab CHF 95.– | Driving Team</Title>
+      <Meta name="description" content="Fahrstunden in Lachen SZ: Auto fahren lernen ab CHF 95.–/Lektion. Flexible Termine, Prüfung Pfäffikon SZ, 85% Erfolgsquote. Jetzt online buchen!" />
+      <Meta name="keywords" content="Fahrstunden Lachen, Auto fahren lernen Lachen, Fahrschule Lachen, Fahrschule Lachen SZ, Auto Fahrschule Lachen, Führerschein Lachen" />
+      <Meta property="og:title" content="Fahrstunden Lachen | Auto fahren lernen ab CHF 95.– | Driving Team" />
+      <Meta property="og:description" content="Auto fahren lernen in Lachen SZ. Fahrstunden ab CHF 95.–, flexible Termine, Prüfung Pfäffikon SZ. Jetzt buchen!" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-lachen/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
@@ -18,8 +18,8 @@
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
       <Meta name="twitter:card" content="summary_large_image" />
-      <Meta name="twitter:title" content="Fahrschule Lachen SZ | ab CHF 95.- | Driving Team" />
-      <Meta name="twitter:description" content="Fahrschule Lachen SZ. Auto, Motorrad, Anhänger, Lastwagen, Bus. Ab CHF 95.-/Lektion. Flexible Zeiten. Prüfung Pfäffikon SZ. Jetzt anmelden!" />
+      <Meta name="twitter:title" content="Fahrstunden Lachen | Auto fahren lernen ab CHF 95.–" />
+      <Meta name="twitter:description" content="Auto fahren lernen in Lachen SZ. Fahrstunden ab CHF 95.–, Prüfung Pfäffikon SZ. Jetzt anmelden!" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       <Meta name="date" :content="new Date().toISOString()" />
     </Head>
@@ -34,8 +34,8 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
-          <h1 class="heading-lg text-white mb-6">Fahrschule Lachen</h1>
-          <p class="text-base xs:text-xl text-white mb-8">Deine moderne Fahrschule in Lachen/SZ. Melde Dich an und starte deine Fahrausbildung mit erfahrenen Fahrlehrern.</p>
+          <h1 class="heading-lg text-white mb-6">Fahrstunden & Auto Fahrschule Lachen</h1>
+          <p class="text-base xs:text-xl text-white mb-8">Auto fahren lernen in Lachen/SZ – ab CHF 95.–/Lektion, flexible Termine und erfahrene Fahrlehrer. Melde dich an und starte deine Fahrausbildung.</p>
           <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>

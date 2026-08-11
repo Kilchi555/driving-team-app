@@ -229,10 +229,10 @@
             <div class="flex items-start justify-between gap-2 mb-1">
               <h3 class="font-semibold text-lg text-slate-800">{{ removeDateFromTitle(course.name) }}</h3>
               <span
-                v-if="course._partiallyStarted"
+                v-if="course._partiallyStarted && course._partialPartLabel"
                 class="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200"
               >
-                Einzellektion
+                {{ course._partialPartLabel }}
               </span>
             </div>
             <p class="text-sm text-slate-500">{{ course.description || 'Standort wird noch bekannt gegeben' }}</p>
@@ -714,16 +714,31 @@ const loadData = async () => {
 
     // Calculate free slots; normalise category from course_category.name if the plain text field is empty
     courses.value = futureCourses.map((course: any) => {
-      const allFuture = course.course_sessions?.every((s: any) => s.start_time > now) ?? true
+      const allSessions = [...(course.course_sessions || [])].sort((a: any, b: any) =>
+        String(a.start_time || '').localeCompare(String(b.start_time || '')),
+      )
+      const allFuture = allSessions.every((s: any) => s.start_time > now)
       // For partially-started courses: keep only future individually-bookable sessions
       const visibleSessions = allFuture
-        ? course.course_sessions
-        : (course.course_sessions || []).filter((s: any) => s.start_time > now && s.allow_individual_booking)
+        ? allSessions
+        : allSessions.filter((s: any) => s.start_time > now && s.allow_individual_booking)
 
       // Determine display price: use individual_price_rappen if partially started
       const individualPrice = !allFuture && visibleSessions.length > 0
         ? visibleSessions[0].individual_price_rappen ?? null
         : null
+
+      // Badge e.g. "Kursteil 3" = chronological position in the full course
+      let partialPartLabel: string | null = null
+      if (!allFuture && visibleSessions.length > 0) {
+        const firstVisible = visibleSessions[0]
+        const partIndex = allSessions.findIndex(
+          (s: any) => s.id === firstVisible.id || s.start_time === firstVisible.start_time,
+        )
+        if (partIndex >= 0) {
+          partialPartLabel = `Kursteil ${partIndex + 1}`
+        }
+      }
 
       return {
         ...course,
@@ -731,6 +746,7 @@ const loadData = async () => {
         category: course.category || course.course_category?.name || null,
         free_slots: (course.max_participants || 0) - (course.current_participants || 0),
         _partiallyStarted: !allFuture,
+        _partialPartLabel: partialPartLabel,
         _individualPrice: individualPrice,
       }
     })

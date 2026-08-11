@@ -123,10 +123,9 @@
       <div class="section-container">
         <h3 class="text-xl font-bold mb-6 text-center text-gray-900">Unsere weiteren Standorte</h3>
         <div class="flex flex-wrap justify-center gap-3">
-          <a href="/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
+          <a href="/auto-fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Auto Fahrschule Zürich</a>
           <a href="/fahrschule-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Lachen</a>
-          <a href="/auto-fahrschule-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich</a>
-          <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Spreitenbach</a>
+            <a href="/fahrschule-spreitenbach/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Spreitenbach</a>
         </div>
       </div>
     </section>

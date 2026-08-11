@@ -5,12 +5,12 @@
       <p class="text-center text-gray-600 text-lg mb-12">Fahrschule Driving Team - Fahrstunden in deiner Region</p>
 
       <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <a v-if="exclude !== 'zuerich'" href="/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
+        <a v-if="exclude !== 'zuerich'" href="/auto-fahrschule-zuerich/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-primary-50 to-primary-100 overflow-hidden">
-            <img src="/images/locations/zuerich-hero.webp" alt="Fahrschule Zürich" loading="lazy" class="w-full h-full object-cover" />
+            <img src="/images/locations/zuerich-hero.webp" alt="Auto Fahrschule Zürich" loading="lazy" class="w-full h-full object-cover" />
           </div>
           <div class="p-6 bg-gradient-to-br from-primary-50 to-primary-100">
-            <h3 class="text-lg font-bold text-gray-900 mb-3">Fahrschule Zürich</h3>
+            <h3 class="text-lg font-bold text-gray-900 mb-3">Auto Fahrschule Zürich</h3>
             <p class="text-sm text-gray-600 mb-4">Zürich-Altstetten & Umgebung</p>
             <p class="text-xs text-gray-500">Baden, Limmattal, Knonaueramt, Uster Oberland</p>
             <span class="text-primary-600 font-semibold text-sm mt-4 inline-block hover:text-primary-800">Mehr erfahren →</span>

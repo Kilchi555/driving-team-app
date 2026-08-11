@@ -817,5 +817,16 @@ ${extLogoHtml}
     }
   }
 
+  // Keep auto waitlist placeholders in sync (e.g. demote when new dates go live)
+  try {
+    const { syncAutoCategoryWaitlists } = await import('~/server/utils/auto-category-waitlist')
+    await syncAutoCategoryWaitlists(supabase, {
+      tenantId: profile.tenant_id,
+      ...(courseData.course_category_id ? { categoryId: courseData.course_category_id } : {}),
+    })
+  } catch (syncErr: any) {
+    logger.warn('⚠️ auto-category-waitlist after course upsert failed (non-blocking):', syncErr?.message || syncErr)
+  }
+
   return { id: savedCourseId }
 })
