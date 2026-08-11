@@ -153,7 +153,10 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    compressPublicAssets: true,
+    // Vercel already compresses at the edge. Shipping .html.br/.gz as public
+    // assets caused prerendered blog URLs to be served as application/octet-stream
+    // (raw brotli body) — unreadable for crawlers.
+    compressPublicAssets: false,
     minify: true,
     experimental: {
       wasm: true,
@@ -172,6 +175,7 @@ export default defineNuxtConfig({
         '/blog/vku-kurs-verkehrskunde-sicherheit/',
         '/blog/fahrschueler-respekt-strasse/',
         '/blog/drivers-license-convert/',
+        '/blog/vku-kurs-2027-neue-regelung/',
       ],
     },
   },
@@ -208,6 +212,7 @@ export default defineNuxtConfig({
     '/blog/vku-kurs-verkehrskunde-sicherheit/': { prerender: true },
     '/blog/fahrschueler-respekt-strasse/': { prerender: true },
     '/blog/drivers-license-convert/': { prerender: true },
+    '/blog/vku-kurs-2027-neue-regelung/': { prerender: true },
 
     // ===== REDIRECTS VON ALTER WORDPRESS-SEITE (301) =====
     // Allgemein

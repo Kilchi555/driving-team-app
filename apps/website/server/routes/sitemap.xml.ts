@@ -80,6 +80,18 @@ export default defineEventHandler((event) => {
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://drivingteam.ch/auto-fahrschule-zuerich-preis/</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/auto-fahrschule-zuerich-probe/</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://drivingteam.ch/motorrad-fahrschule-zuerich/</loc>
     <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>
@@ -510,6 +522,12 @@ export default defineEventHandler((event) => {
     <lastmod>2026-03-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/blog/vku-kurs-2027-neue-regelung/</loc>
+    <lastmod>2026-07-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
 
   <!-- ===== RECHTLICHES ===== -->
