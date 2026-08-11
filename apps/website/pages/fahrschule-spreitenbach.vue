@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Spreitenbach | Fahrlehrer kommt zu dir | 4.9★</Title>
-      <Meta name="description" content="Fahrschule Spreitenbach: Dein Fahrlehrer kommt zu dir – kein Pendelweg. 4.9★, ab CHF 95.–/Lektion, 85% Prüfungserfolg, flexible Termine im Limmattal. Jetzt online buchen!" />
-      <Meta property="og:title" content="Fahrschule Spreitenbach | Fahrlehrer kommt zu dir | 4.9★ | Driving Team" />
-      <Meta property="og:description" content="Fahrschule Spreitenbach: Fahrlehrer kommt zu dir. 4.9★, ab CHF 95.–/Lektion, 85% Prüfungserfolg. Flexible Termine, Online-Buchung." />
+      <Title>Auto Fahrschule Spreitenbach | ab CHF 95.– | Fahrlehrer kommt zu dir</Title>
+      <Meta name="description" content="Auto Fahrschule Spreitenbach (Aargau/Limmattal): Fahrlehrer kommt zu dir – kein Pendelweg. Ab CHF 95.–/Lektion, 4.9★, 85% Prüfungserfolg. Jetzt online buchen!" />
+      <Meta property="og:title" content="Auto Fahrschule Spreitenbach | ab CHF 95.– | Fahrlehrer kommt zu dir" />
+      <Meta property="og:description" content="Auto Fahrschule Spreitenbach: Fahrlehrer kommt zu dir. Ab CHF 95.–/Lektion, 4.9★, flexible Termine. Online buchen." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-spreitenbach/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-spreitenbach/" />
       <Link rel="preload" as="image" href="/images/locations/aargau-hero.webp" fetchpriority="high" />
@@ -21,7 +21,7 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
-          <h1 class="heading-lg text-white mb-6">Fahrschule Spreitenbach – Fahrlehrer kommt zu dir</h1>
+          <h1 class="heading-lg text-white mb-6">Auto Fahrschule Spreitenbach – Fahrlehrer kommt zu dir</h1>
           <p class="text-base xs:text-xl text-white mb-8">Kein Pendelweg: Dein Fahrlehrer kommt zu dir nach Spreitenbach und ins Limmattal. 4.9★, ab CHF 95.–/Lektion, flexible Termine, Online-Buchung.</p>
           <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
