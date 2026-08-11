@@ -80,6 +80,18 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ Category saved:', result.id)
+
+    // Keep auto waitlist placeholders in sync with this category toggle
+    try {
+      const { syncAutoCategoryWaitlists } = await import('~/server/utils/auto-category-waitlist')
+      await syncAutoCategoryWaitlists(supabase, {
+        tenantId,
+        categoryId: result.id,
+      })
+    } catch (syncErr: any) {
+      logger.warn('⚠️ auto-category-waitlist after category save failed (non-blocking):', syncErr?.message || syncErr)
+    }
+
     return { success: true, data: result, error: null }
   } catch (error: any) {
     logger.error('❌ Error saving category:', error)

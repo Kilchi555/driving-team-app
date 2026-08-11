@@ -68,9 +68,9 @@
     </div>
   </section>
 
-  <!-- Fallback: keine Kurse → Warteliste -->
+  <!-- Fallback: keine Kurse → Warteliste (nur wenn Kursart-Toggle aktiv) -->
   <CategoryWaitlistForm
-    v-else
+    v-else-if="waitlistEnabled"
     :category-code="categoryCode"
     :category-label="categoryLabel"
     tenant-id="64259d68-195a-4c68-8875-f1b44d962830"
@@ -94,7 +94,7 @@ const props = defineProps<{
   schemaMeta?: Omit<CourseSchemaMeta, 'name' | 'url'>
 }>()
 
-const { data, status } = useFetch<{ courses: UpcomingPgsCourse[] }>(
+const { data, status } = useFetch<{ courses: UpcomingPgsCourse[]; waitlistEnabled?: boolean }>(
   '/api/courses/upcoming-pgs',
   {
     query: computed(() => ({
@@ -106,6 +106,7 @@ const { data, status } = useFetch<{ courses: UpcomingPgsCourse[] }>(
 )
 
 const courses = computed(() => data.value?.courses ?? [])
+const waitlistEnabled = computed(() => !!data.value?.waitlistEnabled)
 
 useHead(computed(() => {
   if (!props.courseName || !props.pageUrl || !props.schemaMeta) return {}

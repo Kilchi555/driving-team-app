@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrlehrer & Team Zürich | Driving Team Fahrschule</Title>
-      <Meta name="description" content="Lerne das Team der Fahrschule Driving Team kennen – erfahrene Fahrlehrer in Zürich und Lachen. Marc, Nicole, Pascal, Skender, André, Peter und mehr." />
-      <Meta property="og:title" content="Unser Team – Erfahrene Fahrlehrer:innen | Driving Team" />
-      <Meta property="og:description" content="Lerne unsere Fahrlehrer:innen in Zürich und Lachen kennen. Professionell, engagiert, erfolgreich." />
+      <Title>Fahrlehrer & Team | Auto Fahrstunde buchen | Driving Team</Title>
+      <Meta name="description" content="Fahrlehrer in Zürich & Lachen kennenlernen und direkt Auto-Fahrstunde buchen. Erfahrene Instruktoren, flexible Termine – Driving Team." />
+      <Meta property="og:title" content="Fahrlehrer & Team | Auto Fahrstunde buchen | Driving Team" />
+      <Meta property="og:description" content="Fahrlehrer in Zürich & Lachen kennenlernen und direkt Auto-Fahrstunde buchen." />
       <Meta property="og:url" content="https://drivingteam.ch/team/" />
       <Link rel="canonical" href="https://drivingteam.ch/team/" />
       
@@ -20,12 +20,12 @@
         <h1 class="heading-lg text-white mb-6">Die Teammitglieder des Drivingteams</h1>
         <p class="text-xl text-white max-w-3xl mx-auto mb-8">Erfahrene, motivierte und leidenschaftliche Fahrlehrer:innen für deine Fahrausbildung.</p>
         <a
-          href="https://app.simy.ch/booking/availability/driving-team?service=fahrstunde"
+          href="https://app.simy.ch/booking/availability/driving-team?category=B%20Automatik"
           target="_blank"
           rel="noopener noreferrer"
           class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg inline-block"
         >
-          Termin mit Fahrlehrer:in buchen
+          ✨ Auto-Fahrstunde buchen
         </a>
       </div>
     </section>
@@ -96,7 +96,16 @@
             rel="noopener noreferrer"
             class="mt-4 inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition"
           >
-            Bei {{ member.name }} buchen
+            Auto-Fahrstunde bei {{ member.name }} buchen
+          </a>
+          <a
+            v-if="member.bookingUrlSecondary"
+            :href="member.bookingUrlSecondary"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-2 inline-flex items-center justify-center w-full px-4 py-2 rounded-lg border border-primary-600 text-primary-700 text-sm font-semibold hover:bg-primary-50 transition"
+          >
+            {{ member.bookingUrlSecondaryLabel || 'Weitere Kategorie buchen' }}
           </a>
         </div>
       </div>
@@ -375,8 +384,8 @@
     <section class="bg-primary-600 text-white py-16">
       <div class="section-container text-center">
         <h2 class="heading-md mb-6 text-white">Bereit, deine Fahrausbildung zu starten?</h2>
-        <a href="https://app.simy.ch/booking/availability/driving-team?service=fahrstunde" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-          Jetzt Termin buchen
+        <a href="https://app.simy.ch/booking/availability/driving-team?category=B%20Automatik" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          ✨ Auto-Fahrstunde buchen
         </a>
       </div>
     </section>
@@ -462,7 +471,9 @@ const team = [
     categories: 'Lastwagen, Car/Bus, Anhänger, Auto Automatik',
     area: 'Lachen, Kaltbrunn, Rapperswil, Hinwil, Wädenswil, Zürich, Glarus',
     photo: '/images/team/peter.webp',
-    bookingUrl: bookingUrl('C'),
+    bookingUrl: bookingUrl('B Automatik'),
+    bookingUrlSecondary: bookingUrl('C'),
+    bookingUrlSecondaryLabel: 'Lastwagen bei Peter buchen',
   },
   {
     name: 'Samir',

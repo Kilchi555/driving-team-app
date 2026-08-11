@@ -165,9 +165,15 @@ export default defineEventHandler((event) => {
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-spreitenbach/</loc>
-    <lastmod>2026-04-03</lastmod>
+    <lastmod>2026-08-11</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://drivingteam.ch/fahrschule-altstetten/</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://drivingteam.ch/fahrschule-pfaeffikon-sz/</loc>

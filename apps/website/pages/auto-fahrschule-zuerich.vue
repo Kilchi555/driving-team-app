@@ -590,6 +590,19 @@
     <!-- ====== WARUM ====== -->
     <WarumSection category="auto" />
 
+    <!-- ====== ALTSTETTEN ====== -->
+    <section class="py-12 bg-white border-y border-gray-100">
+      <div class="section-container max-w-3xl text-center">
+        <h2 class="heading-md mb-3">Standort Zürich-Altstetten</h2>
+        <p class="text-gray-600 mb-6">
+          Unser Kurslokal und Treffpunkt liegt direkt am Bahnhof Altstetten – ideal für Auto Fahrstunden in der Stadt.
+        </p>
+        <a href="/fahrschule-altstetten/" class="btn-primary inline-block">
+          Mehr zur Fahrschule Altstetten →
+        </a>
+      </div>
+    </section>
+
     <!-- ====== ANDERE STANDORTE ====== -->
     <StandorteSection exclude="zuerich" />
 

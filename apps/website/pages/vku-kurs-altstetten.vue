@@ -247,7 +247,7 @@
       <div class="flex flex-wrap justify-center gap-3 mb-8">
         <a href="/vku-kurs-zuerich/" class="bg-primary-50 border border-primary-200 rounded-full px-4 py-2 text-sm text-primary-700 hover:bg-primary-100 transition font-medium">📋 VKU Kurs Zürich</a>
         <a href="/vku-kurs-lachen/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📋 VKU Kurs Lachen</a>
-        <a href="/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Zürich-Altstetten</a>
+        <a href="/fahrschule-altstetten/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">📍 Fahrschule Altstetten</a>
         <a href="/nothelferkurs-zuerich/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🏥 Nothelferkurs Altstetten</a>
         <a href="/auto-fahrschule/" class="bg-white border border-gray-200 rounded-full px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition">🚗 Auto Fahrschule</a>
       </div>

@@ -1,13 +1,13 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Altstetten | Bahnhof Altstetten | Driving Team</Title>
-      <Meta name="description" content="Deine Fahrschule direkt beim Bahnhof Altstetten – Auto, Motorrad & Anhänger ab CHF 95.-, 85% Erfolgsquote. Jetzt deine Fahrstunde online buchen!" />
-      <Meta name="keywords" content="Fahrschule Altstetten, Fahrstunden Altstetten, Auto Fahrschule Altstetten, Fahrlehrer Altstetten, Fahrschule Zürich Altstetten" />
-      <Meta property="og:title" content="Fahrschule Altstetten – Driving Team | Vulkanstrasse 130b" />
-      <Meta property="og:description" content="Deine Fahrschule direkt in Zürich-Altstetten. Auto, Motorrad & Anhänger ab CHF 95.-. Buche jetzt flexibel online." />
-      <Meta property="og:url" content="https://drivingteam.ch/" />
-      <Link rel="canonical" href="https://drivingteam.ch/" />
+      <Title>Auto Fahrschule Altstetten | Bahnhof · ab CHF 95.– | Driving Team</Title>
+      <Meta name="description" content="Auto Fahrschule Altstetten direkt am Bahnhof: Fahrstunden ab CHF 95.–, 85% Prüfungserfolg, Vulkanstrasse 130b. Jetzt online buchen!" />
+      <Meta name="keywords" content="Fahrschule Altstetten, Auto Fahrschule Altstetten, Fahrstunden Altstetten, Fahrschule Zürich Altstetten, Fahrlehrer Altstetten" />
+      <Meta property="og:title" content="Auto Fahrschule Altstetten | ab CHF 95.– | Driving Team" />
+      <Meta property="og:description" content="Auto Fahrschule in Zürich-Altstetten am Bahnhof. Fahrstunden ab CHF 95.–, flexible Termine. Jetzt buchen!" />
+      <Meta property="og:url" content="https://drivingteam.ch/fahrschule-altstetten/" />
+      <Link rel="canonical" href="https://drivingteam.ch/fahrschule-altstetten/" />
       <Link rel="preload" as="image" href="/images/locations/zuerich-hero.webp" fetchpriority="high" />
       <Meta property="og:image" content="https://drivingteam.ch/images/locations/zuerich-hero.webp" />
       <Meta property="og:image:width" content="1200" />
@@ -15,17 +15,17 @@
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
-    <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Zürich', href: '/' }, { label: 'Altstetten' }]" />
+    <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Zürich', href: '/auto-fahrschule-zuerich/' }, { label: 'Altstetten' }]" />
 
     <!-- Hero -->
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-8 xs:py-16 md:py-24 relative overflow-hidden">
-      <img src="/images/locations/zuerich-hero.webp" alt="Fahrschule Altstetten – Driving Team an der Vulkanstrasse 130b in Zürich-Altstetten" class="absolute inset-0 w-full h-full object-cover opacity-100" fetchpriority="high" loading="eager" width="1920" height="1080" />
+      <img src="/images/locations/zuerich-hero.webp" alt="Auto Fahrschule Altstetten – Driving Team an der Vulkanstrasse 130b" class="absolute inset-0 w-full h-full object-cover opacity-100" fetchpriority="high" loading="eager" width="1920" height="1080" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
-          <h1 class="heading-lg text-white mb-6">Fahrschule Altstetten</h1>
-          <p class="text-base xs:text-xl text-white mb-8">Unser Hauptstandort mitten in Zürich-Altstetten. Direkt an der Baslerstrasse, gut erreichbar mit S-Bahn und Tram.</p>
+          <h1 class="heading-lg text-white mb-6">Auto Fahrschule Altstetten</h1>
+          <p class="text-base xs:text-xl text-white mb-8">Unser Hauptstandort mitten in Zürich-Altstetten – direkt am Bahnhof. Auto Fahrstunden ab CHF 95.–, gut erreichbar mit S-Bahn und Tram.</p>
           <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
