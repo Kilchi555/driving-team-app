@@ -21,14 +21,25 @@
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-6">Lastwagen fahren lernen – C1 | C | CE</h1>
-          <p class="text-base xs:text-xl text-white mb-8">Du suchst eine professionelle LKW Fahrschule, die dich optimal auf deine Prüfung vorbereitet? Egal ob du den Führerschein C1 oder den Führerschein C anstrebst – bei uns bist du genau richtig! Unsere LKW Fahrschule in Zürich und Lachen/SZ bietet dir eine umfassende Ausbildung.</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team?category=C" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✨ Jetzt anmelden
-          </a>
+          <h1 class="heading-lg text-white mb-4">Lastwagen fahren lernen – C1 | C | CE</h1>
+          <p class="text-base xs:text-xl text-white mb-3">LKW-Ausbildung in Zürich &amp; Lachen/SZ – Prüfung Pfäffikon SZ &amp; Albisgütli ZH. Ab CHF 150.– / 45 Min.</p>
+          <p class="text-sm text-white/90 mb-8">Wähle deine Kategorie und reserviere den nächsten freien Termin online.</p>
+          <div class="flex flex-col sm:flex-row flex-wrap gap-3">
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=C" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg text-center">
+              Termin Kat. C reservieren
+            </a>
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=C1" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center px-5 py-3 rounded-lg border-2 border-white text-white font-semibold hover:bg-white/10 transition text-center">
+              Kat. C1 (bis 7.5t)
+            </a>
+            <a href="https://app.simy.ch/booking/availability/driving-team?category=CE" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center px-5 py-3 rounded-lg border-2 border-white/70 text-white font-semibold hover:bg-white/10 transition text-center">
+              Kat. CE
+            </a>
+          </div>
         </div>
       </div>
     </section>
+
+    <UpcomingSlotsSection page="lastwagen-fahrschule" category="C" />
 
     <!-- Intro -->
     <section class="section-container">
@@ -59,8 +70,6 @@
 
     <!-- Reviews -->
     <ReviewsSection category="lastwagen" />
-    <UpcomingSlotsSection page="lastwagen-fahrschule" category="C" />
-
 
     <!-- Voraussetzungen -->
     <section class="bg-gray-50 py-16">
@@ -243,7 +252,7 @@
 
         <div class="text-center mt-12">
           <a href="https://app.simy.ch/booking/availability/driving-team?category=C" target="_blank" rel="noopener noreferrer" class="btn-primary text-lg">
-            🚀 Jetzt anmelden!
+            Termin Kat. C reservieren
           </a>
         </div>
       </div>
@@ -253,11 +262,11 @@
     <section class="section-container">
       <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-10 text-center">Unsere Preise</h2>
       <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-        <div class="bg-white rounded-lg p-8 shadow-sm border border-gray-200">
+        <div class="bg-white rounded-lg p-8 shadow-sm border border-gray-200 flex flex-col">
           <h3 class="font-bold text-xl text-center mb-2 text-primary-600">Kategorie C1</h3>
           <p class="text-center text-3xl font-bold text-gray-900 mb-1">CHF 150.-</p>
           <p class="text-center text-sm text-gray-500 mb-4">à 45 Minuten</p>
-          <ul class="space-y-3 text-sm text-gray-600">
+          <ul class="space-y-3 text-sm text-gray-600 flex-grow">
             <li class="flex gap-2"><span class="text-primary-500">✓</span> Effiziente Fahrausbildung</li>
             <li class="flex gap-2"><span class="text-primary-500">✓</span> Freundliche Fahrlehrer:innen</li>
             <li class="flex gap-2"><span class="text-primary-500">✓</span> Rechnung per E-Mail</li>
@@ -267,12 +276,15 @@
             <p class="text-sm text-gray-500">Versicherungspauschale: <strong>CHF 160.-</strong> (einmalig)</p>
             <p class="text-sm text-gray-500">WarmUp inkl. Prüfungsfahrt: <strong>CHF 649.-</strong></p>
           </div>
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=C1" target="_blank" rel="noopener noreferrer" class="mt-6 btn-primary w-full text-center">
+            C1 Termin buchen
+          </a>
         </div>
-        <div class="bg-primary-600 rounded-lg p-8 shadow-md text-white">
+        <div class="bg-primary-600 rounded-lg p-8 shadow-md text-white flex flex-col">
           <h3 class="font-bold text-xl text-center mb-2">Kategorie C</h3>
           <p class="text-center text-3xl font-bold mb-1">CHF 170.-</p>
           <p class="text-center text-sm text-primary-200 mb-4">à 45 Minuten</p>
-          <ul class="space-y-3 text-sm text-white">
+          <ul class="space-y-3 text-sm text-white flex-grow">
             <li class="flex gap-2"><span>✓</span> Effiziente Fahrausbildung</li>
             <li class="flex gap-2"><span>✓</span> Freundliche Fahrlehrer:innen</li>
             <li class="flex gap-2"><span>✓</span> Rechnung per E-Mail</li>
@@ -282,12 +294,15 @@
             <p class="text-sm text-primary-200">Versicherungspauschale: <strong class="text-white">CHF 200.-</strong> (einmalig)</p>
             <p class="text-sm text-primary-200">WarmUp inkl. Prüfungsfahrt: <strong class="text-white">CHF 737.-</strong></p>
           </div>
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=C" target="_blank" rel="noopener noreferrer" class="mt-6 inline-flex items-center justify-center w-full px-4 py-3 rounded-lg bg-white text-primary-700 font-semibold hover:bg-primary-50 transition">
+            C Termin buchen
+          </a>
         </div>
-        <div class="bg-white rounded-lg p-8 shadow-sm border border-gray-200">
+        <div class="bg-white rounded-lg p-8 shadow-sm border border-gray-200 flex flex-col">
           <h3 class="font-bold text-xl text-center mb-2 text-primary-600">Kategorie CE</h3>
           <p class="text-center text-3xl font-bold text-gray-900 mb-1">CHF 200.-</p>
           <p class="text-center text-sm text-gray-500 mb-4">à 45 Minuten</p>
-          <ul class="space-y-3 text-sm text-gray-600">
+          <ul class="space-y-3 text-sm text-gray-600 flex-grow">
             <li class="flex gap-2"><span class="text-primary-500">✓</span> Effiziente Fahrausbildung</li>
             <li class="flex gap-2"><span class="text-primary-500">✓</span> Freundliche Fahrlehrer:innen</li>
             <li class="flex gap-2"><span class="text-primary-500">✓</span> Rechnung per E-Mail</li>
@@ -297,7 +312,10 @@
             <p class="text-sm text-gray-500">Versicherungspauschale: <strong>CHF 250.-</strong> (einmalig)</p>
             <p class="text-sm text-gray-500">WarmUp inkl. Prüfungsfahrt: <strong>CHF 866.-</strong></p>
           </div>
-          <a href="/lastwagen-fahrschule-ce/" class="mt-4 block text-center text-sm text-primary-600 font-semibold hover:underline">→ Mehr zu Kategorie CE</a>
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=CE" target="_blank" rel="noopener noreferrer" class="mt-6 btn-primary w-full text-center">
+            CE Termin buchen
+          </a>
+          <a href="/lastwagen-fahrschule-ce/" class="mt-3 block text-center text-sm text-primary-600 font-semibold hover:underline">Mehr zu Kategorie CE</a>
         </div>
       </div>
     </section>

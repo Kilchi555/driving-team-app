@@ -18,7 +18,15 @@
     <section class="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-16 md:py-24">
       <div class="section-container text-center">
         <h1 class="heading-lg text-white mb-6">Die Teammitglieder des Drivingteams</h1>
-        <p class="text-xl text-white max-w-3xl mx-auto">Erfahrene, motivierte und leidenschaftliche Fahrlehrer:innen für deine Fahrausbildung.</p>
+        <p class="text-xl text-white max-w-3xl mx-auto mb-8">Erfahrene, motivierte und leidenschaftliche Fahrlehrer:innen für deine Fahrausbildung.</p>
+        <a
+          href="https://app.simy.ch/booking/availability/driving-team?service=fahrstunde"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg inline-block"
+        >
+          Termin mit Fahrlehrer:in buchen
+        </a>
       </div>
     </section>
 
@@ -67,7 +75,7 @@
           </div>
           <!-- Diplom-Badges -->
           <div v-if="getDiplomas(member.name).length" class="border-t border-amber-100 pt-3 mt-3">
-            <p class="text-xs text-amber-700 font-semibold mb-2">🎓 Eidg. Diplome</p>
+            <p class="text-xs text-amber-700 font-semibold mb-2">Eidg. Diplome</p>
             <div class="flex flex-wrap gap-1.5">
               <button
                 v-for="diploma in getDiplomas(member.name)"
@@ -77,11 +85,19 @@
                 :title="diploma.title"
                 @click="diploma.image ? openLightbox(diploma, member.name) : null"
               >
-                📜 {{ diploma.label ?? 'Kat. ' + diploma.category }}
+                Kat. {{ diploma.label ?? diploma.category }}
                 <span v-if="diploma.image" class="text-amber-500">↗</span>
               </button>
             </div>
           </div>
+          <a
+            :href="member.bookingUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-4 inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition"
+          >
+            Bei {{ member.name }} buchen
+          </a>
         </div>
       </div>
 
@@ -402,6 +418,11 @@ const jsonLdScripts = [
 ]
 useHead({ script: jsonLdScripts })
 
+const BOOKING_BASE = 'https://app.simy.ch/booking/availability/driving-team'
+
+const bookingUrl = (category: string) =>
+  `${BOOKING_BASE}?category=${encodeURIComponent(category)}`
+
 const team = [
   {
     name: 'Marc',
@@ -410,7 +431,8 @@ const team = [
     languages: 'Deutsch, Englisch',
     categories: 'Auto Automat, Anhänger, Taxi, Motorboot',
     area: 'Lachen/SZ und Umgebung',
-    photo: '/images/team/marc.webp'
+    photo: '/images/team/marc.webp',
+    bookingUrl: bookingUrl('B Automatik'),
   },
   {
     name: 'Pascal',
@@ -419,7 +441,8 @@ const team = [
     languages: 'Deutsch, Englisch',
     categories: 'Auto Automat, Motorrad, Motorboot, Anhänger',
     area: 'Zürich und Zürcher Oberland',
-    photo: '/images/team/pascal.webp'
+    photo: '/images/team/pascal.webp',
+    bookingUrl: bookingUrl('B Automatik'),
   },
   {
     name: 'Skender',
@@ -428,7 +451,8 @@ const team = [
     languages: 'Deutsch, Albanisch',
     categories: 'Auto Automat, Taxi, Anhänger',
     area: 'Zürich bis Wettingen',
-    photo: '/images/team/skender.webp'
+    photo: '/images/team/skender.webp',
+    bookingUrl: bookingUrl('B Automatik'),
   },
   {
     name: 'Peter',
@@ -437,7 +461,8 @@ const team = [
     languages: 'Deutsch',
     categories: 'Lastwagen, Car/Bus, Anhänger, Auto Automatik',
     area: 'Lachen, Kaltbrunn, Rapperswil, Hinwil, Wädenswil, Zürich, Glarus',
-    photo: '/images/team/peter.webp'
+    photo: '/images/team/peter.webp',
+    bookingUrl: bookingUrl('C'),
   },
   {
     name: 'Samir',
@@ -446,7 +471,8 @@ const team = [
     languages: 'Deutsch, Englisch',
     categories: 'Auto Automatik',
     area: 'Zürich-Oerlikon, Zürich-Altstetten, Zürich-Enge',
-    photo: '/images/team/samir.webp'
+    photo: '/images/team/samir.webp',
+    bookingUrl: bookingUrl('B Automatik'),
   },
   {
     name: 'Rahel',
@@ -455,8 +481,9 @@ const team = [
     languages: 'Deutsch',
     categories: 'Auto Automatik',
     area: 'Lachen, Pfäffikon/SZ, Wollerau, Schindeleggi',
-    photo: '/images/team/rahel.webp'
-  }
+    photo: '/images/team/rahel.webp',
+    bookingUrl: bookingUrl('B Automatik'),
+  },
 ]
 
 const history = [
