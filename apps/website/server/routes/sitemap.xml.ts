@@ -122,12 +122,6 @@ export default defineEventHandler((event) => {
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://drivingteam.ch/fahrschule-uster/</loc>
-    <lastmod>2026-04-03</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://drivingteam.ch/fahrschule-stgallen/</loc>
     <lastmod>2026-04-03</lastmod>
     <changefreq>monthly</changefreq>

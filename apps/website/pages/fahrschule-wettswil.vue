@@ -65,6 +65,8 @@
 
     <AusbildungsthemenSection location="Wettswil am Albis" />
     <ReviewsSection category="zuerich" />
+    <UpcomingSlotsSection page="fahrschule-wettswil" category="B Automatik" />
+
     <CtaSection title="Jetzt in Wettswil starten!" />
     <PriceSection />
 

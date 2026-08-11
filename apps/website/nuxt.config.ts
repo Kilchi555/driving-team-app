@@ -202,6 +202,10 @@ export default defineNuxtConfig({
     },
     '/': { prerender: true },
 
+    // Uster no longer offered — consolidate to Zürich Auto
+    '/fahrschule-uster': { redirect: { to: '/auto-fahrschule-zuerich/', statusCode: 301 } },
+    '/fahrschule-uster/': { redirect: { to: '/auto-fahrschule-zuerich/', statusCode: 301 } },
+
     // ===== BLOG ARTIKEL – explizit prerendered =====
     '/blog/': { prerender: true },
     '/blog/fuehrerschein-kosten-schweiz/': { prerender: true },

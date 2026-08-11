@@ -59,6 +59,8 @@
 
     <!-- 5. Reviews (grau-50) -->
     <ReviewsSection category="dietikon" />
+    <UpcomingSlotsSection page="fahrschule-dietikon" category="B Automatik" />
+
 
     <!-- 6. CTA (primary) -->
     <CtaSection title="Jetzt in Dietikon starten!" />

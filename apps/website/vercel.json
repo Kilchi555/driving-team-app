@@ -23,6 +23,16 @@
       "permanent": true
     },
     {
+      "source": "/fahrschule-uster",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-uster/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
       "source": "/blog/undefined",
       "destination": "https://drivingteam.ch/blog/",
       "permanent": true
@@ -819,12 +829,12 @@
     },
     {
       "source": "/auto-fahrschule-uster",
-      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
       "source": "/auto-fahrschule-uster/",
-      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
@@ -2184,12 +2194,12 @@
     },
     {
       "source": "/en/fahrschule-uster",
-      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
       "source": "/en/fahrschule-uster/",
-      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
@@ -2949,12 +2959,12 @@
     },
     {
       "source": "/it/fahrschule-uster",
-      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
       "source": "/it/fahrschule-uster/",
-      "destination": "https://drivingteam.ch/fahrschule-uster/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
@@ -3049,7 +3059,12 @@
     },
     {
       "source": "/",
-      "has": [{ "type": "query", "key": "page_id" }],
+      "has": [
+        {
+          "type": "query",
+          "key": "page_id"
+        }
+      ],
       "destination": "https://drivingteam.ch/",
       "permanent": true
     },

@@ -328,6 +328,8 @@
     </section>
 
     <ReviewsSection category="lastwagen" />
+    <UpcomingSlotsSection page="lastwagen-fahrschule-ce" category="CE" />
+
 
     <!-- Preise -->
     <section class="bg-gray-50 py-16">

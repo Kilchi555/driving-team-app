@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Standorte | Zürich, Lachen & Uster | Driving Team</Title>
-      <Meta name="description" content="Driving Team ist in Zürich, Lachen, Pfäffikon, Uster, Dietikon, Aargau und St.Gallen vor Ort. Alle Kategorien, flexible Zeiten. Jetzt Standort wählen!" />
-      <Meta property="og:title" content="Fahrschule Standorte - 8 Locations in der Schweiz" />
-      <Meta property="og:description" content="Besuche einen unserer 8 Fahrschule Standorte in Zürich, Lachen, Pfäffikon, Uster und mehr." />
+      <Title>Fahrschule Standorte | Zürich, Lachen & Region | Driving Team</Title>
+      <Meta name="description" content="Driving Team ist in Zürich, Lachen, Pfäffikon, Dietikon, Aargau und St.Gallen vor Ort. Alle Kategorien, flexible Zeiten. Jetzt Standort wählen!" />
+      <Meta property="og:title" content="Fahrschule Standorte | Zürich, Lachen & Region" />
+      <Meta property="og:description" content="Besuche einen unserer Fahrschule-Standorte in Zürich, Lachen, Pfäffikon und mehr." />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-standorte/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-standorte/" />
       
@@ -87,25 +87,6 @@
             </div>
             <a href="/fahrschule-pfaeffikon-sz/" class="block w-full text-center bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition" aria-label="Mehr zu Fahrschule Pfäffikon/SZ">
               Fahrschule Pfäffikon/SZ
-            </a>
-          </div>
-        </div>
-
-        <!-- Uster -->
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition border-t-4 border-yellow-600">
-          <div class="h-40 bg-gradient-to-br from-yellow-500 to-yellow-700 overflow-hidden">
-            <img src="/images/locations/uster-hero.webp" alt="Fahrschule Uster/ZH – Auto und Motorrad Fahrstunden im Zürcher Oberland mit Driving Team" loading="lazy" class="w-full h-full object-cover" />
-          </div>
-          <div class="p-6">
-            <h3 class="text-2xl font-bold text-yellow-600 mb-2">Uster</h3>
-            <p class="text-gray-600 mb-4">Im Zürcher Oberland</p>
-            <div class="space-y-2 mb-6 text-sm text-gray-600">
-              <p><span class="font-semibold">Region:</span> Zürcher Oberland</p>
-              <p><span class="font-semibold">Öffnungszeiten:</span> Mo-Sa 8:00 - 18:00</p>
-              <p><span class="font-semibold">Kategorien:</span> Auto, Motorrad</p>
-            </div>
-            <a href="/fahrschule-uster/" class="block w-full text-center bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition" aria-label="Mehr zu Fahrschule Uster">
-              Fahrschule Uster
             </a>
           </div>
         </div>
@@ -221,7 +202,7 @@
 
 <script setup lang="ts">
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"CollectionPage","name":"Fahrschule Standorte","description":"Alle Fahrschule Standorte von Driving Team in der Schweiz","url":"https://drivingteam.ch/fahrschule-standorte/","hasPart":[{"@type":"LocalBusiness","name":"Driving Team Zürich"},{"@type":"LocalBusiness","name":"Driving Team Lachen"},{"@type":"LocalBusiness","name":"Driving Team Pfäffikon"},{"@type":"LocalBusiness","name":"Driving Team Uster"},{"@type":"LocalBusiness","name":"Driving Team St.Gallen"},{"@type":"LocalBusiness","name":"Driving Team Dietikon"},{"@type":"LocalBusiness","name":"Driving Team Aargau"},{"@type":"LocalBusiness","name":"Driving Team Reichenburg"}]}' },
+  { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"CollectionPage","name":"Fahrschule Standorte","description":"Alle Fahrschule Standorte von Driving Team in der Schweiz","url":"https://drivingteam.ch/fahrschule-standorte/","hasPart":[{"@type":"LocalBusiness","name":"Driving Team Zürich"},{"@type":"LocalBusiness","name":"Driving Team Lachen"},{"@type":"LocalBusiness","name":"Driving Team Pfäffikon"},{"@type":"LocalBusiness","name":"Driving Team St.Gallen"},{"@type":"LocalBusiness","name":"Driving Team Dietikon"},{"@type":"LocalBusiness","name":"Driving Team Aargau"}]}' },
   { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://drivingteam.ch/"},{"@type":"ListItem","position":2,"name":"Standorte","item":"https://drivingteam.ch/fahrschule-standorte/"}]}' },
 ]
 useHead({ script: jsonLdScripts })

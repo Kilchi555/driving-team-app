@@ -41,18 +41,6 @@
           </div>
         </a>
 
-        <a v-if="exclude !== 'uster'" href="/fahrschule-uster/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
-          <div class="h-32 bg-gradient-to-br from-purple-50 to-purple-100 overflow-hidden">
-            <img src="/images/locations/uster-hero.webp" alt="Fahrschule Uster" loading="lazy" class="w-full h-full object-cover" />
-          </div>
-          <div class="p-6 bg-gradient-to-br from-purple-50 to-purple-100">
-            <h3 class="text-lg font-bold text-gray-900 mb-3">Fahrschule Uster</h3>
-            <p class="text-sm text-gray-600 mb-4">Zürcher Oberland</p>
-            <p class="text-xs text-gray-500">Dübendorf, Volketswil, Wetzikon, Hinwil</p>
-            <span class="text-purple-600 font-semibold text-sm mt-4 inline-block hover:text-purple-800">Mehr erfahren →</span>
-          </div>
-        </a>
-
         <a v-if="exclude !== 'stgallen'" href="/fahrschule-stgallen/" class="rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer block overflow-hidden flex flex-col">
           <div class="h-32 bg-gradient-to-br from-red-50 to-red-100 overflow-hidden">
             <img src="/images/locations/stgallen-hero.webp" alt="Fahrschule St.Gallen" loading="lazy" class="w-full h-full object-cover" />

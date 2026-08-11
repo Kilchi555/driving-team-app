@@ -71,6 +71,8 @@
 
     <!-- Reviews -->
     <ReviewsSection category="zuerich" />
+    <UpcomingSlotsSection page="fahrschule-schlieren" category="B Automatik" />
+
 
     <!-- CTA -->
     <CtaSection title="Jetzt in Schlieren starten!" />

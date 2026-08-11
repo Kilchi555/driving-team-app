@@ -66,6 +66,8 @@
 
     <!-- 5. Reviews (grau-50) -->
     <ReviewsSection category="pfaeffikon" />
+    <UpcomingSlotsSection page="fahrschule-pfaeffikon" category="B Automatik" />
+
 
     <!-- 6. CTA (primary) -->
     <CtaSection title="Jetzt in Pfäffikon/SZ starten!" />

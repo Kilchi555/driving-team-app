@@ -141,6 +141,8 @@
 
     <!-- ====== REVIEWS ====== -->
     <ReviewsSection category="zuerich" />
+    <UpcomingSlotsSection page="auto-fahrschule-zuerich" category="B Automatik" />
+
 
     <!-- ====== PRÜFUNGSGEBIET ALBISGÜTLI ====== -->
     <section id="pruefungsgebiet" class="py-16 bg-gray-50">

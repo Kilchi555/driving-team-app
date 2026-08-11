@@ -113,6 +113,8 @@
         </div>
       </div>
     </section>
+    <UpcomingSlotsSection page="lastwagen-fahrschule-zuerich" category="C" />
+
 
     <!-- Warum Zürich-spezifisch -->
     <section class="section-container py-16">
