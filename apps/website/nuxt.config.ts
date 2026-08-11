@@ -202,9 +202,7 @@ export default defineNuxtConfig({
     },
     '/': { prerender: true },
 
-    // Uster no longer offered — consolidate to Zürich Auto
-    '/fahrschule-uster': { redirect: { to: '/auto-fahrschule-zuerich/', statusCode: 301 } },
-    '/fahrschule-uster/': { redirect: { to: '/auto-fahrschule-zuerich/', statusCode: 301 } },
+    // Uster → vercel.json only (routeRules + vercel redirects = EEXIST symlink on Nitro/Vercel)
 
     // ===== BLOG ARTIKEL – explizit prerendered =====
     '/blog/': { prerender: true },
