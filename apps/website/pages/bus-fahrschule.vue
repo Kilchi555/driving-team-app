@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Busführerschein D1 & D | Zürich & Lachen | Driving Team</Title>
-      <Meta name="description" content="Busfahrer-Ausbildung (D1/D) ab Wädenswil oder Pfäffikon SZ – Fahrprüfung StVA Albisgütli, ab CHF 200.-/Lektion. Erfahrene Fahrlehrer. Jetzt anfragen!" />
-      <Meta property="og:title" content="Bus Fahrschule Zürich | D1/D Berufliche Ausbildung | Driving Team" />
-      <Meta property="og:description" content="Professionelle Busfahrer-Ausbildung D1 & D in Zürich. Prüfung am StVA Regensdorf. Erfahrene Fahrlehrer, faire Preise." />
+      <Title>Kleinbus & Bus fahren lernen (D1/D) | Zürich & Lachen | Driving Team</Title>
+      <Meta name="description" content="Kleinbus & Bus fahren lernen (D1/D) in Zürich & Lachen – Ausbildung ab CHF 200.–/Lektion, Prüfung StVA. Erfahrene Fahrlehrer. Jetzt anfragen!" />
+      <Meta property="og:title" content="Kleinbus & Bus fahren lernen (D1/D) | Zürich & Lachen | Driving Team" />
+      <Meta property="og:description" content="Kleinbus (D1) und Bus (D) Ausbildung in Zürich & Lachen. Erfahrene Fahrlehrer, faire Preise. Jetzt anfragen!" />
       <Meta property="og:url" content="https://drivingteam.ch/bus-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/bus-fahrschule/" />
       
@@ -20,8 +20,8 @@
       <img src="/images/categories/bus-fahrschule-hero.webp" alt="Bus Fahrschule – Kategorie D1 und D Fahrstunden mit Driving Team" class="absolute inset-0 w-full h-full object-cover opacity-100" />
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
-          <h1 class="heading-lg text-white mb-6">Bus Fahrschule Kategorie D1 & D</h1>
-          <p class="text-base xs:text-xl text-white mb-8">Möchtest du deinen Bus Führerschein machen? Bei unserer Bus Fahrschule wirst du von einem erfahrenen Fahrlehrer unterrichtet, der seine Begeisterung für grosse Fahrzeuge mit dir teilt. Freu dich auf lehrreiche und spannende Fahrstunden!</p>
+          <h1 class="heading-lg text-white mb-6">Kleinbus & Bus fahren lernen – Kategorie D1 & D</h1>
+          <p class="text-base xs:text-xl text-white mb-8">Möchtest du Kleinbus oder Bus fahren lernen? Bei unserer Bus Fahrschule wirst du von einem erfahrenen Fahrlehrer unterrichtet, der seine Begeisterung für grosse Fahrzeuge mit dir teilt. Freu dich auf lehrreiche und spannende Fahrstunden!</p>
           <a href="https://app.simy.ch/booking/availability/driving-team?category=D" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt anmelden
           </a>
