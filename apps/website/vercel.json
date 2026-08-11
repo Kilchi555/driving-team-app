@@ -789,12 +789,12 @@
     },
     {
       "source": "/fahrschule-zuerich-2",
-      "destination": "https://drivingteam.ch/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
       "source": "/fahrschule-zuerich-2/",
-      "destination": "https://drivingteam.ch/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
@@ -2054,12 +2054,12 @@
     },
     {
       "source": "/en/fahrschule-zuerich",
-      "destination": "https://drivingteam.ch/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
       "source": "/en/fahrschule-zuerich/",
-      "destination": "https://drivingteam.ch/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
@@ -2454,12 +2454,12 @@
     },
     {
       "source": "/sq/fahrschule-zuerich",
-      "destination": "https://drivingteam.ch/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
       "source": "/sq/fahrschule-zuerich/",
-      "destination": "https://drivingteam.ch/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
@@ -3070,22 +3070,12 @@
     },
     {
       "source": "/fahrschule-zuerich",
-      "destination": "https://drivingteam.ch/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {
       "source": "/fahrschule-zuerich/",
-      "destination": "https://drivingteam.ch/",
-      "permanent": true
-    },
-    {
-      "source": "/fahrschule-altstetten",
-      "destination": "https://drivingteam.ch/",
-      "permanent": true
-    },
-    {
-      "source": "/fahrschule-altstetten/",
-      "destination": "https://drivingteam.ch/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "permanent": true
     },
     {

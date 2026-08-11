@@ -246,7 +246,7 @@ export default defineNuxtConfig({
     // ===== FEHLENDE REDIRECTS FÜR GSC COVERAGE VALIDATION =====
     // HINWEIS: /kontrollfahrt hat eine eigene .vue Seite → kein Redirect
 
-    // Fahrschule Zürich → Homepage (Cannibalization-Fix: Homepage ist jetzt die Zürich-Seite)
+    // Fahrschule Zürich → Auto-Landing (nicht Homepage – sonst Kannibalisierung)
     // '/fahrschule-zuerich' und '/fahrschule-zuerich/' → vercel.json (EEXIST symlink conflict)
 
     // HINWEIS: /team, /blog, /kontakt, /agb, /datenschutz, /faq wurden entfernt,
