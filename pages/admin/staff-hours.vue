@@ -647,7 +647,7 @@
                     type="number"
                     min="0"
                     max="365"
-                    step="1"
+                    step="0.5"
                     placeholder="20"
                     class="tenant-focus w-20 px-2 py-1.5 border border-gray-300 rounded-md text-sm text-right focus:ring-2 bg-gray-50"
                   />

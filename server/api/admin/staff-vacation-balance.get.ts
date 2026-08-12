@@ -11,6 +11,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getYearlyWorkingDaysBreakdown } from '~/server/utils/swiss-holidays'
 import { FULLTIME_HOURS_DEFAULT, HR_CATEGORY, KEY_FULLTIME } from '~/server/api/admin/hr-settings.get'
+import { ferienDayCredit } from '~/server/utils/staff-hours-counting'
 
 const TIMEZONE = 'Europe/Zurich'
 
@@ -61,10 +62,10 @@ export default defineEventHandler(async (event) => {
   const entitlementDays: number = staffUser.vacation_entitlement_days ?? 20
   const entitlementHours = entitlementDays * dailyHours
 
-  // Count all planned vacation days (Mon–Fri) for this year
+  // Count planned Ferien days (Mo–Fr) for entitlement — exclude Vaterschaft; support half days
   const { data: vacationApts } = await supabase
     .from('appointments')
-    .select('start_time')
+    .select('start_time, title, event_type_code, duration_minutes')
     .eq('tenant_id', tenantId)
     .eq('staff_id', staffId)
     .eq('event_type_code', 'vacation')
@@ -72,13 +73,14 @@ export default defineEventHandler(async (event) => {
     .gte('start_time', `${year}-01-01`)
     .lte('start_time', `${year}-12-31`)
 
-  const usedVacDays = new Set<string>()
+  const usedVacDayCredits = new Map<string, number>()
   ;(vacationApts || []).forEach((apt: any) => {
+    const credit = ferienDayCredit(apt)
+    if (credit <= 0) return
     const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(new Date(apt.start_time))
-    const weekday = new Date(dateStr + 'T12:00:00').getDay()
-    if (weekday >= 1 && weekday <= 5) usedVacDays.add(dateStr)
+    usedVacDayCredits.set(dateStr, Math.max(usedVacDayCredits.get(dateStr) || 0, credit))
   })
-  const totalPlannedVacDays = usedVacDays.size
+  const totalPlannedVacDays = Math.round([...usedVacDayCredits.values()].reduce((s, c) => s + c, 0) * 10) / 10
   const totalPlannedVacHours = totalPlannedVacDays * dailyHours
   const vacation_balance_hours = Math.round((entitlementHours - totalPlannedVacHours) * 100) / 100
   const vacation_balance_days = dailyHours > 0
@@ -104,11 +106,10 @@ export default defineEventHandler(async (event) => {
   const carryOver: number = carryOverRec ? parseFloat(carryOverRec.carry_over_hours) : 0
 
   // Load vacation appointments per month to correctly credit vacation_hours
-  const vacDaysByMonth: Record<number, Set<string>> = {}
-  usedVacDays.forEach((dateStr) => {
+  const vacDaysByMonth: Record<number, number> = {}
+  usedVacDayCredits.forEach((credit, dateStr) => {
     const month = parseInt(dateStr.slice(5, 7))
-    if (!vacDaysByMonth[month]) vacDaysByMonth[month] = new Set()
-    vacDaysByMonth[month].add(dateStr)
+    vacDaysByMonth[month] = (vacDaysByMonth[month] || 0) + credit
   })
 
   const now = new Date()
@@ -119,7 +120,7 @@ export default defineEventHandler(async (event) => {
     .filter((r: any) => !(year === curYear && r.month >= curMonth) && !(year > curYear))
     .sort((a: any, b: any) => a.month - b.month)
     .forEach((r: any) => {
-      const plannedVacDays = vacDaysByMonth[r.month]?.size ?? 0
+      const plannedVacDays = vacDaysByMonth[r.month] ?? 0
       const plannedVacHours = plannedVacDays * dailyHours
       const stored_vacation = parseFloat(r.vacation_hours ?? 0) || 0
       const vacation_hours = Math.max(plannedVacHours, stored_vacation)

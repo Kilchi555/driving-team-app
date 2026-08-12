@@ -81,7 +81,7 @@ export default defineEventHandler(async (event) => {
       // 3. All active staff for tenant
       supabase
         .from('users')
-        .select('id, first_name, last_name, email, role, category, is_active')
+        .select('id, first_name, last_name, email, role, category, is_active, metadata')
         .eq('tenant_id', tenant_id)
         .eq('role', 'staff')
         .eq('is_active', true)
@@ -249,13 +249,20 @@ export default defineEventHandler(async (event) => {
         const effectiveCats = getEffectiveCategories(staffId, locationId)
         if (!isEventTypeBooking && !effectiveCats.includes(category_code)) return
 
+        const metadata = (staff.metadata && typeof staff.metadata === 'object') ? staff.metadata as Record<string, unknown> : {}
+        const photoUrl =
+          (typeof metadata.photo_url === 'string' && metadata.photo_url) ||
+          (typeof metadata.avatar_url === 'string' && metadata.avatar_url) ||
+          null
+
         locationEntry.available_staff.push({
           id: staff.id,
           first_name: staff.first_name || 'Unknown',
           last_name: staff.last_name || 'Staff',
           category: staff.category,
           available_categories: effectiveCats,
-          is_online_bookable: true
+          is_online_bookable: true,
+          photo_url: photoUrl
         })
       })
     })

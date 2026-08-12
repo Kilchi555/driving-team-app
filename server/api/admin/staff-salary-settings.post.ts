@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
           : null
       // Vacation entitlement in days per year
       if (vacation_entitlement_days != null) {
-        updatePayload.vacation_entitlement_days = parseInt(vacation_entitlement_days)
+        updatePayload.vacation_entitlement_days = parseFloat(vacation_entitlement_days)
       }
     } else if (salary_type === 'hourly') {
       updatePayload.weekly_contracted_hours = null

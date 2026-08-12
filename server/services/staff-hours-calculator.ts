@@ -84,11 +84,11 @@ export async function recalculateStaffHoursForTenant(
   }
 
   // ── 3. Aggregate hours per staff per month ────────────────────────────────
-  // vacation_days: set of distinct calendar dates (Zurich) with vacation appointments
-  const grouped: Record<string, Record<number, { actual: number; vacation_days: Set<string> }>> = {}
+  // vacation_credits: Mon–Fri leave day weights (full=1, half=0.5) per date
+  const grouped: Record<string, Record<number, { actual: number; vacation_credits: Map<string, number> }>> = {}
   staffIds.forEach((id) => {
     grouped[id] = {}
-    monthsToProcess.forEach((m) => { grouped[id][m] = { actual: 0, vacation_days: new Set() } })
+    monthsToProcess.forEach((m) => { grouped[id][m] = { actual: 0, vacation_credits: new Map() } })
   })
 
   ;(allApts || []).forEach((apt: any) => {
@@ -97,14 +97,16 @@ export async function recalculateStaffHoursForTenant(
     const m = zurichMonth(apt.start_time)
     if (!monthsToProcess.includes(m)) return
     if (!grouped[apt.staff_id]) return
-    if (!grouped[apt.staff_id][m]) grouped[apt.staff_id][m] = { actual: 0, vacation_days: new Set() }
+    if (!grouped[apt.staff_id][m]) grouped[apt.staff_id][m] = { actual: 0, vacation_credits: new Map() }
     if (apt.event_type_code === 'vacation') {
-      // Count only Mon–Fri as vacation days (standard 5-day week for entitlement).
-      // Saturday appointments are created to block the calendar but don't count.
+      // Count only Mon–Fri (Sat blocks calendar but not hours). Half-day blocks ≤420 min → 0.5.
       const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(new Date(apt.start_time))
       const weekday = new Date(dateStr + 'T12:00:00').getDay() // 0=Sun, 6=Sat
       if (weekday >= 1 && weekday <= 5) {
-        grouped[apt.staff_id][m].vacation_days.add(dateStr)
+        const duration = apt.duration_minutes ?? 0
+        const credit = duration > 0 && duration <= 420 ? 0.5 : 1
+        const prev = grouped[apt.staff_id][m].vacation_credits.get(dateStr) || 0
+        grouped[apt.staff_id][m].vacation_credits.set(dateStr, Math.max(prev, credit))
       }
     } else {
       grouped[apt.staff_id][m].actual += appointmentHours(apt)
@@ -145,12 +147,12 @@ export async function recalculateStaffHoursForTenant(
       // Skip current and future months – only completed months have reliable data.
       if (year > currentYear || (year === currentYear && m >= currentMonth)) continue
 
-      const monthData = grouped[staff.id]?.[m] ?? { actual: 0, vacation_days: new Set<string>() }
+      const monthData = grouped[staff.id]?.[m] ?? { actual: 0, vacation_credits: new Map<string, number>() }
       const actual = monthData.actual
-      // For monthly-salary staff: vacation = number of distinct vacation days × daily contracted hours
+      // For monthly-salary staff: vacation = day credits × daily contracted hours
       // For hourly staff: vacation stays 0 (no target hours system)
       const dailyHours = isMonthly && weeklyHours > 0 ? weeklyHours / 5 : 0
-      const vacationDays = monthData.vacation_days.size
+      const vacationDays = [...monthData.vacation_credits.values()].reduce((s, c) => s + c, 0)
       const vacation = isMonthly ? vacationDays * dailyHours : 0
 
       // Preserve manually entered admin/sick hours across recalculation

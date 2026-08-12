@@ -11,6 +11,7 @@ import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { recalculateStaffHoursForTenant } from '~/server/services/staff-hours-calculator'
 import { logger } from '~/utils/logger'
+import { ferienDayCredit } from '~/server/utils/staff-hours-counting'
 
 export default defineEventHandler(async (event) => {
   const secret = event.node.req.headers.authorization?.replace('Bearer ', '')
@@ -58,11 +59,10 @@ export default defineEventHandler(async (event) => {
       const staffDetailMap: Record<string, any> = {}
       ;(staffDetails || []).forEach((s: any) => { staffDetailMap[s.id] = s })
 
-      // Load all vacation appointments for prevYear to compute used vacation days
-      const TIMEZONE = 'Europe/Zurich'
+      // Load vacation appointments for prevYear (Ferien entitlement only)
       const { data: vacApts } = await supabase
         .from('appointments')
-        .select('staff_id, start_time')
+        .select('staff_id, start_time, title, event_type_code, duration_minutes')
         .eq('tenant_id', tenantId)
         .eq('event_type_code', 'vacation')
         .neq('status', 'cancelled')
@@ -70,14 +70,12 @@ export default defineEventHandler(async (event) => {
         .lte('start_time', `${prevYear}-12-31`)
         .in('staff_id', staffIds)
 
-      // Count distinct Mon–Fri vacation days per staff
-      const vacDaysByStaff: Record<string, Set<string>> = {}
+      // Sum Mon–Fri Ferien day credits per staff (half days = 0.5)
+      const vacDaysByStaff: Record<string, number> = {}
       ;(vacApts || []).forEach((apt: any) => {
-        const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(new Date(apt.start_time))
-        const weekday = new Date(dateStr + 'T12:00:00').getDay()
-        if (weekday < 1 || weekday > 5) return
-        if (!vacDaysByStaff[apt.staff_id]) vacDaysByStaff[apt.staff_id] = new Set()
-        vacDaysByStaff[apt.staff_id].add(dateStr)
+        const credit = ferienDayCredit(apt)
+        if (credit <= 0) return
+        vacDaysByStaff[apt.staff_id] = (vacDaysByStaff[apt.staff_id] || 0) + credit
       })
 
       const { data: decRecords } = await supabase
@@ -95,7 +93,7 @@ export default defineEventHandler(async (event) => {
         const carryOver = parseFloat(rec.cumulative_overtime ?? 0)
         const staffInfo = staffDetailMap[rec.staff_id]
         const entitlementDays = staffInfo?.vacation_entitlement_days ?? 20
-        const usedVacDays = vacDaysByStaff[rec.staff_id]?.size ?? 0
+        const usedVacDays = vacDaysByStaff[rec.staff_id] ?? 0
         const remainingVacDays = entitlementDays - usedVacDays
         // Cap carry-over at VACATION_CARRY_OVER_MAX (min 0)
         const vacCarryOver = Math.min(Math.max(0, remainingVacDays), VACATION_CARRY_OVER_MAX)
