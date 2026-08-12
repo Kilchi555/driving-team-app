@@ -15,8 +15,8 @@
     <div v-else-if="!enabled" class="card locked">
       <h2>Noch nicht freigeschaltet</h2>
       <p>
-        Add-on-Seiten sind ein Aufpreis-Feature. Bitte Simy kontaktieren, damit Superadmin die
-        Freischaltung setzt.
+        SEO-Unterseiten gehören zum Premium-Website-Paket. Nach dem Veröffentlichen im Wizard
+        werden sie automatisch freigeschaltet — sonst Simy kontaktieren.
       </p>
     </div>
 

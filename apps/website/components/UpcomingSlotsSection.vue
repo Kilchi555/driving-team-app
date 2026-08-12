@@ -1,6 +1,6 @@
 <template>
   <section
-    v-if="status === 'pending' || slots.length > 0"
+    v-if="status === 'pending' || status === 'success'"
     class="bg-white py-10 border-b border-gray-100"
   >
     <div class="section-container">
@@ -13,7 +13,8 @@
           </div>
         </template>
 
-        <template v-else>
+        <!-- Slots available -->
+        <template v-else-if="slots.length > 0">
           <h2 class="text-xl font-bold text-gray-900 mb-1">{{ title }}</h2>
           <p class="text-sm text-gray-500 mb-2">{{ displaySubtitle }}</p>
           <p v-if="hint" class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mb-4">
@@ -37,7 +38,7 @@
             </a>
           </div>
 
-          <div class="text-center sm:text-left">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
             <a
               :href="allUrl"
               target="_blank"
@@ -46,7 +47,44 @@
             >
               Alle Termine anzeigen →
             </a>
+            <a
+              :href="proposalUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-primary-600"
+            >
+              Keinen passenden Termin? Wunschtermin vorschlagen →
+            </a>
           </div>
+        </template>
+
+        <!-- No slots: proposal CTA -->
+        <template v-else>
+          <h2 class="text-xl font-bold text-gray-900 mb-1">{{ emptyTitle }}</h2>
+          <p class="text-sm text-gray-600 mb-5">
+            {{ emptyText }}
+          </p>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <a
+              :href="proposalUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition"
+            >
+              Wunschtermin vorschlagen
+            </a>
+            <a
+              :href="allUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:border-primary-300 hover:text-primary-700 transition"
+            >
+              Buchung trotzdem öffnen
+            </a>
+          </div>
+          <p class="text-xs text-gray-400 mt-4">
+            In der Online-Buchung kannst du bevorzugte Tage und Zeiten angeben — wir melden uns mit einem konkreten Termin.
+          </p>
         </template>
       </div>
     </div>
@@ -69,13 +107,18 @@ const props = withDefaults(
     page: string
     title?: string
     subtitle?: string
-    /** Default deep-link when opening “all slots” */
+    /** Default deep-link when opening “all slots” / proposal */
     category?: string
+    emptyTitle?: string
+    emptyText?: string
   }>(),
   {
     title: 'Nächste freie Fahrstunden',
     subtitle: 'Aktuelle Verfügbarkeit — mit Klick öffnen Sie die Online-Buchung.',
     category: 'B Automatik',
+    emptyTitle: 'Aktuell keine freien Online-Termine',
+    emptyText:
+      'Für diesen Standort sind gerade keine buchbaren Fahrstunden sichtbar. Du kannst uns deine Wunschzeiten schicken — wir melden uns mit einem konkreten Vorschlag.',
   },
 )
 
@@ -84,6 +127,8 @@ const { data, status } = useFetch<{
   used_fallback?: boolean
   hint?: string | null
   booking_url?: string
+  default_location_id?: string | null
+  default_category?: string | null
 }>('/api/next-slots', {
   query: { page: props.page },
   key: `next-slots-${props.page}`,
@@ -94,11 +139,24 @@ const slots = computed(() => data.value?.slots || [])
 const hint = computed(() => data.value?.hint || null)
 const displaySubtitle = computed(() => props.subtitle)
 
-const allUrl = computed(() => {
-  const base = data.value?.booking_url || 'https://app.simy.ch/booking/availability/driving-team'
+const bookingBase = computed(
+  () => data.value?.booking_url || 'https://app.simy.ch/booking/availability/driving-team',
+)
+
+const categoryForLink = computed(
+  () => data.value?.default_category || props.category || 'B Automatik',
+)
+
+function buildBookingUrl(opts: { proposal?: boolean } = {}) {
   const params = new URLSearchParams()
-  if (props.category) params.set('category', props.category)
+  if (categoryForLink.value) params.set('category', categoryForLink.value)
   params.set('prefill', 'partial')
-  return `${base}?${params.toString().replace(/\+/g, '%20')}`
-})
+  const loc = data.value?.default_location_id
+  if (loc) params.set('location', loc)
+  if (opts.proposal) params.set('proposal', '1')
+  return `${bookingBase.value}?${params.toString().replace(/\+/g, '%20')}`
+}
+
+const allUrl = computed(() => buildBookingUrl())
+const proposalUrl = computed(() => buildBookingUrl({ proposal: true }))
 </script>

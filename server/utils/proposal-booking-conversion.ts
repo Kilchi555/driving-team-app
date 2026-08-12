@@ -280,20 +280,30 @@ export async function attachProposalAttributionToStaffAppointment(input: {
   tenantId: string
   appointmentId: string
   userId?: string | null
+  email?: string | null
+  phone?: string | null
   conversionValueChf?: number | null
 }): Promise<void> {
   const supabase = getSupabaseAdmin()
 
-  let email: string | null = null
-  let phone: string | null = null
+  let email: string | null = input.email?.trim().toLowerCase() || null
+  let phone: string | null = input.phone?.trim() || null
+
   if (input.userId) {
     const { data: user } = await supabase
       .from('users')
       .select('email, phone')
       .eq('id', input.userId)
       .maybeSingle()
-    email = user?.email ?? null
-    phone = user?.phone ?? null
+    email = email || user?.email || null
+    phone = phone || user?.phone || null
+  }
+
+  // Walk-in / no user yet: cannot match by appointment contact fields
+  // (appointments table has no email/phone — only user_id).
+  if (!input.userId && !email && !phone) {
+    logger.debug('proposal-booking-conversion: skip staff attach — no user/email/phone to match proposal')
+    return
   }
 
   const proposal = await findAttributedProposalForCustomer(supabase, {

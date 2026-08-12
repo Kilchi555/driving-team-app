@@ -424,6 +424,25 @@ html body .admin-layout textarea[class*="bg-white"][class*="session"] {
   border-color: #d1d5db !important; /* gray-300 */
 }
 
+/* Website setup wizard: light form surface (not dark admin inputs) */
+html body .admin-layout .wz-setup input:not([type="checkbox"]):not([type="radio"]),
+html body .admin-layout .wz-setup select,
+html body .admin-layout .wz-setup textarea,
+html body .admin-layout .wz-setup input.wz-input,
+html body .admin-layout .wz-setup textarea.wz-input,
+html body .admin-layout .wz-setup input[class]:not([type="checkbox"]):not([type="radio"]),
+html body .admin-layout .wz-setup select[class],
+html body .admin-layout .wz-setup textarea[class] {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+html body .admin-layout .wz-setup input::placeholder,
+html body .admin-layout .wz-setup textarea::placeholder {
+  color: #9ca3af !important;
+}
+
 /* === EVENT MODAL OVERRIDE === */
 /* EventModal should have white inputs with black text */
 .fixed.inset-0:not(.admin-modal):not(.admin-layout) input:not([type="checkbox"]):not([type="radio"]),

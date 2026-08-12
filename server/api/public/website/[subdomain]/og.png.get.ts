@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
   const landing = page?.blocks as any
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name')
+    .select('name, business_type, city, address')
     .eq('id', website.tenant_id)
     .maybeSingle()
 
@@ -46,11 +46,19 @@ export default defineEventHandler(async (event) => {
     tenant?.name ||
     website.subdomain
 
+  const { buildLocalSeoDefaults } = await import('~/server/utils/website-local-seo')
+  const local = buildLocalSeoDefaults({
+    name: tenant?.name || website.subdomain,
+    business_type: tenant?.business_type,
+    city: tenant?.city,
+    address: tenant?.address,
+  })
+
   const subtitle =
     landing?.seo?.description ||
     page?.seo_description ||
     website.seo_description ||
-    'Online-Terminbuchung Schweiz'
+    local.description
 
   const png = await renderWebsiteOgCard({
     title,

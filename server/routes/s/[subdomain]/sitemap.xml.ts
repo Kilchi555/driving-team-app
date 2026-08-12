@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: pages } = await supabase
     .from('website_pages')
-    .select('slug, is_home, is_published')
+    .select('slug, is_home, is_published, updated_at')
     .eq('website_id', website.id)
     .eq('is_published', true)
 
@@ -30,19 +30,33 @@ export default defineEventHandler(async (event) => {
     ? `https://${website.custom_domain}`
     : `${proto}://${host}/s/${encodeURIComponent(website.subdomain)}`
 
-  const urls: string[] = []
+  const entries: Array<{ loc: string; lastmod?: string; priority: string }> = []
   for (const p of pages || []) {
-    if (p.is_home || p.slug === 'index') urls.push(base + '/')
-    else urls.push(`${base}/${encodeURIComponent(p.slug)}`)
+    const loc =
+      p.is_home || p.slug === 'index'
+        ? base + '/'
+        : `${base}/${encodeURIComponent(p.slug)}`
+    const lastmod = p.updated_at ? String(p.updated_at).slice(0, 10) : undefined
+    entries.push({
+      loc,
+      lastmod,
+      priority: loc.endsWith('/') ? '1.0' : '0.8',
+    })
   }
-  if (!urls.length) urls.push(base + '/')
+  if (!entries.length) entries.push({ loc: base + '/', priority: '1.0' })
 
-  const body = urls
+  // Legal pages (always present for published sites)
+  entries.push(
+    { loc: `${base}/impressum`, priority: '0.3' },
+    { loc: `${base}/datenschutz`, priority: '0.3' },
+  )
+
+  const body = entries
     .map(
-      (loc) => `  <url>
-    <loc>${loc}</loc>
+      (e) => `  <url>
+    <loc>${e.loc}</loc>${e.lastmod ? `\n    <lastmod>${e.lastmod}</lastmod>` : ''}
     <changefreq>weekly</changefreq>
-    <priority>${loc.endsWith('/') ? '1.0' : '0.8'}</priority>
+    <priority>${e.priority}</priority>
   </url>`,
     )
     .join('\n')

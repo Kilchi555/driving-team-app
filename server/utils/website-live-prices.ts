@@ -1,7 +1,7 @@
 /**
  * Overlay live pricing onto baked services block (home / prices pages).
  */
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { loadWebsiteServices } from '~/server/utils/website-services'
 
 function moneyCHF(cents?: number | null) {
   if (cents == null || Number.isNaN(Number(cents))) return null
@@ -21,22 +21,20 @@ export async function applyLivePricesToLanding(
     return landing
   }
 
+  const { getSupabaseAdmin } = await import('~/server/utils/supabase-admin')
   const supabase = getSupabaseAdmin()
-  const { data: pricing } = await supabase
-    .from('pricing')
-    .select('id, duration_minutes, price, category')
-    .eq('tenant_id', tenantId)
-    .order('category')
+  const pricing = await loadWebsiteServices(supabase, tenantId)
 
-  if (!pricing?.length) return landing
+  if (!pricing.length) return landing
 
-  const byId = new Map(pricing.map((p: any) => [String(p.id), p]))
+  const byId = new Map(pricing.map((p) => [String(p.id), p]))
+  const byCategory = new Map(pricing.map((p) => [String(p.category), p]))
   const clone = JSON.parse(JSON.stringify(landing))
   const servicesBlock = clone.blocks.find((b: any) => b?.type === 'services')
   if (!servicesBlock?.content?.services?.length) return clone
 
   servicesBlock.content.services = servicesBlock.content.services.map((svc: any) => {
-    const live = byId.get(String(svc.id))
+    const live = byId.get(String(svc.id)) || byCategory.get(String(svc.category || ''))
     if (!live) return svc
     return {
       ...svc,

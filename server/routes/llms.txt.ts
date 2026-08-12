@@ -16,9 +16,14 @@ export default defineEventHandler(async (event) => {
     })
     .join('\n')
 
+  const blurb =
+    ctx.seo_description ||
+    ctx.seo_title ||
+    `${ctx.name} — lokale Online-Buchung in der Schweiz`
+
   return `# ${ctx.name}
 
-> ${ctx.seo_description || ctx.seo_title || `${ctx.name} — Online-Terminbuchung Schweiz`}
+> ${blurb}
 
 ## Site
 - Home: ${ctx.baseUrl}/

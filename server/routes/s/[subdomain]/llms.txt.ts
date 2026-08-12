@@ -20,7 +20,11 @@ export default defineEventHandler(async (event) => {
     .maybeSingle()
   if (!website?.is_published) throw createError({ statusCode: 404, statusMessage: 'Not found' })
 
-  const { data: tenant } = await supabase.from('tenants').select('name').eq('id', website.tenant_id).maybeSingle()
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, business_type, city, address')
+    .eq('id', website.tenant_id)
+    .maybeSingle()
   const { data: pages } = await supabase
     .from('website_pages')
     .select('slug, title, is_home, page_type')
@@ -35,6 +39,13 @@ export default defineEventHandler(async (event) => {
     : `${proto}://${host}/s/${encodeURIComponent(website.subdomain)}`
 
   const name = tenant?.name || website.subdomain
+  const { buildLocalSeoDefaults } = await import('~/server/utils/website-local-seo')
+  const local = buildLocalSeoDefaults({
+    name,
+    business_type: tenant?.business_type,
+    city: tenant?.city,
+    address: tenant?.address,
+  })
   const pageLines = (pages || [])
     .map((p) => {
       const path = p.is_home || p.slug === 'index' ? '/' : `/${p.slug}`
@@ -44,7 +55,7 @@ export default defineEventHandler(async (event) => {
 
   return `# ${name}
 
-> ${website.seo_description || website.seo_title || `${name} — Online-Terminbuchung Schweiz`}
+> ${website.seo_description || website.seo_title || local.description}
 
 ## Site
 - Home: ${baseUrl}/
@@ -54,6 +65,7 @@ ${pageLines || `- Home: ${baseUrl}/`}
 
 ## Notes
 - Language: de-CH
+- Local business: ${local.city ? `${local.terms.businessNoun} ${local.city}` : local.terms.businessNoun}
 - Live Google reviews may appear on the home page
 `
 })

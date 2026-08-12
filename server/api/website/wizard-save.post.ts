@@ -4,6 +4,7 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { buildLandingPage, type LandingService, type LandingTestimonial } from '~/server/utils/website-landing-builder'
+import { loadWebsiteServices } from '~/server/utils/website-services'
 
 function appBaseUrl(event: any) {
   const fromEnv = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL
@@ -103,23 +104,10 @@ export default defineEventHandler(async (event) => {
       category: s.category,
     }))
   } else {
-    const [{ data: pricing }, { data: categories }] = await Promise.all([
-      supabase
-        .from('pricing')
-        .select('id, duration_minutes, price, category')
-        .eq('tenant_id', user.tenant_id)
-        .order('category')
-        .limit(20),
-      supabase
-        .from('categories')
-        .select('code, name')
-        .eq('tenant_id', user.tenant_id)
-        .eq('is_active', true),
-    ])
-    const catName = new Map((categories || []).map((c: any) => [c.code, c.name]))
-    services = (pricing || []).map((p: any) => ({
+    const pricing = await loadWebsiteServices(supabase, user.tenant_id)
+    services = pricing.slice(0, 20).map((p) => ({
       id: String(p.id),
-      name: catName.get(p.category) || p.category || 'Angebot',
+      name: p.name,
       description: serviceDescriptions[p.id] || '',
       duration_minutes: p.duration_minutes,
       price_cents: p.price,
@@ -127,45 +115,36 @@ export default defineEventHandler(async (event) => {
     }))
   }
 
-  // Testimonials
+  // Testimonials: prefer explicit payload (manual wizard entries). No app-rating fallback.
   let testimonials: LandingTestimonial[] = []
   const selectedIds: string[] = Array.isArray(body.selectedTestimonials) ? body.selectedTestimonials : []
+  let testimonialsSource: 'manual' | 'app' | 'google_or_app' = 'manual'
 
   if (Array.isArray(body.testimonials) && body.testimonials.length) {
     testimonials = body.testimonials
-      .filter((t: any) => !selectedIds.length || selectedIds.includes(t.id))
+      .filter((t: any) => {
+        if (!String(t?.text || t?.rating_text || '').trim()) return false
+        if (!selectedIds.length) return true
+        return selectedIds.includes(String(t.id))
+      })
       .map((t: any) => ({
-        id: String(t.id),
-        author: t.author || 'Kunde',
-        text: t.text || t.rating_text || '',
-        rating: t.rating || 5,
+        id: String(t.id || `manual-${Math.random().toString(36).slice(2, 9)}`),
+        author: String(t.author || 'Kunde').trim() || 'Kunde',
+        text: String(t.text || t.rating_text || '').trim(),
+        rating: Number(t.rating) || 5,
       }))
-  } else {
-    const { data: rows } = await supabase
-      .from('appointments')
-      .select('id, rating, rating_text, customer_first_name, customer_last_name')
-      .eq('tenant_id', user.tenant_id)
-      .eq('rating', 5)
-      .not('rating_text', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(10)
-    testimonials = (rows || [])
-      .filter((t: any) => !selectedIds.length || selectedIds.includes(t.id))
-      .map((t: any) => ({
-        id: String(t.id),
-        author:
-          t.customer_first_name && t.customer_last_name
-            ? `${t.customer_first_name} ${t.customer_last_name}`
-            : 'Kunde',
-        text: t.rating_text,
-        rating: t.rating || 5,
-      }))
+      .slice(0, 8)
+    testimonialsSource = body.testimonials_source === 'app' ? 'app' : 'manual'
   }
 
   const base = appBaseUrl(event)
   const slug = tenant.slug || website.subdomain
   const bookingUrl = `${base}/booking/availability/${encodeURIComponent(slug)}`
-  const siteUrl = `${base}/s/${encodeURIComponent(website.subdomain)}`
+  // Canonical site URL: verified custom domain wins (schema + OG + absolute links)
+  const siteUrl =
+    website.custom_domain_verified && website.custom_domain
+      ? `https://${String(website.custom_domain).replace(/\/$/, '')}`
+      : `${base}/s/${encodeURIComponent(website.subdomain)}`
 
   const landing = buildLandingPage({
     tenant: {
@@ -182,11 +161,27 @@ export default defineEventHandler(async (event) => {
     seo_description: body.seo_description,
     seo_keywords: body.seo_keywords,
     formal_address: body.formal_address === 'du' ? 'du' : 'sie',
+    booking_policy: (tenant as any).booking_policy || null,
+    hero_image_source:
+      body.hero_image_source === 'stock' || body.hero_image_source === 'ai' || body.hero_image_source === 'own'
+        ? body.hero_image_source
+        : null,
+    hero_attribution:
+      body.hero_image_source === 'stock' && body.hero_attribution
+        ? {
+            photographer: body.hero_attribution.photographer || null,
+            photographer_url: body.hero_attribution.photographer_url || null,
+            unsplash_url: body.hero_attribution.unsplash_url || null,
+          }
+        : null,
     services,
     testimonials,
+    testimonials_source: testimonialsSource,
     stats: body.stats || undefined,
     bookingUrl,
     siteUrl,
+    hide_powered_by: true,
+    contact_channels: body.contact_channels || undefined,
   })
 
   // Source of truth for the public renderer is website_pages.blocks (JSON payload).
@@ -224,6 +219,10 @@ export default defineEventHandler(async (event) => {
       hero_image_url: landing.brand.hero_image_url,
       is_published: publish,
       last_published_at: publish ? now : website.last_published_at,
+      // Premium SKU: SEO add-on pages unlocked on publish
+      ...(publish ? { addon_pages_enabled: true } : {}),
+      // Draft fields are now in the published/saved page — clear scratchpad
+      wizard_draft: {},
       updated_at: now,
     })
     .eq('id', website.id)
@@ -254,9 +253,11 @@ export default defineEventHandler(async (event) => {
       previewUrl,
     })
   } else {
+    // Valid statuses: none | pending_review | approved | live | disabled
+    // Keep setup usable without pretending the site is live.
     await supabase
       .from('tenants')
-      .update({ website_status: 'draft' })
+      .update({ website_status: 'none' })
       .eq('id', user.tenant_id)
   }
 

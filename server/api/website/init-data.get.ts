@@ -5,6 +5,8 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getTerminologyDefaults } from '~/composables/useTerminology'
+import { filterLeafCategories } from '~/server/utils/category-groups'
+import { loadWebsiteServices } from '~/server/utils/website-services'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -43,12 +45,16 @@ export default defineEventHandler(async (event) => {
 
     const { data: website } = await supabase
       .from('website_tenants')
-      .select('id, subdomain, logo_url, hero_image_url, is_published')
+      .select('id, subdomain, logo_url, hero_image_url, is_published, wizard_draft')
       .eq('tenant_id', tenant_id)
       .maybeSingle()
 
     let formalAddress: 'sie' | 'du' = 'sie'
     let existingSeo: { title?: string; description?: string; keywords?: string } | null = null
+    let landingServiceDescriptions: Record<string, string> = {}
+    let landingTestimonials: Array<{ id: string; author: string; text: string; rating: number }> = []
+    let contactChannels: { phone: boolean; email: boolean; whatsapp: boolean; form: boolean } | null =
+      null
     if (website?.id) {
       const { data: homePage } = await supabase
         .from('website_pages')
@@ -65,6 +71,50 @@ export default defineEventHandler(async (event) => {
           keywords: landing?.seo?.keywords || homePage?.seo_keywords || undefined,
         }
       }
+      const servicesBlock = Array.isArray(landing?.blocks)
+        ? landing.blocks.find((b: any) => b?.type === 'services')
+        : null
+      const listed = servicesBlock?.content?.services
+      if (Array.isArray(listed)) {
+        for (const s of listed) {
+          if (s?.id && typeof s.description === 'string' && s.description.trim()) {
+            landingServiceDescriptions[String(s.id)] = s.description
+          }
+        }
+      }
+      const testimonialsBlock = Array.isArray(landing?.blocks)
+        ? landing.blocks.find((b: any) => b?.type === 'testimonials')
+        : null
+      const baked = testimonialsBlock?.content?.testimonials
+      if (Array.isArray(baked)) {
+        landingTestimonials = baked
+          .filter((t: any) => t?.text)
+          .map((t: any, i: number) => ({
+            id: String(t.id || `landing-${i}`),
+            author: String(t.author || 'Kunde'),
+            text: String(t.text),
+            rating: Number(t.rating) || 5,
+          }))
+      }
+      const contactBlock = Array.isArray(landing?.blocks)
+        ? landing.blocks.find((b: any) => b?.type === 'contact')
+        : null
+      const ch = contactBlock?.content?.channels
+      if (ch && typeof ch === 'object') {
+        contactChannels = {
+          phone: ch.phone !== false,
+          email: ch.email !== false,
+          whatsapp: ch.whatsapp !== false,
+          form: ch.form !== false && contactBlock?.content?.form_enabled !== false,
+        }
+      } else if (contactBlock?.content) {
+        contactChannels = {
+          phone: !!contactBlock.content.phone,
+          email: !!contactBlock.content.email,
+          whatsapp: !!contactBlock.content.whatsapp_url,
+          form: contactBlock.content.form_enabled !== false,
+        }
+      }
     }
 
     // ============ 2. GET STAFF MEMBERS (for testimonials/team info) ============
@@ -78,17 +128,13 @@ export default defineEventHandler(async (event) => {
     // ============ 3. GET ALL CATEGORIES ============
     const { data: categories } = await supabase
       .from('categories')
-      .select('id, code, name, parent_category_code')
+      .select('id, code, name, parent_category_id')
       .eq('tenant_id', tenant_id)
       .eq('is_active', true)
       .order('name')
 
     // ============ 4. GET PRICING RULES (services) ============
-    const { data: pricing } = await supabase
-      .from('pricing')
-      .select('id, duration_minutes, price, category, tenant_id')
-      .eq('tenant_id', tenant_id)
-      .order('category')
+    const services = await loadWebsiteServices(supabase, tenant_id)
 
     // ============ 5. GET TESTIMONIALS (5-star ratings) ============
     const { data: testimonials } = await supabase
@@ -131,14 +177,23 @@ export default defineEventHandler(async (event) => {
       total: allAppointments?.length || 0
     }
 
-    // ============ 8. PREPARE SUGGESTED BIO (industry-aware) ============
-    const terms = getTerminologyDefaults(tenant?.business_type)
-    const city = tenant?.city ? ` in ${tenant.city}` : ''
-    const suggestedBio =
-      tenant?.description ||
-      `${tenant?.name || terms.businessNoun}${city}: Online-Terminbuchung für ${terms.appointmentsPlural}, klare Preise und persönlicher Service.`
+    const allCategories = categories || []
+    // Same leaf rule as booking/staff pickers: hide mains that already have subs
+    const leafCategories = filterLeafCategories(allCategories)
 
-    const catName = new Map((categories || []).map((c: any) => [c.code, c.name]))
+    // ============ 8. PREPARE SUGGESTED BIO (industry-aware local SEO) ============
+    const terms = getTerminologyDefaults(tenant?.business_type)
+    const { buildLocalSeoDefaults } = await import('~/server/utils/website-local-seo')
+    const leafNames = leafCategories.map((c: any) => c.name).filter(Boolean)
+    const localSeo = buildLocalSeoDefaults({
+      name: tenant?.name || '',
+      business_type: tenant?.business_type,
+      city: tenant?.city || null,
+      address: tenant?.address || null,
+      categories: leafNames,
+      formal_address: formalAddress,
+    })
+    const suggestedBio = tenant?.description || localSeo.bio
 
     // ============ 9. BUILD RESPONSE ============
     const logoUrl =
@@ -174,19 +229,17 @@ export default defineEventHandler(async (event) => {
           email: s.email,
           phone: s.phone
         })),
-        categories: (categories || []).map((c: any) => ({
+        categories: leafCategories.map((c: any) => ({
           id: c.id,
           code: c.code,
           name: c.name,
-          parent: c.parent_category_code
+          parent: c.parent_category_id
         })),
-        services: (pricing || []).map((p: any) => ({
-          id: p.id,
-          name: catName.get(p.category) || p.category || 'Angebot',
-          duration_minutes: p.duration_minutes,
-          price: p.price,
-          category: p.category
-        })),
+        services,
+        service_descriptions: landingServiceDescriptions,
+        landing_testimonials: landingTestimonials,
+        contact_channels: contactChannels,
+        wizard_draft: (website as any)?.wizard_draft || {},
         testimonials: (testimonials || []).map((t: any) => ({
           id: t.id,
           author: t.customer_first_name && t.customer_last_name
@@ -209,11 +262,11 @@ export default defineEventHandler(async (event) => {
         },
         suggestions: {
           bio: suggestedBio,
-          headline: `Online-Terminbuchung für ${terms.appointmentsPlural}`,
+          headline: localSeo.headline,
           cta_text: terms.bookAction,
-          seo_title: (existingSeo?.title || `Online-Terminbuchung ${tenant?.name || ''}${city}`.trim()).slice(0, 60),
-          seo_description: (existingSeo?.description || `${tenant?.name || terms.businessNoun}: ${terms.bookAction} online${city}. Erinnerungen, klare Preise, Schweizer Service.`).slice(0, 160),
-          seo_keywords: existingSeo?.keywords || `online terminbuchung, ${terms.bookAction.toLowerCase()}, ${terms.businessNoun.toLowerCase()}, buchungssystem schweiz`,
+          seo_title: (existingSeo?.title || localSeo.title).slice(0, 60),
+          seo_description: (existingSeo?.description || localSeo.description).slice(0, 160),
+          seo_keywords: existingSeo?.keywords || localSeo.keywords,
           formal_address: formalAddress,
         }
       }

@@ -42,18 +42,27 @@ function normalizePlaces(raw: unknown): TenantReviewPlace[] {
   return value.filter((p) => p && typeof p === 'object') as TenantReviewPlace[]
 }
 
-export function getTenantPlaceIds(raw: unknown): Array<{ placeId: string; label: string }> {
+export function getTenantPlaceIds(raw: unknown): Array<{ placeId: string; label: string; url?: string }> {
   const places = normalizePlaces(raw)
-  const out: Array<{ placeId: string; label: string }> = []
+  const out: Array<{ placeId: string; label: string; url?: string }> = []
   const seen = new Set<string>()
 
   for (const p of places) {
-    const placeId = String(p.place_id || p.placeId || '').trim()
+    let placeId = String(p.place_id || p.placeId || '').trim()
+    const url = String(p.url || '').trim()
+    if (!placeId && url) {
+      // sync extract only (ChIJ / placeid=); short links need async resolve elsewhere
+      const m =
+        url.match(/[?&#](?:place_id|query_place_id|placeid)=([A-Za-z0-9_-]+)/i) ||
+        url.match(/\b(ChIJ[A-Za-z0-9_-]{20,})\b/)
+      if (m?.[1]) placeId = m[1]
+    }
     if (!placeId || seen.has(placeId)) continue
     seen.add(placeId)
     out.push({
       placeId,
       label: String(p.name || 'Google').trim() || 'Google',
+      url: url || undefined,
     })
   }
   return out

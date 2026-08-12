@@ -57,7 +57,16 @@ async function uploadPhoneClickConversion(
 
   if (!gclid && !gbraid && !wbraid) return // no click ID — organic/direct visitor
 
-  const syntheticId = `phone_${sessionId}_${Date.now()}`
+  // One Inquiry conversion per session per Zurich calendar day — not per tap.
+  // (Date.now() previously minted a new Ads conversion on every phone click.)
+  const dayKey = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Zurich',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+  const stableSession = (sessionId || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'unknown'
+  const syntheticId = `phone_${stableSession}_${dayKey}`
 
   try {
     await fetch(`${baseUrl.replace(/\/$/, '')}/api/internal/upload-inquiry-conversion`, {
@@ -71,6 +80,7 @@ async function uploadPhoneClickConversion(
         gclid,
         gbraid,
         wbraid,
+        conversion_value_chf: 15,
       }),
     })
   } catch (err: any) {
@@ -89,6 +99,7 @@ export default defineEventHandler(async (event) => {
     const tenantId = await getWebsiteTenantId(event)
 
     // Reuse booking_redirects table with category 'phone_call' to keep schema minimal
+    const attr = body.marketing_attribution ?? null
     const { error } = await supabase.from('booking_redirects').insert({
       session_id: body.session_id || 'unknown',
       tenant_id: tenantId,
@@ -100,6 +111,9 @@ export default defineEventHandler(async (event) => {
       utm_campaign: body.utm_campaign || null,
       utm_content: body.utm_content || null,
       utm_term: body.utm_term || null,
+      gclid: attr?.gclid || null,
+      gbraid: attr?.gbraid || null,
+      wbraid: attr?.wbraid || null,
     })
 
     if (error) console.error('phone-click insert error:', error)
