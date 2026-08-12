@@ -77,11 +77,13 @@ export async function getTenantSmsQuotaSnapshot(
 ): Promise<SmsQuotaSnapshot> {
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('subscription_plan')
+    .select('subscription_plan, booking_policy')
     .eq('id', tenantId)
     .single()
 
   const plan = tenant?.subscription_plan || 'trial'
+  const policy = (tenant?.booking_policy as Record<string, any>) || {}
+  const overageWaived = policy.sms_overage_waived === true
   const included = getIncludedSmsSegments(plan)
   const periodStart = getBillingPeriodStart()
   const used = await getTenantSmsUsage(supabase, tenantId, periodStart)
@@ -91,7 +93,7 @@ export async function getTenantSmsQuotaSnapshot(
     included,
     remaining: Math.max(0, included - used),
     overage,
-    overageCostChf: estimateSmsCostChf(overage),
+    overageCostChf: overageWaived ? 0 : estimateSmsCostChf(overage),
     periodStart: periodStart.toISOString(),
     plan,
   }

@@ -170,7 +170,8 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
   const policy = (tenant?.booking_policy as Record<string, any>) || {}
   // Soft-cap by default. Hard-stop only when tenant explicitly enables it.
   // Trial / no payment method: keep sending + counting; overage billed only once Stripe exists.
-  const canBillOverage = !!(tenant?.stripe_subscription_id && tenant?.stripe_customer_id)
+  const overageWaived = policy.sms_overage_waived === true
+  const canBillOverage = !overageWaived && !!(tenant?.stripe_subscription_id && tenant?.stripe_customer_id)
   const hardStop = opts.hardStop !== undefined
     ? opts.hardStop
     : policy.sms_hard_stop_on_quota === true
@@ -226,6 +227,11 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
       } catch (err: any) {
         logger.warn('⚠️ SMS overage Stripe report failed (non-critical):', err?.message)
       }
+    } else if (overageDelta > 0 && overageWaived) {
+      logger.info('ℹ️ SMS overage waived for tenant (sms_overage_waived)', {
+        tenantId,
+        overageDelta,
+      })
     } else if (overageDelta > 0 && !canBillOverage) {
       logger.warn('⚠️ SMS overage not billed — tenant has no Stripe subscription/customer', {
         tenantId,
