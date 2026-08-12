@@ -344,6 +344,20 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused operational docs for recently evolved subsystems (verify against source before changing behavior):
+
+| Doc | Covers |
+|-----|--------|
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin lockout recovery when passkeys/backup codes are gone |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Client session cache / HMR restore |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Stuck pending/processing Wallee payments, webhook logs, sync-then-release lock |
+| [COURSE_SESSION_ROSTER.md](./COURSE_SESSION_ROSTER.md) | Calendar course roster modal, Teil filtering, participant print/PDF |
+| [IN_APP_HELP.md](./IN_APP_HELP.md) | Role-based help modal, `content/help` Markdown contract |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
