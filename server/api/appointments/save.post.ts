@@ -2,7 +2,6 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getHeader } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
-import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
 import {
   validateAppointmentData,
@@ -811,44 +810,19 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Fire-and-forget: email + queue recalc for edits (non-blocking)
-    if (mode === 'create') {
-      // Wait for payment to be created BEFORE sending confirmation email
-      if (paymentPromise) {
-        paymentPromise.then(async () => {
-          try {
-            await $fetch('/api/reminders/send-appointment-confirmation', {
-              method: 'POST',
-              headers: internalSecretHeaders(),
-              body: { appointmentId: result.id, userId: appointmentData.user_id, tenantId: appointmentData.tenant_id }
-            })
-          } catch (err: any) {
-            logger.warn('⚠️ Confirmation email failed (async):', err.message)
-          }
-        }).catch((err: any) => {
-          logger.warn('⚠️ Failed to wait for payment before sending email:', err.message)
-          // Fallback: send email anyway
-          $fetch('/api/reminders/send-appointment-confirmation', {
-            method: 'POST',
-              headers: internalSecretHeaders(),
-            body: { appointmentId: result.id, userId: appointmentData.user_id, tenantId: appointmentData.tenant_id }
-          }).catch((emailErr: any) => {
-            logger.warn('⚠️ Confirmation email fallback failed:', emailErr.message)
-          })
+    // Direct dispatch on create (no nested HTTP). Payment already awaited above.
+    if (mode === 'create' && appointmentData.user_id && appointmentData.tenant_id) {
+      try {
+        const { dispatchAppointmentConfirmation } = await import(
+          '~/server/utils/dispatch-appointment-confirmation'
+        )
+        await dispatchAppointmentConfirmation({
+          appointmentId: result.id,
+          userId: appointmentData.user_id,
+          tenantId: appointmentData.tenant_id,
         })
-      } else {
-        // No payment needed, send email immediately
-        Promise.resolve().then(async () => {
-          try {
-            await $fetch('/api/reminders/send-appointment-confirmation', {
-              method: 'POST',
-              headers: internalSecretHeaders(),
-              body: { appointmentId: result.id, userId: appointmentData.user_id, tenantId: appointmentData.tenant_id }
-            })
-          } catch (err: any) {
-            logger.warn('⚠️ Confirmation email failed (async):', err.message)
-          }
-        })
+      } catch (err: any) {
+        logger.warn('⚠️ Confirmation email failed (non-critical):', err?.message)
       }
     }
 

@@ -683,14 +683,20 @@ export default defineEventHandler(async (event) => {
         // Step 1: Try to UPDATE existing registrations (idempotency for webhook retries)
         const { data: existingRegistrations, error: queryError } = await supabase
           .from('course_registrations')
-          .select('id, course_id')
+          .select('id, course_id, payment_id')
           .in('payment_id', paymentIds)
         
         let updatedRegistrations = existingRegistrations || []
         
         // Step 2: For payments without registrations, CREATE them now
+        // (or MERGE into a SARI-imported row that already holds the same faberid/email)
         if (!queryError && paymentIds.length > 0) {
           const registrationsToCreate = []
+          const normalizeFaberid = (v: any) => {
+            const s = String(v || '').trim()
+            if (!s) return ''
+            return s.replace(/^0+/, '') || s
+          }
           
           for (const payment of paymentsToUpdate) {
             // Check if this payment already has a registration
@@ -806,10 +812,9 @@ export default defineEventHandler(async (event) => {
                   }
                 }
                 
-                // Create registration — even without a userId (email stored directly on registration)
+                // Create or merge registration — even without a userId (email on registration)
                 if (userId || payment.metadata?.email) {
-                  logger.debug(`📋 Building registration object with userId: ${userId || 'none (guest without account)'}`)
-                  registrationsToCreate.push({
+                  const regPayload: any = {
                     course_id: course.id,
                     tenant_id: course.tenant_id,
                     user_id: userId || null,
@@ -837,10 +842,131 @@ export default defineEventHandler(async (event) => {
                     sari_synced: paymentStatus === 'completed',
                     sari_synced_at: paymentStatus === 'completed' ? new Date().toISOString() : null,
                     vehicle_id: payment.metadata?.vehicle_id || null,
-                    created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
-                  })
-                  logger.debug(`✅ Registration object added to array. Total registrations to create: ${registrationsToCreate.length}`)
+                  }
+
+                  // Race with SARI sync: if a row already exists for this course+faberid/email
+                  // (often Auto-imported without contact), MERGE payment + contact into it.
+                  let existingReg: any = null
+                  const faberidNorm = normalizeFaberid(payment.metadata?.sari_faberid)
+                  if (faberidNorm) {
+                    const { data: byFaber } = await supabase
+                      .from('course_registrations')
+                      .select('id, course_id, payment_id, email, user_id, notes')
+                      .eq('course_id', course.id)
+                      .eq('sari_faberid', faberidNorm)
+                      .in('status', ['confirmed', 'enrolled', 'pending'])
+                      .is('deleted_at', null)
+                      .maybeSingle()
+                    existingReg = byFaber
+                    // Also try padded faberid variants SARI sometimes returns
+                    if (!existingReg && payment.metadata?.sari_faberid) {
+                      const { data: byFaberRaw } = await supabase
+                        .from('course_registrations')
+                        .select('id, course_id, payment_id, email, user_id, notes')
+                        .eq('course_id', course.id)
+                        .eq('sari_faberid', String(payment.metadata.sari_faberid).trim())
+                        .in('status', ['confirmed', 'enrolled', 'pending'])
+                        .is('deleted_at', null)
+                        .maybeSingle()
+                      existingReg = byFaberRaw
+                    }
+                  }
+                  if (!existingReg && payment.metadata?.email) {
+                    const { data: byEmail } = await supabase
+                      .from('course_registrations')
+                      .select('id, course_id, payment_id, email, user_id, notes')
+                      .eq('course_id', course.id)
+                      .ilike('email', String(payment.metadata.email).trim())
+                      .in('status', ['confirmed', 'enrolled', 'pending'])
+                      .is('deleted_at', null)
+                      .maybeSingle()
+                    existingReg = byEmail
+                  }
+
+                  if (existingReg?.id) {
+                    logger.info(`🔀 Merging Wallee payment into existing course registration ${existingReg.id} (SARI/email race)`)
+                    const mergeUpdate: any = {
+                      user_id: userId || existingReg.user_id || null,
+                      payment_id: payment.id,
+                      first_name: regPayload.first_name || undefined,
+                      last_name: regPayload.last_name || undefined,
+                      email: regPayload.email || existingReg.email || null,
+                      phone: regPayload.phone || null,
+                      street: regPayload.street,
+                      street_nr: regPayload.street_nr,
+                      zip: regPayload.zip,
+                      city: regPayload.city,
+                      birthdate: regPayload.birthdate,
+                      license_number: regPayload.license_number,
+                      status: registrationStatus,
+                      payment_status: paymentStatusUpdate,
+                      payment_method: 'wallee',
+                      amount_paid_rappen: regPayload.amount_paid_rappen,
+                      discount_applied_rappen: regPayload.discount_applied_rappen,
+                      custom_sessions: regPayload.custom_sessions,
+                      is_partial_enrollment: regPayload.is_partial_enrollment,
+                      vehicle_id: regPayload.vehicle_id,
+                      webhook_processed_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString(),
+                    }
+                    // Keep SARI audit note, append paid marker
+                    if (existingReg.notes && String(existingReg.notes).includes('Auto-imported from SARI')) {
+                      mergeUpdate.notes = `${existingReg.notes} | Linked Wallee payment ${payment.id} on ${new Date().toISOString()}`
+                    }
+
+                    const { data: merged, error: mergeErr } = await supabase
+                      .from('course_registrations')
+                      .update(mergeUpdate)
+                      .eq('id', existingReg.id)
+                      .select('id, course_id, user_id, payment_id')
+                      .single()
+
+                    if (mergeErr) {
+                      logger.error('❌ Failed to merge into existing registration:', mergeErr.message)
+                      // Fall through to insert attempt (may still fail on unique) so error is recorded
+                      registrationsToCreate.push({ ...regPayload, created_at: new Date().toISOString() })
+                    } else {
+                      updatedRegistrations = [...updatedRegistrations, merged]
+                      payment.course_registration_id = merged.id
+                      payment.user_id = merged.user_id
+                      await supabase
+                        .from('payments')
+                        .update({
+                          user_id: merged.user_id,
+                          course_registration_id: merged.id,
+                          updated_at: new Date().toISOString(),
+                          metadata: {
+                            ...payment.metadata,
+                            webhook_merged_existing_registration: true,
+                            webhook_merged_registration_id: merged.id,
+                            webhook_registration_error: null,
+                          }
+                        })
+                        .eq('id', payment.id)
+
+                      if (regPayload.email && regPayload.tenant_id) {
+                        upsertMarketingLeadSafe({
+                          tenantId: regPayload.tenant_id,
+                          email: regPayload.email,
+                          firstName: regPayload.first_name,
+                          lastName: regPayload.last_name,
+                          phone: regPayload.phone,
+                          categories: categoriesFromCourse({
+                            name: payment.metadata?.course_name,
+                          }),
+                          tags: ['client', 'course'],
+                          source: 'course_enroll',
+                          sourceLabel: 'Kursanmeldung (Wallee merge)',
+                        })
+                      }
+                      logger.info(`✅ Merged payment ${payment.id} → registration ${merged.id}`)
+                    }
+                  } else {
+                    logger.debug(`📋 Building registration object with userId: ${userId || 'none (guest without account)'}`)
+                    registrationsToCreate.push({ ...regPayload, created_at: new Date().toISOString() })
+                    logger.debug(`✅ Registration object added to array. Total registrations to create: ${registrationsToCreate.length}`)
+                  }
                 } else {
                   logger.error('❌ No email in payment metadata, skipping registration creation')
                 }
@@ -1057,24 +1183,123 @@ export default defineEventHandler(async (event) => {
                 error_details: insertError?.details,
                 registrations_to_create_count: registrationsToCreate.length
               })
-              
-              // ⚠️ DEBUG: Update payment metadata with error info
-              for (const payment of paymentsToUpdate) {
-                if (!payment.metadata?.course_id) continue
-                try {
-                  await supabase
-                    .from('payments')
-                    .update({
-                      metadata: {
-                        ...payment.metadata,
-                        webhook_registration_error: insertError?.message || 'Unknown error creating registration',
-                        webhook_error_timestamp: new Date().toISOString(),
-                        webhook_error_code: insertError?.code
-                      }
-                    })
-                    .eq('id', payment.id)
-                } catch (e: any) {
-                  logger.warn('Could not update payment metadata with error:', e.message)
+
+              // Duplicate faberid/email: merge instead of abandoning the paid booking
+              const isUniqueViolation = insertError?.code === '23505'
+                || String(insertError?.message || '').includes('idx_course_registrations_unique')
+                || String(insertError?.message || '').includes('duplicate key')
+
+              if (isUniqueViolation) {
+                for (const regData of registrationsToCreate as any[]) {
+                  try {
+                    const faberidNorm = normalizeFaberid(regData.sari_faberid)
+                    let existing: any = null
+                    if (faberidNorm) {
+                      const { data } = await supabase
+                        .from('course_registrations')
+                        .select('id, user_id, email, notes')
+                        .eq('course_id', regData.course_id)
+                        .eq('sari_faberid', faberidNorm)
+                        .in('status', ['confirmed', 'enrolled', 'pending'])
+                        .is('deleted_at', null)
+                        .maybeSingle()
+                      existing = data
+                    }
+                    if (!existing && regData.email) {
+                      const { data } = await supabase
+                        .from('course_registrations')
+                        .select('id, user_id, email, notes')
+                        .eq('course_id', regData.course_id)
+                        .ilike('email', String(regData.email).trim())
+                        .in('status', ['confirmed', 'enrolled', 'pending'])
+                        .is('deleted_at', null)
+                        .maybeSingle()
+                      existing = data
+                    }
+                    if (!existing?.id) {
+                      logger.warn('⚠️ Unique violation but no existing registration found to merge', {
+                        course_id: regData.course_id,
+                        email: regData.email,
+                        sari_faberid: regData.sari_faberid,
+                      })
+                      continue
+                    }
+
+                    const { data: merged, error: mergeErr } = await supabase
+                      .from('course_registrations')
+                      .update({
+                        user_id: regData.user_id || existing.user_id || null,
+                        payment_id: regData.payment_id,
+                        first_name: regData.first_name,
+                        last_name: regData.last_name,
+                        email: regData.email || existing.email,
+                        phone: regData.phone,
+                        street: regData.street,
+                        street_nr: regData.street_nr,
+                        zip: regData.zip,
+                        city: regData.city,
+                        birthdate: regData.birthdate,
+                        status: regData.status,
+                        payment_status: regData.payment_status,
+                        payment_method: 'wallee',
+                        amount_paid_rappen: regData.amount_paid_rappen,
+                        discount_applied_rappen: regData.discount_applied_rappen,
+                        webhook_processed_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
+                        notes: existing.notes && String(existing.notes).includes('Auto-imported from SARI')
+                          ? `${existing.notes} | Linked Wallee payment ${regData.payment_id} (post-insert merge)`
+                          : existing.notes,
+                      })
+                      .eq('id', existing.id)
+                      .select('id, course_id, user_id, payment_id')
+                      .single()
+
+                    if (mergeErr) {
+                      logger.error('❌ Post-insert merge failed:', mergeErr.message)
+                      continue
+                    }
+
+                    updatedRegistrations = [...updatedRegistrations, merged]
+                    const payment = paymentsToUpdate.find(p => p.id === regData.payment_id)
+                    if (payment) {
+                      payment.course_registration_id = merged.id
+                      payment.user_id = merged.user_id
+                      await supabase.from('payments').update({
+                        user_id: merged.user_id,
+                        course_registration_id: merged.id,
+                        updated_at: new Date().toISOString(),
+                        metadata: {
+                          ...payment.metadata,
+                          webhook_merged_existing_registration: true,
+                          webhook_merged_registration_id: merged.id,
+                          webhook_registration_error: null,
+                        }
+                      }).eq('id', payment.id)
+                    }
+                    logger.info(`✅ Post-insert merge: payment ${regData.payment_id} → registration ${merged.id}`)
+                  } catch (mergeCatch: any) {
+                    logger.error('❌ Merge fallback crashed:', mergeCatch?.message || mergeCatch)
+                  }
+                }
+              } else {
+                // ⚠️ DEBUG: Update payment metadata with error info
+                for (const payment of paymentsToUpdate) {
+                  if (!payment.metadata?.course_id) continue
+                  try {
+                    await supabase
+                      .from('payments')
+                      .update({
+                        metadata: {
+                          ...payment.metadata,
+                          webhook_registration_error: insertError?.message || 'Unknown error creating registration',
+                          webhook_error_timestamp: new Date().toISOString(),
+                          webhook_error_code: insertError?.code
+                        }
+                      })
+                      .eq('id', payment.id)
+                  } catch (e: any) {
+                    logger.warn('Could not update payment metadata with error:', e.message)
+                  }
                 }
               }
             }
@@ -1212,6 +1437,38 @@ export default defineEventHandler(async (event) => {
           logger.warn('⚠️ Error updating appointments:', appointmentError)
         } else {
           logger.info(`✅ Updated ${appointmentIds.length} appointment(s) to: ${appointmentStatus}`)
+        }
+
+        // Safety net: if booking-time confirmation never landed, retry after Wallee pay.
+        if (paymentStatus === 'completed') {
+          for (const payment of paymentsToUpdate) {
+            if (!payment.appointment_id || !payment.user_id || !payment.tenant_id) continue
+            try {
+              const { data: appt } = await supabase
+                .from('appointments')
+                .select('id, confirmation_email_sent_at, confirmation_email_status')
+                .eq('id', payment.appointment_id)
+                .maybeSingle()
+              if (appt?.confirmation_email_sent_at || appt?.confirmation_email_status === 'sent') continue
+              if (appt?.confirmation_email_status === 'queued') continue
+
+              const { dispatchAppointmentConfirmation } = await import(
+                '~/server/utils/dispatch-appointment-confirmation'
+              )
+              await dispatchAppointmentConfirmation({
+                appointmentId: payment.appointment_id,
+                userId: payment.user_id,
+                tenantId: payment.tenant_id,
+                skipStaffNotification: false,
+              })
+              logger.info('✅ Post-Wallee confirmation dispatch for appointment', payment.appointment_id)
+            } catch (confirmErr: any) {
+              logger.warn(
+                '⚠️ Post-Wallee confirmation dispatch failed (non-fatal):',
+                confirmErr?.message || confirmErr
+              )
+            }
+          }
         }
       }
     }
@@ -1987,10 +2244,50 @@ async function sendCourseEnrollmentEmails(payments: any[]) {
           .from('course_registrations')
           .select('id')
           .eq('payment_id', payment.id)
-          .single()
+          .maybeSingle()
         
         if (data) {
           courseRegistrationId = data.id
+        }
+      }
+
+      // Safety net for SARI-race payments: find by course + faberid/email from metadata
+      if (!courseRegistrationId && payment.metadata?.course_id) {
+        const faberid = String(payment.metadata?.sari_faberid || '').replace(/^0+/, '') || payment.metadata?.sari_faberid
+        if (faberid) {
+          const { data: byFaber } = await supabase
+            .from('course_registrations')
+            .select('id, email')
+            .eq('course_id', payment.metadata.course_id)
+            .eq('sari_faberid', faberid)
+            .in('status', ['confirmed', 'enrolled', 'pending'])
+            .is('deleted_at', null)
+            .maybeSingle()
+          if (byFaber?.id) {
+            courseRegistrationId = byFaber.id
+            // Opportunistically link for next time
+            await supabase.from('payments').update({
+              course_registration_id: byFaber.id,
+              updated_at: new Date().toISOString(),
+            }).eq('id', payment.id)
+          }
+        }
+        if (!courseRegistrationId && payment.metadata?.email) {
+          const { data: byEmail } = await supabase
+            .from('course_registrations')
+            .select('id')
+            .eq('course_id', payment.metadata.course_id)
+            .ilike('email', String(payment.metadata.email).trim())
+            .in('status', ['confirmed', 'enrolled', 'pending'])
+            .is('deleted_at', null)
+            .maybeSingle()
+          if (byEmail?.id) {
+            courseRegistrationId = byEmail.id
+            await supabase.from('payments').update({
+              course_registration_id: byEmail.id,
+              updated_at: new Date().toISOString(),
+            }).eq('id', payment.id)
+          }
         }
       }
       
