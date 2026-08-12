@@ -60,8 +60,11 @@ export default defineEventHandler(async (event) => {
 
         const data = await getGbpReviews(tenantId, loc.id)
         const reviews = data.reviews ?? []
+        const MAX_SUGGESTIONS_PER_LOCATION = 5
+        let createdForLoc = 0
 
         for (const review of reviews) {
+          if (createdForLoc >= MAX_SUGGESTIONS_PER_LOCATION) break
           if (review.reviewReply) continue
           if (!review.reviewId) continue
 
@@ -84,7 +87,7 @@ export default defineEventHandler(async (event) => {
             brandVoice: settings.brand_voice,
           })
 
-          // P1: always store as suggested (even for auto_* modes) — human approve first
+          // Always store as suggested — human approve first (auto_* modes not enabled yet)
           const { error } = await supabase.from('gbp_review_actions').insert({
             tenant_id: tenantId,
             location_id: loc.id,
@@ -99,12 +102,15 @@ export default defineEventHandler(async (event) => {
           })
 
           if (error) {
+            console.warn('[poll-gbp-reviews] insert failed', tenantId, loc.id, error.message)
             errors++
             continue
           }
           suggested++
+          createdForLoc++
         }
-      } catch {
+      } catch (err: any) {
+        console.warn('[poll-gbp-reviews] location failed', tenantId, loc.id, err?.message || err)
         errors++
       }
     }

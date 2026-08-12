@@ -246,27 +246,170 @@
 
         <!-- Insights tab -->
         <div v-if="selectedLocationId && activeTab === 'insights'">
-          <div v-if="insightsLoading" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div v-for="i in 4" :key="i" class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-24" />
+          <div v-if="insightsLoading" class="space-y-4">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div v-for="i in 4" :key="`a-${i}`" class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-24" />
+            </div>
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-56" />
           </div>
           <div v-else-if="insightsError" class="bg-white rounded-2xl p-6 border border-gray-100 text-center">
             <p class="text-sm text-gray-400">{{ insightsError }}</p>
           </div>
-          <div v-else class="space-y-3">
-            <p v-if="insightsMeta" class="text-xs text-gray-400">
-              Gespeichert
-              <template v-if="insightsMeta.historyFrom && insightsMeta.historyTo">
-                · Historie {{ formatDate(insightsMeta.historyFrom) }}–{{ formatDate(insightsMeta.historyTo) }}
-              </template>
-              <template v-if="insightsMeta.lastSyncedAt">
-                · zuletzt aktualisiert {{ formatDateTime(insightsMeta.lastSyncedAt) }}
-              </template>
-            </p>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div v-for="metric in insightMetrics" :key="metric.label" class="bg-white rounded-2xl p-5 border border-gray-100">
-                <p class="text-2xl font-bold text-gray-900">{{ metric.value.toLocaleString('de-CH') }}</p>
-                <p class="text-xs text-gray-400 mt-1 font-medium">{{ metric.label }}</p>
-                <p class="text-xs text-gray-300 mt-0.5">letzte {{ insightsMeta?.displayDays ?? 28 }} Tage</p>
+          <div v-else class="space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <p v-if="insightsMeta" class="text-xs text-gray-400">
+                <template v-if="insightsMeta.historyFrom && insightsMeta.historyTo">
+                  Historie {{ formatDate(insightsMeta.historyFrom) }}–{{ formatDate(insightsMeta.historyTo) }}
+                </template>
+                <template v-if="insightsMeta.lastSyncedAt">
+                  · Sync {{ formatDateTime(insightsMeta.lastSyncedAt) }}
+                </template>
+              </p>
+              <div class="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+                <button
+                  type="button"
+                  :class="['px-3 py-1.5 rounded-md text-xs font-semibold transition-colors', insightsRange === '3m' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500']"
+                  @click="insightsRange = '3m'"
+                >3 Monate</button>
+                <button
+                  type="button"
+                  :class="['px-3 py-1.5 rounded-md text-xs font-semibold transition-colors', insightsRange === '12m' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500']"
+                  @click="insightsRange = '12m'"
+                >12 Monate</button>
+              </div>
+            </div>
+
+            <p class="text-xs text-gray-400 -mt-1">{{ insightsRangeLabel }} · Vergleich jeweils zur gleich langen Vorperiode</p>
+
+            <!-- Aktivität -->
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
+              <div>
+                <p class="text-sm font-semibold text-gray-900">Was wir gemacht haben</p>
+                <p class="text-xs text-gray-400 mt-0.5">Posts, Fotos und Review-Antworten in diesem Zeitraum</p>
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <div v-for="card in insightsActivityCards" :key="card.label" class="rounded-xl bg-gray-50 px-3 py-3">
+                  <p class="text-2xl font-bold text-gray-900">{{ card.value.toLocaleString('de-CH') }}</p>
+                  <p class="text-xs text-gray-500 font-medium">{{ card.label }}</p>
+                  <p
+                    v-if="card.trend != null"
+                    :class="['text-[11px] mt-0.5 font-semibold', card.trend > 0 ? 'text-green-600' : card.trend < 0 ? 'text-red-500' : 'text-gray-400']"
+                  >
+                    {{ formatTrend(card.trend) }} vs. vorher
+                    <span v-if="card.previous != null" class="font-normal text-gray-400"> ({{ card.previous }})</span>
+                  </p>
+                  <p v-else class="text-[11px] mt-0.5 text-gray-300">keine Vorperiode</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Wirkung -->
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
+              <div>
+                <p class="text-sm font-semibold text-gray-900">Was es gebracht hat</p>
+                <p class="text-xs text-gray-400 mt-0.5">Sichtbarkeit &amp; Aktionen aus Google Insights</p>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div v-for="card in insightsPeriodCards" :key="card.label" class="rounded-xl bg-gray-50 px-3 py-3">
+                  <p class="text-xl font-bold text-gray-900">{{ card.value.toLocaleString('de-CH') }}</p>
+                  <p class="text-xs text-gray-500 font-medium">{{ card.label }}</p>
+                  <p
+                    v-if="card.trend != null"
+                    :class="['text-[11px] mt-0.5 font-semibold', card.trend > 0 ? 'text-green-600' : card.trend < 0 ? 'text-red-500' : 'text-gray-400']"
+                  >
+                    {{ formatTrend(card.trend) }} vs. vorher
+                  </p>
+                  <p v-else class="text-[11px] mt-0.5 text-gray-300">keine Vorperiode</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Monatsverlauf -->
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p class="text-sm font-semibold text-gray-900">Monatsverlauf</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ insightsChartMetricLabel }} — Balken = Wirkung, Punkte = Aktivität</p>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <button
+                    v-for="opt in insightsChartMetricOptions"
+                    :key="opt.id"
+                    type="button"
+                    :class="[
+                      'px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors',
+                      insightsChartMetric === opt.id
+                        ? 'bg-blue-50 border-blue-200 text-blue-700'
+                        : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50',
+                    ]"
+                    @click="insightsChartMetric = opt.id"
+                  >{{ opt.label }}</button>
+                </div>
+              </div>
+
+              <div v-if="insightsChartMonths.length" class="space-y-3">
+                <div class="flex items-end gap-1 sm:gap-1.5 h-40">
+                  <div
+                    v-for="bar in insightsChartMonths"
+                    :key="bar.month"
+                    class="flex-1 min-w-0 flex flex-col items-center justify-end h-full gap-1 relative"
+                  >
+                    <span class="text-[10px] text-gray-400 tabular-nums leading-none">
+                      {{ bar.value > 0 ? bar.value.toLocaleString('de-CH') : '' }}
+                    </span>
+                    <div
+                      class="w-full rounded-t-md bg-blue-500/80 min-h-[2px] transition-all"
+                      :style="{ height: `${bar.heightPct}%` }"
+                      :title="`${bar.label}: ${bar.value.toLocaleString('de-CH')} · Aktivität ${bar.activityTotal}`"
+                    />
+                    <span
+                      v-if="bar.activityTotal > 0"
+                      class="absolute bottom-5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white"
+                      :title="`Posts ${bar.posts} · Fotos ${bar.photos} · Reviews ${bar.reviewReplies}`"
+                    />
+                    <span class="text-[10px] text-gray-400 truncate w-full text-center leading-none">{{ bar.shortLabel }}</span>
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-4 text-[11px] text-gray-400">
+                  <span class="inline-flex items-center gap-1.5"><span class="w-3 h-2 rounded-sm bg-blue-500/80" /> Wirkung ({{ insightsChartMetricLabel }})</span>
+                  <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500" /> Monat mit Posts/Fotos/Antworten</span>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-xs text-left">
+                    <thead>
+                      <tr class="text-gray-400 border-b border-gray-100">
+                        <th class="py-2 font-medium">Monat</th>
+                        <th class="py-2 font-medium text-right">Posts</th>
+                        <th class="py-2 font-medium text-right">Fotos</th>
+                        <th class="py-2 font-medium text-right">Reviews</th>
+                        <th class="py-2 font-medium text-right">{{ insightsChartMetricLabel }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="row in insightsChartMonths" :key="`row-${row.month}`" class="border-b border-gray-50 text-gray-700">
+                        <td class="py-2">{{ row.label }}</td>
+                        <td class="py-2 text-right tabular-nums">{{ row.posts }}</td>
+                        <td class="py-2 text-right tabular-nums">{{ row.photos }}</td>
+                        <td class="py-2 text-right tabular-nums">{{ row.reviewReplies }}</td>
+                        <td class="py-2 text-right tabular-nums font-semibold">{{ row.value.toLocaleString('de-CH') }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <p v-else class="text-xs text-gray-400 text-center py-6">
+                Noch zu wenig Historie — öffne den Tab erneut nach dem ersten Sync.
+              </p>
+            </div>
+
+            <!-- 28-Tage Snapshot -->
+            <div class="space-y-2">
+              <p class="text-xs font-medium text-gray-500">Aktuell · letzte {{ insightsMeta?.displayDays ?? 28 }} Tage</p>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div v-for="metric in insightMetrics" :key="metric.label" class="bg-white rounded-xl p-4 border border-gray-100">
+                  <p class="text-lg font-bold text-gray-900">{{ metric.value.toLocaleString('de-CH') }}</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ metric.label }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -1009,16 +1152,28 @@
           <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
             <div>
               <p class="text-sm font-semibold text-gray-900">Review-Vorschläge</p>
-              <p class="text-xs text-gray-400 mt-0.5">Vom Cron erzeugt — prüfen und freigeben.</p>
+              <p class="text-xs text-gray-400 mt-0.5">Vom Cron erzeugt — prüfen und freigeben. Fehlgeschlagene erscheinen hier zum erneuten Versuch.</p>
             </div>
             <div v-if="reviewActions.length === 0" class="text-sm text-gray-400 py-4 text-center">Keine offenen Vorschläge</div>
             <div v-else class="space-y-3">
-              <div v-for="ra in reviewActions" :key="ra.id" class="border border-gray-100 rounded-xl p-4 space-y-2">
+              <div
+                v-for="ra in reviewActions"
+                :key="ra.id"
+                :class="['border rounded-xl p-4 space-y-2', ra.status === 'failed' ? 'border-red-200 bg-red-50/40' : 'border-gray-100']"
+              >
                 <div class="flex items-center justify-between gap-2">
                   <p class="text-sm font-semibold text-gray-900">{{ ra.reviewer_name || 'Anonym' }} · {{ ra.star_rating }}/5</p>
-                  <span class="text-xs text-gray-400">{{ ra.status }}</span>
+                  <span
+                    :class="[
+                      'text-xs font-semibold px-2 py-0.5 rounded-full',
+                      ra.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-50 text-amber-700',
+                    ]"
+                  >
+                    {{ ra.status === 'failed' ? 'Fehlgeschlagen' : 'Vorschlag' }}
+                  </span>
                 </div>
                 <p v-if="ra.review_comment" class="text-sm text-gray-600">{{ ra.review_comment }}</p>
+                <p v-if="ra.error_message" class="text-xs text-red-600">{{ ra.error_message }}</p>
                 <GbpAiTextField
                   :model-value="ra.suggested_reply"
                   context="review_reply"
@@ -1039,7 +1194,7 @@
                     :disabled="publishingReviewId === ra.id"
                     class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
                   >
-                    {{ publishingReviewId === ra.id ? '…' : 'Antwort publishen' }}
+                    {{ publishingReviewId === ra.id ? '…' : (ra.status === 'failed' ? 'Erneut versuchen' : 'Antwort publishen') }}
                   </button>
                   <button
                     @click="skipReviewAction(ra.id)"
@@ -1220,6 +1375,10 @@ async function loadStatus() {
 async function onLocationChange() {
   insightMetrics.value = []
   insightsMeta.value = null
+  insightsPeriod3m.value = null
+  insightsPeriod12m.value = null
+  insightsMonthly.value = []
+  insightsError.value = ''
   reviews.value = []
   posts.value = []
   scheduledPosts.value = []
@@ -1294,6 +1453,97 @@ const insightsMeta = ref<{
   historyTo: string | null
   lastSyncedAt: string | null
 } | null>(null)
+const insightsRange = ref<'3m' | '12m'>('3m')
+const insightsChartMetric = ref<'impressions' | 'websiteClicks' | 'callClicks' | 'directionRequests'>('impressions')
+const insightsPeriod3m = ref<any>(null)
+const insightsPeriod12m = ref<any>(null)
+const insightsMonthly = ref<{
+  month: string
+  label: string
+  impressions: number
+  websiteClicks: number
+  callClicks: number
+  directionRequests: number
+  posts: number
+  photos: number
+  reviewReplies: number
+}[]>([])
+
+const insightsChartMetricOptions = [
+  { id: 'impressions' as const, label: 'Aufrufe' },
+  { id: 'websiteClicks' as const, label: 'Website' },
+  { id: 'callClicks' as const, label: 'Anrufe' },
+  { id: 'directionRequests' as const, label: 'Routen' },
+]
+
+const insightsPeriod = computed(() =>
+  insightsRange.value === '3m' ? insightsPeriod3m.value : insightsPeriod12m.value,
+)
+
+const insightsRangeLabel = computed(() => {
+  const p = insightsPeriod.value
+  if (!p?.from || !p?.to) return insightsRange.value === '3m' ? 'Letzte 90 Tage' : 'Letzte 365 Tage'
+  return `${formatDate(p.from)} – ${formatDate(p.to)}`
+})
+
+const insightsActivityCards = computed(() => {
+  const p = insightsPeriod.value
+  if (!p?.activity) return []
+  const a = p.activity
+  const prev = p.previousActivity || {}
+  return [
+    { label: 'Posts', value: a.posts || 0, previous: prev.posts ?? null, trend: p.postsTrendPct },
+    { label: 'Fotos', value: a.photos || 0, previous: prev.photos ?? null, trend: p.photosTrendPct },
+    { label: 'Reviews beantwortet', value: a.reviewReplies || 0, previous: prev.reviewReplies ?? null, trend: p.reviewRepliesTrendPct },
+  ]
+})
+
+const insightsPeriodCards = computed(() => {
+  const p = insightsPeriod.value
+  if (!p?.totals) return []
+  const t = p.totals
+  return [
+    {
+      label: 'Profilaufrufe Maps',
+      value: (t.BUSINESS_IMPRESSIONS_MOBILE_MAPS || 0) + (t.BUSINESS_IMPRESSIONS_DESKTOP_MAPS || 0),
+      trend: p.impressionsTrendPct,
+    },
+    { label: 'Website-Klicks', value: t.WEBSITE_CLICKS || 0, trend: p.websiteTrendPct },
+    { label: 'Anruf-Klicks', value: t.CALL_CLICKS || 0, trend: p.callsTrendPct },
+    { label: 'Routenanfragen', value: t.BUSINESS_DIRECTION_REQUESTS || 0, trend: p.directionsTrendPct },
+  ]
+})
+
+const insightsChartMetricLabel = computed(() =>
+  insightsChartMetricOptions.find(o => o.id === insightsChartMetric.value)?.label || 'Aufrufe',
+)
+
+const insightsChartMonths = computed(() => {
+  const all = insightsMonthly.value
+  if (!all.length) return []
+  const months = insightsRange.value === '3m' ? all.slice(-3) : all
+  const key = insightsChartMetric.value
+  const values = months.map(m => m[key] || 0)
+  const max = Math.max(...values, 1)
+  return months.map((m, i) => ({
+    month: m.month,
+    label: m.label,
+    shortLabel: insightsRange.value === '12m'
+      ? (m.label.split(' ')[0] || m.label)
+      : m.label,
+    value: values[i],
+    heightPct: Math.max(4, Math.round((values[i] / max) * 100)),
+    posts: m.posts || 0,
+    photos: m.photos || 0,
+    reviewReplies: m.reviewReplies || 0,
+    activityTotal: (m.posts || 0) + (m.photos || 0) + (m.reviewReplies || 0),
+  }))
+})
+
+function formatTrend(pct: number): string {
+  if (pct > 0) return `+${pct}%`
+  return `${pct}%`
+}
 
 async function loadInsights() {
   if (!status.value?.connected || !selectedLocationId.value) return
@@ -1314,6 +1564,9 @@ async function loadInsights() {
       historyTo: data.historyTo ?? null,
       lastSyncedAt: data.lastSyncedAt ?? null,
     }
+    insightsPeriod3m.value = data.period3m ?? null
+    insightsPeriod12m.value = data.period12m ?? null
+    insightsMonthly.value = Array.isArray(data.monthly) ? data.monthly : []
   } catch (e: any) {
     insightsError.value = e?.data?.statusMessage || e?.message || 'Insights konnten nicht geladen werden'
   } finally {
@@ -1969,14 +2222,23 @@ async function uploadPhoto() {
 
 async function submitReply(reviewId: string) {
   if (!replyText.value.trim() || !selectedLocationId.value) return
+  const review = reviews.value.find((r: any) => r.reviewId === reviewId)
   replying.value = true
   try {
     await $fetch(`/api/gbp/reviews/${reviewId}/reply`, {
       method: 'POST',
-      body: { comment: replyText.value.trim(), locationId: selectedLocationId.value },
+      body: {
+        comment: replyText.value.trim(),
+        locationId: selectedLocationId.value,
+        starRating: review ? starRating(review.starRating) : undefined,
+        reviewerName: review?.reviewer?.displayName || undefined,
+        reviewComment: review?.comment || undefined,
+      },
     })
+    replyText.value = ''
     replyingTo.value = null
     await loadReviews()
+    if (activeTab.value === 'automation') await loadQueue()
   } catch (e: any) {
     alert(e?.data?.statusMessage || 'Fehler beim Senden der Antwort')
   } finally {
@@ -2164,7 +2426,7 @@ async function loadQueue() {
   try {
     const [postsRes, actionsRes] = await Promise.all([
       $fetch<any>('/api/gbp/scheduled-posts', { query: locQuery() }),
-      $fetch<any>('/api/gbp/review-actions', { query: { ...locQuery(), status: 'suggested' } }),
+      $fetch<any>('/api/gbp/review-actions', { query: locQuery() }),
     ])
     scheduledPosts.value = (postsRes.posts ?? []).filter((p: any) => p.status !== 'published')
     reviewActions.value = actionsRes.actions ?? []

@@ -61,10 +61,13 @@
 
         <!-- Insights -->
         <div v-if="activeTab === 'insights'">
-          <div v-if="insightsLoading" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div v-for="i in 4" :key="i" class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-24" />
+          <div v-if="insightsLoading" class="space-y-4">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div v-for="i in 4" :key="i" class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-24" />
+            </div>
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-40" />
           </div>
-          <div v-else class="space-y-3">
+          <div v-else class="space-y-4">
             <p v-if="insightsMeta" class="text-xs text-gray-400">
               Gespeichert
               <template v-if="insightsMeta.historyFrom && insightsMeta.historyTo">
@@ -79,6 +82,34 @@
                 <p class="text-2xl font-bold text-gray-900">{{ m.value.toLocaleString('de-CH') }}</p>
                 <p class="text-xs text-gray-400 mt-1 font-medium">{{ m.label }}</p>
                 <p class="text-xs text-gray-300 mt-0.5">letzte {{ insightsMeta?.displayDays ?? 28 }} Tage</p>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-semibold text-gray-900">Verlauf</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ insightsRange === '3m' ? 'Letzte 3 Monate' : 'Letzte 12 Monate' }}</p>
+                </div>
+                <div class="flex gap-1 bg-gray-100 rounded-lg p-0.5">
+                  <button type="button" :class="['px-3 py-1 rounded-md text-xs font-semibold', insightsRange === '3m' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500']" @click="insightsRange = '3m'">3 Monate</button>
+                  <button type="button" :class="['px-3 py-1 rounded-md text-xs font-semibold', insightsRange === '12m' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500']" @click="insightsRange = '12m'">12 Monate</button>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div v-for="card in insightsPeriodCards" :key="card.label" class="rounded-xl bg-gray-50 px-3 py-3">
+                  <p class="text-lg font-bold text-gray-900">{{ card.value.toLocaleString('de-CH') }}</p>
+                  <p class="text-xs text-gray-500 font-medium">{{ card.label }}</p>
+                  <p v-if="card.trend != null" :class="['text-[11px] mt-0.5 font-semibold', card.trend > 0 ? 'text-green-600' : card.trend < 0 ? 'text-red-500' : 'text-gray-400']">
+                    {{ card.trend > 0 ? '+' : '' }}{{ card.trend }}% vs. vorher
+                  </p>
+                </div>
+              </div>
+              <div v-if="insightsChartMonths.length" class="flex items-end gap-1 h-32 pt-2">
+                <div v-for="bar in insightsChartMonths" :key="bar.month" class="flex-1 min-w-0 flex flex-col items-center justify-end h-full gap-1">
+                  <div class="w-full rounded-t-md bg-purple-500/80 min-h-[2px]" :style="{ height: `${bar.heightPct}%` }" :title="`${bar.label}: ${bar.value}`" />
+                  <span class="text-[10px] text-gray-400 truncate w-full text-center">{{ bar.shortLabel }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -204,6 +235,45 @@ const insightsMeta = ref<{
   historyTo: string | null
   lastSyncedAt: string | null
 } | null>(null)
+const insightsRange = ref<'3m' | '12m'>('3m')
+const insightsPeriod3m = ref<any>(null)
+const insightsPeriod12m = ref<any>(null)
+const insightsMonthly = ref<any[]>([])
+
+const insightsPeriod = computed(() =>
+  insightsRange.value === '3m' ? insightsPeriod3m.value : insightsPeriod12m.value,
+)
+
+const insightsPeriodCards = computed(() => {
+  const p = insightsPeriod.value
+  if (!p?.totals) return []
+  const t = p.totals
+  return [
+    {
+      label: 'Aufrufe',
+      value: (t.BUSINESS_IMPRESSIONS_MOBILE_MAPS || 0) + (t.BUSINESS_IMPRESSIONS_DESKTOP_MAPS || 0),
+      trend: p.impressionsTrendPct,
+    },
+    { label: 'Website', value: t.WEBSITE_CLICKS || 0, trend: p.websiteTrendPct },
+    { label: 'Anrufe', value: t.CALL_CLICKS || 0, trend: p.callsTrendPct },
+    { label: 'Routen', value: t.BUSINESS_DIRECTION_REQUESTS || 0, trend: p.directionsTrendPct },
+  ]
+})
+
+const insightsChartMonths = computed(() => {
+  const all = insightsMonthly.value
+  if (!all.length) return []
+  const months = insightsRange.value === '3m' ? all.slice(-3) : all
+  const values = months.map((m: any) => m.impressions || 0)
+  const max = Math.max(...values, 1)
+  return months.map((m: any, i: number) => ({
+    month: m.month,
+    label: m.label,
+    shortLabel: insightsRange.value === '12m' ? (m.label.split(' ')[0] || m.label) : m.label,
+    value: values[i],
+    heightPct: Math.max(4, Math.round((values[i] / max) * 100)),
+  }))
+})
 
 // Reviews
 const reviews = ref<any[]>([])
@@ -260,6 +330,9 @@ async function loadInsights() {
       historyTo: data.historyTo ?? null,
       lastSyncedAt: data.lastSyncedAt ?? null,
     }
+    insightsPeriod3m.value = data.period3m ?? null
+    insightsPeriod12m.value = data.period12m ?? null
+    insightsMonthly.value = Array.isArray(data.monthly) ? data.monthly : []
   } catch { /* ignore */ } finally { insightsLoading.value = false }
 }
 
