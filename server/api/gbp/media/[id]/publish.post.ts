@@ -45,14 +45,36 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 502, statusMessage: gbp.error.message || 'GBP upload failed' })
   }
 
+  const nowIso = new Date().toISOString()
+
+  // Shared (null) assets: clone to location so other locations keep the original
+  if (!asset.location_id) {
+    const { data: cloned } = await supabase
+      .from('gbp_media_assets')
+      .insert({
+        tenant_id: authUser.tenant_id,
+        location_id: loc.id,
+        storage_path: asset.storage_path,
+        public_url: asset.public_url,
+        category: asset.category,
+        approved: true,
+        source: asset.source || 'upload',
+        notes: asset.notes,
+        last_published_at: nowIso,
+        publish_count: 1,
+      })
+      .select('*')
+      .single()
+    return { ok: true, asset: cloned, gbp }
+  }
+
   const { data: updated } = await supabase
     .from('gbp_media_assets')
     .update({
       approved: true,
-      last_published_at: new Date().toISOString(),
+      last_published_at: nowIso,
       publish_count: (asset.publish_count || 0) + 1,
-      location_id: loc.id,
-      updated_at: new Date().toISOString(),
+      updated_at: nowIso,
     })
     .eq('id', id)
     .select('*')

@@ -35,6 +35,7 @@ export type PhotoMode = 'off' | 'approved_only' | 'pool_auto'
 export interface GbpAutomationSettings {
   review_reply_mode: ReviewReplyMode
   posts_per_week: number
+  photos_per_week: number
   photo_mode: PhotoMode
   brand_voice: string | null
   keywords: string[]
@@ -46,6 +47,7 @@ export interface GbpAutomationSettings {
 export const GBP_AUTOMATION_DEFAULTS: GbpAutomationSettings = {
   review_reply_mode: 'suggest',
   posts_per_week: 2,
+  photos_per_week: 2,
   photo_mode: 'off',
   brand_voice: null,
   keywords: [],
@@ -219,6 +221,7 @@ export async function ensureTenantGbpDefaults(tenantId: string) {
     location_id: null,
     review_reply_mode: GBP_AUTOMATION_DEFAULTS.review_reply_mode,
     posts_per_week: GBP_AUTOMATION_DEFAULTS.posts_per_week,
+    photos_per_week: GBP_AUTOMATION_DEFAULTS.photos_per_week,
     photo_mode: GBP_AUTOMATION_DEFAULTS.photo_mode,
     default_cta_type: GBP_AUTOMATION_DEFAULTS.default_cta_type,
     timezone: GBP_AUTOMATION_DEFAULTS.timezone,
@@ -273,6 +276,7 @@ export async function getGbpAutomationSettings(
   return {
     review_reply_mode: (merged.review_reply_mode as ReviewReplyMode) || GBP_AUTOMATION_DEFAULTS.review_reply_mode,
     posts_per_week: Number(merged.posts_per_week ?? GBP_AUTOMATION_DEFAULTS.posts_per_week),
+    photos_per_week: Number(merged.photos_per_week ?? GBP_AUTOMATION_DEFAULTS.photos_per_week),
     photo_mode: (merged.photo_mode as PhotoMode) || GBP_AUTOMATION_DEFAULTS.photo_mode,
     brand_voice: (merged.brand_voice as string | null) ?? null,
     keywords: parseKeywords(merged.keywords),

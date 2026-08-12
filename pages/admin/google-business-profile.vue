@@ -654,9 +654,40 @@
         <div v-if="selectedLocationId && activeTab === 'photos'" class="space-y-4">
           <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
             <p class="text-sm font-semibold text-gray-900">Foto-Pool</p>
-            <p class="text-xs text-gray-400">Fotos hier ablegen, freigeben — Automation oder manuell nach GBP publishen.</p>
+            <p class="text-xs text-gray-400">Fotos hochladen, Standort(e) wählen, freigeben — Automation publisht mit Caption nach GBP.</p>
 
             <div class="space-y-3">
+              <div v-if="linkedLocations.length > 1" class="rounded-xl border border-gray-200 bg-gray-50/60 p-3 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-medium text-gray-600">Ziel-Standorte</span>
+                  <button
+                    type="button"
+                    class="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                    @click="toggleAllPoolLocations"
+                  >
+                    {{ poolAllLocationsSelected ? 'Nur aktuellen' : 'Alle Standorte' }}
+                  </button>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <label
+                    v-for="loc in linkedLocations"
+                    :key="loc.id"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-white border border-gray-200 px-2.5 py-1.5 text-xs text-gray-700 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      :checked="poolTargetLocationIds.includes(loc.id)"
+                      @change="togglePoolLocation(loc.id)"
+                    />
+                    {{ loc.title || loc.id.slice(0, 8) }}
+                  </label>
+                </div>
+                <p class="text-[11px] text-gray-400">
+                  Ein Upload legt pro gewähltem Standort einen Pool-Eintrag an (gleiche Datei, eigene Caption-Zuordnung).
+                </p>
+              </div>
+
               <div>
                 <span class="text-xs font-medium text-gray-600 mb-1.5 block">Dateien</span>
                 <input
@@ -722,7 +753,7 @@
                 </ul>
               </div>
 
-              <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
                 <select v-model="poolCategory" class="w-full sm:flex-1 bg-white text-gray-900 text-sm rounded-xl border border-gray-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="INTERIOR">Innen</option>
                   <option value="EXTERIOR">Aussen</option>
@@ -730,6 +761,10 @@
                   <option value="COVER">Titelbild</option>
                   <option value="PRODUCT">Produkt</option>
                 </select>
+                <label class="flex items-center gap-2 text-xs text-gray-600 shrink-0">
+                  <input type="checkbox" v-model="poolAutoCaption" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  KI-Caption pro Bild
+                </label>
                 <label class="flex items-center gap-2 text-xs text-gray-600 shrink-0">
                   <input type="checkbox" v-model="poolApprovedOnUpload" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                   Sofort freigeben
@@ -742,8 +777,12 @@
                 :location-id="selectedLocationId"
                 :default-keywords="settingsKeywords"
                 :image-files="poolFiles"
-                label="Foto-Beschreibung (optional, für Google SEO)"
-                placeholder="Stichworte oder Rohtext — KI erkennt das Motiv und schreibt die Caption…"
+                :label="poolAutoCaption
+                  ? 'Stichworte / Entwurf (optional — KI schreibt pro Bild eine eigene Caption)'
+                  : 'Foto-Beschreibung (optional, für Google SEO)'"
+                :placeholder="poolAutoCaption
+                  ? 'Optional: Stichworte für alle Bilder — KI analysiert jedes Motiv einzeln…'
+                  : 'Stichworte oder Rohtext — KI erkennt das Motiv und schreibt die Caption…'"
                 :max-length="250"
                 :rows="3"
               />
@@ -751,7 +790,7 @@
               <button
                 type="button"
                 @click="uploadToPool"
-                :disabled="!poolFiles.length || poolUploading"
+                :disabled="!poolFiles.length || poolUploading || !poolTargetLocationIds.length"
                 class="w-full px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
               >
                 {{ poolUploadLabel }}
@@ -802,6 +841,9 @@
                       {{ asset.approved ? 'Freigegeben' : 'Wartend' }}
                     </span>
                   </div>
+                  <p class="text-xs text-gray-500">
+                    {{ locationLabel(asset.location_id) }}
+                  </p>
                   <p class="text-xs text-gray-400">
                     Publishes: {{ asset.publish_count || 0 }}
                     <span v-if="asset.last_published_at"> · zuletzt {{ formatDate(asset.last_published_at) }}</span>
@@ -1043,6 +1085,18 @@
                   <option value="off">Aus</option>
                   <option value="approved_only">Nur freigegebene Pool-Fotos (empfohlen)</option>
                   <option value="pool_auto">Pool automatisch (freigegebene)</option>
+                </select>
+              </label>
+              <label class="block space-y-1">
+                <span class="text-xs font-medium text-gray-600">Fotos pro Woche</span>
+                <select v-model.number="settingsForm.photos_per_week" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
+                  <option :value="1">1</option>
+                  <option :value="2">2 (empfohlen)</option>
+                  <option :value="3">3</option>
+                  <option :value="4">4</option>
+                  <option :value="5">5</option>
+                  <option :value="6">6</option>
+                  <option :value="7">7 (täglich)</option>
                 </select>
               </label>
               <label class="block space-y-1">
@@ -1580,22 +1634,73 @@ const poolFiles = ref<File[]>([])
 const poolFileInput = ref<HTMLInputElement | null>(null)
 const poolCategory = ref<'EXTERIOR' | 'INTERIOR' | 'PRODUCT' | 'LOGO' | 'COVER'>('INTERIOR')
 const poolNotes = ref('')
+const poolAutoCaption = ref(true)
 const poolApprovedOnUpload = ref(true)
+const poolTargetLocationIds = ref<string[]>([])
 const poolUploading = ref(false)
 const poolUploadProgress = ref({ done: 0, total: 0 })
 const publishingAssetId = ref<string | null>(null)
 
 const poolFilesTotalBytes = computed(() => poolFiles.value.reduce((sum, f) => sum + f.size, 0))
+const poolAllLocationsSelected = computed(() =>
+  linkedLocations.value.length > 0
+  && poolTargetLocationIds.value.length === linkedLocations.value.length,
+)
 const poolUploadLabel = computed(() => {
+  const locN = poolTargetLocationIds.value.length || 1
+  const locHint = locN > 1 ? ` → ${locN} Standorte` : ''
   if (!poolUploading.value) {
-    return poolFiles.value.length > 1
-      ? `${poolFiles.value.length} Fotos in Pool laden`
-      : 'In Pool laden'
+    if (poolFiles.value.length > 1) {
+      return poolAutoCaption.value
+        ? `${poolFiles.value.length} Fotos + KI${locHint}`
+        : `${poolFiles.value.length} Fotos in Pool${locHint}`
+    }
+    return poolAutoCaption.value ? `Laden + KI-Caption${locHint}` : `In Pool laden${locHint}`
   }
   const { done, total } = poolUploadProgress.value
-  if (total > 1) return `Upload ${done}/${total}…`
-  return 'Upload…'
+  if (total > 1) {
+    return poolAutoCaption.value
+      ? `KI + Upload ${done}/${total}…`
+      : `Upload ${done}/${total}…`
+  }
+  return poolAutoCaption.value ? 'KI analysiert…' : 'Upload…'
 })
+
+watch(
+  [linkedLocations, selectedLocationId],
+  () => {
+    if (!poolTargetLocationIds.value.length && selectedLocationId.value) {
+      poolTargetLocationIds.value = [selectedLocationId.value]
+      return
+    }
+    // Drop targets that are no longer linked
+    const valid = new Set(linkedLocations.value.map(l => l.id))
+    poolTargetLocationIds.value = poolTargetLocationIds.value.filter(id => valid.has(id))
+    if (!poolTargetLocationIds.value.length && selectedLocationId.value) {
+      poolTargetLocationIds.value = [selectedLocationId.value]
+    }
+  },
+  { immediate: true, deep: true },
+)
+
+function togglePoolLocation(id: string) {
+  if (poolTargetLocationIds.value.includes(id)) {
+    if (poolTargetLocationIds.value.length === 1) return
+    poolTargetLocationIds.value = poolTargetLocationIds.value.filter(x => x !== id)
+  } else {
+    poolTargetLocationIds.value = [...poolTargetLocationIds.value, id]
+  }
+}
+
+function toggleAllPoolLocations() {
+  if (poolAllLocationsSelected.value) {
+    poolTargetLocationIds.value = selectedLocationId.value
+      ? [selectedLocationId.value]
+      : (linkedLocations.value[0] ? [linkedLocations.value[0].id] : [])
+  } else {
+    poolTargetLocationIds.value = linkedLocations.value.map(l => l.id)
+  }
+}
 
 function onPoolFile(e: Event) {
   const input = e.target as HTMLInputElement
@@ -1618,6 +1723,12 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function locationLabel(locationId: string | null | undefined): string {
+  if (!locationId) return 'Alle Standorte (geteilt)'
+  const loc = linkedLocations.value.find(l => l.id === locationId)
+  return loc?.title || 'Standort'
+}
+
 async function loadMedia() {
   if (!selectedLocationId.value) return
   mediaLoading.value = true
@@ -1630,13 +1741,20 @@ async function loadMedia() {
 }
 
 async function uploadToPool() {
-  if (!poolFiles.value.length || !selectedLocationId.value) return
+  if (!poolFiles.value.length) return
+  const locationIds = [...poolTargetLocationIds.value]
+  if (!locationIds.length) {
+    alert('Mindestens einen Standort wählen')
+    return
+  }
   poolUploading.value = true
   photoResult.value = ''
   const files = [...poolFiles.value]
   const notes = poolNotes.value.trim()
+  const autoCaption = poolAutoCaption.value
   poolUploadProgress.value = { done: 0, total: files.length }
   let ok = 0
+  let captioned = 0
   const errors: string[] = []
 
   try {
@@ -1647,11 +1765,16 @@ async function uploadToPool() {
         const fd = new FormData()
         fd.append('file', compressed)
         fd.append('category', poolCategory.value)
-        fd.append('locationId', selectedLocationId.value)
+        fd.append('locationIds', JSON.stringify(locationIds))
         fd.append('approved', poolApprovedOnUpload.value ? 'true' : 'false')
+        fd.append('autoCaption', autoCaption ? 'true' : 'false')
         if (notes) fd.append('notes', notes)
-        await $fetch('/api/gbp/media/upload', { method: 'POST', body: fd })
+        const res = await $fetch<{ captionGenerated?: boolean; locationCount?: number }>('/api/gbp/media/upload', {
+          method: 'POST',
+          body: fd,
+        })
         ok++
+        if (res?.captionGenerated) captioned++
       } catch (e: any) {
         const status = e?.statusCode || e?.status || e?.data?.statusCode
         const msg = status === 413
@@ -1666,8 +1789,15 @@ async function uploadToPool() {
     if (ok) poolNotes.value = ''
     await loadMedia()
 
+    const locHint = locationIds.length > 1 ? ` für ${locationIds.length} Standorte` : ''
     if (ok && !errors.length) {
-      photoResult.value = ok === 1 ? 'Foto im Pool gespeichert' : `${ok} Fotos im Pool gespeichert`
+      if (autoCaption && captioned) {
+        photoResult.value = ok === 1
+          ? `Foto im Pool + KI-Caption${locHint}`
+          : `${ok} Fotos im Pool, ${captioned} mit KI-Caption${locHint}`
+      } else {
+        photoResult.value = ok === 1 ? `Foto im Pool gespeichert${locHint}` : `${ok} Fotos im Pool gespeichert${locHint}`
+      }
     } else if (ok && errors.length) {
       photoResult.value = `${ok} von ${files.length} Fotos gespeichert`
       alert(`Teilweise fehlgeschlagen:\n${errors.join('\n')}`)
@@ -1681,7 +1811,12 @@ async function uploadToPool() {
 }
 
 async function addUrlToPool() {
-  if (!photoUrl.value || !selectedLocationId.value) return
+  if (!photoUrl.value) return
+  const locationIds = [...poolTargetLocationIds.value]
+  if (!locationIds.length) {
+    alert('Mindestens einen Standort wählen')
+    return
+  }
   poolUploading.value = true
   try {
     await $fetch('/api/gbp/media', {
@@ -1689,14 +1824,16 @@ async function addUrlToPool() {
       body: {
         publicUrl: photoUrl.value,
         category: poolCategory.value,
-        locationId: selectedLocationId.value,
+        locationIds,
         approved: poolApprovedOnUpload.value,
         notes: poolNotes.value.trim() || undefined,
       },
     })
     photoUrl.value = ''
     poolNotes.value = ''
-    photoResult.value = 'URL im Pool gespeichert'
+    photoResult.value = locationIds.length > 1
+      ? `URL im Pool für ${locationIds.length} Standorte`
+      : 'URL im Pool gespeichert'
     await loadMedia()
   } catch (e: any) {
     alert(e?.data?.statusMessage || 'Hinzufügen fehlgeschlagen')
@@ -1959,6 +2096,7 @@ async function linkLocation(location: { locationId: string; title: string; gbpAc
 const settingsForm = ref({
   review_reply_mode: 'suggest',
   posts_per_week: 2,
+  photos_per_week: 2,
   photo_mode: 'off',
   brand_voice: '',
   default_cta_type: 'BOOK',
@@ -1975,6 +2113,7 @@ async function loadSettings() {
     settingsForm.value = {
       review_reply_mode: s.review_reply_mode ?? 'suggest',
       posts_per_week: s.posts_per_week ?? 2,
+      photos_per_week: s.photos_per_week ?? 2,
       photo_mode: s.photo_mode ?? 'off',
       brand_voice: s.brand_voice ?? '',
       default_cta_type: s.default_cta_type ?? 'BOOK',
