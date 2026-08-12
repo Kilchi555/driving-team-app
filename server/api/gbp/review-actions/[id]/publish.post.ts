@@ -6,7 +6,7 @@ import { replyToGbpReview } from '~/server/utils/gbp'
 
 /**
  * POST /api/gbp/review-actions/:id/publish
- * Publish a suggested review reply to Google.
+ * Publish a suggested (or failed) review reply to Google.
  */
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -29,6 +29,7 @@ export default defineEventHandler(async (event) => {
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
   if (!action) throw createError({ statusCode: 404, statusMessage: 'Action not found' })
   if (action.status === 'published') throw createError({ statusCode: 400, statusMessage: 'Already published' })
+  if (action.status === 'skipped') throw createError({ statusCode: 400, statusMessage: 'Action was skipped' })
 
   const comment = (body?.comment || action.suggested_reply || '').trim()
   if (!comment) throw createError({ statusCode: 400, statusMessage: 'No reply text' })
@@ -36,14 +37,16 @@ export default defineEventHandler(async (event) => {
   try {
     await replyToGbpReview(authUser.tenant_id, action.google_review_id, comment, action.location_id)
 
+    const nowIso = new Date().toISOString()
     const { data: updated } = await supabase
       .from('gbp_review_actions')
       .update({
         status: 'published',
         published_reply: comment,
         suggested_reply: comment,
+        published_at: nowIso,
         error_message: null,
-        updated_at: new Date().toISOString(),
+        updated_at: nowIso,
       })
       .eq('id', id)
       .select('*')
@@ -59,6 +62,6 @@ export default defineEventHandler(async (event) => {
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
-    throw createError({ statusCode: 500, statusMessage: err.message || 'Failed to publish reply' })
+    throw createError({ statusCode: 502, statusMessage: err.message || 'Failed to publish reply' })
   }
 })

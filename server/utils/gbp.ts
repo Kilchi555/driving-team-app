@@ -350,7 +350,17 @@ export async function getGbpReviews(tenantId: string, locationId?: string | null
       `${GBP_REVIEWS_BASE}/${loc.gbp_account_name}/${loc.gbp_location_id}/reviews?pageSize=20&orderBy=updateTime desc`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     )
-    return res.json()
+    const text = await res.text()
+    let data: any
+    try {
+      data = text ? JSON.parse(text) : {}
+    } catch {
+      throw new Error(`GBP Reviews API returned non-JSON (${res.status})`)
+    }
+    if (!res.ok) {
+      throw new Error(data?.error?.message || `GBP Reviews API error ${res.status}`)
+    }
+    return data
   })
 }
 
@@ -400,7 +410,16 @@ export async function getAllGbpReviews(
     if (pageToken) url.searchParams.set('pageToken', pageToken)
 
     const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } })
-    const data = await res.json() as GbpReviewsPage
+    const text = await res.text()
+    let data: GbpReviewsPage
+    try {
+      data = text ? JSON.parse(text) : { reviews: [], averageRating: 0, totalReviewCount: 0 }
+    } catch {
+      throw new Error(`GBP Reviews API returned non-JSON (${res.status})`)
+    }
+    if (!res.ok) {
+      throw new Error((data as any)?.error?.message || `GBP Reviews API error ${res.status}`)
+    }
 
     if (data.reviews?.length) allReviews.push(...data.reviews)
     pageToken = data.nextPageToken
@@ -527,7 +546,17 @@ export async function replyToGbpReview(
         body: JSON.stringify({ comment }),
       }
     )
-    return res.json()
+    const text = await res.text()
+    let data: any
+    try {
+      data = text ? JSON.parse(text) : {}
+    } catch {
+      throw new Error(`GBP Review Reply API returned non-JSON (${res.status})`)
+    }
+    if (!res.ok) {
+      throw new Error(data?.error?.message || `GBP Review Reply failed (${res.status})`)
+    }
+    return data
   })
 }
 
