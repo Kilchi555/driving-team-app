@@ -838,11 +838,14 @@ export default defineEventHandler(async (event) => {
                     registration_date: new Date().toISOString(),
                     registered_at: new Date().toISOString(),
                     custom_sessions: payment.metadata?.custom_sessions || null,
-                    is_partial_enrollment: !!(payment.metadata?.is_partial_enrollment),
+                    is_partial_enrollment: payment.metadata?.is_partial_enrollment === true
+                      || String(payment.metadata?.is_partial_enrollment || '') === 'true',
                     partial_start_session: payment.metadata?.partial_start_session != null
+                      && payment.metadata?.partial_start_session !== ''
                       ? Number(payment.metadata.partial_start_session)
                       : null,
                     individual_session_number: payment.metadata?.individual_session_number != null
+                      && payment.metadata?.individual_session_number !== ''
                       ? Number(payment.metadata.individual_session_number)
                       : null,
                     sari_synced: false,
@@ -911,15 +914,19 @@ export default defineEventHandler(async (event) => {
                       amount_paid_rappen: regPayload.amount_paid_rappen,
                       discount_applied_rappen: regPayload.discount_applied_rappen,
                       custom_sessions: regPayload.custom_sessions,
-                      is_partial_enrollment: regPayload.is_partial_enrollment,
+                      is_partial_enrollment: payment.metadata?.is_partial_enrollment === true
+                        || String(payment.metadata?.is_partial_enrollment || '') === 'true',
                       partial_start_session: payment.metadata?.partial_start_session != null
+                        && payment.metadata?.partial_start_session !== ''
                         ? Number(payment.metadata.partial_start_session)
                         : null,
                       individual_session_number: payment.metadata?.individual_session_number != null
+                        && payment.metadata?.individual_session_number !== ''
                         ? Number(payment.metadata.individual_session_number)
                         : null,
                       vehicle_id: regPayload.vehicle_id,
                       sari_synced: false,
+                      sari_synced_at: null,
                       webhook_processed_at: new Date().toISOString(),
                       updated_at: new Date().toISOString(),
                     }
@@ -1262,6 +1269,7 @@ export default defineEventHandler(async (event) => {
                         partial_start_session: regData.partial_start_session ?? null,
                         individual_session_number: regData.individual_session_number ?? null,
                         sari_synced: false,
+                        sari_synced_at: null,
                         webhook_processed_at: new Date().toISOString(),
                         updated_at: new Date().toISOString(),
                         notes: existing.notes && String(existing.notes).includes('Auto-imported from SARI')
@@ -2360,7 +2368,7 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
           sari_course_id,
           is_partial_only,
           tenant_id,
-          course_sessions(id, start_time, session_number, sari_session_id)
+          course_sessions(id, start_time, session_number, sari_session_id, allow_individual_booking)
         )
       `)
       .eq('id', registrationId)
@@ -2403,7 +2411,9 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
       } else if (payment?.metadata?.birthdate) {
         birthdate = payment.metadata.birthdate
       }
-      if (payment?.metadata?.individual_session_number != null) {
+      if (payment?.metadata?.individual_session_number != null
+        && payment.metadata.individual_session_number !== ''
+        && Number.isFinite(Number(payment.metadata.individual_session_number))) {
         individualSessionNum = Number(payment.metadata.individual_session_number)
         logger.debug('✅ Got individual_session_number from payment metadata:', individualSessionNum)
       }

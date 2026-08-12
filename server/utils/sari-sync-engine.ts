@@ -871,16 +871,17 @@ export class SARISyncEngine {
             .maybeSingle()
 
           if (!existingByFaberid) {
-            // Skip auto-import while an online checkout is still open for this faberid+course.
-            // Otherwise validateAllSessions leftovers get imported mid-payment and the Wallee
-            // webhook hits unique(faberid) before it can create/enroll the paid registration.
+            // Skip auto-import while an online checkout is still open for this faberid+course
+            // (recent pending/processing only — abandoned rows must not block imports forever).
             let openCheckout = false
             try {
+              const checkoutWindowIso = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
               const { data: openPays } = await this.supabase
                 .from('payments')
                 .select('id, payment_status, metadata, course_registration_id, created_at')
                 .eq('tenant_id', this.tenantId)
                 .in('payment_status', ['pending', 'processing', 'authorized'])
+                .gte('created_at', checkoutWindowIso)
                 .contains('metadata', { course_id: simyCourseId })
                 .order('created_at', { ascending: false })
                 .limit(30)
