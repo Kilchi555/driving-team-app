@@ -71,6 +71,19 @@ export async function getTenantSmsUsage(
   return (data || []).reduce((sum: number, row: any) => sum + (Number(row.segment_count) || 1), 0)
 }
 
+export function isSmsOverageWaived(policy: Record<string, any> | null | undefined, now: Date = new Date()): boolean {
+  const p = policy || {}
+  if (p.sms_overage_waived === true) return true
+  const until = typeof p.sms_overage_waived_until === 'string' ? p.sms_overage_waived_until.trim() : ''
+  if (!until) return false
+  // Inclusive end of UTC day for YYYY-MM-DD
+  const end = until.length <= 10
+    ? new Date(`${until}T23:59:59.999Z`)
+    : new Date(until)
+  if (Number.isNaN(end.getTime())) return false
+  return now.getTime() <= end.getTime()
+}
+
 export async function getTenantSmsQuotaSnapshot(
   supabase: SupabaseClient,
   tenantId: string,
@@ -83,7 +96,7 @@ export async function getTenantSmsQuotaSnapshot(
 
   const plan = tenant?.subscription_plan || 'trial'
   const policy = (tenant?.booking_policy as Record<string, any>) || {}
-  const overageWaived = policy.sms_overage_waived === true
+  const overageWaived = isSmsOverageWaived(policy)
   const included = getIncludedSmsSegments(plan)
   const periodStart = getBillingPeriodStart()
   const used = await getTenantSmsUsage(supabase, tenantId, periodStart)

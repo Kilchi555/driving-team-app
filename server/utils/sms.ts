@@ -154,6 +154,7 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
     getTenantSmsUsage,
     getBillingPeriodStart,
     SmsQuotaExceededError,
+    isSmsOverageWaived,
   } = await import('~/server/utils/sms-quota')
   const { getIncludedSmsSegments, SMS_OVERAGE_CHF_PER_SEGMENT } = await import('~/utils/planFeatures')
   const { ensureSmsOverageSubscriptionItem, reportSmsOverageUsage } = await import('~/server/utils/sms-stripe')
@@ -170,7 +171,8 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
   const policy = (tenant?.booking_policy as Record<string, any>) || {}
   // Soft-cap by default. Hard-stop only when tenant explicitly enables it.
   // Trial / no payment method: keep sending + counting; overage billed only once Stripe exists.
-  const overageWaived = policy.sms_overage_waived === true
+  // Kulanz: sms_overage_waived / sms_overage_waived_until — after that, normal billing.
+  const overageWaived = isSmsOverageWaived(policy)
   const canBillOverage = !overageWaived && !!(tenant?.stripe_subscription_id && tenant?.stripe_customer_id)
   const hardStop = opts.hardStop !== undefined
     ? opts.hardStop
