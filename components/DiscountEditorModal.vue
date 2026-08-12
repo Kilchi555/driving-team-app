@@ -219,15 +219,18 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Alle Kategorien</option>
+              <option value="B Automatik,B Schaltung">B – Automatik & Schaltung</option>
+              <option value="B Automatik">B Automatik</option>
+              <option value="B Schaltung">B Schaltung</option>
+              <option value="B">B (nur Code «B»)</option>
               <option value="A">A - Motorrad/Roller</option>
-              <option value="B">B - Auto</option>
               <option value="BE">BE - Auto mit Anhänger</option>
               <option value="C">C - LKW</option>
               <option value="D">D - Bus</option>
               <option value="BPT">BPT - Taxi</option>
               <option value="Motorboot">Motorboot</option>
             </select>
-            <p class="text-xs text-gray-500 mt-1">Rabatt gilt nur für diese Fahrzeugkategorie</p>
+            <p class="text-xs text-gray-500 mt-1">Rabatt gilt nur für diese Fahrzeugkategorie (Komma = mehrere Codes)</p>
           </div>
 
           <!-- Description -->

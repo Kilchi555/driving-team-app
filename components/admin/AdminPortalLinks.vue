@@ -326,7 +326,13 @@ async function loadExtras() {
         const params = new URLSearchParams()
         params.set('code', code)
         if (d.category_filter && d.category_filter !== 'all') {
-          params.set('category', d.category_filter)
+          const parts = String(d.category_filter).split(',').map((p: string) => p.trim()).filter(Boolean)
+          let category = parts[0] || null
+          if (parts.length > 1) {
+            const parents = [...new Set(parts.map((c: string) => (c.includes(' ') ? c.split(' ')[0] : c)))]
+            if (parents.length === 1) category = parents[0]
+          }
+          if (category) params.set('category', category)
         }
         return {
           id: String(d.id),

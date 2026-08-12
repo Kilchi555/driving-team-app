@@ -2,6 +2,7 @@ import { defineEventHandler, createError, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
+import { matchesDiscountCategoryFilter } from '~/server/utils/discount-category-filter'
 
 /**
  * POST /api/discounts/validate
@@ -209,8 +210,8 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Check category filter
-    if (discount.category_filter && discount.category_filter !== 'all' && discount.category_filter !== categoryCode) {
+    // Check category filter (single code or comma-separated list)
+    if (!matchesDiscountCategoryFilter(discount.category_filter, categoryCode)) {
       return {
         isValid: false,
         discount_amount_rappen: 0,

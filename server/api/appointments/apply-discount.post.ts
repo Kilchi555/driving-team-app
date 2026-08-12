@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { roundToNearest5Rappen } from '~/utils/rounding'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { matchesDiscountCategoryFilter } from '~/server/utils/discount-category-filter'
 
 /**
  * POST /api/appointments/apply-discount
@@ -212,6 +213,19 @@ export default defineEventHandler(async (event) => {
         if ((count ?? 0) > 1) {
           // > 1 because the current appointment already exists as confirmed
           return { isValid: false, error: `Dieser Code gilt nur für die erste ${appointmentSingular}` }
+        }
+      }
+
+      if (isLessonPayment && payment.appointment_id) {
+        const { data: appt } = await supabase
+          .from('appointments')
+          .select('type')
+          .eq('id', payment.appointment_id)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+
+        if (!matchesDiscountCategoryFilter(discountData.category_filter, appt?.type)) {
+          return { isValid: false, error: 'Gutschein gilt nicht für diese Kategorie' }
         }
       }
 
