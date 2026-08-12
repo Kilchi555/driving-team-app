@@ -2476,12 +2476,19 @@ const promoBookingLinks = ref<{
   url: string
 }[]>([])
 
+const primaryCategoryFromFilter = (filter?: string | null): string | null => {
+  if (!filter || filter === 'all') return null
+  const parts = String(filter).split(',').map((p) => p.trim()).filter(Boolean)
+  if (!parts.length) return null
+  if (parts.length === 1) return parts[0]
+  const parents = [...new Set(parts.map((c) => (c.includes(' ') ? c.split(' ')[0] : c)))]
+  return parents.length === 1 ? parents[0]! : parts[0]!
+}
+
 const buildPromoBookingUrl = (discount: { code: string; category_filter?: string | null }) => {
   const params = new URLSearchParams()
   params.set('code', String(discount.code).trim())
-  const category = discount.category_filter && discount.category_filter !== 'all'
-    ? discount.category_filter
-    : null
+  const category = primaryCategoryFromFilter(discount.category_filter)
   if (category) params.set('category', category)
   return `${bookingPageLink.value}?${params.toString()}`
 }

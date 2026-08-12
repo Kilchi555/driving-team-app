@@ -1,7 +1,8 @@
-import { defineEventHandler, createError } from 'h3'
+import { defineEventHandler, createError, getRouterParam } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
+import { matchesDiscountCategoryFilter } from '~/server/utils/discount-category-filter'
 
 /**
  * GET /api/discounts/by-category/:categoryCode
@@ -28,7 +29,6 @@ export default defineEventHandler(async (event) => {
       .eq('tenant_id', authUser.tenant_id)
       .eq('is_active', true)
       .is('deleted_at', null)
-      .or(`category_filter.eq.${categoryCode},category_filter.eq.all`)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -39,12 +39,16 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    logger.debug('✅ Loaded category discounts:', discounts?.length || 0)
+    const filtered = (discounts || []).filter((d: any) =>
+      matchesDiscountCategoryFilter(d.category_filter, categoryCode)
+    )
+
+    logger.debug('✅ Loaded category discounts:', filtered.length)
 
     return {
       success: true,
-      data: discounts || [],
-      count: (discounts || []).length
+      data: filtered,
+      count: filtered.length
     }
   } catch (err: any) {
     logger.error('❌ Error in GET /api/discounts/by-category/:categoryCode:', err.message)
