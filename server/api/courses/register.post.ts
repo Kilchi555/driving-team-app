@@ -1,6 +1,6 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { formatResendFrom } from '~/server/utils/format-resend-from'
+import { sendEmail } from '~/server/utils/email'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
@@ -67,10 +67,10 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // Load tenant for branding
+    // Load tenant for branding + verified from-address
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, contact_email, primary_color')
+      .select('name, contact_email, primary_color, from_email, resend_domain_verified')
       .eq('id', body.tenant_id)
       .single()
 
@@ -121,19 +121,20 @@ export default defineEventHandler(async (event) => {
 
     // Send emails (non-blocking)
     try {
-      const { Resend } = await import('resend')
-      const resend = new Resend(process.env.RESEND_API_KEY)
-      const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
-      const fromWithName = formatResendFrom(tenantName, fromEmail)
-      const teamEmail = 'info@drivingteam.ch'
+      const tenantFrom = {
+        fromName: tenantName,
+        fromEmail: tenant?.from_email ?? null,
+        domainVerified: !!tenant?.resend_domain_verified,
+      }
+      const teamEmail = tenant?.contact_email || 'info@drivingteam.ch'
       const courseLabel = COURSE_TYPE_LABELS[body.course_type] || body.course_type
       const isDefinitiveRegistration = !!(body.course_dates && body.course_dates.length > 0)
 
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
       // Team notification
-      await resend.emails.send({
-        from: fromWithName,
+      await sendEmail({
+        ...tenantFrom,
         to: teamEmail,
         subject: isDefinitiveRegistration
           ? `Neue Anmeldung: ${body.course_title || courseLabel} – ${body.first_name} ${body.last_name}`
@@ -145,8 +146,8 @@ export default defineEventHandler(async (event) => {
 
       // Customer confirmation (only if email provided)
       if (body.email) {
-        await resend.emails.send({
-          from: fromWithName,
+        await sendEmail({
+          ...tenantFrom,
           to: body.email,
           subject: isDefinitiveRegistration
             ? `Anmeldebestätigung: ${courseLabel}`

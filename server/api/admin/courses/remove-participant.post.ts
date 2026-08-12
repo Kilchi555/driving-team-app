@@ -6,6 +6,7 @@ import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure
 import { generateCourseRegistrationCancellationEmail } from '~/server/utils/email-templates'
 import { formatCourseSessionLine } from '~/utils/format-course-sessions'
 import { logger } from '~/utils/logger'
+import { sendEmail } from '~/server/utils/email'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
@@ -94,7 +95,7 @@ export default defineEventHandler(async (event) => {
   // Load tenant info for the email
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, contact_email, primary_color, logo_wide_url, logo_url, logo_square_url')
+    .select('name, contact_email, primary_color, from_email, resend_domain_verified, logo_wide_url, logo_url, logo_square_url')
     .eq('id', profile.tenant_id)
     .single()
 
@@ -403,12 +404,14 @@ export default defineEventHandler(async (event) => {
         logoUrl,
       })
 
-      const { Resend } = await import('resend')
-      const resend = new Resend(process.env.RESEND_API_KEY)
-      const fromEmail   = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
-      const fromWithName = tenant?.name ? `${tenant.name} <${fromEmail}>` : fromEmail
-
-      await resend.emails.send({ from: fromWithName, to: recipientEmail, subject, html })
+      await sendEmail({
+        to: recipientEmail,
+        subject,
+        html,
+        fromName: tenant?.name || undefined,
+        fromEmail: tenant?.from_email ?? null,
+        domainVerified: !!tenant?.resend_domain_verified,
+      })
       logger.info('✅ Cancellation email sent to:', recipientEmail)
     } catch (emailErr: any) {
       logger.warn('⚠️ Cancellation email failed (non-fatal):', emailErr.message)
