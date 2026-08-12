@@ -455,16 +455,11 @@ export class SARIClient {
   }
 
   /**
-   * Validate enrollment for ALL sessions (including custom swapped sessions)
-   * Does a test enrollment and immediately unenrolls to check for deadline violations etc.
-   * @param sessionIds Array of SARI session IDs to validate
-   * @param faberid Student's FABER ID
-   * @param birthdate Student's birthdate (YYYY-MM-DD)
-   */
-  /**
    * Validate that SARI will accept enrollment for all sessions.
-   * Uses real enroll + rollback (SARI has no dry-run). Must not leave leftovers:
-   * incomplete rollback blocks checkout so SARI-sync cannot import a partial seat mid-payment.
+   * Uses real enroll + rollback (SARI has no dry-run). Incomplete rollback is
+   * retried/verified; if leftovers remain after a successful capability check we
+   * still allow checkout (payment is created next; webhook re-enrolls all paid
+   * sessions and SARI sync skips open checkouts).
    */
   async validateAllSessions(
     sessionIds: string[],
@@ -473,14 +468,13 @@ export class SARIClient {
   ): Promise<{ canEnroll: boolean; reason?: string; failedSessionId?: string }> {
     const enrolledSessions: string[] = []
     const normFid = (v: string) => String(v || '').replace(/^0+/, '') || String(v || '')
-    const faberNorm = normFid(faberid)
 
-    const isMember = async (sessionId: string): Promise<boolean> => {
+    const isMember = async (sessionId: string): Promise<boolean | null> => {
       try {
         const members = await this.getCourseDetail(parseInt(sessionId))
-        return members.some(m => normFid(m.faberid) === faberNorm)
+        return members.some(m => normFid(m.faberid) === normFid(faberid))
       } catch {
-        return false
+        return null // unknown — caller may try enroll
       }
     }
 
@@ -488,17 +482,12 @@ export class SARIClient {
       for (const sessionId of sessionIds) {
         const numericId = parseInt(sessionId)
 
-        // First check if already enrolled
-        try {
-          if (await isMember(sessionId)) {
-            console.log(`⏭️ Session ${sessionId}: Already enrolled (OK for validation)`)
-            continue
-          }
-        } catch (e) {
-          // If getCourseDetail fails, try enrollment anyway
+        const membership = await isMember(sessionId)
+        if (membership === true) {
+          console.log(`⏭️ Session ${sessionId}: Already enrolled (OK for validation)`)
+          continue
         }
 
-        // Try to enroll (test)
         try {
           console.log(`🔍 Test enrollment for session ${sessionId}...`)
           await this.enrollStudent(numericId, faberid, birthdate)
@@ -512,16 +501,13 @@ export class SARIClient {
             continue
           }
 
+          // Capability failure — rollback our test seats, then reject checkout
+          const cleaned = await this.rollbackTestEnrollments(enrolledSessions, faberid)
+          if (!cleaned.ok) {
+            console.error(`❌ Rollback incomplete after failed validate (session ${cleaned.leftoverSessionId})`)
+          }
+
           if (errorMsg.includes('COURSE_PERSON_DEADLINE_VIOLATED')) {
-            console.log(`❌ Session ${sessionId}: Deadline violated`)
-            const cleaned = await this.rollbackTestEnrollments(enrolledSessions, faberid)
-            if (!cleaned.ok) {
-              return {
-                canEnroll: false,
-                reason: 'Temporäre SARI-Reservierung konnte nicht zurückgesetzt werden. Bitte in 1–2 Minuten erneut versuchen.',
-                failedSessionId: cleaned.leftoverSessionId || sessionId,
-              }
-            }
             return {
               canEnroll: false,
               reason: 'Die Anmeldefrist für diesen Kurs ist abgelaufen. Bitte wählen Sie einen anderen Termin.',
@@ -530,15 +516,6 @@ export class SARIClient {
           }
 
           if (errorMsg.includes('COURSE_FULL') || errorMsg.includes('NO_FREE_PLACES')) {
-            console.log(`❌ Session ${sessionId}: Course full`)
-            const cleaned = await this.rollbackTestEnrollments(enrolledSessions, faberid)
-            if (!cleaned.ok) {
-              return {
-                canEnroll: false,
-                reason: 'Temporäre SARI-Reservierung konnte nicht zurückgesetzt werden. Bitte in 1–2 Minuten erneut versuchen.',
-                failedSessionId: cleaned.leftoverSessionId || sessionId,
-              }
-            }
             return {
               canEnroll: false,
               reason: 'Der ausgewählte Termin ist leider bereits ausgebucht.',
@@ -547,14 +524,6 @@ export class SARIClient {
           }
 
           console.error(`❌ Session ${sessionId}: ${errorMsg}`)
-          const cleaned = await this.rollbackTestEnrollments(enrolledSessions, faberid)
-          if (!cleaned.ok) {
-            return {
-              canEnroll: false,
-              reason: 'Temporäre SARI-Reservierung konnte nicht zurückgesetzt werden. Bitte in 1–2 Minuten erneut versuchen.',
-              failedSessionId: cleaned.leftoverSessionId || sessionId,
-            }
-          }
           return {
             canEnroll: false,
             reason: `Anmeldung nicht möglich: ${errorMsg}`,
@@ -563,21 +532,24 @@ export class SARIClient {
         }
       }
 
-      // All sessions validated - rollback test enrollments and verify they are gone
+      // All sessions accepted — rollback test seats. If a leftover remains, still
+      // allow checkout: blocking here strands the student in SARI with no payment
+      // row (sync can import + next attempt hits 409). Webhook enroll + open-checkout
+      // sync skip heal the leftover after pay.
       const cleaned = await this.rollbackTestEnrollments(enrolledSessions, faberid)
       if (!cleaned.ok) {
-        console.error(`❌ SARI test-enroll rollback incomplete; leftover session ${cleaned.leftoverSessionId}`)
-        return {
-          canEnroll: false,
-          reason: 'Temporäre SARI-Reservierung konnte nicht vollständig zurückgesetzt werden. Bitte in 1–2 Minuten erneut versuchen.',
-          failedSessionId: cleaned.leftoverSessionId,
-        }
+        console.error(
+          `🚨 SARI test-enroll leftover after validate (session ${cleaned.leftoverSessionId}, faberid ${faberid}) — allowing checkout; webhook must complete full enroll`
+        )
       }
 
       return { canEnroll: true }
     } catch (error: any) {
       console.error('❌ validateAllSessions error:', error.message)
-      await this.rollbackTestEnrollments(enrolledSessions, faberid)
+      const cleaned = await this.rollbackTestEnrollments(enrolledSessions, faberid)
+      if (!cleaned.ok) {
+        console.error(`🚨 Rollback incomplete after validate error (session ${cleaned.leftoverSessionId})`)
+      }
       return { canEnroll: false, reason: `Validierungsfehler: ${error.message}` }
     }
   }
