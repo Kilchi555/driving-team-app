@@ -64,7 +64,18 @@ async function uploadInquiryConversionViaSimy(
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { first_name, last_name, email, phone, notes, company, marketing_attribution } = body
+    const {
+      first_name,
+      last_name,
+      email,
+      phone,
+      notes,
+      company,
+      marketing_attribution,
+      category_code,
+      location_id,
+      duration_minutes,
+    } = body
 
     // Validate required fields
     if (!first_name?.trim() || !last_name?.trim() || !email?.trim() || !phone?.trim()) {
@@ -96,6 +107,16 @@ export default defineEventHandler(async (event) => {
       ? `Firma: ${company.trim()}\n\n${notes.trim()}`
       : notes.trim()
 
+    const categoryCode = typeof category_code === 'string' && category_code.trim()
+      ? category_code.trim().slice(0, 64)
+      : null
+    const locationId = typeof location_id === 'string' && location_id.trim()
+      ? location_id.trim()
+      : null
+    const durationMinutes = Number.isFinite(Number(duration_minutes)) && Number(duration_minutes) > 0
+      ? Math.round(Number(duration_minutes))
+      : null
+
     const attr = marketing_attribution as MarketingAttributionPayload | null | undefined
     const { data: proposal, error: dbError } = await supabase
       .from('booking_proposals')
@@ -106,9 +127,9 @@ export default defineEventHandler(async (event) => {
         email: email.trim().toLowerCase(),
         phone: phone.trim(),
         notes: fullNotes,
-        category_code: null,
-        duration_minutes: null,
-        location_id: null,
+        category_code: categoryCode,
+        duration_minutes: durationMinutes,
+        location_id: locationId,
         staff_id: null,
         preferred_time_slots: [],
         status: 'pending',

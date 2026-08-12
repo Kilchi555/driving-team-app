@@ -115,11 +115,26 @@ type VercelConfig = {
 
 export function getVercelDomainConfig(): VercelConfig | null {
   const config = useRuntimeConfig()
-  const token = String((config as any).vercelToken || process.env.VERCEL_TOKEN || '').trim()
-  const projectId = String(
-    (config as any).vercelProjectId || process.env.VERCEL_PROJECT_ID || process.env.VERCEL_PROJECT_ID_APP || '',
+  const token = String(
+    (config as any).vercelToken ||
+      process.env['NUXT_VERCEL_TOKEN'] ||
+      process.env['VERCEL_TOKEN'] ||
+      '',
   ).trim()
-  const teamId = String((config as any).vercelTeamId || process.env.VERCEL_TEAM_ID || '').trim() || undefined
+  const projectId = String(
+    (config as any).vercelProjectId ||
+      process.env['NUXT_VERCEL_PROJECT_ID'] ||
+      process.env['VERCEL_PROJECT_ID'] ||
+      process.env['VERCEL_PROJECT_ID_APP'] ||
+      '',
+  ).trim()
+  const teamId =
+    String(
+      (config as any).vercelTeamId ||
+        process.env['NUXT_VERCEL_TEAM_ID'] ||
+        process.env['VERCEL_TEAM_ID'] ||
+        '',
+    ).trim() || undefined
   if (!token || !projectId) return null
   return { token, projectId, teamId }
 }

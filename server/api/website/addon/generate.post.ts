@@ -204,7 +204,10 @@ export default defineEventHandler(async (event) => {
     slug = `${suggestAddonSlug(pageType, inputs)}-${i + 2}`
   }
 
-  const siteUrl = `${base}/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(slug)}`
+  const siteUrl =
+    website.custom_domain_verified && website.custom_domain
+      ? `https://${String(website.custom_domain).replace(/\/$/, '')}/${encodeURIComponent(slug)}`
+      : `${base}/s/${encodeURIComponent(website.subdomain)}/${encodeURIComponent(slug)}`
 
   const aiCopy = await generateAiCopy({
     pageType,

@@ -14,7 +14,13 @@ export type WebsiteSeoContext = {
   name: string
   seo_title: string | null
   seo_description: string | null
-  pages: Array<{ slug: string; title: string; is_home: boolean; page_type: string | null }>
+  pages: Array<{
+    slug: string
+    title: string
+    is_home: boolean
+    page_type: string | null
+    updated_at: string | null
+  }>
 }
 
 export async function resolveWebsiteSeoContext(event: any): Promise<WebsiteSeoContext | null> {
@@ -62,7 +68,7 @@ export async function resolveWebsiteSeoContext(event: any): Promise<WebsiteSeoCo
 
   const { data: pages } = await supabase
     .from('website_pages')
-    .select('slug, title, is_home, page_type, is_published')
+    .select('slug, title, is_home, page_type, is_published, updated_at')
     .eq('website_id', website.id)
     .eq('is_published', true)
 
@@ -87,6 +93,7 @@ export async function resolveWebsiteSeoContext(event: any): Promise<WebsiteSeoCo
       title: p.title,
       is_home: !!p.is_home,
       page_type: p.page_type,
+      updated_at: p.updated_at || null,
     })),
   }
 }

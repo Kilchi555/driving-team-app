@@ -2160,6 +2160,12 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 // New flow state
 const currentStep = ref(0)
 const showProposalFormManually = ref(false) // Manually trigger proposal form even if slots exist
+/** Deep-link ?proposal=1 from website empty-slot teaser */
+const preferProposalFromQuery = computed(() => {
+  const p = route.query.proposal
+  const raw = Array.isArray(p) ? p[0] : p
+  return raw === '1' || raw === 'true' || raw === 'yes'
+})
 const selectedServiceType = ref<'fahrstunde' | 'theorie' | 'beratung'>('fahrstunde') // Step 0 selection
 
 const serviceTypes = computed(() => [
@@ -3777,6 +3783,16 @@ const selectInstructor = async (instructor: any) => {
     showProposalFormManually.value = true
     currentStep.value = 6
     saveBookingPrefs()
+    return
+  }
+
+  // Website teaser: no visible slots → open proposal path after staff pick
+  if (preferProposalFromQuery.value) {
+    showProposalFormManually.value = true
+    currentStep.value = 6
+    saveBookingPrefs()
+    // Still fetch slots in background so user can switch back if any appear
+    void generateTimeSlotsForSpecificCombination()
     return
   }
 

@@ -56,7 +56,10 @@
         </select>
       </div>
 
-      <div v-if="filteredLeads.length === 0" class="py-16 text-center text-gray-400">
+      <div v-if="loadingLeads" class="py-16 text-center text-gray-400">
+        <p class="font-600">Lädt…</p>
+      </div>
+      <div v-else-if="filteredLeads.length === 0" class="py-16 text-center text-gray-400">
         <p class="text-3xl mb-3">📭</p>
         <p class="font-600">Noch keine Anfragen</p>
         <p class="text-sm mt-1">Sobald jemand ein Formular auf der Website ausfüllt, erscheint es hier.</p>
@@ -145,7 +148,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 
 definePageMeta({ layout: 'admin', middleware: ['admin'] })
@@ -156,20 +159,32 @@ const { t } = useTerminology()
 
 const filterType = ref('')
 const selectedLead = ref<any>(null)
+const loadingLeads = ref(true)
 
-// Demo-Daten — werden später durch echte Supabase-Queries ersetzt
-const newLeads = ref([
-  { id: '1', first_name: 'Luca', last_name: 'Müller', email: 'luca@beispiel.ch', phone: '079 123 45 67', type: 'booking', status: 'new', created_at: new Date().toISOString(), course_date: null, message: null },
-  { id: '2', first_name: 'Sara', last_name: 'Meier', email: 'sara@beispiel.ch', phone: '078 234 56 78', type: 'vku', status: 'new', created_at: new Date(Date.now() - 3600000).toISOString(), course_date: '18. – 19. Juni 2026', message: null },
-  { id: '3', first_name: 'Noah', last_name: 'Keller', email: 'noah@beispiel.ch', phone: '076 345 67 89', type: 'nothilfe', status: 'contacted', created_at: new Date(Date.now() - 86400000).toISOString(), course_date: null, message: 'Wann ist der nächste Kurs?' },
-])
+const newLeads = ref<any[]>([])
 
-const kpis = ref([
-  { label: 'Leads gesamt', value: '3', trend: 0 },
-  { label: 'Diese Woche', value: '2', trend: 50 },
-  { label: 'Conversion Rate', value: '–', trend: 0 },
-  { label: 'Ø Antwortzeit', value: '–', trend: 0 },
-])
+const kpis = computed(() => {
+  const all = newLeads.value
+  const weekAgo = Date.now() - 7 * 86400000
+  const thisWeek = all.filter((l) => new Date(l.created_at).getTime() >= weekAgo).length
+  return [
+    { label: 'Leads gesamt', value: String(all.length), trend: 0 },
+    { label: 'Diese Woche', value: String(thisWeek), trend: 0 },
+    { label: 'Conversion Rate', value: '–', trend: 0 },
+    { label: 'Ø Antwortzeit', value: '–', trend: 0 },
+  ]
+})
+
+onMounted(async () => {
+  try {
+    const res = await $fetch<{ leads: any[] }>('/api/website/leads')
+    newLeads.value = res?.leads || []
+  } catch {
+    newLeads.value = []
+  } finally {
+    loadingLeads.value = false
+  }
+})
 
 const filteredLeads = computed(() =>
   filterType.value ? newLeads.value.filter(l => l.type === filterType.value) : newLeads.value

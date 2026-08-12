@@ -5,6 +5,7 @@
 import { getTerminologyDefaults } from '~/composables/useTerminology'
 import type { LandingPagePayload } from '~/utils/website-slot-schema'
 import { slugifySubdomain } from '~/server/utils/website-landing-builder'
+import { schemaBusinessType } from '~/server/utils/website-local-seo'
 
 export type AddonPageType = 'location' | 'category' | 'prices'
 
@@ -88,11 +89,11 @@ export function buildAddonPage(ctx: AddonBuildContext): LandingPagePayload {
   const seoTitle = (ctx.copy.seo_title || `${pageLabel} | ${name}`).slice(0, 60)
   const seoDescription = (
     ctx.copy.seo_description ||
-    `${pageLabel} bei ${name}. Online-Terminbuchung, klare Infos, Schweizer Service.`
+    `${pageLabel} bei ${name}. Klare Infos, transparente Preise, online buchen.`
   ).slice(0, 160)
   const seoKeywords =
     ctx.copy.seo_keywords ||
-    [pageLabel, name, ctx.inputs.keywords, t.bookAction].filter(Boolean).join(', ').slice(0, 200)
+    [pageLabel, name, ctx.inputs.keywords, t.bookAction, t.businessNoun].filter(Boolean).join(', ').slice(0, 200)
 
   const faqs =
     ctx.copy.faq?.length
@@ -102,8 +103,8 @@ export function buildAddonPage(ctx: AddonBuildContext): LandingPagePayload {
             q: formal === 'du' ? `Wie buche ich in ${pageLabel}?` : `Wie buche ich in ${pageLabel}?`,
             a:
               formal === 'du'
-                ? `Über die Online-Terminbuchung wählst du einen freien Slot und buchst direkt.`
-                : `Über die Online-Terminbuchung wählen Sie einen freien Slot und buchen direkt.`,
+                ? `Über die Online-Buchung auf dieser Seite wählst du einen freien Slot und buchst direkt.`
+                : `Über die Online-Buchung auf dieser Seite wählen Sie einen freien Slot und buchen direkt.`,
           },
           {
             q: 'Welche Preise gelten?',
@@ -136,6 +137,7 @@ export function buildAddonPage(ctx: AddonBuildContext): LandingPagePayload {
         headline: ctx.copy.headline,
         subheadline: ctx.copy.subheadline,
         image_url: heroImage,
+        image_alt: `${name} — ${pageLabel}`,
         cta_primary_text: t.bookAction,
         cta_primary_url: ctx.bookingUrl,
         cta_secondary_text: 'Mehr erfahren',
@@ -221,10 +223,49 @@ export function buildAddonPage(ctx: AddonBuildContext): LandingPagePayload {
     blocks,
     schema: {
       '@context': 'https://schema.org',
-      '@type': ctx.pageType === 'location' ? 'LocalBusiness' : 'WebPage',
-      name: seoTitle,
-      description: seoDescription,
-      url: ctx.siteUrl,
+      '@graph': [
+        {
+          '@type':
+            ctx.pageType === 'location'
+              ? schemaBusinessType(ctx.tenant.business_type)
+              : 'WebPage',
+          '@id': `${ctx.siteUrl}#page`,
+          name: seoTitle,
+          description: seoDescription,
+          url: ctx.siteUrl,
+          isPartOf: { '@id': `${ctx.siteUrl.replace(/\/[^/]*$/, '') || ctx.siteUrl}#website` },
+          ...(ctx.pageType === 'location'
+            ? {
+                address: {
+                  '@type': 'PostalAddress',
+                  addressLocality: ctx.inputs.city || ctx.tenant.city || undefined,
+                  addressCountry: 'CH',
+                },
+                areaServed: ctx.inputs.city
+                  ? { '@type': 'City', name: ctx.inputs.city }
+                  : undefined,
+              }
+            : {}),
+        },
+        {
+          '@type': 'BreadcrumbList',
+          '@id': `${ctx.siteUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: name,
+              item: ctx.siteUrl.replace(/\/[^/]*$/, '') || ctx.siteUrl,
+            },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: pageLabel,
+              item: ctx.siteUrl,
+            },
+          ],
+        },
+      ],
     },
   }
 }
@@ -252,7 +293,7 @@ export function fallbackAddonCopy(
           : `Buchen Sie online am Standort ${inputs.city || ''}. Klar, lokal, ohne Wartezeit am Telefon.`,
       body: inputs.notes || `Alles Wichtige zu ${label} — Anfahrt, Angebot und Buchung.`,
       seo_title: `${inputs.city || 'Standort'} | ${tenantName}`.slice(0, 60),
-      seo_description: `${tenantName} in ${inputs.city || 'der Schweiz'}: Online-Terminbuchung und lokale Infos.`.slice(0, 160),
+      seo_description: `${tenantName} in ${inputs.city || 'der Schweiz'}: Angebot, Preise und Online-Buchung vor Ort.`.slice(0, 160),
       seo_keywords: [inputs.keywords, inputs.city, tenantName].filter(Boolean).join(', '),
     }
   }

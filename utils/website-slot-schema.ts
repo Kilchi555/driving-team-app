@@ -6,7 +6,18 @@
 export const WEBSITE_TEMPLATE_ID = 'onepager@v1'
 
 export type LandingBlock = {
-  type: 'hero' | 'services' | 'testimonials' | 'faq' | 'cta' | 'contact'
+  type:
+    | 'hero'
+    | 'services'
+    | 'team'
+    | 'courses'
+    | 'slots'
+    | 'gallery'
+    | 'process'
+    | 'testimonials'
+    | 'faq'
+    | 'cta'
+    | 'contact'
   content: Record<string, any>
 }
 
@@ -25,6 +36,12 @@ export type LandingPagePayload = {
     hero_image_url: string | null
     hero_video_url?: string | null
     formal_address?: 'sie' | 'du'
+    hero_image_source?: 'own' | 'stock' | 'ai' | null
+    hero_attribution?: {
+      photographer?: string | null
+      photographer_url?: string | null
+      unsplash_url?: string | null
+    } | null
   }
   bookingUrl: string
   siteUrl: string
@@ -112,12 +129,63 @@ export const STATIC_SLOTS: readonly SlotDef[] = [
     kind: 'color',
   },
   {
+    id: 'hero.headline',
+    group: 'hero',
+    label: 'Hero-Überschrift (H1)',
+    kind: 'text',
+    maxLength: 90,
+    formalAware: true,
+    hint: 'Lokal & klar — z.B. Fahrschule Zürich — …',
+  },
+  {
     id: 'hero.subheadline',
     group: 'hero',
     label: 'Hero-Unterzeile (Bio)',
     kind: 'textarea',
     maxLength: 280,
     formalAware: true,
+  },
+  {
+    id: 'hero.trust_0_value',
+    group: 'hero',
+    label: 'Trust 1 Wert',
+    kind: 'text',
+    maxLength: 24,
+  },
+  {
+    id: 'hero.trust_0_label',
+    group: 'hero',
+    label: 'Trust 1 Label',
+    kind: 'text',
+    maxLength: 40,
+  },
+  {
+    id: 'hero.trust_1_value',
+    group: 'hero',
+    label: 'Trust 2 Wert',
+    kind: 'text',
+    maxLength: 24,
+  },
+  {
+    id: 'hero.trust_1_label',
+    group: 'hero',
+    label: 'Trust 2 Label',
+    kind: 'text',
+    maxLength: 40,
+  },
+  {
+    id: 'hero.trust_2_value',
+    group: 'hero',
+    label: 'Trust 3 Wert',
+    kind: 'text',
+    maxLength: 24,
+  },
+  {
+    id: 'hero.trust_2_label',
+    group: 'hero',
+    label: 'Trust 3 Label',
+    kind: 'text',
+    maxLength: 40,
   },
   {
     id: 'cta.headline',
@@ -284,6 +352,16 @@ export function getSlotValue(payload: LandingPagePayload, slotId: string): strin
   if (slotId === 'hero.subheadline') {
     return findBlock(payload, 'hero')?.content?.subheadline ?? null
   }
+  if (slotId === 'hero.headline') {
+    return findBlock(payload, 'hero')?.content?.headline ?? null
+  }
+  const trustMatch = slotId.match(/^hero\.trust_(\d+)_(value|label)$/)
+  if (trustMatch) {
+    const idx = Number(trustMatch[1])
+    const field = trustMatch[2]
+    const trust = findBlock(payload, 'hero')?.content?.trust || []
+    return trust[idx]?.[field] ?? null
+  }
   if (slotId === 'cta.headline') {
     return findBlock(payload, 'cta')?.content?.headline ?? null
   }
@@ -421,6 +499,21 @@ export function applySlotPatch(
     } else if (slotId === 'hero.subheadline') {
       const hero = findBlock(next, 'hero')
       if (hero) hero.content.subheadline = value
+    } else if (slotId === 'hero.headline') {
+      const hero = findBlock(next, 'hero')
+      if (hero) hero.content.headline = value
+    } else if (slotId.match(/^hero\.trust_(\d+)_(value|label)$/)) {
+      const m = slotId.match(/^hero\.trust_(\d+)_(value|label)$/)!
+      const idx = Number(m[1])
+      const field = m[2]
+      const hero = findBlock(next, 'hero')
+      if (hero) {
+        if (!Array.isArray(hero.content.trust)) hero.content.trust = []
+        while (hero.content.trust.length <= idx) {
+          hero.content.trust.push({ value: '', label: '', icon: 'shield' })
+        }
+        hero.content.trust[idx][field] = value
+      }
     } else if (slotId === 'cta.headline') {
       const cta = findBlock(next, 'cta')
       if (cta) cta.content.headline = value

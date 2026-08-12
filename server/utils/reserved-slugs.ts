@@ -7,7 +7,7 @@ export const RESERVED_SLUGS = new Set([
   'tenant-register', 'onboarding', 'billing', 'dashboard',
   'reset-password', 'password-reset', 'set-password',
   'staff', 'customers', 'calendar', 'settings', 'profile',
-  'help', 'support', 'terms', 'privacy', 'agb', 'datenschutz',
+  'help', 'support', 'terms', 'privacy', 'agb', 'datenschutz', 'impressum',
   'static', 'assets', 'public', 'simy', 'app', 'www', 'mail',
   // Common spam / placeholder slugs
   'test', 'demo', 'example', 'sample', 'asdf', 'null', 'undefined',

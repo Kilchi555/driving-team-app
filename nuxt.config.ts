@@ -7,7 +7,8 @@ import { defineNuxtConfig } from 'nuxt/config'
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: false },
-  ssr: false,
+  // SSR engine ON so /s/** can truly server-render. Most app routes opt out below.
+  ssr: true,
 
   // Allow the smoke-test build (scripts/smoke-test.sh, runs on every `git push`)
   // to use an isolated build directory instead of the default `.nuxt`. Without
@@ -215,6 +216,16 @@ export default defineNuxtConfig({
 
   // Route-level optimisations
   routeRules: {
+    // Keep the product app client-rendered (previous global SPA behavior)
+    '/**': { ssr: false },
+    // Public tenant websites: real Vue SSR + short ISR at the edge
+    '/s/**': {
+      ssr: true,
+      isr: 60,
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+      },
+    },
     // Public booking + courses pages: cache API responses at CDN edge for 60s
     '/api/booking/get-booking-init': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
     '/api/courses/public': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
@@ -242,9 +253,15 @@ export default defineNuxtConfig({
     internalCancellationSecret: process.env.NUXT_INTERNAL_CANCELLATION_SECRET,
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY,
     googleDistanceMatrixKey: process.env.GOOGLE_DISTANCE_MATRIX_KEY || process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY,
-    vercelToken: process.env.VERCEL_TOKEN || '',
-    vercelProjectId: process.env.VERCEL_PROJECT_ID || '',
-    vercelTeamId: process.env.VERCEL_TEAM_ID || '',
+    vercelToken: process.env.NUXT_VERCEL_TOKEN || process.env.VERCEL_TOKEN || '',
+    vercelProjectId:
+      process.env.NUXT_VERCEL_PROJECT_ID ||
+      process.env.VERCEL_PROJECT_ID ||
+      process.env.VERCEL_PROJECT_ID_APP ||
+      '',
+    vercelTeamId: process.env.NUXT_VERCEL_TEAM_ID || process.env.VERCEL_TEAM_ID || '',
+    // Website Builder stock heroes (Unsplash). Prefer NUXT_UNSPLASH_ACCESS_KEY.
+    unsplashAccessKey: process.env.NUXT_UNSPLASH_ACCESS_KEY || process.env.UNSPLASH_ACCESS_KEY || '',
     
     // Public keys (exposed to client-side)
     public: {

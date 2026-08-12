@@ -1,5 +1,6 @@
 // Public: published tenant landing page by subdomain
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
 
 export default defineEventHandler(async (event) => {
   const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
@@ -78,7 +79,23 @@ export default defineEventHandler(async (event) => {
     .order('page_type', { ascending: true })
 
   const { applyLivePricesToLanding } = await import('~/server/utils/website-live-prices')
-  const landing = await applyLivePricesToLanding(website.tenant_id, page.blocks || null)
+  const { enrichLandingPremium } = await import('~/server/utils/website-enrich-landing')
+  let landing = await applyLivePricesToLanding(website.tenant_id, page.blocks || null)
+  landing = await enrichLandingPremium(supabase, tenant, landing as any, {
+    subdomain,
+    siteUrl:
+      website.custom_domain_verified && website.custom_domain
+        ? `https://${website.custom_domain}`
+        : undefined,
+  })
+
+  // Edge cache ~2 min (slots soft-refreshed client-side); never cache preview
+  setWebsitePublicCache(event, {
+    preview,
+    sMaxAge: 120,
+    swr: 600,
+    tag: `website-${subdomain}`,
+  })
 
   return {
     website,

@@ -44,7 +44,7 @@ export async function renderWebsiteOgCard(input: OgCardInput): Promise<Buffer> {
   const secondary = input.secondary || '#134E4A'
   const accent = input.accent || '#F59E0B'
   const brand = escapeXml((input.brand || 'Simy').slice(0, 48))
-  const titleLines = wrapLines(input.title || 'Online-Terminbuchung', 28, 3).map(escapeXml)
+  const titleLines = wrapLines(input.title || 'Website', 28, 3).map(escapeXml)
   const subtitle = escapeXml((input.subtitle || '').slice(0, 110))
 
   let logoImage = ''

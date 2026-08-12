@@ -24,22 +24,33 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Sitemap not found' })
   }
 
-  const urls: string[] = []
+  const entries: Array<{ loc: string; lastmod?: string; priority: string }> = []
   for (const p of ctx.pages) {
-    if (p.is_home || p.slug === 'index') {
-      urls.push(ctx.baseUrl + '/')
-    } else {
-      urls.push(`${ctx.baseUrl}/${encodeURIComponent(p.slug)}`)
-    }
+    const loc =
+      p.is_home || p.slug === 'index'
+        ? ctx.baseUrl + '/'
+        : `${ctx.baseUrl}/${encodeURIComponent(p.slug)}`
+    const lastmod = p.updated_at ? String(p.updated_at).slice(0, 10) : undefined
+    entries.push({
+      loc,
+      lastmod,
+      priority: loc.endsWith('/') ? '1.0' : '0.8',
+    })
   }
-  if (!urls.length) urls.push(ctx.baseUrl + '/')
+  if (!entries.length) entries.push({ loc: ctx.baseUrl + '/', priority: '1.0' })
 
-  const body = urls
+  // Legal pages (always present for published sites)
+  entries.push(
+    { loc: `${ctx.baseUrl}/impressum`, priority: '0.3' },
+    { loc: `${ctx.baseUrl}/datenschutz`, priority: '0.3' },
+  )
+
+  const body = entries
     .map(
-      (loc) => `  <url>
-    <loc>${loc}</loc>
+      (e) => `  <url>
+    <loc>${e.loc}</loc>${e.lastmod ? `\n    <lastmod>${e.lastmod}</lastmod>` : ''}
     <changefreq>weekly</changefreq>
-    <priority>${loc.endsWith('/') ? '1.0' : '0.8'}</priority>
+    <priority>${e.priority}</priority>
   </url>`,
     )
     .join('\n')

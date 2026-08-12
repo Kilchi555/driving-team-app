@@ -32,6 +32,8 @@ type CacheEntry = {
   slots: DtTeaserSlot[]
   usedFallback: boolean
   hint: string | null
+  defaultLocationId: string | null
+  defaultCategory: string | null
 }
 
 const memoryCache = new Map<string, CacheEntry>()
@@ -153,7 +155,14 @@ export default defineEventHandler(async (event) => {
   const filter = resolveNextSlotsFilter(page)
   if (!filter) {
     setHeader(event, 'Cache-Control', 'public, max-age=60, s-maxage=60')
-    return { slots: [], used_fallback: false, hint: null, booking_url: BOOKING_BASE }
+    return {
+      slots: [],
+      used_fallback: false,
+      hint: null,
+      booking_url: BOOKING_BASE,
+      default_location_id: null,
+      default_category: null,
+    }
   }
 
   const cacheKey = page
@@ -165,6 +174,8 @@ export default defineEventHandler(async (event) => {
       used_fallback: hit.usedFallback,
       hint: hit.hint,
       booking_url: BOOKING_BASE,
+      default_location_id: hit.defaultLocationId,
+      default_category: hit.defaultCategory,
     }
   }
 
@@ -184,7 +195,16 @@ export default defineEventHandler(async (event) => {
   }
 
   const slots = diversify(rows)
-  memoryCache.set(cacheKey, { at: Date.now(), slots, usedFallback, hint })
+  const defaultLocationId = filter.locationIds[0] || null
+  const defaultCategory = filter.categories[0] || null
+  memoryCache.set(cacheKey, {
+    at: Date.now(),
+    slots,
+    usedFallback,
+    hint,
+    defaultLocationId,
+    defaultCategory,
+  })
 
   setHeader(event, 'Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300')
   return {
@@ -192,5 +212,7 @@ export default defineEventHandler(async (event) => {
     used_fallback: usedFallback,
     hint,
     booking_url: BOOKING_BASE,
+    default_location_id: defaultLocationId,
+    default_category: defaultCategory,
   }
 })
