@@ -155,6 +155,19 @@ export async function dispatchAppointmentConfirmation(
     return { success: true, skipped: true, reason: 'appointment_not_found' }
   }
 
+  // Internal calendar blocks (Sonstiges/Admin etc.): staff is both assignee and "customer".
+  // No confirmation email/SMS — the creator already knows.
+  if (appointment.staff_id && appointment.staff_id === userId) {
+    await markConfirmationStatus(appointmentId, 'skipped', true)
+    logger.debug('⏭️ Skipping confirmation — user_id === staff_id (self-booking)')
+    return {
+      success: true,
+      skipped: true,
+      reason: 'self_booking',
+      message: 'Confirmation skipped (staff self-booking)',
+    }
+  }
+
   // Reject obvious typos / incomplete domains (e.g. outlook.con, icloud.c)
   const emailRaw = String(user.email || '').trim()
   const emailLooksValid = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(emailRaw)
