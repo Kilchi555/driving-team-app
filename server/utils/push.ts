@@ -22,10 +22,24 @@ let _cachedToken: string | null = null
 let _tokenExpiry = 0
 
 function getServiceAccount(): { client_email: string; private_key: string } | null {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT?.trim()
   if (!raw) return null
   try {
-    return JSON.parse(raw)
+    // Some hosts (and dotenv) expand `\n` inside the JSON into real newlines,
+    // which breaks JSON.parse. Normalize private_key newlines first.
+    const normalized = raw.includes('-----BEGIN PRIVATE KEY-----') && !raw.includes('\\n')
+      ? raw.replace(/\r?\n/g, '\\n')
+      : raw
+    const parsed = JSON.parse(normalized)
+    if (!parsed?.client_email || !parsed?.private_key) {
+      console.warn('[Push] FIREBASE_SERVICE_ACCOUNT missing client_email/private_key')
+      return null
+    }
+    // Node crypto expects real newlines in PEM
+    if (typeof parsed.private_key === 'string' && parsed.private_key.includes('\\n')) {
+      parsed.private_key = parsed.private_key.replace(/\\n/g, '\n')
+    }
+    return parsed
   } catch {
     console.warn('[Push] FIREBASE_SERVICE_ACCOUNT is not valid JSON')
     return null
@@ -107,16 +121,26 @@ async function sendToToken(
   }
 }
 
+export type SendPushResult = {
+  /** Devices successfully targeted (FCM accepted). */
+  sent: number
+  /** Whether Firebase env / auth was available. */
+  configured: boolean
+}
+
 /**
  * Send a push notification to every registered device of a user.
- * Silently no-ops if Firebase is not configured.
+ * Silently no-ops if Firebase is not configured (returns sent: 0).
+ * `userId` must be `public.users.id` (not auth.users.id).
  */
-export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
+export async function sendPushToUser(userId: string, payload: PushPayload): Promise<SendPushResult> {
   const projectId = process.env.FIREBASE_PROJECT_ID
-  if (!projectId || !process.env.FIREBASE_SERVICE_ACCOUNT) return
+  if (!projectId || !process.env.FIREBASE_SERVICE_ACCOUNT) {
+    return { sent: 0, configured: false }
+  }
 
   const accessToken = await getAccessToken()
-  if (!accessToken) return
+  if (!accessToken) return { sent: 0, configured: false }
 
   const supabase = getSupabaseAdmin()
   const { data: tokens } = await supabase
@@ -124,18 +148,22 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     .select('id, token')
     .eq('user_id', userId)
 
-  if (!tokens?.length) return
+  if (!tokens?.length) return { sent: 0, configured: true }
 
   const staleIds: string[] = []
+  let sent = 0
 
   await Promise.allSettled(
     tokens.map(async ({ id, token }) => {
       const result = await sendToToken(projectId, accessToken, token, payload)
       if (result === 'invalid_token') staleIds.push(id)
+      else sent++
     }),
   )
 
   if (staleIds.length > 0) {
     await supabase.from('push_tokens').delete().in('id', staleIds)
   }
+
+  return { sent, configured: true }
 }

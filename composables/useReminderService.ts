@@ -4,6 +4,7 @@ import { useFallbackLogger } from '~/composables/useFallbackLogger'
 
 export const useReminderService = () => {
   const { logFallbackUsed } = useFallbackLogger()
+  const supabase = useSupabaseClient()
 
   /**
    * Process template variables with actual data
@@ -148,28 +149,43 @@ export const useReminderService = () => {
   }
 
   /**
-   * Send reminder via Push notification (SIMULATED)
+   * Send reminder via Push notification (FCM via /api/push/send)
    */
   const sendPushReminder = async (
     userId: string,
     message: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      logger.debug('🔔 Push Reminder (SIMULATED):', { userId, message })
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        return { success: false, error: 'Nicht authentifiziert' }
+      }
 
-      // TODO: Implement actual push notification via service (e.g., Firebase, OneSignal)
-      // For now, we'll log it
-      logger.debug('🔔 Push content:', { message })
+      const result = await $fetch<{ success: boolean; sent?: number; configured?: boolean }>(
+        '/api/push/send',
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          body: {
+            userId,
+            title: 'Erinnerung',
+            body: message,
+            path: '/customer-dashboard',
+          },
+        },
+      )
 
-      // Log the reminder in database
       const { error: logError } = await supabase
         .from('reminder_logs')
         .insert({
           channel: 'push',
           recipient: userId,
           body: message,
-          status: 'simulated',
-          sent_at: new Date().toISOString()
+          status: result.configured === false ? 'failed' : 'sent',
+          error_message: result.configured === false
+            ? 'Firebase nicht konfiguriert'
+            : (result.sent === 0 ? 'Kein Gerät registriert' : null),
+          sent_at: new Date().toISOString(),
         })
 
       if (logError) {

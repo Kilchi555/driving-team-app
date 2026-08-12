@@ -85,9 +85,44 @@ curl -s https://app.simy.ch/.well-known/assetlinks.json | jq .
 ### 1.5 Firebase / Push
 ✅ `google-services.json` lokal für `ch.simy.app` (Firebase Projekt `simy-app`)
 ✅ CI injiziert via Secret `FIREBASE_CONFIGS`
-✅ Client-Registrierung: `plugins/push.client.ts`
-- [ ] `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT` auf dem Server für Outbound-Push
-- [ ] Smoke-Test: Token landet in `push_tokens`, Test-Notification empfangen
+✅ Client-Registrierung: `plugins/push.client.ts` (speichert `public.users.id` in `push_tokens`)
+✅ Outbound-Sender: `server/utils/push.ts` → FCM HTTP v1
+✅ Terminbestätigung: direkter Push in `dispatch-appointment-confirmation.ts`
+✅ Erinnerungen: Queue-Channel `push` (Termin + Zahlung) via `process-outbound-messages`
+
+#### Server-Env (Vercel / lokal `.env`)
+
+| Variable | Wert |
+|----------|------|
+| `FIREBASE_PROJECT_ID` | Firebase Project ID, z.B. `simy-app` |
+| `FIREBASE_SERVICE_ACCOUNT` | **gesamtes** Service-Account-JSON als **ein** String (eine Zeile) |
+
+Service Account anlegen:
+1. [Firebase Console](https://console.firebase.google.com/) → Projekt `simy-app` → Project settings → Service accounts
+2. **Generate new private key** → JSON herunterladen
+3. Inhalt als eine Zeile in Vercel Env legen (JSON minified / escaped)
+
+Beispiel lokal (`.env`, nie committen):
+
+```bash
+FIREBASE_PROJECT_ID=simy-app
+FIREBASE_SERVICE_ACCOUNT={"type":"service_account","project_id":"simy-app","private_key_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"...@....iam.gserviceaccount.com",...}
+```
+
+Ohne diese Vars ist jeder Send ein stiller No-op (App bricht nicht).
+
+#### iOS APNs (einmalig in Firebase)
+- Apple Developer → Key mit **Apple Push Notifications** → `.p8` in Firebase → Project settings → Cloud Messaging → Apple app config
+
+#### Smoke-Test
+1. Native App öffnen, einloggen, Push-Permission erlauben
+2. In Supabase prüfen: `select * from push_tokens order by updated_at desc limit 5;` → Zeile mit `user_id` = `public.users.id`
+3. Als Admin: `POST /api/push/send` mit `{ "userId": "<users.id>", "title": "Test", "body": "Hallo" }`
+4. Termin buchen → Bestätigungs-Push sollte ankommen
+5. Optional Cron-Test: Appointment-Reminder mit `?test_appointment_id=...` → Queue-Row `channel=push` → Processor sendet
+
+- [x] `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT` auf dem Server gesetzt
+- [ ] Smoke-Test: Token in `push_tokens`, Test-Notification empfangen
 
 ### 1.6 Passkeys
 Passkeys sind auf Native bewusst deaktiviert, bis App Links + Fingerprints verifiziert sind

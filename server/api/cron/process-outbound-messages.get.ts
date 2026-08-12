@@ -3,6 +3,7 @@ import { defineEventHandler, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { sendSMS, sendTenantSMS } from '~/server/utils/sms'
+import { sendPushToUser } from '~/server/utils/push'
 
 // Simple delay utility
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -184,13 +185,52 @@ export default defineEventHandler(async (event) => {
             failedCount++
           }
         } else if (message.channel === 'push') {
-          // TODO: Implement Push notification sending logic here
-          console.warn(`[OutboundMessageProcessor] ⚠️ Push notification sending not yet implemented for message ${message.id}`)
-          await supabase
-            .from('outbound_messages_queue')
-            .update({ status: 'failed', error_message: 'Push channel not implemented', failed_at: new Date().toISOString() })
-            .eq('id', message.id)
-          failedCount++
+          const userId = message.context_data?.user_id as string | undefined
+          if (!userId || !message.body) {
+            console.warn(`[OutboundMessageProcessor] ⚠️ Skipping push message ${message.id}: missing user_id or body`)
+            await supabase
+              .from('outbound_messages_queue')
+              .update({
+                status: 'failed',
+                error_message: 'Missing context_data.user_id or body',
+                failed_at: new Date().toISOString(),
+              })
+              .eq('id', message.id)
+            failedCount++
+            continue
+          }
+
+          try {
+            const path =
+              (typeof message.context_data?.path === 'string' && message.context_data.path)
+              || '/customer-dashboard'
+            const result = await sendPushToUser(userId, {
+              title: message.subject || 'Simy',
+              body: message.body,
+              data: { path },
+            })
+            // Best-effort: mark sent even with 0 devices (no token / Firebase unset)
+            // so the queue does not retry forever. Confirmation already uses the same model.
+            console.log(
+              `[OutboundMessageProcessor] ✅ Push processed for message ${message.id} (sent=${result.sent}, configured=${result.configured})`,
+            )
+            await supabase
+              .from('outbound_messages_queue')
+              .update({ status: 'sent', sent_at: new Date().toISOString() })
+              .eq('id', message.id)
+            sentCount++
+          } catch (pushError: any) {
+            console.error(`[OutboundMessageProcessor] ❌ Failed to send push for message ${message.id}:`, pushError)
+            await supabase
+              .from('outbound_messages_queue')
+              .update({
+                status: 'failed',
+                error_message: pushError?.message || 'Push send failed',
+                failed_at: new Date().toISOString(),
+              })
+              .eq('id', message.id)
+            failedCount++
+          }
         } else {
           console.warn(`[OutboundMessageProcessor] ⚠️ Unknown channel ${message.channel} for message ${message.id}`)
           await supabase

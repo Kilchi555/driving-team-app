@@ -172,7 +172,6 @@ export default defineEventHandler(async (event) => {
 
     const hasEmail = !!(user.email && String(user.email).trim())
     const hasPhone = !!(user.phone && String(user.phone).trim())
-    if (!hasEmail && !hasPhone) continue
 
     const tenant = tenantMap.get(userPayments[0].tenant_id)
     const policy = (tenant as any)?.booking_policy || {}
@@ -184,7 +183,8 @@ export default defineEventHandler(async (event) => {
       emailEnabled: true,
       smsEnabled: policy.payment_reminder_sms_enabled !== false,
     })
-    if (!channels.sendEmail && !channels.sendSms) continue
+    // Push is always attempted alongside email/SMS
+    // (email/sms still respect tenant channel policy)
 
     // Find oldest unpaid appointment to base the reminder schedule on
     const appointmentDates = userPayments
@@ -356,7 +356,20 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // Mark as queued so email+SMS for same day don't double-count as separate reminders
+      toInsert.push({
+        tenant_id: userPayments[0].tenant_id,
+        channel: 'push',
+        subject: subjectPrefix,
+        body: `Offener Betrag: CHF ${totalCHF}. Tippe zum Bezahlen.`,
+        status: 'pending',
+        send_at: now.toISOString(),
+        context_data: {
+          ...contextData,
+          path: '/customer/payments',
+        },
+      })
+
+      // Mark as queued so email+SMS+push for same day don't double-count as separate reminders
       alreadyQueued.add(key)
     }
   }
