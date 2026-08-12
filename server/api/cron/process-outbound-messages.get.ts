@@ -126,6 +126,18 @@ export default defineEventHandler(async (event) => {
                 .eq('lead_id', ctx.lead_id)
                 .in('status', ['queued', 'sending', 'sent'])
             }
+
+            // Appointment confirmation queue fallback → mark appointment delivered
+            if (ctx.stage === 'appointment_confirmation' && ctx.appointment_id) {
+              await supabase
+                .from('appointments')
+                .update({
+                  confirmation_email_status: 'sent',
+                  confirmation_email_sent_at: sentAt,
+                  updated_at: sentAt,
+                })
+                .eq('id', ctx.appointment_id)
+            }
             sentCount++
           }
         } else         if (message.channel === 'sms') {

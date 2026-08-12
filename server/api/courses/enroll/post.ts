@@ -128,17 +128,19 @@ export default defineEventHandler(async (event) => {
       sourceLabel: courseRow?.name ? `Kurs: ${courseRow.name}` : 'Admin Kursanmeldung',
     })
 
-    // Send confirmation email (same as online booking flow — fire-and-forget)
-    $fetch('/api/emails/send-course-enrollment-confirmation', {
-      method: 'POST',
-      body: {
-        courseRegistrationId: enrollment.id,
-        paymentMethod: 'cash', // Manual admin enrollments have no online payment
-        totalAmount: undefined
-      }
-    }).catch((err: any) => {
+    // Await confirmation — fire-and-forget is dropped on Vercel after the response.
+    try {
+      await $fetch('/api/emails/send-course-enrollment-confirmation', {
+        method: 'POST',
+        body: {
+          courseRegistrationId: enrollment.id,
+          paymentMethod: 'cash', // Manual admin enrollments have no online payment
+          totalAmount: undefined
+        }
+      })
+    } catch (err: any) {
       console.warn('⚠️ Confirmation email failed (non-critical):', err?.message)
-    })
+    }
 
     return {
       success: true,

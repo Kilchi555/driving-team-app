@@ -21,7 +21,6 @@
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { DEFAULT_BOOKING_POLICY } from '~/server/api/admin/booking-policy.get'
 import { mergeAttributionFields } from '~/server/utils/marketing-attribution-merge'
 import { sendTenantSMS } from '~/server/utils/sms'
@@ -737,22 +736,17 @@ export default defineEventHandler(async (event) => {
   } catch (e: any) {
     logger.warn('⚠️ Meta CAPI event failed (guest):', e.message)
   }
-  // ── Send appointment confirmation email (customer) + new-booking notification
-  // (staff). AWAITED on purpose: Vercel freezes the serverless function right
-  // after the response is returned, so a fire-and-forget call here was
-  // frequently cut off before either email actually went out — same root
-  // cause that broke staff "new online booking" notifications.
+  // Direct dispatch (no nested HTTP). Awaits Resend; on failure queues for cron.
   try {
     if (email) {
       logger.debug('📧 Triggering confirmation email for guest appointment:', newAppointment.id)
-      await $fetch('/api/reminders/send-appointment-confirmation', {
-        method: 'POST',
-              headers: internalSecretHeaders(),
-        body: {
-          appointmentId: newAppointment.id,
-          userId: newUserId,
-          tenantId: tenantId
-        }
+      const { dispatchAppointmentConfirmation } = await import(
+        '~/server/utils/dispatch-appointment-confirmation'
+      )
+      await dispatchAppointmentConfirmation({
+        appointmentId: newAppointment.id,
+        userId: newUserId,
+        tenantId: tenantId,
       })
       logger.debug('✅ Confirmation email triggered for guest:', email)
     }

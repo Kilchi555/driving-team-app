@@ -13,7 +13,6 @@ import {
 } from '~/server/utils/sms-templates'
 import { getAccountAccessLink } from '~/server/utils/account-access-link'
 import { DEFAULT_BOOKING_POLICY } from '~/server/api/admin/booking-policy.get'
-import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 
 export async function notifyCustomerAppointmentChange(opts: {
   tenantId: string
@@ -78,21 +77,20 @@ export async function notifyCustomerAppointmentChange(opts: {
 
   if (channels.sendEmail && user.email) {
     try {
-      await $fetch('/api/email/send-appointment-notification', {
-        method: 'POST',
-        headers: internalSecretHeaders(),
-        body: {
-          email: user.email,
-          studentName: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Kunde',
-          appointmentTime: appointmentTimeLabel,
-          type: opts.type,
-          cancellationReason: opts.cancellationReason || undefined,
-          tenantName: tenant.name,
-          tenantId: opts.tenantId,
-          tenantSlug: tenant.slug,
-          userId: user.id,
-          ...(opts.emailExtras || {}),
-        },
+      const { sendAppointmentNotificationEmail } = await import(
+        '~/server/utils/appointment-notification-email'
+      )
+      await sendAppointmentNotificationEmail({
+        email: user.email,
+        studentName: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Kunde',
+        appointmentTime: appointmentTimeLabel,
+        type: opts.type,
+        cancellationReason: opts.cancellationReason || undefined,
+        tenantName: tenant.name,
+        tenantId: opts.tenantId,
+        tenantSlug: tenant.slug,
+        userId: user.id,
+        ...(opts.emailExtras || {}),
       })
       emailSent = true
     } catch (err: any) {

@@ -871,26 +871,67 @@ export class SARISyncEngine {
             .maybeSingle()
 
           if (!existingByFaberid) {
+            // If an online Wallee payment already completed for this faberid+course but the
+            // webhook lost the race to SARI sync, reuse contact/payment from that payment.
+            let pendingPayment: any = null
+            try {
+              const { data: payHits } = await this.supabase
+                .from('payments')
+                .select('id, user_id, total_amount_rappen, payment_status, metadata, course_registration_id')
+                .eq('tenant_id', this.tenantId)
+                .eq('payment_status', 'completed')
+                .is('course_registration_id', null)
+                .contains('metadata', { course_id: simyCourseId })
+                .order('created_at', { ascending: false })
+                .limit(20)
+
+              pendingPayment = (payHits || []).find((p: any) => {
+                const metaFid = String(p.metadata?.sari_faberid || '').replace(/^0+/, '') || String(p.metadata?.sari_faberid || '')
+                return metaFid && metaFid === canonicalFaberid
+              }) || null
+            } catch (payLookupErr: any) {
+              logger.warn(`Could not look up pending course payments for ${canonicalFaberid}: ${payLookupErr.message}`)
+            }
+
+            const paymentEmail = pendingPayment?.metadata?.email || null
+            const paymentPhone = pendingPayment?.metadata?.phone || null
+            const paymentUserId = pendingPayment?.user_id || null
+
             // Create course_registration directly — participant_id stays null (same as Wallee flow).
             // We do NOT write to course_participants as that table may not exist in all environments.
             const registrationData: any = {
               course_id: simyCourseId,
               participant_id: null,
               tenant_id: this.tenantId,
+              user_id: paymentUserId,
               
               // Status: treat all SARI-synced participants as confirmed
               status: 'confirmed',
-              payment_status: 'paid',
+              payment_status: pendingPayment ? 'paid' : 'paid',
+              payment_method: pendingPayment ? 'wallee' : null,
+              payment_id: pendingPayment?.id || null,
+              amount_paid_rappen: pendingPayment?.total_amount_rappen || 0,
               
               // Personal data inline (mirrored from SARI)
-              first_name: fullCustomerData?.firstname || participant.firstname || 'Unbekannt',
-              last_name: fullCustomerData?.lastname || participant.lastname || 'Unbekannt',
-              email: null,
-              phone: null,
+              // Prefer contact from SARI customer payload when present (API may return email/phone
+              // even if TypeScript SARICustomer doesn't declare them yet).
+              first_name: fullCustomerData?.firstname || participant.firstname || pendingPayment?.metadata?.firstname || 'Unbekannt',
+              last_name: fullCustomerData?.lastname || participant.lastname || pendingPayment?.metadata?.lastname || 'Unbekannt',
+              email: (fullCustomerData as any)?.email
+                || (fullCustomerData as any)?.contact_email
+                || (participant as any)?.email
+                || paymentEmail
+                || null,
+              phone: (fullCustomerData as any)?.phone
+                || (fullCustomerData as any)?.mobile
+                || (fullCustomerData as any)?.contact_phone
+                || (participant as any)?.phone
+                || paymentPhone
+                || null,
               sari_faberid: canonicalFaberid,
-              street: fullCustomerData?.address || null,
-              zip: fullCustomerData?.zip || null,
-              city: fullCustomerData?.city || null,
+              street: fullCustomerData?.address || pendingPayment?.metadata?.street || null,
+              zip: fullCustomerData?.zip || pendingPayment?.metadata?.zip || null,
+              city: fullCustomerData?.city || pendingPayment?.metadata?.city || null,
               
               // SARI audit trail
               sari_data: fullCustomerData ? {
@@ -898,6 +939,8 @@ export class SARISyncEngine {
                 firstname: fullCustomerData.firstname,
                 lastname: fullCustomerData.lastname,
                 birthdate: fullCustomerData.birthdate,
+                email: (fullCustomerData as any)?.email || (fullCustomerData as any)?.contact_email || null,
+                phone: (fullCustomerData as any)?.phone || (fullCustomerData as any)?.mobile || null,
                 address: fullCustomerData.address,
                 zip: fullCustomerData.zip,
                 city: fullCustomerData.city,
@@ -917,13 +960,17 @@ export class SARISyncEngine {
               
               sari_synced: true,
               sari_synced_at: new Date().toISOString(),
-              notes: `Auto-imported from SARI on ${new Date().toLocaleDateString('de-CH')} | SARI ID: ${canonicalFaberid}`,
+              notes: pendingPayment
+                ? `Auto-imported from SARI on ${new Date().toLocaleDateString('de-CH')} | SARI ID: ${canonicalFaberid} | Linked open Wallee payment ${pendingPayment.id}`
+                : `Auto-imported from SARI on ${new Date().toLocaleDateString('de-CH')} | SARI ID: ${canonicalFaberid}`,
               created_at: new Date().toISOString()
             }
 
-            const { error: regError } = await this.supabase
+            const { data: insertedReg, error: regError } = await this.supabase
               .from('course_registrations')
               .insert(registrationData)
+              .select('id')
+              .single()
 
             if (regError) {
               const errDetail = regError.message || regError.details || regError.hint || regError.code || JSON.stringify(regError)
@@ -931,6 +978,69 @@ export class SARISyncEngine {
             } else {
               syncedCount++
               logger.debug(`✅ Created registration for ${canonicalFaberid}: ${registrationData.first_name} ${registrationData.last_name}`)
+
+              if (pendingPayment?.id && insertedReg?.id) {
+                await this.supabase
+                  .from('payments')
+                  .update({
+                    course_registration_id: insertedReg.id,
+                    user_id: paymentUserId || pendingPayment.user_id,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', pendingPayment.id)
+                logger.info(`🔗 Linked Wallee payment ${pendingPayment.id} to SARI-imported registration ${insertedReg.id}`)
+              }
+            }
+          } else {
+            // Existing SARI row: enrich missing contact from a paid-but-unlinked Wallee payment
+            try {
+              const { data: existingFull } = await this.supabase
+                .from('course_registrations')
+                .select('id, email, phone, user_id, payment_id, notes')
+                .eq('id', existingByFaberid.id)
+                .maybeSingle()
+
+              if (existingFull && (!existingFull.email || !existingFull.payment_id)) {
+                const { data: payHits } = await this.supabase
+                  .from('payments')
+                  .select('id, user_id, total_amount_rappen, metadata, course_registration_id')
+                  .eq('tenant_id', this.tenantId)
+                  .eq('payment_status', 'completed')
+                  .is('course_registration_id', null)
+                  .contains('metadata', { course_id: simyCourseId })
+                  .order('created_at', { ascending: false })
+                  .limit(20)
+
+                const orphanPay = (payHits || []).find((p: any) => {
+                  const metaFid = String(p.metadata?.sari_faberid || '').replace(/^0+/, '') || String(p.metadata?.sari_faberid || '')
+                  return metaFid && metaFid === canonicalFaberid
+                })
+
+                if (orphanPay) {
+                  const enrich: any = {
+                    updated_at: new Date().toISOString(),
+                    payment_status: 'paid',
+                    payment_method: 'wallee',
+                    payment_id: orphanPay.id,
+                    amount_paid_rappen: orphanPay.total_amount_rappen || 0,
+                    user_id: orphanPay.user_id || existingFull.user_id,
+                    email: existingFull.email || orphanPay.metadata?.email || null,
+                    phone: existingFull.phone || orphanPay.metadata?.phone || null,
+                    notes: existingFull.notes
+                      ? `${existingFull.notes} | Linked Wallee payment ${orphanPay.id} on sync enrich`
+                      : `Linked Wallee payment ${orphanPay.id} on sync enrich`,
+                  }
+                  await this.supabase.from('course_registrations').update(enrich).eq('id', existingFull.id)
+                  await this.supabase.from('payments').update({
+                    course_registration_id: existingFull.id,
+                    user_id: enrich.user_id,
+                    updated_at: new Date().toISOString(),
+                  }).eq('id', orphanPay.id)
+                  logger.info(`🔗 Enriched SARI registration ${existingFull.id} from orphan Wallee payment ${orphanPay.id}`)
+                }
+              }
+            } catch (enrichErr: any) {
+              logger.warn(`Could not enrich existing SARI registration for ${canonicalFaberid}: ${enrichErr.message}`)
             }
           }
         } catch (err: any) {

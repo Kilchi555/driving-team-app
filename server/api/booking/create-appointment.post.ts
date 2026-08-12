@@ -28,7 +28,6 @@
 
 import { defineEventHandler, readBody, createError, getHeader, H3Event } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { roundToNearest5Rappen } from '~/utils/rounding'
@@ -38,6 +37,7 @@ import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
+import { matchesDiscountCategoryFilter } from '~/server/utils/discount-category-filter'
 import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
@@ -820,7 +820,7 @@ export default defineEventHandler(async (event: H3Event) => {
         if (!discountFound) {
           const { data: discountData } = await supabase
             .from('discounts')
-            .select('discount_type, discount_value, max_discount_rappen, valid_from, valid_until, is_active, first_lesson_only, usage_limit, usage_count')
+            .select('discount_type, discount_value, max_discount_rappen, valid_from, valid_until, is_active, first_lesson_only, usage_limit, usage_count, category_filter')
             .ilike('code', discountCode)
             .eq('tenant_id', tenantId!)
             .eq('is_active', true)
@@ -832,8 +832,9 @@ export default defineEventHandler(async (event: H3Event) => {
             const validUntil = discountData.valid_until ? new Date(discountData.valid_until) : null
             const withinPeriod = (!validFrom || now >= validFrom) && (!validUntil || now <= validUntil)
             const withinLimit = !discountData.usage_limit || (discountData.usage_count ?? 0) < discountData.usage_limit
+            const categoryOk = matchesDiscountCategoryFilter(discountData.category_filter, body.category_code)
 
-            if (withinPeriod && withinLimit) {
+            if (withinPeriod && withinLimit && categoryOk) {
               // Check first_lesson_only: appointment just inserted counts, so <= 1 means first lesson
               let firstLessonOk = true
               if (discountData.first_lesson_only) {
@@ -1066,22 +1067,15 @@ export default defineEventHandler(async (event: H3Event) => {
       logger.warn('⚠️ Could not queue availability recalc after booking (non-critical):', err.message)
     })
 
-    // Send appointment confirmation email. We AWAIT this (inside try/catch so a
-    // failure never breaks the already-committed booking). A previous
-    // fire-and-forget version was unreliable on Vercel serverless: the function
-    // is frozen right after the response is returned, so the unawaited $fetch was
-    // frequently cut off before the email was actually sent — which is why
-    // self-booking customers received no confirmation while staff-created
-    // appointments (different flow) did.
+    // Direct dispatch (no nested HTTP). Awaits Resend; on failure queues for cron.
     try {
-      await $fetch('/api/reminders/send-appointment-confirmation', {
-        method: 'POST',
-              headers: internalSecretHeaders(),
-        body: {
-          appointmentId: newAppointment.id,
-          userId: userData.id,
-          tenantId: tenantId
-        }
+      const { dispatchAppointmentConfirmation } = await import(
+        '~/server/utils/dispatch-appointment-confirmation'
+      )
+      await dispatchAppointmentConfirmation({
+        appointmentId: newAppointment.id,
+        userId: userData.id,
+        tenantId: tenantId,
       })
     } catch (err: any) {
       logger.warn('⚠️ Could not send appointment confirmation email (non-critical):', err?.message)
