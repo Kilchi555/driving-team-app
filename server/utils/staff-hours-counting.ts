@@ -84,6 +84,45 @@ export function isVacationAppointment(apt: { event_type_code?: string | null }):
 }
 
 /**
+ * True when a vacation appointment should reduce Ferien entitlement (Mo–Fr days).
+ * Calendar leave that is not annual leave (e.g. Vaterschaftsurlaub) still uses
+ * event_type_code=vacation for blocking + hours, but must not consume Ferien days.
+ */
+export function isFerienEntitlementAppointment(apt: {
+  event_type_code?: string | null
+  title?: string | null
+}): boolean {
+  if (apt.event_type_code !== 'vacation') return false
+  const title = (apt.title || '').trim().toLowerCase()
+  if (!title || title === 'ferien' || title.startsWith('ferien')) return true
+  // Explicit non-Ferien leave titles stay on the calendar / in hours, not in Ferien saldo
+  if (title.includes('vaterschaft') || title.includes('mutterschaft') || title.includes('elternzeit')) {
+    return false
+  }
+  return true
+}
+
+/**
+ * Ferien day credit for entitlement: full day = 1, half day (shorter block) = 0.5.
+ * Full-day calendar blocks are 07:00–19:00 (720 min); half days use ≤ half of that.
+ */
+export function ferienDayCredit(apt: {
+  event_type_code?: string | null
+  title?: string | null
+  duration_minutes?: number | null
+  start_time?: string | null
+}): number {
+  if (!isFerienEntitlementAppointment(apt) || !apt.start_time) return 0
+  const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: STAFF_HOURS_TIMEZONE }).format(new Date(apt.start_time))
+  const weekday = new Date(dateStr + 'T12:00:00').getDay()
+  if (weekday < 1 || weekday > 5) return 0
+  const duration = apt.duration_minutes ?? 0
+  // Half-day leave blocks are shorter than the standard 720 min full-day vacation block
+  if (duration > 0 && duration <= 420) return 0.5
+  return 1
+}
+
+/**
  * Returns true when an appointment should be counted toward a staff member's
  * actual working hours (Ist).
  */

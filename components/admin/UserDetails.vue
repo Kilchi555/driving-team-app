@@ -19,14 +19,62 @@
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4">
           <!-- Avatar + Name -->
           <div class="flex items-center gap-3 flex-1 min-w-0">
-            <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0 text-gray-500">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-              </svg>
+            <div class="relative flex-shrink-0">
+              <div
+                class="w-14 h-14 rounded-2xl bg-gray-100 overflow-hidden flex items-center justify-center text-gray-500 border border-gray-100"
+              >
+                <img
+                  v-if="staffPhotoUrl"
+                  :src="staffPhotoUrl"
+                  :alt="displayName"
+                  class="w-full h-full object-cover"
+                />
+                <span
+                  v-else-if="isStaffOrAdmin"
+                  class="text-sm font-semibold text-gray-600"
+                >{{ displayInitials }}</span>
+                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+              </div>
+              <template v-if="userDetails && isStaffOrAdmin && canManageUser(userDetails as any)">
+                <input
+                  ref="staffPhotoInput"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  class="hidden"
+                  @change="onStaffPhotoSelected"
+                />
+                <button
+                  type="button"
+                  class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+                  :disabled="staffPhotoBusy"
+                  :title="staffPhotoUrl ? 'Foto ändern' : 'Foto hochladen'"
+                  @click="openStaffPhotoPicker"
+                >
+                  <svg v-if="staffPhotoBusy" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                </button>
+              </template>
             </div>
             <div class="min-w-0">
               <h1 class="text-base font-semibold text-gray-900 truncate">{{ displayName }}</h1>
               <p class="text-xs text-gray-400">{{ roleLabel }}</p>
+              <button
+                v-if="userDetails && isStaffOrAdmin && staffPhotoUrl && canManageUser(userDetails as any)"
+                type="button"
+                class="mt-1 text-[11px] text-gray-400 hover:text-red-600 disabled:opacity-50"
+                :disabled="staffPhotoBusy"
+                @click="removeStaffPhoto"
+              >
+                Foto entfernen
+              </button>
             </div>
             <!-- Status badge -->
             <span
@@ -1073,6 +1121,7 @@ interface UserDetails {
   birthdate?: string | null
   faberid?: string | null
   profession?: string | null
+  metadata?: Record<string, any> | null
 }
 
 interface SystemActivity {
@@ -1280,6 +1329,91 @@ const displayName = computed(() => {
   const lastName = userDetails.value.last_name || ''
   return `${firstName} ${lastName}`.trim() || 'Unbekannt'
 })
+
+const isStaffOrAdmin = computed(() => {
+  const role = String(userDetails.value?.role || '')
+  return role === 'staff' || role === 'admin'
+})
+
+const staffPhotoUrl = computed(() => {
+  const meta = (userDetails.value as any)?.metadata
+  if (!meta || typeof meta !== 'object') return null
+  return (typeof meta.photo_url === 'string' && meta.photo_url)
+    || (typeof meta.avatar_url === 'string' && meta.avatar_url)
+    || null
+})
+
+const displayInitials = computed(() => {
+  const first = String(userDetails.value?.first_name || '').trim()
+  const last = String(userDetails.value?.last_name || '').trim()
+  const a = first[0] || ''
+  const b = last[0] || ''
+  return `${a}${b}`.toUpperCase() || '?'
+})
+
+const staffPhotoInput = ref<HTMLInputElement | null>(null)
+const staffPhotoBusy = ref(false)
+
+function openStaffPhotoPicker() {
+  staffPhotoInput.value?.click()
+}
+
+async function onStaffPhotoSelected(ev: Event) {
+  const input = ev.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || !userDetails.value?.id) return
+  staffPhotoBusy.value = true
+  try {
+    const fd = new FormData()
+    fd.append('user_id', String(userDetails.value.id))
+    fd.append('file', file)
+    const res = await $fetch<{ success?: boolean; photo_url?: string | null }>(
+      '/api/admin/upload-staff-photo',
+      { method: 'POST', body: fd },
+    )
+    const meta = {
+      ...(((userDetails.value as any).metadata && typeof (userDetails.value as any).metadata === 'object')
+        ? (userDetails.value as any).metadata
+        : {}),
+      photo_url: res.photo_url || null,
+      avatar_url: res.photo_url || null,
+    }
+    if (!res.photo_url) {
+      delete meta.photo_url
+      delete meta.avatar_url
+    }
+    userDetails.value = { ...(userDetails.value as any), metadata: meta }
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || e?.message || 'Foto-Upload fehlgeschlagen')
+  } finally {
+    staffPhotoBusy.value = false
+  }
+}
+
+async function removeStaffPhoto() {
+  if (!userDetails.value?.id || !staffPhotoUrl.value) return
+  if (!confirm('Profilfoto entfernen?')) return
+  staffPhotoBusy.value = true
+  try {
+    const fd = new FormData()
+    fd.append('user_id', String(userDetails.value.id))
+    fd.append('remove', '1')
+    await $fetch('/api/admin/upload-staff-photo', { method: 'POST', body: fd })
+    const meta = {
+      ...(((userDetails.value as any).metadata && typeof (userDetails.value as any).metadata === 'object')
+        ? { ...(userDetails.value as any).metadata }
+        : {}),
+    }
+    delete meta.photo_url
+    delete meta.avatar_url
+    userDetails.value = { ...(userDetails.value as any), metadata: meta }
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || e?.message || 'Foto konnte nicht entfernt werden')
+  } finally {
+    staffPhotoBusy.value = false
+  }
+}
 
 const displayEmail = computed(() => {
   return userDetails.value?.email || 'Keine E-Mail'
