@@ -839,8 +839,14 @@ export default defineEventHandler(async (event) => {
                     registered_at: new Date().toISOString(),
                     custom_sessions: payment.metadata?.custom_sessions || null,
                     is_partial_enrollment: !!(payment.metadata?.is_partial_enrollment),
-                    sari_synced: paymentStatus === 'completed',
-                    sari_synced_at: paymentStatus === 'completed' ? new Date().toISOString() : null,
+                    partial_start_session: payment.metadata?.partial_start_session != null
+                      ? Number(payment.metadata.partial_start_session)
+                      : null,
+                    individual_session_number: payment.metadata?.individual_session_number != null
+                      ? Number(payment.metadata.individual_session_number)
+                      : null,
+                    sari_synced: false,
+                    sari_synced_at: null,
                     vehicle_id: payment.metadata?.vehicle_id || null,
                     updated_at: new Date().toISOString()
                   }
@@ -906,7 +912,14 @@ export default defineEventHandler(async (event) => {
                       discount_applied_rappen: regPayload.discount_applied_rappen,
                       custom_sessions: regPayload.custom_sessions,
                       is_partial_enrollment: regPayload.is_partial_enrollment,
+                      partial_start_session: payment.metadata?.partial_start_session != null
+                        ? Number(payment.metadata.partial_start_session)
+                        : null,
+                      individual_session_number: payment.metadata?.individual_session_number != null
+                        ? Number(payment.metadata.individual_session_number)
+                        : null,
                       vehicle_id: regPayload.vehicle_id,
+                      sari_synced: false,
                       webhook_processed_at: new Date().toISOString(),
                       updated_at: new Date().toISOString(),
                     }
@@ -1244,6 +1257,11 @@ export default defineEventHandler(async (event) => {
                         payment_method: 'wallee',
                         amount_paid_rappen: regData.amount_paid_rappen,
                         discount_applied_rappen: regData.discount_applied_rappen,
+                        custom_sessions: regData.custom_sessions ?? null,
+                        is_partial_enrollment: !!regData.is_partial_enrollment,
+                        partial_start_session: regData.partial_start_session ?? null,
+                        individual_session_number: regData.individual_session_number ?? null,
+                        sari_synced: false,
                         webhook_processed_at: new Date().toISOString(),
                         updated_at: new Date().toISOString(),
                         notes: existing.notes && String(existing.notes).includes('Auto-imported from SARI')
@@ -2334,6 +2352,8 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
         payment_id,
         custom_sessions,
         is_partial_enrollment,
+        individual_session_number,
+        partial_start_session,
         courses!inner(
           id,
           sari_managed,
@@ -2365,27 +2385,43 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
       return
     }
     
-    // 4. Get birthdate + individual_session_number from payment metadata
+    // 4. Get birthdate + enrollment shape from payment metadata (source of truth after Wallee pay)
     let birthdate: string | null = null
     let individualSessionNum: number | null = null
-    
+    let isPartialFromPayment: boolean | null = null
+
     if (registration.payment_id) {
       const { data: payment } = await supabase
         .from('payments')
         .select('metadata')
         .eq('id', registration.payment_id)
         .single()
-      
+
       if (payment?.metadata?.sari_birthdate) {
         birthdate = payment.metadata.sari_birthdate
         logger.debug('✅ Got birthdate from payment metadata:', birthdate)
+      } else if (payment?.metadata?.birthdate) {
+        birthdate = payment.metadata.birthdate
       }
-      if (payment?.metadata?.individual_session_number) {
+      if (payment?.metadata?.individual_session_number != null) {
         individualSessionNum = Number(payment.metadata.individual_session_number)
         logger.debug('✅ Got individual_session_number from payment metadata:', individualSessionNum)
       }
+      if (typeof payment?.metadata?.is_partial_enrollment === 'boolean') {
+        isPartialFromPayment = payment.metadata.is_partial_enrollment
+      } else if (payment?.metadata?.is_partial_enrollment != null) {
+        isPartialFromPayment = String(payment.metadata.is_partial_enrollment) === 'true'
+      }
     }
-    
+
+    // Prefer payment metadata over registration row (SARI auto-import may have wrong/missing flags)
+    const isPartialEnrollment = isPartialFromPayment != null
+      ? isPartialFromPayment
+      : !!registration.is_partial_enrollment
+    if (individualSessionNum == null && registration.individual_session_number != null) {
+      individualSessionNum = Number(registration.individual_session_number)
+    }
+
     if (!birthdate) {
       logger.error('❌ No birthdate available for SARI enrollment (not in payment metadata)')
       return
@@ -2413,7 +2449,7 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     // For partial enrollment, filter session IDs to only those the customer booked.
     // is_partial_only courses already contain only the relevant sessions in sari_course_id
     // — no further filtering needed.
-    if (registration.is_partial_enrollment && !course.is_partial_only) {
+    if (isPartialEnrollment && !course.is_partial_only) {
       if (individualSessionNum !== null) {
         // Individual session booking: enroll only in the specific session
         const targetSess = (course.course_sessions || []).find(
@@ -2565,18 +2601,24 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     }
     
     logger.info(`✅ SARI enrollment completed: ${successCount}/${sariCourseIds.length} sessions successful${errorCount > 0 ? `, ${errorCount} errors` : ''}`)
-    
-    // 7. Update registration with sari_synced
-    await supabase
-      .from('course_registrations')
-      .update({
-        sari_synced: true,
-        sari_synced_at: new Date().toISOString()
-      })
-      .eq('id', registrationId)
-    
-    logger.info('✅ Registration marked as SARI synced')
-    
+
+    const fullySynced = errorCount === 0 && successCount >= sariCourseIds.length
+    if (fullySynced) {
+      await supabase
+        .from('course_registrations')
+        .update({
+          sari_synced: true,
+          sari_synced_at: new Date().toISOString(),
+        })
+        .eq('id', registrationId)
+      logger.info('✅ Registration marked as SARI synced')
+    } else {
+      logger.error(`🚨 SARI enrollment incomplete for registration ${registrationId}: ${successCount}/${sariCourseIds.length}`)
+      await supabase
+        .from('course_registrations')
+        .update({ sari_synced: false, sari_synced_at: null })
+        .eq('id', registrationId)
+    }
   } catch (error: any) {
     logger.error('❌ SARI enrollment failed:', error.message)
     // Non-critical - payment was successful, enrollment can be done manually
