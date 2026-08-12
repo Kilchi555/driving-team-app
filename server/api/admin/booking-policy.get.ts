@@ -78,10 +78,16 @@ export interface BookingPolicy {
   /** When true, stop billable SMS once included segments are used */
   sms_hard_stop_on_quota: boolean
   /**
-   * When true, SMS overage is not billed to Stripe (comp / goodwill).
-   * Usage is still counted and soft alerts may still fire.
+   * Temporary goodwill: do not bill SMS overage to Stripe while this is true.
+   * Prefer sms_overage_waived_until for time-bound kulanz; clear this when the
+   * tenant opts into paid SMS overage.
    */
   sms_overage_waived: boolean
+  /**
+   * ISO date (YYYY-MM-DD) — overage waived until end of that UTC day (inclusive).
+   * After that, normal metered billing applies again.
+   */
+  sms_overage_waived_until: string | null
   /** SMS on appointment cancellation (default true) */
   cancellation_sms_enabled: boolean
   /** SMS on appointment reschedule (default true) */
@@ -173,6 +179,7 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   sms_message_length: 'short',
   sms_hard_stop_on_quota: false,
   sms_overage_waived: false,
+  sms_overage_waived_until: null,
   cancellation_sms_enabled: true,
   reschedule_sms_enabled: true,
   payment_reminder_sms_enabled: true,
