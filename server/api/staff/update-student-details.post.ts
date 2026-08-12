@@ -149,7 +149,12 @@ export default defineEventHandler(async (event) => {
     if (email !== undefined) updateData.email = email
     if (phone !== undefined) updateData.phone = phone
     if (category !== undefined) updateData.category = category
-    if (birthdate !== undefined) updateData.birthdate = birthdate
+    // Empty string is invalid for Postgres date columns — store null instead
+    if (birthdate !== undefined) {
+      updateData.birthdate = typeof birthdate === 'string' && birthdate.trim() !== ''
+        ? birthdate.trim()
+        : null
+    }
     if (street !== undefined) updateData.street = street
     if (street_nr !== undefined) updateData.street_nr = street_nr
     if (zip !== undefined) updateData.zip = zip
