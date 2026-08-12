@@ -158,9 +158,10 @@ function restorePrevious() {
 
     <p v-if="context === 'photo_caption'" class="text-xs text-gray-400">
       <template v-if="visionImage">
-        KI erkennt das Motiv im Bild
-        <span v-if="imageFiles.length > 1"> (erstes von {{ imageFiles.length }})</span>
-        und schreibt die Caption danach.
+        Manueller KI-Button analysiert
+        <span v-if="imageFiles.length > 1">das erste von {{ imageFiles.length }} Bildern</span>
+        <span v-else>dieses Bild</span>
+        — beim Upload mit «KI-Caption pro Bild» bekommt jedes Foto eine eigene SEO-Beschreibung.
       </template>
       <template v-else>
         Zuerst ein Bild auswählen — dann erkennt die KI das Motiv für den SEO-Text.

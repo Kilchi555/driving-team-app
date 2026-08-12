@@ -343,3 +343,69 @@ Anforderungen:
 
   return message.content[0].type === 'text' ? message.content[0].text.trim() : ''
 }
+
+/**
+ * SEO photo caption from an uploaded image buffer (sharp → vision → Anthropic).
+ * Used by pool upload auto-caption so each file gets its own description.
+ */
+export async function generateGbpPhotoCaptionFromBuffer(params: {
+  tenantId: string
+  locationId?: string | null
+  imageBuffer: Buffer
+  draftText?: string | null
+  tone?: GbpAiTextTone
+}): Promise<string> {
+  const sharp = (await import('sharp')).default
+  const jpeg = await sharp(params.imageBuffer, { animated: false, failOn: 'none' })
+    .rotate()
+    .resize({ width: 1280, height: 1280, fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 75, mozjpeg: true })
+    .toBuffer()
+
+  const imageBase64 = jpeg.toString('base64')
+  if (imageBase64.length > 2_000_000) {
+    throw createError({
+      statusCode: 413,
+      statusMessage: 'Bild zu gross für KI-Analyse — bitte kleineres Foto wählen',
+    })
+  }
+
+  const { getSupabaseAdmin } = await import('~/server/utils/supabase-admin')
+  const { getGbpAutomationSettings, resolveGbpLocation } = await import('~/server/utils/gbp')
+  const supabase = getSupabaseAdmin()
+
+  let locationTitle: string | null = null
+  let settings = await getGbpAutomationSettings(params.tenantId, null)
+  if (params.locationId) {
+    const loc = await resolveGbpLocation(params.tenantId, params.locationId)
+    locationTitle = loc.title
+    settings = await getGbpAutomationSettings(params.tenantId, loc.id)
+  }
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, business_type')
+    .eq('id', params.tenantId)
+    .single()
+
+  const { getTerminologyDefaults } = await import('~/composables/useTerminology')
+  const terms = getTerminologyDefaults(tenant?.business_type)
+
+  return generateGbpAiText({
+    context: 'photo_caption',
+    tenantName: tenant?.name || terms.businessNoun,
+    businessNoun: terms.businessNoun,
+    clientsPlural: terms.clientsPlural,
+    clientSingular: terms.client,
+    appointmentSingular: terms.appointment,
+    locationTitle,
+    brandVoice: settings.brand_voice,
+    keywords: settings.keywords ?? [],
+    draftText: params.draftText,
+    tone: params.tone || 'local_friendly',
+    mode: 'generate',
+    ctaType: settings.default_cta_type,
+    imageBase64,
+    imageMediaType: 'image/jpeg',
+  })
+}

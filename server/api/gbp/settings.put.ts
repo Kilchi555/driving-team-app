@@ -22,6 +22,7 @@ export default defineEventHandler(async (event) => {
     locationId?: string | null
     review_reply_mode?: ReviewReplyMode
     posts_per_week?: number
+    photos_per_week?: number
     photo_mode?: PhotoMode
     brand_voice?: string | null
     keywords?: string[]
@@ -46,12 +47,16 @@ export default defineEventHandler(async (event) => {
   if (body.posts_per_week != null && (body.posts_per_week < 1 || body.posts_per_week > 4)) {
     throw createError({ statusCode: 400, statusMessage: 'posts_per_week must be 1–4' })
   }
+  if (body.photos_per_week != null && (body.photos_per_week < 1 || body.photos_per_week > 7)) {
+    throw createError({ statusCode: 400, statusMessage: 'photos_per_week must be 1–7' })
+  }
 
   const patch: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   }
   if (body.review_reply_mode != null) patch.review_reply_mode = body.review_reply_mode
   if (body.posts_per_week != null) patch.posts_per_week = body.posts_per_week
+  if (body.photos_per_week != null) patch.photos_per_week = body.photos_per_week
   if (body.photo_mode != null) patch.photo_mode = body.photo_mode
   if (body.brand_voice !== undefined) patch.brand_voice = body.brand_voice
   if (body.keywords != null) patch.keywords = body.keywords
@@ -79,6 +84,7 @@ export default defineEventHandler(async (event) => {
         location_id: locationId,
         review_reply_mode: defaults.review_reply_mode,
         posts_per_week: defaults.posts_per_week,
+        photos_per_week: defaults.photos_per_week,
         photo_mode: defaults.photo_mode,
         brand_voice: defaults.brand_voice,
         keywords: defaults.keywords,
