@@ -219,9 +219,10 @@ export default defineEventHandler(async (event) => {
 
   for (const apt of appointments as any[]) {
     const user = apt.user
-    const hasEmail = !!(user?.email && String(user.email).trim())
-    const hasPhone = !!(user?.phone && String(user.phone).trim())
-    if (!hasEmail && !hasPhone) { skipped++; continue }
+    if (!user?.id) { skipped++; continue }
+
+    const hasEmail = !!(user.email && String(user.email).trim())
+    const hasPhone = !!(user.phone && String(user.phone).trim())
 
     if (alreadyQueued.has(apt.id)) {
       logger.debug(`⏭️ Reminder already queued for appointment ${apt.id}`)
@@ -372,9 +373,23 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    if (!channels.sendEmail && !channels.sendSms) {
-      skipped++
-    }
+    // Push alongside email/SMS (no-op at send time if no device token)
+    const pushBody = `${eventLabel} am ${dateLabel} um ${timeStr} Uhr`
+    toInsert.push({
+      tenant_id: apt.tenant_id,
+      channel: 'push',
+      subject: 'Erinnerung an deinen Termin',
+      body: pushBody,
+      status: 'pending',
+      send_at: now.toISOString(),
+      context_data: {
+        stage: 'appointment_reminder',
+        appointment_id: apt.id,
+        user_id: user.id,
+        tenant_name: tenantName,
+        path: '/customer-dashboard',
+      },
+    })
   }
 
   if (toInsert.length === 0) {

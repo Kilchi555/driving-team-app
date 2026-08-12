@@ -38,21 +38,30 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Ungültiger Token' })
   }
 
-  // Look up tenant_id for the user
+  // Map auth.users.id → public.users.id (sendPushToUser keys off app user id)
   const admin = getSupabaseAdmin()
-  const { data: userData } = await admin
+  const { data: userData, error: userLookupError } = await admin
     .from('users')
-    .select('tenant_id')
+    .select('id, tenant_id')
     .eq('auth_user_id', user.id)
-    .single()
+    .maybeSingle()
+
+  if (userLookupError) {
+    console.error('[push/register-token] User lookup error:', userLookupError.message)
+    throw createError({ statusCode: 500, statusMessage: 'Fehler beim Laden des Users' })
+  }
+  if (!userData?.id) {
+    throw createError({ statusCode: 404, statusMessage: 'Kein App-User für diese Session gefunden' })
+  }
 
   // Upsert: insert or update the token (keeps updated_at fresh)
   const { error } = await admin.from('push_tokens').upsert(
     {
-      user_id: user.id,
+      user_id: userData.id,
       token,
       platform,
-      tenant_id: userData?.tenant_id ?? null,
+      tenant_id: userData.tenant_id ?? null,
+      updated_at: new Date().toISOString(),
     },
     { onConflict: 'user_id,token' },
   )
