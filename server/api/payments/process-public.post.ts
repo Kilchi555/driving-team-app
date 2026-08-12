@@ -389,6 +389,7 @@ export default defineEventHandler(async (event) => {
         custom_sessions: metadata?.custom_sessions || null,
         is_partial_enrollment: metadata?.is_partial_enrollment ? true : false,
         partial_start_position: metadata?.partial_start_position ?? null,
+        partial_start_session: metadata?.partial_start_session ?? null,
         individual_session_number: metadata?.individual_session_number ?? null,
         // Discount — needed by webhook for discount record + registration
         discount_code: metadata?.discount_code || null,

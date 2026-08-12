@@ -461,29 +461,43 @@ export class SARIClient {
    * @param faberid Student's FABER ID
    * @param birthdate Student's birthdate (YYYY-MM-DD)
    */
+  /**
+   * Validate that SARI will accept enrollment for all sessions.
+   * Uses real enroll + rollback (SARI has no dry-run). Must not leave leftovers:
+   * incomplete rollback blocks checkout so SARI-sync cannot import a partial seat mid-payment.
+   */
   async validateAllSessions(
     sessionIds: string[],
     faberid: string,
     birthdate: string
   ): Promise<{ canEnroll: boolean; reason?: string; failedSessionId?: string }> {
     const enrolledSessions: string[] = []
-    
+    const normFid = (v: string) => String(v || '').replace(/^0+/, '') || String(v || '')
+    const faberNorm = normFid(faberid)
+
+    const isMember = async (sessionId: string): Promise<boolean> => {
+      try {
+        const members = await this.getCourseDetail(parseInt(sessionId))
+        return members.some(m => normFid(m.faberid) === faberNorm)
+      } catch {
+        return false
+      }
+    }
+
     try {
       for (const sessionId of sessionIds) {
         const numericId = parseInt(sessionId)
-        
+
         // First check if already enrolled
         try {
-          const members = await this.getCourseDetail(numericId)
-          const alreadyEnrolled = members.some(m => m.faberid === faberid)
-          if (alreadyEnrolled) {
+          if (await isMember(sessionId)) {
             console.log(`⏭️ Session ${sessionId}: Already enrolled (OK for validation)`)
-            continue // Already enrolled is fine for validation
+            continue
           }
         } catch (e) {
           // If getCourseDetail fails, try enrollment anyway
         }
-        
+
         // Try to enroll (test)
         try {
           console.log(`🔍 Test enrollment for session ${sessionId}...`)
@@ -492,73 +506,129 @@ export class SARIClient {
           console.log(`✅ Test enrollment successful for session ${sessionId}`)
         } catch (error: any) {
           const errorMsg = error.message || ''
-          
-          // If already enrolled, that's OK
+
           if (errorMsg.includes('ALREADY_ENROLLED') || errorMsg.includes('PERSON_ALREADY_ADDED')) {
             console.log(`⏭️ Session ${sessionId}: Already enrolled (OK)`)
             continue
           }
-          
-          // Deadline violation - this is what we're looking for
+
           if (errorMsg.includes('COURSE_PERSON_DEADLINE_VIOLATED')) {
             console.log(`❌ Session ${sessionId}: Deadline violated`)
-            // Rollback any test enrollments we made
-            await this.rollbackTestEnrollments(enrolledSessions, faberid)
-            return { 
-              canEnroll: false, 
+            const cleaned = await this.rollbackTestEnrollments(enrolledSessions, faberid)
+            if (!cleaned.ok) {
+              return {
+                canEnroll: false,
+                reason: 'Temporäre SARI-Reservierung konnte nicht zurückgesetzt werden. Bitte in 1–2 Minuten erneut versuchen.',
+                failedSessionId: cleaned.leftoverSessionId || sessionId,
+              }
+            }
+            return {
+              canEnroll: false,
               reason: 'Die Anmeldefrist für diesen Kurs ist abgelaufen. Bitte wählen Sie einen anderen Termin.',
               failedSessionId: sessionId
             }
           }
-          
-          // Course full
+
           if (errorMsg.includes('COURSE_FULL') || errorMsg.includes('NO_FREE_PLACES')) {
             console.log(`❌ Session ${sessionId}: Course full`)
-            await this.rollbackTestEnrollments(enrolledSessions, faberid)
-            return { 
-              canEnroll: false, 
+            const cleaned = await this.rollbackTestEnrollments(enrolledSessions, faberid)
+            if (!cleaned.ok) {
+              return {
+                canEnroll: false,
+                reason: 'Temporäre SARI-Reservierung konnte nicht zurückgesetzt werden. Bitte in 1–2 Minuten erneut versuchen.',
+                failedSessionId: cleaned.leftoverSessionId || sessionId,
+              }
+            }
+            return {
+              canEnroll: false,
               reason: 'Der ausgewählte Termin ist leider bereits ausgebucht.',
               failedSessionId: sessionId
             }
           }
-          
-          // Other error
+
           console.error(`❌ Session ${sessionId}: ${errorMsg}`)
-          await this.rollbackTestEnrollments(enrolledSessions, faberid)
-          return { 
-            canEnroll: false, 
+          const cleaned = await this.rollbackTestEnrollments(enrolledSessions, faberid)
+          if (!cleaned.ok) {
+            return {
+              canEnroll: false,
+              reason: 'Temporäre SARI-Reservierung konnte nicht zurückgesetzt werden. Bitte in 1–2 Minuten erneut versuchen.',
+              failedSessionId: cleaned.leftoverSessionId || sessionId,
+            }
+          }
+          return {
+            canEnroll: false,
             reason: `Anmeldung nicht möglich: ${errorMsg}`,
             failedSessionId: sessionId
           }
         }
       }
-      
-      // All sessions validated - now rollback the test enrollments
-      await this.rollbackTestEnrollments(enrolledSessions, faberid)
-      
+
+      // All sessions validated - rollback test enrollments and verify they are gone
+      const cleaned = await this.rollbackTestEnrollments(enrolledSessions, faberid)
+      if (!cleaned.ok) {
+        console.error(`❌ SARI test-enroll rollback incomplete; leftover session ${cleaned.leftoverSessionId}`)
+        return {
+          canEnroll: false,
+          reason: 'Temporäre SARI-Reservierung konnte nicht vollständig zurückgesetzt werden. Bitte in 1–2 Minuten erneut versuchen.',
+          failedSessionId: cleaned.leftoverSessionId,
+        }
+      }
+
       return { canEnroll: true }
     } catch (error: any) {
       console.error('❌ validateAllSessions error:', error.message)
-      // Try to rollback any test enrollments
       await this.rollbackTestEnrollments(enrolledSessions, faberid)
       return { canEnroll: false, reason: `Validierungsfehler: ${error.message}` }
     }
   }
 
   /**
-   * Helper: Rollback test enrollments by unenrolling
+   * Unenroll test seats and verify membership is cleared (with retries).
    */
-  private async rollbackTestEnrollments(sessionIds: string[], faberid: string): Promise<void> {
+  private async rollbackTestEnrollments(
+    sessionIds: string[],
+    faberid: string
+  ): Promise<{ ok: boolean; leftoverSessionId?: string }> {
+    if (!sessionIds.length) return { ok: true }
+
+    const normFid = (v: string) => String(v || '').replace(/^0+/, '') || String(v || '')
+    const faberNorm = normFid(faberid)
+
     for (const sessionId of sessionIds) {
-      try {
-        console.log(`🔄 Rolling back test enrollment for session ${sessionId}...`)
-        await this.unenrollStudent(parseInt(sessionId), faberid)
-        console.log(`✅ Rolled back session ${sessionId}`)
-      } catch (e: any) {
-        // If unenroll fails, log but continue - session might have auto-unenrolled or never enrolled
-        console.warn(`⚠️ Could not rollback session ${sessionId}: ${e.message}`)
+      let stillThere = true
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          console.log(`🔄 Rolling back test enrollment for session ${sessionId} (attempt ${attempt})...`)
+          await this.unenrollStudent(parseInt(sessionId), faberid)
+        } catch (e: any) {
+          console.warn(`⚠️ Unenroll session ${sessionId} attempt ${attempt}: ${e.message}`)
+        }
+
+        try {
+          const members = await this.getCourseDetail(parseInt(sessionId))
+          stillThere = members.some(m => normFid(m.faberid) === faberNorm)
+        } catch (e: any) {
+          // If we cannot verify, assume not cleaned
+          console.warn(`⚠️ Could not verify rollback for session ${sessionId}: ${e.message}`)
+          stillThere = true
+        }
+
+        if (!stillThere) {
+          console.log(`✅ Rolled back session ${sessionId}`)
+          break
+        }
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 400 * attempt))
+        }
+      }
+
+      if (stillThere) {
+        console.error(`❌ Leftover SARI enrollment after rollback: session ${sessionId}, faberid ${faberid}`)
+        return { ok: false, leftoverSessionId: sessionId }
       }
     }
+
+    return { ok: true }
   }
 
   /**

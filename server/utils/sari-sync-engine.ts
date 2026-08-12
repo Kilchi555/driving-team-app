@@ -871,6 +871,34 @@ export class SARISyncEngine {
             .maybeSingle()
 
           if (!existingByFaberid) {
+            // Skip auto-import while an online checkout is still open for this faberid+course.
+            // Otherwise validateAllSessions leftovers get imported mid-payment and the Wallee
+            // webhook hits unique(faberid) before it can create/enroll the paid registration.
+            let openCheckout = false
+            try {
+              const { data: openPays } = await this.supabase
+                .from('payments')
+                .select('id, payment_status, metadata, course_registration_id, created_at')
+                .eq('tenant_id', this.tenantId)
+                .in('payment_status', ['pending', 'processing', 'authorized'])
+                .contains('metadata', { course_id: simyCourseId })
+                .order('created_at', { ascending: false })
+                .limit(30)
+
+              openCheckout = !!(openPays || []).find((p: any) => {
+                if (p.course_registration_id) return false
+                const metaFid = String(p.metadata?.sari_faberid || '').replace(/^0+/, '') || String(p.metadata?.sari_faberid || '')
+                return metaFid && metaFid === canonicalFaberid
+              })
+            } catch (openPayErr: any) {
+              logger.warn(`Could not check open checkouts for ${canonicalFaberid}: ${openPayErr.message}`)
+            }
+
+            if (openCheckout) {
+              logger.info(`⏭️ Skipping SARI auto-import for ${canonicalFaberid}: open Wallee checkout in progress for course ${simyCourseId}`)
+              continue
+            }
+
             // If an online Wallee payment already completed for this faberid+course but the
             // webhook lost the race to SARI sync, reuse contact/payment from that payment.
             let pendingPayment: any = null
