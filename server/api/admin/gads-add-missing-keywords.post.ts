@@ -219,6 +219,24 @@ const KEYWORD_GROUPS: Array<{
     ],
     reason: 'Hochintent-Buchungskeywords fehlen in Pfäffikon Ad Group',
   },
+
+  // ── Auto Zürich / Altstetten: Exact core demand on AG_Local ─────────────────
+  {
+    preset: 'auto_zh',
+    campaign_name_contains: 'Fahrschule Zürich / Altstetten',
+    ad_group_name_contains: 'AG_Local',
+    keywords: [
+      { text: 'fahrschule zürich', match_type: 'EXACT', cpc_chf: 4.2 },
+      { text: 'fahrstunden zürich', match_type: 'EXACT', cpc_chf: 4.0 },
+      { text: 'autofahrschule zürich', match_type: 'EXACT', cpc_chf: 4.0 },
+      { text: 'auto fahrschule zürich', match_type: 'EXACT', cpc_chf: 4.0 },
+      { text: 'fahrschule zürich west', match_type: 'EXACT', cpc_chf: 3.8 },
+      { text: 'fahrschule altstetten', match_type: 'EXACT', cpc_chf: 3.8 },
+      { text: 'fahrstunden buchen zürich', match_type: 'EXACT', cpc_chf: 4.2 },
+      { text: 'auto fahrstunden zürich', match_type: 'EXACT', cpc_chf: 4.0 },
+    ],
+    reason: 'Core Auto-Zürich Exact-Demand auf AG_Local (Landing Auto-ZH)',
+  },
 ]
 
 export default defineEventHandler(async (event) => {
@@ -230,7 +248,7 @@ export default defineEventHandler(async (event) => {
   const dryRun: boolean = body?.dry_run !== false
   const preset: string = body?.preset ?? 'all'
 
-  const validPresets = ['all', 'be_keywords', 'march', 'fahrstunden', 'buchungsintent']
+  const validPresets = ['all', 'be_keywords', 'march', 'fahrstunden', 'buchungsintent', 'auto_zh']
   if (!validPresets.includes(preset)) {
     return { ok: false, reason: `Invalid preset. Use one of: ${validPresets.join(', ')}` }
   }

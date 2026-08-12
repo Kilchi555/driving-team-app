@@ -227,6 +227,18 @@
             :result="motoResult"
             @run="runEndpoint('/api/admin/gads-create-motorrad-zuerich', {}, motoLoading, motoResult)"
           />
+
+          <!-- Auto Zürich optimize -->
+          <ToolCard
+            title="Auto Zürich Ads optimieren"
+            description="Umgebung pausiert lassen, Negatives, Exact-KWs auf AG_Local, Broad-Probe pausieren"
+            badge="Auto ZH"
+            badge-color="blue"
+            :loading="autoZhOptLoading"
+            :result="autoZhOptResult"
+            confirm-message="Auto-Zürich-Kampagne wird live optimiert (Negatives + Exact-KWs)."
+            @run="runEndpoint('/api/admin/gads-optimize-auto-zh', { dry_run: false, daily_budget_chf: 55 }, autoZhOptLoading, autoZhOptResult)"
+          />
         </div>
       </section>
 
@@ -718,6 +730,8 @@ const czvResult = ref<any>(null)
 const czvAdsOnly = ref(false)
 const motoLoading = ref(false)
 const motoResult = ref<any>(null)
+const autoZhOptLoading = ref(false)
+const autoZhOptResult = ref<any>(null)
 
 // ── Keywords & Bids ─────────────────────────────────────────────────────────
 const negKw = ref({ preset: 'competitors_and_irrelevant' })

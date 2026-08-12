@@ -20,8 +20,9 @@ const ZUERICH_LOCATION_URLS: Record<string, string> = {
   'Fahrschule Schlieren': `${BASE}/fahrschule-schlieren/`,
   'Fahrschule Dietikon': `${BASE}/fahrschule-dietikon/`,
   'Fahrschule Birmensdorf': `${BASE}/fahrschule-birmensdorf/`,
-  'Fahrschule Altstetten': `${BASE}/`,
-  'Fahrschule Urdorf': `${BASE}/`,
+  // Altstetten / Urdorf → converting Auto-ZH landing (not Home)
+  'Fahrschule Altstetten': `${BASE}/auto-fahrschule-zuerich/`,
+  'Fahrschule Urdorf': `${BASE}/auto-fahrschule-zuerich/`,
   'Fahrschule Uitikon': `${BASE}/fahrschule-birmensdorf/`,
   'Fahrschule Spreitenbach': `${BASE}/fahrschule-spreitenbach/`,
 }
