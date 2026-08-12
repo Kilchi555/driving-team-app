@@ -2502,9 +2502,10 @@ const handleOpenStudentProgress = async (student: any) => {
   // Schließe EventModal
   isModalVisible.value = false
   
-  // Öffne EnhancedStudentModal — pending users land on details tab (reminder button)
+  // Profil-Button → immer Fortschritt. Details (Onboarding-Reminder) nur manuell,
+  // sonst landen Tenants ohne Login-Pflicht (kein auth_user_id) fälschlich auf Details.
   selectedStudentForProgress.value = student
-  studentProgressActiveTab.value = !student?.auth_user_id ? 'details' : 'progress'
+  studentProgressActiveTab.value = 'progress'
   showEnhancedStudentModal.value = true
 }
 
