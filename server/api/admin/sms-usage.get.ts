@@ -41,6 +41,7 @@ export default defineEventHandler(async (event) => {
       reminder_sms_enabled: policy.reminder_sms_enabled !== false,
       sms_message_length: length,
       sms_hard_stop_on_quota: policy.sms_hard_stop_on_quota === true,
+      sms_overage_waived: policy.sms_overage_waived === true,
     },
     previews: {
       short: {

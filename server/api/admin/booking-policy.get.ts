@@ -77,6 +77,11 @@ export interface BookingPolicy {
   sms_message_length: 'short' | 'long'
   /** When true, stop billable SMS once included segments are used */
   sms_hard_stop_on_quota: boolean
+  /**
+   * When true, SMS overage is not billed to Stripe (comp / goodwill).
+   * Usage is still counted and soft alerts may still fire.
+   */
+  sms_overage_waived: boolean
   /** SMS on appointment cancellation (default true) */
   cancellation_sms_enabled: boolean
   /** SMS on appointment reschedule (default true) */
@@ -167,6 +172,7 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   customer_notification_channel: 'email_first',
   sms_message_length: 'short',
   sms_hard_stop_on_quota: false,
+  sms_overage_waived: false,
   cancellation_sms_enabled: true,
   reschedule_sms_enabled: true,
   payment_reminder_sms_enabled: true,
