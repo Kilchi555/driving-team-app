@@ -9,6 +9,7 @@ import {
   notifyStaffCourseCancelled,
 } from '~/server/utils/course-staff-notifications'
 import { logger } from '~/utils/logger'
+import { sendEmail } from '~/server/utils/email'
 
 /**
  * POST /api/admin/courses/cancel-course
@@ -43,7 +44,7 @@ export default defineEventHandler(async (event) => {
     .select(`
       id, name, description, sari_managed, sari_course_id,
       course_sessions(id, start_time, end_time, sari_session_id),
-      tenants!inner(id, name, slug, contact_email, primary_color, sari_enabled, sari_environment)
+      tenants!inner(id, name, slug, contact_email, from_email, resend_domain_verified, primary_color, sari_enabled, sari_environment)
     `)
     .eq('id', courseId)
     .eq('tenant_id', profile.tenant_id)
@@ -236,10 +237,11 @@ export default defineEventHandler(async (event) => {
     const formattedSessions = formatSessionsForEmail(sortedSessions)
 
     try {
-      const { Resend } = await import('resend')
-      const resend = new Resend(process.env.RESEND_API_KEY)
-      const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
-      const fromWithName = tenant?.name ? `${tenant.name} <${fromEmail}>` : fromEmail
+      const tenantFrom = {
+        fromName: tenant?.name || undefined,
+        fromEmail: tenant?.from_email ?? null,
+        domainVerified: !!tenant?.resend_domain_verified,
+      }
 
       let sent = 0
       for (const p of participants) {
@@ -263,7 +265,7 @@ export default defineEventHandler(async (event) => {
         })
 
         try {
-          await resend.emails.send({ from: fromWithName, to: p.email, subject, html })
+          await sendEmail({ ...tenantFrom, to: p.email, subject, html })
           sent++
         } catch (err: any) {
           logger.warn(`⚠️ Failed to send cancellation email to ${p.email}:`, err.message)

@@ -10,6 +10,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { sendEmail } from '~/server/utils/email'
 import { generateAdminEnrollmentNotificationEmail } from '~/server/utils/email-templates'
 import {
   buildBrandedEmailShell,
@@ -96,6 +97,8 @@ export default defineEventHandler(async (event) => {
           name,
           slug,
           contact_email,
+          from_email,
+          resend_domain_verified,
           primary_color,
           secondary_color,
           business_type,
@@ -366,19 +369,23 @@ export default defineEventHandler(async (event) => {
       }),
     }
 
-    // 5. Send email using Resend
+    // 5. Send via central email util (tenant from_email when domain verified)
     try {
-      const { Resend } = await import('resend')
-      const resend = new Resend(process.env.RESEND_API_KEY)
+      const tenantFrom = {
+        fromName: tenant?.name || undefined,
+        fromEmail: tenant?.from_email ?? null,
+        domainVerified: !!tenant?.resend_domain_verified,
+      }
 
-      const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
-      const fromWithName = tenant?.name ? `${tenant.name} <${fromEmail}>` : fromEmail
-
-      await resend.emails.send({
-        from: fromWithName,
-        ...enrollmentEmail
+      await sendEmail({
+        ...enrollmentEmail,
+        ...tenantFrom,
       })
-      logger.info('✅ Course enrollment confirmation email sent to:', enrollment.email)
+      logger.info('✅ Course enrollment confirmation email sent to:', enrollment.email, {
+        fromEmail: tenant?.resend_domain_verified && tenant?.from_email
+          ? tenant.from_email
+          : 'platform fallback',
+      })
 
       // Send admin notification (non-blocking)
       if (tenant?.contact_email) {
@@ -402,11 +409,11 @@ export default defineEventHandler(async (event) => {
           paymentAmount: adminPrice,
           tenantName: tenant.name
         })
-        resend.emails.send({
-          from: fromWithName,
+        sendEmail({
           to: tenant.contact_email,
           subject: adminSubject,
-          html: adminHtml
+          html: adminHtml,
+          ...tenantFrom,
         }).catch((err: any) => logger.warn('⚠️ Admin notification email failed:', err.message))
       }
 
