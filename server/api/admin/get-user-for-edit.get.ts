@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
     // Do NOT return onboarding_token — it is an account-takeover secret
     const { data: targetUser, error: targetError } = await supabase
       .from('users')
-      .select('id, email, first_name, last_name, phone, category, birthdate, faberid, tenant_id, preferred_payment_method, role, auth_user_id, street, street_nr, zip, city, profession')
+      .select('id, email, first_name, last_name, phone, category, birthdate, faberid, tenant_id, preferred_payment_method, role, auth_user_id, street, street_nr, zip, city, profession, company_id')
       .eq('id', userId)
       .eq('tenant_id', requestingUser.tenant_id)
       .single()

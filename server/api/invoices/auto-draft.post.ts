@@ -10,6 +10,7 @@ import { computeVatAmountRappen, getTenantDefaultVatRate } from '~/server/utils/
 import { groupProductSalesByAppointment } from '~/server/utils/invoice-product-lines'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
+import { resolveStudentBillingAddress } from '~/server/utils/billing-from-company'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -106,7 +107,7 @@ export default defineEventHandler(async (event) => {
   let student: any = null
   const { data: studentById, error: errById } = await supabase
     .from('users')
-    .select('id, first_name, last_name, email, street, street_nr, zip, city, phone')
+    .select('id, first_name, last_name, email, street, street_nr, zip, city, phone, company_id, default_company_billing_address_id')
     .eq('id', student_user_id)
     .maybeSingle()
 
@@ -115,7 +116,7 @@ export default defineEventHandler(async (event) => {
   } else {
     const { data: studentByAuthId } = await supabase
       .from('users')
-      .select('id, first_name, last_name, email, street, street_nr, zip, city, phone')
+      .select('id, first_name, last_name, email, street, street_nr, zip, city, phone, company_id, default_company_billing_address_id')
       .eq('auth_user_id', student_user_id)
       .maybeSingle()
     student = studentByAuthId
@@ -125,15 +126,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Student not found' })
   }
 
-  // Billing-Adresse aus company_billing_addresses laden (neueste aktive)
-  const { data: savedBilling } = await supabase
-    .from('company_billing_addresses')
-    .select('company_name, contact_person, email, street, street_number, zip, city, country')
-    .eq('user_id', student.id)
-    .eq('is_active', true)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const savedBilling = await resolveStudentBillingAddress(supabase, student)
 
   // Tenant-Daten für Rechnungsnummer-Prefix + QR-IBAN + Rechnungstexte + MwSt
   const { data: tenant } = await supabase

@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     // Get user's tenant_id (the student's record)
     const { data: userData, error: studentError } = await supabaseAdmin
       .from('users')
-      .select('tenant_id')
+      .select('tenant_id, company_id, default_company_billing_address_id')
       .eq('id', user_id)
       .single()
     
@@ -72,27 +72,51 @@ export default defineEventHandler(async (event) => {
       throw new Error('Unauthorized to access this user')
     }
     
-    // Get billing addresses
-    const { data: addresses, error } = await supabaseAdmin
-      .from('company_billing_addresses')
-      .select('*')
-      .eq('user_id', user_id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-    
-    if (error) {
-      logger.error('❌ Error fetching billing addresses:', error)
-      throw new Error(error.message)
+    // Prefer the user's default billing address, then the latest active snapshot
+    let address: any = null
+    if (userData.default_company_billing_address_id) {
+      const { data: defaultAddress } = await supabaseAdmin
+        .from('company_billing_addresses')
+        .select('*')
+        .eq('id', userData.default_company_billing_address_id)
+        .eq('is_active', true)
+        .maybeSingle()
+      address = defaultAddress || null
     }
-    
-    const address = addresses && addresses.length > 0 ? addresses[0] : null
+
+    if (!address) {
+      const { data: addresses, error } = await supabaseAdmin
+        .from('company_billing_addresses')
+        .select('*')
+        .eq('user_id', user_id)
+        .eq('is_active', true)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+      
+      if (error) {
+        logger.error('❌ Error fetching billing addresses:', error)
+        throw new Error(error.message)
+      }
+      address = addresses && addresses.length > 0 ? addresses[0] : null
+    }
+
+    let company = null
+    if (userData.company_id) {
+      const { data: companyRow } = await supabaseAdmin
+        .from('companies')
+        .select('id, name, street, street_nr, zip, city, country, email, phone, contact_person, vat_number, company_register_number')
+        .eq('id', userData.company_id)
+        .maybeSingle()
+      company = companyRow || null
+    }
     
     logger.debug('✅ Billing address loaded:', address?.id || 'none')
     
     return {
       success: true,
-      data: address
+      data: address,
+      company,
+      company_id: userData.company_id || null,
     }
     
   } catch (error: any) {

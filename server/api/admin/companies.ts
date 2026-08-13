@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
 
   if (event.method === 'GET') {
-    const { search, include_inactive } = getQuery(event) as any
+    const { search, include_inactive, id } = getQuery(event) as any
     let q = supabase
       .from('companies')
       .select('*, users:users!users_company_id_fkey(id, first_name, last_name, email)')
@@ -20,6 +20,7 @@ export default defineEventHandler(async (event) => {
       .order('name')
 
     if (!include_inactive) q = q.eq('is_active', true)
+    if (id) q = q.eq('id', id)
     if (search) q = q.ilike('name', `%${search}%`)
 
     const { data, error } = await q

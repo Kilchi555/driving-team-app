@@ -544,6 +544,101 @@
             </div>
           </Transition>
         </div>
+
+        <!-- Rechnungsadresse-Quellen: Privat / zugewiesene Firma / Firma suchen -->
+        <div
+          v-if="selectedPaymentMethod === 'invoice' && props.selectedStudent && !props.isPastAppointment"
+          class="mt-3 space-y-2"
+        >
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+              :style="billingSource === 'private' ? { ...primaryBg, borderColor: 'transparent' } : {}"
+              :class="billingSource === 'private' ? 'text-white' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'"
+              @click="applyPrivateAddress"
+            >
+              Privatadresse
+            </button>
+            <button
+              v-if="linkedCompany"
+              type="button"
+              class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors max-w-[220px] truncate"
+              :style="billingSource === 'company' ? { ...primaryBg, borderColor: 'transparent' } : {}"
+              :class="billingSource === 'company' ? 'text-white' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'"
+              @click="applyLinkedCompanyAddress"
+            >
+              {{ linkedCompany.name }}
+            </button>
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+              :class="showCompanySearch ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'"
+              @click="toggleCompanySearch"
+            >
+              Firma suchen…
+            </button>
+          </div>
+
+          <div v-if="showCompanySearch" class="relative">
+            <input
+              v-model="companySearch"
+              type="search"
+              placeholder="Firma suchen…"
+              class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
+              @input="searchCompanies"
+            >
+            <div
+              v-if="companyResults.length > 0"
+              class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto"
+            >
+              <button
+                v-for="c in companyResults"
+                :key="c.id"
+                type="button"
+                class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left border-b border-gray-100 last:border-0"
+                @click="onCompanyPicked(c)"
+              >
+                <span class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 bg-orange-500">
+                  {{ (c.name || '?').charAt(0).toUpperCase() }}
+                </span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-900 truncate">{{ c.name }}</p>
+                  <p class="text-xs text-gray-400 truncate">{{ [c.contact_person, c.city].filter(Boolean).join(' · ') }}</p>
+                </div>
+              </button>
+            </div>
+            <p v-else-if="companySearch.length >= 1 && !isSearchingCompanies" class="text-xs text-gray-400 mt-1.5 pl-1">
+              Keine Firmen gefunden
+            </p>
+          </div>
+
+          <div v-if="pendingCompanyAssign" class="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2">
+            <p class="text-sm text-amber-900">
+              Es gibt bereits eine Rechnungsadresse. Adresse von
+              <span class="font-semibold">{{ pendingCompanyAssign.name }}</span> übernehmen?
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium border border-amber-300 text-amber-900 bg-white hover:bg-amber-100"
+                :disabled="isAssigningCompany"
+                @click="confirmCompanyAssign(false)"
+              >
+                Bestehende behalten
+              </button>
+              <button
+                type="button"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+                :style="primaryBg"
+                :disabled="isAssigningCompany"
+                @click="confirmCompanyAssign(true)"
+              >
+                Firmenadresse übernehmen
+              </button>
+            </div>
+          </div>
+        </div>
         
         <!-- Gespeicherte Rechnungsadresse anzeigen (CREATE-Modus mit bestehender Adresse) -->
         <div v-if="shouldShowSavedBillingAddress && !props.isEditMode" class="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
@@ -566,25 +661,6 @@
               <h5 class="text-sm font-semibold text-gray-700">
                 {{ isEditingBillingAddress ? 'Rechnungsadresse bearbeiten' : 'Rechnungsadresse' }}
               </h5>
-
-              <!-- Toggle: Gleich wie Kundenadresse -->
-              <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  @click="useCustomBillingAddressInModal = !useCustomBillingAddressInModal"
-                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
-                  :style="useCustomBillingAddressInModal ? primaryBg : {}"
-                  :class="useCustomBillingAddressInModal ? '' : 'bg-gray-300'"
-                >
-                  <span
-                    :class="[
-                      'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-                      useCustomBillingAddressInModal ? 'translate-x-6' : 'translate-x-1'
-                    ]"
-                  />
-                </button>
-                <span class="text-xs sm:text-sm text-gray-600">Gleich wie Kundenadresse</span>
-              </div>
             </div>
             
             <!-- Formular -->
@@ -644,8 +720,7 @@
                   <input
                     v-model="invoiceData.street_number"
                     type="text"
-                    required
-                    placeholder="123"
+                    placeholder="Nr."
                     class="px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                   >
                 </div>
@@ -746,10 +821,14 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { usePaymentMethods, useBillingAddresses } from '~/composables/usePaymentMethods'
 import { useDiscounts } from '~/composables/useDiscounts'
 const { primaryBg, primaryText, primaryBgLight, primaryBorder } = usePrimaryColor()
-import { useEventModalForm } from '~/composables/useEventModalForm'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import {
+  billingFieldsFromCompany,
+  billingFieldsFromPerson,
+  billingLooksLikeCompany,
+} from '~/utils/billing-address-map'
 import { watch } from 'vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
@@ -896,7 +975,15 @@ const studentBillingAddress = ref<any>(null)
 const adjustmentNotification = ref<any>(null)
 const isLoadingStudentBilling = ref(false)
 const isEditingBillingAddress = ref(false)
-const useCustomBillingAddressInModal = ref(false)
+const billingSource = ref<'private' | 'company' | 'custom' | null>(null)
+const linkedCompany = ref<any>(null)
+const showCompanySearch = ref(false)
+const companySearch = ref('')
+const companyResults = ref<any[]>([])
+const isSearchingCompanies = ref(false)
+const pendingCompanyAssign = ref<any>(null)
+const isAssigningCompany = ref(false)
+let companySearchTimer: ReturnType<typeof setTimeout> | null = null
 const customBillingDataModal = ref({
   company_name: '',
   contact_person: '',
@@ -1085,6 +1172,7 @@ onMounted(async () => {
       if (!studentBillingAddress.value) {
         await loadBillingAddressFromExistingPayments(props.selectedStudent.id)
       }
+      await applyDefaultBillingSource()
     } else {
       logger.debug('💡 PriceDisplay onMounted: No student selected yet')
     }
@@ -1102,6 +1190,9 @@ watch(cashAlreadyPaid, (val) => {
 })
 watch(selectedPaymentMethod, (method) => {
   if (method !== 'cash') cashAlreadyPaid.value = false
+  if (method === 'invoice') {
+    applyDefaultBillingSource()
+  }
 })
 
 // If cash becomes invisible while selected, fall back to invoice
@@ -1117,8 +1208,13 @@ watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId
     if (newStudentId && newStudentId !== oldStudentId) {
       logger.debug('👤 Student changed, loading billing address for:', newStudentId)
       
-      // Reset Toggle und Custom Data
-      useCustomBillingAddressInModal.value = false
+      billingSource.value = null
+      linkedCompany.value = null
+      showCompanySearch.value = false
+      companySearch.value = ''
+      companyResults.value = []
+      pendingCompanyAssign.value = null
+      studentBillingAddress.value = null
       customBillingDataModal.value = {
         company_name: '',
         contact_person: '',
@@ -1131,6 +1227,7 @@ watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId
       if (!studentBillingAddress.value) {
         await loadBillingAddressFromExistingPayments(newStudentId)
       }
+      await applyDefaultBillingSource()
     }
   } catch (watchError: any) {
     console.warn('⚠️ Error in student change watcher:', watchError.message)
@@ -1198,50 +1295,18 @@ watch(() => invoiceData.value, (newData: any) => {
 }, { deep: true })
 */
 
-// ✅ Watcher für Toggle - füllt Formular mit Kundendaten (users-Profil) wenn ON
-watch(() => useCustomBillingAddressInModal.value, async (isOn: boolean) => {
-  try {
-    logger.debug('🔄 Toggle watcher triggered, isOn:', isOn)
-
-    if (isOn) {
-      await fillInvoiceFromCustomerAddress()
-    } else {
-      logger.debug('✅ Toggle OFF - clearing form')
-      invoiceData.value = {
-        company_name: '',
-        contact_person: '',
-        email: '',
-        phone: '',
-        street: '',
-        street_number: '',
-        zip: '',
-        city: '',
-        country: 'Schweiz',
-        vat_number: '',
-        company_register_number: '',
-        notes: ''
-      }
-    }
-  } catch (watchError: any) {
-    console.warn('⚠️ Error in toggle watcher:', watchError.message)
-  }
-})
-
-/**
- * Map selected student's profile address → invoice form («Gleich wie Kundenadresse»).
- * StudentSelector often only has name/email/phone — fetch full address when missing.
- */
+// Map selected student's profile address → invoice form («Privatadresse»).
 const fillInvoiceFromCustomerAddress = async () => {
   let student = props.selectedStudent
   if (!student?.id) {
-    logger.debug('⚠️ Toggle ON but no selectedStudent — cannot fill customer address')
+    logger.debug('⚠️ No selectedStudent — cannot fill customer address')
     return
   }
 
   const hasAddress = !!(student.street || student.zip || student.city || student.street_nr || student.street_number)
   if (!hasAddress) {
     try {
-      logger.debug('📡 Fetching full customer address for toggle fill:', student.id)
+      logger.debug('📡 Fetching full customer address for private fill:', student.id)
       const res = await $fetch<{ user: any }>('/api/admin/get-user-for-edit', {
         query: { user_id: student.id },
       })
@@ -1249,32 +1314,156 @@ const fillInvoiceFromCustomerAddress = async () => {
         student = { ...student, ...res.user }
       }
     } catch (err: any) {
-      console.warn('⚠️ Could not load customer address for billing toggle:', err?.message)
+      console.warn('⚠️ Could not load customer address for billing fill:', err?.message)
     }
   }
 
-  const contactPerson = [student.first_name, student.last_name].filter(Boolean).join(' ').trim()
-  invoiceData.value = {
-    company_name: student.company_name || '',
-    contact_person: contactPerson,
-    email: student.email || '',
-    phone: student.phone || '',
-    street: student.street || '',
-    street_number: student.street_nr || student.street_number || '',
-    zip: student.zip || '',
-    city: student.city || '',
-    country: student.country || 'Schweiz',
-    vat_number: '',
-    company_register_number: '',
-    notes: ''
-  }
-  logger.debug('✅ Toggle ON - filled form from customer address:', {
-    contact_person: contactPerson,
+  invoiceData.value = billingFieldsFromPerson(student)
+  logger.debug('✅ Filled form from customer address:', {
+    contact_person: invoiceData.value.contact_person,
     street: invoiceData.value.street,
     zip: invoiceData.value.zip,
     city: invoiceData.value.city,
-    hasAddressFields: !!(invoiceData.value.street || invoiceData.value.zip),
   })
+}
+
+const syncPreviewFromInvoiceData = () => {
+  studentBillingAddress.value = {
+    ...(studentBillingAddress.value || {}),
+    ...invoiceData.value,
+  }
+}
+
+const applyPrivateAddress = async () => {
+  await fillInvoiceFromCustomerAddress()
+  billingSource.value = 'private'
+  syncPreviewFromInvoiceData()
+  isEditingBillingAddress.value = false
+}
+
+const applyCompanyFields = (company: any) => {
+  invoiceData.value = billingFieldsFromCompany(company, props.selectedStudent)
+  billingSource.value = 'company'
+  linkedCompany.value = company
+  syncPreviewFromInvoiceData()
+  isEditingBillingAddress.value = false
+}
+
+const applyLinkedCompanyAddress = () => {
+  if (!linkedCompany.value) return
+  applyCompanyFields(linkedCompany.value)
+}
+
+const applyDefaultBillingSource = async () => {
+  if (!props.selectedStudent?.id) return
+
+  if (!linkedCompany.value && props.selectedStudent.company_id) {
+    try {
+      const res: any = await $fetch('/api/admin/companies', { query: { id: props.selectedStudent.company_id } })
+      linkedCompany.value = res?.companies?.[0] || linkedCompany.value
+    } catch (err: any) {
+      console.warn('⚠️ Could not load linked company:', err?.message)
+    }
+  }
+
+  if (linkedCompany.value && !studentBillingAddress.value) {
+    applyCompanyFields(linkedCompany.value)
+    return
+  }
+
+  if (linkedCompany.value && billingLooksLikeCompany(studentBillingAddress.value, linkedCompany.value)) {
+    billingSource.value = 'company'
+    return
+  }
+
+  if (studentBillingAddress.value && !studentBillingAddress.value.company_name) {
+    billingSource.value = 'private'
+    return
+  }
+
+  if (studentBillingAddress.value) {
+    billingSource.value = 'custom'
+  }
+}
+
+const toggleCompanySearch = () => {
+  showCompanySearch.value = !showCompanySearch.value
+  if (!showCompanySearch.value) {
+    companySearch.value = ''
+    companyResults.value = []
+  }
+}
+
+const searchCompanies = () => {
+  if (companySearchTimer) clearTimeout(companySearchTimer)
+  const q = companySearch.value.trim()
+  if (q.length < 1) {
+    companyResults.value = []
+    return
+  }
+  isSearchingCompanies.value = true
+  companySearchTimer = setTimeout(async () => {
+    try {
+      const res: any = await $fetch('/api/admin/companies', { query: { search: q } })
+      companyResults.value = res?.companies || []
+    } catch (err: any) {
+      console.warn('⚠️ Company search failed:', err?.message)
+      companyResults.value = []
+    } finally {
+      isSearchingCompanies.value = false
+    }
+  }, 280)
+}
+
+const onCompanyPicked = async (company: any) => {
+  showCompanySearch.value = false
+  companySearch.value = ''
+  companyResults.value = []
+
+  if (linkedCompany.value?.id === company.id) {
+    applyCompanyFields(company)
+    return
+  }
+
+  if (studentBillingAddress.value) {
+    pendingCompanyAssign.value = company
+    return
+  }
+
+  await confirmCompanyAssign(true, company)
+}
+
+const confirmCompanyAssign = async (applyBilling: boolean, company = pendingCompanyAssign.value) => {
+  if (!company || !props.selectedStudent?.id) return
+  isAssigningCompany.value = true
+  try {
+    const res: any = await $fetch('/api/admin/companies/assign-user', {
+      method: 'POST',
+      body: {
+        user_id: props.selectedStudent.id,
+        company_id: company.id,
+        apply_company_billing: applyBilling,
+      },
+    })
+    linkedCompany.value = res?.company || company
+    if (props.selectedStudent) {
+      props.selectedStudent.company_id = company.id
+    }
+    if (applyBilling) {
+      applyCompanyFields(linkedCompany.value)
+    } else {
+      billingSource.value = studentBillingAddress.value ? 'custom' : null
+    }
+    pendingCompanyAssign.value = null
+  } catch (err: any) {
+    console.error('❌ Company assign failed:', err)
+    invoiceSaveMessage.value = {
+      type: 'error',
+      text: `❌ Firma konnte nicht zugewiesen werden: ${err?.data?.statusMessage || err.message}`,
+    }
+  } finally {
+    isAssigningCompany.value = false
+  }
 }
 
 // ✅ SIMPLE: Watcher für Duration- ODER PricePerMinute-Änderung - nur Preis aktualisieren
@@ -1687,9 +1876,20 @@ const loadStudentBillingAddressData = async (studentId: string) => {
     isLoadingStudentBilling.value = true
     logger.debug('🏢 Loading student billing address for PriceDisplay:', studentId)
     
-    const modalForm = useEventModalForm()
-    const billingData = await modalForm.loadStudentBillingAddress(studentId)
-    
+    const response = await $fetch('/api/addresses/get-by-user', {
+      query: { user_id: studentId }
+    }) as any
+
+    if (response?.company) {
+      linkedCompany.value = response.company
+      if (props.selectedStudent) {
+        props.selectedStudent.company_id = response.company.id
+      }
+    } else if (response?.company_id && props.selectedStudent) {
+      props.selectedStudent.company_id = response.company_id
+    }
+
+    const billingData = response?.data || null
     if (billingData) {
       studentBillingAddress.value = billingData
       logger.debug('✅ Student billing address loaded in PriceDisplay:', billingData)
@@ -1986,7 +2186,6 @@ const isInvoiceFormValid = computed(() => {
   return invoiceData.value.contact_person && 
          invoiceData.value.email && 
          invoiceData.value.street && 
-         invoiceData.value.street_number && 
          invoiceData.value.zip && 
          invoiceData.value.city
 })
