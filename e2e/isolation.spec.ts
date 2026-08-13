@@ -1,30 +1,34 @@
 import { expect, test } from '@playwright/test'
 import { demoPassword, signIn } from './auth'
 
+const isolationPassword = process.env.E2E_ISOLATION_PASSWORD || demoPassword
+
 /**
  * Tenant A = apple-review (App Store / Play demo).
  * Tenant B = e2e-isolation (seeded by `npm run demo:e2e-isolation:setup`).
- * Same password as E2E_DEMO_PASSWORD. A must not read B's rows.
  */
 test.beforeAll(() => {
   if (process.env.CI && !demoPassword) {
     throw new Error('E2E_DEMO_PASSWORD is not set. Add it as a GitHub Actions secret.')
   }
+  if (process.env.CI && !isolationPassword) {
+    throw new Error('E2E_ISOLATION_PASSWORD is not set. Run npm run demo:e2e-isolation:setup and store the printed password as that secret.')
+  }
 })
 
 test.describe('tenant isolation', () => {
-  test.skip(!demoPassword, 'E2E_DEMO_PASSWORD is not set')
+  test.skip(!demoPassword || !isolationPassword, 'E2E passwords are not set')
 
   test('apple-review admin cannot read e2e-isolation users or appointments', async ({ browser }) => {
     const isolation = await browser.newContext()
     const isolationPage = await isolation.newPage()
-    await signIn(isolationPage, 'e2e-isolation@simy.ch', 'e2e-isolation')
+    await signIn(isolationPage, 'e2e-isolation@simy.ch', 'e2e-isolation', isolationPassword)
 
     const me = await isolationPage.request.get('/api/auth/current-user')
     expect(me.ok(), `current-user failed: ${me.status()}`).toBeTruthy()
     const meBody = await me.json()
     const isolationTenantId = meBody?.profile?.tenant_id as string | undefined
-    expect(isolationTenantId, 'e2e-isolation tenant_id missing — run DEMO_PASSWORD=… npm run demo:e2e-isolation:setup').toBeTruthy()
+    expect(isolationTenantId, 'e2e-isolation tenant_id missing — run npm run demo:e2e-isolation:setup').toBeTruthy()
 
     const calendar = await isolationPage.request.get('/api/calendar/get-appointments')
     expect(calendar.ok(), `calendar failed: ${calendar.status()}`).toBeTruthy()
