@@ -164,6 +164,37 @@ async function ensureLocation(tenantId) {
   return data.id
 }
 
+async function ensureEventType(tenantId) {
+  const { data: existing } = await supabase
+    .from('event_types')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('code', 'lesson')
+    .maybeSingle()
+  if (existing) return existing.id
+  const { data, error } = await supabase
+    .from('event_types')
+    .insert({
+      tenant_id: tenantId,
+      code: 'lesson',
+      name: 'Fahrstunde',
+      description: 'Standard Fahrstunde',
+      default_duration_minutes: 45,
+      default_color: '#7C3AED',
+      display_order: 0,
+      is_default: true,
+      is_active: true,
+      auto_generate_title: true,
+      requires_team_invite: false,
+      allowed_roles: ['staff', 'admin'],
+      public_bookable: true,
+    })
+    .select('id')
+    .single()
+  if (error) throw error
+  return data.id
+}
+
 async function ensureAppointment({ tenantId, customerId, staffId, locationId }) {
   const { data: existing } = await supabase
     .from('appointments')
@@ -229,6 +260,7 @@ const clientId = await ensureUserRow({
   tenantId,
 })
 const locationId = await ensureLocation(tenantId)
+await ensureEventType(tenantId)
 const appointmentId = await ensureAppointment({ tenantId, customerId: clientId, staffId, locationId })
 
 console.log('e2e-isolation tenant ready')
