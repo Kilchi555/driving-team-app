@@ -323,29 +323,59 @@ export default defineEventHandler(async (event) => {
       if (admin.email) recipientSet.set(admin.email, admin.first_name || 'Admin')
     }
 
-    if (recipientSet.size === 0) continue
+    if (recipientSet.size === 0 && !(
+      multiStaffTenants.has(tenantId) &&
+      session.staff_id &&
+      session.instructor_type !== 'external'
+    )) continue
 
-    const html = buildStaffReminderEmail({
-      courseName, dateStr, timeRange,
-      location: session.custom_location || null,
-      participants,
-      tenantName, primaryColor, logoUrl,
-    })
+    if (recipientSet.size > 0) {
+      const html = buildStaffReminderEmail({
+        courseName, dateStr, timeRange,
+        location: session.custom_location || null,
+        participants,
+        tenantName, primaryColor, logoUrl,
+      })
 
-    for (const [email, name] of recipientSet) {
-      const recipientEmail = testEmail || email
+      for (const [email, name] of recipientSet) {
+        const recipientEmail = testEmail || email
+        toInsert.push({
+          tenant_id:       tenantId,
+          channel:         'email',
+          recipient_email: recipientEmail,
+          subject:         `Kurs morgen: ${courseName} — ${participants.length} Teilnehmer`,
+          body:            html,
+          status:          'pending',
+          send_at:         now.toISOString(),
+          context_data: {
+            stage: 'course_staff_reminder', session_id: sessionId,
+            course_name: courseName, tenant_name: tenantName, recipient_name: name,
+          }
+        })
+      }
+    }
+
+    // Push only to the assigned internal instructor (not to every admin email recipient)
+    if (
+      multiStaffTenants.has(tenantId) &&
+      session.staff_id &&
+      session.instructor_type !== 'external'
+    ) {
       toInsert.push({
-        tenant_id:       tenantId,
-        channel:         'email',
-        recipient_email: recipientEmail,
-        subject:         `Kurs morgen: ${courseName} — ${participants.length} Teilnehmer`,
-        body:            html,
-        status:          'pending',
-        send_at:         now.toISOString(),
+        tenant_id: tenantId,
+        channel: 'push',
+        subject: 'Kurs morgen',
+        body: `${courseName} · ${timeRange} · ${participants.length} TN`,
+        status: 'pending',
+        send_at: now.toISOString(),
         context_data: {
-          stage: 'course_staff_reminder', session_id: sessionId,
-          course_name: courseName, tenant_name: tenantName, recipient_name: name,
-        }
+          stage: 'course_staff_reminder',
+          session_id: sessionId,
+          course_name: courseName,
+          tenant_name: tenantName,
+          user_id: session.staff_id,
+          path: '/dashboard',
+        },
       })
     }
   }

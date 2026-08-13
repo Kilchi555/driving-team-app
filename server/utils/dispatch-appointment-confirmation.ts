@@ -414,42 +414,53 @@ export async function dispatchAppointmentConfirmation(
 
   const isOnlineBooking = appointment.source === 'online' && appointment.created_by === userId
   const staffNotificationEnabled = policy.staff_booking_notification_enabled !== false
-  if (staff?.email && isOnlineBooking && !skipStaffNotification && staffNotificationEnabled) {
-    const staffPayload: AppointmentNotificationBody = {
-      email: staff.email,
-      studentName: `${user.first_name} ${user.last_name}`,
-      appointmentTime: appointmentDateTime,
-      type: 'staff_new_booking',
-      staffName,
-      location: locationDisplay,
-      locationAddress: locationAddressDisplay,
-      tenantName: tenant.name,
-      tenantId,
-      tenantSlug: tenant.slug,
-      amount,
-      eventTypeName,
-      durationMinutes,
-      showPrice,
-    }
-    try {
-      await sendAppointmentNotificationEmail(staffPayload)
-    } catch (err: any) {
-      logger.warn('⚠️ Staff notification direct send failed, queueing:', err?.message)
+  if (isOnlineBooking && !skipStaffNotification && staffNotificationEnabled && appointment.staff_id) {
+    const studentLabel = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Kunde'
+    if (staff?.email) {
+      const staffPayload: AppointmentNotificationBody = {
+        email: staff.email,
+        studentName: `${user.first_name} ${user.last_name}`,
+        appointmentTime: appointmentDateTime,
+        type: 'staff_new_booking',
+        staffName,
+        location: locationDisplay,
+        locationAddress: locationAddressDisplay,
+        tenantName: tenant.name,
+        tenantId,
+        tenantSlug: tenant.slug,
+        amount,
+        eventTypeName,
+        durationMinutes,
+        showPrice,
+      }
       try {
-        const rendered = await renderAppointmentNotificationEmail(staffPayload)
-        await queueEmail({
-          tenantId,
-          to: staff.email,
-          subject: rendered.subject,
-          html: rendered.html,
-          appointmentId,
-          tenantName: tenant.name,
-          stage: 'staff_new_booking',
-        })
-      } catch (queueErr: any) {
-        logger.warn('⚠️ Staff notification queue failed:', queueErr?.message)
+        await sendAppointmentNotificationEmail(staffPayload)
+      } catch (err: any) {
+        logger.warn('⚠️ Staff notification direct send failed, queueing:', err?.message)
+        try {
+          const rendered = await renderAppointmentNotificationEmail(staffPayload)
+          await queueEmail({
+            tenantId,
+            to: staff.email,
+            subject: rendered.subject,
+            html: rendered.html,
+            appointmentId,
+            tenantName: tenant.name,
+            stage: 'staff_new_booking',
+          })
+        } catch (queueErr: any) {
+          logger.warn('⚠️ Staff notification queue failed:', queueErr?.message)
+        }
       }
     }
+
+    sendPushToUser(appointment.staff_id, {
+      title: 'Neue Online-Buchung',
+      body: `${studentLabel} · ${appointmentDateTime}`,
+      data: { path: '/dashboard' },
+    }).catch((err: any) => {
+      logger.warn('⚠️ Staff push notification failed (non-critical):', err?.message)
+    })
   }
 
   return {

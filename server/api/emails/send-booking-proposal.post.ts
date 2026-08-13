@@ -88,7 +88,8 @@ export default defineEventHandler(async (event) => {
     }
 
     const location = proposal.location as any
-    const staff = proposal.staff as any
+    const staffRaw = proposal.staff as any
+    const staff = Array.isArray(staffRaw) ? staffRaw[0] : staffRaw
     const tenant = proposal.tenant as any
     const terms = await getTenantTerminology(supabase, tenant_id)
     const intakeMode = inferIntakeMode(proposal)
@@ -142,6 +143,22 @@ export default defineEventHandler(async (event) => {
           logger.error('❌ Failed to send staff email:', err.message)
         }
         await delay(600)
+      }
+
+      // Staff push (same gates as staff email: policy + multi-staff + assigned staff)
+      if (staff?.id && staffNotificationEnabled && multiStaff) {
+        const { sendPushToUser } = await import('~/server/utils/push')
+        const nameLabel = [proposal.first_name, proposal.last_name].filter(Boolean).join(' ').trim()
+          || proposal.email
+          || 'Neue Anfrage'
+        const categoryLabel = proposal.category_code || ''
+        sendPushToUser(staff.id, {
+          title: 'Neue Anfrage',
+          body: categoryLabel ? `${nameLabel} · ${categoryLabel}` : nameLabel,
+          data: { path: `/dashboard?openProposal=${proposal.id}` },
+        }).catch((err: any) => {
+          logger.warn('⚠️ Staff proposal push failed (non-critical):', err?.message)
+        })
       }
 
       if (tenant?.contact_email) {

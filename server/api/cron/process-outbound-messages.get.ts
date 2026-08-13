@@ -57,15 +57,15 @@ export default defineEventHandler(async (event) => {
 
     const resendApiKey = process.env.RESEND_API_KEY
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
-
-    if (!resendApiKey) {
+    const needsEmail = messages.some((m: any) => m.channel === 'email')
+    if (needsEmail && !resendApiKey) {
       console.error('[OutboundMessageProcessor] ❌ RESEND_API_KEY not configured. Cannot send emails.')
       throw createError({
         statusCode: 500,
         statusMessage: 'RESEND_API_KEY not configured'
       })
     }
-    const resend = new Resend(resendApiKey)
+    const resend = resendApiKey ? new Resend(resendApiKey) : null
 
     let sentCount = 0
     let failedCount = 0
@@ -79,6 +79,14 @@ export default defineEventHandler(async (event) => {
           .eq('id', message.id)
 
         if (message.channel === 'email') {
+          if (!resend) {
+            await supabase
+              .from('outbound_messages_queue')
+              .update({ status: 'failed', error_message: 'RESEND_API_KEY not configured', failed_at: new Date().toISOString() })
+              .eq('id', message.id)
+            failedCount++
+            continue
+          }
           if (!message.recipient_email || !message.subject || !message.body) {
             console.warn(`[OutboundMessageProcessor] ⚠️ Skipping email message ${message.id} due to missing data:`, { recipient_email: message.recipient_email, subject: message.subject, body: message.body })
             await supabase
@@ -201,9 +209,18 @@ export default defineEventHandler(async (event) => {
           }
 
           try {
-            const path =
-              (typeof message.context_data?.path === 'string' && message.context_data.path)
-              || '/customer-dashboard'
+            const stage = message.context_data?.stage
+            const isStaffStage = typeof stage === 'string' && (
+              stage.includes('staff') || stage === 'course_staff_reminder'
+            )
+            const rawPath = message.context_data?.path
+            const path = (
+              typeof rawPath === 'string'
+              && rawPath.startsWith('/')
+              && !rawPath.startsWith('//')
+            )
+              ? rawPath
+              : (isStaffStage ? '/dashboard' : '/customer-dashboard')
             const result = await sendPushToUser(userId, {
               title: message.subject || 'Simy',
               body: message.body,
@@ -240,8 +257,10 @@ export default defineEventHandler(async (event) => {
           failedCount++
         }
 
-        // 1 message per second to respect Resend/Twilio rate limits
-        await delay(1000)
+        // Rate-limit email/SMS; push can proceed immediately
+        if (message.channel !== 'push') {
+          await delay(1000)
+        }
 
       } catch (error: any) {
         console.error(`[OutboundMessageProcessor] ❌ Unhandled error processing message ${message.id}:`, error)

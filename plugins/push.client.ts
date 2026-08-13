@@ -61,10 +61,17 @@ export default defineNuxtPlugin(async () => {
       console.info('[Push] Foreground notification:', notification.title)
     })
 
-    // ── 6. Notification tap → navigate if data.path is provided ──────────────
+    // ── 6. Notification tap → navigate if data.path is a safe in-app path ───
     await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       const path = action.notification.data?.path as string | undefined
-      if (path) navigateTo(path)
+      if (
+        typeof path === 'string'
+        && path.startsWith('/')
+        && !path.startsWith('//')
+        && !path.includes('://')
+      ) {
+        navigateTo(path)
+      }
     })
   } catch (e) {
     console.warn('[Push] Setup failed:', e)
