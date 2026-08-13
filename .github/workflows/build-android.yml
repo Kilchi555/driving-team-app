@@ -274,7 +274,12 @@ jobs:
             });
             console.log(`Track ${track} updated`);
 
-            await publisher.edits.commit({ packageName, editId });
+            await publisher.edits.commit({
+              packageName,
+              editId,
+              // Required while the app has unresolved Play policy issues (e.g. rejected v19).
+              changesNotSentForReview: true,
+            });
             console.log('Release committed successfully!');
           }
 
