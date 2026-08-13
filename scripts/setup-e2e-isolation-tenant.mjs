@@ -185,6 +185,7 @@ async function ensureAppointment({ tenantId, customerId, staffId, locationId }) 
       staff_id: staffId,
       location_id: locationId,
       title: 'E2E Isolation Lesson',
+      description: 'Seeded appointment for tenant-isolation E2E',
       duration_minutes: 45,
       type: 'lesson',
       event_type_code: 'lesson',
