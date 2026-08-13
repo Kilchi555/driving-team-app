@@ -74,6 +74,7 @@ interface Props {
   selectedStudent?: any // ✅ NEU: Für letzte Dauer-Abfrage
   appointmentId?: string // ✅ NEU: Für Payment-Status-Prüfung
   originalDuration?: number // ✅ NEU: Original-Dauer für Vergleich
+  lockDuration?: boolean // Staff already chose a duration; do not auto-overwrite
 }
 
 interface Emits {
@@ -92,7 +93,8 @@ const props = withDefaults(defineProps<Props>(), {
   isPastAppointment: false,
   appointmentId: undefined,
   originalDuration: undefined,
-  mode: 'create'
+  mode: 'create',
+  lockDuration: false
 })
 
 const emit = defineEmits<Emits>()
@@ -318,52 +320,55 @@ watch(() => props.modelValue, async (newValue, oldValue) => {
 watch(() => props.availableDurations, async (newDurations) => {
   logger.debug('🔄 DurationSelector - Available durations changed:', newDurations, 'Mode:', props.mode)
   
-  // ✅ KORRIGIERT: Verwende formattedDurations für die Prüfung
   const durations = formattedDurations.value.map((d: any) => d.value)
   
-  // ✅ KORRIGIERT: Immer eine Dauer setzen wenn verfügbar und keine gesetzt ist
-  if (durations.length > 0 && (!props.modelValue || !durations.includes(props.modelValue))) {
+  // Never snap away from a duration the staff already chose (buttons or end time).
+  if (props.lockDuration) {
+    logger.debug('📝 Duration locked by staff — keeping:', props.modelValue)
+    return
+  }
+
+  // Only auto-select when nothing is set yet. If a value exists but is missing
+  // from the list (custom end-time duration), keep it — parent adds it to the list.
+  if (durations.length > 0 && !props.modelValue) {
     const isEditMode = props.mode === 'edit' || props.mode === 'view'
     
     if (!isEditMode) {
-      // Fallback: Erste verfügbare Dauer verwenden
       logger.debug('⏱️ Auto-setting duration to first available (CREATE mode):', durations[0])
       emit('update:modelValue', durations[0])
       emit('duration-changed', durations[0])
-    } else {
-      logger.debug('📝 EDIT/VIEW mode detected - keeping existing duration:', props.modelValue)
     }
   }
 }, { immediate: true })
 
 // ✅ NEU: Watcher für selectedStudent - lade letzte Dauer wenn sich der Schüler ändert
 watch(() => props.selectedStudent, async (newStudent) => {
-  // ✅ KORRIGIERT: Immer im CREATE-Modus reagieren, auch wenn bereits eine Dauer gesetzt ist
   if (newStudent?.id && props.mode === 'create' && props.availableDurations.length > 0) {
+    if (props.lockDuration) {
+      logger.debug('📝 Student changed but duration is locked by staff — keeping:', props.modelValue)
+      return
+    }
     try {
       logger.debug('👤 Student changed, loading last duration for:', newStudent.first_name)
       const lastDuration = await getLastStudentDuration(newStudent.id)
+
+      // Staff may have typed/clicked a duration while this request was in flight.
+      if (props.lockDuration) {
+        logger.debug('📝 Skipping last-student-duration — staff chose duration during fetch')
+        return
+      }
       
-      // ✅ KORRIGIERT: Verwende formattedDurations für die Prüfung
       const durations = formattedDurations.value.map((d: any) => d.value)
       
       if (lastDuration && durations.includes(lastDuration)) {
         logger.debug('✅ Setting duration to student\'s last used duration:', lastDuration)
         emit('update:modelValue', lastDuration)
         emit('duration-changed', lastDuration)
-      } else if (durations.length > 0) {
-        logger.debug('⚠️ Last duration not available, using first available:', durations[0])
-        emit('update:modelValue', durations[0])
-        emit('duration-changed', durations[0])
       }
+      // Do not fall back to durations[0] when a value is already set — that
+      // raced with manual input and snapped back to the category default.
     } catch (err) {
       console.error('❌ Error loading last student duration:', err)
-      // Fallback zur ersten verfügbaren Dauer
-      const durations = formattedDurations.value.map((d: any) => d.value)
-      if (durations.length > 0) {
-        emit('update:modelValue', durations[0])
-        emit('duration-changed', durations[0])
-      }
     }
   }
 }, { immediate: true })

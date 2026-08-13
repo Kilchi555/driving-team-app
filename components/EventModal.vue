@@ -171,6 +171,7 @@
               :selected-student="selectedStudent"
               :appointment-id="props.eventData?.id"
               :original-duration="props.eventData?.duration_minutes"
+              :lock-duration="durationManuallyChosen"
               @duration-changed="handleDurationChanged"
               @duration-change-rejected="handleDurationChangeRejected"
             />
@@ -1048,8 +1049,10 @@ const applyCreateEventTypeDefaultsOnce = async (opts?: {
   }
   // Always take the event-type duration on first apply (calendar slot is often a
   // generic 45min placeholder and must not win over e.g. discovery=30 / workshop=120).
-  formData.value.duration_minutes = defaults.duration
-  calculateEndTime()
+  if (!durationManuallyChosen.value) {
+    formData.value.duration_minutes = defaults.duration
+    calculateEndTime()
+  }
   if (!formData.value.title || formData.value.title === 'Termin' || formData.value.title === 'Fahrstunde' || formData.value.title === t.value.appointment) {
     formData.value.title = defaults.title
   }
@@ -2176,6 +2179,50 @@ const manualLocationInput = ref<string>('')
 /** True after staff explicitly picks a location (dropdown / Zuhause / Neue).
  * Prevents late "last used location" loads in handleStudentSelected from overwriting. */
 const locationManuallyChosen = ref(false)
+/** True after staff picks a duration button or types end time.
+ * Prevents late last-duration / default-duration loads from snapping back. */
+const durationManuallyChosen = ref(false)
+
+const toScalarDuration = (value: any, fallback = 45): number => {
+  if (Array.isArray(value)) {
+    const n = Number(value[0])
+    return Number.isFinite(n) && n > 0 ? n : fallback
+  }
+  const n = Number(value)
+  return Number.isFinite(n) && n > 0 ? n : fallback
+}
+
+const markDurationManuallyChosen = () => {
+  durationManuallyChosen.value = true
+  formData.value._durationManuallyChosen = true
+}
+
+const resetDurationManuallyChosen = () => {
+  durationManuallyChosen.value = false
+  if (formData.value) formData.value._durationManuallyChosen = false
+}
+
+const applyAutoDuration = (minutes: any, reason: string) => {
+  const value = toScalarDuration(minutes, 0)
+  if (!value) return
+  const isEditOrView = props.mode === 'edit' || props.mode === 'view'
+  if (isEditOrView || durationManuallyChosen.value || formData.value._durationManuallyChosen) {
+    logger.debug('⏱️ Skipping auto duration:', {
+      skipped: value,
+      current: formData.value.duration_minutes,
+      reason,
+      isEditOrView,
+      durationManuallyChosen: durationManuallyChosen.value
+    })
+    if (typeof formData.value.duration_minutes === 'number' && formData.value.duration_minutes > 0
+        && Array.isArray(availableDurations.value)
+        && !availableDurations.value.includes(formData.value.duration_minutes)) {
+      availableDurations.value = [...availableDurations.value, formData.value.duration_minutes].sort((a, b) => a - b)
+    }
+    return
+  }
+  formData.value.duration_minutes = value
+}
 
 // ✅ NEW: Extended form validation that includes manual input
 const isFormValidWithManualInput = computed(() => {
@@ -2286,20 +2333,25 @@ const {
   setDurationForLessonType,
 } = handlers
 
-// In edit mode: only update available options, never overwrite the current duration
+// Keep staff-chosen / DB duration when CategorySelector emits a new list
 const handleDurationsChanged = (durations: number[]) => {
-  if (props.mode === 'edit' || props.mode === 'view') {
-    const currentDuration = formData.value.duration_minutes
-    // If the incoming list doesn't include our DB duration, it's an incomplete intermediate
-    // emit (e.g. staff-only [45] before category durations [45,60,90] arrive). Skip it.
+  const currentDuration = formData.value.duration_minutes
+  const preserve = props.mode === 'edit' || props.mode === 'view' || durationManuallyChosen.value
+  if (preserve) {
+    // If the incoming list doesn't include our duration, it's often an incomplete
+    // intermediate emit (e.g. staff-only [45] before category durations [45,60,90]).
+    // In edit/view skip it; in create+manual still apply the list but restore duration.
     const flatDurations = durations.flat().filter((d: any) => typeof d === 'number')
-    if (!flatDurations.includes(currentDuration)) {
+    if ((props.mode === 'edit' || props.mode === 'view') && !flatDurations.includes(currentDuration)) {
       return
     }
     originalHandleDurationsChanged(durations)
-    // Restore the original duration from the DB – CategorySelector must not override it
     if (formData.value.duration_minutes !== currentDuration) {
       formData.value.duration_minutes = currentDuration
+    }
+    if (typeof currentDuration === 'number' && currentDuration > 0
+        && !availableDurations.value.includes(currentDuration)) {
+      availableDurations.value = [...availableDurations.value, currentDuration].sort((a, b) => a - b)
     }
     return
   }
@@ -2309,30 +2361,30 @@ const handleDurationsChanged = (durations: number[]) => {
 // ✅ Enhanced handleCategorySelected with DB duration loading
 const handleCategorySelected = async (category: any) => {
   logger.debug('🎯 Enhanced category selected:', category?.code)
+  const currentDuration = formData.value.duration_minutes
   
   // Load durations and update selectedCategory (handles duration loading via API)
   await originalHandleCategorySelected(category)
-  
-  // After durations are loaded, try to pre-select the student's last used duration
-  if (category?.code && availableDurations.value.length > 0) {
-    if (props.mode === 'edit' && formData.value.duration_minutes) {
-      logger.debug('✅ Edit mode - keeping original duration from database:', formData.value.duration_minutes, 'min')
-      if (!availableDurations.value.includes(formData.value.duration_minutes)) {
-        availableDurations.value.unshift(formData.value.duration_minutes)
-        availableDurations.value.sort((a, b) => a - b)
-        logger.debug('✅ Added original duration to available durations:', availableDurations.value)
+
+  const preserveDuration = props.mode === 'edit' || props.mode === 'view' || durationManuallyChosen.value
+  if (preserveDuration) {
+    formData.value.duration_minutes = currentDuration
+    if (typeof currentDuration === 'number' && currentDuration > 0
+        && !availableDurations.value.includes(currentDuration)) {
+      availableDurations.value = [...availableDurations.value, currentDuration].sort((a, b) => a - b)
+    }
+    logger.debug('📝 Category change — keeping existing duration:', currentDuration)
+  } else if (category?.code && availableDurations.value.length > 0
+      && selectedStudent.value?.id
+      && formData.value.appointment_type !== 'consultation'
+      && formData.value.appointment_type !== 'exam') {
+    try {
+      const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
+      if (lastDuration && lastDuration > 0 && availableDurations.value.includes(lastDuration)) {
+        applyAutoDuration(lastDuration, 'category-change-last-appointment')
       }
-    } else if (selectedStudent.value?.id && formData.value.appointment_type !== 'consultation' && formData.value.appointment_type !== 'exam') {
-      try {
-        const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
-        if (lastDuration && lastDuration > 0 && availableDurations.value.includes(lastDuration)) {
-          logger.debug('✅ Category change - using last appointment duration:', lastDuration, 'min')
-          formData.value.duration_minutes = lastDuration
-        }
-        // Fallback already set by originalHandleCategorySelected (first available)
-      } catch (err) {
-        logger.debug('⚠️ Category change - could not load last duration, keeping current')
-      }
+    } catch (err) {
+      logger.debug('⚠️ Category change - could not load last duration, keeping current')
     }
   }
 
@@ -3018,7 +3070,8 @@ const handleEndTimeUpdate = (newEndTime: string) => {
     const newDurationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
     logger.debug('🔥 DEBUG: Calculated duration:', newDurationMinutes)
     
-    if (newDurationMinutes > 0) {
+    if (newDurationMinutes > 0 && newDurationMinutes !== formData.value.duration_minutes) {
+      markDurationManuallyChosen()
       formData.value.duration_minutes = newDurationMinutes
       logger.debug('🔥 DEBUG: Duration updated to:', newDurationMinutes)
     }
@@ -3180,12 +3233,12 @@ const applyConsultationDuration = async (categoryCode: string) => {
     const rule = getPricingRule(categoryCode)
     const duration = rule?.consultation_base_duration_minutes || 30
     availableDurations.value = [duration]
-    formData.value.duration_minutes = duration
+    applyAutoDuration(duration, 'consultation-pricing-rule')
     logger.debug('💬 Consultation duration applied:', { categoryCode, duration, hasRule: !!rule?.has_consultation_rule })
   } catch (err) {
     console.error('❌ Error loading consultation duration:', err)
     availableDurations.value = [30]
-    formData.value.duration_minutes = 30
+    applyAutoDuration(30, 'consultation-pricing-error')
   }
 }
 
@@ -3263,7 +3316,6 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
       // ✅ WICHTIG: Beim Edit-Modus die ursprüngliche duration_minutes aus der DB beibehalten
       if (props.mode === 'edit' && formData.value.duration_minutes) {
         logger.debug('✅ Edit mode - keeping original duration from database:', formData.value.duration_minutes, 'min')
-        // Stelle sicher, dass die ursprüngliche Dauer in availableDurations enthalten ist
         if (!availableDurations.value.includes(formData.value.duration_minutes)) {
           availableDurations.value.unshift(formData.value.duration_minutes)
           availableDurations.value.sort((a, b) => a - b)
@@ -3273,21 +3325,16 @@ const loadDurationsFromDatabase = async (staffId: string, categoryCode: string) 
         try {
           const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
           if (lastDuration && lastDuration > 0 && availableDurations.value.includes(lastDuration)) {
-            logger.debug('✅ Database load - using last appointment duration:', lastDuration, 'min')
-            formData.value.duration_minutes = lastDuration
+            applyAutoDuration(lastDuration, 'database-load-last-appointment')
           } else {
-            // ✅ FALLBACK: Auto-select first available duration
-            formData.value.duration_minutes = availableDurations.value[0]
-            logger.debug('⏱️ Database load - using first available duration:', availableDurations.value[0], 'min')
+            applyAutoDuration(availableDurations.value[0], 'database-load-first-available')
           }
         } catch (err) {
           logger.debug('⚠️ Database load - could not load last duration, using first available')
-          formData.value.duration_minutes = availableDurations.value[0]
+          applyAutoDuration(availableDurations.value[0], 'database-load-last-duration-error')
         }
       } else {
-        // ✅ FALLBACK: Auto-select first available duration
-        formData.value.duration_minutes = availableDurations.value[0]
-        logger.debug('⏱️ Database load - no student, using first available duration:', availableDurations.value[0], 'min')
+        applyAutoDuration(availableDurations.value[0], 'database-load-no-student')
       }
     } else {
       // Fallback based on category code
@@ -3322,7 +3369,7 @@ const loadTheoryDurations = async (categoryCode: string) => {
     
     if (!categoryData) {
       console.error('❌ Category not found:', categoryCode)
-      formData.value.duration_minutes = 45
+      applyAutoDuration(45, 'theory-category-not-found')
       availableDurations.value = [45]
       return
     }
@@ -3366,31 +3413,25 @@ const loadTheoryDurations = async (categoryCode: string) => {
         try {
           const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
           if (lastDuration && lastDuration > 0 && theoryDurations.includes(lastDuration)) {
-            logger.debug('✅ Theory load - using last appointment duration:', lastDuration, 'min')
-            formData.value.duration_minutes = lastDuration
+            applyAutoDuration(lastDuration, 'theory-load-last-appointment')
           } else {
-            // ✅ FALLBACK: Auto-select first available theory duration
-            formData.value.duration_minutes = theoryDurations[0]
-            logger.debug('⏱️ Theory load - using first available theory duration:', theoryDurations[0], 'min')
+            applyAutoDuration(theoryDurations[0], 'theory-load-first-available')
           }
         } catch (err) {
           logger.debug('⚠️ Theory load - could not load last duration, using first available')
-          formData.value.duration_minutes = theoryDurations[0]
+          applyAutoDuration(theoryDurations[0], 'theory-load-last-duration-error')
         }
       } else {
-        // ✅ FALLBACK: Auto-select first available theory duration
-        formData.value.duration_minutes = theoryDurations[0]
-        logger.debug('⏱️ Theory load - no student, using first available theory duration:', theoryDurations[0], 'min')
+        applyAutoDuration(theoryDurations[0], 'theory-load-no-student')
       }
     } else {
       logger.debug('⚠️ No theory durations found, using default 45 minutes')
-      formData.value.duration_minutes = 45
+      applyAutoDuration(45, 'theory-no-durations')
       availableDurations.value = [45]
     }
   } catch (error) {
     console.error('❌ Error loading theory durations:', error)
-    // Fallback: Standard 45 Minuten
-    formData.value.duration_minutes = 45
+    applyAutoDuration(45, 'theory-load-error')
     availableDurations.value = [45]
   }
 }
@@ -3411,9 +3452,10 @@ const loadDefaultDurations = async () => {
     try {
       const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
       if (lastDuration && lastDuration > 0) {
-        logger.debug('✅ Using last appointment duration:', lastDuration, 'min')
-        formData.value.duration_minutes = lastDuration
-        availableDurations.value = [lastDuration]
+        applyAutoDuration(lastDuration, 'default-durations-last-appointment')
+        if (!durationManuallyChosen.value) {
+          availableDurations.value = [lastDuration]
+        }
         await nextTick()
         return
       }
@@ -3424,14 +3466,12 @@ const loadDefaultDurations = async () => {
 
   // ✅ FALLBACK: Setze Standard-Dauern basierend auf dem Lektionstyp
   if (formData.value.appointment_type === 'theory') {
-    // Für Theorielektionen: Standard 45 Minuten
     availableDurations.value = [45]
-    formData.value.duration_minutes = 45
+    applyAutoDuration(45, 'default-durations-theory')
     logger.debug('📚 Theory lesson - using default duration: 45min')
   } else {
-    // Für normale Fahrstunden: Standard 45 Minuten
     availableDurations.value = [45]
-    formData.value.duration_minutes = 45
+    applyAutoDuration(45, 'default-durations-lesson')
     logger.debug('🚗 Normal lesson - using default duration: 45min')
   }
 
@@ -3476,21 +3516,16 @@ const loadCategoriesForEventModal = async () => {
             try {
               const lastDuration = await handlers.getLastAppointmentDuration(selectedStudent.value.id)
               if (lastDuration && lastDuration > 0 && availableDurations.value.includes(lastDuration)) {
-                logger.debug('✅ Using last appointment duration from category load:', lastDuration, 'min')
-                formData.value.duration_minutes = lastDuration
+                applyAutoDuration(lastDuration, 'categories-for-modal-last-appointment')
               } else {
-                // ✅ FALLBACK: Auto-select first available duration
-                formData.value.duration_minutes = availableDurations.value[0]
-                logger.debug('⏱️ Using first available duration:', availableDurations.value[0], 'min')
+                applyAutoDuration(availableDurations.value[0], 'categories-for-modal-first-available')
               }
             } catch (err) {
               logger.debug('⚠️ Could not load last appointment duration, using first available')
-              formData.value.duration_minutes = availableDurations.value[0]
+              applyAutoDuration(availableDurations.value[0], 'categories-for-modal-last-duration-error')
             }
           } else {
-            // ✅ FALLBACK: Auto-select first available duration
-            formData.value.duration_minutes = availableDurations.value[0]
-            logger.debug('⏱️ No student selected, using first available duration:', availableDurations.value[0], 'min')
+            applyAutoDuration(availableDurations.value[0], 'categories-for-modal-no-student')
           }
         }
       }
@@ -3586,8 +3621,9 @@ const handleStudentSelected = async (student: Student | null) => {
     return
   }
 
-  // New student → allow auto last-location again until staff picks explicitly
+  // New student → allow auto last-location / last-duration again until staff picks explicitly
   locationManuallyChosen.value = false
+  resetDurationManuallyChosen()
   
   // ✅ WICHTIG: Bei Freeslot-Modus Schülerauswahl erlauben, aber nicht automatisch
   // Der User kann manuell einen Schüler wählen
@@ -3675,11 +3711,16 @@ const handleStudentSelected = async (student: Student | null) => {
             
             // ✅ Dauer basierend auf event_type_code setzen
             if (lastAppointment.event_type_code === 'exam') {
-              formData.value.duration_minutes = categoryData.exam_duration_minutes || 135
+              applyAutoDuration(categoryData.exam_duration_minutes || 135, 'last-appointment-exam')
               selectedLessonType.value = 'exam'
               formData.value.appointment_type = 'exam'
             } else {
-              formData.value.duration_minutes = categoryData.lesson_duration_minutes || 45
+              applyAutoDuration(
+                Array.isArray(categoryData.lesson_duration_minutes)
+                  ? categoryData.lesson_duration_minutes[0]
+                  : categoryData.lesson_duration_minutes,
+                'last-appointment-lesson'
+              )
               selectedLessonType.value = 'lesson'
               formData.value.appointment_type = 'lesson'
             }
@@ -3745,7 +3786,7 @@ const handleStudentSelected = async (student: Student | null) => {
             lesson_duration_minutes: 45,
             exam_duration_minutes: 135
           }
-          formData.value.duration_minutes = 45
+          applyAutoDuration(45, 'last-appointment-category-error')
           const fallbackDuration = getFallbackDuration(lastAppointment.type)
           availableDurations.value = [fallbackDuration]
           logger.debug('✅ Using fallback category data:', selectedCategory.value)
@@ -3970,6 +4011,7 @@ const handleStudentCleared = () => {
   formData.value.title = ''
   formData.value.type = ''
   locationManuallyChosen.value = false
+  resetDurationManuallyChosen()
   triggerStudentLoad()
 }
 
@@ -4103,7 +4145,7 @@ const handleLessonTypeSelected = async (lessonType: any) => {
         loadTheoryDurations(formData.value.type)
       } else {
         // Fallback: Standard 45 Minuten wenn keine Kategorie ausgewählt
-        formData.value.duration_minutes = 45
+        applyAutoDuration(45, 'lesson-type-theory-no-user')
         availableDurations.value = [45]
       }
     } else if (lessonType.code === 'consultation') {
@@ -4144,34 +4186,29 @@ const handleLessonTypeSelected = async (lessonType: any) => {
             
             // ✅ Intelligente Dauer-Auswahl
             const currentDuration = formData.value.duration_minutes
-            if (lessonDurations.includes(currentDuration)) {
+            if (lessonDurations.includes(currentDuration) || durationManuallyChosen.value) {
               logger.debug('✅ Keeping current duration:', currentDuration)
-            } else {
-              // Versuche eine ähnliche Dauer zu finden
-              const similarDuration = lessonDurations.find((d: number) => Math.abs(d - currentDuration) <= 15)
-              if (similarDuration) {
-                formData.value.duration_minutes = similarDuration
-                logger.debug('🎯 Found similar duration:', similarDuration, 'instead of', currentDuration)
-              } else {
-                formData.value.duration_minutes = lessonDurations[0]
-                logger.debug('🔄 Set lesson duration to first available:', lessonDurations[0])
+              if (durationManuallyChosen.value && !lessonDurations.includes(currentDuration)) {
+                availableDurations.value = [...lessonDurations, currentDuration].sort((a: number, b: number) => a - b)
               }
+            } else {
+              const similarDuration = lessonDurations.find((d: number) => Math.abs(d - currentDuration) <= 15)
+              applyAutoDuration(similarDuration || lessonDurations[0], 'lesson-type-similar-or-first')
             }
           } else {
             logger.debug('⚠️ Could not load durations via API, using fallback')
             availableDurations.value = [45]
-            formData.value.duration_minutes = 45
+            applyAutoDuration(45, 'lesson-type-api-empty')
           }
         } catch (err) {
           console.error('❌ Error loading lesson durations via API:', err)
           availableDurations.value = [45]
-          formData.value.duration_minutes = 45
+          applyAutoDuration(45, 'lesson-type-api-error')
         }
       } else {
-        // Fallback wenn keine Kategorie oder User
         logger.debug('⚠️ No category or user - using fallback durations')
         availableDurations.value = [45]
-        formData.value.duration_minutes = 45
+        applyAutoDuration(45, 'lesson-type-no-category')
       }
     }
   } else {
@@ -4242,7 +4279,8 @@ const handleDurationChanged = (newDuration: number) => {
     logger.debug('🚫 Cannot change duration for past appointment')
     return
   }
-  
+
+  markDurationManuallyChosen()
   formData.value.duration_minutes = newDuration
   calculateEndTime()
 }
@@ -4460,7 +4498,7 @@ const handleTimeChanged = (timeData: { startDate: string, startTime: string, end
       logger.debug('⏰ Duration calculated from manual time change:', 
         `${formData.value.duration_minutes}min → ${newDurationMinutes}min`)
       
-      // ✅ 3. Update duration (this will trigger price recalculation via watcher)
+      markDurationManuallyChosen()
       formData.value.duration_minutes = newDurationMinutes
       
       // ✅ 4. Add custom duration to available options
@@ -4582,6 +4620,8 @@ const resetForm = () => {
     discount_type: 'fixed' as const,
     discount_reason: '',
     is_manual_discount: false,
+    _mode: props.mode,
+    _durationManuallyChosen: false,
     // payment_method und payment_data entfernt - werden in der payments Tabelle gespeichert
   }
   
@@ -4597,6 +4637,7 @@ const resetForm = () => {
   // ✅ NEU: Standard-Zahlungsmethode beim Reset setzen
   selectedPaymentMethod.value = 'wallee'
   cashAlreadyPaid.value = false
+  resetDurationManuallyChosen()
 }
 
 // Staff Selection Handler
@@ -5848,7 +5889,8 @@ const showPaymentStatus = async (appointmentId: string) => {
 
 const initializeFormData = async () => {
   logger.debug('🎯 Initializing form data, mode:', props.mode)
-    logger.debug('🎯 props.eventData:', props.eventData) 
+    logger.debug('🎯 props.eventData:', props.eventData)
+  resetDurationManuallyChosen() 
 
       // ✅ NEUE ZEILE: Staff ID automatisch auf currentUser setzen (nur wenn Staff)
   if (props.currentUser?.role === 'staff' && props.currentUser?.id) {
@@ -6068,53 +6110,16 @@ const initializeFormData = async () => {
       formData.value.duration_minutes = formData.value.duration_minutes[0] || 45
       logger.debug('✅ Fixed duration from array to number:', formData.value.duration_minutes)
     }
-    
-    // ✅ SCHRITT 1.8: Duration explizit auf 90 setzen für diesen Test
-    if (props.eventData && props.eventData.duration_minutes === 90) {
-      formData.value.duration_minutes = 90
-      logger.debug('✅ FORCED duration to 90 minutes for this test')
-    }
-    
-  // ✅ SCHRITT 1.9: Duration NOCHMAL explizit setzen nach allen anderen Operationen
-  if (props.eventData && props.eventData.duration_minutes) {
-    formData.value.duration_minutes = props.eventData.duration_minutes
-    logger.debug('✅ FINAL duration set to:', formData.value.duration_minutes, 'min')
-  }
-  
-  // ✅ SCHRITT 1.10: Duration nach nextTick nochmal setzen (nach allen Watchers)
-  await nextTick()
-  if (props.eventData && props.eventData.duration_minutes) {
-    formData.value.duration_minutes = props.eventData.duration_minutes
-    logger.debug('✅ POST-TICK duration set to:', formData.value.duration_minutes, 'min')
-  }
-  
-  // ✅ SCHRITT 1.11: Duration nach setTimeout nochmal setzen (nach allen async Operationen)
-  setTimeout(() => {
+
     if (props.eventData && props.eventData.duration_minutes) {
       formData.value.duration_minutes = props.eventData.duration_minutes
-      logger.debug('✅ POST-TIMEOUT duration set to:', formData.value.duration_minutes, 'min')
+      logger.debug('✅ FINAL duration set to:', formData.value.duration_minutes, 'min')
     }
-  }, 100)
-  
-  // ✅ SCHRITT 1.12: Duration nach längerem setTimeout nochmal setzen (nach allen Watchers)
-  setTimeout(() => {
-    if (props.eventData && props.eventData.duration_minutes) {
+
+    await nextTick()
+    if (props.eventData && props.eventData.duration_minutes && !durationManuallyChosen.value) {
       formData.value.duration_minutes = props.eventData.duration_minutes
-      logger.debug('✅ POST-TIMEOUT-500 duration set to:', formData.value.duration_minutes, 'min')
-    }
-  }, 500)
-  
-  // ✅ SCHRITT 1.13: Duration nach noch längerem setTimeout nochmal setzen (nach allen async Operationen)
-  setTimeout(() => {
-    if (props.eventData && props.eventData.duration_minutes) {
-      formData.value.duration_minutes = props.eventData.duration_minutes
-      logger.debug('✅ POST-TIMEOUT-1000 duration set to:', formData.value.duration_minutes, 'min')
-    }
-  }, 1000)
-    
-    // ✅ SCHRITT 1.6: Duration-Logik nach populateFormFromAppointment
-    if (formData.value.duration_minutes) {
-      logger.debug('✅ Keeping existing duration from database:', formData.value.duration_minutes, 'min')
+      logger.debug('✅ POST-TICK duration set to:', formData.value.duration_minutes, 'min')
     }
   }
 }
@@ -6211,7 +6216,7 @@ const handleCreateMode = async () => {
   if (props.mode === 'create' && props.eventData?.start) {
     // Paid types → student + Terminart + price. Only free → EventTypeSelector.
     const defaults = await applyCreateEventTypeDefaultsOnce()
-    if (defaults?.duration) {
+    if (defaults?.duration && !durationManuallyChosen.value) {
       formData.value.duration_minutes = defaults.duration
       calculateEndTime()
     }

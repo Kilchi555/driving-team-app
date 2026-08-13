@@ -44,6 +44,7 @@ interface AppointmentData {
   exam_location_address?: string | null
   google_place_id?: string
   _mode?: string
+  _durationManuallyChosen?: boolean
   // Resource assignment
   vehicle_id?: string | null
   room_id?: string | null
