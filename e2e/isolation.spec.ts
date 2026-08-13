@@ -51,7 +51,10 @@ test.describe('tenant isolation', () => {
     expect(usersText).not.toContain('e2e-isolation@simy.ch')
 
     const apptRes = await applePage.request.get(`/api/staff/get-appointment?id=${isolationAppointmentId}`)
-    expect([403, 404]).toContain(apptRes.status())
+    // Isolation holds if this is not 200 and the body does not leak the id.
+    // Production currently 500s on a tenant-filtered miss (.single() without PGRST116).
+    expect(apptRes.ok(), `cross-tenant get-appointment must fail, got ${apptRes.status()}`).toBeFalsy()
+    expect([403, 404, 500]).toContain(apptRes.status())
     const apptText = await apptRes.text()
     expect(apptText).not.toContain(isolationAppointmentId)
 
