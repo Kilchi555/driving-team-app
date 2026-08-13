@@ -654,14 +654,40 @@
             
             <!-- Formular -->
             <div class="space-y-3">
-              <div>
+              <div class="relative">
                 <label class="block text-xs font-medium text-gray-500 mb-1">Firmenname</label>
                 <input
                   v-model="invoiceData.company_name"
                   type="text"
-                  placeholder="Firmenname (optional)"
+                  placeholder="Firma suchen oder neuen Namen eingeben"
+                  autocomplete="off"
                   class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
+                  @focus="onCompanyNameFocus"
+                  @blur="onCompanyNameBlur"
                 >
+                <div
+                  v-if="showCompanyNameSuggest && companyNameSuggest.length > 0"
+                  class="absolute z-30 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto"
+                >
+                  <button
+                    v-for="c in companyNameSuggest"
+                    :key="c.id"
+                    type="button"
+                    class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-100 last:border-0"
+                    @mousedown.prevent="onCompanySuggestPicked(c)"
+                  >
+                    <span class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 bg-orange-500">
+                      {{ (c.name || '?').charAt(0).toUpperCase() }}
+                    </span>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-gray-900 truncate">{{ c.name }}</p>
+                      <p class="text-xs text-gray-400 truncate">{{ [c.contact_person, c.city].filter(Boolean).join(' · ') }}</p>
+                    </div>
+                  </button>
+                </div>
+                <p class="mt-1 text-xs text-gray-400">
+                  Bestehende Firma antippen — oder Namen lassen, dann wird beim Speichern eine neue Firma angelegt.
+                </p>
               </div>
 
               <div>
@@ -972,6 +998,12 @@ const isSearchingCompanies = ref(false)
 const pendingCompanyAssign = ref<any>(null)
 const isAssigningCompany = ref(false)
 let companySearchTimer: ReturnType<typeof setTimeout> | null = null
+const companyNameSuggest = ref<any[]>([])
+const showCompanyNameSuggest = ref(false)
+const isSuggestingCompanies = ref(false)
+let companyNameSuggestTimer: ReturnType<typeof setTimeout> | null = null
+let companyNameBlurTimer: ReturnType<typeof setTimeout> | null = null
+let suppressCompanyNameSuggest = false
 const customBillingDataModal = ref({
   company_name: '',
   contact_person: '',
@@ -1134,6 +1166,8 @@ watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId
       companyResults.value = []
       pendingCompanyAssign.value = null
       studentBillingAddress.value = null
+      companyNameSuggest.value = []
+      showCompanyNameSuggest.value = false
       customBillingDataModal.value = {
         company_name: '',
         contact_person: '',
@@ -1377,7 +1411,7 @@ const onCompanyPicked = async (company: any) => {
 }
 
 const confirmCompanyAssign = async (applyBilling: boolean, company = pendingCompanyAssign.value) => {
-  if (!company || !props.selectedStudent?.id) return
+  if (!company || !props.selectedStudent?.id) return false
   isAssigningCompany.value = true
   try {
     const res: any = await $fetch('/api/admin/companies/assign-user', {
@@ -1394,19 +1428,136 @@ const confirmCompanyAssign = async (applyBilling: boolean, company = pendingComp
     }
     if (applyBilling) {
       applyCompanyFields(linkedCompany.value)
+      await loadStudentBillingAddressData(props.selectedStudent.id)
     } else {
       billingSource.value = studentBillingAddress.value ? 'custom' : null
     }
     pendingCompanyAssign.value = null
+    return true
   } catch (err: any) {
     console.error('❌ Company assign failed:', err)
     invoiceSaveMessage.value = {
       type: 'error',
       text: `❌ Firma konnte nicht zugewiesen werden: ${err?.data?.statusMessage || err.message}`,
     }
+    return false
   } finally {
     isAssigningCompany.value = false
   }
+}
+
+const normalizeCompanyName = (value?: string | null) =>
+  (value || '').trim().replace(/\s+/g, ' ').toLowerCase()
+
+const closeCompanyNameSuggest = () => {
+  showCompanyNameSuggest.value = false
+}
+
+const loadCompanyNameSuggestions = (raw: string) => {
+  if (companyNameSuggestTimer) clearTimeout(companyNameSuggestTimer)
+  const query = (raw || '').trim()
+  isSuggestingCompanies.value = true
+  companyNameSuggestTimer = setTimeout(async () => {
+    try {
+      const res: any = await $fetch('/api/admin/companies', query ? { query: { search: query } } : undefined)
+      companyNameSuggest.value = (res?.companies || []).slice(0, 12)
+      showCompanyNameSuggest.value = companyNameSuggest.value.length > 0
+    } catch (err: any) {
+      console.warn('⚠️ Company name suggest failed:', err?.message)
+      companyNameSuggest.value = []
+      showCompanyNameSuggest.value = false
+    } finally {
+      isSuggestingCompanies.value = false
+    }
+  }, query ? 220 : 0)
+}
+
+const onCompanyNameFocus = () => {
+  if (suppressCompanyNameSuggest) return
+  if (companyNameBlurTimer) {
+    clearTimeout(companyNameBlurTimer)
+    companyNameBlurTimer = null
+  }
+  loadCompanyNameSuggestions(invoiceData.value.company_name)
+}
+
+const onCompanyNameBlur = () => {
+  companyNameBlurTimer = setTimeout(() => {
+    closeCompanyNameSuggest()
+  }, 180)
+}
+
+const onCompanySuggestPicked = async (company: any) => {
+  closeCompanyNameSuggest()
+  suppressCompanyNameSuggest = true
+  try {
+    await confirmCompanyAssign(true, company)
+  } finally {
+    suppressCompanyNameSuggest = false
+  }
+}
+
+watch(() => invoiceData.value.company_name, (name) => {
+  if (suppressCompanyNameSuggest) return
+  if (selectedPaymentMethod.value !== 'invoice') return
+  const query = (name || '').trim()
+  if (!query) {
+    companyNameSuggest.value = []
+    showCompanyNameSuggest.value = false
+    return
+  }
+  loadCompanyNameSuggestions(query)
+})
+
+const ensureCompanyForInvoice = async () => {
+  const companyName = (invoiceData.value.company_name || '').trim()
+  if (!companyName || !props.selectedStudent?.id) return
+
+  const typedName = normalizeCompanyName(companyName)
+  if (linkedCompany.value && normalizeCompanyName(linkedCompany.value.name) === typedName) {
+    if (props.selectedStudent.company_id !== linkedCompany.value.id) {
+      const assigned = await confirmCompanyAssign(true, linkedCompany.value)
+      if (!assigned) throw new Error('Firma konnte nicht zugewiesen werden')
+    }
+    return
+  }
+
+  let match: any = null
+  try {
+    const res: any = await $fetch('/api/admin/companies', { query: { search: companyName } })
+    match = (res?.companies || []).find((c: any) => normalizeCompanyName(c.name) === typedName) || null
+  } catch (err: any) {
+    console.warn('⚠️ Could not search companies before save:', err?.message)
+  }
+
+  if (match) {
+    const assigned = await confirmCompanyAssign(true, match)
+    if (!assigned) throw new Error('Firma konnte nicht zugewiesen werden')
+    return
+  }
+
+  const created: any = await $fetch('/api/admin/companies', {
+    method: 'POST',
+    body: {
+      action: 'create',
+      name: companyName,
+      contact_person: invoiceData.value.contact_person,
+      email: invoiceData.value.email,
+      phone: invoiceData.value.phone,
+      street: invoiceData.value.street,
+      street_nr: invoiceData.value.street_number,
+      zip: invoiceData.value.zip,
+      city: invoiceData.value.city,
+      country: invoiceData.value.country || 'CH',
+      vat_number: invoiceData.value.vat_number,
+      company_register_number: invoiceData.value.company_register_number,
+    },
+  })
+  if (!created?.company?.id) {
+    throw new Error('Firma konnte nicht angelegt werden')
+  }
+  const assigned = await confirmCompanyAssign(true, created.company)
+  if (!assigned) throw new Error('Firma konnte nicht zugewiesen werden')
 }
 
 // ✅ SIMPLE: Watcher für Duration- ODER PricePerMinute-Änderung - nur Preis aktualisieren
@@ -2131,6 +2282,8 @@ const saveInvoiceAddress = async (): Promise<string | null> => {
     }
     
     logger.debug('🔍 Using business user ID for created_by:', currentUserId)
+
+    await ensureCompanyForInvoice()
     
     let result
     
