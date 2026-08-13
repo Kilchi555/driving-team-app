@@ -1744,6 +1744,7 @@ const submitEnrollment = async () => {
     const isIndividual = isIndividualSessionMode.value && individualSessionNumber.value !== null
 
     const marketingSessionId = (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined
+    const marketingAttribution = (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined
 
     const response = await $fetch(endpoint, {
       method: 'POST',
@@ -1768,6 +1769,7 @@ const submitEnrollment = async () => {
         isPartialEnrollment: (isPartial || isIndividual) || undefined,
         individualSessionNumber: isIndividual ? individualSessionNumber.value : undefined,
         marketingSessionId,
+        marketingAttribution,
         vehicleId: selectedVehicleId.value || undefined,
         ...(paymentMethod.value !== 'WALLEE' ? { paymentMethod: nonWalleePaymentMethod } : {}),
       }
