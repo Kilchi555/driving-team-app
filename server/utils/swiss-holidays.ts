@@ -94,18 +94,48 @@ export function getWorkingDaysInMonth(year: number, month: number): number {
   return workingDays
 }
 
+/** 100% instructor week that the 6.5h working day belongs to. */
+export const MONTHLY_SOLL_WEEKLY_REFERENCE = 33.75
+/** Working-day length at 100% (33.75h/week). Part-time scales with weekly hours. */
+export const MONTHLY_SOLL_DAILY_HOURS = 6.5
+
+function roundHours2(n: number): number {
+  return Math.round(n * 100) / 100
+}
+
+/** Daily Soll/vacation hours for monthly-salary staff. 33.75h/week → 6.5h/day. */
+export function getMonthlyDailyHours(weeklyContractedHours: number): number {
+  if (weeklyContractedHours <= 0) return 0
+  return weeklyContractedHours * (MONTHLY_SOLL_DAILY_HOURS / MONTHLY_SOLL_WEEKLY_REFERENCE)
+}
+
 /**
- * Returns the target hours for a month given the staff member's weekly contracted hours.
- * Formula: workingDays × (weeklyHours / 5)
- *
- * @param year                4-digit year
- * @param month               1-indexed month
- * @param weeklyContractedHours  e.g. 42.5 (hours per week)
+ * Monthly Soll: Arbeitstage × 6.5h, scaled by contracted week / 33.75.
+ * 33.75h/week → 6.5h per working day (not weekly/5 = 6.75h).
  */
 export function getMonthlyTargetHours(year: number, month: number, weeklyContractedHours: number): number {
   const workingDays = getWorkingDaysInMonth(year, month)
-  const dailyHours = weeklyContractedHours / 5
-  return Math.round(workingDays * dailyHours * 100) / 100
+  return roundHours2(workingDays * getMonthlyDailyHours(weeklyContractedHours))
+}
+
+/**
+ * Keep a stored Soll when it is a genuine override (or a previous pensum).
+ * Auto-calculated values from the old weekly/5 formula are migrated.
+ */
+export function resolveMonthlyTargetHours(
+  year: number,
+  month: number,
+  weeklyContractedHours: number,
+  storedTarget: number | null | undefined,
+): number {
+  const computed = getMonthlyTargetHours(year, month, weeklyContractedHours)
+  if (storedTarget == null || Number.isNaN(storedTarget)) return computed
+
+  const stored = roundHours2(storedTarget)
+  const legacyDaily = weeklyContractedHours / 5
+  const legacyCalendar = roundHours2(getWorkingDaysInMonth(year, month) * legacyDaily)
+  if (Math.abs(stored - legacyCalendar) < 0.015) return computed
+  return stored
 }
 
 /**

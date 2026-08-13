@@ -4,7 +4,7 @@
  *
  * Appointment counting rules: see ~/server/utils/staff-hours-counting.ts
  */
-import { getMonthlyTargetHours } from '~/server/utils/swiss-holidays'
+import { getMonthlyDailyHours, getMonthlyTargetHours, resolveMonthlyTargetHours } from '~/server/utils/swiss-holidays'
 import { logger } from '~/utils/logger'
 import {
   STAFF_HOURS_TIMEZONE as TIMEZONE,
@@ -151,7 +151,7 @@ export async function recalculateStaffHoursForTenant(
       const actual = monthData.actual
       // For monthly-salary staff: vacation = day credits × daily contracted hours
       // For hourly staff: vacation stays 0 (no target hours system)
-      const dailyHours = isMonthly && weeklyHours > 0 ? weeklyHours / 5 : 0
+      const dailyHours = isMonthly ? getMonthlyDailyHours(weeklyHours) : 0
       const vacationDays = [...monthData.vacation_credits.values()].reduce((s, c) => s + c, 0)
       const vacation = isMonthly ? vacationDays * dailyHours : 0
 
@@ -178,12 +178,12 @@ export async function recalculateStaffHoursForTenant(
         // without any saved month) – wait for admin to set "gilt ab" first.
         if (!existing && firstEmploymentMonth === null && !forceTargetRecalc && !hasActuals) continue
 
-        // Only use stored target_hours as admin override if it was intentionally set.
-        // forceTargetRecalc = true skips the stored value (e.g. on employment % change).
+        // forceTargetRecalc skips stored Soll (e.g. on employment % change).
+        // Otherwise keep genuine overrides; migrate old weekly/5 Soll to 6.5h/day.
         const storedTarget = existing?.target_hours != null ? parseFloat(existing.target_hours) : null
-        targetHours = (!forceTargetRecalc && storedTarget != null)
-          ? storedTarget
-          : getMonthlyTargetHours(year, m, weeklyHours)
+        targetHours = forceTargetRecalc
+          ? getMonthlyTargetHours(year, m, weeklyHours)
+          : resolveMonthlyTargetHours(year, m, weeklyHours, storedTarget)
       }
 
       results.push({

@@ -7,6 +7,7 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getMonthlyDailyHours } from '~/server/utils/swiss-holidays'
 import { ferienDayCredit } from '~/server/utils/staff-hours-counting'
 
 const TIMEZONE = 'Europe/Zurich'
@@ -51,7 +52,9 @@ export default defineEventHandler(async (event) => {
   })
 
   const weeklyHours: number = staffUser.weekly_contracted_hours || 0
-  const dailyHours = weeklyHours > 0 ? weeklyHours / 5 : 0
+  const dailyHours = staffUser.salary_type === 'monthly'
+    ? getMonthlyDailyHours(weeklyHours)
+    : (weeklyHours > 0 ? weeklyHours / 5 : 0)
   const entitlementDays: number = Number(staffUser.vacation_entitlement_days ?? 20)
   const usedDays = Math.round([...vacDayCredits.values()].reduce((s, c) => s + c, 0) * 10) / 10
   const remainingDays = Math.round((entitlementDays - usedDays) * 10) / 10

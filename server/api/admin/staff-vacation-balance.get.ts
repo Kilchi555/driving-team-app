@@ -9,7 +9,7 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { getYearlyWorkingDaysBreakdown } from '~/server/utils/swiss-holidays'
+import { getMonthlyDailyHours, resolveMonthlyTargetHours } from '~/server/utils/swiss-holidays'
 import { FULLTIME_HOURS_DEFAULT, HR_CATEGORY, KEY_FULLTIME } from '~/server/api/admin/hr-settings.get'
 import { ferienDayCredit } from '~/server/utils/staff-hours-counting'
 
@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
   const salaryType: string = staffUser.salary_type || 'hourly'
   const isMonthly = salaryType === 'monthly'
   const weeklyHours: number = staffUser.weekly_contracted_hours || 0
-  const dailyHours = weeklyHours > 0 ? weeklyHours / 5 : 0
+  const dailyHours = isMonthly ? getMonthlyDailyHours(weeklyHours) : (weeklyHours > 0 ? weeklyHours / 5 : 0)
   const entitlementDays: number = staffUser.vacation_entitlement_days ?? 20
   const entitlementHours = entitlementDays * dailyHours
 
@@ -126,7 +126,7 @@ export default defineEventHandler(async (event) => {
       const vacation_hours = Math.max(plannedVacHours, stored_vacation)
       const overtime = parseFloat(r.actual_hours) + vacation_hours
         + parseFloat(r.sick_hours ?? 0) + parseFloat(r.admin_hours ?? 0)
-        - parseFloat(r.target_hours)
+        - resolveMonthlyTargetHours(year, r.month, weeklyHours, parseFloat(r.target_hours))
       running += overtime
     })
 
