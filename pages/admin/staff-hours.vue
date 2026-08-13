@@ -515,7 +515,7 @@
     <div v-if="activeView === 'settings'" class="space-y-4">
       <div class="rounded-lg p-3 text-sm" :style="{ background: `${primaryColor}10`, border: `1px solid ${primaryColor}33`, color: primaryColor }">
         Hier kannst du für jeden {{ t.staff }} den Lohntyp und das Pensum festlegen.
-        Für Monatslohn-Mitarbeiter werden die Soll-Stunden pro Monat automatisch anhand der Schweizer Arbeitstage (inkl. Feiertage) berechnet.
+        Für Monatslohn-Mitarbeiter gilt: Soll = Arbeitstage × 6.5h (bei 100% / 33.75h-Woche), anteilig nach Pensum.
       </div>
 
       <!-- Vollzeit-Referenz -->

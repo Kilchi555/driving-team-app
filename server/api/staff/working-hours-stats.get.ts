@@ -13,7 +13,7 @@
 import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { getMonthlyTargetHours } from '~/server/utils/swiss-holidays'
+import { getMonthlyDailyHours, getMonthlyTargetHours } from '~/server/utils/swiss-holidays'
 import { logger } from '~/utils/logger'
 import {
   STAFF_HOURS_TIMEZONE,
@@ -80,10 +80,8 @@ export default defineEventHandler(async (event) => {
 
     const { id: staffId, tenant_id: tenantId } = staffUser
     const weeklyHours = staffUser.weekly_contracted_hours || 0
-    const dailyHours = weeklyHours > 0 ? weeklyHours / 5 : 0
-    // Monatssoll (Zielstunden) macht nur für Monatslohn-Mitarbeitende Sinn –
-    // bei Stundenlohn gibt es kein Soll/Ist-Konto.
     const isMonthlySalary = staffUser.salary_type === 'monthly' && weeklyHours > 0
+    const dailyHours = isMonthlySalary ? getMonthlyDailyHours(weeklyHours) : 0
     const now = new Date()
     const { year: currentYear, month: currentMonth } = zurichYearMonth(now)
 

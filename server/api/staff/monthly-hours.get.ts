@@ -7,7 +7,7 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { getYearlyWorkingDaysBreakdown } from '~/server/utils/swiss-holidays'
+import { getMonthlyDailyHours, getYearlyWorkingDaysBreakdown, resolveMonthlyTargetHours } from '~/server/utils/swiss-holidays'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -83,7 +83,7 @@ export default defineEventHandler(async (event) => {
       : 0
 
     const weeklyHours = weekly_contracted_hours || 0
-    const dailyHours = weeklyHours > 0 ? weeklyHours / 5 : 0
+    const dailyHours = getMonthlyDailyHours(weeklyHours)
     const yearBreakdown = getYearlyWorkingDaysBreakdown(year, weeklyHours)
     const recordsMap: Record<number, any> = {}
     ;(records || []).forEach((r: any) => { recordsMap[r.month] = r })
@@ -131,13 +131,15 @@ export default defineEventHandler(async (event) => {
         }
       }
       const actual_hours = parseFloat(record.actual_hours)
-      // Prefer the higher of live appointment days vs stored — avoids undercounting
-      // when either source is stale, and keeps Diff/Saldo credited for taken vacation.
       const stored_vacation = parseFloat(record.vacation_hours ?? 0) || 0
       const vacation_hours = Math.max(plannedVacHours, stored_vacation)
       const sick_hours = parseFloat(record.sick_hours ?? 0) || 0
       const admin_hours = parseFloat(record.admin_hours ?? 0) || 0
-      const target_hours = parseFloat(record.target_hours)
+      let target_hours = resolveMonthlyTargetHours(year, month, weeklyHours, parseFloat(record.target_hours))
+      const isOpenMonth = year > curYearForTarget || (year === curYearForTarget && month >= curMonthForTarget)
+      const storedTarget = parseFloat(record.target_hours)
+      const is_projected = isOpenMonth && weeklyHours > 0 && !(storedTarget > 0)
+      if (is_projected) target_hours = projectedTargetHours
       const overtime_hours = actual_hours + vacation_hours + sick_hours + admin_hours - target_hours
       return {
         month,
@@ -150,7 +152,7 @@ export default defineEventHandler(async (event) => {
         overtime_hours,
         _overtime_for_running: overtime_hours,
         has_record: true,
-        is_projected: false,
+        is_projected,
       }
     })
 

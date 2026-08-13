@@ -1,16 +1,83 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getMonthlyDailyHours } from '~/server/utils/swiss-holidays'
 import { logger } from '~/utils/logger'
+import { zurichYearMonth, shouldCountAppointment } from '~/server/utils/staff-hours-counting'
 
 const TIMEZONE = 'Europe/Zurich'
 const MONTH_KEYS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+const PAGE_SIZE = 1000
 
 /** Returns the 0-based month index of a UTC timestamp, interpreted in Europe/Zurich. */
 function zurichMonthIndex(isoString: string): number {
   return parseInt(
     new Intl.DateTimeFormat('en-US', { month: '2-digit', timeZone: TIMEZONE }).format(new Date(isoString))
   ) - 1
+}
+
+async function fetchAllRows(buildPage: (from: number, to: number) => Promise<{ data: any[] | null }>) {
+  const all: any[] = []
+  let from = 0
+  const maxRows = PAGE_SIZE * 50
+  while (from < maxRows) {
+    const { data: page } = await buildPage(from, from + PAGE_SIZE - 1)
+    if (!page || page.length === 0) break
+    all.push(...page)
+    if (page.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return all
+}
+
+/** Hourly staff: worked hours only. Monthly staff: worked + contracted vacation days. */
+function addLiveMonthHours(
+  hoursByMonth: Record<string, number>,
+  staff: { salary_type?: string | null; weekly_contracted_hours?: number | null },
+  apts: any[],
+  includeMonth: (month1: number) => boolean
+) {
+  const isMonthly = staff.salary_type === 'monthly'
+  const dailyHours = isMonthly ? getMonthlyDailyHours(staff.weekly_contracted_hours || 0) : 0
+  const vacCredits: Record<number, Map<string, number>> = {}
+
+  for (const apt of apts) {
+    if (!apt.start_time || !shouldCountAppointment(apt)) continue
+    const mIdx = zurichMonthIndex(apt.start_time)
+    const month1 = mIdx + 1
+    if (!includeMonth(month1)) continue
+    const mKey = MONTH_KEYS[mIdx]
+    if (!mKey) continue
+
+    if (apt.event_type_code === 'vacation') {
+      if (!isMonthly || !dailyHours) continue
+      if (apt.status === 'cancelled') continue
+      const dateStr = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(new Date(apt.start_time))
+      const weekday = new Date(dateStr + 'T12:00:00').getDay()
+      if (weekday < 1 || weekday > 5) continue
+      const duration = apt.duration_minutes ?? 0
+      const credit = duration > 0 && duration <= 420 ? 0.5 : 1
+      if (!vacCredits[month1]) vacCredits[month1] = new Map()
+      const prev = vacCredits[month1].get(dateStr) || 0
+      vacCredits[month1].set(dateStr, Math.max(prev, credit))
+      continue
+    }
+
+    hoursByMonth[mKey] += (apt.duration_minutes || 0) / 60
+  }
+
+  Object.entries(vacCredits).forEach(([monthStr, days]) => {
+    const mKey = MONTH_KEYS[Number(monthStr) - 1]
+    if (!mKey) return
+    const credit = [...days.values()].reduce((s, c) => s + c, 0)
+    hoursByMonth[mKey] += credit * dailyHours
+  })
+
+  MONTH_KEYS.forEach((key, i) => {
+    if (includeMonth(i + 1)) {
+      hoursByMonth[key] = Math.round(hoursByMonth[key] * 100) / 100
+    }
+  })
 }
 
 export default defineEventHandler(async (event) => {
@@ -85,49 +152,40 @@ export default defineEventHandler(async (event) => {
 
     const staffIds = (staffData || []).map((s: any) => s.id)
 
-    // ── 4. Load ALL appointments for ALL staff in ONE query ──────────────────────
-    let allActive: any[] = []
-    let allCancelled: any[] = []
+    // ── 4. Load ALL appointments (incl. cancelled + payments) ──────────────────
+    let allApts: any[] = []
 
     if (staffIds.length > 0) {
-      const [activeRes, cancelledRes] = await Promise.all([
+      allApts = await fetchAllRows((from, to) =>
         supabase
           .from('appointments')
-          .select('id, staff_id, start_time, duration_minutes, event_type_code, type, status')
+          .select('id, staff_id, start_time, duration_minutes, event_type_code, type, status, payments(payment_status)')
           .in('staff_id', staffIds)
           .eq('tenant_id', tenantId)
           .gte('start_time', startDate)
           .lt('start_time', endDate)
-          .neq('status', 'cancelled')
-          .limit(10000),
-        supabase
-          .from('appointments')
-          .select('id, staff_id, start_time, duration_minutes, event_type_code, type')
-          .in('staff_id', staffIds)
-          .eq('tenant_id', tenantId)
-          .gte('start_time', startDate)
-          .lt('start_time', endDate)
-          .eq('status', 'cancelled')
-          .limit(10000),
-      ])
-      allActive = activeRes.data || []
-      allCancelled = cancelledRes.data || []
-      logger.debug(`📊 Loaded ${allActive.length} active / ${allCancelled.length} cancelled appointments`)
+          .neq('status', 'deleted')
+          .order('start_time', { ascending: true })
+          .range(from, to)
+      )
+      logger.debug(`📊 Loaded ${allApts.length} appointments`)
     }
 
-    // Pre-group by staff_id for O(n) lookups
-    const activeByStaff: Record<string, any[]> = {}
-    const cancelledByStaff: Record<string, any[]> = {}
-    staffIds.forEach((id: string) => { activeByStaff[id] = []; cancelledByStaff[id] = [] })
-    allActive.forEach((a: any) => { activeByStaff[a.staff_id]?.push(a) })
-    allCancelled.forEach((a: any) => { cancelledByStaff[a.staff_id]?.push(a) })
+    const aptsByStaff: Record<string, any[]> = {}
+    staffIds.forEach((id: string) => { aptsByStaff[id] = [] })
+    allApts.forEach((a: any) => { aptsByStaff[a.staff_id]?.push(a) })
 
     // ── 5. Aggregate per-staff statistics ────────────────────────────────────────
     const staffWithHours = (staffData || []).map((staff: any) => {
-      const apts = activeByStaff[staff.id] || []
-      const cancelled = cancelledByStaff[staff.id] || []
+      const apts = aptsByStaff[staff.id] || []
+      const isMonthly = staff.salary_type === 'monthly'
+      const cancelled = apts.filter((a: any) => a.status === 'cancelled')
+      const freeCancels = cancelled.filter((a: any) => !shouldCountAppointment(a))
+      const worked = apts.filter((a: any) =>
+        shouldCountAppointment(a) && a.event_type_code !== 'vacation'
+      )
 
-      const totalHours = apts.reduce((s: number, a: any) => s + (a.duration_minutes || 0), 0) / 60
+      const totalHours = worked.reduce((s: number, a: any) => s + (a.duration_minutes || 0), 0) / 60
 
       // Licence-category stats (driving_school only)
       const categoryStats: Record<string, { count: number; hours: number }> = {}
@@ -144,23 +202,22 @@ export default defineEventHandler(async (event) => {
         const etCode = a.event_type_code || ''
         const catCode = a.type || ''
 
-        // Licence-category
+        if (etCode === 'vacation') {
+          if (isMonthly && a.status !== 'cancelled') vacationHours += hours
+          return
+        }
+
+        if (!shouldCountAppointment(a)) return
+
         if (categoryStats[catCode]) {
           categoryStats[catCode].count++
           categoryStats[catCode].hours += hours
         }
 
-        // Event-type (dynamic)
         if (etCode in eventTypeStats) {
           eventTypeStats[etCode] += hours
         } else if (etCode) {
-          // Unknown code (not in tenant's event_types) → still track it
           eventTypeStats[etCode] = (eventTypeStats[etCode] || 0) + hours
-        }
-
-        // Vacation tracked separately for salary calculations
-        if (etCode === 'vacation') {
-          vacationHours += hours
         }
       })
 
@@ -169,19 +226,19 @@ export default defineEventHandler(async (event) => {
         eventTypeStats[k] = Math.round(eventTypeStats[k] * 100) / 100
       })
 
-      const cancelledHours = cancelled.reduce((s: number, a: any) => s + (a.duration_minutes || 0), 0) / 60
+      const cancelledHours = freeCancels.reduce((s: number, a: any) => s + (a.duration_minutes || 0), 0) / 60
       const lastApt = apts.length > 0
         ? apts.slice().sort((a: any, b: any) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime())[0]
         : null
 
       return {
         ...staff,
-        appointment_count: apts.length,
+        appointment_count: worked.length,
         total_hours: Math.round(totalHours * 100) / 100,
         vacation_hours: Math.round(vacationHours * 100) / 100,
-        average_hours: apts.length > 0 ? totalHours / apts.length : 0,
+        average_hours: worked.length > 0 ? totalHours / worked.length : 0,
         last_appointment: lastApt?.start_time || null,
-        cancelled_count: cancelled.length,
+        cancelled_count: freeCancels.length,
         cancelled_hours: Math.round(cancelledHours * 100) / 100,
         category_stats: categoryStats,
         event_type_stats: eventTypeStats,
@@ -209,27 +266,46 @@ export default defineEventHandler(async (event) => {
     })
 
     if ((monthlyRecords || []).length > 0) {
-      // Data available from pre-computed table
+      // Completed months from pre-computed table.
+      // Hourly: actual only. Monthly: actual + contracted vacation hours.
+      const staffById: Record<string, any> = {}
+      staffWithHours.forEach((s: any) => { staffById[s.id] = s })
+
       ;(monthlyRecords || []).forEach((r: any) => {
         const mKey = MONTH_KEYS[r.month - 1]
-        if (mKey && staffMonthlyHours[r.staff_id]) {
-          const total = (parseFloat(r.actual_hours) || 0) + (parseFloat(r.vacation_hours) || 0)
-          staffMonthlyHours[r.staff_id][mKey] = Math.round(total * 100) / 100
-        }
+        if (!mKey || !staffMonthlyHours[r.staff_id]) return
+        const actual = parseFloat(r.actual_hours) || 0
+        const vacation = staffById[r.staff_id]?.salary_type === 'monthly'
+          ? (parseFloat(r.vacation_hours) || 0)
+          : 0
+        staffMonthlyHours[r.staff_id][mKey] = Math.round((actual + vacation) * 100) / 100
+      })
+
+      const nowZ = zurichYearMonth()
+      const isOpenMonth = (month1: number) =>
+        year > nowZ.year || (year === nowZ.year && month1 >= nowZ.month)
+
+      staffWithHours.forEach((staff: any) => {
+        MONTH_KEYS.forEach((key, i) => {
+          if (isOpenMonth(i + 1)) staffMonthlyHours[staff.id][key] = 0
+        })
+        addLiveMonthHours(
+          staffMonthlyHours[staff.id],
+          staff,
+          aptsByStaff[staff.id] || [],
+          isOpenMonth
+        )
       })
     } else {
       // Fallback: aggregate live from appointments (used until first recalculate)
       logger.debug('⚠️ No staff_monthly_hours records found, falling back to live aggregation')
       staffWithHours.forEach((staff: any) => {
-        ;(activeByStaff[staff.id] || []).forEach((apt: any) => {
-          if (!apt.start_time) return
-          const mIdx = zurichMonthIndex(apt.start_time)
-          const mKey = MONTH_KEYS[mIdx]
-          if (mKey) staffMonthlyHours[staff.id][mKey] += (apt.duration_minutes || 0) / 60
-        })
-        MONTH_KEYS.forEach((m) => {
-          staffMonthlyHours[staff.id][m] = Math.round(staffMonthlyHours[staff.id][m] * 100) / 100
-        })
+        addLiveMonthHours(
+          staffMonthlyHours[staff.id],
+          staff,
+          aptsByStaff[staff.id] || [],
+          () => true
+        )
       })
     }
 

@@ -8,7 +8,7 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { getMonthlyTargetHours, getYearlyWorkingDaysBreakdown } from '~/server/utils/swiss-holidays'
+import { getMonthlyDailyHours, getMonthlyTargetHours, getYearlyWorkingDaysBreakdown, resolveMonthlyTargetHours } from '~/server/utils/swiss-holidays'
 import { FULLTIME_HOURS_DEFAULT, HR_CATEGORY, KEY_FULLTIME } from '~/server/api/admin/hr-settings.get'
 import { logger } from '~/utils/logger'
 
@@ -123,7 +123,7 @@ export default defineEventHandler(async (event) => {
     // Assemble response: per staff, per month, with target hours auto-calculated if no record exists
     const result = (staffList || []).map((staff: any) => {
       const weeklyHours = staff.weekly_contracted_hours || 0
-      const dailyHours = weeklyHours > 0 ? weeklyHours / 5 : 0
+      const dailyHours = getMonthlyDailyHours(weeklyHours)
       const yearBreakdown = getYearlyWorkingDaysBreakdown(year, weeklyHours)
       const carryOver = carryOverMap[staff.id] ?? 0
       const vacCarryOver = vacCarryOverMap[staff.id] ?? 0
@@ -160,7 +160,7 @@ export default defineEventHandler(async (event) => {
         const vacation_hours = Math.max(plannedVacHours, stored_vacation)
         const sick_hours = parseFloat(record.sick_hours ?? 0) || 0
         const admin_hours = parseFloat(record.admin_hours ?? 0) || 0
-        const target_hours = parseFloat(record.target_hours)
+        const target_hours = resolveMonthlyTargetHours(year, month, weeklyHours, parseFloat(record.target_hours))
         const overtime_hours = actual_hours + vacation_hours + sick_hours + admin_hours - target_hours
         const fulltime_target = getMonthlyTargetHours(year, month, fulltimeWeeklyHours)
         const pensum_pct = fulltime_target > 0
