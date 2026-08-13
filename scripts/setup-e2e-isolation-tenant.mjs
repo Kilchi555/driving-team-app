@@ -57,22 +57,24 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 })
 
-async function findAuthUser(email) {
-  for (let page = 1; page <= 10; page++) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 200 })
-    if (error) throw error
-    const found = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase())
-    if (found) return found
-    if (data.users.length < 200) return null
-  }
+async function findAuthUserId(email) {
+  const { data } = await supabase.from('users').select('auth_user_id').eq('email', email).maybeSingle()
+  if (data?.auth_user_id) return data.auth_user_id
+
+  const { data: link, error } = await supabase.auth.admin.generateLink({ type: 'magiclink', email })
+  if (!error && link?.user?.id) return link.user.id
   return null
 }
 
 async function ensureAuthUser(email) {
-  const existing = await findAuthUser(email)
-  if (existing) {
-    await supabase.auth.admin.updateUserById(existing.id, { password: DEMO_PASSWORD, email_confirm: true })
-    return existing.id
+  const existingId = await findAuthUserId(email)
+  if (existingId) {
+    const { error } = await supabase.auth.admin.updateUserById(existingId, {
+      password: DEMO_PASSWORD,
+      email_confirm: true,
+    })
+    if (error) throw error
+    return existingId
   }
   const { data, error } = await supabase.auth.admin.createUser({
     email,
