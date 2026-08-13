@@ -366,6 +366,10 @@
                   +{{ monthlyStats.currentMonth.vacationHours.toFixed(1) }}h Ferien
                   <span v-if="monthlyStats.currentMonth.vacationDays" class="opacity-70">({{ monthlyStats.currentMonth.vacationDays }} T)</span>
                 </div>
+                <div v-if="currentMonthSick" class="mt-1 text-xs text-orange-700 font-medium">
+                  +{{ currentMonthSick.hours.toFixed(2) }}h Krank
+                  <span v-if="currentMonthSick.pct != null" class="opacity-70">({{ currentMonthSick.pct }}% AU)</span>
+                </div>
                 <div v-if="monthlyStats.currentMonth.cancellations.total > 0" class="mt-auto pt-2 text-xs text-gray-500 space-y-0.5">
                   <div class="flex items-center gap-1">
                     <span class="text-red-400">✕</span>
@@ -395,6 +399,10 @@
                 <div v-if="card.vacationHours > 0" class="mt-2 text-xs text-emerald-700 font-medium">
                   +{{ card.vacationHours.toFixed(1) }}h Ferien
                   <span v-if="card.vacationDays" class="opacity-70">({{ card.vacationDays }} T)</span>
+                </div>
+                <div v-if="card.sick" class="mt-1 text-xs text-orange-700 font-medium">
+                  +{{ card.sick.hours.toFixed(2) }}h Krank
+                  <span v-if="card.sick.pct != null" class="opacity-70">({{ card.sick.pct }}% AU)</span>
                 </div>
                 <div v-if="card.cancellations.total > 0" class="mt-auto pt-3 text-xs text-gray-500 space-y-0.5">
                   <div class="flex items-center gap-1">
@@ -2005,7 +2013,7 @@
                   <th class="px-2 py-2 text-right">Soll</th>
                   <th class="px-2 py-2 text-right">Ist</th>
                   <th v-if="showVacationColumn" class="px-2 py-2 text-right">Ferien</th>
-                  <th v-if="hoursTableExpanded" class="px-2 py-2 text-right">Krank</th>
+                  <th v-if="showSickColumn" class="px-2 py-2 text-right">Krank / AU</th>
                   <th v-if="hoursTableExpanded" class="px-2 py-2 text-right">Admin</th>
                   <th class="px-2 py-2 text-right">Diff</th>
                   <th class="px-2 py-2 text-right">Saldo</th>
@@ -2036,12 +2044,18 @@
                     <span v-if="m.vacation_hours != null && m.vacation_hours > 0">{{ m.vacation_hours.toFixed(1) }}h</span>
                     <span v-else class="text-gray-300">–</span>
                   </td>
-                  <td v-if="hoursTableExpanded" class="px-2 py-2 text-right text-orange-600">{{ (m.sick_hours ?? 0) > 0 ? Number(m.sick_hours).toFixed(1) + 'h' : '–' }}</td>
+                  <td v-if="showSickColumn" class="px-2 py-2 text-right text-orange-700">
+                    <template v-if="(m.sick_hours ?? 0) > 0">
+                      <span class="font-medium">{{ sickPercentLabel(m) }}</span>
+                      <span class="block text-[10px] text-orange-600/80">{{ Number(m.sick_hours).toFixed(2) }}h</span>
+                    </template>
+                    <span v-else class="text-gray-300">–</span>
+                  </td>
                   <td v-if="hoursTableExpanded" class="px-2 py-2 text-right text-purple-600">{{ (m.admin_hours ?? 0) > 0 ? Number(m.admin_hours).toFixed(1) + 'h' : '–' }}</td>
                   <td
                     class="px-2 py-2 text-right font-semibold"
                     :class="monthDiffVisible(m) ? getOvertimeColor(m.overtime_hours) : 'text-gray-300'"
-                    :title="(m.vacation_hours ?? 0) > 0 ? 'Diff = Ist + Ferien + Krank + Admin − Soll' : undefined"
+                    :title="'Diff = Ist + Ferien + Krank + Admin − Soll'"
                   >
                     <span v-if="monthDiffVisible(m)">{{ formatMonthlyBalance(m.overtime_hours) }}</span>
                     <span v-else>–</span>
@@ -2053,8 +2067,8 @@
                 </tr>
               </tbody>
             </table>
-            <p v-if="showVacationColumn" class="mt-2 text-[11px] text-gray-400">
-              Diff und Saldo enthalten bezogene Ferien (Ist + Ferien − Soll).
+            <p v-if="showVacationColumn || showSickColumn" class="mt-2 text-[11px] text-gray-400">
+              Diff und Saldo: Ist + Ferien + Krank + Admin − Soll.
             </p>
             <p v-if="monthlyHoursData.months?.some((m: any) => m.is_projected)" class="mt-1 text-[11px] text-gray-400">
               * Soll geplant – Monat noch nicht abgeschlossen, Ist folgt automatisch.
@@ -2702,7 +2716,21 @@ const showVacationColumn = computed(() =>
 
 const monthDiffVisible = (m: any): boolean =>
   m.overtime_hours != null &&
-  (m.cumulative_overtime !== null || (m.actual_hours ?? 0) > 0 || (m.vacation_hours ?? 0) > 0)
+  (m.cumulative_overtime !== null || (m.actual_hours ?? 0) > 0 || (m.vacation_hours ?? 0) > 0 || (m.sick_hours ?? 0) > 0)
+
+/** Show Krank column whenever any month has Arbeitsunfähigkeit hours */
+const showSickColumn = computed(() =>
+  hoursTableExpanded.value ||
+  (monthlyHoursData.value.months || []).some((m: any) => (m.sick_hours ?? 0) > 0)
+)
+
+const sickPercentLabel = (m: any) => {
+  const target = Number(m.target_hours) || 0
+  const sick = Number(m.sick_hours) || 0
+  if (target <= 0 || sick <= 0) return ''
+  const pct = Math.round((sick / target) * 1000) / 10
+  return `${pct}%`
+}
 
 const loadMonthlyHours = async () => {
   isLoadingMonthlyHours.value = true
@@ -3259,6 +3287,29 @@ const twoMonthsAgoName = computed(() => zurichMonthLabel(-2))
 const threeMonthsAgoName = computed(() => zurichMonthLabel(-3))
 const nextMonthName = computed(() => zurichMonthLabel(1))
 
+const sickForMonthOffset = (monthOffset: number) => {
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Zurich',
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(now)
+  const year = parseInt(parts.find((p) => p.type === 'year')!.value)
+  const month = parseInt(parts.find((p) => p.type === 'month')!.value)
+  const idx = year * 12 + (month - 1) + monthOffset
+  const y = Math.floor(idx / 12)
+  const m = (idx % 12) + 1
+  if (y !== monthlyHoursYear.value) return null
+  const rec = (monthlyHoursData.value.months || []).find((row: any) => row.month === m)
+  const hours = Number(rec?.sick_hours) || 0
+  if (hours <= 0) return null
+  const target = Number(rec?.target_hours) || 0
+  const pct = target > 0 ? Math.round((hours / target) * 1000) / 10 : null
+  return { hours, pct }
+}
+
+const currentMonthSick = computed(() => sickForMonthOffset(0))
+
 const pastWorkingHoursCards = computed(() => [
   {
     key: 'previous',
@@ -3268,6 +3319,7 @@ const pastWorkingHoursCards = computed(() => [
     vacationHours: monthlyStats.value.previousMonth.vacationHours ?? 0,
     vacationDays: monthlyStats.value.previousMonth.vacationDays ?? 0,
     cancellations: monthlyStats.value.previousMonth.cancellations,
+    sick: sickForMonthOffset(-1),
   },
   {
     key: 'twoMonthsAgo',
@@ -3277,6 +3329,7 @@ const pastWorkingHoursCards = computed(() => [
     vacationHours: monthlyStats.value.twoMonthsAgo.vacationHours ?? 0,
     vacationDays: monthlyStats.value.twoMonthsAgo.vacationDays ?? 0,
     cancellations: monthlyStats.value.twoMonthsAgo.cancellations,
+    sick: sickForMonthOffset(-2),
   },
   {
     key: 'threeMonthsAgo',
@@ -3286,6 +3339,7 @@ const pastWorkingHoursCards = computed(() => [
     vacationHours: monthlyStats.value.threeMonthsAgo.vacationHours ?? 0,
     vacationDays: monthlyStats.value.threeMonthsAgo.vacationDays ?? 0,
     cancellations: monthlyStats.value.threeMonthsAgo.cancellations,
+    sick: sickForMonthOffset(-3),
   },
 ])
 

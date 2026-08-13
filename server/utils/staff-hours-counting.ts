@@ -4,8 +4,9 @@
  *
  * Rules:
  *  - Not cancelled → always count (except vacation → separate)
- *  - Cancelled + has a payment that is NOT cancelled/refunded/failed → count
- *  - Cancelled + no payment OR payment cancelled/refunded → do NOT count
+ *  - Cancelled + payment still due/kept (pending, completed, authorized, …)
+ *    → count (short-notice / charged cancellation)
+ *  - Cancelled + no payment OR payment cancelled/refunded/failed → do NOT count
  *  - Missing duration_minutes → 0
  *  - Hours rounded to 0.01
  *  - Calendar month/day in Europe/Zurich
@@ -125,12 +126,17 @@ export function ferienDayCredit(apt: {
 /**
  * Returns true when an appointment should be counted toward a staff member's
  * actual working hours (Ist).
+ *
+ * Short-notice cancellations keep the payment (pending to collect, or already
+ * completed and retained). On-time cancellations void the payment — those
+ * hours are not worked.
  */
 export function shouldCountAppointment(apt: {
   status: string
   payments?: Array<{ payment_status: string }> | null
 }): boolean {
+  if (apt.status === 'deleted') return false
   if (apt.status !== 'cancelled') return true
   const payments = apt.payments || []
-  return payments.some((p) => !VOID_PAYMENT_STATUSES.has(p.payment_status))
+  return payments.some((p) => p.payment_status && !VOID_PAYMENT_STATUSES.has(p.payment_status))
 }
