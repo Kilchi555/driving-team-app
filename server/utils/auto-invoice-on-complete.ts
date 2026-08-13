@@ -26,6 +26,7 @@ import {
 } from '~/server/utils/invoice-persist-and-send'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
+import { resolveStudentBillingAddress } from '~/server/utils/billing-from-company'
 import logger from '~/utils/logger'
 
 const PAYMENT_SELECT = `
@@ -393,7 +394,7 @@ export async function createAndSendAutoInvoiceForPayments(opts: {
 
   const { data: student } = await supabase
     .from('users')
-    .select('id, first_name, last_name, email, street, street_nr, zip, city, phone')
+    .select('id, first_name, last_name, email, street, street_nr, zip, city, phone, company_id, default_company_billing_address_id')
     .eq('id', userId)
     .maybeSingle()
 
@@ -402,14 +403,7 @@ export async function createAndSendAutoInvoiceForPayments(opts: {
     return null
   }
 
-  const { data: savedBilling } = await supabase
-    .from('company_billing_addresses')
-    .select('company_name, contact_person, email, street, street_number, zip, city, country')
-    .eq('user_id', student.id)
-    .eq('is_active', true)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const savedBilling = await resolveStudentBillingAddress(supabase, student)
 
   const draft = await buildDraftForPayments({
     supabase,

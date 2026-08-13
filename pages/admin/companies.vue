@@ -323,6 +323,43 @@
       </div>
     </Teleport>
 
+    <!-- Confirm: existing billing vs company address -->
+    <Teleport to="body">
+      <div
+        v-if="pendingAssignUser"
+        class="fixed inset-0 z-[70] flex items-center justify-center p-4"
+        @click.self="confirmAssignUser(false)"
+      >
+        <div class="fixed inset-0 bg-gray-900/50" @click="confirmAssignUser(false)" />
+        <div class="relative w-full max-w-md bg-white rounded-2xl shadow-xl p-5 space-y-4">
+          <h3 class="text-base font-semibold text-gray-900">Rechnungsadresse übernehmen?</h3>
+          <p class="text-sm text-gray-600">
+            {{ pendingAssignUser.first_name }} {{ pendingAssignUser.last_name }} hat bereits eine Rechnungsadresse.
+            Soll die Adresse von {{ editingCompany?.name }} als Default gesetzt werden?
+          </p>
+          <div class="flex flex-col sm:flex-row gap-2 sm:justify-end">
+            <button
+              type="button"
+              class="px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50"
+              :disabled="isAssigning"
+              @click="confirmAssignUser(false)"
+            >
+              Bestehende behalten
+            </button>
+            <button
+              type="button"
+              class="px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90"
+              :style="{ background: primaryColor }"
+              :disabled="isAssigning"
+              @click="confirmAssignUser(true)"
+            >
+              Firmenadresse übernehmen
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Invoice Create Modal (opened from company Rechnungen tab) -->
     <InvoiceCreateModal
       v-if="showInvoiceCreateModal"
@@ -447,6 +484,8 @@ async function archiveCompany() {
 const companyUsers = ref<any[]>([])
 const userSearchQuery = ref('')
 const userSearchResults = ref<any[]>([])
+const pendingAssignUser = ref<any>(null)
+const isAssigning = ref(false)
 
 async function loadCompanyUsers() {
   if (!editingCompany.value?.id) return
@@ -461,10 +500,40 @@ async function searchUsers() {
 }
 
 async function assignUser(user: any) {
-  await $fetch('/api/admin/companies/assign-user', { method: 'POST', body: { user_id: user.id, company_id: editingCompany.value.id } })
-  userSearchQuery.value = ''
-  userSearchResults.value = []
-  await loadCompanyUsers()
+  if (!editingCompany.value?.id) return
+  try {
+    const billing: any = await $fetch('/api/addresses/get-by-user', { query: { user_id: user.id } }).catch(() => ({ data: null }))
+    if (billing?.data) {
+      pendingAssignUser.value = user
+      return
+    }
+    await confirmAssignUser(true, user)
+  } catch (err: any) {
+    formError.value = err?.data?.statusMessage || 'Zuweisung fehlgeschlagen.'
+  }
+}
+
+async function confirmAssignUser(applyCompanyBilling: boolean, user = pendingAssignUser.value) {
+  if (!user || !editingCompany.value?.id) return
+  isAssigning.value = true
+  try {
+    await $fetch('/api/admin/companies/assign-user', {
+      method: 'POST',
+      body: {
+        user_id: user.id,
+        company_id: editingCompany.value.id,
+        apply_company_billing: applyCompanyBilling,
+      },
+    })
+    pendingAssignUser.value = null
+    userSearchQuery.value = ''
+    userSearchResults.value = []
+    await loadCompanyUsers()
+  } catch (err: any) {
+    formError.value = err?.data?.statusMessage || 'Zuweisung fehlgeschlagen.'
+  } finally {
+    isAssigning.value = false
+  }
 }
 
 async function removeUser(user: any) {

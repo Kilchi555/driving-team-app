@@ -68,6 +68,7 @@ const CLIENT_SAFE_FIELDS = [
   'faberid',
   'tenant_id',
   'payment_provider_customer_id',
+  'company_id',
 ] as const
 
 const sanitizeStudentForClient = (student: any): any => {
