@@ -4,7 +4,7 @@
 // Text und HTML. Wird sowohl von der Vorschau- als auch der Versand-Route
 // genutzt, damit Vorschau und tatsächlicher Versand exakt übereinstimmen.
 
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { invoicePersonNames } from '~/server/utils/invoice-billing-snapshot'
 import { createError } from 'h3'
 import {
   DUNNING_SETTINGS_DEFAULTS, DunningSettingsRow, getStageDef, daysOverdue,
@@ -83,8 +83,7 @@ export async function prepareDunning(supabase: SupabaseClient, opts: PrepareDunn
   newDueDate.setDate(newDueDate.getDate() + (settings.new_due_days || 10))
   const newDueDateIso = newDueDate.toISOString().slice(0, 10)
 
-  const customerName = invoice.billing_contact_person ||
-    `${invoice.customer_first_name || ''} ${invoice.customer_last_name || ''}`.trim() || 'Kunde'
+  const { customerName, studentName } = invoicePersonNames(invoice)
 
   const placeholders = buildDunningPlaceholders({
     customerName,
@@ -173,6 +172,7 @@ export async function prepareDunning(supabase: SupabaseClient, opts: PrepareDunn
     formattedTotalDue: formatChf(totalDueRappen),
     staffName,
     customerName,
+    studentName,
     qrCodeDataUrl,
     scorRef,
   }

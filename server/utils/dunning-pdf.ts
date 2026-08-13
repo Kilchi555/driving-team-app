@@ -25,6 +25,7 @@ export interface DunningPdfData {
   tenantContactPerson?: string
   tenantLogoBase64?: string | null
   customerName: string
+  studentName?: string
   billingCompanyName?: string
   billingStreet?: string
   billingZip?: string
@@ -111,6 +112,7 @@ export async function generateDunningPdf(data: DunningPdfData): Promise<Buffer> 
     tenantContactPerson: data.tenantContactPerson,
     tenantLogoBase64: data.tenantLogoBase64,
     customerName: data.customerName,
+    studentName: data.studentName,
     billingCompanyName: data.billingCompanyName,
     billingStreet: data.billingStreet,
     billingZip: data.billingZip,

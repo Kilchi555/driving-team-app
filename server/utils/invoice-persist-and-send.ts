@@ -9,6 +9,8 @@ import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/t
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 import { appointmentCountLabel, getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { applyMissingInvoiceBilling, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
+import { formatBillingPersonLabel, joinStreetAndNumber } from '~/utils/billing-address-map'
 
 export type InvoiceDraftPayload = {
   user_id: string
@@ -155,6 +157,9 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
 
   const invoiceNumber = await allocateInvoiceNumber(supabase, tenantId)
   const now = new Date().toISOString()
+  const billedDraft = await applyMissingInvoiceBilling(supabase, tenantId, draft)
+  Object.assign(draft, billedDraft)
+  const billedStreetNumber = draft.billing_street_number || draft.billing_street_nr || null
 
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
@@ -166,10 +171,11 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
       invoice_date: draft.invoice_date,
       due_date: draft.due_date,
       billing_type: draft.billing_type || 'individual',
-      billing_contact_person: [draft.billing_first_name, draft.billing_last_name].filter(Boolean).join(' ') || null,
+      billing_contact_person: formatBillingPersonLabel(draft.billing_first_name, draft.billing_last_name) || null,
       billing_company_name: draft.billing_company_name || null,
       billing_email: draft.billing_email,
-      billing_street: draft.billing_street || null,
+      billing_street: joinStreetAndNumber(draft.billing_street, billedStreetNumber) || null,
+      billing_street_number: billedStreetNumber,
       billing_zip: draft.billing_zip || null,
       billing_city: draft.billing_city || null,
       billing_country: draft.billing_country || 'CH',
@@ -350,6 +356,7 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
           draft.creditor_street?.trim() || tenantData.invoice_street?.trim(),
           draft.creditor_street_nr?.trim() || tenantData.invoice_street_nr?.trim(),
         ].filter(Boolean).join(' ')
+        const pdfAddr = pdfBillingFields(draft)
 
         const pdfBuffer = await generateInvoicePdf({
           invoiceNumber,
@@ -364,10 +371,11 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
           tenantLogoBase64: logo?.base64 || null,
           tenantLogoFormat: logo?.format,
           customerName: [draft.billing_first_name, draft.billing_last_name].filter(Boolean).join(' ') || studentName,
+          studentName: (draft.student?.name || '').trim() || undefined,
           billingCompanyName: draft.billing_company_name || '',
-          billingStreet: draft.billing_street,
-          billingZip: draft.billing_zip,
-          billingCity: draft.billing_city,
+          billingStreet: pdfAddr.billingStreet,
+          billingZip: pdfAddr.billingZip,
+          billingCity: pdfAddr.billingCity,
           billingEmail: billingEmail || uniqueRecipients[0],
           items: draft.items,
           subtotalRappen: draft.subtotal_rappen || draft.total_amount_rappen,

@@ -433,6 +433,7 @@ export default defineEventHandler(async (event) => {
                   tenantLogoBase64: logo?.base64 || null,
                   tenantLogoFormat: logo?.format,
                   customerName: external_contact_name.trim() || customerName,
+                  studentName: customerName,
                   billingCompanyName: external_company_name?.trim() || '',
                   billingStreet: [external_street, external_street_nr].filter(Boolean).join(' '),
                   billingZip: external_zip || '',
