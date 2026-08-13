@@ -74,5 +74,6 @@ jobs:
       - name: Apple Review login
         env:
           E2E_DEMO_PASSWORD: ${{ secrets.E2E_DEMO_PASSWORD }}
+          E2E_ISOLATION_PASSWORD: ${{ secrets.E2E_ISOLATION_PASSWORD }}
           E2E_BASE_URL: https://app.simy.ch
         run: npm run test:e2e

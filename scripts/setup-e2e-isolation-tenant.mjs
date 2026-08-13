@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 /**
  * Second demo tenant for Playwright tenant-isolation tests.
- * Same DEMO_PASSWORD as the Apple Review accounts (E2E_DEMO_PASSWORD).
  *
- *   DEMO_PASSWORD='…' npm run demo:e2e-isolation:setup
+ *   npm run demo:e2e-isolation:setup
+ *
+ * Generates DEMO_PASSWORD unless you pass one. Store the printed value as
+ * GitHub secret E2E_ISOLATION_PASSWORD (Apple Review keeps E2E_DEMO_PASSWORD).
  */
 import { readFileSync, existsSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { randomBytes } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -29,15 +32,20 @@ if (existsSync(envPath)) {
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD
+const generatedPassword = !process.env.DEMO_PASSWORD
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD || `${randomBytes(18).toString('base64url')}!aA1`
 
 if (!SERVICE_ROLE_KEY) {
   console.error('Missing SUPABASE_SERVICE_ROLE_KEY')
   process.exit(1)
 }
-if (!DEMO_PASSWORD || DEMO_PASSWORD.length < 12) {
-  console.error('Missing DEMO_PASSWORD (min. 12 characters). Use the same value as E2E_DEMO_PASSWORD.')
+if (DEMO_PASSWORD.length < 12) {
+  console.error('DEMO_PASSWORD must be at least 12 characters.')
   process.exit(1)
+}
+
+if (generatedPassword) {
+  console.log(`Neues Passwort: ${DEMO_PASSWORD}`)
 }
 
 const TENANT_SLUG = 'e2e-isolation'
@@ -224,4 +232,7 @@ console.log('e2e-isolation tenant ready')
 console.log(`  slug:         ${TENANT_SLUG}`)
 console.log(`  admin:        ${ADMIN_EMAIL}`)
 console.log(`  appointment:  ${appointmentId}`)
-console.log('Use the same DEMO_PASSWORD as the Apple Review / E2E_DEMO_PASSWORD secret.')
+console.log('GitHub → Settings → Secrets → E2E_ISOLATION_PASSWORD = the password printed above.')
+if (generatedPassword) {
+  console.log(`Neues Passwort: ${DEMO_PASSWORD}`)
+}
