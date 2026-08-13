@@ -16,7 +16,12 @@
     </style>
 
 
+    <!-- Android 12+ SplashScreen API. postSplashScreenTheme is required or
+         AppCompat inflates under Theme.SplashScreen and the process dies after launch. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_round</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:windowSplashScreenBehavior">icon_preferred</item>
     </style>
 </resources>
