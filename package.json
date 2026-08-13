@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "lint": "eslint \"server/utils/__tests__/**/*.ts\" --max-warnings 0",
     "audit:prod": "npm audit --omit=dev",
+    "test:e2e": "playwright test",
     "app:build": "bash scripts/build-client.sh",
     "app:icons": "node scripts/generate-icons.mjs",
     "app:bump": "bash scripts/bump-version.sh",
@@ -93,6 +94,7 @@
   },
   "devDependencies": {
     "@nuxt/eslint": "^0.5.7",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^24.0.12",
     "@vitest/ui": "^2.0.0",
     "eslint": "^8.57.1",

@@ -2,9 +2,8 @@
 # that must stay green — the local pre-push smoke-test is too slow to be
 # the only gate and is skippable with SKIP_SMOKE_TEST=1.
 #
-# Blocking today: unit tests + lint on the test suite (the only eslint
-# surface we can keep clean; the rest of the repo has hundreds of
-# pre-existing errors, mostly no-explicit-any).
+# Blocking today: unit tests + lint on the test suite, plus Playwright
+# login against the apple-review demo tenant (needs E2E_DEMO_PASSWORD).
 #
 # Report-only: npm audit. Production deps currently include unfixed
 # highs/criticals (xlsx has no patch; nuxt/vite pull more). Failing the
@@ -51,3 +50,29 @@ jobs:
       - name: Production dependency audit (report only)
         continue-on-error: true
         run: npm run audit:prod
+
+  e2e:
+    name: E2E login
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Apple Review login
+        env:
+          E2E_DEMO_PASSWORD: ${{ secrets.E2E_DEMO_PASSWORD }}
+          E2E_BASE_URL: https://app.simy.ch
+        run: npm run test:e2e
