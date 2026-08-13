@@ -120,7 +120,7 @@ export default defineEventHandler(async (event) => {
       .from('payments')
       .update({ payment_status: 'completed', paid_at: paidAt, updated_at: now })
       .eq('invoice_id', invoice_id)
-      .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed'])
+      .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed', 'partial'])
 
     // Fallback: Payments über Invoice-Items → appointment_ids aktualisieren
     const { data: invoiceItems } = await supabase
@@ -136,7 +136,7 @@ export default defineEventHandler(async (event) => {
         .update({ payment_status: 'completed', invoice_id, paid_at: paidAt, updated_at: now })
         .eq('user_id', invoice.user_id ?? '')
         .in('appointment_id', appointmentIds)
-        .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed'])
+        .in('payment_status', ['invoice', 'invoiced', 'pending', 'open', 'failed', 'partial'])
     }
   }
 

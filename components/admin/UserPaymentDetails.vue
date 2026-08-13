@@ -747,6 +747,14 @@ v-if="(appointment.credit_used || 0) > 0"
                           <span>Guthaben verwendet:</span>
                           <span>-{{ formatCurrency(appointment.credit_used || 0) }}</span>
                         </div>
+
+                        <div
+                          v-if="(appointment.amount_paid || 0) > 0 && appointment.payment_status === 'partial'"
+                          class="flex justify-between text-xs text-amber-700 font-medium pt-1 border-t border-gray-200"
+                        >
+                          <span>Bereits bezahlt:</span>
+                          <span>-{{ formatCurrency(appointment.amount_paid || 0) }}</span>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -758,6 +766,7 @@ v-if="(appointment.credit_used || 0) > 0"
                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-fit"
                         :class="[
                           appointment.payment_status === 'completed' ? 'bg-green-100 text-green-800' :
+                          appointment.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
                           appointment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           appointment.payment_status === 'failed' ? 'bg-red-100 text-red-800' :
                           'bg-gray-100 text-gray-800'
@@ -772,7 +781,7 @@ v-if="(appointment.credit_used || 0) > 0"
                           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                         </svg>
                         <svg 
-                          v-else-if="appointment.payment_status === 'pending' || appointment.payment_status === 'failed'" 
+                          v-else-if="appointment.payment_status === 'pending' || appointment.payment_status === 'partial' || appointment.payment_status === 'failed'" 
                           class="w-3 h-3 mr-1" 
                           fill="currentColor" 
                           viewBox="0 0 20 20"
@@ -781,6 +790,7 @@ v-if="(appointment.credit_used || 0) > 0"
                         </svg>
                         {{
                           appointment.payment_status === 'completed' ? 'Bezahlt' :
+                          appointment.payment_status === 'partial' ? 'Teilzahlung' :
                           appointment.payment_status === 'pending' ? 'Ausstehend' :
                           appointment.payment_status === 'failed' ? 'Fehlgeschlagen' :
                           appointment.payment_status
@@ -1147,6 +1157,7 @@ interface Appointment {
   products_price?: number
   discount_amount?: number
   credit_used?: number
+  amount_paid?: number
   // Zahlungsstatus aus payments
   payment_status?: string
   // Neue Felder für Titel-Anzeige
@@ -1183,6 +1194,7 @@ interface Payment {
   products_price_rappen?: number
   discount_amount_rappen?: number
   credit_used_rappen?: number
+  amount_paid_rappen?: number
   paid_at?: string
   refunded_at?: string
   created_at?: string
@@ -1630,7 +1642,8 @@ const loadUserAppointments = async () => {
         admin_fee: adminFee,
         products_price: productsPrice,
         discount_amount: discountAmount,
-        credit_used: payment ? (payment.credit_used_rappen || 0) / 100 : 0
+        credit_used: payment ? (payment.credit_used_rappen || 0) / 100 : 0,
+        amount_paid: payment ? (payment.amount_paid_rappen || 0) / 100 : 0
       }
       
       logger.debug(`📋 Final processed appointment ${appointment.id}:`, {
@@ -1691,17 +1704,16 @@ const getPaymentMethodClass = (method: string): string => {
 
 /**
  * Berechnet den Betrag, der für einen Termin noch geschuldet ist bzw. verrechnet werden soll.
- * WICHTIG: Bereits verwendetes Guthaben (credit_used) wird abgezogen, da dieser Anteil der
- * Lektion bereits über das Kundenguthaben bezahlt wurde. Ohne diesen Abzug würde bei der
- * Rechnungserstellung der volle Betrag verrechnet und der Kunde faktisch doppelt belastet
- * (einmal via Guthaben, einmal via Rechnung).
+ * WICHTIG: Bereits verwendetes Guthaben (credit_used) und bereits eingezogene Teilzahlungen
+ * (amount_paid) werden abgezogen, sonst würde die Rechnung den Kunden doppelt belasten.
  */
 const calculateAppointmentAmount = (appointment: Appointment): number => {
   const creditUsed = appointment.credit_used || 0
+  const alreadyPaid = appointment.payment_status === 'partial' ? (appointment.amount_paid || 0) : 0
 
   // Verwende total_amount aus payments (bereits berechneter Gesamtbetrag) als Basis
   if (appointment.total_amount !== undefined) {
-    return Math.max(0, appointment.total_amount - creditUsed)
+    return Math.max(0, appointment.total_amount - creditUsed - alreadyPaid)
   }
 
   // Fallback: Berechne aus den einzelnen Komponenten
@@ -1711,7 +1723,7 @@ const calculateAppointmentAmount = (appointment: Appointment): number => {
   const discountAmount = appointment.discount_amount || 0
 
   const subtotal = lessonPrice + adminFee + productsPrice
-  const total = Math.max(0, subtotal - discountAmount - creditUsed)
+  const total = Math.max(0, subtotal - discountAmount - creditUsed - alreadyPaid)
 
   return total
 }

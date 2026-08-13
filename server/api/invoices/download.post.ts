@@ -113,7 +113,7 @@ export default defineEventHandler(async (event) => {
   if (appointmentIds.length > 0) {
     const { data: payments } = await supabase
       .from('payments')
-      .select('appointment_id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen')
+      .select('appointment_id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen, amount_paid_rappen')
       .eq('invoice_id', invoiceId)
       .in('appointment_id', appointmentIds)
     if (payments) for (const p of payments) {
@@ -218,6 +218,7 @@ export default defineEventHandler(async (event) => {
       discount_amount_rappen: i.discount_amount_rappen || 0,
       voucher_discount_rappen: i.voucher_discount_rappen || 0,
       credit_used_rappen: i.credit_used_rappen || 0,
+      amount_paid_rappen: i.amount_paid_rappen || 0,
       product_details: i.product_details || [],
     })),
     // Bereits versendete Mahngebühren wieder herausrechnen — die gehören nur

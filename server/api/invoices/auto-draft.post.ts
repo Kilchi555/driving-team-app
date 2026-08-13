@@ -48,6 +48,8 @@ export default defineEventHandler(async (event) => {
     discount_amount_rappen,
     credit_used_rappen,
     voucher_discount_rappen,
+    amount_paid_rappen,
+    invoice_id,
     appointment_id,
     payment_method,
     payment_status,
@@ -81,7 +83,7 @@ export default defineEventHandler(async (event) => {
       .select(paymentSelect)
       .eq('user_id', student_user_id)
       .eq('payment_method', 'invoice')
-      .in('payment_status', ['pending', 'open'])
+      .in('payment_status', ['pending', 'open', 'partial'])
       .order('created_at', { ascending: true })
 
     const withFilter = await baseQuery().is('invoice_id', null)
@@ -99,6 +101,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: paymentsError.message })
   }
 
+  const alreadyPaidRappen = (p: any) => Math.max(0, Number(p.amount_paid_rappen) || 0)
+  const remainingDueRappen = (p: any) =>
+    Math.max(0, (p.total_amount_rappen || 0) - (p.credit_used_rappen || 0) - alreadyPaidRappen(p))
+
+  openPayments = (openPayments || []).filter((p) => {
+    if (p.invoice_id) return false
+    if (!['pending', 'partial', 'open'].includes(p.payment_status)) return false
+    return remainingDueRappen(p) > 0
+  })
 
   if (!openPayments || openPayments.length === 0) {
     return { hasOpenItems: false, draft: null }
@@ -159,11 +170,12 @@ export default defineEventHandler(async (event) => {
   const subtotal = openPayments.reduce((sum, p) => sum + getGrossAmount(p), 0)  // Brutto
   const totalDiscounts = openPayments.reduce((sum, p) => sum + (p.discount_amount_rappen || 0) + ((p as any).voucher_discount_rappen || 0), 0)
   const totalCredits = openPayments.reduce((sum, p) => sum + (p.credit_used_rappen || 0), 0)
+  const totalAlreadyPaid = openPayments.reduce((sum, p) => sum + alreadyPaidRappen(p), 0)
   const vatRatePercent = Number.isFinite(Number((tenant as any)?.default_vat_rate))
     ? Number((tenant as any).default_vat_rate)
     : await getTenantDefaultVatRate(supabase, staffUser.tenant_id)
-  // Netto nach Rabatt/Guthaben, darauf MwSt gemäss Tenant-Einstellung
-  const netAfterDiscounts = subtotal - totalDiscounts - totalCredits
+  // Netto nach Rabatt/Guthaben/bereits bezahlter Teilzahlung, darauf MwSt gemäss Tenant-Einstellung
+  const netAfterDiscounts = subtotal - totalDiscounts - totalCredits - totalAlreadyPaid
   const vatAmount = computeVatAmountRappen(Math.max(0, netAfterDiscounts), vatRatePercent)
   const total = netAfterDiscounts + vatAmount
 
@@ -195,7 +207,7 @@ export default defineEventHandler(async (event) => {
     subtotal_rappen: subtotal,
     vat_rate: vatRatePercent,
     vat_amount_rappen: vatAmount,
-    discount_amount_rappen: totalDiscounts + totalCredits, // Kombiniert für DB-Trigger: total = subtotal - discount
+    discount_amount_rappen: totalDiscounts + totalCredits + totalAlreadyPaid, // Kombiniert für DB-Trigger: total = subtotal - discount
     credit_used_rappen: totalCredits,
     total_amount_rappen: total,
 
@@ -290,6 +302,7 @@ export default defineEventHandler(async (event) => {
       products_price_rappen: 0,
       discount_amount_rappen: p.discount_amount_rappen || 0,
       credit_used_rappen: p.credit_used_rappen || 0,
+      amount_paid_rappen: alreadyPaidRappen(p),
       voucher_discount_rappen: (p as any).voucher_discount_rappen || 0,
       product_details: [] as { name: string; price_rappen: number }[],
     }
@@ -318,6 +331,7 @@ export default defineEventHandler(async (event) => {
         products_price_rappen: 0,
         discount_amount_rappen: 0,
         credit_used_rappen: 0,
+        amount_paid_rappen: 0,
         voucher_discount_rappen: 0,
         product_details: [] as { name: string; price_rappen: number }[],
       }
@@ -347,6 +361,7 @@ export default defineEventHandler(async (event) => {
         products_price_rappen: 0,
         discount_amount_rappen: 0,
         credit_used_rappen: 0,
+        amount_paid_rappen: 0,
         voucher_discount_rappen: 0,
         product_details: [],
       })
