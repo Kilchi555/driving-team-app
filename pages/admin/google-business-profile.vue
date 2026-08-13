@@ -795,6 +795,88 @@
 
         <!-- Photos tab -->
         <div v-if="selectedLocationId && activeTab === 'photos'" class="space-y-4">
+          <!-- Nächste Uploads (berechnete Queue) -->
+          <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-gray-900">Nächste Uploads</p>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  <template v-if="photoSchedule?.photoMode === 'off'">
+                    Foto-Automation ist aus —
+                    <button type="button" class="text-blue-600 hover:text-blue-800 font-semibold" @click="activeTab = 'settings'">Automation öffnen</button>
+                  </template>
+                  <template v-else-if="photoSchedule?.nextPublishAt">
+                    Nächstes Foto voraussichtlich:
+                    <span class="font-semibold text-gray-700">{{ formatDateTime(photoSchedule.nextPublishAt) }}</span>
+                    · {{ photoSchedule.remainingThisWeek }}/{{ photoSchedule.photosPerWeek }} diese Woche
+                  </template>
+                  <template v-else-if="photoSchedule?.status === 'quota_full'">
+                    Wochen-Quota erreicht ({{ photoSchedule.photosPerWeek }}/Woche) — nächster Slot nächste Woche
+                  </template>
+                  <template v-else-if="photoSchedule?.status === 'no_assets'">
+                    Keine freigegebenen Pool-Fotos in der Warteschlange
+                  </template>
+                  <template v-else>
+                    Berechnete Termine aus Automation ({{ photoSchedule?.photosPerWeek ?? '…' }}/Woche)
+                  </template>
+                </p>
+              </div>
+              <button
+                type="button"
+                class="text-xs text-gray-500 hover:text-gray-700"
+                @click="loadPhotoSchedule"
+              >Aktualisieren</button>
+            </div>
+
+            <div v-if="photoScheduleLoading" class="space-y-2">
+              <div v-for="i in 3" :key="i" class="h-14 rounded-xl bg-gray-50 animate-pulse" />
+            </div>
+            <div v-else-if="photoSchedule?.photoMode === 'off'" class="text-sm text-gray-400 py-2">
+              Schalte unter Automation «Nur freigegebene Pool-Fotos» ein und setze Fotos pro Woche.
+            </div>
+            <div v-else-if="!(photoSchedule?.upcoming?.length)" class="text-sm text-gray-400 py-2">
+              Noch keine geplanten Uploads — lade Fotos hoch und gib sie frei.
+            </div>
+            <ul v-else class="space-y-2">
+              <li
+                v-for="slot in photoSchedule.upcoming"
+                :key="`${slot.assetId}-${slot.rank}`"
+                class="flex items-center gap-3 rounded-xl border border-gray-100 p-2.5"
+              >
+                <img
+                  v-if="slot.publicUrl"
+                  :src="slot.publicUrl"
+                  alt=""
+                  class="h-12 w-12 rounded-lg object-cover bg-gray-50 shrink-0"
+                />
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs font-semibold text-gray-900">
+                    #{{ slot.rank }} · {{ formatDateTime(slot.estimatedAt) }}
+                    <span v-if="slot.queuePriority > 0" class="ml-1 text-amber-600 font-medium">priorisiert</span>
+                  </p>
+                  <p class="text-xs text-gray-500 line-clamp-1">{{ slot.notes || slot.category || 'Ohne Caption' }}</p>
+                </div>
+                <div class="flex flex-wrap gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    class="px-2 py-1 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    :disabled="bumpingAssetId === slot.assetId || slot.rank === 1"
+                    @click="bumpAssetToFront(slot.assetId)"
+                  >Als nächstes</button>
+                  <button
+                    type="button"
+                    class="px-2 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-semibold disabled:opacity-50"
+                    :disabled="publishingAssetId === slot.assetId"
+                    @click="publishAsset(slot.assetId)"
+                  >{{ publishingAssetId === slot.assetId ? '…' : 'Jetzt' }}</button>
+                </div>
+              </li>
+            </ul>
+            <p class="text-[11px] text-gray-400">
+              Frequenz ändern: Tab Automation → Fotos pro Woche. Cron läuft täglich ~10:15 (CH).
+            </p>
+          </div>
+
           <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
             <p class="text-sm font-semibold text-gray-900">Foto-Pool</p>
             <p class="text-xs text-gray-400">Fotos hochladen, Standort(e) wählen, freigeben — Automation publisht mit Caption nach GBP.</p>
@@ -1003,6 +1085,12 @@
                       @click="approveAsset(asset.id, false)"
                       class="px-2.5 py-1 rounded-lg border border-gray-200 text-xs"
                     >Sperren</button>
+                    <button
+                      v-if="asset.approved"
+                      @click="bumpAssetToFront(asset.id)"
+                      :disabled="bumpingAssetId === asset.id"
+                      class="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-semibold disabled:opacity-50"
+                    >Als nächstes</button>
                     <button
                       @click="publishAsset(asset.id)"
                       :disabled="publishingAssetId === asset.id"
@@ -1384,6 +1472,7 @@ async function onLocationChange() {
   scheduledPosts.value = []
   reviewActions.value = []
   mediaAssets.value = []
+  photoSchedule.value = null
   await loadSettingsKeywords()
   audit.value = null
   analysisChecked.value = false
@@ -1392,7 +1481,7 @@ async function onLocationChange() {
   if (activeTab.value === 'profile') loadProfileTab()
   if (activeTab.value === 'reviews') loadReviews()
   if (activeTab.value === 'posts') { loadPosts(); loadMedia() }
-  if (activeTab.value === 'photos') loadMedia()
+  if (activeTab.value === 'photos') { loadMedia(); loadPhotoSchedule() }
   if (activeTab.value === 'automation') loadQueue()
   if (activeTab.value === 'settings') loadSettings()
 }
@@ -1893,7 +1982,25 @@ const poolTargetLocationIds = ref<string[]>([])
 const poolUploading = ref(false)
 const poolUploadProgress = ref({ done: 0, total: 0 })
 const publishingAssetId = ref<string | null>(null)
-
+const bumpingAssetId = ref<string | null>(null)
+const photoScheduleLoading = ref(false)
+const photoSchedule = ref<{
+  photoMode: string
+  photosPerWeek: number
+  status: string
+  remainingThisWeek: number
+  nextPublishAt: string | null
+  upcoming: {
+    rank: number
+    estimatedAt: string
+    assetId: string
+    publicUrl: string | null
+    category: string | null
+    notes: string | null
+    approved: boolean
+    queuePriority: number
+  }[]
+} | null>(null)
 const poolFilesTotalBytes = computed(() => poolFiles.value.reduce((sum, f) => sum + f.size, 0))
 const poolAllLocationsSelected = computed(() =>
   linkedLocations.value.length > 0
@@ -1990,6 +2097,31 @@ async function loadMedia() {
     mediaAssets.value = data.assets ?? []
   } catch { /* ignore */ } finally {
     mediaLoading.value = false
+  }
+  await loadPhotoSchedule()
+}
+
+async function loadPhotoSchedule() {
+  if (!selectedLocationId.value) return
+  photoScheduleLoading.value = true
+  try {
+    photoSchedule.value = await $fetch('/api/gbp/media/schedule', { query: locQuery() })
+  } catch {
+    photoSchedule.value = null
+  } finally {
+    photoScheduleLoading.value = false
+  }
+}
+
+async function bumpAssetToFront(id: string) {
+  bumpingAssetId.value = id
+  try {
+    await $fetch(`/api/gbp/media/${id}`, { method: 'PATCH', body: { bumpToFront: true } })
+    await loadMedia()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Priorisieren fehlgeschlagen')
+  } finally {
+    bumpingAssetId.value = null
   }
 }
 
@@ -2405,6 +2537,7 @@ async function saveSettings() {
     })
     settingsSaved.value = true
     setTimeout(() => { settingsSaved.value = false }, 2500)
+    if (activeTab.value === 'photos' || selectedLocationId.value) loadPhotoSchedule()
   } catch (e: any) {
     alert(e?.data?.statusMessage || 'Speichern fehlgeschlagen')
   } finally {
