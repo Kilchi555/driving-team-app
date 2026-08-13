@@ -91,19 +91,20 @@ export default defineEventHandler(async (event) => {
       .select(selectQuery)
       .eq('id', appointmentId)
       .eq('tenant_id', tenantId)
-      .single()
+      .maybeSingle()
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        throw createError({
-          statusCode: 404,
-          statusMessage: 'Appointment not found'
-        })
-      }
       logger.error('❌ Error fetching appointment:', error)
       throw createError({
         statusCode: 500,
         statusMessage: 'Failed to fetch appointment'
+      })
+    }
+
+    if (!appointment) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Appointment not found'
       })
     }
 

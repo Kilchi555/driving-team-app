@@ -51,12 +51,15 @@ test.describe('tenant isolation', () => {
     expect(usersText).not.toContain('e2e-isolation@simy.ch')
 
     const apptRes = await applePage.request.get(`/api/staff/get-appointment?id=${isolationAppointmentId}`)
-    // Isolation holds if this is not 200 and the body does not leak the id.
+    // Isolation holds if this is not 200 and the body has no appointment payload.
+    // Nitro may echo the requested id in the error URL; that is not a data leak.
     // Production currently 500s on a tenant-filtered miss (.single() without PGRST116).
     expect(apptRes.ok(), `cross-tenant get-appointment must fail, got ${apptRes.status()}`).toBeFalsy()
     expect([403, 404, 500]).toContain(apptRes.status())
-    const apptText = await apptRes.text()
-    expect(apptText).not.toContain(isolationAppointmentId)
+    const apptJson = await apptRes.json()
+    expect(apptJson?.success, 'must not return a successful appointment payload').not.toBe(true)
+    expect(apptJson?.data).toBeFalsy()
+    expect(JSON.stringify(apptJson)).not.toContain('e2e-isolation@simy.ch')
 
     const ownCalendar = await applePage.request.get('/api/calendar/get-appointments')
     expect(ownCalendar.ok()).toBeTruthy()
