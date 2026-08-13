@@ -247,6 +247,10 @@
                       <span class="text-xs text-blue-600 pl-5">Guthaben verwendet</span>
                       <span class="text-xs font-medium text-blue-600">−{{ chf(item.credit_used_rappen || 0) }}</span>
                     </div>
+                    <div v-if="(item.amount_paid_rappen || 0) > 0" class="flex justify-between items-center">
+                      <span class="text-xs text-amber-700 pl-5">Bereits bezahlt</span>
+                      <span class="text-xs font-medium text-amber-700">−{{ chf(item.amount_paid_rappen || 0) }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -453,6 +457,7 @@ interface InvoiceDraftItem {
   discount_amount_rappen: number
   voucher_discount_rappen: number
   credit_used_rappen: number
+  amount_paid_rappen?: number
   product_details?: { name: string; price_rappen: number }[]
 }
 
@@ -517,7 +522,7 @@ const props = defineProps<{
     vat_amount_rappen: number
     discount_amount_rappen: number
     notes?: string | null
-    invoice_items: { product_name: string; product_description?: string; appointment_date?: string; appointment_start_time?: string; appointment_duration_minutes?: number; quantity: number; unit_price_rappen: number; total_price_rappen: number; lesson_price_rappen?: number; admin_fee_rappen?: number; products_price_rappen?: number; discount_amount_rappen?: number; voucher_discount_rappen?: number; credit_used_rappen?: number; product_details?: { name: string; price_rappen: number }[] }[]
+    invoice_items: { product_name: string; product_description?: string; appointment_date?: string; appointment_start_time?: string; appointment_duration_minutes?: number; quantity: number; unit_price_rappen: number; total_price_rappen: number; lesson_price_rappen?: number; admin_fee_rappen?: number; products_price_rappen?: number; discount_amount_rappen?: number; voucher_discount_rappen?: number; credit_used_rappen?: number; amount_paid_rappen?: number; product_details?: { name: string; price_rappen: number }[] }[]
   } | null
 }>()
 
@@ -699,8 +704,12 @@ const totalCredits = computed(() => {
   return (props.draft?.items || []).reduce((s, i) => s + (i.credit_used_rappen || 0), 0)
 })
 
+const totalAlreadyPaid = computed(() => {
+  return (props.draft?.items || []).reduce((s, i) => s + (i.amount_paid_rappen || 0), 0)
+})
+
 const computedTotal = computed(() => {
-  return (props.draft?.total_amount_rappen || 0) || ((props.draft?.subtotal_rappen || 0) - totalDiscounts.value - totalCredits.value + (props.draft?.vat_amount_rappen || 0))
+  return (props.draft?.total_amount_rappen || 0) || ((props.draft?.subtotal_rappen || 0) - totalDiscounts.value - totalCredits.value - totalAlreadyPaid.value + (props.draft?.vat_amount_rappen || 0))
 })
 
 // Payment reference for display — QRR for QR-IBAN, SCOR for regular IBAN

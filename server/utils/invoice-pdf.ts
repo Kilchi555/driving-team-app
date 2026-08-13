@@ -95,6 +95,7 @@ export interface InvoicePdfData {
     discount_amount_rappen?: number
     voucher_discount_rappen?: number
     credit_used_rappen?: number
+    amount_paid_rappen?: number
     product_details?: { name: string; price_rappen: number }[]
   }[]
   subtotalRappen: number
@@ -389,6 +390,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       if ((item.discount_amount_rappen || 0) > 0) breakdownCount++
       if ((item.voucher_discount_rappen || 0) > 0) breakdownCount++
       if ((item.credit_used_rappen || 0) > 0) breakdownCount++
+      if ((item.amount_paid_rappen || 0) > 0) breakdownCount++
       const rowH = 22 + (metaLines.length > 0 ? metaLines.length * 11 + 2 : 0)
       const breakdownH = breakdownCount > 0 ? breakdownCount * 14 + 4 : 0
       return rowH + breakdownH
@@ -449,6 +451,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
         breakdown.push({ label: 'Gutschein', amount: -(item.voucher_discount_rappen!) })
       if ((item.credit_used_rappen || 0) > 0)
         breakdown.push({ label: 'Guthaben verwendet', amount: -(item.credit_used_rappen!) })
+      if ((item.amount_paid_rappen || 0) > 0)
+        breakdown.push({ label: 'Bereits bezahlt', amount: -(item.amount_paid_rappen!) })
 
       const rowH = 22 + (hasMeta ? metaLines.length * 11 + 2 : 0)
       const breakdownH = breakdown.length > 0 ? breakdown.length * 14 + 4 : 0

@@ -781,7 +781,7 @@
                   Guthaben
                 </button>
                 <button
-                  v-if="canCreateInvoice && selectedPayments.some(id => { const p = payments.find(p => p.id === id); return p?.payment_status === 'pending' && !isInvoicedPayment(p) })"
+                  v-if="canCreateInvoice && selectedPayments.some(id => isInvoiceableOpenPayment(payments.find(p => p.id === id)))"
                   class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:shadow-md border bg-white"
                   :style="{ color: primaryColor, borderColor: primaryColor }"
                   @click="handleBulkInvoice"
@@ -2883,6 +2883,13 @@ const isInvoicedPayment = (payment: any) =>
   (payment.payment_status === 'invoiced' || payment.invoice_id) &&
   payment.payment_status !== 'completed'
 
+/** Offene Restbeträge (inkl. Teilzahlung) die noch nicht verrechnet sind */
+const isInvoiceableOpenPayment = (payment: any) => {
+  if (!payment || isInvoicedPayment(payment)) return false
+  if (!['pending', 'partial', 'open'].includes(payment.payment_status)) return false
+  return getPaymentDueAmountRappen(payment) > 0
+}
+
 const handlePaymentCardClick = (payment: any) => {
   // If cancelled, allow selection if there's a charge to collect
   if (payment.appointment?.status === 'cancelled') {
@@ -2895,7 +2902,7 @@ const handlePaymentCardClick = (payment: any) => {
     }
     
     // ✅ Also allow selection if there's a charge (chargePercentage > 0)
-    if (isBillableCancelledPayment(payment) && payment.payment_status === 'pending') {
+    if (isBillableCancelledPayment(payment) && ['pending', 'partial'].includes(payment.payment_status)) {
       logger.debug('💳 Cancelled payment with charge can be selected - toggling selection', {
         chargePercentage: payment.appointment.cancellation_charge_percentage ?? 100,
         paymentStatus: payment.payment_status,
@@ -3880,9 +3887,9 @@ async function loadInvoiceDraft(studentUserId: string, paymentIds?: string[]) {
 async function handleBulkInvoice() {
   if (!props.selectedStudent?.id || selectedPayments.value.length === 0) return
 
-  // Only include non-invoiced pending payments in the new invoice
+  // Offene Restbeträge inkl. Teilzahlung — nur noch nicht verrechnete Positionen
   const pendingIds = payments.value
-    .filter(p => selectedPayments.value.includes(p.id) && !isInvoicedPayment(p) && p.payment_status === 'pending')
+    .filter(p => selectedPayments.value.includes(p.id) && isInvoiceableOpenPayment(p))
     .map(p => p.id)
 
   if (pendingIds.length === 0) {

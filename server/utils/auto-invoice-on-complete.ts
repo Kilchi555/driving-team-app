@@ -41,6 +41,7 @@ const PAYMENT_SELECT = `
   discount_amount_rappen,
   credit_used_rappen,
   voucher_discount_rappen,
+  amount_paid_rappen,
   appointment_id,
   payment_method,
   payment_status,
@@ -164,10 +165,11 @@ async function buildDraftForPayments(opts: {
     0
   )
   const totalCredits = payments.reduce((sum, p) => sum + (p.credit_used_rappen || 0), 0)
+  const totalAlreadyPaid = payments.reduce((sum, p) => sum + Math.max(0, p.amount_paid_rappen || 0), 0)
   const vatRatePercent = Number.isFinite(Number(tenant?.default_vat_rate))
     ? Number(tenant.default_vat_rate)
     : await getTenantDefaultVatRate(supabase, tenantId)
-  const netAfterDiscounts = subtotal - totalDiscounts - totalCredits
+  const netAfterDiscounts = subtotal - totalDiscounts - totalCredits - totalAlreadyPaid
   const vatAmount = computeVatAmountRappen(Math.max(0, netAfterDiscounts), vatRatePercent)
   const total = netAfterDiscounts + vatAmount
 
@@ -231,6 +233,8 @@ async function buildDraftForPayments(opts: {
       vat_rate: vatRatePercent,
       vat_amount_rappen: computeVatAmountRappen(serviceGross, vatRatePercent),
       sort_order: sortOrder++,
+      credit_used_rappen: p.credit_used_rappen || 0,
+      amount_paid_rappen: Math.max(0, p.amount_paid_rappen || 0),
     }
 
     const productItems = products.map((pd) => {
@@ -300,7 +304,7 @@ async function buildDraftForPayments(opts: {
     subtotal_rappen: subtotal,
     vat_rate: vatRatePercent,
     vat_amount_rappen: vatAmount,
-    discount_amount_rappen: totalDiscounts + totalCredits,
+    discount_amount_rappen: totalDiscounts + totalCredits + totalAlreadyPaid,
     total_amount_rappen: total,
     user_id: student.id,
     staff_id: actor.id,

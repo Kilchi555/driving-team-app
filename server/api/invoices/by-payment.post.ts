@@ -103,11 +103,12 @@ export default defineEventHandler(async (event) => {
     discount_amount_rappen: number
     voucher_discount_rappen: number
     credit_used_rappen: number
+    amount_paid_rappen: number
   }> = {}
   if (appointmentIds.length > 0) {
     const { data: payments } = await supabase
       .from('payments')
-      .select('appointment_id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen')
+      .select('appointment_id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen, amount_paid_rappen')
       .eq('invoice_id', payment.invoice_id)
       .in('appointment_id', appointmentIds)
     if (payments) {
@@ -120,6 +121,7 @@ export default defineEventHandler(async (event) => {
             discount_amount_rappen: p.discount_amount_rappen || 0,
             voucher_discount_rappen: (p as any).voucher_discount_rappen || 0,
             credit_used_rappen: p.credit_used_rappen || 0,
+            amount_paid_rappen: (p as any).amount_paid_rappen || 0,
           }
         }
       }
@@ -180,6 +182,7 @@ export default defineEventHandler(async (event) => {
         discount_amount_rappen: breakdown.discount_amount_rappen,
         voucher_discount_rappen: breakdown.voucher_discount_rappen,
         credit_used_rappen: breakdown.credit_used_rappen,
+        amount_paid_rappen: breakdown.amount_paid_rappen,
       } : {}),
       product_details: item.appointment_id ? (productsByAppointment[item.appointment_id] || []) : [],
     }
