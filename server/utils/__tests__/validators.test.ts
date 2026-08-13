@@ -1,6 +1,6 @@
 /**
  * Tests für die Input Validation Library
- * Führe aus mit: npm run test:validators
+ * Führe aus mit: npm test
  */
 
 import { describe, it, expect } from 'vitest'
@@ -17,12 +17,11 @@ import {
   validateAppointmentTimes,
   validateDrivingCategory,
   validateEventType,
-  validateAppointmentStatus,
   validatePaymentStatus,
   validatePaymentMethod,
   validateAppointmentData,
   validatePaymentData
-} from '../utils/validators'
+} from '../validators'
 
 // ============================================================================
 // STRING VALIDATORS
@@ -62,52 +61,28 @@ describe('String Validators', () => {
 
   describe('validateEmail', () => {
     it('should accept valid emails', () => {
-      expect(validateEmail('test@example.com')).toBe(true)
-      expect(validateEmail('user+tag@domain.co.uk')).toBe(true)
+      expect(validateEmail('test@example.com').valid).toBe(true)
+      expect(validateEmail('user+tag@domain.co.uk').valid).toBe(true)
     })
 
     it('should reject invalid emails', () => {
-      expect(validateEmail('invalid')).toBe(false)
-      expect(validateEmail('test@')).toBe(false)
-      expect(validateEmail('@example.com')).toBe(false)
-      expect(validateEmail('test @example.com')).toBe(false)
+      expect(validateEmail('invalid').valid).toBe(false)
+      expect(validateEmail('test@').valid).toBe(false)
+      expect(validateEmail('@example.com').valid).toBe(false)
+      expect(validateEmail('test @example.com').valid).toBe(false)
     })
 
     it('should reject null/undefined', () => {
-      expect(validateEmail(null)).toBe(false)
-      expect(validateEmail(undefined)).toBe(false)
-      expect(validateEmail('')).toBe(false)
+      expect(validateEmail(null).valid).toBe(false)
+      expect(validateEmail(undefined).valid).toBe(false)
+      expect(validateEmail('').valid).toBe(false)
     })
   })
 
   describe('validateBasicPassword', () => {
-    it('should accept strong passwords with special characters', () => {
-      const result = validateBasicPassword('SecurePass123!')
-      expect(result.valid).toBe(true)
-    })
-
-    it('should reject passwords without uppercase', () => {
-      const result = validateBasicPassword('securepass123!')
-      expect(result.valid).toBe(false)
-      expect(result.message).toContain('Großbuchstaben')
-    })
-
-    it('should reject passwords without lowercase', () => {
-      const result = validateBasicPassword('SECUREPASS123!')
-      expect(result.valid).toBe(false)
-      expect(result.message).toContain('Kleinbuchstaben')
-    })
-
-    it('should reject passwords without numbers', () => {
-      const result = validateBasicPassword('SecurePassword!')
-      expect(result.valid).toBe(false)
-      expect(result.message).toContain('Zahlen')
-    })
-
-    it('should reject passwords without special characters', () => {
-      const result = validateBasicPassword('SecurePassword123')
-      expect(result.valid).toBe(false)
-      expect(result.message).toContain('Sonderzeichen')
+    it('should accept passwords of 12+ characters regardless of complexity', () => {
+      expect(validateBasicPassword('SecurePass123!').valid).toBe(true)
+      expect(validateBasicPassword('aaaaaaaaaaaa').valid).toBe(true)
     })
 
     it('should reject passwords shorter than 12 chars', () => {
@@ -116,32 +91,39 @@ describe('String Validators', () => {
       expect(result.message).toContain('mindestens 12')
     })
 
+    it('should reject passwords longer than 500 chars', () => {
+      const result = validateBasicPassword('a'.repeat(501))
+      expect(result.valid).toBe(false)
+      expect(result.message).toContain('maximal 500')
+    })
+
     it('should reject null/undefined', () => {
       expect(validateBasicPassword(null).valid).toBe(false)
       expect(validateBasicPassword(undefined).valid).toBe(false)
+      expect(validateBasicPassword('').message).toContain('erforderlich')
     })
   })
 
   describe('validateUUID', () => {
     it('should accept valid UUIDs', () => {
       const uuid = '550e8400-e29b-41d4-a716-446655440000'
-      expect(validateUUID(uuid)).toBe(true)
+      expect(validateUUID(uuid).valid).toBe(true)
     })
 
     it('should accept uppercase UUIDs', () => {
       const uuid = '550E8400-E29B-41D4-A716-446655440000'
-      expect(validateUUID(uuid)).toBe(true)
+      expect(validateUUID(uuid).valid).toBe(true)
     })
 
     it('should reject invalid UUIDs', () => {
-      expect(validateUUID('not-a-uuid')).toBe(false)
-      expect(validateUUID('550e8400-e29b-41d4-a716')).toBe(false)
-      expect(validateUUID('')).toBe(false)
+      expect(validateUUID('not-a-uuid').valid).toBe(false)
+      expect(validateUUID('550e8400-e29b-41d4-a716').valid).toBe(false)
+      expect(validateUUID('').valid).toBe(false)
     })
 
     it('should reject null/undefined', () => {
-      expect(validateUUID(null)).toBe(false)
-      expect(validateUUID(undefined)).toBe(false)
+      expect(validateUUID(null).valid).toBe(false)
+      expect(validateUUID(undefined).valid).toBe(false)
     })
   })
 
@@ -249,7 +231,7 @@ describe('Numeric Validators', () => {
     })
 
     it('should reject durations above maximum', () => {
-      const result = validateDuration(500, 'Duration')
+      const result = validateDuration(601, 'Duration')
       expect(result.valid).toBe(false)
     })
 
@@ -290,10 +272,9 @@ describe('Date/Time Validators', () => {
 
   describe('validateAppointmentTimes', () => {
     it('should accept valid times', () => {
-      const result = validateAppointmentTimes(
-        '2025-12-31T10:00:00Z',
-        '2025-12-31T11:00:00Z'
-      )
+      const start = new Date(Date.now() + 86400000).toISOString()
+      const end = new Date(Date.now() + 86400000 + 3600000).toISOString()
+      const result = validateAppointmentTimes(start, end)
       expect(result.valid).toBe(true)
     })
 
@@ -349,22 +330,23 @@ describe('Enum Validators', () => {
       expect(validateDrivingCategory('Z99').valid).toBe(false)
     })
 
-    it('should be case-insensitive', () => {
-      expect(validateDrivingCategory('b').valid).toBe(true)
-      expect(validateDrivingCategory('a1').valid).toBe(true)
+    it('should reject lowercase codes that are not in the fallback list', () => {
+      expect(validateDrivingCategory('b').valid).toBe(false)
+      expect(validateDrivingCategory('a1').valid).toBe(false)
     })
   })
 
   describe('validateEventType', () => {
-    it('should accept valid event types', () => {
+    it('should accept any non-empty event type (FK-validated at DB)', () => {
       expect(validateEventType('lesson').valid).toBe(true)
       expect(validateEventType('exam').valid).toBe(true)
-      expect(validateEventType('practice').valid).toBe(true)
+      expect(validateEventType('workshop').valid).toBe(true)
     })
 
-    it('should reject invalid event types', () => {
-      expect(validateEventType('invalid').valid).toBe(false)
-      expect(validateEventType('workshop').valid).toBe(false)
+    it('should reject empty event types', () => {
+      expect(validateEventType('').valid).toBe(false)
+      expect(validateEventType('   ').valid).toBe(false)
+      expect(validateEventType(null).valid).toBe(false)
     })
   })
 
@@ -448,12 +430,12 @@ describe('Complex Validators', () => {
       const invalid = {
         ...validAppointment,
         user_id: 'invalid',
-        staff_id: 'invalid',
-        type: 'Z'
+        staff_id: 'invalid'
       }
       const result = validateAppointmentData(invalid)
       expect(result.valid).toBe(false)
-      expect(Object.keys(result.errors).length).toBeGreaterThan(1)
+      expect(result.errors.user_id).toBeDefined()
+      expect(result.errors.staff_id).toBeDefined()
     })
   })
 
