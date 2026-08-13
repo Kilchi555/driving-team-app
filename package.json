@@ -29,6 +29,7 @@
     "app:fingerprint": "bash scripts/android-cert-fingerprint.sh",
     "demo:apple-review:setup": "node scripts/setup-apple-review-tenant.mjs",
     "demo:apple-review:teardown": "node scripts/teardown-apple-review-tenant.mjs --confirm",
+    "demo:e2e-isolation:setup": "node scripts/setup-e2e-isolation-tenant.mjs",
     "pci:generate": "node scripts/generate-pci-docs.mjs"
   },
   "dependencies": {
