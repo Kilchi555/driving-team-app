@@ -62,9 +62,14 @@ export default defineEventHandler(async (event) => {
         notes: asset.notes,
         last_published_at: nowIso,
         publish_count: 1,
+        queue_priority: 0,
       })
       .select('*')
       .single()
+    await supabase
+      .from('gbp_media_assets')
+      .update({ queue_priority: 0, updated_at: nowIso })
+      .eq('id', id)
     return { ok: true, asset: cloned, gbp }
   }
 
@@ -74,6 +79,7 @@ export default defineEventHandler(async (event) => {
       approved: true,
       last_published_at: nowIso,
       publish_count: (asset.publish_count || 0) + 1,
+      queue_priority: 0,
       updated_at: nowIso,
     })
     .eq('id', id)
