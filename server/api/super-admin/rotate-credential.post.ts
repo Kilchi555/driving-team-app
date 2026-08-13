@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { loadRotationLog, saveRotationLog } from './credential-status.get'
 
-const VERCEL_PROJECT_ID = 'prj_DhkLC3tYRjc3zE7CZS_oLFqhESWhK'
+const VERCEL_PROJECT_ID = 'prj_DhkLC3tYRjc3zE7CZSoLFqhESWhK'
 const GITHUB_REPO = 'Kilchi555/driving-team-app'
 
 // ── Vercel ──────────────────────────────────────────────────────────────────
