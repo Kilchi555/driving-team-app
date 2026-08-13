@@ -103,7 +103,7 @@ describe('getTenantTerminology', () => {
       if (opts.throwOnTenant && table === 'tenants') {
         throw new Error('db down')
       }
-      const chain: any = {
+      const chain = {
         select: () => chain,
         eq: () => chain,
         maybeSingle: async () => {

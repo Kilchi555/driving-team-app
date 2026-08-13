@@ -330,15 +330,15 @@ export function validateAppointmentData(data: AppointmentValidationData): { vali
   const errors: Record<string, string> = {}
   
   // Required fields
-  if (!data.user_id || !validateUUID(data.user_id)) {
+  if (!data.user_id || !validateUUID(data.user_id).valid) {
     errors.user_id = 'Ungültige Benutzer-ID'
   }
   
-  if (!data.staff_id || !validateUUID(data.staff_id)) {
+  if (!data.staff_id || !validateUUID(data.staff_id).valid) {
     errors.staff_id = 'Ungültige Mitarbeiter-ID'
   }
   
-  if (!data.tenant_id || !validateUUID(data.tenant_id)) {
+  if (!data.tenant_id || !validateUUID(data.tenant_id).valid) {
     errors.tenant_id = 'Ungültige Mandanten-ID'
   }
   
@@ -424,11 +424,11 @@ export function validatePaymentData(data: PaymentValidationData): { valid: boole
   const errors: Record<string, string> = {}
   
   // Required fields
-  if (!data.user_id || !validateUUID(data.user_id)) {
+  if (!data.user_id || !validateUUID(data.user_id).valid) {
     errors.user_id = 'Ungültige Benutzer-ID'
   }
   
-  if (data.appointment_id && !validateUUID(data.appointment_id)) {
+  if (data.appointment_id && !validateUUID(data.appointment_id).valid) {
     errors.appointment_id = 'Ungültige Termin-ID'
   }
   
