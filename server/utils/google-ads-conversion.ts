@@ -473,6 +473,31 @@ export async function recordAndUploadInquiryConversion(input: {
     ? Number(Number(input.conversion_value_chf).toFixed(2))
     : readInquiryDefaultValueChf()
 
+  // Idempotent: same order_id (e.g. phone click same session/day) must not re-upload.
+  const { data: existing } = await supabase
+    .from('google_ads_conversion_uploads')
+    .select('id, upload_status')
+    .eq('order_id', orderId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (existing?.upload_status === 'success') {
+    logger.debug(`google-ads-conversion: inquiry already uploaded for ${orderId}`)
+    return
+  }
+  if (existing?.upload_status === 'pending' || existing?.upload_status === 'failed') {
+    await finishInquiryUpload({
+      rowId: existing.id,
+      orderId,
+      conversionActionId,
+      valueChf,
+      conversionDateTime,
+      input,
+    })
+    return
+  }
+
   // Record pending upload for audit trail + hourly retry cron.
   // appointment_id stays null (FK to appointments); proposal_id only when it is a real booking_proposals UUID.
   const { data: row, error: insertError } = await supabase
