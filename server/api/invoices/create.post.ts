@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 import { computeInvoiceDueDate, getTenantInvoiceDueDays } from '~/server/utils/invoice-due-date'
 import { getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
+import { applyMissingInvoiceBilling } from '~/server/utils/invoice-billing-snapshot'
 
 export default defineEventHandler(async (event) => {
   // ✅ Use authenticated user
@@ -72,9 +73,15 @@ export default defineEventHandler(async (event) => {
 
     const totalRappen: number = subtotalRappen + vatRappen - discountRappen
 
+    const billedInvoiceData = await applyMissingInvoiceBilling(
+      supabaseAdmin,
+      userProfile.tenant_id,
+      invoiceData
+    )
+
     // Create invoice
     const invoiceInsertData = {
-      ...invoiceData,
+      ...billedInvoiceData,
       tenant_id: userProfile.tenant_id,
       invoice_number: invoiceNumber,
       invoice_date: invoiceDate,

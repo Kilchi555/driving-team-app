@@ -118,7 +118,7 @@
                   <!-- Edit -->
                   <div v-else class="space-y-2">
                     <input v-model="localViewBilling.company_name" placeholder="Firmenname (optional)" class="input-field w-full" />
-                    <input v-model="localViewBilling.contact_person" placeholder="Name *" required class="input-field w-full" />
+                    <input v-model="localViewBilling.contact_person" placeholder="Kontaktperson (optional)" class="input-field w-full" />
                     <input v-model="localViewBilling.street" placeholder="Strasse + Nr. *" required class="input-field w-full" />
                     <div class="grid grid-cols-3 gap-2">
                       <input v-model="localViewBilling.zip" placeholder="PLZ *" required class="input-field" />
@@ -145,8 +145,8 @@
                   <!-- Read -->
                   <div v-if="!editingAddress" class="space-y-0.5">
                     <p v-if="localBilling.company_name" class="text-xs font-semibold text-gray-500">{{ localBilling.company_name }}</p>
-                    <p class="text-sm font-semibold text-gray-800">{{ localBilling.first_name }} {{ localBilling.last_name }}</p>
-                    <p v-if="localBilling.street" class="text-xs text-gray-500">{{ localBilling.street }} {{ localBilling.street_nr }}</p>
+                    <p v-if="billingPersonLabel" class="text-sm font-semibold text-gray-800">{{ billingPersonLabel }}</p>
+                    <p v-if="localBilling.street" class="text-xs text-gray-500">{{ joinStreetAndNumber(localBilling.street, localBilling.street_nr) }}</p>
                     <p v-if="localBilling.zip || localBilling.city" class="text-xs text-gray-500">{{ localBilling.zip }} {{ localBilling.city }}</p>
                     <p v-if="localBilling.email" class="text-xs break-all" :style="{ color: primaryColor }">{{ localBilling.email }}</p>
                     <p v-if="!localBilling.street && !localBilling.zip" class="text-xs text-orange-500 italic">Keine Adresse hinterlegt</p>
@@ -155,8 +155,8 @@
                   <div v-else class="space-y-2">
                     <input v-model="localBilling.company_name" placeholder="Firmenname (optional)" class="input-field w-full" />
                     <div class="grid grid-cols-2 gap-2">
-                      <input v-model="localBilling.first_name" placeholder="Vorname *" required class="input-field" :class="{ 'border-red-400': billingErrors.first_name }" />
-                      <input v-model="localBilling.last_name" placeholder="Nachname *" required class="input-field" :class="{ 'border-red-400': billingErrors.last_name }" />
+                      <input v-model="localBilling.first_name" placeholder="Vorname" class="input-field" />
+                      <input v-model="localBilling.last_name" placeholder="Nachname" class="input-field" />
                     </div>
                     <div class="grid grid-cols-3 gap-2">
                       <input v-model="localBilling.street" placeholder="Strasse *" required class="input-field col-span-2" :class="{ 'border-red-400': billingErrors.street }" />
@@ -338,6 +338,9 @@
             </svg>
             {{ successMessage }}
           </div>
+          <div v-if="props.mode !== 'view' && !hasSent && billingIncompleteHint" class="mb-3 text-xs text-orange-600">
+            {{ billingIncompleteHint }}
+          </div>
           <div class="flex gap-3">
             <!-- Im view-Modus: PDF anzeigen statt Schliessen -->
             <button
@@ -429,6 +432,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { billingPersonNameParts, collapseDuplicatePersonName, formatBillingPersonLabel, joinStreetAndNumber } from '~/utils/billing-address-map'
 import { useDynamicBranding } from '~/composables/useDynamicBranding'
 import { openPdf as openPdfUtil } from '~/utils/openPdf'
 
@@ -591,14 +595,25 @@ const billingErrors = ref({
   email: false,
 })
 
-const isBillingComplete = computed(() =>
-  !!localBilling.value.first_name.trim() &&
-  !!localBilling.value.last_name.trim() &&
-  !!localBilling.value.street.trim() &&
-  !!localBilling.value.zip.trim() &&
-  !!localBilling.value.city.trim() &&
-  !!localBilling.value.email.trim()
+const billingPersonLabel = computed(() =>
+  formatBillingPersonLabel(localBilling.value.first_name, localBilling.value.last_name)
 )
+
+const isBillingComplete = computed(() => {
+  const b = localBilling.value
+  return !!b.street.trim() && !!b.zip.trim() && !!b.city.trim()
+})
+
+const billingIncompleteHint = computed(() => {
+  if (props.mode === 'view') return ''
+  if (isBillingComplete.value) return ''
+  const b = localBilling.value
+  const missing: string[] = []
+  if (!b.street.trim()) missing.push('Strasse')
+  if (!b.zip.trim()) missing.push('PLZ')
+  if (!b.city.trim()) missing.push('Ort')
+  return missing.length ? `Bitte noch ergänzen: ${missing.join(', ')}` : ''
+})
 
 watch(() => props.draft, (d) => {
   if (d) {
@@ -613,10 +628,14 @@ watch(() => props.draft, (d) => {
     hasSent.value = false
     hasEmailSent.value = false
     sentInvoiceId.value = null
+    const person = billingPersonNameParts(
+      [d.billing_first_name, d.billing_last_name].filter(Boolean).join(' ') || (d as any).billing_contact_person,
+      d.student
+    )
     localBilling.value = {
       company_name: d.billing_company_name || (d as any).billing_company_name || '',
-      first_name: d.billing_first_name || ((d as any).billing_contact_person?.split(' ')[0] || ''),
-      last_name: d.billing_last_name || ((d as any).billing_contact_person?.split(' ').slice(1).join(' ') || ''),
+      first_name: person.first_name,
+      last_name: person.last_name,
       street: d.billing_street || '',
       street_nr: d.billing_street_nr || (d as any).billing_street_nr || '',
       zip: d.billing_zip || '',
@@ -632,7 +651,7 @@ watch(() => props.viewInvoice, (v) => {
     localNote.value = v.notes || ''
     localViewBilling.value = {
       company_name: v.billing_company_name || '',
-      contact_person: v.billing_contact_person || '',
+      contact_person: collapseDuplicatePersonName(v.billing_contact_person),
       street: v.billing_street || '',
       zip: v.billing_zip || '',
       city: v.billing_city || '',
@@ -831,12 +850,12 @@ async function createInvoiceOnly() {
   if (!props.draft || isSending.value) return
 
   billingErrors.value = {
-    first_name: !localBilling.value.first_name.trim(),
-    last_name: !localBilling.value.last_name.trim(),
+    first_name: false,
+    last_name: false,
     street: !localBilling.value.street.trim(),
     zip: !localBilling.value.zip.trim(),
     city: !localBilling.value.city.trim(),
-    email: !localBilling.value.email.trim(),
+    email: false,
   }
   if (Object.values(billingErrors.value).some(Boolean)) {
     editingAddress.value = true
@@ -855,7 +874,7 @@ async function createInvoiceOnly() {
       billing_company_name: localBilling.value.company_name || undefined,
       billing_first_name: localBilling.value.first_name,
       billing_last_name: localBilling.value.last_name,
-      billing_street: [localBilling.value.street, localBilling.value.street_nr].filter(Boolean).join(' '),
+      billing_street: joinStreetAndNumber(localBilling.value.street, localBilling.value.street_nr),
       billing_zip: localBilling.value.zip,
       billing_city: localBilling.value.city,
       billing_email: localBilling.value.email,

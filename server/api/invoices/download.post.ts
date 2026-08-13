@@ -13,6 +13,7 @@ import {
 } from '~/server/utils/invoice-product-lines'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
+import { invoicePersonNames, loadUserAddressForInvoice, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
 
 export default defineEventHandler(async (event) => {
   const { invoiceId } = await readBody(event)
@@ -149,8 +150,9 @@ export default defineEventHandler(async (event) => {
     productsByApt
   )
 
-  const customerName = invoice.billing_contact_person ||
-    `${(invoice as any).customer_first_name || ''} ${(invoice as any).customer_last_name || ''}`.trim() || 'Kunde'
+  const userAddress = await loadUserAddressForInvoice(supabase, invoice.user_id, invoice.tenant_id)
+  const pdfAddr = pdfBillingFields(invoice, userAddress)
+  const { customerName, studentName } = invoicePersonNames(invoice as any, userAddress)
 
   // QR-Code generieren
   let qrCodeDataUrl: string | null = null
@@ -169,10 +171,10 @@ export default defineEventHandler(async (event) => {
         creditor_zip: (tenant as any)?.invoice_zip || '',
         creditor_city: (tenant as any)?.invoice_city || '',
         debtor_name: customerName,
-        debtor_street: invoice.billing_street || '',
-        debtor_street_nr: (invoice as any).billing_street_number || '',
-        debtor_zip: invoice.billing_zip || '',
-        debtor_city: invoice.billing_city || '',
+        debtor_street: invoice.billing_street || userAddress?.street || '',
+        debtor_street_nr: (invoice as any).billing_street_number || userAddress?.street_nr || '',
+        debtor_zip: invoice.billing_zip || userAddress?.zip || '',
+        debtor_city: invoice.billing_city || userAddress?.city || '',
         amount_rappen: invoice.total_amount_rappen - (invoice.dunning_fees_rappen || 0),
         reference: paymentRef,
         additional_info: `Rechnung ${invoice.invoice_number}`,
@@ -196,11 +198,12 @@ export default defineEventHandler(async (event) => {
     tenantLogoBase64: logo?.base64 || null,
     tenantLogoFormat: logo?.format,
     customerName,
+    studentName,
     billingCompanyName: (invoice as any).billing_company_name || '',
-    billingStreet: invoice.billing_street || '',
-    billingZip: invoice.billing_zip || '',
-    billingCity: invoice.billing_city || '',
-    billingEmail: invoice.billing_email || '',
+    billingStreet: pdfAddr.billingStreet,
+    billingZip: pdfAddr.billingZip,
+    billingCity: pdfAddr.billingCity,
+    billingEmail: pdfAddr.billingEmail || invoice.billing_email || '',
     items: finalItems.map((i: any) => ({
       product_name: i.product_name,
       appointment_date: i.appointment_start_time || i.appointment_date,

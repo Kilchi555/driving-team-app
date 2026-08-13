@@ -47,6 +47,65 @@ function personName(person?: PersonAddressSource | null): string {
   return [person?.first_name, person?.last_name].filter(Boolean).join(' ').trim()
 }
 
+function splitPersonName(name?: string | null): { first_name: string; last_name: string } {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return { first_name: '', last_name: '' }
+  if (parts.length === 1) return { first_name: parts[0], last_name: '' }
+  return { first_name: parts[0], last_name: parts.slice(1).join(' ') }
+}
+
+function isCompletePersonName(parts: { first_name: string; last_name: string }): boolean {
+  const first = parts.first_name.trim()
+  const last = parts.last_name.trim()
+  return !!first && !!last && first.toLowerCase() !== last.toLowerCase()
+}
+
+/** Prefer a two-part contact name; otherwise the student's first + last name. Avoids "Kilchenmann Kilchenmann". */
+export function billingPersonNameParts(
+  contactPerson?: string | null,
+  person?: { first_name?: string | null; last_name?: string | null; name?: string | null } | null
+): { first_name: string; last_name: string } {
+  const fromContact = splitPersonName(contactPerson)
+  const fromPerson = (person?.first_name || person?.last_name)
+    ? {
+        first_name: (person?.first_name || '').trim(),
+        last_name: (person?.last_name || '').trim(),
+      }
+    : splitPersonName(person?.name)
+
+  if (isCompletePersonName(fromContact)) return fromContact
+  if (isCompletePersonName(fromPerson)) return fromPerson
+  if (fromContact.first_name || fromContact.last_name) return fromContact
+  return fromPerson
+}
+
+export function formatBillingPersonLabel(first?: string | null, last?: string | null): string {
+  const f = (first || '').trim()
+  const l = (last || '').trim()
+  if (f && l && f.toLowerCase() === l.toLowerCase()) return f
+  return [f, l].filter(Boolean).join(' ')
+}
+
+export function collapseDuplicatePersonName(name?: string | null): string {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean)
+  const unique: string[] = []
+  for (const part of parts) {
+    const prev = unique[unique.length - 1]
+    if (!prev || prev.toLowerCase() !== part.toLowerCase()) unique.push(part)
+  }
+  return unique.join(' ')
+}
+
+export function joinStreetAndNumber(street?: string | null, number?: string | null): string {
+  const collapsedStreet = collapseDuplicatePersonName(street)
+  const collapsedNumber = collapseDuplicatePersonName(number)
+  if (!collapsedStreet) return collapsedNumber
+  if (!collapsedNumber) return collapsedStreet
+  const tokens = collapsedStreet.split(/\s+/)
+  if (tokens[tokens.length - 1].toLowerCase() === collapsedNumber.toLowerCase()) return collapsedStreet
+  return `${collapsedStreet} ${collapsedNumber}`
+}
+
 function normalizeCountry(country?: string | null): string {
   if (!country || country === 'CH') return 'Schweiz'
   return country

@@ -14,6 +14,7 @@ import {
 } from '~/server/utils/invoice-product-lines'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
+import { invoicePersonNames, isPlaceholderBillingEmail, loadUserAddressForInvoice, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
 export default defineEventHandler(async (event) => {
   try {
     const { invoiceId } = await readBody(event)
@@ -156,11 +157,13 @@ export default defineEventHandler(async (event) => {
 
     const tenantName = (tenant as any)?.name || ''
     const staffName = `${staffUser.first_name || ''} ${staffUser.last_name || ''}`.trim()
-    const customerName = invoice.billing_contact_person ||
-      `${(invoice as any).customer_first_name || ''} ${(invoice as any).customer_last_name || ''}`.trim() ||
-      'Kunde'
-    const billingEmail = invoice.billing_email
-    if (!billingEmail) throw createError({ statusCode: 422, statusMessage: 'Keine E-Mail-Adresse für Rechnung hinterlegt' })
+    const userAddress = await loadUserAddressForInvoice(supabase, invoice.user_id, invoice.tenant_id)
+    const pdfAddr = pdfBillingFields(invoice, userAddress)
+    const { customerName, studentName } = invoicePersonNames(invoice as any, userAddress)
+    const billingEmail = pdfAddr.billingEmail || invoice.billing_email
+    if (!billingEmail || isPlaceholderBillingEmail(billingEmail)) {
+      throw createError({ statusCode: 422, statusMessage: 'Keine E-Mail-Adresse für Rechnung hinterlegt' })
+    }
 
     const introText = (invoice as any).notes || (tenant as any)?.invoice_intro_text || null
     const paymentTerms = (invoice as any).payment_terms || (tenant as any)?.invoice_payment_terms || null
@@ -183,10 +186,10 @@ export default defineEventHandler(async (event) => {
           creditor_zip: (tenant as any)?.invoice_zip || '',
           creditor_city: (tenant as any)?.invoice_city || '',
           debtor_name: customerName,
-          debtor_street: invoice.billing_street || '',
-          debtor_street_nr: (invoice as any).billing_street_number || '',
-          debtor_zip: invoice.billing_zip || '',
-          debtor_city: invoice.billing_city || '',
+          debtor_street: invoice.billing_street || userAddress?.street || '',
+          debtor_street_nr: (invoice as any).billing_street_number || userAddress?.street_nr || '',
+          debtor_zip: invoice.billing_zip || userAddress?.zip || '',
+          debtor_city: invoice.billing_city || userAddress?.city || '',
           amount_rappen: invoiceTotalRappen,
           reference: paymentRef,
           additional_info: `Rechnung ${invoice.invoice_number}`,
@@ -237,10 +240,11 @@ export default defineEventHandler(async (event) => {
         tenantLogoBase64: logo?.base64 || null,
         tenantLogoFormat: logo?.format,
         customerName,
+        studentName,
         billingCompanyName: (invoice as any).billing_company_name || '',
-        billingStreet: invoice.billing_street || '',
-        billingZip: invoice.billing_zip || '',
-        billingCity: invoice.billing_city || '',
+        billingStreet: pdfAddr.billingStreet,
+        billingZip: pdfAddr.billingZip,
+        billingCity: pdfAddr.billingCity,
         billingEmail,
         items: finalItems.map((i: any) => ({
           product_name: i.product_name,

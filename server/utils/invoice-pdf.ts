@@ -2,6 +2,7 @@
 // Generiert eine professionelle PDF-Rechnung im Swiss-Invoice-Stil (weiss, DIN-Fenster)
 
 import PDFDocument from 'pdfkit'
+import { collapseDuplicatePersonName } from '~/utils/billing-address-map'
 
 function formatChf(rappen: number): string {
   return `CHF ${(rappen / 100).toFixed(2)}`
@@ -70,6 +71,11 @@ export interface InvoicePdfData {
   tenantLogoBase64?: string | null   // base64 PNG/JPEG ohne data:-Prefix
   tenantLogoFormat?: 'png' | 'jpeg'
   customerName: string
+  /**
+   * Actual student/client this invoice is for (users.first_name + last_name).
+   * Shown as «Betrifft» when the window recipient is a company or another person.
+   */
+  studentName?: string
   billingCompanyName?: string
   billingStreet?: string
   billingZip?: string
@@ -130,6 +136,26 @@ export function formatTenantContactPerson(tenant: {
     .map((p) => (p || '').trim())
     .filter(Boolean)
     .join(' ')
+}
+
+function normalizePersonName(name?: string | null): string {
+  return (name || '').trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+function namesDiffer(a?: string | null, b?: string | null): boolean {
+  const left = normalizePersonName(a)
+  const right = normalizePersonName(b)
+  return !!left && !!right && left !== right
+}
+
+function nameIsCoveredBy(part?: string | null, full?: string | null): boolean {
+  const a = normalizePersonName(part)
+  const b = normalizePersonName(full)
+  if (!a) return true
+  if (!b) return false
+  if (a === b) return true
+  const bTokens = new Set(b.split(' '))
+  return a.split(' ').every((token) => bTokens.has(token))
 }
 
 export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
@@ -233,15 +259,19 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     // ── Empfängeradresse (Fensterzone, ohne Hintergrundfläche) ───────────────
     // Nur postalische Adresse im Couvert-Fenster — Kontaktperson darunter, ausserhalb.
+    const customerName = collapseDuplicatePersonName(data.customerName)
+    const studentName = collapseDuplicatePersonName(data.studentName)
+    const billingStreet = collapseDuplicatePersonName(data.billingStreet)
+    const billingCompanyName = (data.billingCompanyName || '').trim()
     let addrY = winTop + 2
-    const addrMainName = data.billingCompanyName || data.customerName
+    const addrMainName = billingCompanyName || customerName
     doc.fontSize(11).fillColor(ink).font('Helvetica-Bold')
       .text(addrMainName, winX, addrY, { width: winWidth })
     addrY += 14
 
     doc.font('Helvetica').fontSize(10).fillColor(ink)
-    if (data.billingStreet) {
-      doc.text(data.billingStreet, winX, addrY, { width: winWidth })
+    if (billingStreet) {
+      doc.text(billingStreet, winX, addrY, { width: winWidth })
       addrY += 13
     }
     if (data.billingZip || data.billingCity) {
@@ -261,6 +291,10 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       ['Rechnungsdatum', formatDate(data.invoiceDate)],
       ['Fällig am', formatDate(data.dueDate)],
     ]
+    const windowName = billingCompanyName || customerName
+    if (studentName && namesDiffer(studentName, windowName)) {
+      metaRows.push(['Betrifft', studentName])
+    }
     if (data.tenantContactPerson) metaRows.push(['Kontaktperson', data.tenantContactPerson])
     if (data.tenantEmail) metaRows.push(['Kontakt', data.tenantEmail])
     metaRows.forEach(([label, value], i) => {
@@ -276,13 +310,18 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     const winBottom = winTop + mmToPt(45)
     let belowWindowY = winBottom - 32
 
-    // Kunden-Kontaktperson unter dem Fenster, Kunden-Seite (nicht im Couvert sichtbar)
-    if (data.billingCompanyName && data.customerName && data.customerName !== data.billingCompanyName) {
+    // Firmen-Kontaktperson unter dem Fenster — nur wenn sie ein eigener Name ist.
+    if (
+      billingCompanyName
+      && customerName
+      && namesDiffer(customerName, billingCompanyName)
+      && !nameIsCoveredBy(customerName, studentName)
+    ) {
       doc.fontSize(7).fillColor(muted).font('Helvetica')
         .text('KONTAKTPERSON', winX, belowWindowY, { width: winWidth, characterSpacing: 0.4 })
       belowWindowY += 10
       doc.fontSize(9).fillColor(ink).font('Helvetica')
-        .text(data.customerName, winX, belowWindowY, { width: winWidth })
+        .text(customerName, winX, belowWindowY, { width: winWidth })
       belowWindowY += 14
     }
 
@@ -625,13 +664,13 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
           iy += mm(5)
         }
 
-        const debtorName = data.billingCompanyName || data.customerName
+        const debtorName = billingCompanyName || customerName
         if (debtorName) {
           doc.fontSize(6).font('Helvetica-Bold').fillColor('#000').text('Zahlbar durch', infoX, iy)
           iy += mm(3)
           doc.fontSize(7).font('Helvetica').text(debtorName, infoX, iy, { width: infoW })
           iy += mm(3.5)
-          if (data.billingStreet) { doc.text(data.billingStreet, infoX, iy, { width: infoW }); iy += mm(3.5) }
+          if (billingStreet) { doc.text(billingStreet, infoX, iy, { width: infoW }); iy += mm(3.5) }
           if (data.billingZip || data.billingCity) {
             doc.text(`${data.billingZip || ''} ${data.billingCity || ''}`.trim(), infoX, iy, { width: infoW })
           }

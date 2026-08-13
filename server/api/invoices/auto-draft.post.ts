@@ -11,6 +11,7 @@ import { groupProductSalesByAppointment } from '~/server/utils/invoice-product-l
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
 import { resolveStudentBillingAddress } from '~/server/utils/billing-from-company'
+import { billingPersonNameParts } from '~/utils/billing-address-map'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -166,6 +167,11 @@ export default defineEventHandler(async (event) => {
   const vatAmount = computeVatAmountRappen(Math.max(0, netAfterDiscounts), vatRatePercent)
   const total = netAfterDiscounts + vatAmount
 
+  const billingPerson = billingPersonNameParts(
+    savedBilling?.contact_person,
+    { first_name: student.first_name, last_name: student.last_name }
+  )
+
   const draft = {
     // Rechnungsinformationen
     invoice_number_preview: previewInvoiceNumber,
@@ -176,8 +182,8 @@ export default defineEventHandler(async (event) => {
     // Rechnungsadresse: gespeicherte company_billing_address bevorzugen, Fallback auf Schülerdaten
     billing_type: savedBilling?.company_name ? 'company' as const : 'individual' as const,
     billing_email: savedBilling?.email || student.email,
-    billing_first_name: savedBilling ? (savedBilling.contact_person?.split(' ')[0] || '') : student.first_name,
-    billing_last_name: savedBilling ? (savedBilling.contact_person?.split(' ').slice(1).join(' ') || '') : student.last_name,
+    billing_first_name: billingPerson.first_name,
+    billing_last_name: billingPerson.last_name,
     billing_company_name: savedBilling?.company_name || '',
     billing_street: savedBilling?.street || student.street || '',
     billing_street_nr: savedBilling?.street_number || student.street_nr || '',

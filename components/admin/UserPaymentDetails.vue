@@ -391,7 +391,7 @@
                         
                         <div v-else class="space-y-3">
                           <input v-model="customBillingCompanyName" type="text" placeholder="Firmenname (optional)" class="invoice-modal-input w-full" />
-                          <input v-model="customBillingContactPerson" type="text" placeholder="Kontaktperson *" class="invoice-modal-input w-full" />
+                          <input v-model="customBillingContactPerson" type="text" placeholder="Kontaktperson (optional)" class="invoice-modal-input w-full" />
                           <input v-model="customBillingEmail" type="email" placeholder="E-Mail *" class="invoice-modal-input w-full" />
                         </div>
                       </div>
@@ -1097,6 +1097,10 @@ interface UserDetails {
   last_name: string | null
   email: string | null
   phone: string | null
+  street: string | null
+  street_nr: string | null
+  zip: string | null
+  city: string | null
   role: string | null
   preferred_payment_method: string | null
   default_company_billing_address_id: string | null
@@ -2756,7 +2760,7 @@ const invoiceSelectedAppointments = async () => {
     customBillingContactPerson.value = ''
     customBillingEmail.value = ''
     
-    invoiceEmail.value = companyBillingAddress.value?.email || displayEmail.value
+    invoiceEmail.value = companyBillingAddress.value?.email || userDetails.value?.email || ''
     invoiceSubject.value = `Rechnung für ${selectedAppointments.value.length} ${selectedAppointments.value.length > 1 ? t.value.appointmentsPlural : t.value.appointment}`
     // Nur Intro in die Nachricht — Zahlungsbedingungen/Footer gehen separat auf die Rechnung
     const intro = (invoiceIntroText.value || '').trim()
@@ -2804,28 +2808,28 @@ const buildInvoicePayload = (internalNotes: string) => {
   if (rows.length === 0) throw new Error('Keine gültigen Termine gefunden')
 
   const billingEmail = resolvedInvoiceEmail.value
-  if (!billingEmail) throw new Error('Keine E-Mail-Adresse für die Rechnung angegeben')
 
   if (useCustomBillingAddress.value) {
-    if (!customBillingContactPerson.value.trim()) throw new Error('Kontaktperson ist erforderlich')
     if (!customBillingEmail.value.trim() && !invoiceEmail.value.trim()) throw new Error('E-Mail-Adresse ist erforderlich')
   }
 
   const useCompanyBilling = useCustomBillingAddress.value || !!companyBillingAddress.value
+  const company = companyBillingAddress.value
+  const user = userDetails.value
   const invoiceFormData = {
-    user_id: userDetails.value?.id || '',
+    user_id: user?.id || '',
     billing_type: (useCompanyBilling ? 'company' : 'individual') as 'company' | 'individual',
     billing_company_name: useCustomBillingAddress.value
       ? customBillingCompanyName.value || undefined
-      : companyBillingAddress.value?.company_name || undefined,
+      : company?.company_name || undefined,
     billing_contact_person: useCustomBillingAddress.value
       ? customBillingContactPerson.value || undefined
-      : companyBillingAddress.value?.contact_person || undefined,
-    billing_email: billingEmail,
-    billing_street: companyBillingAddress.value?.street || undefined,
-    billing_street_number: companyBillingAddress.value?.street_number || undefined,
-    billing_zip: companyBillingAddress.value?.zip || undefined,
-    billing_city: companyBillingAddress.value?.city || undefined,
+      : company?.contact_person || undefined,
+    billing_email: billingEmail || undefined,
+    billing_street: company?.street || user?.street || undefined,
+    billing_street_number: company?.street_number || user?.street_nr || undefined,
+    billing_zip: company?.zip || user?.zip || undefined,
+    billing_city: company?.city || user?.city || undefined,
     billing_country: 'CH',
     billing_vat_number: companyBillingAddress.value?.vat_number || undefined,
     subtotal_rappen: chfToRappen(selectedAppointmentsTotal.value),
@@ -2878,6 +2882,10 @@ const finalizeInvoiceModal = async () => {
 
 const sendDirectEmail = async () => {
   if (selectedAppointments.value.length === 0 || isCreatingInvoice.value) return
+  if (!resolvedInvoiceEmail.value) {
+    showErrorToast('❌ Fehler aufgetreten', 'Keine E-Mail-Adresse für die Rechnung angegeben')
+    return
+  }
 
   isCreatingInvoice.value = true
   invoiceAction.value = 'email'

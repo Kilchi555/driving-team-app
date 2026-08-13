@@ -60,6 +60,7 @@ export default defineEventHandler(async (event) => {
     tenantContactPerson: formatTenantContactPerson(tenant) || undefined,
     tenantLogoBase64: logo?.base64 || null,
     customerName: prepared.customerName,
+    studentName: prepared.studentName,
     billingCompanyName: invoice.billing_company_name || undefined,
     billingStreet: [invoice.billing_street, invoice.billing_street_number].filter(Boolean).join(' ').trim() || undefined,
     billingZip: invoice.billing_zip || undefined,

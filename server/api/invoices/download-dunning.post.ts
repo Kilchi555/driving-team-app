@@ -10,6 +10,7 @@ import { generateDunningPdf, dunningPdfFilename, extractDunningLetterText } from
 import { uploadPdfAndGetPublicUrl } from '~/server/utils/upload-pdf-public'
 import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
 import { formatTenantContactPerson } from '~/server/utils/invoice-pdf'
+import { invoicePersonNames } from '~/server/utils/invoice-billing-snapshot'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
@@ -102,8 +103,7 @@ export default defineEventHandler(async (event) => {
   const bodyText = extractDunningLetterText((log as any).body_text, log.body_html)
     || `${stageDef.label} zur Rechnung ${invoice.invoice_number}.`
 
-  const customerName = invoice.billing_contact_person ||
-    `${invoice.customer_first_name || ''} ${invoice.customer_last_name || ''}`.trim() || 'Kunde'
+  const { customerName, studentName } = invoicePersonNames(invoice)
 
   const logo = await loadTenantLogoForPdf(resolveTenantWideLogoUrl(tenant as any))
 
@@ -128,6 +128,7 @@ export default defineEventHandler(async (event) => {
     tenantContactPerson: formatTenantContactPerson(tenant) || undefined,
     tenantLogoBase64: logo?.base64 || null,
     customerName,
+    studentName,
     billingCompanyName: invoice.billing_company_name || undefined,
     billingStreet: [invoice.billing_street, invoice.billing_street_number].filter(Boolean).join(' ').trim() || undefined,
     billingZip: invoice.billing_zip || undefined,

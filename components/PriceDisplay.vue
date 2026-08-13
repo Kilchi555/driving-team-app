@@ -456,21 +456,6 @@
               </div>
             </div>
 
-            <!-- Rechnungsadresse für Invoice -->
-            <div v-if="existingPayment?.payment_method === 'invoice' && hasInvoiceAddress" 
-                 class="bg-gray-50 p-3 rounded-lg border border-gray-200">
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-sm font-medium text-gray-700">Rechnungsadresse</span>
-                <button 
-                  v-if="!props.isPastAppointment"
-                  @click="startEditingBillingAddress"
-                  class="text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                >
-                  Bearbeiten
-                </button>
-              </div>
-              <div class="text-sm text-gray-600 whitespace-pre-line">{{ formatInvoiceAddress() }}</div>
-            </div>
           </div>
         </div>
 
@@ -580,17 +565,17 @@
             </button>
           </div>
 
-          <div v-if="showCompanySearch" class="relative">
+          <div v-if="showCompanySearch" class="space-y-2">
             <input
               v-model="companySearch"
               type="search"
-              placeholder="Firma suchen…"
+              placeholder="Firma suchen oder Liste durchscrollen…"
               class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
               @input="searchCompanies"
             >
             <div
               v-if="companyResults.length > 0"
-              class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto"
+              class="w-full bg-white border border-gray-200 rounded-xl max-h-56 overflow-y-auto overscroll-contain"
             >
               <button
                 v-for="c in companyResults"
@@ -608,7 +593,10 @@
                 </div>
               </button>
             </div>
-            <p v-else-if="companySearch.length >= 1 && !isSearchingCompanies" class="text-xs text-gray-400 mt-1.5 pl-1">
+            <p v-else-if="isSearchingCompanies" class="text-xs text-gray-400 pl-1">
+              Lädt Firmen…
+            </p>
+            <p v-else class="text-xs text-gray-400 pl-1">
               Keine Firmen gefunden
             </p>
           </div>
@@ -640,11 +628,12 @@
           </div>
         </div>
         
-        <!-- Gespeicherte Rechnungsadresse anzeigen (CREATE-Modus mit bestehender Adresse) -->
-        <div v-if="shouldShowSavedBillingAddress && !props.isEditMode" class="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+        <!-- Aktuelle Rechnungsadresse (folgt Privat / Firma sofort) -->
+        <div v-if="shouldShowSavedBillingAddress" class="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
           <div class="flex justify-between items-center mb-2">
-            <span class="text-sm font-medium text-gray-700">Gespeicherte Rechnungsadresse</span>
+            <span class="text-sm font-medium text-gray-700">Rechnungsadresse</span>
             <button
+              v-if="!props.isPastAppointment"
               @click="startEditingBillingAddress"
               class="text-xs font-medium hover:underline"
               :style="primaryText"
@@ -652,7 +641,7 @@
               Bearbeiten
             </button>
           </div>
-          <div class="text-sm text-gray-600 whitespace-pre-line">{{ formatStudentBillingAddress() }}</div>
+          <div class="text-sm text-gray-600 whitespace-pre-line">{{ formattedCurrentBilling }}</div>
         </div>
 
         <!-- Rechnungsadresse Form - nur wenn Formular angezeigt werden soll -->
@@ -676,11 +665,10 @@
               </div>
 
               <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1">Kontaktperson *</label>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Kontaktperson</label>
                 <input
                   v-model="invoiceData.contact_person"
                   type="text"
-                  required
                   placeholder="Vorname Nachname"
                   class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-400 bg-white text-gray-900"
                 >
@@ -1003,120 +991,13 @@ const selectedPaymentMethod = computed({
 const hasInvoiceAddress = computed(() => {
   const payment = existingPayment.value
   if (!payment) return false
-  
-  // Check if there's a company billing address (preferred)
   if (payment.company_billing_address && typeof payment.company_billing_address === 'object') {
     return true
   }
-  
-  // Fallback: Check JSONB invoice_address field
-  return payment.invoice_address && 
+  return payment.invoice_address &&
          typeof payment.invoice_address === 'object' &&
          Object.keys(payment.invoice_address).length > 0
 })
-
-// ✅ Function: Format invoice address for display
-const formatInvoiceAddress = (): string => {
-  const payment = existingPayment.value
-  if (!payment) return 'Keine Rechnungsadresse gespeichert'
-  
-  let invoiceAddr = null
-  
-  // Prefer company billing address (new structure with single object)
-  if (payment.company_billing_address && typeof payment.company_billing_address === 'object') {
-    invoiceAddr = payment.company_billing_address
-  }
-  // Fallback to JSONB invoice_address
-  else if (payment.invoice_address && typeof payment.invoice_address === 'object') {
-    invoiceAddr = payment.invoice_address
-  }
-  
-  if (!invoiceAddr) {
-    return 'Keine Rechnungsadresse gespeichert'
-  }
-  
-  const lines = []
-  
-  if (invoiceAddr.company_name) {
-    lines.push(invoiceAddr.company_name)
-  }
-  
-  if (invoiceAddr.contact_person) {
-    lines.push(invoiceAddr.contact_person)
-  }
-  
-  if (invoiceAddr.street && invoiceAddr.street_number) {
-    lines.push(`${invoiceAddr.street} ${invoiceAddr.street_number}`)
-  } else if (invoiceAddr.street) {
-    lines.push(invoiceAddr.street)
-  }
-  
-  if (invoiceAddr.zip && invoiceAddr.city) {
-    lines.push(`${invoiceAddr.zip} ${invoiceAddr.city}`)
-  }
-  
-  if (invoiceAddr.country && invoiceAddr.country !== 'Schweiz') {
-    lines.push(invoiceAddr.country)
-  }
-  
-  if (invoiceAddr.email) {
-    lines.push(`E-Mail: ${invoiceAddr.email}`)
-  }
-  
-  if (invoiceAddr.phone) {
-    lines.push(`Tel: ${invoiceAddr.phone}`)
-  }
-  
-  if (invoiceAddr.vat_number) {
-    lines.push(`UID: ${invoiceAddr.vat_number}`)
-  }
-  
-  return lines.join('\n') || 'Keine Adressdaten verfügbar'
-}
-
-// ✅ NEU: Format student billing address for display (CREATE-Modus)
-const formatStudentBillingAddress = (): string => {
-  const addr = studentBillingAddress.value
-  if (!addr) return 'Keine Rechnungsadresse gefunden'
-  
-  const lines = []
-  
-  if (addr.company_name) {
-    lines.push(addr.company_name)
-  }
-  
-  if (addr.contact_person) {
-    lines.push(addr.contact_person)
-  }
-  
-  if (addr.street && addr.street_number) {
-    lines.push(`${addr.street} ${addr.street_number}`)
-  } else if (addr.street) {
-    lines.push(addr.street)
-  }
-  
-  if (addr.zip && addr.city) {
-    lines.push(`${addr.zip} ${addr.city}`)
-  }
-  
-  if (addr.country && addr.country !== 'Schweiz') {
-    lines.push(addr.country)
-  }
-  
-  if (addr.email) {
-    lines.push(`E-Mail: ${addr.email}`)
-  }
-  
-  if (addr.phone) {
-    lines.push(`Tel: ${addr.phone}`)
-  }
-  
-  if (addr.vat_number) {
-    lines.push(`UID: ${addr.vat_number}`)
-  }
-  
-  return lines.join('\n') || 'Keine Adressdaten verfügbar'
-}
 
 // ✅ NEU: Manueller Rabatt State
 const manualDiscountAmount = ref<number | null>(null)
@@ -1147,6 +1028,44 @@ const invoiceData = ref({
   company_register_number: '',
   notes: ''
 })
+
+const addressHasContent = (addr: any): boolean => {
+  if (!addr || typeof addr !== 'object') return false
+  return !!(
+    addr.company_name || addr.name || addr.contact_person ||
+    addr.street || addr.zip || addr.city || addr.email
+  )
+}
+
+const formatAddressLines = (addr: any): string => {
+  if (!addr) return 'Keine Rechnungsadresse gefunden'
+  const mapped = addr.name && !addr.company_name
+    ? billingFieldsFromCompany(addr, props.selectedStudent)
+    : addr
+  const lines: string[] = []
+  if (mapped.company_name) lines.push(mapped.company_name)
+  if (mapped.contact_person) lines.push(mapped.contact_person)
+  if (mapped.street && mapped.street_number) lines.push(`${mapped.street} ${mapped.street_number}`)
+  else if (mapped.street) lines.push(mapped.street)
+  if (mapped.zip && mapped.city) lines.push(`${mapped.zip} ${mapped.city}`)
+  if (mapped.country && mapped.country !== 'Schweiz' && mapped.country !== 'CH') lines.push(mapped.country)
+  if (mapped.email) lines.push(`E-Mail: ${mapped.email}`)
+  if (mapped.phone) lines.push(`Tel: ${mapped.phone}`)
+  if (mapped.vat_number) lines.push(`UID: ${mapped.vat_number}`)
+  return lines.join('\n') || 'Keine Rechnungsadresse gefunden'
+}
+
+const currentBillingAddress = computed(() => {
+  if (addressHasContent(invoiceData.value)) return invoiceData.value
+  if (addressHasContent(studentBillingAddress.value)) return studentBillingAddress.value
+  if (linkedCompany.value) return billingFieldsFromCompany(linkedCompany.value, props.selectedStudent)
+  const payment = existingPayment.value
+  if (addressHasContent(payment?.company_billing_address)) return payment.company_billing_address
+  if (addressHasContent(payment?.invoice_address)) return payment.invoice_address
+  return null
+})
+
+const formattedCurrentBilling = computed(() => formatAddressLines(currentBillingAddress.value))
 
 const isSavingInvoice = ref(false)
 const invoiceSaveMessage = ref<{ type: 'success' | 'error', text: string } | null>(null)
@@ -1329,7 +1248,7 @@ const fillInvoiceFromCustomerAddress = async () => {
 
 const syncPreviewFromInvoiceData = () => {
   studentBillingAddress.value = {
-    ...(studentBillingAddress.value || {}),
+    id: studentBillingAddress.value?.id,
     ...invoiceData.value,
   }
 }
@@ -1366,23 +1285,49 @@ const applyDefaultBillingSource = async () => {
     }
   }
 
-  if (linkedCompany.value && !studentBillingAddress.value) {
+  if (
+    linkedCompany.value &&
+    (!addressHasContent(studentBillingAddress.value) || billingLooksLikeCompany(studentBillingAddress.value, linkedCompany.value))
+  ) {
     applyCompanyFields(linkedCompany.value)
     return
   }
 
-  if (linkedCompany.value && billingLooksLikeCompany(studentBillingAddress.value, linkedCompany.value)) {
-    billingSource.value = 'company'
-    return
-  }
-
-  if (studentBillingAddress.value && !studentBillingAddress.value.company_name) {
+  if (addressHasContent(studentBillingAddress.value) && !studentBillingAddress.value.company_name) {
     billingSource.value = 'private'
+    invoiceData.value = {
+      company_name: studentBillingAddress.value.company_name || '',
+      contact_person: studentBillingAddress.value.contact_person || '',
+      email: studentBillingAddress.value.email || '',
+      phone: studentBillingAddress.value.phone || '',
+      street: studentBillingAddress.value.street || '',
+      street_number: studentBillingAddress.value.street_number || '',
+      zip: studentBillingAddress.value.zip || '',
+      city: studentBillingAddress.value.city || '',
+      country: studentBillingAddress.value.country || 'Schweiz',
+      vat_number: studentBillingAddress.value.vat_number || '',
+      company_register_number: studentBillingAddress.value.company_register_number || '',
+      notes: studentBillingAddress.value.notes || '',
+    }
     return
   }
 
-  if (studentBillingAddress.value) {
+  if (addressHasContent(studentBillingAddress.value)) {
     billingSource.value = 'custom'
+    invoiceData.value = {
+      company_name: studentBillingAddress.value.company_name || '',
+      contact_person: studentBillingAddress.value.contact_person || '',
+      email: studentBillingAddress.value.email || '',
+      phone: studentBillingAddress.value.phone || '',
+      street: studentBillingAddress.value.street || '',
+      street_number: studentBillingAddress.value.street_number || '',
+      zip: studentBillingAddress.value.zip || '',
+      city: studentBillingAddress.value.city || '',
+      country: studentBillingAddress.value.country || 'Schweiz',
+      vat_number: studentBillingAddress.value.vat_number || '',
+      company_register_number: studentBillingAddress.value.company_register_number || '',
+      notes: studentBillingAddress.value.notes || '',
+    }
   }
 }
 
@@ -1391,20 +1336,18 @@ const toggleCompanySearch = () => {
   if (!showCompanySearch.value) {
     companySearch.value = ''
     companyResults.value = []
+    return
   }
+  searchCompanies()
 }
 
 const searchCompanies = () => {
   if (companySearchTimer) clearTimeout(companySearchTimer)
   const q = companySearch.value.trim()
-  if (q.length < 1) {
-    companyResults.value = []
-    return
-  }
   isSearchingCompanies.value = true
   companySearchTimer = setTimeout(async () => {
     try {
-      const res: any = await $fetch('/api/admin/companies', { query: { search: q } })
+      const res: any = await $fetch('/api/admin/companies', q ? { query: { search: q } } : undefined)
       companyResults.value = res?.companies || []
     } catch (err: any) {
       console.warn('⚠️ Company search failed:', err?.message)
@@ -1412,7 +1355,7 @@ const searchCompanies = () => {
     } finally {
       isSearchingCompanies.value = false
     }
-  }, 280)
+  }, q ? 280 : 0)
 }
 
 const onCompanyPicked = async (company: any) => {
@@ -2095,25 +2038,8 @@ const shouldShowBillingAddressForm = computed(() => {
 // ✅ NEU: Computed für die Anzeige der gespeicherten Rechnungsadresse
 const shouldShowSavedBillingAddress = computed(() => {
   const isInvoiceSelected = selectedPaymentMethod.value === 'invoice'
-  const hasStudentBilling = !!studentBillingAddress.value
-  const hasExistingPaymentBilling = !!existingPayment.value?.company_billing_address
   const isNotEditing = !isEditingBillingAddress.value
-  
-  const result = isInvoiceSelected && (hasStudentBilling || hasExistingPaymentBilling) && isNotEditing
-  
-  if (isInvoiceSelected) {
-    logger.debug('🔍 shouldShowSavedBillingAddress check (INVOICE SELECTED):', {
-      isInvoiceSelected,
-      hasStudentBilling,
-      studentBillingAddress: studentBillingAddress.value,
-      hasExistingPaymentBilling,
-      existingPaymentBilling: existingPayment.value?.company_billing_address,
-      isNotEditing,
-      result
-    })
-  }
-  
-  return result
+  return isInvoiceSelected && !!currentBillingAddress.value && isNotEditing
 })
 
 // Als Bar bezahlt markieren
@@ -2183,11 +2109,9 @@ const paymentStatusBadge = computed(() => {
 
 // Computed für Rechnungsform-Validierung
 const isInvoiceFormValid = computed(() => {
-  return invoiceData.value.contact_person && 
-         invoiceData.value.email && 
-         invoiceData.value.street && 
-         invoiceData.value.zip && 
-         invoiceData.value.city
+  return !!invoiceData.value.street &&
+         !!invoiceData.value.zip &&
+         !!invoiceData.value.city
 })
 
 // Rechnungsadresse speichern

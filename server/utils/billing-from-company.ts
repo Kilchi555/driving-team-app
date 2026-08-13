@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { billingFieldsFromCompany, type CompanyAddressSource, type PersonAddressSource } from '~/utils/billing-address-map'
+import { billingFieldsFromCompany, billingFieldsFromPerson, type CompanyAddressSource, type PersonAddressSource } from '~/utils/billing-address-map'
 
 const BILLING_SELECT = 'id, company_name, contact_person, email, phone, street, street_number, zip, city, country, vat_number, company_register_number'
 const COMPANY_SELECT = 'id, name, street, street_nr, zip, city, country, email, phone, contact_person, vat_number, company_register_number'
@@ -91,14 +91,10 @@ export async function upsertBillingFromCompany(
 
 export async function resolveStudentBillingAddress(
   supabase: SupabaseClient,
-  student: {
+  student: PersonAddressSource & {
     id: string
     company_id?: string | null
     default_company_billing_address_id?: string | null
-    first_name?: string | null
-    last_name?: string | null
-    email?: string | null
-    phone?: string | null
   }
 ): Promise<ResolvedBillingAddress | null> {
   if (student.default_company_billing_address_id) {
@@ -114,28 +110,43 @@ export async function resolveStudentBillingAddress(
   const latest = await latestActiveBilling(supabase, student.id)
   if (latest) return latest
 
-  if (!student.company_id) return null
+  if (student.company_id) {
+    const { data: company } = await supabase
+      .from('companies')
+      .select(COMPANY_SELECT)
+      .eq('id', student.company_id)
+      .maybeSingle()
 
-  const { data: company } = await supabase
-    .from('companies')
-    .select(COMPANY_SELECT)
-    .eq('id', student.company_id)
-    .maybeSingle()
+    if (company) {
+      const fields = billingFieldsFromCompany(company, student)
+      return {
+        company_name: fields.company_name,
+        contact_person: fields.contact_person,
+        email: fields.email,
+        phone: fields.phone,
+        street: fields.street,
+        street_number: fields.street_number,
+        zip: fields.zip,
+        city: fields.city,
+        country: fields.country,
+        vat_number: fields.vat_number,
+        company_register_number: fields.company_register_number,
+      }
+    }
+  }
 
-  if (!company) return null
+  const person = billingFieldsFromPerson(student)
+  if (!person.street && !person.zip && !person.city) return null
 
-  const fields = billingFieldsFromCompany(company, student)
   return {
-    company_name: fields.company_name,
-    contact_person: fields.contact_person,
-    email: fields.email,
-    phone: fields.phone,
-    street: fields.street,
-    street_number: fields.street_number,
-    zip: fields.zip,
-    city: fields.city,
-    country: fields.country,
-    vat_number: fields.vat_number,
-    company_register_number: fields.company_register_number,
+    company_name: person.company_name || null,
+    contact_person: person.contact_person || null,
+    email: person.email || null,
+    phone: person.phone || null,
+    street: person.street || null,
+    street_number: person.street_number || null,
+    zip: person.zip || null,
+    city: person.city || null,
+    country: person.country || null,
   }
 }
