@@ -14,13 +14,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Nicht authentifiziert' })
   }
 
-  const { token, platform } = await readBody(event) as {
+  const { token: rawToken, platform } = await readBody(event) as {
     token?: string
     platform?: string
   }
 
+  const token = typeof rawToken === 'string' ? rawToken.trim() : ''
   if (!token || !platform) {
     throw createError({ statusCode: 400, statusMessage: 'token und platform sind erforderlich' })
+  }
+  if (token.length > 4096) {
+    throw createError({ statusCode: 400, statusMessage: 'token zu lang' })
   }
   if (!['ios', 'android', 'web'].includes(platform)) {
     throw createError({ statusCode: 400, statusMessage: 'Ungültige Plattform' })

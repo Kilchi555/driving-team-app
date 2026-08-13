@@ -681,23 +681,43 @@ export default defineEventHandler(async (event) => {
         staffLabel: terms.staff,
       }
 
-      // 1. Notify staff (queued for retry/audit)
+      // 1. Notify staff (queued for retry/audit) — isolated so failures don't skip push/customer
       if (staffEmail) {
-        const html = generateCustomerCancelledAdminEmail({ ...emailParams, recipientName: staffName })
-        await supabaseAdmin.from('outbound_messages_queue').insert({
-          tenant_id: tenantId,
-          channel: 'email',
-          recipient_email: staffEmail,
-          subject: `Termin abgesagt – ${customerName} (${apptDate})`,
-          body: html,
-          status: 'pending',
-          send_at: new Date().toISOString(),
-          context_data: {
-            stage: 'appointment_cancellation_staff',
-            tenant_name: tenantName,
-          },
+        try {
+          const html = generateCustomerCancelledAdminEmail({ ...emailParams, recipientName: staffName })
+          const { error: staffQueueError } = await supabaseAdmin.from('outbound_messages_queue').insert({
+            tenant_id: tenantId,
+            channel: 'email',
+            recipient_email: staffEmail,
+            subject: `Termin abgesagt – ${customerName} (${apptDate})`,
+            body: html,
+            status: 'pending',
+            send_at: new Date().toISOString(),
+            context_data: {
+              stage: 'appointment_cancellation_staff',
+              tenant_name: tenantName,
+              user_id: appointment.staff_id || null,
+            },
+          })
+          if (staffQueueError) {
+            logger.warn('⚠️ Staff cancellation email queue failed:', staffQueueError.message)
+          } else {
+            logger.debug('✅ Staff cancellation notification queued for:', staffEmail)
+          }
+        } catch (staffEmailErr: any) {
+          logger.warn('⚠️ Staff cancellation email failed (non-critical):', staffEmailErr?.message)
+        }
+      }
+
+      if (appointment.staff_id) {
+        const { sendPushToUser } = await import('~/server/utils/push')
+        sendPushToUser(appointment.staff_id, {
+          title: 'Termin abgesagt',
+          body: `${customerName} · ${apptDate} ${apptTime}`,
+          data: { path: '/dashboard' },
+        }).catch((pushErr: any) => {
+          logger.warn('⚠️ Staff cancellation push failed (non-critical):', pushErr?.message)
         })
-        logger.debug('✅ Staff cancellation notification queued for:', staffEmail)
       }
 
       // 2. Notify customer (email / SMS per channel policy)

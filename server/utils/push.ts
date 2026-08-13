@@ -25,12 +25,19 @@ function getServiceAccount(): { client_email: string; private_key: string } | nu
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT?.trim()
   if (!raw) return null
   try {
-    // Some hosts (and dotenv) expand `\n` inside the JSON into real newlines,
-    // which breaks JSON.parse. Normalize private_key newlines first.
-    const normalized = raw.includes('-----BEGIN PRIVATE KEY-----') && !raw.includes('\\n')
-      ? raw.replace(/\r?\n/g, '\\n')
-      : raw
-    const parsed = JSON.parse(normalized)
+    let parsed: any
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      // dotenv/Vercel sometimes expand `\n` inside private_key into real newlines,
+      // which makes the overall JSON invalid. Escape only inside the PEM block.
+      const fixed = raw.replace(
+        /-----BEGIN PRIVATE KEY-----([\s\S]*?)-----END PRIVATE KEY-----/,
+        (_m, pemBody: string) =>
+          `-----BEGIN PRIVATE KEY-----${pemBody.replace(/\r?\n/g, '\\n')}-----END PRIVATE KEY-----`,
+      )
+      parsed = JSON.parse(fixed)
+    }
     if (!parsed?.client_email || !parsed?.private_key) {
       console.warn('[Push] FIREBASE_SERVICE_ACCOUNT missing client_email/private_key')
       return null
@@ -132,38 +139,77 @@ export type SendPushResult = {
  * Send a push notification to every registered device of a user.
  * Silently no-ops if Firebase is not configured (returns sent: 0).
  * `userId` must be `public.users.id` (not auth.users.id).
+ * Never throws — callers can fire-and-forget safely.
  */
 export async function sendPushToUser(userId: string, payload: PushPayload): Promise<SendPushResult> {
-  const projectId = process.env.FIREBASE_PROJECT_ID
-  if (!projectId || !process.env.FIREBASE_SERVICE_ACCOUNT) {
-    return { sent: 0, configured: false }
+  try {
+    if (!userId || typeof userId !== 'string') {
+      return { sent: 0, configured: false }
+    }
+
+    const projectId = process.env.FIREBASE_PROJECT_ID
+    if (!projectId || !process.env.FIREBASE_SERVICE_ACCOUNT) {
+      return { sent: 0, configured: false }
+    }
+
+    const title = String(payload?.title || '').trim() || 'Simy'
+    const body = String(payload?.body || '').trim()
+    if (!body) {
+      console.warn('[Push] Skipping send — empty body')
+      return { sent: 0, configured: true }
+    }
+
+    // FCM data payload values must be strings
+    const data: Record<string, string> | undefined = payload.data
+      ? Object.fromEntries(
+          Object.entries(payload.data)
+            .filter(([, v]) => v != null && v !== '')
+            .map(([k, v]) => [k, String(v)]),
+        )
+      : undefined
+
+    const accessToken = await getAccessToken()
+    if (!accessToken) return { sent: 0, configured: false }
+
+    const supabase = getSupabaseAdmin()
+    const { data: tokens, error: tokenError } = await supabase
+      .from('push_tokens')
+      .select('id, token')
+      .eq('user_id', userId)
+
+    if (tokenError) {
+      console.warn('[Push] Token lookup failed:', tokenError.message)
+      return { sent: 0, configured: true }
+    }
+
+    if (!tokens?.length) return { sent: 0, configured: true }
+
+    const staleIds: string[] = []
+    let sent = 0
+
+    await Promise.allSettled(
+      tokens.map(async ({ id, token }) => {
+        if (!token) {
+          staleIds.push(id)
+          return
+        }
+        const result = await sendToToken(projectId, accessToken, token, {
+          title,
+          body,
+          ...(data && Object.keys(data).length ? { data } : {}),
+        })
+        if (result === 'invalid_token') staleIds.push(id)
+        else sent++
+      }),
+    )
+
+    if (staleIds.length > 0) {
+      await supabase.from('push_tokens').delete().in('id', staleIds)
+    }
+
+    return { sent, configured: true }
+  } catch (e: any) {
+    console.warn('[Push] sendPushToUser failed (non-critical):', e?.message || e)
+    return { sent: 0, configured: Boolean(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_SERVICE_ACCOUNT) }
   }
-
-  const accessToken = await getAccessToken()
-  if (!accessToken) return { sent: 0, configured: false }
-
-  const supabase = getSupabaseAdmin()
-  const { data: tokens } = await supabase
-    .from('push_tokens')
-    .select('id, token')
-    .eq('user_id', userId)
-
-  if (!tokens?.length) return { sent: 0, configured: true }
-
-  const staleIds: string[] = []
-  let sent = 0
-
-  await Promise.allSettled(
-    tokens.map(async ({ id, token }) => {
-      const result = await sendToToken(projectId, accessToken, token, payload)
-      if (result === 'invalid_token') staleIds.push(id)
-      else sent++
-    }),
-  )
-
-  if (staleIds.length > 0) {
-    await supabase.from('push_tokens').delete().in('id', staleIds)
-  }
-
-  return { sent, configured: true }
 }

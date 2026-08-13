@@ -204,6 +204,8 @@ export async function notifyStaffAssigned(
   course: CourseForNotification,
   sessions: CourseSessionForNotification[],
 ) {
+  if (!staffId) return
+
   // Solo tenants already get admin-side course emails — skip duplicate staff assign mail
   if (!(await shouldNotifyAssignedStaff(supabase, course.tenant_id))) {
     logger.debug(`⏭️ Skipping staff assignment email — tenant ${course.tenant_id} has ≤1 active staff`)
@@ -216,11 +218,6 @@ export async function notifyStaffAssigned(
     .eq('id', staffId)
     .single()
 
-  if (!staffUser?.email) {
-    logger.warn(`⚠️ Staff ${staffId} has no email — skipping assignment notification`)
-    return
-  }
-
   const { data: tenant } = await supabase
     .from('tenants')
     .select('name, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
@@ -229,33 +226,53 @@ export async function notifyStaffAssigned(
 
   const branding = extractBranding(tenant)
   const courseLabel = course.course_category?.name || course.name || 'Kurs'
-  const rows = sessionTable(sessions)
+  const safeSessions = Array.isArray(sessions) ? sessions : []
+  const rows = sessionTable(safeSessions)
 
-  const html = emailWrapper(
-    '📅 Kurs-Zuteilung',
-    `<p>Hallo ${staffUser.first_name},</p>
+  if (staffUser?.email) {
+    const html = emailWrapper(
+      '📅 Kurs-Zuteilung',
+      `<p>Hallo ${staffUser.first_name},</p>
     <p>Du wurdest als Instruktor/in für den folgenden Kurs eingeplant:</p>
     <p style="font-size:18px;font-weight:700;color:#1e293b;margin:16px 0">${courseLabel}</p>
     <table><thead><tr>
       <th>Datum</th><th>Zeit</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <p style="margin-top:24px;color:#6b7280;font-size:14px">Die Termine sind bereits in deinem Kalender eingetragen.</p>`,
-    branding.name,
-    branding,
-  )
+      branding.name,
+      branding,
+    )
+
+    try {
+      await sendEmail({
+        to: staffUser.email,
+        subject: `Kurs-Zuteilung: ${courseLabel}`,
+        html,
+        fromName: tenant?.name ?? undefined,
+        fromEmail: tenant?.from_email ?? null,
+        domainVerified: tenant?.resend_domain_verified ?? false,
+      })
+      logger.debug(`✅ Assignment email sent to ${staffUser.email}`)
+    } catch (e: any) {
+      logger.warn(`⚠️ Could not send assignment email to ${staffUser.email}:`, e.message)
+    }
+  } else {
+    logger.warn(`⚠️ Staff ${staffId} has no email — skipping assignment email (push still attempted)`)
+  }
 
   try {
-    await sendEmail({
-      to: staffUser.email,
-      subject: `Kurs-Zuteilung: ${courseLabel}`,
-      html,
-      fromName: tenant?.name ?? undefined,
-      fromEmail: tenant?.from_email ?? null,
-      domainVerified: tenant?.resend_domain_verified ?? false,
+    const { sendPushToUser } = await import('~/server/utils/push')
+    const first = safeSessions
+      .slice()
+      .sort((a, b) => a.start_time.localeCompare(b.start_time))[0]
+    const when = first ? `${fmtDate(first.start_time)} ${fmtTime(first.start_time)}` : ''
+    await sendPushToUser(staffId, {
+      title: 'Kurs-Zuteilung',
+      body: when ? `${courseLabel} · ${when}` : `${courseLabel} · bitte prüfen`,
+      data: { path: '/dashboard' },
     })
-    logger.debug(`✅ Assignment email sent to ${staffUser.email}`)
   } catch (e: any) {
-    logger.warn(`⚠️ Could not send assignment email to ${staffUser.email}:`, e.message)
+    logger.warn(`⚠️ Staff assignment push failed (non-critical):`, e?.message)
   }
 }
 
@@ -295,13 +312,13 @@ async function sendStaffCourseRemovalEmail(
   sessions: CourseSessionForNotification[],
   copy: { header: string; intro: string; subjectPrefix: string },
 ) {
+  if (!staffId) return
+
   const { data: staffUser } = await supabase
     .from('users')
     .select('first_name, last_name, email')
     .eq('id', staffId)
     .single()
-
-  if (!staffUser?.email) return
 
   const { data: tenant } = await supabase
     .from('tenants')
@@ -311,33 +328,48 @@ async function sendStaffCourseRemovalEmail(
 
   const branding = extractBranding(tenant)
   const courseLabel = course.course_category?.name || course.name || 'Kurs'
-  const rows = sessionTable(sessions)
+  const safeSessions = Array.isArray(sessions) ? sessions : []
+  const rows = sessionTable(safeSessions)
 
-  const html = emailWrapper(
-    copy.header,
-    `<p>Hallo ${staffUser.first_name},</p>
+  if (staffUser?.email) {
+    const html = emailWrapper(
+      copy.header,
+      `<p>Hallo ${staffUser.first_name},</p>
     <p>${copy.intro}</p>
     <p style="font-size:18px;font-weight:700;color:#dc2626;margin:16px 0">${courseLabel}</p>
     <table><thead><tr>
       <th>Datum</th><th>Zeit</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <p style="margin-top:24px;color:#6b7280;font-size:14px">Die Kalendertermine wurden automatisch entfernt.</p>`,
-    branding.name,
-    branding,
-  )
+      branding.name,
+      branding,
+    )
+
+    try {
+      await sendEmail({
+        to: staffUser.email,
+        subject: `${copy.subjectPrefix}: ${courseLabel}`,
+        html,
+        fromName: tenant?.name ?? undefined,
+        fromEmail: tenant?.from_email ?? null,
+        domainVerified: tenant?.resend_domain_verified ?? false,
+      })
+      logger.debug(`✅ Staff course email sent to ${staffUser.email} (${copy.subjectPrefix})`)
+    } catch (e: any) {
+      logger.warn(`⚠️ Could not send staff course email to ${staffUser.email}:`, e.message)
+    }
+  }
 
   try {
-    await sendEmail({
-      to: staffUser.email,
-      subject: `${copy.subjectPrefix}: ${courseLabel}`,
-      html,
-      fromName: tenant?.name ?? undefined,
-      fromEmail: tenant?.from_email ?? null,
-      domainVerified: tenant?.resend_domain_verified ?? false,
+    const { sendPushToUser } = await import('~/server/utils/push')
+    const isCancelled = copy.subjectPrefix.toLowerCase().includes('abgesagt')
+    await sendPushToUser(staffId, {
+      title: isCancelled ? 'Kurs abgesagt' : 'Kurs-Zuteilung entfernt',
+      body: `${courseLabel} · aus Kalender entfernt`,
+      data: { path: '/dashboard' },
     })
-    logger.debug(`✅ Staff course email sent to ${staffUser.email} (${copy.subjectPrefix})`)
   } catch (e: any) {
-    logger.warn(`⚠️ Could not send staff course email to ${staffUser.email}:`, e.message)
+    logger.warn(`⚠️ Staff course removal push failed (non-critical):`, e?.message)
   }
 }
 
