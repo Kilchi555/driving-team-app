@@ -3,7 +3,9 @@
 # the only gate and is skippable with SKIP_SMOKE_TEST=1.
 #
 # Blocking today: unit tests + lint on the test suite, plus Playwright
-# login against the apple-review demo tenant (needs E2E_DEMO_PASSWORD).
+# login and tenant isolation. PRs hit the Vercel simy-app preview
+# (needs VERCEL_AUTOMATION_BYPASS_SECRET). Pushes to main stay on
+# https://app.simy.ch.
 #
 # Report-only: npm audit. Production deps currently include unfixed
 # highs/criticals (xlsx has no patch; nuxt/vite pull more). Failing the
@@ -21,6 +23,7 @@ concurrency:
 
 permissions:
   contents: read
+  deployments: read
 
 jobs:
   quality:
@@ -54,10 +57,18 @@ jobs:
   e2e:
     name: E2E login
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Wait for Vercel preview
+        id: preview
+        if: github.event_name == 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          E2E_PREVIEW_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/wait-for-simy-preview.mjs
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -71,9 +82,15 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Apple Review login
+      - name: Playwright
         env:
           E2E_DEMO_PASSWORD: ${{ secrets.E2E_DEMO_PASSWORD }}
           E2E_ISOLATION_PASSWORD: ${{ secrets.E2E_ISOLATION_PASSWORD }}
-          E2E_BASE_URL: https://app.simy.ch
-        run: npm run test:e2e
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          E2E_BASE_URL: ${{ github.event_name == 'pull_request' && steps.preview.outputs.url || 'https://app.simy.ch' }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            echo "VERCEL_AUTOMATION_BYPASS_SECRET is not set"
+            exit 1
+          fi
+          npm run test:e2e
