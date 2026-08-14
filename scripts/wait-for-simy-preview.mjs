@@ -4,6 +4,7 @@
  * build instead of production.
  */
 import { appendFileSync } from 'node:fs'
+
 const repo = process.env.GITHUB_REPOSITORY
 const sha = process.env.E2E_PREVIEW_SHA
 const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
@@ -53,21 +54,30 @@ while (Date.now() < deadline) {
     console.log(`No simy-app preview deployment yet for ${sha.slice(0, 7)}`)
   }
 
+  const states = []
   for (const deployment of candidates) {
     const statuses = await gh(
       `/repos/${repo}/deployments/${deployment.id}/statuses`
     )
     const latest = statuses[0]
     if (!latest) continue
-    lastState = `${deployment.environment}:${latest.state}`
-    if (latest.state === 'success' && latest.target_url) {
-      writeOutput(latest.target_url)
-      process.exit(0)
-    }
-    if (latest.state === 'failure' || latest.state === 'error') {
-      console.error(`Preview failed (${lastState})`)
-      process.exit(1)
-    }
+    states.push({
+      id: deployment.id,
+      state: latest.state,
+      url: latest.target_url,
+    })
+  }
+
+  const ready = states.find((row) => row.state === 'success' && row.url)
+  if (ready) {
+    writeOutput(ready.url)
+    process.exit(0)
+  }
+
+  lastState = states.map((row) => `${row.id}:${row.state}`).join(', ') || 'none'
+  if (states.some((row) => row.state === 'failure' || row.state === 'error')) {
+    console.log(`A preview failed; waiting for a later deploy (${lastState})`)
+  } else if (states.length > 0) {
     console.log(`Waiting: ${lastState}`)
   }
 
