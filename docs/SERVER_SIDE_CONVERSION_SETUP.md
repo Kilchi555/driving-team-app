@@ -111,6 +111,17 @@ Ohne diese Variable: Anfragen werden trotzdem in `booking_events` + GA4 getrackt
 
 Nach dem Setzen: redeploy (`vercel --prod` oder neuer Push triggert auto-deploy).
 
+### Inquiry upload — Idempotenz & Wert
+
+- Audit-Key: `order_id = inquiry-<proposal_id>` in `google_ads_conversion_uploads`.
+- Wenn bereits eine Row mit `upload_status='success'` existiert → **kein zweiter Upload** (Duplicate-Schutz).
+- `pending` / `failed` Rows dürfen erneut versucht werden (kein stiller Skip).
+- Lead-Wert: `GOOGLE_ADS_INQUIRY_CONVERSION_VALUE_CHF` (leer/ungültig → Fallback **10** CHF). Leerer String in Vercel zählt **nicht** als unset — der Code trimmed und validiert explizit (sonst Upload mit Value 0).
+
+### Kurs-Enrollment Attribution
+
+`CourseEnrollmentModal` liest `window.__marketingAttribution` und übergibt den Blob an Wallee/course enroll APIs (`enroll-wallee` speichert u.a. `gclid` / `gbraid` / `wbraid` / Facebook click ids auf der Payment-/Enrollment-Kette). Ohne vorausgehendes Attribution-Plugin (`dt_attr` / localStorage) bleibt der Blob leer — gleiche Semantik wie bei Lesson-Bookings.
+
 ## 5. Smoke Test in Produktion
 
 1. Klicke auf einen aktiven Google Ads `drivingteam.ch`-Anzeigentext.
@@ -135,6 +146,8 @@ Nach dem Setzen: redeploy (`vercel --prod` oder neuer Push triggert auto-deploy)
 | ----------------------------------------- | ------------------------------------------------------------------------ |
 | User klickt kein Ad, sondern organisch    | `gclid` fehlt → Upload wird mit `skipped_no_click_id` geloggt, nichts wird an Google geschickt. Booking läuft normal. |
 | `GOOGLE_ADS_CONVERSION_ACTION_ID` fehlt   | Upload wird mit `missing_credentials` geloggt, Booking läuft normal.     |
+| Inquiry erneut für dieselbe `proposal_id` | Skip wenn bereits `upload_status='success'` für `inquiry-<proposal_id>`. |
+| `GOOGLE_ADS_INQUIRY_CONVERSION_VALUE_CHF=""` | Wird wie ungültig behandelt → Default 10 CHF (nicht 0).                |
 | Google Ads API Fehler                     | `upload_status='failed'`, `error_message` ist gesetzt. Booking läuft.    |
 | Buchung wird storniert (chargePercentage=0) | RETRACT-Adjustment wird gesendet, Conversion wird in Google entfernt.    |
 | Buchung wird zu 50% storniert             | RESTATEMENT-Adjustment auf 50 % des Originalwerts.                       |
