@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { demoPassword, signIn } from './auth'
+import { demoPassword, newE2EContext, signIn } from './auth'
 
 const isolationPassword = process.env.E2E_ISOLATION_PASSWORD || demoPassword
 
@@ -20,7 +20,7 @@ test.describe('tenant isolation', () => {
   test.skip(!demoPassword || !isolationPassword, 'E2E passwords are not set')
 
   test('apple-review admin cannot read e2e-isolation users or appointments', async ({ browser }) => {
-    const isolation = await browser.newContext()
+    const isolation = await newE2EContext(browser)
     const isolationPage = await isolation.newPage()
     await signIn(isolationPage, 'e2e-isolation@simy.ch', 'e2e-isolation', isolationPassword)
 
@@ -39,7 +39,7 @@ test.describe('tenant isolation', () => {
 
     await isolation.close()
 
-    const apple = await browser.newContext()
+    const apple = await newE2EContext(browser)
     const applePage = await apple.newPage()
     await signIn(applePage, 'demo-admin@simy.ch', 'apple-review')
 
