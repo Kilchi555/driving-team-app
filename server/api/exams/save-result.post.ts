@@ -1,5 +1,5 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { getAuthenticatedUser } from '~/server/utils/auth'
+import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { triggerAutoInvoiceOnComplete } from '~/server/utils/auto-invoice-on-complete'
 import logger from '~/utils/logger'
@@ -20,29 +20,44 @@ import { getTenantTerminology } from '~/server/utils/tenant-terminology'
  * 
  * Security Layers:
  *   1. Bearer Token Authentication
- *   2. Tenant Isolation
- *   3. Input Validation
+ *   2. Staff/admin role gate
+ *   3. Tenant Isolation
+ *   4. Input Validation
  */
 
 export default defineEventHandler(async (event) => {
   try {
-    // ✅ 1. AUTHENTIFIZIERUNG
-    const authUser = await getAuthenticatedUser(event)
-    if (!authUser) {
-      throw createError({ statusCode: 401, message: 'Unauthorized' })
-    }
+    // ✅ 1. AUTHENTIFIZIERUNG + ROLLE
+    const profile = await requireAdminProfile(event, [
+      'admin',
+      'staff',
+      'super_admin',
+      'tenant_admin',
+      'externer_instruktor'
+    ])
 
     const supabase = getSupabaseAdmin()
 
-    // Get user from users table to get tenant_id
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id, tenant_id, role, first_name, last_name, email')
-      .eq('auth_user_id', authUser.id)
-      .single()
+    const user = {
+      id: profile.id,
+      tenant_id: profile.tenant_id,
+      role: profile.role,
+      first_name: null as string | null,
+      last_name: null as string | null,
+      email: null as string | null
+    }
 
-    if (userError || !user) {
-      throw createError({ statusCode: 401, message: 'User not found' })
+    // Optional display fields for emails (non-secret)
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('first_name, last_name, email')
+      .eq('id', profile.id)
+      .maybeSingle()
+
+    if (userRow) {
+      user.first_name = userRow.first_name
+      user.last_name = userRow.last_name
+      user.email = userRow.email
     }
 
     const tenantId = user.tenant_id
