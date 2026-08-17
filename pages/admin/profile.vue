@@ -1641,6 +1641,26 @@
             </div>
           </div>
 
+          <!-- Default payment method for new appointments -->
+          <div class="bg-white rounded-lg shadow-sm border p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-1">Standard-Zahlungsart</h2>
+            <p class="text-sm text-gray-500 mb-4">
+              Wird im Termin-Dialog vorausgewählt, wenn der Kunde keine eigene Präferenz hat.
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <label
+                v-for="method in defaultPaymentMethodOptions"
+                :key="method.key"
+                class="flex items-center justify-between gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                :class="paymentSettings.default_payment_method === method.key ? '' : 'border-gray-200'"
+                :style="paymentSettings.default_payment_method === method.key ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
+              >
+                <span class="text-sm font-medium text-gray-700">{{ method.label }}</span>
+                <input type="radio" v-model="paymentSettings.default_payment_method" :value="method.key" class="rounded" />
+              </label>
+            </div>
+          </div>
+
           <!-- Cash Payment Settings -->
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-4">Barzahlungs-Einstellungen</h2>
@@ -2933,8 +2953,15 @@ const paymentSettings = ref({
   // Off by default: previously there was no way for customers to choose
   // "Rechnung" in self-service booking, so keep that behavior unchanged
   // until an admin explicitly opts in.
-  invoice_payments_enabled: false
+  invoice_payments_enabled: false,
+  default_payment_method: 'wallee'
 })
+
+const defaultPaymentMethodOptions = [
+  { key: 'wallee', label: 'Online (TWINT / Karte)' },
+  { key: 'invoice', label: 'Rechnung' },
+  { key: 'cash', label: 'Bar' }
+]
 
 const staffInvoicePermission = ref<'hidden' | 'create_only' | 'create_and_send'>('create_and_send')
 const autoInvoiceOnComplete = ref(false)

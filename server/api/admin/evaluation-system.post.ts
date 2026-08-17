@@ -114,7 +114,7 @@ export default defineEventHandler(async (event) => {
         .from('evaluation_categories')
         .select('id, name, description, color, display_order, is_active, tenant_id, is_theory')
         .eq('is_active', true)
-        .or(`tenant_id.eq.${tenantId},and(is_theory.eq.true,tenant_id.is.null)`)
+        .eq('tenant_id', tenantId)
         .order('display_order'),
       // is_theory lives on evaluation_categories only — filtering it here
       // makes PostgREST reject the whole criteria query (silent empty list).

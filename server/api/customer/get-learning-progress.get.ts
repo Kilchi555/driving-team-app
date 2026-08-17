@@ -145,10 +145,12 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
 
     const appointmentIds = (appointments || []).map(a => a.id)
 
-    // 3. Load max evaluation scale rating
-    const { data: scaleData, error: scaleError } = await supabaseAdmin
+    // 3. Load max evaluation scale rating (tenant scale only; no global 1–6 mix)
+    const { data: tenantScale, error: scaleError } = await supabaseAdmin
       .from('evaluation_scale')
       .select('rating')
+      .eq('tenant_id', tenantId)
+      .eq('is_active', true)
       .order('rating', { ascending: false })
       .limit(1)
 
@@ -157,7 +159,7 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
       throw scaleError
     }
 
-    const maxRating = scaleData?.[0]?.rating || 5
+    const maxRating = tenantScale?.[0]?.rating || 5
 
     // 4. Load notes/evaluations for appointments
     let notes: any[] = []
@@ -176,11 +178,11 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
       notes = notesData || []
     }
 
-    // 5. Load ALL evaluation_categories for this tenant (incl. global ones with tenant_id = null)
+    // 5. Only tenant-owned evaluation categories — never global templates
     const { data: categories, error: categoriesError } = await supabaseAdmin
       .from('evaluation_categories')
       .select('id, name, display_order, color, is_theory')
-      .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
+      .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('display_order')
 
@@ -189,8 +191,7 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
       throw categoriesError
     }
 
-    // 6. Load ALL criteria for this tenant (incl. global categories with tenant_id = null)
-    // Filter by category_id using already tenant-scoped categories — avoids unsupported cross-table .or() filter
+    // 6. Only tenant-owned criteria
     const categoryIds = (categories || []).map((c: any) => c.id)
 
     let criteria: any[] = []
@@ -210,6 +211,8 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
         evaluation_categories!inner(id, name, display_order, color, tenant_id)
       `)
         .in('category_id', categoryIds)
+        .eq('tenant_id', tenantId)
+        .eq('evaluation_categories.tenant_id', tenantId)
         .eq('is_active', true)
         .order('display_order')
       criteria = data || []
