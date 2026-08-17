@@ -393,13 +393,73 @@
       "permanent": true
     },
     {
-      "source": "/fahrschule-aargau",
-      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "source": "/preise",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
       "permanent": true
     },
     {
-      "source": "/fahrschule-aargau/",
-      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "source": "/preise/",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/impressum",
+      "destination": "https://drivingteam.ch/kontakt/",
+      "permanent": true
+    },
+    {
+      "source": "/impressum/",
+      "destination": "https://drivingteam.ch/kontakt/",
+      "permanent": true
+    },
+    {
+      "source": "/lastwagen-fahrschule-3",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/lastwagen-fahrschule-3/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/auto",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/auto/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/motorrad",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/motorrad/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/lastwagen",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/lastwagen/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/taxi",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/taxi/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
       "permanent": true
     },
     {

@@ -652,6 +652,11 @@
 import { ref, computed } from 'vue'
 definePageMeta({ layout: false })
 
+useHead({
+  title: 'fahre-schlau Preview | Martin Scotti',
+  meta: [{ name: 'robots', content: 'noindex, nofollow' }],
+})
+
 const whatsappMsg = encodeURIComponent('Hallo Martin 👋 Ich interessiere mich für Fahrstunden bei fahre-schlau. Kannst du mir mehr Infos geben und einen Termin vorschlagen?')
 const whatsappLink = `https://wa.me/41791248922?text=${whatsappMsg}`
 
