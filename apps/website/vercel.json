@@ -393,13 +393,73 @@
       "permanent": true
     },
     {
-      "source": "/fahrschule-aargau",
-      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "source": "/preise",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
       "permanent": true
     },
     {
-      "source": "/fahrschule-aargau/",
-      "destination": "https://drivingteam.ch/fahrschule-spreitenbach/",
+      "source": "/preise/",
+      "destination": "https://drivingteam.ch/fahrschule-preise/",
+      "permanent": true
+    },
+    {
+      "source": "/impressum",
+      "destination": "https://drivingteam.ch/kontakt/",
+      "permanent": true
+    },
+    {
+      "source": "/impressum/",
+      "destination": "https://drivingteam.ch/kontakt/",
+      "permanent": true
+    },
+    {
+      "source": "/lastwagen-fahrschule-3",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/lastwagen-fahrschule-3/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/auto",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/auto/",
+      "destination": "https://drivingteam.ch/auto-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/motorrad",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/motorrad/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/lastwagen",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/lastwagen/",
+      "destination": "https://drivingteam.ch/lastwagen-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/taxi",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
+      "permanent": true
+    },
+    {
+      "source": "/categories/taxi/",
+      "destination": "https://drivingteam.ch/taxi-fahrschule/",
       "permanent": true
     },
     {
@@ -3145,6 +3205,26 @@
     },
     {
       "source": "/anh%C3%A4nger-fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-z%c3%bcrich",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-z%c3%bcrich/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/anh%c3%a4nger-fahrschule-lachen",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/anh%c3%a4nger-fahrschule-lachen/",
       "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
       "permanent": true
     }

@@ -5,10 +5,9 @@ export default defineNuxtRouteMiddleware((to, from) => {
     '/categories/motorrad': '/motorrad-fahrschule/',
     '/categories/lastwagen': '/lastwagen-fahrschule/',
     '/categories/taxi': '/taxi-fahrschule/',
-    '/pricing': '/preise/',
-    '/about': '/uber-uns/',
+    '/pricing': '/fahrschule-preise/',
+    '/about': '/team/',
     '/contact': '/kontakt/',
-    '/faq': '/',
   }
 
   const redirectUrl = redirects[to.path]
