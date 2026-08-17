@@ -92,7 +92,7 @@ export async function dispatchAppointmentConfirmation(
   // Idempotent: already delivered
   const { data: existingAppt } = await supabase
     .from('appointments')
-    .select('confirmation_email_sent_at, confirmation_email_status')
+    .select('confirmation_email_sent_at, confirmation_email_status, start_time, status')
     .eq('id', appointmentId)
     .maybeSingle()
 
@@ -110,6 +110,31 @@ export async function dispatchAppointmentConfirmation(
       message: existingAppt?.confirmation_email_status === 'queued'
         ? 'Confirmation already queued'
         : 'Confirmation already sent',
+    }
+  }
+
+  const status = String(existingAppt?.status || '')
+  if (status === 'cancelled' || status === 'canceled') {
+    await markConfirmationStatus(appointmentId, 'skipped', true)
+    return { success: true, skipped: true, reason: 'cancelled' }
+  }
+
+  // Never confirm a lesson that already happened (late Wallee pay, backdated staff entry).
+  const PAST_GRACE_MS = 30 * 60 * 1000
+  if (existingAppt?.start_time) {
+    const startMs = new Date(existingAppt.start_time).getTime()
+    if (Number.isFinite(startMs) && startMs < Date.now() - PAST_GRACE_MS) {
+      await markConfirmationStatus(appointmentId, 'skipped', true)
+      logger.debug('⏭️ Skipping confirmation — appointment already started', {
+        appointmentId,
+        start_time: existingAppt.start_time,
+      })
+      return {
+        success: true,
+        skipped: true,
+        reason: 'appointment_in_past',
+        message: 'Confirmation skipped (appointment already started)',
+      }
     }
   }
 
@@ -145,6 +170,7 @@ export async function dispatchAppointmentConfirmation(
     .select(`
       id, title, start_time, end_time, duration_minutes, event_type_code, type,
       staff_id, confirmation_token, location_id, customer_pickup_address, source, created_by,
+      original_price_rappen,
       payments ( id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_status )
     `)
     .eq('id', appointmentId)
@@ -279,7 +305,17 @@ export async function dispatchAppointmentConfirmation(
     }
   }
 
-  const payment = Array.isArray(appointment.payments) ? appointment.payments[0] : appointment.payments
+  let payment = Array.isArray(appointment.payments) ? appointment.payments[0] : appointment.payments
+  if (!payment?.total_amount_rappen) {
+    const { data: payRow } = await supabase
+      .from('payments')
+      .select('id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_status')
+      .eq('appointment_id', appointmentId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (payRow) payment = payRow
+  }
   const startTime = new Date(appointment.start_time)
   const endTime = appointment.end_time ? new Date(appointment.end_time) : null
   const appointmentDateTime = startTime.toLocaleString('de-CH', {
@@ -296,7 +332,8 @@ export async function dispatchAppointmentConfirmation(
     (endTime ? Math.round((endTime.getTime() - startTime.getTime()) / 60000) : undefined)
 
   const customerDashboard = `${CUSTOMER_PORTAL_BASE_URL}/${tenant.slug}`
-  const amount = payment ? `CHF ${(payment.total_amount_rappen / 100).toFixed(2)}` : 'CHF 0.00'
+  const rappen = Number(payment?.total_amount_rappen || appointment.original_price_rappen || 0)
+  const amount = rappen > 0 ? `CHF ${(rappen / 100).toFixed(2)}` : undefined
 
   let emailSent = false
   let emailQueued = false
