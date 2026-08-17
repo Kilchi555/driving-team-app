@@ -1,6 +1,6 @@
 import { SITEMAP_PATHS } from '../../data/sitemap-urls'
 
-export default defineEventHandler(() => {
+export default defineEventHandler((event) => {
   const urls = SITEMAP_PATHS.map(
     (e) => `  <url>
     <loc>https://drivingteam.ch${e.path}</loc>

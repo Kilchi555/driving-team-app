@@ -166,7 +166,6 @@ export default defineNuxtConfig({
       failOnError: false,
       routes: [
         '/',
-        '/blog/',
         '/blog/fuehrerschein-kosten-schweiz/',
         '/blog/bf17-begleitetes-fahren-schweiz/',
         '/blog/fuehrerschein-kategorien-schweiz/',
@@ -204,8 +203,8 @@ export default defineNuxtConfig({
 
     // Uster → vercel.json only (routeRules + vercel redirects = EEXIST symlink on Nitro/Vercel)
 
-    // ===== BLOG ARTIKEL – explizit prerendered =====
-    '/blog/': { prerender: true },
+    // Blog-Index nicht prerendern: Nitro schreibt sonst eine Datei `blog`
+    // (Meta-Refresh auf /blog/), die auf Vercel /blog/ überschreibt.
     '/blog/fuehrerschein-kosten-schweiz/': { prerender: true },
     '/blog/bf17-begleitetes-fahren-schweiz/': { prerender: true },
     '/blog/fuehrerschein-kategorien-schweiz/': { prerender: true },
