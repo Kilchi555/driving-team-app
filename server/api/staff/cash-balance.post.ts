@@ -1,7 +1,15 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { requireAdminProfile } from '~/server/utils/auth'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, [
+    'admin',
+    'staff',
+    'super_admin',
+    'tenant_admin'
+  ])
+
   const body = await readBody(event)
   const { action, data } = body
 
@@ -12,22 +20,46 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  )
+  const instructorId = data?.instructorId
+  if (!instructorId || typeof instructorId !== 'string') {
+    throw createError({
+      statusCode: 400,
+      message: 'instructorId is required'
+    })
+  }
+
+  // Non-admin staff may only read their own cash ledger
+  if (
+    profile.role === 'staff' &&
+    profile.id !== instructorId
+  ) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Forbidden – can only view own cash balance'
+    })
+  }
+
+  const supabase = getSupabaseAdmin()
+
+  // Ensure the instructor belongs to the caller's tenant (super_admin may cross tenants)
+  if (profile.role !== 'super_admin') {
+    const { data: instructor, error: instructorError } = await supabase
+      .from('users')
+      .select('id, tenant_id')
+      .eq('id', instructorId)
+      .eq('tenant_id', profile.tenant_id)
+      .maybeSingle()
+
+    if (instructorError || !instructor) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden – instructor not in tenant'
+      })
+    }
+  }
 
   try {
     if (action === 'loadMovements') {
-      const { instructorId } = data
-
-      if (!instructorId) {
-        throw createError({
-          statusCode: 400,
-          message: 'instructorId is required'
-        })
-      }
-
       const { data: movements, error } = await supabase
         .from('cash_movements')
         .select('*')
@@ -41,15 +73,6 @@ export default defineEventHandler(async (event) => {
         data: movements || []
       }
     } else if (action === 'loadTransactions') {
-      const { instructorId } = data
-
-      if (!instructorId) {
-        throw createError({
-          statusCode: 400,
-          message: 'instructorId is required'
-        })
-      }
-
       const { data: transactions, error } = await supabase
         .from('cash_transactions')
         .select(

@@ -3309,7 +3309,7 @@ const submitRegistration = async () => {
     try {
       await $fetch('/api/tenants/send-welcome-email', {
         method: 'POST',
-        body: { tenantId: response.tenant.id }
+        body: { tenantId: response.tenant.id, registration_token: registrationToken }
       })
     } catch (welcomeErr) {
       console.warn('Welcome email failed (non-critical):', welcomeErr)

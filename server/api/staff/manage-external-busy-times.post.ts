@@ -15,6 +15,7 @@
  */
 
 import { defineEventHandler, createError, readBody } from 'h3'
+import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
@@ -56,6 +57,13 @@ type ManageBusyTimeRequest =
 
 export default defineEventHandler(async (event) => {
   try {
+    const profile = await requireAdminProfile(event, [
+      'admin',
+      'staff',
+      'super_admin',
+      'tenant_admin'
+    ])
+
     const supabase = getSupabaseAdmin()
     const slotManager = createAvailabilitySlotManager(supabase)
     
@@ -64,10 +72,51 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('🔄 External busy time action:', action)
 
+    const resolveTenantAndStaff = async (staff_id: string, requestedTenantId?: string) => {
+      if (!staff_id) {
+        throw createError({ statusCode: 400, statusMessage: 'staff_id is required' })
+      }
+
+      const tenant_id =
+        profile.role === 'super_admin' && requestedTenantId
+          ? requestedTenantId
+          : profile.tenant_id
+
+      if (!tenant_id) {
+        throw createError({ statusCode: 403, statusMessage: 'Forbidden – no tenant assigned' })
+      }
+
+      // Staff may only mutate their own busy times; admins any staff in tenant
+      if (profile.role === 'staff' && profile.id !== staff_id) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Forbidden – can only manage own busy times'
+        })
+      }
+
+      const { data: staffUser, error: staffError } = await supabase
+        .from('users')
+        .select('id, tenant_id')
+        .eq('id', staff_id)
+        .eq('tenant_id', tenant_id)
+        .maybeSingle()
+
+      if (staffError || !staffUser) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Forbidden – staff not in tenant'
+        })
+      }
+
+      return { tenant_id, staff_id }
+    }
+
     // ========== CREATE EXTERNAL BUSY TIME ==========
     if (action === 'create') {
-      const { staff_id, start_time, end_time, tenant_id, title, source } = 
+      const { staff_id: rawStaffId, start_time, end_time, tenant_id: rawTenantId, title, source } = 
         body as CreateExternalBusyTimeRequest
+
+      const { tenant_id, staff_id } = await resolveTenantAndStaff(rawStaffId, rawTenantId)
 
       logger.debug('➕ Creating external busy time:', {
         staff_id: staff_id.substring(0, 8),
@@ -140,13 +189,15 @@ export default defineEventHandler(async (event) => {
     if (action === 'update') {
       const {
         id,
-        staff_id,
+        staff_id: rawStaffId,
         old_start_time,
         old_end_time,
         start_time,
         end_time,
-        tenant_id
+        tenant_id: rawTenantId
       } = body as UpdateExternalBusyTimeRequest
+
+      const { tenant_id, staff_id } = await resolveTenantAndStaff(rawStaffId, rawTenantId)
 
       logger.debug('✏️ Updating external busy time:', {
         id: id.substring(0, 8),
@@ -163,6 +214,8 @@ export default defineEventHandler(async (event) => {
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
+        .eq('tenant_id', tenant_id)
+        .eq('staff_id', staff_id)
         .select()
         .single()
 
@@ -226,8 +279,10 @@ export default defineEventHandler(async (event) => {
 
     // ========== DELETE EXTERNAL BUSY TIME ==========
     if (action === 'delete') {
-      const { id, staff_id, start_time, end_time, tenant_id } = 
+      const { id, staff_id: rawStaffId, start_time, end_time, tenant_id: rawTenantId } = 
         body as DeleteExternalBusyTimeRequest
+
+      const { tenant_id, staff_id } = await resolveTenantAndStaff(rawStaffId, rawTenantId)
 
       logger.debug('🗑️ Deleting external busy time:', {
         id: id.substring(0, 8),
@@ -240,6 +295,8 @@ export default defineEventHandler(async (event) => {
         .from('external_busy_times')
         .delete()
         .eq('id', id)
+        .eq('tenant_id', tenant_id)
+        .eq('staff_id', staff_id)
 
       if (deleteError) {
         logger.error('❌ Error deleting external busy time:', deleteError)

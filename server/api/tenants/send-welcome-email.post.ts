@@ -1,9 +1,38 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendWelcomeEmail } from '~/server/utils/send-welcome-email'
+import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
+import { verifyRegistrationToken } from '~/server/utils/registration-token'
 
+/**
+ * POST /api/tenants/send-welcome-email
+ *
+ * Allowed callers:
+ * - Registration flow presenting a valid short-lived registration_token for tenantId
+ * - Authenticated staff/admin for their tenant (or internal secret)
+ */
 export default defineEventHandler(async (event) => {
-  const { tenantId } = await readBody(event)
+  const body = await readBody(event)
+  const tenantId = body?.tenantId as string | undefined
+  const registrationToken = body?.registration_token as string | undefined
+
   if (!tenantId) throw createError({ statusCode: 400, statusMessage: 'Missing tenantId' })
+
+  const isRegistrationFlow = verifyRegistrationToken(registrationToken, tenantId)
+
+  if (!isRegistrationFlow) {
+    const auth = await requireStaffOrInternal(event)
+    if (
+      auth.mode === 'staff' &&
+      auth.profile?.role !== 'super_admin' &&
+      auth.profile?.tenant_id &&
+      auth.profile.tenant_id !== tenantId
+    ) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden – tenant mismatch'
+      })
+    }
+  }
 
   const supabase = getSupabaseAdmin()
   const { data: tenant, error } = await supabase
