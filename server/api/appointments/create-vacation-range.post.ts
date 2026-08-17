@@ -9,21 +9,18 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { zurichWallTimeToUtc } from '~/server/utils/zurich-wall-time'
 
-const TIMEZONE = 'Europe/Zurich'
-
-function localDateParts(dateStr: string, timeStr: string) {
-  // Build an ISO string in Zurich time and convert to UTC for DB storage
-  const local = new Date(`${dateStr}T${timeStr}:00`)
-  // Force interpretation as Zurich local time via Intl
-  const zurichFormatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: TIMEZONE,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: false
-  })
-  // We just pass the date string directly – Supabase stores with TZ, so we build a proper ISO
-  return `${dateStr}T${timeStr}:00`
+/** 07:00–19:00 Europe/Zurich as UTC ISO, DST-safe. */
+function vacationBoundsUtc(day: string): { startISO: string; endISO: string; durationMinutes: number } {
+  const [year, month, date] = day.split('-').map(Number)
+  const start = zurichWallTimeToUtc(year, month - 1, date, 7, 0)
+  const end = zurichWallTimeToUtc(year, month - 1, date, 19, 0)
+  return {
+    startISO: start.toISOString(),
+    endISO: end.toISOString(),
+    durationMinutes: Math.round((end.getTime() - start.getTime()) / 60000),
+  }
 }
 
 function isWeekend(dateStr: string) {
@@ -75,10 +72,8 @@ export default defineEventHandler(async (event) => {
 
     if (!staffUser) throw createError({ statusCode: 404, statusMessage: 'Staff not found' })
 
-    // Calendar block: always 07:00–19:00 (720 min) to prevent customer bookings.
-    // The actual vacation hours are calculated separately by the calculator (distinct days × daily_hours).
-    const VACATION_START = '07:00'
-    const VACATION_DURATION_MINUTES = 720 // 07:00–19:00
+    // Calendar block: 07:00–19:00 Europe/Zurich so early morning slots are covered.
+    // Vacation hours for payroll are calculated separately (distinct days × daily_hours).
 
     // Get vacation event type (system or tenant-level)
     const supabase = getSupabaseAdmin()
@@ -99,15 +94,13 @@ export default defineEventHandler(async (event) => {
 
     // Build appointment rows (no user_id – vacation has no student)
     const appointments = workingDays.map((day) => {
-      const startISO = `${day}T${VACATION_START}:00`
-      const endDate = new Date(new Date(startISO).getTime() + VACATION_DURATION_MINUTES * 60 * 1000)
-      const endISO = endDate.toISOString()
+      const { startISO, endISO, durationMinutes } = vacationBoundsUtc(day)
       return {
         tenant_id: tenantId,
         staff_id: staffId,
         start_time: startISO,
         end_time: endISO,
-        duration_minutes: VACATION_DURATION_MINUTES,
+        duration_minutes: durationMinutes,
         event_type_code: 'vacation',
         title: 'Ferien',
         description: '',
@@ -129,6 +122,13 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug(`✅ Created ${inserted?.length ?? 0} vacation appointments for staff ${staffId}`)
+
+    $fetch('/api/availability/queue-recalc', {
+      method: 'POST',
+      body: { staff_id: staffId, tenant_id: tenantId, trigger: 'appointment' },
+    }).catch((err: any) => {
+      logger.warn('⚠️ Could not queue availability recalc after vacation insert:', err?.message)
+    })
 
     // Trigger recalculation for all affected months (past months only – current month excluded by calculator)
     const affectedMonths = [...new Set(workingDays.map(d => parseInt(d.slice(5, 7))))]
