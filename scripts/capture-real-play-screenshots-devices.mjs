@@ -4,6 +4,9 @@
  * Tablets are captured in LANDSCAPE (portrait leaves huge empty gaps with this UI).
  *
  * Usage: DEMO_PASSWORD=... node scripts/capture-real-play-screenshots-devices.mjs
+ *
+ * DEMO_PASSWORD is required. Never put a fallback in this file — the repo is public.
+ * Rotate demo accounts with: DEMO_PASSWORD='…' npm run demo:apple-review:setup
  */
 import puppeteer from 'puppeteer'
 import { mkdirSync } from 'fs'
@@ -15,7 +18,16 @@ const root = join(__dirname, '..')
 const baseOut = join(root, 'clients/simy/store/screenshots')
 
 const APP = 'https://app.simy.ch'
-const PASS = process.env.DEMO_PASSWORD || 'PlayShot2026!Review'
+const PASS = process.env.DEMO_PASSWORD
+if (!PASS) {
+  console.error('Missing DEMO_PASSWORD. Refusing to use a committed fallback.')
+  console.error('  DEMO_PASSWORD=\'…\' node scripts/capture-real-play-screenshots-devices.mjs')
+  process.exit(1)
+}
+if (PASS.length < 12) {
+  console.error('DEMO_PASSWORD must be at least 12 characters.')
+  process.exit(1)
+}
 
 const DEVICES = [
   {

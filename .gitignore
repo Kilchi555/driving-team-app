@@ -61,5 +61,11 @@ docs/pci/**/*.html
 .env.vercel.local
 .env.vercel.production
 .env.backfill
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
 supabase/.temp/
 .env.vercel.pulled
