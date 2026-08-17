@@ -3207,6 +3207,56 @@
       "source": "/anh%C3%A4nger-fahrschule-lachen/",
       "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
       "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-z%c3%bcrich",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/auto-fahrschule-z%c3%bcrich/",
+      "destination": "https://drivingteam.ch/auto-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/anh%c3%a4nger-fahrschule-lachen",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/anh%c3%a4nger-fahrschule-lachen/",
+      "destination": "https://drivingteam.ch/anhaenger-fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/motorrad-fahrstunden/)",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/motorrad-fahrstunden/)/",
+      "destination": "https://drivingteam.ch/motorrad-fahrschule-zuerich/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-reichenburg/%e2%80%9e",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-reichenburg/%e2%80%9e/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-reichenburg/%E2%80%9E",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
+    },
+    {
+      "source": "/fahrschule-reichenburg/%E2%80%9E/",
+      "destination": "https://drivingteam.ch/fahrschule-lachen/",
+      "permanent": true
     }
   ],
   "headers": [
