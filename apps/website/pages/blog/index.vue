@@ -104,12 +104,7 @@
 </template>
 
 <script setup lang="ts">
-const { data: articles } = await useAsyncData('blog-list', () =>
-  queryCollection('blog')
-    .select('title', 'description', 'slug', 'date', 'category', 'readingTime')
-    .order('date', 'DESC')
-    .all()
-)
+const articles = listBlogArticles()
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''

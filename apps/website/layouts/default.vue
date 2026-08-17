@@ -488,6 +488,8 @@
               <li><a href="/kontakt/" class="hover:text-white transition">Kontakt</a></li>
               <li><a href="/team/" class="hover:text-white transition">Team</a></li>
               <li><a href="/faq/" class="hover:text-white transition">FAQ</a></li>
+              <li><a href="/blog/" class="hover:text-white transition">Blog</a></li>
+              <li><a href="/autoshkolle-shqipe/" class="hover:text-white transition">Autoshkollë Shqipe</a></li>
               <li><a href="/fahrschule-preise/" class="hover:text-white transition">Preise</a></li>
               <li><a href="/agb/" class="hover:text-white transition">AGB</a></li>
               <li><a href="/datenschutz/" class="hover:text-white transition">Datenschutz</a></li>

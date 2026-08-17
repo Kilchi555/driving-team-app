@@ -2,11 +2,15 @@
  * Nuxt client plugin — sets up Capacitor Push Notifications.
  * Runs only in the native app (iOS / Android); silently skips in the browser.
  *
+ * Do not register FCM on cold start. Without google-services.json,
+ * PushNotifications.register() kills the Android process. Play reviewers
+ * also never get past the login screen, so permission prompts belong after auth.
+ *
  * Flow:
- *  1. Check / request permission
- *  2. Register with FCM / APNs → receive device token
+ *  1. Attach listeners
+ *  2. After a session exists: request permission + register with FCM / APNs
  *  3. POST token to /api/push/register-token (authenticated)
- *  4. Listen for incoming notifications and taps
+ *  4. Handle incoming notifications and taps
  */
 
 import { defineNuxtPlugin, navigateTo } from '#imports'
@@ -17,24 +21,11 @@ export default defineNuxtPlugin(async () => {
 
   try {
     const { PushNotifications } = await import('@capacitor/push-notifications')
+    const supabase = useSupabaseClient()
+    let registered = false
 
-    // ── 1. Permission ─────────────────────────────────────────────────────────
-    let permStatus = await PushNotifications.checkPermissions()
-    if (permStatus.receive === 'prompt') {
-      permStatus = await PushNotifications.requestPermissions()
-    }
-    if (permStatus.receive !== 'granted') {
-      console.info('[Push] Permission not granted, skipping registration.')
-      return
-    }
-
-    // ── 2. Register with platform push service ────────────────────────────────
-    await PushNotifications.register()
-
-    // ── 3. Token received → save to backend ──────────────────────────────────
     await PushNotifications.addListener('registration', async (tokenData) => {
       try {
-        const supabase = useSupabaseClient()
         const { data: { session } } = await supabase.auth.getSession()
         if (!session?.access_token) return
 
@@ -51,17 +42,14 @@ export default defineNuxtPlugin(async () => {
       }
     })
 
-    // ── 4. Registration error ─────────────────────────────────────────────────
     await PushNotifications.addListener('registrationError', (err) => {
       console.error('[Push] Registration error:', JSON.stringify(err))
     })
 
-    // ── 5. Foreground notification (show as in-app banner via console for now) ─
     await PushNotifications.addListener('pushNotificationReceived', (notification) => {
       console.info('[Push] Foreground notification:', notification.title)
     })
 
-    // ── 6. Notification tap → navigate if data.path is a safe in-app path ───
     await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       const path = action.notification.data?.path as string | undefined
       if (
@@ -72,6 +60,31 @@ export default defineNuxtPlugin(async () => {
       ) {
         navigateTo(path)
       }
+    })
+
+    const registerIfAllowed = async () => {
+      if (registered) return
+      try {
+        let permStatus = await PushNotifications.checkPermissions()
+        if (permStatus.receive === 'prompt') {
+          permStatus = await PushNotifications.requestPermissions()
+        }
+        if (permStatus.receive !== 'granted') {
+          console.info('[Push] Permission not granted, skipping registration.')
+          return
+        }
+        await PushNotifications.register()
+        registered = true
+      } catch (e) {
+        console.warn('[Push] Native register failed (Firebase missing?):', e)
+      }
+    }
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) await registerIfAllowed()
+
+    supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (nextSession) registerIfAllowed()
     })
   } catch (e) {
     console.warn('[Push] Setup failed:', e)
