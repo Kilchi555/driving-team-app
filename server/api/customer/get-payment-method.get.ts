@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getTenantDefaultPaymentMethod, normalizeTenantPaymentMethod } from '~/server/utils/tenant-default-payment-method'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -17,7 +18,7 @@ export default defineEventHandler(async (event) => {
     // LAYER 2: GET USER FROM USERS TABLE
     const { data: requestingUser, error: userError } = await supabaseAdmin
       .from('users')
-      .select('id, preferred_payment_method')
+      .select('id, tenant_id, preferred_payment_method')
       .eq('auth_user_id', authenticatedUser.id)
       .single()
 
@@ -28,10 +29,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Return payment method (default to 'wallee' if not set)
+    const tenantDefault = requestingUser.tenant_id
+      ? await getTenantDefaultPaymentMethod(supabaseAdmin, requestingUser.tenant_id)
+      : 'wallee'
+
     return {
       success: true,
-      preferredPaymentMethod: requestingUser.preferred_payment_method || 'wallee'
+      preferredPaymentMethod: normalizeTenantPaymentMethod(
+        requestingUser.preferred_payment_method || tenantDefault
+      )
     }
   } catch (err: any) {
     console.error('❌ Error getting payment method:', err)

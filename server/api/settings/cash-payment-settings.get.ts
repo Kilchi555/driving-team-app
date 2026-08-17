@@ -8,6 +8,7 @@
 import { defineEventHandler, createError, getQuery } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { normalizeTenantPaymentMethod, parsePaymentSettings } from '~/server/utils/tenant-default-payment-method'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -38,12 +39,11 @@ export default defineEventHandler(async (event) => {
     .eq('setting_key', 'payment_settings')
     .maybeSingle()
 
-  const settings = data?.setting_value
-    ? (typeof data.setting_value === 'string' ? JSON.parse(data.setting_value) : data.setting_value)
-    : {}
+  const settings = parsePaymentSettings(data?.setting_value)
 
   return {
     cash_payments_enabled: settings.cash_payments_enabled ?? true,
     cash_payment_visibility: settings.cash_payment_visibility ?? 'staff_only',
+    default_payment_method: normalizeTenantPaymentMethod(settings.default_payment_method),
   }
 })

@@ -6,6 +6,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getEffectiveCreditBalanceRappen } from '~/server/utils/effective-credit-balance'
+import { getTenantDefaultPaymentMethod, normalizeTenantPaymentMethod } from '~/server/utils/tenant-default-payment-method'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -102,7 +103,12 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 3: INPUT VALIDATION (implicit - no query params) ============
 
     // Fetch user's preferred payment method (already have it from user profile)
-    const preferredPaymentMethod = requestingUser.preferred_payment_method || 'wallee'
+    const tenantDefault = tenantId
+      ? await getTenantDefaultPaymentMethod(supabaseAdmin, tenantId)
+      : 'wallee'
+    const preferredPaymentMethod = normalizeTenantPaymentMethod(
+      requestingUser.preferred_payment_method || tenantDefault
+    )
 
     // ============ FETCH 1: Student Credit Balance (inkl. Legacy-/Journal-Fallback) ============
     const studentBalance = await getEffectiveCreditBalanceRappen(
