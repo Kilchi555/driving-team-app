@@ -5,7 +5,7 @@
     <p>Diese Website ist noch nicht veröffentlicht oder existiert nicht.</p>
   </div>
   <div v-else class="lp" :class="[`lp-template-${templateVariant}`, { 'lp-nav-open': mobileNavOpen }]" :style="cssVars">
-    <header class="lp-nav">
+    <header class="lp-nav" :class="{ 'lp-nav--pages': pageLinks.length }">
       <div class="lp-nav-inner">
         <div class="lp-brand">
           <NuxtLink :to="homeHref" class="lp-brand-link">
@@ -14,13 +14,28 @@
               :src="landing.brand.logo_url"
               :alt="landing.brand.name"
               class="lp-logo"
+              width="160"
               height="52"
+              decoding="async"
             />
             <span v-else class="lp-brand-name">{{ landing.brand.name }}</span>
           </NuxtLink>
         </div>
-        <nav v-if="navLinks.length" class="lp-nav-links" aria-label="Seiten">
-          <NuxtLink v-for="n in navLinks" :key="n.slug" :to="n.href">{{ n.title }}</NuxtLink>
+        <nav v-if="sectionLinks.length" class="lp-nav-links" aria-label="Bereiche">
+          <div
+            v-for="n in sectionLinks"
+            :key="n.href"
+            class="lp-nav-item"
+            :class="{ 'has-dd': (n.children || []).length >= 2 }"
+          >
+            <a :href="n.href">
+              {{ n.label }}
+              <span v-if="(n.children || []).length >= 2" class="lp-nav-caret" aria-hidden="true" />
+            </a>
+            <div v-if="(n.children || []).length >= 2" class="lp-nav-dd">
+              <a v-for="c in n.children" :key="c.href + c.label" :href="c.href">{{ c.label }}</a>
+            </div>
+          </div>
         </nav>
         <div class="lp-nav-actions">
           <a
@@ -30,10 +45,10 @@
             target="_blank"
             rel="noopener noreferrer"
             aria-label="WhatsApp"
-          >WA</a>
+          >WhatsApp</a>
           <a class="lp-nav-cta" :href="landing.bookingUrl">{{ bookLabel }}</a>
           <button
-            v-if="navLinks.length"
+            v-if="hasDrawer"
             type="button"
             class="lp-nav-toggle"
             :aria-expanded="mobileNavOpen"
@@ -44,57 +59,51 @@
           </button>
         </div>
       </div>
-      <nav v-if="navLinks.length && mobileNavOpen" class="lp-nav-drawer" aria-label="Mobile Navigation">
-        <NuxtLink v-for="n in navLinks" :key="`m-${n.slug}`" :to="n.href" @click="mobileNavOpen = false">{{ n.title }}</NuxtLink>
+      <nav v-if="hasDrawer && mobileNavOpen" class="lp-nav-drawer" aria-label="Menü">
+        <template v-for="n in sectionLinks" :key="`s-${n.href}`">
+          <a :href="n.href" @click="mobileNavOpen = false">{{ n.label }}</a>
+          <a
+            v-for="c in n.children || []"
+            :key="`sc-${c.href}-${c.label}`"
+            class="lp-nav-drawer-sub"
+            :href="c.href"
+            @click="mobileNavOpen = false"
+          >{{ c.label }}</a>
+        </template>
+        <div v-if="sectionLinks.length && pageLinks.length" class="lp-nav-drawer-sep" />
+        <NuxtLink v-for="n in pageLinks" :key="`m-${n.slug}`" :to="n.href" @click="mobileNavOpen = false">{{ n.title }}</NuxtLink>
         <a :href="landing.bookingUrl" @click="mobileNavOpen = false">{{ bookLabel }}</a>
         <a v-if="whatsappUrl" :href="whatsappUrl" target="_blank" rel="noopener noreferrer">WhatsApp</a>
       </nav>
     </header>
 
+    <nav v-if="landing" class="lp-crumbs" aria-label="Brotkrumen">
+      <NuxtLink :to="homeHref">{{ landing.brand?.name || 'Home' }}</NuxtLink>
+      <span aria-hidden="true">/</span>
+      <span>{{ pageTitle }}</span>
+    </nav>
+
     <template v-for="(block, idx) in renderBlocks" :key="idx">
       <!-- HERO -->
       <section v-if="block.type === 'hero'" class="lp-hero" :class="{ 'lp-hero--photo': !!heroImage(block) || !!heroVideo(block) }">
         <div class="lp-hero-media" aria-hidden="true">
-          <video
-            v-if="heroVideo(block)"
-            class="lp-hero-video"
-            :src="heroVideo(block)!"
-            :poster="heroImage(block) || undefined"
-            autoplay
-            muted
-            loop
-            playsinline
-            preload="metadata"
+          <WebsiteHeroMedia
+            :src="heroImage(block)"
+            :video-url="heroVideo(block)"
+            :alt="heroAlt(block)"
+            :clip-start="heroVideoStart(block)"
+            :clip-duration="heroVideoDuration(block)"
           />
-          <picture v-else-if="heroImage(block)">
-            <source v-if="heroAvif(block)" type="image/avif" :srcset="heroAvif(block)!" />
-            <img
-              class="lp-hero-img"
-              :src="heroImage(block)!"
-              :alt="heroAlt(block)"
-              width="1600"
-              height="900"
-              fetchpriority="high"
-              decoding="async"
-            />
-          </picture>
         </div>
         <div class="lp-hero-inner">
           <p class="lp-brand-signal">{{ block.content.brand }}</p>
           <h1 class="lp-h1">{{ block.content.headline }}</h1>
           <p class="lp-hero-sub">{{ block.content.subheadline }}</p>
           <div class="lp-cta-row">
-            <a class="lp-btn-primary" :href="block.content.cta_primary_url">{{ block.content.cta_primary_text }}</a>
+            <a class="lp-btn-primary" :href="block.content.cta_primary_url || landing.bookingUrl">{{ block.content.cta_primary_text || bookLabel }}</a>
             <a v-if="block.content.cta_secondary_url" class="lp-btn-ghost" :href="block.content.cta_secondary_url">
               {{ block.content.cta_secondary_text }}
             </a>
-            <a
-              v-if="block.content.whatsapp_url || whatsappUrl"
-              class="lp-btn-ghost"
-              :href="block.content.whatsapp_url || whatsappUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-            >WhatsApp</a>
           </div>
           <ul v-if="heroTrust(block).length" class="lp-trust">
             <li v-for="(item, i) in heroTrust(block)" :key="i">
@@ -115,6 +124,15 @@
         <p class="lp-lead">{{ block.content.description }}</p>
         <div v-if="block.content.services?.length" class="lp-services">
           <article v-for="svc in block.content.services" :key="svc.id" class="lp-service">
+            <img
+              v-if="svc.image_url"
+              class="lp-service-photo"
+              :src="svc.image_url"
+              :alt="svc.name"
+              width="600"
+              height="400"
+              loading="lazy"
+            />
             <div class="lp-service-top">
               <h3>{{ svc.name }}</h3>
               <span v-if="svc.price_label" class="lp-price">{{ svc.price_label }}</span>
@@ -129,6 +147,40 @@
           </article>
         </div>
         <div v-else class="lp-empty">Angebote werden bald ergänzt.</div>
+      </section>
+
+      <!-- PRODUCTS -->
+      <section
+        v-else-if="block.type === 'products' && (block.content.products || []).length"
+        id="produkte"
+        class="lp-section lp-section-alt lp-reveal"
+      >
+        <p class="lp-eyebrow">{{ block.content.eyebrow }}</p>
+        <h2 class="lp-h2">{{ block.content.title }}</h2>
+        <p class="lp-lead">{{ block.content.description }}</p>
+        <div class="lp-services">
+          <article v-for="p in block.content.products" :key="p.id" class="lp-service">
+            <img
+              v-if="p.image_url"
+              class="lp-service-photo"
+              :src="p.image_url"
+              :alt="p.name"
+              width="600"
+              height="400"
+              loading="lazy"
+            />
+            <div class="lp-service-top">
+              <h3>{{ p.name }}</h3>
+              <span v-if="p.price_label" class="lp-price">{{ p.price_label }}</span>
+            </div>
+            <p v-if="p.category" class="lp-meta">{{ p.category }}</p>
+            <p v-if="p.description">{{ p.description }}</p>
+            <a v-if="p.shop_url" class="lp-service-book" :href="p.shop_url">{{ p.cta_label || 'Im Shop kaufen →' }}</a>
+          </article>
+        </div>
+        <div v-if="block.content.cta_url" class="lp-section-cta">
+          <a class="lp-btn-primary" :href="block.content.cta_url">{{ block.content.cta_text || 'Zum Shop' }}</a>
+        </div>
       </section>
 
       <!-- TEAM -->
@@ -230,7 +282,16 @@
         <h2 class="lp-h2">{{ block.content.title }}</h2>
         <div class="lp-gallery">
           <figure v-for="(img, gi) in galleryImages(block).slice(0, 6)" :key="gi">
-            <img :src="img.url" :alt="img.alt || ''" loading="lazy" width="600" height="400" />
+            <img
+              :src="gallerySrc(img.url)"
+              :srcset="gallerySrcset(img.url)"
+              sizes="(max-width: 700px) 100vw, 600px"
+              :alt="img.alt || ''"
+              loading="lazy"
+              decoding="async"
+              width="600"
+              height="400"
+            />
           </figure>
         </div>
       </section>
@@ -316,14 +377,38 @@
       </section>
 
       <!-- FAQ -->
+      <section v-else-if="block.type === 'pages' && block.content.items?.length" class="lp-section lp-reveal">
+        <p class="lp-eyebrow">{{ block.content.eyebrow }}</p>
+        <h2 class="lp-h2">{{ block.content.title }}</h2>
+        <p class="lp-lead">{{ block.content.description }}</p>
+        <div class="lp-pages">
+          <a
+            v-for="p in pageBlockItems(block)"
+            :key="pageCardHref(p)"
+            :href="pageCardHref(p)"
+            class="lp-page-card"
+          >
+            <span class="lp-page-type">{{ pageTypeLabel(p.type) }}</span>
+            <strong>{{ p.title }}</strong>
+          </a>
+        </div>
+      </section>
+
       <section v-else-if="block.type === 'faq'" class="lp-section lp-section-center">
         <p class="lp-eyebrow">{{ block.content.eyebrow }}</p>
         <h2 class="lp-h2">{{ block.content.title }}</h2>
         <div class="lp-faq">
-          <details v-for="(item, i) in block.content.items" :key="i" class="lp-faq-item">
-            <summary>{{ item.q }}</summary>
-            <p>{{ item.a }}</p>
-          </details>
+          <div v-for="(col, ci) in faqColumns(block)" :key="ci" class="lp-faq-col">
+            <details
+              v-for="(item, i) in col"
+              :key="item.q || `${ci}-${i}`"
+              class="lp-faq-item"
+              :open="ci === 0 && i === 0"
+            >
+              <summary>{{ item.q }}</summary>
+              <p>{{ item.a }}</p>
+            </details>
+          </div>
         </div>
       </section>
 
@@ -345,6 +430,42 @@
 
       <!-- CONTACT (+ optional map section) -->
       <template v-else-if="block.type === 'contact'">
+        <section
+          v-if="pickupCheck(block)"
+          id="treffpunkt"
+          class="lp-section lp-section-center lp-pickup-check lp-reveal"
+        >
+          <p class="lp-eyebrow">Treffpunkt</p>
+          <h2 class="lp-h2">{{ pickupCheck(block).title }}</h2>
+          <p class="lp-lead">{{ pickupCheck(block).subtitle }}</p>
+          <form class="lp-pickup-form" @submit.prevent="checkPickupPlz">
+            <input
+              v-model="pickupPlz"
+              type="text"
+              inputmode="numeric"
+              autocomplete="postal-code"
+              maxlength="4"
+              pattern="[1-9][0-9]{3}"
+              :placeholder="pickupCheck(block).placeholder || 'PLZ'"
+              aria-label="Postleitzahl"
+            />
+            <button class="lp-btn-primary" type="submit" :disabled="pickupChecking || pickupPlz.length !== 4">
+              {{ pickupChecking ? 'Prüfen…' : (pickupCheck(block).cta || 'Prüfen') }}
+            </button>
+          </form>
+          <p v-if="pickupMsg" class="lp-pickup-result" :class="pickupResultClass">{{ pickupMsg }}</p>
+          <div v-if="pickupResult?.in_radius === true" class="lp-section-cta">
+            <a
+              v-if="pickupCheck(block).book_url || landing?.bookingUrl"
+              class="lp-btn-primary"
+              :href="pickupCheck(block).book_url || landing?.bookingUrl"
+            >Jetzt buchen</a>
+          </div>
+          <div v-else-if="pickupResult && pickupResult.in_radius !== true" class="lp-section-cta">
+            <button type="button" class="lp-btn-ghost" @click="askPickupLead">Anfrage senden</button>
+          </div>
+        </section>
+
         <section
           v-if="block.content.map_embed_url"
           id="standort"
@@ -394,6 +515,7 @@
                 />
                 <input v-model="leadForm.first_name" type="text" required placeholder="Vorname" autocomplete="given-name" />
                 <input v-model="leadForm.email" type="email" required placeholder="E-Mail" autocomplete="email" />
+                <input v-model="leadForm.phone" type="tel" placeholder="Telefon" autocomplete="tel" />
                 <textarea v-model="leadForm.message" rows="3" placeholder="Ihre Nachricht (optional)" />
                 <button type="submit" class="lp-btn-primary" :disabled="leadSending">
                   {{ leadSending ? 'Senden…' : 'Absenden' }}
@@ -406,12 +528,18 @@
               <div class="lp-contact-identity">
                 <p class="lp-contact-kicker">Kontakt</p>
                 <strong class="lp-contact-name">{{ block.content.name }}</strong>
-                <p v-if="block.content.address || block.content.city" class="lp-contact-address">
+                <p v-if="showHqAddress(block)" class="lp-contact-address">
                   <span v-if="block.content.address">{{ block.content.address }}</span>
                   <template v-if="mapCityLine(block.content)">
                     <span v-if="block.content.address"><br /></span>{{ mapCityLine(block.content) }}
                   </template>
                 </p>
+                <ul v-if="meetingPoints(block).length" class="lp-meeting-points">
+                  <li v-for="p in meetingPoints(block)" :key="p.id || p.name">
+                    <strong>{{ p.name }}</strong>
+                    <span v-if="p.address">{{ p.address }}</span>
+                  </li>
+                </ul>
                 <div v-if="contactChannels(block).length" class="lp-contact-channels">
                   <a
                     v-for="ch in contactChannels(block)"
@@ -428,6 +556,15 @@
                     </span>
                   </a>
                 </div>
+                <nav v-if="socialLinks(block).length" class="lp-social" aria-label="Social Media">
+                  <a
+                    v-for="s in socialLinks(block)"
+                    :key="s.key || s.href"
+                    :href="s.href"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >{{ s.label }}</a>
+                </nav>
               </div>
 
               <div v-if="(block.content.hours || []).length" class="lp-hours">
@@ -473,6 +610,17 @@
         </footer>
       </template>
     </template>
+
+    <nav v-if="stickyActions.length" class="lp-sticky-bar" aria-label="Schnellkontakt">
+      <a
+        v-for="a in stickyActions"
+        :key="a.key"
+        :href="a.href"
+        :target="a.external ? '_blank' : undefined"
+        :rel="a.external ? 'noopener noreferrer' : undefined"
+        :class="['lp-sticky-btn', `lp-sticky-btn--${a.key}`]"
+      >{{ a.label }}</a>
+    </nav>
   </div>
 </template>
 
@@ -480,7 +628,9 @@
 import '~/assets/css/website-landing-fonts.css'
 import WebsiteIcon from '~/components/website/WebsiteIcon.vue'
 import { isWebsiteIconKey, trustIconForLabel, type WebsiteIconKey } from '~/utils/website-icons'
-import { heroAvifCandidate } from '~/utils/website-landing-head'
+import { heroPreloadAttrs, websiteImageProxyUrl } from '~/utils/website-responsive-image'
+import { websiteOverflowPages, websitePageCardHref, websitePageLinks, websiteStandardLinks } from '~/utils/website-nav'
+import { websiteFontCssVars, websiteFontHeadLinks } from '~/utils/website-fonts'
 
 definePageMeta({
   layout: 'site',
@@ -492,10 +642,14 @@ const subdomain = computed(() => String(route.params.subdomain || '').toLowerCas
 const pageSlug = computed(() => String(route.params.slug || '').toLowerCase())
 const preview = computed(() => route.query.preview === '1')
 const mobileNavOpen = ref(false)
-const leadForm = ref({ first_name: '', email: '', message: '', company: '' })
+const leadForm = ref({ first_name: '', email: '', phone: '', message: '', company: '' })
 const leadSending = ref(false)
 const leadMsg = ref('')
 const leadOk = ref(false)
+const pickupPlz = ref('')
+const pickupChecking = ref(false)
+const pickupMsg = ref('')
+const pickupResult = ref<{ in_radius?: boolean | null; minutes?: number | null; radius_minutes?: number | null; plz?: string } | null>(null)
 const liveSlots = ref<any[] | null>(null)
 const slotsSectionEl = ref<HTMLElement | null>(null)
 
@@ -521,10 +675,25 @@ const { data, pending, error } = await useAsyncData(
 )
 
 const homeHref = computed(() => `/s/${subdomain.value}${preview.value ? '?preview=1' : ''}`)
-const navLinks = computed(() => {
-  const items = (data.value as any)?.nav || []
-  return items.filter((n: any) => !n.is_home && n.slug !== pageSlug.value).slice(0, 6)
-})
+const pageTitle = computed(
+  () => data.value?.page?.title || landing.value?.seo?.title || pageSlug.value,
+)
+const sectionLinks = computed(() =>
+  websiteStandardLinks({
+    blocks: landing.value?.blocks,
+    pages: (data.value as any)?.nav || [],
+    homeHref: homeHref.value,
+    onHome: false,
+    slots: landing.value?.nav_slots || null,
+  }),
+)
+const pageLinks = computed(() =>
+  websiteOverflowPages(
+    websitePageLinks((data.value as any)?.nav || [], pageSlug.value),
+    sectionLinks.value,
+  ),
+)
+const hasDrawer = computed(() => sectionLinks.value.length + pageLinks.value.length > 0)
 
 const { data: googleReviews } = await useAsyncData(
   () => `site-reviews-${subdomain.value}-${preview.value ? 'p' : 'l'}`,
@@ -659,6 +828,95 @@ const whatsappUrl = computed(() => {
   return contact?.content?.whatsapp_url || hero?.content?.whatsapp_url || null
 })
 
+const meetingPoints = (block: any) =>
+  (Array.isArray(block?.content?.meeting_points) ? block.content.meeting_points : []).filter(
+    (p: any) => p?.name,
+  )
+
+const showHqAddress = (block: any) => {
+  if (block?.content?.show_hq_address === false) return false
+  return !!(block?.content?.address || block?.content?.city)
+}
+
+const socialLinks = (block: any) =>
+  (Array.isArray(block?.content?.social) ? block.content.social : []).filter(
+    (s: any) => s?.href && s?.label,
+  )
+
+const pickupCheck = (block: any) =>
+  block?.content?.pickup_check?.enabled ? block.content.pickup_check : null
+
+const pickupResultClass = computed(() => {
+  if (pickupResult.value?.in_radius === true) return 'ok'
+  if (pickupResult.value?.in_radius === false) return 'no'
+  return ''
+})
+
+async function checkPickupPlz() {
+  const plz = String(pickupPlz.value || '').replace(/\D/g, '').slice(0, 4)
+  pickupPlz.value = plz
+  pickupMsg.value = ''
+  pickupResult.value = null
+  if (!/^[1-9]\d{3}$/.test(plz)) {
+    pickupMsg.value = 'Bitte eine gültige Schweizer PLZ eingeben.'
+    return
+  }
+  pickupChecking.value = true
+  try {
+    const res = await $fetch<{
+      in_radius?: boolean | null
+      minutes?: number | null
+      radius_minutes?: number | null
+      plz?: string
+    }>(`/api/public/website/${encodeURIComponent(subdomain.value)}/pickup-check`, {
+      method: 'POST',
+      query: preview.value ? { preview: '1' } : undefined,
+      body: { plz },
+    })
+    pickupResult.value = res
+    if (res.in_radius === true) {
+      pickupMsg.value =
+        res.minutes != null
+          ? `Ja — ${plz} liegt im Radius (ca. ${res.minutes} Min.). Bei der Buchung die Adresse angeben.`
+          : `Ja — ${plz} liegt im Radius. Bei der Buchung die Adresse angeben.`
+    } else if (res.in_radius === false) {
+      pickupMsg.value = `${plz} liegt ausserhalb. Wählen Sie einen festen Treffpunkt oder senden Sie uns eine Anfrage.`
+    } else {
+      pickupMsg.value = `${plz} können wir nicht automatisch prüfen. Schreib uns kurz — wir schauen es an.`
+    }
+  } catch (e: any) {
+    pickupMsg.value = e?.data?.statusMessage || e?.message || 'Prüfung fehlgeschlagen'
+  } finally {
+    pickupChecking.value = false
+  }
+}
+
+function askPickupLead() {
+  const plz = pickupResult.value?.plz || pickupPlz.value
+  leadForm.value.message = plz
+    ? `Anfrage eigener Treffpunkt: PLZ ${plz} — bitte prüfen, ob im Radius.`
+    : 'Anfrage eigener Treffpunkt — bitte Radius prüfen.'
+  document.getElementById('kontakt')?.scrollIntoView({ behavior: 'smooth' })
+}
+
+const contactPhone = computed(() => {
+  const contact = landing.value?.blocks?.find((b: any) => b.type === 'contact')
+  return contact?.content?.phone || landing.value?.brand?.phone || null
+})
+
+const telHref = computed(() => {
+  const raw = String(contactPhone.value || '').replace(/[^\d+]/g, '')
+  return raw ? `tel:${raw}` : null
+})
+
+const stickyActions = computed(() => {
+  const out: Array<{ key: string; href: string; label: string; external?: boolean }> = []
+  if (telHref.value) out.push({ key: 'call', href: telHref.value, label: 'Anrufen' })
+  if (whatsappUrl.value) out.push({ key: 'wa', href: whatsappUrl.value, label: 'WhatsApp', external: true })
+  if (landing.value?.bookingUrl) out.push({ key: 'book', href: landing.value.bookingUrl, label: bookLabel.value })
+  return out
+})
+
 const defaultLegalLinks = computed(() => [
   { label: 'Impressum', href: `/s/${subdomain.value}/impressum` },
   { label: 'Datenschutz', href: `/s/${subdomain.value}/datenschutz` },
@@ -777,6 +1035,15 @@ function displaySlots(block: any) {
   return block?.content?.items || []
 }
 
+const FAQ_SHOW = 10
+function faqColumns(block: any) {
+  const items = (Array.isArray(block?.content?.items) ? block.content.items : [])
+    .filter((item: any) => item?.q)
+    .slice(0, FAQ_SHOW)
+  const mid = Math.ceil(items.length / 2)
+  return [items.slice(0, mid), items.slice(mid)]
+}
+
 function galleryImages(block: any) {
   const logo = String(landing.value?.brand?.logo_url || '').trim()
   const imgs = Array.isArray(block?.content?.images) ? block.content.images : []
@@ -822,7 +1089,7 @@ async function submitLead() {
     )
     leadOk.value = true
     leadMsg.value = res?.message || 'Danke — wir melden uns.'
-    leadForm.value = { first_name: '', email: '', message: '', company: '' }
+    leadForm.value = { first_name: '', email: '', phone: '', message: '', company: '' }
   } catch (e: any) {
     leadOk.value = false
     leadMsg.value = e?.data?.statusMessage || e?.message || 'Senden fehlgeschlagen'
@@ -843,8 +1110,28 @@ const heroAlt = (block: any) =>
 
 const heroVideo = (block: any) =>
   block?.content?.video_url || landing.value?.brand?.hero_video_url || null
+const heroVideoStart = (block: any) =>
+  block?.content?.video_start ?? landing.value?.brand?.hero_video_start ?? 0
+const heroVideoDuration = (block: any) =>
+  block?.content?.video_duration ?? landing.value?.brand?.hero_video_duration ?? 0
 
-const heroAvif = (block: any) => heroAvifCandidate(heroImage(block))
+const gallerySrc = (url: string) => (url ? websiteImageProxyUrl(url, 800, 'webp', 'inside') : '')
+const gallerySrcset = (url: string) =>
+  url
+    ? [400, 800].map((w) => `${websiteImageProxyUrl(url, w, 'webp', 'inside')} ${w}w`).join(', ')
+    : ''
+function pageTypeLabel(type: string) {
+  if (type === 'location') return 'Standort'
+  if (type === 'category') return 'Angebot'
+  if (type === 'prices') return 'Preise'
+  return 'Seite'
+}
+function pageCardHref(p: { href?: string; url?: string; slug?: string; title?: string }) {
+  return websitePageCardHref(p, subdomain.value, (data.value as any)?.nav || [])
+}
+function pageBlockItems(block: any) {
+  return (block?.content?.items || []).filter((p: any) => pageCardHref(p))
+}
 
 const ssrRequestOrigin = import.meta.server
   ? (() => {
@@ -891,6 +1178,7 @@ const cssVars = computed(() => {
     '--lp-primary': b?.primary || '#0F766E',
     '--lp-secondary': b?.secondary || '#134E4A',
     '--lp-accent': b?.accent || '#F59E0B',
+    ...websiteFontCssVars((b as any)?.font_pair),
   }
 })
 
@@ -992,22 +1280,18 @@ useHead(() => ({
     { rel: 'canonical', href: canonical.value },
     { rel: 'icon', href: faviconHref.value },
     { rel: 'apple-touch-icon', href: faviconHref.value },
-    {
-      rel: 'preload',
-      href: '/fonts/website/manrope-latin.woff2',
-      as: 'font',
-      type: 'font/woff2',
-      crossorigin: 'anonymous',
-    },
-    {
-      rel: 'preload',
-      href: '/fonts/website/syne-latin.woff2',
-      as: 'font',
-      type: 'font/woff2',
-      crossorigin: 'anonymous',
-    },
+    ...websiteFontHeadLinks((landing.value?.brand as any)?.font_pair),
     ...(heroPreload.value
-      ? [{ rel: 'preload', as: 'image', href: heroPreload.value, fetchpriority: 'high' } as any]
+      ? [
+          {
+            rel: 'preload',
+            as: 'image',
+            href: heroPreloadAttrs(heroPreload.value)?.href || heroPreload.value,
+            imagesrcset: heroPreloadAttrs(heroPreload.value)?.imagesrcset || undefined,
+            imagesizes: heroPreloadAttrs(heroPreload.value)?.imagesizes || '100vw',
+            fetchpriority: 'high',
+          } as any,
+        ]
       : []),
     { rel: 'alternate', type: 'application/xml', href: `/s/${subdomain.value}/sitemap.xml`, title: 'Sitemap' },
   ],
@@ -1066,7 +1350,9 @@ onMounted(() => {
   --lp-line: rgba(12, 18, 34, 0.08);
   --lp-bg: #f7f4ef;
   color: var(--lp-ink);
-  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  --lp-font-display: Syne;
+  --lp-font-body: Manrope;
+  font-family: var(--lp-font-body), ui-sans-serif, system-ui, sans-serif;
   background: #fff;
 }
 
@@ -1077,11 +1363,11 @@ onMounted(() => {
   place-content: center;
   gap: 0.5rem;
   text-align: center;
-  font-family: Manrope, sans-serif;
+  font-family: var(--lp-font-body), sans-serif;
   padding: 2rem;
 }
 .site-error h1 {
-  font-family: Syne, sans-serif;
+  font-family: var(--lp-font-display), sans-serif;
   font-size: 1.75rem;
 }
 
@@ -1089,34 +1375,40 @@ onMounted(() => {
   position: sticky;
   top: 0;
   z-index: 20;
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.86);
-  border-bottom: 1px solid var(--lp-line);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.72);
+  border-bottom: 1px solid color-mix(in srgb, var(--lp-line) 70%, transparent);
 }
 .lp-nav-inner {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 0.85rem 1.25rem;
+  padding: 0.7rem 1.25rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-wrap: nowrap;
+  gap: 0.75rem;
 }
 .lp-brand {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  flex: 0 1 auto;
   min-width: 0;
+  overflow: hidden;
 }
-.lp-logo {
-  height: 52px;
+.lp-nav .lp-logo {
+  display: block;
+  height: 40px;
   width: auto;
-  max-width: min(240px, 58vw);
+  max-height: 40px;
+  max-width: min(168px, 46vw);
   border-radius: 0;
   object-fit: contain;
+  object-position: left center;
 }
 .lp-brand-name {
-  font-family: Syne, sans-serif;
+  font-family: var(--lp-font-display), sans-serif;
   font-weight: 700;
   font-size: 1.05rem;
   white-space: nowrap;
@@ -1133,26 +1425,76 @@ onMounted(() => {
 }
 .lp-nav-links {
   display: none;
-  gap: 1rem;
-  flex: 1;
-  justify-content: center;
+  gap: 2rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-end;
+  padding-right: 1.5rem;
+  overflow: visible;
+}
+.lp-nav-item {
+  position: relative;
+  flex-shrink: 0;
 }
 .lp-nav-links a {
   color: var(--lp-muted);
   text-decoration: none;
   font-size: 0.88rem;
   font-weight: 600;
+  white-space: nowrap;
+}
+.lp-nav-item > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
 }
 .lp-nav-links a:hover {
   color: var(--lp-ink);
 }
-@media (min-width: 860px) {
+.lp-nav-caret {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  opacity: 0.7;
+}
+.lp-nav-dd {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 13.5rem;
+  padding: 0.4rem 0;
+  background: #fff;
+  border: 1px solid var(--lp-line);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 28px rgba(12, 18, 34, 0.1);
+  z-index: 40;
+}
+.lp-nav-dd a {
+  display: block;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.84rem;
+  color: var(--lp-ink);
+  white-space: normal;
+}
+.lp-nav-dd a:hover {
+  background: color-mix(in srgb, var(--lp-primary) 8%, #fff);
+}
+.lp-nav-item.has-dd:hover .lp-nav-dd,
+.lp-nav-item.has-dd:focus-within .lp-nav-dd {
+  display: block;
+}
+@media (min-width: 1100px) {
   .lp-nav-links {
     display: flex;
   }
 }
 .lp-nav-cta {
   flex-shrink: 0;
+  white-space: nowrap;
   background: var(--lp-primary);
   color: #fff;
   text-decoration: none;
@@ -1209,17 +1551,64 @@ onMounted(() => {
   background-size: auto, 18px 18px;
   opacity: 1;
 }
-.lp-hero-media picture,
-.lp-hero-media video {
+.lp-hero-media :deep(picture),
+.lp-hero-media :deep(video) {
   position: absolute;
   inset: 0;
 }
-.lp-hero-img,
-.lp-hero-video {
+.lp-hero-media :deep(.lp-hero-img),
+.lp-hero-media :deep(.lp-hero-video) {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+}
+.lp-crumbs {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.75rem 1.25rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--lp-muted);
+}
+.lp-crumbs a {
+  color: inherit;
+  text-decoration: none;
+}
+.lp-crumbs a:hover {
+  text-decoration: underline;
+}
+.lp-pages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.85rem;
+  margin-top: 1.25rem;
+}
+.lp-page-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--lp-line);
+  border-radius: 14px;
+  text-decoration: none;
+  color: inherit;
+  background: #fff;
+  min-height: 88px;
+  cursor: pointer;
+}
+.lp-page-card:hover {
+  border-color: color-mix(in srgb, var(--lp-primary) 40%, var(--lp-line));
+  box-shadow: 0 4px 14px rgba(12, 18, 34, 0.06);
+}
+.lp-page-type {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lp-muted);
 }
 .lp-hero-inner {
   position: relative;
@@ -1228,21 +1617,30 @@ onMounted(() => {
   width: 100%;
   margin: 0 auto;
   padding: 5.5rem 1.25rem 3.5rem;
+  animation: lp-rise 0.75s ease both;
+}
+@keyframes lp-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero-inner { animation: none; }
 }
 .lp-brand-signal {
-  font-family: Syne, sans-serif;
-  font-weight: 800;
+  font-family: var(--lp-font-display), sans-serif;
+  font-weight: 750;
   font-size: clamp(2rem, 6vw, 3.75rem);
   line-height: 0.95;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.05em;
   margin: 0 0 1rem;
   max-width: 14ch;
 }
 .lp-h1 {
-  font-family: Syne, sans-serif;
-  font-weight: 700;
+  font-family: var(--lp-font-display), sans-serif;
+  font-weight: 650;
   font-size: clamp(1.35rem, 3.2vw, 2rem);
   line-height: 1.2;
+  letter-spacing: -0.03em;
   margin: 0 0 1rem;
   max-width: 22ch;
   opacity: 0.95;
@@ -1288,31 +1686,44 @@ onMounted(() => {
 }
 .lp-trust {
   list-style: none;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.65rem 1rem;
-  max-width: 36rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1.35rem;
+  max-width: 38rem;
   margin: 0;
-  padding: 0;
+  padding: 0.85rem 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
 }
 .lp-trust li {
   display: grid;
-  gap: 0.15rem;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.5rem;
+  row-gap: 0.05rem;
   min-width: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  backdrop-filter: none;
 }
 .lp-trust-icon {
+  grid-row: 1 / span 2;
   display: inline-flex;
+  align-items: center;
   color: var(--lp-accent);
-  margin-bottom: 0.15rem;
+  margin: 0;
 }
 .lp-trust strong {
-  font-family: Syne, sans-serif;
-  font-size: 1.15rem;
+  font-family: var(--lp-font-body), sans-serif;
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
 }
 .lp-trust span {
-  font-size: 0.75rem;
-  opacity: 0.85;
-  line-height: 1.25;
+  font-size: 0.72rem;
+  opacity: 0.78;
+  line-height: 1.3;
 }
 
 .lp-section {
@@ -1341,7 +1752,7 @@ onMounted(() => {
   margin: 0 0 0.75rem;
 }
 .lp-h2 {
-  font-family: Syne, sans-serif;
+  font-family: var(--lp-font-display), sans-serif;
   font-size: clamp(1.6rem, 3vw, 2.25rem);
   margin: 0 0 0.75rem;
   letter-spacing: -0.02em;
@@ -1362,6 +1773,15 @@ onMounted(() => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2rem 2.5rem;
   }
+}
+.lp-service-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 0.85rem;
+  margin: 0 0 0.85rem;
+  background: var(--lp-line);
 }
 .lp-service {
   border-top: 1px solid var(--lp-line);
@@ -1403,7 +1823,17 @@ onMounted(() => {
   color: var(--lp-muted);
 }
 .lp-section-cta {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
+}
+.lp-section .lp-btn-primary,
+.lp-form .lp-btn-primary {
+  background: var(--lp-primary);
+  color: #fff;
+}
+.lp-section .lp-btn-ghost {
+  color: var(--lp-ink);
+  background: #fff;
+  border: 1px solid var(--lp-line);
 }
 
 .lp-quotes {
@@ -1428,7 +1858,7 @@ onMounted(() => {
 }
 .lp-rating-score {
   margin: 0;
-  font-family: Syne, sans-serif;
+  font-family: var(--lp-font-display), sans-serif;
   font-size: clamp(2.75rem, 6vw, 3.75rem);
   font-weight: 800;
   letter-spacing: -0.04em;
@@ -1494,7 +1924,7 @@ onMounted(() => {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  font-family: Syne, sans-serif;
+  font-family: var(--lp-font-display), sans-serif;
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -1529,15 +1959,19 @@ onMounted(() => {
 
 .lp-faq {
   display: grid;
-  gap: 0.5rem;
+  gap: 0;
   max-width: 46rem;
+}
+.lp-faq-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 @media (min-width: 880px) {
   .lp-faq {
     max-width: 64rem;
     grid-template-columns: 1fr 1fr;
     column-gap: 2rem;
-    row-gap: 0.15rem;
     align-items: start;
   }
 }
@@ -1567,7 +2001,7 @@ onMounted(() => {
   background: linear-gradient(135deg, var(--lp-secondary), var(--lp-primary));
 }
 .lp-final h2 {
-  font-family: Syne, sans-serif;
+  font-family: var(--lp-font-display), sans-serif;
   font-size: clamp(1.6rem, 3vw, 2.4rem);
   margin: 0 0 0.75rem;
 }
@@ -1616,7 +2050,7 @@ onMounted(() => {
   color: var(--lp-primary);
 }
 .lp-contact-name {
-  font-family: Syne, sans-serif;
+  font-family: var(--lp-font-display), sans-serif;
   font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -1694,7 +2128,7 @@ onMounted(() => {
   background: #fff;
 }
 .lp-hours > strong {
-  font-family: Syne, sans-serif;
+  font-family: var(--lp-font-display), sans-serif;
   font-size: 1rem;
 }
 .lp-powered {
@@ -1715,12 +2149,11 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .lp-trust {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.5rem 0.65rem;
+    gap: 0.7rem 1rem;
     max-width: none;
   }
   .lp-trust strong {
-    font-size: 0.95rem;
+    font-size: 0.88rem;
   }
   .lp-trust span {
     font-size: 0.68rem;
@@ -1734,21 +2167,75 @@ onMounted(() => {
 .lp-nav-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 .lp-nav-wa {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
   height: 2.25rem;
+  padding: 0 0.8rem;
   border-radius: 999px;
-  background: #25d366;
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 800;
+  background: transparent;
+  color: var(--lp-ink);
+  border: 1px solid var(--lp-line);
+  font-size: 0.78rem;
+  font-weight: 700;
   text-decoration: none;
+}
+.lp-sticky-bar {
+  display: none;
+}
+@media (max-width: 859px) {
+  .lp {
+    padding-bottom: 4.75rem;
+  }
+  .lp-nav-wa,
+  .lp-nav-cta {
+    display: none;
+  }
+  .lp-nav .lp-logo {
+    height: 36px;
+    max-height: 36px;
+    max-width: min(152px, 62vw);
+  }
+  .lp-sticky-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    gap: 0.4rem;
+    padding: 0.55rem 0.7rem calc(0.55rem + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(10px);
+  }
+  .lp-sticky-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.6rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-decoration: none;
+    color: #fff;
+    background: var(--lp-ink);
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  .lp-sticky-btn--wa {
+    background: #25d366;
+  }
+  .lp-sticky-btn--book {
+    background: var(--lp-primary);
+  }
 }
 .lp-nav-toggle {
   display: inline-flex;
@@ -1769,7 +2256,7 @@ onMounted(() => {
   background: var(--lp-ink);
   border-radius: 2px;
 }
-@media (min-width: 860px) {
+@media (min-width: 1100px) {
   .lp-nav-toggle,
   .lp-nav-drawer {
     display: none !important;
@@ -1790,18 +2277,32 @@ onMounted(() => {
   font-weight: 600;
   min-height: 44px;
 }
+.lp-nav-drawer-sub {
+  padding-left: 1rem !important;
+  font-weight: 500 !important;
+  color: var(--lp-muted) !important;
+}
+.lp-nav-drawer-sep {
+  height: 1px;
+  margin: 0.35rem 0;
+  background: var(--lp-line);
+}
 
 /* Deep-book + new sections */
 .lp-service-book {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   margin-top: 0.75rem;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  color: var(--lp-primary);
+  color: #fff;
+  background: var(--lp-primary);
   text-decoration: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
 }
 .lp-service-book:hover {
-  text-decoration: underline;
+  opacity: 0.92;
 }
 .lp-section-center {
   text-align: center;
@@ -1838,7 +2339,7 @@ onMounted(() => {
   background: color-mix(in srgb, var(--lp-primary) 18%, #fff);
   display: grid;
   place-items: center;
-  font-family: Syne, sans-serif;
+  font-family: var(--lp-font-display), sans-serif;
   font-weight: 700;
   color: var(--lp-primary);
 }
@@ -1919,19 +2420,63 @@ onMounted(() => {
   letter-spacing: 0.04em;
 }
 .lp-slot-time {
-  font-family: Syne, sans-serif;
-  font-size: 1.25rem;
-  font-weight: 800;
+  font-family: var(--lp-font-body), sans-serif;
+  font-size: 1.15rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
 }
 .lp-slot-cat {
   font-size: 0.85rem;
   color: var(--lp-muted);
 }
 .lp-slot-cta {
-  margin-top: 0.35rem;
-  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 0.45rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: var(--lp-primary);
+  color: #fff;
+  background: var(--lp-primary);
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+}
+@media (max-width: 639px) {
+  .lp-slots {
+    gap: 0.4rem;
+  }
+  .lp-slot {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'day cta'
+      'time cta'
+      'cat cta';
+    align-items: center;
+    column-gap: 0.7rem;
+    row-gap: 0.02rem;
+    padding: 0.5rem 0.7rem;
+    min-height: 0;
+    border-radius: 10px;
+  }
+  .lp-slot-day {
+    grid-area: day;
+    font-size: 0.68rem;
+  }
+  .lp-slot-time {
+    grid-area: time;
+    font-family: var(--lp-font-body), sans-serif;
+    font-size: 0.98rem;
+    font-weight: 750;
+  }
+  .lp-slot-cat {
+    grid-area: cat;
+    font-size: 0.75rem;
+  }
+  .lp-slot-cta {
+    grid-area: cta;
+    margin-top: 0;
+    font-size: 0.75rem;
+  }
 }
 .lp-gallery {
   display: grid;
@@ -2011,6 +2556,69 @@ onMounted(() => {
     align-items: start;
   }
 }
+.lp-meeting-points {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.lp-meeting-points li {
+  display: grid;
+  gap: 0.1rem;
+  font-size: 0.88rem;
+  color: var(--lp-muted);
+}
+.lp-meeting-points strong {
+  color: inherit;
+  font-weight: 650;
+}
+.lp-social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-top: 0.85rem;
+  font-size: 0.86rem;
+}
+.lp-social a {
+  color: var(--lp-muted);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.lp-social a:hover {
+  color: inherit;
+}
+.lp-pickup-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  margin: 1rem auto 0;
+  max-width: 22rem;
+}
+.lp-pickup-form input {
+  flex: 1 1 7rem;
+  min-width: 0;
+  border: 1px solid var(--lp-line);
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  text-align: center;
+  letter-spacing: 0.12em;
+}
+.lp-pickup-result {
+  margin: 0.85rem 0 0;
+  text-align: center;
+  color: var(--lp-muted);
+  line-height: 1.45;
+}
+.lp-pickup-result.ok {
+  color: var(--lp-primary);
+  font-weight: 650;
+}
+.lp-pickup-result.no {
+  color: inherit;
+}
 .lp-hours ul {
   list-style: none;
   margin: 0.5rem 0 0;
@@ -2058,7 +2666,7 @@ onMounted(() => {
 }
 .lp-lead-form h3 {
   margin: 0 0 0.35rem;
-  font-family: Syne, sans-serif;
+  font-family: var(--lp-font-display), sans-serif;
 }
 .lp-lead-form > p {
   margin: 0 auto 0.85rem;

@@ -4,25 +4,23 @@
       <div>
         <h1 class="editor-title">{{ isAddonPage ? 'Add-on Seite bearbeiten' : 'Website bearbeiten' }}</h1>
         <p class="editor-sub">
-          <template v-if="isAddonPage">Review der generierten Seite — nur freigegebene Slots.</template>
-          <template v-else>Nur freigegebene Felder — Layout und Buchungs-CTA bleiben geschützt.</template>
+          <span v-if="isAddonPage">Review der generierten Seite — nur freigegebene Slots.</span>
+          <span v-else>Texte, Team, Preise, Kontakt und Button-Link — das Layout bleibt geschützt.</span>
         </p>
       </div>
       <div class="editor-actions">
         <NuxtLink to="/admin/website/addons" class="btn-ghost">Add-on Seiten</NuxtLink>
-        <NuxtLink to="/admin/website/setup" class="btn-ghost">Neu generieren</NuxtLink>
         <a
           v-if="previewUrl"
           :href="previewUrl"
           target="_blank"
           rel="noopener"
           class="btn-ghost"
+          @click="onPreviewClick"
         >
-          Preview öffnen
+          Vorschau
         </a>
-        <button type="button" class="btn-ghost" :disabled="saving" @click="save(false)">
-          {{ saving && !publishing ? 'Speichern…' : 'Speichern' }}
-        </button>
+        <span class="autosave-hint" aria-live="polite">{{ autosaveHint }}</span>
         <button type="button" class="btn-primary" :disabled="saving" @click="save(true)">
           {{ publishing ? 'Veröffentlichen…' : 'Veröffentlichen' }}
         </button>
@@ -31,34 +29,141 @@
 
     <div v-if="loadError" class="editor-empty">
       <p>{{ loadError }}</p>
-      <NuxtLink to="/admin/website/setup" class="btn-primary">Wizard starten</NuxtLink>
+      <button type="button" class="btn-primary" @click="load()">Erneut laden</button>
     </div>
 
     <div v-else-if="loading" class="editor-empty">Lädt…</div>
 
     <div v-else class="editor-grid">
-      <aside class="editor-form">
-        <div v-for="group in grouped" :key="group.group" class="slot-group">
-          <h2>{{ group.label }}</h2>
-          <div v-for="slot in group.slots" :key="slot.id" class="slot-field">
-            <label :for="slot.id">{{ slot.label }}</label>
+      <aside class="editor-form editor-form--wide">
+        <nav class="editor-tabs" aria-label="Bereiche">
+          <button
+            v-for="group in editorTabs"
+            :key="group.group"
+            type="button"
+            class="editor-tab"
+            :class="{
+              active: activeTab === group.group,
+              'has-missing': missingCount(group.group) > 0,
+            }"
+            @click="selectTab(group.group)"
+          >
+            {{ tabLabel(group.group) }}
+            <span v-if="missingCount(group.group)" class="tab-badge" :title="missingHint(group.group)">
+              {{ missingCount(group.group) }}
+            </span>
+          </button>
+        </nav>
+        <p v-if="missingTotal" class="editor-missing-bar">
+          <strong>{{ missingTotal }} {{ missingTotal === 1 ? 'Angabe fehlt' : 'Angaben fehlen' }}</strong>
+          <button type="button" class="editor-missing-jump" @click="jumpToFirstMissing">
+            {{ missingGroupsLabel }} — zum nächsten
+          </button>
+        </p>
+        <div class="tab-step-nav">
+          <button
+            v-if="hasPrevTab"
+            type="button"
+            class="btn-ghost tab-step-back"
+            @click="goPrevTab"
+          >
+            Zurück
+          </button>
+          <span v-else class="tab-step-spacer" aria-hidden="true" />
+          <button
+            v-if="hasNextTab"
+            type="button"
+            class="btn-primary tab-step-next"
+            @click="goNextTab"
+          >
+            Weiter
+          </button>
+        </div>
+        <div
+          v-for="group in grouped"
+          v-show="activeTab === group.group"
+          :key="group.group"
+          class="slot-group"
+        >
+          <WebsiteSeoAdvisor
+            v-if="!isAddonPage && group.group === 'seo'"
+            :formal-address="formalAddress"
+            :current="seoAdvisorCurrent"
+            @apply="applyAdvisorSlot"
+            @ready="unlockSeoFields"
+            @skip="skipSeoResearch"
+          />
+          <WebsiteFaqResearch
+            v-if="group.group === 'faq'"
+            :formal-address="formalAddress"
+            :existing="existingFaqQuestions"
+            :can-add="canAddFaqSuggestion"
+            @add="applyFaqSuggestion"
+          />
+          <p v-if="group.group === 'seo' && !seoFieldsOpen" class="slot-hint">
+            Google-Titel, Text und Keywords erscheinen nach der Recherche — oder über «Ohne Recherche weiter».
+          </p>
+          <div
+            v-for="slot in visibleSlots(group.slots)"
+            v-show="group.group !== 'seo' || seoFieldsOpen"
+            :key="slot.id"
+            class="slot-field"
+            :class="{
+              'slot-field--color': slot.kind === 'color',
+              'slot-field--font': slot.kind === 'font',
+              'is-missing': isSlotMissing(slot.id),
+            }"
+          >
+            <div class="slot-head">
+              <label :for="slot.id">
+                {{ slot.label }}
+                <span v-if="isRequiredSlot(slot.id)" class="slot-req">*</span>
+              </label>
+              <AIOptimizationSuggestion
+                v-if="slotAi(slot)"
+                compact
+                :original="form[slot.id] || ''"
+                :context="aiContext(slot)"
+                :content-type="slotAi(slot)!.contentType"
+                :optimization-type="slotAi(slot)!.optimizationType"
+                :formal-address="formalAddress"
+                @apply="applyAdvisorSlot(slot.id, $event)"
+              />
+            </div>
             <p v-if="slot.hint" class="slot-hint">{{ slot.hint }}</p>
 
             <div v-if="slot.kind === 'image'" class="slot-image">
-              <div class="slot-image-preview">
+              <div
+                class="slot-image-preview"
+                :class="{
+                  'is-logo': slot.id.includes('logo'),
+                  'is-service': slot.id.startsWith('service.'),
+                }"
+              >
                 <img v-if="form[slot.id]" :src="form[slot.id]!" :alt="slot.label" />
                 <span v-else>Kein Bild</span>
               </div>
-              <label class="btn-upload">
-                {{ uploadingSlot === slot.id ? 'Lädt…' : 'Hochladen' }}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
-                  class="hidden"
+              <div class="slot-image-actions">
+                <label class="btn-upload">
+                  {{ uploadingSlot === slot.id ? 'Lädt…' : 'Hochladen' }}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                    class="hidden"
+                    :disabled="!!uploadingSlot"
+                    @change="onUpload($event, slot.id)"
+                  />
+                </label>
+                <button
+                  v-if="form[slot.id] && slot.id.startsWith('service.')"
+                  type="button"
+                  class="btn-ghost btn-sm"
                   :disabled="!!uploadingSlot"
-                  @change="onUpload($event, slot.id)"
-                />
-              </label>
+                  @click="form[slot.id] = ''"
+                >
+                  Entfernen
+                </button>
+              </div>
             </div>
 
             <div v-else-if="slot.kind === 'video'" class="slot-video">
@@ -110,19 +215,39 @@
                 type="button"
                 class="enum-btn"
                 :class="{ active: form[slot.id] === opt }"
-                @click="form[slot.id] = opt"
+                @click="onEnumClick(slot, opt)"
               >
                 {{ opt === 'sie' ? 'Sie' : opt === 'du' ? 'Du' : opt }}
               </button>
             </div>
 
-            <input
-              v-else-if="slot.kind === 'color'"
-              :id="slot.id"
-              v-model="form[slot.id]"
-              type="color"
-              class="slot-color"
+            <WebsiteFontPicker
+              v-else-if="slot.kind === 'font'"
+              :model-value="form[slot.id] || 'syne-manrope'"
+              :brand="form['brand.name']"
+              :headline="form['hero.headline']"
+              :subheadline="form['hero.subheadline']"
+              :primary="form['brand.primary']"
+              @update:model-value="form[slot.id] = $event"
             />
+
+            <div v-else-if="slot.kind === 'color'" class="slot-color-row">
+              <input
+                :id="slot.id"
+                v-model="form[slot.id]"
+                type="color"
+                class="slot-color"
+                :title="slot.label"
+              />
+              <input
+                v-model="form[slot.id]"
+                type="text"
+                class="slot-color-hex"
+                maxlength="7"
+                spellcheck="false"
+                :aria-label="`${slot.label} Hex`"
+              />
+            </div>
 
             <textarea
               v-else-if="slot.kind === 'textarea'"
@@ -140,44 +265,129 @@
               :maxlength="slot.maxLength"
             />
 
-            <p v-if="slot.maxLength && form[slot.id]" class="slot-count">
+            <p v-if="slotMissingMessage(slot.id)" class="slot-missing">{{ slotMissingMessage(slot.id) }}</p>
+            <p v-else-if="slot.maxLength && form[slot.id]" class="slot-count">
               {{ (form[slot.id] || '').length }}/{{ slot.maxLength }}
             </p>
+            <WebsiteVideoTrimEditor
+              v-if="slot.id === 'brand.hero_image_url'"
+              :form="form"
+              @applied="statusMsg = 'Ausschnitt übernommen — wird gespeichert.'"
+            />
           </div>
+          <p v-if="group.group === 'hero' && slotMissingMessage('hero.trust_0_value')" class="slot-missing">
+            {{ slotMissingMessage('hero.trust_0_value') }}
+          </p>
+          <WebsiteTrustRowEditor
+            v-if="group.group === 'hero' && group.slots.some((s) => s.id.startsWith('hero.trust_'))"
+            :form="form"
+            :formal-address="formalAddress"
+            :context="String(form['hero.headline'] || form['brand.name'] || '')"
+          />
+          <WebsiteEditorMore
+            v-if="!isAddonPage && group.group === 'hero'"
+            panel="usps"
+            :extras="extras"
+            :google-reviews="googleReviews"
+            :formal-address="formalAddress"
+          />
+          <WebsiteEditorMore
+            v-if="!isAddonPage && group.group === 'services'"
+            panel="offer"
+            :extras="extras"
+            :catalog-products="catalogProducts"
+            :catalog-services="catalogServices"
+            :google-reviews="googleReviews"
+            :formal-address="formalAddress"
+            :website-only="websiteOnly"
+          />
+          <p v-if="group.group === 'services' && slotMissingMessage('extras.offer')" class="slot-missing">
+            {{ slotMissingMessage('extras.offer') }}
+          </p>
+          <WebsiteEditorMore
+            v-if="!isAddonPage && group.group === 'contact'"
+            panel="channels"
+            :extras="extras"
+            :google-reviews="googleReviews"
+            :formal-address="formalAddress"
+          />
+          <p v-if="group.group === 'cta' && ctaMissing.length" class="slot-missing">
+            {{ ctaMissing.map((m) => m.msg).join(' · ') }}
+          </p>
+          <WebsiteCtaEditor
+            v-if="group.group === 'cta'"
+            :form="form"
+            :formal-address="formalAddress"
+            :context="String(form['brand.name'] || form['hero.headline'] || '')"
+            :primary-color="primaryColor"
+            :website-only="websiteOnly"
+          />
+          <button
+            v-if="group.group === 'faq' && faqCount < 10"
+            type="button"
+            class="btn-ghost btn-sm"
+            @click="addFaq"
+          >
+            Frage hinzufügen
+          </button>
         </div>
-      </aside>
-
-      <section class="editor-preview">
-        <div class="preview-toolbar">
-          <span>Vorschau</span>
-          <div class="viewport-toggle">
-            <button
-              type="button"
-              :class="{ active: viewport === 'desktop' }"
-              @click="viewport = 'desktop'"
-            >
-              Desktop
-            </button>
-            <button
-              type="button"
-              :class="{ active: viewport === 'mobile' }"
-              @click="viewport = 'mobile'"
-            >
-              Mobile
-            </button>
-          </div>
-          <button type="button" class="btn-ghost btn-sm" @click="refreshPreview">Aktualisieren</button>
-        </div>
-        <div class="preview-frame-wrap" :class="`is-${viewport}`">
-          <iframe
-            v-if="iframeSrc"
-            :key="iframeKey"
-            :src="iframeSrc"
-            title="Website Preview"
-            class="preview-iframe"
+        <div
+          v-if="!isAddonPage && !grouped.some((g) => g.group === 'services')"
+          v-show="activeTab === 'services'"
+          class="slot-group"
+        >
+          <p v-if="slotMissingMessage('extras.offer')" class="slot-missing">{{ slotMissingMessage('extras.offer') }}</p>
+          <WebsiteEditorMore
+            panel="offer"
+            :extras="extras"
+            :catalog-products="catalogProducts"
+            :catalog-services="catalogServices"
+            :google-reviews="googleReviews"
+            :formal-address="formalAddress"
+            :website-only="websiteOnly"
           />
         </div>
-      </section>
+        <div v-show="activeTab === 'team' && !isAddonPage" class="slot-group">
+          <p v-if="slotMissingMessage('extras.team')" class="slot-missing">{{ slotMissingMessage('extras.team') }}</p>
+          <WebsiteEditorMore
+            panel="team"
+            :extras="extras"
+            :google-reviews="googleReviews"
+            :formal-address="formalAddress"
+          />
+        </div>
+        <div v-show="activeTab === 'voices' && !isAddonPage" class="slot-group">
+          <p v-if="slotMissingMessage('extras.voices')" class="slot-missing">{{ slotMissingMessage('extras.voices') }}</p>
+          <WebsiteEditorMore
+            panel="voices"
+            :extras="extras"
+            :google-reviews="googleReviews"
+            :formal-address="formalAddress"
+            :brand-name="String(form['brand.name'] || '')"
+            :address="String(form['contact.address'] || '')"
+            :city="String(form['contact.city'] || '')"
+          />
+        </div>
+        <div class="tab-step-nav tab-step-nav--bottom">
+          <button
+            v-if="hasPrevTab"
+            type="button"
+            class="btn-ghost tab-step-back"
+            @click="goPrevTab"
+          >
+            Zurück
+          </button>
+          <span v-else class="tab-step-spacer" aria-hidden="true" />
+          <button
+            v-if="hasNextTab"
+            type="button"
+            class="btn-primary tab-step-next"
+            @click="goNextTab"
+          >
+            Weiter
+          </button>
+        </div>
+      </aside>
     </div>
 
     <p v-if="statusMsg" class="editor-status">{{ statusMsg }}</p>
@@ -185,7 +395,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import {
   getAllSlots,
   getSlotValues,
@@ -195,11 +405,37 @@ import {
   type SlotDef,
 } from '~/utils/website-slot-schema'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import WebsiteSeoAdvisor from '~/components/website/WebsiteSeoAdvisor.vue'
+import WebsiteTrustRowEditor from '~/components/website/WebsiteTrustRowEditor.vue'
+import WebsiteCtaEditor from '~/components/website/WebsiteCtaEditor.vue'
+import WebsiteVideoTrimEditor from '~/components/website/WebsiteVideoTrimEditor.vue'
+import WebsiteFontPicker from '~/components/website/WebsiteFontPicker.vue'
+import WebsiteEditorMore, { type EditorExtras } from '~/components/website/WebsiteEditorMore.vue'
+import AIOptimizationSuggestion from '~/components/website/AIOptimizationSuggestion.vue'
+import WebsiteFaqResearch from '~/components/website/WebsiteFaqResearch.vue'
+import { websiteFontEditorHrefs } from '~/utils/website-fonts'
+import { extractColorsFromFile, isDefaultBrandPrimary } from '~/utils/logoUtils'
+import {
+  newWizardId,
+  shouldHideStaffOnWebsite,
+  isSeedPlaceholderStaffName,
+  dedupeTeamMembersByName,
+  type WizardTeamMember,
+} from '~/utils/website-wizard-content'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
+useHead({
+  link: [
+    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: 'anonymous' },
+    ...websiteFontEditorHrefs().map((href) => ({ rel: 'stylesheet', href })),
+  ],
+})
+
 const route = useRoute()
 const { primaryColor } = useTenantBranding()
+const { t: terms } = useTerminology()
 
 const loading = ref(true)
 const loadError = ref('')
@@ -207,29 +443,390 @@ const saving = ref(false)
 const publishing = ref(false)
 const statusMsg = ref('')
 const uploadingSlot = ref('')
-const viewport = ref<'desktop' | 'mobile'>('desktop')
-const iframeKey = ref(0)
 const subdomain = ref('')
 const previewUrl = ref('')
 const currentSlug = ref('index')
 const isAddonPage = ref(false)
 const form = reactive<Record<string, string | null>>({})
 const slotDefs = ref<SlotDef[]>([])
+const extrasLoaded = ref(false)
+const extras = reactive<EditorExtras>({
+  extraServices: [],
+  extraProducts: [],
+  teamMembers: [],
+  testimonials: [],
+  contact_channels: { phone: true, email: true, whatsapp: true, form: true },
+  usps: [],
+})
+const catalogProducts = ref<Array<{ id: string; name: string; description?: string; price_chf?: number | null }>>([])
+const catalogServices = ref<Array<{ id: string; name: string; duration_minutes?: number | null; price_chf?: number | null }>>([])
+const websiteOnly = ref(false)
+const googleReviews = reactive<{ enabled: boolean; places: Array<{ name?: string; place_id?: string }> }>({
+  enabled: false,
+  places: [],
+})
+const faqCount = computed(
+  () => slotDefs.value.filter((s) => /^faq\.\d+\.q$/.test(s.id)).length,
+)
+
+function addFaq() {
+  const i = faqCount.value
+  if (i >= 10) return
+  slotDefs.value = [
+    ...slotDefs.value,
+    { id: `faq.${i}.q`, group: 'faq', label: `Frage ${i + 1}`, kind: 'text', maxLength: 160 },
+    {
+      id: `faq.${i}.a`,
+      group: 'faq',
+      label: `Antwort ${i + 1}`,
+      kind: 'textarea',
+      maxLength: 500,
+      formalAware: true,
+    },
+  ]
+  form[`faq.${i}.q`] = ''
+  form[`faq.${i}.a`] = ''
+}
+
+const existingFaqQuestions = computed(() => {
+  const out: string[] = []
+  for (let i = 0; i < faqCount.value; i++) {
+    const q = String(form[`faq.${i}.q`] || '').trim()
+    if (q) out.push(q)
+  }
+  return out
+})
+
+const canAddFaqSuggestion = computed(() => {
+  if (faqCount.value < 10) return true
+  for (let i = 0; i < faqCount.value; i++) {
+    if (!String(form[`faq.${i}.q`] || '').trim() && !String(form[`faq.${i}.a`] || '').trim()) return true
+  }
+  return false
+})
+
+function applyFaqSuggestion(item: { q: string; a: string }) {
+  const q = String(item.q || '').trim().slice(0, 160)
+  const a = String(item.a || '').trim().slice(0, 500)
+  if (!q) return
+  for (let i = 0; i < faqCount.value; i++) {
+    if (!String(form[`faq.${i}.q`] || '').trim() && !String(form[`faq.${i}.a`] || '').trim()) {
+      form[`faq.${i}.q`] = q
+      form[`faq.${i}.a`] = a
+      return
+    }
+  }
+  if (faqCount.value >= 10) return
+  addFaq()
+  const i = faqCount.value - 1
+  form[`faq.${i}.q`] = q
+  form[`faq.${i}.a`] = a
+}
 
 const grouped = computed(() => groupSlots(slotDefs.value))
+const TAB_LABELS: Record<string, string> = {
+  brand: 'Marke',
+  hero: 'Hero',
+  services: 'Angebot',
+  team: 'Team',
+  voices: 'Stimmen',
+  faq: 'FAQ',
+  cta: 'Abschluss',
+  contact: 'Kontakt',
+  seo: 'SEO',
+}
+function tabLabel(group: string) {
+  return TAB_LABELS[group] || group
+}
+function groupHasContent(group: { group: string; slots: SlotDef[] }) {
+  if (group.group === 'cta' || group.group === 'hero' || group.group === 'faq') return true
+  if (!isAddonPage.value && group.group === 'services') return true
+  return visibleSlots(group.slots).length > 0
+}
+const editorTabs = computed(() => {
+  const base = grouped.value.filter(groupHasContent)
+  if (isAddonPage.value) return base
+  const out: Array<{ group: string; slots: SlotDef[] }> = []
+  let insertedExtras = false
+  for (const g of base) {
+    out.push(g)
+    if (g.group === 'services') {
+      out.push({ group: 'team', slots: [] }, { group: 'voices', slots: [] })
+      insertedExtras = true
+    }
+  }
+  if (!base.some((g) => g.group === 'services')) {
+    const afterHero = out.findIndex((g) => g.group === 'hero')
+    const at = afterHero >= 0 ? afterHero + 1 : out.length
+    out.splice(at, 0, { group: 'services', slots: [] }, { group: 'team', slots: [] }, { group: 'voices', slots: [] })
+    insertedExtras = true
+  }
+  if (!insertedExtras) {
+    out.push({ group: 'team', slots: [] }, { group: 'voices', slots: [] })
+  }
+  return out
+})
+const activeTab = ref('')
+function selectTab(id: string) {
+  activeTab.value = id
+  const query = { ...route.query }
+  if (id) query.tab = id
+  else delete query.tab
+  void navigateTo({ query }, { replace: true })
+}
+const tabIndex = computed(() => editorTabs.value.findIndex((t) => t.group === activeTab.value))
+const hasPrevTab = computed(() => tabIndex.value > 0)
+const hasNextTab = computed(() => tabIndex.value >= 0 && tabIndex.value < editorTabs.value.length - 1)
+function scrollEditorTop() {
+  void nextTick(() => {
+    document.querySelector('.editor-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+function goPrevTab() {
+  const prev = editorTabs.value[tabIndex.value - 1]
+  if (!prev) return
+  selectTab(prev.group)
+  scrollEditorTop()
+}
+function goNextTab() {
+  const next = editorTabs.value[tabIndex.value + 1]
+  if (!next) return
+  selectTab(next.group)
+  scrollEditorTop()
+}
+watch(
+  editorTabs,
+  (tabs) => {
+    if (tabs.some((t) => t.group === activeTab.value)) return
+    const fromQuery = String(route.query.tab || '')
+    activeTab.value = tabs.some((t) => t.group === fromQuery)
+      ? fromQuery
+      : tabs[0]?.group || 'brand'
+  },
+  { immediate: true },
+)
+function visibleSlots(slots: SlotDef[]) {
+  return slots.filter(
+    (s) =>
+      !s.id.startsWith('hero.trust_') &&
+      !s.id.startsWith('cta.') &&
+      s.id !== 'brand.hero_video_url' &&
+      s.id !== 'brand.hero_video_start' &&
+      s.id !== 'brand.hero_video_duration',
+  )
+}
+
+const REQUIRED_MIN: Record<string, { min: number; msg: string }> = {
+  'brand.name': { min: 2, msg: 'Name fehlt' },
+  'hero.headline': { min: 8, msg: 'Überschrift fehlt oder ist zu kurz' },
+  'hero.subheadline': { min: 40, msg: 'Bio fehlt oder ist zu kurz (mind. 2 Sätze)' },
+  'cta.headline': { min: 6, msg: 'Abschluss-Überschrift fehlt' },
+  'cta.cta_text': { min: 3, msg: 'Button-Text fehlt' },
+  'contact.address': { min: 4, msg: 'Adresse fehlt' },
+  'contact.city': { min: 2, msg: 'Ort fehlt' },
+  'seo.title': { min: 8, msg: 'SEO-Titel fehlt oder ist zu kurz' },
+  'seo.description': { min: 40, msg: 'SEO-Beschreibung fehlt oder ist zu kurz' },
+}
+
+function slotVal(id: string) {
+  return String(form[id] || '').trim()
+}
+
+type MissingItem = { group: string; slotId: string; msg: string }
+
+const missingItems = computed<MissingItem[]>(() => {
+  const out: MissingItem[] = []
+  const known = new Set(slotDefs.value.map((s) => s.id))
+
+  for (const [id, rule] of Object.entries(REQUIRED_MIN)) {
+    if (!known.has(id)) continue
+    if (slotVal(id).length < rule.min) {
+      const group = slotDefs.value.find((s) => s.id === id)?.group || id.split('.')[0]
+      out.push({ group, slotId: id, msg: rule.msg })
+    }
+  }
+
+  if (known.has('contact.phone') || known.has('contact.email')) {
+    if (!slotVal('contact.phone') && !slotVal('contact.email')) {
+      out.push({ group: 'contact', slotId: 'contact.phone', msg: 'Telefon oder E-Mail fehlt' })
+    }
+  }
+
+  if (known.has('hero.trust_0_value')) {
+    const hasTrust = [0, 1, 2].some(
+      (i) => slotVal(`hero.trust_${i}_value`) && slotVal(`hero.trust_${i}_label`),
+    )
+    if (!hasTrust) {
+      out.push({ group: 'hero', slotId: 'hero.trust_0_value', msg: 'Mindestens ein Vorteil fehlt' })
+    }
+  }
+
+  const emptyServices = slotDefs.value.filter(
+    (s) => s.id.startsWith('service.') && s.id.endsWith('.description') && !slotVal(s.id),
+  )
+  if (emptyServices.length) {
+    out.push({
+      group: 'services',
+      slotId: emptyServices[0].id,
+      msg:
+        emptyServices.length === 1
+          ? 'Eine Angebots-Beschreibung fehlt'
+          : `${emptyServices.length} Angebots-Beschreibungen fehlen`,
+    })
+  }
+
+  for (const slot of slotDefs.value) {
+    if (!/^faq\.\d+\.a$/.test(slot.id)) continue
+    const qId = slot.id.replace(/\.a$/, '.q')
+    const q = slotVal(qId)
+    const a = slotVal(slot.id)
+    if (q && !a) out.push({ group: 'faq', slotId: slot.id, msg: 'Antwort fehlt' })
+    if (!q && a) out.push({ group: 'faq', slotId: qId, msg: 'Frage fehlt' })
+  }
+
+  if (!isAddonPage.value && extrasLoaded.value) {
+    const dbOffers = slotDefs.value.some((s) => s.id.startsWith('service.') && s.id.endsWith('.description'))
+    const extraOffers = extras.extraServices.some(
+      (s) => String(s.name || '').trim() && s.price_chf != null && Number(s.price_chf) > 0,
+    )
+    if (!dbOffers && !extraOffers) {
+      out.push({ group: 'services', slotId: 'extras.offer', msg: 'Mindestens ein Angebot mit Preis fehlt' })
+    }
+    const visibleTeam = extras.teamMembers.filter((m) => m.visible && String(m.name || '').trim())
+    if (visibleTeam.length < 1) {
+      out.push({ group: 'team', slotId: 'extras.team', msg: 'Mindestens eine Person im Team fehlt' })
+    }
+    const hasVoice =
+      googleReviews.enabled ||
+      extras.testimonials.some((t) => String(t.text || '').trim().length >= 20)
+    if (!hasVoice) {
+      out.push({
+        group: 'voices',
+        slotId: 'extras.voices',
+        msg: 'Google-Standort oder mindestens eine echte Kundenstimme fehlt',
+      })
+    }
+  }
+
+  return out
+})
+
+const missingByGroup = computed(() => {
+  const map: Record<string, MissingItem[]> = {}
+  for (const item of missingItems.value) {
+    if (!map[item.group]) map[item.group] = []
+    map[item.group].push(item)
+  }
+  return map
+})
+
+const missingTotal = computed(() => missingItems.value.length)
+const ctaMissing = computed(() => missingByGroup.value.cta || [])
+const missingGroupsLabel = computed(() => {
+  const names = editorTabs.value
+    .filter((g) => (missingByGroup.value[g.group] || []).length)
+    .map((g) => tabLabel(g.group))
+  return names.join(', ')
+})
+
+function missingCount(group: string) {
+  return (missingByGroup.value[group] || []).length
+}
+function missingHint(group: string) {
+  return (missingByGroup.value[group] || []).map((m) => m.msg).join(' · ')
+}
+function isRequiredSlot(id: string) {
+  return !!REQUIRED_MIN[id] || id === 'contact.phone' || id === 'contact.email'
+}
+function isSlotMissing(id: string) {
+  return missingItems.value.some((m) => m.slotId === id)
+}
+function slotMissingMessage(id: string) {
+  return missingItems.value.find((m) => m.slotId === id)?.msg || ''
+}
+function jumpToFirstMissing() {
+  const first = missingItems.value[0]
+  if (!first) return
+  selectTab(first.group)
+  nextTick(() => {
+    const el = document.getElementById(first.slotId)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    if (el instanceof HTMLElement) el.focus()
+  })
+}
+const seoAdvisorCurrent = computed(() => ({
+  headline: form['hero.headline'] || '',
+  subheadline: form['hero.subheadline'] || '',
+  seo_title: form['seo.title'] || '',
+  seo_description: form['seo.description'] || '',
+  seo_keywords: form['seo.keywords'] || '',
+}))
+const seoFieldsOpen = ref(false)
+function seoSkipKey() {
+  return subdomain.value ? `simy-website-seo-skip:${subdomain.value}` : ''
+}
+function unlockSeoFields() {
+  seoFieldsOpen.value = true
+}
+function skipSeoResearch() {
+  seoFieldsOpen.value = true
+  const key = seoSkipKey()
+  if (key && import.meta.client) localStorage.setItem(key, '1')
+}
+function restoreSeoUnlock() {
+  const key = seoSkipKey()
+  if (key && import.meta.client && localStorage.getItem(key) === '1') {
+    seoFieldsOpen.value = true
+  }
+}
+
+const formalAddress = computed(() => (form['brand.formal_address'] === 'du' ? 'du' : 'sie') as 'sie' | 'du')
+
+function slotAi(slot: SlotDef): { contentType: string; optimizationType: 'seo' | 'conversion' } | null {
+  if (slot.id === 'brand.name') return { contentType: 'brand_name', optimizationType: 'seo' }
+  if (slot.id === 'hero.headline') return { contentType: 'headline', optimizationType: 'seo' }
+  if (slot.id === 'hero.subheadline') return { contentType: 'bio', optimizationType: 'seo' }
+  if (slot.id === 'seo.title') return { contentType: 'seo_title', optimizationType: 'seo' }
+  if (slot.id === 'seo.description') return { contentType: 'seo_description', optimizationType: 'seo' }
+  if (slot.id === 'seo.keywords') return { contentType: 'keywords', optimizationType: 'seo' }
+  if (slot.id === 'cta.headline') return { contentType: 'cta_headline', optimizationType: 'conversion' }
+  if (slot.id === 'cta.subheadline') return { contentType: 'cta_sub', optimizationType: 'conversion' }
+  if (slot.id === 'cta.cta_text') return { contentType: 'cta_button', optimizationType: 'conversion' }
+  if (slot.id.startsWith('service.') && slot.id.endsWith('.description')) {
+    return { contentType: 'service_description', optimizationType: 'seo' }
+  }
+  if (/^faq\.\d+\.q$/.test(slot.id)) return { contentType: 'faq_question', optimizationType: 'seo' }
+  if (/^faq\.\d+\.a$/.test(slot.id)) return { contentType: 'faq_answer', optimizationType: 'seo' }
+  return null
+}
+
+function aiContext(slot: SlotDef) {
+  const brand = String(form['brand.name'] || '').trim()
+  const city = String(form['contact.city'] || '').trim()
+  const base = [brand, city].filter(Boolean).join(', ')
+  if (slot.id === 'brand.name') {
+    return [brand, city].filter(Boolean).join(', ') || city || brand
+  }
+  if (slot.id.startsWith('service.') && slot.label) {
+    return `${slot.label.replace(/^Beschreibung:\s*/, '')}${base ? ` — ${base}` : ''}`
+  }
+  if (slot.id.startsWith('faq.')) {
+    const q = slot.id.replace(/\.a$/, '.q')
+    return `${form[q] || slot.label}${base ? ` — ${base}` : ''}`
+  }
+  return base || String(form['hero.headline'] || '')
+}
+
+function applyAdvisorSlot(slotId: string, value: string) {
+  const slot = slotDefs.value.find((s) => s.id === slotId)
+  const max = slot?.maxLength
+  form[slotId] = max ? String(value || '').slice(0, max) : value
+  statusMsg.value = 'Vorschlag übernommen — wird gespeichert.'
+}
 const pageQuerySlug = computed(() => {
   const raw = route.query.page
   const s = Array.isArray(raw) ? raw[0] : raw
   return s ? String(s).trim() : ''
-})
-
-const iframeSrc = computed(() => {
-  if (!subdomain.value) return ''
-  const path =
-    isAddonPage.value && currentSlug.value && currentSlug.value !== 'index'
-      ? `/s/${encodeURIComponent(subdomain.value)}/${encodeURIComponent(currentSlug.value)}`
-      : `/s/${encodeURIComponent(subdomain.value)}`
-  return `${path}?preview=1&_=${iframeKey.value}`
 })
 
 function hydrateForm(landing: LandingPagePayload) {
@@ -241,23 +838,155 @@ function hydrateForm(landing: LandingPagePayload) {
   }
 }
 
+function resetExtras() {
+  extras.extraServices = []
+  extras.extraProducts = []
+  extras.teamMembers = []
+  extras.testimonials = []
+  extras.contact_channels = { phone: true, email: true, whatsapp: true, form: true }
+  extras.usps = []
+  catalogProducts.value = []
+  catalogServices.value = []
+  googleReviews.enabled = false
+  googleReviews.places = []
+  extrasLoaded.value = false
+}
+
+function hydrateTeam(data: any) {
+  const overlay = Array.isArray(data?.landing_team) ? data.landing_team : []
+  const overlayById = new Map(overlay.map((m: any) => [String(m.id), m]))
+  const overlayByName = new Map(
+    overlay
+      .filter((m: any) => String(m.name || '').trim())
+      .map((m: any) => [String(m.name || '').trim().toLowerCase().replace(/\s+/g, ' '), m]),
+  )
+  const fromStaff: WizardTeamMember[] = (data?.staff || []).map((s: any) => {
+    const staffName = String(s.name || '').trim()
+    const prev =
+      (overlayById.get(String(s.id)) as any) ||
+      overlayByName.get(staffName.toLowerCase().replace(/\s+/g, ' '))
+    const defaultRole = s.role === 'admin' ? 'Inhaber/in' : terms.value.staff
+    return {
+      id: String(s.id),
+      source: 'staff' as const,
+      name: String(prev?.name || staffName),
+      role_label: String(prev?.role_label || defaultRole),
+      photo_url: typeof prev?.photo_url === 'string' ? prev.photo_url : null,
+      visible:
+        prev && !isSeedPlaceholderStaffName(String(prev.name || staffName))
+          ? prev.visible !== false
+          : !shouldHideStaffOnWebsite(staffName, data.tenant),
+    }
+  })
+  const customTeam = overlay
+    .filter((m: any) => m.source === 'custom' || !fromStaff.some((s) => s.id === String(m.id)))
+    .filter((m: any) => !fromStaff.some((s) => s.id === String(m.id)))
+    .map((m: any) => ({
+      id: String(m.id || newWizardId('team')),
+      source: 'custom' as const,
+      name: String(m.name || ''),
+      role_label: String(m.role_label || ''),
+      photo_url: typeof m.photo_url === 'string' ? m.photo_url : null,
+      visible: m.visible !== false,
+    }))
+  extras.teamMembers = dedupeTeamMembersByName([...fromStaff, ...customTeam])
+}
+
+async function loadExtras() {
+  try {
+    const res = await $fetch<any>('/api/website/init-data')
+    const data = res?.data || {}
+    const draft = (data.wizard_draft || {}) as Record<string, any>
+    extras.extraServices = Array.isArray(data.extra_services) && data.extra_services.length
+      ? data.extra_services
+      : Array.isArray(draft.extraServices)
+        ? draft.extraServices
+        : []
+    extras.extraProducts = Array.isArray(data.extra_products) && data.extra_products.length
+      ? data.extra_products
+      : Array.isArray(draft.extraProducts)
+        ? draft.extraProducts
+        : []
+    extras.usps = Array.isArray(data.usps) && data.usps.length
+      ? data.usps.map(String).filter(Boolean)
+      : Array.isArray(draft.usps)
+        ? draft.usps.map(String).filter(Boolean)
+        : []
+    const landingQuotes = Array.isArray(data.landing_testimonials) ? data.landing_testimonials : []
+    const draftQuotes = Array.isArray(draft.testimonials) ? draft.testimonials : []
+    extras.testimonials = (landingQuotes.length ? landingQuotes : draftQuotes).map((t: any, i: number) => ({
+      id: String(t.id || `landing-${i}`),
+      author: String(t.author || 'Kunde'),
+      text: String(t.text || ''),
+      rating: Number(t.rating) || 5,
+    }))
+    const channels = data.contact_channels || draft.contact_channels
+    if (channels && typeof channels === 'object') {
+      extras.contact_channels = {
+        phone: channels.phone !== false,
+        email: channels.email !== false,
+        whatsapp: channels.whatsapp !== false,
+        form: channels.form !== false,
+      }
+    }
+    websiteOnly.value = Boolean(data.tenant?.website_only)
+    catalogProducts.value = Array.isArray(data.products) ? data.products : []
+    catalogServices.value = Array.isArray(data.services)
+      ? data.services.map((s: any) => ({
+          id: String(s.id),
+          name: String(s.name || s.category || 'Angebot'),
+          duration_minutes: s.duration_minutes ?? null,
+          price_chf:
+            s.price_chf != null
+              ? Number(s.price_chf)
+              : s.price != null
+                ? Math.round(Number(s.price) / 100)
+                : null,
+        }))
+      : []
+    googleReviews.enabled = !!data.google_reviews?.enabled
+    googleReviews.places = Array.isArray(data.google_reviews?.places) ? data.google_reviews.places : []
+    hydrateTeam({
+      ...data,
+      landing_team:
+        Array.isArray(data.landing_team) && data.landing_team.length
+          ? data.landing_team
+          : draft.teamMembers || [],
+    })
+    extrasLoaded.value = true
+  } catch {
+    extrasLoaded.value = true
+  }
+}
+
 async function load() {
   loading.value = true
   loadError.value = ''
+  extrasLoaded.value = false
+  seoFieldsOpen.value = false
+  autosaveReady.value = false
+  dirty.value = false
+  clearAutosaveTimer()
   try {
     await $fetch('/api/website/init', { method: 'POST' }).catch(() => null)
     const slug = pageQuerySlug.value || 'index'
-    const res = await $fetch<any>(`/api/website/pages/${encodeURIComponent(slug)}`)
+    let res = await $fetch<any>(`/api/website/pages/${encodeURIComponent(slug)}`).catch(() => null)
+    if (!isLandingPayload(res?.page?.blocks) && !pageQuerySlug.value) {
+      await $fetch('/api/website/ensure-home', { method: 'POST' })
+      res = await $fetch<any>('/api/website/pages/index')
+    }
     const landing = res?.page?.blocks
     if (!isLandingPayload(landing)) {
       loadError.value = pageQuerySlug.value
         ? 'Add-on Seite nicht gefunden.'
-        : 'Noch keine Website-Inhalte. Bitte zuerst den Wizard abschliessen.'
+        : 'Website konnte nicht angelegt werden. Bitte neu laden.'
       return
     }
     subdomain.value = res?.website?.subdomain || ''
+    restoreSeoUnlock()
     currentSlug.value = res?.page?.slug || slug
     isAddonPage.value = !res?.page?.is_home && res?.page?.page_type !== 'home'
+    if (isAddonPage.value) seoFieldsOpen.value = true
     previewUrl.value =
       subdomain.value && isAddonPage.value
         ? `/s/${encodeURIComponent(subdomain.value)}/${encodeURIComponent(currentSlug.value)}?preview=1`
@@ -265,24 +994,41 @@ async function load() {
           ? `/s/${encodeURIComponent(subdomain.value)}?preview=1`
           : ''
     hydrateForm(landing)
+    if (!isAddonPage.value) await loadExtras()
+    else resetExtras()
   } catch (err: any) {
     loadError.value =
       err?.data?.statusMessage ||
       err?.message ||
-      'Website konnte nicht geladen werden. Wizard starten?'
+      'Website konnte nicht geladen werden. Bitte neu laden.'
   } finally {
     loading.value = false
+    await nextTick()
+    dirty.value = false
+    autosaveReady.value = !loadError.value
   }
 }
 
 async function save(publish: boolean) {
+  if (publish && missingItems.value.length) {
+    statusMsg.value = `${missingItems.value.length === 1 ? 'Eine Angabe fehlt' : `${missingItems.value.length} Angaben fehlen`}: ${missingItems.value.map((m) => m.msg).join(' · ')}`
+    jumpToFirstMissing()
+    return
+  }
   saving.value = true
   publishing.value = publish
+  dirty.value = false
   statusMsg.value = ''
   try {
     const slots: Record<string, string> = {}
     for (const slot of slotDefs.value) {
       slots[slot.id] = form[slot.id] ?? ''
+    }
+    for (const svc of extras.extraServices) {
+      const fromSlot = form[`service.${svc.id}.image_url`]
+      if (fromSlot) svc.image_url = fromSlot
+      const fromDesc = form[`service.${svc.id}.description`]
+      if (fromDesc && !svc.description) svc.description = fromDesc
     }
     const res = await $fetch<any>('/api/website/slots-save', {
       method: 'POST',
@@ -290,24 +1036,52 @@ async function save(publish: boolean) {
         slots,
         publish,
         slug: currentSlug.value || undefined,
+        extras:
+          !isAddonPage.value && extrasLoaded.value
+            ? {
+                extraServices: extras.extraServices.filter(
+                  (s) =>
+                    !catalogServices.value.some(
+                      (db) => String(db.name || '').trim().toLowerCase() === String(s.name || '').trim().toLowerCase(),
+                    ),
+                ),
+                extraProducts: extras.extraProducts.filter(
+                  (p) =>
+                    !catalogProducts.value.some(
+                      (db) => String(db.name || '').trim().toLowerCase() === String(p.name || '').trim().toLowerCase(),
+                    ),
+                ),
+                teamMembers: extras.teamMembers,
+                testimonials: extras.testimonials,
+                contact_channels: extras.contact_channels,
+                usps: extras.usps,
+              }
+            : undefined,
       },
     })
-    if (res?.landing && isLandingPayload(res.landing)) {
+    if (publish && res?.landing && isLandingPayload(res.landing)) {
+      const ready = autosaveReady.value
+      autosaveReady.value = false
       hydrateForm(res.landing)
+      await nextTick()
+      autosaveReady.value = ready
     }
-    statusMsg.value = publish ? 'Veröffentlicht.' : 'Gespeichert.'
-    refreshPreview()
+    lastSavedAt.value = Date.now()
+    statusMsg.value = publish ? 'Veröffentlicht.' : ''
   } catch (err: any) {
+    dirty.value = true
     statusMsg.value = err?.data?.statusMessage || err?.message || 'Speichern fehlgeschlagen'
   } finally {
     saving.value = false
     publishing.value = false
+    if (!publish && dirty.value) scheduleAutosave()
   }
 }
 
-function mediaUploadSlotFor(slotId: string): 'logo' | 'hero' | 'hero_video' {
+function mediaUploadSlotFor(slotId: string): 'logo' | 'hero' | 'hero_video' | 'service' {
   if (slotId === 'brand.hero_video_url') return 'hero_video'
   if (slotId === 'brand.hero_image_url' || slotId.includes('hero_image')) return 'hero'
+  if (slotId.startsWith('service.') && slotId.endsWith('.image_url')) return 'service'
   return 'logo'
 }
 
@@ -327,17 +1101,35 @@ async function onUpload(event: Event, slotId: string) {
       method: 'POST',
       body,
     })
+    const hadLogo = !!String(form['brand.logo_url'] || '').trim()
     form[slotId] = res.url || res.webp_url
     // Keep brand hero/logo synced if related
     if (slot === 'logo' && slotId !== 'brand.logo_url') form['brand.logo_url'] = form[slotId]
+    let extractedColors = false
+    if (slot === 'logo' && (!hadLogo || isDefaultBrandPrimary(form['brand.primary']))) {
+      try {
+        const colors = await extractColorsFromFile(file)
+        if (colors) {
+          form['brand.primary'] = colors[0]
+          form['brand.secondary'] = colors[1]
+          form['brand.accent'] = colors[2]
+          extractedColors = true
+        }
+      } catch {
+        /* keep uploaded logo even if palette fails */
+      }
+    }
     if (slot === 'hero' && slotId !== 'brand.hero_image_url') form['brand.hero_image_url'] = form[slotId]
     if (slot === 'hero_video' && slotId !== 'brand.hero_video_url') {
       form['brand.hero_video_url'] = form[slotId]
     }
-    statusMsg.value =
-      slot === 'hero_video'
-        ? 'Video hochgeladen — bitte speichern. (Kein Transcode: ≤720p empfohlen.)'
-        : 'Bild hochgeladen — bitte speichern.'
+    statusMsg.value = extractedColors
+      ? 'Farben aus dem Logo übernommen — wird gespeichert. Unter Marke kannst du sie noch anpassen.'
+      : slot === 'hero_video'
+        ? 'Video hochgeladen — wird gespeichert. (Kein Transcode: ≤720p empfohlen.)'
+        : slot === 'service'
+          ? 'Foto konvertiert (WebP, 3:2) — wird gespeichert.'
+          : 'Bild hochgeladen — wird gespeichert.'
   } catch (err: any) {
     statusMsg.value = err?.data?.statusMessage || err?.message || 'Upload fehlgeschlagen'
   } finally {
@@ -346,15 +1138,74 @@ async function onUpload(event: Event, slotId: string) {
   }
 }
 
-function refreshPreview() {
-  iframeKey.value += 1
+function onEnumClick(slot: SlotDef, opt: string) {
+  form[slot.id] = opt
 }
 
+const autosaveReady = ref(false)
+const dirty = ref(false)
+const lastSavedAt = ref(0)
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null
+
+const autosaveHint = computed(() => {
+  if (publishing.value) return ''
+  if (saving.value) return 'Speichert…'
+  if (dirty.value) return 'Änderung merken…'
+  if (lastSavedAt.value) return 'Gespeichert'
+  return ''
+})
+
+function clearAutosaveTimer() {
+  if (!autosaveTimer) return
+  clearTimeout(autosaveTimer)
+  autosaveTimer = null
+}
+
+function markDirty() {
+  if (!autosaveReady.value || loading.value) return
+  dirty.value = true
+  scheduleAutosave()
+}
+
+function scheduleAutosave() {
+  if (!autosaveReady.value || loading.value || publishing.value) return
+  clearAutosaveTimer()
+  autosaveTimer = setTimeout(() => {
+    autosaveTimer = null
+    if (!autosaveReady.value || publishing.value || !dirty.value) return
+    void save(false)
+  }, 2000)
+}
+
+async function onPreviewClick(event: MouseEvent) {
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
+  if (!dirty.value && !saving.value) return
+  event.preventDefault()
+  clearAutosaveTimer()
+  await save(false)
+  if (previewUrl.value) window.open(previewUrl.value, '_blank', 'noopener')
+}
+
+function onBeforeUnload(event: BeforeUnloadEvent) {
+  if (!dirty.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+watch(form, markDirty, { deep: true })
+watch(extras, markDirty, { deep: true })
 watch(pageQuerySlug, () => {
   load()
 })
 
-onMounted(load)
+onMounted(() => {
+  window.addEventListener('beforeunload', onBeforeUnload)
+  void load()
+})
+onUnmounted(() => {
+  clearAutosaveTimer()
+  window.removeEventListener('beforeunload', onBeforeUnload)
+})
 </script>
 
 <style scoped>
@@ -363,6 +1214,26 @@ onMounted(load)
   min-height: 100%;
   padding: 1.25rem 1.5rem 2.5rem;
   background: linear-gradient(160deg, #f6f4f0 0%, #eef2f6 100%);
+  color-scheme: light;
+}
+.editor-page :deep(input[type='text']),
+.editor-page :deep(input[type='url']),
+.editor-page :deep(input[type='number']),
+.editor-page :deep(input[type='tel']),
+.editor-page :deep(input[type='email']),
+.editor-page :deep(input[type='search']),
+.editor-page :deep(textarea) {
+  background: #fff;
+  color: #111;
+  -webkit-text-fill-color: #111;
+  caret-color: #111;
+  color-scheme: light;
+}
+.editor-page :deep(input::placeholder),
+.editor-page :deep(textarea::placeholder) {
+  color: #8a93a3;
+  -webkit-text-fill-color: #8a93a3;
+  opacity: 1;
 }
 .editor-top {
   display: flex;
@@ -386,7 +1257,14 @@ onMounted(load)
 .editor-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
+}
+.autosave-hint {
+  min-width: 7.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #7a8494;
 }
 .btn-primary,
 .btn-ghost,
@@ -433,45 +1311,173 @@ onMounted(load)
   color: #5b6577;
 }
 .editor-grid {
-  display: grid;
-  grid-template-columns: minmax(320px, 420px) 1fr;
-  gap: 1rem;
-  align-items: start;
-}
-@media (max-width: 1100px) {
-  .editor-grid {
-    grid-template-columns: 1fr;
-  }
+  display: block;
+  max-width: 44rem;
 }
 .editor-form {
   background: #fff;
   border-radius: 1rem;
   border: 1px solid #e6e9ef;
   padding: 1rem 1.1rem 1.5rem;
-  max-height: calc(100vh - 10rem);
-  overflow: auto;
 }
-.slot-group + .slot-group {
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
+.editor-form--wide {
+  max-height: none;
+}
+.tab-step-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+.tab-step-nav--bottom {
+  margin: 1.15rem 0 0;
+  padding-top: 1rem;
   border-top: 1px solid #eef1f5;
 }
-.slot-group h2 {
+.tab-step-spacer {
+  display: block;
+  width: 0;
+  height: 0;
+}
+.tab-step-back {
+  margin-right: auto;
+}
+.tab-step-next {
+  margin-left: auto;
+}
+.editor-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.3rem;
+  overflow-x: auto;
+  margin: 0 0 1.15rem;
+  padding: 0 0 0.75rem;
+  border-bottom: 1px solid #eef1f5;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.editor-tab {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: #5b6577;
+  cursor: pointer;
+}
+.editor-tab:hover:not(.active) {
+  background: #f3f5f8;
+  color: #1a2333;
+}
+.editor-tab.active {
+  background: var(--ed-primary, #0f766e);
+  color: #fff;
+}
+.editor-tab.has-missing:not(.active) {
+  color: #9a3412;
+}
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  margin-left: 0.35rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #c2410c;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.editor-tab.active .tab-badge {
+  background: #fff;
+  color: #c2410c;
+}
+.editor-missing-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+  margin: -0.35rem 0 1rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.75rem;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 0.82rem;
+}
+.editor-missing-bar strong {
+  font-weight: 750;
+}
+.editor-missing-jump {
+  border: 0;
+  background: transparent;
+  color: #9a3412;
+  font-weight: 650;
+  font-size: 0.82rem;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.slot-req {
+  color: #c2410c;
+  font-weight: 800;
+}
+.slot-field.is-missing input[type='text'],
+.slot-field.is-missing textarea {
+  border-color: #fdba74;
+  background: #fffaf5;
+}
+.slot-missing {
+  margin: 0.35rem 0 0.15rem;
   font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #7a8494;
-  margin: 0 0 0.85rem;
+  color: #c2410c;
+  font-weight: 600;
+}
+.slot-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 0.65rem;
+}
+.slot-group > :not(.slot-field--color) {
+  grid-column: 1 / -1;
+}
+.slot-field--font {
+  margin-top: 0.25rem;
 }
 .slot-field {
   margin-bottom: 0.9rem;
+}
+.slot-field--color {
+  margin-bottom: 1rem;
+}
+.slot-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.2rem 0.5rem;
+  margin-bottom: 0.3rem;
+}
+.slot-head :deep(.ai-opt-panel),
+.slot-head :deep(.ai-opt-error) {
+  flex: 1 1 100%;
+  order: 3;
 }
 .slot-field label {
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
   color: #1a2333;
-  margin-bottom: 0.3rem;
+  margin: 0;
 }
 .slot-hint {
   font-size: 0.72rem;
@@ -479,26 +1485,46 @@ onMounted(load)
   margin: -0.15rem 0 0.35rem;
 }
 .slot-field input[type='text'],
+.slot-field input[type='url'],
 .slot-field textarea {
   width: 100%;
   border: 1px solid #d7dbe3;
   border-radius: 0.65rem;
   padding: 0.55rem 0.7rem;
   font-size: 0.9rem;
-  background: #fafbfc;
+  background: #fff;
+  color: #111;
 }
 .slot-field input:focus,
 .slot-field textarea:focus {
   outline: 2px solid color-mix(in srgb, var(--ed-primary, #0f766e) 35%, transparent);
   border-color: var(--ed-primary, #0f766e);
 }
+.slot-color-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+}
 .slot-color {
-  width: 3rem;
-  height: 2.25rem;
+  width: 100%;
+  height: 2.6rem;
   border: 1px solid #d7dbe3;
   border-radius: 0.5rem;
   padding: 0;
   background: transparent;
+  cursor: pointer;
+}
+.slot-color-hex {
+  width: 100%;
+  border: 1px solid #d7dbe3;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #fff;
+  color: #111;
+  text-transform: uppercase;
 }
 .slot-count {
   font-size: 0.7rem;
@@ -529,8 +1555,14 @@ onMounted(load)
   display: grid;
   gap: 0.5rem;
 }
+.slot-image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
 .slot-image-preview {
-  height: 5.5rem;
+  min-height: 7rem;
   border-radius: 0.75rem;
   background: #f3f5f8;
   border: 1px dashed #c9d0db;
@@ -540,10 +1572,41 @@ onMounted(load)
   color: #9aa3b2;
   font-size: 0.8rem;
 }
+.slot-image-preview:not(.is-logo) {
+  aspect-ratio: 16 / 9;
+  height: auto;
+}
+.slot-image-preview.is-service {
+  width: 7.5rem;
+  min-height: 0;
+  aspect-ratio: 3 / 2;
+}
 .slot-image-preview img {
+  min-width: 0;
+  min-height: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+}
+.slot-image-preview.is-logo {
+  height: 8.5rem;
+  min-height: 8.5rem;
+  background:
+    linear-gradient(45deg, #eef1f5 25%, transparent 25%),
+    linear-gradient(-45deg, #eef1f5 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #eef1f5 75%),
+    linear-gradient(-45deg, transparent 75%, #eef1f5 75%);
+  background-size: 14px 14px;
+  background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+  background-color: #fff;
+}
+.slot-image-preview.is-logo img {
+  width: auto;
+  height: auto;
+  max-width: calc(100% - 1.5rem);
+  max-height: 7.2rem;
+  object-fit: contain;
 }
 .slot-video {
   display: grid;
@@ -578,68 +1641,10 @@ onMounted(load)
   padding: 0.55rem 0.7rem;
   font-size: 0.875rem;
   background: #fff;
+  color: #111;
 }
 .hidden {
   display: none;
-}
-.editor-preview {
-  background: #fff;
-  border-radius: 1rem;
-  border: 1px solid #e6e9ef;
-  overflow: hidden;
-  min-height: 70vh;
-  display: flex;
-  flex-direction: column;
-}
-.preview-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.65rem 0.85rem;
-  border-bottom: 1px solid #eef1f5;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #5b6577;
-}
-.viewport-toggle {
-  display: inline-flex;
-  border: 1px solid #d7dbe3;
-  border-radius: 0.55rem;
-  overflow: hidden;
-  margin-left: auto;
-}
-.viewport-toggle button {
-  border: 0;
-  background: #fff;
-  padding: 0.35rem 0.7rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  color: #5b6577;
-}
-.viewport-toggle button.active {
-  background: #0c1222;
-  color: #fff;
-}
-.preview-frame-wrap {
-  flex: 1;
-  background: #e8ebf0;
-  display: flex;
-  justify-content: center;
-  padding: 0.75rem;
-  min-height: 64vh;
-}
-.preview-frame-wrap.is-mobile .preview-iframe {
-  width: 390px;
-  max-width: 100%;
-  border-radius: 1rem;
-  box-shadow: 0 12px 40px rgba(12, 18, 34, 0.18);
-}
-.preview-iframe {
-  width: 100%;
-  height: 100%;
-  min-height: 64vh;
-  border: 0;
-  background: #fff;
 }
 .editor-status {
   margin-top: 0.85rem;

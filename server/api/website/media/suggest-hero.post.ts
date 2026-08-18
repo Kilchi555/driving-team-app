@@ -12,6 +12,7 @@ import {
   buildStockQueries,
 } from '~/server/utils/website-hero-prompts'
 import { filterLeafCategories } from '~/server/utils/category-groups'
+import { resolveWebsiteCity } from '~/server/utils/website-local-seo'
 
 export type HeroCandidate = {
   id: string
@@ -26,10 +27,7 @@ export type HeroCandidate = {
 }
 
 function cityFromTenant(tenant: any): string {
-  if (tenant?.city) return String(tenant.city)
-  const addr = String(tenant?.address || '')
-  const m = addr.match(/\b\d{4}\s+([A-Za-zÄÖÜäöüÉéÈè\-\s]+)\b/)
-  return m?.[1]?.trim().split(',')[0].trim() || ''
+  return resolveWebsiteCity(tenant)
 }
 
 async function fetchUnsplashCandidates(queries: string[], accessKey: string): Promise<HeroCandidate[]> {
