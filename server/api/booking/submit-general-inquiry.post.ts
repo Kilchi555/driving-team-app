@@ -4,7 +4,7 @@
 // - Specific request: contact info + category + location + duration + preferred_time_slots
 // Contact field requirements follow tenant booking_policy.booking_required_fields
 
-import { defineEventHandler, readBody, createError, getRequestIP } from 'h3'
+import { defineEventHandler, readBody, createError, getRequestIP, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { v4 as uuidv4 } from 'uuid'
 import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
@@ -16,6 +16,7 @@ import { normalizePhoneNumber } from '~/server/utils/sms'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
+import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -545,6 +546,30 @@ export default defineEventHandler(async (event) => {
       } catch (err: any) {
         console.warn('⚠️ Server-side Google Ads inquiry conversion upload failed (non-critical):', err?.message ?? err)
       }
+    }
+
+    try {
+      const normalizedEmail = (fieldValues.email || '').toLowerCase()
+      const normalizedPhone = (fieldValues.phone || '').replace(/\s+/g, '').replace(/^00/, '+')
+      const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+      const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+
+      await recordAndSendCapiEvent({
+        appointment_id: proposal.id,
+        tenant_id,
+        event_name: 'Lead',
+        conversion_value_chf: 0,
+        conversion_date_time: new Date(),
+        fbclid: resolvedAttribution?.fbclid ?? null,
+        fbc: resolvedAttribution?.fbc ?? null,
+        fbp: resolvedAttribution?.fbp ?? null,
+        hashed_email: hashedEmail,
+        hashed_phone: hashedPhone,
+        client_ip: ip,
+        user_agent: getHeader(event, 'user-agent') ?? null,
+      })
+    } catch (err: any) {
+      console.warn('⚠️ Meta CAPI Lead upload failed (non-critical):', err?.message ?? err)
     }
 
     try {

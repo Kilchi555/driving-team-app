@@ -1,12 +1,13 @@
 // server/api/booking/submit-proposal.post.ts
 // Submit a booking proposal when no slots are available
 
-import { defineEventHandler, readBody, createError, getRequestIP } from 'h3'
+import { defineEventHandler, readBody, createError, getRequestIP, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { upsertMarketingLeadSafe } from '~/server/utils/upsert-marketing-lead'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
+import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -303,6 +304,30 @@ export default defineEventHandler(async (event) => {
       } catch (err: any) {
         console.warn('⚠️ Server-side Google Ads inquiry conversion upload failed (non-critical):', err?.message ?? err)
       }
+    }
+
+    try {
+      const normalizedEmail = (email ?? '').trim().toLowerCase()
+      const normalizedPhone = (phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+      const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+      const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+
+      await recordAndSendCapiEvent({
+        appointment_id: proposal.id,
+        tenant_id,
+        event_name: 'Lead',
+        conversion_value_chf: 0,
+        conversion_date_time: new Date(),
+        fbclid: resolvedAttribution?.fbclid ?? null,
+        fbc: resolvedAttribution?.fbc ?? null,
+        fbp: resolvedAttribution?.fbp ?? null,
+        hashed_email: hashedEmail,
+        hashed_phone: hashedPhone,
+        client_ip: ip,
+        user_agent: getHeader(event, 'user-agent') ?? null,
+      })
+    } catch (err: any) {
+      console.warn('⚠️ Meta CAPI Lead upload failed (non-critical):', err?.message ?? err)
     }
 
     // Send emails to customer and staff

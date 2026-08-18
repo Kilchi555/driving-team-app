@@ -132,6 +132,15 @@ export default defineNuxtPlugin(() => {
     attribution = decodeAttribution(dtAttr)
   }
 
+  const readCookie = (name: string): string | null => {
+    try {
+      const match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]+)'))
+      return match ? decodeURIComponent(match[1]) : null
+    } catch {
+      return null
+    }
+  }
+
   const urlHasClickId = !!(gclidFromUrl || gbraidFromUrl || wbraidFromUrl || fbclidFromUrl)
   if (urlHasClickId || urlParams.get('utm_source')) {
     const fromUrl: DecodedAttribution = {
@@ -164,8 +173,19 @@ export default defineNuxtPlugin(() => {
     }
   }
 
+  const fbcCookie = readCookie('_fbc')
+  const fbpCookie = readCookie('_fbp')
+  if (attribution && (fbcCookie || fbpCookie)) {
+    attribution = {
+      ...attribution,
+      fbc: attribution.fbc || fbcCookie,
+      fbp: attribution.fbp || fbpCookie,
+    }
+  }
+
   const hasPaidOrUtm = !!(
     attribution?.gclid || attribution?.gbraid || attribution?.wbraid || attribution?.fbclid
+    || attribution?.fbc || attribution?.fbp
     || (attribution?.utm_source && attribution.utm_source !== 'direct' && attribution.utm_source !== 'drivingteam_direct')
   )
   if (attribution && hasPaidOrUtm) {

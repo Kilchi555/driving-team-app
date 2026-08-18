@@ -20,6 +20,9 @@ import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
+import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
+import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conversion'
+import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -61,6 +64,7 @@ const handler = defineEventHandler(async (event) => {
       partialStartPosition,
       individualSessionNumber,  // Set when booking a single allow_individual_booking session
       marketingSessionId,   // Optional: analytics session ID from drivingteam.ch for attribution
+      marketingAttribution, // Optional: client-side gclid/UTM blob
       vehicleId,            // Optional: selected rental vehicle
       paymentMethod: requestedPaymentMethod, // Optional: 'cash_on_site' (default) or 'invoice'
     } = body
@@ -618,22 +622,23 @@ const handler = defineEventHandler(async (event) => {
       })
     }
 
+    const isPartialOrd = !!(isPartialEnrollment || course.is_partial_only)
+    const isIndivSess = isPartialOrd && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
+    let effectivePrice: number
+    if (isIndivSess) {
+      const tgt = (course.course_sessions || []).find(
+        (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
+      )
+      effectivePrice = tgt?.individual_price_rappen ?? course.price_per_participant_rappen
+    } else {
+      const partialPriceRappen: number = course.course_category?.partial_price_rappen ?? 0
+      effectivePrice = (isPartialOrd && !course.is_partial_only && partialPriceRappen > 0)
+        ? partialPriceRappen
+        : course.price_per_participant_rappen
+    }
+
     // 11. Send confirmation email
     try {
-      const isPartialOrd = !!(isPartialEnrollment || course.is_partial_only)
-      const isIndivSess = isPartialOrd && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
-      let effectivePrice: number
-      if (isIndivSess) {
-        const tgt = (course.course_sessions || []).find(
-          (s: any) => s.session_number === individualSessionNumber && s.allow_individual_booking
-        )
-        effectivePrice = tgt?.individual_price_rappen ?? course.price_per_participant_rappen
-      } else {
-        const partialPriceRappen: number = course.course_category?.partial_price_rappen ?? 0
-        effectivePrice = (isPartialOrd && !course.is_partial_only && partialPriceRappen > 0)
-          ? partialPriceRappen
-          : course.price_per_participant_rappen
-      }
       await $fetch('/api/emails/send-course-enrollment-confirmation', {
         method: 'POST',
         body: {
@@ -645,6 +650,42 @@ const handler = defineEventHandler(async (event) => {
       logger.info(`📧 Confirmation email sent to ${finalEmail}`)
     } catch (error: any) {
       logger.warn('⚠️ Email send failed (non-critical):', error.message)
+    }
+
+    try {
+      const attrRow = await resolveMarketingAttribution(supabase, marketingSessionId, marketingAttribution)
+      const hashedEmail = finalEmail ? await sha256Hex(finalEmail.trim().toLowerCase()) : null
+      const normalizedPhone = (finalPhone || phone || '').replace(/\s+/g, '').replace(/^00/, '+')
+      const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+      const valueChf = effectivePrice / 100
+      const conversionDateTime = new Date()
+
+      await sendCapiEvent({
+        appointment_id: `course_${enrollment.id}`,
+        tenant_id: tenantId,
+        event_name: 'Purchase',
+        conversion_value_chf: valueChf,
+        conversion_date_time: conversionDateTime,
+        fbclid: attrRow?.fbclid ?? null,
+        fbc: attrRow?.fbc ?? null,
+        fbp: attrRow?.fbp ?? null,
+        hashed_email: hashedEmail,
+        hashed_phone: hashedPhone,
+      })
+
+      await recordAndUploadCourseConversion({
+        registration_id: enrollment.id,
+        tenant_id: tenantId,
+        gclid: attrRow?.gclid ?? null,
+        gbraid: attrRow?.gbraid ?? null,
+        wbraid: attrRow?.wbraid ?? null,
+        conversion_value_chf: valueChf,
+        conversion_date_time: conversionDateTime,
+        hashed_email: hashedEmail,
+        hashed_phone: hashedPhone,
+      })
+    } catch (err: any) {
+      logger.warn('⚠️ Meta/Google Ads conversion upload failed for cash enrollment (non-critical):', err?.message ?? err)
     }
 
     return {

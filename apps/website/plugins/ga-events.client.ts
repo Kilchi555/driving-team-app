@@ -76,6 +76,7 @@ export default defineNuxtPlugin(() => {
       gclid: attr.gclid || p.get('gclid') || null,
       gbraid: attr.gbraid || p.get('gbraid') || null,
       wbraid: attr.wbraid || p.get('wbraid') || null,
+      fbclid: attr.fbclid || p.get('fbclid') || null,
     }
   }
 
