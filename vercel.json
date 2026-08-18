@@ -195,7 +195,7 @@
     },
     {
       "path": "/api/cron/poll-gbp-reviews",
-      "schedule": "7,37 * * * *"
+      "schedule": "7,37 5-17 * * *"
     },
     {
       "path": "/api/cron/publish-gbp-photos",

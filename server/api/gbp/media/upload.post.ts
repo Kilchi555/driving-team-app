@@ -92,22 +92,33 @@ export default defineEventHandler(async (event) => {
   const draftNotes = notesPart?.data?.toString()?.trim() || null
   const autoCaption = autoCaptionPart?.data?.toString() === 'true'
 
-  let notes = draftNotes
+  const captionByLocation = new Map<string, string | null>()
   let captionGenerated = false
+
   if (autoCaption) {
-    try {
-      const caption = await generateGbpPhotoCaptionFromBuffer({
-        tenantId: authUser.tenant_id,
-        locationId: locationUuids[0],
-        imageBuffer: Buffer.from(filePart.data),
-        draftText: draftNotes,
-      })
-      if (caption?.trim()) {
-        notes = caption.trim().slice(0, 250)
-        captionGenerated = true
+    // One SEO caption per GBP location (tenant keywords adapted to place)
+    for (const locationId of locationUuids) {
+      try {
+        const caption = await generateGbpPhotoCaptionFromBuffer({
+          tenantId: authUser.tenant_id,
+          locationId,
+          imageBuffer: Buffer.from(filePart.data),
+          draftText: draftNotes,
+        })
+        if (caption?.trim()) {
+          captionByLocation.set(locationId, caption.trim().slice(0, 250))
+          captionGenerated = true
+        } else {
+          captionByLocation.set(locationId, draftNotes)
+        }
+      } catch (err: any) {
+        console.warn('[gbp/media/upload] autoCaption failed:', locationId, err?.message || err)
+        captionByLocation.set(locationId, draftNotes)
       }
-    } catch (err: any) {
-      console.warn('[gbp/media/upload] autoCaption failed:', err?.message || err)
+    }
+  } else {
+    for (const locationId of locationUuids) {
+      captionByLocation.set(locationId, draftNotes)
     }
   }
 
@@ -119,7 +130,7 @@ export default defineEventHandler(async (event) => {
     category,
     approved: approved || publishNow,
     source: 'upload' as const,
-    notes,
+    notes: captionByLocation.get(locationId) ?? draftNotes,
   }))
 
   const { data: assets, error } = await supabase
@@ -139,7 +150,7 @@ export default defineEventHandler(async (event) => {
       publicUrl,
       category,
       first.location_id,
-      notes,
+      first.notes,
     )
     await supabase
       .from('gbp_media_assets')
