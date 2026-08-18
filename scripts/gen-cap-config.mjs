@@ -25,10 +25,6 @@ const plugins = {
     splashFullScreen: true,
     splashImmersive: true,
   },
-  StatusBar: {
-    style: 'Default',
-    overlaysWebView: true,
-  },
 }
 
 // Only enable push if the client has explicitly opted in and configured APNs/FCM.
