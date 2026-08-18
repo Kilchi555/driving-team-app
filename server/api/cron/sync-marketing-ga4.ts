@@ -1,20 +1,18 @@
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getTenantIdByGa4Property } from '~/server/utils/marketing-tenant'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 import { logger } from '~/utils/logger'
 import { readBody } from 'h3'
+
+export const maxDuration = 120
 
 // Fetches GA4 data (sessions, users, conversions by channel + page)
 // and upserts into marketing_ga4_daily. Runs daily at 04:00 via Vercel Cron.
 // Default: last 7 days. Backfill via body: { startDate, endDate }.
 // Paginates with offset — a single 5000-row page under-counted busy properties.
 export default defineEventHandler(async (event) => {
-  // ============ LAYER 1: CRON AUTH ============
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   // ============ LAYER 2: ENV CHECK ============
   const clientEmail = process.env.GOOGLE_SA_CLIENT_EMAIL
