@@ -6,6 +6,7 @@ import {
   getVercelDomainConfig,
   normalizeHostname,
 } from '~/server/utils/custom-domain'
+import { infomaniakDnsGuideUrl, infomaniakShopUrl } from '~/server/utils/domain-availability'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -29,6 +30,11 @@ export default defineEventHandler(async (event) => {
     .maybeSingle()
 
   const domain = website?.custom_domain ? normalizeHostname(website.custom_domain) : null
+  const liveUrl = domain
+    ? `https://${domain}`
+    : website?.subdomain
+      ? `https://app.simy.ch/s/${website.subdomain}`
+      : null
 
   return {
     website_id: website?.id || null,
@@ -41,11 +47,11 @@ export default defineEventHandler(async (event) => {
     verification: website?.custom_domain_verification || null,
     dns: domain ? dnsInstructions(domain) : null,
     vercel_api_configured: !!getVercelDomainConfig(),
-    live_url: domain
-      ? `https://${domain}`
-      : website?.subdomain
-        ? `https://app.simy.ch/s/${website.subdomain}`
-        : null,
+    live_url: liveUrl,
+    sitemap_url: liveUrl ? `${liveUrl.replace(/\/$/, '')}/sitemap.xml` : null,
+    robots_url: liveUrl ? `${liveUrl.replace(/\/$/, '')}/robots.txt` : null,
     preview_url: website?.subdomain ? `https://app.simy.ch/s/${website.subdomain}?preview=1` : null,
+    infomaniak_shop_url: domain ? infomaniakShopUrl(domain) : 'https://www.infomaniak.com/de/domains',
+    infomaniak_dns_guide: infomaniakDnsGuideUrl(),
   }
 })

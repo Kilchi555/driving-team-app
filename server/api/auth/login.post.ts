@@ -1,11 +1,11 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { checkProgressiveRateLimitWithHistory } from '~/server/utils/progressive-rate-limiter'
 import { logger } from '~/utils/logger'
 import { validateEmail, throwValidationError } from '~/server/utils/validators'
 import { setAuthCookies } from '~/server/utils/cookies'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { getSupabaseAdmin, getSupabaseAnon } from '~/server/utils/supabase-admin'
 
 // Helper function to extract device name from User-Agent
 function getDeviceNameFromUserAgent(userAgent: string): string {
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
     })
     
     const supabaseUrl = process.env.SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceRoleKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !serviceRoleKey) {
       throw createError({
@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
+    const adminSupabase = getSupabaseAdmin()
     
     // Check if IP is blocked
     try {
@@ -191,9 +191,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Use anon client for login (as frontend would)
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
-    const supabase = createClient(supabaseUrl, supabaseAnonKey!)
+    // Anon client for password login. New sb_publishable_ keys must not go out
+    // as Authorization: Bearer (that 401s). getSupabaseAnon() strips that.
+    const supabase = getSupabaseAnon()
 
     logger.debug('🔑 Attempting login for email:', email.substring(0, 3) + '***')
 
@@ -732,7 +732,7 @@ Diese E-Mail ist eine automatische Sicherheitsmitteilung von ${tenantName}.
     try {
       const { data: profileData, error: profileError } = await adminSupabase
         .from('users')
-        .select('id, email, role, first_name, last_name, phone, tenant_id, is_active, preferred_payment_method, password_strength_version')
+        .select('id, email, role, first_name, last_name, phone, tenant_id, is_active, preferred_payment_method, password_strength_version, admin_level, is_primary_admin, linked_admin_user_id, can_switch_all_staff')
         .eq('auth_user_id', data.user.id)
         .eq('is_active', true)
         .single()
@@ -746,12 +746,19 @@ Diese E-Mail ist eine automatische Sicherheitsmitteilung von ${tenantName}.
           try {
             const { data: tenantData } = await adminSupabase
               .from('tenants')
-              .select('slug')
+              .select('slug, website_only')
               .eq('id', profileData.tenant_id)
               .single()
             if (tenantData?.slug) {
               ;(userProfile as any).tenant_slug = tenantData.slug
             }
+            // Default register tenants stay false — slim admin only when explicitly set.
+            ;(userProfile as any).website_only = !!tenantData?.website_only
+            ;(userProfile as any).can_switch_accounts =
+              !tenantData?.website_only &&
+              (userProfile.role === 'admin' ||
+                !!(userProfile as any).linked_admin_user_id ||
+                !!(userProfile as any).can_switch_all_staff)
           } catch (slugErr: any) {
             logger.warn('⚠️ Failed to resolve tenant slug for login response:', slugErr?.message)
           }

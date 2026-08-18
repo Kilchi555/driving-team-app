@@ -5,6 +5,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 const client = new Anthropic()
 
@@ -52,6 +54,50 @@ function contentTypeRules(contentType: string, terms: Terminology, city?: string
 - Keep the meaning; 1–3 short sentences
 - First person is OK if the original is first person
 - Never fabricate a review from scratch`
+    case 'headline':
+      return `Content-type rules for H1 HEADLINE:
+- 35–90 characters, one line
+- Local + clear: "${terms.businessNoun}${where}" or offer + city
+- No keyword stuffing, no invented superlatives`
+    case 'cta_headline':
+      return `Content-type rules for CTA HEADLINE:
+- 20–80 characters
+- Action + benefit, ${terms.bookAction}
+- No exclamation-mark spam`
+    case 'cta_sub':
+      return `Content-type rules for CTA SUBLINE:
+- 60–160 characters, 1–2 sentences
+- Reduce friction (online, schnell, ohne Telefon)`
+    case 'cta_button':
+      return `Content-type rules for CTA BUTTON:
+- 8–28 characters
+- Verb first: ${terms.bookAction}, Jetzt buchen, Termin sichern
+- No exclamation marks, no «hier klicken»`
+    case 'faq_question':
+      return `Content-type rules for FAQ QUESTION:
+- 40–120 characters
+- How customers actually search (also-asked)
+- Include geo or ${terms.businessNoun} when natural`
+    case 'faq_answer':
+      return `Content-type rules for FAQ ANSWER:
+- 80–280 characters, 1–3 sentences
+- Direct answer first, then a soft next step
+- No invented prices, hours, or legal claims`
+    case 'trust_row':
+      return `Content-type rules for TRUST ROW (3 cards under the H1):
+- Return EXACTLY 3 lines, format: VALUE | LABEL
+- VALUE ≤24 chars (number or short word: Online, 4.9★, CH, WhatsApp)
+- LABEL ≤40 chars (short explanation)
+- Do NOT invent star ratings or review counts unless they already appear in the current content
+- Prefer real differentiators: booking, local/CH, WhatsApp, personal coaching`
+    case 'brand_name':
+      return `Content-type rules for BRAND / DISPLAY NAME:
+- 2–40 characters, one line, no slogan, no punctuation spam
+- Keep the REAL business identity — do not invent a new brand
+- Variants only: drop GmbH/AG, tighten spelling, optional city, shorter website display name
+- At least ONE suggestion MUST include the industry keyword «${terms.businessNoun}» if the current name does not already contain it (e.g. «${terms.businessNoun} Muster»)
+- Do not invent extra keywords beyond «${terms.businessNoun}» and an optional city
+- Swiss High German, no «beste ${terms.businessNoun}», no invented first names`
     default:
       return `Respect typical length for content type "${contentType}".`
   }
@@ -63,6 +109,15 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 401,
       statusMessage: 'Unauthorized'
+    })
+  }
+
+  const ip = getClientIP(event)
+  const burst = await checkRateLimit(ip, 'website_ai_optimize_ip', 40, 60 * 60 * 1000)
+  if (!burst.allowed) {
+    throw createError({
+      statusCode: 429,
+      statusMessage: 'Zu viele AI-Anfragen. Bitte später erneut versuchen.',
     })
   }
 
@@ -92,19 +147,19 @@ export default defineEventHandler(async (event) => {
   if (userProfile?.tenant_id) {
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('business_type, name, city, address')
+      .select('business_type, name, invoice_city, address')
       .eq('id', userProfile.tenant_id)
       .single()
     if (tenant?.business_type) businessType = tenant.business_type
     tenantName = tenant?.name || ''
-    tenantCity = tenant?.city || ''
+    tenantCity = tenant?.invoice_city || ''
     tenantAddress = tenant?.address || ''
   }
 
-  const { buildLocalSeoDefaults, extractCityFromAddress } = await import(
+  const { buildLocalSeoDefaults, resolveWebsiteCity } = await import(
     '~/server/utils/website-local-seo'
   )
-  const city = extractCityFromAddress(tenantAddress, tenantCity)
+  const city = resolveWebsiteCity({ address: tenantAddress, invoice_city: tenantCity })
   const localSeo = buildLocalSeoDefaults({
     name: tenantName || content.slice(0, 40),
     business_type: businessType,
@@ -357,7 +412,7 @@ function parseAIResponse(response: string): any[] {
         reason: String(s?.reason || s?.explanation || '').trim(),
         score: Number(s?.score) || 5,
       }))
-      .filter((s: any) => s.suggestion.length >= 5)
+      .filter((s: any) => s.suggestion.length >= 2)
   } catch (error) {
     console.error('Failed to parse AI response:', error)
     return []
@@ -375,6 +430,42 @@ function buildLocalFallbacks(
   const city = localSeo.city
   const where = city ? ` in ${city}` : ''
   const du = formal === 'du'
+
+  if (contentType === 'brand_name') {
+    const quoted = content.match(/«([^»]+)»/)
+    const raw = String(quoted?.[1] || name || content)
+      .replace(/^Markenname[\s\S]*?:/i, '')
+      .trim()
+      .slice(0, 40)
+    const cleaned = raw.replace(/\s+(GmbH|AG|Ltd\.?|LLC)\.?$/i, '').trim() || raw
+    const withCity =
+      city && !cleaned.toLowerCase().includes(city.toLowerCase())
+        ? `${cleaned} ${city}`.slice(0, 40)
+        : ''
+    const words = cleaned.split(/\s+/).filter(Boolean)
+    const shorter = words.length >= 3 ? words.slice(0, 2).join(' ') : ''
+    const out: Array<{ suggestion: string; reason: string; score: number }> = []
+    const add = (value: string, reason: string, score: number) => {
+      const suggestion = value.trim().slice(0, 40)
+      if (suggestion.length < 2 || out.some((row) => row.suggestion === suggestion)) return
+      out.push({ suggestion, reason, score })
+    }
+    const industry = String(terms.businessNoun || '').trim()
+    const genericIndustry = /^(unternehmen)$/i.test(industry)
+    const hasIndustry = industry && cleaned.toLowerCase().includes(industry.toLowerCase())
+    if (industry && !genericIndustry && !hasIndustry) {
+      add(
+        `${industry} ${cleaned}`.slice(0, 40),
+        `Mit Branchen-Keyword «${industry}» — besser auffindbar.`,
+        9,
+      )
+    }
+    add(cleaned, 'Kurzer Anzeigename — ohne Rechtsform.', hasIndustry ? 9 : 8)
+    add(withCity, 'Marke plus Ort, gut erkennbar lokal.', 8)
+    add(shorter, 'Kürzer für Navigation und Logo-Text.', 7)
+    add(raw, 'Nah am bisherigen Namen.', 7)
+    return out.slice(0, 3)
+  }
 
   if (contentType === 'bio') {
     const a = localSeo.bio
@@ -465,6 +556,100 @@ function buildLocalFallbacks(
         reason: 'Lokal und vertrauensbildend.',
         score: 7,
       },
+    ]
+  }
+
+  if (contentType === 'headline') {
+    const h = city
+      ? `${terms.businessNoun} ${city} — ${terms.appointmentsPlural}`.slice(0, 90)
+      : `${name} — ${terms.appointmentsPlural}`.slice(0, 90)
+    return [
+      { suggestion: h, reason: 'Lokal und klar als H1.', score: 9 },
+      { suggestion: h, reason: 'Branche + Ort, ohne Füllwörter.', score: 8 },
+      { suggestion: `${name}${where}`.slice(0, 90), reason: 'Marke + Ort, kurz.', score: 7 },
+    ]
+  }
+
+  if (contentType === 'cta_headline') {
+    return [
+      { suggestion: du ? `Jetzt ${terms.appointment} buchen` : `Jetzt ${terms.appointment} buchen`, reason: 'Direkter Buchungs-CTA.', score: 8 },
+      { suggestion: du ? `Sichere dir den nächsten Termin` : `Sichern Sie sich den nächsten Termin`, reason: 'Leicht dringlicher.', score: 7 },
+      { suggestion: `${terms.bookAction}${where}`.slice(0, 80), reason: 'Lokal + Handlung.', score: 7 },
+    ]
+  }
+
+  if (contentType === 'cta_button') {
+    return [
+      { suggestion: terms.bookAction.slice(0, 32) || 'Jetzt buchen', reason: 'Klare Handlung.', score: 9 },
+      { suggestion: 'Jetzt buchen', reason: 'Kurz und üblich.', score: 8 },
+      { suggestion: du ? 'Termin sichern' : 'Termin sichern', reason: 'Etwas weicher.', score: 7 },
+    ]
+  }
+
+  if (contentType === 'cta_sub') {
+    return [
+      {
+        suggestion: du
+          ? `Wähle Zeit und ${terms.staff} online — ohne Telefon-Hin und Her.`
+          : `Wählen Sie Zeit und ${terms.staff} online — ohne Telefon-Hin und Her.`,
+        reason: 'Nimmt Reibung weg.',
+        score: 8,
+      },
+      {
+        suggestion: `Transparente Preise, klare nächste Schritte. ${terms.bookAction}.`.slice(0, 160),
+        reason: 'Vertrauen + CTA.',
+        score: 7,
+      },
+      {
+        suggestion: du
+          ? `In unter einer Minute gebucht — Erinnerung per SMS.`
+          : `In unter einer Minute gebucht — Erinnerung per SMS.`,
+        reason: 'Schnell und konkret.',
+        score: 7,
+      },
+    ]
+  }
+
+  if (contentType === 'faq_question') {
+    return [
+      { suggestion: city ? `Was kostet eine ${terms.appointment} in ${city}?` : `Was kostet eine ${terms.appointment}?`, reason: 'Preis-Intent, oft gesucht.', score: 8 },
+      { suggestion: `Kann ich ${terms.appointmentsPlural} online buchen?`, reason: 'Buchungsfrage.', score: 8 },
+      { suggestion: city ? `Wie finde ich eine ${terms.businessNoun} in ${city}?` : `Wie starte ich bei ${name}?`, reason: 'Einstiegsfrage.', score: 7 },
+    ]
+  }
+
+  if (contentType === 'faq_answer') {
+    return [
+      {
+        suggestion: `${name}${where} zeigt Preise transparent auf der Website. ${du ? 'Du buchst' : 'Sie buchen'} online — ohne Telefon.`,
+        reason: 'Antwort zuerst, dann nächster Schritt.',
+        score: 8,
+      },
+      {
+        suggestion: `Ja — ${terms.appointmentsPlural} sind online buchbar. ${du ? 'Wähle' : 'Wählen Sie'} Zeit und ${terms.staff} direkt hier.`,
+        reason: 'Kurz und handlungsorientiert.',
+        score: 7,
+      },
+      {
+        suggestion: `Am einfachsten: Angebot anschauen und den nächsten Termin online sichern. Fragen gehen per WhatsApp.`,
+        reason: 'Reibungsarm.',
+        score: 7,
+      },
+    ]
+  }
+
+  if (contentType === 'trust_row') {
+    const rows = [
+      'Online | Jederzeit buchbar\nCH | Schweiz\nWhatsApp | Direkt schreiben',
+      city
+        ? `Lokal | ${city}\nOnline | Ohne Telefon\nKlar | Transparente Preise`
+        : `Online | Ohne Telefon\nKlar | Transparente Preise\nPersönlich | ${terms.staff} bleibt`,
+      `SMS | Erinnerungen\nCH | Schweiz\nOnline | ${terms.bookAction}`,
+    ]
+    return [
+      { suggestion: rows[0], reason: 'Buchung, Herkunft, Kontakt — ohne erfundene Sterne.', score: 9 },
+      { suggestion: rows[1], reason: 'Lokal und transparent.', score: 8 },
+      { suggestion: rows[2], reason: 'Erinnerung + Handlung.', score: 7 },
     ]
   }
 

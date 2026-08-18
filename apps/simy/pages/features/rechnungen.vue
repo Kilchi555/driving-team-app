@@ -101,6 +101,11 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight
+      title="Zuerst gefunden werden — dann abrechnen"
+      subtitle="Ohne Website kommen die Rechnungen nicht. Simy liefert die SEO-Seite eigenständig, die Software kannst du später dazunehmen."
+    />
+
     <!-- CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">

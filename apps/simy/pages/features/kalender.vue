@@ -100,6 +100,11 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight
+      title="Kalender allein reicht nicht — Kunden müssen dich finden"
+      subtitle="Die Simy-Website ist die öffentliche Seite vor dem Buchungskalender. SEO, Preise, Bewertungen — dann erst der Termin."
+    />
+
     <!-- CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">

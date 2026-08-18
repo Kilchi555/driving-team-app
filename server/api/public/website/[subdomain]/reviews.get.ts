@@ -2,6 +2,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { fetchTenantGoogleReviews } from '~/server/utils/tenant-google-reviews'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
+import { isDemoWebsiteTenant, isForeignGooglePlaceName } from '~/utils/website-google-reviews'
 
 /**
  * Server-memory cache for Google Places (rate-limit friendly).
@@ -38,6 +39,22 @@ const loadReviewsCached = defineCachedFunction(
       .eq('id', website.tenant_id)
       .maybeSingle()
 
+    const demoTenant = isDemoWebsiteTenant({
+      subdomain,
+      name: tenant?.name,
+    })
+    if (demoTenant) {
+      return {
+        subdomain,
+        tenant_name: tenant?.name || null,
+        source: 'none',
+        averageRating: null,
+        totalReviewCount: null,
+        total: 0,
+        reviews: [],
+      }
+    }
+
     const config = useRuntimeConfig()
     const apiKey = String(config.googleMapsApiKey || '')
 
@@ -71,6 +88,20 @@ const loadReviewsCached = defineCachedFunction(
     }
 
     const result = await fetchTenantGoogleReviews(apiKey, placesRaw, limit)
+    const foreignHits = result.reviews.filter((r) =>
+      /driving\s*team|\bskender\b/i.test(String(r.text || '')),
+    )
+    if (foreignHits.length >= Math.max(1, Math.ceil(result.reviews.length / 2))) {
+      return {
+        subdomain,
+        tenant_name: tenant?.name || null,
+        source: 'none',
+        averageRating: null,
+        totalReviewCount: null,
+        total: 0,
+        reviews: [],
+      }
+    }
 
     return {
       subdomain,

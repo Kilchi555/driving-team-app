@@ -117,7 +117,7 @@ export default defineNuxtConfig({
         "connect-src 'self' https://unyjaetebnaexaflpyoc.supabase.co https://maps.googleapis.com https://api.resend.com https://app-wallee.com wss://unyjaetebnaexaflpyoc.supabase.co https://www.facebook.com https://connect.facebook.net",
         "font-src 'self' data: https://fonts.gstatic.com",
         "frame-src 'self' https://app-wallee.com",
-        "media-src 'self' blob:",
+        "media-src 'self' blob: https:",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self' https://app-wallee.com"
@@ -227,6 +227,9 @@ export default defineNuxtConfig({
       },
     },
     // Public booking + courses pages: cache API responses at CDN edge for 60s
+    '/api/public/website/img': {
+      headers: { 'cache-control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400' },
+    },
     '/api/booking/get-booking-init': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
     '/api/courses/public': { headers: { 'cache-control': 'public, max-age=60, s-maxage=60' } },
     // Redirect common misspelling of the Helvetia offer form URL

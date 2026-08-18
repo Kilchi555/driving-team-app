@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')
     .select(
-      'id, name, legal_company_name, address, invoice_city, invoice_zip, contact_email, contact_phone, uid_number, contact_person_first_name, contact_person_last_name, legal_form',
+      'id, name, legal_company_name, address, invoice_city, invoice_zip, contact_email, contact_phone, uid_number, mwst_obligated, handelsregister_nr, contact_person_first_name, contact_person_last_name, legal_form',
     )
     .eq('id', website.tenant_id)
     .maybeSingle()

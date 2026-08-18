@@ -3,6 +3,7 @@
  */
 import type { WorkingDaysTemplate } from '~/utils/workingDaysTemplate'
 import { getWorkingDaysTemplateDefaults } from '~/utils/workingDaysTemplate'
+import { getTerminologyDefaults } from '~/composables/useTerminology'
 
 const DAY_LABELS_DE: Record<number, string> = {
   1: 'Montag',
@@ -123,6 +124,12 @@ const LANG_LABELS: Record<string, string> = {
   ar: 'Arabisch',
 }
 
+function languageLabel(code: string) {
+  const key = String(code || '').trim()
+  if (!key) return ''
+  return LANG_LABELS[key.toLowerCase()] || key
+}
+
 export function mapStaffToTeam(
   rows: Array<{
     id: string
@@ -131,33 +138,71 @@ export function mapStaffToTeam(
     role?: string | null
     language?: string | null
     category?: string[] | null
+    profession?: string | null
     metadata?: any
   }>,
+  businessType?: string | null,
 ): LandingTeamMember[] {
+  const staffLabel = getTerminologyDefaults(businessType).staff
   return rows
     .map((u) => {
       const name = [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
       if (!name) return null
       const meta = u.metadata && typeof u.metadata === 'object' ? u.metadata : {}
       const spoken = Array.isArray(meta.languages)
-        ? meta.languages.map((x: any) => String(x))
+        ? meta.languages.map((x: any) => languageLabel(String(x)))
         : u.language
-          ? [LANG_LABELS[u.language] || u.language]
+          ? [languageLabel(u.language)]
           : []
       const photo =
         (typeof meta.photo_url === 'string' && meta.photo_url) ||
         (typeof meta.avatar_url === 'string' && meta.avatar_url) ||
         null
+      const profession = String(u.profession || meta.role_label || '').trim()
       return {
         id: u.id,
         name,
-        role_label: u.role === 'admin' ? 'Inhaber/in' : 'Fahrlehrer/in',
-        languages: spoken.filter(Boolean),
-        categories: Array.isArray(u.category) ? u.category.map(String) : [],
+        role_label: profession || (u.role === 'admin' ? 'Inhaber/in' : staffLabel),
+        languages: [...new Set(spoken.filter(Boolean))],
+        categories: Array.isArray(u.category)
+          ? [...new Set(u.category.map((c) => String(c).trim()).filter(Boolean))]
+          : [],
         photo_url: photo,
       } as LandingTeamMember
     })
     .filter(Boolean) as LandingTeamMember[]
+}
+
+function teamMemberScore(m: LandingTeamMember) {
+  return (m.photo_url ? 2 : 0) + (m.categories?.length || 0) + (m.languages?.length || 0)
+}
+
+export function dedupeWebsiteTeam(members: LandingTeamMember[]): LandingTeamMember[] {
+  const byName = new Map<string, LandingTeamMember>()
+  for (const member of members) {
+    const key = String(member.name || '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (!key) continue
+    const prev = byName.get(key)
+    if (!prev) {
+      byName.set(key, member)
+      continue
+    }
+    const keep =
+      teamMemberScore(member) > teamMemberScore(prev)
+        ? { ...prev, ...member }
+        : { ...member, ...prev }
+    if (prev.role_label === 'Inhaber/in' || member.role_label === 'Inhaber/in') {
+      keep.role_label = 'Inhaber/in'
+    }
+    keep.languages = [...new Set([...(prev.languages || []), ...(member.languages || [])])]
+    keep.categories = [...new Set([...(prev.categories || []), ...(member.categories || [])])]
+    keep.photo_url = keep.photo_url || prev.photo_url || member.photo_url
+    byName.set(key, keep)
+  }
+  return [...byName.values()]
 }
 
 export type UpcomingCourseCard = {
@@ -196,7 +241,9 @@ export function buildImpressumHtml(tenant: {
   legal_company_name?: string | null
   address?: string | null
   city?: string | null
+  invoice_city?: string | null
   postal_code?: string | null
+  invoice_zip?: string | null
   contact_email?: string | null
   email?: string | null
   contact_phone?: string | null
@@ -204,6 +251,8 @@ export function buildImpressumHtml(tenant: {
   company_type?: string | null
   legal_form?: string | null
   uid_number?: string | null
+  mwst_obligated?: boolean | null
+  handelsregister_nr?: string | null
   first_name?: string | null
   last_name?: string | null
   contact_person_first_name?: string | null
@@ -212,7 +261,10 @@ export function buildImpressumHtml(tenant: {
   const name = tenant.legal_company_name || tenant.name || 'Unternehmen'
   const email = tenant.contact_email || tenant.email || ''
   const phone = tenant.contact_phone || tenant.phone || ''
-  const addr = [tenant.address, [tenant.postal_code, tenant.city].filter(Boolean).join(' ')]
+  const addr = [
+    tenant.address,
+    [tenant.postal_code || tenant.invoice_zip, tenant.city || tenant.invoice_city].filter(Boolean).join(' '),
+  ]
     .filter(Boolean)
     .join(', ')
   const owner = [
@@ -230,6 +282,14 @@ export function buildImpressumHtml(tenant: {
   ${owner ? `<p>Vertreten durch: ${escapeHtml(owner)}</p>` : ''}
   ${legalForm ? `<p>Rechtsform: ${escapeHtml(String(legalForm))}</p>` : ''}
   ${tenant.uid_number ? `<p>UID: ${escapeHtml(String(tenant.uid_number))}</p>` : ''}
+  ${
+    tenant.mwst_obligated === true
+      ? '<p>MWST-pflichtig</p>'
+      : tenant.mwst_obligated === false
+        ? '<p>Nicht MWST-pflichtig</p>'
+        : ''
+  }
+  ${tenant.handelsregister_nr ? `<p>Handelsregister: ${escapeHtml(String(tenant.handelsregister_nr))}</p>` : ''}
   ${email ? `<p>E-Mail: <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>` : ''}
   ${phone ? `<p>Telefon: <a href="tel:${escapeHtml(phone)}">${escapeHtml(phone)}</a></p>` : ''}
   <p>Schweiz</p>

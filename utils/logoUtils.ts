@@ -214,6 +214,23 @@ export type LogoContext = keyof typeof logoContexts
  * (primary is darkened when the logo color is too light for buttons/text),
  * or null if not enough color data.
  */
+const DEFAULT_BRAND_PRIMARIES = new Set(['#3b82f6', '#2563eb', '#0f766e'])
+
+export function isDefaultBrandPrimary(hex?: string | null) {
+  return DEFAULT_BRAND_PRIMARIES.has(String(hex || '').trim().toLowerCase())
+}
+
+export async function extractColorsFromFile(file: File): Promise<[string, string, string] | null> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(new Error('Datei konnte nicht gelesen werden'))
+    reader.readAsDataURL(file)
+  })
+  if (!dataUrl) return null
+  return extractColorsFromLogo(dataUrl)
+}
+
 export async function extractColorsFromLogo(dataUrl: string): Promise<[string, string, string] | null> {
   return new Promise((resolve) => {
     const img = new Image()

@@ -1,5 +1,5 @@
 /**
- * World-class local SEO defaults for tenant websites (CH SMB / Fahrschule).
+ * World-class local SEO defaults for tenant websites (CH SMB, industry-aware).
  * Prefer local intent (business + city) over SaaS booking jargon.
  */
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
@@ -26,6 +26,39 @@ export function extractCityFromAddress(address?: string | null, city?: string | 
   const m = addr.match(/\b\d{4}\s+([A-Za-zÄÖÜäöüÉéÈèÊêÂâÎîÔôÛûçÇ'’\-\s]+)\b/)
   if (m?.[1]) return m[1].trim().split(',')[0].trim()
   return ''
+}
+
+const LOCATION_NAME_PREFIX = /^(hauptstandort|standort|filiale|büro|hq|sitz)\s+/i
+const LOCATION_VENUE_NAME = /^(bahnhof|haltestelle|pickup|zuhause|treffpunkt|parkplatz|tram|bus|sbb|home)\b/i
+
+/** tenants.city does not exist — city lives in invoice_city or the address line. */
+export function resolveWebsiteCity(tenant?: {
+  city?: string | null
+  invoice_city?: string | null
+  address?: string | null
+} | null): string {
+  if (!tenant) return ''
+  return (
+    extractCityFromAddress(tenant.address, tenant.city || tenant.invoice_city) ||
+    String(tenant.invoice_city || tenant.city || '').trim()
+  )
+}
+
+/** Prefer locations.city / address — never publish venue nicknames as a city page. */
+export function resolveLocationCity(loc: {
+  name?: string | null
+  address?: string | null
+  city?: string | null
+}): string {
+  const fromField = String(loc.city || '').trim()
+  if (fromField) return fromField
+  const fromAddr = extractCityFromAddress(loc.address)
+  if (fromAddr) return fromAddr
+  const raw = String(loc.name || '').trim()
+  if (!LOCATION_NAME_PREFIX.test(raw)) return ''
+  const stripped = raw.replace(LOCATION_NAME_PREFIX, '').trim()
+  if (!stripped || LOCATION_VENUE_NAME.test(stripped) || stripped.split(/\s+/).length > 3) return ''
+  return stripped
 }
 
 export function schemaBusinessType(businessType?: string | null): string | string[] {
@@ -114,6 +147,8 @@ export function buildLocalFaqs(
   formal: 'sie' | 'du' = 'sie',
   businessType?: string | null,
   city?: string | null,
+  serviceNames?: string[] | null,
+  pickup?: boolean,
 ) {
   const du = formal === 'du'
   const where = city ? ` in ${city}` : ''
@@ -123,114 +158,68 @@ export function buildLocalFaqs(
     businessType === 'driving_school'
 
   if (isDriving) {
-    return du
-      ? [
-          {
-            q: `Wie buche ich eine Fahrstunde bei ${name}?`,
-            a: `Über die Online-Buchung auf dieser Seite wählst du Zeit und Ort und buchst direkt. ${name} bestätigt deinen Termin automatisch.`,
-          },
-          {
-            q: 'Wieviele Fahrstunden brauche ich bis zur Prüfung?',
-            a: 'Das ist individuell und hängt von Alter, Erfahrung und Lerntempo ab. Viele Schülerinnen und Schüler brauchen rund 15–30 Fahrlektionen — mit regelmässigem privaten Üben oft weniger. Ohne private Übungsfahrten kann es deutlich mehr sein. Wir beraten dich nach den ersten Lektionen ehrlich.',
-          },
-          {
-            q: 'Wie kann ich meine Fahrausbildung beschleunigen?',
-            a: 'Optimal sind 2–4 Fahrten pro Woche: zum Beispiel eine Fahrlektion plus private Übungsfahrten. Setze die Tipps deines Fahrlehrers konsequent um — so entstehen Automatismen schneller. Gegen Prüfungsdatum lohnt es sich, die Abstände der Lektionen wieder zu verkürzen.',
-          },
-          {
-            q: 'Brauche ich einen Lernfahrausweis?',
-            a: 'Für praktische Fahrstunden brauchst du in der Regel einen gültigen Lernfahrausweis der entsprechenden Kategorie. Den beantragst du beim Strassenverkehrsamt deines Kantons (inkl. Sehtest, Passfoto und ggf. Nothelferausweis). Details klären wir gerne vor der ersten Lektion.',
-          },
-          {
-            q: 'Wie lange ist der Lernfahrausweis gültig?',
-            a: 'Der Lernfahrausweis ist in der Regel 24 Monate ab Ausstellungsdatum gültig und kann einmalig um weitere 24 Monate verlängert werden, sofern noch keine Prüfung abgelegt wurde. Am effizientesten ist eine Ausbildung innerhalb von ca. 12 Monaten.',
-          },
-          {
-            q: 'Ab welchem Alter kann ich starten?',
-            a: 'Lernfahrten fürs Auto (Kat. B) sind ab dem 17. Geburtstag möglich — der Lernfahrausweis kann früher beantragt werden (je nach Kanton oft ca. 2 Monate vorher). Für kleinere Motorradkategorien gelten tiefere Altersgrenzen. Frag uns für deine Kategorie nach.',
-          },
-          {
-            q: 'Automatik oder Schaltung — was soll ich wählen?',
-            a: `Rechtlich darfst du nach bestandener Prüfung beides fahren, unabhängig vom Getriebe in der Prüfung. ${name} zeigt die verfügbaren Varianten und Preise im Angebot — du buchst, was zu dir passt.`,
-          },
-          {
-            q: 'Warum dauern Fahrstunden oft 45 Minuten?',
-            a: 'Nach etwa 45 Minuten lässt die Konzentration bei den meisten Menschen nach — deshalb ist das die übliche Grundeinheit. Je nach Thema und Gebiet können längere Lektionen (z. B. 90 Minuten) sinnvoll sein.',
-          },
-          {
-            q: 'Was gilt für private Lernfahrten?',
-            a: 'Private Übungsfahrten sind wertvoll, aber die ersten Versuche gehören in die Fahrschule. Die Begleitperson braucht einen gültigen Ausweis der Kategorie (oder höher), muss nüchtern und fahrfähig sein — beim Auto zusätzlich mind. 23 Jahre alt und die Prüfung vor mind. 3 Jahren bestanden haben. Die Handbremse muss für die Begleitperson erreichbar und wirksam sein.',
-          },
-          {
-            q: `Kann ich eine Fahrstunde absagen oder verschieben?`,
-            a: `Ja — innerhalb der hinterlegten Fristen kannst du Termine online absagen oder umbuchen.`,
-          },
-          {
-            q: 'Wie kann ich bezahlen?',
-            a: 'Je nach Angebot zahlst du online (z. B. Twint, Karte), bar oder per Rechnung. Schweizer QR-Rechnungen sind möglich.',
-          },
-          {
-            q: `Wo findet der Unterricht${where} statt?`,
-            a: city
-              ? `Der Unterricht startet an den Standorten von ${name} in und um ${city}. Den genauen Treffpunkt siehst du bei der Buchung — flexible Treffpunkte sind oft möglich.`
-              : `Den genauen Treffpunkt siehst du bei der Buchung. ${name} meldet sich bei Bedarf mit Details.`,
-          },
-        ]
-      : [
-          {
-            q: `Wie buche ich eine Fahrstunde bei ${name}?`,
-            a: `Über die Online-Buchung auf dieser Seite wählen Sie Zeit und Ort und buchen direkt. ${name} bestätigt Ihren Termin automatisch.`,
-          },
-          {
-            q: 'Wieviele Fahrstunden brauche ich bis zur Prüfung?',
-            a: 'Das ist individuell und hängt von Alter, Erfahrung und Lerntempo ab. Viele Schülerinnen und Schüler benötigen rund 15–30 Fahrlektionen — mit regelmässigem privaten Üben oft weniger. Ohne private Übungsfahrten kann es deutlich mehr sein. Wir beraten Sie nach den ersten Lektionen ehrlich.',
-          },
-          {
-            q: 'Wie kann ich meine Fahrausbildung beschleunigen?',
-            a: 'Optimal sind 2–4 Fahrten pro Woche: zum Beispiel eine Fahrlektion plus private Übungsfahrten. Setzen Sie die Tipps Ihres Fahrlehrers konsequent um — so entstehen Automatismen schneller. Gegen Prüfungsdatum lohnt es sich, die Abstände der Lektionen wieder zu verkürzen.',
-          },
-          {
-            q: 'Brauche ich einen Lernfahrausweis?',
-            a: 'Für praktische Fahrstunden benötigen Sie in der Regel einen gültigen Lernfahrausweis der entsprechenden Kategorie. Den beantragen Sie beim Strassenverkehrsamt Ihres Kantons (inkl. Sehtest, Passfoto und ggf. Nothelferausweis). Details klären wir gerne vor der ersten Lektion.',
-          },
-          {
-            q: 'Wie lange ist der Lernfahrausweis gültig?',
-            a: 'Der Lernfahrausweis ist in der Regel 24 Monate ab Ausstellungsdatum gültig und kann einmalig um weitere 24 Monate verlängert werden, sofern noch keine Prüfung abgelegt wurde. Am effizientesten ist eine Ausbildung innerhalb von ca. 12 Monaten.',
-          },
-          {
-            q: 'Ab welchem Alter kann ich starten?',
-            a: 'Lernfahrten fürs Auto (Kat. B) sind ab dem 17. Geburtstag möglich — der Lernfahrausweis kann früher beantragt werden (je nach Kanton oft ca. 2 Monate vorher). Für kleinere Motorradkategorien gelten tiefere Altersgrenzen. Fragen Sie uns für Ihre Kategorie nach.',
-          },
-          {
-            q: 'Automatik oder Schaltung — was soll ich wählen?',
-            a: `Rechtlich dürfen Sie nach bestandener Prüfung beides fahren, unabhängig vom Getriebe in der Prüfung. ${name} zeigt die verfügbaren Varianten und Preise im Angebot — Sie buchen, was zu Ihnen passt.`,
-          },
-          {
-            q: 'Warum dauern Fahrstunden oft 45 Minuten?',
-            a: 'Nach etwa 45 Minuten lässt die Konzentration bei den meisten Menschen nach — deshalb ist das die übliche Grundeinheit. Je nach Thema und Gebiet können längere Lektionen (z. B. 90 Minuten) sinnvoll sein.',
-          },
-          {
-            q: 'Was gilt für private Lernfahrten?',
-            a: 'Private Übungsfahrten sind wertvoll, aber die ersten Versuche gehören in die Fahrschule. Die Begleitperson braucht einen gültigen Ausweis der Kategorie (oder höher), muss nüchtern und fahrfähig sein — beim Auto zusätzlich mind. 23 Jahre alt und die Prüfung vor mind. 3 Jahren bestanden haben. Die Handbremse muss für die Begleitperson erreichbar und wirksam sein.',
-          },
-          {
-            q: `Kann ich eine Fahrstunde absagen oder verschieben?`,
-            a: `Ja — innerhalb der hinterlegten Fristen können Sie Termine online absagen oder umbuchen.`,
-          },
-          {
-            q: 'Wie kann ich bezahlen?',
-            a: 'Je nach Angebot zahlen Sie online (z. B. Twint, Karte), bar oder per Rechnung. Schweizer QR-Rechnungen sind möglich.',
-          },
-          {
-            q: `Wo findet der Unterricht${where} statt?`,
-            a: city
-              ? `Der Unterricht startet an den Standorten von ${name} in und um ${city}. Den genauen Treffpunkt sehen Sie bei der Buchung — flexible Treffpunkte sind oft möglich.`
+    const categoryFaq = serviceNames?.length
+      ? {
+          q: `Welche Kategorien bietet ${name}${where} an?`,
+          a: du
+            ? `${name} bietet unter anderem ${serviceNames.slice(0, 5).join(', ')}. Preise und nächste Termine siehst du direkt auf dieser Website.`
+            : `${name} bietet unter anderem ${serviceNames.slice(0, 5).join(', ')}. Preise und nächste Termine sehen Sie direkt auf dieser Website.`,
+        }
+      : null
+    return [
+      {
+        q: `Wie buche ich eine Fahrstunde bei ${name}?`,
+        a: du
+          ? `Über die Online-Buchung auf dieser Seite wählst du Zeit und Ort und buchst direkt. ${name} bestätigt deinen Termin automatisch.`
+          : `Über die Online-Buchung auf dieser Seite wählen Sie Zeit und Ort und buchen direkt. ${name} bestätigt Ihren Termin automatisch.`,
+      },
+      {
+        q: 'Wieviele Fahrstunden brauche ich bis zur Prüfung?',
+        a: du
+          ? 'Das ist individuell und hängt von Alter, Erfahrung und Lerntempo ab. Viele Schülerinnen und Schüler brauchen rund 15–30 Fahrlektionen — mit regelmässigem privaten Üben oft weniger. Wir beraten dich nach den ersten Lektionen ehrlich.'
+          : 'Das ist individuell und hängt von Alter, Erfahrung und Lerntempo ab. Viele Schülerinnen und Schüler benötigen rund 15–30 Fahrlektionen — mit regelmässigem privaten Üben oft weniger. Wir beraten Sie nach den ersten Lektionen ehrlich.',
+      },
+      {
+        q: 'Brauche ich einen Lernfahrausweis?',
+        a: du
+          ? 'Für praktische Fahrstunden brauchst du in der Regel einen gültigen Lernfahrausweis der entsprechenden Kategorie. Den beantragst du beim Strassenverkehrsamt deines Kantons. Details klären wir gerne vor der ersten Lektion.'
+          : 'Für praktische Fahrstunden benötigen Sie in der Regel einen gültigen Lernfahrausweis der entsprechenden Kategorie. Den beantragen Sie beim Strassenverkehrsamt Ihres Kantons. Details klären wir gerne vor der ersten Lektion.',
+      },
+      {
+        q: 'Kann ich eine Fahrstunde absagen oder verschieben?',
+        a: du
+          ? 'Ja — innerhalb der hinterlegten Fristen kannst du Termine online absagen oder umbuchen.'
+          : 'Ja — innerhalb der hinterlegten Fristen können Sie Termine online absagen oder umbuchen.',
+      },
+      {
+        q: `Wo findet der Unterricht${where} statt?`,
+        a: pickup
+          ? du
+            ? `Du wählst bei der Buchung einen festen Treffpunkt — oder trägst einen Wunschort im Radius ein. Liegt die Adresse ausserhalb, nimmst du einen der Treffpunkte von ${name}.`
+            : `Sie wählen bei der Buchung einen festen Treffpunkt — oder tragen einen Wunschort im Radius ein. Liegt die Adresse ausserhalb, nehmen Sie einen der Treffpunkte von ${name}.`
+          : city
+            ? du
+              ? `Der Unterricht startet an den Standorten von ${name} in und um ${city}. Den genauen Treffpunkt siehst du bei der Buchung.`
+              : `Der Unterricht startet an den Standorten von ${name} in und um ${city}. Den genauen Treffpunkt sehen Sie bei der Buchung.`
+            : du
+              ? `Den genauen Treffpunkt siehst du bei der Buchung. ${name} meldet sich bei Bedarf mit Details.`
               : `Den genauen Treffpunkt sehen Sie bei der Buchung. ${name} meldet sich bei Bedarf mit Details.`,
-          },
-        ]
+      },
+      ...(pickup
+        ? [
+            {
+              q: 'Kann ich einen eigenen Treffpunkt angeben?',
+              a: du
+                ? `Ja, wenn die Adresse im hinterlegten Umkreis liegt. Bei der Buchung trägst du den Wunschort ein. Sonst wählst du einen festen Treffpunkt.`
+                : `Ja, wenn die Adresse im hinterlegten Umkreis liegt. Bei der Buchung tragen Sie den Wunschort ein. Sonst wählen Sie einen festen Treffpunkt.`,
+            },
+          ]
+        : []),
+      ...(categoryFaq ? [categoryFaq] : []),
+    ]
   }
 
-  return du
+  const base = du
     ? [
         {
           q: `Wie buche ich eine ${terms.appointment}?`,
@@ -283,6 +272,17 @@ export function buildLocalFaqs(
           a: 'Nach der Buchung erhalten Sie eine Bestätigung — je nach Einstellung per E-Mail und/oder SMS, inklusive Erinnerungen vor dem Termin.',
         },
       ]
+  const pickupFaq = pickup
+    ? [
+        {
+          q: 'Kann ich einen eigenen Treffpunkt angeben?',
+          a: du
+            ? 'Ja, wenn die Adresse im hinterlegten Umkreis liegt. Bei der Buchung trägst du den Wunschort ein. Sonst wählst du einen festen Treffpunkt.'
+            : 'Ja, wenn die Adresse im hinterlegten Umkreis liegt. Bei der Buchung tragen Sie den Wunschort ein. Sonst wählen Sie einen festen Treffpunkt.',
+        },
+      ]
+    : []
+  return [...base, ...pickupFaq]
 }
 
 /** Rewrite schema graph URLs when the public canonical host differs from baked siteUrl. */

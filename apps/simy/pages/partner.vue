@@ -41,6 +41,11 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight
+      title="Website-Generator für Partner-Empfehlungen"
+      subtitle="Viele Betriebe wollen zuerst eine starke Website. Simy hat sie als eigenes Produkt — einmalig CHF 490, Hosting ab CHF 29."
+    />
+
     <SimyFooter />
   </div>
 </template>

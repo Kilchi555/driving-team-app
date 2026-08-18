@@ -51,18 +51,20 @@ function escapeHtml(s: unknown) {
     .replace(/"/g, '&quot;')
 }
 
-/**
- * Opens a print-ready participant list (same layout as admin courses).
- * Returns false if the browser blocked the popup or there is nothing to print.
- */
-export function printParticipantList(options: {
+export type PrintParticipantListOptions = {
   course: ParticipantListCourse
   participants: ParticipantListPerson[]
   brand?: ParticipantListBrand
   availableStaff?: StaffLookup[]
-}): boolean {
+}
+
+/**
+ * Builds the print-ready HTML for a course participant list.
+ * Used by the browser print dialog and by the server PDF renderer (iOS app).
+ */
+export function buildParticipantListHtml(options: PrintParticipantListOptions): string {
   const { course, participants, brand, availableStaff = [] } = options
-  if (!course?.name || !participants?.length) return false
+  if (!course?.name || !participants?.length) return ''
 
   const color = brand?.color || '#1E40AF'
   const tenant = brand?.tenant || 'Unternehmen'
@@ -183,10 +185,7 @@ export function printParticipantList(options: {
     ? `<img class="logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(tenant)}" />`
     : `<div class="logo-fallback" style="background:${escapeHtml(color)}">${escapeHtml(tenant.charAt(0).toUpperCase())}</div>`
 
-  const win = window.open('', '_blank')
-  if (!win) return false
-
-  win.document.write(`<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
@@ -452,9 +451,62 @@ export function printParticipantList(options: {
     </div>
   </div>
 </body>
-</html>`)
+</html>`
+}
+
+/**
+ * Opens a print-ready participant list (same layout as admin courses).
+ * Returns false if the browser blocked the popup or there is nothing to print.
+ * Does not work in the native iOS/Android app — use openParticipantListPdf there.
+ */
+export function printParticipantList(options: PrintParticipantListOptions): boolean {
+  if (typeof window === 'undefined') return false
+  const html = buildParticipantListHtml(options)
+  if (!html) return false
+
+  const win = window.open('', '_blank')
+  if (!win) return false
+
+  win.document.write(html)
   win.document.close()
   win.focus()
   setTimeout(() => win.print(), 250)
   return true
+}
+
+async function isNativeApp(): Promise<boolean> {
+  try {
+    const { Capacitor } = await import('@capacitor/core')
+    return Capacitor.isNativePlatform()
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Opens the participant list as a real PDF on native apps (Capacitor Browser + HTTPS),
+ * and uses the print dialog on web. Falls back to the PDF API if popups are blocked.
+ */
+export async function openParticipantListPdf(options: PrintParticipantListOptions & {
+  courseId?: string | null
+  appointmentId?: string | null
+}): Promise<void> {
+  const native = await isNativeApp()
+  const canPrintLocally = !native && !!options.course && !!options.participants?.length
+
+  if (canPrintLocally) {
+    const printed = printParticipantList(options)
+    if (printed) return
+  }
+
+  const result = await $fetch<{ pdfUrl: string; filename: string }>('/api/courses/participant-list-pdf', {
+    method: 'POST',
+    body: {
+      courseId: options.courseId || (options.course as { id?: string } | undefined)?.id || null,
+      appointmentId: options.appointmentId || null,
+    },
+  })
+
+  const { openPdf } = await import('~/utils/openPdf')
+  await openPdf(result.pdfUrl, result.filename || 'Teilnehmerliste.pdf')
 }

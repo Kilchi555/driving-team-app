@@ -48,6 +48,7 @@
             <li><a href="/features/kalender" class="footer-link">Kalender & Planung</a></li>
             <li><a href="/features/rechnungen" class="footer-link">Rechnungen & Kasse</a></li>
             <li><a href="/features/kurse" class="footer-link">Kursbuchungsseite</a></li>
+            <li><a href="/website" class="footer-link">Website-Generator</a></li>
             <li><a href="/marketing" class="footer-link">Marketing</a></li>
             <li><a href="/vergleich" class="footer-link">Vergleiche</a></li>
             <li><a href="/vergleich/calendly-alternative" class="footer-link">Calendly Alternative</a></li>
@@ -61,6 +62,7 @@
         <div>
           <p class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Produkt</p>
           <ul class="space-y-2.5">
+            <li><a href="/website" class="footer-link">Website erstellen</a></li>
             <li><a href="/preise" class="footer-link">Preise</a></li>
             <li><a href="/demo" class="footer-link">Demo starten</a></li>
             <li><a href="/kunden" class="footer-link">Kundenstories</a></li>

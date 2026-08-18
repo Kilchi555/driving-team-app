@@ -5,6 +5,23 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { buildLandingPage, type LandingService, type LandingTestimonial } from '~/server/utils/website-landing-builder'
 import { loadWebsiteServices } from '~/server/utils/website-services'
+import {
+  extraProductsToLanding,
+  extraServicesToLanding,
+  normalizeExtraProducts,
+  normalizeExtraServices,
+  normalizeMeetingPoints,
+  normalizeTeamMembers,
+  normalizeUsps,
+  websitePublishContentMissing,
+} from '~/utils/website-wizard-content'
+import { hasUsableGoogleReviews } from '~/utils/website-google-reviews'
+import { loadWebsitePickupOffer } from '~/server/utils/website-pickup'
+import { mapStaffToTeam } from '~/server/utils/website-premium'
+import {
+  loadWebsitePublicLocations,
+  mergeWebsiteMeetingPoints,
+} from '~/server/utils/website-public-tenant'
 
 function appBaseUrl(event: any) {
   const fromEnv = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL
@@ -21,7 +38,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event)
-  const publish = body?.publish !== false
+  let publish = body?.publish !== false
   const supabase = getSupabaseAdmin()
 
   const { data: user } = await supabase
@@ -44,6 +61,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Tenant not found' })
   }
 
+  const { websitePublishBlockedReason } = await import('~/server/utils/website-billing')
+  const publishBlock = publish ? websitePublishBlockedReason(tenant) : null
+  if (publishBlock) {
+    // Keep the draft; live requires checkout first.
+    publish = false
+  }
+
   let { data: website } = await supabase
     .from('website_tenants')
     .select('*')
@@ -60,7 +84,8 @@ export default defineEventHandler(async (event) => {
         primary_color: tenant.primary_color || '#0F766E',
         secondary_color: tenant.secondary_color || '#134E4A',
         accent_color: tenant.accent_color || '#F59E0B',
-        logo_url: tenant.logo_url || null,
+        logo_url: tenant.logo_url || tenant.logo_square_url || null,
+        favicon_url: tenant.logo_square_url || tenant.logo_url || null,
       })
       .select()
       .single()
@@ -115,6 +140,25 @@ export default defineEventHandler(async (event) => {
     }))
   }
 
+  const extraServices = normalizeExtraServices(body.extraServices || body.extra_services)
+  const extraProducts = normalizeExtraProducts(body.extraProducts || body.extra_products)
+  const extraIds = new Set(extraServices.map((s) => s.id))
+  services = [
+    ...services.filter((s) => !extraIds.has(s.id) && !String(s.id).startsWith('extra-')),
+    ...extraServicesToLanding(extraServices).map((s) => ({
+      ...s,
+      description: serviceDescriptions[s.id] || s.description || '',
+    })),
+  ].slice(0, 12)
+
+  const usps = normalizeUsps(body.usps)
+  const teamMembers = normalizeTeamMembers(body.teamMembers || body.team)
+  const meetingPoints = mergeWebsiteMeetingPoints(
+    normalizeMeetingPoints(body.meetingPoints || body.meeting_points).filter((p) => p.visible),
+    await loadWebsitePublicLocations(supabase, tenant.id),
+    false,
+  )
+
   // Testimonials: prefer explicit payload (manual wizard entries). No app-rating fallback.
   let testimonials: LandingTestimonial[] = []
   const selectedIds: string[] = Array.isArray(body.selectedTestimonials) ? body.selectedTestimonials : []
@@ -137,6 +181,34 @@ export default defineEventHandler(async (event) => {
     testimonialsSource = body.testimonials_source === 'app' ? 'app' : 'manual'
   }
 
+  if (publish) {
+    const missing = websitePublishContentMissing({
+      name: body.name || tenant.name,
+      bio: body.bio,
+      address: body.address || tenant.address,
+      phone: body.phone || tenant.contact_phone || tenant.phone,
+      email: body.email || tenant.contact_email || tenant.email,
+      seo_title: body.seo_title,
+      seo_description: body.seo_description,
+      specializations: Array.isArray(body.specializations) ? body.specializations : [],
+      usps,
+      dbServiceCount: services.filter((s) => !String(s.id).startsWith('extra-')).length,
+      extraServices,
+      hasGoogleReviews: hasUsableGoogleReviews(tenant.google_review_places, {
+        subdomain: tenant.slug || website.subdomain,
+        name: tenant.name,
+      }),
+      testimonials: testimonials.map((t) => ({ text: t.text, selected: true })),
+      teamMembers,
+    })
+    if (missing.length) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: missing.join(' '),
+      })
+    }
+  }
+
   const base = appBaseUrl(event)
   const slug = tenant.slug || website.subdomain
   const bookingUrl = `${base}/booking/availability/${encodeURIComponent(slug)}`
@@ -152,9 +224,16 @@ export default defineEventHandler(async (event) => {
       contact_email: body.email || tenant.contact_email,
       contact_phone: body.phone || tenant.contact_phone,
       address: body.address || tenant.address,
+      city: tenant.invoice_city || tenant.city || null,
+      invoice_city: tenant.invoice_city || null,
+      postal_code: tenant.invoice_zip || tenant.postal_code || null,
+      invoice_zip: tenant.invoice_zip || null,
       name: body.name || tenant.name,
       logo_url: body.logo_url || tenant.logo_url || tenant.logo_square_url || null,
       hero_image_url: body.hero_image_url || website.hero_image_url || null,
+      primary_color: body.primary_color || tenant.primary_color,
+      secondary_color: body.secondary_color || tenant.secondary_color,
+      accent_color: body.accent_color || tenant.accent_color,
     },
     bio: body.bio,
     seo_title: body.seo_title,
@@ -182,24 +261,64 @@ export default defineEventHandler(async (event) => {
     siteUrl,
     hide_powered_by: true,
     contact_channels: body.contact_channels || undefined,
+    usps,
+    team: await (async () => {
+      let liveById = new Map<string, ReturnType<typeof mapStaffToTeam>[number]>()
+      try {
+        const { data: staffRows } = await supabase
+          .from('users')
+          .select('id, first_name, last_name, role, language, category, profession, metadata, is_active')
+          .eq('tenant_id', tenant.id)
+          .eq('is_active', true)
+          .in('role', ['staff', 'admin'])
+          .limit(12)
+        liveById = new Map(mapStaffToTeam(staffRows || [], tenant.business_type).map((m) => [m.id, m]))
+      } catch {
+        liveById = new Map()
+      }
+      return teamMembers
+        .filter((m) => m.visible)
+        .map((m) => {
+          const live = liveById.get(m.id)
+          return {
+            id: m.id,
+            name: m.name,
+            role_label: m.role_label || live?.role_label || 'Team',
+            languages: live?.languages || [],
+            categories: live?.categories || [],
+            photo_url: live?.photo_url || null,
+          }
+        })
+    })(),
+    meeting_points: meetingPoints.map((p) => ({
+      id: p.id,
+      name: p.name,
+      address: p.address || '',
+    })),
+    pickup: (await loadWebsitePickupOffer(supabase, tenant.id)).enabled,
+    products: extraProductsToLanding(extraProducts),
   })
 
   // Source of truth for the public renderer is website_pages.blocks (JSON payload).
   // website_content_blocks is legacy/unused by /s/[subdomain] — do not dual-write.
 
   const now = new Date().toISOString()
+  const alreadyLive = !!(website.is_published || tenant.website_status === 'live')
+  const stayPublished = publish || alreadyLive
+  const pageUpdate: Record<string, unknown> = {
+    title: 'Home',
+    blocks: landing,
+    seo_title: landing.seo.title,
+    seo_description: landing.seo.description,
+    seo_keywords: landing.seo.keywords,
+    is_published: stayPublished,
+    updated_at: now,
+  }
+  if (publish) pageUpdate.published_at = now
+  else if (!alreadyLive) pageUpdate.published_at = null
   const { error: pageError } = await supabase
     .from('website_pages')
-    .update({
-      title: 'Home',
-      blocks: landing,
-      seo_title: landing.seo.title,
-      seo_description: landing.seo.description,
-      seo_keywords: landing.seo.keywords,
-      is_published: publish,
-      published_at: publish ? now : null,
-      updated_at: now,
-    })
+    .update(pageUpdate)
     .eq('id', homePage.id)
 
   if (pageError) {
@@ -217,7 +336,7 @@ export default defineEventHandler(async (event) => {
       accent_color: landing.brand.accent,
       logo_url: landing.brand.logo_url,
       hero_image_url: landing.brand.hero_image_url,
-      is_published: publish,
+      is_published: stayPublished,
       last_published_at: publish ? now : website.last_published_at,
       // Premium SKU: SEO add-on pages unlocked on publish
       ...(publish ? { addon_pages_enabled: true } : {}),
@@ -243,6 +362,18 @@ export default defineEventHandler(async (event) => {
       .update({ website_status: 'live' })
       .eq('id', user.tenant_id)
 
+    try {
+      const { ensureWebsiteSeoPages } = await import('~/server/utils/website-ensure-seo-pages')
+      await ensureWebsiteSeoPages(supabase, {
+        website: { ...website, addon_pages_enabled: true },
+        tenant,
+        baseUrl: appBaseUrl(event),
+        publish: true,
+      })
+    } catch (err: any) {
+      console.warn('[wizard-save] seo pages skipped:', err?.message)
+    }
+
     const { notifySuperadminsWebsitePublished } = await import('~/server/utils/website-publish-notify')
     await notifySuperadminsWebsitePublished({
       tenantId: user.tenant_id,
@@ -252,9 +383,12 @@ export default defineEventHandler(async (event) => {
       liveUrl,
       previewUrl,
     })
+  } else if (alreadyLive) {
+    await supabase
+      .from('tenants')
+      .update({ website_status: 'live' })
+      .eq('id', user.tenant_id)
   } else {
-    // Valid statuses: none | pending_review | approved | live | disabled
-    // Keep setup usable without pretending the site is live.
     await supabase
       .from('tenants')
       .update({ website_status: 'none' })
@@ -263,11 +397,12 @@ export default defineEventHandler(async (event) => {
 
   return {
     success: true,
-    message: publish ? 'Website veröffentlicht' : 'Website gespeichert',
+    message: publish ? 'Website veröffentlicht' : alreadyLive ? 'Live-Seite aktualisiert' : 'Website gespeichert',
     website_id: website.id,
     subdomain: website.subdomain,
     preview_url: previewUrl,
     live_url: liveUrl,
-    published: publish,
+    published: stayPublished,
+    payment_required: publishBlock || null,
   }
 })

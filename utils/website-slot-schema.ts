@@ -2,6 +2,8 @@
  * One-pager slot schema — only CR/SEO-safe fields are editable.
  * Shared by API (merge-save) and admin editor UI.
  */
+import { applyFormalToLanding } from '~/utils/website-formal-rewrite'
+import { DEFAULT_FONT_PAIR_ID, WEBSITE_FONT_PAIRS } from '~/utils/website-fonts'
 
 export const WEBSITE_TEMPLATE_ID = 'onepager@v1'
 
@@ -35,7 +37,10 @@ export type LandingPagePayload = {
     logo_url: string | null
     hero_image_url: string | null
     hero_video_url?: string | null
+    hero_video_start?: string | number | null
+    hero_video_duration?: string | number | null
     formal_address?: 'sie' | 'du'
+    font_pair?: string | null
     hero_image_source?: 'own' | 'stock' | 'ai' | null
     hero_attribution?: {
       photographer?: string | null
@@ -49,7 +54,7 @@ export type LandingPagePayload = {
   schema: Record<string, any>
 }
 
-export type SlotKind = 'text' | 'textarea' | 'url' | 'image' | 'video' | 'enum' | 'color'
+export type SlotKind = 'text' | 'textarea' | 'url' | 'image' | 'video' | 'enum' | 'color' | 'font'
 
 export type SlotGroup =
   | 'brand'
@@ -106,9 +111,23 @@ export const STATIC_SLOTS: readonly SlotDef[] = [
   {
     id: 'brand.hero_video_url',
     group: 'brand',
-    label: 'Hero-Video (optional)',
+    label: 'Hintergrund-Video',
     kind: 'video',
-    hint: 'MP4/WebM, max 40 MB, empfohlen ≤720p. Muted Autoplay — Poster = Hero-Bild. URL oder Upload.',
+    hint: 'Nur ein 8-Sekunden-Ausschnitt, stumm, als Loop.',
+  },
+  {
+    id: 'brand.hero_video_start',
+    group: 'brand',
+    label: 'Video-Start',
+    kind: 'text',
+    maxLength: 12,
+  },
+  {
+    id: 'brand.hero_video_duration',
+    group: 'brand',
+    label: 'Video-Dauer',
+    kind: 'text',
+    maxLength: 12,
   },
   {
     id: 'brand.primary',
@@ -129,13 +148,20 @@ export const STATIC_SLOTS: readonly SlotDef[] = [
     kind: 'color',
   },
   {
+    id: 'brand.font_pair',
+    group: 'brand',
+    label: 'Schrift',
+    kind: 'font',
+    hint: 'Überschrift + Fliesstext — 20 bewährte Paare',
+  },
+  {
     id: 'hero.headline',
     group: 'hero',
     label: 'Hero-Überschrift (H1)',
     kind: 'text',
     maxLength: 90,
     formalAware: true,
-    hint: 'Lokal & klar — z.B. Fahrschule Zürich — …',
+    hint: 'Lokal & klar — z.B. Praxis Zürich — …',
   },
   {
     id: 'hero.subheadline',
@@ -148,60 +174,84 @@ export const STATIC_SLOTS: readonly SlotDef[] = [
   {
     id: 'hero.trust_0_value',
     group: 'hero',
-    label: 'Trust 1 Wert',
+    label: 'Vorteil 1 — Zahl oder Wort',
     kind: 'text',
     maxLength: 24,
+    hint: 'z.B. Online, 4.9★, CH',
   },
   {
     id: 'hero.trust_0_label',
     group: 'hero',
-    label: 'Trust 1 Label',
+    label: 'Vorteil 1 — kurze Erklärung',
     kind: 'text',
     maxLength: 40,
+    hint: 'z.B. Jederzeit buchbar',
   },
   {
     id: 'hero.trust_1_value',
     group: 'hero',
-    label: 'Trust 2 Wert',
+    label: 'Vorteil 2 — Zahl oder Wort',
     kind: 'text',
     maxLength: 24,
+    hint: 'z.B. CH oder 4.9★',
   },
   {
     id: 'hero.trust_1_label',
     group: 'hero',
-    label: 'Trust 2 Label',
+    label: 'Vorteil 2 — kurze Erklärung',
     kind: 'text',
     maxLength: 40,
+    hint: 'z.B. Schweiz oder Google-Bewertung',
   },
   {
     id: 'hero.trust_2_value',
     group: 'hero',
-    label: 'Trust 3 Wert',
+    label: 'Vorteil 3 — Zahl oder Wort',
     kind: 'text',
     maxLength: 24,
+    hint: 'z.B. WhatsApp',
   },
   {
     id: 'hero.trust_2_label',
     group: 'hero',
-    label: 'Trust 3 Label',
+    label: 'Vorteil 3 — kurze Erklärung',
     kind: 'text',
     maxLength: 40,
+    hint: 'z.B. Direkt schreiben',
   },
   {
     id: 'cta.headline',
     group: 'cta',
-    label: 'CTA Überschrift',
+    label: 'Abschluss-Überschrift',
     kind: 'text',
     maxLength: 100,
     formalAware: true,
+    hint: 'Letzter Anstoss zum Buchen, z.B. Jetzt Termin sichern',
   },
   {
     id: 'cta.subheadline',
     group: 'cta',
-    label: 'CTA Unterzeile',
+    label: 'Abschluss-Unterzeile',
     kind: 'textarea',
     maxLength: 200,
     formalAware: true,
+    hint: 'Ein Satz, der die Hürde senkt — ohne Telefon, online, klarer nächster Schritt',
+  },
+  {
+    id: 'cta.cta_text',
+    group: 'cta',
+    label: 'Button-Text',
+    kind: 'text',
+    maxLength: 32,
+    formalAware: true,
+    hint: 'Kurz, Handlung: Jetzt buchen',
+  },
+  {
+    id: 'cta.cta_url',
+    group: 'cta',
+    label: 'Button-Link',
+    kind: 'url',
+    hint: 'Eigenen Link, wenn keine Simy-Termine/Kurse — z.B. Calendly, Formular, alte Website. Leer = Simy-Buchung.',
   },
   {
     id: 'contact.email',
@@ -266,7 +316,7 @@ export const SLOT_GROUP_LABELS: Record<SlotGroup, string> = {
   hero: 'Hero',
   services: 'Angebot',
   faq: 'FAQ',
-  cta: 'Abschluss-CTA',
+  cta: 'Abschluss (Buchungsaufruf)',
   contact: 'Kontakt',
   seo: 'SEO',
 }
@@ -299,6 +349,13 @@ export function getDynamicSlots(payload: LandingPagePayload): SlotDef[] {
       kind: 'textarea',
       maxLength: 400,
       formalAware: true,
+    })
+    slots.push({
+      id: `service.${key}.image_url`,
+      group: 'services',
+      label: `Foto: ${svc.name || `Service ${i + 1}`}`,
+      kind: 'image',
+      hint: 'JPG, PNG oder HEIC — wird automatisch nach WebP konvertiert und komprimiert (3:2).',
     })
   })
 
@@ -342,6 +399,7 @@ export function getSlotValue(payload: LandingPagePayload, slotId: string): strin
     const key = slotId.slice('brand.'.length) as keyof LandingPagePayload['brand']
     const v = payload.brand?.[key]
     if (key === 'formal_address') return (v as string) || 'sie'
+    if (key === 'font_pair') return (v as string) || DEFAULT_FONT_PAIR_ID
     return v == null ? null : String(v)
   }
   if (slotId.startsWith('seo.')) {
@@ -368,15 +426,22 @@ export function getSlotValue(payload: LandingPagePayload, slotId: string): strin
   if (slotId === 'cta.subheadline') {
     return findBlock(payload, 'cta')?.content?.subheadline ?? null
   }
+  if (slotId === 'cta.cta_text') {
+    return findBlock(payload, 'cta')?.content?.cta_text ?? null
+  }
+  if (slotId === 'cta.cta_url') {
+    return findBlock(payload, 'cta')?.content?.cta_url || payload.bookingUrl || null
+  }
   if (slotId.startsWith('contact.')) {
     const key = slotId.slice('contact.'.length)
     return findBlock(payload, 'contact')?.content?.[key] ?? null
   }
-  const serviceMatch = slotId.match(/^service\.(.+)\.description$/)
+  const serviceMatch = slotId.match(/^service\.(.+)\.(description|image_url)$/)
   if (serviceMatch) {
     const services = findBlock(payload, 'services')?.content?.services || []
     const svc = services.find((s: any, i: number) => String(s.id || i) === serviceMatch[1])
-    return svc?.description ?? null
+    const field = serviceMatch[2]
+    return svc?.[field] ?? null
   }
   const faqMatch = slotId.match(/^faq\.(\d+)\.(q|a)$/)
   if (faqMatch) {
@@ -427,8 +492,20 @@ function validateSlotValue(slot: SlotDef, raw: unknown): string {
     return color
   }
 
+  if (slot.kind === 'font') {
+    if (!str) return DEFAULT_FONT_PAIR_ID
+    if (!WEBSITE_FONT_PAIRS.some((p) => p.id === str)) {
+      throw createSlotError(slot.id, 'Unbekanntes Schriftpaar')
+    }
+    return str
+  }
+
   if (slot.kind === 'image' || slot.kind === 'url' || slot.kind === 'video') {
     if (!str) return ''
+    if (/^(tel:|mailto:)/i.test(str) || str.startsWith('/')) return str
+    if (!/^https?:\/\//i.test(str) && /^[\w.-]+\.[a-z]{2,}([/:?#].*)?$/i.test(str)) {
+      str = `https://${str}`
+    }
     if (!/^https?:\/\//i.test(str) && !str.startsWith('/')) {
       throw createSlotError(slot.id, 'URL ungültig')
     }
@@ -476,6 +553,12 @@ export function applySlotPatch(
       const key = slotId.slice('brand.'.length)
       ;(next.brand as any)[key] = value || null
       // Keep hero brand signal + contact name in sync when brand name changes
+      if (key === 'formal_address' && (value === 'du' || value === 'sie')) {
+        const rewritten = applyFormalToLanding(next, value)
+        next.brand = rewritten.brand
+        next.seo = rewritten.seo
+        next.blocks = rewritten.blocks
+      }
       if (key === 'name' && value) {
         const hero = findBlock(next, 'hero')
         if (hero) hero.content.brand = value
@@ -489,6 +572,14 @@ export function applySlotPatch(
       if (key === 'hero_video_url') {
         const hero = findBlock(next, 'hero')
         if (hero) hero.content.video_url = value || null
+      }
+      if (key === 'hero_video_start') {
+        const hero = findBlock(next, 'hero')
+        if (hero) hero.content.video_start = value || '0'
+      }
+      if (key === 'hero_video_duration') {
+        const hero = findBlock(next, 'hero')
+        if (hero) hero.content.video_duration = value || ''
       }
       if (key === 'logo_url') {
         // logo lives on brand; nav uses it
@@ -520,25 +611,62 @@ export function applySlotPatch(
     } else if (slotId === 'cta.subheadline') {
       const cta = findBlock(next, 'cta')
       if (cta) cta.content.subheadline = value
+    } else if (slotId === 'cta.cta_text') {
+      const cta = findBlock(next, 'cta')
+      if (cta) cta.content.cta_text = value
+      const hero = findBlock(next, 'hero')
+      if (hero && value) hero.content.cta_primary_text = value
+    } else if (slotId === 'cta.cta_url') {
+      const cta = findBlock(next, 'cta')
+      if (cta) cta.content.cta_url = value || null
+      const hero = findBlock(next, 'hero')
+      if (hero) hero.content.cta_primary_url = value || hero.content.cta_primary_url || null
+      if (value) {
+        next.bookingUrl = value
+        const slots = findBlock(next, 'slots')
+        if (slots) slots.content.cta_url = value
+        const services = findBlock(next, 'services')
+        if (Array.isArray(services?.content?.services)) {
+          const simy = /\/booking\/availability\//i.test(value)
+          services.content.services = services.content.services.map((s: any) => ({
+            ...s,
+            book_url: simy && (s.category || s.name)
+              ? `${value}${value.includes('?') ? '&' : '?'}category=${encodeURIComponent(String(s.category || s.name))}`
+              : value,
+          }))
+        }
+      }
     } else if (slotId.startsWith('contact.')) {
       const key = slotId.slice('contact.'.length)
       const contact = findBlock(next, 'contact')
       if (contact) contact.content[key] = value || null
     } else {
-      const serviceMatch = slotId.match(/^service\.(.+)\.description$/)
+      const serviceMatch = slotId.match(/^service\.(.+)\.(description|image_url)$/)
       if (serviceMatch) {
         const servicesBlock = findBlock(next, 'services')
         const services = servicesBlock?.content?.services || []
         const svc = services.find((s: any, i: number) => String(s.id || i) === serviceMatch[1])
-        if (svc) svc.description = value
+        if (svc) svc[serviceMatch[2]] = value || null
       }
       const faqMatch = slotId.match(/^faq\.(\d+)\.(q|a)$/)
       if (faqMatch) {
         const idx = Number(faqMatch[1])
         const field = faqMatch[2]
-        const faq = findBlock(next, 'faq')
-        const items = faq?.content?.items || []
-        if (items[idx]) items[idx][field] = value
+        let faq = findBlock(next, 'faq')
+        if (!faq) {
+          next.blocks = next.blocks || []
+          next.blocks.push({
+            type: 'faq',
+            content: { eyebrow: 'FAQ', title: 'Häufige Fragen', items: [] },
+          })
+          faq = findBlock(next, 'faq')
+        }
+        if (faq) {
+          if (!Array.isArray(faq.content.items)) faq.content.items = []
+          const items = faq.content.items
+          while (items.length <= idx) items.push({ q: '', a: '' })
+          items[idx][field] = value
+        }
       }
     }
 

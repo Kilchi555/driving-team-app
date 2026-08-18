@@ -1,7 +1,9 @@
 // server/utils/audit.ts
 // Utility for audit logging to the database
 
+import type { H3Event } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { readImpersonatorCookie } from '~/server/utils/account-switch'
 
 export interface AuditLogEntry {
   user_id?: string  // users.id (can be null if user not found)
@@ -16,9 +18,19 @@ export interface AuditLogEntry {
   tenant_id?: string
 }
 
-export async function logAudit(entry: AuditLogEntry): Promise<void> {
+export async function logAudit(entry: AuditLogEntry, event?: H3Event): Promise<void> {
   try {
     const supabase = getSupabaseAdmin()
+    if (event) {
+      const impersonator = readImpersonatorCookie(event)
+      if (impersonator) {
+        entry.details = {
+          ...(entry.details || {}),
+          impersonated_by: impersonator.actorUserId,
+          impersonation_session_id: impersonator.sessionId,
+        }
+      }
+    }
 
     // Only try to log if we have required fields
     if (!entry.action || !entry.status) {

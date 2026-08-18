@@ -1,16 +1,20 @@
 import { defineEventHandler, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getGbpReviews, getGbpAutomationSettings, listTenantGbpLocations } from '~/server/utils/gbp'
-import { assertCronAuth, gbpStarToNumber, generateGbpReviewSuggestion } from '~/server/utils/gbp-automation'
+import { assertCronAuth, gbpStarToNumber, generateGbpReviewSuggestion, isGbpReviewHours } from '~/server/utils/gbp-automation'
 
 /**
  * GET /api/cron/poll-gbp-reviews
  * Polls unreplied reviews and creates AI suggestions (mode=suggest).
  * Auto-publish modes are prepared but not enabled in P1.
- * Schedule: every 30 minutes
+ * Schedule: :07/:37 from 05–17 UTC; skipped outside 07:00–19:00 Europe/Zurich.
  */
 export default defineEventHandler(async (event) => {
   assertCronAuth(getHeader(event, 'authorization') || undefined)
+
+  if (!isGbpReviewHours()) {
+    return { ok: true, skipped: 'outside_review_hours', timezone: 'Europe/Zurich', window: '07:00-19:00' }
+  }
 
   const supabase = getSupabaseAdmin()
 

@@ -119,9 +119,9 @@
           >
             <span class="text-xs text-gray-400 w-5 text-right font-mono">{{ i + 1 }}</span>
             <div class="flex-1 min-w-0">
-              <a :href="`https://drivingteam.ch${page.page}`" target="_blank" class="text-sm text-primary-600 hover:underline truncate block">
+              <span class="text-sm text-gray-800 truncate block">
                 {{ page.page }}
-              </a>
+              </span>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
               <div class="h-1.5 w-16 sm:w-24 bg-gray-100 rounded-full overflow-hidden">
@@ -159,6 +159,8 @@ async function load() {
   isLoading.value = true
   try {
     data.value = await $fetch<AnalyticsData>(`/api/admin/website-analytics?days=${days.value}`)
+  } catch {
+    data.value = { totalViews: 0, topPages: [], sources: {}, devices: {}, daily: [] }
   } finally {
     isLoading.value = false
   }

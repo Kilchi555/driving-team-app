@@ -52,7 +52,13 @@ export default defineEventHandler(async (event) => {
       }
 
       case 'checkout.session.completed': {
-        const session = stripeEvent.data.object as Stripe.CheckoutSession
+        const session = stripeEvent.data.object as Stripe.Checkout.Session
+        if (session.metadata?.product === 'website') {
+          const { applyWebsiteCheckoutSession } = await import('~/server/utils/website-billing')
+          const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+          await applyWebsiteCheckoutSession({ supabase, stripe, session, baseUrl })
+          break
+        }
         if (session.mode === 'subscription' && session.subscription) {
           const sub = await stripe.subscriptions.retrieve(session.subscription as string)
           await handleSubscriptionUpsert(supabase, stripe, sub)
@@ -277,6 +283,16 @@ async function handleSubscriptionUpsert(
 
   console.log(`✅ Resolved tenant: ${tenantId}`)
 
+  const { isWebsiteStripeSubscription, applyWebsiteHostingFromSubscription } = await import('~/server/utils/website-billing')
+  if (isWebsiteStripeSubscription(sub) || sub.metadata?.product === 'website') {
+    await applyWebsiteHostingFromSubscription(supabase, tenantId, sub, {
+      setupPaid: sub.metadata?.include_setup === 'true',
+      currentPeriodEnd: resolveSubscriptionPeriodEnd(sub),
+    })
+    console.log(`✅ Website hosting synced for tenant ${tenantId}`)
+    return
+  }
+
   // ── Resolve plan from metadata ──────────────────────────────────────────
   const plan = (sub.metadata?.plan || resolvePlanFromPrices(sub)) as SubscriptionPlan
   console.log(`📦 Resolved plan: "${plan}" (from metadata: "${sub.metadata?.plan}", from prices: "${resolvePlanFromPrices(sub)}")`)
@@ -369,6 +385,29 @@ async function handleSubscriptionDeleted(
   const tenantId = await getTenantIdByCustomer(supabase, customerId)
   if (!tenantId) return
 
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('website_only')
+    .eq('id', tenantId)
+    .maybeSingle()
+
+  if (tenant?.website_only) {
+    await supabase
+      .from('tenants')
+      .update({
+        stripe_subscription_id: null,
+        website_hosting_plan: null,
+        subscription_plan: 'trial',
+        current_period_end: null,
+        subscription_cancel_at: null,
+      })
+      .eq('id', tenantId)
+    const { unpublishWebsiteForTenant } = await import('~/server/utils/website-billing')
+    await unpublishWebsiteForTenant(supabase, tenantId)
+    console.log(`⚠️ Website hosting cancelled for tenant ${tenantId} — unpublished, preview remains`)
+    return
+  }
+
   await supabase
     .from('tenants')
     .update({
@@ -432,6 +471,8 @@ function resolvePlanFromPrices(sub: Stripe.Subscription): string {
     [process.env.STRIPE_PRICE_STARTER?.trim() || '_']: 'starter',
     [process.env.STRIPE_PRICE_PROFESSIONAL?.trim() || '_']: 'professional',
     [process.env.STRIPE_PRICE_ENTERPRISE?.trim() || '_']: 'enterprise',
+    [process.env.STRIPE_PRICE_WEBSITE_HOST?.trim() || '_h']: 'website_host',
+    [process.env.STRIPE_PRICE_WEBSITE_CARE?.trim() || '_c']: 'website_care',
   }
   for (const item of sub.items.data) {
     const match = envMap[item.price.id]

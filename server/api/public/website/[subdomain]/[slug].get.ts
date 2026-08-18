@@ -94,6 +94,9 @@ export default defineEventHandler(async (event) => {
       website.custom_domain_verified && website.custom_domain
         ? `https://${website.custom_domain}`
         : undefined,
+    navPages: navPages || [],
+    pageSlug: page.slug,
+    pageTitle: page.title,
   })
 
   setWebsitePublicCache(event, {

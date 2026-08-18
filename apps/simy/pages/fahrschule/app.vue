@@ -214,6 +214,12 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight
+      title="App fürs Team — Website für Schüler"
+      subtitle="Die Fahrlehrer-App organisiert den Alltag. Die Simy-Website holt neue Schüler über Google. Beides aus einer Hand, Website auch allein."
+      preview-host="simy.ch/s/fahrschule-muster"
+    />
+
     <!-- CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">

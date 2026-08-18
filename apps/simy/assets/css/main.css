@@ -15,6 +15,91 @@ html {
 }
 
 @keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+.simy-display {
+  letter-spacing: -0.05em;
+  line-height: 1.02;
+  font-weight: 650;
+}
+
+.simy-float {
+  animation: simyFloat 7s ease-in-out infinite;
+}
+.simy-float-delay {
+  animation-delay: 1.4s;
+}
+@keyframes simyFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+.simy-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: auto;
+  width: 42rem;
+  height: 42rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(var(--brand-rgb), 0.22) 0%, transparent 68%);
+  filter: blur(8px);
+}
+
+.simy-gradient-border {
+  position: relative;
+  background: #fff;
+  border-radius: 1.5rem;
+}
+.simy-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.55), rgba(var(--brand-2-rgb), 0.2), rgba(var(--brand-rgb), 0.08));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.simy-glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 8px 32px rgba(15, 10, 30, 0.08);
+}
+
+.simy-closer {
+  background:
+    radial-gradient(800px 280px at 50% -10%, rgba(var(--brand-rgb), 0.28), transparent 70%),
+    #0c0a12;
+}
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+[data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .simy-glow {
+    filter: none;
+  }
+  .simy-float,
+  .simy-float-delay {
+    animation: none;
+  }
 }

@@ -1,11 +1,11 @@
 /**
- * Server-side image normalize for website slots (logo / hero).
+ * Server-side image normalize for website slots (logo / hero / service).
  * Outputs WebP + AVIF at fixed ratios via sharp.
  * Video uploads are validated (mime/size) but not transcoded yet.
  */
 import sharp from 'sharp'
 
-export type WebsiteMediaSlot = 'logo' | 'hero'
+export type WebsiteMediaSlot = 'logo' | 'hero' | 'service' | 'team'
 export type WebsiteVideoSlot = 'hero_video'
 export type WebsiteUploadSlot = WebsiteMediaSlot | WebsiteVideoSlot
 
@@ -35,6 +35,8 @@ const PRESETS: Record<
 > = {
   logo: { width: 400, height: 400, fit: 'contain', maxWebpBytes: 120_000 },
   hero: { width: 1600, height: 900, fit: 'cover', maxWebpBytes: 420_000 },
+  service: { width: 1200, height: 800, fit: 'cover', maxWebpBytes: 180_000 },
+  team: { width: 600, height: 600, fit: 'cover', maxWebpBytes: 90_000 },
 }
 
 const ALLOWED_INPUT = new Set([
@@ -51,7 +53,7 @@ const ALLOWED_INPUT = new Set([
 export const WEBSITE_HERO_VIDEO_MAX_BYTES = 40 * 1024 * 1024
 
 export function isWebsiteImageSlot(slot: string): slot is WebsiteMediaSlot {
-  return slot === 'logo' || slot === 'hero'
+  return slot === 'logo' || slot === 'hero' || slot === 'service' || slot === 'team'
 }
 
 export function isWebsiteVideoSlot(slot: string): slot is WebsiteVideoSlot {
@@ -144,7 +146,7 @@ export async function normalizeWebsiteMedia(
           background: { r: 255, g: 255, b: 255, alpha: 0 },
         })
       : base.resize(preset.width, preset.height, {
-          fit: 'cover',
+          fit: preset.fit,
           position: 'centre',
         })
 

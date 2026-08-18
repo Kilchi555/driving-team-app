@@ -90,7 +90,7 @@ export function scoreWizardSeo(input: WizardSeoInput): WizardSeoScore {
         points: max - earned,
         text:
           titleLen === 0
-            ? 'Setze einen Google-Titel (ca. 35–60 Zeichen), z.B. «Fahrschule Zürich | Dein Name».'
+            ? 'Setze einen Google-Titel (ca. 35–60 Zeichen), z.B. «Praxis Zürich | Dein Name».'
             : titleLen < 35
               ? `Titel etwas länger machen (${titleLen}/60) — Ort + Angebot nennen.`
               : `Titel kürzen (${titleLen}/60) — Google schneidet sonst ab.`,
@@ -176,7 +176,7 @@ export function scoreWizardSeo(input: WizardSeoInput): WizardSeoScore {
       suggestions.push({
         id: 'desc_cta',
         points: max - earned,
-        text: 'In die Meta-Beschreibung Ort und eine klare Aktion schreiben (z.B. «Fahrstunde online buchen»).',
+        text: 'In die Meta-Beschreibung Ort und eine klare Aktion schreiben (z.B. «Termin online buchen»).',
         step: 4,
       })
     }

@@ -9,18 +9,13 @@
         v-for="duration in formattedDurations"
         :key="duration.value"
         @click="selectDuration(duration.value)"
-        :disabled="props.isPastAppointment"
         :class="[
           'p-2 text-sm rounded-xl border transition-colors font-medium',
           Number(modelValue) === Number(duration.value)
-            ? props.isPastAppointment 
-              ? 'bg-gray-400 text-white border-gray-400 cursor-not-allowed'
-              : 'border-transparent'
-            : props.isPastAppointment
-              ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+            ? 'border-transparent'
+            : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
         ]"
-        :style="Number(modelValue) === Number(duration.value) && !props.isPastAppointment ? primaryBg : {}"
+        :style="Number(modelValue) === Number(duration.value) ? primaryBg : {}"
         :title="`modelValue: ${modelValue} (${typeof modelValue}), duration.value: ${duration.value} (${typeof duration.value}), match: ${Number(modelValue) === Number(duration.value)}`"
       >
         {{ duration.label }}
@@ -245,10 +240,9 @@ const evaluatePaidDurationChange = async (newDuration: number): Promise<boolean>
     return true
   }
 
-  // Dauer verringert - erlaubt, Guthaben-Info anzeigen (bleibt sichtbar bis zum Speichern)
-  logger.info('ℹ️ Duration decreased on paid appointment - will credit difference')
-  const durationReduction = props.originalDuration - newDuration
-  setDurationMessage(`ℹ️ Dieser Termin ist bereits bezahlt. Die Differenz von ${durationReduction} Minuten wird Ihrem Guthaben gutgeschrieben.`)
+  // Dauer verringert — die kompakte Wahl (Guthaben/Karte) zeigt EventModal
+  logger.info('ℹ️ Duration decreased on paid appointment - staff chooses credit or refund on save')
+  setDurationMessage(null)
   return true
 }
 
@@ -282,12 +276,6 @@ const checkIfPaid = async (): Promise<boolean> => {
 // Methods
 const selectDuration = async (duration: number) => {
   logger.debug('🔄 Duration selected:', duration)
-  
-  // ❌ Vergangene Termine können nicht mehr geändert werden
-  if (props.isPastAppointment) {
-    logger.debug('🚫 Cannot change duration for past appointment')
-    return
-  }
   
   // ✅ Prüfe ob Dauer-Änderung bei bereits bezahltem Termin erlaubt ist
   // (synchron VOR dem Emit, damit bei "erhöhen" gar kein kurzes Aufblitzen der

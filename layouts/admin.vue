@@ -23,7 +23,7 @@
         </button>
 
         <!-- Brand -->
-        <NuxtLink to="/admin" class="flex items-center gap-2.5 flex-shrink-0 min-w-0 group">
+        <NuxtLink :to="isWebsiteOnly ? '/admin/website' : '/admin'" class="flex items-center gap-2.5 flex-shrink-0 min-w-0 group">
           <div class="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 bg-white/20 flex items-center justify-center">
             <img v-if="tenantLogo" :src="tenantLogo" :alt="tenantName" class="w-full h-full object-cover" />
             <svg v-else class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -119,7 +119,20 @@
 
         <!-- Drawer Nav -->
         <nav class="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-          <template v-if="!featuresLoading">
+          <template v-if="!featuresLoading && isWebsiteOnly">
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-2 pb-1">Website</p>
+            <NuxtLink to="/admin/website" @click="showMobileMenu = false"
+              class="drawer-link" :class="route.path === '/admin/website' ? 'drawer-active' : ''">Übersicht</NuxtLink>
+            <NuxtLink to="/admin/website/editor" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/website/editor') ? 'drawer-active' : ''">Bearbeiten</NuxtLink>
+            <NuxtLink to="/admin/website/addons" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/website/addons') ? 'drawer-active' : ''">Seiten</NuxtLink>
+            <NuxtLink to="/admin/website-analytics" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/website-analytics') ? 'drawer-active' : ''">Analytics</NuxtLink>
+            <NuxtLink to="/admin/categories" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">{{ t.categoriesLabel }} &amp; Standorte</NuxtLink>
+          </template>
+          <template v-else-if="!featuresLoading">
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-2 pb-1">Hauptbereich</p>
             <NuxtLink to="/admin" @click="showMobileMenu = false"
               class="drawer-link" :class="isActive('/admin') && !isActive('/admin/') ? '' : (route.path === '/admin' ? 'drawer-active' : '')">
@@ -238,7 +251,20 @@
       >
         <!-- Sidebar Nav -->
         <nav class="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-          <template v-if="!featuresLoading">
+          <template v-if="!featuresLoading && isWebsiteOnly">
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-2 pb-1">Website</p>
+            <NuxtLink to="/admin/website"
+              class="drawer-link" :class="route.path === '/admin/website' ? 'drawer-active' : ''">Übersicht</NuxtLink>
+            <NuxtLink to="/admin/website/editor"
+              class="drawer-link" :class="isActive('/admin/website/editor') ? 'drawer-active' : ''">Bearbeiten</NuxtLink>
+            <NuxtLink to="/admin/website/addons"
+              class="drawer-link" :class="isActive('/admin/website/addons') ? 'drawer-active' : ''">Seiten</NuxtLink>
+            <NuxtLink to="/admin/website-analytics"
+              class="drawer-link" :class="isActive('/admin/website-analytics') ? 'drawer-active' : ''">Analytics</NuxtLink>
+            <NuxtLink to="/admin/categories"
+              class="drawer-link" :class="isActive('/admin/categories') ? 'drawer-active' : ''">{{ t.categoriesLabel }} &amp; Standorte</NuxtLink>
+          </template>
+          <template v-else-if="!featuresLoading">
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-2 pb-1">Hauptbereich</p>
             <NuxtLink to="/admin"
               class="drawer-link" :class="route.path === '/admin' ? 'drawer-active' : ''">Dashboard</NuxtLink>
@@ -355,12 +381,28 @@
     <footer class="flex-shrink-0 border-t border-white/10 py-3"
       style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px))"
       :style="{ background: `linear-gradient(135deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }">
-      <div class="mx-auto px-4 sm:px-6">
+      <div class="mx-auto px-4 sm:px-6 flex items-center">
+        <div class="flex-1" />
         <div class="text-center text-xs text-white/50">
           <span>Powered by <a href="https://simy.ch" target="_blank" rel="noopener" class="hover:text-white/80 transition-colors">Simy.ch</a></span>
         </div>
+        <div class="flex-1 flex justify-end">
+          <button
+            v-if="canOpenAccountSwitch"
+            type="button"
+            title="Konto wechseln"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+            @click="showAccountSwitch = true"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+            <span class="hidden sm:inline">Konto</span>
+          </button>
+        </div>
       </div>
     </footer>
+    <AccountSwitchModal :open="showAccountSwitch" @close="showAccountSwitch = false" />
     <!-- Global toast notifications -->
     <GlobalNotifications />
   </div>
@@ -374,6 +416,7 @@ import { useRoute } from '#app'
 import { useStatusBar } from '~/composables/useStatusBar'
 import { useTerminology } from '~/composables/useTerminology'
 import { useHelpModal } from '~/composables/useHelpModal'
+import { isWebsiteOnlyAllowedAdminPath } from '~/utils/website-only'
 
 const { openHelp } = useHelpModal()
 const { t, isDrivingSchool } = useTerminology()
@@ -381,9 +424,27 @@ const { t, isDrivingSchool } = useTerminology()
 const route = useRoute()
 const showMobileMenu = ref(false)
 const showFooterDropdown = ref(false)
+const showAccountSwitch = ref(false)
 
 // Auth Store für Logout
-const { logout } = useAuthStore()
+const authStore = useAuthStore()
+const { logout } = authStore
+const isWebsiteOnly = computed(() => !!authStore.tenantTrialInfo?.website_only)
+const canOpenAccountSwitch = computed(() =>
+  !isWebsiteOnly.value &&
+  (authStore.userProfile?.can_switch_accounts || authStore.userRole === 'admin')
+)
+
+watch(isWebsiteOnly, (only) => {
+  if (!only || !route.path.startsWith('/admin')) return
+  if (route.path === '/admin' || route.path === '/admin/') {
+    navigateTo('/admin/website')
+    return
+  }
+  if (!isWebsiteOnlyAllowedAdminPath(route.path)) {
+    navigateTo('/admin/website')
+  }
+}, { immediate: true })
 const { showSuccess, showError } = useUIStore()
 const supabase = getSupabase()
 
@@ -642,258 +703,97 @@ const handleLogout = async () => {
   z-index: 40;
 }
 
-/* ✅ NUR INPUT-FELDER UND DROPDOWNS: Weiße Schrift, normale Texte bleiben unverändert */
-input[type="text"],
-input[type="email"], 
-input[type="password"],
-input[type="number"],
-input[type="tel"],
-input[type="url"],
-input[type="search"],
-input[type="date"],
-input[type="time"],
-input[type="datetime-local"],
-select,
-textarea {
-  color: white !important;
-  background-color: #374151 !important;
-  border-color: #6b7280 !important;
+/* Eingabefelder: weisser Hintergrund, schwarze Schrift */
+.admin-layout {
+  color-scheme: light;
 }
 
-/* Placeholder-Texte bleiben grau */
-input::placeholder,
-textarea::placeholder {
-  color: #9ca3af !important;
+html body .admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="color"]),
+html body .admin-layout select,
+html body .admin-layout textarea,
+html body .admin-modal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="color"]),
+html body .admin-modal select,
+html body .admin-modal textarea,
+.admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="color"]),
+.admin-layout select,
+.admin-layout textarea,
+.admin-modal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="color"]),
+.admin-modal select,
+.admin-modal textarea {
+  color: #111 !important;
+  -webkit-text-fill-color: #111;
+  caret-color: #111;
+  background-color: #fff !important;
+  border-color: #d1d5db !important;
+  color-scheme: light;
 }
 
-/* Select-Optionen */
-select option {
-  color: white !important;
-  background-color: #374151 !important;
+html body .admin-layout input::placeholder,
+html body .admin-layout textarea::placeholder,
+html body .admin-modal input::placeholder,
+html body .admin-modal textarea::placeholder,
+.admin-layout input::placeholder,
+.admin-layout textarea::placeholder,
+.admin-modal input::placeholder,
+.admin-modal textarea::placeholder {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280;
+  opacity: 1;
 }
 
-/* Custom Select-Styling */
-select {
+html body .admin-layout select option,
+html body .admin-modal select option,
+.admin-layout select option,
+.admin-modal select option {
+  color: #111 !important;
+  background-color: #fff !important;
+}
+
+html body .admin-layout select,
+html body .admin-modal select,
+.admin-layout select,
+.admin-modal select {
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
   appearance: none !important;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23111111' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e") !important;
   background-repeat: no-repeat !important;
   background-position: right 12px center !important;
   background-size: 16px !important;
+  background-color: #fff !important;
   padding-right: 40px !important;
 }
 
-/* Focus States */
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none !important;
-  border-color: #10b981 !important;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
-  color: white !important;
-  background-color: #374151 !important;
-}
-
-/* Spezielle Behandlung für disabled Felder */
-.admin-layout input:disabled,
-.admin-layout select:disabled,
-.admin-layout textarea:disabled,
-.admin-main input:disabled,
-.admin-main select:disabled,
-.admin-main textarea:disabled,
-input:disabled,
-select:disabled,
-textarea:disabled {
-  background-color: #4b5563 !important; /* gray-600 */
-  color: #9ca3af !important; /* gray-400 */
-  border-color: #6b7280 !important;
-}
-
-/* Focus States - Weiße Schrift beim Fokus */
+html body .admin-layout input:focus,
+html body .admin-layout select:focus,
+html body .admin-layout textarea:focus,
+html body .admin-modal input:focus,
+html body .admin-modal select:focus,
+html body .admin-modal textarea:focus,
 .admin-layout input:focus,
 .admin-layout select:focus,
 .admin-layout textarea:focus,
-.admin-main input:focus,
-.admin-main select:focus,
-.admin-main textarea:focus,
-input:focus,
-select:focus,
-textarea:focus {
+.admin-modal input:focus,
+.admin-modal select:focus,
+.admin-modal textarea:focus {
   outline: none !important;
-  border-color: #10b981 !important; /* green-500 */
+  border-color: #10b981 !important;
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
-  color: white !important;
-  background-color: #374151 !important;
+  color: #111 !important;
+  -webkit-text-fill-color: #111;
+  background-color: #fff !important;
 }
 
-/* ✅ SPEZIFISCHE REGELN FÜR ADMIN-MODALS - HÖHERE SPEZIFITÄT */
-/* Diese Regeln gelten für alle Modals in Admin-Seiten */
-.admin-layout div[class*="fixed inset-0"] input[type="text"],
-.admin-layout div[class*="fixed inset-0"] input[type="email"], 
-.admin-layout div[class*="fixed inset-0"] input[type="password"],
-.admin-layout div[class*="fixed inset-0"] input[type="number"],
-.admin-layout div[class*="fixed inset-0"] input[type="tel"],
-.admin-layout div[class*="fixed inset-0"] input[type="url"],
-.admin-layout div[class*="fixed inset-0"] input[type="search"],
-.admin-layout div[class*="fixed inset-0"] input[type="date"],
-.admin-layout div[class*="fixed inset-0"] input[type="time"],
-.admin-layout div[class*="fixed inset-0"] input[type="datetime-local"],
-.admin-layout div[class*="fixed inset-0"] select,
-.admin-layout div[class*="fixed inset-0"] textarea,
-.admin-layout div[class*="fixed inset-0"] input,
-div.admin-modal input[type="text"],
-div.admin-modal input[type="email"], 
-div.admin-modal input[type="password"],
-div.admin-modal input[type="number"],
-div.admin-modal input[type="tel"],
-div.admin-modal input[type="url"],
-div.admin-modal input[type="search"],
-div.admin-modal input[type="date"],
-div.admin-modal input[type="time"],
-div.admin-modal input[type="datetime-local"],
-div.admin-modal select,
-div.admin-modal textarea,
-div.admin-modal input {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
-}
-
-/* Noch höhere Spezifität für hartnäckige Inputs */
-body .admin-layout div[class*="fixed inset-0"] input,
-body .admin-layout div[class*="fixed inset-0"] select,
-body .admin-layout div[class*="fixed inset-0"] textarea,
-body div.admin-modal input,
-body div.admin-modal select,
-body div.admin-modal textarea {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
-}
-
-/* Placeholder-Texte bleiben grau - in Admin-Modals */
-.admin-layout div[class*="fixed inset-0"] input::placeholder,
-.admin-layout div[class*="fixed inset-0"] textarea::placeholder,
-div.admin-modal input::placeholder,
-div.admin-modal textarea::placeholder,
-body .admin-layout div[class*="fixed inset-0"] input::placeholder,
-body .admin-layout div[class*="fixed inset-0"] textarea::placeholder,
-body div.admin-modal input::placeholder,
-body div.admin-modal textarea::placeholder {
-  color: #9ca3af !important; /* gray-400 */
-}
-
-/* Select-Optionen - in Admin-Modals */
-.admin-layout div[class*="fixed inset-0"] select option,
-div.admin-modal select option,
-body .admin-layout div[class*="fixed inset-0"] select option,
-body div.admin-modal select option {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-}
-
-/* Custom Select-Styling - in Admin-Modals */
-.admin-layout div[class*="fixed inset-0"] select,
-div.admin-modal select,
-body .admin-layout div[class*="fixed inset-0"] select,
-body div.admin-modal select {
-  -webkit-appearance: none !important;
-  -moz-appearance: none !important;
-  appearance: none !important;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e") !important;
-  background-repeat: no-repeat !important;
-  background-position: right 12px center !important;
-  background-size: 16px !important;
-  padding-right: 40px !important;
-}
-
-/* Focus States - in Admin-Modals */
-.admin-layout div[class*="fixed inset-0"] input:focus,
-.admin-layout div[class*="fixed inset-0"] select:focus,
-.admin-layout div[class*="fixed inset-0"] textarea:focus,
-div.admin-modal input:focus,
-div.admin-modal select:focus,
-div.admin-modal textarea:focus,
-body .admin-layout div[class*="fixed inset-0"] input:focus,
-body .admin-layout div[class*="fixed inset-0"] select:focus,
-body .admin-layout div[class*="fixed inset-0"] textarea:focus,
-body div.admin-modal input:focus,
-body div.admin-modal select:focus,
-body div.admin-modal textarea:focus {
-  outline: none !important;
-  border-color: #10b981 !important; /* green-500 */
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
-  color: white !important;
-  background-color: #374151 !important;
-}
-
-/* ✅ ULTIMATIVE REGEL FÜR ALLE ADMIN-INPUTS */
-/* Fängt alle Inputs in Admin-Seiten ab, die andere Regeln übersehen haben */
-.admin-layout input,
-.admin-layout select,
-.admin-layout textarea {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
-}
-
-/* Spezielle Regel für weiße Modal-Hintergründe */
-.admin-layout .bg-white input,
-.admin-layout .bg-white select,
-.admin-layout .bg-white textarea {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
-}
-
-/* Override für alle möglichen Tailwind-Klassen */
-.admin-layout input[class*="text-gray"],
-.admin-layout select[class*="text-gray"],
-.admin-layout textarea[class*="text-gray"],
-.admin-layout input[class*="bg-gray"],
-.admin-layout select[class*="bg-gray"],
-.admin-layout textarea[class*="bg-gray"],
-.admin-layout input[class*="bg-white"],
-.admin-layout select[class*="bg-white"],
-.admin-layout textarea[class*="bg-white"] {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
-}
-
-/* ✅ NUCLEAR OPTION - Überschreibt ALLES */
-/* Für hartnäckige Modals, die andere Regeln ignorieren */
-html .admin-layout input,
-html .admin-layout select, 
-html .admin-layout textarea,
-html body .admin-layout input,
-html body .admin-layout select,
-html body .admin-layout textarea {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
-}
-
-/* Spezielle Behandlung für Modals */
-html .admin-layout div[class*="fixed"] input,
-html .admin-layout div[class*="fixed"] select,
-html .admin-layout div[class*="fixed"] textarea {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
-}
-
-/* Absolute ultimative Regel für alle Eingabefelder */
-div.admin-layout input,
-div.admin-layout select,
-div.admin-layout textarea,
-.admin-layout input,
-.admin-layout select,
-.admin-layout textarea {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
+html body .admin-layout input:disabled,
+html body .admin-layout select:disabled,
+html body .admin-layout textarea:disabled,
+.admin-layout input:disabled,
+.admin-layout select:disabled,
+.admin-layout textarea:disabled {
+  background-color: #f3f4f6 !important;
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280;
+  border-color: #d1d5db !important;
 }
 
 /* ═══ DESKTOP SIDEBAR ═══ */

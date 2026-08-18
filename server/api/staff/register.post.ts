@@ -248,6 +248,26 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Auth user created:', authData.user.id)
 
+    let linkedAdminId: string | null = null
+    if (invitation.link_to_admin && invitation.invited_by) {
+      const { data: ownerAdmin } = await serviceSupabase
+        .from('users')
+        .select('id')
+        .eq('id', invitation.invited_by)
+        .eq('tenant_id', invitation.tenant_id)
+        .eq('role', 'admin')
+        .eq('is_active', true)
+        .maybeSingle()
+      if (ownerAdmin?.id) {
+        const { data: alreadyLinked } = await serviceSupabase
+          .from('users')
+          .select('id')
+          .eq('linked_admin_user_id', ownerAdmin.id)
+          .maybeSingle()
+        if (!alreadyLinked) linkedAdminId = ownerAdmin.id
+      }
+    }
+
     // 3. Create user profile in database with sanitized inputs
     const { data: newUser, error: profileError } = await serviceSupabase
       .from('users')
@@ -269,7 +289,8 @@ export default defineEventHandler(async (event) => {
         accepted_terms_at: acceptedTerms ? new Date().toISOString() : null,
         category: Array.isArray(selectedCategories) && selectedCategories.length > 0
           ? selectedCategories
-          : null
+          : null,
+        linked_admin_user_id: linkedAdminId,
       })
       .select('id')
       .single()

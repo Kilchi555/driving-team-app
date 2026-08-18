@@ -11,6 +11,13 @@ type WizardDraft = {
   formal_address?: 'sie' | 'du'
   testimonials?: Array<{ id: string; author: string; text: string; rating?: number }>
   selectedTestimonials?: string[]
+  extraServices?: unknown[]
+  extraProducts?: unknown[]
+  usps?: string[]
+  specializations?: string[]
+  teamMembers?: unknown[]
+  meetingPoints?: unknown[]
+  contact_channels?: Record<string, boolean>
   updated_at?: string
 }
 
@@ -116,6 +123,15 @@ export default defineEventHandler(async (event) => {
   }
   if (Array.isArray(body.selectedTestimonials)) {
     next.selectedTestimonials = body.selectedTestimonials.map(String)
+  }
+  if (Array.isArray(body.extraServices)) next.extraServices = body.extraServices.slice(0, 12)
+  if (Array.isArray(body.extraProducts)) next.extraProducts = body.extraProducts.slice(0, 12)
+  if (Array.isArray(body.usps)) next.usps = body.usps.map(String).slice(0, 8)
+  if (Array.isArray(body.specializations)) next.specializations = body.specializations.map(String).slice(0, 12)
+  if (Array.isArray(body.teamMembers)) next.teamMembers = body.teamMembers.slice(0, 12)
+  if (Array.isArray(body.meetingPoints)) next.meetingPoints = body.meetingPoints.slice(0, 8)
+  if (body.contact_channels && typeof body.contact_channels === 'object') {
+    next.contact_channels = body.contact_channels
   }
 
   const { error } = await supabase

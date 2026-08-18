@@ -282,10 +282,8 @@ onMounted(async () => {
     })
 
     // ── Deduplicate criteria by name + eval-category-name ────────────────────
-    // The API returns global (tenant_id=null) AND tenant-specific duplicates.
-    // We pick the canonical version per name: prefer the one with educational_content,
-    // then tenant-specific, then global. We also track all alias IDs so that notes
-    // referencing any duplicate still surface the canonical criterion.
+    // API is tenant-only. Keep a light dedup so notes that still reference an
+    // older alias ID (same name) still surface the current criterion.
 
     // Step 1: find the best criterion per (name + category-name) group
     const canonicalByKey = new Map<string, any>() // key → best criterion

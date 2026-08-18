@@ -3,7 +3,12 @@
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { notifySuperadminsWebsitePublished } from '~/server/utils/website-publish-notify'
+import {
+  homepageHasContent,
+  loadWebsiteHomePage,
+  publishWebsiteForTenant,
+  websitePublishBlockedReason,
+} from '~/server/utils/website-billing'
 
 function appBaseUrl(event: any) {
   const fromEnv = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL
@@ -33,67 +38,43 @@ export default defineEventHandler(async (event) => {
 
   const { data: website } = await supabase
     .from('website_tenants')
-    .select('*')
+    .select('id, subdomain')
     .eq('tenant_id', user.tenant_id)
-    .single()
+    .maybeSingle()
 
   if (!website) {
     throw createError({ statusCode: 404, statusMessage: 'Website not found' })
   }
 
+  const home = await loadWebsiteHomePage(supabase, website.id)
+  if (!home || !homepageHasContent(home.blocks)) {
+    throw createError({ statusCode: 400, statusMessage: 'Homepage ist noch nicht bereit' })
+  }
+
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, slug')
+    .select('website_only, website_setup_paid_at, website_hosting_plan, trial_ends_at')
     .eq('id', user.tenant_id)
     .maybeSingle()
 
-  const now = new Date().toISOString()
-
-  await supabase
-    .from('website_pages')
-    .update({ is_published: true, published_at: now })
-    .eq('website_id', website.id)
-
-  const { data: updatedWebsite, error } = await supabase
-    .from('website_tenants')
-    .update({
-      is_published: true,
-      last_published_at: now,
+  const blocked = websitePublishBlockedReason(tenant)
+  if (blocked) {
+    throw createError({
+      statusCode: 402,
+      statusMessage: blocked === 'hosting'
+        ? 'Hosting-Abo erforderlich, bevor die Website live geht.'
+        : 'Die einmalige Website-Gebühr ist fällig, bevor die Homepage live geht.',
+      data: { code: 'website_payment_required', reason: blocked },
     })
-    .eq('id', website.id)
-    .select()
-    .single()
-
-  if (error) {
-    throw createError({ statusCode: 500, statusMessage: error.message })
   }
 
-  await supabase
-    .from('tenants')
-    .update({ website_status: 'live' })
-    .eq('id', user.tenant_id)
-
-  const base = appBaseUrl(event)
-  const liveUrl =
-    website.custom_domain_verified && website.custom_domain
-      ? `https://${website.custom_domain}`
-      : `${base}/s/${encodeURIComponent(website.subdomain)}`
-  const previewUrl = `${base}/s/${encodeURIComponent(website.subdomain)}?preview=1`
-
-  await notifySuperadminsWebsitePublished({
-    tenantId: user.tenant_id,
-    tenantName: tenant?.name || website.subdomain,
-    tenantSlug: tenant?.slug || website.subdomain,
-    subdomain: website.subdomain,
-    liveUrl,
-    previewUrl,
-  })
+  const published = await publishWebsiteForTenant(supabase, user.tenant_id, appBaseUrl(event))
 
   return {
     success: true,
-    website: updatedWebsite,
+    website: published.website,
     message: 'Website published successfully',
-    live_url: liveUrl,
-    preview_url: previewUrl,
+    live_url: published.liveUrl,
+    preview_url: published.previewUrl,
   }
 })

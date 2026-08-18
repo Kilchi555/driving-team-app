@@ -2,7 +2,7 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { suggestGooglePlacesForTenant } from '~/server/utils/google-place-resolve'
-import { extractCityFromAddress } from '~/server/utils/website-local-seo'
+import { resolveWebsiteCity } from '~/server/utils/website-local-seo'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -25,15 +25,15 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, address, city, google_review_places')
+    .select('name, address, invoice_city, google_review_places')
     .eq('id', user.tenant_id)
     .single()
 
   const name = String(body.name || tenant?.name || '').trim()
   const address = String(body.address || tenant?.address || '').trim()
   const city =
-    String(body.city || tenant?.city || '').trim() ||
-    extractCityFromAddress(address, tenant?.city)
+    String(body.city || '').trim() ||
+    resolveWebsiteCity({ ...tenant, address })
 
   let mapsUrl = String(body.maps_url || body.url || '').trim()
   if (!mapsUrl && tenant?.google_review_places) {

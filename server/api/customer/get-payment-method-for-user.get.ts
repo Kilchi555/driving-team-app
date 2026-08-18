@@ -2,6 +2,7 @@ import { defineEventHandler, createError, getQuery } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
+import { getTenantDefaultPaymentMethod, normalizeTenantPaymentMethod } from '~/server/utils/tenant-default-payment-method'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -49,11 +50,13 @@ export default defineEventHandler(async (event) => {
       .eq('tenant_id', requestingUser.tenant_id)
       .single()
 
+    const tenantDefault = await getTenantDefaultPaymentMethod(supabase, requestingUser.tenant_id)
+
     if (targetUserError || !targetUser) {
-      logger.debug('ℹ️ Target user not found or not in same tenant, returning default')
+      logger.debug('ℹ️ Target user not found or not in same tenant, returning tenant default')
       return {
         success: true,
-        preferred_payment_method: 'wallee'
+        preferred_payment_method: tenantDefault
       }
     }
 
@@ -74,14 +77,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const method = normalizeTenantPaymentMethod(targetUser.preferred_payment_method || tenantDefault)
+
     logger.debug('✅ Payment method loaded for user:', {
       userId,
-      method: targetUser.preferred_payment_method || 'wallee'
+      method,
+      fromUser: !!targetUser.preferred_payment_method
     })
 
     return {
       success: true,
-      preferred_payment_method: targetUser.preferred_payment_method || 'wallee'
+      preferred_payment_method: method
     }
   } catch (error: any) {
     logger.error('❌ Error loading payment method for user:', error)

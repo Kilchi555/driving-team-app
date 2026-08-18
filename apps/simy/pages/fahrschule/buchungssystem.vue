@@ -81,6 +81,12 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight
+      title="Buchungslink allein ist unsichtbar"
+      subtitle="Schüler finden dich über Google — nicht über einen nackten Link. Die Simy-Website ist die öffentliche Seite vor der Buchung."
+      preview-host="simy.ch/s/fahrschule-muster"
+    />
+
     <!-- CTA Banner -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">

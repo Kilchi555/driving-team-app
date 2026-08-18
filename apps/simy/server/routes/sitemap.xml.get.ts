@@ -26,6 +26,7 @@ export default defineEventHandler((event) => {
     { path: '/marketing',                  priority: '0.8', changefreq: 'monthly', lastmod: today },
     { path: '/marketing/google-ads',       priority: '0.8', changefreq: 'monthly', lastmod: today },
     { path: '/marketing/seo',              priority: '0.8', changefreq: 'monthly', lastmod: today },
+    { path: '/website',                    priority: '0.95', changefreq: 'weekly', lastmod: today },
     { path: '/features/kalender',          priority: '0.7', changefreq: 'monthly', lastmod: today },
     { path: '/features/rechnungen',        priority: '0.7', changefreq: 'monthly', lastmod: today },
     { path: '/features/kurse',             priority: '0.7', changefreq: 'monthly', lastmod: today },

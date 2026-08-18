@@ -1,15 +1,13 @@
 /**
  * POST /api/payments/refund-request
  *
- * Staff submits a refund request for a completed payment.
- * Only available if staff_refund_permission === 'request' or 'allowed'.
- * If 'allowed', the refund is processed immediately.
- * If 'request', a refund_request entry is created and the admin is notified.
+ * Direct Wallee refund (full or partial). Temporarily limited to the
+ * WALLEE_REFUND_ALLOWED_EMAILS allowlist.
  */
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { processWalleeRefund } from '~/server/utils/wallee-refund'
-import { DEFAULT_BOOKING_POLICY } from '~/server/api/admin/booking-policy.get'
+import { processWalleeRefund, remainingWalleeRefundableRappen } from '~/server/utils/wallee-refund'
+import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import logger from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -20,7 +18,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: actor } = await supabase
     .from('users')
-    .select('id, tenant_id, role, first_name, last_name')
+    .select('id, tenant_id, role, email, first_name, last_name')
     .eq('auth_user_id', authUser.id)
     .single()
 
@@ -28,102 +26,65 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  // Load booking policy
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('booking_policy')
-    .eq('id', actor.tenant_id)
-    .maybeSingle()
-
-  const policy = { ...DEFAULT_BOOKING_POLICY, ...(tenant?.booking_policy ?? {}) }
-  const permission = policy.staff_refund_permission
-
-  if (permission === 'hidden' && !['admin', 'superadmin'].includes(actor.role)) {
-    throw createError({ statusCode: 403, statusMessage: 'Rückerstattungen sind für Staff nicht aktiviert.' })
+  if (!canInitiateWalleeRefund(actor.email)) {
+    throw createError({ statusCode: 403, statusMessage: 'Wallee-Rückerstattungen sind vorerst nur für freigeschriebene Staff-Accounts aktiv.' })
   }
 
   const body = await readBody(event)
-  const { payment_id, amount_rappen, reason } = body
+  const { payment_id, amount_rappen, reason, price_correction } = body
 
   if (!payment_id) throw createError({ statusCode: 400, statusMessage: 'payment_id is required' })
 
   const { data: payment } = await supabase
     .from('payments')
-    .select('id, wallee_transaction_id, total_amount_rappen, credit_used_rappen, payment_status, tenant_id, payment_method')
+    .select('id, wallee_transaction_id, total_amount_rappen, credit_used_rappen, payment_status, tenant_id, payment_method, refunded_amount_rappen')
     .eq('id', payment_id)
     .eq('tenant_id', actor.tenant_id)
     .single()
 
   if (!payment) throw createError({ statusCode: 404, statusMessage: 'Payment not found' })
-  if (payment.payment_status !== 'completed') {
-    throw createError({ statusCode: 400, statusMessage: 'Nur abgeschlossene Zahlungen können erstattet werden.' })
+  if (payment.payment_method !== 'wallee') {
+    throw createError({ statusCode: 400, statusMessage: 'Nur Wallee-Zahlungen können via API erstattet werden.' })
   }
 
-  const requestedAmount = amount_rappen ?? (payment.total_amount_rappen - (payment.credit_used_rappen || 0))
+  const remaining = remainingWalleeRefundableRappen(payment)
+  if (remaining <= 0) {
+    throw createError({ statusCode: 400, statusMessage: 'Diese Zahlung ist via Wallee bereits vollständig erstattet.' })
+  }
 
-  // Admin/superadmin or 'allowed' → direct refund
-  if (['admin', 'superadmin'].includes(actor.role) || permission === 'allowed') {
-    const result = await processWalleeRefund({
-      payment,
-      requestedAmountRappen: requestedAmount,
-      tenantId: payment.tenant_id,
-      idempotencyKey: `refund-${payment_id}-${Date.now()}`,
-      reason: reason || 'Manuell ausgelöst',
-    })
+  const requestedAmount = amount_rappen ?? remaining
+  if (requestedAmount <= 0) {
+    throw createError({ statusCode: 400, statusMessage: 'Rückerstattungsbetrag muss grösser als 0 sein.' })
+  }
 
-    if (!result.success) throw createError({ statusCode: 400, statusMessage: result.error })
+  logger.info(`💸 Wallee refund by ${actor.email} for payment ${payment_id}, amount: ${requestedAmount} Rappen`)
 
+  const result = await processWalleeRefund({
+    payment,
+    requestedAmountRappen: requestedAmount,
+    tenantId: payment.tenant_id,
+    idempotencyKey: price_correction
+      ? `duration-reduction-${payment_id}-${requestedAmount}`
+      : `manual-refund-${payment_id}-${requestedAmount}`,
+    reason: reason || (price_correction ? 'Dauer reduziert' : 'Manuell ausgelöst'),
+    initiatedBy: actor.id,
+    priceCorrection: !!price_correction,
+  })
+
+  if (!result.success) throw createError({ statusCode: 400, statusMessage: result.error })
+
+  if (reason) {
     await supabase.from('payments').update({
-      payment_status: 'refunded',
-      wallee_refund_id: result.refundId || null,
-      refunded_at: new Date().toISOString(),
+      notes: reason,
       updated_at: new Date().toISOString(),
     }).eq('id', payment_id)
-
-    return { success: true, mode: 'direct', refunded_amount_chf: result.refundedAmountChf }
   }
 
-  // Staff with 'request' permission → create pending request
-  const { data: request, error: insertErr } = await supabase
-    .from('refund_requests')
-    .insert({
-      tenant_id: actor.tenant_id,
-      payment_id,
-      requested_by: actor.id,
-      requested_amount_rappen: requestedAmount,
-      reason: reason || null,
-      status: 'pending',
-    })
-    .select('id')
-    .single()
-
-  if (insertErr) {
-    logger.error('❌ refund_requests insert error:', insertErr)
-    throw createError({ statusCode: 500, statusMessage: 'Antrag konnte nicht erstellt werden.' })
+  return {
+    success: true,
+    mode: 'direct',
+    refunded_amount_chf: result.refundedAmountChf,
+    remaining_refundable_chf: (result.remainingRefundableRappen || 0) / 100,
+    payment_status: result.paymentStatus,
   }
-
-  // Notify all admins via outbound_messages_queue (email)
-  try {
-    const { data: admins } = await supabase
-      .from('users')
-      .select('id, email, first_name')
-      .eq('tenant_id', actor.tenant_id)
-      .in('role', ['admin', 'superadmin'])
-      .not('email', 'is', null)
-
-    for (const admin of (admins || [])) {
-      await supabase.from('outbound_messages_queue').insert({
-        tenant_id: actor.tenant_id,
-        channel: 'email',
-        recipient_email: admin.email,
-        subject: `Rückerstattungsantrag von ${actor.first_name} ${actor.last_name}`,
-        body: `${actor.first_name} ${actor.last_name} hat einen Rückerstattungsantrag gestellt.\n\nBetrag: CHF ${(requestedAmount / 100).toFixed(2)}\nGrund: ${reason || '—'}\n\nAntrag prüfen: https://app.simy.ch/admin/refund-requests`,
-        status: 'pending',
-      })
-    }
-  } catch (notifyErr: any) {
-    logger.warn('⚠️ Could not notify admins:', notifyErr.message)
-  }
-
-  return { success: true, mode: 'request', request_id: request.id }
 })
