@@ -15,10 +15,10 @@ import {
 import { generateAppointmentDeletedEmail } from '../email'
 
 describe('getTerminologyDefaults', () => {
-  it('returns driving_school for null/undefined/unknown', () => {
+  it('returns driving_school for null/undefined, generic for unknown types', () => {
     expect(getTerminologyDefaults(null).staff).toBe('Fahrlehrer')
     expect(getTerminologyDefaults(undefined).appointment).toBe('Fahrstunde')
-    expect(getTerminologyDefaults('unknown_type').businessNoun).toBe('Fahrschule')
+    expect(getTerminologyDefaults('unknown_type').businessNoun).toBe('Unternehmen')
   })
 
   it('returns consulting labels', () => {
