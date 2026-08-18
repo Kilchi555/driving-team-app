@@ -732,7 +732,7 @@ Diese E-Mail ist eine automatische Sicherheitsmitteilung von ${tenantName}.
     try {
       const { data: profileData, error: profileError } = await adminSupabase
         .from('users')
-        .select('id, email, role, first_name, last_name, phone, tenant_id, is_active, preferred_payment_method, password_strength_version')
+        .select('id, email, role, first_name, last_name, phone, tenant_id, is_active, preferred_payment_method, password_strength_version, admin_level, is_primary_admin, linked_admin_user_id, can_switch_all_staff')
         .eq('auth_user_id', data.user.id)
         .eq('is_active', true)
         .single()
@@ -746,12 +746,19 @@ Diese E-Mail ist eine automatische Sicherheitsmitteilung von ${tenantName}.
           try {
             const { data: tenantData } = await adminSupabase
               .from('tenants')
-              .select('slug')
+              .select('slug, website_only')
               .eq('id', profileData.tenant_id)
               .single()
             if (tenantData?.slug) {
               ;(userProfile as any).tenant_slug = tenantData.slug
             }
+            // Default register tenants stay false — slim admin only when explicitly set.
+            ;(userProfile as any).website_only = !!tenantData?.website_only
+            ;(userProfile as any).can_switch_accounts =
+              !tenantData?.website_only &&
+              (userProfile.role === 'admin' ||
+                !!(userProfile as any).linked_admin_user_id ||
+                !!(userProfile as any).can_switch_all_staff)
           } catch (slugErr: any) {
             logger.warn('⚠️ Failed to resolve tenant slug for login response:', slugErr?.message)
           }
