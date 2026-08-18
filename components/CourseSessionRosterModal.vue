@@ -40,14 +40,14 @@
           type="button"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-40 transition-opacity hover:opacity-90"
           :style="{ background: primaryColor }"
-          :disabled="isLoading || allParticipants.length === 0"
+          :disabled="isLoading || isPreparingPdf || allParticipants.length === 0"
           title="Kurs-Teilnehmerliste (alle Teile) als PDF"
           @click="downloadPdf"
         >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-3.5 h-3.5" :class="isPreparingPdf ? 'animate-pulse' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
           </svg>
-          PDF / Druck
+          {{ isPreparingPdf ? 'PDF…' : 'PDF / Druck' }}
         </button>
       </div>
 
@@ -62,7 +62,12 @@
           {{ error }}
         </div>
 
-        <div v-else-if="participants.length === 0" class="flex flex-col items-center justify-center py-14 text-center">
+        <template v-else>
+        <div v-if="pdfError" class="mb-3 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+          {{ pdfError }}
+        </div>
+
+        <div v-if="participants.length === 0" class="flex flex-col items-center justify-center py-14 text-center">
           <div class="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
             <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -109,7 +114,7 @@
           </li>
         </ul>
 
-        <div v-if="!isLoading && focusSessions.length" class="mt-5 pt-4 border-t border-gray-100">
+        <div v-if="focusSessions.length" class="mt-5 pt-4 border-t border-gray-100">
           <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
             {{ filteredBySession ? 'Dieser Termin' : 'Kursteile' }}
           </p>
@@ -123,6 +128,7 @@
             </span>
           </div>
         </div>
+        </template>
       </div>
     </div>
   </div>
@@ -132,7 +138,7 @@
 import { ref, watch, computed } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { formatCourseSessionLine } from '~/utils/format-course-sessions'
-import { printParticipantList } from '~/utils/print-participant-list'
+import { openParticipantListPdf } from '~/utils/print-participant-list'
 
 const props = defineProps<{
   isVisible: boolean
@@ -148,7 +154,9 @@ const emit = defineEmits<{ close: [] }>()
 const { primaryColor, brandName, getLogo } = useTenantBranding()
 
 const isLoading = ref(false)
+const isPreparingPdf = ref(false)
 const error = ref<string | null>(null)
+const pdfError = ref<string | null>(null)
 const course = ref<any>(null)
 const participants = ref<any[]>([])
 const allParticipants = ref<any[]>([])
@@ -221,6 +229,7 @@ async function loadRoster() {
 
   isLoading.value = true
   error.value = null
+  pdfError.value = null
   course.value = null
   participants.value = []
   allParticipants.value = []
@@ -249,23 +258,34 @@ async function loadRoster() {
   }
 }
 
-function downloadPdf() {
+async function downloadPdf() {
   // Same PDF as admin: whole course, all Teile, all participants
   // Partial/individual attendance is marked per signature column in the print util.
+  // Native iOS/Android cannot use window.print() — those go through a real PDF URL.
   const pdfParticipants = allParticipants.value.length
     ? allParticipants.value
     : participants.value
-  if (!course.value || pdfParticipants.length === 0) return
+  if (!course.value || pdfParticipants.length === 0 || isPreparingPdf.value) return
 
-  printParticipantList({
-    course: course.value,
-    participants: pdfParticipants,
-    brand: {
-      color: primaryColor.value,
-      tenant: brandName.value || 'Unternehmen',
-      logoUrl: getLogo('header') || getLogo('square') || '',
-    },
-  })
+  isPreparingPdf.value = true
+  pdfError.value = null
+  try {
+    await openParticipantListPdf({
+      courseId: course.value.id || props.courseId,
+      appointmentId: props.appointmentId,
+      course: course.value,
+      participants: pdfParticipants,
+      brand: {
+        color: primaryColor.value,
+        tenant: brandName.value || 'Unternehmen',
+        logoUrl: getLogo('header') || getLogo('square') || '',
+      },
+    })
+  } catch (err: any) {
+    pdfError.value = err?.data?.statusMessage || err?.message || 'PDF konnte nicht geöffnet werden'
+  } finally {
+    isPreparingPdf.value = false
+  }
 }
 
 function close() {
