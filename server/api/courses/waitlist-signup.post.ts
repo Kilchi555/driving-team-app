@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
   // 1. Verify course exists and accepts waitlist entries
   const { data: course, error: courseError } = await supabase
     .from('courses')
-    .select('id, name, description, status, tenant_id, max_participants, free_slots')
+    .select('id, name, description, status, tenant_id, max_participants, current_participants')
     .eq('id', course_id)
     .eq('is_public', true)
     .single()
@@ -40,8 +40,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Kurs nicht gefunden' })
   }
 
+  const freeSlots = (course.max_participants ?? 0) - (course.current_participants ?? 0)
   const isWaitlistMode = course.status === 'waitlist'
-  const isFullCourse = (course.status === 'active' || course.status === 'scheduled') && (course.free_slots ?? 1) === 0
+  const isFullCourse = (course.status === 'active' || course.status === 'scheduled') && freeSlots <= 0
 
   if (!isWaitlistMode && !isFullCourse) {
     throw createError({ statusCode: 409, statusMessage: 'Dieser Kurs nimmt keine Wartelisten-Einträge an' })
