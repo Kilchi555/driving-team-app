@@ -83,6 +83,8 @@ curl -s https://app.simy.ch/.well-known/assetlinks.json | jq .
 `sha256_cert_fingerprints` darf **nicht** mehr `[]` sein.
 
 ### 1.5 Firebase / Push
+Engineering pipeline (token mapping, queue, pitfalls): [FCM_PUSH_NOTIFICATIONS.md](./FCM_PUSH_NOTIFICATIONS.md).
+
 ✅ `google-services.json` lokal für `ch.simy.app` (Firebase Projekt `simy-app`)
 ✅ CI injiziert via Secret `FIREBASE_CONFIGS`
 ✅ Client-Registrierung: `plugins/push.client.ts` (speichert `public.users.id` in `push_tokens`)
