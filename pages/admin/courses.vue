@@ -3208,14 +3208,14 @@
               <button
                 type="button"
                 @click="printParticipantList"
-                :disabled="currentEnrollments.length === 0"
+                :disabled="currentEnrollments.length === 0 || isPreparingParticipantListPdf"
                 class="inline-flex items-center gap-1 px-1.5 py-1 rounded-md text-[11px] font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors"
                 title="Drucken / PDF"
               >
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5" :class="isPreparingParticipantListPdf ? 'animate-pulse' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                 </svg>
-                <span class="hidden sm:inline">Druck</span>
+                <span class="hidden sm:inline">{{ isPreparingParticipantListPdf ? '…' : 'Druck' }}</span>
               </button>
               <button
                 v-if="deletedEnrollments.length > 0"
@@ -4403,7 +4403,7 @@
             </div>
 
             <!-- Wallee refund toggle (only shown if all conditions met AND admin actively opts in) -->
-            <div v-if="refundPreview.canRefundViaWallee && refundPreview.refundAmountChf > 0" class="px-3 py-3 border-t border-gray-100">
+            <div v-if="canStaffWalleeRefund && refundPreview.canRefundViaWallee && refundPreview.refundAmountChf > 0" class="px-3 py-3 border-t border-gray-100">
               <label class="flex items-start gap-3 cursor-pointer select-none">
                 <input type="checkbox" v-model="removalProcessRefund" class="w-4 h-4 mt-0.5 rounded border-gray-300 text-green-600 focus:ring-green-400" />
                 <div>
@@ -4466,6 +4466,7 @@ import { useAppModal } from '~/composables/useModal'
 import { useGeneralResources } from '~/composables/useGeneralResources'
 import { formatDateTime, formatDate, formatTime } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
+import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
@@ -4473,7 +4474,7 @@ import { getCoursePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLoc
 import { evaluateSessionOrder } from '~/utils/session-order-rules'
 import { refreshClientSession } from '~/utils/client-session-refresh'
 import { formatCourseSessionLine } from '~/utils/format-course-sessions'
-import { printParticipantList as openParticipantListPrint } from '~/utils/print-participant-list'
+import { openParticipantListPdf } from '~/utils/print-participant-list'
 
 // Warning banner: surface "no online payments" so admins understand all
 // course enrollments will fall back to cash.
@@ -4507,6 +4508,9 @@ definePageMeta({
 // Composables
 const { currentUser, fetchCurrentUser } = useCurrentUser()
 const modal = useAppModal()
+const canStaffWalleeRefund = computed(() =>
+  canInitiateWalleeRefund(currentUser.value?.email || currentUser.value?.profile?.email)
+)
 
 // Business Type
 const tenantBusinessType = ref<string>('')
@@ -5025,6 +5029,7 @@ const sariParticipantsSyncSuccess = ref(false)
 const isAddingParticipant = ref(false)
 const showAddParticipantForm = ref(false)
 const isSendingParticipantList = ref(false)
+const isPreparingParticipantListPdf = ref(false)
 const participantListEmailResult = ref<{ success: boolean; message: string } | null>(null)
 const enrollmentMode = ref('search') // 'search' or 'new'
 const userSearchQuery = ref('')
@@ -7400,19 +7405,31 @@ const sendParticipantListEmail = async () => {
   }
 }
 
-const printParticipantList = () => {
-  if (!selectedCourse.value || currentEnrollments.value.length === 0) return
+const printParticipantList = async () => {
+  if (!selectedCourse.value || currentEnrollments.value.length === 0 || isPreparingParticipantListPdf.value) return
 
-  openParticipantListPrint({
-    course: selectedCourse.value,
-    participants: currentEnrollments.value,
-    brand: {
-      color: primaryColor.value || '#1E40AF',
-      tenant: brandName.value || 'Unternehmen',
-      logoUrl: getLogo('header') || getLogo('square') || '',
-    },
-    availableStaff: availableStaff.value || [],
-  })
+  isPreparingParticipantListPdf.value = true
+  try {
+    await openParticipantListPdf({
+      courseId: selectedCourse.value.id,
+      course: selectedCourse.value,
+      participants: currentEnrollments.value,
+      brand: {
+        color: primaryColor.value || '#1E40AF',
+        tenant: brandName.value || 'Unternehmen',
+        logoUrl: getLogo('header') || getLogo('square') || '',
+      },
+      availableStaff: availableStaff.value || [],
+    })
+  } catch (err: any) {
+    participantListEmailResult.value = {
+      success: false,
+      message: err?.data?.statusMessage || err?.message || 'PDF konnte nicht geöffnet werden',
+    }
+    setTimeout(() => { participantListEmailResult.value = null }, 6000)
+  } finally {
+    isPreparingParticipantListPdf.value = false
+  }
 }
 
 const loadCourseEnrollments = async (courseId: string) => {
@@ -7553,7 +7570,7 @@ const confirmRemoveParticipant = async () => {
         enrollmentId: enrollment.id,
         reason: reasonText || undefined,
         notify: removalNotify.value,
-        processRefund: removalProcessRefund.value,
+        processRefund: canStaffWalleeRefund.value && removalProcessRefund.value,
         refundAmountChf: removalProcessRefund.value ? (refundPreview.value?.refundAmountChf ?? undefined) : undefined,
       },
     }) as any
