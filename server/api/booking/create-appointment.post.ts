@@ -1097,37 +1097,34 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // ============ LAYER 11b: META CONVERSIONS API (CAPI) UPLOAD ============
-    // Fire-and-forget. Sends a Purchase event to Meta's CAPI even when the browser
-    // Pixel fires too — Meta deduplicates via event_id. Requires at least one user
-    // signal (fbclid, fbc, fbp, email, or phone) to be meaningful.
-    ;(async () => {
-      try {
-        const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
-        const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
-        const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
-        const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+    // Awaited: Vercel freezes the isolate after the response. Pixel still fires
+    // in the browser — Meta deduplicates via event_id.
+    try {
+      const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
+      const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+      const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+      const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
 
-        const conversionValueChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
+      const conversionValueChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
 
-        await recordAndSendCapiEvent({
-          appointment_id: newAppointment.id,
-          tenant_id: tenantId ?? null,
-          event_name: 'Purchase',
-          conversion_value_chf: conversionValueChf,
-          conversion_date_time: new Date(),
-          fbclid: marketingAttr?.fbclid ?? null,
-          fbc: marketingAttr?.fbc ?? null,
-          fbp: marketingAttr?.fbp ?? null,
-          hashed_email: hashedEmail,
-          hashed_phone: hashedPhone,
-          client_ip: ipAddress ?? null,
-          user_agent: getHeader(event, 'user-agent') ?? null,
-          event_source_url: getHeader(event, 'referer') ?? null,
-        })
-      } catch (err: any) {
-        logger.warn('⚠️ Meta CAPI upload failed (non-critical):', err?.message ?? err)
-      }
-    })()
+      await recordAndSendCapiEvent({
+        appointment_id: newAppointment.id,
+        tenant_id: tenantId ?? null,
+        event_name: 'Purchase',
+        conversion_value_chf: conversionValueChf,
+        conversion_date_time: new Date(),
+        fbclid: marketingAttr?.fbclid ?? null,
+        fbc: marketingAttr?.fbc ?? null,
+        fbp: marketingAttr?.fbp ?? null,
+        hashed_email: hashedEmail,
+        hashed_phone: hashedPhone,
+        client_ip: ipAddress ?? null,
+        user_agent: getHeader(event, 'user-agent') ?? null,
+        event_source_url: getHeader(event, 'referer') ?? null,
+      })
+    } catch (err: any) {
+      logger.warn('⚠️ Meta CAPI upload failed (non-critical):', err?.message ?? err)
+    }
 
     // ============ LAYER 12: LINK booking_events.completed TO APPOINTMENT ============
     // Closes the first-party funnel so we can answer "which marketing session

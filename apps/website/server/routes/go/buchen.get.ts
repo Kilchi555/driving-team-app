@@ -57,11 +57,14 @@ export default defineEventHandler(async (event) => {
 
   const sessionId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
 
+  const fbclid = str(query.fbclid)
   const attribution: AttributionFields & { landing_page?: string | null } = {
     gclid: str(query.gclid),
     gbraid: str(query.gbraid),
     wbraid: str(query.wbraid),
-    utm_source: str(query.utm_source) ?? 'google',
+    fbclid,
+    fbc: fbclid ? `fb.1.${Date.now()}.${fbclid}` : null,
+    utm_source: str(query.utm_source) ?? (fbclid ? 'facebook' : 'google'),
     utm_medium: str(query.utm_medium) ?? 'cpc',
     utm_campaign: str(query.utm_campaign),
     utm_content: str(query.utm_content),
@@ -80,6 +83,8 @@ export default defineEventHandler(async (event) => {
           gclid: attribution.gclid,
           gbraid: attribution.gbraid,
           wbraid: attribution.wbraid,
+          fbclid: attribution.fbclid,
+          fbc: attribution.fbc,
           utm_source: attribution.utm_source,
           utm_medium: attribution.utm_medium,
           utm_campaign: attribution.utm_campaign,
@@ -99,6 +104,10 @@ export default defineEventHandler(async (event) => {
   const dtAttr = encodeAttributionServer(attribution)
   const params = new URLSearchParams({ category, session_id: sessionId })
   if (dtAttr) params.set('dt_attr', dtAttr)
+  for (const key of ['gclid', 'gbraid', 'wbraid', 'fbclid'] as const) {
+    const value = attribution[key]
+    if (value) params.set(key, value)
+  }
 
   return sendRedirect(event, `${BOOKING_BASE_URL}?${params.toString()}`, 302)
 })
