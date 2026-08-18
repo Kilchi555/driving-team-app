@@ -97,6 +97,30 @@ export default defineEventHandler(async (event) => {
             continue
           }
 
+          const ctxPre = message.context_data || {}
+          if (ctxPre.stage === 'appointment_confirmation' && ctxPre.appointment_id) {
+            const { data: queuedAppt } = await supabase
+              .from('appointments')
+              .select('start_time, status')
+              .eq('id', ctxPre.appointment_id)
+              .maybeSingle()
+            const queuedStatus = String(queuedAppt?.status || '')
+            const startMs = queuedAppt?.start_time ? new Date(queuedAppt.start_time).getTime() : NaN
+            if (
+              queuedStatus === 'cancelled'
+              || queuedStatus === 'canceled'
+              || (Number.isFinite(startMs) && startMs < Date.now() - 30 * 60 * 1000)
+            ) {
+              console.log(`[OutboundMessageProcessor] ⏭️ Skipping stale appointment confirmation ${message.id}`)
+              await supabase
+                .from('outbound_messages_queue')
+                .update({ status: 'failed', error_message: 'Appointment already started or cancelled', failed_at: new Date().toISOString() })
+                .eq('id', message.id)
+              failedCount++
+              continue
+            }
+          }
+
           const { data: emailResult, error: emailError } = await resend.emails.send({
             from: message.context_data?.tenant_name
               ? `${message.context_data.tenant_name} <${fromEmail}>`
