@@ -52,7 +52,8 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       const uiStore = useUIStore()
       uiStore.showError('Zugriff verweigert', `Die Funktion "${requiredFeature}" ist aktuell deaktiviert.`)
       
-      return navigateTo('/admin')
+      const dest = authStore.tenantTrialInfo?.website_only ? '/admin/website' : '/admin'
+      return navigateTo(dest)
     }
     
     logger.debug(`Feature middleware: Access granted for route ${to.path} (feature: ${requiredFeature})`)

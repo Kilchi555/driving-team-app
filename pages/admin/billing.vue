@@ -4,7 +4,7 @@
     <!-- Header -->
     <div class="mb-2">
       <h1 class="text-2xl font-bold text-gray-900">Abonnement</h1>
-      <p class="text-sm text-gray-500 mt-0.5">Dein Simy-Plan, Add-ons und Rechnungen</p>
+      <p class="text-sm text-gray-500 mt-0.5">{{ isWebsiteOnly ? 'Website-Hosting und Live-Schaltung' : 'Dein Simy-Plan, Add-ons und Rechnungen' }}</p>
     </div>
 
     <div v-if="showUpdatedBanner"
@@ -21,7 +21,104 @@
       <div v-for="i in 3" :key="i" class="h-28 rounded-2xl bg-gray-100 animate-pulse" />
     </div>
 
-    <template v-else>
+    <template v-else-if="isWebsiteOnly">
+      <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+      <div v-if="websiteHostingLocked" class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+        <p class="font-semibold">Einrichtungszeit abgelaufen</p>
+        <p class="mt-1 text-amber-800">Die Vorschau bleibt sichtbar. Editor und Live-Schaltung sind gesperrt, bis Hosting oder Care bezahlt ist.</p>
+      </div>
+
+      <div class="rounded-2xl text-white p-6 shadow-lg" :style="{ background: brandGradient }">
+        <p class="text-xs font-bold uppercase tracking-widest text-white/70 mb-1">Status</p>
+        <h2 class="text-2xl font-extrabold">{{ websiteStatusTitle }}</h2>
+        <p class="text-white/80 text-sm mt-1">{{ websiteStatusDetail }}</p>
+        <a
+          v-if="billing?.website_preview_url"
+          :href="billing.website_preview_url"
+          target="_blank"
+          rel="noopener"
+          class="inline-flex mt-4 px-4 py-2 rounded-xl bg-white/15 text-sm font-semibold hover:bg-white/25"
+        >
+          Vorschau öffnen
+        </a>
+      </div>
+
+      <div v-if="!billing?.website_is_published || !billing?.website_hosting_plan" class="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
+        <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Monatsabo wählen</p>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            @click="websiteHostingChoice = 'host'"
+            class="text-left rounded-xl border px-4 py-3 transition"
+            :class="websiteHostingChoice === 'host' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'"
+          >
+            <p class="font-bold text-gray-900">Hosting</p>
+            <p class="text-sm text-gray-500">CHF 29 / Monat</p>
+            <p class="text-xs text-gray-400 mt-1">Seite online halten</p>
+          </button>
+          <button
+            type="button"
+            @click="websiteHostingChoice = 'care'"
+            class="text-left rounded-xl border px-4 py-3 transition"
+            :class="websiteHostingChoice === 'care' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'"
+          >
+            <p class="font-bold text-gray-900">Care</p>
+            <p class="text-sm text-gray-500">CHF 49 / Monat</p>
+            <p class="text-xs text-gray-400 mt-1">Hosting inkl. Support</p>
+          </button>
+        </div>
+
+        <p v-if="!billing?.website_homepage_ready" class="text-sm text-amber-700">
+          Homepage zuerst im Editor einrichten — danach kannst du live gehen (einmalig CHF 490).
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            v-if="websiteHostingLocked && !billing?.website_hosting_plan"
+            type="button"
+            :disabled="websiteCheckoutLoading"
+            class="flex-1 px-4 py-3 rounded-xl text-white font-semibold disabled:opacity-50"
+            :style="{ background: brandGradient }"
+            @click="startWebsiteCheckout({ includeSetup: false, publishAfterPay: false })"
+          >
+            {{ websiteCheckoutLoading ? '…' : 'Hosting starten' }}
+          </button>
+          <button
+            v-else-if="!billing?.website_is_published && billing?.website_homepage_ready"
+            type="button"
+            :disabled="websiteCheckoutLoading"
+            class="flex-1 px-4 py-3 rounded-xl text-white font-semibold disabled:opacity-50"
+            :style="{ background: brandGradient }"
+            @click="goLiveWebsite"
+          >
+            {{ websiteCheckoutLoading ? '…' : liveButtonLabel }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="billing?.website_is_published" class="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+        <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Live</p>
+        <a v-if="billing.website_live_url" :href="billing.website_live_url" target="_blank" class="text-sm font-semibold underline break-all">
+          {{ billing.website_live_url }}
+        </a>
+        <p class="text-sm text-gray-500 mt-2">
+          Plan: {{ billing.website_hosting_plan === 'care' ? 'Care (CHF 49)' : 'Hosting (CHF 29)' }}
+        </p>
+        <button
+          v-if="billing.has_stripe_customer"
+          type="button"
+          :disabled="portalLoading"
+          class="mt-4 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          @click="openPortal"
+        >
+          {{ portalLoading ? 'Öffne…' : 'Zahlungsmethode & Rechnungen' }}
+        </button>
+      </div>
+
+      <WebsiteDomainConnect :primary-color="primaryColor" />
+    </template>
+
+    <template v-else-if="!isWebsiteOnly">
 
       <!-- ── Trial Banner ─────────────────────────────────────────────────────── -->
       <div v-if="billing?.is_trial" class="rounded-2xl text-white p-6 shadow-lg" :style="{ background: brandGradient }">
@@ -313,6 +410,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { PLANS, SMS_OVERAGE_CHF_PER_SEGMENT, getIncludedSmsSegments } from '~/utils/planFeatures'
+import { isWebsiteHostingLocked, WEBSITE_SETUP_CHF, type WebsiteHostingPlan } from '~/utils/website-billing'
 import type { PricingResponse } from '~/server/api/stripe/prices.get'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { refreshClientSession } from '~/utils/client-session-refresh'
@@ -383,6 +481,13 @@ interface BillingStatus {
   addon_gbp_enabled: boolean
   has_stripe_subscription: boolean
   has_stripe_customer: boolean
+  website_only?: boolean
+  website_setup_paid_at?: string | null
+  website_hosting_plan?: string | null
+  website_is_published?: boolean
+  website_homepage_ready?: boolean
+  website_preview_url?: string | null
+  website_live_url?: string | null
 }
 
 const billing = ref<BillingStatus | null>(null)
@@ -414,8 +519,41 @@ const authHeaders = async (): Promise<Record<string, string>> => {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+const authStore = useAuthStore()
+const isWebsiteOnly = computed(() => !!(billing.value?.website_only || authStore.tenantTrialInfo?.website_only))
+const websiteHostingChoice = ref<WebsiteHostingPlan>('host')
+const websiteCheckoutLoading = ref(false)
+const websiteHostingLocked = computed(() => isWebsiteHostingLocked({
+  website_only: true,
+  website_hosting_plan: billing.value?.website_hosting_plan,
+  trial_ends_at: billing.value?.trial_ends_at,
+}))
+const websiteStatusTitle = computed(() => {
+  if (billing.value?.website_is_published) return 'Website ist live'
+  if (websiteHostingLocked.value) return 'Hosting ausstehend'
+  return 'Einrichtung'
+})
+const websiteStatusDetail = computed(() => {
+  if (billing.value?.website_is_published) return 'Öffentlich erreichbar.'
+  if ((trialDaysLeft.value ?? 0) > 0) {
+    return `Noch ${trialDaysLeft.value} ${trialDaysLeft.value === 1 ? 'Tag' : 'Tage'} zum Einrichten. Vorschau ist gratis.`
+  }
+  if (websiteHostingLocked.value) return 'Monatsabo wählen, um weiterzuarbeiten.'
+  return 'Vorschau ist gratis. Live erst nach einmaliger Gebühr.'
+})
+const liveButtonLabel = computed(() => {
+  const needSetup = !billing.value?.website_setup_paid_at
+  const needHost = !billing.value?.website_hosting_plan
+  if (needSetup && needHost) return `Live schalten (CHF ${WEBSITE_SETUP_CHF} + Abo)`
+  if (needSetup) return `Live schalten (CHF ${WEBSITE_SETUP_CHF})`
+  if (needHost) return 'Live schalten + Hosting'
+  return 'Jetzt live schalten'
+})
+
 onMounted(async () => {
-  await Promise.all([loadBillingStatus(), loadPrices(), loadSmsUsage(), loadPlatformReferral()])
+  await loadBillingStatus()
+  if (isWebsiteOnly.value) return
+  await Promise.all([loadPrices(), loadSmsUsage(), loadPlatformReferral()])
 })
 
 async function loadPlatformReferral() {
@@ -459,6 +597,52 @@ async function loadSmsUsage() {
     })
     smsUsage.value = res.usage
   } catch { /* non-critical */ }
+}
+
+async function startWebsiteCheckout(opts: { includeSetup: boolean; publishAfterPay: boolean }) {
+  websiteCheckoutLoading.value = true
+  try {
+    const res = await $fetch<{ url?: string }>('/api/website/checkout', {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: {
+        hosting_plan: websiteHostingChoice.value,
+        include_setup: opts.includeSetup,
+        publish_after_pay: opts.publishAfterPay,
+      },
+    })
+    if (res?.url) {
+      window.location.href = res.url
+      return
+    }
+    error.value = 'Checkout-URL fehlt.'
+  } catch (e: any) {
+    error.value = e?.data?.statusMessage || e?.statusMessage || 'Checkout fehlgeschlagen.'
+  } finally {
+    websiteCheckoutLoading.value = false
+  }
+}
+
+async function goLiveWebsite() {
+  const needSetup = !billing.value?.website_setup_paid_at
+  const needHost = !billing.value?.website_hosting_plan
+  if (!needSetup && !needHost) {
+    websiteCheckoutLoading.value = true
+    try {
+      await $fetch('/api/website/publish', { method: 'POST', headers: await authHeaders() })
+      await loadBillingStatus()
+    } catch (e: any) {
+      if (e?.statusCode === 402) {
+        await startWebsiteCheckout({ includeSetup: true, publishAfterPay: true })
+        return
+      }
+      error.value = e?.data?.statusMessage || 'Veröffentlichen fehlgeschlagen.'
+    } finally {
+      websiteCheckoutLoading.value = false
+    }
+    return
+  }
+  await startWebsiteCheckout({ includeSetup: needSetup, publishAfterPay: true })
 }
 
 async function loadBillingStatus() {

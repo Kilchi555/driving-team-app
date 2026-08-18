@@ -367,8 +367,12 @@ const syncStripeSubscription = async () => {
   }
 }
 
+const isWebsiteCheckout = route.query.website === '1'
+
 const redirectToAdminDashboard = () => {
-  if (isWalleeSetup) {
+  if (isWebsiteCheckout) {
+    window.location.href = '/admin/website'
+  } else if (isWalleeSetup) {
     window.location.href = '/admin/profile?tab=payments'
   } else {
     window.location.href = '/admin'

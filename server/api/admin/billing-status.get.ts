@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     ? { tenant_id: authUser.tenant_id, role: authUser.role }
     : null
 
-  if (!userRow?.tenant_id || userRow.role !== 'admin') {
+  if (!userRow?.tenant_id || !['admin', 'tenant_admin'].includes(userRow.role || '')) {
     throw createError({ statusCode: 403, statusMessage: 'Admins only' })
   }
 
@@ -35,7 +35,10 @@ export default defineEventHandler(async (event) => {
       addon_affiliate_enabled,
       addon_gbp_enabled,
       stripe_subscription_id,
-      stripe_customer_id
+      stripe_customer_id,
+      website_only,
+      website_setup_paid_at,
+      website_hosting_plan
     `)
     .eq('id', userRow.tenant_id)
     .single()
@@ -70,6 +73,29 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  let website_is_published = false
+  let website_homepage_ready = false
+  let website_preview_url: string | null = null
+  let website_live_url: string | null = null
+  if ((tenant as any).website_only) {
+    const { data: row } = await supabase
+      .from('website_tenants')
+      .select('id, subdomain, is_published, custom_domain, custom_domain_verified')
+      .eq('tenant_id', userRow.tenant_id)
+      .maybeSingle()
+    if (row) {
+      website_is_published = !!row.is_published
+      const { homepageHasContent, loadWebsiteHomePage } = await import('~/server/utils/website-billing')
+      const home = await loadWebsiteHomePage(supabase, row.id)
+      website_homepage_ready = homepageHasContent(home?.blocks)
+      const base = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+      website_preview_url = `${base}/s/${encodeURIComponent(row.subdomain)}?preview=1`
+      website_live_url = row.custom_domain_verified && row.custom_domain
+        ? `https://${row.custom_domain}`
+        : `${base}/s/${encodeURIComponent(row.subdomain)}`
+    }
+  }
+
   return {
     plan: tenant.subscription_plan ?? 'trial',
     is_trial: tenant.is_trial ?? true,
@@ -82,5 +108,12 @@ export default defineEventHandler(async (event) => {
     addon_gbp_enabled: (tenant as any).addon_gbp_enabled ?? false,
     has_stripe_subscription: !!tenant.stripe_subscription_id,
     has_stripe_customer: !!tenant.stripe_customer_id,
+    website_only: !!(tenant as any).website_only,
+    website_setup_paid_at: (tenant as any).website_setup_paid_at ?? null,
+    website_hosting_plan: (tenant as any).website_hosting_plan ?? null,
+    website_is_published,
+    website_homepage_ready,
+    website_preview_url,
+    website_live_url,
   }
 })

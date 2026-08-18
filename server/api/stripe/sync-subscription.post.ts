@@ -48,7 +48,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid session ID' })
   }
 
-  if (session.status !== 'complete' || session.mode !== 'subscription') {
+  if (session.status !== 'complete') {
+    return { synced: false, reason: 'session_not_complete' }
+  }
+
+  if (session.metadata?.product === 'website') {
+    const { applyWebsiteCheckoutSession } = await import('~/server/utils/website-billing')
+    const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+    await applyWebsiteCheckoutSession({ supabase, stripe, session, baseUrl })
+    return { synced: true, plan: 'website', tenantId }
+  }
+
+  if (session.mode !== 'subscription') {
     return { synced: false, reason: 'session_not_complete' }
   }
 
