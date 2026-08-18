@@ -673,23 +673,25 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Google Ads + Meta CAPI conversion (awaited — Vercel freezes after response)
-  try {
-    const hashedEmail = email ? await sha256Hex(email.toLowerCase().trim()) : null
-    const hashedPhone = phone ? await sha256Hex(formatSwissPhoneNumber(phone)) : null
+  if (marketingAttr?.gclid || marketingAttr?.gbraid || marketingAttr?.wbraid) {
+    try {
+      const hashedEmail = email ? await sha256Hex(email.toLowerCase().trim()) : null
+      const hashedPhone = phone ? await sha256Hex(formatSwissPhoneNumber(phone)) : null
 
-    await recordAndUploadConversion({
-      appointment_id: newAppointment.id,
-      tenant_id: tenantId,
-      gclid: marketingAttr?.gclid ?? null,
-      gbraid: marketingAttr?.gbraid ?? null,
-      wbraid: marketingAttr?.wbraid ?? null,
-      conversion_date_time: new Date(),
-      conversion_value_chf: grossAmountRappen / 100,
-      hashed_email: hashedEmail,
-      hashed_phone: hashedPhone,
-    })
-  } catch (e: any) {
-    logger.warn('⚠️ Google Ads conversion upload failed (guest):', e.message)
+      await recordAndUploadConversion({
+        appointment_id: newAppointment.id,
+        tenant_id: tenantId,
+        gclid: marketingAttr?.gclid ?? null,
+        gbraid: marketingAttr?.gbraid ?? null,
+        wbraid: marketingAttr?.wbraid ?? null,
+        conversion_date_time: new Date(),
+        conversion_value_chf: grossAmountRappen / 100,
+        hashed_email: hashedEmail,
+        hashed_phone: hashedPhone,
+      })
+    } catch (e: any) {
+      logger.warn('⚠️ Google Ads conversion upload failed (guest):', e.message)
+    }
   }
 
   try {
