@@ -31,7 +31,7 @@ export const SIMY_WEBSITE: Record<string, unknown> = {
   inLanguage: 'de-CH',
   publisher: { '@id': `${SIMY_BASE}/#organization` },
   description:
-    'All-in-One Software aus der Schweiz: Online-Buchung, Abrechnung, Kundenverwaltung und App für Selbständige und KMUs.',
+    'All-in-One Software aus der Schweiz: Online-Buchung, Website-Generator, Abrechnung, Kundenverwaltung und App für Selbständige und KMUs.',
 }
 
 export type BreadcrumbItem = { name: string; url: string }
@@ -166,6 +166,24 @@ export function productOffersLd(opts: {
         priceValidUntil: `${new Date().getFullYear() + 1}-12-31`,
       })),
     },
+  }
+}
+
+export function howToLd(opts: {
+  name: string
+  description: string
+  steps: { name: string; text: string }[]
+}) {
+  return {
+    '@type': 'HowTo',
+    name: opts.name,
+    description: opts.description,
+    step: opts.steps.map((s, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: s.name,
+      text: s.text,
+    })),
   }
 }
 

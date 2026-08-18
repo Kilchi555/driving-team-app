@@ -24,6 +24,9 @@ export default defineNuxtRouteMiddleware((to) => {
   // If trial data hasn't loaded yet (e.g. before login), allow navigation
   if (!info) return
 
+  // Website-only product is not the Simy SaaS trial. Hosting gate comes later.
+  if (info.website_only) return
+
   const now = new Date()
 
   // ── Active paid subscription → always allow ────────────────────────────────

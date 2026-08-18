@@ -1,55 +1,55 @@
 <template>
-  <div
-    v-if="showSuggestions"
-    class="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3"
-  >
-    <div class="flex items-start gap-2 sm:gap-3">
-      <span class="text-xl shrink-0" aria-hidden="true">✨</span>
-      <div class="flex-1 min-w-0">
-        <p class="font-semibold text-sm mb-2">AI-Vorschläge:</p>
-        <div class="space-y-3 max-h-60 overflow-y-auto">
-          <div v-for="(suggestion, idx) in suggestions" :key="idx" class="bg-white rounded p-2 border border-blue-100">
-            <p class="text-sm text-gray-700 mb-2 break-words whitespace-pre-wrap">{{ suggestion.suggestion }}</p>
-            <p class="text-xs text-gray-500 mb-2 italic leading-snug">{{ suggestion.reason }}</p>
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="text-xs text-gray-500">
-                Score: <span class="font-semibold">{{ suggestion.score }}/10</span>
-              </span>
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  @click="generateMoreVersions(suggestion.suggestion, idx)"
-                  :disabled="loadingMore.includes(idx)"
-                  class="text-xs bg-amber-500 text-white px-2.5 py-1.5 rounded hover:bg-amber-600 disabled:opacity-50 min-h-[32px]"
-                >
-                  {{ loadingMore.includes(idx) ? '…' : 'Mehr' }}
-                </button>
-                <button
-                  type="button"
-                  @click="applySuggestion(suggestion.suggestion)"
-                  class="text-xs bg-blue-500 text-white px-2.5 py-1.5 rounded hover:bg-blue-600 min-h-[32px]"
-                >
-                  Übernehmen
-                </button>
+  <div class="ai-opt" :class="{ 'ai-opt--compact': compact }">
+    <div
+      v-if="showSuggestions"
+      class="ai-opt-panel bg-blue-50 border border-blue-200 rounded-lg p-3"
+    >
+      <div class="flex items-start gap-2 sm:gap-3">
+        <span class="text-xl shrink-0" aria-hidden="true">✨</span>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-sm mb-2">AI-Vorschläge:</p>
+          <div class="space-y-3 max-h-60 overflow-y-auto">
+            <div v-for="(suggestion, idx) in suggestions" :key="idx" class="bg-white rounded p-2 border border-blue-100">
+              <p class="text-sm text-gray-700 mb-2 break-words whitespace-pre-wrap">{{ suggestion.suggestion }}</p>
+              <p class="text-xs text-gray-500 mb-2 italic leading-snug">{{ suggestion.reason }}</p>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="text-xs text-gray-500">
+                  Score: <span class="font-semibold">{{ suggestion.score }}/10</span>
+                </span>
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    @click="generateMoreVersions(suggestion.suggestion, idx)"
+                    :disabled="loadingMore.includes(idx)"
+                    class="text-xs bg-amber-500 text-white px-2.5 py-1.5 rounded hover:bg-amber-600 disabled:opacity-50 min-h-[32px]"
+                  >
+                    {{ loadingMore.includes(idx) ? '…' : 'Mehr' }}
+                  </button>
+                  <button
+                    type="button"
+                    @click="applySuggestion(suggestion.suggestion)"
+                    class="text-xs bg-blue-500 text-white px-2.5 py-1.5 rounded hover:bg-blue-600 min-h-[32px]"
+                  >
+                    Übernehmen
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+          <button
+            type="button"
+            @click="resetSuggestions"
+            class="text-xs text-gray-600 hover:text-gray-800 mt-3 underline"
+          >
+            Zurück
+          </button>
         </div>
-        <button
-          type="button"
-          @click="resetSuggestions"
-          class="text-xs text-gray-600 hover:text-gray-800 mt-3 underline"
-        >
-          Zurück
-        </button>
       </div>
     </div>
-  </div>
 
-  <div v-else class="mt-3 space-y-2">
     <div
-      v-if="loading"
-      class="w-full bg-blue-50 border border-blue-200 rounded-lg p-3"
+      v-else-if="loading"
+      class="ai-opt-panel w-full bg-blue-50 border border-blue-200 rounded-lg p-3"
       role="status"
       aria-live="polite"
     >
@@ -76,13 +76,13 @@
     <button
       v-else
       type="button"
-      class="w-full text-left bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-600 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-700 transition-colors cursor-pointer min-h-[44px]"
+      :class="compact ? 'ai-opt-compact' : 'w-full text-left bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-600 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-700 transition-colors cursor-pointer min-h-[44px]'"
       @click="loadSuggestions"
     >
-      ✨ AI-Vorschläge holen
+      {{ compact ? 'AI-Text vorschlagen' : '✨ AI-Vorschläge holen' }}
     </button>
 
-    <p v-if="errorMsg" class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+    <p v-if="errorMsg" class="ai-opt-error text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
       {{ errorMsg }}
     </p>
   </div>
@@ -98,6 +98,7 @@ const props = defineProps<{
   formalAddress?: 'sie' | 'du'
   /** Used when the field is still empty (e.g. service name). */
   context?: string
+  compact?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -158,6 +159,16 @@ function buildRequestContent(): string | null {
   const text = String(props.original || '').trim()
   const ctx = String(props.context || '').trim()
 
+  if (props.contentType === 'brand_name') {
+    if (text.length >= 2) {
+      return `Markenname für die Website (Navigation/Logo-Text): «${text}».${ctx ? ` Ort/Kontext: ${ctx}.` : ''} Nur Varianten des echten Namens, nichts erfinden. Mindestens eine Variante mit dem Branchen-Keyword (z.B. Fahrschule, Praxis), falls es im Namen noch fehlt.`
+    }
+    if (ctx.length >= 2) {
+      return `Schlage einen klaren Website-Markennamen vor für «${ctx}». Nur den echten Betriebnamen glätten, nichts erfinden.`
+    }
+    return null
+  }
+
   if (props.contentType === 'testimonial') {
     if (text.length >= 5) return text
     return null
@@ -186,6 +197,27 @@ function buildRequestContent(): string | null {
     if (props.contentType === 'keywords') {
       return `Erstelle kommagetrennte SEO-Keywords für «${ctx}».`
     }
+    if (props.contentType === 'headline') {
+      return `Erstelle eine lokale H1 (Hero-Überschrift) für «${ctx}».`
+    }
+    if (props.contentType === 'cta_headline') {
+      return `Erstelle eine CTA-Überschrift zum Online-Buchen für «${ctx}».`
+    }
+    if (props.contentType === 'cta_sub') {
+      return `Erstelle eine CTA-Unterzeile (1–2 Sätze) für «${ctx}».`
+    }
+    if (props.contentType === 'cta_button') {
+      return `Erstelle einen kurzen Button-Text (8–28 Zeichen) zum Online-Buchen für «${ctx}».`
+    }
+    if (props.contentType === 'faq_question') {
+      return `Erstelle eine häufige Kundenfrage (FAQ) für «${ctx}».`
+    }
+    if (props.contentType === 'faq_answer') {
+      return `Erstelle eine klare FAQ-Antwort für «${ctx}».`
+    }
+    if (props.contentType === 'trust_row') {
+      return `Erstelle 3 Vertrauenskarten (VALUE | LABEL) für «${ctx}». Keine erfundenen Sterne.`
+    }
     return `Erstelle passenden Website-Text für «${ctx}» (Typ: ${props.contentType}).`
   }
   return null
@@ -198,7 +230,9 @@ const loadSuggestions = async () => {
     errorMsg.value =
       props.contentType === 'testimonial'
         ? 'Bitte zuerst das echte Zitat eintippen — AI formt nur um, erfindet nichts.'
-        : 'Bitte zuerst etwas Text eingeben — oder warte, bis der Servicename geladen ist.'
+        : props.contentType === 'brand_name'
+          ? 'Bitte zuerst den Markennamen eintragen — AI macht nur Varianten, erfindet keinen neuen Namen.'
+          : 'Bitte zuerst etwas Text eingeben — oder warte, bis der Servicename geladen ist.'
     return
   }
 
@@ -306,5 +340,39 @@ onBeforeUnmount(() => {
   to {
     transform: rotate(360deg);
   }
+}
+
+.ai-opt--compact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  margin-left: auto;
+}
+.ai-opt--compact:has(.ai-opt-panel),
+.ai-opt--compact:has(.ai-opt-error) {
+  flex: 1 1 100%;
+  margin-left: 0;
+}
+.ai-opt-compact {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin: 0;
+  border: 1px solid #c9d6ea;
+  background: #eef4ff;
+  color: #1d4ed8;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 650;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.ai-opt-compact:hover {
+  background: #e0ebff;
+}
+.ai-opt-error {
+  margin: 0.25rem 0 0;
 }
 </style>

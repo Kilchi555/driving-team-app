@@ -98,7 +98,7 @@
       </div>
     </section>
 
-    <section id="features" class="py-24 px-6 bg-gray-50">
+    <section id="features" class="py-24 px-6 bg-gray-50" data-reveal>
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-16">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">{{ v.featuresEyebrow }}</p>
@@ -205,6 +205,12 @@
       :subtitle="`Nur Reviews, die zu ${v.navLabel} passen — live gefiltert.`"
     />
 
+    <SimyWebsiteHighlight
+      :title="`SEO-Website für ${v.navLabel}`"
+      :subtitle="`Eine schnelle Landingpage für ${v.navLabel} — mit Preisen, Standorten und Bewertungen. Vorschau sofort, live erst wenn du bereit bist.`"
+      :preview-host="`simy.ch/s/deine-${v.slug}`"
+    />
+
     <section class="py-24 px-6">
       <div class="max-w-2xl mx-auto">
         <div class="text-center mb-12">
@@ -235,10 +241,10 @@
       </div>
     </section>
 
-    <section class="py-28 px-6" style="background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)">
+    <section class="simy-closer py-28 px-6">
       <div class="max-w-2xl mx-auto text-center">
         <SimyFounderNote :blurb="founderBlurb" compact />
-        <h2 class="text-3xl md:text-4xl font-black text-white mb-5">{{ v.finalTitle }}</h2>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-5 simy-display">{{ v.finalTitle }}</h2>
         <p class="text-white/80 text-lg mb-10">{{ v.finalSub }}</p>
         <a
           :href="ctaUrl"

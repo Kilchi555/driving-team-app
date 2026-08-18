@@ -20,6 +20,7 @@ import { useFallbackLogger } from '~/composables/useFallbackLogger'
 import { useTerminology } from '~/composables/useTerminology'
 import { useFeatures } from '~/composables/useFeatures'
 
+const authStore = useAuthStore()
 const { primaryColor } = useTenantBranding()
 const { logFallbackUsed } = useFallbackLogger()
 const { t, isDrivingSchool } = useTerminology()
@@ -157,6 +158,13 @@ const debugInfo = computed(() => ({
 const shouldShowStaffSwitcher = computed(() => {
   return currentUser.value && 
          (currentUser.value.role === 'admin' || currentUser.value.role === 'staff')
+})
+
+const switchIdentityLabel = computed(() => {
+  const profile = authStore.userProfile || currentUser.value
+  if (!profile?.can_switch_accounts && !profile?.impersonating) return ''
+  const name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
+  return name || ''
 })
 
 // Debug: Log admin status
@@ -333,6 +341,9 @@ watch(pendingCount, (newCount, oldCount) => {
 // Watch for userError changes and redirect to tenant login
 watch(userError, async (error) => {
   if (error === 'Nicht eingeloggt' && process.client) {
+    const { isPublicAuthPath } = await import('~/utils/public-paths')
+    if (isPublicAuthPath(window.location.pathname)) return
+
     // Try to get tenant slug from localStorage
     let tenantSlug: string | null = null
     try {
@@ -595,6 +606,12 @@ onUnmounted(() => {
         </button>
 
       </div>
+      <p
+        v-if="switchIdentityLabel"
+        class="text-center text-[10px] text-gray-400 leading-none pb-1 pointer-events-none select-none"
+      >
+        {{ switchIdentityLabel }}
+      </p>
     </div>
 
     <!-- Pendenzen Modal -->

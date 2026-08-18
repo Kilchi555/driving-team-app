@@ -70,6 +70,8 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight />
+
     <!-- Final CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">

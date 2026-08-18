@@ -109,6 +109,11 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight
+      title="Werbung ohne starke Website verpufft"
+      subtitle="Google Ads und SEO brauchen eine schnelle, lokale Landingpage. Simy generiert sie — SSR, Preise, Bewertungen. Sonst klickt niemand durch."
+    />
+
     <!-- Why Simy for marketing -->
     <section class="py-20 px-6 bg-gray-950">
       <div class="max-w-4xl mx-auto">
@@ -133,7 +138,7 @@
     </section>
 
     <!-- CTA -->
-    <section class="py-24 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
+    <section class="simy-closer py-24 px-6">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-4xl font-black text-white mb-5">Bereit, mehr Kunden zu gewinnen?</h2>
         <p class="text-white/70 text-lg mb-10">Starte kostenlos mit der Software und frage uns nach unserem Marketing-Paket.</p>

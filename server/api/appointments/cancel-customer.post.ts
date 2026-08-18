@@ -13,6 +13,7 @@ import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { calculateCancellationCharges } from '~/utils/policyCalculations'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -61,7 +62,10 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 3: READ & VALIDATE INPUT ============
     const body = await readBody(event)
-    const { appointmentId, cancellationReasonId, refundDestination } = body
+    const { appointmentId, cancellationReasonId, refundDestination: requestedDestination } = body
+    const refundDestination = requestedDestination === 'wallee' && canInitiateWalleeRefund(user.email)
+      ? 'wallee'
+      : 'wallet'
 
     // ============ LAYER 4: INPUT VALIDATION ============
     const errors: any = {}
@@ -524,24 +528,33 @@ export default defineEventHandler(async (event) => {
           }
         }
         
-        // Mark payment as refunded (covers both full and partial refunds — the
-        // exact refunded share is recorded in notes/credit_transactions above)
-        await supabaseAdmin
-          .from('payments')
-          .update({
-            payment_status: 'refunded',
-            refunded_at: new Date().toISOString(),
-            ...(walleeRefundId ? { wallee_refund_id: walleeRefundId } : {}),
-            notes: refundPercentage < 100
-              ? `Kundenstornierung mit ${chargePercentage}% Gebühr: ${reason.name_de} (${refundPercentage}% erstattet${refundDestination === 'wallee' ? ' via Wallee' : ''})`
-              : refundDestination === 'wallee'
-                ? `Kundenstornierung (Wallee-Rückerstattung): ${reason.name_de}`
-                : `Kostenlose Stornierung: ${reason.name_de}`,
-            updated_at: toLocalTimeString(now)
-          })
-          .eq('id', payment.id)
-        
-        logger.debug('✅ Payment marked as refunded')
+        const cancellationNote = refundPercentage < 100
+          ? `Kundenstornierung mit ${chargePercentage}% Gebühr: ${reason.name_de} (${refundPercentage}% erstattet${refundDestination === 'wallee' ? ' via Wallee' : ''})`
+          : refundDestination === 'wallee'
+            ? `Kundenstornierung (Wallee-Rückerstattung): ${reason.name_de}`
+            : `Kostenlose Stornierung: ${reason.name_de}`
+
+        if (refundDestination === 'wallee' && walleeRefundId) {
+          await supabaseAdmin
+            .from('payments')
+            .update({
+              notes: cancellationNote,
+              updated_at: toLocalTimeString(now),
+            })
+            .eq('id', payment.id)
+        } else {
+          await supabaseAdmin
+            .from('payments')
+            .update({
+              payment_status: 'refunded',
+              refunded_at: new Date().toISOString(),
+              notes: cancellationNote,
+              updated_at: toLocalTimeString(now),
+            })
+            .eq('id', payment.id)
+        }
+
+        logger.debug('✅ Payment cancellation recorded')
       } 
       else if (payment.payment_status === 'authorized') {
         if (chargePercentage === 0) {

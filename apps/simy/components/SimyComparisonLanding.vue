@@ -185,9 +185,14 @@
       </div>
     </section>
 
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
+    <SimyWebsiteHighlight
+      title="Plus: eine SEO-Website, die die anderen nicht haben"
+      subtitle="Buchungstools enden beim Kalender. Simy generiert zusätzlich eine schnelle, lokale Landingpage — auch als eigenes Produkt ohne Software-Abo."
+    />
+
+    <section class="simy-closer py-20 px-6">
       <div class="max-w-xl mx-auto text-center">
-        <h2 class="text-3xl font-black text-white mb-4">Bereit für weniger Tools?</h2>
+        <h2 class="text-3xl font-extrabold text-white mb-4 simy-display">Bereit für weniger Tools?</h2>
         <p class="text-white/80 mb-8">30 Tage kostenlos — keine Kreditkarte.</p>
         <a
           :href="ctaUrl"

@@ -18,7 +18,7 @@
             <h1 class="text-4xl font-black text-gray-900 mb-5 leading-tight">Gebaut aus der Praxis — für Dienstleister</h1>
             <p class="text-gray-500 leading-relaxed mb-4">Simy wurde von Pascal Kilchenmann gegründet — aktiver Fahrlehrer und Inhaber der Driving Team Fahrschule in Zürich. Die erste Version entstand, weil wir die täglich frustrierenden Admin-Aufgaben satt hatten.</p>
             <p class="text-gray-500 leading-relaxed mb-4">Was als interne Lösung startete, ist heute eine Plattform für Schweizer Dienstleister — von Fahrschule über Coaching bis Consulting. Wir bauen Simy für uns selbst — und für alle, die arbeiten wollen statt verwalten.</p>
-            <p class="text-gray-500 leading-relaxed">Unser Ziel: Software + Website + Marketing aus einer Hand. Damit sich Betriebe auf das konzentrieren können, was sie wirklich können — und lieben.</p>
+            <p class="text-gray-500 leading-relaxed">Unser Ziel: Software + <a href="/website" class="font-semibold underline" style="color: var(--brand-primary)">Website</a> + Marketing aus einer Hand. Damit sich Betriebe auf das konzentrieren können, was sie wirklich können — und lieben.</p>
           </div>
           <!-- Numbers -->
           <div class="space-y-4">
@@ -110,7 +110,7 @@ const facts = [
   { value: '2022', label: 'Gegründet in der Schweiz', desc: 'Aus der Praxis — für Dienstleister' },
   { value: '50+', label: 'Betriebe vertrauen Simy', desc: 'Täglich aktive Nutzer in der ganzen Schweiz' },
   { value: '100%', label: 'Swiss Made', desc: 'Team, Server und Support in der Schweiz' },
-  { value: '3', label: 'Produkte unter einem Dach', desc: 'Software + Website + Marketing' },
+  { value: '3', label: 'Produkte unter einem Dach', desc: 'Software + Website-Generator + Marketing' },
 ]
 
 const team = [

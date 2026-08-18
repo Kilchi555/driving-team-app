@@ -617,6 +617,7 @@ import { useTenant } from '~/composables/useTenant'
 import { useMFAFlow } from '~/composables/useMFAFlow'
 import { logger } from '~/utils/logger'
 import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
+import { adminHomePath, withWebsiteOnlyFlag } from '~/utils/website-only'
 
 // Meta
 definePageMeta({
@@ -987,6 +988,9 @@ const handleLogin = async () => {
     if (response.profile) {
       authStore.userProfile = response.profile
       authStore.userRole = response.profile.role || ''
+      if (response.profile.website_only) {
+        authStore.tenantTrialInfo = withWebsiteOnlyFlag(authStore.tenantTrialInfo, true) as any
+      }
       logger.debug('✅ User profile from login response:', response.profile.email)
     } else {
       // Fallback: fetch profile via API
@@ -1021,7 +1025,7 @@ const handleLogin = async () => {
         if (supabase) {
           const { data: tenant, error: tenantError } = await supabase
             .from('tenants')
-            .select('slug')
+            .select('slug, website_only')
             .eq('id', user.tenant_id)
             .single()
           
@@ -1029,10 +1033,13 @@ const handleLogin = async () => {
             console.error('❌ Error loading tenant:', tenantError)
           } else if (tenant?.slug) {
             logger.debug('✅ Found tenant slug:', tenant.slug)
+            if (tenant.website_only) {
+              authStore.tenantTrialInfo = withWebsiteOnlyFlag(authStore.tenantTrialInfo, true) as any
+            }
             
             // Weiterleitung basierend auf Rolle
             if (user.role === 'admin' || user.role === 'tenant_admin') {
-              redirectPath = '/admin'
+              redirectPath = adminHomePath(!!tenant.website_only)
             } else if (user.role === 'staff') {
               redirectPath = '/dashboard'
             } else {
@@ -1122,7 +1129,7 @@ const handleLogin = async () => {
       pendingAccount.value.success = null
     } else if (errorMsg?.includes('User not found')) {
       loginError.value = 'Benutzername und/oder Passwort ist falsch.'
-    } else if (errorMsg?.includes('disabled')) {
+    } else if (/\b(account|user)\b.*\bdisabled\b|\bdisabled\b.*\b(account|user)\b/i.test(errorMsg || '')) {
       loginError.value = 'Ihr Account wurde deaktiviert. Bitte kontaktieren Sie den Administrator.'
     } else if (errorMsg?.includes('network') || errorMsg?.includes('timeout')) {
       loginError.value = 'Verbindungsfehler. Bitte überprüfen Sie Ihre Internetverbindung.'
@@ -1165,13 +1172,16 @@ const handleMFAVerify = async () => {
     } else if (user.tenant_id) {
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('slug')
+        .select('slug, website_only')
         .eq('id', user.tenant_id)
         .single()
       
       if (tenant?.slug) {
+        if (tenant.website_only) {
+          authStore.tenantTrialInfo = withWebsiteOnlyFlag(authStore.tenantTrialInfo, true) as any
+        }
         if (user.role === 'admin' || user.role === 'tenant_admin') {
-          redirectPath = '/admin'
+          redirectPath = adminHomePath(!!tenant.website_only)
         } else if (user.role === 'staff') {
           redirectPath = '/dashboard'
         } else {
@@ -1373,11 +1383,14 @@ onMounted(async () => {
     }
     
     logger.debug('✅ User profile found, redirecting...')
+    if (!authStore.tenantTrialInfo && user.tenant_id) {
+      await authStore.loadTenantTrialInfo()
+    }
     let redirectPath = '/customer-dashboard'
     if (user?.role === 'super_admin') {
       redirectPath = '/tenant-admin'
     } else if (user?.role === 'admin' || user?.role === 'tenant_admin') {
-      redirectPath = '/admin'
+      redirectPath = adminHomePath(!!authStore.tenantTrialInfo?.website_only)
     } else if (user?.role === 'staff') {
       redirectPath = '/dashboard'
     }

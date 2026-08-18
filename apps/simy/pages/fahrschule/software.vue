@@ -157,6 +157,12 @@
 
     </div>
 
+    <SimyWebsiteHighlight
+      title="Fahrschul-Website ohne Agentur"
+      subtitle="SEO-Landingpage mit Preisen, Standorten und Bewertungen — in Minuten, nicht in Wochen. Auch ohne die volle Software."
+      preview-host="simy.ch/s/fahrschule-muster"
+    />
+
     <!-- Final CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">

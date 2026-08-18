@@ -742,6 +742,7 @@ async function processRefund(
         tenantId: tenantId || payment.tenant_id,
         idempotencyKey: `appointment-cancel-${appointmentId}`,
         reason: deletionReason,
+        initiatedBy: currentUserId,
       })
 
       if (!walleeResult.success) {
@@ -749,15 +750,10 @@ async function processRefund(
         logger.warn('⚠️ [processRefund] Wallee refund failed, falling back to wallet credit:', walleeResult.error)
         // Fall through to wallet credit logic below
       } else {
-        // Wallee refund succeeded — update payment, create credit transaction record for audit
-        const refundedAt = new Date().toISOString()
-
+        // Wallee refund succeeded — ledger already updated payment totals
         await supabase
           .from('payments')
           .update({
-            payment_status: 'refunded',
-            refunded_at: refundedAt,
-            wallee_refund_id: walleeResult.refundId || null,
             notes: `${payment.notes ? payment.notes + ' | ' : ''}Wallee-Rückerstattung: ${deletionReason} (CHF ${walleeResult.refundedAmountChf.toFixed(2)}, refundId: ${walleeResult.refundId})`,
           })
           .eq('id', payment.id)
