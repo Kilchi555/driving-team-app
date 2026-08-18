@@ -642,12 +642,12 @@ const filteredCourses = computed(() => {
     result = result.filter(c => getCourseCity(c) === selectedLocation.value)
   }
   
-  // Waitlist courses first, then by next session date ascending
+  // Regular courses first (by next session date ascending), waitlist courses always last
   result.sort((a, b) => {
     const aIsWaitlist = a.status === 'waitlist'
     const bIsWaitlist = b.status === 'waitlist'
-    if (aIsWaitlist && !bIsWaitlist) return -1
-    if (!aIsWaitlist && bIsWaitlist) return 1
+    if (aIsWaitlist && !bIsWaitlist) return 1
+    if (!aIsWaitlist && bIsWaitlist) return -1
     const aDate = a.course_sessions?.[0]?.start_time || ''
     const bDate = b.course_sessions?.[0]?.start_time || ''
     return aDate.localeCompare(bDate)
