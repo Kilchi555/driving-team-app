@@ -341,6 +341,9 @@ watch(pendingCount, (newCount, oldCount) => {
 // Watch for userError changes and redirect to tenant login
 watch(userError, async (error) => {
   if (error === 'Nicht eingeloggt' && process.client) {
+    const { isPublicAuthPath } = await import('~/utils/public-paths')
+    if (isPublicAuthPath(window.location.pathname)) return
+
     // Try to get tenant slug from localStorage
     let tenantSlug: string | null = null
     try {

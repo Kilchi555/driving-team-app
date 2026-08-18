@@ -1,11 +1,11 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { createClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { checkProgressiveRateLimitWithHistory } from '~/server/utils/progressive-rate-limiter'
 import { logger } from '~/utils/logger'
 import { validateEmail, throwValidationError } from '~/server/utils/validators'
 import { setAuthCookies } from '~/server/utils/cookies'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { getSupabaseAdmin, getSupabaseAnon } from '~/server/utils/supabase-admin'
 
 // Helper function to extract device name from User-Agent
 function getDeviceNameFromUserAgent(userAgent: string): string {
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
     })
     
     const supabaseUrl = process.env.SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceRoleKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !serviceRoleKey) {
       throw createError({
@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
+    const adminSupabase = getSupabaseAdmin()
     
     // Check if IP is blocked
     try {
@@ -191,9 +191,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Use anon client for login (as frontend would)
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
-    const supabase = createClient(supabaseUrl, supabaseAnonKey!)
+    // Anon client for password login. New sb_publishable_ keys must not go out
+    // as Authorization: Bearer (that 401s). getSupabaseAnon() strips that.
+    const supabase = getSupabaseAnon()
 
     logger.debug('🔑 Attempting login for email:', email.substring(0, 3) + '***')
 

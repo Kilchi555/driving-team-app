@@ -1129,7 +1129,7 @@ const handleLogin = async () => {
       pendingAccount.value.success = null
     } else if (errorMsg?.includes('User not found')) {
       loginError.value = 'Benutzername und/oder Passwort ist falsch.'
-    } else if (errorMsg?.includes('disabled')) {
+    } else if (/\b(account|user)\b.*\bdisabled\b|\bdisabled\b.*\b(account|user)\b/i.test(errorMsg || '')) {
       loginError.value = 'Ihr Account wurde deaktiviert. Bitte kontaktieren Sie den Administrator.'
     } else if (errorMsg?.includes('network') || errorMsg?.includes('timeout')) {
       loginError.value = 'Verbindungsfehler. Bitte überprüfen Sie Ihre Internetverbindung.'

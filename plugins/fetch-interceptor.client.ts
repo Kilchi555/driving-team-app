@@ -253,10 +253,11 @@ export default defineNuxtPlugin((nuxtApp) => {
             }
           }
           
-          // Last resort: if nothing worked, we have a problem - but we should never reach here
+          // Last resort: tenant login if we know the slug, otherwise generic /login
           if (!redirectPath) {
             console.error('❌ No tenant slug found for redirect! This should not happen.')
-            redirectPath = '/'
+            const { getLoginPath } = await import('~/utils/redirect-to-login')
+            redirectPath = getLoginPath()
           }
 
           // Clear auth state

@@ -23,7 +23,7 @@
 import { defineNuxtPlugin } from '#app'
 import { logger } from '~/utils/logger'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
-import { isPublicOnlyPath } from '~/utils/public-paths'
+import { isPublicAuthPath, isPublicOnlyPath } from '~/utils/public-paths'
 
 export default defineNuxtPlugin(async (nuxtApp) => {
   // Only run on client - check both process.client and !process.server
@@ -216,12 +216,19 @@ export default defineNuxtPlugin(async (nuxtApp) => {
                 clearTimeout(refreshCheckInterval)
                 refreshCheckInterval = null
               }
+
+              const currentPath = typeof window !== 'undefined' ? window.location.pathname : route.path
+              if (isPublicAuthPath(currentPath)) {
+                logger.debug('ℹ️ Already on public login page — skip redirect after refresh 401')
+                return
+              }
               
               try {
                 const { navigateTo } = await import('#app')
                 const authStore = useAuthStore()
+                const { getLoginPath } = await import('~/utils/redirect-to-login')
                 
-                let redirectPath = '/login'
+                let redirectPath = getLoginPath()
                 const tenantId = authStore.userProfile?.tenant_id
                 
                 // Try to get tenant slug for redirect
@@ -251,8 +258,8 @@ export default defineNuxtPlugin(async (nuxtApp) => {
                 await navigateTo(redirectPath)
               } catch (redirectErr: any) {
                 logger.error('❌ Failed to redirect:', redirectErr.message)
-                // Fallback redirect
-                await navigateTo('/login')
+                const { getLoginPath } = await import('~/utils/redirect-to-login')
+                await navigateTo(getLoginPath())
               }
             }
             // For other errors (network issues, etc), wait for next check
