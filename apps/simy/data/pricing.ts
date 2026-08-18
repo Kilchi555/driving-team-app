@@ -1,6 +1,11 @@
 /** Single source of truth for public pricing claims on simy.ch */
 export const STARTING_PRICE_CHF = 49
 
+/** Website-only product (not the Simy SaaS Starter plan) */
+export const WEBSITE_SETUP_CHF = 490
+export const WEBSITE_HOST_CHF = 29
+export const WEBSITE_CARE_CHF = 49
+
 export const REGISTER_BASE = 'https://app.simy.ch/tenant-register'
 export const PLATFORM_REF_STORAGE_KEY = 'platform_ref'
 
@@ -10,6 +15,14 @@ export function registerUrl(businessType?: string, refCode?: string) {
   if (refCode) params.set('ref', refCode.trim().toUpperCase())
   const q = params.toString()
   return q ? `${REGISTER_BASE}?${q}` : REGISTER_BASE
+}
+
+export function registerWebsiteUrl(businessType?: string, refCode?: string) {
+  const params = new URLSearchParams()
+  params.set('product', 'website')
+  if (businessType) params.set('type', businessType)
+  if (refCode) params.set('ref', refCode.trim().toUpperCase())
+  return `${REGISTER_BASE}?${params.toString()}`
 }
 
 /** Read invite code from localStorage (client only). */
@@ -48,6 +61,10 @@ export function storePlatformRef(code: string): void {
 /** Client-only: append stored ?ref= from marketing middleware to register URLs. */
 export function registerUrlWithStoredRef(businessType?: string, explicitRef?: string): string {
   return registerUrl(businessType, explicitRef || getStoredPlatformRef())
+}
+
+export function registerWebsiteUrlWithStoredRef(businessType?: string, explicitRef?: string): string {
+  return registerWebsiteUrl(businessType, explicitRef || getStoredPlatformRef())
 }
 
 /** Ensure an absolute register URL carries the current platform ref. */

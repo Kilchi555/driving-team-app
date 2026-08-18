@@ -107,6 +107,11 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight
+      title="Kursseite braucht eine echte Website davor"
+      subtitle="Google findet zuerst die Landingpage — dann die Kursbuchung. Simy baut beides, die Website auch allein."
+    />
+
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl font-black text-white mb-4">Kurse und Termine in einer Plattform</h2>

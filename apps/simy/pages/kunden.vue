@@ -93,6 +93,11 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight
+      title="Dieselben Betriebe starten oft mit der Website"
+      subtitle="Viele wollen zuerst online gefunden werden. Der Website-Generator ist eigenständig — Software kommt, wenn der Betrieb bereit ist."
+    />
+
     <!-- CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">

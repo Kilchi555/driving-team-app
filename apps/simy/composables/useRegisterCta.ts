@@ -1,4 +1,4 @@
-import { registerUrlWithStoredRef } from '~/data/pricing'
+import { registerUrlWithStoredRef, registerWebsiteUrlWithStoredRef } from '~/data/pricing'
 import { businessTypeFromPath } from '~/data/verticals'
 
 /**
@@ -20,4 +20,17 @@ export function useRegisterCta(businessType?: MaybeRefOrGetter<string | undefine
   })
 
   return { registerCta }
+}
+
+export function useWebsiteRegisterCta(businessType?: MaybeRefOrGetter<string | undefined>) {
+  const route = useRoute()
+
+  const websiteRegisterCta = computed(() => {
+    const fromQuery = typeof route.query.ref === 'string' ? route.query.ref : undefined
+    const explicit = toValue(businessType)
+    const inferred = businessTypeFromPath(route.path)
+    return registerWebsiteUrlWithStoredRef(explicit || inferred, fromQuery)
+  })
+
+  return { websiteRegisterCta }
 }

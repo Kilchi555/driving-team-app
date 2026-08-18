@@ -60,6 +60,11 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight
+      title="Keiner der Vergleichstools baut dir die Website"
+      subtitle="Calendly, Terminli, KLARA: Buchung oder Buchhaltung. Simy liefert zusätzlich eine SEO-Website — auch als eigenes Produkt."
+    />
+
     <SimyFooter />
   </div>
 </template>
