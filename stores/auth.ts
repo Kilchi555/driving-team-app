@@ -9,6 +9,7 @@ import { logger } from '~/utils/logger'
 import { SESSION_STORAGE_KEY } from '~/utils/session-persistence'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
+import { isTenantLoginPath } from '~/utils/public-paths'
 
 // Types
 interface TenantTrialInfo {
@@ -323,6 +324,12 @@ const isAdmin = computed(() => {
       if (fromBranding) return fromBranding
     } catch { /* branding composable unavailable */ }
 
+    try {
+      const path = window.location?.pathname || ''
+      const first = path.split('/').filter(Boolean)[0]
+      if (first && isTenantLoginPath(path)) return first
+    } catch { /* ignore */ }
+
     return null
   }
 
@@ -468,7 +475,7 @@ const isAdmin = computed(() => {
       if (shouldRedirect && process.client) {
         const { navigateTo } = await import('#app')
         const { getLoginPath } = await import('~/utils/redirect-to-login')
-        await navigateTo(getLoginPath(tenantSlug))
+        await navigateTo(getLoginPath(tenantSlug), { replace: true })
       }
 
       return { tenantSlug }
@@ -481,7 +488,7 @@ const isAdmin = computed(() => {
         try {
           const { navigateTo } = await import('#app')
           const { getLoginPath } = await import('~/utils/redirect-to-login')
-          await navigateTo(getLoginPath(tenantSlug))
+          await navigateTo(getLoginPath(tenantSlug), { replace: true })
         } catch {
           // Ignore errors in fallback redirect
         }

@@ -16,6 +16,7 @@ import { useAuthStore } from '~/stores/auth'
 import { useRouter, useRoute } from '#app'
 import { logger } from '~/utils/logger'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
+import { isPublicAuthPath } from '~/utils/public-paths'
 
 // Pages that don't require authentication
 const PUBLIC_PAGES = [
@@ -66,7 +67,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
   }
 
   // Check if current page is public (use real URL — useRoute() can be "/" before navigation settles)
-  const isPublicPage = PUBLIC_PAGES.some((page) => path.startsWith(page))
+  const isPublicPage = PUBLIC_PAGES.some((page) => path.startsWith(page)) || isPublicAuthPath(path)
   const isSessionOptionalPage =
     pathnameIncludesAffiliateDashboard(path) ||
     SESSION_OPTIONAL_PREFIXES.some(
@@ -121,17 +122,15 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       path,
     })
 
-    // If session is invalid and user is on protected page, redirect to login
+    // If session is invalid and user is on protected page, redirect to tenant login.
+    // Never send /{slug} (tenant login) here — that is a public auth page.
     if (!isPublicPage && !isSessionOptionalPage) {
       logger.warn('🔐 No valid session on protected page, redirecting to login...', {
         fromPage: path,
       })
 
-      // Redirect to login
-      await router.push({
-        path: '/login',
-        query: path !== '/' ? { redirect: path } : {},
-      })
+      const { getLoginPath } = await import('~/utils/redirect-to-login')
+      await router.replace(getLoginPath())
       return
     }
 

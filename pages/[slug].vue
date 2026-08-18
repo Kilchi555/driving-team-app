@@ -1003,7 +1003,8 @@ const handleLogout = async () => {
     } else if (currentTenantBranding.value?.slug) {
       router.push(`/${currentTenantBranding.value.slug}`)
     } else {
-      router.push('/')
+      const { getLoginPath } = await import('~/utils/redirect-to-login')
+      router.push(getLoginPath())
     }
   } catch (error) {
     console.error('Logout error:', error)
@@ -1239,11 +1240,8 @@ onMounted(async () => {
     if (!currentTenantBranding.value) {
       await loadTenantBranding(tenantSlug.value)
     }
-    if (!currentTenantBranding.value && brandingError.value) {
-      // Unbekannter Slug -> zurück zur Auswahl
-      router.push('/')
-      return
-    }
+    // Stay on /{slug} even if branding fails — `/` immediately becomes
+    // the generic Simy /login and looks like a 1s "login switch".
   } catch (error) {
     console.error('Failed to load tenant branding:', error)
   }

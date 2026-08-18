@@ -4,9 +4,8 @@
  */
 
 import { createHmac, timingSafeEqual } from 'crypto'
-import { createClient } from '@supabase/supabase-js'
 import { createError, deleteCookie, getCookie, setCookie, type H3Event } from 'h3'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getSupabaseAdmin, getSupabaseAnon } from '~/server/utils/supabase-admin'
 import { setAuthCookies } from '~/server/utils/cookies'
 
 export const IMPERSONATOR_COOKIE = 'sb-impersonator'
@@ -388,9 +387,7 @@ export async function mintSessionForUser(user: SwitchUserRow): Promise<{
     throw createError({ statusCode: 500, statusMessage: 'Server configuration error' })
   }
 
-  const adminClient = createClient(supabaseUrl, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
+  const adminClient = getSupabaseAdmin()
 
   const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
     type: 'magiclink',
@@ -401,9 +398,7 @@ export async function mintSessionForUser(user: SwitchUserRow): Promise<{
     throw createError({ statusCode: 500, statusMessage: 'Session konnte nicht erstellt werden' })
   }
 
-  const publicClient = createClient(supabaseUrl, anonKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
+  const publicClient = getSupabaseAnon()
   const { data: sessionData, error: sessionErr } = await publicClient.auth.verifyOtp({
     token_hash: linkData.properties.hashed_token,
     type: 'magiclink',
