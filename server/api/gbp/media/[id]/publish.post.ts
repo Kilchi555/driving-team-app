@@ -33,16 +33,20 @@ export default defineEventHandler(async (event) => {
   if (!locationId) throw createError({ statusCode: 400, statusMessage: 'locationId required' })
 
   const loc = await resolveGbpLocation(authUser.tenant_id, locationId)
-  const gbp = await uploadGbpPhoto(
-    authUser.tenant_id,
-    asset.public_url,
-    asset.category,
-    loc.id,
-    asset.notes
-  )
-
-  if (gbp?.error) {
-    throw createError({ statusCode: 502, statusMessage: gbp.error.message || 'GBP upload failed' })
+  let gbp: any
+  try {
+    gbp = await uploadGbpPhoto(
+      authUser.tenant_id,
+      asset.public_url,
+      asset.category,
+      loc.id,
+      asset.notes
+    )
+  } catch (err: any) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: err?.message || 'GBP-Upload fehlgeschlagen',
+    })
   }
 
   const nowIso = new Date().toISOString()

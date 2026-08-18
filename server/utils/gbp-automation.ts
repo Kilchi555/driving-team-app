@@ -26,6 +26,21 @@ export function assertCronAuth(authHeader: string | undefined) {
   }
 }
 
+/** Review replies should look like office hours, not 03:00. */
+export const GBP_REVIEW_HOURS_START = 7
+export const GBP_REVIEW_HOURS_END = 19
+
+export function isGbpReviewHours(now = new Date(), timeZone = 'Europe/Zurich'): boolean {
+  const hour = Number(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      hour: 'numeric',
+      hourCycle: 'h23',
+    }).format(now)
+  )
+  return hour >= GBP_REVIEW_HOURS_START && hour < GBP_REVIEW_HOURS_END
+}
+
 export type GbpAiTextContext = 'post' | 'photo_caption' | 'review_reply' | 'profile_description'
 export type GbpAiTextTone = 'local_friendly' | 'factual' | 'cta_focus'
 export type GbpAiTextMode = 'generate' | 'regenerate' | 'shorter' | 'more_cta'
@@ -51,6 +66,58 @@ export interface GenerateGbpAiTextParams {
   /** Optional image for photo_caption vision (raw base64, no data: prefix) */
   imageBase64?: string | null
   imageMediaType?: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' | null
+}
+
+/** City/place from GBP title e.g. "Fahrschule Lachen | Driving Team | …" → "Lachen" */
+export function extractGbpPlaceName(locationTitle?: string | null): string | null {
+  if (!locationTitle?.trim()) return null
+  const first = locationTitle.split('|')[0]?.trim() || locationTitle.trim()
+  const cleaned = first
+    .replace(/^(Fahrschule|Driving School|Praxis|Studio|Salon|Agentur|Institut|Zentrum)\s+/i, '')
+    .replace(/\s*[-–—].*$/, '')
+    .trim()
+  return cleaned || first
+}
+
+/**
+ * Rewrite tenant-wide keywords so the active GBP place wins
+ * (e.g. "Fahrschule Birmensdorf" → "Fahrschule Lachen" for Lachen GBP).
+ */
+export function adaptKeywordsForGbpLocation(
+  keywords: string[] | null | undefined,
+  locationTitle?: string | null,
+): string[] {
+  const place = extractGbpPlaceName(locationTitle)
+  const base = (keywords ?? []).map(String).map(k => k.trim()).filter(Boolean)
+  if (!place) return base
+
+  const placeRe = /Birmensdorf|Spreitenbach|Pfäffikon(?:\/SZ)?|Zürich|Zurich|Lachen|Schlieren|Altstetten|Urdorf|Dietikon|Affoltern|Wädenswil|Horgen|Rapperswil|Jona/gi
+  const adapted = base.map((kw) => {
+    if (!placeRe.test(kw)) return kw
+    placeRe.lastIndex = 0
+    return kw.replace(placeRe, place)
+  })
+
+  const withPlace = [`${place}`, ...adapted]
+  const seen = new Set<string>()
+  return withPlace.filter((k) => {
+    const key = k.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+/** Strip markdown / labels the model sometimes returns for GBP captions */
+export function sanitizeGbpCaption(text: string): string {
+  return text
+    .replace(/^#+\s*[^\n]*\n*/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/^\s*[-•]\s*/gm, '')
+    .replace(/\n+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 const TONE_LABELS: Record<GbpAiTextTone, string> = {
@@ -123,12 +190,15 @@ export async function generateGbpAiText(params: GenerateGbpAiTextParams): Promis
   const clientsPlural = params.clientsPlural || defaults.clientsPlural
   const branchTag = `(${businessNoun} Schweiz)`
 
-  const keywords = (params.keywords ?? []).filter(Boolean)
+  const place = extractGbpPlaceName(params.locationTitle)
+  const keywords = adaptKeywordsForGbpLocation(params.keywords, params.locationTitle)
   const voice = params.brandVoice ? `\nMarkenstimme: ${params.brandVoice}` : ''
   const kw = keywords.length
     ? `\nSEO-Stichworte natürlich einbauen (kein Keyword-Stuffing): ${keywords.join(', ')}`
     : ''
-  const loc = params.locationTitle ? `\nStandort: ${params.locationTitle}` : ''
+  const loc = params.locationTitle
+    ? `\nGBP-Standort (verbindlich): ${params.locationTitle}${place ? `\nOrtsname für Local SEO: ${place}` : ''}`
+    : ''
   const tone = TONE_LABELS[params.tone || 'local_friendly']
   const mode = params.mode || 'generate'
   const modeBlock = buildModeInstruction(mode, params.draftText)
@@ -170,21 +240,29 @@ Anforderungen:
 
   if (params.context === 'photo_caption') {
     const hasImage = !!params.imageBase64
-    prompt = `Du schreibst eine Google Business Profile Foto-Beschreibung für "${params.tenantName}" ${branchTag}.${loc}${voice}${kw}
-Ton: ${tone}.
-${hasImage ? '\nDir liegt das Foto als Bild bei. Erkenne zuerst klar das Motiv (Fahrzeug, Ort, Personen, Innen/Aussen, Situation) und schreibe die Caption DANACH passend dazu — nicht generisch.' : '\nKein Bild übermittelt — nutze Stichworte und Standort.'}
+    const clientSingular = params.clientSingular || defaults.client
+    const appointmentSingular = params.appointmentSingular || defaults.appointment
+    prompt = `Du bist Local-SEO-Texter für Google Business Profile Foto-Captions.
+Marke: "${params.tenantName}" ${branchTag} (Branche: ${businessNoun}).${loc}${voice}${kw}
+Ton: ${tone}. Zielgruppe: ${clientsPlural}. Leistungen typisch: ${appointmentSingular}, Ausbildung/Betreuung durch Fachpersonal.
+
+${hasImage
+  ? `Dir liegt ein Foto bei — nutze es NUR als Motiv-Hinweis (z.B. Fahrzeug, Training, Team, Innenraum). Schreibe KEINE Museumbeschreibung („Aufnahme aus dem Auto…“, „Person mit Helm…“). Verwandle das Motiv in verkaufsstarken Local-SEO-Text.`
+  : `Kein Bild — schreibe aus Marke, Standort und Stichworten.`}
 ${modeBlock}
 
-Anforderungen:
+PFLICHT:
 - ${HOCHDEUTSCH_RULE}
-- 80–220 Zeichen
-- Beschreibe konkret, was auf dem Foto zu sehen ist (Marke/Modell nur wenn klar erkennbar; nichts erfinden)
-- Local SEO: Ort und Leistung natürlich einbauen, passend zum Motiv
-- Kein Hashtag-Spam
-- Nur den Beschreibungstext`
-    return callAnthropic(
+- 90–220 Zeichen, ein flüssiger Fliesstext
+- Local SEO high-end: Ortsname${place ? ` «${place}»` : ''} + relevante Leistung natürlich einweben (nicht Keyword-Stuffing)
+- Ort MUSS zum GBP-Standort passen${place ? ` («${place}»)` : ''} — keine anderen Städte nennen
+- Nutzen/Vertrauen für ${clientSingular} andeuten (Qualität, Prüfung, Praxis, modern, erfahren — ohne erfundene Fakten/Preise)
+- Kein Markdown, keine Überschriften, keine Aufzählungen, keine Anführungszeichen um den ganzen Text
+- Max. 1 Hashtag, besser keines
+- Nur den Caption-Text ausgeben`
+    const raw = await callAnthropic(
       prompt,
-      200,
+      220,
       hasImage && params.imageBase64
         ? {
             base64: params.imageBase64,
@@ -192,6 +270,7 @@ Anforderungen:
           }
         : null,
     )
+    return sanitizeGbpCaption(raw)
   }
 
   // post
@@ -391,7 +470,7 @@ export async function generateGbpPhotoCaptionFromBuffer(params: {
   const { getTerminologyDefaults } = await import('~/composables/useTerminology')
   const terms = getTerminologyDefaults(tenant?.business_type)
 
-  return generateGbpAiText({
+  const text = await generateGbpAiText({
     context: 'photo_caption',
     tenantName: tenant?.name || terms.businessNoun,
     businessNoun: terms.businessNoun,
@@ -400,7 +479,7 @@ export async function generateGbpPhotoCaptionFromBuffer(params: {
     appointmentSingular: terms.appointment,
     locationTitle,
     brandVoice: settings.brand_voice,
-    keywords: settings.keywords ?? [],
+    keywords: adaptKeywordsForGbpLocation(settings.keywords ?? [], locationTitle),
     draftText: params.draftText,
     tone: params.tone || 'local_friendly',
     mode: 'generate',
@@ -408,4 +487,5 @@ export async function generateGbpPhotoCaptionFromBuffer(params: {
     imageBase64,
     imageMediaType: 'image/jpeg',
   })
+  return sanitizeGbpCaption(text)
 }

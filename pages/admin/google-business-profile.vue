@@ -9,9 +9,30 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
           </svg>
         </button>
-        <div>
-          <h1 class="text-xl font-bold text-gray-900">Google Business Profile</h1>
-          <p class="text-sm text-gray-500">Verwalte dein Google-Profil direkt aus dem Dashboard</p>
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h1 class="text-xl font-bold text-gray-900">Google Business Profile</h1>
+            <div
+              v-if="status?.connected && !featureBlocked"
+              class="inline-flex items-center gap-2 min-w-0 max-w-full"
+            >
+              <span class="inline-block w-2 h-2 rounded-full bg-green-400 shrink-0"></span>
+              <span class="text-xs text-gray-500 truncate">
+                {{ status.email }}
+                · {{ linkedLocations.length }} Standort{{ linkedLocations.length === 1 ? '' : 'e' }}
+              </span>
+              <button
+                type="button"
+                @click="disconnectAccount"
+                :disabled="disconnecting"
+                class="shrink-0 text-xs text-gray-400 hover:text-red-600 font-medium"
+                title="OAuth komplett trennen (alle Standorte)"
+              >
+                {{ disconnecting ? '…' : 'Trennen' }}
+              </button>
+            </div>
+          </div>
+          <p class="text-sm text-gray-500">Google hält dein Profil sichtbar — du lädst Fotos, prüfst Texte, Simy postet.</p>
         </div>
       </div>
 
@@ -51,7 +72,7 @@
         <p class="text-xs text-gray-400 mt-3">Du wirst zur Upgrade-Seite weitergeleitet — GBP ist dort bereits vorausgewählt.</p>
       </div>
 
-      <template v-else>
+      <div v-else class="space-y-6">
       <!-- OAuth error banner -->
       <div v-if="connectError" class="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
         <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -94,31 +115,7 @@
       </div>
 
       <!-- Connected -->
-      <template v-else>
-
-        <!-- Connection info: Google account (not a single location) -->
-        <div class="bg-white rounded-2xl p-5 border border-gray-100 flex items-center justify-between gap-4">
-          <div class="flex items-center gap-3 min-w-0">
-            <span class="inline-block w-2.5 h-2.5 rounded-full bg-green-400 flex-shrink-0"></span>
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-gray-900">Google-Konto verbunden</p>
-              <p class="text-xs text-gray-400 truncate">
-                {{ status.email }}
-                · Verbunden {{ formatDate(status.connectedAt) }}
-                · {{ linkedLocations.length }} Standort{{ linkedLocations.length === 1 ? '' : 'e' }}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            @click="disconnectAccount"
-            :disabled="disconnecting"
-            class="shrink-0 text-xs text-gray-400 hover:text-red-600 font-medium px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-            title="OAuth komplett trennen (alle Standorte)"
-          >
-            {{ disconnecting ? '…' : 'Konto trennen' }}
-          </button>
-        </div>
+      <div v-else class="space-y-6">
 
         <!-- Location switcher (multi-location) -->
         <div v-if="linkedLocations.length > 0" class="bg-white rounded-2xl p-4 border border-gray-100 space-y-3">
@@ -138,14 +135,21 @@
               @click="toggleAddLocation"
               class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
             >
-              + Standort hinzufügen
+              + Standort
             </button>
             <button
               type="button"
+              @click="showAccountTools = !showAccountTools"
+              class="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5"
+            >Konto</button>
+          </div>
+          <div v-if="showAccountTools" class="flex flex-wrap gap-2">
+            <button
+              type="button"
               @click="toggleUnlinkLocation"
-              class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+              class="text-xs text-gray-400 hover:text-red-600"
             >
-              Standorte trennen
+              Standort entfernen
             </button>
           </div>
         </div>
@@ -243,9 +247,31 @@
           >{{ tab.label }}</button>
         </div>
 
+        <!-- Setup checklist -->
+        <div
+          v-if="selectedLocationId && setupOpenCount > 0 && (activeTab === 'start' || activeTab === 'posts' || activeTab === 'photos')"
+          class="bg-white rounded-2xl p-4 border border-gray-100"
+        >
+          <p class="text-sm font-semibold text-gray-900">In 3 Schritten läuft die Automatik</p>
+          <ol class="mt-3 space-y-2">
+            <li v-for="step in setupSteps" :key="step.id" class="flex items-center gap-2.5 text-sm">
+              <span
+                :class="['w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0', step.done ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500']"
+              >{{ step.done ? '✓' : step.n }}</span>
+              <span :class="step.done ? 'text-gray-400 line-through' : 'text-gray-800'">{{ step.label }}</span>
+              <button
+                v-if="!step.done"
+                type="button"
+                class="ml-auto text-xs font-semibold text-blue-600"
+                @click="activeTab = step.tab"
+              >{{ step.cta }}</button>
+            </li>
+          </ol>
+        </div>
 
-        <!-- Insights tab -->
-        <div v-if="selectedLocationId && activeTab === 'insights'">
+
+        <!-- Insights: Entwicklung durch Automation -->
+        <div v-if="selectedLocationId && activeTab === 'start'">
           <div v-if="insightsLoading" class="space-y-4">
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div v-for="i in 4" :key="`a-${i}`" class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-24" />
@@ -257,14 +283,10 @@
           </div>
           <div v-else class="space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
-              <p v-if="insightsMeta" class="text-xs text-gray-400">
-                <template v-if="insightsMeta.historyFrom && insightsMeta.historyTo">
-                  Historie {{ formatDate(insightsMeta.historyFrom) }}–{{ formatDate(insightsMeta.historyTo) }}
-                </template>
-                <template v-if="insightsMeta.lastSyncedAt">
-                  · Sync {{ formatDateTime(insightsMeta.lastSyncedAt) }}
-                </template>
-              </p>
+              <div>
+                <p class="text-sm font-semibold text-gray-900">Entwicklung</p>
+                <p class="text-xs text-gray-400 mt-0.5">{{ insightsRangeLabel }} · was die Automatik macht und was Google daraus macht</p>
+              </div>
               <div class="flex gap-1 bg-gray-100 rounded-lg p-0.5">
                 <button
                   type="button"
@@ -279,12 +301,12 @@
               </div>
             </div>
 
-            <p class="text-xs text-gray-400 -mt-1">{{ insightsRangeLabel }} · Vergleich jeweils zur gleich langen Vorperiode</p>
+            <p class="text-xs text-gray-400 -mt-1">Vergleich jeweils zur gleich langen Vorperiode</p>
 
             <!-- Aktivität -->
             <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
               <div>
-                <p class="text-sm font-semibold text-gray-900">Was wir gemacht haben</p>
+                <p class="text-sm font-semibold text-gray-900">Was Simy gemacht hat</p>
                 <p class="text-xs text-gray-400 mt-0.5">Posts, Fotos und Review-Antworten in diesem Zeitraum</p>
               </div>
               <div class="grid grid-cols-3 gap-3">
@@ -329,7 +351,7 @@
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p class="text-sm font-semibold text-gray-900">Monatsverlauf</p>
-                  <p class="text-xs text-gray-400 mt-0.5">{{ insightsChartMetricLabel }} — Balken = Wirkung, Punkte = Aktivität</p>
+                  <p class="text-xs text-gray-400 mt-0.5">Balken = Reichweite/Aktionen, Punkte = Monate mit Posts, Fotos oder Antworten</p>
                 </div>
                 <div class="flex flex-wrap gap-1.5">
                   <button
@@ -374,8 +396,9 @@
                   <span class="inline-flex items-center gap-1.5"><span class="w-3 h-2 rounded-sm bg-blue-500/80" /> Wirkung ({{ insightsChartMetricLabel }})</span>
                   <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500" /> Monat mit Posts/Fotos/Antworten</span>
                 </div>
-                <div class="overflow-x-auto">
-                  <table class="w-full text-xs text-left">
+                <details class="overflow-x-auto">
+                  <summary class="text-xs font-semibold text-gray-500 cursor-pointer py-1">Zahlen nach Monat</summary>
+                  <table class="w-full text-xs text-left mt-2">
                     <thead>
                       <tr class="text-gray-400 border-b border-gray-100">
                         <th class="py-2 font-medium">Monat</th>
@@ -395,35 +418,34 @@
                       </tr>
                     </tbody>
                   </table>
-                </div>
+                </details>
               </div>
               <p v-else class="text-xs text-gray-400 text-center py-6">
                 Noch zu wenig Historie — öffne den Tab erneut nach dem ersten Sync.
               </p>
             </div>
 
-            <!-- 28-Tage Snapshot -->
-            <div class="space-y-2">
-              <p class="text-xs font-medium text-gray-500">Aktuell · letzte {{ insightsMeta?.displayDays ?? 28 }} Tage</p>
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <details class="space-y-2">
+              <summary class="text-xs font-medium text-gray-500 cursor-pointer">Aktuell · letzte {{ insightsMeta?.displayDays ?? 28 }} Tage</summary>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                 <div v-for="metric in insightMetrics" :key="metric.label" class="bg-white rounded-xl p-4 border border-gray-100">
                   <p class="text-lg font-bold text-gray-900">{{ metric.value.toLocaleString('de-CH') }}</p>
                   <p class="text-xs text-gray-400 mt-0.5">{{ metric.label }}</p>
                 </div>
               </div>
-            </div>
+            </details>
           </div>
         </div>
 
-        <!-- Analysis tab -->
-        <div v-if="selectedLocationId && activeTab === 'analysis'" class="space-y-4">
-          <div class="bg-white rounded-2xl p-5 border border-gray-100">
+        <!-- Profilstand -->
+        <div v-if="selectedLocationId && activeTab === 'start'" class="space-y-4 mt-4">
+          <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p class="text-sm font-semibold text-gray-900">GBP-Analyse</p>
+                <p class="text-sm font-semibold text-gray-900">Profilstand</p>
                 <p class="text-xs text-gray-400 mt-0.5">
-                  <template v-if="audit">Zuletzt analysiert {{ formatDateTime(audit.generatedAt) }}</template>
-                  <template v-else>Noch keine Analyse durchgeführt</template>
+                  <span v-if="audit">Stand {{ formatDateTime(audit.generatedAt) }} · so vollständig und aktiv ist dein Google-Profil</span>
+                  <span v-else>Score und Lücken — damit du siehst, was noch fehlt</span>
                 </p>
               </div>
               <button
@@ -431,105 +453,164 @@
                 :disabled="analysisRunning"
                 class="px-4 py-2 rounded-xl bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-50"
               >
-                {{ analysisRunning ? 'Analysiere… (bis zu 20s)' : (audit ? '↻ Neu analysieren' : '✦ Jetzt analysieren') }}
+                {{ analysisRunning ? 'Analysiere…' : (audit ? '↻ Aktualisieren' : '✦ Jetzt prüfen') }}
               </button>
             </div>
-            <p v-if="analysisError" class="text-xs text-red-500 mt-2">{{ analysisError }}</p>
-          </div>
+            <p v-if="analysisError" class="text-xs text-red-500">{{ analysisError }}</p>
 
-          <div v-if="analysisLoading" class="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse h-40" />
+            <div v-if="analysisLoading" class="h-24 rounded-xl bg-gray-50 animate-pulse" />
 
-          <template v-else-if="audit">
-            <!-- Overall score -->
-            <div class="bg-white rounded-2xl p-6 border border-gray-100 flex items-center gap-5">
-              <div
-                class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold shrink-0"
-                :class="scoreRingClass(audit.overallScore)"
-              >{{ audit.overallScore }}</div>
-              <div>
-                <p class="text-base font-semibold text-gray-900">{{ scoreLabel(audit.overallScore) }}</p>
-                <p class="text-xs text-gray-400 mt-1">Gesamtscore aus Profil, Bewertungen, Aktualität und Sichtbarkeit</p>
-              </div>
-            </div>
-
-            <!-- Category scores -->
-            <div class="grid sm:grid-cols-2 gap-4">
-              <div v-for="cat in audit.categories" :key="cat.key" class="bg-white rounded-2xl p-5 border border-gray-100 space-y-2">
-                <div class="flex items-center justify-between">
-                  <p class="text-sm font-semibold text-gray-900">{{ cat.label }}</p>
-                  <span class="text-sm font-bold" :class="scoreTextClass(cat.score)">{{ cat.score }}</span>
+            <template v-else-if="audit">
+              <div class="flex items-center gap-4">
+                <div
+                  class="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold shrink-0"
+                  :class="scoreRingClass(audit.overallScore)"
+                >{{ audit.overallScore }}</div>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-gray-900">{{ scoreLabel(audit.overallScore) }}</p>
+                  <p class="text-xs text-gray-400 mt-0.5">Profil, Bewertungen, Aktualität, Sichtbarkeit</p>
                 </div>
-                <div class="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                  <div class="h-full rounded-full" :class="scoreBarClass(cat.score)" :style="{ width: cat.score + '%' }" />
-                </div>
-                <p class="text-xs text-gray-500">{{ cat.summary }}</p>
               </div>
-            </div>
-
-            <!-- Strengths -->
-            <div v-if="audit.strengths?.length" class="bg-white rounded-2xl p-5 border border-gray-100 space-y-2">
-              <p class="text-sm font-semibold text-gray-900">Was schon gut läuft</p>
-              <ul class="space-y-1.5">
-                <li v-for="(s, i) in audit.strengths" :key="i" class="flex items-start gap-2 text-sm text-gray-600">
-                  <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                  {{ s }}
-                </li>
-              </ul>
-            </div>
-
-            <!-- Recommendations -->
-            <div v-if="audit.recommendations?.length" class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
-              <p class="text-sm font-semibold text-gray-900">Empfehlungen für mehr Reichweite</p>
-              <div v-for="(rec, i) in audit.recommendations" :key="i" class="border border-gray-100 rounded-xl p-4 space-y-2">
-                <div class="flex flex-wrap items-start justify-between gap-2">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full" :class="priorityBadgeClass(rec.priority)">
-                      {{ priorityLabel(rec.priority) }}
-                    </span>
-                    <p class="text-sm font-semibold text-gray-900">{{ rec.title }}</p>
+              <div class="grid sm:grid-cols-2 gap-3">
+                <div v-for="cat in audit.categories" :key="cat.key" class="rounded-xl bg-gray-50 px-3 py-3 space-y-1.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="text-xs font-semibold text-gray-800">{{ cat.label }}</p>
+                    <span class="text-xs font-bold" :class="scoreTextClass(cat.score)">{{ cat.score }}</span>
                   </div>
-                  <button
-                    v-if="rec.tab && tabs.some(t => t.id === rec.tab)"
-                    type="button"
-                    @click="activeTab = rec.tab"
-                    class="shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-700"
-                  >Beheben →</button>
-                </div>
-                <p class="text-sm text-gray-600">{{ rec.description }}</p>
-                <div class="flex gap-3 text-xs text-gray-400">
-                  <span>Impact: <span class="font-medium text-gray-600">{{ impactLabel(rec.impact) }}</span></span>
-                  <span>Aufwand: <span class="font-medium text-gray-600">{{ impactLabel(rec.effort) }}</span></span>
+                  <div class="h-1.5 rounded-full bg-white overflow-hidden">
+                    <div class="h-full rounded-full" :class="scoreBarClass(cat.score)" :style="{ width: cat.score + '%' }" />
+                  </div>
+                  <p class="text-xs text-gray-500">{{ cat.summary }}</p>
                 </div>
               </div>
-            </div>
+            </template>
 
-            <!-- Raw facts -->
-            <div class="bg-white rounded-2xl p-5 border border-gray-100">
-              <p class="text-sm font-semibold text-gray-900 mb-3">Zahlen im Überblick</p>
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                <div>
-                  <p class="text-lg font-bold text-gray-900">{{ audit.facts.reviewCount }}</p>
-                  <p class="text-xs text-gray-400">Bewertungen · Ø{{ audit.facts.averageRating.toFixed(1) }}★</p>
-                </div>
-                <div>
-                  <p class="text-lg font-bold text-gray-900">{{ audit.facts.lastPostDaysAgo ?? '–' }}</p>
-                  <p class="text-xs text-gray-400">Tage seit letztem Post</p>
-                </div>
-                <div>
-                  <p class="text-lg font-bold text-gray-900">{{ audit.facts.photoCount }}</p>
-                  <p class="text-xs text-gray-400">Veröffentlichte Fotos</p>
-                </div>
-                <div>
-                  <p class="text-lg font-bold text-gray-900">{{ audit.facts.hoursConfiguredDays }}/7</p>
-                  <p class="text-xs text-gray-400">Öffnungstage hinterlegt</p>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <div v-else class="bg-white rounded-2xl p-8 border border-gray-100 text-center">
-            <p class="text-sm text-gray-500">Starte deine erste Analyse — dauert ca. 15–20 Sekunden.</p>
+            <p v-else class="text-sm text-gray-500">Ein Klick zeigt, ob Beschreibung, Zeiten, Bewertungen und Posts für lokale Suche reichen.</p>
           </div>
+
+          <div v-if="audit?.recommendations?.length" class="bg-white rounded-2xl p-5 border border-gray-100 space-y-3">
+            <div>
+              <p class="text-sm font-semibold text-gray-900">Was noch fehlt</p>
+              <p class="text-xs text-gray-400 mt-0.5">Zuerst das mit dem grössten Effekt auf Reichweite und Anfragen.</p>
+            </div>
+            <div
+              v-for="(rec, i) in openAuditRecommendations"
+              :key="i"
+              class="border border-gray-100 rounded-xl p-4 space-y-2"
+            >
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div class="flex items-center gap-2 flex-wrap min-w-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full" :class="priorityBadgeClass(rec.priority)">
+                    {{ priorityLabel(rec.priority) }}
+                  </span>
+                  <p class="text-sm font-semibold text-gray-900">{{ rec.title }}</p>
+                </div>
+                <button
+                  v-if="auditTab(rec.tab)"
+                  type="button"
+                  @click="activeTab = auditTab(rec.tab)"
+                  class="shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                >Beheben →</button>
+              </div>
+              <p class="text-sm text-gray-600">{{ rec.description }}</p>
+            </div>
+          </div>
+
+          <details v-if="audit?.strengths?.length" class="bg-white rounded-2xl p-5 border border-gray-100">
+            <summary class="text-sm font-semibold text-gray-900 cursor-pointer">Was schon gut läuft</summary>
+            <ul class="space-y-1.5 pt-3">
+              <li v-for="(s, i) in audit.strengths" :key="i" class="flex items-start gap-2 text-sm text-gray-600">
+                <svg class="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                {{ s }}
+              </li>
+            </ul>
+          </details>
+        </div>
+
+        <!-- Settings tab -->
+        <div v-if="selectedLocationId && activeTab === 'start'" class="space-y-4">
+          <details class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4" :open="setupOpenCount > 0">
+            <summary class="cursor-pointer list-none">
+              <span class="block text-sm font-semibold text-gray-900">Automatik</span>
+              <span class="block text-xs text-gray-400 mt-0.5">Frequenz, Buchungs-Link, Texte — einmal setzen.</span>
+            </summary>
+            <div class="grid sm:grid-cols-2 gap-4 pt-2">
+              <label class="block space-y-1">
+                <span class="text-xs font-medium text-gray-600">Review-Antworten</span>
+                <select v-model="settingsForm.review_reply_mode" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
+                  <option value="off">Aus</option>
+                  <option value="suggest">KI-Vorschlag, du sendest</option>
+                </select>
+              </label>
+              <label class="block space-y-1">
+                <span class="text-xs font-medium text-gray-600">Post-Automation</span>
+                <select v-model="settingsForm.post_mode" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
+                  <option value="off">Aus</option>
+                  <option value="calendar">Jahreskalender automatisch posten</option>
+                </select>
+              </label>
+              <label class="block space-y-1">
+                <span class="text-xs font-medium text-gray-600">Posts pro Woche</span>
+                <select v-model.number="settingsForm.posts_per_week" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
+                  <option :value="1">1 (empfohlen)</option>
+                  <option :value="2">2</option>
+                  <option :value="3">3</option>
+                  <option :value="4">4</option>
+                </select>
+              </label>
+              <label class="block space-y-1">
+                <span class="text-xs font-medium text-gray-600">Foto-Automation</span>
+                <select v-model="settingsForm.photo_mode" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
+                  <option value="off">Aus</option>
+                  <option value="approved_only">Pool automatisch auf Google</option>
+                </select>
+              </label>
+              <label class="block space-y-1">
+                <span class="text-xs font-medium text-gray-600">Fotos pro Woche</span>
+                <select v-model.number="settingsForm.photos_per_week" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
+                  <option :value="1">1</option>
+                  <option :value="2">2 (empfohlen)</option>
+                  <option :value="3">3</option>
+                </select>
+              </label>
+              <label class="block space-y-1">
+                <span class="text-xs font-medium text-gray-600">Standard-CTA</span>
+                <select v-model="settingsForm.default_cta_type" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
+                  <option value="">Kein Default</option>
+                  <option value="BOOK">Buchen</option>
+                  <option value="LEARN_MORE">Mehr erfahren</option>
+                  <option value="CALL">Anrufen</option>
+                  <option value="SIGN_UP">Registrieren</option>
+                </select>
+              </label>
+            </div>
+            <label class="block space-y-1">
+              <span class="text-xs font-medium text-gray-600">CTA-URL</span>
+              <input v-model="settingsForm.default_cta_url" placeholder="https://…" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2" />
+            </label>
+            <details class="space-y-3">
+              <summary class="text-xs font-semibold text-gray-500 cursor-pointer">Texte feiner steuern</summary>
+              <label class="block space-y-1">
+                <span class="text-xs font-medium text-gray-600">Brand Voice</span>
+                <textarea v-model="settingsForm.brand_voice" rows="2" placeholder="z.B. freundlich, klar, professionell — immer Hochdeutsch" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2 resize-none" />
+              </label>
+              <label class="block space-y-1">
+                <span class="text-xs font-medium text-gray-600">Keywords (kommagetrennt)</span>
+                <input v-model="keywordsInput" placeholder="Unternehmen Zürich, Kursangebot, …" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2" />
+              </label>
+            </details>
+            <div class="flex items-center justify-between">
+              <p v-if="settingsSaved" class="text-xs text-green-600">Gespeichert</p>
+              <span v-else />
+              <button
+                @click="saveSettings"
+                :disabled="settingsSaving"
+                class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+              >
+                {{ settingsSaving ? 'Speichern…' : 'Speichern' }}
+              </button>
+            </div>
+          </details>
         </div>
 
         <!-- Profile tab -->
@@ -700,9 +781,234 @@
 
         <!-- Posts tab -->
         <div v-if="selectedLocationId && activeTab === 'posts'" class="space-y-4">
-          <!-- New post form -->
+
           <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
-            <p class="text-sm font-semibold text-gray-900">Neuer Post</p>
+            <div class="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <p class="text-sm font-semibold text-gray-900">Jahreskalender</p>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  Simy-AI-Themenplan (12 Monate) — Texte anpassen, dann automatisch posten.
+                  <span v-if="postCalendar.nextPublishAt">
+                    Nächster Post: <span class="font-semibold text-gray-600">{{ formatDateTime(postCalendar.nextPublishAt) }}</span>
+                  </span>
+                </p>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  @click="generatePostCalendar"
+                  :disabled="generatingCalendar"
+                  class="px-3 py-1.5 rounded-lg border border-purple-200 text-purple-600 text-xs font-semibold hover:bg-purple-50 disabled:opacity-50"
+                >
+                  {{ generatingCalendar ? (calendarGenNow?.label || 'Simy AI plant…') : (postCalendar.upcoming.length ? '✦ Kalender neu erzeugen' : '✦ Jahreskalender erzeugen') }}
+                </button>
+                <button
+                  @click="loadPostCalendar"
+                  class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50"
+                >
+                  Aktualisieren
+                </button>
+              </div>
+            </div>
+
+            <div v-if="generatingCalendar" class="rounded-xl border border-purple-100 bg-purple-50/40 p-4 space-y-3">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-semibold text-gray-900">{{ calendarGenNow?.label || 'Simy AI arbeitet…' }}</p>
+                <span class="text-xs font-semibold text-purple-700">{{ calendarGenPercent }}%</span>
+              </div>
+              <div class="h-1.5 rounded-full bg-white overflow-hidden">
+                <div class="h-full rounded-full bg-purple-500 transition-all duration-300" :style="{ width: calendarGenPercent + '%' }" />
+              </div>
+              <p v-if="calendarGenNow?.detail" class="text-xs text-gray-600">{{ calendarGenNow.detail }}</p>
+              <ol class="space-y-1.5">
+                <li
+                  v-for="step in calendarGenPipeline"
+                  :key="step.id"
+                  class="flex items-start gap-2 text-xs"
+                  :class="step.state === 'done' ? 'text-gray-500' : step.state === 'active' ? 'text-gray-900 font-medium' : 'text-gray-400'"
+                >
+                  <span class="mt-0.5 w-3.5 text-center shrink-0">
+                    <span v-if="step.state === 'done'" class="text-green-600">✓</span>
+                    <span v-else-if="step.state === 'active'" class="inline-block w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+                    <span v-else>·</span>
+                  </span>
+                  <span>
+                    {{ step.label }}
+                    <span v-if="step.state === 'active' && calendarGenNow?.current && calendarGenNow?.total" class="text-gray-500 font-normal">
+                      · {{ calendarGenNow.current }}/{{ calendarGenNow.total }}
+                    </span>
+                  </span>
+                </li>
+              </ol>
+              <p v-if="calendarGenError" class="text-xs text-red-600">{{ calendarGenError }}</p>
+            </div>
+            <div v-else-if="calendarLoading" class="space-y-2">
+              <div v-for="i in 3" :key="i" class="h-16 rounded-xl bg-gray-50 animate-pulse" />
+            </div>
+            <div v-else-if="!postCalendar.upcoming.length" class="text-sm text-gray-400 py-4 text-center">
+              Noch kein Kalender — Simy AI erstellt Themen aus Marke, Branche und Standort.
+            </div>
+            <ul v-else class="space-y-2">
+              <li
+                v-for="slot in postCalendar.upcoming"
+                :key="slot.id"
+                class="rounded-xl border border-gray-100 p-3 space-y-2"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-xs font-semibold text-gray-900">
+                      {{ formatDateTime(slot.planned_for) }}
+                      <span class="ml-1 text-gray-400 font-medium">{{ slot.topic_type }}</span>
+                      <span v-if="slot.status === 'failed'" class="ml-1 text-red-600">fehlgeschlagen</span>
+                    </p>
+                    <p class="text-sm text-gray-800 mt-0.5">{{ slot.theme_title }}</p>
+                    <p v-if="editingCalendarId !== slot.id" class="text-xs text-gray-500 mt-1 line-clamp-2">
+                      {{ slot.summary || slot.theme_angle || 'Text wird vor dem Termin erzeugt' }}
+                    </p>
+                  </div>
+                  <div class="flex flex-wrap gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      class="px-2 py-1 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
+                      @click="startEditCalendar(slot)"
+                    >{{ editingCalendarId === slot.id ? 'Schliessen' : 'Text' }}</button>
+                    <button
+                      type="button"
+                      class="px-2 py-1 rounded-lg border border-purple-200 text-purple-700 text-[11px] font-semibold hover:bg-purple-50 disabled:opacity-50"
+                      :disabled="regeneratingCalendarId === slot.id"
+                      @click="regenerateCalendarItem(slot.id)"
+                    >{{ regeneratingCalendarId === slot.id ? 'Simy AI…' : '✦ Neu' }}</button>
+                    <button
+                      type="button"
+                      class="px-2 py-1 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      :disabled="bumpingCalendarId === slot.id"
+                      @click="bumpCalendarToFront(slot.id)"
+                    >Als nächstes</button>
+                    <button
+                      type="button"
+                      class="px-2 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-semibold disabled:opacity-50"
+                      :disabled="publishingCalendarId === slot.id"
+                      @click="publishCalendarItem(slot.id)"
+                    >{{ publishingCalendarId === slot.id ? '…' : 'Jetzt' }}</button>
+                  </div>
+                </div>
+                <div v-if="editingCalendarId === slot.id" class="space-y-2">
+                  <GbpAiTextField
+                    v-model="editingCalendarText"
+                    context="post"
+                    :location-id="selectedLocationId"
+                    :default-keywords="settingsKeywords"
+                    label="Post-Text"
+                    :rows="5"
+                    :max-length="1500"
+                  />
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      class="px-2.5 py-1 rounded-lg bg-gray-900 text-white text-xs font-semibold disabled:opacity-50"
+                      :disabled="savingCalendarId === slot.id"
+                      @click="saveCalendarText(slot.id)"
+                    >{{ savingCalendarId === slot.id ? '…' : 'Speichern' }}</button>
+                    <button
+                      type="button"
+                      class="px-2.5 py-1 rounded-lg text-red-500 text-xs"
+                      @click="skipCalendarItem(slot.id)"
+                    >Überspringen</button>
+                  </div>
+                </div>
+                <p v-if="slot.error_message" class="text-xs text-red-500">{{ slot.error_message }}</p>
+              </li>
+            </ul>
+            <p class="text-[11px] text-gray-400">
+              Automatisch zum Termin. Texte kannst du vorher anpassen.
+            </p>
+          </div>
+
+          <details v-if="posts.length || postsLoading" class="bg-white rounded-2xl border border-gray-100 p-5">
+            <summary class="text-sm font-semibold text-gray-900 cursor-pointer">Bereits auf Google</summary>
+            <div class="mt-4 space-y-3">
+              <div v-if="postsLoading" class="space-y-3">
+                <div v-for="i in 2" :key="i" class="rounded-xl bg-gray-50 animate-pulse h-20" />
+              </div>
+              <div v-for="post in posts" :key="post.name" class="border border-gray-100 rounded-xl p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <span class="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 mb-2">{{ post.topicType || 'Standard' }}</span>
+                    <p class="text-sm text-gray-700 leading-relaxed">{{ post.summary }}</p>
+                  </div>
+                  <button @click="deletePost(post.name)" class="text-xs text-red-400 hover:text-red-600 flex-shrink-0 px-2 py-1">Löschen</button>
+                </div>
+                <p class="text-xs text-gray-400 mt-2">{{ formatDate(post.createTime) }}</p>
+              </div>
+            </div>
+          </details>
+
+          <div v-if="scheduledPosts.length" class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+            <div>
+              <p class="text-sm font-semibold text-gray-900">Manuelle Drafts</p>
+              <p class="text-xs text-gray-400 mt-0.5">Ältere Entwürfe ausserhalb des Kalenders.</p>
+            </div>
+
+            <div v-if="queueLoading" class="text-xs text-gray-400">Lade Queue…</div>
+            <div v-else-if="scheduledPosts.length === 0" class="text-sm text-gray-400 py-4 text-center">Keine Drafts / geplanten Posts</div>
+            <div v-else class="space-y-3">
+              <div v-for="sp in scheduledPosts" :key="sp.id" class="border border-gray-100 rounded-xl p-4 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{ sp.status }} · {{ sp.source }}</span>
+                  <span class="text-xs text-gray-400">{{ sp.scheduled_for ? formatDate(sp.scheduled_for) : 'ohne Termin' }}</span>
+                </div>
+                <GbpAiTextField
+                  v-if="sp.status !== 'published'"
+                  :model-value="sp.summary || ''"
+                  context="post"
+                  :location-id="selectedLocationId"
+                  :default-keywords="settingsKeywords"
+                  label="Post-Text"
+                  :rows="5"
+                  :max-length="1500"
+                  @update:model-value="(v: string) => { sp.summary = v }"
+                />
+                <p v-else class="text-sm text-gray-700 whitespace-pre-wrap">{{ sp.summary }}</p>
+                <div class="flex gap-2 flex-wrap">
+                  <button
+                    v-if="sp.status !== 'published'"
+                    @click="saveScheduledSummary(sp)"
+                    :disabled="savingPostId === sp.id"
+                    class="px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 disabled:opacity-50"
+                  >
+                    {{ savingPostId === sp.id ? '…' : 'Text speichern' }}
+                  </button>
+                  <button
+                    v-if="sp.status !== 'published'"
+                    @click="publishScheduled(sp.id)"
+                    :disabled="publishingId === sp.id"
+                    class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {{ publishingId === sp.id ? '…' : 'Jetzt publishen' }}
+                  </button>
+                  <button
+                    v-if="sp.status === 'draft'"
+                    @click="schedulePost(sp.id)"
+                    class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50"
+                  >
+                    In 1h planen
+                  </button>
+                  <button
+                    v-if="sp.status !== 'published'"
+                    @click="deleteScheduled(sp.id)"
+                    class="px-3 py-1.5 rounded-lg text-red-500 text-xs hover:bg-red-50"
+                  >
+                    Löschen
+                  </button>
+                </div>
+                <p v-if="sp.error_message" class="text-xs text-red-500">{{ sp.error_message }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- New post form (rarely needed — calendar is the default) -->
+          <details class="bg-white rounded-2xl border border-gray-100 p-5">
+            <summary class="text-sm font-semibold text-gray-900 cursor-pointer">Zusätzlichen Post schreiben</summary>
+            <div class="mt-4 space-y-4">
             <GbpAiTextField
               v-model="newPost.summary"
               context="post"
@@ -764,33 +1070,8 @@
                 {{ postPublishing ? 'Veröffentlichen…' : 'Jetzt veröffentlichen' }}
               </button>
             </div>
-          </div>
-
-          <!-- Existing posts -->
-          <div v-if="postsLoading" class="space-y-3">
-            <div v-for="i in 2" :key="i" class="bg-white rounded-2xl p-5 border border-gray-100 animate-pulse h-24" />
-          </div>
-          <div v-else-if="posts.length === 0" class="bg-white rounded-2xl p-6 border border-gray-100 text-center">
-            <p class="text-sm text-gray-400">Noch keine Posts veröffentlicht</p>
-          </div>
-          <div v-else class="space-y-3">
-            <div v-for="post in posts" :key="post.name" class="bg-white rounded-2xl p-5 border border-gray-100">
-              <div class="flex items-start justify-between gap-3">
-                <img
-                  v-if="post.media?.[0]?.googleUrl"
-                  :src="post.media[0].googleUrl"
-                  alt=""
-                  class="w-14 h-14 rounded-lg object-cover shrink-0 bg-gray-50"
-                />
-                <div class="flex-1">
-                  <span class="inline-block text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 mb-2">{{ post.topicType || 'Standard' }}</span>
-                  <p class="text-sm text-gray-700 leading-relaxed">{{ post.summary }}</p>
-                </div>
-                <button @click="deletePost(post.name)" class="text-xs text-red-400 hover:text-red-600 flex-shrink-0 px-2 py-1 hover:bg-red-50 rounded-lg transition-colors">Löschen</button>
-              </div>
-              <p class="text-xs text-gray-400 mt-2">{{ formatDate(post.createTime) }}</p>
             </div>
-          </div>
+          </details>
         </div>
 
         <!-- Photos tab -->
@@ -801,24 +1082,24 @@
               <div>
                 <p class="text-sm font-semibold text-gray-900">Nächste Uploads</p>
                 <p class="text-xs text-gray-400 mt-0.5">
-                  <template v-if="photoSchedule?.photoMode === 'off'">
+                  <span v-if="photoSchedule?.photoMode === 'off'">
                     Foto-Automation ist aus —
-                    <button type="button" class="text-blue-600 hover:text-blue-800 font-semibold" @click="activeTab = 'settings'">Automation öffnen</button>
-                  </template>
-                  <template v-else-if="photoSchedule?.nextPublishAt">
+                    <button type="button" class="text-blue-600 hover:text-blue-800 font-semibold" @click="activeTab = 'start'">Automatik öffnen</button>
+                  </span>
+                  <span v-else-if="photoSchedule?.nextPublishAt">
                     Nächstes Foto voraussichtlich:
                     <span class="font-semibold text-gray-700">{{ formatDateTime(photoSchedule.nextPublishAt) }}</span>
                     · {{ photoSchedule.remainingThisWeek }}/{{ photoSchedule.photosPerWeek }} diese Woche
-                  </template>
-                  <template v-else-if="photoSchedule?.status === 'quota_full'">
+                  </span>
+                  <span v-else-if="photoSchedule?.status === 'quota_full'">
                     Wochen-Quota erreicht ({{ photoSchedule.photosPerWeek }}/Woche) — nächster Slot nächste Woche
-                  </template>
-                  <template v-else-if="photoSchedule?.status === 'no_assets'">
+                  </span>
+                  <span v-else-if="photoSchedule?.status === 'no_assets'">
                     Keine freigegebenen Pool-Fotos in der Warteschlange
-                  </template>
-                  <template v-else>
+                  </span>
+                  <span v-else>
                     Berechnete Termine aus Automation ({{ photoSchedule?.photosPerWeek ?? '…' }}/Woche)
-                  </template>
+                  </span>
                 </p>
               </div>
               <button
@@ -832,7 +1113,7 @@
               <div v-for="i in 3" :key="i" class="h-14 rounded-xl bg-gray-50 animate-pulse" />
             </div>
             <div v-else-if="photoSchedule?.photoMode === 'off'" class="text-sm text-gray-400 py-2">
-              Schalte unter Automation «Nur freigegebene Pool-Fotos» ein und setze Fotos pro Woche.
+              Schalte unter Übersicht die Foto-Automatik ein und lade Fotos in den Pool.
             </div>
             <div v-else-if="!(photoSchedule?.upcoming?.length)" class="text-sm text-gray-400 py-2">
               Noch keine geplanten Uploads — lade Fotos hoch und gib sie frei.
@@ -841,39 +1122,74 @@
               <li
                 v-for="slot in photoSchedule.upcoming"
                 :key="`${slot.assetId}-${slot.rank}`"
-                class="flex items-center gap-3 rounded-xl border border-gray-100 p-2.5"
+                class="rounded-xl border border-gray-100 p-2.5 space-y-2"
               >
-                <img
-                  v-if="slot.publicUrl"
-                  :src="slot.publicUrl"
-                  alt=""
-                  class="h-12 w-12 rounded-lg object-cover bg-gray-50 shrink-0"
-                />
-                <div class="min-w-0 flex-1">
-                  <p class="text-xs font-semibold text-gray-900">
-                    #{{ slot.rank }} · {{ formatDateTime(slot.estimatedAt) }}
-                    <span v-if="slot.queuePriority > 0" class="ml-1 text-amber-600 font-medium">priorisiert</span>
-                  </p>
-                  <p class="text-xs text-gray-500 line-clamp-1">{{ slot.notes || slot.category || 'Ohne Caption' }}</p>
+                <div class="flex items-center gap-3">
+                  <img
+                    v-if="slot.publicUrl"
+                    :src="slot.publicUrl"
+                    alt=""
+                    class="h-12 w-12 rounded-lg object-cover bg-gray-50 shrink-0"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <p class="text-xs font-semibold text-gray-900">
+                      #{{ slot.rank }} · {{ formatDateTime(slot.estimatedAt) }}
+                      <span v-if="slot.queuePriority > 0" class="ml-1 text-amber-600 font-medium">priorisiert</span>
+                    </p>
+                    <p v-if="editingCaptionId !== slot.assetId" class="text-xs text-gray-500 line-clamp-2">
+                      {{ slot.notes || slot.category || 'Ohne Caption' }}
+                    </p>
+                  </div>
+                  <div class="flex flex-wrap gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      class="px-2 py-1 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
+                      @click="startEditCaption(slot.assetId, slot.notes)"
+                    >{{ editingCaptionId === slot.assetId ? 'Schliessen' : 'Text' }}</button>
+                    <button
+                      type="button"
+                      class="px-2 py-1 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      :disabled="bumpingAssetId === slot.assetId || slot.rank === 1"
+                      @click="bumpAssetToFront(slot.assetId)"
+                    >Als nächstes</button>
+                    <button
+                      type="button"
+                      class="px-2 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-semibold disabled:opacity-50"
+                      :disabled="publishingAssetId === slot.assetId"
+                      @click="publishAsset(slot.assetId)"
+                    >{{ publishingAssetId === slot.assetId ? '…' : 'Jetzt' }}</button>
+                  </div>
                 </div>
-                <div class="flex flex-wrap gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    class="px-2 py-1 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                    :disabled="bumpingAssetId === slot.assetId || slot.rank === 1"
-                    @click="bumpAssetToFront(slot.assetId)"
-                  >Als nächstes</button>
-                  <button
-                    type="button"
-                    class="px-2 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-semibold disabled:opacity-50"
-                    :disabled="publishingAssetId === slot.assetId"
-                    @click="publishAsset(slot.assetId)"
-                  >{{ publishingAssetId === slot.assetId ? '…' : 'Jetzt' }}</button>
+                <div v-if="editingCaptionId === slot.assetId" class="space-y-2 pl-0 sm:pl-[60px]">
+                  <GbpAiTextField
+                    v-model="editingCaptionText"
+                    context="photo_caption"
+                    :location-id="selectedLocationId"
+                    :default-keywords="settingsKeywords"
+                    label="Foto-Caption"
+                    placeholder="SEO-Caption für diesen Standort…"
+                    :max-length="250"
+                    :rows="3"
+                  />
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      class="px-2.5 py-1 rounded-lg bg-gray-900 text-white text-xs font-semibold disabled:opacity-50"
+                      :disabled="savingCaptionId === slot.assetId"
+                      @click="saveCaption(slot.assetId)"
+                    >{{ savingCaptionId === slot.assetId ? '…' : 'Speichern' }}</button>
+                    <button
+                      type="button"
+                      class="px-2.5 py-1 rounded-lg border border-purple-200 text-purple-700 text-xs font-semibold disabled:opacity-50"
+                      :disabled="recaptioningId === slot.assetId"
+                      @click="recaptionAsset(slot.assetId)"
+                    >{{ recaptioningId === slot.assetId ? 'KI…' : '✦ Neu generieren' }}</button>
+                  </div>
                 </div>
               </li>
             </ul>
             <p class="text-[11px] text-gray-400">
-              Frequenz ändern: Tab Automation → Fotos pro Woche. Cron läuft täglich ~10:15 (CH).
+              Frequenz: Übersicht → Fotos pro Woche. Uploads laufen täglich automatisch.
             </p>
           </div>
 
@@ -988,7 +1304,7 @@
                 </select>
                 <label class="flex items-center gap-2 text-xs text-gray-600 shrink-0">
                   <input type="checkbox" v-model="poolAutoCaption" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  KI-Caption pro Bild
+                  KI-SEO-Caption pro Standort
                 </label>
                 <label class="flex items-center gap-2 text-xs text-gray-600 shrink-0">
                   <input type="checkbox" v-model="poolApprovedOnUpload" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
@@ -1003,11 +1319,11 @@
                 :default-keywords="settingsKeywords"
                 :image-files="poolFiles"
                 :label="poolAutoCaption
-                  ? 'Stichworte / Entwurf (optional — KI schreibt pro Bild eine eigene Caption)'
+                  ? 'Stichworte / Entwurf (optional — KI schreibt pro Standort eine Local-SEO-Caption)'
                   : 'Foto-Beschreibung (optional, für Google SEO)'"
                 :placeholder="poolAutoCaption
-                  ? 'Optional: Stichworte für alle Bilder — KI analysiert jedes Motiv einzeln…'
-                  : 'Stichworte oder Rohtext — KI erkennt das Motiv und schreibt die Caption…'"
+                  ? 'Optional: Stichworte — KI schreibt high-end SEO-Text passend zu Marke & Standort…'
+                  : 'Stichworte oder Rohtext — KI schreibt Local-SEO-Caption…'"
                 :max-length="250"
                 :rows="3"
               />
@@ -1073,7 +1389,33 @@
                     Publishes: {{ asset.publish_count || 0 }}
                     <span v-if="asset.last_published_at"> · zuletzt {{ formatDate(asset.last_published_at) }}</span>
                   </p>
-                  <p v-if="asset.notes" class="text-xs text-gray-500 line-clamp-2">{{ asset.notes }}</p>
+                  <p v-if="asset.notes && editingCaptionId !== asset.id" class="text-xs text-gray-500 line-clamp-2">{{ asset.notes }}</p>
+                  <div v-if="editingCaptionId === asset.id" class="space-y-2">
+                    <GbpAiTextField
+                      v-model="editingCaptionText"
+                      context="photo_caption"
+                      :location-id="asset.location_id || selectedLocationId"
+                      :default-keywords="settingsKeywords"
+                      label="Foto-Caption"
+                      :max-length="250"
+                      :rows="3"
+                    />
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        class="px-2.5 py-1 rounded-lg bg-gray-900 text-white text-xs font-semibold disabled:opacity-50"
+                        :disabled="savingCaptionId === asset.id"
+                        @click="saveCaption(asset.id)"
+                      >{{ savingCaptionId === asset.id ? '…' : 'Speichern' }}</button>
+                      <button
+                        type="button"
+                        class="px-2.5 py-1 rounded-lg border border-purple-200 text-purple-700 text-xs font-semibold disabled:opacity-50"
+                        :disabled="recaptioningId === asset.id"
+                        @click="recaptionAsset(asset.id, asset.location_id)"
+                      >{{ recaptioningId === asset.id ? 'KI…' : '✦ Neu generieren' }}</button>
+                      <button type="button" class="px-2.5 py-1 rounded-lg text-gray-500 text-xs" @click="cancelEditCaption">Abbrechen</button>
+                    </div>
+                  </div>
                   <div class="flex flex-wrap gap-2">
                     <button
                       v-if="!asset.approved"
@@ -1085,6 +1427,11 @@
                       @click="approveAsset(asset.id, false)"
                       class="px-2.5 py-1 rounded-lg border border-gray-200 text-xs"
                     >Sperren</button>
+                    <button
+                      v-if="editingCaptionId !== asset.id"
+                      @click="startEditCaption(asset.id, asset.notes)"
+                      class="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-semibold"
+                    >Text</button>
                     <button
                       v-if="asset.approved"
                       @click="bumpAssetToFront(asset.id)"
@@ -1174,70 +1521,7 @@
           </div>
         </div>
 
-        <!-- Automation tab -->
-        <div v-if="selectedLocationId && activeTab === 'automation'" class="space-y-4">
-          <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
-            <div class="flex items-start justify-between gap-3 flex-wrap">
-              <div>
-                <p class="text-sm font-semibold text-gray-900">Post-Queue</p>
-                <p class="text-xs text-gray-400 mt-0.5">KI-Drafts & geplante Posts — vor dem Publish freigeben.</p>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  @click="generateAiPost"
-                  :disabled="generatingPost"
-                  class="px-3 py-1.5 rounded-lg border border-purple-200 text-purple-600 text-xs font-semibold hover:bg-purple-50 disabled:opacity-50"
-                >
-                  {{ generatingPost ? 'KI schreibt…' : '✦ KI-Draft erzeugen' }}
-                </button>
-                <button
-                  @click="loadQueue"
-                  class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50"
-                >
-                  Aktualisieren
-                </button>
-              </div>
-            </div>
-
-            <div v-if="queueLoading" class="text-xs text-gray-400">Lade Queue…</div>
-            <div v-else-if="scheduledPosts.length === 0" class="text-sm text-gray-400 py-4 text-center">Keine Drafts / geplanten Posts</div>
-            <div v-else class="space-y-3">
-              <div v-for="sp in scheduledPosts" :key="sp.id" class="border border-gray-100 rounded-xl p-4 space-y-2">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{{ sp.status }} · {{ sp.source }}</span>
-                  <span class="text-xs text-gray-400">{{ sp.scheduled_for ? formatDate(sp.scheduled_for) : 'ohne Termin' }}</span>
-                </div>
-                <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ sp.summary }}</p>
-                <div class="flex gap-2 flex-wrap">
-                  <button
-                    v-if="sp.status !== 'published'"
-                    @click="publishScheduled(sp.id)"
-                    :disabled="publishingId === sp.id"
-                    class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {{ publishingId === sp.id ? '…' : 'Jetzt publishen' }}
-                  </button>
-                  <button
-                    v-if="sp.status === 'draft'"
-                    @click="schedulePost(sp.id)"
-                    class="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50"
-                  >
-                    In 1h planen
-                  </button>
-                  <button
-                    v-if="sp.status !== 'published'"
-                    @click="deleteScheduled(sp.id)"
-                    class="px-3 py-1.5 rounded-lg text-red-500 text-xs hover:bg-red-50"
-                  >
-                    Löschen
-                  </button>
-                </div>
-                <p v-if="sp.error_message" class="text-xs text-red-500">{{ sp.error_message }}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
+        <div v-if="selectedLocationId && activeTab === 'reviews'" class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
             <div>
               <p class="text-sm font-semibold text-gray-900">Review-Vorschläge</p>
               <p class="text-xs text-gray-400 mt-0.5">Vom Cron erzeugt — prüfen und freigeben. Fehlgeschlagene erscheinen hier zum erneuten Versuch.</p>
@@ -1296,93 +1580,9 @@
           </div>
         </div>
 
-        <!-- Settings tab -->
-        <div v-if="selectedLocationId && activeTab === 'settings'" class="space-y-4">
-          <div class="bg-white rounded-2xl p-5 border border-gray-100 space-y-4">
-            <div>
-              <p class="text-sm font-semibold text-gray-900">Automation-Einstellungen</p>
-              <p class="text-xs text-gray-400 mt-1">Tenant-Defaults — gelten für alle Standorte, sofern nicht überschrieben.</p>
-            </div>
-            <div class="grid sm:grid-cols-2 gap-4">
-              <label class="block space-y-1">
-                <span class="text-xs font-medium text-gray-600">Review-Antworten</span>
-                <select v-model="settingsForm.review_reply_mode" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
-                  <option value="off">Aus</option>
-                  <option value="suggest">Nur KI-Vorschlag (empfohlen)</option>
-                  <option value="auto_ge_4">Auto ab 4★ (noch nicht aktiv)</option>
-                  <option value="auto_all">Auto alle (noch nicht aktiv)</option>
-                </select>
-              </label>
-              <label class="block space-y-1">
-                <span class="text-xs font-medium text-gray-600">Posts pro Woche</span>
-                <select v-model.number="settingsForm.posts_per_week" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
-                  <option :value="1">1</option>
-                  <option :value="2">2 (empfohlen)</option>
-                  <option :value="3">3</option>
-                  <option :value="4">4</option>
-                </select>
-              </label>
-              <label class="block space-y-1">
-                <span class="text-xs font-medium text-gray-600">Foto-Automation</span>
-                <select v-model="settingsForm.photo_mode" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
-                  <option value="off">Aus</option>
-                  <option value="approved_only">Nur freigegebene Pool-Fotos (empfohlen)</option>
-                  <option value="pool_auto">Pool automatisch (freigegebene)</option>
-                </select>
-              </label>
-              <label class="block space-y-1">
-                <span class="text-xs font-medium text-gray-600">Fotos pro Woche</span>
-                <select v-model.number="settingsForm.photos_per_week" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
-                  <option :value="1">1</option>
-                  <option :value="2">2 (empfohlen)</option>
-                  <option :value="3">3</option>
-                  <option :value="4">4</option>
-                  <option :value="5">5</option>
-                  <option :value="6">6</option>
-                  <option :value="7">7 (täglich)</option>
-                </select>
-              </label>
-              <label class="block space-y-1">
-                <span class="text-xs font-medium text-gray-600">Standard-CTA</span>
-                <select v-model="settingsForm.default_cta_type" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
-                  <option value="">Kein Default</option>
-                  <option value="BOOK">Buchen</option>
-                  <option value="LEARN_MORE">Mehr erfahren</option>
-                  <option value="CALL">Anrufen</option>
-                  <option value="SIGN_UP">Registrieren</option>
-                </select>
-              </label>
-            </div>
-            <label class="block space-y-1">
-              <span class="text-xs font-medium text-gray-600">CTA-URL</span>
-              <input v-model="settingsForm.default_cta_url" placeholder="https://…" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2" />
-            </label>
-            <label class="block space-y-1">
-              <span class="text-xs font-medium text-gray-600">Brand Voice</span>
-              <textarea v-model="settingsForm.brand_voice" rows="2" placeholder="z.B. freundlich, klar, professionell — immer Hochdeutsch" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2 resize-none" />
-            </label>
-            <label class="block space-y-1">
-              <span class="text-xs font-medium text-gray-600">Keywords (kommagetrennt)</span>
-              <input v-model="keywordsInput" placeholder="Unternehmen Zürich, Kursangebot, …" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2" />
-            </label>
-            <div class="flex items-center justify-between">
-              <p v-if="settingsSaved" class="text-xs text-green-600">Gespeichert</p>
-              <span v-else />
-              <button
-                @click="saveSettings"
-                :disabled="settingsSaving"
-                class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
-              >
-                {{ settingsSaving ? 'Speichern…' : 'Einstellungen speichern' }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </template>
-      </template>
+      </div>
+      </div>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -1395,16 +1595,13 @@ useHead({ title: 'Google Business Profile' })
 const { t } = useTerminology()
 
 const tabs = [
-  { id: 'insights', label: 'Insights' },
-  { id: 'analysis', label: 'Analyse' },
-  { id: 'profile', label: 'Profil' },
-  { id: 'reviews', label: 'Bewertungen' },
+  { id: 'start', label: 'Übersicht' },
   { id: 'posts', label: 'Posts' },
   { id: 'photos', label: 'Fotos' },
-  { id: 'automation', label: 'Freigaben' },
-  { id: 'settings', label: 'Automation' },
+  { id: 'reviews', label: 'Bewertungen' },
+  { id: 'profile', label: 'Profil' },
 ]
-const activeTab = ref('insights')
+const activeTab = ref('start')
 
 const gbpFeatures = [
   'Mehr Reichweite, Anfragen und Umsatz durch ein aktives Google-Profil',
@@ -1476,14 +1673,11 @@ async function onLocationChange() {
   await loadSettingsKeywords()
   audit.value = null
   analysisChecked.value = false
-  if (activeTab.value === 'insights') loadInsights()
-  if (activeTab.value === 'analysis') loadAnalysis()
+  if (activeTab.value === 'start') { loadInsights(); loadAnalysis(); loadSettings(); loadPostCalendar(); loadMedia() }
   if (activeTab.value === 'profile') loadProfileTab()
-  if (activeTab.value === 'reviews') loadReviews()
-  if (activeTab.value === 'posts') { loadPosts(); loadMedia() }
+  if (activeTab.value === 'reviews') { loadReviews(); loadQueue() }
+  if (activeTab.value === 'posts') { loadPosts(); loadMedia(); loadQueue() }
   if (activeTab.value === 'photos') { loadMedia(); loadPhotoSchedule() }
-  if (activeTab.value === 'automation') loadQueue()
-  if (activeTab.value === 'settings') loadSettings()
 }
 
 function toggleAddLocation() {
@@ -1740,6 +1934,19 @@ function priorityBadgeClass(p: string): string {
 }
 function impactLabel(v: string): string {
   return v === 'high' ? 'Hoch' : v === 'medium' ? 'Mittel' : 'Niedrig'
+}
+
+const openAuditRecommendations = computed(() => {
+  const recs = audit.value?.recommendations
+  if (!Array.isArray(recs)) return []
+  const order = { critical: 0, important: 1, optional: 2 }
+  return [...recs].sort((a, b) => (order[a.priority as keyof typeof order] ?? 3) - (order[b.priority as keyof typeof order] ?? 3))
+})
+
+function auditTab(tab: string | null | undefined): string | null {
+  if (!tab) return null
+  if (tab === 'settings') return 'start'
+  return tabs.some(t => t.id === tab) ? tab : null
 }
 
 // Profile tab
@@ -2001,6 +2208,11 @@ const photoSchedule = ref<{
     queuePriority: number
   }[]
 } | null>(null)
+const editingCaptionId = ref<string | null>(null)
+const editingCaptionText = ref('')
+const savingCaptionId = ref<string | null>(null)
+const recaptioningId = ref<string | null>(null)
+const savingPostId = ref<string | null>(null)
 const poolFilesTotalBytes = computed(() => poolFiles.value.reduce((sum, f) => sum + f.size, 0))
 const poolAllLocationsSelected = computed(() =>
   linkedLocations.value.length > 0
@@ -2117,11 +2329,75 @@ async function bumpAssetToFront(id: string) {
   bumpingAssetId.value = id
   try {
     await $fetch(`/api/gbp/media/${id}`, { method: 'PATCH', body: { bumpToFront: true } })
-    await loadMedia()
+    await Promise.all([loadMedia(), loadPhotoSchedule()])
   } catch (e: any) {
     alert(e?.data?.statusMessage || 'Priorisieren fehlgeschlagen')
   } finally {
     bumpingAssetId.value = null
+  }
+}
+
+function startEditCaption(id: string, notes?: string | null) {
+  if (editingCaptionId.value === id) {
+    cancelEditCaption()
+    return
+  }
+  editingCaptionId.value = id
+  editingCaptionText.value = notes || ''
+}
+
+function cancelEditCaption() {
+  editingCaptionId.value = null
+  editingCaptionText.value = ''
+}
+
+async function saveCaption(id: string) {
+  savingCaptionId.value = id
+  try {
+    await $fetch(`/api/gbp/media/${id}`, {
+      method: 'PATCH',
+      body: { notes: editingCaptionText.value.trim() || null },
+    })
+    cancelEditCaption()
+    await Promise.all([loadMedia(), loadPhotoSchedule()])
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Caption speichern fehlgeschlagen')
+  } finally {
+    savingCaptionId.value = null
+  }
+}
+
+async function recaptionAsset(id: string, locationId?: string | null) {
+  recaptioningId.value = id
+  try {
+    const res = await $fetch<{ notes?: string }>('/api/gbp/media/' + id + '/recaption', {
+      method: 'POST',
+      body: {
+        draftText: editingCaptionText.value || null,
+        locationId: locationId || selectedLocationId.value,
+      },
+    })
+    if (res?.notes) editingCaptionText.value = res.notes
+    await Promise.all([loadMedia(), loadPhotoSchedule()])
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'KI-Caption fehlgeschlagen')
+  } finally {
+    recaptioningId.value = null
+  }
+}
+
+async function saveScheduledSummary(sp: { id: string; summary?: string }) {
+  savingPostId.value = sp.id
+  try {
+    await $fetch(`/api/gbp/scheduled-posts/${sp.id}`, {
+      method: 'PATCH',
+      body: { summary: sp.summary || '' },
+    })
+    await loadQueue()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Post speichern fehlgeschlagen')
+  } finally {
+    savingPostId.value = null
   }
 }
 
@@ -2370,7 +2646,7 @@ async function submitReply(reviewId: string) {
     replyText.value = ''
     replyingTo.value = null
     await loadReviews()
-    if (activeTab.value === 'automation') await loadQueue()
+    await loadQueue()
   } catch (e: any) {
     alert(e?.data?.statusMessage || 'Fehler beim Senden der Antwort')
   } finally {
@@ -2492,6 +2768,7 @@ const settingsForm = ref({
   posts_per_week: 2,
   photos_per_week: 2,
   photo_mode: 'off',
+  post_mode: 'off',
   brand_voice: '',
   default_cta_type: 'BOOK',
   default_cta_url: '',
@@ -2509,6 +2786,7 @@ async function loadSettings() {
       posts_per_week: s.posts_per_week ?? 2,
       photos_per_week: s.photos_per_week ?? 2,
       photo_mode: s.photo_mode ?? 'off',
+      post_mode: s.post_mode ?? 'off',
       brand_voice: s.brand_voice ?? '',
       default_cta_type: s.default_cta_type ?? 'BOOK',
       default_cta_url: s.default_cta_url ?? '',
@@ -2538,6 +2816,7 @@ async function saveSettings() {
     settingsSaved.value = true
     setTimeout(() => { settingsSaved.value = false }, 2500)
     if (activeTab.value === 'photos' || selectedLocationId.value) loadPhotoSchedule()
+    loadPostCalendar()
   } catch (e: any) {
     alert(e?.data?.statusMessage || 'Speichern fehlgeschlagen')
   } finally {
@@ -2563,8 +2842,234 @@ async function loadQueue() {
     ])
     scheduledPosts.value = (postsRes.posts ?? []).filter((p: any) => p.status !== 'published')
     reviewActions.value = actionsRes.actions ?? []
+    await loadPostCalendar()
   } catch { /* ignore */ } finally {
     queueLoading.value = false
+  }
+}
+
+const postCalendar = ref<{ upcoming: any[]; nextPublishAt: string | null; publishedCount: number }>({
+  upcoming: [],
+  nextPublishAt: null,
+  publishedCount: 0,
+})
+const calendarLoading = ref(false)
+const generatingCalendar = ref(false)
+const calendarGenError = ref('')
+const calendarGenNow = ref<{ step: string; label: string; detail?: string; current?: number; total?: number } | null>(null)
+const CALENDAR_GEN_STEPS = [
+  { id: 'context', label: 'Marke, Standort und Keywords laden' },
+  { id: 'slots', label: 'Termine für 12 Monate berechnen' },
+  { id: 'themes', label: 'Simy AI plant Themen fürs Jahr' },
+  { id: 'save', label: 'Kalender speichern' },
+  { id: 'copy', label: 'Texte für die nächsten Posts schreiben' },
+  { id: 'done', label: 'Fertig' },
+] as const
+const calendarGenActiveId = ref<string>('context')
+const calendarGenDoneIds = ref<string[]>([])
+
+function calendarGenPipelineId(step: string) {
+  if (step === 'themes_done') return 'themes'
+  if (step === 'replace' || step === 'save') return 'save'
+  if (step === 'enable' || step === 'done') return 'done'
+  return step
+}
+
+const calendarGenPipeline = computed(() => {
+  const active = calendarGenActiveId.value
+  const done = new Set(calendarGenDoneIds.value)
+  return CALENDAR_GEN_STEPS.map((step) => ({
+    ...step,
+    state: done.has(step.id) ? 'done' : step.id === active ? 'active' : 'pending',
+  }))
+})
+
+const calendarGenPercent = computed(() => {
+  const ids = CALENDAR_GEN_STEPS.map(s => s.id)
+  const activeIdx = Math.max(0, ids.indexOf(calendarGenActiveId.value as typeof ids[number]))
+  const doneCount = calendarGenDoneIds.value.length
+  let pct = Math.round((doneCount / ids.length) * 100)
+  const now = calendarGenNow.value
+  if (now?.total && now.current != null && (calendarGenActiveId.value === 'copy' || calendarGenActiveId.value === 'themes')) {
+    pct = Math.round(((doneCount + now.current / now.total) / ids.length) * 100)
+  } else if (calendarGenActiveId.value && !calendarGenDoneIds.value.includes(calendarGenActiveId.value)) {
+    pct = Math.round(((activeIdx + 0.35) / ids.length) * 100)
+  }
+  return Math.min(100, Math.max(4, pct))
+})
+
+function applyCalendarProgress(ev: { step: string; label: string; detail?: string; current?: number; total?: number }) {
+  const id = calendarGenPipelineId(ev.step)
+  calendarGenNow.value = ev
+  calendarGenActiveId.value = id
+  const order = CALENDAR_GEN_STEPS.map(s => s.id)
+  const idx = order.indexOf(id as typeof order[number])
+  if (idx > 0) {
+    calendarGenDoneIds.value = order.slice(0, ev.step === 'done' ? order.length : idx)
+  }
+  if (ev.step === 'themes_done' || ev.step === 'save' || ev.step === 'done') {
+    if (!calendarGenDoneIds.value.includes(id)) calendarGenDoneIds.value = [...calendarGenDoneIds.value, id]
+  }
+}
+
+const editingCalendarId = ref<string | null>(null)
+const editingCalendarText = ref('')
+const savingCalendarId = ref<string | null>(null)
+const regeneratingCalendarId = ref<string | null>(null)
+const publishingCalendarId = ref<string | null>(null)
+const bumpingCalendarId = ref<string | null>(null)
+
+const setupSteps = computed(() => {
+  const cal = postCalendar.value.upcoming.length > 0
+  const photos = mediaAssets.value.length > 0 && settingsForm.value.photo_mode !== 'off'
+  const cta = !!(settingsForm.value.default_cta_url || '').trim()
+  return [
+    { id: 'cal', n: 1, done: cal, label: 'Jahreskalender starten', tab: 'posts', cta: 'Öffnen' },
+    { id: 'photos', n: 2, done: photos, label: 'Fotos laden & Automatik an', tab: mediaAssets.value.length === 0 ? 'photos' : 'start', cta: 'Öffnen' },
+    { id: 'cta', n: 3, done: cta, label: 'Buchungs-Link setzen', tab: 'start', cta: 'Setzen' },
+  ]
+})
+const setupOpenCount = computed(() => setupSteps.value.filter(s => !s.done).length)
+
+async function loadPostCalendar() {
+  if (!selectedLocationId.value) return
+  calendarLoading.value = true
+  try {
+    postCalendar.value = await $fetch('/api/gbp/post-calendar', { query: locQuery() })
+  } catch {
+    postCalendar.value = { upcoming: [], nextPublishAt: null, publishedCount: 0 }
+  } finally {
+    calendarLoading.value = false
+  }
+}
+
+async function generatePostCalendar() {
+  if (!selectedLocationId.value) return
+  if (postCalendar.value.upcoming.length) {
+    if (!confirm('Unveröffentlichte Kalender-Posts ersetzen? Bereits gepostete bleiben.')) return
+  }
+  generatingCalendar.value = true
+  calendarGenError.value = ''
+  calendarGenNow.value = { step: 'context', label: 'Marke, Standort und Keywords laden' }
+  calendarGenActiveId.value = 'context'
+  calendarGenDoneIds.value = []
+  try {
+    const res = await fetch('/api/gbp/post-calendar/generate?stream=1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+      body: JSON.stringify({ locationId: selectedLocationId.value }),
+    })
+    if (!res.ok || !res.body) {
+      let message = 'Kalender konnte nicht erzeugt werden'
+      try {
+        const err = await res.json()
+        message = err?.statusMessage || err?.message || message
+      } catch { /* ignore */ }
+      throw new Error(message)
+    }
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = ''
+    let failed: string | null = null
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      const chunks = buf.split('\n\n')
+      buf = chunks.pop() || ''
+      for (const chunk of chunks) {
+        const line = chunk.split('\n').find(l => l.startsWith('data: '))
+        if (!line) continue
+        const ev = JSON.parse(line.slice(6))
+        applyCalendarProgress(ev)
+        if (ev.step === 'error') failed = ev.message || ev.detail || 'Kalender konnte nicht erzeugt werden'
+      }
+    }
+    if (failed) throw new Error(failed)
+    settingsForm.value.post_mode = 'calendar'
+    await loadPostCalendar()
+  } catch (e: any) {
+    calendarGenError.value = e?.message || 'Kalender konnte nicht erzeugt werden'
+    alert(calendarGenError.value)
+  } finally {
+    generatingCalendar.value = false
+  }
+}
+
+function startEditCalendar(slot: { id: string; summary?: string }) {
+  if (editingCalendarId.value === slot.id) {
+    editingCalendarId.value = null
+    return
+  }
+  editingCalendarId.value = slot.id
+  editingCalendarText.value = slot.summary || ''
+}
+
+async function saveCalendarText(id: string) {
+  savingCalendarId.value = id
+  try {
+    await $fetch(`/api/gbp/post-calendar/${id}`, {
+      method: 'PATCH',
+      body: { summary: editingCalendarText.value },
+    })
+    editingCalendarId.value = null
+    await loadPostCalendar()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Speichern fehlgeschlagen')
+  } finally {
+    savingCalendarId.value = null
+  }
+}
+
+async function regenerateCalendarItem(id: string) {
+  regeneratingCalendarId.value = id
+  try {
+    const res = await $fetch<{ item?: { summary?: string } }>(`/api/gbp/post-calendar/${id}/regenerate`, {
+      method: 'POST',
+    })
+    if (res?.item?.summary) editingCalendarText.value = res.item.summary
+    await loadPostCalendar()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Simy-AI-Post fehlgeschlagen')
+  } finally {
+    regeneratingCalendarId.value = null
+  }
+}
+
+async function bumpCalendarToFront(id: string) {
+  bumpingCalendarId.value = id
+  try {
+    await $fetch(`/api/gbp/post-calendar/${id}`, { method: 'PATCH', body: { bumpToFront: true } })
+    await loadPostCalendar()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Priorisieren fehlgeschlagen')
+  } finally {
+    bumpingCalendarId.value = null
+  }
+}
+
+async function publishCalendarItem(id: string) {
+  publishingCalendarId.value = id
+  try {
+    await $fetch(`/api/gbp/post-calendar/${id}/publish`, { method: 'POST' })
+    editingCalendarId.value = null
+    await Promise.all([loadPostCalendar(), loadPosts()])
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Publish fehlgeschlagen')
+    await loadPostCalendar()
+  } finally {
+    publishingCalendarId.value = null
+  }
+}
+
+async function skipCalendarItem(id: string) {
+  if (!confirm('Diesen Termin überspringen?')) return
+  try {
+    await $fetch(`/api/gbp/post-calendar/${id}`, { method: 'PATCH', body: { status: 'skipped' } })
+    editingCalendarId.value = null
+    await loadPostCalendar()
+  } catch (e: any) {
+    alert(e?.data?.statusMessage || 'Überspringen fehlgeschlagen')
   }
 }
 
@@ -2659,6 +3164,9 @@ onMounted(async () => {
   if (status.value?.connected && selectedLocationId.value) {
     loadInsights()
     loadReviews()
+    loadSettings()
+    loadPostCalendar()
+    loadMedia()
   } else if (status.value?.connected && linkedLocations.value.length === 0) {
     loadAccounts()
   }
@@ -2674,16 +3182,23 @@ onMounted(async () => {
 })
 
 watch(activeTab, (tab) => {
-  if (tab === 'insights' && insightMetrics.value.length === 0) loadInsights()
-  if (tab === 'analysis' && !analysisChecked.value && !analysisLoading.value) loadAnalysis()
+  if (tab === 'start') {
+    if (insightMetrics.value.length === 0) loadInsights()
+    if (!analysisChecked.value && !analysisLoading.value) loadAnalysis()
+    loadSettings()
+    loadPostCalendar()
+    if (mediaAssets.value.length === 0) loadMedia()
+  }
   if (tab === 'profile' && !profileForm.value) loadProfileTab()
-  if (tab === 'reviews' && reviews.value.length === 0) loadReviews()
+  if (tab === 'reviews') {
+    if (reviews.value.length === 0) loadReviews()
+    loadQueue()
+  }
   if (tab === 'posts') {
     if (posts.value.length === 0) loadPosts()
     if (mediaAssets.value.length === 0) loadMedia()
+    loadQueue()
   }
   if (tab === 'photos') loadMedia()
-  if (tab === 'automation') loadQueue()
-  if (tab === 'settings') loadSettings()
 })
 </script>
