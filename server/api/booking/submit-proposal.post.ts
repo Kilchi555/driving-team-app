@@ -6,7 +6,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { upsertMarketingLeadSafe } from '~/server/utils/upsert-marketing-lead'
-import { mergeAttributionFields } from '~/server/utils/marketing-attribution-merge'
+import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -227,31 +227,11 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Resolve UTM attribution: prefer client payload, always merge DB + booking_redirects
-    // so click IDs survive even when the client only forwarded session_id.
-    let resolvedAttribution: MarketingAttributionPayload | null = marketing_attribution ?? null
-    if (marketing_session_id) {
-      const { data: attrRow } = await supabase
-        .from('marketing_attributions')
-        .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, fbc, fbp')
-        .eq('session_id', marketing_session_id)
-        .maybeSingle()
-      if (attrRow) {
-        resolvedAttribution = mergeAttributionFields(attrRow, resolvedAttribution) as MarketingAttributionPayload
-      }
-      if (!resolvedAttribution?.gclid && !resolvedAttribution?.gbraid && !resolvedAttribution?.wbraid) {
-        const { data: redirectRow } = await supabase
-          .from('booking_redirects')
-          .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
-          .eq('session_id', marketing_session_id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        if (redirectRow) {
-          resolvedAttribution = mergeAttributionFields(resolvedAttribution, redirectRow) as MarketingAttributionPayload
-        }
-      }
-    }
+    const resolvedAttribution = await resolveMarketingAttribution(
+      supabase,
+      marketing_session_id,
+      marketing_attribution,
+    )
 
     // Create the proposal via service_role – this is a server-side endpoint, input is
     // already validated above. Admin client bypasses RLS safely.
