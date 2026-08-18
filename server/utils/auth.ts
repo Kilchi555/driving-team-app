@@ -1,6 +1,28 @@
 import { H3Event, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { switchFlagsForUser, type SwitchUserRow } from '~/server/utils/account-switch'
+
+const AUTH_USER_COLS =
+  'id, tenant_id, auth_user_id, role, email, first_name, last_name, can_edit_guide, can_view_all_students, admin_level, is_primary_admin, linked_admin_user_id, can_switch_all_staff, is_active, deleted_at'
+
+async function attachSwitchFlags(
+  event: H3Event,
+  dbUser: SwitchUserRow,
+  profile: Record<string, unknown>,
+  websiteOnly: boolean,
+) {
+  const flags = await switchFlagsForUser(event, dbUser, websiteOnly)
+  return {
+    ...profile,
+    admin_level: dbUser.admin_level ?? null,
+    is_primary_admin: !!dbUser.is_primary_admin,
+    linked_admin_user_id: dbUser.linked_admin_user_id ?? null,
+    can_switch_all_staff: !!dbUser.can_switch_all_staff,
+    can_switch_accounts: flags.can_switch_accounts,
+    impersonating: flags.impersonating,
+  }
+}
 
 /**
  * Get authenticated user with full profile including tenant_id
@@ -134,25 +156,20 @@ export async function getAuthenticatedUser(event: H3Event) {
                 const supabaseAdmin = getSupabaseAdmin()
                 const { data: dbUser } = await supabaseAdmin
                   .from('users')
-                  .select('id, tenant_id, auth_user_id, role, email, first_name, last_name, can_edit_guide, can_view_all_students')
+                  .select(AUTH_USER_COLS)
                   .eq('auth_user_id', authUser.id)
                   .single()
                 if (dbUser) {
-                  let tenantTrialData: { is_trial: boolean; trial_ends_at: string | null; subscription_plan: string | null; current_period_end: string | null; slug?: string | null } | null = null
+                  let tenantTrialData: { is_trial: boolean; trial_ends_at: string | null; subscription_plan: string | null; current_period_end: string | null; slug?: string | null; website_only?: boolean; website_setup_paid_at?: string | null; website_hosting_plan?: string | null } | null = null
                   if (dbUser.tenant_id) {
                     const { data: tenantRow } = await supabaseAdmin
                       .from('tenants')
-                      .select('is_trial, trial_ends_at, subscription_plan, current_period_end, slug')
+                      .select('is_trial, trial_ends_at, subscription_plan, current_period_end, slug, website_only, website_setup_paid_at, website_hosting_plan')
                       .eq('id', dbUser.tenant_id)
                       .single()
                     if (tenantRow) tenantTrialData = tenantRow
                   }
-                  return {
-                    ...authUser,
-                    tenant_id: dbUser.tenant_id,
-                    db_user_id: dbUser.id,
-                    role: dbUser.role,
-                    profile: {
+                  const profile = await attachSwitchFlags(event, dbUser as SwitchUserRow, {
                       id: dbUser.id,
                       tenant_id: dbUser.tenant_id,
                       role: dbUser.role,
@@ -163,7 +180,13 @@ export async function getAuthenticatedUser(event: H3Event) {
                       can_view_all_students: (dbUser as any).can_view_all_students ?? false,
                       tenant_slug: tenantTrialData?.slug || null,
                       tenant: tenantTrialData
-                    }
+                    }, !!tenantTrialData?.website_only)
+                  return {
+                    ...authUser,
+                    tenant_id: dbUser.tenant_id,
+                    db_user_id: dbUser.id,
+                    role: dbUser.role,
+                    profile
                   }
                 }
               }
@@ -186,29 +209,23 @@ export async function getAuthenticatedUser(event: H3Event) {
       const supabase = getSupabaseAdmin()
       const { data: dbUser, error: userError } = await supabase
         .from('users')
-        .select('id, tenant_id, auth_user_id, role, email, first_name, last_name, can_edit_guide, can_view_all_students')
+        .select(AUTH_USER_COLS)
         .eq('auth_user_id', authUser.id)
         .single()
       
       if (dbUser) {
         // Also fetch tenant trial/subscription status so middleware can check it synchronously
-        let tenantTrialData: { is_trial: boolean; trial_ends_at: string | null; subscription_plan: string | null; current_period_end: string | null; slug?: string | null } | null = null
+        let tenantTrialData: { is_trial: boolean; trial_ends_at: string | null; subscription_plan: string | null; current_period_end: string | null; slug?: string | null; website_only?: boolean; website_setup_paid_at?: string | null; website_hosting_plan?: string | null } | null = null
         if (dbUser.tenant_id) {
           const { data: tenantRow } = await supabase
             .from('tenants')
-            .select('is_trial, trial_ends_at, subscription_plan, current_period_end, slug')
+            .select('is_trial, trial_ends_at, subscription_plan, current_period_end, slug, website_only, website_setup_paid_at, website_hosting_plan')
             .eq('id', dbUser.tenant_id)
             .single()
           if (tenantRow) tenantTrialData = tenantRow
         }
 
-        // Merge DB user info into auth user
-        return {
-          ...authUser,
-          tenant_id: dbUser.tenant_id,
-          db_user_id: dbUser.id,
-          role: dbUser.role,
-          profile: {
+        const profile = await attachSwitchFlags(event, dbUser as SwitchUserRow, {
             id: dbUser.id,
             tenant_id: dbUser.tenant_id,
             role: dbUser.role,
@@ -219,7 +236,14 @@ export async function getAuthenticatedUser(event: H3Event) {
             can_view_all_students: (dbUser as any).can_view_all_students ?? false,
             tenant_slug: tenantTrialData?.slug || null,
             tenant: tenantTrialData
-          }
+          }, !!tenantTrialData?.website_only)
+
+        return {
+          ...authUser,
+          tenant_id: dbUser.tenant_id,
+          db_user_id: dbUser.id,
+          role: dbUser.role,
+          profile
         }
       } else if (userError) {
         logger.debug('⚠️ Could not find user in database:', userError.message)
@@ -273,6 +297,7 @@ export async function requireAdminProfile(
     id: dbUserId,
     tenant_id: tenantId,
     role,
+    email: (authUser.profile?.email || authUser.email || '') as string,
     auth_user_id: authUser.id as string
   }
 }

@@ -355,12 +355,28 @@
     <footer class="flex-shrink-0 border-t border-white/10 py-3"
       style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px))"
       :style="{ background: `linear-gradient(135deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }">
-      <div class="mx-auto px-4 sm:px-6">
+      <div class="mx-auto px-4 sm:px-6 flex items-center">
+        <div class="flex-1" />
         <div class="text-center text-xs text-white/50">
           <span>Powered by <a href="https://simy.ch" target="_blank" rel="noopener" class="hover:text-white/80 transition-colors">Simy.ch</a></span>
         </div>
+        <div class="flex-1 flex justify-end">
+          <button
+            v-if="canOpenAccountSwitch"
+            type="button"
+            title="Konto wechseln"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+            @click="showAccountSwitch = true"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+            <span class="hidden sm:inline">Konto</span>
+          </button>
+        </div>
       </div>
     </footer>
+    <AccountSwitchModal :open="showAccountSwitch" @close="showAccountSwitch = false" />
     <!-- Global toast notifications -->
     <GlobalNotifications />
   </div>
@@ -381,9 +397,15 @@ const { t, isDrivingSchool } = useTerminology()
 const route = useRoute()
 const showMobileMenu = ref(false)
 const showFooterDropdown = ref(false)
+const showAccountSwitch = ref(false)
 
 // Auth Store für Logout
-const { logout } = useAuthStore()
+const authStore = useAuthStore()
+const { logout } = authStore
+const canOpenAccountSwitch = computed(() =>
+  !authStore.tenantTrialInfo?.website_only &&
+  (authStore.userProfile?.can_switch_accounts || authStore.userRole === 'admin')
+)
 const { showSuccess, showError } = useUIStore()
 const supabase = getSupabase()
 
