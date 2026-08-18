@@ -137,10 +137,20 @@
               class="bg-gray-50 rounded-lg p-3 border border-gray-200"
             >
               <div class="flex items-start justify-between mb-3">
-                <div class="flex-1">
-                  <h4 class="font-medium text-gray-900">
+                <div class="flex-1 min-w-0 flex items-center gap-2">
+                  <h4 class="font-medium text-gray-900 leading-snug">
                     {{ getCriteriaById(criteriaId)?.name }}
-                  </h4>         
+                  </h4>
+                  <button
+                    type="button"
+                    @click.stop="openGuide(criteriaId)"
+                    title="Lerninhalt öffnen"
+                    class="flex-shrink-0 w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 hover:bg-indigo-100 transition-colors"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/>
+                    </svg>
+                  </button>
                 </div>
                 
                 <button
@@ -236,6 +246,14 @@
 
   </div>
   </Teleport>
+
+  <StaffGuideModal
+    v-if="showGuide"
+    :initial-criterion-id="guideCriterionId"
+    :initial-criterion-name="guideCriterionName"
+    :can-edit="currentUser?.can_edit_guide === true || currentUser?.role === 'admin' || currentUser?.role === 'tenant_admin'"
+    @close="showGuide = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -249,6 +267,7 @@ const { primaryBg, primaryText } = usePrimaryColor()
 // Importiere den CriteriaEvaluationData-Typ
 import { usePendingTasks, type CriteriaEvaluationData } from '~/composables/usePendingTasks'
 import { useTerminology } from '~/composables/useTerminology'
+import StaffGuideModal from '~/components/StaffGuideModal.vue'
 
 // Props
 interface Props {
@@ -691,6 +710,16 @@ const removeCriteria = (criteriaId: string) => {
 
 const getCriteriaById = (criteriaId: string) => {
   return allCriteria.value.find(c => c.id === criteriaId)
+}
+
+const showGuide = ref(false)
+const guideCriterionId = ref<string | null>(null)
+const guideCriterionName = ref<string | null>(null)
+
+const openGuide = (criteriaId: string) => {
+  guideCriterionId.value = criteriaId
+  guideCriterionName.value = getCriteriaById(criteriaId)?.name || null
+  showGuide.value = true
 }
 
 const setCriteriaRating = (criteriaId: string, rating: number) => {
