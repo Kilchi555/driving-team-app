@@ -2372,8 +2372,6 @@ onActivated(async () => {
   background-color: var(--color-primary, #1E40AF);
 }
 
-/* ✅ LOKALE CSS-REGELN FÜR USER-MODAL INPUTS */
-/* Überschreibt Tailwind-Klassen mit höherer Spezifität */
 .admin-modal input[type="text"],
 .admin-modal input[type="email"], 
 .admin-modal input[type="password"],
@@ -2382,31 +2380,28 @@ onActivated(async () => {
 .admin-modal input[type="date"],
 .admin-modal select,
 .admin-modal textarea {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
+  color: #111 !important;
+  background-color: #fff !important;
+  border-color: #d1d5db !important;
 }
 
-/* Placeholder-Texte grau */
 .admin-modal input::placeholder,
 .admin-modal textarea::placeholder {
-  color: #9ca3af !important; /* gray-400 */
+  color: #6b7280 !important;
 }
 
-/* Focus States */
 .admin-modal input:focus,
 .admin-modal select:focus,
 .admin-modal textarea:focus {
-  color: white !important;
-  background-color: #374151 !important;
-  border-color: #10b981 !important; /* green-500 */
+  color: #111 !important;
+  background-color: #fff !important;
+  border-color: #10b981 !important;
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
 }
 
-/* Select Options */
 .admin-modal select option {
-  color: white !important;
-  background-color: #374151 !important;
+  color: #111 !important;
+  background-color: #fff !important;
 }
 
 /* Animation für Loading Spinner */

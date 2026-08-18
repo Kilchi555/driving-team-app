@@ -1,2 +1,8 @@
 ios/
 android/
+.nuxt-ssr-check/
+tmp/
+tmp-*.hdr
+tmp-*.err
+apps/simy/tmp-mockups/
+*.pdf
