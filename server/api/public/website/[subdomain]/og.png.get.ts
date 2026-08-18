@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
   const landing = page?.blocks as any
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, business_type, city, address')
+    .select('name, business_type, invoice_city, address')
     .eq('id', website.tenant_id)
     .maybeSingle()
 
@@ -46,11 +46,11 @@ export default defineEventHandler(async (event) => {
     tenant?.name ||
     website.subdomain
 
-  const { buildLocalSeoDefaults } = await import('~/server/utils/website-local-seo')
+  const { buildLocalSeoDefaults, resolveWebsiteCity } = await import('~/server/utils/website-local-seo')
   const local = buildLocalSeoDefaults({
     name: tenant?.name || website.subdomain,
     business_type: tenant?.business_type,
-    city: tenant?.city,
+    city: resolveWebsiteCity(tenant) || null,
     address: tenant?.address,
   })
 

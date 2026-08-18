@@ -117,6 +117,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       const isStripeRequest = url.includes('/api/stripe/')
       const isCourseAdminRetryable =
         url.includes('/api/courses/send-participant-list')
+        || url.includes('/api/courses/participant-list-pdf')
       if ((isStripeRequest || isCourseAdminRetryable) && status === 401) {
         console.debug('ℹ️ Auth-retryable 401 - letting the page retry/handle it (no reload)')
         const d = (response as any)?._data

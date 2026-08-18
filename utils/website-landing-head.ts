@@ -1,15 +1,10 @@
 /**
  * Shared head helpers for tenant landing pages (/s/...).
  */
+import { heroPreloadAttrs } from '~/utils/website-responsive-image'
+
 export function websiteFontHeadLinks(heroImageUrl?: string | null) {
   const links: Array<Record<string, string>> = [
-    {
-      rel: 'preload',
-      href: '/fonts/website/manrope-latin.woff2',
-      as: 'font',
-      type: 'font/woff2',
-      crossorigin: 'anonymous',
-    },
     {
       rel: 'preload',
       href: '/fonts/website/syne-latin.woff2',
@@ -20,11 +15,12 @@ export function websiteFontHeadLinks(heroImageUrl?: string | null) {
   ]
 
   if (heroImageUrl) {
+    const preload = heroPreloadAttrs(heroImageUrl)
     links.unshift({
       rel: 'preload',
       as: 'image',
-      href: heroImageUrl,
-      // @ts-expect-error fetchpriority is valid on link
+      href: preload?.href || heroImageUrl,
+      ...(preload?.imagesrcset ? { imagesrcset: preload.imagesrcset, imagesizes: preload.imagesizes } : {}),
       fetchpriority: 'high',
     } as any)
   }

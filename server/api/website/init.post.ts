@@ -4,6 +4,16 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { slugifySubdomain } from '~/server/utils/website-landing-builder'
+import { ensureWebsiteHomeLanding } from '~/server/utils/website-ensure-home'
+
+function appBaseUrl(event: any) {
+  const fromEnv =
+    process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL
+  if (fromEnv) return fromEnv.replace(/\/$/, '')
+  const host = getRequestHeader(event, 'x-forwarded-host') || getRequestHeader(event, 'host')
+  const proto = getRequestHeader(event, 'x-forwarded-proto') || 'https'
+  return host ? `${proto}://${host}` : 'https://app.simy.ch'
+}
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -36,6 +46,15 @@ export default defineEventHandler(async (event) => {
     .maybeSingle()
 
   if (existing) {
+    try {
+      await ensureWebsiteHomeLanding(supabase, {
+        tenant,
+        website: existing,
+        baseUrl: appBaseUrl(event),
+      })
+    } catch (err: any) {
+      console.warn('[website-init] home seed skipped:', err?.message)
+    }
     return {
       success: true,
       website: existing,
@@ -72,17 +91,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: websiteError.message })
   }
 
-  const { error: pageError } = await supabase.from('website_pages').insert({
-    website_id: website.id,
-    title: 'Home',
-    slug: 'index',
-    is_home: true,
-    page_type: 'home',
-    blocks: [],
-  })
-
-  if (pageError) {
-    throw createError({ statusCode: 500, statusMessage: pageError.message })
+  try {
+    await ensureWebsiteHomeLanding(supabase, {
+      tenant,
+      website,
+      baseUrl: appBaseUrl(event),
+    })
+  } catch (err: any) {
+    throw createError({ statusCode: 500, statusMessage: err?.message || 'Home-Seite anlegen fehlgeschlagen' })
   }
 
   return {

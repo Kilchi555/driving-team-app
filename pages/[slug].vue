@@ -517,6 +517,7 @@ import { useUIStore } from '~/stores/ui'
 import { useMFAFlow } from '~/composables/useMFAFlow'
 import { getSupabase } from '~/utils/supabase'
 import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
+import { adminHomePath, withWebsiteOnlyFlag } from '~/utils/website-only'
 
 logger.debug('📄 [slug].vue imports completed')
 
@@ -734,6 +735,9 @@ const handleLogin = async () => {
     if (response.profile) {
       authStore.userProfile = response.profile
       authStore.userRole = response.profile.role || ''
+      if (response.profile.website_only) {
+        authStore.tenantTrialInfo = withWebsiteOnlyFlag(authStore.tenantTrialInfo, true) as any
+      }
       logger.debug('✅ User profile from login response:', response.profile.email)
     } else {
       // Fallback: fetch profile via API
@@ -812,7 +816,7 @@ const handleLogin = async () => {
     
     // Redirect based on role (fallback)
     if (user?.role === 'admin' || user?.role === 'tenant_admin') {
-      router.push('/admin')
+      router.push(adminHomePath(!!(response.profile?.website_only || authStore.tenantTrialInfo?.website_only)))
     } else if (user?.role === 'staff') {
       router.push('/dashboard')
     } else {
@@ -920,13 +924,16 @@ const handleMFAVerify = async () => {
     if (user.tenant_id) {
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('slug')
+        .select('slug, website_only')
         .eq('id', user.tenant_id)
         .single()
       
       if (tenant?.slug) {
+        if (tenant.website_only) {
+          authStore.tenantTrialInfo = withWebsiteOnlyFlag(authStore.tenantTrialInfo, true) as any
+        }
         if (user.role === 'admin' || user.role === 'tenant_admin') {
-          redirectPath = '/admin'
+          redirectPath = adminHomePath(!!tenant.website_only)
         } else if (user.role === 'staff') {
           redirectPath = '/dashboard'
         } else {
@@ -1295,9 +1302,13 @@ onMounted(async () => {
       }
 
       logger.debug('✅ User profile found, redirecting...')
+      if (!authStore.tenantTrialInfo && user.tenant_id) {
+        await authStore.loadTenantTrialInfo()
+      }
       let autoPath = '/customer-dashboard'
-      if (user?.role === 'admin' || user?.role === 'tenant_admin') autoPath = '/admin'
-      else if (user?.role === 'staff') autoPath = '/dashboard'
+      if (user?.role === 'admin' || user?.role === 'tenant_admin') {
+        autoPath = adminHomePath(!!authStore.tenantTrialInfo?.website_only)
+      } else if (user?.role === 'staff') autoPath = '/dashboard'
 
       const deepCandidates = [
         route.query.returnTo as string | undefined,

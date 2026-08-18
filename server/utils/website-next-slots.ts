@@ -19,7 +19,7 @@ export type WebsiteTeaserSlot = {
 const memoryCache = new Map<string, { at: number; slots: WebsiteTeaserSlot[] }>()
 const CACHE_MS = 120_000
 const MAX_SLOTS = 9
-const MAX_PER_CATEGORY = 3
+const MAX_PER_CATEGORY = 6
 const LOOKAHEAD_DAYS = 14
 
 function formatDayLabel(iso: string) {
@@ -50,13 +50,33 @@ function categoryLabel(code: string | null) {
   return code.replace(/_/g, ' ')
 }
 
+function hourInZurich(iso: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Zurich',
+      hour: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date(iso))
+    return Number(parts.find((p) => p.type === 'hour')?.value || 0)
+  } catch {
+    return new Date(iso).getHours()
+  }
+}
+
+/** Hide 05:00 / late-night generator leftovers — customers expect 07:00–20:00. */
+function isCustomerFacingHour(iso: string) {
+  const hour = hourInZurich(iso)
+  return hour >= 7 && hour < 20
+}
+
 function diversifySlots(rows: any[], bookingUrl: string): WebsiteTeaserSlot[] {
   const perCat = new Map<string, number>()
   const seenStartCat = new Set<string>()
   const out: WebsiteTeaserSlot[] = []
   for (const row of rows) {
-    const cat = String(row.category_code || 'general')
     const start = String(row.start_time)
+    if (!isCustomerFacingHour(start)) continue
+    const cat = String(row.category_code || 'general')
     const dedupeKey = `${start}|${cat}`
     if (seenStartCat.has(dedupeKey)) continue
     const used = perCat.get(cat) || 0
