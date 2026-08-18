@@ -17,19 +17,15 @@
 
     <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
     <section class="relative overflow-hidden pt-10 pb-16 px-6">
-      <div class="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full opacity-10 pointer-events-none"
-        style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
-      <div class="absolute -bottom-20 -left-20 w-[500px] h-[500px] rounded-full opacity-8 pointer-events-none"
-        style="background: radial-gradient(circle, var(--brand-accent), transparent)"></div>
+      <div class="simy-glow -top-48 left-1/2 -translate-x-1/2" />
 
       <div class="relative max-w-5xl mx-auto text-center">
-        <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          :style="{ background: `rgba(var(--brand-rgb), 0.07)`, color: primaryColor, borderColor: `rgba(var(--brand-rgb), 0.28)` }">
-          <span class="w-2 h-2 rounded-full animate-pulse" :style="{ background: primaryColor }"></span>
+        <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold mb-6"
+          :style="{ background: `rgba(var(--brand-rgb), 0.07)`, color: primaryColor }">
           30 Tage kostenlos testen
         </div>
 
-        <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 mb-5 leading-tight">
+        <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mb-5 simy-display">
           Dein KMU.<br>
           <span :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }">
             Auf Autopilot.
@@ -37,27 +33,28 @@
         </h1>
 
         <p class="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto mb-8 leading-relaxed">
-          Online-Buchung, automatische Abrechnung und Kundenverwaltung für Schweizer Dienstleister —
+          Online-Buchung, Website-Generator, automatische Abrechnung und Kundenverwaltung für Schweizer Dienstleister —
           Coaching, Consulting, Fahrschule und mehr. Damit du wieder arbeitest statt administrierst.
         </p>
 
         <div class="flex flex-col sm:flex-row gap-4 justify-center mb-4">
           <a href="#" @click.prevent="goToRegister"
-            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-xl transition-all hover:scale-105"
+            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full text-white font-bold text-lg shadow-xl transition-all hover:opacity-90"
             :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, boxShadow: `0 8px 30px rgba(var(--brand-rgb), 0.35)` }">
             <svg v-if="isNavigatingToRegister && logoTokenUploading" class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             <svg v-else class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
             30 Tage gratis testen
           </a>
           <a href="#branding-preview"
-            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg border-2 transition-all"
+            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-semibold text-lg border transition-all"
             :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }"
             @mouseenter="(e) => (e.currentTarget as HTMLElement).style.background = `rgba(var(--brand-rgb), 0.05)`"
             @mouseleave="(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'">
             In deinen Farben testen
           </a>
         </div>
-        <p class="text-sm text-gray-400 mb-8">Keine Kreditkarte · Monatlich kündbar · Schweizer Server</p>
+        <p class="text-sm text-gray-400 mb-3">Keine Kreditkarte · Monatlich kündbar · Schweizer Server</p>
+        <p class="text-xs text-gray-400 mb-8">50+ Betriebe · Swiss Hosting · DSGVO · 30 Tage Vorschau</p>
 
         <div class="relative mx-auto max-w-2xl pt-10 md:pt-14">
           <div
@@ -120,17 +117,18 @@
     />
 
     <!-- ── Features ──────────────────────────────────────────────────────────── -->
-    <section id="features" class="py-20 px-6 bg-white">
+    <section id="features" class="py-20 px-6 bg-white" data-reveal>
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-14">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Features</p>
-          <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Alles was dein Betrieb braucht</h2>
+          <p class="text-xs font-semibold mb-3" style="color: var(--brand-primary);">Features</p>
+          <h2 class="text-4xl font-extrabold text-gray-900 mb-4 simy-display">Alles was dein Betrieb braucht</h2>
           <p class="text-gray-500 text-lg max-w-xl mx-auto">Von der Online-Terminbuchung bis zur TWINT-Abrechnung – in einer einzigen Schweizer Plattform.</p>
         </div>
 
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <NuxtLink v-for="feat in features" :key="feat.title" :to="feat.link"
-            class="group rounded-2xl p-6 border border-gray-100 bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300 block focus:outline-none focus-visible:ring-2"
+            class="group rounded-2xl p-6 border border-gray-100 bg-white hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 block focus:outline-none focus-visible:ring-2"
+            :class="feat.wide ? 'sm:col-span-2 lg:col-span-2 simy-gradient-border' : ''"
             :style="`--tw-ring-color: ${primaryColor}`">
             <SimyIconTile :name="feat.icon" :size="44" :alpha="feat.alpha" class="mb-4" />
             <h3 class="font-bold text-gray-900 mb-1 group-hover:text-gray-800">{{ feat.title }}</h3>
@@ -153,6 +151,11 @@
         </div>
       </div>
     </section>
+
+    <SimyWebsiteHighlight
+      title="Nur eine Website? Geht auch — überzeugend."
+      subtitle="SEO-starke Landingpage in Minuten: Preise, Standorte, Bewertungen. Einmalig CHF 490, Hosting ab CHF 29. Vorschau gratis, live wenn du bereit bist."
+    />
 
     <!-- ── Branding Preview Section ────────────────────────────────────────── -->
     <section id="branding-preview" class="py-20 px-6 bg-white border-y border-gray-100">
@@ -1177,11 +1180,11 @@
     </section>
 
     <!-- ── Final CTA ──────────────────────────────────────────────────────────── -->
-    <section class="py-24 px-6" style="background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);">
+    <section class="simy-closer py-24 px-6">
       <div class="max-w-3xl mx-auto text-center">
         <SimyFounderNote :blurb="founderBlurbHome" />
 
-        <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
+        <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4 simy-display">
           Bereit, dein Unternehmen<br>auf Autopilot zu schalten?
         </h2>
         <p class="text-lg mb-10" style="color: rgba(255,255,255,0.7);">Starte heute mit 30 Tagen kostenlos – keine Kreditkarte, monatlich kündbar.</p>
@@ -1526,8 +1529,8 @@ useHead({
   title: 'Simy – Online-Buchungssystem & All-in-One Software Schweiz',
   htmlAttrs: { lang: 'de' },
   meta: [
-    { name: 'description', content: 'All-in-One Software aus der Schweiz: Online-Buchung, automatische Rechnungen mit TWINT, Mitarbeiter-App, Marketing & SEO. Für Dienstleister und KMU. 30 Tage kostenlos.' },
-    { name: 'keywords', content: 'Online-Buchungssystem Schweiz, Online-Terminbuchung, All-in-One Software, Kundenverwaltung, Rechnungssoftware Schweiz, Marketing Software Schweiz' },
+    { name: 'description', content: 'All-in-One Software aus der Schweiz: Online-Buchung, Website-Generator, automatische Rechnungen mit TWINT, Mitarbeiter-App, Marketing & SEO. Für Dienstleister und KMU. 30 Tage kostenlos.' },
+    { name: 'keywords', content: 'Online-Buchungssystem Schweiz, Website-Generator Schweiz, Online-Terminbuchung, All-in-One Software, Kundenverwaltung, Rechnungssoftware Schweiz, Marketing Software Schweiz' },
     { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
     { name: 'author', content: 'Simy' },
     // Open Graph
@@ -2045,11 +2048,12 @@ const pains = [
 ]
 
 const features = computed(() => [
+  { icon: 'globe', title: 'Website-Generator', desc: 'SEO-starke Landingpage in Minuten: Preise, Standorte, Bewertungen. Einmalig CHF 490, Hosting ab CHF 29 — ohne die volle Software.', alpha: 0.12, link: '/website', wide: true },
   { icon: 'calendar', title: 'Kalender & Terminplanung', desc: 'Simy-Termine erscheinen in Google/Apple/Outlook. Private Termine dort blockieren automatisch deine Verfügbarkeit — Kunden sehen dort keine freien Slots.', alpha: 0.10, link: '/features/kalender' },
   { icon: 'credit-card', title: 'Rechnungen & TWINT-Zahlungen', desc: 'Online-Zahlung mit TWINT, Debit- und Kreditkarte inkl. PostFinance, Rechnungen mit 2 Klicks erstellt und versendet, Mahnungen und Gutschriften einfach erstellt.', alpha: 0.07, link: '/features/rechnungen' },
   { icon: 'users', title: 'Kundenverwaltung', desc: 'Alle Kundendaten, Fortschritte, Dokumente und Notizen zentral an einem Ort.', alpha: 0.13, link: '/branchen' },
   { icon: 'phone', title: 'Mitarbeiter-App (iOS & Android)', desc: 'Native App für unterwegs – Kalender, Kunden, Rechnungen und Push-Erinnerungen immer griffbereit.', alpha: 0.10, link: '/features/rechnungen' },
-  { icon: 'globe', title: 'Online-Buchungssystem', desc: 'Kunden buchen freie Termine selbstständig – mit Bestätigung, Erinnerungen und Multi-Mitarbeiter-Sync.', alpha: 0.12, link: '/features/kalender' },
+  { icon: 'link', title: 'Online-Buchungssystem', desc: 'Kunden buchen freie Termine selbstständig – mit Bestätigung, Erinnerungen und Multi-Mitarbeiter-Sync.', alpha: 0.12, link: '/features/kalender' },
   { icon: 'chart', title: 'Auswertungen & Statistiken', desc: 'Umsatz, Auslastung, No-Show-Rate, Top-Kunden – alle wichtigen Kennzahlen auf einen Blick.', alpha: 0.09, link: '/branchen' },
   { icon: 'graduate', title: 'Fortschritt & Dokumentation', desc: 'Sessions dokumentieren, Ziele tracken und Bewertungen erfassen. Alles an einem Ort.', alpha: 0.12, link: '/branchen' },
   { icon: 'label', title: 'Ressourcen-Management', desc: 'Räume, Geräte oder Fahrzeuge verwalten und Verfügbarkeiten übersichtlich planen.', alpha: 0.07, link: '/branchen' },

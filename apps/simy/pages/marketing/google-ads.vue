@@ -118,6 +118,11 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight
+      title="Ads brauchen eine Landingpage, die konvertiert"
+      subtitle="Klicks ohne schnelle, lokale Seite sind verbranntes Budget. Simy liefert die Website — du schaltest die Anzeigen."
+    />
+
     <!-- CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">

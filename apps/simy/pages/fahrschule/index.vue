@@ -127,60 +127,11 @@
       </div>
     </section>
 
-    <!-- ── Website Generator Highlight ─────────────────────────────────────── -->
-    <section class="py-24 px-6">
-      <div class="max-w-5xl mx-auto">
-        <div class="rounded-3xl p-10 md:p-14 relative overflow-hidden border"
-          style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04) 0%, rgba(var(--brand-2-rgb),0.06) 100%); border-color: rgba(var(--brand-rgb),0.15)">
-          <div class="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 pointer-events-none"
-            style="background: radial-gradient(circle, var(--brand-secondary), transparent); transform: translate(30%, -30%)"></div>
-          <div class="relative grid md:grid-cols-2 gap-10 items-center">
-            <div>
-              <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold mb-5 border"
-                style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.2)">
-                Website-Generator
-              </div>
-              <h2 class="text-3xl font-extrabold text-gray-900 mb-4">High-Converting Landingpage in Minuten</h2>
-              <p class="text-gray-500 leading-relaxed mb-6">Simy baut aus deinen Daten eine SEO-starke Landingpage mit Online-Terminbuchung, Preisen und Bewertungen — SSR, schnell, bereit für Google.</p>
-              <ul class="space-y-3 mb-8">
-                <li v-for="item in websiteFeatures" :key="item" class="flex items-center gap-3 text-sm text-gray-700">
-                  <svg class="w-5 h-5 flex-shrink-0" style="color: var(--brand-primary)" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                  </svg>
-                  {{ item }}
-                </li>
-              </ul>
-              <a href="https://app.simy.ch/admin/website/setup"
-                class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90"
-                style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
-                Website jetzt generieren →
-              </a>
-            </div>
-            <div class="hidden md:block">
-              <div class="rounded-2xl bg-white border border-gray-100 p-6 shadow-xl">
-                <div class="flex items-center gap-2 mb-4">
-                  <div class="w-3 h-3 rounded-full bg-red-400"></div>
-                  <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-                  <div class="w-3 h-3 rounded-full bg-green-400"></div>
-                  <div class="ml-2 flex-1 h-5 rounded bg-gray-100 text-xs flex items-center justify-center text-gray-400 font-mono">simy.ch/fahrschule-muster</div>
-                </div>
-                <div class="space-y-2">
-                  <div class="h-24 rounded-xl" style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.12), rgba(var(--brand-2-rgb),0.12))"></div>
-                  <div class="grid grid-cols-3 gap-2">
-                    <div class="h-14 rounded-lg bg-gray-50 border border-gray-100"></div>
-                    <div class="h-14 rounded-lg bg-gray-50 border border-gray-100"></div>
-                    <div class="h-14 rounded-lg bg-gray-50 border border-gray-100"></div>
-                  </div>
-                  <div class="h-3 w-3/4 rounded bg-gray-100"></div>
-                  <div class="h-3 w-1/2 rounded bg-gray-100"></div>
-                  <div class="h-8 w-1/3 rounded-lg mt-2" style="background: rgba(var(--brand-rgb),0.15)"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <SimyWebsiteHighlight
+      title="High-Converting Landingpage in Minuten"
+      subtitle="Simy baut aus deinen Daten eine SEO-starke Landingpage mit Online-Terminbuchung, Preisen und Bewertungen — SSR, schnell, bereit für Google."
+      preview-host="simy.ch/s/fahrschule-muster"
+    />
 
     <!-- ── Marketing Add-on ────────────────────────────────────────────────── -->
     <section class="py-16 px-6 bg-gray-950">
@@ -268,7 +219,7 @@
     </section>
 
     <!-- ── Final CTA ─────────────────────────────────────────────────────────── -->
-    <section class="py-28 px-6" style="background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)">
+    <section class="simy-closer py-28 px-6">
       <div class="max-w-2xl mx-auto text-center">
         <SimyFounderNote :blurb="founderBlurbHome" compact />
         <h2 class="text-4xl font-black text-white mb-5">Bereit, deine Fahrschule auf Autopilot zu stellen?</h2>
@@ -367,16 +318,8 @@ const features = [
   { icon: 'school', title: 'Kursbuchungsseite', desc: 'Theorie, VKU und Nothelfer online verkaufen: Plätze, Anmeldung und Zahlung auf einer Kursseite — neben den Fahrstunden.', link: '/features/kurse' },
   { icon: 'wallet', title: 'Einfache Rechnungsstellung', desc: 'Rechnungen automatisch erstellt und per E-Mail versendet. Mit Online-Zahlung laufen Erinnerungen vollautomatisch — bei Rechnungsversand ist das Mahnen mit wenigen Klicks erledigt.', link: null },
   { icon: 'phone', title: 'Fahrlehrer-App', desc: 'Dein Kalender, deine Schüler, deine Einnahmen — alles auf dem Smartphone, immer aktuell.', link: '/fahrschule/app' },
-  { icon: 'globe', title: 'Website-Generator', desc: 'Simy erstellt eine SEO-starke Landingpage mit Online-Terminbuchung, Preisen und Bewertungen — live unter /s/dein-slug.', link: 'https://app.simy.ch/admin/website/setup' },
+  { icon: 'globe', title: 'Website-Generator', desc: 'Simy erstellt eine SEO-starke Landingpage mit Online-Terminbuchung, Preisen und Bewertungen — live unter /s/dein-slug.', link: '/website' },
   { icon: 'chart', title: 'Statistiken & Berichte', desc: 'Einnahmen, Fahrstunden, Prüfungsquote — alle Zahlen auf einen Blick.', link: null },
-]
-
-const websiteFeatures = [
-  'SSR-Landingpage mit Online-Terminbuchung',
-  'Preise & Bewertungen aus Simy',
-  'SEO: Title, Description, FAQ & JSON-LD',
-  'Schnell, mobil, branchenfähig',
-  'Live unter /s/dein-slug',
 ]
 
 const testimonials = [
@@ -391,7 +334,8 @@ const faqs = [
   { q: 'Kann ich Theorie- und VKU-Kurse online verkaufen?', a: 'Ja. Mit der Kursbuchungsseite melden sich Schüler selbst an, freie Plätze sind sichtbar — ideal für Theorie, VKU und Nothelfer neben den Fahrstunden.' },
   { q: 'Funktioniert Simy auch auf dem Smartphone?', a: 'Ja. Die Fahrlehrer-App läuft auf iOS und Android. Deine Schüler können den Buchungslink direkt im Browser öffnen.' },
   { q: 'Sind meine Daten in der Schweiz gespeichert?', a: 'Ja. Simy speichert alle Daten auf Schweizer Servern und ist vollständig DSGVO-konform.' },
-  { q: 'Kann ich Simy zusammen mit meiner bestehenden Website nutzen?', a: 'Ja. Du kannst einfach den Buchungslink auf deiner Website einbinden. Optional generiert Simy auch eine komplette Website für dich.' },
+  { q: 'Kann ich Simy zusammen mit meiner bestehenden Website nutzen?', a: 'Ja. Du kannst den Buchungslink auf deiner bestehenden Website einbinden — oder eine komplette SEO-Website von Simy generieren lassen.' },
+  { q: 'Kann ich nur eine Website ohne die volle Software?', a: 'Ja. Der Website-Generator ist eigenständig: einmalig CHF 490 beim Live-Gang, Hosting ab CHF 29/Monat. 30 Tage Vorschau gratis. Alle Details auf der Website-Generator-Seite.' },
 ]
 </script>
 

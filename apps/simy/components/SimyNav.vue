@@ -1,5 +1,14 @@
 <template>
-  <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
+  <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100/80">
+    <a
+      v-if="showAnnounce"
+      href="/website"
+      class="hidden sm:flex items-center justify-center gap-2 h-8 text-[12px] font-semibold text-white"
+      style="background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary))"
+    >
+      Neu: Website-Generator — einmalig CHF 490
+      <span class="opacity-80">→</span>
+    </a>
 
     <!-- ── Main bar ─────────────────────────────────────────────────────────── -->
     <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
@@ -66,6 +75,9 @@
               </a>
               <a href="/features/kurse" class="nav-dropdown-item">
                 <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="school" :size="16" /></span><span>Kursbuchungsseite</span>
+              </a>
+              <a href="/website" class="nav-dropdown-item">
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="globe" :size="16" /></span><span>Website-Generator</span>
               </a>
               <a href="/features/kalender" class="nav-dropdown-item">
                 <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="link" :size="16" /></span><span>Online-Buchung</span>
@@ -157,6 +169,7 @@
         <a href="/features/kalender" class="mobile-nav-link" @click="mobileOpen=false">Kalender & Planung</a>
         <a href="/features/rechnungen" class="mobile-nav-link" @click="mobileOpen=false">Rechnungen & Kasse</a>
         <a href="/features/kurse" class="mobile-nav-link" @click="mobileOpen=false">Kursbuchungsseite</a>
+        <a href="/website" class="mobile-nav-link" @click="mobileOpen=false">Website-Generator</a>
         <a href="/features/kalender" class="mobile-nav-link" @click="mobileOpen=false">Online-Buchung</a>
         <a href="/marketing" class="mobile-nav-link" @click="mobileOpen=false">Marketing</a>
         <a href="/marketing/google-ads" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Google Ads</a>
@@ -202,6 +215,8 @@ const props = defineProps<{
 }>()
 
 const { registerCta } = useRegisterCta()
+const route = useRoute()
+const showAnnounce = computed(() => route.path !== '/website')
 
 const branchenLinks = [
   { href: '/fahrschule', label: 'Fahrschule', icon: VERTICAL_ICON_BY_SLUG.fahrschule as SimyIconName },

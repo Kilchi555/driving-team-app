@@ -65,6 +65,45 @@
       </div>
     </section>
 
+    <section class="pb-20 px-6">
+      <div class="max-w-5xl mx-auto">
+        <div class="rounded-3xl border-2 p-8 md:p-10" style="border-color: rgba(var(--brand-rgb),0.2); background: rgba(var(--brand-rgb),0.03)">
+          <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-widest mb-2" style="color: var(--brand-primary)">Eigenständiges Produkt</p>
+              <h2 class="text-2xl font-extrabold text-gray-900">Nur Website — ohne Software-Abo</h2>
+              <p class="text-gray-500 mt-2 max-w-xl">SEO-Landingpage in Minuten. 30 Tage Vorschau gratis. Zahlen erst bei Live.</p>
+            </div>
+            <a href="/website" class="text-sm font-bold" style="color: var(--brand-primary)">Alle Details →</a>
+          </div>
+          <div class="grid sm:grid-cols-3 gap-4 mb-8">
+            <div class="rounded-2xl bg-white border border-gray-100 p-5">
+              <p class="text-xs text-gray-400 mb-1">Einmalig</p>
+              <p class="text-2xl font-black text-gray-900">CHF {{ websiteSetup }}</p>
+              <p class="text-xs text-gray-500 mt-1">Setup beim Go-Live</p>
+            </div>
+            <div class="rounded-2xl bg-white border border-gray-100 p-5">
+              <p class="text-xs text-gray-400 mb-1">Host</p>
+              <p class="text-2xl font-black text-gray-900">CHF {{ websiteHost }}<span class="text-sm font-bold text-gray-400">/Mt.</span></p>
+              <p class="text-xs text-gray-500 mt-1">Hosting &amp; Updates</p>
+            </div>
+            <div class="rounded-2xl bg-white border border-gray-100 p-5">
+              <p class="text-xs text-gray-400 mb-1">Care</p>
+              <p class="text-2xl font-black text-gray-900">CHF {{ websiteCare }}<span class="text-sm font-bold text-gray-400">/Mt.</span></p>
+              <p class="text-xs text-gray-500 mt-1">Hosting + Pflege</p>
+            </div>
+          </div>
+          <a
+            :href="websiteRegisterCta"
+            class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm"
+            style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
+          >
+            Website erstellen →
+          </a>
+        </div>
+      </div>
+    </section>
+
     <!-- Add-ons -->
     <section class="pb-16 px-6">
       <div class="max-w-5xl mx-auto">
@@ -229,9 +268,9 @@
     </section>
 
     <!-- CTA -->
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
+    <section class="simy-closer py-20 px-6">
       <div class="max-w-xl mx-auto text-center">
-        <h2 class="text-3xl font-black text-white mb-4">Kostenlos starten — heute noch</h2>
+        <h2 class="text-3xl font-extrabold text-white mb-4 simy-display">Kostenlos starten — heute noch</h2>
         <p class="text-white mb-8">30 Tage gratis. Keine Kreditkarte. In 5 Minuten eingerichtet.</p>
         <a :href="registerCta"
           class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-white font-black text-lg transition-all hover:opacity-90"
@@ -248,8 +287,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { breadcrumbLd, faqPageLd, ldScripts, productOffersLd } from '~/utils/schema'
-import { STARTING_PRICE_CHF } from '~/data/pricing'
+import { STARTING_PRICE_CHF, WEBSITE_CARE_CHF, WEBSITE_HOST_CHF, WEBSITE_SETUP_CHF } from '~/data/pricing'
 const { registerCta } = useRegisterCta()
+const { websiteRegisterCta } = useWebsiteRegisterCta()
+const websiteSetup = WEBSITE_SETUP_CHF
+const websiteHost = WEBSITE_HOST_CHF
+const websiteCare = WEBSITE_CARE_CHF
 
 const openFaq = ref<number | null>(null)
 
@@ -335,6 +378,7 @@ const faqs = [
   { q: 'Wie funktionieren SMS?', a: 'Jeder Plan enthält SMS-Segmente (Starter 20, Professional 50, Enterprise 100 pro Monat). Bestätigungen und Erinnerungen gehen primär per E-Mail; SMS nur wenn keine E-Mail vorhanden ist. Über das Kontingent hinaus verrechnen wir CHF 0.15 pro Segment automatisch auf der nächsten Rechnung.' },
   { q: 'Was passiert mit meinen Daten, wenn ich kündige?', a: 'Du kannst alle deine Daten jederzeit exportieren. Nach der Kündigung werden die Daten für 30 Tage gespeichert, dann endgültig gelöscht.' },
   { q: 'Gibt es Rabatte für mehrere Standorte?', a: 'Ja, für Betriebe mit mehreren Standorten haben wir individuelle Enterprise-Angebote. Kontaktiere uns für ein massgeschneidertes Angebot.' },
+  { q: 'Kann ich nur eine Website ohne Software-Abo?', a: `Ja. Der Website-Generator ist ein eigenes Produkt: einmalig CHF ${WEBSITE_SETUP_CHF} beim Live-Gang, danach Host CHF ${WEBSITE_HOST_CHF} oder Care CHF ${WEBSITE_CARE_CHF} pro Monat. Details auf der Website-Seite.` },
 ]
 
 useHead(() => ({
