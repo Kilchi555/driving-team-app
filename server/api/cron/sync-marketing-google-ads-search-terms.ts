@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getTenantIdByGoogleAdsCustomer } from '~/server/utils/marketing-tenant'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 import { logger } from '~/utils/logger'
 
 // Fetches the last 7 days of Google Ads search terms (actual queries that triggered ads)
@@ -7,12 +8,7 @@ import { logger } from '~/utils/logger'
 // Runs daily at 04:50 via Vercel Cron.
 // Key use case: identify wasted spend from irrelevant search terms → negative keywords.
 export default defineEventHandler(async (event) => {
-  // ============ LAYER 1: CRON AUTH ============
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   // ============ LAYER 2: ENV CHECK ============
   const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN

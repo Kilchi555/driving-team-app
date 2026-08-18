@@ -1,7 +1,10 @@
 import { google } from 'googleapis'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getTenantIdByGscSite } from '~/server/utils/marketing-tenant'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 import { logger } from '~/utils/logger'
+
+export const maxDuration = 120
 
 // Fetches Search Console data and upserts into marketing_gsc_daily.
 // Runs daily at 04:00 via Vercel Cron (last 5 days).
@@ -13,12 +16,7 @@ import { logger } from '~/utils/logger'
 //   1) use 7-day chunks (not 30)
 //   2) paginate with startRow up to GSC max rowLimit (25000)
 export default defineEventHandler(async (event) => {
-  // ============ LAYER 1: CRON AUTH ============
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   // ============ LAYER 2: ENV CHECK ============
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID
