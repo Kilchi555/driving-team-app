@@ -2,16 +2,38 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { assertCronRequest } from '~/server/utils/cron-auth'
 
+function getMonday(d: Date): Date {
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  const mon = new Date(d)
+  mon.setDate(diff)
+  mon.setHours(0, 0, 0, 0)
+  return mon
+}
+
+function addWeeks(d: Date, weeks: number): Date {
+  const r = new Date(d)
+  r.setDate(r.getDate() + weeks * 7)
+  return r
+}
+
+function dateStr(d: Date): string {
+  return d.toISOString().split('T')[0]
+}
+
 // Runs every Monday at 07:00 via Vercel Cron.
-// Analyzes the past 7 days of GA4, GSC, Google Ads data and generates
-// a prioritized Top-5 action list + low-hanging fruits per tenant.
+// Same completed ISO week as send-marketing-report (Mon–Sun, exclusive end).
 export default defineEventHandler(async (event) => {
   assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
-  const since = new Date()
-  since.setDate(since.getDate() - 7)
-  const sinceStr = since.toISOString().split('T')[0]
+  const now = new Date()
+  const thisMonday = getMonday(now)
+  const lastMonday = addWeeks(thisMonday, -1)
+  const weekStart = dateStr(lastMonday)
+  const weekEnd = dateStr(thisMonday)
+  const weekNumber = getISOWeek(lastMonday)
+  const year = lastMonday.getFullYear()
 
   // Get all tenants with marketing credentials
   const { data: tenants } = await supabase
@@ -25,7 +47,7 @@ export default defineEventHandler(async (event) => {
 
   for (const tenant of tenants) {
     try {
-      const review = await generateReview(supabase, tenant.id, sinceStr)
+      const review = await generateReview(supabase, tenant.id, weekStart, weekEnd, weekNumber, year)
       results.push({ tenant: tenant.slug, ...review })
     } catch (err: any) {
       logger.error(`weekly-review: failed for ${tenant.slug}: ${err.message}`)
@@ -36,50 +58,62 @@ export default defineEventHandler(async (event) => {
   return { success: true, results }
 })
 
-async function generateReview(supabase: any, tenantId: string, since: string) {
-  const now = new Date()
-  const weekNumber = getISOWeek(now)
-  const year = now.getFullYear()
-
+async function generateReview(
+  supabase: any,
+  tenantId: string,
+  weekStart: string,
+  weekEnd: string,
+  weekNumber: number,
+  year: number,
+) {
   // ── Fetch data in parallel ──────────────────────────────────────────────
-  const [ga4Res, gscOppRes, gscCtrRes, adsRes, metaRes] = await Promise.all([
-    // GA4: sessions + conversions by channel last 7 days
+  const [ga4Res, gscOppRes, gscCtrRes, adsRes, metaRes, apptsRes] = await Promise.all([
     supabase
       .from('marketing_ga4_daily')
       .select('date, channel, sessions, conversions')
       .eq('tenant_id', tenantId)
-      .gte('date', since),
+      .gte('date', weekStart)
+      .lt('date', weekEnd),
 
-    // GSC: keywords on position 4-15 (SEO opportunities)
     supabase
       .from('marketing_gsc_daily')
       .select('query, page, clicks, impressions, position')
       .eq('tenant_id', tenantId)
-      .gte('date', since)
+      .gte('date', weekStart)
+      .lt('date', weekEnd)
       .gte('position', 4)
       .lte('position', 15),
 
-    // GSC: position < 5 but low clicks (CTR bugs)
     supabase
       .from('marketing_gsc_daily')
       .select('query, page, clicks, impressions, position')
       .eq('tenant_id', tenantId)
-      .gte('date', since)
+      .gte('date', weekStart)
+      .lt('date', weekEnd)
       .lt('position', 5),
 
-    // Google Ads
     supabase
       .from('marketing_google_ads_daily')
       .select('campaign_name, cost_micros, clicks, impressions, conversions')
       .eq('tenant_id', tenantId)
-      .gte('date', since),
+      .gte('date', weekStart)
+      .lt('date', weekEnd),
 
-    // Meta Ads
     supabase
       .from('marketing_meta_ads_daily')
       .select('campaign_name, spend, clicks, impressions, reach, actions')
       .eq('tenant_id', tenantId)
-      .gte('date', since),
+      .gte('date', weekStart)
+      .lt('date', weekEnd),
+
+    supabase
+      .from('appointments')
+      .select('gclid, gbraid, wbraid, fbclid')
+      .eq('tenant_id', tenantId)
+      .gte('created_at', weekStart)
+      .lt('created_at', weekEnd)
+      .is('deleted_at', null)
+      .neq('status', 'cancelled'),
   ])
 
   const ga4 = ga4Res.data ?? []
@@ -87,11 +121,12 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
   const gscCtr = gscCtrRes.data ?? []
   const ads = adsRes.data ?? []
   const metaAds = metaRes.data ?? []
+  const appointments = apptsRes.data ?? []
 
   // ── Compute metrics ──────────────────────────────────────────────────────
   // Only count known marketing channels — exclude "Unassigned" (existing students via app)
   // and "Direct" (ambiguous: mix of new visitors and existing students typing URL directly)
-  const MARKETING_CHANNELS = ['Organic Search', 'Paid Search', 'Referral', 'Organic Social', 'Email', 'Affiliates']
+  const MARKETING_CHANNELS = ['Organic Search', 'Paid Search', 'Paid Social', 'Referral', 'Organic Social', 'Email', 'Affiliates']
   const marketingGa4 = ga4.filter((r: any) => MARKETING_CHANNELS.includes(r.channel))
 
   const totalSessions = marketingGa4.reduce((s: number, r: any) => s + (r.sessions ?? 0), 0)
@@ -124,10 +159,14 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
     return s + (purchases ? Number(purchases.value ?? 0) : 0)
   }, 0)
   const metaCpc = metaClicks > 0 ? (metaSpendCHF / metaClicks).toFixed(2) : null
-  const metaCpa = metaConversions > 0 ? (metaSpendCHF / metaConversions).toFixed(0) : null
-  const googleCpa = ads.reduce((s: number, r: any) => s + (r.conversions ?? 0), 0) > 0
-    ? (totalSpendCHF / ads.reduce((s: number, r: any) => s + (r.conversions ?? 0), 0)).toFixed(0)
-    : null
+
+  // First-party CPA: bookings with a click ID on the appointment, same week as spend.
+  // Platform pixels (Google Ads conversions / Meta purchase) use different windows
+  // and overcount — never use those for budget-shift tips.
+  const googleFpConversions = appointments.filter((a: any) => a.gclid || a.gbraid || a.wbraid).length
+  const metaFpConversions = appointments.filter((a: any) => a.fbclid).length
+  const googleCpa = googleFpConversions > 0 ? (totalSpendCHF / googleFpConversions).toFixed(0) : null
+  const metaCpa = metaFpConversions > 0 ? (metaSpendCHF / metaFpConversions).toFixed(0) : null
 
   // SEO opportunities (aggregate by query, position 4-15)
   const oppMap = new Map<string, { impressions: number; clicks: number; positions: number[] }>()
@@ -189,19 +228,21 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
     fruits.push(`CPC diese Woche: CHF ${cpc} – negative Keywords hinzufügen um Budget effizienter einzusetzen.`)
   }
 
-  // Meta Ads recommendations
+  // Meta Ads recommendations — only compare CPA when both sides have first-party bookings
   if (metaSpendCHF > 0) {
-    if (metaCpa && googleCpa) {
+    if (googleFpConversions === 0 || metaFpConversions === 0) {
+      fruits.push(`Kein Budget-Shift: ${googleFpConversions} Google- und ${metaFpConversions} Meta-Buchungen mit Click-ID. Erst Attribution prüfen, dann Kanäle vergleichen.`)
+    } else if (metaCpa && googleCpa) {
       const metaCpaNum = parseFloat(metaCpa)
       const googleCpaNum = parseFloat(googleCpa)
       if (metaCpaNum < googleCpaNum * 0.8) {
-        actions.push(`Meta Ads effizienter als Google: CPA CHF ${metaCpa} vs. Google CHF ${googleCpa} – Budget von Google zu Meta verschieben (CHF ${Math.round(totalSpendCHF * 0.2)}/Woche).`)
+        actions.push(`Meta Ads effizienter als Google: CPA CHF ${metaCpa} vs. Google CHF ${googleCpa} (${metaFpConversions} vs. ${googleFpConversions} First-Party-Buchungen) – Budget von Google zu Meta verschieben (CHF ${Math.round(totalSpendCHF * 0.2)}/Woche).`)
       } else if (metaCpaNum > googleCpaNum * 1.5) {
         fruits.push(`Meta CPA (CHF ${metaCpa}) deutlich höher als Google (CHF ${googleCpa}) – Meta Zielgruppen verfeinern oder Budget zu Google verschieben.`)
       }
     }
-    if (metaClicks > 0 && metaConversions === 0) {
-      actions.push(`Meta Ads: ${metaClicks} Klicks diese Woche aber 0 CAPI-Conversions – CAPI-Integration prüfen und Test-Event im Meta Events Manager triggern.`)
+    if (metaClicks > 0 && metaFpConversions === 0) {
+      actions.push(`Meta Ads: ${metaClicks} Klicks diese Woche aber 0 First-Party-Buchungen mit fbclid – Click-ID-Handoff prüfen (drivingteam.ch → app.simy.ch).`)
     }
     if (metaCpc && parseFloat(metaCpc) > 1.5) {
       fruits.push(`Meta CPC: CHF ${metaCpc} – Audience-Targeting einengen oder ähnliche Zielgruppen (Lookalike) auf Basis der bestehenden Kundenliste testen.`)
@@ -223,9 +264,9 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
 
   // Summary
   const metaSummaryPart = metaSpendCHF > 0
-    ? ` Meta: CHF ${metaSpendCHF.toFixed(0)} Spend, ${metaClicks} Klicks, ${metaConversions} Conversions${metaCpa ? ` (CPA CHF ${metaCpa})` : ''}.`
+    ? ` Meta: CHF ${metaSpendCHF.toFixed(0)} Spend, ${metaClicks} Klicks, ${metaFpConversions} First-Party-Buchungen${metaCpa ? ` (CPA CHF ${metaCpa})` : ''}.`
     : ''
-  const summary = `Diese Woche: ${totalSessions} Marketing-Sessions (ohne Unassigned/Direct), ${totalConversions} Conversions (CVR ${cvr}%), CHF ${totalSpendCHF.toFixed(0)} Google Ads Spend.${metaSummaryPart} ${topOpps.length} SEO-Chancen in Position 4–15 identifiziert.`
+  const summary = `Diese Woche: ${totalSessions} Marketing-Sessions (ohne Unassigned/Direct), ${totalConversions} GA4-Conversions (CVR ${cvr}%), CHF ${totalSpendCHF.toFixed(0)} Google Ads Spend, ${googleFpConversions} First-Party-Buchungen mit gclid.${metaSummaryPart} ${topOpps.length} SEO-Chancen in Position 4–15 identifiziert.`
 
   // ── Save to DB ────────────────────────────────────────────────────────────
   const { error } = await supabase
@@ -243,6 +284,7 @@ async function generateReview(supabase: any, tenantId: string, since: string) {
           googleSpendCHF: Math.round(totalSpendCHF * 100) / 100,
           metaSpendCHF: Math.round(metaSpendCHF * 100) / 100,
           metaClicks, metaConversions,
+          googleFpConversions, metaFpConversions,
           metaCpa: metaCpa ? parseFloat(metaCpa) : null,
           googleCpa: googleCpa ? parseFloat(googleCpa) : null,
         },

@@ -22,7 +22,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { DEFAULT_BOOKING_POLICY } from '~/server/api/admin/booking-policy.get'
-import { mergeAttributionFields } from '~/server/utils/marketing-attribution-merge'
+import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 import { sendTenantSMS } from '~/server/utils/sms'
 import { sendEmail } from '~/server/utils/email'
 import { roundToNearest5Rappen } from '~/utils/rounding'
@@ -301,7 +301,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Parallel: pricing + marketing attribution + location name ────────────
-  const [pricingResult, eventPricingResult, attrResult, locationResult] = await Promise.all([
+  const [pricingResult, eventPricingResult, marketingAttr, locationResult] = await Promise.all([
     supabase
       .from('pricing_rules')
       .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier, admin_fee_rappen, admin_fee_applies_from')
@@ -323,13 +323,7 @@ export default defineEventHandler(async (event) => {
       .limit(1)
       .maybeSingle(),
 
-    body.marketing_session_id
-      ? supabase
-          .from('marketing_attributions')
-          .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
-          .eq('session_id', body.marketing_session_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
+    resolveMarketingAttribution(supabase, body.marketing_session_id, body.marketing_attribution),
 
     supabase
       .from('locations')
@@ -339,24 +333,6 @@ export default defineEventHandler(async (event) => {
   ])
 
   const pricingRule = pricingResult.data || eventPricingResult.data
-  let marketingAttr = body.marketing_attribution ?? null
-  if (body.marketing_session_id) {
-    if (attrResult.data) {
-      marketingAttr = mergeAttributionFields(attrResult.data, marketingAttr)
-    }
-    if (!marketingAttr?.gclid && !marketingAttr?.gbraid && !marketingAttr?.wbraid) {
-      const { data: redirectRow } = await supabase
-        .from('booking_redirects')
-        .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
-        .eq('session_id', body.marketing_session_id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      if (redirectRow) {
-        marketingAttr = mergeAttributionFields(marketingAttr, redirectRow)
-      }
-    }
-  }
   const location = locationResult.data
 
   // ── Calculate lesson price ────────────────────────────────────────────────
