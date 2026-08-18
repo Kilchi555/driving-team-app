@@ -130,12 +130,12 @@ useHead({
 function trackPhone() {
   if (typeof window === 'undefined') return
   try {
-    const attr = (window as any).__marketingAttribution || {}
+    const attr = (window as any).__dtMarketingAttribution || {}
     fetch('/api/phone-click', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        session_id: attr.session_id || 'unknown',
+        session_id: (window as any).__analyticsSessionId || 'unknown',
         marketing_attribution: attr,
         referrer_page: '/auto-fahrschule-zuerich-preis/',
         utm_content: 'ag_preis',

@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
       .from('booking_proposals')
       .select(`
         id, tenant_id, staff_id, status, email, phone, category_code, created_by_user_id,
-        gclid, gbraid, wbraid, outcome_type
+        gclid, gbraid, wbraid, fbclid, fbc, fbp, outcome_type
       `)
       .eq('id', proposalId)
       .eq('tenant_id', tenantId)
@@ -109,7 +109,7 @@ export default defineEventHandler(async (event) => {
     if (
       outcomeType === 'booking_confirmed'
       && existingProposal.outcome_type !== 'booking_confirmed'
-      && (existingProposal.gclid || existingProposal.gbraid || existingProposal.wbraid)
+      && (existingProposal.gclid || existingProposal.gbraid || existingProposal.wbraid || existingProposal.fbclid)
     ) {
       try {
         adsUpload = await uploadProposalDerivedBookingConversion({
@@ -119,6 +119,9 @@ export default defineEventHandler(async (event) => {
             gclid: existingProposal.gclid,
             gbraid: existingProposal.gbraid,
             wbraid: existingProposal.wbraid,
+            fbclid: existingProposal.fbclid,
+            fbc: existingProposal.fbc,
+            fbp: existingProposal.fbp,
             email: existingProposal.email,
             phone: existingProposal.phone,
           },
