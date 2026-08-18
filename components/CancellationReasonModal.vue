@@ -138,6 +138,37 @@
         </div>
       </div>
 
+      <div
+        v-if="cancellationStep === 2 && canChooseWalleeRefund && (policyResult?.calculation?.chargePercentage ?? 0) < 100"
+        class="mb-4"
+      >
+        <p class="text-sm font-semibold text-gray-700 mb-2">Rückerstattung an Kunden:</p>
+        <div class="space-y-2">
+          <label
+            class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border transition-colors"
+            :class="refundDestination === 'wallet' ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'"
+          >
+            <input type="radio" value="wallet" v-model="refundDestination" class="mt-0.5 text-blue-600 focus:ring-blue-400" />
+            <div>
+              <span class="text-sm font-medium text-gray-900">Guthaben gutschreiben</span>
+              <p class="text-xs text-gray-500 mt-0.5">Sofort verfügbar für die nächste Buchung</p>
+            </div>
+          </label>
+          <label
+            class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border transition-colors"
+            :class="refundDestination === 'wallee' ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:bg-gray-50'"
+          >
+            <input type="radio" value="wallee" v-model="refundDestination" class="mt-0.5 text-green-600 focus:ring-green-400" />
+            <div>
+              <span class="text-sm font-medium text-gray-900">Zurück auf Zahlungsmittel (Wallee)</span>
+              <p class="text-xs text-gray-500 mt-0.5">
+                CHF {{ (refundableRappen / 100).toFixed(2) }} — 3–5 Werktage
+              </p>
+            </div>
+          </label>
+        </div>
+      </div>
+
       <!-- Charge Decision Modal (für Student < 24h) -->
       <div v-if="showChargeDecision" class="mb-6">
         <p class="text-sm text-gray-600 mb-4">
@@ -219,6 +250,7 @@ import { logger } from '~/utils/logger'
 import { useCancellationReasons } from '~/composables/useCancellationReasons'
 import { useCancellationPolicies } from '~/composables/useCancellationPolicies'
 import { calculateCancellationCharges } from '~/utils/policyCalculations'
+import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { useUIStore } from '~/stores/ui'
 
 interface Props {
@@ -248,6 +280,25 @@ const appointmentPriceLocal = ref(0)
 const isLoading = ref(false)
 const showChargeDecision = ref(false)
 const pendingReason = ref<any>(null)
+const refundDestination = ref<'wallet' | 'wallee'>('wallet')
+const paymentData = ref<any>(null)
+
+const refundableRappen = computed(() => {
+  const payment = paymentData.value
+  if (!payment) return 0
+  const chargePercentage = policyResult.value?.calculation?.chargePercentage ?? 0
+  const captured = (payment.total_amount_rappen || 0) - (payment.credit_used_rappen || 0) - (payment.refunded_amount_rappen || 0)
+  if (chargePercentage <= 0) return Math.max(0, captured)
+  return Math.max(0, Math.round(captured * (1 - chargePercentage / 100)))
+})
+
+const canChooseWalleeRefund = computed(() => {
+  const email = props.currentUser?.email || props.currentUser?.profile?.email
+  if (!canInitiateWalleeRefund(email)) return false
+  if (paymentData.value?.payment_status !== 'completed') return false
+  if (paymentData.value?.payment_method !== 'wallee' && !paymentData.value?.wallee_transaction_id) return false
+  return refundableRappen.value > 0
+})
 
 // Computed: Gefilterte Absage-Gründe basierend auf Typ
 const filteredReasons = computed(() => {
@@ -275,7 +326,8 @@ const resetState = () => {
   isLoading.value = false
   showChargeDecision.value = false
   pendingReason.value = null
-
+  refundDestination.value = 'wallet'
+  paymentData.value = null
 }
 
 const selectCancellationType = (type: 'student' | 'staff') => {
@@ -294,19 +346,7 @@ const selectReasonAndContinue = async (reasonId: string) => {
 
   pendingReason.value = selectedReason
 
-  // Load appointment price
   await loadAppointmentPrice()
-
-  const isCancelledByStudent = localCancellationType.value === 'student'
-
-  // For student cancellations: show charge decision modal
-  if (isCancelledByStudent) {
-    logger.debug('❓ Student cancellation - showing charge decision modal')
-    showChargeDecision.value = true
-    return
-  }
-
-  // For staff: use force_charge_percentage or default to 0
   await goToPolicySelection(selectedReason)
 }
 
@@ -337,8 +377,11 @@ const goToPolicySelection = async (selectedReason: any) => {
     return
   }
 
-  // Load policies and calculate
   await fetchPolicies('appointments')
+
+  const appointmentTime = new Date(props.appointment?.start_time || props.appointment?.start)
+  const hoursUntilAppointment = (appointmentTime.getTime() - Date.now()) / (1000 * 60 * 60)
+  const isWithin24h = hoursUntilAppointment < 24 && hoursUntilAppointment >= 0
 
   if (defaultPolicy.value && props.appointment) {
     const appointmentData = {
@@ -350,11 +393,19 @@ const goToPolicySelection = async (selectedReason: any) => {
       staff_id: props.appointment.staff_id
     }
 
-    const result = calculateCancellationCharges(defaultPolicy.value, appointmentData, new Date())
+    const result = calculateCancellationCharges(
+      defaultPolicy.value,
+      appointmentData,
+      new Date(),
+      localCancellationType.value
+    )
     logger.debug('✅ Policy calculation result:', result)
     policyResult.value = result
+  } else if (localCancellationType.value === 'student' && isWithin24h) {
+    logger.debug('❓ No policy and student cancellation within 24h — asking staff')
+    showChargeDecision.value = true
+    return
   } else {
-    // No policy: default to free
     policyResult.value = {
       calculation: { chargePercentage: 0 },
       chargeAmountRappen: 0,
@@ -413,6 +464,7 @@ const loadAppointmentPrice = async () => {
     }) as any
     const payment = response?.data
     if (payment) {
+      paymentData.value = payment
       appointmentPriceLocal.value = payment.lesson_price_rappen || payment.total_amount_rappen || 0
       logger.debug('💰 Loaded appointment price:', appointmentPriceLocal.value)
     }
@@ -455,15 +507,20 @@ const confirmCancellation = async () => {
         deletionReason,
         chargePercentage,
         shouldCreditHours: chargePercentage === 100,
-        cancelledBy: localCancellationType.value === 'student' ? 'customer' : 'staff'
+        cancelledBy: localCancellationType.value === 'student' ? 'customer' : 'staff',
+        refundDestination: refundDestination.value,
       }
     }) as any
 
     logger.debug('✅ Cancellation completed:', result)
 
     let notificationMessage = result.message || 'Der Termin wurde erfolgreich storniert.'
-    if (wasFreeCancellationOfPaid) {
-      notificationMessage += ' Credits wurden rückvergütet.'
+    if (wasFreeCancellationOfPaid || (chargePercentage < 100 && paymentData.value?.payment_status === 'completed')) {
+      if (refundDestination.value === 'wallee' && result.refundDestination === 'wallee') {
+        notificationMessage += ' Rückerstattung via Wallee veranlasst (3–5 Werktage).'
+      } else {
+        notificationMessage += ' Credits wurden rückvergütet.'
+      }
     }
 
     uiStore.addNotification({

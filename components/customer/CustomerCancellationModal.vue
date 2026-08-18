@@ -242,13 +242,7 @@ const cancellationCharge = ref<{ chargePercentage: number; description: string }
 const chargePercentage = computed(() => cancellationCharge.value?.chargePercentage ?? null)
 
 // Whether the current situation allows a direct Wallee refund
-const canChooseWalleeRefund = computed(() => {
-  if (!props.payment) return false
-  if (props.payment.payment_status !== 'completed') return false
-  if (!props.payment.wallee_transaction_id) return false
-  const walleeCapture = (props.payment.total_amount_rappen || 0) - (props.payment.credit_used_rappen || 0)
-  return walleeCapture > 0
-})
+const canChooseWalleeRefund = computed(() => false)
 
 // Amount that will be charged/refunded, scaled by the actual chargePercentage
 // (0%, 100%, or anything in between — not just a binary free/full case)

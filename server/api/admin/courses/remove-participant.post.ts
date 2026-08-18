@@ -8,6 +8,7 @@ import { formatCourseSessionLine } from '~/utils/format-course-sessions'
 import { logger } from '~/utils/logger'
 import { sendEmail } from '~/server/utils/email'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
+import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 /** Outcome of the SARI de-enrollment attempt, returned to the admin UI so a failure is never silent. */
@@ -215,6 +216,10 @@ export default defineEventHandler(async (event) => {
   // ── 2a. Optional Wallee refund ──────────────────────────────────────────
   let refundResult: any = null
 
+  if (shouldProcessRefund && !canInitiateWalleeRefund(profile.email)) {
+    throw createError({ statusCode: 403, statusMessage: 'Wallee-Rückerstattungen sind vorerst nur für freigeschriebene Staff-Accounts aktiv.' })
+  }
+
   if (shouldProcessRefund) {
     // Look up the payment for this enrollment
     let payment: any = null
@@ -229,7 +234,7 @@ export default defineEventHandler(async (event) => {
     if (regWithPayment?.payment_id) {
       const { data: pd } = await supabase
         .from('payments')
-        .select('id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, tenant_id')
+        .select('id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, tenant_id, refunded_amount_rappen')
         .eq('id', regWithPayment.payment_id)
         .single()
       payment = pd
@@ -239,7 +244,7 @@ export default defineEventHandler(async (event) => {
     if (!payment) {
       const { data: pd } = await supabase
         .from('payments')
-        .select('id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, tenant_id')
+        .select('id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, tenant_id, refunded_amount_rappen')
         .eq('course_registration_id', enrollmentId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -258,15 +263,13 @@ export default defineEventHandler(async (event) => {
         tenantId: profile.tenant_id,
         idempotencyKey: `course-remove-${enrollmentId}`,
         reason: reason || 'Kurs-Abmeldung durch Admin',
+        initiatedBy: profile.id,
       })
 
       if (refundResult.success) {
-        // Mark payment as refunded in DB
         await supabase
           .from('payments')
           .update({
-            payment_status: 'refunded',
-            refunded_at: new Date().toISOString(),
             notes: `Rückerstattung durch Admin (CHF ${refundResult.refundedAmountChf.toFixed(2)}): ${reason || 'Kurs-Abmeldung'}`,
           })
           .eq('id', payment.id)
