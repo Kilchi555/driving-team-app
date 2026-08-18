@@ -902,7 +902,8 @@
               Zahlungsmethode
             </label>
             <p class="text-xs text-gray-500 mb-2">
-              <strong>Automatisch</strong> wählt anhand der Stadt: <em>Einsiedeln → Barzahlung</em>, alle anderen → <em>Online-Zahlung (Wallee)</em>. Setze manuell, wenn dieser Kurs abweichen soll (z. B. PGS in Einsiedeln auf Cash, Spezialkurs in Zürich auf Cash).
+              Vorausgewählt aus der <strong>Standard-Zahlungsart</strong> in den Zahlungseinstellungen.
+              <strong>Automatisch</strong> folgt der Stadt: <em>Einsiedeln → Barzahlung</em>, alle anderen → <em>Online</em>.
             </p>
             <select
               v-model="newCourse.payment_method"
@@ -4470,7 +4471,12 @@ import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
-import { getCoursePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
+import {
+  getCoursePaymentMethod,
+  getPaymentMethodLabel,
+  mapTenantDefaultToCoursePaymentMethod,
+  defaultAdminEnrollmentPaymentOption,
+} from '~/utils/courseLocationUtils'
 import { evaluateSessionOrder } from '~/utils/session-order-rules'
 import { refreshClientSession } from '~/utils/client-session-refresh'
 import { formatCourseSessionLine } from '~/utils/format-course-sessions'
@@ -4480,6 +4486,21 @@ import { openParticipantListPdf } from '~/utils/print-participant-list'
 // course enrollments will fall back to cash.
 const { walleeEnabled, walleeStatusLoaded, loadWalleeStatus } = useWalleeStatus()
 const { invoiceEnabled: invoicePaymentsEnabledForTenant } = useInvoicePaymentSettings()
+const tenantDefaultPaymentMethod = ref<'wallee' | 'cash' | 'invoice'>('wallee')
+const defaultCoursePaymentMethod = computed(() =>
+  mapTenantDefaultToCoursePaymentMethod(tenantDefaultPaymentMethod.value)
+)
+
+async function loadTenantDefaultPaymentMethod() {
+  try {
+    const res = await $fetch<{ default_payment_method?: string }>('/api/settings/cash-payment-settings')
+    if (res.default_payment_method === 'cash' || res.default_payment_method === 'invoice' || res.default_payment_method === 'wallee') {
+      tenantDefaultPaymentMethod.value = res.default_payment_method
+    }
+  } catch {
+    // keep wallee fallback
+  }
+}
 
 // Simple toast notification functions
 const showSuccessToast = (title: string, message: string = '') => {
@@ -5334,7 +5355,7 @@ const newCourse = ref({
   sari_course_id: null as string | null,
   registration_deadline: null as string | null,
   status: 'draft',
-  payment_method: null as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null,
+  payment_method: defaultCoursePaymentMethod.value as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null,
   billing_mode: 'individual' as 'individual' | 'company_collective',
   company_id: null as string | null,
 })
@@ -5787,7 +5808,7 @@ const resetNewCourse = () => {
     sari_course_id: null,
     registration_deadline: null,
     status: 'scheduled',
-    payment_method: null,
+    payment_method: defaultCoursePaymentMethod.value,
     billing_mode: 'individual',
     company_id: null,
   }
@@ -6523,7 +6544,7 @@ const deleteRoom = async (roomId: string) => {
 // Modal Management Functions
 const openCreateCourseModal = async () => {
   logger.debug('🔄 Opening create course modal...')
-  
+
   // Ensure categories are loaded before opening modal
   if (!activeCategories.value || activeCategories.value.length === 0) {
     logger.debug('📥 Categories not loaded, loading now...')
@@ -6531,7 +6552,10 @@ const openCreateCourseModal = async () => {
       await loadCourseCategories(currentUser.value.tenant_id)
     }
   }
-  
+
+  await loadTenantDefaultPaymentMethod()
+  resetNewCourse()
+
   logger.debug('📋 Available categories:', activeCategories.value.length)
   showCreateCourseModal.value = true
 }
@@ -6962,6 +6986,7 @@ onMounted(async () => {
   loadWalleeStatus().catch(() => {})
   loadCompanies().catch(() => {})
   loadTenantSariEnabled().catch(() => {})
+  loadTenantDefaultPaymentMethod().catch(() => {})
   
   // Ensure current user is loaded first
   if (!currentUser.value?.tenant_id) {
@@ -7047,6 +7072,7 @@ const testOpenModal = () => {
 
 const manageEnrollments = (course: any) => {
   selectedCourse.value = course
+  resetEnrollmentFormExtras()
   showEnrollmentModal.value = true
   nextTick(async () => {
     try {
@@ -7183,6 +7209,7 @@ const closeEnrollmentModal = () => {
 
 const toggleAddParticipantForm = () => {
   showAddParticipantForm.value = !showAddParticipantForm.value
+  resetEnrollmentFormExtras()
   if (!showAddParticipantForm.value) {
     // Reset form when hiding
     enrollmentMode.value = 'search'
@@ -7204,7 +7231,11 @@ const toggleAddParticipantForm = () => {
 
 const resetEnrollmentFormExtras = () => {
   selectedExistingUser.value = null
-  enrollmentPaymentOption.value = isSelectedCourseCompanyCollective.value ? 'invoice' : ''
+  enrollmentPaymentOption.value = defaultAdminEnrollmentPaymentOption(
+    selectedCourse.value,
+    walleeEnabled.value,
+    invoicePaymentsEnabledForTenant.value
+  )
   enrollmentInvoiceAction.value = 'later'
   enrollmentType.value = 'full'
   enrollmentIndividualSession.value = 0
