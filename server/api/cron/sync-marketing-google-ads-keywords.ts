@@ -1,15 +1,12 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getTenantIdByGoogleAdsCustomer } from '~/server/utils/marketing-tenant'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 import { logger } from '~/utils/logger'
 
 // Fetches keyword-level Google Ads performance (last 7 days) and upserts into
 // marketing_google_ads_keywords_daily. Runs daily at 04:30 via Vercel Cron.
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN
   const clientId = process.env.GOOGLE_ADS_CLIENT_ID

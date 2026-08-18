@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getTenantIdByMetaAdAccount } from '~/server/utils/marketing-tenant'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 /**
  * Daily Meta Ads sync — runs at 04:20 via Vercel Cron.
@@ -14,12 +15,7 @@ import { getTenantIdByMetaAdAccount } from '~/server/utils/marketing-tenant'
  * Register ad accounts: INSERT INTO marketing_meta_accounts (tenant_id, ad_account_id, pixel_id, label)
  */
 export default defineEventHandler(async (event) => {
-  // ============ LAYER 1: CRON AUTH ============
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   // ============ LAYER 2: ENV CHECK ============
   const accessToken = process.env.META_SYSTEM_USER_TOKEN ?? process.env.META_ACCESS_TOKEN
