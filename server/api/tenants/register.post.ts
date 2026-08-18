@@ -51,6 +51,8 @@ interface TenantRegistrationData {
   pricing_json?: string          // JSON array of PricingItem objects
   /** Platform tenant→tenant referral code (?ref= on tenant-register) */
   platform_referral_code?: string
+  /** '1' only for /tenant-register?product=website — never set by the default Simy flow */
+  website_only?: string
 }
 
 interface RegistrationResponse {
@@ -133,6 +135,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       custom_categories_json: '',
       staff_json: '',
       platform_referral_code: '',
+      website_only: '',
     }
 
     let logoFile: File | null = null
@@ -190,6 +193,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       })
     }
     logger.debug('✅ Disposable email check passed')
+
+    applyWebsiteOnlyDefaults(data)
 
     // Validierung
     const validationError = validateTenantData(data)
@@ -345,6 +350,10 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
           ? data.selected_categories.split(',').map(c => c.trim()).filter(Boolean)
           : null,
         working_days_template: defaultWorkingDaysTemplate,
+        // Default register never sends website_only — column default stays false.
+        ...(data.website_only === '1' || data.website_only === 'true'
+          ? { website_only: true, website_status: 'pending_review' }
+          : {}),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -721,6 +730,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         customer_number: newTenant.customer_number,
         contact_email: newTenant.contact_email,
         business_type: newTenant.business_type,
+        website_only: !!newTenant.website_only,
         has_logo: !!logoUrl,
         duration_ms: Date.now() - startTime
       }
@@ -737,7 +747,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         contact_email: newTenant.contact_email,
         logo_url: newTenant.logo_url,
         primary_color: newTenant.primary_color,
-        secondary_color: newTenant.secondary_color
+        secondary_color: newTenant.secondary_color,
+        website_only: !!newTenant.website_only
       }
     }
     
@@ -772,7 +783,51 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
 /**
  * Validiert die Tenant-Registrierungsdaten
  */
+function isWebsiteOnlyPayload(data: TenantRegistrationData) {
+  return data.website_only === '1' || data.website_only === 'true'
+}
+
+function guessSwissZip(city?: string) {
+  const c = String(city || '').trim().toLowerCase()
+  const map: Record<string, string> = {
+    'zürich': '8000',
+    zurich: '8000',
+    bern: '3000',
+    basel: '4000',
+    luzern: '6000',
+    winterthur: '8400',
+    'st. gallen': '9000',
+    'st.gallen': '9000',
+    genf: '1200',
+    lausanne: '1000',
+    lugano: '6900',
+    biel: '2500',
+    thun: '3600',
+  }
+  return map[c] || '8000'
+}
+
+function applyWebsiteOnlyDefaults(data: TenantRegistrationData) {
+  if (!isWebsiteOnlyPayload(data)) return
+  if (!data.legal_company_name?.trim()) data.legal_company_name = data.name
+  if (!data.contact_person_first_name?.trim()) {
+    const local = String(data.contact_email || '').split('@')[0]
+    const first = local.split(/[._-]/)[0]
+    data.contact_person_first_name = first
+      ? first.charAt(0).toUpperCase() + first.slice(1)
+      : 'Admin'
+  }
+  if (!data.contact_person_last_name?.trim()) {
+    data.contact_person_last_name = data.name?.trim().split(/\s+/)[0] || 'Konto'
+  }
+  if (!data.street?.trim()) data.street = data.city?.trim() || 'Adresse folgt'
+  if (!data.streetNr?.trim()) data.streetNr = '1'
+  if (!data.zip?.trim()) data.zip = guessSwissZip(data.city)
+}
+
 function validateTenantData(data: TenantRegistrationData): string | null {
+  const websiteOnly = isWebsiteOnlyPayload(data)
+
   if (!data.name?.trim()) {
     return 'Fahrschul-Name ist erforderlich'
   }
@@ -816,7 +871,7 @@ function validateTenantData(data: TenantRegistrationData): string | null {
     return 'Kontaktperson Nachname ist erforderlich'
   }
 
-  if (!data.contact_phone?.trim()) {
+  if (!websiteOnly && !data.contact_phone?.trim()) {
     return 'Telefonnummer ist erforderlich'
   }
 
@@ -829,28 +884,30 @@ function validateTenantData(data: TenantRegistrationData): string | null {
   ) {
     return 'Bitte echte Firmendaten verwenden.'
   }
-  const phoneDigits = data.contact_phone.replace(/\D/g, '')
-  if (/(.)\1{5,}/.test(phoneDigits)) {
-    return 'Bitte eine gültige Telefonnummer angeben.'
+  if (data.contact_phone?.trim()) {
+    const phoneDigits = data.contact_phone.replace(/\D/g, '')
+    if (/(.)\1{5,}/.test(phoneDigits)) {
+      return 'Bitte eine gültige Telefonnummer angeben.'
+    }
   }
   if (/^1234$/.test(data.zip.trim()) && placeholderNames.test(data.city.trim())) {
     return 'Bitte echte Adressdaten verwenden.'
   }
 
-  if (!data.street?.trim()) {
+  if (!websiteOnly && !data.street?.trim()) {
     return 'Straße ist erforderlich'
   }
 
-  if (!data.streetNr?.trim()) {
+  if (!websiteOnly && !data.streetNr?.trim()) {
     return 'Hausnummer ist erforderlich'
   }
 
-  if (!data.zip?.trim()) {
+  if (!websiteOnly && !data.zip?.trim()) {
     return 'PLZ ist erforderlich'
   }
 
   // PLZ Validierung (4-stellige Schweizer PLZ)
-  if (!/^[0-9]{4}$/.test(data.zip)) {
+  if (data.zip?.trim() && !/^[0-9]{4}$/.test(data.zip)) {
     return 'PLZ muss 4 Ziffern haben'
   }
 
