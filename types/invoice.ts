@@ -11,6 +11,13 @@ export interface Invoice {
   invoice_number: string
   invoice_date: string
   due_date: string
+  document_kind?: 'invoice' | 'quote'
+  quote_number?: string | null
+  valid_until?: string | null
+  public_token?: string | null
+  accepted_at?: string | null
+  declined_at?: string | null
+  company_id?: string | null
   
   // Rechnungsempfänger
   billing_type: 'individual' | 'company'
@@ -141,6 +148,8 @@ export interface InvoiceFormData {
   billing_city?: string
   billing_country: string
   billing_vat_number?: string
+  document_kind?: 'invoice' | 'quote'
+  valid_until?: string
   
   // Rechnungsdetails
   subtotal_rappen: number
@@ -209,6 +218,7 @@ export interface InvoiceFilters {
   search?: string
   /** Nur Rechnungen mit versendeter Zahlungserinnerung/Mahnung */
   has_dunning?: boolean
+  document_kind?: 'invoice' | 'quote'
 }
 
 export interface InvoiceSummary {

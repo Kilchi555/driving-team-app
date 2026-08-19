@@ -1476,6 +1476,50 @@
                   </div>
                 </div>
               </div>
+
+              <div class="col-span-2 border-t pt-4 mt-2">
+                <h5 class="text-sm font-semibold text-gray-700 mb-3">Offertentexte (Vorlagen)</h5>
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Einleitungstext</label>
+                    <textarea
+                      v-model="invoiceSettings.quote_intro_text"
+                      rows="3"
+                      placeholder="z.B. Guten Tag&#10;&#10;Vielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen folgendes Angebot:"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm resize-none"
+                    />
+                    <p class="text-xs text-gray-400 mt-1">Erscheint oben auf der Offerte, vor den Positionen.</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Gültigkeit / Bedingungen</label>
+                    <textarea
+                      ref="quoteTermsTextarea"
+                      v-model="invoiceSettings.quote_terms_text"
+                      rows="2"
+                      placeholder="z.B. Dieses Angebot ist gültig bis {valid_until}."
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm resize-none"
+                    />
+                    <p class="text-xs text-gray-400 mt-1">
+                      Erscheint nach den Positionen auf der Offerte.
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded font-mono transition-colors ml-1"
+                        @click="insertPlaceholder(quoteTermsTextarea, 'invoiceSettings', 'quote_terms_text', '{valid_until}')"
+                      >+ {valid_until}</button> einfügen – wird durch das Gültigkeitsdatum ersetzt
+                    </p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Abschlusstext</label>
+                    <textarea
+                      v-model="invoiceSettings.quote_footer_text"
+                      rows="2"
+                      placeholder="Leer = gleicher Abschlusstext wie bei Rechnungen"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm resize-none"
+                    />
+                    <p class="text-xs text-gray-400 mt-1">Erscheint ganz unten auf der Offerte.</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="mt-5 flex justify-end">
@@ -2986,6 +3030,7 @@ const weekdayOptions = [
   { value: 7, label: 'Sonntag' },
 ]
 const paymentTermsTextarea = ref<HTMLTextAreaElement | null>(null)
+const quoteTermsTextarea = ref<HTMLTextAreaElement | null>(null)
 
 const insertPlaceholder = (el: HTMLTextAreaElement | null, obj: string, field: string, placeholder: string) => {
   if (!el) return
@@ -3014,6 +3059,9 @@ const invoiceSettings = ref({
   invoice_intro_text: '',
   invoice_payment_terms: '',
   invoice_footer_text: '',
+  quote_intro_text: '',
+  quote_terms_text: '',
+  quote_footer_text: '',
   invoice_window_side: 'left' as 'left' | 'right',
 })
 const isSavingInvoiceSettings = ref(false)
@@ -3034,6 +3082,9 @@ const loadInvoiceSettings = async (_tenantId: string) => {
         invoice_intro_text: data.invoice_intro_text || '',
         invoice_payment_terms: data.invoice_payment_terms || '',
         invoice_footer_text: data.invoice_footer_text || '',
+        quote_intro_text: data.quote_intro_text || '',
+        quote_terms_text: data.quote_terms_text || '',
+        quote_footer_text: data.quote_footer_text || '',
         invoice_window_side: data.invoice_window_side === 'right' ? 'right' : 'left',
       }
     }
