@@ -124,7 +124,7 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
     // 2. Load appointments for this user (incl. older rows that may have tenant_id = null)
     const { data: appointments, error: appointmentsError } = await supabaseAdmin
       .from('appointments')
-      .select('id, type')
+      .select('id, type, start_time')
       .eq('user_id', userId)
       .or(`tenant_id.eq.${tenantId},tenant_id.is.null`)
 
@@ -177,6 +177,23 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
       }
       notes = notesData || []
     }
+
+    // 4b. Split off "planned focus" notes (vorgemerkte Themen ohne Bewertung
+    // für einen künftigen Termin) — shown separately, never mixed into the
+    // rated-topics history above (frontend already filters criteria_rating
+    // == null there).
+    const appointmentStartById = new Map(
+      (appointments || []).map((a: any) => [a.id, a.start_time])
+    )
+    const nowIso = new Date().toISOString()
+    const plannedFocus = notes
+      .filter((n: any) => n.criteria_rating == null && !!n.criteria_note)
+      .map((n: any) => ({
+        ...n,
+        start_time: appointmentStartById.get(n.appointment_id) || null
+      }))
+      .filter((n: any) => n.start_time && n.start_time > nowIso)
+      .sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 
     // 5. Only tenant-owned evaluation categories — never global templates
     const { data: categories, error: categoriesError } = await supabaseAdmin
@@ -258,6 +275,7 @@ export default defineEventHandler(async (event): Promise<LearningProgressRespons
         appointments: appointments || [],
         maxRating,
         notes,
+        plannedFocus,
         categories: categories || [],
         criteria: criteria || []
       }
