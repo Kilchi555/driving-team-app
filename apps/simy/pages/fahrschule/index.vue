@@ -133,6 +133,8 @@
       preview-host="simy.ch/s/fahrschule-muster"
     />
 
+    <SimyGbpHighlight business-type="driving_school" slug="fahrschule" />
+
     <!-- ── Marketing Add-on ────────────────────────────────────────────────── -->
     <section class="py-16 px-6 bg-gray-950">
       <div class="max-w-4xl mx-auto text-center">
@@ -251,7 +253,7 @@ useHead({
   title: 'Fahrschulsoftware Schweiz – Buchung, App & Website | Simy',
   meta: [
     { name: 'description', content: 'Fahrschulsoftware für die Schweiz: Online-Buchungssystem, automatische Rechnungen, Fahrlehrer-App und Website — alles in Simy. 30 Tage kostenlos.' },
-    { name: 'keywords', content: 'fahrschulsoftware, fahrschulsoftware schweiz, buchungssystem fahrschule, fahrlehrer app, website fahrschule, online terminbuchung fahrschule' },
+    { name: 'keywords', content: 'fahrschulsoftware, fahrschulsoftware schweiz, buchungssystem fahrschule, fahrlehrer app, website fahrschule, online terminbuchung fahrschule, google business profile fahrschule, google maps fahrschule' },
     { property: 'og:title', content: 'Fahrschulsoftware Schweiz – Buchung, App & Website | Simy' },
     { property: 'og:description', content: 'Fahrschulsoftware mit Online-Buchung, Rechnungen, App und Website — alles in Simy. 30 Tage kostenlos testen.' },
     { property: 'og:url', content: 'https://simy.ch/fahrschule' },
@@ -319,6 +321,7 @@ const features = [
   { icon: 'wallet', title: 'Einfache Rechnungsstellung', desc: 'Rechnungen automatisch erstellt und per E-Mail versendet. Mit Online-Zahlung laufen Erinnerungen vollautomatisch — bei Rechnungsversand ist das Mahnen mit wenigen Klicks erledigt.', link: null },
   { icon: 'phone', title: 'Fahrlehrer-App', desc: 'Dein Kalender, deine Schüler, deine Einnahmen — alles auf dem Smartphone, immer aktuell.', link: '/fahrschule/app' },
   { icon: 'globe', title: 'Website-Generator', desc: 'Simy erstellt eine SEO-starke Landingpage mit Online-Terminbuchung, Preisen und Bewertungen — live unter /s/dein-slug.', link: '/website' },
+  { icon: 'map-pin', title: 'Google Business Profile', desc: 'Jahreskalender postet von selbst, Fotos aus dem Pool gehen live, neue Schüler-Reviews werden automatisch beantwortet. CHF 19/Monat — wer «Fahrschule in der Nähe» googelt, soll dich sehen.', link: '/features/google-business-profile' },
   { icon: 'chart', title: 'Statistiken & Berichte', desc: 'Einnahmen, Fahrstunden, Prüfungsquote — alle Zahlen auf einen Blick.', link: null },
 ]
 
@@ -335,7 +338,8 @@ const faqs = [
   { q: 'Funktioniert Simy auch auf dem Smartphone?', a: 'Ja. Die Fahrlehrer-App läuft auf iOS und Android. Deine Schüler können den Buchungslink direkt im Browser öffnen.' },
   { q: 'Sind meine Daten in der Schweiz gespeichert?', a: 'Ja. Simy speichert alle Daten auf Schweizer Servern und ist vollständig DSGVO-konform.' },
   { q: 'Kann ich Simy zusammen mit meiner bestehenden Website nutzen?', a: 'Ja. Du kannst den Buchungslink auf deiner bestehenden Website einbinden — oder eine komplette SEO-Website von Simy generieren lassen.' },
-  { q: 'Kann ich nur eine Website ohne die volle Software?', a: 'Ja. Der Website-Generator ist eigenständig: einmalig CHF 490 beim Live-Gang, Hosting ab CHF 29/Monat. 30 Tage Vorschau gratis. Alle Details auf der Website-Generator-Seite.' },
+  { q: 'Kann ich nur eine Website ohne die volle Software?', a: 'Ja. Der Website-Generator ist eigenständig: einmalig CHF 490 beim Live-Gang, Hosting ab CHF 19/Monat. 30 Tage Vorschau gratis. Alle Details auf der Website-Generator-Seite.' },
+  { q: 'Kann Simy mein Google-Unternehmensprofil für die Fahrschule automatisieren?', a: 'Ja. Jahreskalender postet 1–4×/Woche, Foto-Pool 1–3×/Woche, neue Reviews werden automatisch beantwortet. CHF 19/Monat. Wer «Fahrschule in der Nähe» googelt, soll dich in Maps sehen.' },
 ]
 </script>
 

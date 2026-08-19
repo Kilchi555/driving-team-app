@@ -114,6 +114,8 @@
       subtitle="Google Ads und SEO brauchen eine schnelle, lokale Landingpage. Simy generiert sie — SSR, Preise, Bewertungen. Sonst klickt niemand durch."
     />
 
+    <SimyGbpHighlight />
+
     <!-- Why Simy for marketing -->
     <section class="py-20 px-6 bg-gray-950">
       <div class="max-w-4xl mx-auto">

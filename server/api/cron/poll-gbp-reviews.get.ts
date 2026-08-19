@@ -1,12 +1,12 @@
 import { defineEventHandler, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { getGbpReviews, getGbpAutomationSettings, listTenantGbpLocations } from '~/server/utils/gbp'
-import { assertCronAuth, gbpStarToNumber, generateGbpReviewSuggestion, isGbpReviewHours } from '~/server/utils/gbp-automation'
+import { getGbpReviews, getGbpAutomationSettings, listTenantGbpLocations, replyToGbpReview } from '~/server/utils/gbp'
+import { assertCronAuth, gbpStarToNumber, generateGbpReviewSuggestion, isGbpReviewHours, shouldAutoPublishReview } from '~/server/utils/gbp-automation'
 
 /**
  * GET /api/cron/poll-gbp-reviews
- * Polls unreplied reviews and creates AI suggestions (mode=suggest).
- * Auto-publish modes are prepared but not enabled in P1.
+ * Polls unreplied reviews, writes an AI reply, and publishes when
+ * review_reply_mode is auto_all or auto_ge_4 (4–5 stars).
  * Schedule: :07/:37 from 05–17 UTC; skipped outside 07:00–19:00 Europe/Zurich.
  */
 export default defineEventHandler(async (event) => {
@@ -25,6 +25,7 @@ export default defineEventHandler(async (event) => {
 
   const tenantIds = [...new Set((connections ?? []).map(c => c.tenant_id))]
   let suggested = 0
+  let published = 0
   let skipped = 0
   let errors = 0
 
@@ -91,7 +92,25 @@ export default defineEventHandler(async (event) => {
             brandVoice: settings.brand_voice,
           })
 
-          // Always store as suggested — human approve first (auto_* modes not enabled yet)
+          const nowIso = new Date().toISOString()
+          const auto = shouldAutoPublishReview(settings.review_reply_mode, stars)
+          let status: 'suggested' | 'published' | 'failed' = 'suggested'
+          let publishedReply: string | null = null
+          let publishedAt: string | null = null
+          let errorMessage: string | null = null
+
+          if (auto) {
+            try {
+              await replyToGbpReview(tenantId, review.reviewId, suggestion, loc.id)
+              status = 'published'
+              publishedReply = suggestion
+              publishedAt = nowIso
+            } catch (err: any) {
+              status = 'failed'
+              errorMessage = err?.message || 'auto-publish failed'
+            }
+          }
+
           const { error } = await supabase.from('gbp_review_actions').insert({
             tenant_id: tenantId,
             location_id: loc.id,
@@ -101,7 +120,10 @@ export default defineEventHandler(async (event) => {
             review_comment: review.comment || null,
             mode: settings.review_reply_mode,
             suggested_reply: suggestion,
-            status: 'suggested',
+            published_reply: publishedReply,
+            status,
+            published_at: publishedAt,
+            error_message: errorMessage,
             review_create_time: review.createTime || null,
           })
 
@@ -110,7 +132,9 @@ export default defineEventHandler(async (event) => {
             errors++
             continue
           }
-          suggested++
+          if (status === 'published') published++
+          else if (status === 'failed') errors++
+          else suggested++
           createdForLoc++
         }
       } catch (err: any) {
@@ -120,5 +144,5 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  return { ok: true, tenants: tenantIds.length, suggested, skipped, errors }
+  return { ok: true, tenants: tenantIds.length, suggested, published, skipped, errors }
 })

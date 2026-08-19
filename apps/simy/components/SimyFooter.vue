@@ -49,6 +49,7 @@
             <li><a href="/features/rechnungen" class="footer-link">Rechnungen & Kasse</a></li>
             <li><a href="/features/kurse" class="footer-link">Kursbuchungsseite</a></li>
             <li><a href="/website" class="footer-link">Website-Generator</a></li>
+            <li><a href="/features/google-business-profile" class="footer-link">Google Business Profile</a></li>
             <li><a href="/marketing" class="footer-link">Marketing</a></li>
             <li><a href="/vergleich" class="footer-link">Vergleiche</a></li>
             <li><a href="/vergleich/calendly-alternative" class="footer-link">Calendly Alternative</a></li>

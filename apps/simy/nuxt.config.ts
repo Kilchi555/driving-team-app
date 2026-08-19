@@ -102,6 +102,7 @@ export default defineNuxtConfig({
         '/features/kalender',
         '/features/rechnungen',
         '/features/kurse',
+        '/features/google-business-profile',
         '/website',
         '/marketing',
         '/marketing/google-ads',

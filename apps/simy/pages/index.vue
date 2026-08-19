@@ -154,8 +154,10 @@
 
     <SimyWebsiteHighlight
       title="Nur eine Website? Geht auch — überzeugend."
-      subtitle="SEO-starke Landingpage in Minuten: Preise, Standorte, Bewertungen. Einmalig CHF 490, Hosting ab CHF 29. Vorschau gratis, live wenn du bereit bist."
+      subtitle="SEO-starke Landingpage in Minuten: Preise, Standorte, Bewertungen. Einmalig CHF 490, Hosting ab CHF 19. Vorschau gratis, live wenn du bereit bist."
     />
+
+    <SimyGbpHighlight />
 
     <!-- ── Branding Preview Section ────────────────────────────────────────── -->
     <section id="branding-preview" class="py-20 px-6 bg-white border-y border-gray-100">
@@ -1117,8 +1119,8 @@
     <section class="py-12 px-6" :style="{ background: `rgba(var(--brand-rgb), 0.04)` }">
       <div class="max-w-3xl mx-auto text-center">
         <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Optional: Wachstum</p>
-        <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Mehr Kunden? Google Ads &amp; lokales SEO</h2>
-        <p class="text-gray-500 mb-6">Zusätzlich zur Software — Managed Ads und SEO für Schweizer Dienstleistungsbetriebe.</p>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Mehr Kunden? Google Ads, SEO und Google Business</h2>
+        <p class="text-gray-500 mb-6">Zusätzlich zur Software — Managed Ads, lokales SEO und Google-Business-Automation für CHF 19/Monat.</p>
         <div class="flex flex-wrap justify-center gap-3">
           <NuxtLink to="/marketing/google-ads"
             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
@@ -1129,6 +1131,11 @@
             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold border transition-all"
             :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }">
             Lokales SEO →
+          </NuxtLink>
+          <NuxtLink to="/features/google-business-profile"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold border transition-all"
+            :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }">
+            Google Business →
           </NuxtLink>
           <NuxtLink to="/marketing"
             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors">
@@ -1305,6 +1312,7 @@
               <li><NuxtLink to="/marketing" class="text-gray-500 hover:text-gray-900 transition-colors">Marketing-Übersicht</NuxtLink></li>
               <li><NuxtLink to="/marketing/google-ads" class="text-gray-500 hover:text-gray-900 transition-colors">Google Ads</NuxtLink></li>
               <li><NuxtLink to="/marketing/seo" class="text-gray-500 hover:text-gray-900 transition-colors">Lokales SEO</NuxtLink></li>
+              <li><NuxtLink to="/features/google-business-profile" class="text-gray-500 hover:text-gray-900 transition-colors">Google Business Profile</NuxtLink></li>
               <li><NuxtLink to="/partner" class="text-gray-500 hover:text-gray-900 transition-colors">Partner werden</NuxtLink></li>
             </ul>
           </div>
@@ -1530,7 +1538,7 @@ useHead({
   htmlAttrs: { lang: 'de' },
   meta: [
     { name: 'description', content: 'All-in-One Software aus der Schweiz: Online-Buchung, Website-Generator, automatische Rechnungen mit TWINT, Mitarbeiter-App, Marketing & SEO. Für Dienstleister und KMU. 30 Tage kostenlos.' },
-    { name: 'keywords', content: 'Online-Buchungssystem Schweiz, Website-Generator Schweiz, Online-Terminbuchung, All-in-One Software, Kundenverwaltung, Rechnungssoftware Schweiz, Marketing Software Schweiz' },
+    { name: 'keywords', content: 'Online-Buchungssystem Schweiz, Website-Generator Schweiz, Online-Terminbuchung, All-in-One Software, Kundenverwaltung, Rechnungssoftware Schweiz, Marketing Software Schweiz, Google Business Profile automatisieren, Google Maps Ranking Schweiz' },
     { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
     { name: 'author', content: 'Simy' },
     // Open Graph
@@ -2048,7 +2056,8 @@ const pains = [
 ]
 
 const features = computed(() => [
-  { icon: 'globe', title: 'Website-Generator', desc: 'SEO-starke Landingpage in Minuten: Preise, Standorte, Bewertungen. Einmalig CHF 490, Hosting ab CHF 29 — ohne die volle Software.', alpha: 0.12, link: '/website', wide: true },
+  { icon: 'globe', title: 'Website-Generator', desc: 'SEO-starke Landingpage in Minuten: Preise, Standorte, Bewertungen. Einmalig CHF 490, Hosting ab CHF 19 — ohne die volle Software.', alpha: 0.12, link: '/website', wide: true },
+  { icon: 'map-pin', title: 'Google Business Profile', desc: 'Jahreskalender postet 1–4×/Woche, Foto-Pool geht 1–3×/Woche live, neue Reviews werden automatisch beantwortet. CHF 19/Monat — sonst gehen kostenlose Maps-Klicks verloren.', alpha: 0.11, link: '/features/google-business-profile', wide: true },
   { icon: 'calendar', title: 'Kalender & Terminplanung', desc: 'Simy-Termine erscheinen in Google/Apple/Outlook. Private Termine dort blockieren automatisch deine Verfügbarkeit — Kunden sehen dort keine freien Slots.', alpha: 0.10, link: '/features/kalender' },
   { icon: 'credit-card', title: 'Rechnungen & TWINT-Zahlungen', desc: 'Online-Zahlung mit TWINT, Debit- und Kreditkarte inkl. PostFinance, Rechnungen mit 2 Klicks erstellt und versendet, Mahnungen und Gutschriften einfach erstellt.', alpha: 0.07, link: '/features/rechnungen' },
   { icon: 'users', title: 'Kundenverwaltung', desc: 'Alle Kundendaten, Fortschritte, Dokumente und Notizen zentral an einem Ort.', alpha: 0.13, link: '/branchen' },
@@ -2116,6 +2125,7 @@ const faqs = reactive([
   { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },
   { q: 'Sind meine Daten sicher?', a: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.', open: false },
   { q: 'Was kostet Simy?', a: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende).', open: false },
+  { q: 'Was bringt die Google-Business-Automation?', a: 'Simy postet den Jahreskalender (1–4×/Woche), verteilt deinen Foto-Pool (1–3×/Woche), beantwortet neue Google-Reviews automatisch und zeigt Insights. CHF 19/Monat. Sonst gehen kostenlose Maps-Klicks verloren.', open: false },
 ])
 
 // ─── App Live Demo ───────────────────────────────────────────────────────────

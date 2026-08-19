@@ -30,6 +30,7 @@ export default defineEventHandler((event) => {
     { path: '/features/kalender',          priority: '0.7', changefreq: 'monthly', lastmod: today },
     { path: '/features/rechnungen',        priority: '0.7', changefreq: 'monthly', lastmod: today },
     { path: '/features/kurse',             priority: '0.7', changefreq: 'monthly', lastmod: today },
+    { path: '/features/google-business-profile', priority: '0.85', changefreq: 'weekly', lastmod: today },
     { path: '/kunden',                     priority: '0.7', changefreq: 'monthly', lastmod: today },
     { path: '/kontakt',                    priority: '0.6', changefreq: 'monthly', lastmod: today },
     { path: '/ueber-uns',                  priority: '0.6', changefreq: 'monthly', lastmod: today },
