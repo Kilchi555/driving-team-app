@@ -127,6 +127,8 @@
       subtitle="Simy-Websites sind SSR, mit Title, FAQ und JSON-LD. Genau die technische Basis, auf der lokales SEO überhaupt wirkt."
     />
 
+    <SimyGbpHighlight />
+
     <!-- CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-2xl mx-auto text-center">
@@ -151,7 +153,7 @@ useHead({
   title: 'SEO für Terminbetriebe – Organisch auf Platz 1 bei Google | Simy',
   meta: [
     { name: 'description', content: 'Lokales SEO für Terminbetriebe: Simy optimiert dein Google Business Profile, deine Website und dein lokales Ranking. Dauerhaft mehr Kunden ohne Werbekosten.' },
-    { name: 'keywords', content: 'lokales seo schweiz, google business profile, google maps ranking, suchmaschinenoptimierung dienstleister' },
+    { name: 'keywords', content: 'lokales seo schweiz, google business profile automatisieren, google maps ranking, suchmaschinenoptimierung dienstleister, google unternehmen profil software' },
     { property: 'og:title', content: 'SEO für Terminbetriebe – Simy | Dauerhaft auf Platz 1 bei Google' },
     { property: 'og:description', content: 'Lokales SEO für Terminbetriebe: Google Business, Keywords, Website-Optimierung. Nachhaltig mehr Kunden.' },
     { property: 'og:url', content: 'https://simy.ch/marketing/seo' },

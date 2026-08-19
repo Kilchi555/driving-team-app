@@ -47,7 +47,7 @@ export interface GbpAutomationSettings {
 }
 
 export const GBP_AUTOMATION_DEFAULTS: GbpAutomationSettings = {
-  review_reply_mode: 'suggest',
+  review_reply_mode: 'auto_all',
   posts_per_week: 2,
   photos_per_week: 2,
   photo_mode: 'off',

@@ -90,7 +90,7 @@
             <div class="rounded-2xl bg-white border border-gray-100 p-5">
               <p class="text-xs text-gray-400 mb-1">Care</p>
               <p class="text-2xl font-black text-gray-900">CHF {{ websiteCare }}<span class="text-sm font-bold text-gray-400">/Mt.</span></p>
-              <p class="text-xs text-gray-500 mt-1">Hosting + Pflege</p>
+              <p class="text-xs text-gray-500 mt-1">Hosting + max. 1h Support / Monat</p>
             </div>
           </div>
           <a
@@ -157,12 +157,12 @@
           <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
             <div class="flex items-start justify-between mb-3">
               <div>
-                <p class="font-bold text-gray-900 text-sm">Google Business Profile</p>
-                <p class="text-xs text-gray-400 mt-0.5">Profil, Bewertungen & Posts aus Simy</p>
+                <NuxtLink to="/features/google-business-profile" class="font-bold text-gray-900 text-sm hover:underline" style="color: inherit;">Google Business Profile</NuxtLink>
+                <p class="text-xs text-gray-400 mt-0.5">Jahreskalender, Fotos, Reviews, Insights</p>
               </div>
-              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary);">Add-on</span>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg" style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary);">CHF {{ gbpAddon }} / Mt.</span>
             </div>
-            <p class="text-xs text-gray-500 leading-relaxed">Für alle Pläne als Add-on zubuchbar — mehr lokale Sichtbarkeit und Anfragen.</p>
+            <p class="text-xs text-gray-500 leading-relaxed">Simy postet den Jahreskalender (1–4×/Woche), verteilt deinen Foto-Pool (1–3×/Woche), beantwortet neue Reviews automatisch und zeigt Maps-Klicks. Sonst gehen kostenlose Anfragen verloren. <NuxtLink to="/features/google-business-profile" class="underline" style="color: var(--brand-primary);">Was genau läuft</NuxtLink></p>
           </div>
 
           <div class="rounded-2xl border-2 border-gray-100 p-6 bg-white">
@@ -287,12 +287,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { breadcrumbLd, faqPageLd, ldScripts, productOffersLd } from '~/utils/schema'
-import { STARTING_PRICE_CHF, WEBSITE_CARE_CHF, WEBSITE_HOST_CHF, WEBSITE_SETUP_CHF } from '~/data/pricing'
+import { ADDON_GBP_CHF, STARTING_PRICE_CHF, WEBSITE_CARE_CHF, WEBSITE_HOST_CHF, WEBSITE_SETUP_CHF } from '~/data/pricing'
 const { registerCta } = useRegisterCta()
 const { websiteRegisterCta } = useWebsiteRegisterCta()
 const websiteSetup = WEBSITE_SETUP_CHF
 const websiteHost = WEBSITE_HOST_CHF
 const websiteCare = WEBSITE_CARE_CHF
+const gbpAddon = ADDON_GBP_CHF
 
 const openFaq = ref<number | null>(null)
 
@@ -378,14 +379,15 @@ const faqs = [
   { q: 'Wie funktionieren SMS?', a: 'Jeder Plan enthält SMS-Segmente (Starter 20, Professional 50, Enterprise 100 pro Monat). Bestätigungen und Erinnerungen gehen primär per E-Mail; SMS nur wenn keine E-Mail vorhanden ist. Über das Kontingent hinaus verrechnen wir CHF 0.15 pro Segment automatisch auf der nächsten Rechnung.' },
   { q: 'Was passiert mit meinen Daten, wenn ich kündige?', a: 'Du kannst alle deine Daten jederzeit exportieren. Nach der Kündigung werden die Daten für 30 Tage gespeichert, dann endgültig gelöscht.' },
   { q: 'Gibt es Rabatte für mehrere Standorte?', a: 'Ja, für Betriebe mit mehreren Standorten haben wir individuelle Enterprise-Angebote. Kontaktiere uns für ein massgeschneidertes Angebot.' },
-  { q: 'Kann ich nur eine Website ohne Software-Abo?', a: `Ja. Der Website-Generator ist ein eigenes Produkt: einmalig CHF ${WEBSITE_SETUP_CHF} beim Live-Gang, danach Host CHF ${WEBSITE_HOST_CHF} oder Care CHF ${WEBSITE_CARE_CHF} pro Monat. Details auf der Website-Seite.` },
+  { q: 'Kann ich nur eine Website ohne Software-Abo?', a: `Ja. Der Website-Generator ist ein eigenes Produkt: einmalig CHF ${WEBSITE_SETUP_CHF} beim Live-Gang, danach Host CHF ${WEBSITE_HOST_CHF} oder Care CHF ${WEBSITE_CARE_CHF} (inkl. max. 1 Stunde Support / Monat). Details auf der Website-Seite.` },
+  { q: 'Was bringt die Google-Business-Automation?', a: `CHF ${ADDON_GBP_CHF}/Monat. Simy postet den Jahreskalender automatisch, verteilt freigegebene Fotos, beantwortet neue Google-Reviews automatisch und zeigt Insights (Aufrufe, Anrufe, Website-Klicks). Sonst gehen kostenlose Maps-Klicks verloren.` },
 ]
 
 useHead(() => ({
   title: `Preise – Simy | All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat`,
   meta: [
     { name: 'description', content: `Simy Preise: All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar. Transparent, flexibel, fair.` },
-    { name: 'keywords', content: 'Simy preis, all-in-one software kosten, online buchungssystem preis schweiz' },
+    { name: 'keywords', content: 'Simy preis, all-in-one software kosten, online buchungssystem preis schweiz, website hosten schweiz, google business profile preis, website generator preis' },
     { property: 'og:title', content: `Preise – Simy | All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat` },
     { property: 'og:description', content: `Simy Preise: ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar.` },
     { property: 'og:url', content: 'https://simy.ch/preise' },

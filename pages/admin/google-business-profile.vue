@@ -538,8 +538,10 @@
               <label class="block space-y-1">
                 <span class="text-xs font-medium text-gray-600">Review-Antworten</span>
                 <select v-model="settingsForm.review_reply_mode" class="w-full text-sm rounded-lg border border-gray-200 px-3 py-2">
-                  <option value="off">Aus</option>
+                  <option value="auto_all">Automatisch alle beantworten</option>
+                  <option value="auto_ge_4">Automatisch ab 4 Sternen</option>
                   <option value="suggest">KI-Vorschlag, du sendest</option>
+                  <option value="off">Aus</option>
                 </select>
               </label>
               <label class="block space-y-1">
@@ -2764,7 +2766,7 @@ async function linkLocation(location: { locationId: string; title: string; gbpAc
 
 // Settings
 const settingsForm = ref({
-  review_reply_mode: 'suggest',
+  review_reply_mode: 'auto_all',
   posts_per_week: 2,
   photos_per_week: 2,
   photo_mode: 'off',
@@ -2782,7 +2784,7 @@ async function loadSettings() {
     const data = await $fetch<any>('/api/gbp/settings', { query: { scope: 'tenant' } })
     const s = data.settings ?? {}
     settingsForm.value = {
-      review_reply_mode: s.review_reply_mode ?? 'suggest',
+      review_reply_mode: s.review_reply_mode ?? 'auto_all',
       posts_per_week: s.posts_per_week ?? 2,
       photos_per_week: s.photos_per_week ?? 2,
       photo_mode: s.photo_mode ?? 'off',
