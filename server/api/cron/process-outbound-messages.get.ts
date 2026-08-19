@@ -250,16 +250,32 @@ export default defineEventHandler(async (event) => {
               body: message.body,
               data: { path },
             })
-            // Best-effort: mark sent even with 0 devices (no token / Firebase unset)
-            // so the queue does not retry forever. Confirmation already uses the same model.
-            console.log(
-              `[OutboundMessageProcessor] ✅ Push processed for message ${message.id} (sent=${result.sent}, configured=${result.configured})`,
-            )
-            await supabase
-              .from('outbound_messages_queue')
-              .update({ status: 'sent', sent_at: new Date().toISOString() })
-              .eq('id', message.id)
-            sentCount++
+            if (result.sent > 0) {
+              console.log(
+                `[OutboundMessageProcessor] ✅ Push sent for message ${message.id} (sent=${result.sent})`,
+              )
+              await supabase
+                .from('outbound_messages_queue')
+                .update({ status: 'sent', sent_at: new Date().toISOString() })
+                .eq('id', message.id)
+              sentCount++
+            } else {
+              const reason = result.configured
+                ? 'No registered device token'
+                : 'Firebase push not configured'
+              console.warn(
+                `[OutboundMessageProcessor] ⚠️ Push not delivered for message ${message.id}: ${reason}`,
+              )
+              await supabase
+                .from('outbound_messages_queue')
+                .update({
+                  status: 'failed',
+                  error_message: reason,
+                  failed_at: new Date().toISOString(),
+                })
+                .eq('id', message.id)
+              failedCount++
+            }
           } catch (pushError: any) {
             console.error(`[OutboundMessageProcessor] ❌ Failed to send push for message ${message.id}:`, pushError)
             await supabase
