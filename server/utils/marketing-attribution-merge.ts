@@ -57,6 +57,11 @@ export function hasClickId(attr: AttributionFields | null | undefined): boolean 
   return !!(attr?.gclid || attr?.gbraid || attr?.wbraid)
 }
 
+/** Google or Meta click ID — used to decide whether a booking is paid-attributed. */
+export function hasPaidClickId(attr: AttributionFields | null | undefined): boolean {
+  return !!(attr?.gclid || attr?.gbraid || attr?.wbraid || attr?.fbclid)
+}
+
 export function hasAnyAttribution(attr: AttributionFields | null | undefined): boolean {
   if (!attr) return false
   return !!(

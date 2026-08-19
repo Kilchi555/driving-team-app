@@ -556,6 +556,7 @@ const submitInquiry = async () => {
       // First-party DB log so inquiry forms appear in booking_redirects alongside booking clicks
       const sessionId = (window as any).__analyticsSessionId || 'unknown'
       const urlParams = new URLSearchParams(window.location.search)
+      const attr = (window as any).__dtMarketingAttribution ?? {}
       fetch('/api/booking-redirect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -563,10 +564,13 @@ const submitInquiry = async () => {
           session_id: sessionId,
           category: label,
           referrer_page: window.location.pathname,
-          utm_source: urlParams.get('utm_source') || null,
-          utm_medium: urlParams.get('utm_medium') || null,
-          utm_campaign: urlParams.get('utm_campaign') || null,
-          utm_content: urlParams.get('utm_content') || null,
+          utm_source: attr.utm_source || urlParams.get('utm_source') || null,
+          utm_medium: attr.utm_medium || urlParams.get('utm_medium') || null,
+          utm_campaign: attr.utm_campaign || urlParams.get('utm_campaign') || null,
+          utm_content: attr.utm_content || urlParams.get('utm_content') || null,
+          gclid: attr.gclid || urlParams.get('gclid') || null,
+          gbraid: attr.gbraid || urlParams.get('gbraid') || null,
+          wbraid: attr.wbraid || urlParams.get('wbraid') || null,
         }),
       }).catch(() => {})
 

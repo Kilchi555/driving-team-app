@@ -640,7 +640,7 @@ const totalSessions = computed(() => {
   return data.value.ga4.reduce((sum: number, r: any) => sum + (r.sessions ?? 0), 0)
 })
 
-const MARKETING_CHANNELS = ['Organic Search', 'Paid Search', 'Referral', 'Organic Social', 'Email', 'Affiliates']
+const MARKETING_CHANNELS = ['Organic Search', 'Paid Search', 'Paid Social', 'Referral', 'Organic Social', 'Email', 'Affiliates']
 
 const totalConversions = computed(() => {
   if (!data.value?.ga4) return 0
