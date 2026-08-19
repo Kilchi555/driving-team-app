@@ -430,6 +430,14 @@
               Zurück zur Startseite
             </NuxtLink>
           </div>
+
+          <div class="mt-3 flex items-center justify-center gap-3 text-xs text-gray-400">
+            <NuxtLink to="/agb" class="hover:text-gray-600 transition-colors">AGB</NuxtLink>
+            <span>·</span>
+            <NuxtLink to="/datenschutz" class="hover:text-gray-600 transition-colors">Datenschutz</NuxtLink>
+            <span>·</span>
+            <a href="https://simy.ch/impressum" target="_blank" rel="noopener" class="hover:text-gray-600 transition-colors">Impressum</a>
+          </div>
         </div>
       </div>
     </div>
