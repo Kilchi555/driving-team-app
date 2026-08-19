@@ -39,6 +39,10 @@
 	<string>Um Fahrstunden direkt in deinen Kalender zu speichern.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Für schnelles und sicheres Einloggen ohne Passwort.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
