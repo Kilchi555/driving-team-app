@@ -11,7 +11,7 @@
           </button>
         </div>
         <h1 class="text-2xl sm:text-3xl font-bold mb-2">Auftragsverarbeitungsvertrag (AVV)</h1>
-        <p class="text-blue-200 text-sm">Gemäss Art. 28 DSGVO und Art. 9 nDSG | Stand: 1. April 2026</p>
+        <p class="text-blue-200 text-sm">Gemäss Art. 28 DSGVO und Art. 9 nDSG | Stand: 18. August 2026</p>
       </div>
     </div>
 
@@ -55,6 +55,7 @@
             <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
               <p class="text-xs font-bold text-blue-500 uppercase tracking-wide mb-2">Auftragsverarbeiter</p>
               <p class="font-semibold text-gray-900">Simy IT Systems Kilchenmann</p>
+              <p class="text-gray-600">Einzelfirma</p>
               <p class="text-gray-600">Weiherweg 2, 8610 Uster</p>
               <p class="text-gray-600">info@simy.ch</p>
               <p class="text-xs text-blue-600 mt-2">(im Folgenden: «Simy»)</p>
@@ -160,20 +161,57 @@
               <tbody>
                 <tr>
                   <td class="p-3 border border-gray-200 font-medium">Supabase Inc.</td>
-                  <td class="p-3 border border-gray-200">Datenbankhosting, Authentifizierung</td>
-                  <td class="p-3 border border-gray-200">USA / EU</td>
-                  <td class="p-3 border border-gray-200">SCCs, EU-Hosting bevorzugt</td>
+                  <td class="p-3 border border-gray-200">Datenbankhosting (Rechenzentrum Zürich), Authentifizierung</td>
+                  <td class="p-3 border border-gray-200">USA (Unternehmenssitz) / Schweiz (Rechenzentrum)</td>
+                  <td class="p-3 border border-gray-200">SCCs</td>
                 </tr>
                 <tr class="bg-gray-50">
+                  <td class="p-3 border border-gray-200 font-medium">Vercel Inc.</td>
+                  <td class="p-3 border border-gray-200">Hosting der Anwendungsserver</td>
+                  <td class="p-3 border border-gray-200">EU (Frankfurt) / USA</td>
+                  <td class="p-3 border border-gray-200">SCCs</td>
+                </tr>
+                <tr>
                   <td class="p-3 border border-gray-200 font-medium">Wallee Group AG</td>
                   <td class="p-3 border border-gray-200">Zahlungsabwicklung</td>
                   <td class="p-3 border border-gray-200">Schweiz</td>
                   <td class="p-3 border border-gray-200">PCI DSS Level 1</td>
                 </tr>
+                <tr class="bg-gray-50">
+                  <td class="p-3 border border-gray-200 font-medium">Resend Inc.</td>
+                  <td class="p-3 border border-gray-200">Transaktionaler E-Mail-Versand</td>
+                  <td class="p-3 border border-gray-200">USA</td>
+                  <td class="p-3 border border-gray-200">SCCs</td>
+                </tr>
+                <tr>
+                  <td class="p-3 border border-gray-200 font-medium">Twilio Inc.</td>
+                  <td class="p-3 border border-gray-200">SMS-Versand (Einladungen, Erinnerungen, Codes)</td>
+                  <td class="p-3 border border-gray-200">USA</td>
+                  <td class="p-3 border border-gray-200">SCCs</td>
+                </tr>
+                <tr class="bg-gray-50">
+                  <td class="p-3 border border-gray-200 font-medium">OpenAI, L.L.C.</td>
+                  <td class="p-3 border border-gray-200">KI-Erkennung von Beleg-/Rechnungsfotos (Betrag, Datum, IBAN)</td>
+                  <td class="p-3 border border-gray-200">USA</td>
+                  <td class="p-3 border border-gray-200">SCCs, API-Enterprise-Terms (kein Modelltraining auf Kundendaten)</td>
+                </tr>
+                <tr>
+                  <td class="p-3 border border-gray-200 font-medium">Anthropic, PBC</td>
+                  <td class="p-3 border border-gray-200">Simy AI Assistent (Textantworten im Admin-Bereich)</td>
+                  <td class="p-3 border border-gray-200">USA</td>
+                  <td class="p-3 border border-gray-200">SCCs, API-Enterprise-Terms (kein Modelltraining auf Kundendaten)</td>
+                </tr>
+                <tr class="bg-gray-50">
+                  <td class="p-3 border border-gray-200 font-medium">Google LLC</td>
+                  <td class="p-3 border border-gray-200">Simy AI Assistent (Textantworten im Admin-Bereich, Ausweichmodell)</td>
+                  <td class="p-3 border border-gray-200">USA / EU</td>
+                  <td class="p-3 border border-gray-200">SCCs, API-Enterprise-Terms (kein Modelltraining auf Kundendaten)</td>
+                </tr>
               </tbody>
             </table>
           </div>
           <p class="mt-3 text-sm">Simy informiert den Auftraggeber über beabsichtigte Änderungen bei Sub-Prozessoren mindestens <strong>14 Tage</strong> im Voraus. Der Auftraggeber kann gegen die Änderung begründeten Einspruch erheben.</p>
+          <p class="mt-3 text-sm">Die KI-Anbieter (OpenAI, Anthropic, Google) erhalten ausschliesslich die für die jeweilige Funktion nötigen Daten (z. B. ein einzelnes Belegbild oder die Eingabe im Simy-AI-Chat), keinen direkten Datenbankzugriff, und sind vertraglich verpflichtet, diese Daten nicht zum Training eigener Modelle zu verwenden.</p>
         </section>
 
         <!-- §6 -->
@@ -206,10 +244,18 @@
           <p>Dieser AVV unterliegt Schweizer Recht. Gerichtsstand ist Zürich. Im Verhältnis zu EU-ansässigen Kunden gelten ergänzend die Anforderungen der DSGVO, insbesondere Art. 28 DSGVO.</p>
         </section>
 
+        <!-- §9 -->
+        <section id="a9">
+          <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">9. Einsatz von Künstlicher Intelligenz</h2>
+          <p class="mb-3">Simy setzt für einzelne Funktionen KI-Modelle der in Ziffer 5 genannten Anbieter (OpenAI, Anthropic, Google) ein, u. a. zur automatischen Erkennung von Belegen und im "Simy AI"-Assistenten. Diese Funktionen sind für den Auftraggeber im Produkt klar als KI gekennzeichnet.</p>
+          <p class="mb-3">Simy stellt sicher, dass KI-Anbieter nur die für die jeweilige Funktion erforderlichen Daten erhalten, keinen eigenständigen Datenbankzugriff besitzen und die übermittelten Daten vertraglich nicht zum Training eigener Modelle verwenden dürfen.</p>
+          <p>KI-Funktionen treffen keine automatisierten Entscheidungen mit rechtlicher Wirkung oder erheblicher Auswirkung auf betroffene Personen im Sinne von Art. 22 DSGVO. Der Auftraggeber bleibt verantwortlich dafür, seine Endkunden/Schüler nicht über Simy AI zu identifizieren oder deren Personendaten in Freitext-Chatfelder einzugeben.</p>
+        </section>
+
         <!-- Footer -->
         <div class="pt-6 border-t border-gray-100 text-xs text-gray-400">
           <p>Simy IT Systems Kilchenmann · Weiherweg 2 · 8610 Uster · Schweiz</p>
-          <p class="mt-1">Stand: 1. April 2026 · Version 1.0</p>
+          <p class="mt-1">Stand: 18. August 2026 · Version 1.1</p>
           <div class="flex gap-4 mt-3">
             <NuxtLink to="/agb" class="text-blue-500 hover:underline">AGB</NuxtLink>
             <NuxtLink to="/datenschutz" class="text-blue-500 hover:underline">Datenschutz</NuxtLink>
@@ -236,6 +282,7 @@ const toc = [
   { href: '#a6', label: 'Pflichten des Auftraggebers' },
   { href: '#a7', label: 'Datenlöschung nach Vertragsende' },
   { href: '#a8', label: 'Anwendbares Recht' },
+  { href: '#a9', label: 'Einsatz von Künstlicher Intelligenz' },
 ]
 
 function scrollTo(href: string) {
@@ -265,5 +312,8 @@ const toms = [
   { title: 'Zugangsprotokollierung', desc: 'Login-Versuche und Admin-Aktionen werden protokolliert (90 Tage).' },
   { title: 'Incident Response', desc: 'Dokumentierter Prozess; Kundenmeldung bei Datenpanne innerhalb 72h.' },
   { title: 'Patch-Management', desc: 'Kritische Sicherheits-Updates innerhalb von 30 Tagen nach Release.' },
+  { title: 'Support-Zugriff (Impersonation)', desc: 'Simy-Mitarbeitende können sich zu Support-Zwecken zeitlich begrenzt als Nutzer einloggen. Jede Sitzung wird protokolliert (Akteur, Ziel, IP, Zeitraum) und ist jederzeit widerrufbar.' },
+  { title: 'Entwickler- und Tooling-Zugriff', desc: 'Zugriff von Entwicklungswerkzeugen (inkl. KI-gestützter Coding-Tools) auf Produktionsdaten ist auf autorisiertes Personal beschränkt, projektbezogen begrenzt und wird nach dem Prinzip der minimalen Rechtevergabe konfiguriert.' },
+  { title: 'Zugangsdaten- und Schlüsselrotation', desc: 'Zugriffstoken und API-Schlüssel werden regelmässig überprüft und rotiert sowie umgehend widerrufen bei Personalwechsel, Auftragsende oder Verdacht auf Kompromittierung. Details regelt ein internes Zugriffs- und Secrets-Reglement.' },
 ]
 </script>

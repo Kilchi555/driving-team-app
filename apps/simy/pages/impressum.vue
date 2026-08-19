@@ -44,11 +44,11 @@ useHead({
 const blocks = [
   {
     title: 'Firmenangaben',
-    content: 'Simy IT Systems\nPascal Kilchenmann\nSchweiz',
+    content: 'Simy IT Systems Kilchenmann\nRechtsform: Einzelfirma\nInhaber: Pascal Kilchenmann\nWeiherweg 2\n8610 Uster\nSchweiz',
   },
   {
     title: 'Kontakt',
-    content: 'E-Mail: info@simy.ch\nWebsite: https://simy.ch',
+    content: 'E-Mail: info@simy.ch\nTelefon: +41 79 715 70 27\nWebsite: https://simy.ch',
   },
   {
     title: 'Vertretungsberechtigte Person',

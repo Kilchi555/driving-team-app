@@ -383,8 +383,10 @@
       :style="{ background: `linear-gradient(135deg, ${primaryColor || '#1e293b'} 0%, ${secondaryColor || '#334155'} 100%)` }">
       <div class="mx-auto px-4 sm:px-6 flex items-center">
         <div class="flex-1" />
-        <div class="text-center text-xs text-white/50">
+        <div class="text-center text-xs text-white/50 flex items-center gap-2">
           <span>Powered by <a href="https://simy.ch" target="_blank" rel="noopener" class="hover:text-white/80 transition-colors">Simy.ch</a></span>
+          <span class="text-white/30">·</span>
+          <a href="https://simy.ch/impressum" target="_blank" rel="noopener" class="hover:text-white/80 transition-colors">Impressum</a>
         </div>
         <div class="flex-1 flex justify-end">
           <button

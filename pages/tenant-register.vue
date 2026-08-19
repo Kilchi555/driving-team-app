@@ -1834,6 +1834,7 @@
               Ich akzeptiere die <NuxtLink to="/agb" target="_blank" class="text-blue-600 hover:underline font-medium">Nutzungsbedingungen</NuxtLink>
               und die <NuxtLink to="/datenschutz" target="_blank" class="text-blue-600 hover:underline font-medium">Datenschutzerklärung</NuxtLink>
               (inkl. <NuxtLink to="/avv" target="_blank" class="text-blue-600 hover:underline font-medium">AVV</NuxtLink>).
+              <a href="https://simy.ch/impressum" target="_blank" class="text-blue-600 hover:underline font-medium">Impressum</a>
             </span>
           </div>
         </div>
