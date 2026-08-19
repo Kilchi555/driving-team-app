@@ -13,40 +13,51 @@
  * database — no GA4 property access needed for this specific campaign.
  * The RPC only allows inserting into that one table (security definer,
  * narrow grant to anon), so the publishable key used here can't do anything
- * else. Logging failures never block the redirect.
+ * else. This is awaited (with a short timeout) rather than fire-and-forget:
+ * on Vercel, work started after the response is sent can be cut off, so a
+ * true "background" write isn't reliable here. Logging failures/timeouts
+ * never block the redirect.
  */
 import { defineEventHandler, getHeader, getQuery, sendRedirect, type H3Event } from 'h3'
 
 const DEFAULT_CAMPAIGN = 'fahrlehrer-empfehlung'
 const TARGET_PATH = '/fahrschule'
+const LOG_TIMEOUT_MS = 2000
 
-function logClickInBackground(campaign: string, targetPath: string, event: H3Event) {
+async function logClick(campaign: string, targetPath: string, event: H3Event) {
   const supabaseUrl = process.env.SUPABASE_URL
   const supabaseKey = process.env.SUPABASE_ANON_KEY
   if (!supabaseUrl || !supabaseKey) return
 
   const userAgent = getHeader(event, 'user-agent') ?? null
   const referrer = getHeader(event, 'referer') ?? null
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), LOG_TIMEOUT_MS)
 
-  fetch(`${supabaseUrl}/rest/v1/rpc/log_sms_link_click`, {
-    method: 'POST',
-    headers: {
-      apikey: supabaseKey,
-      Authorization: `Bearer ${supabaseKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      p_campaign: campaign,
-      p_target_path: targetPath,
-      p_user_agent: userAgent,
-      p_referrer: referrer,
-    }),
-  }).catch(() => {
-    // Never block the redirect on logging failures.
-  })
+  try {
+    await fetch(`${supabaseUrl}/rest/v1/rpc/log_sms_link_click`, {
+      method: 'POST',
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        p_campaign: campaign,
+        p_target_path: targetPath,
+        p_user_agent: userAgent,
+        p_referrer: referrer,
+      }),
+      signal: controller.signal,
+    })
+  } catch {
+    // Never block the redirect on logging failures/timeouts.
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const raw = typeof query.c === 'string' ? query.c.trim() : ''
   const campaign = raw ? raw.slice(0, 60) : DEFAULT_CAMPAIGN
@@ -57,7 +68,7 @@ export default defineEventHandler((event) => {
     utm_campaign: campaign,
   })
 
-  logClickInBackground(campaign, TARGET_PATH, event)
+  await logClick(campaign, TARGET_PATH, event)
 
   return sendRedirect(event, `${TARGET_PATH}?${params.toString()}`, 302)
 })
