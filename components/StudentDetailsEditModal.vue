@@ -336,7 +336,7 @@ async function saveChanges() {
     isSaving.value = true
     saveError.value = null
 
-    await $fetch('/api/staff/update-student-details', {
+    const response = await $fetch<{ success: boolean; data?: Record<string, any> }>('/api/staff/update-student-details', {
       method: 'POST',
       body: {
         user_id: props.student.id,
@@ -344,13 +344,21 @@ async function saveChanges() {
       }
     })
 
-    logger.debug('✅ Student details updated:', formData.value)
-    emit('save', formData.value)
+    const saved = {
+      ...formData.value,
+      ...(response?.data || {})
+    }
+    logger.debug('✅ Student details updated:', saved)
+    emit('save', saved)
 
     setTimeout(() => emit('close'), 300)
   } catch (error: any) {
     logger.error('❌ Error updating student details:', error)
-    saveError.value = error.data?.statusMessage || error.data?.message || error.message || 'Fehler beim Speichern'
+    saveError.value =
+      error.data?.statusMessage
+      || error.statusMessage
+      || error.data?.message
+      || 'Die Angaben konnten nicht gespeichert werden.'
   } finally {
     isSaving.value = false
   }
