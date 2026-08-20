@@ -118,3 +118,57 @@ export async function loadPayrollCalendarHours(
   }
   return result
 }
+
+export function summarizeStaffYearHours(
+  appointments: CountableApt[],
+  staffId: string,
+  year: number,
+): number {
+  let actual = 0
+  for (const apt of appointments) {
+    if (apt.staff_id !== staffId || !apt.start_time) continue
+    if (zurichYear(apt.start_time) !== year) continue
+    if (!shouldCountAppointment({ status: apt.status || '', payments: apt.payments })) continue
+    if (apt.event_type_code === 'vacation') continue
+    actual += appointmentHours(apt)
+  }
+  return Math.round(actual * 100) / 100
+}
+
+export async function loadPayrollCalendarHoursYear(
+  supabase: { from: (table: string) => any },
+  tenantId: string,
+  year: number,
+  staffIds: string[],
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>()
+  if (!staffIds.length) return result
+
+  const from = new Date(Date.UTC(year - 1, 11, 30)).toISOString()
+  const to = new Date(Date.UTC(year + 1, 0, 3)).toISOString()
+  const apts: CountableApt[] = []
+  const pageSize = 1000
+  let offset = 0
+  while (true) {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('staff_id, start_time, duration_minutes, event_type_code, status, payments(payment_status)')
+      .eq('tenant_id', tenantId)
+      .in('staff_id', staffIds)
+      .gte('start_time', from)
+      .lt('start_time', to)
+      .neq('status', 'deleted')
+      .order('start_time', { ascending: true })
+      .range(offset, offset + pageSize - 1)
+    if (error) throw new Error(error.message)
+    if (!data?.length) break
+    apts.push(...data)
+    if (data.length < pageSize) break
+    offset += pageSize
+  }
+
+  for (const id of staffIds) {
+    result.set(id, summarizeStaffYearHours(apts, id, year))
+  }
+  return result
+}

@@ -5,7 +5,7 @@
     <div class="flex items-center justify-between flex-wrap gap-3">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">Lohnbuchhaltung</h1>
-        <p class="text-sm text-gray-500 mt-0.5">Mitarbeiter, Lohnabrechnungen & Rentabilität</p>
+        <p class="text-sm text-gray-500 mt-0.5">Mitarbeiter, Lohnabrechnungen, Rentabilität & Budget</p>
       </div>
       <div class="flex items-center gap-2">
         <select v-model="selectedYear" @change="loadAll"
@@ -314,12 +314,20 @@
           :class="profitView === 'overall' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
           Gesamt
         </button>
+        <button @click="profitView = 'budget'"
+          class="px-3 py-1.5 rounded-lg font-medium transition-all"
+          :class="profitView === 'budget' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
+          Budget
+        </button>
         <button @click="profitView = 'instructors'"
           class="px-3 py-1.5 rounded-lg font-medium transition-all"
           :class="profitView === 'instructors' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
           Pro {{ t.staff }}
         </button>
       </div>
+      <p class="text-xs text-gray-400">
+        Gesamt und Budget kommen aus der Buchhaltung. Löhne zählen nur als bezahlte Lohnbuchung, nicht zusätzlich aus der Lohnabrechnung.
+      </p>
 
       <!-- ── OVERALL VIEW ── -->
       <template v-if="profitView === 'overall'">
@@ -347,7 +355,7 @@
           <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Break-Even / Monat</p>
             <p class="text-2xl font-bold text-gray-900">{{ chf(profitability?.summary.break_even_monthly_rappen ?? 0) }}</p>
-            <p class="text-xs text-gray-400 mt-1">Mindest-Umsatz nötig</p>
+            <p class="text-xs text-gray-400 mt-1">Ø Kosten über {{ profitability?.closed_months || 0 }} Monate</p>
           </div>
         </div>
 
@@ -408,7 +416,7 @@
               <div class="flex justify-between items-center">
                 <span class="text-sm text-gray-600">Ø Umsatz / Monat</span>
                 <span class="font-semibold text-emerald-600">
-                  {{ chf(Math.round((profitability?.summary.total_revenue_rappen ?? 0) / 12)) }}
+                  {{ chf(profitability?.summary.avg_monthly_revenue_rappen ?? 0) }}
                 </span>
               </div>
               <div class="border-t border-gray-100 pt-3 flex justify-between items-center">
@@ -418,6 +426,77 @@
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="profitView === 'budget'">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div class="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p class="text-sm font-semibold text-gray-700">Jahresbudget {{ selectedYear }}</p>
+              <p class="text-xs text-gray-400 mt-0.5">
+                {{ budgetSaved ? 'Gespeichertes Soll' : 'Vorschlag aus Vorjahr bzw. wiederkehrenden Buchungen' }} — Ist aus der Buchhaltung.
+              </p>
+            </div>
+            <button
+              v-if="canWriteBooks"
+              type="button"
+              :disabled="savingBudget"
+              class="px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+              @click="saveBudget"
+            >{{ savingBudget ? 'Speichern…' : 'Budget speichern' }}</button>
+          </div>
+          <div v-if="budgetLines.length === 0" class="px-5 py-12 text-center text-gray-400 text-sm">
+            Keine Kategorien oder Buchungen für ein Budget. Zuerst Kategorien in der Buchhaltung anlegen.
+          </div>
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+                  <th class="px-5 py-3 text-left">Kategorie</th>
+                  <th class="px-5 py-3 text-right">Soll</th>
+                  <th class="px-5 py-3 text-right">Ist</th>
+                  <th class="px-5 py-3 text-right">Abweichung</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-50">
+                <tr v-for="line in budgetLines" :key="line.key" class="hover:bg-gray-50">
+                  <td class="px-5 py-3">
+                    <p class="font-medium text-gray-900">{{ line.name }}</p>
+                    <p class="text-xs text-gray-400">{{ line.type === 'income' ? 'Einnahme' : 'Ausgabe' }}</p>
+                  </td>
+                  <td class="px-5 py-3 text-right">
+                    <input
+                      v-if="canWriteBooks"
+                      :value="(line.budget_rappen / 100).toFixed(0)"
+                      type="number"
+                      min="0"
+                      step="100"
+                      class="w-28 ml-auto block text-right border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
+                      @change="setBudgetChf(line.key, ($event.target as HTMLInputElement).value)"
+                    >
+                    <span v-else class="font-medium">{{ chf(line.budget_rappen) }}</span>
+                  </td>
+                  <td class="px-5 py-3 text-right text-gray-700">{{ chf(line.actual_rappen) }}</td>
+                  <td class="px-5 py-3 text-right font-semibold"
+                    :class="budgetDeltaClass(line)">
+                    {{ line.delta_rappen > 0 ? '+' : '' }}{{ chf(line.delta_rappen) }}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot class="border-t-2 border-gray-200 bg-gray-50">
+                <tr>
+                  <td class="px-5 py-3 font-bold">Ergebnis Soll / Ist</td>
+                  <td class="px-5 py-3 text-right font-bold">{{ chf(budgetResult.budget) }}</td>
+                  <td class="px-5 py-3 text-right font-bold">{{ chf(budgetResult.actual) }}</td>
+                  <td class="px-5 py-3 text-right font-bold"
+                    :class="budgetResult.actual >= budgetResult.budget ? 'text-emerald-700' : 'text-red-600'">
+                    {{ chf(budgetResult.actual - budgetResult.budget) }}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
       </template>
@@ -434,7 +513,8 @@
           <!-- Summary bar per instructor -->
           <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100 bg-gray-50">
-              <span class="text-sm font-semibold text-gray-700">Rentabilität pro {{ t.staff }} {{ selectedYear }}</span>
+              <span class="text-sm font-semibold text-gray-700">Deckungsbeitrag pro {{ t.staff }} {{ selectedYear }}</span>
+              <p class="text-xs text-gray-400 mt-0.5">Nur eigener Umsatz und Lohn. Miete, Autos und übrige Gemeinkosten bleiben im Gesamt.</p>
             </div>
             <table class="w-full">
               <thead>
@@ -444,7 +524,7 @@
                   <th class="px-5 py-3 text-right">Lohnkosten AG</th>
                   <th class="px-5 py-3 text-right">Ergebnis</th>
                   <th class="px-5 py-3 text-right">Marge</th>
-                  <th class="px-5 py-3 text-center">Stunden</th>
+                  <th class="px-5 py-3 text-right">Stunden</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-50">
@@ -472,8 +552,8 @@
                     </span>
                     <span v-else class="text-xs text-gray-400">–</span>
                   </td>
-                  <td class="px-5 py-4 text-center text-sm text-gray-500">
-                    {{ inst.payments_count > 0 ? inst.payments_count : '–' }}
+                  <td class="px-5 py-4 text-right text-sm text-gray-500">
+                    {{ inst.hours > 0 ? `${inst.hours} h` : '–' }}
                   </td>
                 </tr>
               </tbody>
@@ -1112,6 +1192,18 @@ const activeTab = ref<'employees' | 'runs' | 'profitability'>('employees')
 const employees = ref<PayrollEmployee[]>([])
 const runs = ref<PayrollRun[]>([])
 const profitability = ref<any>(null)
+const budgetLines = ref<Array<{
+  key: string
+  type: 'income' | 'expense'
+  category_id: string | null
+  name: string
+  budget_rappen: number
+  actual_rappen: number
+  suggested_rappen: number
+  delta_rappen: number
+}>>([])
+const budgetSaved = ref(false)
+const savingBudget = ref(false)
 
 const showEmployeeModal = ref(false)
 const editingEmployee = ref<PayrollEmployee | null>(null)
@@ -1121,7 +1213,7 @@ const paying = ref<string | null>(null)
 const exportingPayslip = ref<string | null>(null)
 const exportingPayslips = ref(false)
 const canWriteBooks = ref(true)
-const profitView = ref<'overall' | 'instructors'>('overall')
+const profitView = ref<'overall' | 'budget' | 'instructors'>('overall')
 const errorMsg = ref<string | null>(null)
 const staffUsers = ref<Array<{ id: string; first_name: string; last_name: string; email: string; already_linked: boolean }>>([])
 const selectedStaffUserId = ref('')
@@ -1223,8 +1315,21 @@ const maxMonthlyRevenue = computed(() => {
 
 const coverageRatio = computed(() => {
   const s = profitability.value?.summary
-  if (!s || s.break_even_monthly_rappen === 0) return 1
-  return (s.total_revenue_rappen / 12) / s.break_even_monthly_rappen
+  if (!s) return 1
+  if (typeof s.coverage_ratio === 'number') return s.coverage_ratio
+  if (!s.break_even_monthly_rappen) return 1
+  return (s.avg_monthly_revenue_rappen || 0) / s.break_even_monthly_rappen
+})
+
+const budgetResult = computed(() => {
+  const incomeBudget = budgetLines.value.filter(l => l.type === 'income').reduce((s, l) => s + l.budget_rappen, 0)
+  const expenseBudget = budgetLines.value.filter(l => l.type === 'expense').reduce((s, l) => s + l.budget_rappen, 0)
+  const incomeActual = budgetLines.value.filter(l => l.type === 'income').reduce((s, l) => s + l.actual_rappen, 0)
+  const expenseActual = budgetLines.value.filter(l => l.type === 'expense').reduce((s, l) => s + l.actual_rappen, 0)
+  return {
+    budget: incomeBudget - expenseBudget,
+    actual: incomeActual - expenseActual,
+  }
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1276,7 +1381,7 @@ const selfAhvResult = computed(() => {
 
 // ─── Data loading ─────────────────────────────────────────────────────────────
 async function loadAll() {
-  await Promise.all([loadEmployees(), loadRuns(), loadProfitability(), loadLegalInfo(), loadAccountantAccess()])
+  await Promise.all([loadEmployees(), loadRuns(), loadProfitability(), loadBudget(), loadLegalInfo(), loadAccountantAccess()])
 }
 
 async function loadAccountantAccess() {
@@ -1306,6 +1411,57 @@ async function loadProfitability() {
   try {
     profitability.value = await $fetch(`/api/admin/payroll/profitability?year=${selectedYear.value}`)
   } catch { profitability.value = null }
+}
+
+async function loadBudget() {
+  try {
+    const data = await $fetch<{
+      saved?: boolean
+      lines?: typeof budgetLines.value
+    }>(`/api/admin/accounting/budget?year=${selectedYear.value}`)
+    budgetSaved.value = !!data.saved
+    budgetLines.value = (data.lines || []).map(line => ({
+      ...line,
+      delta_rappen: line.actual_rappen - line.budget_rappen,
+    }))
+  } catch {
+    budgetLines.value = []
+    budgetSaved.value = false
+  }
+}
+
+function setBudgetChf(key: string, raw: string) {
+  const line = budgetLines.value.find(l => l.key === key)
+  if (!line) return
+  line.budget_rappen = Math.max(0, Math.round((Number(raw) || 0) * 100))
+  line.delta_rappen = line.actual_rappen - line.budget_rappen
+}
+
+function budgetDeltaClass(line: { type: string; delta_rappen: number }) {
+  if (line.type === 'income') return line.delta_rappen >= 0 ? 'text-emerald-600' : 'text-red-500'
+  return line.delta_rappen <= 0 ? 'text-emerald-600' : 'text-red-500'
+}
+
+async function saveBudget() {
+  savingBudget.value = true
+  try {
+    await $fetch('/api/admin/accounting/budget', {
+      method: 'PUT',
+      body: {
+        year: selectedYear.value,
+        lines: budgetLines.value.map(line => ({
+          type: line.type,
+          category_id: line.category_id,
+          amount_rappen: line.budget_rappen,
+        })),
+      },
+    })
+    await loadBudget()
+  } catch (e: any) {
+    alert(e?.statusMessage || e?.message || 'Budget speichern fehlgeschlagen')
+  } finally {
+    savingBudget.value = false
+  }
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -1506,7 +1662,7 @@ async function payRun(run: PayrollRun) {
   paying.value = run.id
   try {
     await $fetch(`/api/admin/payroll/runs/${run.id}/pay`, { method: 'POST' })
-    await Promise.all([loadRuns(), loadProfitability()])
+    await Promise.all([loadRuns(), loadProfitability(), loadBudget()])
   } catch (e: any) {
     alert(e.data?.message ?? 'Fehler beim Bezahlen')
   } finally {
