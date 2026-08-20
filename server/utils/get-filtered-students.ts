@@ -5,6 +5,7 @@
 // pages/customers.vue and components/users/CustomersTab.vue. Keep this
 // logic in one place so all UIs always show exactly the same list.
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { isStudentCompleted } from '~/utils/student-exam'
 
 export interface GetFilteredStudentsOptions {
   tenantId: string
@@ -14,21 +15,6 @@ export interface GetFilteredStudentsOptions {
   showInactive: boolean
   /** Staff privilege: see all tenant students without admin role / Alle toggle */
   canViewAllStudents?: boolean
-}
-
-// Normalizes both sides: "B Automatik" -> "B" to match exam_passed_categories
-const isCategoryPassed = (student: any, cat: string): boolean => {
-  const passed: string[] = student.exam_passed_categories || []
-  if (!passed.length) return false
-  const normalizedCat = cat.trim().split(' ')[0]
-  return passed.some((p: string) => p === cat || p === normalizedCat)
-}
-
-// A student is "completed" if they have enrolled categories and ALL are passed
-const isStudentCompleted = (student: any): boolean => {
-  const categories: string[] = student.category || []
-  if (!categories.length) return false
-  return categories.every((cat: string) => isCategoryPassed(student, cat))
 }
 
 // ✅ Explicit allowlist of fields the client is actually allowed to see.
