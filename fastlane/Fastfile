@@ -29,16 +29,15 @@ def load_client_config
   JSON.parse(File.read(config_path))
 end
 
-def match_api_key
-  {
-    key_id:      ENV['APPLE_API_KEY_ID'],
-    issuer_id:   ENV['APPLE_API_ISSUER_ID'],
-    key_content: ENV['APPLE_API_KEY_CONTENT'] || File.read(
-      File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8")
-    ),
-    is_key_content_base64: !!ENV['APPLE_API_KEY_CONTENT'],
-    in_house: false,
-  }
+def connect_api_key
+  p8 = File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8")
+  UI.user_error!("App Store Connect .p8 missing: #{p8}") unless File.exist?(p8)
+  app_store_connect_api_key(
+    key_id:        ENV['APPLE_API_KEY_ID'],
+    issuer_id:     ENV['APPLE_API_ISSUER_ID'],
+    key_filepath:  p8,
+    in_house:      false,
+  )
 end
 
 # ─── iOS Platform ─────────────────────────────────────────────────────────────
@@ -52,14 +51,21 @@ platform :ios do
     client = load_client_config
     setup_ci if is_ci
 
+    git_url = ENV['MATCH_GIT_URL'].to_s.strip
+    git_url = 'https://github.com/Kilchi555/simy-certificates.git' if git_url.empty?
+    UI.user_error!('MATCH_PASSWORD is missing (GitHub secret / .env). Needed to decrypt Match certs.') if ENV['MATCH_PASSWORD'].to_s.strip.empty?
+    UI.user_error!('MATCH_GIT_TOKEN is missing. CI needs a PAT with access to the Match repo.') if ENV['MATCH_GIT_TOKEN'].to_s.strip.empty?
+
     match(
       type:                'appstore',
       app_identifier:      client['bundleId'],
-      git_url:             ENV['MATCH_GIT_URL'],
+      git_url:             git_url,
+      git_branch:          'main',
       git_basic_authorization: Base64.strict_encode64("x-access-token:#{ENV['MATCH_GIT_TOKEN']}"),
       readonly:            is_ci,
       team_id:             ENV['APPLE_TEAM_ID'],
-      api_key:             match_api_key,
+      skip_confirmation:    true,
+      api_key:             connect_api_key,
     )
   end
 
@@ -69,14 +75,8 @@ platform :ios do
   lane :create_app do
     client = load_client_config
 
-    api_key = app_store_connect_api_key(
-      key_id:        ENV['APPLE_API_KEY_ID'],
-      issuer_id:     ENV['APPLE_API_ISSUER_ID'],
-      key_filepath:  File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8"),
-      in_house:      false,
-    )
-
     produce(
+      api_key:        connect_api_key,
       app_identifier: client['bundleId'],
       app_name:       client['appName'],
       language:       'German',
@@ -98,12 +98,7 @@ platform :ios do
 
     UI.message("🚀 Deploying #{app_name} (#{bundle_id}) v#{version} → #{target}")
 
-    api_key = app_store_connect_api_key(
-      key_id:        ENV['APPLE_API_KEY_ID'],
-      issuer_id:     ENV['APPLE_API_ISSUER_ID'],
-      key_filepath:  File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8"),
-      in_house:      false,
-    )
+    api_key = connect_api_key
 
     sh("cd .. && CLIENT=#{client['clientId']} node scripts/gen-cap-config.mjs")
     sh('cd .. && npx cap sync ios')
