@@ -10,7 +10,6 @@ import {
   extraServicesToLanding,
   normalizeExtraProducts,
   normalizeExtraServices,
-  normalizeMeetingPoints,
   normalizeTeamMembers,
   normalizeUsps,
   websitePublishContentMissing,
@@ -18,10 +17,6 @@ import {
 import { hasUsableGoogleReviews } from '~/utils/website-google-reviews'
 import { loadWebsitePickupOffer } from '~/server/utils/website-pickup'
 import { mapStaffToTeam } from '~/server/utils/website-premium'
-import {
-  loadWebsitePublicLocations,
-  mergeWebsiteMeetingPoints,
-} from '~/server/utils/website-public-tenant'
 
 function appBaseUrl(event: any) {
   const fromEnv = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL
@@ -153,11 +148,7 @@ export default defineEventHandler(async (event) => {
 
   const usps = normalizeUsps(body.usps)
   const teamMembers = normalizeTeamMembers(body.teamMembers || body.team)
-  const meetingPoints = mergeWebsiteMeetingPoints(
-    normalizeMeetingPoints(body.meetingPoints || body.meeting_points).filter((p) => p.visible),
-    await loadWebsitePublicLocations(supabase, tenant.id),
-    false,
-  )
+  const meetingPoints: Array<{ id: string; name: string; address?: string }> = []
 
   // Testimonials: prefer explicit payload (manual wizard entries). No app-rating fallback.
   let testimonials: LandingTestimonial[] = []

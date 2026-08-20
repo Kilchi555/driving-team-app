@@ -1,0 +1,2 @@
+ALTER TABLE public.payroll_runs
+  ADD COLUMN IF NOT EXISTS vacation_hours numeric;

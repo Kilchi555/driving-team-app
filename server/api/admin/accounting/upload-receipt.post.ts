@@ -1,9 +1,9 @@
 import { defineEventHandler, readMultipartFormData, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { requireAccountingAccess } from '~/server/utils/accountant-access'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event)
+  const profile = await requireAccountingAccess(event, { write: true })
   const supabase = getSupabaseAdmin()
 
   const formData = await readMultipartFormData(event)

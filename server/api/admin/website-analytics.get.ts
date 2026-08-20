@@ -3,6 +3,7 @@ import { requireAdminProfile } from '~/server/utils/auth'
 
 const EMPTY = {
   totalViews: 0,
+  ctaClicks: 0,
   topPages: [] as { page: string; views: number }[],
   sources: {} as Record<string, number>,
   devices: {} as Record<string, number>,
@@ -67,7 +68,7 @@ export default defineEventHandler(async (event) => {
     .from('website_analytics_events')
     .select('event_type, event_url, referrer, user_agent, created_at')
     .eq('website_id', website.id)
-    .in('event_type', ['pageview', 'page_view'])
+    .in('event_type', ['pageview', 'page_view', 'cta_click'])
     .gte('created_at', sinceIso)
     .limit(20000)
 
@@ -80,8 +81,10 @@ export default defineEventHandler(async (event) => {
   const sourceMap: Record<string, number> = {}
   const deviceMap: Record<string, number> = {}
   const dailyMap: Record<string, number> = {}
+  const views = (rows || []).filter((r) => r.event_type === 'pageview' || r.event_type === 'page_view')
+  const clicks = (rows || []).filter((r) => r.event_type === 'cta_click')
 
-  for (const row of rows || []) {
+  for (const row of views) {
     const page = pagePath(row.event_url, website.subdomain)
     pageMap[page] = (pageMap[page] || 0) + 1
 
@@ -105,7 +108,8 @@ export default defineEventHandler(async (event) => {
     .map(([date, views]) => ({ date, views }))
 
   return {
-    totalViews: (rows || []).length,
+    totalViews: views.length,
+    ctaClicks: clicks.length,
     topPages,
     sources: sourceMap,
     devices: deviceMap,

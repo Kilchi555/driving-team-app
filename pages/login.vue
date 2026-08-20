@@ -770,6 +770,8 @@ const handlePasskeyLogin = async () => {
       let redirectPath = '/'
       if (role === 'admin' || role === 'tenant_admin' || role === 'superadmin') {
         redirectPath = '/admin/dashboard'
+      } else if (role === 'accountant') {
+        redirectPath = '/admin/accounting'
       } else if (role === 'staff') {
         redirectPath = '/staff/dashboard'
       } else if (role === 'client') {
@@ -805,6 +807,8 @@ const handleBackupCodeLogin = async () => {
       let redirectPath = '/'
       if (role === 'admin' || role === 'tenant_admin' || role === 'superadmin') {
         redirectPath = '/admin/dashboard'
+      } else if (role === 'accountant') {
+        redirectPath = '/admin/accounting'
       } else if (role === 'staff') {
         redirectPath = '/staff/dashboard'
       } else if (role === 'client') {
@@ -1048,6 +1052,8 @@ const handleLogin = async () => {
             // Weiterleitung basierend auf Rolle
             if (user.role === 'admin' || user.role === 'tenant_admin') {
               redirectPath = adminHomePath(!!tenant.website_only)
+            } else if (user.role === 'accountant') {
+              redirectPath = '/admin/accounting'
             } else if (user.role === 'staff') {
               redirectPath = '/dashboard'
             } else {
@@ -1190,6 +1196,8 @@ const handleMFAVerify = async () => {
         }
         if (user.role === 'admin' || user.role === 'tenant_admin') {
           redirectPath = adminHomePath(!!tenant.website_only)
+        } else if (user.role === 'accountant') {
+          redirectPath = '/admin/accounting'
         } else if (user.role === 'staff') {
           redirectPath = '/dashboard'
         } else {
@@ -1399,6 +1407,8 @@ onMounted(async () => {
       redirectPath = '/tenant-admin'
     } else if (user?.role === 'admin' || user?.role === 'tenant_admin') {
       redirectPath = adminHomePath(!!authStore.tenantTrialInfo?.website_only)
+    } else if (user?.role === 'accountant') {
+      redirectPath = '/admin/accounting'
     } else if (user?.role === 'staff') {
       redirectPath = '/dashboard'
     }

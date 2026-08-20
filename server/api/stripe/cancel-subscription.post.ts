@@ -2,6 +2,7 @@ import Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { sendEmail } from '~/server/utils/email'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { readBody } from 'h3'
 
 // Cancels the subscription with 1-month notice, effective end of the month
 // after the notice period (e.g. cancel on Apr 15 → effective May 31)
@@ -22,9 +23,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Only admins can cancel subscriptions' })
   }
 
+  const body = await readBody<{ accounting_export_ack?: boolean }>(event).catch(() => ({} as { accounting_export_ack?: boolean }))
+
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('stripe_subscription_id, subscription_cancel_at, name, contact_email, subscription_plan')
+    .select('stripe_subscription_id, subscription_cancel_at, name, contact_email, subscription_plan, accounting_export_completed_at')
     .eq('id', tenantId)
     .single()
 
@@ -34,6 +37,27 @@ export default defineEventHandler(async (event) => {
 
   if (tenant.subscription_cancel_at) {
     throw createError({ statusCode: 409, statusMessage: 'Cancellation already scheduled' })
+  }
+
+  const { count: entryCount } = await supabase
+    .from('accounting_entries')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .is('deleted_at', null)
+
+  if ((entryCount ?? 0) > 0) {
+    if (!body?.accounting_export_ack) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Bitte zuerst die Buchhaltungsdaten exportieren und die Bestätigung setzen (OR Art. 958f).',
+      })
+    }
+    if (!tenant.accounting_export_completed_at) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Bitte den vollständigen Buchhaltungs-Export herunterladen, bevor Sie kündigen.',
+      })
+    }
   }
 
   // ── Calculate cancel_at: end of month, at least 1 month from now ────────

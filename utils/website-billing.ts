@@ -10,7 +10,7 @@ export const WEBSITE_HOSTING_PLANS = ['host', 'care'] as const
 export type WebsiteHostingPlan = (typeof WEBSITE_HOSTING_PLANS)[number]
 
 export const WEBSITE_HOSTING_META: Record<WebsiteHostingPlan, { label: string; chf: number; envKey: string }> = {
-  host: { label: 'Hosting', chf: 29, envKey: WEBSITE_PRICE_ENV.host },
+  host: { label: 'Hosting', chf: 19, envKey: WEBSITE_PRICE_ENV.host },
   care: { label: 'Care', chf: 49, envKey: WEBSITE_PRICE_ENV.care },
 }
 
@@ -38,6 +38,22 @@ export function isWebsiteHostingLocked(info: WebsiteBillingInfo | null | undefin
 
 export function isWebsiteSetupPaid(info: WebsiteBillingInfo | null | undefined): boolean {
   return !!info?.website_setup_paid_at
+}
+
+/** Website-only: live publish needs setup fee + hosting. Preview stays free. */
+export function websitePublishBlockedReason(
+  tenant: WebsiteBillingInfo | null | undefined,
+): 'hosting' | 'setup' | null {
+  if (!tenant?.website_only) return null
+  if (!tenant.website_setup_paid_at) return 'setup'
+  if (!isWebsiteHostingPlan(tenant.website_hosting_plan)) return 'hosting'
+  return null
+}
+
+export function websitePublishBlockedMessage(reason: 'hosting' | 'setup'): string {
+  return reason === 'hosting'
+    ? 'Hosting-Abo erforderlich, bevor die Website live geht.'
+    : 'Die einmalige Website-Gebühr ist fällig, bevor die Homepage live geht.'
 }
 
 /** When hosting is locked, only billing + profile stay open. */

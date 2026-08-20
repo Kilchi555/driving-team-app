@@ -23,7 +23,7 @@
         </button>
 
         <!-- Brand -->
-        <NuxtLink :to="isWebsiteOnly ? '/admin/website' : '/admin'" class="flex items-center gap-2.5 flex-shrink-0 min-w-0 group">
+        <NuxtLink :to="isAccountant ? '/admin/accounting' : (isWebsiteOnly ? '/admin/website' : '/admin')" class="flex items-center gap-2.5 flex-shrink-0 min-w-0 group">
           <div class="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 bg-white/20 flex items-center justify-center">
             <img v-if="tenantLogo" :src="tenantLogo" :alt="tenantName" class="w-full h-full object-cover" />
             <svg v-else class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -37,7 +37,13 @@
           </span>
         </NuxtLink>
 
-        <!-- Spacer -->
+        <div v-if="isAccountant" class="hidden sm:flex items-center gap-1 ml-2">
+          <NuxtLink to="/admin/accounting" class="px-3 py-1.5 rounded-lg text-xs font-semibold"
+            :class="isActive('/admin/accounting') ? 'bg-white/25 text-white' : 'text-white/80 hover:bg-white/15'">Buchhaltung</NuxtLink>
+          <NuxtLink to="/admin/payroll" class="px-3 py-1.5 rounded-lg text-xs font-semibold"
+            :class="isActive('/admin/payroll') ? 'bg-white/25 text-white' : 'text-white/80 hover:bg-white/15'">Lohn</NuxtLink>
+        </div>
+
         <div class="flex-1"></div>
 
         <!-- Right: Date + Logout + Mobile Trigger -->
@@ -48,10 +54,10 @@
           </span>
 
           <!-- Links (always present) -->
-          <AdminPortalLinks />
+          <AdminPortalLinks v-if="!isAccountant" />
 
           <!-- Settings shortcut -->
-          <NuxtLink to="/admin/profile" title="Einstellungen"
+          <NuxtLink v-if="!isAccountant" to="/admin/profile" title="Einstellungen"
             class="flex w-8 h-8 rounded-lg items-center justify-center hover:bg-white/20 transition-colors"
             :class="isActive('/admin/profile') ? 'bg-white/30' : ''">
             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -70,6 +76,14 @@
         </div>
       </div>
     </header>
+
+    <div v-if="isAccountant" class="flex-shrink-0 bg-slate-800 text-white text-xs px-4 py-2 flex items-center justify-center gap-3">
+      <span>Treuhänder-Zugang · {{ tenantName || 'Mandant' }} · {{ accountantAccessLabel }}</span>
+      <select v-if="accountantGrants.length > 1" v-model="activeAccountantTenant" @change="switchAccountantTenant"
+        class="bg-slate-700 text-white text-xs rounded-lg px-2 py-1 border border-white/20">
+        <option v-for="g in accountantGrants" :key="g.tenant_id" :value="g.tenant_id">{{ g.tenant_name }}</option>
+      </select>
+    </div>
 
     <!-- ═══ MOBILE DRAWER ═══ -->
     <Transition
@@ -119,7 +133,14 @@
 
         <!-- Drawer Nav -->
         <nav class="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-          <template v-if="!featuresLoading && isWebsiteOnly">
+          <template v-if="isAccountant">
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-2 pb-1">Treuhänder</p>
+            <NuxtLink to="/admin/accounting" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
+            <NuxtLink to="/admin/payroll" @click="showMobileMenu = false"
+              class="drawer-link" :class="isActive('/admin/payroll') ? 'drawer-active' : ''">Lohnbuchhaltung</NuxtLink>
+          </template>
+          <template v-else-if="!featuresLoading && isWebsiteOnly">
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-2 pb-1">Website</p>
             <NuxtLink to="/admin/website" @click="showMobileMenu = false"
               class="drawer-link" :class="route.path === '/admin/website' ? 'drawer-active' : ''">Übersicht</NuxtLink>
@@ -251,7 +272,14 @@
       >
         <!-- Sidebar Nav -->
         <nav class="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-          <template v-if="!featuresLoading && isWebsiteOnly">
+          <template v-if="isAccountant">
+            <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-2 pb-1">Treuhänder</p>
+            <NuxtLink to="/admin/accounting"
+              class="drawer-link" :class="isActive('/admin/accounting') ? 'drawer-active' : ''">Buchhaltung</NuxtLink>
+            <NuxtLink to="/admin/payroll"
+              class="drawer-link" :class="isActive('/admin/payroll') ? 'drawer-active' : ''">Lohnbuchhaltung</NuxtLink>
+          </template>
+          <template v-else-if="!featuresLoading && isWebsiteOnly">
             <p class="text-xs font-bold text-white/40 uppercase tracking-widest px-3 pt-2 pb-1">Website</p>
             <NuxtLink to="/admin/website"
               class="drawer-link" :class="route.path === '/admin/website' ? 'drawer-active' : ''">Übersicht</NuxtLink>
@@ -431,9 +459,36 @@ const showAccountSwitch = ref(false)
 // Auth Store für Logout
 const authStore = useAuthStore()
 const { logout } = authStore
+const isAccountant = computed(() => authStore.userRole === 'accountant')
+const accountantAccessLabel = computed(() => accountantAccess.value === 'write' ? 'Lesen & Schreiben' : 'Nur Lesen')
+const accountantAccess = ref('read')
+const accountantGrants = ref([])
+const activeAccountantTenant = ref('')
+
+async function loadAccountantContext() {
+  if (!isAccountant.value) return
+  try {
+    const data = await $fetch('/api/admin/accounting/access')
+    accountantAccess.value = data.accountant_access || 'read'
+    accountantGrants.value = data.grants || []
+    activeAccountantTenant.value = data.tenant_id || ''
+  } catch { /* ignore */ }
+}
+
+async function switchAccountantTenant() {
+  try {
+    await $fetch('/api/accountant/active-tenant', { method: 'POST', body: { tenant_id: activeAccountantTenant.value } })
+    window.location.reload()
+  } catch {
+    alert('Mandant konnte nicht gewechselt werden')
+  }
+}
+
+watch(isAccountant, (yes) => { if (yes) loadAccountantContext() }, { immediate: true })
 const isWebsiteOnly = computed(() => !!authStore.tenantTrialInfo?.website_only)
 const canOpenAccountSwitch = computed(() =>
   !isWebsiteOnly.value &&
+  !isAccountant.value &&
   (authStore.userProfile?.can_switch_accounts || authStore.userRole === 'admin')
 )
 

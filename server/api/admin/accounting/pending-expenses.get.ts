@@ -1,9 +1,9 @@
 import { defineEventHandler, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { requireAccountingAccess } from '~/server/utils/accountant-access'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event, ['admin', 'staff', 'superadmin'])
+  const profile = await requireAccountingAccess(event)
   const supabase = getSupabaseAdmin()
 
   const { data, error } = await supabase

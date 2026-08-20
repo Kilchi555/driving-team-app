@@ -1025,6 +1025,18 @@
                   placeholder="+41 44 123 45 67"
                 >
               </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">WhatsApp</label>
+                <input
+                  v-model="brandingForm.contact.whatsappPhone"
+                  @blur="autoSaveBranding"
+                  type="tel"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
+                  placeholder="+41 79 123 45 67"
+                >
+                <p class="text-xs text-gray-400 mt-1">Handy-Nummer aus der WhatsApp-App — nicht die Festnetznummer.</p>
+              </div>
               
               <!-- Address -->
               <div class="md:col-span-2">
@@ -3379,6 +3391,7 @@ const brandingForm = ref({
   contact: {
     email: '',
     phone: '',
+    whatsappPhone: '',
     address: '',
     smsSender: ''
   }

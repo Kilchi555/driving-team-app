@@ -75,15 +75,51 @@ export default defineEventHandler(async (event) => {
 
           const { data: existing } = await supabase
             .from('gbp_review_actions')
-            .select('id, status')
+            .select('id, status, suggested_reply')
             .eq('tenant_id', tenantId)
             .eq('location_id', loc.id)
             .eq('google_review_id', review.reviewId)
             .maybeSingle()
 
-          if (existing) continue
-
           const stars = gbpStarToNumber(review.starRating)
+
+          if (existing) {
+            if (
+              (existing.status === 'suggested' || existing.status === 'failed')
+              && shouldAutoPublishReview(settings.review_reply_mode, stars)
+              && existing.suggested_reply
+            ) {
+              try {
+                await replyToGbpReview(tenantId, review.reviewId, existing.suggested_reply, loc.id)
+                const nowIso = new Date().toISOString()
+                await supabase
+                  .from('gbp_review_actions')
+                  .update({
+                    status: 'published',
+                    published_reply: existing.suggested_reply,
+                    published_at: nowIso,
+                    error_message: null,
+                    mode: settings.review_reply_mode,
+                    updated_at: nowIso,
+                  })
+                  .eq('id', existing.id)
+                published++
+                createdForLoc++
+              } catch (err: any) {
+                await supabase
+                  .from('gbp_review_actions')
+                  .update({
+                    status: 'failed',
+                    error_message: err?.message || 'auto-publish failed',
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', existing.id)
+                errors++
+              }
+            }
+            continue
+          }
+
           const suggestion = await generateGbpReviewSuggestion({
             tenantName: tenant?.name || loc.title || 'Unternehmen',
             reviewerName: review.reviewer?.displayName,

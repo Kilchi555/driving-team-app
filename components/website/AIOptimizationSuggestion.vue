@@ -169,6 +169,19 @@ function buildRequestContent(): string | null {
     return null
   }
 
+  if (props.contentType === 'service_description') {
+    const offer = ctx || text
+    if (offer.length < 2) return null
+    const draft = text.length >= 5 ? text : ''
+    return [
+      `ANGEBOTSNAME (jedes unterscheidende Wort MUSS im Text stehen — nie weglassen, z.B. Schaltung, Automatik, A1, Anhänger): «${offer}»`,
+      draft
+        ? `Aktueller Entwurf (umschreiben, ausführlicher und verkaufsstärker, nicht kürzen):\n${draft}`
+        : 'Kein Entwurf — schreibe komplett neu.',
+      'Schreibe 4–6 Sätze (380–680 Zeichen), die GENAU dieses Angebot an einen unsicheren Kunden verkaufen. Weltklasse-Copy, Schweizer Hochdeutsch, lokal, konkret.',
+    ].join('\n')
+  }
+
   if (props.contentType === 'testimonial') {
     if (text.length >= 5) return text
     return null
@@ -185,9 +198,6 @@ function buildRequestContent(): string | null {
 
   if (text.length >= 5) return text
   if (ctx.length >= 2) {
-    if (props.contentType === 'service_description') {
-      return `Erstelle eine kurze, überzeugende Website-Beschreibung (1–2 Sätze) für die Dienstleistung «${ctx}».`
-    }
     if (props.contentType === 'seo_title') {
       return `Erstelle einen SEO-Titel für «${ctx}».`
     }
@@ -246,6 +256,7 @@ const loadSuggestions = async () => {
         content_type: props.contentType,
         optimization_type: props.optimizationType,
         formal_address: props.formalAddress === 'du' ? 'du' : 'sie',
+        context: props.context || '',
       },
     })
 
@@ -284,6 +295,7 @@ const generateMoreVersions = async (baseSuggestion: string, index: number) => {
         content_type: props.contentType,
         optimization_type: props.optimizationType,
         formal_address: props.formalAddress === 'du' ? 'du' : 'sie',
+        context: props.context || '',
       },
     })
 

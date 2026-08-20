@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { requireAccountingAccess } from '~/server/utils/accountant-access'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { loadPayrollCalendarHours } from '~/server/utils/payroll-calendar-hours'
 
 // CH 2025 legal defaults (used as fallback only — all rates are configurable per employee)
 export const DEFAULT_RATES = {
@@ -72,7 +73,7 @@ export function computeDeductions(grossRappen: number, rates: EmployeeRates) {
  * Creates or updates payroll runs for one or more employees for a given month.
  */
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event)
+  const profile = await requireAccountingAccess(event, { write: true })
   const body = await readBody(event)
   const supabase = getSupabaseAdmin()
 
@@ -89,7 +90,7 @@ export default defineEventHandler(async (event) => {
   const employeeIds = runs.map(r => r.employee_id)
   const { data: employees, error: empErr } = await supabase
     .from('payroll_employees')
-    .select(`id, employment_type, gross_salary_rappen, hours_per_month,
+    .select(`id, user_id, email, employment_type, gross_salary_rappen, hours_per_month,
       ahv_employee_rate, ahv_employer_rate, alv_employee_rate, alv_employer_rate,
       nbu_rate, bu_rate,
       bvg_employee_rate, bvg_employer_rate, bvg_coordination_rappen,
@@ -99,12 +100,45 @@ export default defineEventHandler(async (event) => {
 
   if (empErr) throw createError({ statusCode: 500, statusMessage: empErr.message })
 
+  const { data: paidRows } = await supabase
+    .from('payroll_runs')
+    .select('employee_id')
+    .eq('tenant_id', profile.tenant_id)
+    .eq('year', year)
+    .eq('month', month)
+    .eq('status', 'paid')
+  const paidIds = new Set((paidRows ?? []).map(r => r.employee_id))
+
   const empMap = new Map((employees ?? []).map(e => [e.id, e]))
+  const emails = [...new Set((employees ?? []).map(e => e.email).filter(Boolean))] as string[]
+  const { data: staffByEmail } = emails.length
+    ? await supabase
+      .from('users')
+      .select('id, email')
+      .eq('tenant_id', profile.tenant_id)
+      .eq('role', 'staff')
+      .in('email', emails)
+    : { data: [] as Array<{ id: string; email: string }> }
+  const staffIdByEmail = new Map((staffByEmail ?? []).map(u => [u.email?.toLowerCase(), u.id]))
+
+  const staffIds = [...new Set((employees ?? []).map((e) => {
+    return e.user_id || (e.email ? staffIdByEmail.get(e.email.toLowerCase()) : null)
+  }).filter(Boolean))] as string[]
+
+  const calendarHours = await loadPayrollCalendarHours(supabase, profile.tenant_id, year, month, staffIds)
+
   const upserts = []
 
   for (const run of runs) {
     const emp = empMap.get(run.employee_id)
-    if (!emp) continue
+    if (!emp || paidIds.has(emp.id)) continue
+
+    const staffId = emp.user_id || (emp.email ? staffIdByEmail.get(emp.email.toLowerCase()) : null) || null
+    const cal = staffId ? calendarHours.get(staffId) : undefined
+    const hoursWorked = run.hours_worked != null
+      ? run.hours_worked
+      : (cal?.actual_hours ?? null)
+    const vacationHours = cal?.vacation_hours ?? null
 
     // Additional taxable salary components (bruttopflichtig)
     const salaryItemsRappen = Array.isArray((emp as any).salary_items)
@@ -112,8 +146,8 @@ export default defineEventHandler(async (event) => {
       : 0
 
     let grossRappen = emp.gross_salary_rappen + salaryItemsRappen
-    if (emp.employment_type === 'hourly' && run.hours_worked != null) {
-      grossRappen = Math.round(emp.gross_salary_rappen * run.hours_worked) + salaryItemsRappen
+    if (emp.employment_type === 'hourly' && hoursWorked != null) {
+      grossRappen = Math.round(emp.gross_salary_rappen * hoursWorked) + salaryItemsRappen
     }
 
     const rates: EmployeeRates = {
@@ -138,11 +172,16 @@ export default defineEventHandler(async (event) => {
       year,
       month,
       gross_rappen:  grossRappen,
-      hours_worked:  run.hours_worked ?? null,
+      hours_worked:  hoursWorked,
+      vacation_hours: vacationHours,
       ...deductions,
       status:       'draft',
       updated_at:   new Date().toISOString(),
     })
+  }
+
+  if (!upserts.length) {
+    return { success: true, data: [], skipped_paid: paidIds.size }
   }
 
   const { data, error } = await supabase
@@ -151,5 +190,5 @@ export default defineEventHandler(async (event) => {
     .select()
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
-  return { success: true, data }
+  return { success: true, data, skipped_paid: paidIds.size }
 })
