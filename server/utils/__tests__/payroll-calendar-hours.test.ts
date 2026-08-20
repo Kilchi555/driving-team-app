@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { summarizeStaffMonthHours } from '../payroll-calendar-hours'
+import { summarizeStaffMonthHours, summarizeStaffYearHours } from '../payroll-calendar-hours'
 
 const staff = 'staff-1'
 
@@ -59,5 +59,18 @@ describe('summarizeStaffMonthHours', () => {
       8,
     )
     expect(row.actual_hours).toBe(1)
+  })
+
+  it('sums lesson hours across the year and skips vacation', () => {
+    const hours = summarizeStaffYearHours(
+      [
+        apt({ start_time: '2026-01-05T08:00:00.000Z', duration_minutes: 90 }),
+        apt({ start_time: '2026-08-03T07:00:00.000Z', duration_minutes: 60 }),
+        apt({ start_time: '2026-08-04T07:00:00.000Z', duration_minutes: 720, event_type_code: 'vacation' }),
+      ],
+      staff,
+      2026,
+    )
+    expect(hours).toBe(2.5)
   })
 })

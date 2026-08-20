@@ -1319,7 +1319,8 @@ const loadUserDocuments = async () => {
 
     // Create a single "Ausweise" category with all documents
     userDocumentCategories.value = [{
-     
+      code: 'all',
+      name: 'Lernfahrausweis',
       description: 'Alle hochgeladenen Dokumente',
       documents: documents
     }]
