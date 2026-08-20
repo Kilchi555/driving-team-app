@@ -125,22 +125,22 @@ useHead({
     { name: 'description', content: 'Erfahrungsberichte von Betrieben, die Simy nutzen. Echte Zahlen: weniger Verwaltungsaufwand, mehr Buchungen, höherer Umsatz. 50+ Betriebe in der Schweiz.' },
     { property: 'og:title', content: 'Kundenstories – Simy | Erfahrungen aus der Praxis' },
     { property: 'og:description', content: '50+ Schweizer Betriebe vertrauen Simy. Echte Erfahrungsberichte.' },
-    { property: 'og:url', content: 'https://simy.ch/kunden' },
+    { property: 'og:url', content: 'https://www.simy.ch/kunden' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/kunden' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/kunden' }],
   script: ldScripts(
     itemListLd({
       name: 'Simy Kundenstories',
       description: 'Erfahrungsberichte von Schweizer Betrieben, die Simy nutzen.',
-      url: 'https://simy.ch/kunden',
+      url: 'https://www.simy.ch/kunden',
       items: [
-        { name: 'Driving Team Zürich – Pascal Kilchenmann', url: 'https://simy.ch/kunden' },
-        { name: 'Betrieb Rapperswil – Marco R.', url: 'https://simy.ch/kunden' },
+        { name: 'Driving Team Zürich – Pascal Kilchenmann', url: 'https://www.simy.ch/kunden' },
+        { name: 'Betrieb Rapperswil – Marco R.', url: 'https://www.simy.ch/kunden' },
       ],
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Kunden', url: 'https://simy.ch/kunden' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Kunden', url: 'https://www.simy.ch/kunden' },
     ]),
   ),
 })

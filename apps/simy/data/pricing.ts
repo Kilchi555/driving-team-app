@@ -74,7 +74,7 @@ export function withPlatformRef(href: string, explicitRef?: string): string {
   const ref = (explicitRef || getStoredPlatformRef() || '').trim().toUpperCase()
   if (!ref) return href
   try {
-    const url = new URL(href, typeof window !== 'undefined' ? window.location.origin : 'https://simy.ch')
+    const url = new URL(href, typeof window !== 'undefined' ? window.location.origin : 'https://www.simy.ch')
     if (!url.hostname.includes('simy.ch')) return href
     if (!url.pathname.includes('tenant-register')) return href
     if (!url.searchParams.has('ref')) url.searchParams.set('ref', ref)

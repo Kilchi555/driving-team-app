@@ -32,16 +32,16 @@ import { breadcrumbLd, ldScripts, webPageLd } from '~/utils/schema'
 useHead({
   title: 'AGB – Simy | Allgemeine Geschäftsbedingungen',
   meta: [{ name: 'description', content: 'Allgemeine Geschäftsbedingungen der Simy IT Systems.' }],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/agb' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/agb' }],
   script: ldScripts(
     webPageLd({
       name: 'AGB – Simy',
       description: 'Allgemeine Geschäftsbedingungen der Simy IT Systems.',
-      url: 'https://simy.ch/agb',
+      url: 'https://www.simy.ch/agb',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'AGB', url: 'https://simy.ch/agb' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'AGB', url: 'https://www.simy.ch/agb' },
     ]),
   ),
 })

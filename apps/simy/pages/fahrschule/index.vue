@@ -256,11 +256,11 @@ useHead({
     { name: 'keywords', content: 'fahrschulsoftware, fahrschulsoftware schweiz, buchungssystem fahrschule, fahrlehrer app, website fahrschule, online terminbuchung fahrschule, google business profile fahrschule, google maps fahrschule' },
     { property: 'og:title', content: 'Fahrschulsoftware Schweiz – Buchung, App & Website | Simy' },
     { property: 'og:description', content: 'Fahrschulsoftware mit Online-Buchung, Rechnungen, App und Website — alles in Simy. 30 Tage kostenlos testen.' },
-    { property: 'og:url', content: 'https://simy.ch/fahrschule' },
+    { property: 'og:url', content: 'https://www.simy.ch/fahrschule' },
     { name: 'twitter:title', content: 'Fahrschulsoftware Schweiz | Simy' },
     { name: 'twitter:description', content: 'Fahrschulsoftware mit Buchung, Rechnungen, App und Website. 30 Tage gratis.' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/fahrschule' }],
   script: [
     {
       type: 'application/ld+json',
@@ -292,8 +292,8 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
-          { '@type': 'ListItem', position: 2, name: 'Fahrschule', item: 'https://simy.ch/fahrschule' },
+          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://www.simy.ch/' },
+          { '@type': 'ListItem', position: 2, name: 'Fahrschule', item: 'https://www.simy.ch/fahrschule' },
         ],
       }),
     },
