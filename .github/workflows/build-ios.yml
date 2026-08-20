@@ -136,9 +136,8 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           DEPLOY_TARGET: ${{ github.event.inputs.environment || 'testflight' }}
-        run: |
-          cd ios/App
-          bundle exec fastlane ios deploy
+          FASTLANE_SKIP_UPDATE_CHECK: '1'
+        run: bundle exec fastlane ios deploy
 
       - name: Notify on failure
         if: failure()
