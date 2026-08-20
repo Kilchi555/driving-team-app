@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { parseIdleStudentReminderSettings } from '~/server/utils/idle-student-reminder-settings'
 
 export interface BookingPolicy {
   // ── Internal (staff creates student) ──────────────────────────────────────
@@ -60,6 +61,15 @@ export interface BookingPolicy {
   registration_reminder_days: number
   registration_reminder_email_enabled: boolean
   registration_reminder_sms_enabled: boolean
+  /** Email idle clients (and optionally staff/admin) who have not booked for idle_student_reminder_days. */
+  idle_student_reminder_enabled: boolean
+  idle_student_reminder_days: number
+  idle_student_reminder_resend_days: number
+  idle_student_reminder_notify_client: boolean
+  idle_student_reminder_notify_staff: boolean
+  idle_student_reminder_notify_admin: boolean
+  /** How to reach idle clients: email only, SMS only, or whichever exists with a priority. */
+  idle_student_reminder_client_channel: 'email' | 'sms' | 'email_first' | 'sms_first'
   onboarding_sms_enabled: boolean
   onboarding_email_enabled: boolean
   /** SMS confirmation (gated further by customer_notification_channel) */
@@ -171,6 +181,13 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   registration_reminder_days: 7,
   registration_reminder_email_enabled: true,
   registration_reminder_sms_enabled: true,
+  idle_student_reminder_enabled: false,
+  idle_student_reminder_days: 30,
+  idle_student_reminder_resend_days: 14,
+  idle_student_reminder_notify_client: true,
+  idle_student_reminder_notify_staff: true,
+  idle_student_reminder_notify_admin: true,
+  idle_student_reminder_client_channel: 'email_first',
   onboarding_sms_enabled: true,
   onboarding_email_enabled: false,
   confirmation_sms_enabled: true,
@@ -266,6 +283,7 @@ export default defineEventHandler(async (event) => {
     ...DEFAULT_BOOKING_POLICY,
     ...(tenant?.booking_policy ?? {}),
   }
+  const idleReminder = parseIdleStudentReminderSettings(merged)
   const policy: BookingPolicy = {
     ...merged,
     location_intake_modes: normalizeLocationIntakeModes(merged),
@@ -301,6 +319,13 @@ export default defineEventHandler(async (event) => {
     auto_invoice_schedule_day: normalizeAutoInvoiceMonthDay(merged.auto_invoice_schedule_day),
     staff_manual_discount_permission:
       merged.staff_manual_discount_permission === 'allowed' ? 'allowed' : 'hidden',
+    idle_student_reminder_enabled: idleReminder.enabled,
+    idle_student_reminder_days: idleReminder.idleDays,
+    idle_student_reminder_resend_days: idleReminder.resendDays,
+    idle_student_reminder_notify_client: idleReminder.notifyClient,
+    idle_student_reminder_notify_staff: idleReminder.notifyStaff,
+    idle_student_reminder_notify_admin: idleReminder.notifyAdmin,
+    idle_student_reminder_client_channel: idleReminder.clientChannel,
   }
 
   return { success: true, policy }
