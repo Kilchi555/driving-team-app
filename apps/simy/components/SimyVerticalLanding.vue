@@ -306,7 +306,7 @@ const related = computed(() =>
     ])
 )
 
-const canonical = computed(() => `https://simy.ch/${props.vertical.slug}`)
+const canonical = computed(() => `https://www.simy.ch/${props.vertical.slug}`)
 
 useHead(() => ({
   title: props.vertical.title,
@@ -343,7 +343,7 @@ useHead(() => ({
         provider: {
           '@type': 'Organization',
           name: 'Simy IT Systems',
-          url: 'https://simy.ch',
+          url: 'https://www.simy.ch',
         },
       }),
     },
@@ -365,8 +365,8 @@ useHead(() => ({
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
-          { '@type': 'ListItem', position: 2, name: 'Branchen', item: 'https://simy.ch/branchen' },
+          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://www.simy.ch/' },
+          { '@type': 'ListItem', position: 2, name: 'Branchen', item: 'https://www.simy.ch/branchen' },
           { '@type': 'ListItem', position: 3, name: props.vertical.navLabel, item: canonical.value },
         ],
       }),

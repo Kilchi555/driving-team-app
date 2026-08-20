@@ -28,16 +28,16 @@ import { breadcrumbLd, ldScripts, webPageLd } from '~/utils/schema'
 useHead({
   title: 'Datenschutz – Simy',
   meta: [{ name: 'description', content: 'Datenschutzerklärung der Simy IT Systems Kilchenmann. DSGVO-konform, Schweizer Server.' }],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/datenschutz' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/datenschutz' }],
   script: ldScripts(
     webPageLd({
       name: 'Datenschutz – Simy',
       description: 'Datenschutzerklärung der Simy IT Systems. DSG/DSGVO-konform, Schweizer Server.',
-      url: 'https://simy.ch/datenschutz',
+      url: 'https://www.simy.ch/datenschutz',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Datenschutz', url: 'https://simy.ch/datenschutz' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Datenschutz', url: 'https://www.simy.ch/datenschutz' },
     ]),
   ),
 })
@@ -61,7 +61,7 @@ const sections = [
   },
   {
     title: '5. Deine Rechte',
-    content: 'Auskunft über deine gespeicherten Daten\nBerichtigung unrichtiger Daten\nLöschung deiner Daten ("Recht auf Vergessenwerden")\nEinschränkung der Verarbeitung\nDatenportabilität\n\nKonto löschen: In der Simy-App unter Profil → „Konto löschen“, oder siehe https://simy.ch/konto-loeschen\n\nUm deine Rechte auszuüben, kontaktiere uns unter info@simy.ch bzw. support@simy.ch.',
+    content: 'Auskunft über deine gespeicherten Daten\nBerichtigung unrichtiger Daten\nLöschung deiner Daten ("Recht auf Vergessenwerden")\nEinschränkung der Verarbeitung\nDatenportabilität\n\nKonto löschen: In der Simy-App unter Profil → „Konto löschen“, oder siehe https://www.simy.ch/konto-loeschen\n\nUm deine Rechte auszuüben, kontaktiere uns unter info@simy.ch bzw. support@simy.ch.',
   },
   {
     title: '6. Cookies',

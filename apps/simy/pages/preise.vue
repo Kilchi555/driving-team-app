@@ -390,16 +390,16 @@ useHead(() => ({
     { name: 'keywords', content: 'Simy preis, all-in-one software kosten, online buchungssystem preis schweiz, website hosten schweiz, google business profile preis, website generator preis' },
     { property: 'og:title', content: `Preise – Simy | All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat` },
     { property: 'og:description', content: `Simy Preise: ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen, Keine Kreditkarte, monatlich kündbar.` },
-    { property: 'og:url', content: 'https://simy.ch/preise' },
+    { property: 'og:url', content: 'https://www.simy.ch/preise' },
     { name: 'twitter:title', content: `Preise – Simy | All-in-One Software ab CHF ${STARTING_PRICE_CHF}/Monat` },
     { name: 'twitter:description', content: `Simy Preise: ab CHF ${STARTING_PRICE_CHF}/Monat. 30 Tage kostenlos testen.` },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/preise' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/preise' }],
   script: ldScripts(
     productOffersLd({
       name: 'Simy All-in-One Software',
       description: 'Online-Buchung, Abrechnung und App für Schweizer Selbständige und KMUs.',
-      url: 'https://simy.ch/preise',
+      url: 'https://www.simy.ch/preise',
       plans: plans.value.map((p) => ({
         name: p.name,
         price: p.price,
@@ -408,8 +408,8 @@ useHead(() => ({
     }),
     faqPageLd(faqs),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Preise', url: 'https://simy.ch/preise' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Preise', url: 'https://www.simy.ch/preise' },
     ]),
   ),
 }))

@@ -248,14 +248,14 @@ useHead({
     { name: 'keywords', content: 'fahrlehrer app, fahrschulapp, app für fahrschule, fahrlehrer kalender app, fahrschule app' },
     { property: 'og:title', content: 'Fahrlehrer App – Simy | iOS & Android' },
     { property: 'og:description', content: 'Kalender, Schüler und Rechnungen in einer App — iOS und Android.' },
-    { property: 'og:url', content: 'https://simy.ch/fahrschule/app' },
+    { property: 'og:url', content: 'https://www.simy.ch/fahrschule/app' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule/app' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/fahrschule/app' }],
   script: ldScripts(
     softwareAppLd({
       name: 'Simy Fahrlehrer App',
       description: 'Native iOS- und Android-App für Fahrlehrer: Kalender, Schüler, Rechnungen und Push-Benachrichtigungen.',
-      url: 'https://simy.ch/fahrschule/app',
+      url: 'https://www.simy.ch/fahrschule/app',
     }),
     faqPageLd([
       { q: 'Gibt es eine Fahrlehrer-App für iOS und Android?', a: 'Ja. Simy bietet eine native App für iOS und Android mit Kalender, Schülerprofilen und Rechnungen.' },
@@ -263,9 +263,9 @@ useHead({
       { q: 'Kostet die App extra?', a: 'Nein. Die Fahrlehrer-App ist in den Simy-Plänen enthalten — 30 Tage kostenlos testen.' },
     ]),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Fahrschule', url: 'https://simy.ch/fahrschule' },
-      { name: 'Fahrlehrer App', url: 'https://simy.ch/fahrschule/app' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Fahrschule', url: 'https://www.simy.ch/fahrschule' },
+      { name: 'Fahrlehrer App', url: 'https://www.simy.ch/fahrschule/app' },
     ]),
   ),
 })

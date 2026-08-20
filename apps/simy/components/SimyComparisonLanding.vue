@@ -220,7 +220,7 @@ const c = computed(() => props.comparison)
 const { registerCta: ctaUrl } = useRegisterCta()
 const openFaq = ref<number | null>(0)
 const others = computed(() => COMPARISONS.filter((x) => x.slug !== props.comparison.slug))
-const canonical = computed(() => `https://simy.ch/vergleich/${props.comparison.slug}`)
+const canonical = computed(() => `https://www.simy.ch/vergleich/${props.comparison.slug}`)
 
 useHead(() => ({
   title: props.comparison.title,
@@ -246,7 +246,7 @@ useHead(() => ({
         description: props.comparison.verdict,
         url: canonical.value,
         inLanguage: 'de-CH',
-        isPartOf: { '@type': 'WebSite', name: 'Simy', url: 'https://simy.ch' },
+        isPartOf: { '@type': 'WebSite', name: 'Simy', url: 'https://www.simy.ch' },
         about: {
           '@type': 'SoftwareApplication',
           name: 'Simy',
@@ -277,8 +277,8 @@ useHead(() => ({
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
-          { '@type': 'ListItem', position: 2, name: 'Vergleich', item: 'https://simy.ch/vergleich' },
+          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://www.simy.ch/' },
+          { '@type': 'ListItem', position: 2, name: 'Vergleich', item: 'https://www.simy.ch/vergleich' },
           {
             '@type': 'ListItem',
             position: 3,

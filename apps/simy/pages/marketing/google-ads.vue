@@ -152,19 +152,19 @@ useHead({
     { name: 'keywords', content: 'google ads schweiz, google ads terminbuchung, online marketing dienstleister, lokale werbung' },
     { property: 'og:title', content: 'Google Ads für Terminbetriebe – Simy | Sofort sichtbar bei Google' },
     { property: 'og:description', content: 'Wir erstellen & betreuen Google Ads für Terminbetriebe. Sofortige Leads, messbare Ergebnisse.' },
-    { property: 'og:url', content: 'https://simy.ch/marketing/google-ads' },
+    { property: 'og:url', content: 'https://www.simy.ch/marketing/google-ads' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/marketing/google-ads' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/marketing/google-ads' }],
   script: ldScripts(
     serviceLd({
       name: 'Google Ads für Terminbetriebe',
       description: 'Managed Google Ads für Schweizer Terminbetriebe — lokal, messbar, verbunden mit Simy.',
-      url: 'https://simy.ch/marketing/google-ads',
+      url: 'https://www.simy.ch/marketing/google-ads',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Marketing', url: 'https://simy.ch/marketing' },
-      { name: 'Google Ads', url: 'https://simy.ch/marketing/google-ads' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Marketing', url: 'https://www.simy.ch/marketing' },
+      { name: 'Google Ads', url: 'https://www.simy.ch/marketing/google-ads' },
     ]),
   ),
 })

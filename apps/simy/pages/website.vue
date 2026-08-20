@@ -376,19 +376,19 @@ useHead({
     { name: 'keywords', content: 'website erstellen schweiz, website generator kmu, seo website schweiz, ai website schweiz, landingpage generator, website fahrschule, website coaching, website hosten schweiz, kmu website preise' },
     { property: 'og:title', content: 'Website-Generator Schweiz – SEO- und AI-Website in Minuten | Simy' },
     { property: 'og:description', content: `Professionelle KMU-Website: einmalig CHF ${setup}, Hosting ab CHF ${host}/Monat. Vorschau sofort, live wenn du bereit bist.` },
-    { property: 'og:url', content: 'https://simy.ch/website' },
+    { property: 'og:url', content: 'https://www.simy.ch/website' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/website' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/website' }],
   script: ldScripts(
     webPageLd({
       name: 'Website-Generator Schweiz – Simy',
       description: 'SEO- und AI-optimierte KMU-Website in Minuten. Preise, Standorte, Bewertungen, eigene Domain.',
-      url: 'https://simy.ch/website',
+      url: 'https://www.simy.ch/website',
     }),
     productOffersLd({
       name: 'Simy Website-Generator',
       description: 'Professionelle SEO-Website für Schweizer Dienstleister — Setup plus Hosting.',
-      url: 'https://simy.ch/website',
+      url: 'https://www.simy.ch/website',
       plans: [
         { name: 'Setup', price: setup, description: 'Einmalige Live-Schaltung' },
         { name: 'Host', price: host, description: 'Monatliches Hosting' },
@@ -402,8 +402,8 @@ useHead({
     }),
     faqPageLd(faqs),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Website-Generator', url: 'https://simy.ch/website' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Website-Generator', url: 'https://www.simy.ch/website' },
     ]),
   ),
 })

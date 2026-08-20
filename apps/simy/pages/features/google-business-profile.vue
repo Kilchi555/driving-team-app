@@ -180,26 +180,26 @@ useHead({
     { name: 'keywords', content: 'google business profile automatisieren, google unternehmen profil software, google maps ranking schweiz, google business profile fahrschule, google maps coach, lokales seo google unternehmen, gbp automation schweiz' },
     { property: 'og:title', content: 'Google Business Profile automatisieren – Simy | CHF 19/Monat' },
     { property: 'og:description', content: 'Jahreskalender postet von selbst, Fotos gehen live, Reviews werden automatisch beantwortet. CHF 19/Monat — kostenlose Maps-Klicks zurückholen.' },
-    { property: 'og:url', content: `https://simy.ch${GBP_PATH}` },
+    { property: 'og:url', content: `https://www.simy.ch${GBP_PATH}` },
   ],
-  link: [{ rel: 'canonical', href: `https://simy.ch${GBP_PATH}` }],
+  link: [{ rel: 'canonical', href: `https://www.simy.ch${GBP_PATH}` }],
   script: ldScripts(
     softwareAppLd({
       name: 'Simy Google Business Profile Automation',
       description: 'Google Business Profile aus Simy: Jahreskalender-Posts, Foto-Pool, KI-Review-Antworten, mehrere Standorte und Insights.',
-      url: `https://simy.ch${GBP_PATH}`,
+      url: `https://www.simy.ch${GBP_PATH}`,
       price,
     }),
     webPageLd({
       name: 'Google Business Profile automatisieren',
       description: 'Kostenlose Google-Maps-Klicks zurückholen — GBP-Automation für CHF 19/Monat.',
-      url: `https://simy.ch${GBP_PATH}`,
+      url: `https://www.simy.ch${GBP_PATH}`,
     }),
     faqPageLd(faqs),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Features', url: 'https://simy.ch/features/kalender' },
-      { name: 'Google Business Profile', url: `https://simy.ch${GBP_PATH}` },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Features', url: 'https://www.simy.ch/features/kalender' },
+      { name: 'Google Business Profile', url: `https://www.simy.ch${GBP_PATH}` },
     ]),
   ),
 })
