@@ -16,9 +16,10 @@ import { assertCronRequest } from '~/server/utils/cron-auth'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { getAccountAccessLink } from '~/server/utils/account-access-link'
 import { getTenantsWithMultipleStaff } from '~/server/utils/tenant-staff-notify'
-import { isStudentCompleted } from '~/utils/student-exam'
+import { isStudentOutOfTraining } from '~/utils/student-exam'
 import { filterIdleStudents } from '~/utils/student-appointment-activity'
 import { fetchStudentAppointmentActivity } from '~/server/utils/student-appointment-activity-db'
+import { buildIdleStopUrl } from '~/server/utils/idle-stop-token'
 import {
   assignedStaffIdsForStudent,
   parseIdleStudentReminderSettings,
@@ -43,12 +44,13 @@ async function fetchActiveClients(supabase: ReturnType<typeof getSupabaseAdmin>,
   while (from < CLIENT_PAGE * 20) {
     const { data, error } = await supabase
       .from('users')
-      .select('id, first_name, last_name, email, phone, category, exam_passed_categories, assigned_staff_id, assigned_staff_ids, onboarding_status, onboarding_token, onboarding_token_expires, auth_user_id')
+      .select('id, first_name, last_name, email, phone, category, exam_passed_categories, assigned_staff_id, assigned_staff_ids, onboarding_status, onboarding_token, onboarding_token_expires, auth_user_id, no_further_lessons_at')
       .eq('tenant_id', tenantId)
       .eq('role', 'client')
       .eq('is_active', true)
       .not('auth_user_id', 'is', null)
       .is('deleted_at', null)
+      .is('no_further_lessons_at', null)
       .range(from, from + CLIENT_PAGE - 1)
 
     if (error) throw error
@@ -58,7 +60,7 @@ async function fetchActiveClients(supabase: ReturnType<typeof getSupabaseAdmin>,
     from += CLIENT_PAGE
   }
 
-  return rows.filter((student) => !isStudentCompleted(student))
+  return rows.filter((student) => !isStudentOutOfTraining(student))
 }
 
 function alreadySentRecently(
@@ -175,6 +177,7 @@ export default defineEventHandler(async (event) => {
 
         if (sendEmail && student.email) {
           const access = await getAccountAccessLink(supabase, student, slug)
+          const pauseUrl = buildIdleStopUrl(student.id)
           const email = buildIdleStudentClientEmail({
             student,
             activity: activityById[student.id],
@@ -183,6 +186,7 @@ export default defineEventHandler(async (event) => {
             logoUrls: tenant,
             bookingUrl,
             accountUrl: access.url,
+            pauseUrl,
             contactEmail: tenant.contact_email,
             idleDays: settings.idleDays,
             clientsPlural
@@ -213,7 +217,8 @@ export default defineEventHandler(async (event) => {
             recipient_phone: student.phone,
             body: buildIdleStudentClientSms({
               firstName: student.first_name,
-              bookingUrl
+              bookingUrl,
+              pauseUrl: buildIdleStopUrl(student.id)
             }),
             status: 'pending',
             send_at: now.toISOString(),

@@ -22,7 +22,7 @@ Mindestens ein Name bleibt immer erforderlich.
 
 **Registrierungs-Erinnerung** — nach X Tagen, Kanal E-Mail und/oder SMS.
 
-**Erinnerung bei langer Pause** — standardmässig aus. Wenn aktiv, erinnert Simy aktive Kunden ohne bestandene Prüfung, die seit X Tagen keinen Termin mehr haben (Standard 30 Tage). Empfänger frei wählbar: Kunde, zugewiesener Staff (nur wenn mehrere Staff), Admin. Für Kunden wählst du den Kanal: nur E-Mail, nur SMS, Prio E-Mail oder Prio SMS. SMS ist kostenpflichtig (**15 Rp. pro SMS-Segment**). Dieselbe Person wird frühestens nach der eingestellten Pause erneut erinnert (Standard 14 Tage).
+**Erinnerung bei langer Pause** — standardmässig aus. Wenn aktiv, erinnert Simy aktive Kunden ohne bestandene Prüfung, die seit X Tagen keinen Termin mehr haben (Standard 30 Tage). Empfänger frei wählbar: Kunde, zugewiesener Staff (nur wenn mehrere Staff), Admin. Für Kunden wählst du den Kanal: nur E-Mail, nur SMS, Prio E-Mail oder Prio SMS. SMS ist kostenpflichtig (**15 Rp. pro SMS-Segment**). Dieselbe Person wird frühestens nach der eingestellten Pause erneut erinnert (Standard 14 Tage). In der Erinnerung können Kunden selbst mitteilen, dass die Prüfung bestanden wurde oder keine Fahrstunden mehr nötig sind — danach gibt es keine weiteren Erinnerungen.
 
 ## Online-Buchung
 

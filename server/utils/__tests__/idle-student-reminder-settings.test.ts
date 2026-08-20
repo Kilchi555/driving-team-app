@@ -5,6 +5,7 @@ import {
   resolveIdleStudentClientChannels
 } from '../idle-student-reminder-settings'
 import { formatLastLessonLabel } from '../idle-student-reminder-emails'
+import { createIdleStopToken, verifyIdleStopToken } from '../idle-stop-token'
 
 describe('parseIdleStudentReminderSettings', () => {
   it('defaults to disabled and email_first client channel', () => {
@@ -116,3 +117,20 @@ describe('formatLastLessonLabel', () => {
     }, now)).toContain('vor 30 Tagen')
   })
 })
+
+describe('idle stop token', () => {
+  const userId = '64259d68-195a-4c68-8875-f1b44d962830'
+
+  it('round-trips a valid user id', () => {
+    const token = createIdleStopToken(userId)
+    expect(verifyIdleStopToken(token)).toBe(userId)
+  })
+
+  it('rejects tampered tokens', () => {
+    const token = createIdleStopToken(userId)
+    expect(verifyIdleStopToken(token.slice(0, -1) + 'x')).toBeNull()
+    expect(verifyIdleStopToken('not-a-token')).toBeNull()
+    expect(verifyIdleStopToken('')).toBeNull()
+  })
+})
+

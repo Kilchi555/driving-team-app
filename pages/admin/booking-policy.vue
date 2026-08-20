@@ -207,7 +207,7 @@
           <div>
             <h2 class="text-sm font-semibold text-gray-800">Erinnerung bei langer Pause</h2>
             <p class="text-xs text-gray-400 mt-0.5">
-              Aktive {{ t.clientsPlural }} ohne bestandene Prüfung und ohne kommenden Termin erhalten automatisch eine Erinnerung. Staff und Admin bekommen eine Übersicht.
+              Aktive {{ t.clientsPlural }} ohne bestandene Prüfung und ohne kommenden Termin erhalten automatisch eine Erinnerung. Staff und Admin bekommen eine Übersicht. In der Mail können {{ t.clientsPlural }} selbst sagen, dass sie keine Termine mehr brauchen.
             </p>
           </div>
           <button

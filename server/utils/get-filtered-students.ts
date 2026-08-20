@@ -5,7 +5,7 @@
 // pages/customers.vue and components/users/CustomersTab.vue. Keep this
 // logic in one place so all UIs always show exactly the same list.
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { isStudentCompleted } from '~/utils/student-exam'
+import { isStudentOutOfTraining } from '~/utils/student-exam'
 
 export interface GetFilteredStudentsOptions {
   tenantId: string
@@ -39,6 +39,7 @@ const CLIENT_SAFE_FIELDS = [
   'phone',
   'category',
   'exam_passed_categories',
+  'no_further_lessons_at',
   'is_active',
   'auth_user_id',
   'onboarding_status',
@@ -82,8 +83,8 @@ const SELECT_COLUMNS = CLIENT_SAFE_FIELDS.join(', ')
  *   tenant_admin, super_admin): all clients in the tenant.
  * - showInactive=false (default): active, not-yet-completed students, plus
  *   users still in onboarding (auth_user_id === null).
- * - showInactive=true: deactivated students OR students who completed all
- *   their enrolled categories.
+ * - showInactive=true: deactivated students, students who completed all
+ *   enrolled categories, or students who said they no longer need lessons.
  *
  * Deliberately does NOT fall back to appointment history - a student only
  * shows up here because of their current assignment, never because of a
@@ -149,11 +150,11 @@ export async function getFilteredStudents(
   const filtered = students.filter((student: any) => {
     if (showInactive) {
       const deactivated = student.is_active === false && student.auth_user_id !== null
-      const completed = student.is_active === true && isStudentCompleted(student)
+      const completed = student.is_active === true && isStudentOutOfTraining(student)
       return deactivated || completed
     }
     if (student.auth_user_id === null) return true // always show pending onboarding
-    return student.is_active === true && !isStudentCompleted(student)
+    return student.is_active === true && !isStudentOutOfTraining(student)
   })
 
   filtered.sort((a: any, b: any) =>
