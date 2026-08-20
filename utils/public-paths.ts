@@ -38,6 +38,7 @@ const RESERVED_TOP_SEGMENTS = new Set([
   'helvetia-offerte',
   'confirm-sessions',
   'unsubscribe',
+  'pause',
   'agb',
   'avv',
   'aktion',
@@ -56,6 +57,7 @@ function normalizePathname(pathname: string): string {
 export function isPublicOnlyPath(pathname: string): boolean {
   return (
     pathname.startsWith('/booking/') ||
+    pathname.startsWith('/pause') ||
     pathname.startsWith('/customer/courses/') ||
     pathname.startsWith('/courses/') ||
     pathname.startsWith('/shop')

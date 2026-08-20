@@ -42,9 +42,12 @@ function logoUrl(tenant: { logo_wide_url?: string | null, logo_url?: string | nu
 export function buildIdleStudentClientSms(opts: {
   firstName: string | null
   bookingUrl: string
+  pauseUrl?: string
 }): string {
   const name = (opts.firstName || '').trim() || 'du'
-  return `Hallo ${name}, schon länger kein Termin mehr gehabt. Jetzt buchen: ${opts.bookingUrl}`
+  const text = `Hallo ${name}, schon länger kein Termin mehr gehabt. Jetzt buchen: ${opts.bookingUrl}`
+  if (!opts.pauseUrl) return text
+  return `${text} Keine mehr nötig: ${opts.pauseUrl}`
 }
 
 export function buildIdleStudentClientEmail(opts: {
@@ -55,6 +58,7 @@ export function buildIdleStudentClientEmail(opts: {
   logoUrls: { logo_wide_url?: string | null, logo_url?: string | null, logo_square_url?: string | null }
   bookingUrl: string
   accountUrl: string
+  pauseUrl?: string
   contactEmail?: string | null
   idleDays: number
   clientsPlural: string
@@ -79,6 +83,7 @@ export function buildIdleStudentClientEmail(opts: {
     <p style="color:#6b7280;font-size:13px;line-height:1.5;margin:0;text-align:center">
       <a href="${escapeHtml(opts.accountUrl)}" style="color:${opts.primaryColor};text-decoration:none">Zum Konto</a>
     </p>
+    ${opts.pauseUrl ? `<p style="color:#9ca3af;font-size:12px;line-height:1.5;margin:24px 0 0;text-align:center">Prüfung schon bestanden oder keine Fahrstunden mehr nötig?<br><a href="${escapeHtml(opts.pauseUrl)}" style="color:#6b7280;text-decoration:underline">Bitte hier mitteilen</a></p>` : ''}
     ${emailSignature(opts.tenantName, opts.contactEmail, opts.primaryColor)}
   `
 

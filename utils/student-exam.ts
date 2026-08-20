@@ -1,6 +1,7 @@
 export interface StudentExamInfo {
   category?: string[] | null
   exam_passed_categories?: string[] | null
+  no_further_lessons_at?: string | null
 }
 
 /** Normalizes "B Automatik" → "B" so it matches exam_passed_categories. */
@@ -16,4 +17,14 @@ export function isStudentCompleted(student: StudentExamInfo): boolean {
   const categories: string[] = student.category || []
   if (!categories.length) return false
   return categories.every(cat => isCategoryPassed(student, cat))
+}
+
+/** Student said they no longer need lessons (exam elsewhere or stopped). */
+export function hasStoppedLessons(student: Pick<StudentExamInfo, 'no_further_lessons_at'>): boolean {
+  return !!student.no_further_lessons_at
+}
+
+/** Completed exam or opted out of further lessons. */
+export function isStudentOutOfTraining(student: StudentExamInfo): boolean {
+  return isStudentCompleted(student) || hasStoppedLessons(student)
 }

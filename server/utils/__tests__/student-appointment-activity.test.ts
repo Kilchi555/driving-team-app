@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isCategoryPassed, isStudentCompleted } from '~/utils/student-exam'
+import { isCategoryPassed, isStudentCompleted, isStudentOutOfTraining } from '~/utils/student-exam'
 import {
   aggregateStudentAppointmentActivity,
   compareByLastAppointmentOldestFirst,
@@ -93,6 +93,20 @@ describe('filterIdleStudents', () => {
     }
 
     expect(filterIdleStudents(students, activity, '30', NOW).map(s => s.id)).toEqual(['open'])
+  })
+
+  it('drops students who said they no longer need lessons', () => {
+    const students = [
+      { id: 'stopped', category: ['B'], exam_passed_categories: [], no_further_lessons_at: '2026-08-01T00:00:00.000Z' },
+      { id: 'open', category: ['B'], exam_passed_categories: [] }
+    ]
+    const activity = {
+      stopped: { lastStartTime: '2026-01-01T00:00:00.000Z', hasUpcoming: false },
+      open: { lastStartTime: '2026-01-01T00:00:00.000Z', hasUpcoming: false }
+    }
+
+    expect(filterIdleStudents(students, activity, '30', NOW).map(s => s.id)).toEqual(['open'])
+    expect(isStudentOutOfTraining(students[0])).toBe(true)
   })
 })
 

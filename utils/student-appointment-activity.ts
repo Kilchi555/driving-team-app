@@ -1,4 +1,4 @@
-import { isStudentCompleted, type StudentExamInfo } from '~/utils/student-exam'
+import { isStudentOutOfTraining, type StudentExamInfo } from '~/utils/student-exam'
 
 export const UPCOMING_APPOINTMENT_STATUSES = [
   'scheduled',
@@ -118,7 +118,7 @@ export function filterIdleStudents<T extends StudentExamInfo & { id: string }>(
   if (filter === 'all') return students
 
   return students.filter((student) => {
-    if (isStudentCompleted(student)) return false
+    if (isStudentOutOfTraining(student)) return false
     return matchesIdleFilter(activityById[student.id], filter, now)
   })
 }

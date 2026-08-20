@@ -402,6 +402,35 @@
           <p class="text-sm text-green-700">{{ successMessage }}</p>
         </div>
 
+        <!-- No further lessons -->
+        <div v-if="!isEditMode" class="rounded-xl border border-gray-100 p-4 space-y-3">
+          <p class="text-sm font-medium text-gray-800">Brauchst du noch Fahrstunden?</p>
+          <p v-if="lessonsStopped" class="text-sm text-gray-600">
+            Wir erinnern dich nicht mehr an den nächsten Termin.
+            <button type="button" class="underline underline-offset-2" :disabled="lessonsBusy" @click="resumeLessons">
+              Doch wieder Termine wollen
+            </button>
+          </p>
+          <div v-else class="flex flex-col sm:flex-row gap-2">
+            <button
+              type="button"
+              class="flex-1 py-2 px-3 rounded-lg bg-gray-900 text-white text-sm font-medium disabled:opacity-50"
+              :disabled="lessonsBusy"
+              @click="stopLessons('exam_passed')"
+            >
+              Prüfung bestanden
+            </button>
+            <button
+              type="button"
+              class="flex-1 py-2 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-800 disabled:opacity-50"
+              :disabled="lessonsBusy"
+              @click="stopLessons('stopped')"
+            >
+              Keine Fahrstunden mehr
+            </button>
+          </div>
+        </div>
+
         <!-- Account deletion: required in-app by Apple/Google, kept out of the way -->
         <div class="border-t border-gray-100 pt-4 mt-2">
           <button
@@ -500,6 +529,8 @@ const headerStyle = computed(() => ({
 }))
 
 const isEditMode = ref(false)
+const lessonsStopped = ref(false)
+const lessonsBusy = ref(false)
 
 const formData = ref({
   firstName: '',
@@ -541,6 +572,45 @@ const loadUserData = () => {
     logger.debug('📋 Final formData:', formData.value)
   } catch (err: any) {
     console.error('❌ Error loading user profile:', err)
+  }
+}
+
+const loadLessonsStatus = async () => {
+  try {
+    const res = await $fetch<{ stopped?: boolean }>('/api/idle-reminder/status')
+    lessonsStopped.value = !!res.stopped
+  } catch {
+    lessonsStopped.value = false
+  }
+}
+
+const stopLessons = async (reason: 'exam_passed' | 'stopped') => {
+  lessonsBusy.value = true
+  try {
+    await $fetch('/api/idle-reminder/stop', { method: 'POST', body: { reason } })
+    lessonsStopped.value = true
+    successMessage.value = reason === 'exam_passed'
+      ? 'Glückwunsch — wir erinnern dich nicht mehr an den nächsten Termin.'
+      : 'Notiert — wir erinnern dich nicht mehr an den nächsten Termin.'
+    showSuccess('Gespeichert', successMessage.value)
+  } catch (err: any) {
+    showError('Fehler', err?.data?.statusMessage || err?.message || 'Konnte nicht gespeichert werden')
+  } finally {
+    lessonsBusy.value = false
+  }
+}
+
+const resumeLessons = async () => {
+  lessonsBusy.value = true
+  try {
+    await $fetch('/api/idle-reminder/stop', { method: 'POST', body: { action: 'resume' } })
+    lessonsStopped.value = false
+    successMessage.value = 'Du kannst wieder Termine buchen. Erinnerungen sind wieder aktiv.'
+    showSuccess('Gespeichert', successMessage.value)
+  } catch (err: any) {
+    showError('Fehler', err?.data?.statusMessage || err?.message || 'Konnte nicht gespeichert werden')
+  } finally {
+    lessonsBusy.value = false
   }
 }
 
@@ -815,6 +885,7 @@ watch(() => props.isOpen, (newVal) => {
     isEditMode.value = false
     cancelDeleteAccount()
     loadUserData()
+    loadLessonsStatus()
     // Use categories from props if provided
     if (props.categories) {
       categories.value = props.categories
