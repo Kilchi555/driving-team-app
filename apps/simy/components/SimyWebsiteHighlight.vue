@@ -62,7 +62,7 @@ const bullets = [
   'Strukturierte Daten im Hintergrund — für Google, Maps und ChatGPT',
   'Preise, Standorte und Kontakt aus deinen Daten',
   'Vorschau gratis — zahlen erst bei Live oder nach 30 Tagen',
-  `Hosting CHF ${WEBSITE_HOST_CHF} oder Care CHF ${WEBSITE_CARE_CHF} / Monat`,
+  `Hosting CHF ${WEBSITE_HOST_CHF} oder Care CHF ${WEBSITE_CARE_CHF} / Monat (inkl. max. 1h Support)`,
 ]
 
 const setup = WEBSITE_SETUP_CHF

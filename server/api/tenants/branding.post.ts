@@ -310,7 +310,7 @@ export default defineEventHandler(async (event) => {
       // Brand identity
       'brand_name', 'tagline', 'description',
       // Contact (tenant's own — they can update)
-      'contact_email', 'contact_phone', 'address',
+      'contact_email', 'contact_phone', 'whatsapp_phone', 'address',
       'street', 'street_nr', 'zip', 'city', 'country',
       // Messaging
       'twilio_from_sender',

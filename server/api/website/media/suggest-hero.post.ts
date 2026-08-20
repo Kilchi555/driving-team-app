@@ -10,9 +10,16 @@ import { normalizeWebsiteMedia } from '~/server/utils/website-media-normalize'
 import {
   buildAiHeroPrompt,
   buildStockQueries,
+  heroIndustryChips,
+  heroIndustryLabel,
 } from '~/server/utils/website-hero-prompts'
 import { filterLeafCategories } from '~/server/utils/category-groups'
 import { resolveWebsiteCity } from '~/server/utils/website-local-seo'
+import {
+  heroCacheQueryKey,
+  loadCachedHeroCandidates,
+  saveHeroCandidates,
+} from '~/server/utils/website-hero-cache'
 
 export type HeroCandidate = {
   id: string
@@ -30,15 +37,63 @@ function cityFromTenant(tenant: any): string {
   return resolveWebsiteCity(tenant)
 }
 
-async function fetchUnsplashCandidates(queries: string[], accessKey: string): Promise<HeroCandidate[]> {
-  const seen = new Set<string>()
+function titlesFromLandingBlocks(blocks: unknown): string[] {
+  const landing = (blocks as { blocks?: any[] } | null)?.blocks
+  const list = Array.isArray(landing) ? landing : []
+  const out: string[] = []
+  for (const block of list) {
+    const services = block?.content?.services
+    const products = block?.content?.products
+    if (Array.isArray(services)) {
+      for (const item of services) {
+        const title = String(item?.title || item?.name || '').trim()
+        if (title) out.push(title)
+      }
+    }
+    if (Array.isArray(products)) {
+      for (const item of products) {
+        const title = String(item?.title || item?.name || '').trim()
+        if (title) out.push(title)
+      }
+    }
+  }
+  return out
+}
+
+async function offerTitlesFromWebsite(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  tenantId: string,
+): Promise<string[]> {
+  const { data: website } = await supabase
+    .from('website_tenants')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (!website?.id) return []
+  const { data: home } = await supabase
+    .from('website_pages')
+    .select('blocks')
+    .eq('website_id', website.id)
+    .eq('is_home', true)
+    .maybeSingle()
+  return titlesFromLandingBlocks(home?.blocks).slice(0, 8)
+}
+
+async function fetchUnsplashCandidates(
+  queries: string[],
+  accessKey: string,
+  opts?: { excludeIds?: string[]; page?: number },
+): Promise<HeroCandidate[]> {
+  const seen = new Set<string>(opts?.excludeIds || [])
   const out: HeroCandidate[] = []
+  const page = Math.max(1, opts?.page || 1)
 
   for (const query of queries) {
     if (out.length >= 3) break
     const url = new URL('https://api.unsplash.com/search/photos')
     url.searchParams.set('query', query)
-    url.searchParams.set('per_page', '6')
+    url.searchParams.set('per_page', '12')
+    url.searchParams.set('page', String(page))
     url.searchParams.set('orientation', 'landscape')
     url.searchParams.set('content_filter', 'high')
 
@@ -113,12 +168,14 @@ async function fetchAiCandidates(
   tenantId: string,
   ctx: Parameters<typeof buildAiHeroPrompt>[0],
   apiKey: string,
+  count = 3,
 ): Promise<HeroCandidate[]> {
   const openai = new OpenAI({ apiKey })
   const out: HeroCandidate[] = []
+  const n = Math.max(1, Math.min(3, count))
 
-  // DALL·E 3 / gpt-image: generate 3 variants sequentially (n=1 per call)
-  for (let i = 0; i < 3; i++) {
+  // DALL·E 3 / gpt-image: generate variants sequentially (n=1 per call)
+  for (let i = 0; i < n; i++) {
     const prompt = buildAiHeroPrompt(ctx, i)
     const result = await openai.images.generate({
       model: 'dall-e-3',
@@ -156,6 +213,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'source must be stock or ai' })
   }
   const hint = typeof body?.hint === 'string' ? body.hint.slice(0, 200) : ''
+  const excludeIds = Array.isArray(body?.exclude_ids)
+    ? body.exclude_ids.map((id: unknown) => String(id).replace(/^unsplash:/, '')).filter(Boolean).slice(0, 60)
+    : []
+  const page = Math.max(1, Math.min(20, Number(body?.page) || 1))
 
   const supabase = getSupabaseAdmin()
   const { data: user } = await supabase
@@ -174,7 +235,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('id, name, business_type, address, slug')
+    .select('id, name, business_type, address, invoice_city, slug')
     .eq('id', user.tenant_id)
     .single()
 
@@ -185,13 +246,16 @@ export default defineEventHandler(async (event) => {
     .eq('is_active', true)
 
   const leafCategories = filterLeafCategories(categories || []).slice(0, 8)
+  const fromDb = leafCategories.map((c: any) => c.name).filter(Boolean)
+  const fromLanding = await offerTitlesFromWebsite(supabase, user.tenant_id)
+  const categoryHints = [...new Set([...fromDb, ...fromLanding])].slice(0, 8)
 
   const ctx = {
     business_type: tenant?.business_type,
     name: tenant?.name,
     city: cityFromTenant(tenant),
     address: tenant?.address,
-    categories: leafCategories.map((c: any) => c.name).filter(Boolean),
+    categories: categoryHints,
     hint: hint || null,
   }
 
@@ -210,7 +274,22 @@ export default defineEventHandler(async (event) => {
       })
     }
     const queries = buildStockQueries(ctx)
-    const candidates = await fetchUnsplashCandidates(queries, key)
+    const queryKey = heroCacheQueryKey('stock', ctx)
+    const cached = await loadCachedHeroCandidates(supabase, {
+      source: 'stock',
+      queryKey,
+      excludeIds,
+      limit: 3,
+    })
+    const need = Math.max(0, 3 - cached.length)
+    const fetched = need
+      ? await fetchUnsplashCandidates(queries, key, {
+          excludeIds: [...excludeIds, ...cached.map((c) => c.id.replace(/^unsplash:/, ''))],
+          page,
+        })
+      : []
+    if (fetched.length) await saveHeroCandidates(supabase, { source: 'stock', queryKey, candidates: fetched })
+    const candidates = [...cached, ...fetched].slice(0, 3)
     if (!candidates.length) {
       throw createError({
         statusCode: 404,
@@ -221,7 +300,10 @@ export default defineEventHandler(async (event) => {
       success: true,
       source: 'stock',
       query: queries[0],
+      from_cache: cached.length,
       candidates,
+      industry: heroIndustryLabel(tenant?.business_type),
+      chips: heroIndustryChips(tenant?.business_type),
       configured: true,
     }
   }
@@ -236,7 +318,17 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const candidates = await fetchAiCandidates(supabase, user.tenant_id, ctx, apiKey)
+    const queryKey = heroCacheQueryKey('ai', ctx)
+    const cached = await loadCachedHeroCandidates(supabase, {
+      source: 'ai',
+      queryKey,
+      excludeIds,
+      limit: 3,
+    })
+    const need = Math.max(0, 3 - cached.length)
+    const fetched = need ? await fetchAiCandidates(supabase, user.tenant_id, ctx, apiKey, need) : []
+    if (fetched.length) await saveHeroCandidates(supabase, { source: 'ai', queryKey, candidates: fetched })
+    const candidates = [...cached, ...fetched].slice(0, 3)
     if (!candidates.length) {
       throw createError({
         statusCode: 502,
@@ -246,7 +338,10 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       source: 'ai',
+      from_cache: cached.length,
       candidates,
+      industry: heroIndustryLabel(tenant?.business_type),
+      chips: heroIndustryChips(tenant?.business_type),
       configured: true,
     }
   } catch (err: any) {

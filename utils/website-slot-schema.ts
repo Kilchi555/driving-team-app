@@ -347,7 +347,8 @@ export function getDynamicSlots(payload: LandingPagePayload): SlotDef[] {
       group: 'services',
       label: `Beschreibung: ${svc.name || `Service ${i + 1}`}`,
       kind: 'textarea',
-      maxLength: 400,
+      maxLength: 700,
+      hint: 'Ausführlich verkaufen: voller Kategoriename (z.B. Schaltung), für wen, was anders ist, warum bei euch.',
       formalAware: true,
     })
     slots.push({
@@ -526,6 +527,22 @@ function createSlotError(slotId: string, message: string): Error & { statusCode:
   return err
 }
 
+function faqSlotDef(slotId: string): SlotDef | null {
+  const m = slotId.match(/^faq\.(\d+)\.(q|a)$/)
+  if (!m) return null
+  const idx = Number(m[1])
+  if (idx < 0 || idx >= 10) return null
+  const field = m[2]
+  return {
+    id: slotId,
+    group: 'faq',
+    label: field === 'q' ? `Frage ${idx + 1}` : `Antwort ${idx + 1}`,
+    kind: field === 'q' ? 'text' : 'textarea',
+    maxLength: field === 'q' ? 160 : 500,
+    formalAware: field === 'a',
+  }
+}
+
 /**
  * Apply a slot patch. Only known slot IDs are accepted.
  * Returns a new payload (does not mutate input).
@@ -543,10 +560,16 @@ export function applySlotPatch(
   const allowed = new Set(getAllSlots(next).map((s) => s.id))
 
   for (const [slotId, raw] of Object.entries(patch || {})) {
-    if (!allowed.has(slotId)) {
+    const extraFaq = faqSlotDef(slotId)
+    if (!allowed.has(slotId) && !extraFaq) {
+      if (!String(raw ?? '').trim()) continue
       throw createSlotError(slotId, 'Slot nicht erlaubt / locked')
     }
-    const def = getSlotById(next, slotId)!
+    const def = getSlotById(next, slotId) || extraFaq
+    if (!def) {
+      if (!String(raw ?? '').trim()) continue
+      throw createSlotError(slotId, 'Slot nicht erlaubt / locked')
+    }
     const value = validateSlotValue(def, raw)
 
     if (slotId.startsWith('brand.')) {

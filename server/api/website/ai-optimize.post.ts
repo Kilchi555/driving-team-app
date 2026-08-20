@@ -14,6 +14,52 @@ const client = new Anthropic()
 // claude-haiku-4-5 is the current latest Haiku version (replacing deprecated 3.5)
 const AI_MODEL = 'claude-haiku-4-5'
 
+function distinctiveOfferTokens(name: string): string[] {
+  const stop = new Set([
+    'kategorie',
+    'kat',
+    'der',
+    'die',
+    'das',
+    'und',
+    'für',
+    'mit',
+    'von',
+    'im',
+    'in',
+    'am',
+    'auf',
+    'den',
+    'dem',
+    'des',
+    'ein',
+    'eine',
+    'auto',
+    'motorrad',
+  ])
+  return String(name || '')
+    .split(/[\s,/|+–—_-]+/)
+    .map((t) => t.trim())
+    .filter((t) => {
+      if (!t) return false
+      if (/^[A-Z]{1,2}\d?E?$/i.test(t)) return true
+      return t.length >= 3 && !stop.has(t.toLowerCase())
+    })
+}
+
+function ensureOfferTitleWords(text: string, offerName: string): string {
+  const clean = String(text || '').trim()
+  const name = String(offerName || '')
+    .replace(/^Beschreibung:\s*/i, '')
+    .trim()
+  if (!clean || !name) return clean
+  const lower = clean.toLowerCase()
+  if (lower.includes(name.toLowerCase())) return clean.slice(0, 700)
+  const missing = distinctiveOfferTokens(name).filter((t) => !lower.includes(t.toLowerCase()))
+  if (!missing.length) return clean.slice(0, 700)
+  return `${name}: ${clean}`.slice(0, 700)
+}
+
 function industryKeywords(terms: Terminology, businessType: string, city?: string): string {
   const geo = city ? `"${terms.businessNoun} ${city}", "${terms.appointment} ${city}"` : `"${terms.businessNoun} Schweiz"`
   if (businessType === 'driving_school') {
@@ -45,9 +91,15 @@ function contentTypeRules(contentType: string, terms: Terminology, city?: string
       return `Content-type rules for KEYWORDS:
 - 5–8 comma-separated phrases, lowercase, local intent`
     case 'service_description':
-      return `Content-type rules for SERVICE DESCRIPTION:
-- 1–2 sentences, concrete benefit + what is included
-- 60–160 characters`
+      return `Content-type rules for SERVICE / CATEGORY DESCRIPTION — you are a world-class Swiss conversion copywriter (not an SEO keyword bot):
+- 4–6 complete sentences, 380–680 characters (hard max 700). A one-liner is a FAIL. A 75-character slogan is a FAIL.
+- First or second sentence MUST contain the EXACT offer title (every distinctive word: Schaltung, Automatik, A1, Anhänger, Boot, …). Dropping a word from the title is a FAIL.
+- Sell THIS licence/vehicle to a hesitant customer: who it is for, what feels different in the lesson, what they can do afterwards, why this school (personal, local, calm, online booking).
+- If the title contains «Schaltung»: sell clutch + gear changes, exam-ready on a manual, later they can drive automatics too — in plain language, no invented legal codes.
+- If the title contains «Automatik»: sell less overload, focus on traffic, calmer start — do not pretend it is the same as Schaltung.
+- If the title contains A / A1 / A2: motorbike-specific (balance, lean, traffic), not car copy.
+- Local: weave city naturally once. Swiss High German. Warm, specific, confident. No «beste Fahrschule», no fake stars/prices/hours, no keyword lists, no telegraphic «45 Min. buchen.» ads.
+- Each of the 3 versions must take a different angle (e.g. exam-fear / first-timer / switching from Automatik) but ALL must keep the full offer title words.`
     case 'testimonial':
       return `Content-type rules for TESTIMONIAL polish:
 - Rewrite the customer's OWN words more clearly — do NOT invent facts, names, or praise
@@ -121,7 +173,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { content, content_type, optimization_type, formal_address } = await readBody(event)
+  const { content, content_type, optimization_type, formal_address, context } = await readBody(event)
 
   if (!content || content.length < 5) {
     throw createError({
@@ -182,28 +234,46 @@ export default defineEventHandler(async (event) => {
       sampleDescription: localSeo.description,
       sampleHeadline: localSeo.headline,
       sampleBio: localSeo.bio,
+      offerName: String(context || '').trim(),
     },
   )
 
+  const models =
+    content_type === 'service_description' ? ['claude-sonnet-4-5', AI_MODEL] : [AI_MODEL]
+  const maxTokens = content_type === 'service_description' ? 2800 : 1500
+
   try {
-    const message = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: 1500,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-    })
+    let message: Awaited<ReturnType<typeof client.messages.create>> | null = null
+    let lastErr: any = null
+    for (const model of models) {
+      try {
+        message = await client.messages.create({
+          model,
+          max_tokens: maxTokens,
+          messages: [{ role: 'user', content: prompt }],
+        })
+        lastErr = null
+        break
+      } catch (err: any) {
+        lastErr = err
+      }
+    }
+    if (!message) throw lastErr
 
     const responseText =
       message.content[0].type === 'text' ? message.content[0].text : ''
     let suggestions = parseAIResponse(responseText)
+    const offerName = String(context || '').trim()
+    if (content_type === 'service_description' && offerName) {
+      suggestions = suggestions.map((s: any) => ({
+        ...s,
+        suggestion: ensureOfferTitleWords(String(s.suggestion || ''), offerName),
+      }))
+    }
 
     if (!suggestions.length) {
       console.warn('AI optimize returned empty suggestions, using local fallbacks. Raw:', responseText.slice(0, 500))
-      suggestions = buildLocalFallbacks(content_type, content, terms, formal, localSeo)
+      suggestions = buildLocalFallbacks(content_type, content, terms, formal, localSeo, offerName)
     }
 
     if (userProfile?.tenant_id) {
@@ -242,7 +312,14 @@ export default defineEventHandler(async (event) => {
 
       return {
         success: true,
-        suggestions: buildLocalFallbacks(content_type, content, terms, formal, localSeo),
+        suggestions: buildLocalFallbacks(
+          content_type,
+          content,
+          terms,
+          formal,
+          localSeo,
+          String(context || '').trim(),
+        ),
         tokens_used: 0,
         fallback: true,
         message: 'AI service temporarily unavailable. Showing local suggestions.',
@@ -252,7 +329,14 @@ export default defineEventHandler(async (event) => {
     // Still prefer useful copy over a hard error for tenants
     return {
       success: true,
-      suggestions: buildLocalFallbacks(content_type, content, terms, formal, localSeo),
+      suggestions: buildLocalFallbacks(
+        content_type,
+        content,
+        terms,
+        formal,
+        localSeo,
+        String(context || '').trim(),
+      ),
       tokens_used: 0,
       fallback: true,
       message: error?.message || 'AI optimization failed',
@@ -274,6 +358,7 @@ function buildOptimizationPrompt(
     sampleDescription: string
     sampleHeadline: string
     sampleBio?: string
+    offerName?: string
   },
 ): string {
   const keywords = industryKeywords(terms, businessType, local?.city)
@@ -305,6 +390,11 @@ IMPORTANT INSTRUCTIONS:
 - Write for potential ${terms.clientsPlural} searching Google near the business
 
 ${localBlock}
+${
+  local?.offerName
+    ? `\nMANDATORY OFFER TITLE: «${local.offerName}». Every distinctive word in this title (e.g. Schaltung, Automatik, A1, Anhänger) MUST appear in EVERY suggestion. Generic «Kategorie B» copy that drops those words is a FAIL.`
+    : ''
+}
 
 Current content to optimize:
 <<<
@@ -317,6 +407,12 @@ Optimization focus: ${optimizationType}
 Generate EXACTLY 3 alternative versions of this content that are optimized for ${optimizationType}.
 
 ${contentTypeRules(contentType, terms, local?.city)}
+
+${
+  contentType === 'service_description'
+    ? `Write like a world-class copywriter selling this exact lesson to a nervous first-time customer. Longer, warmer, more specific than typical SaaS blurbs. Never a one-liner.`
+    : ''
+}
 
 ${
   optimizationType === 'seo'
@@ -425,6 +521,7 @@ function buildLocalFallbacks(
   terms: Terminology,
   formal: 'sie' | 'du',
   localSeo: { name: string; city: string; title: string; description: string; keywords: string; bio: string },
+  offerName = '',
 ) {
   const name = localSeo.name || 'Unser Betrieb'
   const city = localSeo.city
@@ -539,22 +636,50 @@ function buildLocalFallbacks(
   }
 
   if (contentType === 'service_description') {
-    const seed = content.replace(/^Erstelle[\s\S]*«([^»]+)»[\s\S]*$/, '$1').trim() || terms.appointment
+    const fromQuoted = content.match(/«([^»]+)»/)
+    const offer =
+      String(offerName || fromQuoted?.[1] || '')
+        .replace(/^Beschreibung:\s*/i, '')
+        .replace(/\s+—\s+.*$/, '')
+        .trim() || terms.appointment
+    const you = du ? 'du' : 'Sie'
+    const dein = du ? 'dein' : 'Ihr'
+    const buchst = du ? 'buchst du' : 'buchen Sie'
+    const willst = du ? 'willst' : 'wollen'
+    const bestehst = du ? 'bestehst' : 'bestehen'
+    const darfst = du ? 'darfst' : 'dürfen'
+    const startest = du ? 'Du startest' : 'Sie starten'
+    const schaltung = /schaltung/i.test(offer)
+    const automatik = /automatik/i.test(offer)
+    const skill = schaltung
+      ? `Kupplung, Gangwahl und Tempo sitzen — damit ${you} die Prüfung auf Schaltung ${bestehst} und danach jedes Auto fahren ${darfst}.`
+      : automatik
+        ? `Weniger Überforderung: der Fokus liegt auf Verkehr und Blickführung statt auf der Kupplung — ein ruhiger Einstieg, wenn ${you} erst einmal sicher ankommen ${willst}.`
+        : `Jede Lektion hat ein klares Ziel, ehrliches Feedback und ein Tempo, das zu ${dein}em Stand passt.`
     return [
       {
-        suggestion: `${seed}: praxisnah, klar erklärt und auf ${du ? 'dein' : 'Ihr'} Tempo abgestimmt. Preise transparent — online buchbar.`,
-        reason: 'Nutzen + Transparenz + CTA.',
+        suggestion: ensureOfferTitleWords(
+          `${offer}${where}: genau das ${du ? 'suchst du' : 'suchen Sie'}, wenn ${you} nicht irgendeine Fahrstunde ${willst}, sondern dieses Angebot. ${skill} Bei ${name} ${buchst} persönlich begleitet — online, ohne Telefon-Hin und Her.`,
+          offer,
+        ),
+        reason: 'Voller Angebotsname, Nutzen und Buchung — verkauft genau diese Kategorie.',
+        score: 9,
+      },
+      {
+        suggestion: ensureOfferTitleWords(
+          `Viele starten unsicher — bei ${offer} ist das normal. ${skill} ${name}${where} nimmt den Druck raus: kurze Einheiten, klare nächste Schritte, ${startest.toLowerCase()} wann es passt.`,
+          offer,
+        ),
+        reason: 'Spricht Prüfungsangst an und bleibt beim konkreten Angebot.',
         score: 8,
       },
       {
-        suggestion: `Ideal für ${du ? 'dich' : 'Sie'}, wenn ${du ? 'du' : 'Sie'} ${seed} zuverlässig und ohne Stress ${du ? 'willst' : 'wollen'}.`,
-        reason: 'Kundenorientiert und konkret.',
-        score: 7,
-      },
-      {
-        suggestion: `${seed} bei ${name}${where} — klare Abläufe, moderne Buchung, persönliche Begleitung.`,
-        reason: 'Lokal und vertrauensbildend.',
-        score: 7,
+        suggestion: ensureOfferTitleWords(
+          `${offer} bei ${name}${where}: nicht Massenabfertigung, sondern ${terms.appointmentsPlural} mit einem Plan. ${skill} Transparent, lokal, online buchbar.`,
+          offer,
+        ),
+        reason: 'Marke + Kategorie + Differenzierung zur Massenfahrschule.',
+        score: 8,
       },
     ]
   }

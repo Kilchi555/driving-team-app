@@ -41,6 +41,10 @@ export function formatWebsiteLocationAddress(loc: {
   return [street, cityLine].filter(Boolean).join(', ')
 }
 
+/**
+ * Booking locations that are physically public (not pickup/home).
+ * Used in the website editor/init data — not listed on the public contact block.
+ */
 export function isPublicWebsiteLocation(loc: {
   name?: string | null
   address?: string | null

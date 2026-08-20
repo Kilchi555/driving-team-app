@@ -1,8 +1,8 @@
 import { defineEventHandler, readMultipartFormData, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { requireAccountingAccess } from '~/server/utils/accountant-access'
 
 export default defineEventHandler(async (event) => {
-  await requireAdminProfile(event)
+  await requireAccountingAccess(event, { write: true })
 
   const config = useRuntimeConfig()
   const billScanKey = config.billScanApiKey as string | undefined

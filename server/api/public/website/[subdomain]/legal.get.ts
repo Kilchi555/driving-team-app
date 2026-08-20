@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
     .eq('subdomain', subdomain)
     .maybeSingle()
 
-  if (!website || (!website.is_published && !preview)) {
+  if (!website) {
     throw createError({ statusCode: 404, statusMessage: 'Website not found' })
   }
 
