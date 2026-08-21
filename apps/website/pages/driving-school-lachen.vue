@@ -43,7 +43,7 @@
             <span class="text-sm font-semibold">Driving School Lachen SZ · English</span>
           </div>
 
-          <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
+          <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
             Driving School<br/>
             <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-100">Lachen</span>
           </h1>
@@ -52,18 +52,18 @@
             Professional driving lessons in the Lachen/SZ area — in English. Serving Lachen, Rapperswil, Pfäffikon, Wädenswil, Altendorf, Siebnen and the wider March & Höfe region.
           </p>
 
-          <div class="flex gap-8 mb-10">
+          <div class="flex gap-4 sm:gap-8 mb-8 sm:mb-10">
             <div>
-              <p class="text-3xl font-black text-yellow-300">{{ LOCATION_LACHEN.rating.value }}★</p>
-              <p class="text-sm text-white/70">Google reviews</p>
+              <p class="text-2xl sm:text-3xl font-black text-yellow-300 whitespace-nowrap">{{ LOCATION_LACHEN.rating.value }}★</p>
+              <p class="text-[11px] sm:text-sm text-white/70">Google reviews</p>
             </div>
             <div>
-              <p class="text-3xl font-black text-yellow-300">CHF 95</p>
-              <p class="text-sm text-white/70">per lesson</p>
+              <p class="text-2xl sm:text-3xl font-black text-yellow-300 whitespace-nowrap">CHF 95</p>
+              <p class="text-[11px] sm:text-sm text-white/70">per lesson</p>
             </div>
             <div>
-              <p class="text-3xl font-black text-yellow-300">🌍</p>
-              <p class="text-sm text-white/70">English lessons</p>
+              <p class="text-2xl sm:text-3xl font-black text-yellow-300 whitespace-nowrap">🌍</p>
+              <p class="text-[11px] sm:text-sm text-white/70">English lessons</p>
             </div>
           </div>
 
