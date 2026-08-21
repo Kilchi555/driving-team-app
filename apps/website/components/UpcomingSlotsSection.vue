@@ -25,9 +25,7 @@
             <a
               v-for="s in slots"
               :key="s.id"
-              :href="s.book_url"
-              target="_blank"
-              rel="noopener noreferrer"
+              :href="withPromo(s.book_url)"
               class="group border border-gray-200 rounded-xl px-4 py-3 hover:border-primary-300 hover:shadow-sm transition flex flex-col gap-1"
             >
               <span class="text-xs font-semibold uppercase tracking-wide text-primary-600">{{ s.day_label }}</span>
@@ -41,16 +39,12 @@
           <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
             <a
               :href="allUrl"
-              target="_blank"
-              rel="noopener noreferrer"
               class="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700"
             >
               Alle Termine anzeigen →
             </a>
             <a
               :href="proposalUrl"
-              target="_blank"
-              rel="noopener noreferrer"
               class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-primary-600"
             >
               Keinen passenden Termin? Wunschtermin vorschlagen →
@@ -67,16 +61,12 @@
           <div class="flex flex-col sm:flex-row gap-3">
             <a
               :href="proposalUrl"
-              target="_blank"
-              rel="noopener noreferrer"
               class="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 transition"
             >
               Wunschtermin vorschlagen
             </a>
             <a
               :href="allUrl"
-              target="_blank"
-              rel="noopener noreferrer"
               class="inline-flex items-center justify-center px-5 py-3 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:border-primary-300 hover:text-primary-700 transition"
             >
               Buchung trotzdem öffnen
@@ -109,6 +99,8 @@ const props = withDefaults(
     subtitle?: string
     /** Default deep-link when opening “all slots” / proposal */
     category?: string
+    /** First-lesson promo, forwarded to every booking URL */
+    promoCode?: string
     emptyTitle?: string
     emptyText?: string
   }>(),
@@ -116,6 +108,7 @@ const props = withDefaults(
     title: 'Nächste freie Fahrstunden',
     subtitle: 'Aktuelle Verfügbarkeit — mit Klick öffnen Sie die Online-Buchung.',
     category: 'B Automatik',
+    promoCode: '',
     emptyTitle: 'Aktuell keine freien Online-Termine',
     emptyText:
       'Für diesen Standort sind gerade keine buchbaren Fahrstunden sichtbar. Du kannst uns deine Wunschzeiten schicken — wir melden uns mit einem konkreten Vorschlag.',
@@ -147,6 +140,18 @@ const categoryForLink = computed(
   () => data.value?.default_category || props.category || 'B Automatik',
 )
 
+function withPromo(url: string) {
+  const code = props.promoCode?.trim()
+  if (!code) return url
+  try {
+    const parsed = new URL(url, 'https://app.simy.ch')
+    if (!parsed.searchParams.get('code')) parsed.searchParams.set('code', code)
+    return `${parsed.origin}${parsed.pathname}?${parsed.searchParams.toString().replace(/\+/g, '%20')}`
+  } catch {
+    return url
+  }
+}
+
 function buildBookingUrl(opts: { proposal?: boolean } = {}) {
   const params = new URLSearchParams()
   if (categoryForLink.value) params.set('category', categoryForLink.value)
@@ -154,6 +159,7 @@ function buildBookingUrl(opts: { proposal?: boolean } = {}) {
   const loc = data.value?.default_location_id
   if (loc) params.set('location', loc)
   if (opts.proposal) params.set('proposal', '1')
+  if (props.promoCode?.trim()) params.set('code', props.promoCode.trim())
   return `${bookingBase.value}?${params.toString().replace(/\+/g, '%20')}`
 }
 
