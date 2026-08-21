@@ -53,7 +53,7 @@
             :class="websiteHostingChoice === 'host' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'"
           >
             <p class="font-bold text-gray-900">Hosting</p>
-            <p class="text-sm text-gray-500">CHF 29 / Monat</p>
+            <p class="text-sm text-gray-500">CHF {{ WEBSITE_HOSTING_META.host.chf }} / Monat</p>
             <p class="text-xs text-gray-400 mt-1">Seite online halten</p>
           </button>
           <button
@@ -63,8 +63,8 @@
             :class="websiteHostingChoice === 'care' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-300'"
           >
             <p class="font-bold text-gray-900">Care</p>
-            <p class="text-sm text-gray-500">CHF 49 / Monat</p>
-            <p class="text-xs text-gray-400 mt-1">Hosting inkl. Support</p>
+            <p class="text-sm text-gray-500">CHF {{ WEBSITE_HOSTING_META.care.chf }} / Monat</p>
+            <p class="text-xs text-gray-400 mt-1">Hosting inkl. max. 1 Stunde Support / Monat</p>
           </button>
         </div>
 
@@ -102,7 +102,9 @@
           {{ billing.website_live_url }}
         </a>
         <p class="text-sm text-gray-500 mt-2">
-          Plan: {{ billing.website_hosting_plan === 'care' ? 'Care (CHF 49)' : 'Hosting (CHF 29)' }}
+          Plan: {{ billing.website_hosting_plan === 'care'
+            ? `Care (CHF ${WEBSITE_HOSTING_META.care.chf}, max. 1h Support / Monat)`
+            : `Hosting (CHF ${WEBSITE_HOSTING_META.host.chf})` }}
         </p>
         <button
           v-if="billing.has_stripe_customer"
@@ -377,7 +379,7 @@
     <Teleport to="body">
       <Transition name="modal-fade">
         <div v-if="showCancelDialog" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
             <div class="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-4 mx-auto">
               <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -385,16 +387,28 @@
               </svg>
             </div>
             <h3 class="text-lg font-bold text-gray-900 text-center mb-2">Abonnement kündigen?</h3>
-            <p class="text-sm text-gray-500 text-center mb-6">
+            <p class="text-sm text-gray-500 text-center mb-4">
               Das Abo bleibt bis Ende der 1-monatigen Kündigungsfrist vollständig aktiv.
               Du kannst jederzeit widerrufen.
             </p>
+            <p class="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 mb-3">
+              Buchhaltungsbelege müssen Sie 10 Jahre selbst aufbewahren (OR Art. 958f).
+              Bitte zuerst den vollständigen Export herunterladen.
+            </p>
+            <button @click="downloadAccountingArchive" :disabled="archiveLoading"
+              class="w-full mb-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50">
+              {{ archiveLoading ? 'Export wird erstellt…' : 'Buchhaltung als ZIP herunterladen' }}
+            </button>
+            <label class="flex items-start gap-2 text-sm text-gray-700 mb-5 cursor-pointer">
+              <input v-model="accountingExportAck" type="checkbox" class="mt-0.5 rounded text-red-600"/>
+              <span>Ich habe meine Buchhaltungsdaten exportiert und sichere sie selbst für 10 Jahre.</span>
+            </label>
             <div class="flex gap-3">
               <button @click="showCancelDialog = false"
                 class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
                 Abbrechen
               </button>
-              <button @click="cancelSubscription" :disabled="actionLoading"
+              <button @click="cancelSubscription" :disabled="actionLoading || !accountingExportAck"
                 class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50">
                 {{ actionLoading ? 'Wird gekündigt…' : 'Ja, kündigen' }}
               </button>
@@ -410,7 +424,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { PLANS, SMS_OVERAGE_CHF_PER_SEGMENT, getIncludedSmsSegments } from '~/utils/planFeatures'
-import { isWebsiteHostingLocked, WEBSITE_SETUP_CHF, type WebsiteHostingPlan } from '~/utils/website-billing'
+import { isWebsiteHostingLocked, WEBSITE_HOSTING_META, WEBSITE_SETUP_CHF, type WebsiteHostingPlan } from '~/utils/website-billing'
 import type { PricingResponse } from '~/server/api/stripe/prices.get'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { refreshClientSession } from '~/utils/client-session-refresh'
@@ -432,6 +446,8 @@ const actionLoading = ref(false)
 const portalLoading = ref(false)
 const error = ref<string | null>(null)
 const showCancelDialog = ref(false)
+const accountingExportAck = ref(false)
+const archiveLoading = ref(false)
 const route = useRoute()
 const showUpdatedBanner = ref(route.query.updated === '1')
 const smsUsage = ref<{ used: number; included: number; overage: number } | null>(null)
@@ -767,15 +783,43 @@ async function openPortal() {
   }
 }
 
+async function downloadAccountingArchive() {
+  archiveLoading.value = true
+  error.value = null
+  try {
+    const res = await fetch('/api/admin/accounting/export-archive', {
+      headers: await authHeaders(),
+    })
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).statusMessage || 'Export fehlgeschlagen')
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `simy-buchhaltung-${new Date().toISOString().slice(0, 10)}.zip`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e: any) {
+    error.value = e?.message || 'Buchhaltungs-Export fehlgeschlagen.'
+  } finally {
+    archiveLoading.value = false
+  }
+}
+
 async function cancelSubscription() {
+  if (!accountingExportAck.value) {
+    error.value = 'Bitte den Export bestätigen.'
+    return
+  }
   actionLoading.value = true
   error.value = null
   try {
-    const res = await $fetch<{ message: string }>('/api/stripe/cancel-subscription', {
+    await $fetch<{ message: string }>('/api/stripe/cancel-subscription', {
       method: 'POST',
       headers: await authHeaders(),
+      body: { accounting_export_ack: true },
     })
     showCancelDialog.value = false
+    accountingExportAck.value = false
     await loadBillingStatus()
   } catch (e: any) {
     error.value = e?.data?.statusMessage || 'Kündigung fehlgeschlagen.'

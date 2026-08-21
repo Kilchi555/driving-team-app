@@ -150,20 +150,20 @@ useHead({
     { name: 'description', content: 'Jetzt kostenlose SEO-Analyse für dein Unternehmen anfragen. Simy zeigt dir, wie sichtbar du bei Google bist und was du verbessern kannst.' },
     { property: 'og:title', content: 'Kostenlose SEO-Analyse für Terminbetriebe – Simy' },
     { property: 'og:description', content: 'Wir analysieren kostenlos deine Google-Sichtbarkeit und melden uns innerhalb von 24 Stunden.' },
-    { property: 'og:url', content: 'https://simy.ch/marketing/seo-anfrage' },
+    { property: 'og:url', content: 'https://www.simy.ch/marketing/seo-anfrage' },
     { name: 'robots', content: 'noindex, follow' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/marketing/seo-anfrage' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/marketing/seo-anfrage' }],
   script: ldScripts(
     webPageLd({
       name: 'Kostenlose SEO-Analyse',
       description: 'Anfrageformular für eine kostenlose SEO-Analyse für Terminbetriebe.',
-      url: 'https://simy.ch/marketing/seo-anfrage',
+      url: 'https://www.simy.ch/marketing/seo-anfrage',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Marketing', url: 'https://simy.ch/marketing' },
-      { name: 'SEO-Analyse', url: 'https://simy.ch/marketing/seo-anfrage' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Marketing', url: 'https://www.simy.ch/marketing' },
+      { name: 'SEO-Analyse', url: 'https://www.simy.ch/marketing/seo-anfrage' },
     ]),
   ),
 })

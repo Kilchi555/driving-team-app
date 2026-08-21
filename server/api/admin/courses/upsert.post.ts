@@ -817,7 +817,7 @@ ${extLogoHtml}
     }
   }
 
-  // Keep auto waitlist placeholders in sync (e.g. demote when new dates go live)
+  // Keep the category's auto waitlist placeholder in sync (e.g. after code/name changes)
   try {
     const { syncAutoCategoryWaitlists } = await import('~/server/utils/auto-category-waitlist')
     await syncAutoCategoryWaitlists(supabase, {

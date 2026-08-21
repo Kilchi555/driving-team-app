@@ -79,6 +79,9 @@
               <a href="/website" class="nav-dropdown-item">
                 <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="globe" :size="16" /></span><span>Website-Generator</span>
               </a>
+              <a href="/features/google-business-profile" class="nav-dropdown-item">
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="map-pin" :size="16" /></span><span>Google Business Profile</span>
+              </a>
               <a href="/features/kalender" class="nav-dropdown-item">
                 <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="link" :size="16" /></span><span>Online-Buchung</span>
               </a>
@@ -170,6 +173,7 @@
         <a href="/features/rechnungen" class="mobile-nav-link" @click="mobileOpen=false">Rechnungen & Kasse</a>
         <a href="/features/kurse" class="mobile-nav-link" @click="mobileOpen=false">Kursbuchungsseite</a>
         <a href="/website" class="mobile-nav-link" @click="mobileOpen=false">Website-Generator</a>
+        <a href="/features/google-business-profile" class="mobile-nav-link" @click="mobileOpen=false">Google Business Profile</a>
         <a href="/features/kalender" class="mobile-nav-link" @click="mobileOpen=false">Online-Buchung</a>
         <a href="/marketing" class="mobile-nav-link" @click="mobileOpen=false">Marketing</a>
         <a href="/marketing/google-ads" class="mobile-nav-link pl-7 text-gray-400" @click="mobileOpen=false">Google Ads</a>

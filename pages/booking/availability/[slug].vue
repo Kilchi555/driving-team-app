@@ -1707,26 +1707,25 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, defineAsyncComponent } from 'vue'
+import GeneralInquiryForm from '~/components/GeneralInquiryForm.vue'
+import BookingProposalForm from '~/components/BookingProposalForm.vue'
+import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
+
+const LoginRegisterModal = defineAsyncComponent(() => import('~/components/booking/LoginRegisterModal.vue'))
+const DocumentUploadModal = defineAsyncComponent(() => import('~/components/booking/DocumentUploadModal.vue'))
 import { logger } from '~/utils/logger'
 import { useSecureAvailability } from '~/composables/useSecureAvailability'
 import { useCustomerConflictCheck } from '~/composables/useCustomerConflictCheck'
-import LoginRegisterModal from '~/components/booking/LoginRegisterModal.vue'
-import DocumentUploadModal from '~/components/booking/DocumentUploadModal.vue'
-import BookingProposalForm from '~/components/BookingProposalForm.vue'
-import GeneralInquiryForm from '~/components/GeneralInquiryForm.vue'
 import { useRoute, useRuntimeConfig } from '#app'
 import { useFeatures } from '~/composables/useFeatures'
 import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
-import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
-import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
-import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
 import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
 
-const { cashVisible: cashVisibleForCustomer } = useCashPaymentSettings('customer', () => route.params.slug as string)
-const { invoiceVisible: invoiceVisibleForCustomer } = useInvoicePaymentSettings(() => route.params.slug as string)
+const cashVisibleForCustomer = ref(false)
+const invoiceVisibleForCustomer = ref(false)
 // 'wallee' stays the default so nothing changes for tenants that haven't opted in to invoice.
 const selectedPaymentMethod = ref<'wallee' | 'invoice'>('wallee')
 
@@ -1764,13 +1763,14 @@ const countdownInterval = ref<NodeJS.Timeout | null>(null)
 const reservationExpiredNotice = ref(false)
 
 
-const { isEnabled, load: loadFeatures } = useFeatures()
+const { isEnabled } = useFeatures()
 
 // Initialize once at top-level so repeated instructor selections reuse the same instance
 const { checkConflicts: checkCustomerConflicts, customerAppointments } = useCustomerConflictCheck()
 
 // From get-booking-init — reliable for guests (useFeatures needs auth tenant_id)
 const allowOnlineBookingFromInit = ref<boolean | null>(null)
+const pickupTravelCheckFromInit = ref<boolean | null>(null)
 
 // Prüfe ob Online-Buchung aktiviert ist
 const isOnlineBookingEnabled = computed(() => {
@@ -1782,6 +1782,7 @@ const isOnlineBookingEnabled = computed(() => {
 
 // Fahrzeit-Check: Slots bei Pickup nach Erreichbarkeit der Kundenadresse filtern
 const isPickupTravelCheckEnabled = computed(() => {
+  if (pickupTravelCheckFromInit.value !== null) return pickupTravelCheckFromInit.value
   return isEnabled('customer_plz_travel_check_enabled', false)
 })
 
@@ -2077,6 +2078,28 @@ watch(currentTenant, (tenant) => {
 }, { immediate: true })
 const tenantSettings = ref<any>({})
 
+function applyBookingInitPayload(payload: any) {
+  if (!payload) return
+  currentTenant.value = payload.tenant
+  categories.value = payload.categories || []
+  locationsCount.value = payload.locationsCount ?? 0
+  if (payload.availableServiceTypes) {
+    availableServiceTypes.value = payload.availableServiceTypes
+  }
+  if (typeof payload.allow_online_booking === 'boolean') {
+    allowOnlineBookingFromInit.value = payload.allow_online_booking
+  }
+  if (typeof payload.pickup_travel_check === 'boolean') {
+    pickupTravelCheckFromInit.value = payload.pickup_travel_check
+  }
+  if (typeof payload.cash_visible_for_customer === 'boolean') {
+    cashVisibleForCustomer.value = payload.cash_visible_for_customer
+  }
+  if (typeof payload.invoice_payments_enabled === 'boolean') {
+    invoiceVisibleForCustomer.value = payload.invoice_payments_enabled
+  }
+}
+
 // SSR pre-fetch: tenant + categories + locationsCount in one roundtrip before JS hydration
 const slug = computed(() => route.params.slug as string)
 const isInitializing = ref(true)
@@ -2087,13 +2110,8 @@ const { data: initData } = await useAsyncData(
 )
 const availableServiceTypes = ref<Array<'fahrstunde' | 'theorie' | 'beratung'>>([])
 if (initData.value?.success) {
-  currentTenant.value = initData.value.data.tenant
-  categories.value = initData.value.data.categories || []
-  locationsCount.value = initData.value.data.locationsCount ?? 0
-  availableServiceTypes.value = initData.value.data.availableServiceTypes || []
-  if (typeof initData.value.data.allow_online_booking === 'boolean') {
-    allowOnlineBookingFromInit.value = initData.value.data.allow_online_booking
-  }
+  applyBookingInitPayload(initData.value.data)
+  isInitializing.value = false
 }
 
 const bookingLabels = computed(() => mergeTerminology(currentTenant.value?.business_type))
@@ -2553,6 +2571,40 @@ const bookingSteps = computed(() => {
     }
   ]
 })
+
+const hasFiredBookingStarted = ref(false)
+const lastTrackedWizardStep = ref<number | null>(null)
+
+function wizardStepMeta(step: number) {
+  if (step === 0) return { step: 0, label: 'Start' }
+  if (step === 4.5) return { step: 4.5, label: 'Treffpunkt' }
+  if (step === 9) return { step: 9, label: 'Anfrage bestätigt' }
+  if (step === 10) return { step: 10, label: 'Gast-Erfolg' }
+  const found = bookingSteps.value.find(s => s.id === step)
+  return { step, label: found?.label ?? `Schritt ${step}` }
+}
+
+function trackWizardStep(step: number) {
+  if (typeof window === 'undefined' || !(window as any).__trackBookingEvent) return
+  if (lastTrackedWizardStep.value === step) return
+  lastTrackedWizardStep.value = step
+  const meta = wizardStepMeta(step)
+  ;(window as any).__bookingStep = meta
+  if (!hasFiredBookingStarted.value && step >= 1 && step <= 7) {
+    hasFiredBookingStarted.value = true
+    ;(window as any).__trackBookingEvent('started', { step: meta.step, step_label: meta.label })
+  }
+  ;(window as any).__trackBookingEvent('step', { step: meta.step, step_label: meta.label })
+}
+
+watch(
+  [currentStep, currentTenant],
+  ([step, tenant]) => {
+    if (!tenant?.id) return
+    trackWizardStep(step as number)
+  },
+  { immediate: true }
+)
 
 const canSearch = computed(() => {
   return currentTenant.value && filters.value.category_code
@@ -4764,10 +4816,9 @@ const checkGuestPhoneAvailability = () => {
 // the reservation stays valid, and handleAuthSuccess() picks it back up and
 // completes the booking automatically once login succeeds.
 const switchToLoginKeepingReservation = () => {
-  showGuestForm.value = false
   loginModalPrefillEmail.value = guestEmail.value.trim()
-  showLoginModal.value = true
   loginModalTab.value = 'login'
+  showLoginModal.value = true
 }
 
 const submitGuestBooking = async () => {
@@ -4980,6 +5031,10 @@ const getPreviousStep = (fromStep: number): number => {
 }
 
 const goBackToReferrer = () => {
+  if (process.client && window.self !== window.top) {
+    window.parent.postMessage({ type: 'dt-booking-close' }, 'https://drivingteam.ch')
+    return
+  }
   if (referrerUrl.value) {
     navigateTo(referrerUrl.value)
   } else {
@@ -5027,11 +5082,12 @@ watch(() => currentStep.value, (newStep: number, oldStep: number) => {
 
   // Initialize Google Places Autocomplete when entering pickup address step
   if (newStep === 7 && selectedLocation.value?.isPickup) {
+    const { $loadGoogleMaps } = useNuxtApp()
+    ;($loadGoogleMaps as undefined | (() => void))?.()
     nextTick(() => {
       if (window.google?.maps) {
         initializeAddressAutocomplete()
       } else {
-        // Maps not yet loaded — wait for the plugin's load event
         const onMapsLoaded = () => {
           initializeAddressAutocomplete()
           window.removeEventListener('google-maps-loaded', onMapsLoaded)
@@ -5692,10 +5748,7 @@ const loadBookingInit = async (slug: string) => {
     if (typeof cached.value.allow_online_booking !== 'boolean') {
       cached.value = null
     } else {
-      currentTenant.value = cached.value.tenant
-      categories.value = cached.value.categories || []
-      locationsCount.value = cached.value.locationsCount ?? 0
-      allowOnlineBookingFromInit.value = cached.value.allow_online_booking
+      applyBookingInitPayload(cached.value)
       logger.debug('📦 Booking init from cache:', slug)
       return
     }
@@ -5711,18 +5764,9 @@ const loadBookingInit = async (slug: string) => {
       return
     }
 
-    const { tenant, categories: cats, locationsCount: locCount, allow_online_booking: allowOnline } = response.data
-    currentTenant.value = tenant
-    categories.value = cats || []
-    locationsCount.value = locCount ?? 0
-    if (typeof allowOnline === 'boolean') {
-      allowOnlineBookingFromInit.value = allowOnline
-    }
-
-    // Persist in Nuxt state so revisiting the page skips the fetch
+    applyBookingInitPayload(response.data)
     cached.value = response.data
-
-    logger.debug('✅ Booking init loaded:', tenant?.name, '| categories:', cats?.length)
+    logger.debug('✅ Booking init loaded:', response.data?.tenant?.name)
   } catch (err) {
     console.error('❌ Error loading booking init:', err)
   }
@@ -5814,17 +5858,8 @@ onMounted(async () => {
       }
     }
 
-    // Single combined call: tenant + categories + locationsCount (no sequential waterfall)
-    if (slug.value) {
-      // Refetch if SSR/cache lacked allow_online_booking (guests cannot resolve it via useFeatures)
-      if (!currentTenant.value || allowOnlineBookingFromInit.value === null) {
-        await loadBookingInit(slug.value)
-      }
-    }
-
-    // Load remaining feature flags (travel check etc.) once tenant is known
-    if (currentTenant.value?.id) {
-      await loadFeatures(currentTenant.value.id).catch(() => {})
+    if (slug.value && (!currentTenant.value || allowOnlineBookingFromInit.value === null)) {
+      await loadBookingInit(slug.value)
     }
 
     isInitializing.value = false

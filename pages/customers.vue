@@ -92,9 +92,9 @@
         </div>
 
         <!-- Filter Toggles -->
-        <div class="grid grid-cols-3 gap-4 text-sm">
+        <div class="flex items-center gap-2.5 text-sm whitespace-nowrap">
           <!-- Inactive Toggle -->
-          <div class="flex items-center gap-3 rounded-lg">
+          <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-gray-700">
               {{ showInactive ? 'Inaktiv' : 'Aktive' }}
             </span>
@@ -110,7 +110,7 @@
           </div>
 
           <!-- All Students Toggle (nur für Staff ohne can_view_all_students - Admins sehen immer alle) -->
-          <div v-if="currentUser.role === 'staff' && !currentUser.can_view_all_students" class="flex items-center gap-3 rounded-lg">
+          <div v-if="currentUser.role === 'staff' && !currentUser.can_view_all_students" class="flex items-center gap-2">
             <span class="text-sm font-medium text-gray-700">
               {{ showAllStudents ? 'Alle' : 'Meine' }}
             </span>
@@ -120,22 +120,21 @@
             </label>
           </div>
 
-          <!-- No Upcoming Appointments Toggle -->
-          <div class="flex items-center gap-3 rounded-lg">
-            <span class="text-sm font-medium text-gray-700">
-              {{ showOnlyNoUpcoming ? 'Keine Termine geplant' : 'Termin geplant' }}
-            </span>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input v-model="showOnlyNoUpcoming" type="checkbox" class="sr-only peer" @change="handleNoUpcomingToggle">
-              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-            </label>
-          </div>
+          <select
+            v-model="idleFilter"
+            class="tenant-focus ml-auto w-auto rounded-lg border border-gray-300 bg-white px-1.5 py-1 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:border-transparent"
+          >
+            <option v-for="option in idleFilterOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
         </div>
 
         <!-- Statistics -->
         <div class="flex gap-3 text-xs sm:text-sm text-gray-600">
           <span v-if="currentUser.role === 'staff' && !showAllStudents">Meine: {{ students.length }}</span>
           <span v-else>Alle: {{ students.length }}</span>
+          <span>Angezeigt: {{ filteredStudents.length }}</span>
           <span>Aktiv: {{ students.filter(s => s.is_active).length }}</span>
           <span>Inaktiv: {{ students.filter(s => !s.is_active).length }}</span>
         </div>
@@ -184,7 +183,7 @@
         <div class="text-center px-4">
           <div class="text-6xl mb-4">👥</div>
           <h3 class="text-lg font-semibold text-gray-900 mb-2">
-            {{ searchQuery ? `Keine ${t.clientsPlural} gefunden` : `Noch keine ${t.clientsPlural}` }}
+            {{ searchQuery || idleFilter !== 'all' ? `Keine ${t.clientsPlural} gefunden` : `Noch keine ${t.clientsPlural}` }}
           </h3>
         </div>
       </div>
@@ -430,6 +429,8 @@ import StaffPOSModal from '~/components/StaffPOSModal.vue'
 import { useTerminology } from '~/composables/useTerminology'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { filterByStudentSearch } from '~/utils/student-search'
+import { isCategoryPassed } from '~/utils/student-exam'
+import { useStudentIdleFilter } from '~/composables/useStudentIdleFilter'
 
 const { t } = useTerminology()
 const { primaryColor } = useTenantBranding()
@@ -452,7 +453,13 @@ const error = ref<string | null>(null)
 const searchQuery = ref('')
 const showInactive = ref(false)
 const showAllStudents = ref(false)
-const showOnlyNoUpcoming = ref(false)
+const {
+  idleFilter,
+  idleFilterOptions,
+  loadAppointmentActivity,
+  applyIdleFilter,
+  lastLessonFor
+} = useStudentIdleFilter()
 
 // Staff with can_view_all_students always sees the full tenant list (no admin needed)
 watch(
@@ -462,7 +469,6 @@ watch(
   },
   { immediate: true }
 )
-const studentsWithUpcomingIds = ref<Set<string>>(new Set())
 const showPendingModal = ref(false)
 const pendingStudent = ref<any>(null)
 const isResendingSms = ref(false)
@@ -481,67 +487,20 @@ const toastMessage = ref('')
 
 // Computed
 const filteredStudents = computed(() => {
-  logger.debug('🔄 filteredStudents computed triggered:', {
-    studentsCount: students.value.length,
-    showInactive: showInactive.value,
-    showOnlyNoUpcoming: showOnlyNoUpcoming.value,
-    searchQuery: searchQuery.value
-  })
-  
   let filtered = students.value
 
-  // ✅ Aktiv/Inaktiv Filterung passiert jetzt in der DB-Abfrage (loadStudents)
-  // Keine lokale Filterung mehr nötig
-
-  // Filter by search query (trim, multi-token full name, accents, phone digits)
   if (searchQuery.value) {
     filtered = filterByStudentSearch(filtered, searchQuery.value)
-    logger.debug('✅ Filtered by search query:', filtered.length, 'students')
   }
 
-  // Filter by upcoming appointments (uses server-fetched ID set)
-  if (showOnlyNoUpcoming.value) {
-    const beforeFilter = filtered.length
-    filtered = filtered.filter(student => !studentsWithUpcomingIds.value.has(student.id))
-    logger.debug(`✅ No-upcoming filter: ${beforeFilter} → ${filtered.length} students`)
+  if (idleFilter.value !== 'all') {
+    return applyIdleFilter(filtered)
   }
 
-  // Alphabetisch nach Vorname sortieren
-  filtered = filtered.slice().sort((a, b) =>
+  return filtered.slice().sort((a, b) =>
     (a.first_name || '').localeCompare(b.first_name || '', 'de-CH', { sensitivity: 'base' })
   )
-
-  logger.debug('🔄 Final filtered students:', filtered.length)
-  return filtered
 })
-
-// Filter students (for toggle changes)
-const filterStudents = () => {
-  // This function is called when the "No Upcoming" toggle changes
-  // The filteredStudents computed property will automatically update
-  logger.debug('🔄 Filtering students - showOnlyNoUpcoming:', showOnlyNoUpcoming.value)
-}
-
-const loadUpcomingAppointmentIds = async () => {
-  try {
-    const response = await $fetch('/api/admin/get-students-upcoming-appointments', {
-      method: 'GET'
-    }) as any
-    if (response?.success) {
-      studentsWithUpcomingIds.value = new Set(response.data)
-      logger.debug(`📅 Loaded ${response.data.length} students with upcoming appointments`)
-    }
-  } catch (err) {
-    logger.warn('⚠️ Failed to load upcoming appointment IDs:', err)
-  }
-}
-
-const handleNoUpcomingToggle = async () => {
-  logger.debug('🔄 No upcoming toggle changed:', showOnlyNoUpcoming.value)
-  if (showOnlyNoUpcoming.value && studentsWithUpcomingIds.value.size === 0) {
-    await loadUpcomingAppointmentIds()
-  }
-}
 
 // Navigation functions
 const goBack = async () => {
@@ -584,15 +543,6 @@ const handleStudentAdded = async (newStudent: any) => {
   await loadStudents()
 }
 
-// Check if a student has passed the exam for a given category
-// Normalizes both sides: "B Automatik" → "B" to match exam_passed_categories
-const isCategoryPassed = (student: any, cat: string): boolean => {
-  const passed: string[] = student.exam_passed_categories || []
-  if (!passed.length) return false
-  const normalizedCat = cat.trim().split(' ')[0]
-  return passed.some(p => p === cat || p === normalizedCat)
-}
-
 // Mobile optimization methods
 const formatPhone = (phone: string) => {
   if (!phone) return ''
@@ -607,17 +557,18 @@ const formatPhone = (phone: string) => {
 
 const formatRelativeDate = (dateString: string) => {
   if (!dateString) return ''
-  
+
   const date = new Date(dateString)
   const now = new Date()
-  const diffTime = Math.abs(now.getTime() - date.getTime())
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  
-  if (diffDays === 1) return 'Gestern'
-  if (diffDays < 7) return `vor ${diffDays}d`
-  if (diffDays < 30) return `vor ${Math.floor(diffDays / 7)}w`
-  if (diffDays < 365) return `vor ${Math.floor(diffDays / 30)}M`
-  return `vor ${Math.floor(diffDays / 365)}J`
+  const diffMs = now.getTime() - date.getTime()
+  const isPast = diffMs >= 0
+  const diffDays = Math.ceil(Math.abs(diffMs) / (1000 * 60 * 60 * 24))
+
+  if (diffDays <= 1) return isPast ? 'gestern' : 'morgen'
+  if (diffDays < 7) return `${isPast ? 'vor' : 'in'} ${diffDays}d`
+  if (diffDays < 30) return `${isPast ? 'vor' : 'in'} ${Math.floor(diffDays / 7)}w`
+  if (diffDays < 365) return `${isPast ? 'vor' : 'in'} ${Math.floor(diffDays / 30)}M`
+  return `${isPast ? 'vor' : 'in'} ${Math.floor(diffDays / 365)}J`
 }
 
 const quickAction = (student: any) => {
@@ -717,10 +668,7 @@ onMounted(async () => {
     return
   }
 
-  await Promise.all([
-    loadStudents(true),
-    loadUpcomingAppointmentIds()
-  ])
+  await loadStudents(true)
 })
 
 // Methods - ECHTE SUPABASE CALLS mit korrekten Spaltennamen
@@ -755,6 +703,7 @@ const loadStudents = async (loadAppointments = true) => {
 
     if (!studentsToProcess.length) {
       students.value = []
+      await loadAppointmentActivity([])
       logger.debug('ℹ️ No students found')
       return
     }
@@ -870,6 +819,10 @@ const loadStudents = async (loadAppointments = true) => {
         }
       })
 
+    await loadAppointmentActivity(enrichedStudents.map((s: any) => s.id))
+    enrichedStudents.forEach((student: any) => {
+      student.lastLesson = lastLessonFor(student.id)
+    })
     students.value = enrichedStudents
     logger.debug('✅ Students loaded successfully:', students.value.length)
     logger.debug('📊 Sample student:', students.value[0])

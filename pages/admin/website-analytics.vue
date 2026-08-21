@@ -30,7 +30,7 @@
     <template v-else>
 
       <!-- KPI Cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div class="bg-white rounded-lg border shadow-sm p-3 sm:p-4">
           <div class="text-xs text-gray-500 mb-1">Seitenaufrufe total</div>
           <div class="text-2xl font-bold text-gray-900">{{ data?.totalViews?.toLocaleString('de-CH') ?? 0 }}</div>
@@ -50,6 +50,11 @@
           <div class="text-xs text-gray-500 mb-1">Mobile</div>
           <div class="text-2xl font-bold text-blue-600">{{ mobilePct }}%</div>
           <div class="text-xs text-gray-400 mt-1">der Besucher</div>
+        </div>
+        <div class="bg-white rounded-lg border shadow-sm p-3 sm:p-4">
+          <div class="text-xs text-gray-500 mb-1">Button-Klicks</div>
+          <div class="text-2xl font-bold text-gray-900">{{ data?.ctaClicks?.toLocaleString('de-CH') ?? 0 }}</div>
+          <div class="text-xs text-gray-400 mt-1">Anfragen / WhatsApp / Buchen</div>
         </div>
       </div>
 
@@ -145,6 +150,7 @@ definePageMeta({ middleware: 'admin', layout: 'admin' })
 
 interface AnalyticsData {
   totalViews: number
+  ctaClicks: number
   topPages: { page: string; views: number }[]
   sources: Record<string, number>
   devices: Record<string, number>

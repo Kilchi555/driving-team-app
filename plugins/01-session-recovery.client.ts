@@ -32,6 +32,8 @@ const PUBLIC_PAGES = [
   '/customer/courses',
   '/customer/reglemente',
   '/helvetia-offerte',
+  '/pause',
+  '/unsubscribe',
 ]
 
 /** Magic-Link / Supabase-Session ohne httpOnly-Cookie — Session-Recovery nicht erzwingen */

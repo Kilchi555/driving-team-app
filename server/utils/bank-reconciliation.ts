@@ -211,7 +211,10 @@ export function matchEntriesToInvoices(
  * Markiert bereits importierte Transaktionen (aus bank_import_records) anhand
  * ihres Dedupe-Schlüssels als "already_imported" in den Match-Ergebnissen.
  */
-export function flagAlreadyImported(results: MatchResult[], importedKeyMap: Map<string, string>) {
+export function flagAlreadyImported<T extends { entry: { dedupe_key: string }; already_imported?: boolean; already_imported_at?: string }>(
+  results: T[],
+  importedKeyMap: Map<string, string>,
+) {
   for (const r of results) {
     if (importedKeyMap.has(r.entry.dedupe_key)) {
       r.already_imported = true

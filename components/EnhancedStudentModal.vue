@@ -322,11 +322,8 @@
                   </div>
                   <span
                     v-if="evaluationsEnabled"
-                    :class="[
-                    'px-2 py-1 text-xs font-medium rounded-full',
-                    lesson.evaluations && lesson.evaluations.length > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  ]">
-                    {{ lesson.evaluations && lesson.evaluations.length > 0 ? 'Bewertet' : 'Unbewertet' }}
+                    :class="['px-2 py-1 text-xs font-medium rounded-full', getLessonStatus(lesson).classes]">
+                    {{ getLessonStatus(lesson).label }}
                   </span>
                 </div>
                 
@@ -3103,6 +3100,33 @@ const closeModal = () => {
 // Open Reminder Modal for Pending Student
 const openReminderModal = () => {
   emit('open-reminder-modal', selectedStudent.value)
+}
+
+// Status-Badge einer Lektion: unterscheidet zwischen "Bewertet" (mind. eine
+// echte Bewertung), "Geplant" (nur vorgemerkte Themen ohne Rating — via
+// TopicNotePicker), "Ungeplant" (künftiger Termin ganz ohne Vormerkung) und
+// "Unbewertet" (vergangener Termin ohne jede Bewertung/Vormerkung).
+// Nutzt lesson.allEvaluations statt lesson.evaluations, da letzteres für die
+// Fortschritts-Ansicht auf "neu/geändert" gefiltert ist und daher auch bei
+// vorhandenen Bewertungen leer sein kann.
+const getLessonStatus = (lesson: any): { label: string; classes: string } => {
+  const allEvals = lesson.allEvaluations || lesson.evaluations || []
+  const hasRating = allEvals.some((e: any) => e.criteria_rating != null)
+  if (hasRating) {
+    return { label: 'Bewertet', classes: 'bg-green-100 text-green-800' }
+  }
+
+  const hasPlannedTopics = allEvals.length > 0
+  if (hasPlannedTopics) {
+    return { label: 'Geplant', classes: 'bg-blue-100 text-blue-800' }
+  }
+
+  const isFuture = new Date(lesson.start_time).getTime() > Date.now()
+  if (isFuture) {
+    return { label: 'Ungeplant', classes: 'bg-gray-100 text-gray-600' }
+  }
+
+  return { label: 'Unbewertet', classes: 'bg-yellow-100 text-yellow-800' }
 }
 
 // Check if current user can evaluate this lesson

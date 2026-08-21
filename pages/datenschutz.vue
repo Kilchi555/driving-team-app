@@ -11,7 +11,7 @@
           </button>
         </div>
         <h1 class="text-2xl sm:text-3xl font-bold mb-2">Datenschutzerklärung</h1>
-        <p class="text-blue-200 text-sm">Simy – SaaS-Plattform für Terminbetriebe | Stand: 1. April 2026</p>
+        <p class="text-blue-200 text-sm">Simy – SaaS-Plattform für Terminbetriebe | Stand: 18. August 2026</p>
       </div>
     </div>
 
@@ -52,12 +52,12 @@
         <section id="d1">
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">1. Verantwortlicher</h2>
           <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 text-sm space-y-1">
-            <p><strong>Simy IT Systems Kilchenmann</strong></p>
+            <p><strong>Simy IT Systems Kilchenmann</strong> (Einzelfirma)</p>
             <p>Weiherweg 2, 8610 Uster, Schweiz</p>
             <p>E-Mail: <a href="mailto:info@simy.ch" class="text-blue-600 hover:underline">info@simy.ch</a></p>
             <p>Website: <a href="https://www.simy.ch" class="text-blue-600 hover:underline">www.simy.ch</a></p>
           </div>
-          <p class="mt-3">Bei Fragen zum Datenschutz wenden Sie sich bitte direkt per E-Mail an uns. Wir beantworten Anfragen in der Regel innerhalb von 10 Arbeitstagen.</p>
+          <p class="mt-3">Bei allgemeinen Fragen zum Datenschutz wenden Sie sich bitte direkt per E-Mail an uns. Solche Anfragen beantworten wir in der Regel innerhalb von 10 Arbeitstagen. Für formelle Gesuche zur Ausübung Ihrer Betroffenenrechte (z.B. Auskunft, Löschung) gilt die gesetzliche Frist gemäss Ziffer 8.</p>
         </section>
 
         <!-- §2 -->
@@ -193,9 +193,21 @@
               <tbody>
                 <tr>
                   <td class="p-3 border border-gray-200 font-medium">Supabase Inc.</td>
-                  <td class="p-3 border border-gray-200">Datenbank, Authentifizierung</td>
-                  <td class="p-3 border border-gray-200">USA (EU-Server wählbar)</td>
-                  <td class="p-3 border border-gray-200">SCCs / EU-Hosting</td>
+                  <td class="p-3 border border-gray-200">Datenbankhosting (Rechenzentrum Zürich), Authentifizierung</td>
+                  <td class="p-3 border border-gray-200">Schweiz (Rechenzentrum) / USA (Unternehmenssitz)</td>
+                  <td class="p-3 border border-gray-200">SCCs</td>
+                </tr>
+                <tr class="bg-gray-50">
+                  <td class="p-3 border border-gray-200 font-medium">Vercel Inc.</td>
+                  <td class="p-3 border border-gray-200">Hosting der Anwendungsserver</td>
+                  <td class="p-3 border border-gray-200">EU (Frankfurt) / USA</td>
+                  <td class="p-3 border border-gray-200">SCCs</td>
+                </tr>
+                <tr>
+                  <td class="p-3 border border-gray-200 font-medium">Resend Inc.</td>
+                  <td class="p-3 border border-gray-200">Transaktionaler E-Mail-Versand</td>
+                  <td class="p-3 border border-gray-200">USA</td>
+                  <td class="p-3 border border-gray-200">SCCs</td>
                 </tr>
                 <tr class="bg-gray-50">
                   <td class="p-3 border border-gray-200 font-medium">Wallee Group AG</td>
@@ -204,35 +216,47 @@
                   <td class="p-3 border border-gray-200">PCI DSS Level 1, AVV</td>
                 </tr>
                 <tr>
-                  <td class="p-3 border border-gray-200 font-medium">SMS-Provider (tbd)</td>
-                  <td class="p-3 border border-gray-200">Einladungs-SMS</td>
-                  <td class="p-3 border border-gray-200">EU/CH</td>
-                  <td class="p-3 border border-gray-200">AVV</td>
+                  <td class="p-3 border border-gray-200 font-medium">Twilio Inc.</td>
+                  <td class="p-3 border border-gray-200">Einladungs- und Erinnerungs-SMS</td>
+                  <td class="p-3 border border-gray-200">USA</td>
+                  <td class="p-3 border border-gray-200">SCC, AVV</td>
+                </tr>
+                <tr class="bg-gray-50">
+                  <td class="p-3 border border-gray-200 font-medium">OpenAI, L.L.C.</td>
+                  <td class="p-3 border border-gray-200">KI-Erkennung von Beleg-/Rechnungsfotos</td>
+                  <td class="p-3 border border-gray-200">USA</td>
+                  <td class="p-3 border border-gray-200">SCC, kein Modelltraining auf Kundendaten</td>
+                </tr>
+                <tr>
+                  <td class="p-3 border border-gray-200 font-medium">Anthropic, PBC / Google LLC</td>
+                  <td class="p-3 border border-gray-200">Simy AI Assistent (Textantworten im Admin-Bereich)</td>
+                  <td class="p-3 border border-gray-200">USA / EU</td>
+                  <td class="p-3 border border-gray-200">SCC, kein Modelltraining auf Kundendaten</td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <p class="mt-3 text-xs text-gray-500">Simy benachrichtigt Kunden mindestens 14 Tage im Voraus über Änderungen bei Sub-Prozessoren.</p>
+          <p class="mt-3 text-xs text-gray-500">Diese Tabelle ist identisch mit der Sub-Prozessoren-Liste im <NuxtLink to="/avv" class="text-blue-600 hover:underline">AVV</NuxtLink> §5. Simy benachrichtigt Kunden mindestens 14 Tage im Voraus über Änderungen bei Sub-Prozessoren.</p>
         </section>
 
         <!-- §7 -->
         <section id="d7">
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">7. Internationale Datenübermittlung</h2>
-          <p class="mb-3">Wo Daten in Länder ausserhalb der Schweiz oder des Europäischen Wirtschaftsraums (EWR) übertragen werden – insbesondere bei der Nutzung von Supabase (US-Sitz) – stellt Simy durch den Abschluss von <strong>Standardvertragsklauseln (SCCs)</strong> gemäss Art. 46 DSGVO sicher, dass ein angemessenes Datenschutzniveau gewährleistet ist.</p>
-          <p>Die Datenbank wird bevorzugt auf EU-Servern von Supabase betrieben. Auf Anfrage erteilen wir Auskunft über den aktuellen Hosting-Standort.</p>
+          <p class="mb-3">Die Datenbank wird im <strong>Rechenzentrum Zürich (Schweiz)</strong> betrieben. Die Anwendungsserver laufen in der <strong>EU (Frankfurt)</strong>. Wo einzelne Sub-Prozessoren (siehe Ziffer 6) Daten in die USA oder andere Länder ausserhalb der Schweiz/des EWR übertragen – etwa aufgrund ihres Unternehmenssitzes –, stellt Simy durch den Abschluss von <strong>Standardvertragsklauseln (SCCs)</strong> gemäss Art. 46 DSGVO sicher, dass ein angemessenes Datenschutzniveau gewährleistet ist.</p>
+          <p>Auf Anfrage erteilen wir gerne weitere Auskunft zu den technischen Details der Datenübermittlung.</p>
         </section>
 
         <!-- §8 -->
         <section id="d8">
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">8. Ihre Rechte als betroffene Person</h2>
-          <p class="mb-3">Als betroffene Person stehen Ihnen gemäss nDSG und DSGVO folgende Rechte zu. Anfragen richten Sie bitte an <a href="mailto:support@simy.ch" class="text-blue-600 hover:underline">support@simy.ch</a>. Wir bearbeiten Anfragen innerhalb von <strong>30 Tagen</strong>.</p>
+          <p class="mb-3">Als betroffene Person stehen Ihnen gemäss nDSG und DSGVO folgende Rechte zu. Anfragen richten Sie bitte an <a href="mailto:support@simy.ch" class="text-blue-600 hover:underline">support@simy.ch</a>. Wir bearbeiten formelle Gesuche innerhalb von <strong>30 Tagen</strong> nach Eingang (Art. 12 Abs. 3 DSGVO); bei komplexen oder zahlreichen Gesuchen kann diese Frist einmalig um bis zu zwei weitere Monate verlängert werden, worüber wir Sie innerhalb der ersten 30 Tage informieren.</p>
           <div class="grid sm:grid-cols-2 gap-3">
             <div v-for="right in rights" :key="right.title" class="rounded-xl border border-gray-200 p-3">
               <p class="font-semibold text-gray-800 text-sm mb-1">{{ right.title }}</p>
               <p class="text-xs text-gray-600">{{ right.desc }}</p>
             </div>
           </div>
-          <p class="mt-4 text-sm">Sie haben ausserdem das Recht, sich bei der zuständigen Aufsichtsbehörde zu beschweren. In der Schweiz ist dies der <strong>Eidgenössische Datenschutz- und Öffentlichkeitsbeauftragte (EDÖB)</strong>, <a href="https://www.edoeb.admin.ch" target="_blank" class="text-blue-600 hover:underline">www.edoeb.admin.ch</a>.</p>
+          <p class="mt-4 text-sm">Sie haben ausserdem das Recht, sich bei der zuständigen Aufsichtsbehörde zu beschweren. In der Schweiz ist dies der <strong>Eidgenössische Datenschutz- und Öffentlichkeitsbeauftragte (EDÖB)</strong>, <a href="https://www.edoeb.admin.ch" target="_blank" class="text-blue-600 hover:underline">www.edoeb.admin.ch</a>. EU-ansässige betroffene Personen können sich zusätzlich an die Datenschutz-Aufsichtsbehörde ihres Wohnsitzlandes wenden.</p>
         </section>
 
         <!-- §9 -->
@@ -244,6 +268,7 @@
             <li><strong>Zugriffssteuerung:</strong> Rollenbasiertes Berechtigungskonzept; jeder Tenant sieht ausschliesslich seine eigenen Daten.</li>
             <li><strong>Passwörter:</strong> Mindestlänge 12 Zeichen, Stärkeprüfung, Have I Been Pwned-Integration.</li>
             <li><strong>Backups:</strong> Tägliche automatische Datensicherungen mit 30-tägiger Aufbewahrung.</li>
+            <li><strong>Zugangsdaten-Rotation:</strong> Zugriffstoken und API-Schlüssel werden regelmässig überprüft und rotiert sowie umgehend widerrufen bei Personalwechsel, Auftragsende oder Verdacht auf Kompromittierung.</li>
             <li><strong>Incident Response:</strong> Dokumentierter Prozess; Benachrichtigung betroffener Kunden bei Datenpannen innerhalb von 72 Stunden.</li>
             <li><strong>Updates:</strong> Sicherheits-Patches werden innerhalb von 30 Tagen nach Veröffentlichung eingespielt.</li>
           </ul>
@@ -258,14 +283,22 @@
 
         <!-- §11 -->
         <section id="d11">
-          <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">11. Änderungen dieser Erklärung</h2>
+          <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">11. Einsatz von Künstlicher Intelligenz</h2>
+          <p class="mb-3">Simy setzt für einzelne Funktionen KI-Modelle ein, z. B. zur automatischen Erkennung von Beleg-/Rechnungsdaten oder im "Simy AI"-Assistenten für Fragen zu Betrieb, Marketing und Abläufen. Diese Funktionen sind in der App klar als KI gekennzeichnet.</p>
+          <p class="mb-3">Die eingesetzten KI-Anbieter (siehe Ziffer 6) erhalten nur die für die jeweilige Funktion notwendigen Daten, erhalten keinen eigenständigen Zugriff auf die Datenbank und dürfen die übermittelten Daten vertraglich nicht zum Training eigener Modelle verwenden.</p>
+          <p>KI-Funktionen treffen keine automatisierten Entscheidungen mit rechtlicher Wirkung oder Ähnlichem im Sinne von Art. 22 DSGVO — sie schlagen vor, entscheiden aber nicht.</p>
+        </section>
+
+        <!-- §12 -->
+        <section id="d12">
+          <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">12. Änderungen dieser Erklärung</h2>
           <p>Simy behält sich vor, diese Datenschutzerklärung bei wesentlichen Änderungen der Datenverarbeitung oder der gesetzlichen Rahmenbedingungen anzupassen. Kunden werden per E-Mail über wesentliche Änderungen informiert. Die jeweils aktuelle Version ist unter simy.ch/datenschutz abrufbar.</p>
         </section>
 
         <!-- Footer -->
         <div class="pt-6 border-t border-gray-100 text-xs text-gray-400">
           <p>Simy IT Systems Kilchenmann · Weiherweg 2 · 8610 Uster · Schweiz</p>
-          <p class="mt-1">Stand: 1. April 2026 · Version 1.0</p>
+          <p class="mt-1">Stand: 18. August 2026 · Version 1.1</p>
           <div class="flex gap-4 mt-3">
             <NuxtLink to="/agb" class="text-blue-500 hover:underline">AGB</NuxtLink>
             <NuxtLink to="/avv" class="text-blue-500 hover:underline">Auftragsverarbeitungsvertrag</NuxtLink>
@@ -294,7 +327,8 @@ const toc = [
   { href: '#d8',  label: 'Ihre Rechte als betroffene Person' },
   { href: '#d9',  label: 'Datensicherheit' },
   { href: '#d10', label: 'Cookies und Tracking' },
-  { href: '#d11', label: 'Änderungen dieser Erklärung' },
+  { href: '#d11', label: 'Einsatz von Künstlicher Intelligenz' },
+  { href: '#d12', label: 'Änderungen dieser Erklärung' },
 ]
 
 function scrollTo(href: string) {

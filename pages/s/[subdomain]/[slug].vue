@@ -45,8 +45,9 @@
             target="_blank"
             rel="noopener noreferrer"
             aria-label="WhatsApp"
+            @click="trackCta('whatsapp')"
           >WhatsApp</a>
-          <a class="lp-nav-cta" :href="landing.bookingUrl">{{ bookLabel }}</a>
+          <a class="lp-nav-cta" :href="landing.bookingUrl" @click="trackCta('book')">{{ bookLabel }}</a>
           <button
             v-if="hasDrawer"
             type="button"
@@ -72,8 +73,8 @@
         </template>
         <div v-if="sectionLinks.length && pageLinks.length" class="lp-nav-drawer-sep" />
         <NuxtLink v-for="n in pageLinks" :key="`m-${n.slug}`" :to="n.href" @click="mobileNavOpen = false">{{ n.title }}</NuxtLink>
-        <a :href="landing.bookingUrl" @click="mobileNavOpen = false">{{ bookLabel }}</a>
-        <a v-if="whatsappUrl" :href="whatsappUrl" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+        <a :href="landing.bookingUrl" @click="mobileNavOpen = false; trackCta('book')">{{ bookLabel }}</a>
+        <a v-if="whatsappUrl" :href="whatsappUrl" target="_blank" rel="noopener noreferrer" @click="trackCta('whatsapp')">WhatsApp</a>
       </nav>
     </header>
 
@@ -100,7 +101,7 @@
           <h1 class="lp-h1">{{ block.content.headline }}</h1>
           <p class="lp-hero-sub">{{ block.content.subheadline }}</p>
           <div class="lp-cta-row">
-            <a class="lp-btn-primary" :href="block.content.cta_primary_url || landing.bookingUrl">{{ block.content.cta_primary_text || bookLabel }}</a>
+            <a class="lp-btn-primary" :href="block.content.cta_primary_url || landing.bookingUrl" @click="trackCta('hero')">{{ block.content.cta_primary_text || bookLabel }}</a>
             <a v-if="block.content.cta_secondary_url" class="lp-btn-ghost" :href="block.content.cta_secondary_url">
               {{ block.content.cta_secondary_text }}
             </a>
@@ -127,7 +128,9 @@
             <img
               v-if="svc.image_url"
               class="lp-service-photo"
-              :src="svc.image_url"
+              :src="offerPhotoSrc(svc.image_url)"
+              :srcset="offerPhotoSrcset(svc.image_url)"
+              sizes="(max-width: 700px) 100vw, 360px"
               :alt="svc.name"
               width="600"
               height="400"
@@ -143,6 +146,7 @@
               v-if="svc.book_url || landing.bookingUrl"
               class="lp-service-book"
               :href="svc.book_url || landing.bookingUrl"
+              @click="trackCta('service')"
             >{{ bookLabel }}</a>
           </article>
         </div>
@@ -163,7 +167,9 @@
             <img
               v-if="p.image_url"
               class="lp-service-photo"
-              :src="p.image_url"
+              :src="offerPhotoSrc(p.image_url)"
+              :srcset="offerPhotoSrcset(p.image_url)"
+              sizes="(max-width: 700px) 100vw, 360px"
               :alt="p.name"
               width="600"
               height="400"
@@ -175,7 +181,7 @@
             </div>
             <p v-if="p.category" class="lp-meta">{{ p.category }}</p>
             <p v-if="p.description">{{ p.description }}</p>
-            <a v-if="p.shop_url" class="lp-service-book" :href="p.shop_url">{{ p.cta_label || 'Im Shop kaufen →' }}</a>
+            <a v-if="p.shop_url" class="lp-service-book" :href="p.shop_url" @click="trackCta('product')">{{ p.cta_label || 'Im Shop kaufen →' }}</a>
           </article>
         </div>
         <div v-if="block.content.cta_url" class="lp-section-cta">
@@ -195,7 +201,14 @@
         <div class="lp-team">
           <article v-for="m in block.content.members" :key="m.id" class="lp-team-card">
             <div class="lp-team-avatar" aria-hidden="true">
-              <img v-if="m.photo_url" :src="m.photo_url" :alt="m.name" width="72" height="72" />
+              <img
+                v-if="m.photo_url"
+                :src="offerPhotoSrc(m.photo_url, 400)"
+                :alt="m.name"
+                width="72"
+                height="72"
+                loading="lazy"
+              />
               <span v-else>{{ initials(m.name) }}</span>
             </div>
             <h3>{{ m.name }}</h3>
@@ -479,15 +492,11 @@
               <span v-if="block.content.address"> · </span>{{ mapCityLine(block.content) }}
             </template>
           </p>
-          <div class="lp-map lp-map--section">
-            <iframe
-              :src="block.content.map_embed_url"
-              title="Karte"
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"
-              allowfullscreen
-            />
-          </div>
+          <WebsiteLocationMap
+            :embed-url="block.content.map_embed_url"
+            :open-url="block.content.map_url"
+            title="Karte"
+          />
           <div v-if="block.content.map_url" class="lp-section-cta">
             <a
               class="lp-btn-ghost"
@@ -619,6 +628,7 @@
         :target="a.external ? '_blank' : undefined"
         :rel="a.external ? 'noopener noreferrer' : undefined"
         :class="['lp-sticky-btn', `lp-sticky-btn--${a.key}`]"
+        @click="trackCta(a.key)"
       >{{ a.label }}</a>
     </nav>
   </div>
@@ -628,9 +638,10 @@
 import '~/assets/css/website-landing-fonts.css'
 import WebsiteIcon from '~/components/website/WebsiteIcon.vue'
 import { isWebsiteIconKey, trustIconForLabel, type WebsiteIconKey } from '~/utils/website-icons'
-import { heroPreloadAttrs, websiteImageProxyUrl } from '~/utils/website-responsive-image'
+import { heroPreloadAttrs, offerPhotoSrc, offerPhotoSrcset, websiteImageProxyUrl } from '~/utils/website-responsive-image'
 import { websiteOverflowPages, websitePageCardHref, websitePageLinks, websiteStandardLinks } from '~/utils/website-nav'
 import { websiteFontCssVars, websiteFontHeadLinks } from '~/utils/website-fonts'
+import { isWebsitePickupMeetingPoint } from '~/utils/website-wizard-content'
 
 definePageMeta({
   layout: 'site',
@@ -673,6 +684,9 @@ const { data, pending, error } = await useAsyncData(
     ),
   { watch: [subdomain, pageSlug, preview] },
 )
+
+const websiteId = computed(() => data.value?.website?.id || null)
+const { trackPageview, trackCta } = useWebsitePublicAnalytics(websiteId, preview)
 
 const homeHref = computed(() => `/s/${subdomain.value}${preview.value ? '?preview=1' : ''}`)
 const pageTitle = computed(
@@ -830,7 +844,7 @@ const whatsappUrl = computed(() => {
 
 const meetingPoints = (block: any) =>
   (Array.isArray(block?.content?.meeting_points) ? block.content.meeting_points : []).filter(
-    (p: any) => p?.name,
+    (p: any) => p?.name && isWebsitePickupMeetingPoint(p),
   )
 
 const showHqAddress = (block: any) => {
@@ -913,28 +927,31 @@ const stickyActions = computed(() => {
   const out: Array<{ key: string; href: string; label: string; external?: boolean }> = []
   if (telHref.value) out.push({ key: 'call', href: telHref.value, label: 'Anrufen' })
   if (whatsappUrl.value) out.push({ key: 'wa', href: whatsappUrl.value, label: 'WhatsApp', external: true })
-  if (landing.value?.bookingUrl) out.push({ key: 'book', href: landing.value.bookingUrl, label: bookLabel.value })
+  if (landing.value?.bookingUrl) out.push({ key: 'book', href: landing.value.bookingUrl, label: 'Buchen' })
   return out
 })
 
+const previewQs = computed(() => (preview.value ? '?preview=1' : ''))
+
 const defaultLegalLinks = computed(() => [
-  { label: 'Impressum', href: `/s/${subdomain.value}/impressum` },
-  { label: 'Datenschutz', href: `/s/${subdomain.value}/datenschutz` },
+  { label: 'Impressum', href: `/s/${subdomain.value}/impressum${previewQs.value}` },
+  { label: 'Datenschutz', href: `/s/${subdomain.value}/datenschutz${previewQs.value}` },
 ])
 
 function legalHref(href: string) {
+  const qs = previewQs.value
   if (!href) return defaultLegalLinks.value[0].href
   if (href.startsWith('http')) {
     try {
       const u = new URL(href)
-      if (u.pathname.includes('/impressum')) return `/s/${subdomain.value}/impressum`
-      if (u.pathname.includes('/datenschutz')) return `/s/${subdomain.value}/datenschutz`
+      if (u.pathname.includes('/impressum')) return `/s/${subdomain.value}/impressum${qs}`
+      if (u.pathname.includes('/datenschutz')) return `/s/${subdomain.value}/datenschutz${qs}`
     } catch {
       /* ignore */
     }
   }
-  if (href.includes('impressum')) return `/s/${subdomain.value}/impressum`
-  if (href.includes('datenschutz')) return `/s/${subdomain.value}/datenschutz`
+  if (href.includes('impressum')) return `/s/${subdomain.value}/impressum${qs}`
+  if (href.includes('datenschutz')) return `/s/${subdomain.value}/datenschutz${qs}`
   return href
 }
 
@@ -1084,7 +1101,8 @@ async function submitLead() {
       `/api/public/website/${encodeURIComponent(subdomain.value)}/lead`,
       {
         method: 'POST',
-        body: { ...leadForm.value, category: 'contact' },
+        query: preview.value ? { preview: '1' } : undefined,
+        body: { ...leadForm.value, category: 'contact', ...(preview.value ? { preview: '1' } : {}) },
       },
     )
     leadOk.value = true
@@ -1307,19 +1325,7 @@ useHead(() => ({
 
 // Pageview analytics (skip preview / SSR)
 onMounted(() => {
-  if (!preview.value && data.value?.website?.id) {
-    const websiteId = data.value.website.id
-    $fetch('/api/website/analytics/track', {
-      method: 'POST',
-      body: {
-        website_id: websiteId,
-        event_type: 'pageview',
-        event_url: typeof window !== 'undefined' ? window.location.href : undefined,
-        referrer: typeof document !== 'undefined' ? document.referrer || null : null,
-        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-      },
-    }).catch(() => {})
-  }
+  trackPageview()
 
   // Soft-refresh teaser slots when section is visible / every 3 min
   refreshSlotsQuietly()

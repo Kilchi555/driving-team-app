@@ -704,7 +704,7 @@ const handler = defineEventHandler(async (event) => {
         // Awaited: Vercel freezes after response; fire-and-forget was dropping uploads.
         try {
           const { resolveMarketingAttribution } = await import('~/server/utils/resolve-marketing-attribution')
-          const attrRow = await resolveMarketingAttribution(supabase, marketingSessionId)
+          const attrRow = await resolveMarketingAttribution(supabase, marketingSessionId, marketingAttribution)
 
           const hashedEmail = finalEmail ? await sha256Hex(finalEmail.trim().toLowerCase()) : null
           const normalizedPhone = (finalPhone ?? '').replace(/\s+/g, '').replace(/^00/, '+')

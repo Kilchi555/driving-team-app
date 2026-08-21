@@ -44,7 +44,8 @@ import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 import { resolveRoomSettings, pickAvailableRoomId, type RoomServiceType } from '~/server/utils/room-availability'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
-import { mergeAttributionFields } from '~/server/utils/marketing-attribution-merge'
+import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
+import { hasAnyAttribution } from '~/server/utils/marketing-attribution-merge'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -533,31 +534,12 @@ export default defineEventHandler(async (event: H3Event) => {
     })
     
     // Prefer client payload; always merge DB + booking_redirects by session so
-    // Fahrstunden bookings keep gclid when only session_id crossed domains.
-    let marketingAttr: MarketingAttributionPayload | null = body.marketing_attribution ?? null
-    if (body.marketing_session_id) {
-      const { data: attrRow } = await supabase
-        .from('marketing_attributions')
-        .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
-        .eq('session_id', body.marketing_session_id)
-        .maybeSingle()
-      if (attrRow) {
-        marketingAttr = mergeAttributionFields(attrRow, marketingAttr) as MarketingAttributionPayload
-      }
-
-      if (!marketingAttr?.gclid && !marketingAttr?.gbraid && !marketingAttr?.wbraid) {
-        const { data: redirectRow } = await supabase
-          .from('booking_redirects')
-          .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
-          .eq('session_id', body.marketing_session_id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        if (redirectRow) {
-          marketingAttr = mergeAttributionFields(marketingAttr, redirectRow) as MarketingAttributionPayload
-        }
-      }
-    }
+    // Fahrstunden bookings keep gclid/fbclid when only session_id crossed domains.
+    const marketingAttr = await resolveMarketingAttribution(
+      supabase,
+      body.marketing_session_id,
+      body.marketing_attribution,
+    )
 
     // Auto-assign a room (never chosen by the customer) — pick the first free
     // room from the admin-configured pool for this category+location+service type.
@@ -1115,37 +1097,34 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // ============ LAYER 11b: META CONVERSIONS API (CAPI) UPLOAD ============
-    // Fire-and-forget. Sends a Purchase event to Meta's CAPI even when the browser
-    // Pixel fires too — Meta deduplicates via event_id. Requires at least one user
-    // signal (fbclid, fbc, fbp, email, or phone) to be meaningful.
-    ;(async () => {
-      try {
-        const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
-        const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
-        const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
-        const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+    // Awaited: Vercel freezes the isolate after the response. Pixel still fires
+    // in the browser — Meta deduplicates via event_id.
+    try {
+      const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
+      const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+      const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+      const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
 
-        const conversionValueChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
+      const conversionValueChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
 
-        await recordAndSendCapiEvent({
-          appointment_id: newAppointment.id,
-          tenant_id: tenantId ?? null,
-          event_name: 'Purchase',
-          conversion_value_chf: conversionValueChf,
-          conversion_date_time: new Date(),
-          fbclid: marketingAttr?.fbclid ?? null,
-          fbc: marketingAttr?.fbc ?? null,
-          fbp: marketingAttr?.fbp ?? null,
-          hashed_email: hashedEmail,
-          hashed_phone: hashedPhone,
-          client_ip: ipAddress ?? null,
-          user_agent: getHeader(event, 'user-agent') ?? null,
-          event_source_url: getHeader(event, 'referer') ?? null,
-        })
-      } catch (err: any) {
-        logger.warn('⚠️ Meta CAPI upload failed (non-critical):', err?.message ?? err)
-      }
-    })()
+      await recordAndSendCapiEvent({
+        appointment_id: newAppointment.id,
+        tenant_id: tenantId ?? null,
+        event_name: 'Purchase',
+        conversion_value_chf: conversionValueChf,
+        conversion_date_time: new Date(),
+        fbclid: marketingAttr?.fbclid ?? null,
+        fbc: marketingAttr?.fbc ?? null,
+        fbp: marketingAttr?.fbp ?? null,
+        hashed_email: hashedEmail,
+        hashed_phone: hashedPhone,
+        client_ip: ipAddress ?? null,
+        user_agent: getHeader(event, 'user-agent') ?? null,
+        event_source_url: getHeader(event, 'referer') ?? null,
+      })
+    } catch (err: any) {
+      logger.warn('⚠️ Meta CAPI upload failed (non-critical):', err?.message ?? err)
+    }
 
     // ============ LAYER 12: LINK booking_events.completed TO APPOINTMENT ============
     // Closes the first-party funnel so we can answer "which marketing session
@@ -1169,7 +1148,7 @@ export default defineEventHandler(async (event: H3Event) => {
     // For new customers only, and only if not already set.
     // This lets us attribute ALL future bookings and revenue back to the original
     // marketing source — enabling true LTV-per-channel analysis.
-    if (isNewCustomer && (marketingAttr || body.marketing_session_id)) {
+    if (isNewCustomer && (hasAnyAttribution(marketingAttr) || body.marketing_session_id)) {
       ;(async () => {
         try {
           // Resolve referrer page from booking_redirects if we have a marketing_session_id

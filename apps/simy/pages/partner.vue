@@ -43,7 +43,7 @@
 
     <SimyWebsiteHighlight
       title="Website-Generator für Partner-Empfehlungen"
-      subtitle="Viele Betriebe wollen zuerst eine starke Website. Simy hat sie als eigenes Produkt — einmalig CHF 490, Hosting ab CHF 29."
+      subtitle="Viele Betriebe wollen zuerst eine starke Website. Simy hat sie als eigenes Produkt — einmalig CHF 490, Hosting ab CHF 19."
     />
 
     <SimyFooter />
@@ -58,16 +58,16 @@ useHead({
   meta: [
     { name: 'description', content: 'Simy arbeitet mit Wallee, asa.ch und weiteren Partnern zusammen. Erfahre mehr über unsere Integrationen und werde selbst Partner.' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/partner' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/partner' }],
   script: ldScripts(
     webPageLd({
       name: 'Simy Partner',
       description: 'Technologie- und Integrationspartner von Simy — Wallee, asa.ch und mehr.',
-      url: 'https://simy.ch/partner',
+      url: 'https://www.simy.ch/partner',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Partner', url: 'https://simy.ch/partner' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Partner', url: 'https://www.simy.ch/partner' },
     ]),
   ),
 })

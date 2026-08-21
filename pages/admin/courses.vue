@@ -902,7 +902,8 @@
               Zahlungsmethode
             </label>
             <p class="text-xs text-gray-500 mb-2">
-              <strong>Automatisch</strong> wählt anhand der Stadt: <em>Einsiedeln → Barzahlung</em>, alle anderen → <em>Online-Zahlung (Wallee)</em>. Setze manuell, wenn dieser Kurs abweichen soll (z. B. PGS in Einsiedeln auf Cash, Spezialkurs in Zürich auf Cash).
+              Vorausgewählt aus der <strong>Standard-Zahlungsart</strong> in den Zahlungseinstellungen.
+              <strong>Automatisch</strong> folgt der Stadt: <em>Einsiedeln → Barzahlung</em>, alle anderen → <em>Online</em>.
             </p>
             <select
               v-model="newCourse.payment_method"
@@ -1757,11 +1758,6 @@
 
     <!-- Create Category Modal -->
     <div v-if="showCreateCategoryModal || showEditCategoryModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click.self="closeCreateCategoryModal">
-      <!-- Debug Info -->
-      <div v-if="showEditCategoryModal" class="fixed top-4 left-4 bg-red-500 text-white p-2 rounded z-[9999] text-xs">
-        DEBUG: Category Modal ist sichtbar! showEditCategoryModal = {{ showEditCategoryModal }}
-      </div>
-      
       <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-2xl w-full max-h-[90vh] flex flex-col admin-modal" @click.stop>
         <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
           <h2 class="text-xl font-bold text-gray-900">
@@ -2056,7 +2052,7 @@
                 label-class="text-gray-900 font-medium"
               />
               <p class="text-xs text-blue-700 mt-1 ml-1">
-                Wenn aktiv: Sobald für einen Standort keine buchbaren Termine mehr vorhanden sind, erscheint automatisch eine Warteliste (Website + App). Kunden können sich eintragen und werden per E-Mail benachrichtigt, sobald wieder ein Kurs dieser Art auf «Aktiv» gesetzt wird.
+                Wenn aktiv: Diese Kursart hat immer eine eigene Warteliste-Karte (Website + App) — unabhängig davon, ob es bereits buchbare oder ausgebuchte Kurse gibt. Sie erscheint am Ende der Kursliste. Kunden können sich eintragen und werden per E-Mail benachrichtigt, sobald ein neuer Termin verfügbar ist.
               </p>
             </div>
 
@@ -3726,251 +3722,6 @@
     </div>
   </div>
 
-  <!-- Create Category Modal - Outside main container -->
-  <div v-if="showCreateCategoryModal || showEditCategoryModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4" @click="closeCreateCategoryModal">
-    <div class="bg-white rounded-lg border border-gray-200 shadow-sm max-w-2xl w-full max-h-[90vh] flex flex-col" @click.stop>
-      <div class="px-6 py-4 border-b border-gray-200 flex-shrink-0">
-        <h2 class="text-xl font-bold text-gray-900">
-          {{ showEditCategoryModal ? 'Kursart bearbeiten' : 'Neue Kursart erstellen' }}
-        </h2>
-      </div>
-      
-      <div class="px-6 py-4 space-y-4 overflow-y-auto flex-1">
-        <!-- Basic Info -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-500 mb-2">Code *</label>
-            <input
-              v-model="categoryForm.code"
-              type="text"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
-              placeholder="z.B. VKU"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-500 mb-2">Name *</label>
-            <input
-              v-model="categoryForm.name"
-              type="text"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
-              placeholder="z.B. Verkehrskunde"
-            />
-          </div>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-500 mb-2">Beschreibung</label>
-          <textarea
-            v-model="categoryForm.description"
-            rows="3"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
-            placeholder="Beschreibung der Kursart..."
-          ></textarea>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-500 mb-1">E-Mail: «Wichtig!» Hinweise</label>
-          <p class="text-xs text-gray-500 mb-2">Wird als Aufzählung im gelben Bereich der Anmeldebestätigung angezeigt.</p>
-          <div class="space-y-2">
-            <div
-              v-for="(item, index) in emailImportantNoticeItems"
-              :key="index"
-              class="flex items-center gap-2"
-            >
-              <span class="text-gray-400 text-sm">•</span>
-              <input
-                v-model="emailImportantNoticeItems[index]"
-                type="text"
-                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 tenant-focus focus:outline-none focus:ring-2 text-sm"
-                placeholder="z.B. Gültiger Lernfahrausweis mitnehmen"
-              />
-              <button
-                type="button"
-                @click="removeImportantNoticeItem(index)"
-                class="text-gray-400 hover:text-red-500 transition-colors p-1"
-                title="Entfernen"
-              >✕</button>
-            </div>
-          </div>
-          <button
-            type="button"
-            @click="addImportantNoticeItem"
-            class="mt-2 text-sm flex items-center gap-1 hover:opacity-80 transition-opacity"
-            :style="{ color: primaryColor }"
-          >
-            <span class="text-lg leading-none">+</span> Hinweis hinzufügen
-          </button>
-        </div>
-
-        <!-- SARI Integration -->
-        <div class="border-t border-gray-200 pt-4">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">SARI Integration</h3>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-500 mb-2">SARI Kategorie Code</label>
-              <input
-                v-model="categoryForm.sari_category_code"
-                type="text"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
-                placeholder="z.B. VKU"
-              />
-            </div>
-            <div class="flex items-center">
-              <input
-                v-model="categoryForm.requires_sari_sync"
-                type="checkbox"
-                id="requires_sari_sync"
-                class="mr-2"
-              />
-              <label for="requires_sari_sync" class="text-sm font-medium text-gray-500">
-                SARI Synchronisation aktiviert
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Default Settings -->
-        <div class="border-t border-gray-200 pt-4">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Standard-Einstellungen</h3>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-500 mb-2">Max. Teilnehmer</label>
-              <input
-                v-model.number="categoryForm.default_max_participants"
-                type="number"
-                min="1"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-500 mb-2">Preis (CHF)</label>
-              <input
-                v-model.number="defaultCategoryPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div class="flex items-center">
-              <input
-                v-model="categoryForm.default_requires_room"
-                type="checkbox"
-                id="default_requires_room"
-                class="mr-2"
-              />
-              <label for="default_requires_room" class="text-sm font-medium text-gray-500">
-                Standardmäßig Raum erforderlich
-              </label>
-            </div>
-            <div class="flex items-center">
-              <input
-                v-model="categoryForm.default_requires_vehicle"
-                type="checkbox"
-                id="default_requires_vehicle"
-                class="mr-2"
-              />
-              <label for="default_requires_vehicle" class="text-sm font-medium text-gray-500">
-                Standardmäßig Fahrzeug erforderlich
-              </label>
-            </div>
-          </div>
-
-          <!-- Room Selection -->
-          <div v-if="categoryForm.default_requires_room" class="mt-4">
-            <label class="block text-sm font-medium text-gray-500 mb-2">Standard-Raum</label>
-            <select
-              v-model="categoryForm.default_room_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
-            >
-              <option value="">Kein Standard-Raum</option>
-              <option v-for="room in availableRooms" :key="room.id" :value="room.id">
-                {{ room.name }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Vehicle Selection -->
-          <div v-if="categoryForm.default_requires_vehicle" class="mt-4">
-            <label class="block text-sm font-medium text-gray-500 mb-2">Standard-Fahrzeug</label>
-            <select
-              v-model="categoryForm.default_vehicle_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
-            >
-              <option value="">Kein Standard-Fahrzeug</option>
-              <option v-for="vehicle in vehicles" :key="vehicle.id" :value="vehicle.id">
-                {{ vehicle.name }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Duration Settings -->
-        <div class="border-t border-gray-200 pt-4">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Dauer-Einstellungen</h3>
-          
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-500 mb-2">Anzahl Sessions</label>
-              <input
-                v-model.number="categoryForm.session_count"
-                type="number"
-                min="1"
-                @input="updateDurationCalculation"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-500 mb-2">Stunden pro Session</label>
-              <input
-                v-model.number="categoryForm.hours_per_session"
-                type="number"
-                step="0.5"
-                min="0.5"
-                @input="updateDurationCalculation"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:outline-none focus:ring-2"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-500 mb-2">Gesamtdauer (Stunden)</label>
-              <input
-                v-model.number="categoryForm.total_duration_hours"
-                type="number"
-                step="0.5"
-                min="0.5"
-                readonly
-                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="px-6 py-4 border-t border-gray-200 flex-shrink-0 flex justify-end space-x-3">
-        <button
-          @click="cancelCategoryForm"
-          class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
-        >
-          Abbrechen
-        </button>
-        <button
-          @click="saveCategory"
-          :disabled="!canSaveCategory || isSavingCategory"
-          class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-        >
-          {{ isSavingCategory ? 'Speichere...' : (showEditCategoryModal ? 'Speichern' : 'Erstellen') }}
-        </button>
-      </div>
-    </div>
-  </div>
-  
   <!-- Participant Detail Modal -->
   <Teleport to="body">
     <div v-if="showParticipantDetail" class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-[99999] p-0 sm:p-4" @click.self="closeParticipantDetail">
@@ -4470,7 +4221,12 @@ import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import ToggleSwitch from '~/components/ToggleSwitch.vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import { useInvoicePaymentSettings } from '~/composables/useInvoicePaymentSettings'
-import { getCoursePaymentMethod, getPaymentMethodLabel } from '~/utils/courseLocationUtils'
+import {
+  getCoursePaymentMethod,
+  getPaymentMethodLabel,
+  mapTenantDefaultToCoursePaymentMethod,
+  defaultAdminEnrollmentPaymentOption,
+} from '~/utils/courseLocationUtils'
 import { evaluateSessionOrder } from '~/utils/session-order-rules'
 import { refreshClientSession } from '~/utils/client-session-refresh'
 import { formatCourseSessionLine } from '~/utils/format-course-sessions'
@@ -4480,6 +4236,21 @@ import { openParticipantListPdf } from '~/utils/print-participant-list'
 // course enrollments will fall back to cash.
 const { walleeEnabled, walleeStatusLoaded, loadWalleeStatus } = useWalleeStatus()
 const { invoiceEnabled: invoicePaymentsEnabledForTenant } = useInvoicePaymentSettings()
+const tenantDefaultPaymentMethod = ref<'wallee' | 'cash' | 'invoice'>('wallee')
+const defaultCoursePaymentMethod = computed(() =>
+  mapTenantDefaultToCoursePaymentMethod(tenantDefaultPaymentMethod.value)
+)
+
+async function loadTenantDefaultPaymentMethod() {
+  try {
+    const res = await $fetch<{ default_payment_method?: string }>('/api/settings/cash-payment-settings')
+    if (res.default_payment_method === 'cash' || res.default_payment_method === 'invoice' || res.default_payment_method === 'wallee') {
+      tenantDefaultPaymentMethod.value = res.default_payment_method
+    }
+  } catch {
+    // keep wallee fallback
+  }
+}
 
 // Simple toast notification functions
 const showSuccessToast = (title: string, message: string = '') => {
@@ -5334,7 +5105,7 @@ const newCourse = ref({
   sari_course_id: null as string | null,
   registration_deadline: null as string | null,
   status: 'draft',
-  payment_method: null as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null,
+  payment_method: defaultCoursePaymentMethod.value as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null,
   billing_mode: 'individual' as 'individual' | 'company_collective',
   company_id: null as string | null,
 })
@@ -5787,7 +5558,7 @@ const resetNewCourse = () => {
     sari_course_id: null,
     registration_deadline: null,
     status: 'scheduled',
-    payment_method: null,
+    payment_method: defaultCoursePaymentMethod.value,
     billing_mode: 'individual',
     company_id: null,
   }
@@ -6523,7 +6294,7 @@ const deleteRoom = async (roomId: string) => {
 // Modal Management Functions
 const openCreateCourseModal = async () => {
   logger.debug('🔄 Opening create course modal...')
-  
+
   // Ensure categories are loaded before opening modal
   if (!activeCategories.value || activeCategories.value.length === 0) {
     logger.debug('📥 Categories not loaded, loading now...')
@@ -6531,7 +6302,10 @@ const openCreateCourseModal = async () => {
       await loadCourseCategories(currentUser.value.tenant_id)
     }
   }
-  
+
+  await loadTenantDefaultPaymentMethod()
+  resetNewCourse()
+
   logger.debug('📋 Available categories:', activeCategories.value.length)
   showCreateCourseModal.value = true
 }
@@ -6962,6 +6736,7 @@ onMounted(async () => {
   loadWalleeStatus().catch(() => {})
   loadCompanies().catch(() => {})
   loadTenantSariEnabled().catch(() => {})
+  loadTenantDefaultPaymentMethod().catch(() => {})
   
   // Ensure current user is loaded first
   if (!currentUser.value?.tenant_id) {
@@ -7047,6 +6822,7 @@ const testOpenModal = () => {
 
 const manageEnrollments = (course: any) => {
   selectedCourse.value = course
+  resetEnrollmentFormExtras()
   showEnrollmentModal.value = true
   nextTick(async () => {
     try {
@@ -7183,6 +6959,7 @@ const closeEnrollmentModal = () => {
 
 const toggleAddParticipantForm = () => {
   showAddParticipantForm.value = !showAddParticipantForm.value
+  resetEnrollmentFormExtras()
   if (!showAddParticipantForm.value) {
     // Reset form when hiding
     enrollmentMode.value = 'search'
@@ -7204,7 +6981,11 @@ const toggleAddParticipantForm = () => {
 
 const resetEnrollmentFormExtras = () => {
   selectedExistingUser.value = null
-  enrollmentPaymentOption.value = isSelectedCourseCompanyCollective.value ? 'invoice' : ''
+  enrollmentPaymentOption.value = defaultAdminEnrollmentPaymentOption(
+    selectedCourse.value,
+    walleeEnabled.value,
+    invoicePaymentsEnabledForTenant.value
+  )
   enrollmentInvoiceAction.value = 'later'
   enrollmentType.value = 'full'
   enrollmentIndividualSession.value = 0

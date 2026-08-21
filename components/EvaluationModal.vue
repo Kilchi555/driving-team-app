@@ -207,6 +207,7 @@
               Suchen Sie oben nach Bewertungspunkten und klicken Sie diese an, um die {{ t.appointment }} zu bewerten.
             </p>
           </div>
+
         </div>
       </div>
 
@@ -260,7 +261,6 @@
 
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 // import { getSupabase } from '~/utils/supabase'
-import { formatDate } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import { useTenant } from '~/composables/useTenant'
 const { primaryBg, primaryText } = usePrimaryColor()
@@ -320,7 +320,6 @@ const newlyRatedCriteria = ref<string[]>([]) // Track which criteria were newly 
 const allCriteriaRatings = ref<Record<string, number[]>>({}) // Bewertungen des aktuellen Termins
 const historyRatings = ref<Record<string, number[]>>({}) // Historische Bewertungen früherer Termine (für Dropdown-Farben)
 const historyNotes = ref<Record<string, string>>({}) // Aktuellste Note pro Criteria (für Dropdown-Anzeige)
-
 
 // Computed
 
@@ -926,11 +925,18 @@ const loadCurrentAppointmentEvaluations = async () => {
           start_time: props.appointment?.start_time
         }
         
-        // ✅ WICHTIG: Nicht automatisch zu selectedCriteriaOrder hinzufügen!
-        // Der User muss das Kriterium explizit im Dropdown anklicken
-        // if (!selectedCriteriaOrder.value.includes(criteriaId)) {
-        //   selectedCriteriaOrder.value.push(criteriaId)
-        // }
+        // ✅ WICHTIG: Bereits bewertete Themen NICHT automatisch zu
+        // selectedCriteriaOrder hinzufügen — der User muss sie explizit im
+        // Dropdown anklicken.
+        //
+        // Ausnahme: Themen, die im EventModal als "Fokus für diese Lektion"
+        // vorgemerkt wurden (Notiz vorhanden, aber noch keine Bewertung) —
+        // die zeigen wir automatisch als Karte an, sonst müsste man sie hier
+        // erneut suchen, was den Sinn der Vormerkung untergraben würde.
+        const isPlannedTopic = (note.criteria_rating == null) && !!(note.criteria_note && note.criteria_note.trim())
+        if (isPlannedTopic && !selectedCriteriaOrder.value.includes(criteriaId)) {
+          selectedCriteriaOrder.value.push(criteriaId)
+        }
       })
       return true
     }

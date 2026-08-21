@@ -1,6 +1,12 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
+import { normalizePhoneNumber } from '~/server/utils/sms'
+import {
+  duplicateEmailMessage,
+  duplicatePhoneMessage,
+  messageForUniqueConstraint
+} from '~/server/utils/student-contact-conflict'
 import logger from '~/utils/logger'
 
 /**
@@ -9,6 +15,8 @@ import logger from '~/utils/logger'
  * Update student details (name, email, phone, address, etc.)
  * Only accessible by staff/admin
  */
+
+const CONFLICT_USER_FIELDS = 'id, first_name, last_name, is_active, deleted_at, onboarding_status'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -89,21 +97,21 @@ export default defineEventHandler(async (event) => {
       logger.warn('❌ user_id missing from request')
       throw createError({
         statusCode: 400,
-        statusMessage: 'user_id is required'
+        statusMessage: 'Kunde konnte nicht zugeordnet werden'
       })
     }
 
     if (first_name !== undefined && !String(first_name).trim()) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'first_name cannot be empty'
+        statusMessage: 'Vorname darf nicht leer sein'
       })
     }
 
     if (last_name !== undefined && !String(last_name).trim()) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'last_name cannot be empty'
+        statusMessage: 'Nachname darf nicht leer sein'
       })
     }
 
@@ -119,7 +127,7 @@ export default defineEventHandler(async (event) => {
       logger.error('❌ Error fetching student:', studentError)
       throw createError({
         statusCode: 404,
-        statusMessage: 'Student not found'
+        statusMessage: 'Kunde nicht gefunden'
       })
     }
 
@@ -127,7 +135,7 @@ export default defineEventHandler(async (event) => {
       logger.warn('❌ Student not found')
       throw createError({
         statusCode: 404,
-        statusMessage: 'Student not found'
+        statusMessage: 'Kunde nicht gefunden'
       })
     }
 
@@ -135,7 +143,7 @@ export default defineEventHandler(async (event) => {
       logger.warn('❌ Student not in same tenant:', { studentTenant: student.tenant_id, staffTenant: userProfile.tenant_id })
       throw createError({
         statusCode: 403,
-        statusMessage: 'Student not in your tenant'
+        statusMessage: 'Dieser Kunde gehört nicht zu eurer Fahrschule'
       })
     }
     
@@ -146,8 +154,60 @@ export default defineEventHandler(async (event) => {
 
     if (first_name !== undefined) updateData.first_name = String(first_name).trim()
     if (last_name !== undefined) updateData.last_name = String(last_name).trim()
-    if (email !== undefined) updateData.email = email
-    if (phone !== undefined) updateData.phone = phone
+
+    if (email !== undefined) {
+      const nextEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
+      updateData.email = nextEmail || null
+
+      if (updateData.email) {
+        const { data: existingByEmail } = await supabaseAdmin
+          .from('users')
+          .select(CONFLICT_USER_FIELDS)
+          .eq('tenant_id', userProfile.tenant_id)
+          .ilike('email', updateData.email)
+          .neq('id', user_id)
+          .maybeSingle()
+
+        if (existingByEmail) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: duplicateEmailMessage(existingByEmail)
+          })
+        }
+      }
+    }
+
+    if (phone !== undefined) {
+      const phoneRaw = typeof phone === 'string' ? phone.trim() : ''
+      if (!phoneRaw) {
+        updateData.phone = null
+      } else {
+        const normalized = normalizePhoneNumber(phoneRaw)
+        if (!normalized) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'Bitte eine gültige Telefonnummer eingeben (z. B. +41 76 338 02 89).'
+          })
+        }
+        updateData.phone = normalized
+
+        const { data: existingByPhone } = await supabaseAdmin
+          .from('users')
+          .select(CONFLICT_USER_FIELDS)
+          .eq('tenant_id', userProfile.tenant_id)
+          .eq('phone', normalized)
+          .neq('id', user_id)
+          .maybeSingle()
+
+        if (existingByPhone) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: duplicatePhoneMessage(existingByPhone)
+          })
+        }
+      }
+    }
+
     if (category !== undefined) updateData.category = category
     // Empty string is invalid for Postgres date columns — store null instead
     if (birthdate !== undefined) {
@@ -167,13 +227,14 @@ export default defineEventHandler(async (event) => {
       .from('users')
       .update(updateData)
       .eq('id', user_id)
-      .select()
+      .select('id, first_name, last_name, email, phone, category, birthdate, street, street_nr, zip, city, profession')
 
     if (updateError) {
       logger.error('❌ Error updating student:', updateError)
+      const uniqueMessage = messageForUniqueConstraint(updateError.message || '')
       throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to update student details: ' + updateError.message
+        statusCode: uniqueMessage ? 409 : 500,
+        statusMessage: uniqueMessage || 'Die Angaben konnten nicht gespeichert werden. Bitte erneut versuchen.'
       })
     }
 
@@ -181,7 +242,8 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      message: 'Student details updated successfully'
+      message: 'Angaben gespeichert',
+      data: updated?.[0] || null
     }
 
   } catch (error: any) {
@@ -193,7 +255,7 @@ export default defineEventHandler(async (event) => {
 
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to update student details'
+      statusMessage: 'Die Angaben konnten nicht gespeichert werden. Bitte erneut versuchen.'
     })
   }
 })

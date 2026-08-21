@@ -32,32 +32,32 @@
       <div class="absolute inset-0 bg-gradient-to-t from-red-900/60 via-red-800/30 to-transparent"></div>
 
       <div class="section-container relative z-10">
-        <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div class="text-white">
             <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-6 border border-white/20">
               <span class="text-xl">🏥</span>
               <span class="text-sm font-semibold">Nothelferkurs Lachen SZ</span>
             </div>
-            <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
               Nothelferkurs<br/>
               <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-100">Lachen SZ</span>
             </h1>
-            <p class="text-lg text-white/90 mb-8 leading-relaxed max-w-lg">
+            <p class="text-base sm:text-lg text-white/90 mb-6 sm:mb-8 leading-relaxed max-w-2xl">
               Obligatorischer Nothelferkurs am Zürichsee – in Lachen SZ. 10 Stunden Erste Hilfe, CHF 120.- inkl. Nothelferausweis. Gültig 6 Jahre und für alle Fahrzeugkategorien anerkannt.
             </p>
 
-            <div class="flex gap-8 mb-10">
+            <div class="flex gap-4 sm:gap-8 mb-8 sm:mb-10">
               <div>
-                <p class="text-4xl font-black text-yellow-300">CHF 120</p>
-                <p class="text-white/70 text-sm">inkl. Ausweis</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">CHF 120</p>
+                <p class="text-[11px] sm:text-sm text-white/70">inkl. Ausweis</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">10 h</p>
-                <p class="text-white/70 text-sm">Kursdauer</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">10 h</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Kursdauer</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">6 J.</p>
-                <p class="text-white/70 text-sm">Gültigkeitsdauer</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">6 J.</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Gültigkeitsdauer</p>
               </div>
             </div>
 
@@ -79,35 +79,35 @@
                 <span class="text-yellow-300 mt-0.5">📍</span>
                 <div>
                   <p class="font-semibold text-sm">Kursort</p>
-                  <p class="text-white/70 text-sm">Lachen SZ – am Zürichsee</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">Lachen SZ – am Zürichsee</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">⏱️</span>
                 <div>
                   <p class="font-semibold text-sm">Kursformat</p>
-                  <p class="text-white/70 text-sm">1 Tag (10 Stunden) oder 2 × 5 Stunden</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">1 Tag (10 Stunden) oder 2 × 5 Stunden</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">💰</span>
                 <div>
                   <p class="font-semibold text-sm">Preis</p>
-                  <p class="text-white/70 text-sm">CHF 120.- inkl. Nothelferausweis</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">CHF 120.- inkl. Nothelferausweis</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">🎓</span>
                 <div>
                   <p class="font-semibold text-sm">Mindestalter</p>
-                  <p class="text-white/70 text-sm">Ab 14 Jahren · Kein Führerschein nötig</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">Ab 14 Jahren · Kein Führerschein nötig</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">✅</span>
                 <div>
                   <p class="font-semibold text-sm">Gültigkeit</p>
-                  <p class="text-white/70 text-sm">6 Jahre · anerkannt für alle Kategorien (A, B, C, D, BE)</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">6 Jahre · anerkannt für alle Kategorien (A, B, C, D, BE)</p>
                 </div>
               </div>
             </div>

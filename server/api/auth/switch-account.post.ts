@@ -8,6 +8,7 @@ import { validateUUID } from '~/server/utils/validators'
 import {
   applySessionCookies,
   canReturnToAdmin,
+  canReturnToSwitchHome,
   canSwitchToStaff,
   endImpersonation,
   isPrimaryTenantAdmin,
@@ -17,6 +18,7 @@ import {
   loadSwitchUserByAuthId,
   mintSessionForUser,
   resolveGrantActor,
+  resolveImpersonationActor,
   startOrUpdateImpersonation,
   type SwitchUserRow,
 } from '~/server/utils/account-switch'
@@ -85,18 +87,20 @@ export default defineEventHandler(async (event) => {
 
   const userAgent = getHeader(event, 'user-agent') || ''
   let switchType: 'linked' | 'support' | 'staff_switch' = 'support'
-  let goingToAdmin = false
+  let goingHome = false
 
   if (isTenantAdmin(target)) {
     if (!(await canReturnToAdmin(event, current, target))) {
       throw createError({ statusCode: 403, statusMessage: 'Wechsel nicht erlaubt' })
     }
-    goingToAdmin = true
+    goingHome = true
   } else if (target.role === 'staff') {
-    if (!(await canSwitchToStaff(event, current, target))) {
+    if (await canReturnToSwitchHome(event, current, target)) {
+      goingHome = true
+    } else if (!(await canSwitchToStaff(event, current, target))) {
       throw createError({ statusCode: 403, statusMessage: 'Wechsel nicht erlaubt' })
     }
-    if (!isSwitchableStaff(target)) {
+    if (!goingHome && !isSwitchableStaff(target)) {
       throw createError({ statusCode: 403, statusMessage: 'Wechsel nicht erlaubt' })
     }
     const grantActor = await resolveGrantActor(event, current)
@@ -114,12 +118,11 @@ export default defineEventHandler(async (event) => {
   const session = await mintSessionForUser(target)
   applySessionCookies(event, session)
 
-  if (goingToAdmin) {
+  if (goingHome) {
     await endImpersonation(event, current.tenant_id)
   } else {
-    const actor = await resolveGrantActor(event, current)
-    // Impersonator cookie only for a real admin actor — never mint one for staff-to-staff.
-    if (isTenantAdmin(actor) && actor.auth_user_id) {
+    const actor = await resolveImpersonationActor(event, current)
+    if (actor?.auth_user_id) {
       await startOrUpdateImpersonation({
         event,
         actor,
@@ -145,7 +148,7 @@ export default defineEventHandler(async (event) => {
       from_role: current.role,
       to_user_id: target.id,
       to_role: target.role,
-      switch_type: goingToAdmin ? 'return_admin' : switchType,
+      switch_type: goingHome ? (isTenantAdmin(target) ? 'return_admin' : 'return_home') : switchType,
     },
   }, event)
 
@@ -155,7 +158,7 @@ export default defineEventHandler(async (event) => {
     .eq('id', target.tenant_id)
     .maybeSingle()
 
-  const redirectPath = goingToAdmin
+  const redirectPath = goingHome && isTenantAdmin(target)
     ? (tenantRow?.website_only ? '/admin/website' : '/admin')
     : '/dashboard'
 

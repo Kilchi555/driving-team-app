@@ -16,6 +16,8 @@ import {
   notifyAdminMissingExternalEmail,
   notifyAdminMissingInstructors,
 } from '~/server/utils/course-staff-notifications'
+import { getTenantDefaultPaymentMethod } from '~/server/utils/tenant-default-payment-method'
+import { mapTenantDefaultToCoursePaymentMethod, type CoursePaymentMethod } from '~/utils/courseLocationUtils'
 
 export interface SyncResult {
   success: boolean
@@ -79,6 +81,9 @@ export class SARISyncEngine {
         .maybeSingle()
 
       const partialConfig = categoryConfig || null
+      const defaultPaymentMethod = mapTenantDefaultToCoursePaymentMethod(
+        await getTenantDefaultPaymentMethod(this.supabase, this.tenantId)
+      )
 
       // 1. Fetch course GROUPS from SARI (each group = 1 course with multiple sessions)
       const courseGroups = await this.sari.getCourseGroups(courseType)
@@ -92,7 +97,7 @@ export class SARISyncEngine {
       // 2. Process each course GROUP
       for (const group of courseGroups) {
         try {
-          const result = await this.mapAndStoreCourseGroup(group, courseType, partialConfig)
+          const result = await this.mapAndStoreCourseGroup(group, courseType, partialConfig, defaultPaymentMethod)
           if (result) {
             syncedCourses++
             syncedSessions += result.sessionsCreated
@@ -284,7 +289,8 @@ export class SARISyncEngine {
   private async mapAndStoreCourseGroup(
     group: SARICourseGroup,
     courseType: 'VKU' | 'PGS',
-    partialConfig?: { allow_partial_enrollment: boolean; partial_start_position: number; partial_price_rappen: number } | null
+    partialConfig?: { allow_partial_enrollment: boolean; partial_start_position: number; partial_price_rappen: number } | null,
+    defaultPaymentMethod: CoursePaymentMethod = 'WALLEE'
   ): Promise<{ courseId: string; sessionsCreated: number; participantsSynced: number } | null> {
     const sessions = group.courses || []
     if (sessions.length === 0) {
@@ -347,11 +353,18 @@ export class SARISyncEngine {
     // Check if course already exists — first by exact group ID, then by matching
     // any current session ID (handles the case where SARI drops completed sessions
     // from the group, causing a new groupSariId like GROUP_2_3_4 instead of GROUP_1_2_3_4).
-    let existing: { id: string; status: string; current_participants: number; price_per_participant_rappen: number; is_partial_only: boolean } | null = null
+    let existing: {
+      id: string
+      status: string
+      current_participants: number
+      price_per_participant_rappen: number
+      is_partial_only: boolean
+      payment_method: string | null
+    } | null = null
 
     const { data: exactMatch } = await this.supabase
       .from('courses')
-      .select('id, status, current_participants, price_per_participant_rappen, is_partial_only')
+      .select('id, status, current_participants, price_per_participant_rappen, is_partial_only, payment_method')
       .eq('sari_course_id', groupSariId)
       .eq('tenant_id', this.tenantId)
       .maybeSingle()
@@ -373,7 +386,7 @@ export class SARISyncEngine {
       if (matchedCourseId) {
         const { data: matchedCourse } = await this.supabase
           .from('courses')
-          .select('id, status, current_participants, price_per_participant_rappen, is_partial_only')
+          .select('id, status, current_participants, price_per_participant_rappen, is_partial_only, payment_method')
           .eq('id', matchedCourseId)
           .single()
 
@@ -448,7 +461,12 @@ export class SARISyncEngine {
           }
           return existing.price_per_participant_rappen ?? 0
         })(),
-        is_partial_only: isPartialOnly
+        is_partial_only: isPartialOnly,
+        // Drafts without a stored method get the tenant default. Already
+        // published or admin-overridden courses keep whatever is on the row.
+        ...(!existing.payment_method && existing.status === 'draft'
+          ? { payment_method: defaultPaymentMethod }
+          : {}),
       }
       
       const { error: updateError } = await this.supabase
@@ -470,6 +488,7 @@ export class SARISyncEngine {
         ...courseData,
         status: computeCourseStatus(null),
         is_partial_only: isPartialOnly,
+        payment_method: defaultPaymentMethod,
         price_per_participant_rappen: (isPartialOnly && (partialConfig?.partial_price_rappen ?? 0) > 0)
           ? partialConfig!.partial_price_rappen
           : 0

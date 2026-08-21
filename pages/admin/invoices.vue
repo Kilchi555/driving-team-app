@@ -4,20 +4,21 @@
     <!-- ═══ PAGE HEADER ═══ -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h1 class="text-xl font-bold text-gray-900">Rechnungen</h1>
+        <h1 class="text-xl font-bold text-gray-900">{{ listKind === 'quote' ? 'Offerten' : 'Rechnungen' }}</h1>
         <p class="text-sm text-gray-500 mt-0.5">
-          {{ totalInvoices }} Rechnungen · CHF {{ formatCurrency(summary.paid_amount).replace('CHF ', '') }} bezahlt
+          <template v-if="listKind === 'quote'">{{ totalInvoices }} Offerten</template>
+          <template v-else>{{ totalInvoices }} Rechnungen · CHF {{ formatCurrency(summary.paid_amount).replace('CHF ', '') }} bezahlt</template>
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <NuxtLink to="/admin/dunning"
+        <NuxtLink v-if="listKind === 'invoice'" to="/admin/dunning"
           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zM12 15.75h.007v.008H12v-.008z" />
           </svg>
           <span class="hidden sm:inline">Mahnwesen</span>
         </NuxtLink>
-        <button @click="showCamtModal = true"
+        <button v-if="listKind === 'invoice'" @click="showCamtModal = true"
           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
@@ -30,7 +31,7 @@
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
-          Neue Rechnung
+          {{ listKind === 'quote' ? 'Neue Offerte' : 'Neue Rechnung' }}
         </button>
         <button @click="refreshData" :disabled="isLoading"
           class="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 transition-colors disabled:opacity-50 shadow-sm"
@@ -42,8 +43,17 @@
       </div>
     </div>
 
+    <div class="inline-flex rounded-xl border border-gray-200 p-0.5 bg-gray-50">
+      <button type="button" class="px-3 py-1.5 text-sm font-medium rounded-lg"
+        :class="listKind === 'invoice' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'"
+        @click="setListKind('invoice')">Rechnungen</button>
+      <button type="button" class="px-3 py-1.5 text-sm font-medium rounded-lg"
+        :class="listKind === 'quote' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'"
+        @click="setListKind('quote')">Offerten</button>
+    </div>
+
     <!-- ═══ KPI STRIP ═══ -->
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-sm">
+    <div v-if="listKind === 'invoice'" class="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-sm">
       <span class="text-gray-400 text-xs font-semibold uppercase tracking-widest">{{ summary.total_invoices || 0 }} Rechnungen</span>
       <span class="w-px h-4 bg-gray-200 hidden sm:block"/>
       <span class="flex items-center gap-1.5">
@@ -74,7 +84,7 @@
           <input
             v-model="filters.search"
             type="text"
-            placeholder="Name, Rechnungsnummer…"
+            :placeholder="listKind === 'quote' ? 'Name, Offertennummer…' : 'Name, Rechnungsnummer…'"
             :class="[
               'w-full pl-9 pr-3 py-2 text-sm border rounded-xl focus:outline-none focus:ring-2',
               filters.search?.trim() ? 'border-emerald-400 focus:ring-emerald-300' : 'border-gray-200 tenant-focus'
@@ -96,7 +106,9 @@
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
           <div v-if="showStatusDropdown" class="absolute z-10 mt-1.5 w-48 bg-white border border-gray-100 rounded-2xl shadow-xl p-1.5 space-y-0.5">
-            <label v-for="[val, lbl] in [['draft','Entwurf'],['pdf_created','PDF erstellt'],['sent','Versendet'],['paid','Bezahlt'],['overdue','Überfällig'],['cancelled','Storniert']]" :key="val"
+            <label v-for="[val, lbl] in (listKind === 'quote'
+              ? [['draft','Entwurf'],['pdf_created','PDF erstellt'],['sent','Versendet'],['cancelled','Zurückgezogen']]
+              : [['draft','Entwurf'],['pdf_created','PDF erstellt'],['sent','Versendet'],['paid','Bezahlt'],['overdue','Überfällig'],['cancelled','Storniert']])" :key="val"
               class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-gray-50 cursor-pointer text-sm text-gray-700">
               <input type="checkbox" :checked="filters.status?.includes(val) || false" @change="toggleStatusFilter(val)" class="rounded keep-checkbox"/>
               {{ lbl }}
@@ -105,7 +117,7 @@
         </div>
 
         <!-- Zahlungsstatus Filter -->
-        <div class="relative" data-dropdown="payment-status">
+        <div v-if="listKind === 'invoice'" class="relative" data-dropdown="payment-status">
           <button @click.stop="togglePaymentStatusDropdown"
             :class="[
               'inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors',
@@ -151,6 +163,7 @@
 
         <!-- Nur mit Mahnung -->
         <button
+          v-if="listKind === 'invoice'"
           type="button"
           @click="toggleHasDunningFilter"
           :class="[
@@ -180,30 +193,30 @@
     <!-- ═══ INVOICE TABLE ═══ -->
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div class="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-        <h3 class="text-sm font-bold text-gray-900">Rechnungen <span class="text-gray-400 font-normal">({{ totalInvoices }})</span></h3>
+        <h3 class="text-sm font-bold text-gray-900">{{ listKind === 'quote' ? 'Offerten' : 'Rechnungen' }} <span class="text-gray-400 font-normal">({{ totalInvoices }})</span></h3>
       </div>
 
       <div v-if="isLoading" class="flex items-center justify-center py-16 gap-2 text-gray-400">
         <svg class="animate-spin h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
         </svg>
-        Lade Rechnungen…
+        {{ listKind === 'quote' ? 'Lade Offerten…' : 'Lade Rechnungen…' }}
       </div>
 
       <div v-else-if="!hasInvoices" class="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
         <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-        <p class="text-sm font-medium">Keine Rechnungen gefunden</p>
+        <p class="text-sm font-medium">{{ listKind === 'quote' ? 'Keine Offerten gefunden' : 'Keine Rechnungen gefunden' }}</p>
       </div>
 
       <div v-else class="overflow-x-auto">
         <table class="min-w-full">
           <thead>
             <tr class="bg-gray-50/80">
-              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rechnung</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ listKind === 'quote' ? 'Offerte' : 'Rechnung' }}</th>
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kunde</th>
               <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Betrag</th>
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Fällig</th>
+              <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{{ listKind === 'quote' ? 'Gültig bis' : 'Fällig' }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50">
@@ -211,46 +224,66 @@
               class="tenant-row-hover cursor-pointer transition-colors group"
               @click="viewInvoice(invoice.id)">
               <td class="px-5 py-3.5">
-                <p class="text-sm font-semibold text-gray-900 tenant-row-title transition-colors">{{ invoice.invoice_number }}</p>
-                <p class="text-xs text-gray-400 mt-0.5">{{ formatDate(invoice.invoice_date) }}</p>
+                <p class="text-sm font-semibold text-gray-900 tenant-row-title transition-colors">{{ documentDisplayNumber(invoice) }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  {{ formatDate(invoice.invoice_date) }}
+                  <span v-if="listKind === 'invoice' && invoice.quote_number && invoice.quote_number !== invoice.invoice_number">
+                    · aus {{ invoice.quote_number }}
+                  </span>
+                </p>
               </td>
               <td class="px-5 py-3.5">
-                <p class="text-sm font-medium text-gray-900">{{ invoice.customer_first_name }} {{ invoice.customer_last_name }}</p>
-                <p class="text-xs text-gray-400 truncate max-w-[200px]">{{ invoice.customer_email }}</p>
+                <p class="text-sm font-medium text-gray-900">{{ invoice.billing_company_name || `${invoice.customer_first_name || ''} ${invoice.customer_last_name || ''}`.trim() || invoice.billing_contact_person || '—' }}</p>
+                <p class="text-xs text-gray-400 truncate max-w-[200px]">{{ invoice.billing_email || invoice.customer_email }}</p>
               </td>
               <td class="px-5 py-3.5 text-right">
                 <p class="text-sm font-bold text-gray-900">{{ formatCurrency(invoice.total_amount_rappen) }}</p>
                 <p v-if="invoice.discount_amount_rappen > 0" class="text-xs text-emerald-600 mt-0.5">-{{ formatCurrency(invoice.discount_amount_rappen) }}</p>
-                <p v-if="invoice.paid_amount_rappen > 0 && invoice.paid_amount_rappen < invoice.total_amount_rappen" class="text-xs text-amber-600 mt-0.5 font-medium">
+                <p v-if="listKind === 'invoice' && invoice.paid_amount_rappen > 0 && invoice.paid_amount_rappen < invoice.total_amount_rappen" class="text-xs text-amber-600 mt-0.5 font-medium">
                   {{ formatCurrency(invoice.paid_amount_rappen) }} bezahlt
                 </p>
               </td>
               <td class="px-5 py-3.5">
                 <div class="flex flex-wrap gap-1">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" :class="getStatusBadgeClass(invoice.status)">
-                    {{ invoiceStatusLabel(invoice.status) }}
-                  </span>
-                  <span
-                    v-if="invoice.status === 'sent' && invoice.payment_status"
-                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-                    :class="getPaymentStatusBadgeClass(invoice.payment_status)"
-                  >
-                    {{ invoicePaymentStatusLabel(invoice.payment_status) }}
-                  </span>
-                  <span
-                    v-if="invoice.dunning_level > 0"
-                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-                    :style="dunningLevelBadgeStyle(invoice.dunning_level)"
-                    :title="invoice.dunning_paused ? 'Mahnwesen pausiert' : (invoice.last_dunning_sent_at ? `Zuletzt versendet am ${formatDate(invoice.last_dunning_sent_at)}` : '')"
-                  >
-                    {{ dunningLevelLabel(invoice.dunning_level) }}<span v-if="invoice.dunning_paused"> · pausiert</span>
-                  </span>
+                  <template v-if="listKind === 'quote'">
+                    <span
+                      v-if="quoteShowsInvoiceStatus(quoteLifecycle(invoice))"
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                      :class="getStatusBadgeClass(invoice.status)"
+                    >{{ invoiceStatusLabel(invoice.status) }}</span>
+                    <span
+                      v-else
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                      :class="QUOTE_LIFECYCLE_BADGE_CLASS[quoteLifecycle(invoice)]"
+                    >{{ QUOTE_LIFECYCLE_LABELS[quoteLifecycle(invoice)] }}</span>
+                  </template>
+                  <template v-else>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold" :class="getStatusBadgeClass(invoice.status)">
+                      {{ invoiceStatusLabel(invoice.status) }}
+                    </span>
+                    <span
+                      v-if="invoice.status === 'sent' && invoice.payment_status"
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                      :class="getPaymentStatusBadgeClass(invoice.payment_status)"
+                    >
+                      {{ invoicePaymentStatusLabel(invoice.payment_status) }}
+                    </span>
+                    <span
+                      v-if="invoice.dunning_level > 0"
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                      :style="dunningLevelBadgeStyle(invoice.dunning_level)"
+                      :title="invoice.dunning_paused ? 'Mahnwesen pausiert' : (invoice.last_dunning_sent_at ? `Zuletzt versendet am ${formatDate(invoice.last_dunning_sent_at)}` : '')"
+                    >
+                      {{ dunningLevelLabel(invoice.dunning_level) }}<span v-if="invoice.dunning_paused"> · pausiert</span>
+                    </span>
+                  </template>
                 </div>
               </td>
               <td class="px-5 py-3.5">
-                <p class="text-sm text-gray-700">{{ formatDate(effectiveDueDate(invoice)) }}</p>
-                <p v-if="invoice.dunning_due_date && invoice.dunning_level > 0" class="text-xs text-blue-600 mt-0.5">Neues Zahlungsziel</p>
-                <p v-if="isOverdue(effectiveDueDate(invoice), invoice.status, invoice.payment_status)" class="text-xs text-red-600 font-semibold mt-0.5">Überfällig</p>
+                <p class="text-sm text-gray-700">{{ formatDate(listKind === 'quote' ? (invoice.valid_until || invoice.due_date) : effectiveDueDate(invoice)) }}</p>
+                <p v-if="listKind === 'invoice' && invoice.dunning_due_date && invoice.dunning_level > 0" class="text-xs text-blue-600 mt-0.5">Neues Zahlungsziel</p>
+                <p v-if="listKind === 'invoice' && isOverdue(effectiveDueDate(invoice), invoice.status, invoice.payment_status)" class="text-xs text-red-600 font-semibold mt-0.5">Überfällig</p>
+                <p v-else-if="listKind === 'quote' && quoteLifecycle(invoice) === 'expired'" class="text-xs text-red-600 font-semibold mt-0.5">Abgelaufen</p>
               </td>
             </tr>
           </tbody>
@@ -284,6 +317,7 @@
 
     <InvoiceCreateModal
       v-if="showCreateModal"
+      :initial-document-kind="listKind"
       @close="showCreateModal = false"
       @created="onInvoiceCreated"
     />
@@ -296,6 +330,7 @@
       @close="handleModalClose"
       @edit="handleEditInvoice"
       @send="handleSendInvoice"
+      @convert="handleConvertQuote"
       @markAsPaid="handleMarkAsPaid"
       @cancel="handleCancelInvoice"
       @updated="onInvoiceUpdated"
@@ -315,6 +350,13 @@ import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
 import InvoiceDetailModal from '~/components/admin/InvoiceDetailModal.vue'
 import CamtImportModal from '~/components/admin/CamtImportModal.vue'
 import type { InvoiceStatus, PaymentStatus, InvoiceFilters } from '~/types/invoice'
+import {
+  documentDisplayNumber,
+  quoteLifecycle,
+  quoteShowsInvoiceStatus,
+  QUOTE_LIFECYCLE_LABELS,
+  QUOTE_LIFECYCLE_BADGE_CLASS,
+} from '~/server/utils/invoice-quote'
 import { useUIStore } from '~/stores/ui'
 
 const uiStore = useUIStore()
@@ -414,14 +456,23 @@ const selectedInvoice = computed(() => {
 })
 
 // Filter
+const listKind = ref<'invoice' | 'quote'>('invoice')
+
 const filters = ref<InvoiceFilters>({
   status: [] as InvoiceStatus[],
   payment_status: [] as PaymentStatus[],
   date_from: '',
   date_to: '',
   search: '',
-  has_dunning: false
+  has_dunning: false,
+  document_kind: 'invoice',
 })
+
+const setListKind = async (kind: 'invoice' | 'quote') => {
+  listKind.value = kind
+  filters.value.document_kind = kind
+  await fetchInvoices(filters.value, 1)
+}
 
 // Ensure arrays are always initialized
 const ensureFilterArrays = () => {
@@ -516,7 +567,8 @@ const clearFilters = async () => {
     date_from: '',
     date_to: '',
     search: '',
-    has_dunning: false
+    has_dunning: false,
+    document_kind: listKind.value,
   }
   
   // Ensure arrays are initialized
@@ -643,8 +695,31 @@ const handleCancelInvoice = async (id: string) => {
   }
 }
 
+const handleConvertQuote = async (id: string) => {
+  try {
+    const res = await $fetch<any>('/api/invoices/convert-quote', {
+      method: 'POST',
+      body: { invoice_id: id },
+    })
+    listKind.value = 'invoice'
+    filters.value.document_kind = 'invoice'
+    await refreshData()
+    if (res?.data?.id) {
+      selectedInvoiceId.value = res.data.id
+      const invoiceWithItems = await fetchInvoiceWithItems(res.data.id)
+      selectedInvoiceWithItems.value = invoiceWithItems
+    }
+  } catch (error: any) {
+    alert(error?.statusMessage || error?.message || 'Umwandlung fehlgeschlagen')
+  }
+}
+
 const onInvoiceCreated = async (invoice: any) => {
   showCreateModal.value = false
+  if (invoice?.document_kind === 'quote') {
+    listKind.value = 'quote'
+    filters.value.document_kind = 'quote'
+  }
   await refreshData()
 
   if (invoice?.id) {

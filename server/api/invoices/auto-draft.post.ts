@@ -237,7 +237,19 @@ export default defineEventHandler(async (event) => {
     notes: (tenant as any)?.invoice_intro_text || null,
     payment_terms: (tenant as any)?.invoice_payment_terms || null,
     footer_text: (tenant as any)?.invoice_footer_text || null,
+    available_credit_rappen: 0,
   }
+
+  const { data: creditRow } = await supabase
+    .from('student_credits')
+    .select('balance_rappen, pending_withdrawal_rappen')
+    .eq('user_id', student.id)
+    .eq('tenant_id', staffUser.tenant_id)
+    .maybeSingle()
+  draft.available_credit_rappen = Math.max(
+    0,
+    (creditRow?.balance_rappen || 0) - (creditRow?.pending_withdrawal_rappen || 0)
+  )
 
   // Produkte pro Termin laden und als eigene Draft-Positionen ausweisen
   const aptIdsWithProducts = openPayments

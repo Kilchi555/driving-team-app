@@ -77,21 +77,57 @@ export function openingHoursToSchema(tpl: WorkingDaysTemplate) {
     .filter(Boolean)
 }
 
-/** CH phone → wa.me link */
-export function whatsappUrlFromPhone(phone?: string | null): string | null {
+/** Normalize to digits with CH country code when possible. */
+export function phoneDigitsForWhatsApp(phone?: string | null): string | null {
   if (!phone) return null
   let digits = String(phone).replace(/\D/g, '')
   if (!digits) return null
   if (digits.startsWith('00')) digits = digits.slice(2)
   if (digits.startsWith('0')) digits = `41${digits.slice(1)}`
   if (!digits.startsWith('41') && digits.length <= 10) digits = `41${digits}`
+  return digits
+}
+
+/** Swiss mobiles are 07x → 417… Landlines (044, 043, …) cannot open WhatsApp. */
+export function isWhatsAppCapablePhone(phone?: string | null): boolean {
+  const digits = phoneDigitsForWhatsApp(phone)
+  return !!digits && digits.startsWith('417') && digits.length >= 11 && digits.length <= 13
+}
+
+/**
+ * Dedicated WhatsApp number wins. Otherwise only a mobile contact phone —
+ * never a landline.
+ */
+export function resolveWhatsAppPhone(
+  whatsappPhone?: string | null,
+  fallbackPhone?: string | null,
+): string | null {
+  const dedicated = String(whatsappPhone || '').trim()
+  if (dedicated) return dedicated
+  const fallback = String(fallbackPhone || '').trim()
+  if (fallback && isWhatsAppCapablePhone(fallback)) return fallback
+  return null
+}
+
+/** CH phone → wa.me link */
+export function whatsappUrlFromPhone(phone?: string | null): string | null {
+  const digits = phoneDigitsForWhatsApp(phone)
+  if (!digits) return null
   return `https://wa.me/${digits}`
+}
+
+export function whatsappUrlForTenant(tenant: {
+  whatsapp_phone?: string | null
+  contact_phone?: string | null
+  phone?: string | null
+}): string | null {
+  return whatsappUrlFromPhone(resolveWhatsAppPhone(tenant.whatsapp_phone, tenant.contact_phone || tenant.phone))
 }
 
 export function mapsEmbedUrl(addressParts: Array<string | null | undefined>): string | null {
   const q = addressParts.map((p) => String(p || '').trim()).filter(Boolean).join(', ')
   if (!q) return null
-  return `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`
+  return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&hl=de&z=15&output=embed`
 }
 
 export function mapsExternalUrl(addressParts: Array<string | null | undefined>): string | null {
