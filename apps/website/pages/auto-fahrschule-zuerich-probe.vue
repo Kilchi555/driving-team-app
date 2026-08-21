@@ -1,10 +1,10 @@
 <template>
   <div class="erste-landing">
     <Head>
-      <Title>Erste Fahrstunde Zürich | CHF 30.– Rabatt | Driving Team</Title>
-      <Meta name="description" content="Erste Fahrstunde Kat. B Automatik oder Schaltung in Zürich-Altstetten mit CHF 30.– Rabatt (Code ERSTE30). Klarer Preis, online buchbar." />
-      <Meta property="og:title" content="Erste Fahrstunde Zürich – CHF 30.– Rabatt | Driving Team" />
-      <Meta property="og:description" content="Starte mit der ersten Fahrstunde – CHF 30.– Rabatt mit Code ERSTE30. Standort Bahnhof Altstetten." />
+      <Title>Erste Lektion 45 Min. Zürich | CHF 30.– Rabatt | Driving Team</Title>
+      <Meta name="description" content="Erste Auto-Lektion (45 Min.) Kat. B Automatik oder Schaltung in Zürich-Altstetten mit CHF 30.– Rabatt (Code ERSTE30). Klarer Preis, online buchbar." />
+      <Meta property="og:title" content="Erste Lektion 45 Min. Zürich – CHF 30.– Rabatt | Driving Team" />
+      <Meta property="og:description" content="Erste Lektion 45 Min. mit CHF 30.– Rabatt (Code ERSTE30). Standort Bahnhof Altstetten." />
       <Meta property="og:url" content="https://drivingteam.ch/auto-fahrschule-zuerich-probe/" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule-zuerich-probe/" />
       <Meta name="robots" content="index, follow" />
@@ -22,11 +22,11 @@
       <div class="erste-hero__shade" />
       <div class="erste-hero__inner">
         <p class="erste-brand">Driving Team</p>
-        <h1 class="erste-h1">Erste Fahrstunde<br /><span>CHF 30.– Rabatt</span></h1>
+        <h1 class="erste-h1">Erste Lektion 45 Min.<br /><span>CHF 30.– Rabatt</span></h1>
         <p class="erste-sub">
           Kategorie B Automatik oder Schaltung in Zürich-Altstetten.
-          Code <strong>ERSTE30</strong> — nur für die erste Lektion.
-          Danach normal CHF 95.–.
+          Code <strong>ERSTE30</strong> — nur für die erste Lektion (45 Min.).
+          Danach CHF 95.– / 45 Min.
         </p>
         <div class="erste-cta">
           <a
@@ -35,7 +35,7 @@
             rel="noopener noreferrer"
             class="erste-btn"
           >
-            Erste Stunde buchen
+            Erste Lektion buchen
           </a>
           <a href="tel:+41444310033" class="erste-phone" @click="trackPhone">
             +41 44 431 00 33
@@ -50,12 +50,12 @@
       <h2>So funktioniert’s</h2>
       <ul>
         <li>Online Termin wählen (B Automatik oder B Schaltung)</li>
-        <li>Code <strong>ERSTE30</strong> eingeben → CHF 30.– weniger auf die erste Lektion</li>
+        <li>Code <strong>ERSTE30</strong> eingeben → CHF 30.– weniger auf die erste Lektion (45 Min.)</li>
         <li>Treffpunkt Bahnhof Zürich-Altstetten</li>
         <li>Gilt nur für die erste bestätigte Fahrstunde — nicht für Motorrad, LKW oder andere Kategorien</li>
       </ul>
       <p class="erste-note">
-        Effektiver Preis der ersten Lektion: <strong>CHF 65.–</strong> statt CHF 95.–.
+        Effektiver Preis der ersten Lektion (45 Min.): <strong>CHF 65.–</strong> statt CHF 95.–.
       </p>
       <a :href="bookingUrl" target="_blank" rel="noopener noreferrer" class="erste-btn erste-btn--ink">
         Jetzt mit Code buchen

@@ -1,10 +1,10 @@
 <template>
   <div class="preis-landing">
     <Head>
-      <Title>Fahrschule Zürich Preis | Erste Lektion CHF 65.– | Driving Team</Title>
-      <Meta name="description" content="Klarer Preis: Erste Auto-Lektion in Zürich CHF 65.–, danach CHF 95.– / 45 Min. Standort Altstetten, online buchbar." />
-      <Meta property="og:title" content="Fahrschule Zürich Preis | Erste Lektion CHF 65.– | Driving Team" />
-      <Meta property="og:description" content="Kategorie B in Zürich: erste Lektion CHF 65.–, danach CHF 95.–. Treffpunkt Bahnhof Altstetten. Online buchen." />
+      <Title>Fahrschule Zürich Preis | Erste Lektion 45 Min. CHF 65.– | Driving Team</Title>
+      <Meta name="description" content="Klarer Preis: Erste Auto-Lektion in Zürich CHF 65.– / 45 Min., danach CHF 95.– / 45 Min. Standort Altstetten, online buchbar." />
+      <Meta property="og:title" content="Fahrschule Zürich Preis | Erste Lektion 45 Min. CHF 65.– | Driving Team" />
+      <Meta property="og:description" content="Kategorie B in Zürich: erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. Treffpunkt Bahnhof Altstetten. Online buchen." />
       <Meta property="og:url" content="https://drivingteam.ch/auto-fahrschule-zuerich-preis/" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule-zuerich-preis/" />
       <Meta name="robots" content="index, follow" />
@@ -22,9 +22,9 @@
       <div class="preis-hero__shade" />
       <div class="preis-hero__inner">
         <p class="preis-brand">Driving Team</p>
-        <h1 class="preis-h1">Erste Lektion CHF 65.–<span>danach CHF 95.–</span></h1>
+        <h1 class="preis-h1">Erste Lektion 45 Min. CHF 65.–<span>danach CHF 95.– / 45 Min.</span></h1>
         <p class="preis-sub">
-          Kategorie B in Zürich-Altstetten — erste Fahrstunde vergünstigt, danach klarer Preis, Treffpunkt Bahnhof.
+          Kategorie B in Zürich-Altstetten — erste Lektion (45 Min.) vergünstigt, danach klarer Preis, Treffpunkt Bahnhof.
         </p>
         <div class="preis-cta">
           <a
@@ -48,7 +48,7 @@
       <h2>Was du zahlst</h2>
       <ul>
         <li><strong>CHF 65.–</strong> erste Lektion / 45 Min. Kategorie B</li>
-        <li><strong>CHF 95.–</strong> jede weitere Fahrstunde</li>
+        <li><strong>CHF 95.–</strong> jede weitere Lektion / 45 Min.</li>
         <li>Treffpunkt Bahnhof Zürich-Altstetten</li>
         <li>Online buchen — Termin in wenigen Minuten</li>
       </ul>

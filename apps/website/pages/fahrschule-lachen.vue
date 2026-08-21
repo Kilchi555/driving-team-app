@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrstunden Lachen | Erste Auto-Lektion CHF 65.– | Driving Team</Title>
-      <Meta name="description" content="Fahrstunden in Lachen SZ: erste Auto-Lektion CHF 65.–, danach CHF 95.–. Flexible Termine, Prüfung Pfäffikon SZ, 85% Erfolgsquote. Jetzt online buchen!" />
+      <Title>Fahrstunden Lachen | Erste Lektion 45 Min. CHF 65.– | Driving Team</Title>
+      <Meta name="description" content="Fahrstunden in Lachen SZ: erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. Flexible Termine, Prüfung Pfäffikon SZ, 85% Erfolgsquote. Jetzt online buchen!" />
       <Meta name="keywords" content="Fahrstunden Lachen, Auto fahren lernen Lachen, Fahrschule Lachen, Fahrschule Lachen SZ, Auto Fahrschule Lachen, Führerschein Lachen" />
-      <Meta property="og:title" content="Fahrstunden Lachen | Erste Auto-Lektion CHF 65.– | Driving Team" />
-      <Meta property="og:description" content="Auto fahren lernen in Lachen SZ. Erste Lektion CHF 65.–, danach CHF 95.–. Prüfung Pfäffikon SZ. Jetzt buchen!" />
+      <Meta property="og:title" content="Fahrstunden Lachen | Erste Lektion 45 Min. CHF 65.– | Driving Team" />
+      <Meta property="og:description" content="Auto fahren lernen in Lachen SZ. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. Prüfung Pfäffikon SZ. Jetzt buchen!" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-lachen/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
@@ -18,8 +18,8 @@
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
       <Meta name="twitter:card" content="summary_large_image" />
-      <Meta name="twitter:title" content="Fahrstunden Lachen | Erste Auto-Lektion CHF 65.–" />
-      <Meta name="twitter:description" content="Auto fahren lernen in Lachen SZ. Erste Lektion CHF 65.–, danach CHF 95.–. Prüfung Pfäffikon SZ." />
+      <Meta name="twitter:title" content="Fahrstunden Lachen | Erste Lektion 45 Min. CHF 65.–" />
+      <Meta name="twitter:description" content="Auto fahren lernen in Lachen SZ. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. Prüfung Pfäffikon SZ." />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       <Meta name="date" :content="new Date().toISOString()" />
     </Head>
@@ -34,9 +34,12 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
-          <h1 class="heading-lg text-white mb-6">Fahrstunden & Auto Fahrschule Lachen</h1>
-          <p class="text-base xs:text-xl text-white mb-8">Auto fahren lernen in Lachen/SZ – erste Lektion CHF 65.–, danach CHF 95.–. Flexible Termine und erfahrene Fahrlehrer.</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team?category=B&code=ERSTE30" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <h1 class="heading-lg text-white mb-4">Fahrstunden & Auto Fahrschule Lachen</h1>
+          <div class="mb-6">
+            <ErsteOfferBanner variant="badge" href="/buchen?category=B&code=ERSTE30" />
+          </div>
+          <p class="text-base xs:text-xl text-white mb-8">Auto fahren lernen in Lachen/SZ. Flexible Termine und erfahrene Fahrlehrer.</p>
+          <a href="/buchen?category=B&code=ERSTE30" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -52,6 +55,7 @@
 
     <!-- 3. Reviews (grau-50) — bewusst früh für Vertrauen -->
     <ReviewsSection category="lachen" />
+    <ErsteOfferBanner href="/buchen?category=B&code=ERSTE30" />
     <UpcomingSlotsSection page="fahrschule-lachen" category="B Automatik" promo-code="ERSTE30" />
 
 
@@ -131,7 +135,7 @@
     <AusbildungsthemenSection location="Lachen" />
 
     <!-- 6. CTA (primary) -->
-    <CtaSection title="Jetzt in Lachen starten!" />
+    <CtaSection title="Erste Lektion 45 Min. für CHF 65.– – jetzt in Lachen buchen" />
 
     <PriceSection />
 
