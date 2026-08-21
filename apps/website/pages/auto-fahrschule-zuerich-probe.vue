@@ -44,7 +44,7 @@
       </div>
     </section>
 
-    <UpcomingSlotsSection page="auto-fahrschule-zuerich-probe" category="B Automatik" />
+    <UpcomingSlotsSection page="auto-fahrschule-zuerich-probe" category="B Automatik" promo-code="ERSTE30" />
 
     <section class="erste-body">
       <h2>So funktioniert’s</h2>

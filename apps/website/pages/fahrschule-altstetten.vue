@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Auto Fahrschule Altstetten | Bahnhof · ab CHF 95.– | Driving Team</Title>
-      <Meta name="description" content="Auto Fahrschule Altstetten direkt am Bahnhof: Fahrstunden ab CHF 95.–, 85% Prüfungserfolg, Vulkanstrasse 130b. Jetzt online buchen!" />
+      <Title>Auto Fahrschule Altstetten | Erste Lektion CHF 65.– | Driving Team</Title>
+      <Meta name="description" content="Auto Fahrschule Altstetten direkt am Bahnhof: erste Lektion CHF 65.–, danach CHF 95.–. 85% Prüfungserfolg, Vulkanstrasse 130b. Jetzt online buchen!" />
       <Meta name="keywords" content="Fahrschule Altstetten, Auto Fahrschule Altstetten, Fahrstunden Altstetten, Fahrschule Zürich Altstetten, Fahrlehrer Altstetten" />
-      <Meta property="og:title" content="Auto Fahrschule Altstetten | ab CHF 95.– | Driving Team" />
-      <Meta property="og:description" content="Auto Fahrschule in Zürich-Altstetten am Bahnhof. Fahrstunden ab CHF 95.–, flexible Termine. Jetzt buchen!" />
+      <Meta property="og:title" content="Auto Fahrschule Altstetten | Erste Lektion CHF 65.– | Driving Team" />
+      <Meta property="og:description" content="Auto Fahrschule in Zürich-Altstetten am Bahnhof. Erste Lektion CHF 65.–, danach CHF 95.–. Jetzt buchen!" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-altstetten/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-altstetten/" />
       <Link rel="preload" as="image" href="/images/locations/zuerich-hero.webp" fetchpriority="high" />
@@ -25,8 +25,8 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
           <h1 class="heading-lg text-white mb-6">Auto Fahrschule Altstetten</h1>
-          <p class="text-base xs:text-xl text-white mb-8">Unser Hauptstandort mitten in Zürich-Altstetten – direkt am Bahnhof. Auto Fahrstunden ab CHF 95.–, gut erreichbar mit S-Bahn und Tram.</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <p class="text-base xs:text-xl text-white mb-8">Unser Hauptstandort mitten in Zürich-Altstetten – direkt am Bahnhof. Erste Auto-Lektion CHF 65.–, danach CHF 95.–. Gut erreichbar mit S-Bahn und Tram.</p>
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=B&code=ERSTE30" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -90,7 +90,7 @@
 
     <!-- Reviews -->
     <ReviewsSection category="zuerich" />
-    <UpcomingSlotsSection page="fahrschule-altstetten" category="B Automatik" />
+    <UpcomingSlotsSection page="fahrschule-altstetten" category="B Automatik" promo-code="ERSTE30" />
 
 
     <!-- Instructors -->
@@ -165,7 +165,7 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Was kostet eine Fahrstunde ab Altstetten?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Eine Fahrstunde (45 Min.) kostet ab CHF 95.-. Für genaue Preise aller Kategorien besuche unsere <a href="/fahrschule-preise/" class="text-primary-600 hover:underline">Preisseite</a>.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Die erste Auto-Lektion (45 Min., Kat. B) kostet CHF 65.–, jede weitere CHF 95.–. Für alle Kategorien siehe unsere <a href="/fahrschule-preise/" class="text-primary-600 hover:underline">Preisseite</a>.</p>
           </details>
         </div>
       </div>
@@ -257,7 +257,7 @@ const jsonLdScripts = [
       {
         "@type": "Question",
         "name": "Was kostet eine Fahrstunde ab Altstetten?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Eine Fahrstunde (45 Min.) kostet ab CHF 95.-. Alle Kategorienpreise findest du auf unserer Preisseite." }
+        "acceptedAnswer": { "@type": "Answer", "text": "Die erste Auto-Lektion (45 Min., Kat. B) kostet CHF 65.–, jede weitere CHF 95.–. Alle Kategorienpreise findest du auf unserer Preisseite." }
       }
     ]
   }) }

@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Auto Fahrschule Zürich | Ab CHF 95.- | Driving Team</Title>
-      <Meta name="description" content="85% unserer Fahrschüler bestehen die Prüfung beim 1. Versuch – mit der Auto Fahrschule Zürich. Ab CHF 95.-, Prüfung Albisgütli. Jetzt buchen!" />
-      <Meta name="keywords" content="Auto Fahrschule Zürich, Auto Fahrstunden Zürich, Kategorie B Zürich, Fahrschule Zürich Auto, Autofahrschule Zürich, Führerschein Zürich, Fahrprüfung Albisgütli, Fahrstunden Zürich-Altstetten" />
-      <Meta property="og:title" content="Auto Fahrschule Zürich | Kategorie B | Driving Team" />
-      <Meta property="og:description" content="Professionelle Auto Fahrschule in Zürich. Kategorie B ab CHF 95.-/Lektion. 85% Erfolgsquote. Prüfungsgebiet Albisgütli. Flexible Zeiten. Jetzt buchen!" />
+      <Title>Fahrschule Zürich | Erste Auto-Lektion CHF 65.– | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Zürich für Auto (Kat. B): 85% bestehen beim 1. Versuch. Erste Lektion CHF 65.–, danach CHF 95.–. Prüfung Albisgütli, Standort Altstetten. Jetzt buchen." />
+      <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Fahrstunden Zürich, Kategorie B Zürich, Führerschein Zürich, Fahrprüfung Albisgütli" />
+      <Meta property="og:title" content="Fahrschule Zürich | Erste Auto-Lektion CHF 65.– | Driving Team" />
+      <Meta property="og:description" content="Fahrschule Zürich, Kategorie B. 85% Erfolgsquote. Erste Lektion CHF 65.–, danach CHF 95.–. Prüfungsgebiet Albisgütli." />
       <Meta property="og:url" content="https://drivingteam.ch/auto-fahrschule-zuerich/" />
       <Meta property="og:type" content="website" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule-zuerich/" />
@@ -14,8 +14,8 @@
       <Meta property="og:image:height" content="630" />
       <Meta property="og:locale" content="de_CH" />
       <Meta name="twitter:card" content="summary_large_image" />
-      <Meta name="twitter:title" content="Auto Fahrschule Zürich | Kategorie B ab CHF 95.- | Driving Team" />
-      <Meta name="twitter:description" content="Professionelle Auto Fahrschule in Zürich. Kategorie B ab CHF 95.-/Lektion. 85% Erfolgsquote. Prüfungsgebiet Albisgütli. Flexible Zeiten. Jetzt buchen!" />
+      <Meta name="twitter:title" content="Fahrschule Zürich | Erste Auto-Lektion CHF 65.– | Driving Team" />
+      <Meta name="twitter:description" content="Fahrschule Zürich Kat. B. 85% Erfolgsquote. Erste Lektion CHF 65.–, danach CHF 95.–." />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
@@ -43,11 +43,11 @@
           <div class="text-white">
             <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-6 border border-white/20">
               <span class="text-xl">🚗</span>
-              <span class="text-sm font-semibold">Auto Fahrschule Zürich</span>
+              <span class="text-sm font-semibold">Fahrschule Zürich</span>
             </div>
 
             <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
-              Auto Fahrschule<br/>
+              Fahrschule<br/>
               <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-100">Zürich</span>
             </h1>
 
@@ -65,16 +65,14 @@
                 <p class="text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} Bewertungen</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">CHF 95</p>
-                <p class="text-sm text-white/70">pro Lektion</p>
+                <p class="text-4xl font-black text-yellow-300">CHF 65</p>
+                <p class="text-sm text-white/70">erste Lektion, danach 95</p>
               </div>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4">
               <a
-                href="https://app.simy.ch/booking/availability/driving-team?category=B&utm_content=ag_local"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="/buchen?category=B&code=ERSTE30&utm_content=ag_local"
                 class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 hover:bg-yellow-50 font-bold py-4 px-8 rounded-xl transition transform hover:scale-105 hover:shadow-2xl shadow-lg text-lg"
               >
                 ✨ Jetzt Termin buchen
@@ -141,7 +139,7 @@
 
     <!-- ====== REVIEWS ====== -->
     <ReviewsSection category="zuerich" />
-    <UpcomingSlotsSection page="auto-fahrschule-zuerich" category="B Automatik" />
+    <UpcomingSlotsSection page="auto-fahrschule-zuerich" category="B Automatik" promo-code="ERSTE30" />
 
 
     <!-- ====== PRÜFUNGSGEBIET ALBISGÜTLI ====== -->
@@ -246,8 +244,12 @@
           </div>
           <div class="divide-y divide-gray-100">
             <div class="flex items-center justify-between px-8 py-4 hover:bg-primary-50 transition">
-              <span class="font-semibold text-gray-800">Fahrstunde 45 Minuten</span>
-              <span class="inline-block bg-green-100 text-green-700 font-bold px-4 py-2 rounded-lg">CHF 95.-</span>
+              <span class="font-semibold text-gray-800">Erste Fahrstunde 45 Minuten <span class="text-sm text-gray-500 font-normal">(Neukunden Kat. B)</span></span>
+              <span class="inline-block bg-green-100 text-green-700 font-bold px-4 py-2 rounded-lg">CHF 65.–</span>
+            </div>
+            <div class="flex items-center justify-between px-8 py-4 hover:bg-primary-50 transition">
+              <span class="font-semibold text-gray-800">Weitere Fahrstunden 45 Minuten</span>
+              <span class="font-bold text-gray-900">CHF 95.–</span>
             </div>
             <div class="flex items-center justify-between px-8 py-4 hover:bg-primary-50 transition">
               <span class="font-semibold text-gray-800">Fahrstunde 90 Minuten</span>
@@ -422,9 +424,7 @@
           Professionelle Kategorie-B-Ausbildung. Direkt im Prüfungsgebiet Albisgütli. Online buchbar, flexibel und mit 85% Erfolgsquote.
         </p>
         <a
-          href="https://app.simy.ch/booking/availability/driving-team?category=B&utm_content=ag_local"
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/buchen?category=B&code=ERSTE30&utm_content=ag_local"
           class="inline-block bg-white text-primary-600 hover:bg-primary-50 font-bold py-4 px-12 rounded-xl transition text-lg transform hover:scale-105 shadow-2xl"
         >
           ✨ Jetzt Auto Fahrstunde buchen
@@ -445,7 +445,7 @@
               <span>💰 Was kostet eine Auto Fahrstunde bei euch in Zürich?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Eine 45-minütige Auto Fahrstunde (Kategorie B) kostet CHF 95.-. Hinzu kommt einmalig eine Admin- & Versicherungspauschale von CHF 120.- für die gesamte Fahrausbildung. Der WarmUp + die Prüfungsfahrt am Albisgütli kostet CHF 285.-.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Die erste Auto-Lektion (Kategorie B, 45 Min.) kostet CHF 65.–, jede weitere CHF 95.–. Hinzu kommt einmalig eine Admin- & Versicherungspauschale von CHF 120.– für die gesamte Fahrausbildung. Der WarmUp + die Prüfungsfahrt am Albisgütli kostet CHF 285.–.</p>
           </details>
 
           <details class="group bg-gray-50 border border-gray-200 rounded-xl overflow-hidden hover:border-primary-300 transition cursor-pointer">
@@ -628,7 +628,7 @@ const jsonLdScripts = [
       "@type": ["DrivingSchool", "LocalBusiness"],
       "@id": "https://drivingteam.ch/auto-fahrschule-zuerich/#driving-school",
       "name": "Auto Fahrschule Zürich – Driving Team",
-      "description": "Professionelle Auto Fahrschule in Zürich-Altstetten. Kategorie B Fahrstunden ab CHF 95.-. Prüfungsgebiet Albisgütli. 85% Erfolgsquote.",
+      "description": "Professionelle Auto Fahrschule in Zürich-Altstetten. Erste Kategorie-B-Lektion CHF 65.–, danach CHF 95.–. Prüfungsgebiet Albisgütli. 85% Erfolgsquote.",
       "url": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "telephone": "+41444310033",
       "image": "https://drivingteam.ch/images/categories/auto-fahrschule-hero.webp",
@@ -649,7 +649,7 @@ const jsonLdScripts = [
         { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:00", "closes": "20:00" },
         { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Saturday"], "opens": "08:00", "closes": "17:00" }
       ],
-      "priceRange": "CHF 95.-",
+      "priceRange": "CHF 65–95",
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": "4.9",
@@ -663,11 +663,12 @@ const jsonLdScripts = [
         "itemListElement": [
           {
             "@type": "Offer",
-            "name": "Auto Fahrstunde Kategorie B (45 Min)",
-            "price": "95",
+            "name": "Erste Auto Fahrstunde Kategorie B (45 Min)",
+            "price": "65",
             "priceCurrency": "CHF",
             "availability": "https://schema.org/InStock",
-            "url": "https://app.simy.ch/booking/availability/driving-team?service=B"
+            "url": "https://app.simy.ch/booking/availability/driving-team?category=B&code=ERSTE30",
+            "description": "Erste Lektion CHF 65.–, weitere Lektionen CHF 95.–"
           }
         ]
       },
@@ -692,7 +693,7 @@ const jsonLdScripts = [
       "@context": "https://schema.org",
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "Was kostet eine Auto Fahrstunde in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Eine 45-minütige Auto Fahrstunde (Kategorie B) kostet bei Driving Team in Zürich CHF 95.-. Hinzu kommt eine einmalige Admin- & Versicherungspauschale von CHF 120.- sowie CHF 285.- für WarmUp + Prüfungsfahrt am Albisgütli." } },
+        { "@type": "Question", "name": "Was kostet eine Auto Fahrstunde in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Die erste Auto-Lektion Kategorie B kostet bei Driving Team in Zürich CHF 65.–, jede weitere CHF 95.– (45 Min.). Hinzu kommt eine einmalige Admin- & Versicherungspauschale von CHF 120.– sowie CHF 285.– für WarmUp + Prüfungsfahrt am Albisgütli." } },
         { "@type": "Question", "name": "Wo findet die Auto Fahrprüfung in Zürich statt?", "acceptedAnswer": { "@type": "Answer", "text": "Die praktische Auto Fahrprüfung in Zürich findet am Prüfungszentrum Albisgütli statt. Driving Team übt von Anfang an im Prüfungsgebiet – alle häufigen Prüfungsrouten werden trainiert." } },
         { "@type": "Question", "name": "Wie viele Auto Fahrstunden brauche ich in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Durchschnittlich 15–25 Fahrstunden. Mit regelmässigen privaten Übungen 2–4x pro Woche lässt sich die Anzahl reduzieren. Driving Team hat eine 85% Erfolgsquote beim ersten Versuch." } },
         { "@type": "Question", "name": "Bietet die Auto Fahrschule Zürich Unterricht auf Englisch an?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, Driving Team in Zürich bietet Auto Fahrstunden auf Deutsch, Englisch und Albanisch an." } },
