@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Auto Fahrschule Altstetten | Erste Lektion CHF 65.– | Driving Team</Title>
-      <Meta name="description" content="Auto Fahrschule Altstetten direkt am Bahnhof: erste Lektion CHF 65.–, danach CHF 95.–. 85% Prüfungserfolg, Vulkanstrasse 130b. Jetzt online buchen!" />
+      <Title>Auto Fahrschule Altstetten | Erste Lektion 45 Min. CHF 65.– | Driving Team</Title>
+      <Meta name="description" content="Auto Fahrschule Altstetten direkt am Bahnhof: erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. 85% Prüfungserfolg, Vulkanstrasse 130b. Jetzt online buchen!" />
       <Meta name="keywords" content="Fahrschule Altstetten, Auto Fahrschule Altstetten, Fahrstunden Altstetten, Fahrschule Zürich Altstetten, Fahrlehrer Altstetten" />
-      <Meta property="og:title" content="Auto Fahrschule Altstetten | Erste Lektion CHF 65.– | Driving Team" />
-      <Meta property="og:description" content="Auto Fahrschule in Zürich-Altstetten am Bahnhof. Erste Lektion CHF 65.–, danach CHF 95.–. Jetzt buchen!" />
+      <Meta property="og:title" content="Auto Fahrschule Altstetten | Erste Lektion 45 Min. CHF 65.– | Driving Team" />
+      <Meta property="og:description" content="Auto Fahrschule in Zürich-Altstetten am Bahnhof. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. Jetzt buchen!" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-altstetten/" />
       <Link rel="canonical" href="https://drivingteam.ch/fahrschule-altstetten/" />
       <Link rel="preload" as="image" href="/images/locations/zuerich-hero.webp" fetchpriority="high" />
@@ -24,9 +24,12 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
-          <h1 class="heading-lg text-white mb-6">Auto Fahrschule Altstetten</h1>
-          <p class="text-base xs:text-xl text-white mb-8">Unser Hauptstandort mitten in Zürich-Altstetten – direkt am Bahnhof. Erste Auto-Lektion CHF 65.–, danach CHF 95.–. Gut erreichbar mit S-Bahn und Tram.</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team?category=B&code=ERSTE30" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <h1 class="heading-lg text-white mb-4">Auto Fahrschule Altstetten</h1>
+          <div class="mb-6">
+            <ErsteOfferBanner variant="badge" href="/buchen?category=B&code=ERSTE30" />
+          </div>
+          <p class="text-base xs:text-xl text-white mb-8">Unser Hauptstandort mitten in Zürich-Altstetten – direkt am Bahnhof. Gut erreichbar mit S-Bahn und Tram.</p>
+          <a href="/buchen?category=B&code=ERSTE30" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -90,6 +93,7 @@
 
     <!-- Reviews -->
     <ReviewsSection category="zuerich" />
+    <ErsteOfferBanner href="/buchen?category=B&code=ERSTE30" />
     <UpcomingSlotsSection page="fahrschule-altstetten" category="B Automatik" promo-code="ERSTE30" />
 
 
@@ -198,7 +202,7 @@
       </div>
     </section>
 
-    <CtaSection title="Fahrschule Altstetten – jetzt Termin sichern!" />
+    <CtaSection title="Erste Lektion 45 Min. für CHF 65.– – jetzt in Altstetten buchen" />
 
     <StandorteSection exclude="zuerich" />
     <WarumSection category="altstetten" />

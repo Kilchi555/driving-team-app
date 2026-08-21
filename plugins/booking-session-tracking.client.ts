@@ -16,7 +16,8 @@ declare global {
     __marketingAttribution?: DecodedAttribution | null
     __tenantId?: string | null
     __setTenantId: (id: string) => void
-    __trackBookingEvent: (eventType: 'viewed' | 'started' | 'completed' | 'abandoned' | 'inquiry_submitted', data: Record<string, any>) => Promise<void>
+    __bookingStep?: { step: number; label: string } | null
+    __trackBookingEvent: (eventType: 'viewed' | 'started' | 'step' | 'completed' | 'abandoned' | 'inquiry_submitted', data: Record<string, any>) => Promise<void>
     fbq?: (...args: any[]) => void
     _fbq?: any
   }
@@ -220,7 +221,7 @@ export default defineNuxtPlugin(() => {
   window.__marketingAttribution = attribution
 
   // Track booking events — only fire when on a valid booking/availability page
-  const trackBookingEvent = async (eventType: 'viewed' | 'started' | 'completed' | 'abandoned' | 'inquiry_submitted', data: Record<string, any>) => {
+  const trackBookingEvent = async (eventType: 'viewed' | 'started' | 'step' | 'completed' | 'abandoned' | 'inquiry_submitted', data: Record<string, any>) => {
     const currentPath = window.location.pathname
     const isValidBookingPath = currentPath.includes('/booking/') || currentPath.includes('/availability/')
     if (!isValidBookingPath) return
@@ -277,8 +278,11 @@ export default defineNuxtPlugin(() => {
       // sendBeacon requires a Blob with explicit content-type so the server can parse it as JSON
       const payload = JSON.stringify({
         session_id: sessionId,
+        tenant_id: window.__tenantId ?? null,
         event_type: 'abandoned',
         page: window.location.pathname,
+        step: window.__bookingStep?.step ?? null,
+        step_label: window.__bookingStep?.label ?? null,
       })
       navigator.sendBeacon('/api/booking-events', new Blob([payload], { type: 'application/json' }))
     }

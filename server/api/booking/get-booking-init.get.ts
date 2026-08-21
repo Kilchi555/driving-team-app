@@ -7,6 +7,20 @@ import { defineEventHandler, getQuery, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { DEFAULT_BOOKING_POLICY, normalizeLocationIntakeModes, normalizeRegistrationFieldMode, normalizeRegistrationAccountMode } from '~/server/api/admin/booking-policy.get'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { parsePaymentSettings } from '~/server/utils/tenant-default-payment-method'
+
+function parseFeatureEnabled(raw: unknown, fallback: boolean): boolean {
+  if (raw == null) return fallback
+  try {
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (typeof (parsed as any)?.enabled === 'boolean') return (parsed as any).enabled
+  } catch {
+    // plain "true"/"false" strings
+  }
+  if (raw === 'true' || raw === true) return true
+  if (raw === 'false' || raw === false) return false
+  return fallback
+}
 
 export default defineEventHandler(async (event) => {
   const { slug } = getQuery(event)
@@ -37,8 +51,14 @@ export default defineEventHandler(async (event) => {
   // offers — derived from active pricing_rules, not hardcoded on the client.
   let availableServiceTypes: Array<'fahrstunde' | 'theorie' | 'beratung'> = []
 
+  const settingsPromise = getSupabaseAdmin()
+    .from('tenant_settings')
+    .select('category, setting_key, setting_value')
+    .eq('tenant_id', tenant.id)
+    .in('setting_key', ['allow_online_booking', 'customer_plz_travel_check_enabled', 'payment_settings'])
+
   if (tenant.business_type === 'driving_school') {
-    // Load categories + locations + pricing rule types in parallel (no extra roundtrip)
+    // Load categories + locations + pricing + flags in parallel (no extra roundtrip)
     const [categoriesResult, locationsResult, pricingRulesResult] = await Promise.all([
       supabase
         .from('categories')
@@ -150,30 +170,27 @@ export default defineEventHandler(async (event) => {
   // Strip booking_policy from tenant object before returning (avoid leaking internal settings)
   const { booking_policy: _bp, ...tenantPublic } = tenant as any
 
-  // Public booking page cannot rely on useFeatures() (guests have no auth tenant_id).
-  // Default true when unset for backwards compatibility with tenants that never toggled the flag.
   let allowOnlineBooking = true
+  let pickupTravelCheck = false
+  let cashVisibleForCustomer = false
+  let invoicePaymentsEnabled = false
   try {
-    const { data: featureRow } = await getSupabaseAdmin()
-      .from('tenant_settings')
-      .select('setting_value')
-      .eq('tenant_id', tenant.id)
-      .eq('category', 'features')
-      .eq('setting_key', 'allow_online_booking')
-      .maybeSingle()
-
-    if (featureRow?.setting_value) {
-      try {
-        const parsed = JSON.parse(featureRow.setting_value)
-        if (typeof parsed.enabled === 'boolean') {
-          allowOnlineBooking = parsed.enabled
-        }
-      } catch {
-        allowOnlineBooking = featureRow.setting_value === 'true'
+    const { data: settingRows } = await settingsPromise
+    for (const row of settingRows ?? []) {
+      if (row.setting_key === 'allow_online_booking') {
+        allowOnlineBooking = parseFeatureEnabled(row.setting_value, true)
+      } else if (row.setting_key === 'customer_plz_travel_check_enabled') {
+        pickupTravelCheck = parseFeatureEnabled(row.setting_value, false)
+      } else if (row.setting_key === 'payment_settings') {
+        const payment = parsePaymentSettings(row.setting_value)
+        cashVisibleForCustomer =
+          (payment.cash_payments_enabled ?? true)
+          && payment.cash_payment_visibility === 'customers_and_staff'
+        invoicePaymentsEnabled = !!payment.invoice_payments_enabled
       }
     }
   } catch {
-    // Keep default true if feature lookup fails
+    // Keep defaults if settings lookup fails
   }
 
   return {
@@ -185,6 +202,9 @@ export default defineEventHandler(async (event) => {
       bookingPolicy,
       availableServiceTypes,
       allow_online_booking: allowOnlineBooking,
+      pickup_travel_check: pickupTravelCheck,
+      cash_visible_for_customer: cashVisibleForCustomer,
+      invoice_payments_enabled: invoicePaymentsEnabled,
     },
   }
 })

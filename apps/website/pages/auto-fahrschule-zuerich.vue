@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrschule Zürich | Erste Auto-Lektion CHF 65.– | Driving Team</Title>
-      <Meta name="description" content="Fahrschule Zürich für Auto (Kat. B): 85% bestehen beim 1. Versuch. Erste Lektion CHF 65.–, danach CHF 95.–. Prüfung Albisgütli, Standort Altstetten. Jetzt buchen." />
+      <Title>Fahrschule Zürich | Erste Lektion 45 Min. CHF 65.– | Driving Team</Title>
+      <Meta name="description" content="Fahrschule Zürich für Auto (Kat. B): 85% bestehen beim 1. Versuch. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. Prüfung Albisgütli, Standort Altstetten. Jetzt buchen." />
       <Meta name="keywords" content="Fahrschule Zürich, Auto Fahrschule Zürich, Fahrstunden Zürich, Kategorie B Zürich, Führerschein Zürich, Fahrprüfung Albisgütli" />
-      <Meta property="og:title" content="Fahrschule Zürich | Erste Auto-Lektion CHF 65.– | Driving Team" />
-      <Meta property="og:description" content="Fahrschule Zürich, Kategorie B. 85% Erfolgsquote. Erste Lektion CHF 65.–, danach CHF 95.–. Prüfungsgebiet Albisgütli." />
+      <Meta property="og:title" content="Fahrschule Zürich | Erste Lektion 45 Min. CHF 65.– | Driving Team" />
+      <Meta property="og:description" content="Fahrschule Zürich, Kategorie B. 85% Erfolgsquote. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. Prüfungsgebiet Albisgütli." />
       <Meta property="og:url" content="https://drivingteam.ch/auto-fahrschule-zuerich/" />
       <Meta property="og:type" content="website" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule-zuerich/" />
@@ -14,8 +14,8 @@
       <Meta property="og:image:height" content="630" />
       <Meta property="og:locale" content="de_CH" />
       <Meta name="twitter:card" content="summary_large_image" />
-      <Meta name="twitter:title" content="Fahrschule Zürich | Erste Auto-Lektion CHF 65.– | Driving Team" />
-      <Meta name="twitter:description" content="Fahrschule Zürich Kat. B. 85% Erfolgsquote. Erste Lektion CHF 65.–, danach CHF 95.–." />
+      <Meta name="twitter:title" content="Fahrschule Zürich | Erste Lektion 45 Min. CHF 65.– | Driving Team" />
+      <Meta name="twitter:description" content="Fahrschule Zürich Kat. B. 85% Erfolgsquote. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–." />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
@@ -23,7 +23,7 @@
     <BreadcrumbNav :breadcrumbs="[{ label: 'Fahrschule', href: '/' }, { label: 'Auto Fahrschule', href: '/auto-fahrschule/' }, { label: 'Zürich' }]" />
 
     <!-- ====== HERO ====== -->
-    <section class="relative py-20 md:py-32 overflow-hidden">
+    <section class="relative pt-4 pb-6 md:pt-8 md:pb-12 overflow-hidden">
       <div class="absolute inset-0 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900"></div>
       <div class="absolute -top-40 -right-40 w-96 h-96 bg-primary-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
       <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-15"></div>
@@ -41,9 +41,12 @@
       <div class="section-container relative z-10">
         <div class="grid md:grid-cols-2 gap-12 items-center">
           <div class="text-white">
-            <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-6 border border-white/20">
+            <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-4 border border-white/20">
               <span class="text-xl">🚗</span>
               <span class="text-sm font-semibold">Fahrschule Zürich</span>
+            </div>
+            <div class="mb-6">
+              <ErsteOfferBanner variant="badge" href="/buchen?category=B&code=ERSTE30&utm_content=ag_local" />
             </div>
 
             <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
@@ -66,7 +69,7 @@
               </div>
               <div>
                 <p class="text-4xl font-black text-yellow-300">CHF 65</p>
-                <p class="text-sm text-white/70">erste Lektion, danach 95</p>
+                <p class="text-sm text-white/70">erste Lektion 45 Min., danach 95</p>
               </div>
             </div>
 
@@ -139,6 +142,7 @@
 
     <!-- ====== REVIEWS ====== -->
     <ReviewsSection category="zuerich" />
+    <ErsteOfferBanner href="/buchen?category=B&code=ERSTE30&utm_content=ag_local" />
     <UpcomingSlotsSection page="auto-fahrschule-zuerich" category="B Automatik" promo-code="ERSTE30" />
 
 
@@ -290,9 +294,17 @@
         </div>
 
         <div class="mt-8 text-center">
-          <a href="/fahrschule-preise/" class="text-primary-600 hover:text-primary-700 font-semibold text-sm underline">
-            Alle Preise & Kategorien anschauen →
+          <a
+            href="/buchen?category=B&code=ERSTE30&utm_content=ag_local"
+            class="inline-flex items-center justify-center gap-2 bg-primary-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-primary-700 transition mb-4"
+          >
+            Erste Lektion 45 Min. für CHF 65.– buchen
           </a>
+          <div>
+            <a href="/fahrschule-preise/" class="text-primary-600 hover:text-primary-700 font-semibold text-sm underline">
+              Alle Preise & Kategorien anschauen →
+            </a>
+          </div>
         </div>
       </div>
     </section>
@@ -420,8 +432,11 @@
     <section class="py-20 bg-gradient-to-r from-primary-600 to-primary-800 text-white">
       <div class="max-w-4xl mx-auto px-4 text-center">
         <h2 class="text-4xl md:text-5xl font-black mb-6">Bereit für deine Auto Fahrschule in Zürich?</h2>
-        <p class="text-xl text-primary-100 mb-8 max-w-2xl mx-auto">
-          Professionelle Kategorie-B-Ausbildung. Direkt im Prüfungsgebiet Albisgütli. Online buchbar, flexibel und mit 85% Erfolgsquote.
+        <p class="text-xl text-primary-100 mb-3 max-w-2xl mx-auto">
+          Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. Direkt im Prüfungsgebiet Albisgütli.
+        </p>
+        <p class="text-base text-primary-200 mb-8 max-w-2xl mx-auto">
+          Online buchbar, flexibel und mit 85% Erfolgsquote.
         </p>
         <a
           href="/buchen?category=B&code=ERSTE30&utm_content=ag_local"
@@ -628,7 +643,7 @@ const jsonLdScripts = [
       "@type": ["DrivingSchool", "LocalBusiness"],
       "@id": "https://drivingteam.ch/auto-fahrschule-zuerich/#driving-school",
       "name": "Auto Fahrschule Zürich – Driving Team",
-      "description": "Professionelle Auto Fahrschule in Zürich-Altstetten. Erste Kategorie-B-Lektion CHF 65.–, danach CHF 95.–. Prüfungsgebiet Albisgütli. 85% Erfolgsquote.",
+      "description": "Professionelle Auto Fahrschule in Zürich-Altstetten. Erste Kategorie-B-Lektion CHF 65.– / 45 Min., danach CHF 95.–. Prüfungsgebiet Albisgütli. 85% Erfolgsquote.",
       "url": "https://drivingteam.ch/auto-fahrschule-zuerich/",
       "telephone": "+41444310033",
       "image": "https://drivingteam.ch/images/categories/auto-fahrschule-hero.webp",
@@ -668,7 +683,7 @@ const jsonLdScripts = [
             "priceCurrency": "CHF",
             "availability": "https://schema.org/InStock",
             "url": "https://app.simy.ch/booking/availability/driving-team?category=B&code=ERSTE30",
-            "description": "Erste Lektion CHF 65.–, weitere Lektionen CHF 95.–"
+            "description": "Erste Lektion CHF 65.– / 45 Min., weitere Lektionen CHF 95.– / 45 Min."
           }
         ]
       },
