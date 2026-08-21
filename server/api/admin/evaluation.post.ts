@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
 
       const { data, error } = await supabase
         .from('evaluation_categories')
-        .select('id, tenant_id, name, description, display_order, category_code, is_active, created_at')
+        .select('id, tenant_id, name, description, color, display_order, is_active, created_at')
         .eq('tenant_id', effectiveTenantId)
         .order('display_order', { ascending: true })
 

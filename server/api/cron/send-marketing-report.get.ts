@@ -172,7 +172,7 @@ async function sendReport(supabase: any, tenant: { id: string; slug: string; nam
     // GA4: last 7 days by channel
     supabase
       .from('marketing_ga4_daily')
-      .select('date, channel, sessions, conversions, bounce_rate')
+      .select('date, channel, sessions, conversions')
       .eq('tenant_id', tenant.id)
       .gte('date', weekStart)
       .lt('date', weekEnd),
@@ -332,7 +332,7 @@ async function sendReport(supabase: any, tenant: { id: string; slug: string; nam
 
   // ── 5. GA4 metrics ────────────────────────────────────────────────────────
 
-  const MARKETING_CHANNELS = ['Organic Search', 'Paid Search', 'Referral', 'Organic Social', 'Email', 'Affiliates']
+  const MARKETING_CHANNELS = ['Organic Search', 'Paid Search', 'Paid Social', 'Referral', 'Organic Social', 'Email', 'Affiliates']
   const ga4Marketing = ga4.filter(r => MARKETING_CHANNELS.includes(r.channel))
   const ga4All = ga4
 

@@ -246,6 +246,12 @@
                 <input v-model="formData.contact_phone" type="tel" required placeholder="+41 44 123 45 67"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">WhatsApp</label>
+                <input v-model="formData.whatsapp_phone" type="tel" placeholder="+41 79 123 45 67"
+                  class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
+                <p class="text-xs text-gray-400 mt-1">Handy-Nummer aus der WhatsApp-App. Festnetz funktioniert dort nicht.</p>
+              </div>
               <!-- Primäre E-Mail – wird für Login, Kontakt & Versand verwendet -->
               <div class="sm:col-span-2">
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
@@ -1834,6 +1840,7 @@
               Ich akzeptiere die <NuxtLink to="/agb" target="_blank" class="text-blue-600 hover:underline font-medium">Nutzungsbedingungen</NuxtLink>
               und die <NuxtLink to="/datenschutz" target="_blank" class="text-blue-600 hover:underline font-medium">Datenschutzerklärung</NuxtLink>
               (inkl. <NuxtLink to="/avv" target="_blank" class="text-blue-600 hover:underline font-medium">AVV</NuxtLink>).
+              <a href="https://simy.ch/impressum" target="_blank" class="text-blue-600 hover:underline font-medium">Impressum</a>
             </span>
           </div>
         </div>
@@ -2239,6 +2246,7 @@ const formData = ref({
   contact_person_last_name: '',
   contact_email: '',
   contact_phone: '',
+  whatsapp_phone: '',
   admin_birthdate: '',
   street: '',
   streetNr: '',

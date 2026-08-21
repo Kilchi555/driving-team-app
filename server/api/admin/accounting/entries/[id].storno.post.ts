@@ -1,9 +1,10 @@
 import { defineEventHandler, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { requireAccountingAccess } from '~/server/utils/accountant-access'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { syncEntryLedger } from '~/server/utils/accounting-ledger-db'
 
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event)
+  const profile = await requireAccountingAccess(event, { write: true })
   const supabase = getSupabaseAdmin()
   const id = event.context.params?.id
   if (!id) throw createError({ statusCode: 400, statusMessage: 'ID fehlt' })
@@ -45,6 +46,8 @@ export default defineEventHandler(async (event) => {
       entry_date: today,
       description: `Storno: ${original.description}`,
       category_id: original.category_id,
+      notes: original.notes ?? null,
+      document_kind: original.document_kind ?? (original.type === 'income' ? 'debtor' : 'expense'),
       storno_of_id: original.id,
       tenant_id: profile.tenant_id,
     })
@@ -52,6 +55,7 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+  if (storno?.id) await syncEntryLedger(supabase, profile.tenant_id, storno.id)
 
   // Original-Buchung sperren falls noch nicht gesperrt
   if (!original.locked_at) {

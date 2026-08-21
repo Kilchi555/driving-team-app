@@ -89,19 +89,19 @@ useHead({
     { name: 'description', content: 'Simy wurde aus der Praxis gebaut. Erfahre unsere Geschichte, Mission und Team. Schweizer All-in-One Software für Dienstleister — seit 2022.' },
     { property: 'og:title', content: 'Über Simy – All-in-One Software aus der Praxis' },
     { property: 'og:description', content: 'Simy wurde aus der Praxis gebaut — für alle, die arbeiten statt verwalten wollen.' },
-    { property: 'og:url', content: 'https://simy.ch/ueber-uns' },
+    { property: 'og:url', content: 'https://www.simy.ch/ueber-uns' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/ueber-uns' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/ueber-uns' }],
   script: ldScripts(
     webPageLd({
       name: 'Über Simy',
       description: 'Simy — All-in-One Software aus der Schweiz für Dienstleister und KMU.',
-      url: 'https://simy.ch/ueber-uns',
+      url: 'https://www.simy.ch/ueber-uns',
       type: 'AboutPage',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Über uns', url: 'https://simy.ch/ueber-uns' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Über uns', url: 'https://www.simy.ch/ueber-uns' },
     ]),
   ),
 })

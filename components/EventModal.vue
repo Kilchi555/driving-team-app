@@ -179,6 +179,31 @@
 
           </div>
 
+          <!-- Fokus für diese Lektion: Themen mit Notiz vormerken, ohne Bewertung -->
+          <div
+            v-if="isLessonType(formData.eventType) && selectedStudent && !showEventTypeSelection && props.mode !== 'view'"
+            class="py-2"
+          >
+            <details class="group rounded-xl border border-gray-200 bg-white" :open="plannedTopics.length > 0">
+              <summary class="flex items-center justify-between px-3 py-2.5 cursor-pointer select-none list-none">
+                <span class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  🎯 Geplante Themen
+                  <span v-if="plannedTopics.length > 0" class="text-xs font-semibold px-1.5 py-0.5 rounded-full text-white" :style="primaryBg">{{ plannedTopics.length }}</span>
+                </span>
+                <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div class="px-3 pb-3">
+                <TopicNotePicker
+                  v-model="plannedTopics"
+                  :student-category="formData.type || ''"
+                  :is-theory-lesson="formData.appointment_type === 'theory'"
+                />
+              </div>
+            </details>
+          </div>
+
           <!-- Time Section (nicht bei Ferien) -->
           <div v-if="showTimeSection && !showEventTypeSelection && formData.selectedSpecialType !== 'vacation'" class="py-2">
             <TimeSelector
@@ -995,6 +1020,7 @@ import ExamLocationSelector from '~/components/ExamLocationSelector.vue'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import PostAppointmentModal from './PostAppointmentModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import TopicNotePicker, { type PlannedTopic } from '~/components/TopicNotePicker.vue'
 
 
 // Composables
@@ -1236,6 +1262,37 @@ const selectedLessonType = ref('lesson')
 /** Apply tenant create defaults only once per modal open — avoids flipping
  *  discovery ↔ consulting every time the user picks a student or re-inits. */
 const createEventTypeDefaultsApplied = ref(false)
+
+// ── Vorgemerkte Themen ("Fokus für diese Lektion") ─────────────────────────
+// Unbewertete Themen-Vormerkungen für diesen Termin — werden beim späteren
+// Bewerten (EvaluationModal) automatisch vorausgewählt angezeigt.
+const plannedTopics = ref<PlannedTopic[]>([])
+
+const loadPlannedTopics = async (appointmentId: string) => {
+  try {
+    const response = await $fetch<{ success: boolean; data: PlannedTopic[] }>('/api/staff/get-planned-topics', {
+      query: { appointment_id: appointmentId }
+    })
+    plannedTopics.value = response?.data || []
+  } catch (err) {
+    logger.warn('⚠️ Could not load planned topics:', err)
+    plannedTopics.value = []
+  }
+}
+
+const savePlannedTopics = async (appointmentId: string) => {
+  try {
+    await $fetch('/api/staff/save-planned-topics', {
+      method: 'POST',
+      body: {
+        appointment_id: appointmentId,
+        topics: plannedTopics.value
+      }
+    })
+  } catch (err) {
+    logger.warn('⚠️ Could not save planned topics (non-critical):', err)
+  }
+}
 
 // ── Ferien-Bereich ──────────────────────────────────────────────────────────
 const vacationEndDate = ref('')
@@ -1955,6 +2012,17 @@ const handleSaveAppointment = async () => {
           saveToProductSales(savedAppointment.id)
             .then(() => logger.debug('✅ Products saved successfully'))
             .catch((error: any) => logger.warn('⚠️ Failed to save products (non-critical):', error.message))
+        )
+      }
+
+      // Save planned topics / "Fokus für diese Lektion" (non-critical).
+      // Always call — even with an empty list — so topics unselected during
+      // this edit are properly removed on the server, too.
+      if (savedAppointment?.id && isLessonType(formData.value.eventType)) {
+        parallelOperations.push(
+          savePlannedTopics(savedAppointment.id)
+            .then(() => logger.debug('✅ Planned topics saved successfully'))
+            .catch((error: any) => logger.warn('⚠️ Failed to save planned topics (non-critical):', error.message))
         )
       }
       
@@ -6938,6 +7006,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
       selectedExamLocation.value = null
       selectedLessonType.value = 'lesson'
       showEventTypeSelection.value = false
+      plannedTopics.value = []
     }
     isInitializing.value = true
     // Fresh create defaults each time the modal opens
@@ -7010,6 +7079,11 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
         
         // ✅ SCHRITT 3: Edit-Mode LessonType handling
         await handleEditModeLessonType()
+
+        // ✅ Vorgemerkte Themen ("Fokus für diese Lektion") laden
+        if (props.eventData.id) {
+          await loadPlannedTopics(props.eventData.id)
+        }
       } else if (props.eventData && props.eventData.isPasteOperation) {
         // ✅ PASTE OPERATION: Spezielle Behandlung für kopierte Termine
         logger.debug('📋 Initializing pasted appointment')
@@ -7099,6 +7173,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
         // ✅ DANN: resetForm aufrufen, aber mit korrekten Werten überschreiben
         resetForm()
         selectedExamLocation.value = null
+        plannedTopics.value = []
         
         // ✅ SOFORT: Kalenderdaten setzen (bevor andere Funktionen sie überschreiben)
         formData.value.startDate = startDate

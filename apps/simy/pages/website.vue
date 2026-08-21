@@ -244,6 +244,8 @@
       </div>
     </section>
 
+    <SimyGbpHighlight />
+
     <section class="simy-closer py-28 px-6">
       <div class="max-w-xl mx-auto text-center">
         <h2 class="text-3xl md:text-5xl text-white mb-5 simy-display">Heute noch als Vorschau.</h2>
@@ -328,7 +330,7 @@ const websitePlans = [
     price: care,
     suffix: '/Monat',
     highlight: false,
-    items: ['Alles aus Host', 'Inhaltliche Begleitung', 'SEO-Feinschliff', 'Für Betriebe ohne Zeit'],
+    items: ['Alles aus Host', 'Max. 1 Stunde Support / Monat', 'Inhaltliche Begleitung', 'SEO-Feinschliff'],
     cta: 'Mit Care starten',
   },
 ]
@@ -356,40 +358,41 @@ const branchenLinks = [
 ]
 
 const faqs = [
-  { q: 'Was kostet eine Simy-Website?', a: `Einmalig CHF ${setup} beim Live-Gang, danach Hosting CHF ${host}/Monat oder Care CHF ${care}/Monat. 30 Tage kannst du einrichten und die Vorschau teilen — ohne Zahlung.` },
+  { q: 'Was kostet eine Simy-Website?', a: `Einmalig CHF ${setup} beim Live-Gang, danach Hosting CHF ${host}/Monat oder Care CHF ${care}/Monat (inkl. max. 1 Stunde Support). 30 Tage kannst du einrichten und die Vorschau teilen — ohne Zahlung.` },
   { q: 'Muss ich die volle Simy-Software nehmen?', a: 'Nein. Das Website-Produkt ist eigenständig. Du startest über diese Seite, landest im Website-Admin und kannst später auf die volle Software erweitern.' },
   { q: 'Wann muss ich bezahlen?', a: 'Erst wenn die Homepage bereit ist und du live schaltest — oder wenn du nach 30 Tagen ein Hosting-Abo wählst. Es gibt keine automatische Belastung beim Registrieren.' },
   { q: 'Kann ich meine bestehende Domain nutzen?', a: 'Ja. Im Website-Admin verbindest du zuerst deine bestehende Domain. Hast du noch keine, prüfst du die Verfügbarkeit und kaufst sie bei Infomaniak — danach trägst du die DNS-Einträge ein.' },
   { q: 'Ist die Seite wirklich SEO-tauglich?', a: 'Ja. Saubere Title/Description, FAQ und Sitemap — plus Inhalte aus deiner Branche. Genau die Signale, die lokale Suche braucht.' },
   { q: 'Was heisst AI-optimiert?', a: 'Nicht die Optik. Im Hintergrund liegen deine Betriebsdaten strukturiert vor: Name, Ort, Leistungen, Preise, FAQ. Google und ChatGPT lesen genau diese Daten — nicht nur den sichtbaren Text. Deshalb kann dein Betrieb genannt werden, wenn jemand fragt «Fahrschule in meiner Stadt».' },
-  { q: 'Was ist der Unterschied zu Host und Care?', a: `Host (CHF ${host}) hält die Seite online und schnell. Care (CHF ${care}) ergänzt laufende inhaltliche Pflege, damit Texte und SEO nicht nach dem Launch einschlafen.` },
+  { q: 'Was ist der Unterschied zu Host und Care?', a: `Host (CHF ${host}) hält die Seite online und schnell. Care (CHF ${care}) inkl. max. 1 Stunde Support pro Monat — plus laufende inhaltliche Pflege, damit Texte und SEO nicht nach dem Launch einschlafen.` },
   { q: 'Was passiert nach 30 Tagen ohne Live-Schaltung?', a: 'Die Vorschau bleibt. Im Admin kannst du weiter Billing und Profil erreichen, um Hosting zu wählen. Es wird nichts automatisch abgebucht.' },
+  { q: 'Kann ich auch mein Google-Unternehmensprofil automatisieren?', a: 'Ja — mit der Simy-Software als Add-on für CHF 19/Monat: Jahreskalender-Posts, Foto-Pool, automatische Review-Antworten und Insights. Die Website allein ist die Landingpage. Das Profil holt die Maps-Klicks.' },
 ]
 
 useHead({
   title: 'Website-Generator Schweiz – SEO- und AI-Website für KMUs | Simy',
   meta: [
     { name: 'description', content: `Website erstellen in der Schweiz: SEO- und AI-optimiert, einmalig CHF ${setup}, Hosting ab CHF ${host}/Monat. 30 Tage Vorschau gratis. Für Fahrschulen, Coaches und Dienstleister.` },
-    { name: 'keywords', content: 'website erstellen schweiz, website generator kmu, seo website schweiz, ai website schweiz, landingpage generator, website fahrschule, website coaching' },
+    { name: 'keywords', content: 'website erstellen schweiz, website generator kmu, seo website schweiz, ai website schweiz, landingpage generator, website fahrschule, website coaching, website hosten schweiz, kmu website preise' },
     { property: 'og:title', content: 'Website-Generator Schweiz – SEO- und AI-Website in Minuten | Simy' },
     { property: 'og:description', content: `Professionelle KMU-Website: einmalig CHF ${setup}, Hosting ab CHF ${host}/Monat. Vorschau sofort, live wenn du bereit bist.` },
-    { property: 'og:url', content: 'https://simy.ch/website' },
+    { property: 'og:url', content: 'https://www.simy.ch/website' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/website' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/website' }],
   script: ldScripts(
     webPageLd({
       name: 'Website-Generator Schweiz – Simy',
       description: 'SEO- und AI-optimierte KMU-Website in Minuten. Preise, Standorte, Bewertungen, eigene Domain.',
-      url: 'https://simy.ch/website',
+      url: 'https://www.simy.ch/website',
     }),
     productOffersLd({
       name: 'Simy Website-Generator',
       description: 'Professionelle SEO-Website für Schweizer Dienstleister — Setup plus Hosting.',
-      url: 'https://simy.ch/website',
+      url: 'https://www.simy.ch/website',
       plans: [
         { name: 'Setup', price: setup, description: 'Einmalige Live-Schaltung' },
         { name: 'Host', price: host, description: 'Monatliches Hosting' },
-        { name: 'Care', price: care, description: 'Hosting plus Pflege' },
+        { name: 'Care', price: care, description: 'Hosting plus max. 1 Stunde Support / Monat' },
       ],
     }),
     howToLd({
@@ -399,8 +402,8 @@ useHead({
     }),
     faqPageLd(faqs),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Website-Generator', url: 'https://simy.ch/website' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Website-Generator', url: 'https://www.simy.ch/website' },
     ]),
   ),
 })

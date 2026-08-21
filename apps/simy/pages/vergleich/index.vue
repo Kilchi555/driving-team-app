@@ -88,22 +88,22 @@ useHead({
         'online buchungssystem vergleich schweiz, calendly alternative, terminli alternative, klara terminbuchung, simplybook alternative',
     },
     { property: 'og:title', content: 'Simy Vergleich – Online-Buchungssystem Schweiz' },
-    { property: 'og:url', content: 'https://simy.ch/vergleich' },
+    { property: 'og:url', content: 'https://www.simy.ch/vergleich' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/vergleich' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/vergleich' }],
   script: ldScripts(
     itemListLd({
       name: 'Simy Software-Vergleiche',
       description: 'Ehrliche Vergleiche: Simy vs Calendly, Terminli, KLARA und SimplyBook.',
-      url: 'https://simy.ch/vergleich',
+      url: 'https://www.simy.ch/vergleich',
       items: COMPARISONS.map((c) => ({
         name: `Simy vs ${c.competitorName}`,
-        url: `https://simy.ch/vergleich/${c.slug}`,
+        url: `https://www.simy.ch/vergleich/${c.slug}`,
       })),
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Vergleich', url: 'https://simy.ch/vergleich' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Vergleich', url: 'https://www.simy.ch/vergleich' },
     ]),
   ),
 })

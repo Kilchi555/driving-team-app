@@ -78,7 +78,7 @@ export const VERTICALS: SimyVertical[] = [
     description:
       'Online-Terminbuchung und Coaching-Software für die Schweiz: Sitzungskalender, SMS-Erinnerungen, Pakete und QR-Rechnungen. 30 Tage kostenlos testen.',
     keywords:
-      'online terminbuchung coach, coaching software schweiz, terminbuchung software, kundenverwaltung coach, online terminplaner coaching',
+      'online terminbuchung coach, coaching software schweiz, terminbuchung software, kundenverwaltung coach, online terminplaner coaching, google business profile coaching, google maps coach',
     h1Line1: 'Online-Terminbuchung für',
     h1Highlight: 'Coaches',
     heroSub:
@@ -248,7 +248,7 @@ export const VERTICALS: SimyVertical[] = [
     description:
       'Online-Terminbuchung und Beratung-Software für Consultants in der Schweiz: Erstgespräch, Beratungsslots, Leistungsbereiche und QR-Rechnungen. 30 Tage gratis.',
     keywords:
-      'online terminbuchung berater, beratung software, terminbuchungssystem consulting, berater terminplaner, consulting software schweiz',
+      'online terminbuchung berater, beratung software, terminbuchungssystem consulting, berater terminplaner, consulting software schweiz, google business profile beratung, google maps consultant',
     h1Line1: 'Online-Terminbuchung für',
     h1Highlight: 'Berater',
     heroSub:
@@ -396,7 +396,7 @@ export const VERTICALS: SimyVertical[] = [
     description:
       'Online-Terminbuchung und Studio-Software für Personal Trainer: Probe-Training, Pakete, SMS-Erinnerungen und QR-Rechnungen. 30 Tage kostenlos.',
     keywords:
-      'online terminbuchung personal trainer, studio software, trainer software, buchungssystem fitness, personal training software schweiz',
+      'online terminbuchung personal trainer, studio software, trainer software, buchungssystem fitness, personal training software schweiz, google business profile personal trainer, google maps fitness',
     h1Line1: 'Online-Terminbuchung für',
     h1Highlight: 'Personal Trainer',
     heroSub:
@@ -521,7 +521,7 @@ export const VERTICALS: SimyVertical[] = [
     description:
       'Online-Terminbuchung und Nachhilfe-Software: Probestunde, Fächer, Lektionen planen und QR-Rechnungen an Eltern. Für Tutoren und Nachhilfeschulen. 30 Tage gratis.',
     keywords:
-      'online terminbuchung nachhilfe, nachhilfe software schweiz, kursverwaltung software, tutor terminplaner, lektionen buchen',
+      'online terminbuchung nachhilfe, nachhilfe software schweiz, kursverwaltung software, tutor terminplaner, lektionen buchen, google business profile nachhilfe, google maps nachhilfe',
     h1Line1: 'Online-Terminbuchung für',
     h1Highlight: 'Nachhilfe',
     heroSub:
@@ -641,7 +641,7 @@ export const VERTICALS: SimyVertical[] = [
     description:
       'Online-Terminbuchung und Musikschul-Software: Probestunde, Instrumente, Lehrer-Kalender und QR-Rechnungen. Für private Musikschulen und Instrumentallehrer.',
     keywords:
-      'online terminbuchung musikschule, musikschule software schweiz, kursverwaltung software, musiklehrer terminplaner, instrumentalunterricht buchung',
+      'online terminbuchung musikschule, musikschule software schweiz, kursverwaltung software, musiklehrer terminplaner, instrumentalunterricht buchung, google business profile musikschule, google maps musikunterricht',
     h1Line1: 'Online-Terminbuchung für',
     h1Highlight: 'Musikschulen',
     heroSub:
@@ -761,7 +761,7 @@ export const VERTICALS: SimyVertical[] = [
     description:
       'Online-Terminbuchung und Hundeschul-Software: Erstberatung, Einzeltraining, Welpenkurse und QR-Rechnungen. Buchungssystem für Hundetrainer. 30 Tage gratis.',
     keywords:
-      'online terminbuchung hundeschule, hundeschule software schweiz, buchungssystem hundetrainer, kursverwaltung welpenkurs, hundetraining terminplaner',
+      'online terminbuchung hundeschule, hundeschule software schweiz, buchungssystem hundetrainer, kursverwaltung welpenkurs, hundetraining terminplaner, google business profile hundeschule, google maps hundetrainer',
     h1Line1: 'Online-Terminbuchung für',
     h1Highlight: 'Hundeschulen',
     heroSub:
@@ -877,7 +877,7 @@ export const VERTICALS: SimyVertical[] = [
     description:
       'Online-Terminbuchung und Praxis-Software für Massage: Behandlungen buchen, Reminder, QR-Rechnungen. Für Selbstzahler-Praxen ohne Marktplatzgebühr. 30 Tage gratis.',
     keywords:
-      'online terminbuchung massage, praxis software massage, praxissoftware wellness, terminbuchung massagepraxis, massage software schweiz',
+      'online terminbuchung massage, praxis software massage, praxissoftware wellness, terminbuchung massagepraxis, massage software schweiz, google business profile massage, google maps massagepraxis',
     h1Line1: 'Online-Terminbuchung für',
     h1Highlight: 'Massagepraxen',
     heroSub:

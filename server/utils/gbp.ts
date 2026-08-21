@@ -47,11 +47,11 @@ export interface GbpAutomationSettings {
 }
 
 export const GBP_AUTOMATION_DEFAULTS: GbpAutomationSettings = {
-  review_reply_mode: 'suggest',
+  review_reply_mode: 'auto_all',
   posts_per_week: 2,
   photos_per_week: 2,
-  photo_mode: 'off',
-  post_mode: 'off',
+  photo_mode: 'approved_only',
+  post_mode: 'calendar',
   brand_voice: null,
   keywords: [],
   default_cta_type: 'BOOK',

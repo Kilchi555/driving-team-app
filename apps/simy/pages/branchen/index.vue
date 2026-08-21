@@ -98,7 +98,7 @@ const branchenCards = [
 
 const branchenItems = branchenCards.map((c) => ({
   name: c.label,
-  url: `https://simy.ch${c.href}`,
+  url: `https://www.simy.ch${c.href}`,
 }))
 
 useHead({
@@ -110,19 +110,19 @@ useHead({
         'Online-Terminbuchung, SEO-Website und Branchen-Software für Fahrschule, Coaching, Consulting, Personal Training, Nachhilfe, Musikschule, Hundeschule und Massage. Schweizer Buchungssystem mit QR-Rechnung.',
     },
     { property: 'og:title', content: 'Online-Terminbuchung nach Branche – Simy Schweiz' },
-    { property: 'og:url', content: 'https://simy.ch/branchen' },
+    { property: 'og:url', content: 'https://www.simy.ch/branchen' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/branchen' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/branchen' }],
   script: ldScripts(
     itemListLd({
       name: 'Simy Branchen – Online-Terminbuchung Schweiz',
       description: 'Branchenspezifische All-in-One Software und Online-Buchung für Schweizer Dienstleister.',
-      url: 'https://simy.ch/branchen',
+      url: 'https://www.simy.ch/branchen',
       items: branchenItems,
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Branchen', url: 'https://simy.ch/branchen' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Branchen', url: 'https://www.simy.ch/branchen' },
     ]),
   ),
 })

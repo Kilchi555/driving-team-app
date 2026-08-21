@@ -9,7 +9,7 @@
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs-altstetten/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
-      <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-zuerich/" />
+      <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-altstetten/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/courses/motorrad-grundkurs-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />

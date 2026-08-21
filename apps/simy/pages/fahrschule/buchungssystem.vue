@@ -115,14 +115,14 @@ useHead({
     { name: 'keywords', content: 'buchungssystem fahrschule, online terminbuchung fahrschule, fahrschule online buchen, terminverwaltung fahrschule' },
     { property: 'og:title', content: 'Buchungssystem Fahrschule – Simy | Termine auf Autopilot' },
     { property: 'og:description', content: 'Schüler buchen Fahrstunden selbst. Automatisch bestätigt, erinnert und synchronisiert.' },
-    { property: 'og:url', content: 'https://simy.ch/fahrschule/buchungssystem' },
+    { property: 'og:url', content: 'https://www.simy.ch/fahrschule/buchungssystem' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule/buchungssystem' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/fahrschule/buchungssystem' }],
   script: ldScripts(
     softwareAppLd({
       name: 'Simy Buchungssystem für Fahrschulen',
       description: 'Online-Terminbuchung für Fahrschulen: Schüler buchen selbst, Reminder und Kalender-Sync inklusive.',
-      url: 'https://simy.ch/fahrschule/buchungssystem',
+      url: 'https://www.simy.ch/fahrschule/buchungssystem',
     }),
     faqPageLd([
       { q: 'Können Schüler selbst Fahrstunden buchen?', a: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink für Website, WhatsApp oder E-Mail-Signatur.' },
@@ -130,9 +130,9 @@ useHead({
       { q: 'Synchronisiert Simy mit Google/Apple Calendar?', a: 'Ja. Zwei-Wege-Sync: Simy-Termine erscheinen im Kalender, private Termine blockieren Buchungs-Slots.' },
     ]),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Fahrschule', url: 'https://simy.ch/fahrschule' },
-      { name: 'Buchungssystem', url: 'https://simy.ch/fahrschule/buchungssystem' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Fahrschule', url: 'https://www.simy.ch/fahrschule' },
+      { name: 'Buchungssystem', url: 'https://www.simy.ch/fahrschule/buchungssystem' },
     ]),
   ),
 })

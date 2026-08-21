@@ -7,6 +7,7 @@ import {
   homepageHasContent,
   loadWebsiteHomePage,
   publishWebsiteForTenant,
+  websitePublishBlockedMessage,
   websitePublishBlockedReason,
 } from '~/server/utils/website-billing'
 
@@ -61,9 +62,7 @@ export default defineEventHandler(async (event) => {
   if (blocked) {
     throw createError({
       statusCode: 402,
-      statusMessage: blocked === 'hosting'
-        ? 'Hosting-Abo erforderlich, bevor die Website live geht.'
-        : 'Die einmalige Website-Gebühr ist fällig, bevor die Homepage live geht.',
+      statusMessage: websitePublishBlockedMessage(blocked),
       data: { code: 'website_payment_required', reason: blocked },
     })
   }

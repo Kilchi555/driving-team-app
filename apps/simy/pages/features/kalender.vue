@@ -133,24 +133,24 @@ useHead({
     { name: 'keywords', content: 'terminplanung software schweiz, online buchungskalender, kalender app dienstleister' },
     { property: 'og:title', content: 'Kalender & Terminplanung – Simy | Stundenplan auf Autopilot' },
     { property: 'og:description', content: 'Multi-Mitarbeiter-Kalender, iCal-Sync, automatische Erinnerungen. Alles synchronisiert.' },
-    { property: 'og:url', content: 'https://simy.ch/features/kalender' },
+    { property: 'og:url', content: 'https://www.simy.ch/features/kalender' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/features/kalender' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/features/kalender' }],
   script: ldScripts(
     webPageLd({
       name: 'Kalender & Terminplanung – Simy',
       description: 'Multi-Mitarbeiter-Kalender mit Online-Buchung, iCal-Sync und Erinnerungen.',
-      url: 'https://simy.ch/features/kalender',
+      url: 'https://www.simy.ch/features/kalender',
     }),
     softwareAppLd({
       name: 'Simy Kalender',
       description: 'Terminplanung und Kalender-Sync für Schweizer Selbständige und KMUs.',
-      url: 'https://simy.ch/features/kalender',
+      url: 'https://www.simy.ch/features/kalender',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Features', url: 'https://simy.ch/features/kalender' },
-      { name: 'Kalender', url: 'https://simy.ch/features/kalender' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Features', url: 'https://www.simy.ch/features/kalender' },
+      { name: 'Kalender', url: 'https://www.simy.ch/features/kalender' },
     ]),
   ),
 })

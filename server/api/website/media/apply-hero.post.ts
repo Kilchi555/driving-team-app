@@ -179,6 +179,25 @@ export default defineEventHandler(async (event) => {
       .from('website_tenants')
       .update({ hero_image_url: heroUrl, updated_at: now })
       .eq('id', website.id)
+
+    const { data: home } = await supabase
+      .from('website_pages')
+      .select('id, blocks')
+      .eq('website_id', website.id)
+      .eq('is_home', true)
+      .maybeSingle()
+    const landing = home?.blocks as any
+    if (home?.id && landing && typeof landing === 'object') {
+      landing.brand = { ...(landing.brand || {}), hero_image_url: heroUrl, hero_image_source: source, hero_attribution: attribution }
+      if (Array.isArray(landing.blocks)) {
+        landing.blocks = landing.blocks.map((b: any) =>
+          b?.type === 'hero'
+            ? { ...b, content: { ...(b.content || {}), image_url: heroUrl } }
+            : b,
+        )
+      }
+      await supabase.from('website_pages').update({ blocks: landing, updated_at: now }).eq('id', home.id)
+    }
   }
 
   return {

@@ -38,6 +38,9 @@ export async function prepareDunning(supabase: SupabaseClient, opts: PrepareDunn
     .single()
   if (invoiceError || !invoice) throw createError({ statusCode: 404, statusMessage: 'Rechnung nicht gefunden' })
   if (invoice.tenant_id !== opts.tenantId) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  if ((invoice as any).document_kind === 'quote') {
+    throw createError({ statusCode: 422, statusMessage: 'Offerten können nicht gemahnt werden' })
+  }
 
   // invoices_with_details wurde vor Einführung des Mahnwesens erstellt (SELECT i.*
   // wird beim Anlegen der View fixiert) und enthält die neuen dunning_*-Spalten

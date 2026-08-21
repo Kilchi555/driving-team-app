@@ -14,6 +14,7 @@ import {
   VALID_CUSTOMER_NOTIFICATION_CHANNELS,
   normalizeCustomerNotificationChannel,
 } from '~/server/utils/customer-notification-channel'
+import { parseIdleStudentReminderSettings } from '~/server/utils/idle-student-reminder-settings'
 
 const VALID_FIELDS = new Set([
   'first_name', 'last_name', 'phone', 'email',
@@ -157,6 +158,15 @@ export default defineEventHandler(async (event) => {
     ...currentPolicy,
     ...body,
   }
+
+  const idleReminder = parseIdleStudentReminderSettings(updatedPolicy)
+  updatedPolicy.idle_student_reminder_enabled = idleReminder.enabled
+  updatedPolicy.idle_student_reminder_days = idleReminder.idleDays
+  updatedPolicy.idle_student_reminder_resend_days = idleReminder.resendDays
+  updatedPolicy.idle_student_reminder_notify_client = idleReminder.notifyClient
+  updatedPolicy.idle_student_reminder_notify_staff = idleReminder.notifyStaff
+  updatedPolicy.idle_student_reminder_notify_admin = idleReminder.notifyAdmin
+  updatedPolicy.idle_student_reminder_client_channel = idleReminder.clientChannel
 
   // Prefer array; migrate legacy singular if array missing
   if (Array.isArray(body.location_intake_modes) && body.location_intake_modes.length > 0) {

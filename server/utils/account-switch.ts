@@ -82,6 +82,29 @@ export function isSwitchableStaff(user: SwitchUserRow): boolean {
   )
 }
 
+/** Admin or privileged staff who may keep switching after leaving their own account. */
+export function isEligibleSwitchActor(
+  user: Pick<
+    SwitchUserRow,
+    'role' | 'admin_level' | 'linked_admin_user_id' | 'can_switch_all_staff' | 'is_active' | 'deleted_at'
+  >,
+): boolean {
+  if (!user.is_active || user.deleted_at) return false
+  if (user.role === 'super_admin') return false
+  if (isTenantAdmin(user)) return true
+  if (user.role === 'staff' && !!user.linked_admin_user_id) return true
+  if (user.can_switch_all_staff === true && (isSubAdmin(user) || user.role === 'staff')) return true
+  return false
+}
+
+export function preferredImpersonationActorId(
+  actor: Pick<SwitchUserRow, 'id' | 'role' | 'linked_admin_user_id'>,
+  linkedAdminId?: string | null,
+): string {
+  if (actor.role === 'staff' && linkedAdminId) return linkedAdminId
+  return actor.id
+}
+
 function deny(message = 'Wechsel nicht erlaubt'): never {
   throw createError({ statusCode: 403, statusMessage: message })
 }
@@ -167,11 +190,20 @@ async function loadValidImpersonator(
   if (Date.now() - new Date(session.started_at).getTime() > IMPERSONATION_MAX_MS) return null
 
   const actor = await loadSwitchUser(ctx.actorUserId)
-  if (!actor || !isTenantAdmin(actor) || actor.tenant_id !== tenantId || !actor.is_active || actor.deleted_at) {
+  if (!actor || actor.tenant_id !== tenantId || !actor.is_active || actor.deleted_at) {
     return null
   }
   if (actor.auth_user_id !== ctx.actorAuthUserId) return null
+  if (!(await actorMayLeadImpersonation(actor))) return null
   return { ctx, actor }
+}
+
+async function actorMayLeadImpersonation(actor: SwitchUserRow): Promise<boolean> {
+  if (isEligibleSwitchActor(actor)) return true
+  if (actor.role === 'staff' && actor.is_active && !actor.deleted_at && (await actorHasAnyGrant(actor.id))) {
+    return true
+  }
+  return false
 }
 
 async function actorHasGrant(actorId: string, targetStaffId: string): Promise<boolean> {
@@ -205,6 +237,38 @@ export async function resolveGrantActor(
   if (!current.tenant_id) deny()
   const impersonator = await loadValidImpersonator(event, current.tenant_id)
   return impersonator?.actor ?? current
+}
+
+/**
+ * Actor stored on the impersonator cookie. Staff with a linked admin are
+ * promoted to that admin so a later switch still sees the original privileges.
+ */
+export async function resolveImpersonationActor(
+  event: H3Event,
+  current: SwitchUserRow,
+): Promise<SwitchUserRow | null> {
+  const actor = await resolveGrantActor(event, current)
+  if (actor.role === 'super_admin' || !actor.auth_user_id || !actor.is_active || actor.deleted_at) {
+    return null
+  }
+
+  const preferredId = preferredImpersonationActorId(actor, actor.linked_admin_user_id)
+  if (preferredId !== actor.id) {
+    const linked = await loadSwitchUser(preferredId)
+    if (
+      linked &&
+      isTenantAdmin(linked) &&
+      linked.tenant_id === actor.tenant_id &&
+      linked.is_active &&
+      !linked.deleted_at &&
+      linked.auth_user_id
+    ) {
+      return linked
+    }
+  }
+
+  if (await actorMayLeadImpersonation(actor)) return actor
+  return null
 }
 
 export async function canSwitchToStaff(
@@ -250,7 +314,23 @@ export async function canReturnToAdmin(
     ? await loadValidImpersonator(event, current.tenant_id)
     : null
   if (impersonator && impersonator.actor.id === admin.id) return true
+  if (impersonator && impersonator.actor.linked_admin_user_id === admin.id) return true
   if (current.linked_admin_user_id && current.linked_admin_user_id === admin.id) return true
+  return false
+}
+
+export async function canReturnToSwitchHome(
+  event: H3Event,
+  current: SwitchUserRow,
+  target: SwitchUserRow,
+): Promise<boolean> {
+  if (!current.tenant_id || current.tenant_id !== target.tenant_id) return false
+  if (target.id === current.id) return false
+  if (!target.is_active || target.deleted_at || !target.auth_user_id || !target.email) return false
+
+  const impersonator = await loadValidImpersonator(event, current.tenant_id)
+  if (impersonator && impersonator.actor.id === target.id) return true
+  if (isTenantAdmin(target)) return canReturnToAdmin(event, current, target)
   return false
 }
 
@@ -315,9 +395,14 @@ export async function buildSwitchTargets(
 
   const impersonator = await loadValidImpersonator(event, current.tenant_id)
   let admin: SwitchTarget | null = null
-  if (impersonator) {
+  if (impersonator && isTenantAdmin(impersonator.actor)) {
     const a = impersonator.actor
     admin = { id: a.id, first_name: a.first_name, last_name: a.last_name, role: 'admin', kind: 'admin' }
+  } else if (impersonator?.actor.linked_admin_user_id) {
+    const linked = await loadSwitchUser(impersonator.actor.linked_admin_user_id)
+    if (linked && (await canReturnToAdmin(event, current, linked))) {
+      admin = { id: linked.id, first_name: linked.first_name, last_name: linked.last_name, role: 'admin', kind: 'admin' }
+    }
   } else if (current.role === 'staff' && current.linked_admin_user_id) {
     const linked = await loadSwitchUser(current.linked_admin_user_id)
     if (linked && (await canReturnToAdmin(event, current, linked))) {
@@ -343,11 +428,11 @@ export async function buildSwitchTargets(
         kind: 'own_staff',
       }
     }
-  } else if (current.role === 'staff') {
+  } else if (grantActor.role === 'staff') {
     ownStaff = {
-      id: current.id,
-      first_name: current.first_name,
-      last_name: current.last_name,
+      id: grantActor.id,
+      first_name: grantActor.first_name,
+      last_name: grantActor.last_name,
       role: 'staff',
       kind: 'own_staff',
     }

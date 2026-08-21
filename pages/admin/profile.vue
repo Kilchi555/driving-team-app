@@ -1025,6 +1025,18 @@
                   placeholder="+41 44 123 45 67"
                 >
               </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">WhatsApp</label>
+                <input
+                  v-model="brandingForm.contact.whatsappPhone"
+                  @blur="autoSaveBranding"
+                  type="tel"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2"
+                  placeholder="+41 79 123 45 67"
+                >
+                <p class="text-xs text-gray-400 mt-1">Handy-Nummer aus der WhatsApp-App — nicht die Festnetznummer.</p>
+              </div>
               
               <!-- Address -->
               <div class="md:col-span-2">
@@ -1473,6 +1485,50 @@
                       class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm resize-none"
                     />
                     <p class="text-xs text-gray-400 mt-1">Erscheint ganz unten auf der Rechnung.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-span-2 border-t pt-4 mt-2">
+                <h5 class="text-sm font-semibold text-gray-700 mb-3">Offertentexte (Vorlagen)</h5>
+                <div class="space-y-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Einleitungstext</label>
+                    <textarea
+                      v-model="invoiceSettings.quote_intro_text"
+                      rows="3"
+                      placeholder="z.B. Guten Tag&#10;&#10;Vielen Dank für Ihre Anfrage. Gerne unterbreiten wir Ihnen folgendes Angebot:"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm resize-none"
+                    />
+                    <p class="text-xs text-gray-400 mt-1">Erscheint oben auf der Offerte, vor den Positionen.</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Gültigkeit / Bedingungen</label>
+                    <textarea
+                      ref="quoteTermsTextarea"
+                      v-model="invoiceSettings.quote_terms_text"
+                      rows="2"
+                      placeholder="z.B. Dieses Angebot ist gültig bis {valid_until}."
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm resize-none"
+                    />
+                    <p class="text-xs text-gray-400 mt-1">
+                      Erscheint nach den Positionen auf der Offerte.
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded font-mono transition-colors ml-1"
+                        @click="insertPlaceholder(quoteTermsTextarea, 'invoiceSettings', 'quote_terms_text', '{valid_until}')"
+                      >+ {valid_until}</button> einfügen – wird durch das Gültigkeitsdatum ersetzt
+                    </p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Abschlusstext</label>
+                    <textarea
+                      v-model="invoiceSettings.quote_footer_text"
+                      rows="2"
+                      placeholder="Leer = gleicher Abschlusstext wie bei Rechnungen"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg tenant-focus focus:ring-2 text-sm resize-none"
+                    />
+                    <p class="text-xs text-gray-400 mt-1">Erscheint ganz unten auf der Offerte.</p>
                   </div>
                 </div>
               </div>
@@ -2158,6 +2214,106 @@
                       :style="bpPolicy.registration_reminder_sms_enabled ? primaryBg : { background: '#e5e7eb' }">
                       <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
                         :class="bpPolicy.registration_reminder_sms_enabled ? 'translate-x-4' : 'translate-x-0.5'"/>
+                    </button>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Erinnerung bei langer Pause -->
+            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+                <div>
+                  <h2 class="text-sm font-semibold text-gray-800">Erinnerung bei langer Pause</h2>
+                  <p class="text-xs text-gray-400 mt-0.5">
+                    Aktive {{ t.clientsPlural }} ohne bestandene Prüfung und ohne kommenden Termin erhalten automatisch eine Erinnerung. Staff und Admin bekommen eine Übersicht. In der Mail können {{ t.clientsPlural }} selbst sagen, dass sie keine Termine mehr brauchen.
+                  </p>
+                </div>
+                <button type="button" @click="bpPolicy.idle_student_reminder_enabled = !bpPolicy.idle_student_reminder_enabled"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
+                  :style="bpPolicy.idle_student_reminder_enabled ? primaryBg : { background: '#e5e7eb' }">
+                  <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                    :class="bpPolicy.idle_student_reminder_enabled ? 'translate-x-6' : 'translate-x-1'"/>
+                </button>
+              </div>
+              <div v-if="bpPolicy.idle_student_reminder_enabled" class="px-5 py-4 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1.5">Pause ab</label>
+                    <div class="flex items-center gap-2">
+                      <input v-model.number="bpPolicy.idle_student_reminder_days" type="number" min="7" max="365"
+                        class="w-20 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"/>
+                      <span class="text-sm text-gray-500">Tagen ohne Termin</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1.5">Erneut erinnern nach</label>
+                    <div class="flex items-center gap-2">
+                      <input v-model.number="bpPolicy.idle_student_reminder_resend_days" type="number" min="1" max="90"
+                        class="w-20 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"/>
+                      <span class="text-sm text-gray-500">Tagen</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <p class="text-xs font-medium text-gray-500">Empfänger</p>
+                  <label class="flex items-center justify-between py-2.5 px-3.5 rounded-xl border border-gray-100">
+                    <div>
+                      <p class="text-sm font-medium text-gray-700">{{ t.clientsPlural }}</p>
+                      <p class="text-xs text-gray-400">Persönliche Erinnerung per E-Mail oder SMS</p>
+                    </div>
+                    <button type="button" @click="bpPolicy.idle_student_reminder_notify_client = !bpPolicy.idle_student_reminder_notify_client"
+                      class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                      :style="bpPolicy.idle_student_reminder_notify_client ? primaryBg : { background: '#e5e7eb' }">
+                      <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                        :class="bpPolicy.idle_student_reminder_notify_client ? 'translate-x-4' : 'translate-x-0.5'"/>
+                    </button>
+                  </label>
+                  <div v-if="bpPolicy.idle_student_reminder_notify_client" class="space-y-2 pl-1">
+                    <p class="text-xs font-medium text-gray-500">Kanal für {{ t.clientsPlural }}</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <button
+                        v-for="opt in idleClientChannelOptions"
+                        :key="opt.value"
+                        type="button"
+                        @click="bpPolicy.idle_student_reminder_client_channel = opt.value"
+                        class="text-left rounded-xl border p-3 transition-colors"
+                        :class="bpPolicy.idle_student_reminder_client_channel === opt.value ? 'border-transparent' : 'border-gray-100 hover:border-gray-200'"
+                        :style="bpPolicy.idle_student_reminder_client_channel === opt.value ? primaryBgLight : {}"
+                      >
+                        <p class="text-sm font-semibold text-gray-800">{{ opt.label }}</p>
+                        <p class="text-xs text-gray-500 mt-1">{{ opt.description }}</p>
+                      </button>
+                    </div>
+                    <p
+                      v-if="bpPolicy.idle_student_reminder_client_channel !== 'email'"
+                      class="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2"
+                    >
+                      SMS ist kostenpflichtig: <strong>15 Rp. pro SMS-Segment</strong>.
+                    </p>
+                  </div>
+                  <label class="flex items-center justify-between py-2.5 px-3.5 rounded-xl border border-gray-100">
+                    <div>
+                      <p class="text-sm font-medium text-gray-700">Staff</p>
+                      <p class="text-xs text-gray-400">Übersicht der zugewiesenen {{ t.clientsPlural }} (nur bei mehreren Staff)</p>
+                    </div>
+                    <button type="button" @click="bpPolicy.idle_student_reminder_notify_staff = !bpPolicy.idle_student_reminder_notify_staff"
+                      class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                      :style="bpPolicy.idle_student_reminder_notify_staff ? primaryBg : { background: '#e5e7eb' }">
+                      <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                        :class="bpPolicy.idle_student_reminder_notify_staff ? 'translate-x-4' : 'translate-x-0.5'"/>
+                    </button>
+                  </label>
+                  <label class="flex items-center justify-between py-2.5 px-3.5 rounded-xl border border-gray-100">
+                    <div>
+                      <p class="text-sm font-medium text-gray-700">Admin</p>
+                      <p class="text-xs text-gray-400">Gesamtübersicht an Admins und Kontakt-E-Mail</p>
+                    </div>
+                    <button type="button" @click="bpPolicy.idle_student_reminder_notify_admin = !bpPolicy.idle_student_reminder_notify_admin"
+                      class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                      :style="bpPolicy.idle_student_reminder_notify_admin ? primaryBg : { background: '#e5e7eb' }">
+                      <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                        :class="bpPolicy.idle_student_reminder_notify_admin ? 'translate-x-4' : 'translate-x-0.5'"/>
                     </button>
                   </label>
                 </div>
@@ -2986,6 +3142,7 @@ const weekdayOptions = [
   { value: 7, label: 'Sonntag' },
 ]
 const paymentTermsTextarea = ref<HTMLTextAreaElement | null>(null)
+const quoteTermsTextarea = ref<HTMLTextAreaElement | null>(null)
 
 const insertPlaceholder = (el: HTMLTextAreaElement | null, obj: string, field: string, placeholder: string) => {
   if (!el) return
@@ -3014,6 +3171,9 @@ const invoiceSettings = ref({
   invoice_intro_text: '',
   invoice_payment_terms: '',
   invoice_footer_text: '',
+  quote_intro_text: '',
+  quote_terms_text: '',
+  quote_footer_text: '',
   invoice_window_side: 'left' as 'left' | 'right',
 })
 const isSavingInvoiceSettings = ref(false)
@@ -3034,6 +3194,9 @@ const loadInvoiceSettings = async (_tenantId: string) => {
         invoice_intro_text: data.invoice_intro_text || '',
         invoice_payment_terms: data.invoice_payment_terms || '',
         invoice_footer_text: data.invoice_footer_text || '',
+        quote_intro_text: data.quote_intro_text || '',
+        quote_terms_text: data.quote_terms_text || '',
+        quote_footer_text: data.quote_footer_text || '',
         invoice_window_side: data.invoice_window_side === 'right' ? 'right' : 'left',
       }
     }
@@ -3328,6 +3491,7 @@ const brandingForm = ref({
   contact: {
     email: '',
     phone: '',
+    whatsappPhone: '',
     address: '',
     smsSender: ''
   }
@@ -3377,6 +3541,13 @@ const bpPolicy = ref({
   registration_reminder_days: 7,
   registration_reminder_email_enabled: true,
   registration_reminder_sms_enabled: true,
+  idle_student_reminder_enabled: false,
+  idle_student_reminder_days: 30,
+  idle_student_reminder_resend_days: 14,
+  idle_student_reminder_notify_client: true,
+  idle_student_reminder_notify_staff: true,
+  idle_student_reminder_notify_admin: true,
+  idle_student_reminder_client_channel: 'email_first' as 'email' | 'sms' | 'email_first' | 'sms_first',
   onboarding_sms_enabled: true,
   onboarding_email_enabled: false,
   confirmation_sms_enabled: true,
@@ -3391,6 +3562,13 @@ const bpPolicy = ref({
   staff_refund_permission: 'hidden' as 'hidden' | 'request' | 'allowed',
   staff_manual_discount_permission: 'hidden' as 'hidden' | 'allowed',
 })
+
+const idleClientChannelOptions = [
+  { value: 'email' as const, label: 'Nur E-Mail', description: 'Nur wenn eine E-Mail vorhanden ist.' },
+  { value: 'sms' as const, label: 'Nur SMS', description: 'Kostenpflichtig, 15 Rp. pro SMS-Segment.' },
+  { value: 'email_first' as const, label: 'Prio E-Mail', description: 'E-Mail wenn vorhanden, sonst SMS.' },
+  { value: 'sms_first' as const, label: 'Prio SMS', description: 'SMS wenn Telefon vorhanden, sonst E-Mail.' },
+]
 
 const customerChannelOptions = [
   {

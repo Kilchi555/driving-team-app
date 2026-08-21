@@ -22,12 +22,34 @@ function formatTime(d: Date): string {
   return d.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
 }
 
+/** SARI sync can leave placeholders like -100001 — never show those as Teil-Nr. */
+export function isDisplayableSessionNumber(n: number | null | undefined): boolean {
+  return Number.isInteger(n) && Number(n) >= 1 && Number(n) <= 99
+}
+
+function sessionStartMs(iso: string): number {
+  const d = toZurichDate(iso)
+  return d ? d.getTime() : Number.POSITIVE_INFINITY
+}
+
+export function sortCourseSessionsByStart<T extends CourseSessionLike>(sessions: T[]): T[] {
+  return [...sessions].filter((s) => s?.start_time).sort((a, b) =>
+    sessionStartMs(a.start_time) - sessionStartMs(b.start_time),
+  )
+}
+
+function displayTeilNumber(session: CourseSessionLike, indexFallback: number): number {
+  return isDisplayableSessionNumber(session.session_number)
+    ? Number(session.session_number)
+    : indexFallback + 1
+}
+
 /** Eine Zeile: "Teil 1 · Sa., 08.08.2026, 08:00–12:00" */
 export function formatCourseSessionLine(
   session: CourseSessionLike,
   indexFallback = 0,
 ): string {
-  const n = session.session_number ?? indexFallback + 1
+  const n = displayTeilNumber(session, indexFallback)
   const start = toZurichDate(session.start_time)
   if (!start) return `Teil ${n}`
 
@@ -50,7 +72,9 @@ export function formatCourseSessionsDescription(
   sessions: CourseSessionLike[] | null | undefined,
 ): string {
   if (!sessions?.length) return ''
-  return sessions.map((s, i) => formatCourseSessionLine(s, i)).join('\n')
+  return sortCourseSessionsByStart(sessions)
+    .map((s, i) => formatCourseSessionLine({ ...s, session_number: i + 1 }, i))
+    .join('\n')
 }
 
 /** Kurz für Listen: gleiche Zeilen, mit Trenner */
@@ -58,7 +82,9 @@ export function formatCourseSessionsInline(
   sessions: CourseSessionLike[] | null | undefined,
 ): string {
   if (!sessions?.length) return ''
-  return sessions.map((s, i) => formatCourseSessionLine(s, i)).join(' · ')
+  return sortCourseSessionsByStart(sessions)
+    .map((s, i) => formatCourseSessionLine({ ...s, session_number: i + 1 }, i))
+    .join(' · ')
 }
 
 /** Erkennung: Beschreibung enthält bereits formatierte Kursteile */

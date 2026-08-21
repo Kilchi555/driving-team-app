@@ -3,7 +3,7 @@
     <div class="fixed inset-0 bg-gray-900/60 transition-opacity" @click="$emit('close')" />
 
     <!-- Full-width sheet on mobile, centered dialog on sm+ -->
-    <div class="admin-modal relative w-full min-w-0 bg-white shadow-xl transition-all
+    <div class="admin-modal invoice-create-modal relative w-full min-w-0 bg-white shadow-xl transition-all
                 rounded-t-2xl max-h-[95dvh]
                 sm:rounded-2xl sm:max-w-4xl sm:max-h-[90dvh]
                 flex flex-col overflow-hidden">
@@ -13,7 +13,7 @@
           <div class="w-10 h-1 bg-gray-300 rounded-full" />
         </div>
         <div class="flex items-center justify-between gap-3 px-4 py-3">
-          <h3 class="text-base font-semibold text-gray-900 truncate min-w-0">Neue Rechnung erstellen</h3>
+          <h3 class="text-base font-semibold text-gray-900 truncate min-w-0">{{ asQuote ? 'Neue Offerte erstellen' : 'Neue Rechnung erstellen' }}</h3>
           <button
             type="button"
             class="flex-shrink-0 text-gray-400 hover:text-gray-600 p-1"
@@ -26,6 +26,15 @@
 
       <form class="flex flex-col flex-1 min-h-0 min-w-0" @submit.prevent="createInvoiceHandler">
       <div class="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 sm:px-5 space-y-6">
+        <div class="inline-flex rounded-xl border border-gray-200 p-0.5 bg-gray-50">
+          <button type="button" class="px-3 py-1.5 text-sm font-medium rounded-lg"
+            :class="!asQuote ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'"
+            @click="asQuote = false">Rechnung</button>
+          <button type="button" class="px-3 py-1.5 text-sm font-medium rounded-lg"
+            :class="asQuote ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'"
+            @click="asQuote = true">Offerte</button>
+        </div>
+
         <!-- Kunde suchen -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">Kunde *</label>
@@ -53,10 +62,11 @@
 
           <!-- Search field -->
           <div v-else class="relative">
-            <input v-model="customerSearch" type="search"
+            <input v-model="customerSearch" type="text"
+              autocomplete="off"
               placeholder="🔍  Kunde oder Firma suchen…"
               @input="searchCustomers"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
             <!-- Results dropdown -->
             <div v-if="customerResults.length > 0"
               class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto">
@@ -88,8 +98,14 @@
           </div>
         </div>
 
+        <div v-if="asQuote" class="border-t pt-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Gültig bis</label>
+          <input v-model="formData.valid_until" type="date"
+            class="w-full sm:w-56 px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+        </div>
+
         <!-- Offene Positionen (Kurse, Räume, Fahrzeuge) -->
-        <div v-if="formData.user_id || selectedCompanyId" class="border-t pt-4">
+        <div v-if="!asQuote && (formData.user_id || selectedCompanyId)" class="border-t pt-4">
           <div class="flex items-center justify-between mb-3">
             <h4 class="text-sm font-semibold text-gray-800">Offene Positionen</h4>
             <button type="button" @click="loadOpenItems" class="text-xs text-blue-600 hover:underline">
@@ -117,14 +133,14 @@
                 </div>
                 <!-- Detail pills -->
                 <div class="flex flex-wrap gap-1.5 mt-1">
-                  <!-- Multi-session enrollments: Teil N · Datum · Zeit -->
+                  <!-- Multi-session enrollments: Teil N · Datum · Zeit (chronologisch) -->
                   <div v-if="item.sessions?.length" class="w-full space-y-0.5">
                     <p
-                      v-for="(session, sIdx) in item.sessions"
-                      :key="`${item.source_id}-s-${session.session_number || sIdx}`"
+                      v-for="(line, sIdx) in formatCourseSessionsDescription(item.sessions).split('\n')"
+                      :key="`${item.source_id}-s-${sIdx}`"
                       class="text-xs text-gray-500"
                     >
-                      {{ formatCourseSessionLine(session, sIdx) }}
+                      {{ line }}
                     </p>
                   </div>
                   <span v-else-if="item.date" class="text-xs text-gray-500">
@@ -155,7 +171,7 @@
         <!-- Rechnungsempfänger -->
         <div class="border-t pt-5">
           <div class="flex items-center justify-between mb-3">
-            <h4 class="text-sm font-semibold text-gray-800">Rechnungsempfänger</h4>
+            <h4 class="text-sm font-semibold text-gray-800">{{ asQuote ? 'Empfänger' : 'Rechnungsempfänger' }}</h4>
             <button v-if="selectedCustomerLabel" type="button"
               @click="showBillingEdit = !showBillingEdit"
               class="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">
@@ -197,17 +213,17 @@
               <div class="col-span-2">
                 <label class="block text-xs font-medium text-gray-700 mb-1">Firmenname *</label>
                 <input v-model="formData.billing_company_name" type="text" required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
               <div class="col-span-2">
                 <label class="block text-xs font-medium text-gray-700 mb-1">Ansprechpartner</label>
                 <input v-model="formData.billing_contact_person" type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
               <div class="col-span-2">
                 <label class="block text-xs font-medium text-gray-700 mb-1">MWST-Nummer</label>
                 <input v-model="formData.billing_vat_number" type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
             </div>
 
@@ -215,7 +231,7 @@
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">E-Mail *</label>
               <input v-model="formData.billing_email" type="email" required
-                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
                 placeholder="kunde@beispiel.ch" />
             </div>
 
@@ -225,24 +241,24 @@
                 <div class="min-w-0">
                   <label class="block text-xs font-medium text-gray-700 mb-1">Strasse</label>
                   <input v-model="formData.billing_street" type="text"
-                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
                 </div>
                 <div class="min-w-0">
                   <label class="block text-xs font-medium text-gray-700 mb-1">Nr.</label>
                   <input v-model="formData.billing_street_number" type="text"
-                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
                 </div>
               </div>
               <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3">
                 <div class="min-w-0">
                   <label class="block text-xs font-medium text-gray-700 mb-1">PLZ</label>
                   <input v-model="formData.billing_zip" type="text"
-                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
                 </div>
                 <div class="min-w-0">
                   <label class="block text-xs font-medium text-gray-700 mb-1">Ort</label>
                   <input v-model="formData.billing_city" type="text"
-                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
                 </div>
               </div>
             </div>
@@ -252,13 +268,13 @@
         <!-- Rechnungspositionen -->
         <div class="border-t pt-6 min-w-0">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h4 class="text-sm font-semibold text-gray-800">Rechnungspositionen</h4>
+            <h4 class="text-sm font-semibold text-gray-800">{{ asQuote ? 'Positionen' : 'Rechnungspositionen' }}</h4>
             <div class="flex items-center gap-2 flex-wrap">
               <!-- Vorlage-Button -->
               <div class="relative" ref="templateMenuRef">
                 <button
                   type="button"
-                  @click="showTemplateMenu = !showTemplateMenu"
+                  @click="showTemplateMenu = !showTemplateMenu; if (showTemplateMenu) templateMenuSearch = ''"
                   class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
@@ -266,26 +282,38 @@
                 </button>
                 <div
                   v-if="showTemplateMenu"
-                  class="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 w-[min(18rem,calc(100vw-2rem))] bg-white border border-gray-200 rounded-xl shadow-xl z-30 overflow-hidden"
+                  class="absolute left-0 sm:left-auto sm:right-0 top-full mt-1 w-[min(24rem,calc(100vw-2rem))] bg-white border border-gray-200 rounded-xl shadow-xl z-30 overflow-hidden"
                 >
-                  <div class="px-3 py-2 border-b border-gray-100">
-                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Produkte / Vorlagen</p>
-                  </div>
-                  <div v-if="products.length === 0" class="px-3 py-3 text-xs text-gray-400">Keine Produkte verfügbar</div>
-                  <div class="max-h-64 overflow-y-auto">
-                    <button
-                      v-for="p in products"
-                      :key="p.id"
-                      type="button"
-                      @click="addItemFromTemplate(p)"
-                      class="w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0 min-w-0"
+                  <div class="px-3 py-2 border-b border-gray-100 space-y-2">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Vorlagen</p>
+                    <input
+                      v-model="templateMenuSearch"
+                      type="search"
+                      placeholder="Kategorie, Kurs, Produkt…"
+                      class="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      @click.stop
                     >
-                      <div class="min-w-0">
-                        <p class="text-sm font-medium text-gray-800 truncate">{{ p.name }}</p>
-                        <p v-if="p.description" class="text-xs text-gray-400 truncate">{{ p.description }}</p>
-                      </div>
-                      <span class="text-xs font-semibold text-gray-600 shrink-0">CHF {{ (p.price_rappen / 100).toFixed(2) }}</span>
-                    </button>
+                  </div>
+                  <div v-if="groupedMenuTemplates.length === 0" class="px-3 py-3 text-xs text-gray-400">
+                    {{ lineTemplates.length === 0 ? 'Keine Vorlagen verfügbar' : 'Keine Treffer' }}
+                  </div>
+                  <div class="max-h-80 overflow-y-auto">
+                    <div v-for="group in groupedMenuTemplates" :key="group.label">
+                      <p class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 bg-gray-50 border-y border-gray-100">{{ group.label }}</p>
+                      <button
+                        v-for="p in group.items"
+                        :key="p.id"
+                        type="button"
+                        @click="addItemFromTemplate(p)"
+                        class="w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0 min-w-0"
+                      >
+                        <div class="min-w-0">
+                          <p class="text-sm font-medium text-gray-800 truncate">{{ p.name }}</p>
+                          <p v-if="p.description" class="text-xs text-gray-400 truncate">{{ p.description }}</p>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-600 shrink-0">CHF {{ (p.price_rappen / 100).toFixed(2) }}</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -313,15 +341,42 @@
             >
               <!-- Row 1: Beschreibung full width, then qty fields in 2-col on mobile -->
               <div class="grid grid-cols-2 sm:grid-cols-12 gap-3 items-end min-w-0">
-                <div class="col-span-2 sm:col-span-5 min-w-0">
+                <div class="col-span-2 sm:col-span-5 min-w-0 relative template-suggest-wrap">
                   <label class="block text-xs font-medium text-gray-500 mb-1">Beschreibung *</label>
                   <input
                     v-model="item.product_name"
                     type="text"
                     required
+                    autocomplete="off"
                     :placeholder="`z.B. ${t.appointment}, Theorieunterricht`"
-                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    @focus="openTemplateSuggest(index)"
+                    @input="openTemplateSuggest(index)"
                   >
+                  <div
+                    v-if="suggestRow === index && groupedSuggestTemplates(item.product_name).length > 0"
+                    class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 overflow-hidden"
+                  >
+                    <p class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 border-b border-gray-100">Vorlagen</p>
+                    <div class="max-h-72 overflow-y-auto">
+                      <div v-for="group in groupedSuggestTemplates(item.product_name)" :key="group.label">
+                        <p class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400 bg-gray-50 border-y border-gray-100">{{ group.label }}</p>
+                        <button
+                          v-for="p in group.items"
+                          :key="p.id"
+                          type="button"
+                          class="w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-50 last:border-0 min-w-0"
+                          @mousedown.prevent="applyTemplateToItem(index, p)"
+                        >
+                          <div class="min-w-0">
+                            <p class="text-sm font-medium text-gray-800 truncate">{{ p.name }}</p>
+                            <p v-if="p.description" class="text-xs text-gray-400 truncate">{{ p.description }}</p>
+                          </div>
+                          <span class="text-xs font-semibold text-gray-600 shrink-0">CHF {{ (p.price_rappen / 100).toFixed(2) }}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div class="min-w-0 sm:col-span-2">
                   <label class="block text-xs font-medium text-gray-500 mb-1">Menge</label>
@@ -332,7 +387,7 @@
                     step="0.01"
                     required
                     @input="calculateItemTotal(item)"
-                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
                 <div class="min-w-0 sm:col-span-2">
@@ -347,7 +402,7 @@
                     min="0"
                     step="0.01"
                     required
-                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
                 <div class="min-w-0 sm:col-span-1">
@@ -359,7 +414,7 @@
                     step="0.1"
                     required
                     @input="calculateItemTotal(item)"
-                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
                   >
                 </div>
                 <div class="min-w-0 sm:col-span-1">
@@ -372,7 +427,7 @@
                     step="1"
                     placeholder="0"
                     @input="calculateItemTotal(item)"
-                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
                     :class="(item.discount_percent || 0) > 0 ? 'border-amber-400 bg-amber-50' : ''"
                   >
                 </div>
@@ -424,13 +479,25 @@
                 <span class="text-gray-400">(MwSt: CHF {{ formatCurrency(item.vat_amount_rappen) }})</span>
               </div>
 
-              <!-- Optional description (mehrzeilig für Kursteile) -->
-              <div v-if="item.product_description !== undefined" class="mt-2">
+              <!-- Optional description (Kursteile als Liste, sonst editierbar) -->
+              <div
+                v-if="looksLikeCourseSessionsDescription(item.product_description)"
+                class="mt-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5 space-y-1"
+              >
+                <p
+                  v-for="(line, li) in String(item.product_description).split('\n').filter(Boolean)"
+                  :key="li"
+                  class="text-xs text-gray-600 leading-5"
+                >
+                  {{ line }}
+                </p>
+              </div>
+              <div v-else-if="item.product_description !== undefined" class="mt-2">
                 <textarea
                   v-model="item.product_description"
-                  rows="3"
+                  :rows="Math.max(3, String(item.product_description || '').split('\n').length)"
                   placeholder="Zusatztext / Beschreibung (optional)"
-                  class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-300 resize-y"
+                  class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs leading-5 text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-300 resize-y font-sans"
                 />
               </div>
               <button
@@ -462,10 +529,33 @@
               <span>Rabatt:</span>
               <span>CHF {{ formatCurrency(formData.discount_amount_rappen) }}</span>
             </div>
+
+            <label
+              v-if="!asQuote && availableCreditRappen > 0"
+              class="flex items-start justify-between gap-3 pt-1 cursor-pointer"
+            >
+              <span class="flex items-start gap-2">
+                <input
+                  v-model="applyAvailableCredit"
+                  type="checkbox"
+                  class="mt-0.5 rounded border-gray-300"
+                />
+                <span>
+                  <span class="block text-sm text-gray-800">Guthaben verrechnen</span>
+                  <span class="block text-xs text-gray-500">Verfügbar CHF {{ formatCurrency(availableCreditRappen) }}</span>
+                </span>
+              </span>
+              <span v-if="applyAvailableCredit && creditToApplyRappen > 0" class="text-sm font-semibold text-blue-600">
+                −CHF {{ formatCurrency(creditToApplyRappen) }}
+              </span>
+            </label>
+            <p v-if="!asQuote && applyAvailableCredit && creditCoversInvoice" class="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+              Guthaben deckt den gesamten Betrag — es wird keine Rechnung erstellt.
+            </p>
             
             <div class="border-t pt-2 flex justify-between font-medium text-lg">
               <span>Gesamtbetrag:</span>
-              <span>CHF {{ formatCurrency(totalAmount) }}</span>
+              <span>CHF {{ formatCurrency(displayTotalAmount) }}</span>
             </div>
           </div>
         </div>
@@ -483,21 +573,21 @@
               <textarea
                 v-model="formData.notes"
                 rows="3"
-                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                placeholder="z.B. Guten Tag, anbei Ihre Rechnung..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                :placeholder="asQuote ? 'z.B. Guten Tag, anbei unser Angebot…' : 'z.B. Guten Tag, anbei Ihre Rechnung...'"
               />
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
-                Zahlungsbedingungen
+                {{ asQuote ? 'Gültigkeit / Bedingungen' : 'Zahlungsbedingungen' }}
                 <span class="text-xs font-normal text-gray-400 ml-1">(für Kunden sichtbar)</span>
               </label>
               <textarea
                 v-model="formData.payment_terms"
                 rows="3"
-                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                placeholder="z.B. Zahlbar innert 30 Tagen netto."
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                :placeholder="asQuote ? 'z.B. Dieses Angebot ist gültig bis {valid_until}.' : 'z.B. Zahlbar innert 30 Tagen netto.'"
               />
             </div>
 
@@ -509,7 +599,7 @@
               <textarea
                 v-model="formData.footer_text"
                 rows="2"
-                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
                 placeholder="z.B. Vielen Dank für Ihr Vertrauen."
               />
             </div>
@@ -522,7 +612,7 @@
               <textarea
                 v-model="formData.internal_notes"
                 rows="2"
-                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
                 placeholder="Interne Notizen..."
               />
             </div>
@@ -546,7 +636,7 @@
             class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ArrowPathIcon v-if="isSubmitting" class="animate-spin h-4 w-4 mr-2" />
-            {{ isSubmitting ? 'Wird erstellt...' : 'Rechnung erstellen' }}
+            {{ isSubmitting ? 'Wird erstellt...' : (asQuote ? 'Offerte erstellen' : (creditCoversInvoice ? 'Guthaben verrechnen' : 'Rechnung erstellen')) }}
           </button>
         </div>
       </form>
@@ -556,17 +646,24 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { useInvoices } from '~/composables/useInvoices'
-import { useProducts } from '~/composables/useProducts'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import {
+  filterInvoiceLineTemplates,
+  groupInvoiceLineTemplates,
+  type InvoiceLineTemplate,
+} from '~/utils/invoice-line-templates'
 import { useTerminology } from '~/composables/useTerminology'
 import type { InvoiceFormData, InvoiceItemFormData } from '~/types/invoice'
 import { DEFAULT_INVOICE_VALUES, DEFAULT_INVOICE_ITEM_VALUES } from '~/types/invoice'
 import {
-  formatCourseSessionLine,
   formatCourseSessionsDescription,
   looksLikeCourseSessionsDescription,
 } from '~/utils/format-course-sessions'
+import {
+  resolveInvoiceDocumentTexts,
+  resolveQuoteDocumentTexts,
+  swapDocumentBodyTexts,
+} from '~/server/utils/invoice-quote'
 import {
   XMarkIcon,
   PlusIcon,
@@ -577,6 +674,7 @@ const { t } = useTerminology()
 
 // Props
 const props = defineProps<{
+  initialDocumentKind?: 'invoice' | 'quote'
   initialCompany?: {
     id: string
     name: string
@@ -591,6 +689,14 @@ const props = defineProps<{
   } | null
 }>()
 
+const asQuote = ref(props.initialDocumentKind === 'quote')
+
+function defaultValidUntil() {
+  const d = new Date()
+  d.setDate(d.getDate() + 30)
+  return d.toISOString().slice(0, 10)
+}
+
 // Emits
 const emit = defineEmits<{
   close: []
@@ -598,9 +704,22 @@ const emit = defineEmits<{
 }>()
 
 // Composables
-const { createInvoice } = useInvoices()
-const { loadProducts: fetchProducts, products } = useProducts()
-const { primaryColor, defaultVatRate, invoiceIntroText, invoicePaymentTerms, invoiceFooterText } = useTenantBranding()
+const {
+  primaryColor,
+  defaultVatRate,
+  invoiceIntroText,
+  invoicePaymentTerms,
+  invoiceFooterText,
+  quoteIntroText,
+  quoteTermsText,
+  quoteFooterText,
+} = useTenantBranding()
+const lineTemplates = ref<InvoiceLineTemplate[]>([])
+const templateMenuSearch = ref('')
+
+const groupedMenuTemplates = computed(() =>
+  groupInvoiceLineTemplates(filterInvoiceLineTemplates(lineTemplates.value, templateMenuSearch.value, 0)),
+)
 
 // Customer search
 const customerSearch = ref('')
@@ -662,6 +781,8 @@ function applyCustomer(r: any) {
     formData.value.billing_street = r.street || ''
     formData.value.billing_zip = r.zip || ''
     formData.value.billing_city = r.city || ''
+    availableCreditRappen.value = 0
+    applyAvailableCredit.value = false
   } else {
     formData.value.user_id = r.id
     formData.value.company_id = ''
@@ -676,6 +797,7 @@ function applyCustomer(r: any) {
     formData.value.billing_zip = r.zip || ''
     formData.value.billing_city = r.city || ''
     onCustomerSelected(r)
+    loadStudentCredit(r.id)
   }
   selectedOpenItemIds.value = new Set()
   openItems.value = []
@@ -683,6 +805,8 @@ function applyCustomer(r: any) {
 }
 
 function clearCustomer() {
+  availableCreditRappen.value = 0
+  applyAvailableCredit.value = false
   selectedCustomerLabel.value = ''
   selectedCompanyId.value = ''
   showBillingEdit.value = false
@@ -719,6 +843,8 @@ const formData = ref<InvoiceFormData>({
   billing_city: '',
   billing_country: 'CH',
   billing_vat_number: '',
+  document_kind: 'invoice',
+  valid_until: defaultValidUntil(),
   subtotal_rappen: 0,
   vat_rate: defaultVatRate.value,
   discount_amount_rappen: 0,
@@ -727,6 +853,30 @@ const formData = ref<InvoiceFormData>({
   payment_terms: '',
   footer_text: '',
 })
+
+function tenantQuoteTexts() {
+  return resolveQuoteDocumentTexts({
+    quote_intro_text: quoteIntroText.value,
+    quote_terms_text: quoteTermsText.value,
+    quote_footer_text: quoteFooterText.value,
+    invoice_footer_text: invoiceFooterText.value,
+  })
+}
+
+function tenantInvoiceTexts() {
+  return resolveInvoiceDocumentTexts({
+    invoice_intro_text: invoiceIntroText.value,
+    invoice_payment_terms: invoicePaymentTerms.value,
+    invoice_footer_text: invoiceFooterText.value,
+  })
+}
+
+function applyDocumentTexts(kind: 'invoice' | 'quote') {
+  const texts = kind === 'quote' ? tenantQuoteTexts() : tenantInvoiceTexts()
+  formData.value.notes = texts.intro
+  formData.value.payment_terms = texts.terms
+  formData.value.footer_text = texts.footer
+}
 
 // Invoice items — initialized with tenant default VAT
 const invoiceItems = ref<InvoiceItemFormData[]>([
@@ -756,6 +906,32 @@ const totalVat = computed(() => {
 const totalAmount = computed(() => {
   return subtotal.value + totalVat.value - formData.value.discount_amount_rappen
 })
+
+const availableCreditRappen = ref(0)
+const applyAvailableCredit = ref(true)
+const creditToApplyRappen = computed(() => {
+  if (!applyAvailableCredit.value) return 0
+  return Math.min(availableCreditRappen.value, Math.max(0, totalAmount.value))
+})
+const displayTotalAmount = computed(() => Math.max(0, totalAmount.value - creditToApplyRappen.value))
+const creditCoversInvoice = computed(() => creditToApplyRappen.value > 0 && displayTotalAmount.value <= 0)
+
+async function loadStudentCredit(userId: string) {
+  availableCreditRappen.value = 0
+  if (!userId) return
+  try {
+    const res = await $fetch<{ success: boolean; data?: { balance_rappen?: number; pending_withdrawal_rappen?: number } }>(
+      '/api/student-credits/get-credit',
+      { query: { user_id: userId } }
+    )
+    const raw = res?.data?.balance_rappen || 0
+    const frozen = res?.data?.pending_withdrawal_rappen || 0
+    availableCreditRappen.value = Math.max(0, raw - frozen)
+    applyAvailableCredit.value = availableCreditRappen.value > 0
+  } catch {
+    availableCreditRappen.value = 0
+  }
+}
 
 const averageVatRate = computed(() => {
   if (subtotal.value === 0) return 0
@@ -858,19 +1034,41 @@ const addInvoiceItem = () => {
   } as InvoiceItemFormData)
 }
 
-const addItemFromTemplate = (product: any) => {
+const addItemFromTemplate = (tpl: InvoiceLineTemplate) => {
   const item: InvoiceItemFormData = {
     ...DEFAULT_INVOICE_ITEM_VALUES,
-    product_id: product.id,
-    product_name: product.name,
-    product_description: product.description || undefined,
-    unit_price_rappen: product.price_rappen || 0,
+    product_id: tpl.product_id || undefined,
+    product_name: tpl.name,
+    product_description: tpl.details || tpl.description || undefined,
+    unit_price_rappen: tpl.price_rappen || 0,
     vat_rate: defaultVatRate.value,
     sort_order: invoiceItems.value.length,
   } as InvoiceItemFormData
   calculateItemTotal(item)
   invoiceItems.value.push(item)
   showTemplateMenu.value = false
+  templateMenuSearch.value = ''
+}
+
+const suggestRow = ref(-1)
+
+const groupedSuggestTemplates = (query: string) =>
+  groupInvoiceLineTemplates(filterInvoiceLineTemplates(lineTemplates.value, query, 0))
+
+const openTemplateSuggest = (index: number) => {
+  suggestRow.value = index
+}
+
+const applyTemplateToItem = (index: number, tpl: InvoiceLineTemplate) => {
+  const item = invoiceItems.value[index]
+  if (!item) return
+  item.product_id = tpl.product_id || undefined
+  item.product_name = tpl.name
+  item.product_description = tpl.details || tpl.description || undefined
+  item.unit_price_rappen = tpl.price_rappen || 0
+  if (item.vat_rate == null) item.vat_rate = defaultVatRate.value
+  calculateItemTotal(item)
+  suggestRow.value = -1
 }
 
 const moveInvoiceItem = (index: number, direction: -1 | 1) => {
@@ -911,13 +1109,28 @@ const createInvoiceHandler = async () => {
     formData.value.subtotal_rappen = subtotal.value
     formData.value.vat_rate = parseFloat(averageVatRate.value)
     
-    const result = await createInvoice(formData.value, invoiceItems.value)
-    
-    if (result.error) {
-      alert('Fehler beim Erstellen der Rechnung: ' + result.error)
-    } else {
-      // Parent opens the invoice detail modal for the newly created invoice
+    const result = await $fetch<{ success: boolean; paid_with_credit?: boolean; data?: any; invoice_number?: string }>(
+      '/api/invoices/create',
+      {
+        method: 'POST',
+        body: {
+          invoiceData: {
+            ...formData.value,
+            document_kind: asQuote.value ? 'quote' : 'invoice',
+          },
+          items: invoiceItems.value,
+          apply_available_credit: !asQuote.value && applyAvailableCredit.value && creditToApplyRappen.value > 0,
+        },
+      }
+    )
+
+    if (result.paid_with_credit && !result.data) {
+      alert('Offene Beträge wurden vollständig mit Guthaben beglichen. Es wurde keine Rechnung erstellt.')
+      emit('created', { paid_with_credit: true })
+    } else if (result.data) {
       emit('created', result.data)
+    } else {
+      alert('Fehler beim Erstellen der Rechnung.')
     }
     
   } catch (error: any) {
@@ -953,21 +1166,27 @@ const formatDateShort = (dateString: string) => {
 
 // Lifecycle
 onMounted(async () => {
-  // Pre-fill invoice texts from tenant defaults (may already be loaded)
-  if (invoiceIntroText.value) formData.value.notes = invoiceIntroText.value
-  if (invoicePaymentTerms.value) formData.value.payment_terms = invoicePaymentTerms.value
-  if (invoiceFooterText.value) formData.value.footer_text = invoiceFooterText.value
+  applyDocumentTexts(asQuote.value ? 'quote' : 'invoice')
 
   // Register click-outside handler BEFORE any await (lifecycle APIs can't be used after await)
   const closeMenu = (e: MouseEvent) => {
-    if (templateMenuRef.value && !templateMenuRef.value.contains(e.target as Node)) {
+    const target = e.target as Node
+    if (templateMenuRef.value && !templateMenuRef.value.contains(target)) {
       showTemplateMenu.value = false
+    }
+    if (!(target as HTMLElement).closest?.('.template-suggest-wrap')) {
+      suggestRow.value = -1
     }
   }
   document.addEventListener('click', closeMenu)
   onBeforeUnmount(() => document.removeEventListener('click', closeMenu))
 
-  await fetchProducts()
+  try {
+    const res = await $fetch<{ templates?: InvoiceLineTemplate[] }>('/api/admin/invoices/line-templates')
+    lineTemplates.value = res.templates || []
+  } catch {
+    lineTemplates.value = []
+  }
 
   // Pre-select company if passed in (e.g. opened from company detail modal)
   if (props.initialCompany) {
@@ -985,10 +1204,19 @@ onMounted(async () => {
   }
 })
 
-// If branding loads after mount, fill texts once
-watch(invoiceIntroText, (val) => { if (val && !formData.value.notes) formData.value.notes = val }, { once: true })
-watch(invoicePaymentTerms, (val) => { if (val && !formData.value.payment_terms) formData.value.payment_terms = val }, { once: true })
-watch(invoiceFooterText, (val) => { if (val && !formData.value.footer_text) formData.value.footer_text = val }, { once: true })
+watch(asQuote, (quote, wasQuote) => {
+  const next = quote ? tenantQuoteTexts() : tenantInvoiceTexts()
+  const prev = wasQuote ? tenantQuoteTexts() : tenantInvoiceTexts()
+  const swapped = swapDocumentBodyTexts(formData.value, prev, next)
+  formData.value.notes = swapped.notes
+  formData.value.payment_terms = swapped.payment_terms
+  formData.value.footer_text = swapped.footer_text
+})
+
+watch([invoiceIntroText, invoicePaymentTerms, invoiceFooterText, quoteIntroText, quoteTermsText, quoteFooterText], () => {
+  if (formData.value.notes || formData.value.payment_terms || formData.value.footer_text) return
+  applyDocumentTexts(asQuote.value ? 'quote' : 'invoice')
+}, { once: true })
 
 // Keep form + items in sync with tenant default VAT (no once: — branding may load late)
 watch(defaultVatRate, (val) => {
@@ -1003,3 +1231,42 @@ watch(defaultVatRate, (val) => {
   })
 })
 </script>
+
+<style>
+.invoice-create-modal {
+  color-scheme: light;
+}
+
+.invoice-create-modal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+.invoice-create-modal textarea,
+.invoice-create-modal select {
+  background-color: #fff !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  caret-color: #111827 !important;
+  border-color: #d1d5db !important;
+  color-scheme: light !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.invoice-create-modal input[type="search"],
+.invoice-create-modal input[type="date"] {
+  background-color: #fff !important;
+}
+
+.invoice-create-modal input::placeholder,
+.invoice-create-modal textarea::placeholder {
+  color: #9ca3af !important;
+  -webkit-text-fill-color: #9ca3af !important;
+}
+
+.invoice-create-modal input:-webkit-autofill,
+.invoice-create-modal input:-webkit-autofill:hover,
+.invoice-create-modal input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+  box-shadow: 0 0 0 1000px #fff inset !important;
+  -webkit-text-fill-color: #111827 !important;
+  caret-color: #111827 !important;
+}
+</style>

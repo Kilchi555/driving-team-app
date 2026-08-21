@@ -1,12 +1,14 @@
 import type Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { notifySuperadminsWebsitePublished } from '~/server/utils/website-publish-notify'
 import {
   isWebsiteHostingPlan,
   websiteSubscriptionPlanId,
   WEBSITE_PRICE_ENV,
   type WebsiteHostingPlan,
 } from '~/utils/website-billing'
-import { notifySuperadminsWebsitePublished } from '~/server/utils/website-publish-notify'
+
+export { websitePublishBlockedMessage, websitePublishBlockedReason } from '~/utils/website-billing'
 
 export function getWebsitePriceIds() {
   return {
@@ -51,23 +53,6 @@ export async function loadWebsiteHomePage(
     .eq('is_home', true)
     .maybeSingle()
   return data
-}
-
-export function websitePublishBlockedReason(tenant: {
-  website_only?: boolean | null
-  website_setup_paid_at?: string | null
-  website_hosting_plan?: string | null
-  trial_ends_at?: string | null
-} | null): 'hosting' | 'setup' | null {
-  if (!tenant?.website_only) return null
-  // Trial (or unpaid setup) may go live. After the window, hosting is required.
-  // Setup fee is collected at checkout — not a second gate during trial.
-  if (isWebsiteHostingPlan(tenant.website_hosting_plan)) return null
-  const trialOpen = tenant.trial_ends_at
-    ? Date.now() <= new Date(tenant.trial_ends_at).getTime()
-    : true
-  if (trialOpen) return null
-  return 'hosting'
 }
 
 export async function publishWebsiteForTenant(

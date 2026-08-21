@@ -134,24 +134,24 @@ useHead({
     { name: 'keywords', content: 'rechnung software schweiz, twint online zahlung, qr rechnung software, kasse terminbuchung' },
     { property: 'og:title', content: 'Rechnungen & Kasse – Simy | Automatische Abrechnung' },
     { property: 'og:description', content: 'Rechnungen automatisch erstellt, versendet und eingetrieben. TWINT, QR-Rechnung, Kreditkarte.' },
-    { property: 'og:url', content: 'https://simy.ch/features/rechnungen' },
+    { property: 'og:url', content: 'https://www.simy.ch/features/rechnungen' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/features/rechnungen' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/features/rechnungen' }],
   script: ldScripts(
     webPageLd({
       name: 'Rechnungen & Kasse – Simy',
       description: 'Automatische Rechnungen mit TWINT, QR-Rechnung und Kreditkarte für Schweizer Betriebe.',
-      url: 'https://simy.ch/features/rechnungen',
+      url: 'https://www.simy.ch/features/rechnungen',
     }),
     softwareAppLd({
       name: 'Simy Rechnungen & Kasse',
       description: 'Schweizer Abrechnung: TWINT, QR-IBAN, PostFinance und automatische Reminder.',
-      url: 'https://simy.ch/features/rechnungen',
+      url: 'https://www.simy.ch/features/rechnungen',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Features', url: 'https://simy.ch/features/rechnungen' },
-      { name: 'Rechnungen & Kasse', url: 'https://simy.ch/features/rechnungen' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Features', url: 'https://www.simy.ch/features/rechnungen' },
+      { name: 'Rechnungen & Kasse', url: 'https://www.simy.ch/features/rechnungen' },
     ]),
   ),
 })

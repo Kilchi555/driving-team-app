@@ -37,6 +37,12 @@ export type WizardMeetingPoint = {
   visible: boolean
 }
 
+/** Pickup copy only — never list booking `standard` locations on the public contact block. */
+export function isWebsitePickupMeetingPoint(p: { id?: string | null; name?: string | null } | null | undefined) {
+  if (!p) return false
+  return String(p.id || '') === 'pickup' || /eigener treffpunkt|wunschort/i.test(String(p.name || ''))
+}
+
 export type WizardPublishInput = {
   name?: string | null
   bio?: string | null

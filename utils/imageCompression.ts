@@ -201,15 +201,50 @@ export interface PhotoUploadCompressionOptions {
   minQuality?: number
 }
 
+function isLikelyImageFile(file: File) {
+  const type = String(file.type || '').toLowerCase()
+  const name = String(file.name || '').toLowerCase()
+  if (type.startsWith('image/')) return true
+  if (type && type !== 'application/octet-stream') return false
+  return /\.(jpe?g|png|webp|gif|heic|heif|avif|bmp)$/i.test(name) || !name.includes('.')
+}
+
+async function bitmapFromFile(file: File): Promise<ImageBitmap> {
+  try {
+    return await createImageBitmap(file)
+  } catch {
+    const url = URL.createObjectURL(file)
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image()
+        el.onload = () => resolve(el)
+        el.onerror = () =>
+          reject(new Error('Dieses Foto konnte nicht gelesen werden. Bitte JPG oder PNG wählen.'))
+        el.src = url
+      })
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth || img.width
+      canvas.height = img.naturalHeight || img.height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Canvas context not available')
+      ctx.drawImage(img, 0, 0)
+      return await createImageBitmap(canvas)
+    } finally {
+      URL.revokeObjectURL(url)
+    }
+  }
+}
+
 /**
  * Compress a photo for multipart upload while keeping aspect ratio (no crop).
- * Returns a JPEG File ready for FormData.
+ * Returns a JPEG File ready for FormData. Converts HEIC on-device (iOS) so
+ * the server never has to decode it.
  */
 export async function compressPhotoForUpload(
   file: File,
   options: PhotoUploadCompressionOptions = {}
 ): Promise<File> {
-  if (!file.type.startsWith('image/')) {
+  if (!isLikelyImageFile(file)) {
     throw new Error('Bitte eine Bilddatei wählen')
   }
 
@@ -217,7 +252,7 @@ export async function compressPhotoForUpload(
   const maxBytes = options.maxBytes ?? Math.round(1.8 * 1024 * 1024)
   const minQuality = options.minQuality ?? 0.5
 
-  const bitmap = await createImageBitmap(file)
+  const bitmap = await bitmapFromFile(file)
   try {
     const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
     const width = Math.max(1, Math.round(bitmap.width * scale))
