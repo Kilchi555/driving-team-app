@@ -36,7 +36,7 @@
 
       <!-- Content -->
       <div class="section-container relative z-10">
-        <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <!-- Text Content -->
           <div class="text-white">
             <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-6 border border-white/20 hover:bg-white/20 transition">
@@ -44,28 +44,28 @@
               <span class="text-sm font-semibold">Fahrstunden Zürich</span>
             </div>
             
-            <h1 class="text-5xl md:text-6xl font-black mb-6 leading-tight">
+            <h1 class="text-3xl sm:text-5xl md:text-6xl font-black mb-6 leading-tight">
               Fahrstunden<br/>
               <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-100">ab CHF 95.</span>
             </h1>
             
-            <p class="text-lg text-white/90 mb-8 leading-relaxed max-w-lg">
+            <p class="text-base sm:text-lg text-white/90 mb-6 sm:mb-8 leading-relaxed max-w-2xl">
               Auto, Motorrad & Anhänger in Zürich. Flexible Zeiten, erfahrene Instruktor:innen, 85% Erfolgsquote. Buche jetzt online Deine erste Fahrstunde.
             </p>
             
             <!-- Stats Row -->
-            <div class="flex gap-8 mb-10">
+            <div class="flex gap-4 sm:gap-8 mb-8 sm:mb-10">
               <div class="group">
-                <p class="text-4xl font-black text-yellow-300 group-hover:scale-110 transition">85%</p>
-                <p class="text-sm text-white/70">Erfolgsquote</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap group-hover:scale-110 transition">85%</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Erfolgsquote</p>
               </div>
               <div class="group">
-                <p class="text-4xl font-black text-yellow-300 group-hover:scale-110 transition">6</p>
-                <p class="text-sm text-white/70">Tage verfügbar</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap group-hover:scale-110 transition">6</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Tage verfügbar</p>
               </div>
               <div class="group">
-                <p class="text-4xl font-black text-yellow-300 group-hover:scale-110 transition">5+</p>
-                <p class="text-sm text-white/70">Kategorien</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap group-hover:scale-110 transition">5+</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Kategorien</p>
               </div>
             </div>
             
@@ -81,26 +81,26 @@
           </div>
 
           <!-- Right Side - Feature Cards Grid -->
-          <div class="hidden md:grid grid-cols-2 gap-4">
+          <div class="hidden lg:grid grid-cols-2 gap-4">
             <div class="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 hover:border-white/40 transition transform hover:scale-105">
               <p class="text-5xl mb-3 group-hover:scale-125 transition origin-left">🚗</p>
               <p class="font-bold mb-1 text-lg">Auto</p>
-              <p class="text-sm text-white/70">CHF 95.-/45min</p>
+              <p class="text-[11px] sm:text-sm text-white/70">CHF 95.-/45min</p>
             </div>
             <div class="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 hover:border-white/40 transition transform hover:scale-105">
               <p class="text-5xl mb-3 group-hover:scale-125 transition origin-left">🏍️</p>
               <p class="font-bold mb-1 text-lg">Motorrad</p>
-              <p class="text-sm text-white/70">CHF 95.-/45min</p>
+              <p class="text-[11px] sm:text-sm text-white/70">CHF 95.-/45min</p>
             </div>
             <div class="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 hover:border-white/40 transition transform hover:scale-105">
               <p class="text-5xl mb-3 group-hover:scale-125 transition origin-left">🚐</p>
               <p class="font-bold mb-1 text-lg">Anhänger</p>
-              <p class="text-sm text-white/70">CHF 120.-/45min</p>
+              <p class="text-[11px] sm:text-sm text-white/70">CHF 120.-/45min</p>
             </div>
             <div class="group bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 backdrop-blur-md border border-yellow-300/40 rounded-2xl p-6 text-white hover:border-yellow-300/60 transition transform hover:scale-105">
               <p class="text-5xl mb-3 group-hover:scale-125 transition origin-left">⭐</p>
               <p class="font-bold mb-1 text-lg">{{ LOCATION_ZUERICH.rating.value }}</p>
-              <p class="text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} Bewertungen</p>
+              <p class="text-[11px] sm:text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} Bewertungen</p>
             </div>
           </div>
         </div>
@@ -282,7 +282,7 @@
               <span>💰 Wie viel kosten Fahrstunden in Zürich?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Auto Fahrstunden kosten CHF 95.- pro 45-Minuten-Lektion in Zürich. Motorrad kostet CHF 95.- und Anhänger CHF 120.-. Hinzu kommt eine einmalige Pauschale von CHF 120.- für die Admin und Versicherung über die gesamte Fahrausbildung (nicht Motorrad).</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Die erste Auto-Lektion kostet CHF 65.–, jede weitere CHF 95.– / 45 Min. Motorrad kostet CHF 95.– und Anhänger CHF 120.–. Hinzu kommt eine einmalige Pauschale von CHF 120.– für die Admin und Versicherung über die gesamte Fahrausbildung (nicht Motorrad).</p>
           </details>
 
           <!-- Q2 -->
@@ -414,7 +414,7 @@
               <span>🎁 Gibt es Rabatte für Fahrstunden-Pakete in Zürich?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Nein, aber für eine nachweisbare Empfehlung bekommst du 50.- Rabatt auf deine nächste Fahrstunde. </p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Die erste Auto-Lektion (Kat. B, 45 Min.) kostet CHF 65.– statt 95.–. Für eine erfolgreiche Empfehlung erhält der werbende Schüler CHF 30.– Guthaben (Automatik) bzw. CHF 20.– (Schaltung).</p>
           </details>
 
           <!-- Q16 -->
@@ -513,7 +513,7 @@ const jsonLdScripts = [
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
-      { "@type": "Question", "name": "Wie viel kosten Fahrstunden in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Auto Fahrstunden kosten CHF 95.-/45min. Motorrad CHF 95.-/45min (Doppellektion CHF 190.-). Anhänger CHF 120.-/45min (Doppellektion CHF 240.-). Einmalige Pauschale CHF 120.- für Auto/Anhänger-Ausbildung." } },
+      { "@type": "Question", "name": "Wie viel kosten Fahrstunden in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Erste Auto-Lektion CHF 65.– / 45 Min., weitere Auto-Lektionen CHF 95.– / 45 Min. Motorrad CHF 95.–/45min (Doppellektion CHF 190.–). Anhänger CHF 120.–/45min. Einmalige Pauschale CHF 120.– für Auto/Anhänger-Ausbildung." } },
       { "@type": "Question", "name": "Kann ich Fahrstunden in Zürich flexibel buchen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, 7 Tage die Woche. Buche online Morgen, Mittag oder Abend." } },
       { "@type": "Question", "name": "Wie buche ich meine erste Fahrstunde in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Klick auf 'Jetzt buchen', registriere Dich, wähle Datum/Uhrzeit, bestätige. Sofort Bestätigung per Email." } },
       { "@type": "Question", "name": "Wie viele Fahrstunden brauche ich in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Durchschnittlich 15-30 Fahrstunden. Mit regelmässigen Übungen erreichst du dein Ziel schneller." } },

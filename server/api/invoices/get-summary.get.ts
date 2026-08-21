@@ -23,6 +23,7 @@ export default defineEventHandler(async (event) => {
       .from('invoices')
       .select('status, payment_status, total_amount_rappen, due_date')
       .eq('tenant_id', userProfile.tenant_id)
+      .neq('document_kind', 'quote')
 
     if (error) throw mapSupabaseError(error)
 

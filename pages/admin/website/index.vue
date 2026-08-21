@@ -160,6 +160,7 @@ const selectedLead = ref<any>(null)
 const loadingLeads = ref(true)
 
 const newLeads = ref<any[]>([])
+const ctaClicks = ref<number | null>(null)
 
 const kpis = computed(() => {
   const all = newLeads.value
@@ -168,15 +169,19 @@ const kpis = computed(() => {
   return [
     { label: 'Leads gesamt', value: String(all.length), trend: 0 },
     { label: 'Diese Woche', value: String(thisWeek), trend: 0 },
-    { label: 'Conversion Rate', value: '–', trend: 0 },
+    { label: 'Button-Klicks', value: ctaClicks.value == null ? '–' : String(ctaClicks.value), trend: 0 },
     { label: 'Ø Antwortzeit', value: '–', trend: 0 },
   ]
 })
 
 onMounted(async () => {
   try {
-    const res = await $fetch<{ leads: any[] }>('/api/website/leads')
+    const [res, analytics] = await Promise.all([
+      $fetch<{ leads: any[] }>('/api/website/leads'),
+      $fetch<{ ctaClicks?: number }>('/api/admin/website-analytics', { query: { days: 30 } }).catch(() => null),
+    ])
     newLeads.value = res?.leads || []
+    if (typeof analytics?.ctaClicks === 'number') ctaClicks.value = analytics.ctaClicks
   } catch {
     newLeads.value = []
   } finally {

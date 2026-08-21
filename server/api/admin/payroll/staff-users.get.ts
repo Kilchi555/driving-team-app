@@ -1,5 +1,5 @@
 import { defineEventHandler, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { requireAccountingAccess } from '~/server/utils/accountant-access'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 /**
@@ -7,7 +7,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
  * Returns all staff users for this tenant that are not yet linked to a payroll employee.
  */
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event)
+  const profile = await requireAccountingAccess(event, { write: true })
   const supabase = getSupabaseAdmin()
 
   const { data: allStaff, error } = await supabase

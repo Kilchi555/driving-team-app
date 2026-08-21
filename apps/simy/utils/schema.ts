@@ -1,6 +1,6 @@
 /** Shared JSON-LD builders for simy.ch */
 
-export const SIMY_BASE = 'https://simy.ch'
+export const SIMY_BASE = 'https://www.simy.ch'
 
 export const SIMY_ORG: Record<string, unknown> = {
   '@type': 'Organization',

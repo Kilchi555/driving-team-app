@@ -257,9 +257,38 @@
 
               <!-- Totals -->
               <div class="px-5 py-4 border-t border-gray-200 space-y-2 bg-gray-50">
+                <div v-if="props.mode !== 'view' && availableCreditRappen > 0 && !hasSent" class="flex items-start justify-between gap-3 py-2">
+                  <label class="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      v-model="applyAvailableCredit"
+                      type="checkbox"
+                      class="mt-0.5 rounded border-gray-300"
+                      :style="{ accentColor: primaryColor }"
+                    />
+                    <span>
+                      <span class="block text-sm font-semibold text-gray-800">Guthaben verrechnen</span>
+                      <span class="block text-xs text-gray-500">Verfügbar {{ chf(availableCreditRappen) }}</span>
+                    </span>
+                  </label>
+                  <span v-if="applyAvailableCredit && extraCreditRappen > 0" class="text-sm font-semibold text-blue-600 whitespace-nowrap">
+                    −{{ chf(extraCreditRappen) }}
+                  </span>
+                </div>
+                <p
+                  v-if="props.mode !== 'view' && applyAvailableCredit && extraCreditRappen > 0 && extraCreditRappen < availableCreditRappen"
+                  class="text-xs text-gray-500"
+                >
+                  Es wird nur der offene Betrag verrechnet. Restguthaben bleibt stehen.
+                </p>
+                <p
+                  v-if="props.mode !== 'view' && applyAvailableCredit && creditCoversInvoice && !hasSent"
+                  class="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2"
+                >
+                  Guthaben deckt den gesamten Betrag — es wird keine Rechnung erstellt.
+                </p>
                 <div v-if="(props.mode === 'view' ? (props.viewInvoice?.vat_rate || 0) : (draft?.vat_rate || 0)) > 0" class="flex justify-between text-sm text-gray-600">
                   <span>MwSt {{ props.mode === 'view' ? props.viewInvoice?.vat_rate : draft?.vat_rate }}%</span>
-                  <span>{{ chf(props.mode === 'view' ? (props.viewInvoice?.vat_amount_rappen || 0) : (draft?.vat_amount_rappen || 0)) }}</span>
+                  <span>{{ chf(props.mode === 'view' ? (props.viewInvoice?.vat_amount_rappen || 0) : computedVat) }}</span>
                 </div>
                 <div class="flex justify-between items-center pt-2 border-t border-gray-200">
                   <span class="text-base font-bold text-gray-900">Gesamtbetrag</span>
@@ -268,7 +297,7 @@
               </div>
 
               <!-- Swiss QR-Rechnung -->
-              <div v-if="draft?.qr_iban || qrDataUrl" class="border-t-2 border-dashed border-gray-200">
+              <div v-if="!creditCoversInvoice && (draft?.qr_iban || qrDataUrl)" class="border-t-2 border-dashed border-gray-200">
                 <div class="px-5 py-4 flex items-start gap-4">
                   <!-- QR Code -->
                   <div class="flex-shrink-0">
@@ -377,7 +406,7 @@
               <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              Erstellen
+              {{ creditCoversInvoice ? 'Guthaben verrechnen' : 'Erstellen' }}
             </button>
             <!-- Senden (nur im view-Modus) -->
             <button
@@ -397,8 +426,17 @@
               {{ isResending ? 'Wird gesendet…' : 'Senden' }}
             </button>
             <!-- Nach dem Erstellen: Rechnung anzeigen + Versenden -->
-            <template v-if="props.mode !== 'view' && hasSent">
+            <button
+              v-if="props.mode !== 'view' && hasSent && !sentInvoiceId"
+              @click="close"
+              class="flex-1 px-5 py-2.5 rounded-xl text-white font-bold text-sm"
+              :style="{ background: primaryGradient }"
+            >
+              Schliessen
+            </button>
+            <template v-if="props.mode !== 'view' && hasSent && sentInvoiceId">
               <button
+                v-if="sentInvoiceId"
                 @click="emit('view-invoice', sentInvoiceId!)"
                 class="flex-1 px-5 py-2.5 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2"
                 :style="{ borderColor: primaryColor, color: primaryColor }"
@@ -410,7 +448,7 @@
                 Anzeigen
               </button>
               <button
-                v-if="props.canSend !== false && !hasEmailSent"
+                v-if="sentInvoiceId && props.canSend !== false && !hasEmailSent"
                 @click="sendCreatedInvoice"
                 :disabled="isSendingEmail"
                 class="flex-1 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:brightness-110 disabled:shadow-none disabled:hover:brightness-100"
@@ -487,6 +525,7 @@ interface InvoiceDraft {
   payment_ids: string[]
   items: InvoiceDraftItem[]
   student: { id: string; name: string; email: string }
+  available_credit_rappen?: number
   qr_iban?: string | null
   creditor_name?: string
   creditor_street?: string
@@ -528,7 +567,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  'sent': [result: { invoice_id: string; invoice_number: string; total_amount_rappen: number }]
+  'sent': [result: { invoice_id: string; invoice_number: string; total_amount_rappen: number; paid_with_credit?: boolean }]
   'view-invoice': [invoice_id: string]
 }>()
 
@@ -579,6 +618,7 @@ const localViewBilling = ref({
 const expandedItems = ref<number[]>([])
 const qrDataUrl = ref<string | null>(null)
 const qrLoading = ref(false)
+const applyAvailableCredit = ref(true)
 
 const localBilling = ref({
   company_name: '',
@@ -605,6 +645,7 @@ const billingPersonLabel = computed(() =>
 )
 
 const isBillingComplete = computed(() => {
+  if (creditCoversInvoice.value) return true
   const b = localBilling.value
   return !!b.street.trim() && !!b.zip.trim() && !!b.city.trim()
 })
@@ -647,6 +688,7 @@ watch(() => props.draft, (d) => {
       city: d.billing_city || '',
       email: d.billing_email || '',
     }
+    applyAvailableCredit.value = (d.available_credit_rappen || 0) > 0
     if (d.qr_iban) loadQRCode(d)
   }
 }, { immediate: true })
@@ -708,8 +750,43 @@ const totalAlreadyPaid = computed(() => {
   return (props.draft?.items || []).reduce((s, i) => s + (i.amount_paid_rappen || 0), 0)
 })
 
+const availableCreditRappen = computed(() => Math.max(0, props.draft?.available_credit_rappen || 0))
+
+function vatOnNet(netRappen: number, ratePercent: number) {
+  const rate = Number(ratePercent)
+  if (!Number.isFinite(rate) || rate <= 0) return 0
+  return Math.round(Math.max(0, netRappen) * rate / 100)
+}
+
+const baseNetRappen = computed(() => {
+  const d = props.draft
+  if (!d) return 0
+  const packedDiscount = d.discount_amount_rappen || 0
+  if (packedDiscount > 0) return Math.max(0, (d.subtotal_rappen || 0) - packedDiscount)
+  return Math.max(0, (d.subtotal_rappen || 0) - totalDiscounts.value - totalCredits.value - totalAlreadyPaid.value)
+})
+
+const extraCreditRappen = computed(() => {
+  if (!applyAvailableCredit.value) return 0
+  return Math.min(availableCreditRappen.value, baseNetRappen.value)
+})
+
+const computedVat = computed(() => {
+  if (props.mode === 'view') return props.viewInvoice?.vat_amount_rappen || 0
+  return vatOnNet(baseNetRappen.value - extraCreditRappen.value, props.draft?.vat_rate || 0)
+})
+
 const computedTotal = computed(() => {
-  return (props.draft?.total_amount_rappen || 0) || ((props.draft?.subtotal_rappen || 0) - totalDiscounts.value - totalCredits.value - totalAlreadyPaid.value + (props.draft?.vat_amount_rappen || 0))
+  if (props.mode === 'view') return props.viewInvoice?.total_amount_rappen || 0
+  return Math.max(0, baseNetRappen.value - extraCreditRappen.value + computedVat.value)
+})
+
+const creditCoversInvoice = computed(() =>
+  props.mode !== 'view' && extraCreditRappen.value > 0 && computedTotal.value <= 0
+)
+
+watch(applyAvailableCredit, () => {
+  if (props.draft?.qr_iban && !creditCoversInvoice.value) loadQRCode(props.draft)
 })
 
 // Payment reference for display — QRR for QR-IBAN, SCOR for regular IBAN
@@ -892,25 +969,37 @@ async function createInvoiceOnly() {
 
     const result = await $fetch<{
       success: boolean
-      invoice_id: string
-      invoice_number: string
+      paid_with_credit?: boolean
+      invoice_id: string | null
+      invoice_number: string | null
       total_amount_rappen: number
+      credit_used_rappen?: number
     }>('/api/invoices/send-draft', {
       method: 'POST',
-      body: { draft: payload, send_email: false },
+      body: {
+        draft: payload,
+        send_email: false,
+        apply_available_credit: applyAvailableCredit.value && extraCreditRappen.value > 0,
+      },
     })
 
     emit('sent', {
-      invoice_id: result.invoice_id,
-      invoice_number: result.invoice_number,
+      invoice_id: result.invoice_id || '',
+      invoice_number: result.invoice_number || '',
       total_amount_rappen: result.total_amount_rappen,
+      paid_with_credit: !!result.paid_with_credit,
     })
     hasSent.value = true
     sentInvoiceId.value = result.invoice_id
-    successMessage.value = `Rechnung ${result.invoice_number} wurde erstellt.`
-    setTimeout(() => { successMessage.value = null }, 3000)
-    // PDF nach dem Erstellen direkt öffnen
-    openPdfById(result.invoice_id)
+    if (result.paid_with_credit && !result.invoice_id) {
+      successMessage.value = extraCreditRappen.value
+        ? `CHF ${(extraCreditRappen.value / 100).toFixed(2)} Guthaben wurden verrechnet. Keine Rechnung nötig.`
+        : 'Offene Beträge wurden mit Guthaben beglichen.'
+    } else {
+      successMessage.value = `Rechnung ${result.invoice_number} wurde erstellt.`
+      if (result.invoice_id) openPdfById(result.invoice_id)
+    }
+    setTimeout(() => { successMessage.value = null }, 4000)
   } catch (err: any) {
     error.value = err?.data?.statusMessage || err?.message || 'Fehler beim Erstellen der Rechnung'
   } finally {

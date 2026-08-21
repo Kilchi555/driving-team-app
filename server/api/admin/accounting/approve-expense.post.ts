@@ -1,13 +1,14 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { requireAccountingAccess } from '~/server/utils/accountant-access'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { syncEntryLedger } from '~/server/utils/accounting-ledger-db'
 
 /**
  * POST /api/admin/accounting/approve-expense
  * Body: { id, action: 'approve' | 'reject', rejection_reason? }
  */
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event, ['admin', 'superadmin'])
+  const profile = await requireAccountingAccess(event, { write: true })
   const supabase = getSupabaseAdmin()
   const { id, action, rejection_reason } = await readBody(event)
 
@@ -45,5 +46,6 @@ export default defineEventHandler(async (event) => {
     .eq('id', id)
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+  if (action === 'approve') await syncEntryLedger(supabase, profile.tenant_id, id)
   return { success: true }
 })

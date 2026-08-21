@@ -30,6 +30,7 @@ export default defineEventHandler(async (event) => {
     .from('invoices')
     .select('id, invoice_number, invoice_date, due_date, dunning_due_date, status, payment_status, total_amount_rappen, paid_amount_rappen, billing_email, billing_company_name, dunning_level, dunning_paused, last_dunning_sent_at, customer:users!user_id(first_name, last_name, email)')
     .eq('tenant_id', profile.tenant_id)
+    .eq('document_kind', 'invoice')
     .lt('due_date', todayIso)
     .not('status', 'in', '("paid","cancelled","draft")')
     .neq('payment_status', 'paid')

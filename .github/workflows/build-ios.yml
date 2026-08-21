@@ -94,7 +94,17 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           NODE_ENV: production
-        run: npx nuxt generate
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: |
+          CONFIG="clients/${CLIENT}/config.json"
+          HAS_SERVER=$(node -e "const c=require('./${CONFIG}'); process.stdout.write(c.serverUrl ? '1' : '0')")
+          if [ "$HAS_SERVER" = "1" ]; then
+            echo "Hosted shell (serverUrl set) — skip nuxt generate, WebView loads the live site."
+            mkdir -p .output/public
+            printf '%s\n' '<!doctype html><html><head><meta charset="utf-8"><title>App</title></head><body></body></html>' > .output/public/index.html
+            exit 0
+          fi
+          npx nuxt generate
 
       - name: Generate Capacitor config for client
         run: CLIENT="${{ matrix.client }}" node scripts/gen-cap-config.mjs
@@ -126,9 +136,8 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           DEPLOY_TARGET: ${{ github.event.inputs.environment || 'testflight' }}
-        run: |
-          cd ios/App
-          bundle exec fastlane ios deploy
+          FASTLANE_SKIP_UPDATE_CHECK: '1'
+        run: bundle exec fastlane ios deploy
 
       - name: Notify on failure
         if: failure()

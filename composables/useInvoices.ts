@@ -107,6 +107,9 @@ export const useInvoices = () => {
       if (filters?.has_dunning) {
         query.has_dunning = '1'
       }
+      if (filters?.document_kind) {
+        query.document_kind = filters.document_kind
+      }
 
       const response = await $fetch('/api/invoices/list', {
         method: 'GET',

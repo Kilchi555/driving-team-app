@@ -11,7 +11,7 @@
         <h1 class="text-3xl font-black text-gray-900 mb-3">Konto und Daten löschen</h1>
         <p class="text-gray-500 leading-relaxed mb-10">
           Diese Seite erklärt, wie du dein Simy-Konto und die zugehörigen personenbezogenen Daten löschen kannst.
-          Simy ist die App von Simy IT Systems Kilchenmann (<a href="https://simy.ch" class="underline" style="color: var(--brand-primary)">simy.ch</a>).
+          Simy ist die App von Simy IT Systems Kilchenmann (<a href="https://www.simy.ch" class="underline" style="color: var(--brand-primary)">simy.ch</a>).
         </p>
 
         <div class="space-y-8">
@@ -73,16 +73,16 @@ useHead({
     name: 'description',
     content: 'So löschst du dein Simy-Konto und die zugehörigen Daten — in der App oder per E-Mail an support@simy.ch.',
   }],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/konto-loeschen' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/konto-loeschen' }],
   script: ldScripts(
     webPageLd({
       name: 'Konto löschen – Simy',
       description: 'Anleitung zum Löschen des Simy-Kontos und der zugehörigen Daten.',
-      url: 'https://simy.ch/konto-loeschen',
+      url: 'https://www.simy.ch/konto-loeschen',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Konto löschen', url: 'https://simy.ch/konto-loeschen' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Konto löschen', url: 'https://www.simy.ch/konto-loeschen' },
     ]),
   ),
 })

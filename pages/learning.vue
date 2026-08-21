@@ -61,8 +61,23 @@
         {{ error }}
       </div>
 
+      <template v-else>
+        <!-- Fokus für die nächste Lektion: vorgemerkte, noch unbewertete Themen -->
+        <div v-if="plannedFocusItems.length > 0" class="mb-6 rounded-2xl border p-4" :style="{ borderColor: `${primaryColor}30`, background: `${primaryColor}08` }">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">🎯</span>
+            <h2 class="text-sm font-bold text-gray-900">Fokus für die nächste Lektion</h2>
+          </div>
+          <div class="space-y-2">
+            <div v-for="focus in plannedFocusItems" :key="focus.evaluation_criteria_id" class="bg-white rounded-xl p-3 border border-gray-100">
+              <p class="text-sm font-semibold text-gray-900">{{ focus.criterionName }}</p>
+              <p v-if="focus.note" class="text-xs text-gray-600 mt-0.5">{{ focus.note }}</p>
+            </div>
+          </div>
+        </div>
+
       <!-- Empty -->
-      <div v-else-if="items.length === 0" class="p-10 bg-white border border-gray-200 rounded-2xl shadow-sm text-center">
+      <div v-if="items.length === 0 && plannedFocusItems.length === 0" class="p-10 bg-white border border-gray-200 rounded-2xl shadow-sm text-center">
         <div class="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center" :style="{ background: `${primaryColor}15` }">
           <span class="text-2xl" :style="{ color: primaryColor }">✨</span>
         </div>
@@ -71,7 +86,7 @@
       </div>
 
       <!-- Content -->
-      <div v-else class="space-y-8">
+      <div v-else-if="items.length > 0" class="space-y-8">
         <div v-for="category in groupedItems" :key="category.id" class="space-y-3">
           <!-- Category Header -->
           <div class="flex items-center gap-3">
@@ -124,6 +139,7 @@
           </div>
         </div>
       </div>
+      </template>
     </div>
     </div><!-- end scrollable content -->
 
@@ -177,6 +193,7 @@ const { t } = useTerminology()
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const items = ref<any[]>([])
+const plannedFocusItems = ref<any[]>([])
 const allCategoriesWithProgress = ref<any[]>([])
 const selectedCriterion = ref<any | null>(null)
 const activeTab = ref<string>('')
@@ -263,12 +280,20 @@ onMounted(async () => {
       appointments,
       maxRating,
       notes,
+      plannedFocus,
       categories: allCategories,
       criteria: allCriteria,
       studentCategories: studentCategoryCodes
     } = response.data
 
     studentCodes.value = studentCategoryCodes
+
+    // Fokus für die nächste Lektion — unabhängig davon, ob überhaupt schon
+    // Bewertungen existieren (kann auch vor der allerersten Lektion vorkommen).
+    plannedFocusItems.value = (plannedFocus || []).map((focus: any) => ({
+      ...focus,
+      criterionName: (allCriteria || []).find((c: any) => c.id === focus.evaluation_criteria_id)?.name || 'Thema'
+    }))
 
     if (appointments.length === 0) {
       items.value = []

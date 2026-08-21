@@ -1,4 +1,5 @@
 {
+  "regions": ["fra1"],
   "redirects": [
     {
       "source": "/((?!_nuxt/|_payload|api/|fahrschule|marketing|branchen|vergleich|coaching|consulting|personal-training|nachhilfe|musikschule|hundeschule|massage|preise|demo|kunden|kontakt|impressum|agb|datenschutz|konto-loeschen|features|ueber-uns|partner|website|sitemap|robots\\.txt|screenshots/|devices/|fl|.*\\.(?:png|jpe?g|webp|gif|svg|ico|woff2?|ttf|css|js|map|xml|txt|pdf|json|webmanifest)$).+)",

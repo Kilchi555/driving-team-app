@@ -140,24 +140,24 @@ useHead({
     { name: 'keywords', content: 'kursbuchungsseite, kursverwaltung software, gruppenkurs buchen, online kursanmeldung schweiz, welpenkurs software, theoriekurs buchung' },
     { property: 'og:title', content: 'Kursbuchungsseite – Gruppenkurse online verkaufen | Simy' },
     { property: 'og:description', content: 'Kunden melden sich selbst zu Kursen an und zahlen online — Plätze und Rechnung unter Kontrolle.' },
-    { property: 'og:url', content: 'https://simy.ch/features/kurse' },
+    { property: 'og:url', content: 'https://www.simy.ch/features/kurse' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/features/kurse' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/features/kurse' }],
   script: ldScripts(
     softwareAppLd({
       name: 'Simy Kursbuchungsseite',
       description: 'Online-Anmeldung und Zahlung für Gruppenkurse in der Schweiz.',
-      url: 'https://simy.ch/features/kurse',
+      url: 'https://www.simy.ch/features/kurse',
     }),
     webPageLd({
       name: 'Kursbuchungsseite',
       description: 'Gruppenkurse online verkaufen mit Simy.',
-      url: 'https://simy.ch/features/kurse',
+      url: 'https://www.simy.ch/features/kurse',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Features', url: 'https://simy.ch/features/kalender' },
-      { name: 'Kurse', url: 'https://simy.ch/features/kurse' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Features', url: 'https://www.simy.ch/features/kalender' },
+      { name: 'Kurse', url: 'https://www.simy.ch/features/kurse' },
     ]),
   ),
 })

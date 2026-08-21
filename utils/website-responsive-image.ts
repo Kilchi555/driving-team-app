@@ -41,6 +41,22 @@ export function heroSrcset(src: string, format: 'webp' | 'avif'): string {
   return imageSrcset(src, HERO_WIDTHS, format)
 }
 
+export const OFFER_WIDTHS = [400, 800] as const
+export const TEAM_PHOTO_WIDTH = 400
+
+export function offerPhotoSrc(src: string | null | undefined, width = 800): string {
+  const url = String(src || '').trim()
+  if (!url) return ''
+  if (!/^https:\/\//i.test(url)) return url
+  return websiteImageProxyUrl(url, width, 'webp', 'cover')
+}
+
+export function offerPhotoSrcset(src: string | null | undefined): string {
+  const url = String(src || '').trim()
+  if (!/^https:\/\//i.test(url)) return ''
+  return OFFER_WIDTHS.map((w) => `${websiteImageProxyUrl(url, w, 'webp', 'cover')} ${w}w`).join(', ')
+}
+
 export function heroFallbackSrc(src: string): string {
   if (!isProxyableImageUrl(src)) return src
   return websiteImageProxyUrl(src, 960, 'webp')

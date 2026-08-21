@@ -41,34 +41,34 @@
       <div class="absolute inset-0 bg-gradient-to-t from-primary-900/60 via-primary-800/30 to-transparent"></div>
 
       <div class="section-container relative z-10">
-        <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div class="text-white">
             <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-6 border border-white/20">
               <span class="text-xl">🚗</span>
               <span class="text-sm font-semibold">Driving School Zurich · English</span>
             </div>
 
-            <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
               Driving School<br/>
               <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-100">Zurich</span>
             </h1>
 
-            <p class="text-lg text-white/90 mb-8 leading-relaxed max-w-lg">
+            <p class="text-base sm:text-lg text-white/90 mb-6 sm:mb-8 leading-relaxed max-w-2xl">
               Professional driving lessons in Zurich — in English. Whether you're an expat, an international student, or a newcomer to Switzerland, we guide you through the Swiss driving licence process from start to finish.
             </p>
 
-            <div class="flex gap-8 mb-10">
+            <div class="flex gap-4 sm:gap-8 mb-8 sm:mb-10">
               <div>
-                <p class="text-4xl font-black text-yellow-300">85%</p>
-                <p class="text-sm text-white/70">Pass rate</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">85%</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Pass rate</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">{{ LOCATION_ZUERICH.rating.value }}★</p>
-                <p class="text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} reviews</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">{{ LOCATION_ZUERICH.rating.value }}★</p>
+                <p class="text-[11px] sm:text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} reviews</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">CHF 95</p>
-                <p class="text-sm text-white/70">per lesson</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">CHF 95</p>
+                <p class="text-[11px] sm:text-sm text-white/70">per lesson</p>
               </div>
             </div>
 

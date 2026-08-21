@@ -10,6 +10,7 @@ import {
   type WizardTeamMember,
 } from '~/utils/website-wizard-content'
 import type { LandingPagePayload } from '~/utils/website-slot-schema'
+import { whatsappUrlFromPhone } from '~/server/utils/website-premium'
 
 export type WebsiteEditorExtras = {
   extraServices?: WizardExtraService[]
@@ -17,6 +18,7 @@ export type WebsiteEditorExtras = {
   teamMembers?: WizardTeamMember[]
   testimonials?: Array<{ id?: string; author?: string; text?: string; rating?: number }>
   contact_channels?: { phone?: boolean; email?: boolean; whatsapp?: boolean; form?: boolean }
+  whatsapp_phone?: string | null
   usps?: string[]
 }
 
@@ -124,12 +126,23 @@ export function applyWebsiteEditorExtras(
       form: extras.contact_channels.form !== false,
     }
     const idx = blocks.findIndex((b) => b.type === 'contact')
+    const wa = ch.whatsapp ? whatsappUrlFromPhone(extras.whatsapp_phone) : null
     if (idx >= 0) {
       blocks[idx].content.channels = ch
       blocks[idx].content.form_enabled = ch.form
       if (!ch.phone) blocks[idx].content.phone = null
       if (!ch.email) blocks[idx].content.email = null
       if (!ch.whatsapp) blocks[idx].content.whatsapp_url = null
+      else if (extras.whatsapp_phone != null) blocks[idx].content.whatsapp_url = wa
+    }
+    if (extras.whatsapp_phone != null || !ch.whatsapp) {
+      for (const type of ['hero', 'cta'] as const) {
+        const i = blocks.findIndex((b) => b.type === type)
+        if (i >= 0) {
+          if (!ch.whatsapp) blocks[i].content.whatsapp_url = null
+          else if (extras.whatsapp_phone != null) blocks[i].content.whatsapp_url = wa
+        }
+      }
     }
   }
 

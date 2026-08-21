@@ -3,6 +3,8 @@
 // Queues appointment reminder emails for next-day appointments.
 //
 // Schedule: daily at 03:00 UTC (05:00 Zürich summer / 04:00 winter)
+// Email/SMS queue immediately; push send_at waits until 07:00 UTC (≈ 09:00 Zürich)
+// so phones are not woken at 05:00.
 // Window:   appointments starting between NOW()+24h and NOW()+48h
 //
 // Email includes:
@@ -18,6 +20,7 @@
 // ============================================================
 
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { daytimePushSendAt } from '~/server/utils/push'
 import { logger } from '~/utils/logger'
 import { getQuery } from 'h3'
 import { getAccountAccessLink } from '~/server/utils/account-access-link'
@@ -381,7 +384,7 @@ export default defineEventHandler(async (event) => {
       subject: 'Erinnerung an deinen Termin',
       body: pushBody,
       status: 'pending',
-      send_at: now.toISOString(),
+      send_at: daytimePushSendAt(now).toISOString(),
       context_data: {
         stage: 'appointment_reminder',
         appointment_id: apt.id,

@@ -2,14 +2,14 @@
   <div>
     <Head>
       <Title>Driving Team | Auto Fahrschule Zürich & Lachen | 4.9★</Title>
-      <Meta name="description" content="Driving Team – Auto Fahrschule in Zürich-Altstetten & Lachen. 4.9★ (368 Reviews), 85% Prüfungserfolg, ab CHF 95.–. Jetzt online Fahrstunde buchen!" />
+      <Meta name="description" content="Driving Team – Auto Fahrschule in Zürich-Altstetten & Lachen. 4.9★ (368 Reviews), 85% Prüfungserfolg. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. Jetzt online buchen!" />
       <Meta name="keywords" content="Driving Team, Auto Fahrschule Zürich, Fahrschule Lachen, Fahrstunden Zürich, Fahrlehrer Zürich, Fahrschule Altstetten" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       
       <!-- Open Graph -->
       <Meta property="og:title" content="Driving Team | Auto Fahrschule Zürich & Lachen | 4.9★" />
-      <Meta property="og:description" content="Auto Fahrschule Zürich-Altstetten & Lachen. 4.9★, 85% Prüfungserfolg, ab CHF 95.–. Jetzt online buchen." />
+      <Meta property="og:description" content="Auto Fahrschule Zürich-Altstetten & Lachen. 4.9★, 85% Prüfungserfolg. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–." />
       <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
@@ -24,7 +24,7 @@
       <!-- Twitter Card -->
       <Meta name="twitter:card" content="summary_large_image" />
       <Meta name="twitter:title" content="Driving Team | Auto Fahrschule Zürich & Lachen | 4.9★" />
-      <Meta name="twitter:description" content="Auto Fahrschule Zürich-Altstetten & Lachen – 4.9★, 85% Prüfungserfolg, ab CHF 95.–. Jetzt online buchen." />
+      <Meta name="twitter:description" content="Auto Fahrschule Zürich-Altstetten & Lachen – 4.9★, 85% Prüfungserfolg. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–." />
       
       <!-- Canonical & Language -->
       <Link rel="canonical" href="https://drivingteam.ch/" />
@@ -39,29 +39,32 @@
       <div class="relative z-10 w-full flex flex-col items-center justify-center text-center text-gray-900 px-2 md:px-6">
         <!-- Hero Headline -->
         <div class="mb-3">
-          <h1 class="text-3xl md:text-5xl font-black text-gray-900 leading-tight mb-3 mt-6">
+          <h1 class="text-3xl md:text-5xl font-black text-gray-900 leading-tight mb-2 mt-6">
             Driving <span class="text-primary-600">Team</span>
           </h1>
-          <p class="text-sm md:text-base text-gray-500 font-medium mb-2">
-            Auto Fahrschule Zürich-Altstetten &amp; Lachen · ab CHF 95.–
+          <p class="text-sm md:text-base text-gray-500 font-medium mb-4">
+            Auto Fahrschule Zürich-Altstetten &amp; Lachen
           </p>
+          <div class="mb-4 w-full px-3">
+            <ErsteOfferBanner variant="badge" href="/buchen?category=B%20Automatik&code=ERSTE30" />
+          </div>
           <p class="text-sm font-semibold text-primary-700 mb-4">
             4.9★ · 368 Google-Reviews · 85% Prüfungserfolg
           </p>
         </div>
         <!-- Trust Bar + Booking CTA -->
-        <div class="flex flex-row items-center justify-center gap-3 mb-6 px-4">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mb-6 px-4 w-full max-w-xs sm:max-w-none mx-auto">
           <a
-            href="https://app.simy.ch/booking/availability/driving-team?category=B%20Automatik"
+            href="https://app.simy.ch/booking/availability/driving-team?category=B%20Automatik&code=ERSTE30"
             target="_blank"
             rel="noopener noreferrer"
-            class="flex-shrink-0 inline-flex items-center gap-2 bg-primary-600 text-white font-bold py-2.5 px-5 rounded-xl hover:bg-primary-700 active:scale-95 transition shadow-md text-sm"
+            class="inline-flex items-center justify-center gap-2 bg-primary-600 text-white font-bold py-2.5 px-5 rounded-xl hover:bg-primary-700 active:scale-95 transition shadow-md text-sm w-full sm:w-auto"
           >
             Auto Termin buchen
           </a>
           <a
             href="/auto-fahrschule-zuerich/"
-            class="flex-shrink-0 inline-flex items-center gap-2 bg-white border-2 border-primary-600 text-primary-600 font-bold py-2.5 px-5 rounded-xl hover:bg-primary-50 active:scale-95 transition shadow-md text-sm"
+            class="inline-flex items-center justify-center gap-2 bg-white border-2 border-primary-600 text-primary-600 font-bold py-2.5 px-5 rounded-xl hover:bg-primary-50 active:scale-95 transition shadow-md text-sm w-full sm:w-auto"
           >
             Auto Fahrschule Zürich
           </a>
@@ -237,8 +240,8 @@
               <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">Prüfungs&shy;erfolg 1. Versuch</span>
             </div>
             <div class="flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-md py-4 px-2">
-              <span class="text-2xl font-black text-white leading-none">95.–</span>
-              <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">ab CHF pro Lektion</span>
+              <span class="text-2xl font-black text-white leading-none">65.–</span>
+              <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">erste Lektion 45 Min., danach 95.–</span>
             </div>
           </div>
 
@@ -285,7 +288,7 @@
     <StatsSection />
 
     <ReviewsSection category="zuerich" />
-
+    <ErsteOfferBanner href="/buchen?category=B%20Automatik&code=ERSTE30" />
 
     <!-- Courses Section -->
     <section class="py-20 bg-white scroll-mt-20">
@@ -329,7 +332,7 @@
               </li>
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
-                <span>Ab CHF 95.–/Lektion · online buchbar</span>
+                <span>Erste Lektion CHF 65.– / 45 Min. · danach CHF 95.–</span>
               </li>
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>

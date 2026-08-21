@@ -1,19 +1,20 @@
 /**
  * Auto waitlist placeholders for course categories with waitlist_enabled=true.
  *
- * When a category has no future bookable courses for a known city, keep one
- * public course in status=waitlist so the customer app (and location deep-links)
- * still show a signup path. When dates appear again, demote those placeholders
- * back to draft. Only courses with is_auto_waitlist=true are demoted.
+ * Every active category with waitlist_enabled=true always has exactly one
+ * public, tenant-wide placeholder course in status=waitlist, regardless of
+ * whether the category currently has bookable or fully-booked courses. This
+ * gives customers a permanent, dedicated "Warteliste" card per Kursart on the
+ * customer app / website. Only courses with is_auto_waitlist=true are ever
+ * demoted/merged automatically; manually created courses are left alone.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 
 export type AutoWaitlistAction = {
-  action: 'activated' | 'created' | 'demoted' | 'skipped'
+  action: 'activated' | 'created' | 'demoted' | 'merged' | 'skipped'
   tenantId: string
   categoryCode: string
-  city: string | null
   courseId?: string
   detail?: string
 }
@@ -41,33 +42,15 @@ type CourseRow = {
   city: string | null
   is_public: boolean | null
   is_auto_waitlist: boolean | null
+  created_at?: string | null
   course_category_id: string | null
   category: string | null
   course_sessions: { start_time: string }[] | null
 }
 
-function normalizeCity(city: string | null | undefined): string | null {
-  const trimmed = (city || '').trim()
-  return trimmed || null
-}
-
-function cityKey(city: string | null): string {
-  return (city || '').trim().toLowerCase()
-}
-
 function hasFutureSession(course: CourseRow, nowIso: string): boolean {
   const sessions = course.course_sessions || []
   return sessions.some((s) => s?.start_time && s.start_time > nowIso)
-}
-
-function isBookable(course: CourseRow, nowIso: string): boolean {
-  if (!course.is_public) return false
-  if (!['active', 'scheduled'].includes(course.status || '')) return false
-  return hasFutureSession(course, nowIso)
-}
-
-function placeholderName(category: CategoryRow, city: string | null): string {
-  return city ? `${category.name} ${city}` : category.name
 }
 
 async function loadCategories(
@@ -98,7 +81,7 @@ async function loadCategoryCourses(
   const { data, error } = await supabase
     .from('courses')
     .select(`
-      id, tenant_id, name, status, city, is_public, is_auto_waitlist,
+      id, tenant_id, name, status, city, is_public, is_auto_waitlist, created_at,
       course_category_id, category,
       course_sessions ( start_time )
     `)
@@ -109,12 +92,33 @@ async function loadCategoryCourses(
   return (data || []) as CourseRow[]
 }
 
+/** Picks the placeholder with the most existing waitlist signups (so real signups are never orphaned). */
+async function pickCanonical(
+  supabase: SupabaseClient,
+  candidates: CourseRow[],
+): Promise<CourseRow> {
+  if (candidates.length === 1) return candidates[0]
+
+  let best = candidates[0]
+  let bestScore = -1
+  for (const candidate of candidates) {
+    const { count } = await supabase
+      .from('course_waitlist')
+      .select('*', { count: 'exact', head: true })
+      .eq('course_id', candidate.id)
+    const score = count || 0
+    if (score > bestScore) {
+      bestScore = score
+      best = candidate
+    }
+  }
+  return best
+}
+
 async function activatePlaceholder(
   supabase: SupabaseClient,
   courseId: string,
   category: CategoryRow,
-  city: string | null,
-  existingName?: string | null,
 ): Promise<void> {
   const { error } = await supabase
     .from('courses')
@@ -122,11 +126,10 @@ async function activatePlaceholder(
       status: 'waitlist',
       is_public: true,
       is_auto_waitlist: true,
-      city,
+      city: null,
       course_category_id: category.id,
       category: category.code,
-      // Keep a human name if one already exists (e.g. "VKU Zürich")
-      name: (existingName || '').trim() || placeholderName(category, city),
+      name: category.name,
       description: 'Datum folgt — Warteliste offen',
       status_changed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -158,17 +161,16 @@ async function demotePlaceholder(
 async function createPlaceholder(
   supabase: SupabaseClient,
   category: CategoryRow,
-  city: string | null,
 ): Promise<string> {
   const { data, error } = await supabase
     .from('courses')
     .insert({
       tenant_id: category.tenant_id,
-      name: placeholderName(category, city),
+      name: category.name,
       description: 'Datum folgt — Warteliste offen',
       category: category.code,
       course_category_id: category.id,
-      city,
+      city: null,
       status: 'waitlist',
       is_public: true,
       is_auto_waitlist: true,
@@ -188,19 +190,6 @@ async function createPlaceholder(
   return data.id as string
 }
 
-function collectCityKeys(courses: CourseRow[]): Map<string, string | null> {
-  /** key → display city (null for tenant-wide) */
-  const cities = new Map<string, string | null>()
-  for (const course of courses) {
-    // Keep historical locations (incl. completed) so waitlist can reappear after the last date ends.
-    // Skip cancelled — those locations were intentionally retired.
-    if (course.status === 'cancelled') continue
-    const city = normalizeCity(course.city)
-    cities.set(cityKey(city), city)
-  }
-  return cities
-}
-
 async function syncOneCategory(
   supabase: SupabaseClient,
   category: CategoryRow,
@@ -208,114 +197,96 @@ async function syncOneCategory(
   actions: AutoWaitlistAction[],
 ): Promise<void> {
   const courses = await loadCategoryCourses(supabase, category)
-  const cities = collectCityKeys(courses)
+  const autoPlaceholders = courses.filter((c) => c.is_auto_waitlist)
 
-  // Category with waitlist but no location history yet → one tenant-wide placeholder
-  if (cities.size === 0 && category.waitlist_enabled) {
-    cities.set('', null)
-  }
-
-  // When waitlist is off: demote all auto placeholders and stop
+  // Waitlist off for this category: demote every auto placeholder and stop.
   if (!category.waitlist_enabled) {
-    for (const course of courses) {
-      if (!course.is_auto_waitlist) continue
-      if (course.status === 'waitlist') {
-        await demotePlaceholder(supabase, course.id)
-        actions.push({
-          action: 'demoted',
-          tenantId: category.tenant_id,
-          categoryCode: category.code,
-          city: normalizeCity(course.city),
-          courseId: course.id,
-          detail: 'waitlist_enabled=false',
-        })
-      }
+    for (const course of autoPlaceholders) {
+      if (course.status !== 'waitlist') continue
+      await demotePlaceholder(supabase, course.id)
+      actions.push({
+        action: 'demoted',
+        tenantId: category.tenant_id,
+        categoryCode: category.code,
+        courseId: course.id,
+        detail: 'waitlist_enabled=false',
+      })
     }
     return
   }
 
-  for (const [key, city] of Array.from(cities.entries())) {
-    const inCity = courses.filter((c) => cityKey(normalizeCity(c.city)) === key)
-    const hasBookable = inCity.some((c) => isBookable(c, nowIso))
+  // Waitlist on: exactly one active, tenant-wide placeholder must always exist,
+  // independent of whether other courses in this category are bookable or full.
+  const activeOnes = autoPlaceholders.filter((c) => c.status === 'waitlist' && c.is_public !== false)
 
-    const autoPlaceholders = inCity.filter(
-      (c) =>
-        c.is_auto_waitlist ||
-        // Adopt existing empty waitlist/draft placeholders once (e.g. VKU Zürich draft)
-        (
-          ['waitlist', 'draft'].includes(c.status || '') &&
-          !hasFutureSession(c, nowIso) &&
-          (c.is_public !== false)
-        ),
-    )
+  if (activeOnes.length > 0) {
+    const canonical = await pickCanonical(supabase, activeOnes)
 
-    if (hasBookable) {
-      for (const course of inCity) {
-        if (!course.is_auto_waitlist || course.status !== 'waitlist') continue
-        await demotePlaceholder(supabase, course.id)
-        actions.push({
-          action: 'demoted',
-          tenantId: category.tenant_id,
-          categoryCode: category.code,
-          city,
-          courseId: course.id,
-          detail: 'bookable dates exist',
-        })
-      }
-      continue
+    for (const extra of activeOnes) {
+      if (extra.id === canonical.id) continue
+      await demotePlaceholder(supabase, extra.id)
+      actions.push({
+        action: 'merged',
+        tenantId: category.tenant_id,
+        categoryCode: category.code,
+        courseId: extra.id,
+        detail: `merged into ${canonical.id}`,
+      })
     }
 
-    // No bookable dates → ensure one public waitlist placeholder
-    const activeAuto = autoPlaceholders.find((c) => c.status === 'waitlist' && c.is_public !== false)
-    if (activeAuto) {
-      if (!activeAuto.is_auto_waitlist) {
-        await activatePlaceholder(supabase, activeAuto.id, category, city, activeAuto.name)
-        actions.push({
-          action: 'activated',
-          tenantId: category.tenant_id,
-          categoryCode: category.code,
-          city,
-          courseId: activeAuto.id,
-          detail: 'marked existing waitlist as auto',
-        })
-      } else {
-        actions.push({
-          action: 'skipped',
-          tenantId: category.tenant_id,
-          categoryCode: category.code,
-          city,
-          courseId: activeAuto.id,
-          detail: 'already waitlist',
-        })
-      }
-      continue
-    }
-
-    const draftCandidate =
-      autoPlaceholders.find((c) => c.is_auto_waitlist && c.status === 'draft') ||
-      autoPlaceholders.find((c) => c.status === 'draft' && !hasFutureSession(c, nowIso))
-
-    if (draftCandidate) {
-      await activatePlaceholder(supabase, draftCandidate.id, category, city, draftCandidate.name)
+    // Normalise shape (drop any legacy per-city name/city) so exactly one
+    // generic "Kursart"-wide waitlist card is shown.
+    const needsNormalisation = canonical.city !== null || canonical.name !== category.name
+    if (needsNormalisation) {
+      await activatePlaceholder(supabase, canonical.id, category)
       actions.push({
         action: 'activated',
         tenantId: category.tenant_id,
         categoryCode: category.code,
-        city,
-        courseId: draftCandidate.id,
+        courseId: canonical.id,
+        detail: 'normalised to tenant-wide placeholder',
       })
-      continue
+    } else {
+      actions.push({
+        action: 'skipped',
+        tenantId: category.tenant_id,
+        categoryCode: category.code,
+        courseId: canonical.id,
+        detail: 'already active',
+      })
     }
+    return
+  }
 
-    const createdId = await createPlaceholder(supabase, category, city)
+  // No active placeholder yet: reactivate a demoted auto placeholder, adopt an
+  // eligible existing draft/waitlist course, or create a brand new one.
+  const draftCandidate =
+    autoPlaceholders.find((c) => c.status === 'draft') ||
+    courses.find(
+      (c) =>
+        ['waitlist', 'draft'].includes(c.status || '') &&
+        !hasFutureSession(c, nowIso) &&
+        c.is_public !== false,
+    )
+
+  if (draftCandidate) {
+    await activatePlaceholder(supabase, draftCandidate.id, category)
     actions.push({
-      action: 'created',
+      action: 'activated',
       tenantId: category.tenant_id,
       categoryCode: category.code,
-      city,
-      courseId: createdId,
+      courseId: draftCandidate.id,
     })
+    return
   }
+
+  const createdId = await createPlaceholder(supabase, category)
+  actions.push({
+    action: 'created',
+    tenantId: category.tenant_id,
+    categoryCode: category.code,
+    courseId: createdId,
+  })
 }
 
 export async function syncAutoCategoryWaitlists(
@@ -356,7 +327,6 @@ export async function syncAutoCategoryWaitlists(
         action: 'skipped',
         tenantId: category.tenant_id,
         categoryCode: category.code,
-        city: null,
         detail: err?.message || 'sync error',
       })
     }

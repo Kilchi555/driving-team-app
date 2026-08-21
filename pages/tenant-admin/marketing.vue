@@ -187,6 +187,31 @@
       </div>
     </div>
 
+    <div v-if="data" class="sa-card mb-5">
+      <div class="sa-card-header">
+        <h2 class="sa-card-title">Buchungs-Wizard · wo springen sie ab?</h2>
+        <span class="sa-cell-muted text-xs">Unique Sessions pro Schritt · Labels vom Tenant</span>
+      </div>
+      <div v-if="!data.wizardSteps?.length" class="sa-empty">
+        Noch keine Step-Daten — erscheint sobald jemand den Buchungs-Wizard durchläuft.
+      </div>
+      <div v-else class="origin-list">
+        <div v-for="s in data.wizardSteps" :key="s.step" class="origin-row">
+          <div class="origin-name">
+            <span class="origin-dot" :style="{ background: s.dropOffPct >= 25 ? '#f87171' : '#34d399' }"></span>
+            {{ s.label }}
+          </div>
+          <div class="origin-bar-wrap">
+            <div class="origin-bar" :style="{ width: wizardStepPct(s.sessions) + '%', background: s.dropOffPct >= 25 ? '#f87171' : '#818cf8' }"></div>
+          </div>
+          <div class="origin-stats">
+            <span class="origin-bookings">{{ fmtNum(s.sessions) }}</span>
+            <span v-if="s.dropOffPct > 0" class="origin-sub" :class="s.dropOffPct >= 25 ? 'text-rose-400' : ''">−{{ s.dropOffPct }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Google Ads Campaigns -->
     <div v-if="data && data.adsCampaigns.length > 0" class="sa-card mb-5">
       <div class="sa-card-header">
@@ -386,6 +411,7 @@ interface MarketingOverview {
   summary: Record<string, number>
   channels: Channel[]
   funnel: { impressions: number; sessions: number; bookingPageViews: number; bookingStarted: number; bookingCompleted: number; conversionRate: number; bookingFunnelRate: number }
+  wizardSteps: Array<{ step: number; label: string; sessions: number; dropOffPct: number }>
   trend: Array<{ date: string; sessions: number; clicks: number; bookings: number; spend: number; impressions: number }>
   topQueries: Array<{ query: string; clicks: number; impressions: number; ctr: number; position: number }>
   topPages: Array<{ page: string; clicks: number; impressions: number; ctr: number; position: number }>
@@ -476,6 +502,13 @@ const channelMax = computed(() => {
   if (!data.value) return 1
   return Math.max(...data.value.channels.map((c) => Math.max(c.bookings, c.sessions / 50)), 1)
 })
+
+const wizardStepMax = computed(() => {
+  if (!data.value?.wizardSteps?.length) return 1
+  return Math.max(...data.value.wizardSteps.map((s) => s.sessions), 1)
+})
+
+const wizardStepPct = (sessions: number) => Math.max(Math.round((sessions / wizardStepMax.value) * 100), 4)
 
 const channelPct = (c: Channel) => {
   const v = Math.max(c.bookings, c.sessions / 50)

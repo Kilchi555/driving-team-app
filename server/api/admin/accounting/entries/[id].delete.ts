@@ -1,17 +1,17 @@
 import { defineEventHandler, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { requireAccountingAccess } from '~/server/utils/accountant-access'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { canSoftDeleteAccountingEntry } from '~/server/utils/accounting'
 
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event)
+  const profile = await requireAccountingAccess(event, { write: true })
   const supabase = getSupabaseAdmin()
   const id = event.context.params?.id
   if (!id) throw createError({ statusCode: 400, statusMessage: 'ID fehlt' })
 
-  // Sicherstellen dass der Eintrag zum Mandanten gehört und Sperrung prüfen
   const { data: existing } = await supabase
     .from('accounting_entries')
-    .select('id, locked_at')
+    .select('id, locked_at, linked_payment_id, storno_of_id, created_at')
     .eq('id', id)
     .eq('tenant_id', profile.tenant_id)
     .is('deleted_at', null)
@@ -19,15 +19,15 @@ export default defineEventHandler(async (event) => {
 
   if (!existing) throw createError({ statusCode: 404, statusMessage: 'Eintrag nicht gefunden' })
 
-  // OR Art. 957a: Gesperrte Buchungen können nicht gelöscht werden
-  if (existing.locked_at) {
+  if (!canSoftDeleteAccountingEntry(existing)) {
     throw createError({
       statusCode: 403,
-      statusMessage: 'Diese Buchung ist gesperrt und kann nicht gelöscht werden. Bitte eine Storno-Buchung erstellen.',
+      statusMessage: existing.linked_payment_id
+        ? 'Aus Zahlungen erzeugte Buchungen können nicht gelöscht werden. Bitte eine Storno-Buchung erstellen.'
+        : 'Diese Buchung kann nicht mehr gelöscht werden. Bitte eine Storno-Buchung erstellen (OR Art. 957a).',
     })
   }
 
-  // Soft delete: OR-konform, Daten werden nie physisch gelöscht
   const { error } = await supabase
     .from('accounting_entries')
     .update({ deleted_at: new Date().toISOString() })

@@ -7,7 +7,6 @@ import { loadWebsiteServices } from '~/server/utils/website-services'
 import { resolveWebsiteCity } from '~/server/utils/website-local-seo'
 import { loadWebsitePickupOffer } from '~/server/utils/website-pickup'
 import { mapStaffToTeam } from '~/server/utils/website-premium'
-import { loadWebsitePublicLocations } from '~/server/utils/website-public-tenant'
 import { shouldHideStaffOnWebsite } from '~/utils/website-wizard-content'
 import { isLandingPayload, WEBSITE_TEMPLATE_ID } from '~/utils/website-slot-schema'
 
@@ -66,7 +65,6 @@ export async function ensureWebsiteHomeLanding(
 
   const city = resolveWebsiteCity(tenant)
   const pickup = await loadWebsitePickupOffer(supabase, tenant.id)
-  const locations = await loadWebsitePublicLocations(supabase, tenant.id).catch(() => [])
 
   const landing = buildLandingPage({
     tenant: {
@@ -89,11 +87,7 @@ export async function ensureWebsiteHomeLanding(
     siteUrl,
     hide_powered_by: true,
     team,
-    meeting_points: locations.map((l) => ({
-      id: l.id,
-      name: l.name,
-      address: l.address || '',
-    })),
+    meeting_points: [],
     pickup: pickup.enabled,
     products: [],
   })

@@ -73,6 +73,11 @@ export interface InvoiceEmailData {
   footerText?: string | null
   /** Breakdown label for lesson_price_rappen (default: Fahrstunde) */
   appointmentLabel?: string
+  documentTitle?: string
+  dateLabel?: string
+  dueLabel?: string
+  acceptUrl?: string | null
+  isQuote?: boolean
 }
 
 export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
@@ -219,7 +224,7 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
   <tr><td class="header">
     <div class="header-inner">
       <div class="header-l">
-        <p style="margin:0 0 3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.65);">RECHNUNG</p>
+        <p style="margin:0 0 3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.65);">${escapeHtml(data.documentTitle || 'RECHNUNG')}</p>
         <p class="inv-num" style="margin:0;font-size:22px;font-weight:800;color:white;font-family:monospace;">${data.invoiceNumber}</p>
       </div>
       <div class="header-r">
@@ -233,11 +238,11 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
   <tr><td class="meta-band">
     <div class="meta-inner">
       <div class="meta-col" style="width:33%;">
-        <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.5);">Rechnungsdatum</p>
+        <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.5);">${escapeHtml(data.dateLabel || 'Rechnungsdatum')}</p>
         <p style="margin:2px 0 0;font-size:13px;font-weight:600;color:white;">${formatDateEmail(data.invoiceDate)}</p>
       </div>
       <div class="meta-col" style="width:33%;text-align:center;">
-        <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.5);">Fällig bis</p>
+        <p style="margin:0;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(255,255,255,0.5);">${escapeHtml(data.dueLabel || 'Fällig bis')}</p>
         <p style="margin:2px 0 0;font-size:13px;font-weight:700;color:#f87171;">${formatDateEmail(data.dueDate)}</p>
       </div>
       <div class="meta-col meta-col-last" style="width:33%;text-align:right;">
@@ -252,7 +257,9 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
     <p style="margin:0 0 6px;color:#64748b;font-size:15px;">Hallo <strong style="color:#1e293b;">${data.customerName}</strong>,</p>
     ${data.introText
       ? `<p style="margin:0 0 24px;color:#64748b;font-size:14px;line-height:1.6;white-space:pre-line;">${data.introText}</p>`
-      : `<p style="margin:0 0 24px;color:#64748b;font-size:14px;line-height:1.6;">anbei erhalten Sie Ihre Rechnung. Bitte überweisen Sie den Betrag fristgerecht.</p>`
+      : `<p style="margin:0 0 24px;color:#64748b;font-size:14px;line-height:1.6;">${data.isQuote
+        ? 'anbei erhalten Sie unser Angebot. Sie können es über den Link in dieser E-Mail annehmen.'
+        : 'anbei erhalten Sie Ihre Rechnung. Bitte überweisen Sie den Betrag fristgerecht.'}</p>`
     }
 
     <!-- Items -->
@@ -274,9 +281,15 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
       </tfoot>
     </table>
 
+    ${data.acceptUrl ? `
+    <div style="margin:24px 0 0;text-align:center;">
+      <a href="${escapeHtml(data.acceptUrl)}" style="display:inline-block;background:${brand};color:white;text-decoration:none;font-weight:700;font-size:15px;padding:14px 28px;border-radius:10px;">Offerte annehmen</a>
+      <p style="margin:10px 0 0;font-size:12px;color:#94a3b8;">Mit der Annahme wird automatisch eine Rechnung erstellt.</p>
+    </div>` : ''}
+
     <!-- Zahlungshinweis / Zahlungsbedingungen -->
     <div style="margin:20px 0 0;background:${brandLight};border-left:4px solid ${brand};border-radius:0 8px 8px 0;padding:14px 16px;">
-      <p style="margin:0 0 3px;font-weight:700;font-size:13px;color:#1e293b;">Zahlungsinformationen</p>
+      <p style="margin:0 0 3px;font-weight:700;font-size:13px;color:#1e293b;">${data.isQuote ? 'Angebot' : 'Zahlungsinformationen'}</p>
       <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;white-space:pre-line;">
         ${data.paymentTerms
           ? data.paymentTerms.replace(/\{due_date\}/g, formatDateEmail(data.dueDate))

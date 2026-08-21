@@ -126,6 +126,9 @@ export interface InvoicePdfData {
   qrOnSeparatePage?: boolean
   /** Breakdown label for lesson_price_rappen (default: Fahrstunde) */
   appointmentLabel?: string
+  dateLabel?: string
+  dueLabel?: string
+  paymentBlockTitle?: string
 }
 
 /** Vor- + Nachname der Tenant-Kontaktperson (Admin bei Registrierung). */
@@ -289,8 +292,8 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
       : (W - margin - metaX)
     const metaTop = winTop
     const metaRows: [string, string][] = [
-      ['Rechnungsdatum', formatDate(data.invoiceDate)],
-      ['Fällig am', formatDate(data.dueDate)],
+      [data.dateLabel || 'Rechnungsdatum', formatDate(data.invoiceDate)],
+      [data.dueLabel || 'Fällig am', formatDate(data.dueDate)],
     ]
     const windowName = billingCompanyName || customerName
     if (studentName && namesDiffer(studentName, windowName)) {
@@ -346,8 +349,12 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     const tableWidth = tableRight - margin
 
     const rawPaymentText = data.paymentTerms ||
-      `Bitte überweise den Betrag bis ${formatDate(data.dueDate)} unter Angabe der Rechnungsnummer ${data.invoiceNumber}.`
-    const paymentText = rawPaymentText.replace(/\{due_date\}/g, formatDate(data.dueDate))
+      (data.documentTitle?.toUpperCase() === 'OFFERTE'
+        ? `Dieses Angebot ist gültig bis ${formatDate(data.dueDate)}.`
+        : `Bitte überweise den Betrag bis ${formatDate(data.dueDate)} unter Angabe der Rechnungsnummer ${data.invoiceNumber}.`)
+    const paymentText = rawPaymentText
+      .replace(/\{due_date\}/g, formatDate(data.dueDate))
+      .replace(/\{valid_until\}/g, formatDate(data.dueDate))
     doc.fontSize(9).fillColor('#374151').font('Helvetica')
     const paymentTextH = doc.heightOfString(paymentText, { width: tableWidth - 20 })
     const paymentBlockH = Math.max(36, paymentTextH + 26)
@@ -548,7 +555,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     doc.moveTo(margin, rowY).lineTo(margin + tableWidth, rowY)
       .strokeColor(line).lineWidth(0.5).stroke()
     doc.fontSize(8.5).fillColor(ink).font('Helvetica-Bold')
-      .text('Zahlungsbedingungen', margin, rowY + 8)
+      .text(data.paymentBlockTitle || 'Zahlungsbedingungen', margin, rowY + 8)
     doc.fontSize(9).fillColor('#374151').font('Helvetica')
       .text(paymentText, margin, rowY + 22, { width: tableWidth })
     rowY += paymentBlockH + 10

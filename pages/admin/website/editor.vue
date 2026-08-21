@@ -22,7 +22,7 @@
         </a>
         <span class="autosave-hint" aria-live="polite">{{ autosaveHint }}</span>
         <button type="button" class="btn-primary" :disabled="saving" @click="save(true)">
-          {{ publishing ? 'Veröffentlichen…' : 'Veröffentlichen' }}
+          {{ publishing ? 'Veröffentlichen…' : publishNeedsPay ? 'Live schalten — bezahlen' : 'Veröffentlichen' }}
         </button>
       </div>
     </header>
@@ -78,6 +78,15 @@
           >
             Weiter
           </button>
+          <button
+            v-else-if="isLastTab"
+            type="button"
+            class="btn-primary tab-step-next"
+            :disabled="saving || publishing"
+            @click="openPreviewAfterSave"
+          >
+            Vorschau ansehen
+          </button>
         </div>
         <div
           v-for="group in grouped"
@@ -101,7 +110,7 @@
             @add="applyFaqSuggestion"
           />
           <p v-if="group.group === 'seo' && !seoFieldsOpen" class="slot-hint">
-            Google-Titel, Text und Keywords erscheinen nach der Recherche — oder über «Ohne Recherche weiter».
+            Nach der Recherche und den Textvorschlägen erscheinen die Felder hier — oder über «Selbst schreiben».
           </p>
           <div
             v-for="slot in visibleSlots(group.slots)"
@@ -138,6 +147,7 @@
                 :class="{
                   'is-logo': slot.id.includes('logo'),
                   'is-service': slot.id.startsWith('service.'),
+                  'is-hero': isHeroImageSlot(slot.id),
                 }"
               >
                 <img v-if="form[slot.id]" :src="form[slot.id]!" :alt="slot.label" />
@@ -148,8 +158,8 @@
                   {{ uploadingSlot === slot.id ? 'Lädt…' : 'Hochladen' }}
                   <input
                     type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
-                    class="hidden"
+                    accept="image/*,.heic,.heif"
+                    class="slot-file-input"
                     :disabled="!!uploadingSlot"
                     @change="onUpload($event, slot.id)"
                   />
@@ -164,6 +174,7 @@
                   Entfernen
                 </button>
               </div>
+              <p v-if="uploadErrorBySlot[slot.id]" class="slot-missing">{{ uploadErrorBySlot[slot.id] }}</p>
             </div>
 
             <div v-else-if="slot.kind === 'video'" class="slot-video">
@@ -253,7 +264,7 @@
               v-else-if="slot.kind === 'textarea'"
               :id="slot.id"
               v-model="form[slot.id]"
-              rows="3"
+              :rows="slot.id.includes('.description') ? 8 : 3"
               :maxlength="slot.maxLength"
             />
 
@@ -269,6 +280,12 @@
             <p v-else-if="slot.maxLength && form[slot.id]" class="slot-count">
               {{ (form[slot.id] || '').length }}/{{ slot.maxLength }}
             </p>
+            <WebsiteHeroSuggest
+              v-if="slot.id === 'brand.hero_image_url'"
+              :industry="terms.businessNoun"
+              :business-type="businessType"
+              @applied="onHeroSuggested"
+            />
             <WebsiteVideoTrimEditor
               v-if="slot.id === 'brand.hero_image_url'"
               :form="form"
@@ -368,6 +385,34 @@
             :city="String(form['contact.city'] || '')"
           />
         </div>
+        <div
+          v-show="showFinishCard"
+          class="editor-finish"
+        >
+          <p class="editor-finish-kicker">Nächster Schritt</p>
+          <p class="editor-finish-title">Vorschau prüfen, dann live schalten</p>
+          <p class="editor-finish-copy">
+            Alles wird automatisch gespeichert. Schau die Seite zuerst an — wenn sie stimmt, veröffentlichst du sie.
+          </p>
+          <div class="editor-finish-actions">
+            <button
+              type="button"
+              class="btn-ghost"
+              :disabled="saving || publishing || !previewUrl"
+              @click="openPreviewAfterSave"
+            >
+              Vorschau ansehen
+            </button>
+            <button
+              type="button"
+              class="btn-primary"
+              :disabled="saving || publishing"
+              @click="save(true)"
+            >
+              {{ publishing ? 'Veröffentlichen…' : publishNeedsPay ? 'Live schalten — bezahlen' : 'Veröffentlichen' }}
+            </button>
+          </div>
+        </div>
         <div class="tab-step-nav tab-step-nav--bottom">
           <button
             v-if="hasPrevTab"
@@ -385,6 +430,15 @@
             @click="goNextTab"
           >
             Weiter
+          </button>
+          <button
+            v-else-if="isLastTab"
+            type="button"
+            class="btn-primary tab-step-next"
+            :disabled="saving || publishing"
+            @click="openPreviewAfterSave"
+          >
+            Vorschau ansehen
           </button>
         </div>
       </aside>
@@ -409,12 +463,15 @@ import WebsiteSeoAdvisor from '~/components/website/WebsiteSeoAdvisor.vue'
 import WebsiteTrustRowEditor from '~/components/website/WebsiteTrustRowEditor.vue'
 import WebsiteCtaEditor from '~/components/website/WebsiteCtaEditor.vue'
 import WebsiteVideoTrimEditor from '~/components/website/WebsiteVideoTrimEditor.vue'
+import WebsiteHeroSuggest from '~/components/website/WebsiteHeroSuggest.vue'
 import WebsiteFontPicker from '~/components/website/WebsiteFontPicker.vue'
 import WebsiteEditorMore, { type EditorExtras } from '~/components/website/WebsiteEditorMore.vue'
 import AIOptimizationSuggestion from '~/components/website/AIOptimizationSuggestion.vue'
 import WebsiteFaqResearch from '~/components/website/WebsiteFaqResearch.vue'
 import { websiteFontEditorHrefs } from '~/utils/website-fonts'
+import { websitePublishBlockedReason } from '~/utils/website-billing'
 import { extractColorsFromFile, isDefaultBrandPrimary } from '~/utils/logoUtils'
+import { compressPhotoForUpload } from '~/utils/imageCompression'
 import {
   newWizardId,
   shouldHideStaffOnWebsite,
@@ -434,8 +491,10 @@ useHead({
 })
 
 const route = useRoute()
+const authStore = useAuthStore()
 const { primaryColor } = useTenantBranding()
-const { t: terms } = useTerminology()
+const { t: terms, businessType } = useTerminology()
+const publishNeedsPay = computed(() => !!websitePublishBlockedReason(authStore.tenantTrialInfo))
 
 const loading = ref(true)
 const loadError = ref('')
@@ -443,6 +502,7 @@ const saving = ref(false)
 const publishing = ref(false)
 const statusMsg = ref('')
 const uploadingSlot = ref('')
+const uploadErrorBySlot = ref<Record<string, string>>({})
 const subdomain = ref('')
 const previewUrl = ref('')
 const currentSlug = ref('index')
@@ -456,6 +516,7 @@ const extras = reactive<EditorExtras>({
   teamMembers: [],
   testimonials: [],
   contact_channels: { phone: true, email: true, whatsapp: true, form: true },
+  whatsapp_phone: '',
   usps: [],
 })
 const catalogProducts = ref<Array<{ id: string; name: string; description?: string; price_chf?: number | null }>>([])
@@ -577,6 +638,10 @@ function selectTab(id: string) {
 const tabIndex = computed(() => editorTabs.value.findIndex((t) => t.group === activeTab.value))
 const hasPrevTab = computed(() => tabIndex.value > 0)
 const hasNextTab = computed(() => tabIndex.value >= 0 && tabIndex.value < editorTabs.value.length - 1)
+const isLastTab = computed(() => tabIndex.value >= 0 && !hasNextTab.value)
+const showFinishCard = computed(
+  () => isLastTab.value && (activeTab.value !== 'seo' || seoFieldsOpen.value),
+)
 function scrollEditorTop() {
   void nextTick(() => {
     document.querySelector('.editor-tabs')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -808,7 +873,7 @@ function aiContext(slot: SlotDef) {
     return [brand, city].filter(Boolean).join(', ') || city || brand
   }
   if (slot.id.startsWith('service.') && slot.label) {
-    return `${slot.label.replace(/^Beschreibung:\s*/, '')}${base ? ` — ${base}` : ''}`
+    return slot.label.replace(/^Beschreibung:\s*/i, '').trim()
   }
   if (slot.id.startsWith('faq.')) {
     const q = slot.id.replace(/\.a$/, '.q')
@@ -844,6 +909,7 @@ function resetExtras() {
   extras.teamMembers = []
   extras.testimonials = []
   extras.contact_channels = { phone: true, email: true, whatsapp: true, form: true }
+  extras.whatsapp_phone = ''
   extras.usps = []
   catalogProducts.value = []
   catalogServices.value = []
@@ -929,6 +995,7 @@ async function loadExtras() {
         form: channels.form !== false,
       }
     }
+    extras.whatsapp_phone = String(data.tenant?.whatsapp_phone || draft.whatsapp_phone || '').trim()
     websiteOnly.value = Boolean(data.tenant?.website_only)
     catalogProducts.value = Array.isArray(data.products) ? data.products : []
     catalogServices.value = Array.isArray(data.services)
@@ -1005,11 +1072,16 @@ async function load() {
     loading.value = false
     await nextTick()
     dirty.value = false
+    rememberSnapshot()
     autosaveReady.value = !loadError.value
   }
 }
 
 async function save(publish: boolean) {
+  if (publish && publishNeedsPay.value) {
+    await navigateTo('/admin/billing')
+    return
+  }
   if (publish && missingItems.value.length) {
     statusMsg.value = `${missingItems.value.length === 1 ? 'Eine Angabe fehlt' : `${missingItems.value.length} Angaben fehlen`}: ${missingItems.value.map((m) => m.msg).join(' · ')}`
     jumpToFirstMissing()
@@ -1017,6 +1089,7 @@ async function save(publish: boolean) {
   }
   saving.value = true
   publishing.value = publish
+  ignoreDirty = true
   dirty.value = false
   statusMsg.value = ''
   try {
@@ -1054,6 +1127,7 @@ async function save(publish: boolean) {
                 teamMembers: extras.teamMembers,
                 testimonials: extras.testimonials,
                 contact_channels: extras.contact_channels,
+                whatsapp_phone: extras.whatsapp_phone,
                 usps: extras.usps,
               }
             : undefined,
@@ -1067,20 +1141,39 @@ async function save(publish: boolean) {
       autosaveReady.value = ready
     }
     lastSavedAt.value = Date.now()
+    flashSaved()
+    rememberSnapshot()
     statusMsg.value = publish ? 'Veröffentlicht.' : ''
   } catch (err: any) {
     dirty.value = true
-    statusMsg.value = err?.data?.statusMessage || err?.message || 'Speichern fehlgeschlagen'
+    if (publish && (err?.statusCode === 402 || err?.data?.code === 'website_payment_required')) {
+      statusMsg.value = err?.data?.statusMessage || 'Zuerst bezahlen, dann live.'
+      await navigateTo('/admin/billing')
+      return
+    }
+    statusMsg.value = friendlyEditorSaveError(err)
   } finally {
     saving.value = false
     publishing.value = false
+    ignoreDirty = false
     if (!publish && dirty.value) scheduleAutosave()
   }
 }
 
+function onHeroSuggested(payload: { url: string; source: 'stock' | 'ai' }) {
+  form['brand.hero_image_url'] = payload.url
+  dirty.value = true
+  statusMsg.value = payload.source === 'ai' ? 'AI-Bild übernommen — wird gespeichert.' : 'Stock-Foto übernommen — wird gespeichert.'
+  scheduleAutosave()
+}
+
+function isHeroImageSlot(slotId: string) {
+  return slotId === 'brand.hero_image_url' || slotId.includes('hero_image')
+}
+
 function mediaUploadSlotFor(slotId: string): 'logo' | 'hero' | 'hero_video' | 'service' {
   if (slotId === 'brand.hero_video_url') return 'hero_video'
-  if (slotId === 'brand.hero_image_url' || slotId.includes('hero_image')) return 'hero'
+  if (isHeroImageSlot(slotId)) return 'hero'
   if (slotId.startsWith('service.') && slotId.endsWith('.image_url')) return 'service'
   return 'logo'
 }
@@ -1092,11 +1185,19 @@ async function onUpload(event: Event, slotId: string) {
 
   const slot = mediaUploadSlotFor(slotId)
   uploadingSlot.value = slotId
+  uploadErrorBySlot.value = { ...uploadErrorBySlot.value, [slotId]: '' }
   statusMsg.value = ''
   try {
     const body = new FormData()
     body.append('slot', slot)
-    body.append('file', file)
+    const ready =
+      slot === 'hero_video'
+        ? file
+        : await compressPhotoForUpload(file, {
+            maxEdge: slot === 'hero' ? 1920 : slot === 'service' ? 1600 : 1200,
+            maxBytes: 1.8 * 1024 * 1024,
+          })
+    body.append('file', ready)
     const res = await $fetch<any>('/api/website/media/upload', {
       method: 'POST',
       body,
@@ -1131,7 +1232,9 @@ async function onUpload(event: Event, slotId: string) {
           ? 'Foto konvertiert (WebP, 3:2) — wird gespeichert.'
           : 'Bild hochgeladen — wird gespeichert.'
   } catch (err: any) {
-    statusMsg.value = err?.data?.statusMessage || err?.message || 'Upload fehlgeschlagen'
+    const msg = err?.data?.statusMessage || err?.message || 'Upload fehlgeschlagen'
+    uploadErrorBySlot.value = { ...uploadErrorBySlot.value, [slotId]: msg }
+    statusMsg.value = msg
   } finally {
     uploadingSlot.value = ''
     if (input) input.value = ''
@@ -1142,18 +1245,50 @@ function onEnumClick(slot: SlotDef, opt: string) {
   form[slot.id] = opt
 }
 
+function friendlyEditorSaveError(err: any) {
+  const raw = String(err?.data?.statusMessage || err?.statusMessage || err?.message || '').trim()
+  if (/Slot nicht erlaubt|locked/i.test(raw)) {
+    return 'Ein extra FAQ-Feld konnte noch nicht gespeichert werden. Bitte Editor kurz neu laden.'
+  }
+  return raw || 'Speichern fehlgeschlagen'
+}
+
 const autosaveReady = ref(false)
 const dirty = ref(false)
 const lastSavedAt = ref(0)
+const showSavedHint = ref(false)
 let autosaveTimer: ReturnType<typeof setTimeout> | null = null
+let savedHintTimer: ReturnType<typeof setTimeout> | null = null
+let lastSnapshot = ''
+let ignoreDirty = false
 
 const autosaveHint = computed(() => {
   if (publishing.value) return ''
   if (saving.value) return 'Speichert…'
-  if (dirty.value) return 'Änderung merken…'
-  if (lastSavedAt.value) return 'Gespeichert'
+  if (showSavedHint.value) return 'Gespeichert'
   return ''
 })
+
+function editorSnapshot() {
+  try {
+    return JSON.stringify({ form: { ...form }, extras, googleReviews })
+  } catch {
+    return ''
+  }
+}
+
+function rememberSnapshot() {
+  lastSnapshot = editorSnapshot()
+}
+
+function flashSaved() {
+  showSavedHint.value = true
+  if (savedHintTimer) clearTimeout(savedHintTimer)
+  savedHintTimer = setTimeout(() => {
+    showSavedHint.value = false
+    savedHintTimer = null
+  }, 2200)
+}
 
 function clearAutosaveTimer() {
   if (!autosaveTimer) return
@@ -1162,7 +1297,9 @@ function clearAutosaveTimer() {
 }
 
 function markDirty() {
-  if (!autosaveReady.value || loading.value) return
+  if (ignoreDirty || !autosaveReady.value || loading.value) return
+  const snap = editorSnapshot()
+  if (snap && snap === lastSnapshot) return
   dirty.value = true
   scheduleAutosave()
 }
@@ -1177,13 +1314,17 @@ function scheduleAutosave() {
   }, 2000)
 }
 
+async function openPreviewAfterSave() {
+  clearAutosaveTimer()
+  if (dirty.value || saving.value) await save(false)
+  if (previewUrl.value) window.open(previewUrl.value, '_blank', 'noopener')
+}
+
 async function onPreviewClick(event: MouseEvent) {
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
   if (!dirty.value && !saving.value) return
   event.preventDefault()
-  clearAutosaveTimer()
-  await save(false)
-  if (previewUrl.value) window.open(previewUrl.value, '_blank', 'noopener')
+  await openPreviewAfterSave()
 }
 
 function onBeforeUnload(event: BeforeUnloadEvent) {
@@ -1204,6 +1345,7 @@ onMounted(() => {
 })
 onUnmounted(() => {
   clearAutosaveTimer()
+  if (savedHintTimer) clearTimeout(savedHintTimer)
   window.removeEventListener('beforeunload', onBeforeUnload)
 })
 </script>
@@ -1296,6 +1438,19 @@ onUnmounted(() => {
   border-color: #d7dbe3;
   color: #1a2333;
 }
+.btn-upload {
+  position: relative;
+  overflow: hidden;
+}
+.slot-file-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  font-size: 0;
+}
 .btn-sm {
   padding: 0.35rem 0.65rem;
   font-size: 0.8rem;
@@ -1345,6 +1500,44 @@ onUnmounted(() => {
 }
 .tab-step-next {
   margin-left: auto;
+}
+.editor-finish {
+  margin: 1.25rem 0 0;
+  padding: 1rem 1.05rem 1.1rem;
+  border-radius: 1rem;
+  border: 1px solid #d7e3f4;
+  background: #f4f8ff;
+  display: grid;
+  gap: 0.35rem;
+}
+.editor-finish-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #3b6ea8;
+}
+.editor-finish-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: #1a2333;
+}
+.editor-finish-copy {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #4b5563;
+}
+.editor-finish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.editor-finish-actions .btn-primary,
+.editor-finish-actions .btn-ghost {
+  flex: 1 1 9rem;
 }
 .editor-tabs {
   display: flex;
@@ -1554,6 +1747,7 @@ onUnmounted(() => {
 .slot-image {
   display: grid;
   gap: 0.5rem;
+  width: 100%;
 }
 .slot-image-actions {
   display: flex;
@@ -1562,6 +1756,8 @@ onUnmounted(() => {
   align-items: center;
 }
 .slot-image-preview {
+  position: relative;
+  width: 100%;
   min-height: 7rem;
   border-radius: 0.75rem;
   background: #f3f5f8;
@@ -1576,18 +1772,31 @@ onUnmounted(() => {
   aspect-ratio: 16 / 9;
   height: auto;
 }
+.slot-image-preview.is-hero {
+  /* Same framing as the live hero on a phone: tall cover, crop from the center. */
+  aspect-ratio: 3 / 4;
+  max-height: min(52vh, 28rem);
+  margin-inline: auto;
+}
+@media (min-width: 768px) {
+  .slot-image-preview.is-hero {
+    aspect-ratio: 16 / 9;
+    max-height: none;
+  }
+}
 .slot-image-preview.is-service {
   width: 7.5rem;
   min-height: 0;
   aspect-ratio: 3 / 2;
 }
 .slot-image-preview img {
-  min-width: 0;
-  min-height: 0;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
+  display: block;
 }
 .slot-image-preview.is-logo {
   height: 8.5rem;
@@ -1602,6 +1811,8 @@ onUnmounted(() => {
   background-color: #fff;
 }
 .slot-image-preview.is-logo img {
+  position: relative;
+  inset: auto;
   width: auto;
   height: auto;
   max-width: calc(100% - 1.5rem);

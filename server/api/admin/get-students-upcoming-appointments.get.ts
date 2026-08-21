@@ -27,22 +27,33 @@ export default defineEventHandler(async (event) => {
     }
 
     const now = new Date().toISOString()
+    const pageSize = 1000
+    const rows: { user_id: string | null }[] = []
+    let from = 0
 
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('user_id')
-      .eq('tenant_id', userProfile.tenant_id)
-      .is('deleted_at', null)
-      .in('status', ['scheduled', 'confirmed'])
-      .gt('start_time', now)
+    while (from < pageSize * 50) {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('user_id')
+        .eq('tenant_id', userProfile.tenant_id)
+        .is('deleted_at', null)
+        .in('status', ['scheduled', 'confirmed', 'pending_confirmation'])
+        .gt('start_time', now)
+        .range(from, from + pageSize - 1)
 
-    if (error) {
-      logger.error('❌ Error fetching upcoming appointments:', error)
-      throw createError({ statusCode: 500, statusMessage: 'Failed to fetch appointments' })
+      if (error) {
+        logger.error('❌ Error fetching upcoming appointments:', error)
+        throw createError({ statusCode: 500, statusMessage: 'Failed to fetch appointments' })
+      }
+
+      if (!data?.length) break
+      rows.push(...data)
+      if (data.length < pageSize) break
+      from += pageSize
     }
 
     // Return deduplicated list of user_ids that have at least one upcoming appointment
-    const userIds = [...new Set((data || []).map((a: any) => a.user_id))]
+    const userIds = [...new Set(rows.map((a) => a.user_id).filter(Boolean))]
 
     return { success: true, data: userIds }
   } catch (error: any) {
