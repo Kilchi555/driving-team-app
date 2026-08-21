@@ -39,50 +39,50 @@
       <div class="absolute inset-0 bg-gradient-to-t from-primary-900/60 via-primary-800/30 to-transparent"></div>
 
       <div class="section-container relative z-10">
-        <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div class="text-white">
             <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-4 border border-white/20">
               <span class="text-xl">🚗</span>
               <span class="text-sm font-semibold">Fahrschule Zürich</span>
             </div>
-            <div class="mb-6">
+            <div class="mb-6 w-full">
               <ErsteOfferBanner variant="badge" href="/buchen?category=B&code=ERSTE30&utm_content=ag_local" />
             </div>
 
-            <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
               Fahrschule<br/>
               <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-100">Zürich</span>
             </h1>
 
-            <p class="text-lg text-white/90 mb-8 leading-relaxed max-w-lg">
+            <p class="text-base sm:text-lg text-white/90 mb-6 sm:mb-8 leading-relaxed max-w-2xl">
               Professionelle Kategorie-B-Ausbildung im Herzen von Zürich-Altstetten. Wir kennen das Prüfungsgebiet Albisgütli wie unsere Westentasche – und bringen dich beim ersten Versuch durch die Prüfung.
             </p>
 
-            <div class="flex gap-8 mb-10">
+            <div class="flex gap-4 sm:gap-8 mb-8 sm:mb-10">
               <div>
-                <p class="text-4xl font-black text-yellow-300">85%</p>
-                <p class="text-sm text-white/70">Erfolgsquote</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">85%</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Erfolgsquote</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">{{ LOCATION_ZUERICH.rating.value }}★</p>
-                <p class="text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} Bewertungen</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">{{ LOCATION_ZUERICH.rating.value }}★</p>
+                <p class="text-[11px] sm:text-sm text-white/70 whitespace-nowrap">{{ LOCATION_ZUERICH.rating.count }} Bewertungen</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">CHF 65</p>
-                <p class="text-sm text-white/70">erste Lektion 45 Min., danach 95</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">CHF 65</p>
+                <p class="text-[11px] sm:text-sm text-white/70 leading-tight">erste Lektion 45 Min., danach 95</p>
               </div>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4">
               <a
                 href="/buchen?category=B&code=ERSTE30&utm_content=ag_local"
-                class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 hover:bg-yellow-50 font-bold py-4 px-8 rounded-xl transition transform hover:scale-105 hover:shadow-2xl shadow-lg text-lg"
+                class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 hover:bg-yellow-50 font-bold py-3 px-5 sm:py-4 sm:px-8 rounded-xl transition transform hover:scale-105 hover:shadow-2xl shadow-lg text-base sm:text-lg"
               >
                 ✨ Jetzt Termin buchen
               </a>
               <a
                 href="#pruefungsgebiet"
-                class="inline-flex items-center justify-center gap-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 font-bold py-4 px-8 rounded-xl transition border border-white/30 text-lg"
+                class="inline-flex items-center justify-center gap-2 bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 font-bold py-3 px-5 sm:py-4 sm:px-8 rounded-xl transition border border-white/30 text-base sm:text-lg"
               >
                 🗺️ Prüfungsgebiet
               </a>
@@ -90,26 +90,26 @@
           </div>
 
           <!-- Right: Trust-Cards -->
-          <div class="hidden md:grid grid-cols-2 gap-4">
+          <div class="hidden lg:grid grid-cols-2 gap-4">
             <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 transition">
               <p class="text-4xl mb-3">🏆</p>
               <p class="font-bold mb-1">Hohe Erfolgsquote</p>
-              <p class="text-sm text-white/70">85% bestehen beim ersten Versuch</p>
+              <p class="text-[11px] sm:text-sm text-white/70">85% bestehen beim ersten Versuch</p>
             </div>
             <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 transition">
               <p class="text-4xl mb-3">📍</p>
               <p class="font-bold mb-1">Prüfungsgebiet</p>
-              <p class="text-sm text-white/70">Wir üben genau dort, wo die Prüfung stattfindet</p>
+              <p class="text-[11px] sm:text-sm text-white/70">Wir üben genau dort, wo die Prüfung stattfindet</p>
             </div>
             <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 transition">
               <p class="text-4xl mb-3">🌍</p>
               <p class="font-bold mb-1">Mehrsprachig</p>
-              <p class="text-sm text-white/70">Unterricht in Deutsch, Englisch & Albanisch</p>
+              <p class="text-[11px] sm:text-sm text-white/70">Unterricht in Deutsch, Englisch & Albanisch</p>
             </div>
             <div class="bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 backdrop-blur-md border border-yellow-300/40 rounded-2xl p-6 text-white hover:border-yellow-300/60 transition">
               <p class="text-4xl mb-3">📱</p>
               <p class="font-bold mb-1">Online buchbar</p>
-              <p class="text-sm text-white/70">Termin & Zahlung ganz einfach per App</p>
+              <p class="text-[11px] sm:text-sm text-white/70">Termin & Zahlung ganz einfach per App</p>
             </div>
           </div>
         </div>

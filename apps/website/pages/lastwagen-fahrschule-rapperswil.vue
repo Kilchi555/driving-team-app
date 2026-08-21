@@ -58,7 +58,7 @@
 
     <!-- Intro + Fahrlehrer -->
     <section class="section-container py-12">
-      <div class="grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
+      <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center max-w-5xl mx-auto">
         <div>
           <h2 class="text-2xl md:text-3xl font-bold mb-4">LKW Führerschein in Rapperswil – wir kommen zu dir</h2>
           <p class="text-lg text-gray-700 mb-4">

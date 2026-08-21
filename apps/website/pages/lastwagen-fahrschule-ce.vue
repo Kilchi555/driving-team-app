@@ -29,31 +29,31 @@
       <div class="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-gray-800/30 to-transparent"></div>
 
       <div class="section-container relative z-10">
-        <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div class="text-white">
             <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-6 border border-white/20">
               <span class="text-xl">🚛</span>
               <span class="text-sm font-semibold">Kategorie CE – Zentralachsanhänger & Anhängerzug</span>
             </div>
-            <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
               LKW Anhänger<br/>
               <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-100">Führerschein CE</span>
             </h1>
-            <p class="text-lg text-white/90 mb-8 leading-relaxed max-w-lg">
+            <p class="text-base sm:text-lg text-white/90 mb-6 sm:mb-8 leading-relaxed max-w-2xl">
               Kategorie CE: Keine Theorieprüfung, kein Arztbesuch, kein Sehtest. Du brauchst nur Kat. C und Fahrstunden – das ist alles. Die effizienteste Erweiterung im LKW-Bereich.
             </p>
-            <div class="flex gap-8 mb-10">
+            <div class="flex gap-4 sm:gap-8 mb-8 sm:mb-10">
               <div>
-                <p class="text-4xl font-black text-yellow-300">18</p>
-                <p class="text-white/70 text-sm">Mindestalter</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">18</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Mindestalter</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">CHF 200</p>
-                <p class="text-white/70 text-sm">pro Lektion</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">CHF 200</p>
+                <p class="text-[11px] sm:text-sm text-white/70">pro Lektion</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">0</p>
-                <p class="text-white/70 text-sm">Theorieprüfungen</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">0</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Theorieprüfungen</p>
               </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-4">
@@ -74,42 +74,42 @@
                 <span class="text-yellow-300 mt-0.5">📋</span>
                 <div>
                   <p class="font-semibold text-sm">Berechtigung</p>
-                  <p class="text-white/70 text-sm">Fahrzeugkombinationen aus Kat. C + Anhänger über 750 kg (Zentralachsanhänger, Anhängerzug, Kipper)</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">Fahrzeugkombinationen aus Kat. C + Anhänger über 750 kg (Zentralachsanhänger, Anhängerzug, Kipper)</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">✅</span>
                 <div>
                   <p class="font-semibold text-sm">Voraussetzung</p>
-                  <p class="text-white/70 text-sm">Kat. C (mind. Lernfahrausweis) · Mindestalter 18 Jahre</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">Kat. C (mind. Lernfahrausweis) · Mindestalter 18 Jahre</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">🎓</span>
                 <div>
                   <p class="font-semibold text-sm">Theorie</p>
-                  <p class="text-white/70 text-sm">Keine Theorieprüfung erforderlich</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">Keine Theorieprüfung erforderlich</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">🏥</span>
                 <div>
                   <p class="font-semibold text-sm">Ärztliche Untersuchung</p>
-                  <p class="text-white/70 text-sm">Nicht erforderlich (bereits mit Kat. C erfüllt)</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">Nicht erforderlich (bereits mit Kat. C erfüllt)</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">📍</span>
                 <div>
                   <p class="font-semibold text-sm">Treffpunkt & Prüfung</p>
-                  <p class="text-white/70 text-sm">Treffpunkt Parkplatz Tuggen/SZ Industrie Betti · Prüfung Pfäffikon/SZ, Kaltbrunn/SG, Hinwil/ZH & Zürich-Albisgütli</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">Treffpunkt Parkplatz Tuggen/SZ Industrie Betti · Prüfung Pfäffikon/SZ, Kaltbrunn/SG, Hinwil/ZH & Zürich-Albisgütli</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">🔗</span>
                 <div>
                   <p class="font-semibold text-sm">Zusatzberechtigungen nach CE</p>
-                  <p class="text-white/70 text-sm">BE, C1E, DE*, D1E* (automatisch mitinbegriffen)</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">BE, C1E, DE*, D1E* (automatisch mitinbegriffen)</p>
                 </div>
               </div>
             </div>

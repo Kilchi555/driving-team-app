@@ -125,7 +125,7 @@
       </div>
 
       <!-- Anfrageformular (wenn Online-Buchung deaktiviert) — mit Tenant-Branding -->
-      <LazyGeneralInquiryForm
+      <GeneralInquiryForm
         v-if="!isOnlineBookingEnabled && currentTenant?.id"
         :tenant_id="currentTenant.id"
         :primary-color="getBrandPrimary()"
@@ -872,7 +872,7 @@
           
           <!-- No Available Slots - Show Proposal Form -->
           <div v-else>
-            <LazyBookingProposalForm
+            <BookingProposalForm
               :tenant_id="currentTenant?.id"
               :category="selectedCategory"
               :duration_minutes="selectedDuration || 45"
@@ -1126,7 +1126,7 @@
             </div>
 
             <!-- Discount code field -->
-            <LazyDiscountCodeInput
+            <DiscountCodeInput
               v-if="previewPriceRappen > 0 && currentTenant?.id"
               :tenant-id="currentTenant.id"
               :amount-rappen="previewPriceRappen"
@@ -1482,7 +1482,7 @@
   </div>
 
   <!-- Login/Register Modal -->
-  <LazyLoginRegisterModal 
+  <LoginRegisterModal 
     v-if="showLoginModal"
     :initial-tab="loginModalTab"
     :initial-login-email="loginModalPrefillEmail"
@@ -1495,7 +1495,7 @@
   />
 
   <!-- Document Upload Modal -->
-  <LazyDocumentUploadModal
+  <DocumentUploadModal
     v-if="showDocumentUploadModal"
     :required-documents="requiredDocuments"
     @close="showDocumentUploadModal = false"
@@ -1707,7 +1707,13 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch, defineAsyncComponent } from 'vue'
+import GeneralInquiryForm from '~/components/GeneralInquiryForm.vue'
+import BookingProposalForm from '~/components/BookingProposalForm.vue'
+import DiscountCodeInput from '~/components/shared/DiscountCodeInput.vue'
+
+const LoginRegisterModal = defineAsyncComponent(() => import('~/components/booking/LoginRegisterModal.vue'))
+const DocumentUploadModal = defineAsyncComponent(() => import('~/components/booking/DocumentUploadModal.vue'))
 import { logger } from '~/utils/logger'
 import { useSecureAvailability } from '~/composables/useSecureAvailability'
 import { useCustomerConflictCheck } from '~/composables/useCustomerConflictCheck'
@@ -4810,10 +4816,9 @@ const checkGuestPhoneAvailability = () => {
 // the reservation stays valid, and handleAuthSuccess() picks it back up and
 // completes the booking automatically once login succeeds.
 const switchToLoginKeepingReservation = () => {
-  showGuestForm.value = false
   loginModalPrefillEmail.value = guestEmail.value.trim()
-  showLoginModal.value = true
   loginModalTab.value = 'login'
+  showLoginModal.value = true
 }
 
 const submitGuestBooking = async () => {
