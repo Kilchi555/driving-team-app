@@ -18,6 +18,7 @@
             <div class="mb-5">
               <span class="text-4xl font-black text-primary-600">CHF 95</span>
               <span class="text-sm text-gray-600 ml-1">/ Lektion</span>
+              <p class="text-sm font-semibold text-primary-700 mt-1">Erste Lektion CHF 65.– / 45 Min.</p>
             </div>
             <ul class="space-y-2 text-sm text-gray-700 mb-5">
               <li class="flex items-start gap-2"><span class="text-primary-600 font-bold">✓</span> Effiziente Fahrausbildung</li>

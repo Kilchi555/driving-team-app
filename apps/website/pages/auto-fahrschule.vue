@@ -2,9 +2,9 @@
   <div>
     <Head>
       <Title>Auto Fahrschule – Standort wählen | Zürich & Lachen | Driving Team</Title>
-      <Meta name="description" content="Auto Fahrschule Kat. B: Standort Zürich oder Lachen wählen. 85% Erfolgsquote. Erste Lektion CHF 65.–, danach CHF 95.–. Jetzt Fahrstunde buchen." />
+      <Meta name="description" content="Auto Fahrschule Kat. B: Standort Zürich oder Lachen wählen. 85% Erfolgsquote. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. Jetzt buchen." />
       <Meta property="og:title" content="Auto Fahrschule – Standort wählen | Zürich & Lachen" />
-      <Meta property="og:description" content="Wähle deine Auto-Fahrschule: Zürich-Altstetten oder Lachen SZ. Erste Lektion CHF 65.–, danach CHF 95.–." />
+      <Meta property="og:description" content="Wähle deine Auto-Fahrschule: Zürich-Altstetten oder Lachen SZ. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–." />
       <Meta property="og:url" content="https://drivingteam.ch/auto-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule/" />
       <Link rel="alternate" hreflang="de-CH" href="https://drivingteam.ch/auto-fahrschule/" />
@@ -24,10 +24,11 @@
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
           <h1 class="heading-lg text-white mb-4">Auto Fahrschule – Standort wählen</h1>
-          <!-- Trust Badges -->
+          <div class="mb-4">
+            <ErsteOfferBanner variant="badge" />
+          </div>
           <div class="flex flex-wrap gap-2 mb-4">
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">✅ 85 % Erfolgsquote</span>
-            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">💰 Erste Lektion CHF 65.– · danach 95.–</span>
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">📅 Online buchbar</span>
           </div>
           <p class="text-base xs:text-xl text-white mb-8">Kategorie B in Zürich oder Lachen. Flexible Zeiten, erfahrene Fahrlehrer – vom Lernfahrausweis bis zur Prüfung.</p>
@@ -45,7 +46,7 @@
               <p class="text-xs text-primary-100">March · Höfe</p>
             </a>
           </div>
-          <a href="https://app.simy.ch/booking/availability/driving-team?category=B&code=ERSTE30" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="/buchen?category=B&code=ERSTE30" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Fahrstunde buchen (Kat. B)
           </a>
         </div>
@@ -57,6 +58,7 @@
 
     <!-- Reviews -->
     <ReviewsSection category="default" />
+    <ErsteOfferBanner />
 
     <!-- Voraussetzungen -->
     <section class="bg-gray-50 py-16">
@@ -240,14 +242,10 @@
             </div>
           </details>
         </div>
-
-        <div class="text-center mt-12">
-          <a href="https://app.simy.ch/booking/availability/driving-team?category=B&code=ERSTE30" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
-            ✨ Jetzt Termin buchen
-          </a>
-        </div>
       </div>
     </section>
+
+    <ErsteOfferBanner variant="cta" />
 
     <!-- Mental Coach Teaser -->
     <section class="section-container py-10">

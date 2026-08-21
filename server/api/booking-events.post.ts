@@ -4,13 +4,15 @@ import { createClient } from '@supabase/supabase-js'
 interface BookingEventPayload {
   session_id: string
   tenant_id?: string | null
-  event_type: 'viewed' | 'started' | 'completed' | 'abandoned' | 'inquiry_submitted'
+  event_type: 'viewed' | 'started' | 'step' | 'completed' | 'abandoned' | 'inquiry_submitted'
   page: string
   referrer?: string
   course_id?: string
   amount?: number
   proposal_id?: string
   appointment_id?: string
+  step?: number | null
+  step_label?: string | null
   [key: string]: any
 }
 
@@ -43,6 +45,8 @@ export default defineEventHandler(async (event) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Insert booking event
+    const step = body.step == null ? null : Number(body.step)
+
     const { error } = await supabase.from('booking_events').insert({
       session_id: body.session_id,
       tenant_id: body.tenant_id || null,
@@ -53,6 +57,10 @@ export default defineEventHandler(async (event) => {
       amount: body.amount || null,
       appointment_id: body.appointment_id || null,
       proposal_id: body.proposal_id || null,
+      step: Number.isFinite(step) ? step : null,
+      step_label: typeof body.step_label === 'string' && body.step_label.trim()
+        ? body.step_label.trim().slice(0, 80)
+        : null,
       date: new Date().toISOString().split('T')[0],
     })
 
