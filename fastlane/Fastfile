@@ -138,7 +138,12 @@ platform :ios do
     profile_dirs.each { |dir| FileUtils.mkdir_p(dir) }
     if profile_path.to_s != '' && File.exist?(profile_path)
       install_provisioning_profile(path: profile_path)
-      profile_dirs.each { |dir| FileUtils.cp(profile_path, dir) }
+      src = File.expand_path(profile_path)
+      profile_dirs.each do |dir|
+        dest = File.expand_path(File.join(dir, File.basename(src)))
+        next if src == dest
+        FileUtils.cp(src, dest)
+      end
     end
 
     update_code_signing_settings(
