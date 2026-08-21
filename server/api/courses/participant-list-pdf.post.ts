@@ -114,8 +114,7 @@ export default defineEventHandler(async (event) => {
     await browser.close()
     browser = null
 
-    const safeCourse = String(roster.course.name || 'Kurs').replace(/[^\w.\-äöüÄÖÜß]+/g, '_')
-    const filename = `Teilnehmerliste_${safeCourse}.pdf`
+    const filename = `Teilnehmerliste_${roster.course.name || 'Kurs'}.pdf`
 
     const uploaded = await uploadPdfAndGetPublicUrl(supabase, {
       folder: 'participant-lists',
