@@ -45,7 +45,7 @@
           <p class="text-sm md:text-base text-gray-500 font-medium mb-4">
             Auto Fahrschule Zürich-Altstetten &amp; Lachen
           </p>
-          <div class="mb-4">
+          <div class="mb-4 w-full px-3">
             <ErsteOfferBanner variant="badge" href="/buchen?category=B%20Automatik&code=ERSTE30" />
           </div>
           <p class="text-sm font-semibold text-primary-700 mb-4">

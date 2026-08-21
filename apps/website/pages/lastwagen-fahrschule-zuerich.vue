@@ -32,31 +32,31 @@
       <div class="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-gray-800/30 to-transparent"></div>
 
       <div class="section-container relative z-10">
-        <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div class="text-white">
             <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-6 border border-white/20">
               <span class="text-xl">🚚</span>
               <span class="text-sm font-semibold">Lastwagen Fahrschule Zürich</span>
             </div>
-            <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
               Lastwagen Fahrschule<br/>
               <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-100">Zürich</span>
             </h1>
-            <p class="text-lg text-white/90 mb-8 leading-relaxed max-w-lg">
+            <p class="text-base sm:text-lg text-white/90 mb-6 sm:mb-8 leading-relaxed max-w-2xl">
               C1, C & CE Ausbildung ab Wädenswil. Prüfung am Strassenverkehrsamt Zürich-Albisgütli – wir kennen jede Route und fahren mit modernen LKW-Fahrzeuge inklusive.
             </p>
-            <div class="flex gap-8 mb-10">
+            <div class="flex gap-4 sm:gap-8 mb-8 sm:mb-10">
               <div>
-                <p class="text-4xl font-black text-yellow-300">85%</p>
-                <p class="text-white/70 text-sm">Erfolgsquote</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">85%</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Erfolgsquote</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">CHF 150</p>
-                <p class="text-white/70 text-sm">ab / Lektion</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">CHF 150</p>
+                <p class="text-[11px] sm:text-sm text-white/70">ab / Lektion</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">2011</p>
-                <p class="text-white/70 text-sm">Gegründet</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">2011</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Gegründet</p>
               </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-4">
@@ -77,35 +77,35 @@
                 <span class="text-yellow-300 mt-0.5">📍</span>
                 <div>
                   <p class="font-semibold text-sm">Treffpunkt</p>
-                  <p class="text-white/70 text-sm">Parkplatz Neubüel, Wädenswil · Prüfung StVA Zürich-Albisgütli</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">Parkplatz Neubüel, Wädenswil · Prüfung StVA Zürich-Albisgütli</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">🚚</span>
                 <div>
                   <p class="font-semibold text-sm">Kategorien</p>
-                  <p class="text-white/70 text-sm">C1 (bis 7.5t) · C (über 7.5t) · CE (Anhängerzug)</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">C1 (bis 7.5t) · C (über 7.5t) · CE (Anhängerzug)</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">💰</span>
                 <div>
                   <p class="font-semibold text-sm">Preis</p>
-                  <p class="text-white/70 text-sm">ab CHF 150.-/Lektion · Prüfungsfahrt inklusive WarmUp CHF 649.-</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">ab CHF 150.-/Lektion · Prüfungsfahrt inklusive WarmUp CHF 649.-</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">📋</span>
                 <div>
                   <p class="font-semibold text-sm">CZV Grundkurs</p>
-                  <p class="text-white/70 text-sm">Obligatorisch für Berufstätige ab 3.5t · direkt über uns buchbar</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">Obligatorisch für Berufstätige ab 3.5t · direkt über uns buchbar</p>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <span class="text-yellow-300 mt-0.5">🎓</span>
                 <div>
                   <p class="font-semibold text-sm">Mindestalter</p>
-                  <p class="text-white/70 text-sm">C1/C/CE: 18 Jahre</p>
+                  <p class="text-[11px] sm:text-sm text-white/70">C1/C/CE: 18 Jahre</p>
                 </div>
               </div>
             </div>
