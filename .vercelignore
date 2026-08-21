@@ -6,3 +6,4 @@ tmp-*.hdr
 tmp-*.err
 apps/simy/tmp-mockups/
 *.pdf
+!apps/website/public/**/*.pdf
