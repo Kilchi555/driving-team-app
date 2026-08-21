@@ -11,7 +11,7 @@
           </button>
         </div>
         <h1 class="text-2xl sm:text-3xl font-bold mb-2">Allgemeine Geschäftsbedingungen</h1>
-        <p class="text-blue-200 text-sm">Simy – SaaS-Plattform für Terminbetriebe | Stand: 1. April 2026 · Version 1.1</p>
+        <p class="text-blue-200 text-sm">Simy – SaaS-Plattform für Terminbetriebe | Stand: 18. August 2026 · Version 1.3</p>
       </div>
     </div>
 
@@ -46,7 +46,7 @@
         <!-- §1 -->
         <section id="s1">
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">1. Geltungsbereich und Vertragsparteien</h2>
-          <p class="mb-3">Diese Allgemeinen Geschäftsbedingungen («AGB») gelten für alle Verträge zwischen <strong>Simy IT Systems Kilchenmann</strong>, Weiherweg 2, 8610 Uster, Schweiz («Simy», «wir», «uns») und gewerblichen Kunden («Kunde», «Tenant»), die die Simy-SaaS-Plattform nutzen.</p>
+          <p class="mb-3">Diese Allgemeinen Geschäftsbedingungen («AGB») gelten für alle Verträge zwischen <strong>Simy IT Systems Kilchenmann</strong> (Einzelfirma), Weiherweg 2, 8610 Uster, Schweiz («Simy», «wir», «uns») und gewerblichen Kunden («Kunde», «Tenant»), die die Simy-SaaS-Plattform nutzen.</p>
           <p class="mb-3">Diese AGB gelten ausschliesslich für Unternehmen und andere gewerbliche Nutzer (B2B). Verbraucher im Sinne des Konsumentenrechts sind von der Nutzung ausgeschlossen.</p>
           <p class="mb-3">Die Nutzung der Plattform setzt voraus, dass der Kunde ein rechtmässig betriebenes Gewerbe führt. Simy behält sich vor, die Registrierung ohne Angabe von Gründen abzulehnen oder zu widerrufen, insbesondere wenn begründeter Verdacht auf fehlende Gewerbsberechtigung, Missbrauch oder Verstoss gegen diese AGB besteht.</p>
           <p>Abweichende Bedingungen des Kunden werden nicht anerkannt, es sei denn, wir stimmen ihrer Geltung ausdrücklich schriftlich zu.</p>
@@ -118,6 +118,7 @@
           <p class="mb-3">Soweit der Kunde über die Plattform Personendaten (insbesondere Kundendaten) verarbeitet, handelt Simy als <strong>Auftragsverarbeiter</strong> im Sinne des Schweizer Datenschutzgesetzes (nDSG) und der EU-Datenschutz-Grundverordnung (DSGVO). Der Kunde ist in diesem Verhältnis der <strong>Verantwortliche</strong>.</p>
           <p class="mb-3">Mit der Registrierung und Akzeptanz dieser AGB stimmt der Kunde dem <strong>Auftragsverarbeitungsvertrag (AVV)</strong> zu, der integraler Bestandteil dieser AGB ist und unter <NuxtLink to="/avv" class="text-blue-600 hover:underline">simy.ch/avv</NuxtLink> abrufbar ist.</p>
           <p>Für die Verarbeitung von Daten im Rahmen der eigenen Plattform-Administration (Admin-Accounts, Rechnungsdaten) ist Simy selbst Verantwortlicher. Näheres regelt die <NuxtLink to="/datenschutz" class="text-blue-600 hover:underline">Datenschutzerklärung</NuxtLink>.</p>
+          <p class="mt-3">Simy setzt für einzelne Funktionen (z. B. Beleg-Erkennung, "Simy AI"-Assistent) Künstliche Intelligenz ein. Diese Funktionen sind in der App klar gekennzeichnet, treffen keine automatisierten Entscheidungen mit rechtlicher Wirkung und ersetzen keine fachliche oder rechtliche Beratung. Details zu den eingesetzten KI-Anbietern und Garantien regelt Ziffer 9 des <NuxtLink to="/avv" class="text-blue-600 hover:underline">AVV</NuxtLink>.</p>
         </section>
 
         <!-- §8 (war §7, erweitert) -->
@@ -180,7 +181,8 @@
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">10. Wechselrecht und Datenexport</h2>
           <p class="mb-3">Im Einklang mit dem EU Data Act (gültig seit 12. September 2025) garantiert Simy dem Kunden folgende Rechte:</p>
           <ul class="list-disc pl-5 space-y-1.5 mb-3">
-            <li><strong>Jederzeit-Export:</strong> Der Kunde kann seine Daten jederzeit über die Plattform in maschinenlesbaren Standardformaten (CSV, JSON) exportieren.</li>
+            <li><strong>Jederzeit-Export:</strong> Der Kunde kann seine Daten jederzeit über die Plattform in maschinenlesbaren Standardformaten (CSV, JSON) sowie als Buchhaltungs-ZIP (Jahres-PDFs, Journal, Belege) exportieren.</li>
+            <li><strong>Aufbewahrung Buchhaltung:</strong> Der Kunde ist selbst verantwortlich, Geschäftsbücher und Belege <strong>10 Jahre</strong> aufzubewahren (OR Art. 958f). Simy stellt den Export bereit, übernimmt aber keine Archivpflicht nach Vertragsende.</li>
             <li><strong>Migrationshilfe:</strong> Nach Kündigung stellt Simy für mindestens <strong>30 Tage</strong> den vollständigen Datenzugang zur Verfügung, um eine Migration zu ermöglichen.</li>
             <li><strong>Keine Ausstiegsgebühren:</strong> Es werden keine zusätzlichen Gebühren für den Datenexport oder die Migration erhoben.</li>
             <li><strong>Maximale Kündigungsfrist:</strong> Die Kündigungsfrist beträgt höchstens 30 Tage zum Monatsende.</li>
@@ -193,7 +195,8 @@
           <h2 class="text-lg font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100">11. Haftungsbeschränkung</h2>
           <p class="mb-3">Simy haftet für direkte Schäden, die auf eine schuldhafte Pflichtverletzung zurückzuführen sind, bis zu einem Betrag von maximal einer <strong>Jahresabonnementgebühr</strong> des Kunden.</p>
           <p class="mb-3">Für indirekte Schäden, entgangenen Gewinn, Datenverlust (sofern der Kunde keine eigenen Backups erstellt hat), Folgeschäden sowie Schäden infolge von Betriebsunterbrüchen durch Drittanbieter haftet Simy nicht, soweit dies gesetzlich zulässig ist.</p>
-          <p>Diese Haftungsbeschränkungen gelten nicht für Schäden aus Vorsatz oder grober Fahrlässigkeit sowie für Personenschäden.</p>
+          <p class="mb-3">Diese Haftungsbeschränkungen gelten nicht für Schäden aus Vorsatz oder grober Fahrlässigkeit sowie für Personenschäden.</p>
+          <p>Simy Buchhaltung ist ein digitales Hilfsmittel und ersetzt keine Steuer- oder Rechtsberatung. Die Verantwortung für die Korrektheit der Buchführung und aller Steuererklärungen liegt ausschliesslich beim Kunden.</p>
         </section>
 
         <!-- §12 (war §10) -->
@@ -238,7 +241,7 @@
         <!-- Footer -->
         <div class="pt-6 border-t border-gray-100 text-xs text-gray-400">
           <p>Simy IT Systems Kilchenmann · Weiherweg 2 · 8610 Uster · Schweiz</p>
-          <p class="mt-1">E-Mail: info@simy.ch · Stand: 1. April 2026 · Version 1.2</p>
+          <p class="mt-1">E-Mail: info@simy.ch · Stand: 18. August 2026 · Version 1.3</p>
           <div class="flex gap-4 mt-3">
             <NuxtLink to="/datenschutz" class="text-blue-500 hover:underline">Datenschutz</NuxtLink>
             <NuxtLink to="/avv" class="text-blue-500 hover:underline">Auftragsverarbeitungsvertrag</NuxtLink>

@@ -15,9 +15,9 @@
         </div>
 
         <!-- Filter Toggles -->
-        <div class="grid grid-cols-3 gap-4 text-sm">
+        <div class="flex items-center gap-2.5 text-sm whitespace-nowrap">
           <!-- Inactive Toggle -->
-          <div class="flex items-center gap-3 rounded-lg">
+          <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-gray-700">
               {{ showInactive ? 'Inaktive' : 'Aktive' }}
             </span>
@@ -33,7 +33,7 @@
           </div>
 
           <!-- All Students Toggle (nur für Staff ohne can_view_all_students) -->
-          <div v-if="currentUser?.role === 'staff' && !currentUser?.can_view_all_students" class="flex items-center gap-3 rounded-lg">
+          <div v-if="currentUser?.role === 'staff' && !currentUser?.can_view_all_students" class="flex items-center gap-2">
             <span class="text-sm font-medium text-gray-700">
               {{ showAllStudents ? 'Alle' : 'Meine' }}
             </span>
@@ -43,22 +43,21 @@
             </label>
           </div>
 
-          <!-- No Upcoming Appointments Toggle -->
-          <div class="flex items-center gap-3 rounded-lg">
-            <span class="text-sm font-medium text-gray-700">
-              {{ showOnlyNoUpcoming ? 'Keine Termine' : 'Termin geplant' }}
-            </span>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input v-model="showOnlyNoUpcoming" type="checkbox" class="sr-only peer" @change="handleNoUpcomingToggle">
-              <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-            </label>
-          </div>
+          <select
+            v-model="idleFilter"
+            class="ml-auto w-auto rounded-lg border border-gray-300 bg-white px-1.5 py-1 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          >
+            <option v-for="option in idleFilterOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
         </div>
 
         <!-- Statistics -->
         <div class="flex gap-3 text-xs sm:text-sm text-gray-600">
           <span v-if="currentUser?.role === 'staff' && !showAllStudents">Meine: {{ customers.length }}</span>
           <span v-else>Alle: {{ customers.length }}</span>
+          <span>Angezeigt: {{ filteredCustomers.length }}</span>
           <span>Aktiv: {{ customers.filter(s => s.is_active).length }}</span>
           <span>Inaktiv: {{ customers.filter(s => !s.is_active).length }}</span>
         </div>
@@ -86,7 +85,7 @@
         <div class="text-center px-4">
           <div class="text-6xl mb-4">👥</div>
           <h3 class="text-lg font-semibold text-gray-900 mb-2">
-            {{ searchQuery ? 'Keine Kunden gefunden' : 'Noch keine Kunden' }}
+            {{ searchQuery || idleFilter !== 'all' ? 'Keine Kunden gefunden' : 'Noch keine Kunden' }}
           </h3>
         </div>
       </div>
@@ -196,7 +195,9 @@
                   
                   <!-- Right: Date -->
                   <span class="text-xs text-gray-400">
-                    Letzter Termin: {{ customer.lastLesson ? formatRelativeDate(customer.lastLesson) : '-' }}
+                    {{ customer.lastLesson
+                      ? `${new Date(customer.lastLesson).getTime() > Date.now() ? 'Nächster' : 'Letzter'} Termin ${formatRelativeDate(customer.lastLesson)}`
+                      : 'Noch kein Termin' }}
                   </span>
                 </div>
               </div>
@@ -294,6 +295,7 @@ const { t } = useTerminology()
 import { ref, onMounted, computed, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { filterByStudentSearch } from '~/utils/student-search'
+import { useStudentIdleFilter } from '~/composables/useStudentIdleFilter'
 import { useUIStore } from '~/stores/ui'
 import EnhancedStudentModal from '~/components/EnhancedStudentModal.vue'
 import AddStudentModal from '~/components/AddStudentModal.vue'
@@ -321,7 +323,13 @@ const error = ref<string | null>(null)
 const searchQuery = ref('')
 const showInactive = ref(false)
 const showAllStudents = ref(false)
-const showOnlyNoUpcoming = ref(false)
+const {
+  idleFilter,
+  idleFilterOptions,
+  loadAppointmentActivity,
+  applyIdleFilter,
+  lastLessonFor
+} = useStudentIdleFilter()
 const showPendingModal = ref(false)
 const pendingCustomer = ref<any>(null)
 const isResendingSms = ref(false)
@@ -338,35 +346,12 @@ watch(
 const filteredCustomers = computed(() => {
   let filtered = customers.value
 
-  // Filter by search query (trim, multi-token full name, accents, phone digits)
   if (searchQuery.value) {
     filtered = filterByStudentSearch(filtered, searchQuery.value)
   }
 
-  // Filter by upcoming appointments
-  if (showOnlyNoUpcoming.value) {
-    const now = new Date()
-    
-    filtered = filtered.filter(customer => {
-      const hasUpcomingAppointments = customer.appointments?.some((apt: any) => {
-        const appointmentDate = new Date(apt.start_time)
-        return appointmentDate > now && ['scheduled', 'confirmed'].includes(apt.status)
-      })
-      return !hasUpcomingAppointments
-    })
-    
-    // Sort by last appointment
-    filtered = filtered.sort((a, b) => {
-      const aLastAppointment = a.appointments?.length > 0 
-        ? new Date(Math.max(...a.appointments.map((apt: any) => new Date(apt.start_time).getTime())))
-        : new Date(0)
-      
-      const bLastAppointment = b.appointments?.length > 0 
-        ? new Date(Math.max(...b.appointments.map((apt: any) => new Date(apt.start_time).getTime())))
-        : new Date(0)
-      
-      return aLastAppointment.getTime() - bLastAppointment.getTime()
-    })
+  if (idleFilter.value !== 'all') {
+    return applyIdleFilter(filtered)
   }
 
   return filtered
@@ -396,11 +381,14 @@ const loadCustomers = async (_loadAppointments = true) => {
       throw new Error('Failed to load customers from API')
     }
 
+    const studentIds = (response.data as any[]).map((customer: any) => customer.id)
+    await loadAppointmentActivity(studentIds)
+
     const enrichedCustomers = (response.data as any[]).map((customer: any) => ({
       ...customer,
       assignedInstructor: '-',
       completedLessonsCount: 0,
-      lastLesson: null,
+      lastLesson: lastLessonFor(customer.id),
       fullAddress: [customer.street, customer.street_nr, customer.zip, customer.city]
         .filter(Boolean)
         .join(' '),
@@ -479,12 +467,6 @@ const handleCustomerAdded = async (newCustomer: any) => {
   logger.debug('✅ New customer added:', newCustomer)
   showAddCustomerModal.value = false
   await loadCustomers()
-}
-
-const handleNoUpcomingToggle = async () => {
-  if (showOnlyNoUpcoming.value) {
-    await loadCustomers(true)
-  }
 }
 
 const showPendingActions = (customer: any) => {
@@ -585,17 +567,18 @@ const formatPhone = (phone: string) => {
 
 const formatRelativeDate = (dateString: string) => {
   if (!dateString) return ''
-  
+
   const date = new Date(dateString)
   const now = new Date()
-  const diffTime = Math.abs(now.getTime() - date.getTime())
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  
-  if (diffDays === 1) return 'Gestern'
-  if (diffDays < 7) return `vor ${diffDays}d`
-  if (diffDays < 30) return `vor ${Math.floor(diffDays / 7)}w`
-  if (diffDays < 365) return `vor ${Math.floor(diffDays / 30)}M`
-  return `vor ${Math.floor(diffDays / 365)}J`
+  const diffMs = now.getTime() - date.getTime()
+  const isPast = diffMs >= 0
+  const diffDays = Math.ceil(Math.abs(diffMs) / (1000 * 60 * 60 * 24))
+
+  if (diffDays <= 1) return isPast ? 'gestern' : 'morgen'
+  if (diffDays < 7) return `${isPast ? 'vor' : 'in'} ${diffDays}d`
+  if (diffDays < 30) return `${isPast ? 'vor' : 'in'} ${Math.floor(diffDays / 7)}w`
+  if (diffDays < 365) return `${isPast ? 'vor' : 'in'} ${Math.floor(diffDays / 30)}M`
+  return `${isPast ? 'vor' : 'in'} ${Math.floor(diffDays / 365)}J`
 }
 
 const formatDate = (dateString: string | null | undefined) => {

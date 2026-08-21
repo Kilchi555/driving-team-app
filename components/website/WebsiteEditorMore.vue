@@ -81,7 +81,7 @@
               {{ uploadingId === svc.id ? 'Lädt…' : 'Foto hochladen' }}
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                accept="image/*,.heic,.heif"
                 class="wem-file"
                 :disabled="!!uploadingId"
                 @change="onServicePhoto($event, svc)"
@@ -152,7 +152,7 @@
               {{ uploadingId === prod.id ? 'Lädt…' : 'Foto hochladen' }}
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                accept="image/*,.heic,.heif"
                 hidden
                 :disabled="uploadingId === prod.id"
                 @change="onProductPhoto($event, prod)"
@@ -215,7 +215,7 @@
               {{ uploadingId === m.id ? 'Lädt…' : 'Foto hochladen' }}
               <input
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                accept="image/*,.heic,.heif"
                 class="wem-file"
                 :disabled="!!uploadingId"
                 @change="onTeamPhoto($event, m)"
@@ -311,6 +311,11 @@
           <span class="wem-hint">{{ opt.hint }}</span>
         </span>
       </label>
+      <label v-if="extras.contact_channels.whatsapp" class="wem-field">
+        <strong>WhatsApp-Nummer</strong>
+        <span class="wem-hint">Die Handy-Nummer, die in WhatsApp hinterlegt ist — nicht die Festnetznummer.</span>
+        <input v-model="extras.whatsapp_phone" type="tel" placeholder="+41 79 123 45 67" autocomplete="tel" />
+      </label>
     </div>
   </section>
 </template>
@@ -328,6 +333,7 @@ import {
   websiteExtraProductHints,
   websiteExtraServiceHints,
 } from '~/composables/useTerminology'
+import { compressPhotoForUpload } from '~/utils/imageCompression'
 
 export type EditorExtras = {
   extraServices: WizardExtraService[]
@@ -335,6 +341,7 @@ export type EditorExtras = {
   teamMembers: WizardTeamMember[]
   testimonials: Array<{ id: string; author: string; text: string; rating: number }>
   contact_channels: { phone: boolean; email: boolean; whatsapp: boolean; form: boolean }
+  whatsapp_phone: string
   usps: string[]
 }
 
@@ -442,20 +449,28 @@ function removeExtraService(id: string) {
   if (idx >= 0) extras.extraServices.splice(idx, 1)
 }
 
+async function uploadOfferPhoto(file: File, slot: 'service' | 'team') {
+  const ready = await compressPhotoForUpload(file, {
+    maxEdge: slot === 'team' ? 900 : 1600,
+    maxBytes: 1.8 * 1024 * 1024,
+  })
+  const body = new FormData()
+  body.append('slot', slot)
+  body.append('file', ready)
+  const res = await $fetch<{ url?: string; webp_url?: string }>('/api/website/media/upload', {
+    method: 'POST',
+    body,
+  })
+  return res.url || res.webp_url || null
+}
+
 async function onServicePhoto(event: Event, svc: WizardExtraService) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
   uploadingId.value = svc.id
   try {
-    const body = new FormData()
-    body.append('slot', 'service')
-    body.append('file', file)
-    const res = await $fetch<{ url?: string; webp_url?: string }>('/api/website/media/upload', {
-      method: 'POST',
-      body,
-    })
-    svc.image_url = res.url || res.webp_url || null
+    svc.image_url = await uploadOfferPhoto(file, 'service')
   } finally {
     uploadingId.value = ''
     if (input) input.value = ''
@@ -468,14 +483,7 @@ async function onProductPhoto(event: Event, prod: WizardExtraProduct) {
   if (!file) return
   uploadingId.value = prod.id
   try {
-    const body = new FormData()
-    body.append('slot', 'service')
-    body.append('file', file)
-    const res = await $fetch<{ url?: string; webp_url?: string }>('/api/website/media/upload', {
-      method: 'POST',
-      body,
-    })
-    prod.image_url = res.url || res.webp_url || null
+    prod.image_url = await uploadOfferPhoto(file, 'service')
   } finally {
     uploadingId.value = ''
     if (input) input.value = ''
@@ -504,14 +512,7 @@ async function onTeamPhoto(event: Event, member: WizardTeamMember) {
   if (!file) return
   uploadingId.value = member.id
   try {
-    const body = new FormData()
-    body.append('slot', 'team')
-    body.append('file', file)
-    const res = await $fetch<{ url?: string; webp_url?: string }>('/api/website/media/upload', {
-      method: 'POST',
-      body,
-    })
-    member.photo_url = res.url || res.webp_url || null
+    member.photo_url = await uploadOfferPhoto(file, 'team')
   } finally {
     uploadingId.value = ''
     if (input) input.value = ''
@@ -745,6 +746,11 @@ async function confirmGooglePlace(c: (typeof googleCandidates.value)[number]) {
   border-color: #111827;
   background: #f8fafc;
 }
+.wem-field {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.75rem;
+}
 .wem-toggle-fields {
   display: grid;
   gap: 0.4rem;
@@ -783,6 +789,7 @@ async function confirmGooglePlace(c: (typeof googleCandidates.value)[number]) {
 }
 .wem input[type='text'],
 .wem input[type='number'],
+.wem input[type='tel'],
 .wem textarea {
   width: 100%;
   border: 1px solid #d7dbe3;
@@ -806,6 +813,11 @@ async function confirmGooglePlace(c: (typeof googleCandidates.value)[number]) {
 }
 .wem-btn,
 .wem-btn--primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   border: 1px solid #d7dbe3;
   background: #fff;
   border-radius: 0.65rem;
@@ -878,6 +890,12 @@ async function confirmGooglePlace(c: (typeof googleCandidates.value)[number]) {
   font-size: 0.68rem;
 }
 .wem-file {
-  display: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  font-size: 0;
 }
 </style>

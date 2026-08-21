@@ -79,11 +79,15 @@ export default defineEventHandler(async (event) => {
     .eq('id', user.tenant_id)
     .maybeSingle()
   if (publish) {
-    const { websitePublishBlockedReason } = await import('~/server/utils/website-billing')
-    if (websitePublishBlockedReason(tenantRow)) {
+    const { websitePublishBlockedMessage, websitePublishBlockedReason } = await import(
+      '~/server/utils/website-billing'
+    )
+    const blocked = websitePublishBlockedReason(tenantRow)
+    if (blocked) {
       throw createError({
         statusCode: 402,
-        statusMessage: 'Hosting wählen, bevor die Website live geht.',
+        statusMessage: websitePublishBlockedMessage(blocked),
+        data: { code: 'website_payment_required', reason: blocked },
       })
     }
   }
@@ -155,6 +159,14 @@ export default defineEventHandler(async (event) => {
       websiteUpdate.addon_pages_enabled = true
     }
     await supabase.from('website_tenants').update(websiteUpdate).eq('id', website.id)
+
+    if (body?.extras && typeof body.extras === 'object' && 'whatsapp_phone' in body.extras) {
+      const raw = String((body.extras as { whatsapp_phone?: unknown }).whatsapp_phone || '').trim()
+      await supabase
+        .from('tenants')
+        .update({ whatsapp_phone: raw || null, updated_at: now })
+        .eq('id', user.tenant_id)
+    }
   } else if (publish && !website.is_published) {
     // Publishing an add-on implies site is live
     await supabase

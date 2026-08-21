@@ -13,15 +13,18 @@ export default defineNuxtPlugin(() => {
         const inputs = modal.querySelectorAll('input, select, textarea')
         
         inputs.forEach((input: any) => {
-          // Skip checkboxes and radio buttons
-          if (input.type === 'checkbox' || input.type === 'radio') {
+          if (['checkbox', 'radio', 'file', 'hidden', 'color', 'range'].includes(input.type)) {
             return
           }
           
-          // Force white text and dark background
-          input.style.setProperty('color', 'white', 'important')
-          input.style.setProperty('background-color', '#374151', 'important')
-          input.style.setProperty('border-color', '#6b7280', 'important')
+          // Force light fields — inline !important used to paint charcoal
+          // (#374151) and beat every stylesheet, including invoice/offerte CSS.
+          input.style.setProperty('color', '#111827', 'important')
+          input.style.setProperty('-webkit-text-fill-color', '#111827', 'important')
+          input.style.setProperty('caret-color', '#111827', 'important')
+          input.style.setProperty('background-color', '#ffffff', 'important')
+          input.style.setProperty('border-color', '#d1d5db', 'important')
+          input.style.setProperty('color-scheme', 'light', 'important')
         })
       })
     }

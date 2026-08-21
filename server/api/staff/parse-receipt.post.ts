@@ -8,6 +8,9 @@ export interface ReceiptParseResult {
   merchant: string | null
   iban: string | null        // Swiss IBAN from QR bill if present
   reference: string | null   // QR reference number if present
+  vat_rate: number | null
+  vat_amount_chf: number | null
+  category_hint: string | null
   confidence: 'high' | 'medium' | 'low'
 }
 
@@ -15,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const user = await getAuthenticatedUser(event)
   if (!user) throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   const role = user.role || user.profile?.role || ''
-  if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(role)) {
+  if (!['admin', 'staff', 'super_admin', 'tenant_admin', 'accountant'].includes(role)) {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden – staff role required' })
   }
 
@@ -68,7 +71,13 @@ export default defineEventHandler(async (event) => {
     const mimeType = contentType.split(';')[0].trim()
     // For PDFs, OpenAI Vision doesn't support them — skip and return empty result
     if (mimeType === 'application/pdf') {
-      return { success: true, data: { amount_chf: null, date: null, merchant: null, confidence: 'low' } }
+      return {
+        success: true,
+        data: {
+          amount_chf: null, date: null, merchant: null, iban: null, reference: null,
+          vat_rate: null, vat_amount_chf: null, category_hint: null, confidence: 'low',
+        },
+      }
     }
     imageContent = { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'low' } }
   } catch (fetchErr: any) {
@@ -91,6 +100,9 @@ Return a JSON object with exactly these fields:
 - merchant: the creditor/store name as a short string. Use null if not found.
 - iban: the IBAN from a Swiss QR-bill or invoice (format CH.. or LI..). Use null if not present.
 - reference: the QR reference or ESR reference number if visible. Use null if not present.
+- vat_rate: VAT percent if printed (8.1, 2.6, 3.8 or 0). Use null if not shown.
+- vat_amount_chf: VAT amount as a number if printed. Use null if not shown.
+- category_hint: one of Fahrzeugkosten, Miete & Raumkosten, Versicherungen, Marketing & Werbung, Büro & Verwaltung, IT & Software, Aus- & Weiterbildung, Steuern & Abgaben, Eigenverbrauch / Privat, Sonstige Ausgaben. Use null if unsure.
 - confidence: "high" if amount and date are clearly found, "medium" if one is uncertain, "low" if little found.
 Only return the JSON, no explanation.`,
       },
@@ -100,7 +112,7 @@ Only return the JSON, no explanation.`,
           imageContent,
           {
             type: 'text',
-            text: 'Extract the total amount, date, and merchant from this receipt.',
+            text: 'Extract total amount, date, merchant, IBAN, reference, VAT and a category hint from this receipt.',
           },
         ],
       },
@@ -108,7 +120,7 @@ Only return the JSON, no explanation.`,
   })
 
   const raw = response.choices[0]?.message?.content ?? '{}'
-  let parsed: ReceiptParseResult
+  let parsed: Record<string, unknown>
   try {
     parsed = JSON.parse(raw)
   } catch {
@@ -118,12 +130,24 @@ Only return the JSON, no explanation.`,
   return {
     success: true,
     data: {
-      amount_chf: typeof parsed.amount_chf === 'number' ? parsed.amount_chf : null,
+      amount_chf: asNumber(parsed.amount_chf),
       date: typeof parsed.date === 'string' ? parsed.date : null,
       merchant: typeof parsed.merchant === 'string' ? parsed.merchant : null,
       iban: typeof parsed.iban === 'string' ? parsed.iban : null,
       reference: typeof parsed.reference === 'string' ? parsed.reference : null,
-      confidence: parsed.confidence ?? 'low',
+      vat_rate: asNumber(parsed.vat_rate),
+      vat_amount_chf: asNumber(parsed.vat_amount_chf),
+      category_hint: typeof parsed.category_hint === 'string' ? parsed.category_hint : null,
+      confidence: parsed.confidence === 'high' || parsed.confidence === 'medium' ? parsed.confidence : 'low',
     } satisfies ReceiptParseResult,
   }
 })
+
+function asNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const n = Number.parseFloat(value.replace(',', '.'))
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}

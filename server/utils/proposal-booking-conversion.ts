@@ -19,6 +19,7 @@ import {
 } from '~/server/utils/google-ads-conversion'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { logger } from '~/utils/logger'
+import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 
 const PROPOSAL_LOOKBACK_DAYS = 90
 export const proposalBookingOrderId = (proposalId: string) => `proposal-booking-${proposalId}`
@@ -47,8 +48,12 @@ export type ProposalAttributionRow = {
   created_at: string
 }
 
-function hasClickId(row: { gclid?: string | null; gbraid?: string | null; wbraid?: string | null }): boolean {
+function hasGoogleClickId(row: { gclid?: string | null; gbraid?: string | null; wbraid?: string | null }): boolean {
   return !!(row.gclid || row.gbraid || row.wbraid)
+}
+
+function hasMetaClickId(row: { fbclid?: string | null; fbc?: string | null; fbp?: string | null }): boolean {
+  return !!(row.fbclid || row.fbc || row.fbp)
 }
 
 function phonesMatch(a: string | null | undefined, b: string | null | undefined): boolean {
@@ -88,7 +93,7 @@ export async function findAttributedProposalForCustomer(
     .eq('tenant_id', params.tenantId)
     .gte('created_at', since)
     .not('status', 'eq', 'rejected')
-    .or('gclid.not.is.null,gbraid.not.is.null,wbraid.not.is.null')
+    .or('gclid.not.is.null,gbraid.not.is.null,wbraid.not.is.null,fbclid.not.is.null')
     .order('created_at', { ascending: false })
     .limit(40)
 
@@ -108,7 +113,7 @@ export async function findAttributedProposalForCustomer(
     return false
   })
 
-  return matched && hasClickId(matched) ? matched : null
+  return matched && (hasGoogleClickId(matched) || hasMetaClickId(matched)) ? matched : null
 }
 
 async function alreadyUploadedProposalBooking(proposalId: string): Promise<boolean> {
@@ -131,16 +136,17 @@ async function alreadyUploadedProposalBooking(proposalId: string): Promise<boole
 export async function uploadProposalDerivedBookingConversion(input: {
   proposal: Pick<
     ProposalAttributionRow,
-    'id' | 'tenant_id' | 'gclid' | 'gbraid' | 'wbraid' | 'email' | 'phone'
+    'id' | 'tenant_id' | 'gclid' | 'gbraid' | 'wbraid' | 'fbclid' | 'fbc' | 'fbp' | 'email' | 'phone'
   >
   appointmentId?: string | null
   conversionValueChf?: number | null
 }): Promise<'uploaded' | 'skipped_already' | 'skipped_no_click_id' | 'failed'> {
-  if (!hasClickId(input.proposal)) return 'skipped_no_click_id'
+  const google = hasGoogleClickId(input.proposal)
+  const meta = hasMetaClickId(input.proposal)
+  if (!google && !meta) return 'skipped_no_click_id'
 
-  if (await alreadyUploadedProposalBooking(input.proposal.id)) {
-    return 'skipped_already'
-  }
+  const alreadyGoogle = await alreadyUploadedProposalBooking(input.proposal.id)
+  if (alreadyGoogle && !meta) return 'skipped_already'
 
   const value = normalizeConversionValueChf(
     input.conversionValueChf && input.conversionValueChf > 0
@@ -153,82 +159,111 @@ export async function uploadProposalDerivedBookingConversion(input: {
   const hashedEmail = email ? await sha256Hex(email) : null
   const hashedPhone = phoneRaw.startsWith('+') ? await sha256Hex(phoneRaw) : null
 
-  const supabase = getSupabaseAdmin()
-  const orderId = proposalBookingOrderId(input.proposal.id)
-  const conversionActionId = (process.env.GOOGLE_ADS_CONVERSION_ACTION_ID || '').trim() || 'unknown'
+  let googleResult: 'uploaded' | 'skipped_already' | 'failed' | null = alreadyGoogle ? 'skipped_already' : null
 
-  // Audit row first (appointment_id optional — FK only when real appointment exists).
-  const { data: row, error: insertError } = await supabase
-    .from('google_ads_conversion_uploads')
-    .insert({
-      appointment_id: input.appointmentId || null,
-      proposal_id: input.proposal.id,
-      order_id: orderId,
-      tenant_id: input.proposal.tenant_id,
-      conversion_action_id: conversionActionId,
-      gclid: input.proposal.gclid,
-      gbraid: input.proposal.gbraid,
-      wbraid: input.proposal.wbraid,
-      conversion_value_chf: value,
-      conversion_date_time: new Date().toISOString(),
-      upload_status: 'pending',
-      upload_attempts: 0,
-    })
-    .select('id')
-    .single()
+  if (google && !alreadyGoogle) {
+    const supabase = getSupabaseAdmin()
+    const orderId = proposalBookingOrderId(input.proposal.id)
+    const conversionActionId = (process.env.GOOGLE_ADS_CONVERSION_ACTION_ID || '').trim() || 'unknown'
 
-  if (insertError) {
-    // Unique race / duplicate: treat as already handled.
-    if (await alreadyUploadedProposalBooking(input.proposal.id)) {
-      return 'skipped_already'
+    const { data: row, error: insertError } = await supabase
+      .from('google_ads_conversion_uploads')
+      .insert({
+        appointment_id: input.appointmentId || null,
+        proposal_id: input.proposal.id,
+        order_id: orderId,
+        tenant_id: input.proposal.tenant_id,
+        conversion_action_id: conversionActionId,
+        gclid: input.proposal.gclid,
+        gbraid: input.proposal.gbraid,
+        wbraid: input.proposal.wbraid,
+        conversion_value_chf: value,
+        conversion_date_time: new Date().toISOString(),
+        upload_status: 'pending',
+        upload_attempts: 0,
+      })
+      .select('id')
+      .single()
+
+    if (insertError) {
+      if (await alreadyUploadedProposalBooking(input.proposal.id)) {
+        googleResult = 'skipped_already'
+      } else {
+        logger.warn('proposal-booking-conversion: audit insert failed', insertError.message)
+      }
     }
-    logger.warn('proposal-booking-conversion: audit insert failed', insertError.message)
-  }
 
-  try {
-    const result = await uploadClickConversion({
-      appointment_id: input.appointmentId || undefined,
-      order_id: orderId,
-      conversion_action_id: conversionActionId === 'unknown' ? undefined : conversionActionId,
-      gclid: input.proposal.gclid,
-      gbraid: input.proposal.gbraid,
-      wbraid: input.proposal.wbraid,
-      conversion_value_chf: value,
-      conversion_date_time: new Date(),
-      hashed_email: hashedEmail,
-      hashed_phone: hashedPhone,
-    })
-
-    if (row?.id) {
-      await supabase
-        .from('google_ads_conversion_uploads')
-        .update({
-          upload_status: result.uploaded
-            ? 'success'
-            : result.reason === 'no_click_id'
-              ? 'skipped_no_click_id'
-              : 'failed',
-          upload_attempts: 1,
-          last_attempt_at: new Date().toISOString(),
-          error_message: result.error || result.reason || null,
-          google_response: result.google_response ?? null,
+    if (googleResult !== 'skipped_already') {
+      try {
+        const result = await uploadClickConversion({
+          appointment_id: input.appointmentId || undefined,
+          order_id: orderId,
+          conversion_action_id: conversionActionId === 'unknown' ? undefined : conversionActionId,
+          gclid: input.proposal.gclid,
+          gbraid: input.proposal.gbraid,
+          wbraid: input.proposal.wbraid,
+          conversion_value_chf: value,
+          conversion_date_time: new Date(),
+          hashed_email: hashedEmail,
+          hashed_phone: hashedPhone,
         })
-        .eq('id', row.id)
-    }
 
-    if (result.uploaded) {
-      logger.info(`proposal-booking-conversion: uploaded booking for proposal ${input.proposal.id} (CHF ${value})`)
-      return 'uploaded'
-    }
+        if (row?.id) {
+          await supabase
+            .from('google_ads_conversion_uploads')
+            .update({
+              upload_status: result.uploaded
+                ? 'success'
+                : result.reason === 'no_click_id'
+                  ? 'skipped_no_click_id'
+                  : 'failed',
+              upload_attempts: 1,
+              last_attempt_at: new Date().toISOString(),
+              error_message: result.error || result.reason || null,
+              google_response: result.google_response ?? null,
+            })
+            .eq('id', row.id)
+        }
 
-    logger.warn(
-      `proposal-booking-conversion: upload failed for proposal ${input.proposal.id} — ${result.reason}${result.error ? `: ${result.error.slice(0, 160)}` : ''}`,
-    )
-    return 'failed'
-  } catch (err: any) {
-    logger.warn('proposal-booking-conversion: exception', err?.message ?? err)
-    return 'failed'
+        if (result.uploaded) {
+          logger.info(`proposal-booking-conversion: uploaded booking for proposal ${input.proposal.id} (CHF ${value})`)
+          googleResult = 'uploaded'
+        } else {
+          logger.warn(
+            `proposal-booking-conversion: upload failed for proposal ${input.proposal.id} — ${result.reason}${result.error ? `: ${result.error.slice(0, 160)}` : ''}`,
+          )
+          googleResult = 'failed'
+        }
+      } catch (err: any) {
+        logger.warn('proposal-booking-conversion: exception', err?.message ?? err)
+        googleResult = 'failed'
+      }
+    }
   }
+
+  if (meta) {
+    try {
+      await recordAndSendCapiEvent({
+        appointment_id: input.appointmentId || `proposal_${input.proposal.id}`,
+        tenant_id: input.proposal.tenant_id,
+        event_name: 'Purchase',
+        conversion_value_chf: value,
+        conversion_date_time: new Date(),
+        fbclid: input.proposal.fbclid ?? null,
+        fbc: input.proposal.fbc ?? null,
+        fbp: input.proposal.fbp ?? null,
+        hashed_email: hashedEmail,
+        hashed_phone: hashedPhone,
+      })
+    } catch (err: any) {
+      logger.warn('proposal-booking-conversion: Meta CAPI failed', err?.message ?? err)
+    }
+  }
+
+  if (googleResult === 'uploaded' || meta) return 'uploaded'
+  if (googleResult === 'skipped_already') return 'skipped_already'
+  if (googleResult === 'failed') return 'failed'
+  return 'uploaded'
 }
 
 /**
@@ -239,31 +274,37 @@ export async function stampAppointmentFromProposal(
   appointmentId: string,
   proposal: ProposalAttributionRow,
 ): Promise<void> {
-  if (!hasClickId(proposal)) return
+  if (!hasGoogleClickId(proposal) && !hasMetaClickId(proposal)) return
 
   const { data: appt } = await supabase
     .from('appointments')
-    .select('id, gclid, gbraid, wbraid')
+    .select('id, gclid, gbraid, wbraid, fbclid')
     .eq('id', appointmentId)
     .maybeSingle()
 
   if (!appt) return
-  if (appt.gclid || appt.gbraid || appt.wbraid) return
+  const needsGoogle = !(appt.gclid || appt.gbraid || appt.wbraid) && hasGoogleClickId(proposal)
+  const needsMeta = !appt.fbclid && hasMetaClickId(proposal)
+  if (!needsGoogle && !needsMeta) return
 
   const { error } = await supabase
     .from('appointments')
     .update({
-      gclid: proposal.gclid,
-      gbraid: proposal.gbraid,
-      wbraid: proposal.wbraid,
+      ...(needsGoogle ? {
+        gclid: proposal.gclid,
+        gbraid: proposal.gbraid,
+        wbraid: proposal.wbraid,
+      } : {}),
       utm_source: proposal.utm_source,
       utm_medium: proposal.utm_medium,
       utm_campaign: proposal.utm_campaign,
       utm_content: proposal.utm_content,
       utm_term: proposal.utm_term,
-      fbclid: proposal.fbclid,
-      fbc: proposal.fbc,
-      fbp: proposal.fbp,
+      ...(needsMeta ? {
+        fbclid: proposal.fbclid,
+        fbc: proposal.fbc,
+        fbp: proposal.fbp,
+      } : {}),
       marketing_session_id: proposal.marketing_session_id,
     })
     .eq('id', appointmentId)

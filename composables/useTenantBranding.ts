@@ -55,6 +55,7 @@ export interface TenantBrandingMeta {
 export interface TenantBrandingContact {
   email?: string
   phone?: string
+  whatsappPhone?: string
   address?: string
   smsSender?: string
 }
@@ -258,6 +259,7 @@ export const useTenantBranding = () => {
         contact: {
           email: data.contact_email,
           phone: data.contact_phone,
+          whatsappPhone: data.whatsapp_phone,
           address: data.address,
           smsSender: data.twilio_from_sender || '',
         },
@@ -271,6 +273,9 @@ export const useTenantBranding = () => {
         invoice_intro_text: data.invoice_intro_text ?? null,
         invoice_payment_terms: data.invoice_payment_terms ?? null,
         invoice_footer_text: data.invoice_footer_text ?? null,
+        quote_intro_text: data.quote_intro_text ?? null,
+        quote_terms_text: data.quote_terms_text ?? null,
+        quote_footer_text: data.quote_footer_text ?? null,
       }
 
     // Persist slug so logout / auth middleware can redirect to /{slug}
@@ -412,6 +417,9 @@ export const useTenantBranding = () => {
       if (updates.contact) {
         updateData.contact_email = updates.contact.email
         updateData.contact_phone = updates.contact.phone
+        if (updates.contact.whatsappPhone !== undefined) {
+          updateData.whatsapp_phone = updates.contact.whatsappPhone || null
+        }
         updateData.address = updates.contact.address
         if (updates.contact.smsSender !== undefined) {
           updateData.twilio_from_sender = updates.contact.smsSender || null
@@ -569,5 +577,8 @@ export const useTenantBranding = () => {
     invoiceIntroText: computed(() => (currentTenantBranding.value as any)?.invoice_intro_text ?? ''),
     invoicePaymentTerms: computed(() => (currentTenantBranding.value as any)?.invoice_payment_terms ?? ''),
     invoiceFooterText: computed(() => (currentTenantBranding.value as any)?.invoice_footer_text ?? ''),
+    quoteIntroText: computed(() => (currentTenantBranding.value as any)?.quote_intro_text ?? ''),
+    quoteTermsText: computed(() => (currentTenantBranding.value as any)?.quote_terms_text ?? ''),
+    quoteFooterText: computed(() => (currentTenantBranding.value as any)?.quote_footer_text ?? ''),
   }
 }

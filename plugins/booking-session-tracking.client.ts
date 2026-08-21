@@ -94,67 +94,105 @@ export default defineNuxtPlugin(() => {
   let isNewSession = false
 
   const dtAttr = urlParams.get('dt_attr')
-  // Direct click IDs in URL — present when Google Ads links directly to app.simy.ch
-  // instead of going through drivingteam.ch (which would produce a dt_attr blob).
+  // First-class click IDs — website now appends these in addition to dt_attr so
+  // they survive if the blob is stripped or a new session is minted on simy.
   const gclidFromUrl = urlParams.get('gclid')
   const gbraidFromUrl = urlParams.get('gbraid')
   const wbraidFromUrl = urlParams.get('wbraid')
+  const fbclidFromUrl = urlParams.get('fbclid')
 
-  if (dtAttr) {
-    attribution = decodeAttribution(dtAttr)
-    if (attribution) {
-      try {
-        localStorage.setItem(ATTR_KEY, JSON.stringify(attribution))
-      } catch {
-        // localStorage may be unavailable — fail silently
-      }
-      // Persist server-side so it can be joined to the appointment later.
-      fetch('/api/marketing-attribution', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, tenant_id: window.__tenantId ?? null, attribution }),
-      }).catch(() => {})
-    }
-  } else if (gclidFromUrl || gbraidFromUrl || wbraidFromUrl) {
-    // Fallback: Google Ads linked directly to app.simy.ch with ?gclid= in the URL.
-    // Build the attribution from the raw click-ID params so the booking conversion
-    // can still be uploaded server-side.
-    attribution = {
-      gclid: gclidFromUrl ?? null,
-      gbraid: gbraidFromUrl ?? null,
-      wbraid: wbraidFromUrl ?? null,
-      fbclid: null,
-      fbc: null,
-      fbp: null,
-      utm_source: urlParams.get('utm_source') ?? 'google',
-      utm_medium: urlParams.get('utm_medium') ?? 'cpc',
-      utm_campaign: urlParams.get('utm_campaign') ?? null,
-      utm_content: urlParams.get('utm_content') ?? null,
-      utm_term: urlParams.get('utm_term') ?? null,
-      landing_page: window.location.pathname,
-    }
+  const persistAttribution = (attr: DecodedAttribution) => {
     try {
-      localStorage.setItem(ATTR_KEY, JSON.stringify(attribution))
+      localStorage.setItem(ATTR_KEY, JSON.stringify(attr))
     } catch {
-      // ignore
+      // localStorage may be unavailable — fail silently
     }
     fetch('/api/marketing-attribution', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: sessionId, tenant_id: window.__tenantId ?? null, attribution }),
+      body: JSON.stringify({ session_id: sessionId, tenant_id: window.__tenantId ?? null, attribution: attr }),
     }).catch(() => {})
-  } else {
+  }
+
+  const mergeClickIds = (base: DecodedAttribution | null, incoming: DecodedAttribution): DecodedAttribution => ({
+    gclid: incoming.gclid || base?.gclid || null,
+    gbraid: incoming.gbraid || base?.gbraid || null,
+    wbraid: incoming.wbraid || base?.wbraid || null,
+    fbclid: incoming.fbclid || base?.fbclid || null,
+    fbc: incoming.fbc || base?.fbc || null,
+    fbp: incoming.fbp || base?.fbp || null,
+    utm_source: incoming.utm_source || base?.utm_source || null,
+    utm_medium: incoming.utm_medium || base?.utm_medium || null,
+    utm_campaign: incoming.utm_campaign || base?.utm_campaign || null,
+    utm_content: incoming.utm_content || base?.utm_content || null,
+    utm_term: incoming.utm_term || base?.utm_term || null,
+    landing_page: incoming.landing_page || base?.landing_page || null,
+  })
+
+  if (dtAttr) {
+    attribution = decodeAttribution(dtAttr)
+  }
+
+  const readCookie = (name: string): string | null => {
+    try {
+      const match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]+)'))
+      return match ? decodeURIComponent(match[1]) : null
+    } catch {
+      return null
+    }
+  }
+
+  const urlHasClickId = !!(gclidFromUrl || gbraidFromUrl || wbraidFromUrl || fbclidFromUrl)
+  if (urlHasClickId || urlParams.get('utm_source')) {
+    const fromUrl: DecodedAttribution = {
+      gclid: gclidFromUrl,
+      gbraid: gbraidFromUrl,
+      wbraid: wbraidFromUrl,
+      fbclid: fbclidFromUrl,
+      fbc: fbclidFromUrl ? `fb.1.${Date.now()}.${fbclidFromUrl}` : null,
+      fbp: null,
+      utm_source: urlParams.get('utm_source') ?? (urlHasClickId ? (fbclidFromUrl ? 'facebook' : 'google') : null),
+      utm_medium: urlParams.get('utm_medium') ?? (urlHasClickId ? 'cpc' : null),
+      utm_campaign: urlParams.get('utm_campaign'),
+      utm_content: urlParams.get('utm_content'),
+      utm_term: urlParams.get('utm_term'),
+      landing_page: window.location.pathname,
+    }
+    attribution = mergeClickIds(attribution, fromUrl)
+  }
+
+  if (!attribution) {
     try {
       const stored = localStorage.getItem(ATTR_KEY)
       if (stored) {
         attribution = JSON.parse(stored) as DecodedAttribution
       } else {
-        // No attribution from drivingteam.ch — mark as direct so we always have a source
         isNewSession = true
       }
     } catch {
       isNewSession = true
     }
+  }
+
+  const fbcCookie = readCookie('_fbc')
+  const fbpCookie = readCookie('_fbp')
+  if (attribution && (fbcCookie || fbpCookie)) {
+    attribution = {
+      ...attribution,
+      fbc: attribution.fbc || fbcCookie,
+      fbp: attribution.fbp || fbpCookie,
+    }
+  }
+
+  const hasPaidOrUtm = !!(
+    attribution?.gclid || attribution?.gbraid || attribution?.wbraid || attribution?.fbclid
+    || attribution?.fbc || attribution?.fbp
+    || (attribution?.utm_source && attribution.utm_source !== 'direct' && attribution.utm_source !== 'drivingteam_direct')
+  )
+  if (attribution && hasPaidOrUtm) {
+    persistAttribution(attribution)
+  } else if (!attribution) {
+    isNewSession = true
   }
 
   // Persist direct-traffic sessions so they also appear in marketing_attributions.

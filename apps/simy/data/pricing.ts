@@ -3,8 +3,10 @@ export const STARTING_PRICE_CHF = 49
 
 /** Website-only product (not the Simy SaaS Starter plan) */
 export const WEBSITE_SETUP_CHF = 490
-export const WEBSITE_HOST_CHF = 29
+export const WEBSITE_HOST_CHF = 19
 export const WEBSITE_CARE_CHF = 49
+/** Google Business Profile add-on (Simy SaaS + optional later for website) */
+export const ADDON_GBP_CHF = 19
 
 export const REGISTER_BASE = 'https://app.simy.ch/tenant-register'
 export const PLATFORM_REF_STORAGE_KEY = 'platform_ref'
@@ -72,7 +74,7 @@ export function withPlatformRef(href: string, explicitRef?: string): string {
   const ref = (explicitRef || getStoredPlatformRef() || '').trim().toUpperCase()
   if (!ref) return href
   try {
-    const url = new URL(href, typeof window !== 'undefined' ? window.location.origin : 'https://simy.ch')
+    const url = new URL(href, typeof window !== 'undefined' ? window.location.origin : 'https://www.simy.ch')
     if (!url.hostname.includes('simy.ch')) return href
     if (!url.pathname.includes('tenant-register')) return href
     if (!url.searchParams.has('ref')) url.searchParams.set('ref', ref)

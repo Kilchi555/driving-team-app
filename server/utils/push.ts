@@ -122,10 +122,33 @@ async function sendToToken(
     return 'ok'
   } catch (e: any) {
     const code: number | undefined = e?.data?.error?.code ?? e?.statusCode
-    if (code === 404 || e?.data?.error?.status === 'NOT_FOUND') return 'invalid_token'
+    const status = String(e?.data?.error?.status || '')
+    const msg = String(e?.data?.error?.message || e?.message || '')
+    if (
+      code === 404
+      || status === 'NOT_FOUND'
+      || status === 'UNREGISTERED'
+      || /not a valid fcm registration token/i.test(msg)
+    ) {
+      return 'invalid_token'
+    }
     console.warn('[Push] FCM send error:', e?.data?.error?.message ?? e?.message)
     return 'ok'
   }
+}
+
+/** 07:00 UTC \u2248 08:00 (winter) / 09:00 (summer) Europe/Zurich — scheduled pushes, not booking confirmations. */
+export const SCHEDULED_PUSH_HOUR_UTC = 7
+
+/**
+ * Hold queued reminder pushes until morning instead of buzzing at 05:00 Zurich
+ * (appointment-reminder cron runs 03:00 UTC). Transactional pushes should use `new Date()`.
+ */
+export function daytimePushSendAt(now = new Date()): Date {
+  const send = new Date(now)
+  send.setUTCHours(SCHEDULED_PUSH_HOUR_UTC, 0, 0, 0)
+  if (send.getTime() <= now.getTime()) return now
+  return send
 }
 
 export type SendPushResult = {

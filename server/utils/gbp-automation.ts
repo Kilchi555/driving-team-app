@@ -41,6 +41,13 @@ export function isGbpReviewHours(now = new Date(), timeZone = 'Europe/Zurich'): 
   return hour >= GBP_REVIEW_HOURS_START && hour < GBP_REVIEW_HOURS_END
 }
 
+/** auto_all: publish every new review. auto_ge_4: publish 4–5 stars, suggest the rest. */
+export function shouldAutoPublishReview(mode: string | null | undefined, stars: number): boolean {
+  if (mode === 'auto_all') return true
+  if (mode === 'auto_ge_4') return stars >= 4
+  return false
+}
+
 export type GbpAiTextContext = 'post' | 'photo_caption' | 'review_reply' | 'profile_description'
 export type GbpAiTextTone = 'local_friendly' | 'factual' | 'cta_focus'
 export type GbpAiTextMode = 'generate' | 'regenerate' | 'shorter' | 'more_cta'

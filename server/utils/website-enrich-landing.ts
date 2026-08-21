@@ -15,12 +15,11 @@ import {
   buildPickupFaq,
   isPickupFaq,
   loadWebsitePickupOffer,
+  withPickupMeetingPoint,
   withPickupProcessText,
 } from '~/server/utils/website-pickup'
 import { ensureWebsitePickupPlzCache } from '~/server/utils/website-pickup-plz'
 import {
-  loadWebsitePublicLocations,
-  mergeWebsiteMeetingPoints,
   tenantHqCoveredByMeetingPoints,
   tenantPublicSocialLinks,
 } from '~/server/utils/website-public-tenant'
@@ -32,7 +31,7 @@ import {
   mapsExternalUrl,
   openingHoursToSchema,
   resolveWorkingTemplate,
-  whatsappUrlFromPhone,
+  whatsappUrlForTenant,
   type LandingTeamMember,
   type UpcomingCourseCard,
 } from '~/server/utils/website-premium'
@@ -400,7 +399,7 @@ async function enrichLandingPremiumInner(
 
     c.phone = channels.phone ? phone : null
     c.email = channels.email ? email : null
-    c.whatsapp_url = channels.whatsapp ? whatsappUrlFromPhone(phone) : null
+    c.whatsapp_url = channels.whatsapp ? whatsappUrlForTenant(tenant) : null
     c.hours = formatOpeningHours(hoursTpl)
     c.hours_title = c.hours_title || 'Öffnungszeiten'
     c.map_embed_url = c.map_embed_url || mapsEmbedUrl(addrParts)
@@ -412,17 +411,7 @@ async function enrichLandingPremiumInner(
       { label: 'Impressum', href: impressumPath },
       { label: 'Datenschutz', href: datenschutzPath },
     ]
-    let publicLocations: Awaited<ReturnType<typeof loadWebsitePublicLocations>> = []
-    try {
-      publicLocations = await loadWebsitePublicLocations(supabase, tenant.id)
-    } catch {
-      publicLocations = []
-    }
-    c.meeting_points = mergeWebsiteMeetingPoints(
-      Array.isArray(c.meeting_points) ? c.meeting_points : [],
-      publicLocations,
-      pickupOffer.enabled,
-    )
+    c.meeting_points = withPickupMeetingPoint([], pickupOffer.enabled)
     c.show_hq_address = !tenantHqCoveredByMeetingPoints(
       {
         address: c.address || tenant.address,
@@ -463,7 +452,7 @@ async function enrichLandingPremiumInner(
   // --- Hero / CTA WhatsApp ---
   const contactChannels = blocks.find((b) => b.type === 'contact')?.content?.channels
   const waAllowed = contactChannels?.whatsapp !== false
-  const wa = waAllowed ? whatsappUrlFromPhone(tenant.contact_phone || tenant.phone) : null
+  const wa = waAllowed ? whatsappUrlForTenant(tenant) : null
   for (const type of ['hero', 'cta'] as const) {
     const idx = blocks.findIndex((b) => b.type === type)
     if (idx < 0) continue

@@ -1,9 +1,11 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
-import { requireAdminProfile } from '~/server/utils/auth'
+import { requireAccountingAccess } from '~/server/utils/accountant-access'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
+const PAGE = 1000
+
 export default defineEventHandler(async (event) => {
-  const profile = await requireAdminProfile(event)
+  const profile = await requireAccountingAccess(event)
   const supabase = getSupabaseAdmin()
   const query = getQuery(event)
 
@@ -18,25 +20,36 @@ export default defineEventHandler(async (event) => {
     ? new Date(year, month, 0).toISOString().split('T')[0]
     : `${year}-12-31`
 
-  let q = supabase
-    .from('accounting_entries')
-    .select(`
-      *,
-      category:accounting_categories(id, name, type, color)
-    `)
-    .eq('tenant_id', profile.tenant_id)
-    .is('deleted_at', null)
-    .gte('entry_date', dateFrom)
-    .lte('entry_date', dateTo)
-    .order('entry_date', { ascending: false })
-    .order('created_at', { ascending: false })
+  const rows: Record<string, unknown>[] = []
+  let from = 0
 
-  if (type && ['income', 'expense'].includes(type)) {
-    q = q.eq('type', type)
+  while (true) {
+    let q = supabase
+      .from('accounting_entries')
+      .select(`
+        *,
+        category:accounting_categories(id, name, type, color)
+      `)
+      .eq('tenant_id', profile.tenant_id)
+      .eq('approval_status', 'approved')
+      .is('deleted_at', null)
+      .gte('entry_date', dateFrom)
+      .lte('entry_date', dateTo)
+      .order('entry_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .range(from, from + PAGE - 1)
+
+    if (type && ['income', 'expense'].includes(type)) {
+      q = q.eq('type', type)
+    }
+
+    const { data, error } = await q
+    if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+    const chunk = data ?? []
+    rows.push(...chunk)
+    if (chunk.length < PAGE) break
+    from += PAGE
   }
 
-  const { data, error } = await q
-  if (error) throw createError({ statusCode: 500, statusMessage: error.message })
-
-  return { success: true, data: data ?? [] }
+  return { success: true, data: rows }
 })

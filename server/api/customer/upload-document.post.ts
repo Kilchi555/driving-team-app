@@ -17,12 +17,14 @@ import { logger } from '~/utils/logger'
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'image/jpeg',
-  'image/jpg', 
+  'image/jpg',
   'image/png',
-  'image/webp'
+  'image/webp',
+  'image/heic',
+  'image/heif',
 ]
 
-const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp']
+const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif']
 
 // Max file size: 10MB (matches frontend limit)
 const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -40,13 +42,13 @@ const validateFile = (file: any): { valid: boolean; error?: string } => {
 
   // Check file size
   if (file.data.length > MAX_FILE_SIZE) {
-    return { valid: false, error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` }
+    return { valid: false, error: 'Datei ist zu groß (max. 10 MB). Bitte ein Foto statt eines Original-Scans wählen.' }
   }
 
   // Check MIME type
   const mimeType = file.type?.toLowerCase()
   if (!mimeType || !ALLOWED_MIME_TYPES.includes(mimeType)) {
-    return { valid: false, error: `Invalid file type. Allowed: PDF, JPG, PNG, WebP` }
+    return { valid: false, error: 'Ungültiges Dateiformat. Erlaubt: Foto (JPG, PNG, WebP) oder PDF.' }
   }
 
   // Check extension

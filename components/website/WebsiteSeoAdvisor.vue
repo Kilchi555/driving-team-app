@@ -1,104 +1,130 @@
 <template>
   <section class="seo-advisor">
-    <div class="seo-advisor-head">
-      <div>
-        <p class="seo-advisor-kicker">Hilfe für Google</p>
-        <h3>Was suchen Kunden — und was schreibst du hin?</h3>
-        <p class="seo-advisor-hint">
-          Zuerst eine Recherche ({{ remaining }}/{{ limit }} heute).
-          Dann wählst du die Suchwörter, die zu dir passen.
-          Danach erscheinen die Google-Felder zum Übernehmen und Feinschliff.
-        </p>
+    <header class="seo-head">
+      <div class="seo-head-text">
+        <p class="seo-kicker">Google</p>
+        <h3>Texte, die gefunden werden</h3>
       </div>
-      <div class="seo-advisor-actions">
-        <button
-          type="button"
-          class="seo-advisor-run"
-          :disabled="loading || remaining < 1"
-          @click="run(false)"
-        >
-          {{ loading && !rewriting ? 'Sucht…' : remaining < 1 ? 'Heute aufgebraucht' : 'Recherche starten' }}
-        </button>
-        <button
-          v-if="!briefing"
-          type="button"
-          class="seo-advisor-skip"
-          :disabled="loading"
-          @click="skip"
-        >
-          Ohne Recherche weiter
-        </button>
-      </div>
+      <p class="seo-quota" :class="{ 'is-out': remaining < 1 }">
+        {{ remaining }}/{{ limit }} heute
+      </p>
+    </header>
+
+    <ol class="seo-steps" aria-label="Ablauf">
+      <li :class="stepClass(1)">
+        <span>1</span>
+        Recherche
+      </li>
+      <li :class="stepClass(2)">
+        <span>2</span>
+        Wörter wählen
+      </li>
+      <li :class="stepClass(3)">
+        <span>3</span>
+        Übernehmen
+      </li>
+    </ol>
+
+    <p v-if="error" class="seo-msg seo-msg--err">{{ error }}</p>
+    <p v-else-if="flash" class="seo-msg">{{ flash }}</p>
+
+    <div v-if="loading" class="seo-panel seo-wait" role="status">
+      <span class="seo-spinner" aria-hidden="true" />
+      <p>Sucht, was Kunden in deiner Region googeln…</p>
     </div>
 
-    <p v-if="error" class="seo-advisor-error">{{ error }}</p>
-    <p v-if="flash" class="seo-advisor-flash">{{ flash }}</p>
+    <div v-else-if="step === 1" class="seo-panel">
+      <p class="seo-lead">
+        Wir holen Suchbegriffe aus deiner Gegend. Du tippst 1–3 an — danach kommen Titel und Texte zum Übernehmen.
+      </p>
+      <button
+        type="button"
+        class="seo-btn seo-btn--primary"
+        :disabled="remaining < 1"
+        @click="run(false)"
+      >
+        {{ remaining < 1 ? 'Heute aufgebraucht' : 'Recherche starten' }}
+      </button>
+      <button type="button" class="seo-btn seo-btn--text" @click="skip">
+        Selbst schreiben
+      </button>
+    </div>
 
-    <div v-if="briefing" class="seo-advisor-body">
-      <p v-if="briefing.summary" class="seo-advisor-summary">{{ briefing.summary }}</p>
+    <div v-else-if="step === 2" class="seo-panel">
+      <p class="seo-lead">
+        Tippe <strong>1–3 Suchwörter</strong> an, die zu dir passen. Danach schreiben wir die Google-Texte.
+      </p>
+      <p class="seo-pick">{{ selected.size }}/3 gewählt</p>
 
-      <div v-if="briefing.research?.competitors?.length" class="seo-advisor-comp">
-        <p class="seo-advisor-label">Andere Betriebe in der Nähe (Google)</p>
+      <button
+        v-for="k in visibleKeywords"
+        :key="k.phrase"
+        type="button"
+        class="seo-chip"
+        :class="{ 'is-on': selected.has(k.phrase), 'is-skip': k.use === 'skip' }"
+        :aria-pressed="selected.has(k.phrase)"
+        @click="toggle(k.phrase)"
+      >
+        <span class="seo-chip-check" aria-hidden="true" />
+        <span class="seo-chip-body">
+          <strong>{{ k.phrase }}</strong>
+          <em>{{ placeLabel(k.use) }}</em>
+        </span>
+      </button>
+
+      <details v-if="competitors.length" class="seo-more">
+        <summary>Andere Betriebe in der Nähe</summary>
         <ul>
-          <li v-for="c in briefing.research.competitors" :key="c.name">
+          <li v-for="c in competitors" :key="c.name">
             <strong>{{ c.name }}</strong>
-            <span v-if="c.rating" class="seo-comp-meta">{{ c.rating }}★ · {{ c.reviews || 0 }}</span>
+            <span v-if="c.rating">{{ c.rating }}★ · {{ c.reviews || 0 }}</span>
           </li>
         </ul>
-      </div>
+      </details>
 
-      <div v-if="briefing.keywords?.length" class="seo-advisor-keys">
-        <p class="seo-advisor-label">1. Suchwörter antippen, die zu dir passen</p>
-        <p class="seo-advisor-help">
-          Das sind Wörter, die Leute bei Google eingeben. Tippe 1–3 an — so weiss die AI, in welche Richtung die Texte gehen sollen.
-        </p>
-        <article
-          v-for="k in briefing.keywords"
-          :key="k.phrase"
-          class="seo-key"
-          :class="{ 'is-on': selected.has(k.phrase), 'is-skip': k.use === 'skip' }"
-          role="button"
-          tabindex="0"
-          :aria-pressed="selected.has(k.phrase)"
-          @click="toggle(k.phrase)"
-          @keydown.enter.prevent="toggle(k.phrase)"
-        >
-          <span class="seo-key-check" aria-hidden="true" />
-          <div class="seo-key-main">
-            <div class="seo-key-top">
-              <strong>{{ k.phrase }}</strong>
-              <span class="seo-key-use">{{ placeLabel(k.use) }}</span>
-            </div>
-            <p v-if="k.pro" class="seo-key-pro">{{ k.pro }}</p>
-            <p v-if="k.con" class="seo-key-con">{{ k.con }}</p>
-          </div>
-        </article>
-        <button
-          type="button"
-          class="seo-rewrite"
-          :disabled="rewriting || selected.size < 1"
-          @click="run(true)"
-        >
-          {{ rewriting ? 'Schreibt neu…' : 'Texte mit meiner Auswahl schreiben' }}
-        </button>
-        <p class="seo-advisor-help">Zählt nicht als neue Recherche — nur die Texte werden angepasst.</p>
-      </div>
+      <button
+        type="button"
+        class="seo-btn seo-btn--primary"
+        :disabled="rewriting || selected.size < 1"
+        @click="run(true)"
+      >
+        {{ rewriting ? 'Schreibt Texte…' : 'Texte schreiben' }}
+      </button>
+      <button
+        v-if="briefing?.copy"
+        type="button"
+        class="seo-btn seo-btn--text"
+        :disabled="rewriting"
+        @click="showCopy = true"
+      >
+        Vorschläge ohne neue Texte anzeigen
+      </button>
+    </div>
 
-      <div v-if="briefing.copy" class="seo-advisor-copy">
-        <p class="seo-advisor-label">2. Text lesen und ins Feld übernehmen</p>
-        <p class="seo-advisor-help">
-          «Übernehmen» schreibt den Vorschlag ins Formular darunter. Nichts geht live, bis du speicherst.
-        </p>
-        <article v-for="row in copyRows" :key="row.slotId" class="seo-copy" :class="{ 'is-done': row.done }">
-          <div class="seo-copy-top">
-            <p class="seo-copy-where">{{ row.where }}</p>
-            <button type="button" class="seo-copy-btn" :disabled="!row.text" @click="take(row)">
-              {{ row.done ? 'Übernommen' : 'Übernehmen' }}
-            </button>
-          </div>
-          <p class="seo-copy-text">{{ row.text || '—' }}</p>
-        </article>
-      </div>
+    <div v-else class="seo-panel">
+      <p class="seo-lead">
+        Übernehmen schreibt den Text ins Formular darunter. Live wird erst mit «Veröffentlichen».
+      </p>
+      <p v-if="selectedList" class="seo-pick">Fokus: {{ selectedList }}</p>
+
+      <article
+        v-for="row in copyRows"
+        :key="row.slotId"
+        class="seo-copy"
+        :class="{ 'is-done': row.done }"
+      >
+        <div class="seo-copy-top">
+          <p>{{ row.where }}</p>
+          <button type="button" class="seo-copy-btn" :disabled="!row.text" @click="take(row)">
+            {{ row.done ? 'Übernommen' : 'Übernehmen' }}
+          </button>
+        </div>
+        <p class="seo-copy-text">{{ row.text || '—' }}</p>
+      </article>
+
+      <button type="button" class="seo-btn seo-btn--text" @click="showCopy = false">
+        ← Andere Wörter wählen
+      </button>
     </div>
   </section>
 </template>
@@ -125,12 +151,38 @@ const resetsOn = ref('')
 const briefing = ref<any>(null)
 const selected = ref(new Set<string>())
 const applied = ref(new Set<string>())
+const showCopy = ref(false)
+
+const step = computed(() => {
+  if (loading.value) return 1
+  if (!briefing.value) return 1
+  if (showCopy.value && briefing.value.copy) return 3
+  return 2
+})
+
+const visibleKeywords = computed(() => {
+  const list = Array.isArray(briefing.value?.keywords) ? briefing.value.keywords : []
+  return list.filter((k: any) => k?.phrase)
+})
+
+const competitors = computed(() => {
+  const list = briefing.value?.research?.competitors
+  return Array.isArray(list) ? list : []
+})
+
+const selectedList = computed(() => [...selected.value].join(' · '))
+
+function stepClass(n: number) {
+  if (step.value > n) return 'is-done'
+  if (step.value === n) return 'is-now'
+  return ''
+}
 
 function placeLabel(use: string) {
-  if (use === 'title') return 'Gut für Google-Titel'
-  if (use === 'h1') return 'Gut für die grosse Überschrift'
-  if (use === 'skip') return 'Eher weglassen'
-  return 'Gut im Fliesstext'
+  if (use === 'title') return 'Titel'
+  if (use === 'h1') return 'Überschrift'
+  if (use === 'skip') return 'eher nicht'
+  return 'Fliesstext'
 }
 
 function toggle(phrase: string) {
@@ -148,19 +200,19 @@ const copyRows = computed(() => {
   return [
     {
       slotId: 'hero.headline',
-      where: 'Grosse Überschrift ganz oben auf der Seite',
+      where: 'Überschrift auf der Website',
       text: c.headline || '',
       done: applied.value.has('hero.headline'),
     },
     {
       slotId: 'hero.subheadline',
-      where: 'Kurztext unter der Überschrift',
+      where: 'Text unter der Überschrift',
       text: c.subheadline || '',
       done: applied.value.has('hero.subheadline'),
     },
     {
       slotId: 'seo.title',
-      where: 'Titel in Google (blauer Link)',
+      where: 'Blauer Link bei Google',
       text: c.seo_title || '',
       done: applied.value.has('seo.title'),
     },
@@ -172,13 +224,13 @@ const copyRows = computed(() => {
     },
     {
       slotId: 'seo.keywords',
-      where: 'Suchwörter für Google',
+      where: 'Suchwörter',
       text: c.seo_keywords || '',
       done: applied.value.has('seo.keywords'),
     },
     {
       slotId: 'trust',
-      where: 'Drei Vorteilskarten unter der Überschrift',
+      where: 'Drei Vorteilskarten',
       text: Array.isArray(c.trust)
         ? c.trust.map((t: any) => `${t.value} — ${t.label}`).join(' · ')
         : '',
@@ -208,7 +260,7 @@ function take(row: { slotId: string; text: string }) {
   const next = new Set(applied.value)
   next.add(row.slotId)
   applied.value = next
-  flash.value = 'Im Formular eingetragen — bitte noch speichern.'
+  flash.value = 'Ins Formular übernommen.'
 }
 
 async function loadQuota() {
@@ -217,7 +269,10 @@ async function loadQuota() {
     remaining.value = Number(res.remaining ?? 3)
     limit.value = Number(res.limit ?? 3)
     resetsOn.value = String(res.resets_on || '')
-    if (res.last && !briefing.value) briefing.value = res.last
+    if (res.last && !briefing.value) {
+      briefing.value = res.last
+      showCopy.value = false
+    }
     if (briefing.value) markReady()
   } catch {
     /* ignore */
@@ -250,9 +305,13 @@ async function run(rewrite: boolean) {
     briefing.value = res.briefing
     applied.value = new Set()
     markReady()
-    flash.value = rewrite
-      ? 'Neue Texte mit deiner Auswahl — unten lesen und übernehmen.'
-      : 'Recherche fertig. Suchwörter antippen, dann Texte übernehmen.'
+    if (rewrite) {
+      showCopy.value = true
+      flash.value = 'Texte sind fertig — übernehmen, was passt.'
+    } else {
+      showCopy.value = false
+      flash.value = 'Tippe 1–3 Suchwörter an.'
+    }
   } catch (err: any) {
     error.value = err?.data?.statusMessage || err?.message || 'Analyse fehlgeschlagen'
     if (typeof err?.data?.data?.remaining === 'number') remaining.value = err.data.data.remaining
@@ -267,271 +326,277 @@ onMounted(loadQuota)
 
 <style scoped>
 .seo-advisor {
-  background: #eef4ff;
-  border: 1px solid #b8c9e6;
-  border-radius: 1rem;
-  padding: 1rem 1.1rem 1.15rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 1.1rem;
+  padding: 1rem 1rem 1.1rem;
   margin: 0 0 1.1rem;
 }
-.seo-advisor-head {
+.seo-head {
   display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
   align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
-.seo-advisor-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.4rem;
-  flex-shrink: 0;
-}
-.seo-advisor-skip {
-  border: 0;
-  background: transparent;
-  color: #5b6577;
-  font-size: 0.75rem;
-  font-weight: 650;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-  padding: 0.15rem 0.2rem;
-  text-align: right;
-}
-.seo-advisor-skip:hover {
-  color: #0c1222;
-}
-.seo-advisor-skip:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.seo-advisor-kicker {
+.seo-kicker {
   margin: 0;
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 750;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #6b7a8d;
+  color: #64748b;
 }
-.seo-advisor h3 {
-  margin: 0.15rem 0 0.2rem;
-  font-size: 1rem;
-  color: #0c1222;
+.seo-head h3 {
+  margin: 0.15rem 0 0;
+  font-size: 1.12rem;
+  font-weight: 750;
+  color: #0f172a;
+  line-height: 1.25;
 }
-.seo-advisor-hint,
-.seo-advisor-help {
-  margin: 0 0 0.45rem;
-  font-size: 0.78rem;
-  color: #5b6577;
-  line-height: 1.4;
-}
-.seo-advisor-run,
-.seo-rewrite,
-.seo-copy-btn {
-  border: 0;
-  border-radius: 0.7rem;
-  padding: 0.5rem 0.8rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.seo-advisor-run {
+.seo-quota {
+  margin: 0;
   flex-shrink: 0;
-  color: #fff;
-  background: #0c1222;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #334155;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 0.28rem 0.6rem;
 }
-.seo-advisor-run:disabled,
-.seo-rewrite:disabled,
-.seo-copy-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.seo-advisor-error {
-  margin: 0.7rem 0 0;
-  font-size: 0.8rem;
+.seo-quota.is-out {
   color: #9a3412;
+  background: #fff7ed;
 }
-.seo-advisor-flash {
-  margin: 0.7rem 0 0;
+.seo-steps {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin: 0.9rem 0 0.85rem;
+  padding: 0;
+}
+.seo-steps li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: #94a3b8;
+  text-align: center;
+}
+.seo-steps li span {
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+.seo-steps li.is-now {
+  color: #0f172a;
+}
+.seo-steps li.is-now span {
+  background: #0f172a;
+  color: #fff;
+}
+.seo-steps li.is-done {
+  color: #166534;
+}
+.seo-steps li.is-done span {
+  background: #dcfce7;
+  color: #166534;
+}
+.seo-msg {
+  margin: 0 0 0.7rem;
   font-size: 0.8rem;
   color: #1d4ed8;
 }
-.seo-advisor-body {
-  margin-top: 0.9rem;
-  display: grid;
-  gap: 0.95rem;
+.seo-msg--err {
+  color: #9a3412;
 }
-.seo-advisor-summary {
+.seo-panel {
+  display: grid;
+  gap: 0.55rem;
+}
+.seo-lead {
   margin: 0;
-  font-size: 0.85rem;
-  color: #1a2333;
+  font-size: 0.88rem;
   line-height: 1.45;
+  color: #475569;
 }
-.seo-advisor-label {
-  margin: 0 0 0.35rem;
-  font-size: 0.78rem;
-  font-weight: 750;
-  color: #0c1222;
-}
-.seo-advisor-comp ul,
-.seo-advisor-keys {
+.seo-pick {
   margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.4rem;
-}
-.seo-advisor-comp li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.65rem;
-  background: #fff;
-  border: 1px solid #d7deea;
-  border-radius: 0.75rem;
-  padding: 0.55rem 0.7rem;
-  font-size: 0.8rem;
-  color: #0c1222;
-}
-.seo-comp-meta {
-  flex-shrink: 0;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  color: #5b6577;
-  background: #eef2f7;
-  border-radius: 999px;
-  padding: 0.15rem 0.5rem;
+  color: #0f172a;
 }
-.seo-key {
+.seo-btn {
+  border: 0;
+  cursor: pointer;
+  font-weight: 750;
+}
+.seo-btn--primary {
+  width: 100%;
+  min-height: 2.75rem;
+  border-radius: 0.85rem;
+  background: #0f172a;
+  color: #fff;
+  font-size: 0.92rem;
+}
+.seo-btn--primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.seo-btn--text {
+  background: transparent;
+  color: #64748b;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.2rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.seo-wait {
+  justify-items: center;
+  text-align: center;
+  padding: 1.1rem 0.5rem 0.6rem;
+  color: #475569;
+  font-size: 0.88rem;
+}
+.seo-wait p {
+  margin: 0;
+}
+.seo-spinner {
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 2px solid #e2e8f0;
+  border-top-color: #0f172a;
+  border-radius: 999px;
+  animation: seo-spin 0.7s linear infinite;
+}
+@keyframes seo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.seo-chip {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 0.65rem;
-  align-items: start;
-  background: #fff;
-  border: 1px solid #d7deea;
-  border-radius: 0.85rem;
+  align-items: center;
+  text-align: left;
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 0.9rem;
   padding: 0.7rem 0.8rem;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
-.seo-key-check {
-  width: 1.2rem;
-  height: 1.2rem;
-  margin-top: 0.12rem;
+.seo-chip-check {
+  width: 1.15rem;
+  height: 1.15rem;
   border-radius: 999px;
-  border: 1.5px solid #c5cdd8;
+  border: 1.5px solid #cbd5e1;
   background: #fff;
-  flex-shrink: 0;
 }
-.seo-key-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem 0.5rem;
+.seo-chip-body {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
 }
-.seo-key-main strong {
+.seo-chip-body strong {
   font-size: 0.9rem;
-  color: #0c1222;
-  line-height: 1.25;
+  color: #0f172a;
 }
-.seo-key-use {
-  font-size: 0.64rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  padding: 0.12rem 0.45rem;
-  border-radius: 999px;
-  background: #eef2f7;
-  color: #5b6577;
+.seo-chip-body em {
+  font-style: normal;
+  font-size: 0.7rem;
+  font-weight: 650;
+  color: #64748b;
 }
-.seo-key-pro,
-.seo-key-con {
-  margin: 0.28rem 0 0;
-  padding-left: 0.85rem;
-  position: relative;
-  font-size: 0.74rem;
-  line-height: 1.35;
-  color: #5b6577;
+.seo-chip.is-on {
+  border-color: #0f172a;
+  background: #fff;
+  box-shadow: 0 0 0 1px #0f172a;
 }
-.seo-key-pro::before,
-.seo-key-con::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.42rem;
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-}
-.seo-key-pro::before {
-  background: #16a34a;
-}
-.seo-key-con::before {
-  background: #d97706;
-}
-.seo-key.is-on {
-  border-color: #0c1222;
-  background: #f3f6fb;
-  box-shadow: 0 0 0 1px #0c1222;
-}
-.seo-key.is-on .seo-key-check {
-  border-color: #0c1222;
-  background: #0c1222;
+.seo-chip.is-on .seo-chip-check {
+  border-color: #0f172a;
+  background: #0f172a;
   box-shadow: inset 0 0 0 2px #fff;
 }
-.seo-key.is-skip .seo-key-use {
-  background: #f3f4f6;
-  color: #9aa3b2;
+.seo-chip.is-skip {
+  opacity: 0.55;
 }
-.seo-rewrite {
-  justify-self: start;
-  margin-top: 0.35rem;
-  background: #0c1222;
-  color: #fff;
+.seo-more {
+  background: #f8fafc;
+  border-radius: 0.8rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8rem;
+  color: #475569;
 }
-.seo-advisor-copy {
+.seo-more summary {
+  cursor: pointer;
+  font-weight: 650;
+  color: #334155;
+}
+.seo-more ul {
+  list-style: none;
+  margin: 0.45rem 0 0.2rem;
+  padding: 0;
   display: grid;
-  gap: 0.45rem;
+  gap: 0.3rem;
+}
+.seo-more li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 .seo-copy {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.9rem;
+  padding: 0.7rem 0.8rem;
   display: grid;
   gap: 0.4rem;
-  background: #fff;
-  border: 1px solid #d7deea;
-  border-radius: 0.85rem;
-  padding: 0.7rem 0.8rem;
 }
 .seo-copy-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.65rem;
+  gap: 0.5rem;
 }
-.seo-copy-where {
+.seo-copy-top p {
   margin: 0;
-  font-size: 0.64rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #5b6577;
-  background: #eef2f7;
-  border-radius: 999px;
-  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 750;
+  color: #64748b;
 }
 .seo-copy-text {
   margin: 0;
   font-size: 0.88rem;
   line-height: 1.4;
-  color: #0c1222;
+  color: #0f172a;
 }
 .seo-copy-btn {
   flex-shrink: 0;
-  background: #0c1222;
-  color: #fff;
+  border: 0;
   border-radius: 999px;
   padding: 0.35rem 0.7rem;
+  background: #0f172a;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+.seo-copy-btn:disabled {
+  opacity: 0.4;
 }
 .seo-copy.is-done {
-  background: #f3f6fb;
-  border-color: #0c1222;
+  border-color: #86efac;
+  background: #f0fdf4;
 }
 .seo-copy.is-done .seo-copy-btn {
   background: #16a34a;

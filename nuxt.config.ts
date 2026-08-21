@@ -116,7 +116,7 @@ export default defineNuxtConfig({
         "img-src 'self' data: https: blob:",
         "connect-src 'self' https://unyjaetebnaexaflpyoc.supabase.co https://maps.googleapis.com https://api.resend.com https://app-wallee.com wss://unyjaetebnaexaflpyoc.supabase.co https://www.facebook.com https://connect.facebook.net",
         "font-src 'self' data: https://fonts.gstatic.com",
-        "frame-src 'self' https://app-wallee.com",
+        "frame-src 'self' https://app-wallee.com https://*.google.com https://*.google.ch https://www.openstreetmap.org",
         "media-src 'self' blob: https:",
         "object-src 'none'",
         "base-uri 'self'",

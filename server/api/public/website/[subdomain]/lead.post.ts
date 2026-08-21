@@ -45,6 +45,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen — bitte später erneut versuchen' })
   }
 
+  const preview =
+    String(getQuery(event).preview || '') === '1' ||
+    String(body?.preview || '') === '1' ||
+    body?.preview === true
+
   const supabase = getSupabaseAdmin()
   const { data: website } = await supabase
     .from('website_tenants')
@@ -52,7 +57,7 @@ export default defineEventHandler(async (event) => {
     .eq('subdomain', subdomain)
     .maybeSingle()
 
-  if (!website?.tenant_id || !website.is_published) {
+  if (!website?.tenant_id || (!website.is_published && !preview)) {
     throw createError({ statusCode: 404, statusMessage: 'Website not found' })
   }
 
@@ -74,6 +79,17 @@ export default defineEventHandler(async (event) => {
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message })
   }
+
+  const { notifyTenantWebsiteLead } = await import('~/server/utils/website-lead-notify')
+  void notifyTenantWebsiteLead({
+    tenantId: website.tenant_id,
+    firstName,
+    lastName,
+    email,
+    phone,
+    message,
+    category,
+  })
 
   return { success: true, message: 'Danke — wir melden uns bei Ihnen.' }
 })

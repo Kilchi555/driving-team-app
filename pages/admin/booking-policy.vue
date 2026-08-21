@@ -201,6 +201,137 @@
         </div>
       </div>
 
+      <!-- Erinnerung bei langer Pause -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-800">Erinnerung bei langer Pause</h2>
+            <p class="text-xs text-gray-400 mt-0.5">
+              Aktive {{ t.clientsPlural }} ohne bestandene Prüfung und ohne kommenden Termin erhalten automatisch eine Erinnerung. Staff und Admin bekommen eine Übersicht. In der Mail können {{ t.clientsPlural }} selbst sagen, dass sie keine Termine mehr brauchen.
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="policy.idle_student_reminder_enabled = !policy.idle_student_reminder_enabled"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
+            :style="policy.idle_student_reminder_enabled ? primaryBg : { background: '#e5e7eb' }"
+          >
+            <span
+              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+              :class="policy.idle_student_reminder_enabled ? 'translate-x-6' : 'translate-x-1'"
+            />
+          </button>
+        </div>
+
+        <div v-if="policy.idle_student_reminder_enabled" class="px-5 py-4 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5">Pause ab</label>
+              <div class="flex items-center gap-2">
+                <input
+                  v-model.number="policy.idle_student_reminder_days"
+                  type="number"
+                  min="7"
+                  max="365"
+                  class="w-20 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+                <span class="text-sm text-gray-500">Tagen ohne Termin</span>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-500 mb-1.5">Erneut erinnern nach</label>
+              <div class="flex items-center gap-2">
+                <input
+                  v-model.number="policy.idle_student_reminder_resend_days"
+                  type="number"
+                  min="1"
+                  max="90"
+                  class="w-20 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+                />
+                <span class="text-sm text-gray-500">Tagen</span>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <p class="text-xs font-medium text-gray-500">Empfänger</p>
+            <label class="flex items-center justify-between py-2.5 px-3.5 rounded-xl border border-gray-100">
+              <div>
+                <p class="text-sm font-medium text-gray-700">{{ t.clientsPlural }}</p>
+                <p class="text-xs text-gray-400">Persönliche Erinnerung per E-Mail oder SMS</p>
+              </div>
+              <button
+                type="button"
+                @click="policy.idle_student_reminder_notify_client = !policy.idle_student_reminder_notify_client"
+                class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                :style="policy.idle_student_reminder_notify_client ? primaryBg : { background: '#e5e7eb' }"
+              >
+                <span
+                  class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                  :class="policy.idle_student_reminder_notify_client ? 'translate-x-4' : 'translate-x-0.5'"
+                />
+              </button>
+            </label>
+            <div v-if="policy.idle_student_reminder_notify_client" class="space-y-2 pl-1">
+              <p class="text-xs font-medium text-gray-500">Kanal für {{ t.clientsPlural }}</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  v-for="opt in idleClientChannelOptions"
+                  :key="opt.value"
+                  type="button"
+                  @click="policy.idle_student_reminder_client_channel = opt.value"
+                  class="text-left rounded-xl border p-3 transition-colors"
+                  :class="policy.idle_student_reminder_client_channel === opt.value ? 'border-transparent' : 'border-gray-100 hover:border-gray-200'"
+                  :style="policy.idle_student_reminder_client_channel === opt.value ? primaryBgLight : {}"
+                >
+                  <p class="text-sm font-semibold text-gray-800">{{ opt.label }}</p>
+                  <p class="text-xs text-gray-500 mt-1">{{ opt.description }}</p>
+                </button>
+              </div>
+              <p
+                v-if="policy.idle_student_reminder_client_channel !== 'email'"
+                class="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2"
+              >
+                SMS ist kostenpflichtig: <strong>15 Rp. pro SMS-Segment</strong>.
+              </p>
+            </div>
+            <label class="flex items-center justify-between py-2.5 px-3.5 rounded-xl border border-gray-100">
+              <div>
+                <p class="text-sm font-medium text-gray-700">Staff</p>
+                <p class="text-xs text-gray-400">Übersicht der zugewiesenen {{ t.clientsPlural }} (nur bei mehreren Staff)</p>
+              </div>
+              <button
+                type="button"
+                @click="policy.idle_student_reminder_notify_staff = !policy.idle_student_reminder_notify_staff"
+                class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                :style="policy.idle_student_reminder_notify_staff ? primaryBg : { background: '#e5e7eb' }"
+              >
+                <span
+                  class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                  :class="policy.idle_student_reminder_notify_staff ? 'translate-x-4' : 'translate-x-0.5'"
+                />
+              </button>
+            </label>
+            <label class="flex items-center justify-between py-2.5 px-3.5 rounded-xl border border-gray-100">
+              <div>
+                <p class="text-sm font-medium text-gray-700">Admin</p>
+                <p class="text-xs text-gray-400">Gesamtübersicht an Admins und Kontakt-E-Mail</p>
+              </div>
+              <button
+                type="button"
+                @click="policy.idle_student_reminder_notify_admin = !policy.idle_student_reminder_notify_admin"
+                class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+                :style="policy.idle_student_reminder_notify_admin ? primaryBg : { background: '#e5e7eb' }"
+              >
+                <span
+                  class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                  :class="policy.idle_student_reminder_notify_admin ? 'translate-x-4' : 'translate-x-0.5'"
+                />
+              </button>
+            </label>
+          </div>
+        </div>
+      </div>
+
       <!-- ══════════════════════════════════════════════════════
            GRUPPE 2: Online-Buchung (Kundenflow)
       ══════════════════════════════════════════════════════ -->
@@ -616,10 +747,24 @@ const policy = ref({
   registration_reminder_days: 7,
   registration_reminder_email_enabled: true,
   registration_reminder_sms_enabled: true,
+  idle_student_reminder_enabled: false,
+  idle_student_reminder_days: 30,
+  idle_student_reminder_resend_days: 14,
+  idle_student_reminder_notify_client: true,
+  idle_student_reminder_notify_staff: true,
+  idle_student_reminder_notify_admin: true,
+  idle_student_reminder_client_channel: 'email_first' as 'email' | 'sms' | 'email_first' | 'sms_first',
   onboarding_sms_enabled: true,
   onboarding_email_enabled: false,
   staff_refund_permission: 'hidden' as 'hidden' | 'request' | 'allowed',
 })
+
+const idleClientChannelOptions = [
+  { value: 'email' as const, label: 'Nur E-Mail', description: 'Nur wenn eine E-Mail vorhanden ist.' },
+  { value: 'sms' as const, label: 'Nur SMS', description: 'Kostenpflichtig, 15 Rp. pro SMS-Segment.' },
+  { value: 'email_first' as const, label: 'Prio E-Mail', description: 'E-Mail wenn vorhanden, sonst SMS.' },
+  { value: 'sms_first' as const, label: 'Prio SMS', description: 'SMS wenn Telefon vorhanden, sonst E-Mail.' },
+]
 
 const registrationModeOptions = [
   { value: 'hidden' as const, label: 'Aus' },

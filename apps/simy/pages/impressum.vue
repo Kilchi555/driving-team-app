@@ -27,16 +27,16 @@ import { breadcrumbLd, ldScripts, webPageLd } from '~/utils/schema'
 useHead({
   title: 'Impressum – Simy IT Systems',
   meta: [{ name: 'robots', content: 'noindex' }],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/impressum' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/impressum' }],
   script: ldScripts(
     webPageLd({
       name: 'Impressum – Simy',
       description: 'Impressum und Firmenangaben der Simy IT Systems.',
-      url: 'https://simy.ch/impressum',
+      url: 'https://www.simy.ch/impressum',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Impressum', url: 'https://simy.ch/impressum' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Impressum', url: 'https://www.simy.ch/impressum' },
     ]),
   ),
 })
@@ -44,11 +44,11 @@ useHead({
 const blocks = [
   {
     title: 'Firmenangaben',
-    content: 'Simy IT Systems\nPascal Kilchenmann\nSchweiz',
+    content: 'Simy IT Systems Kilchenmann\nRechtsform: Einzelfirma\nInhaber: Pascal Kilchenmann\nWeiherweg 2\n8610 Uster\nSchweiz',
   },
   {
     title: 'Kontakt',
-    content: 'E-Mail: info@simy.ch\nWebsite: https://simy.ch',
+    content: 'E-Mail: info@simy.ch\nTelefon: +41 79 715 70 27\nWebsite: https://www.simy.ch',
   },
   {
     title: 'Vertretungsberechtigte Person',

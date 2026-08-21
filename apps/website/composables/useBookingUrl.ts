@@ -99,8 +99,13 @@ export const useBookingUrl = () => {
     // Marketing attribution (gclid + UTMs) — encoded blob for cross-domain forwarding
     // Always attempt — even when no BookingParams were passed (bare generateBookingUrl()).
     if (typeof window !== 'undefined' && (window as any).__dtMarketingAttribution) {
-      const encoded = encodeAttribution((window as any).__dtMarketingAttribution)
+      const attr = (window as any).__dtMarketingAttribution
+      const encoded = encodeAttribution(attr)
       if (encoded) queryParams.append('dt_attr', encoded)
+      // Raw click IDs as a fallback if dt_attr is dropped by a redirect/proxy.
+      for (const key of ['gclid', 'gbraid', 'wbraid', 'fbclid'] as const) {
+        if (attr[key] && !queryParams.has(key)) queryParams.append(key, attr[key])
+      }
     }
 
     // Referrer — current page URL so the booking page can navigate back

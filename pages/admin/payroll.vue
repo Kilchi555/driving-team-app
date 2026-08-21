@@ -5,7 +5,7 @@
     <div class="flex items-center justify-between flex-wrap gap-3">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">Lohnbuchhaltung</h1>
-        <p class="text-sm text-gray-500 mt-0.5">Mitarbeiter, Lohnabrechnungen & Rentabilität</p>
+        <p class="text-sm text-gray-500 mt-0.5">Mitarbeiter, Lohnabrechnungen, Rentabilität & Budget</p>
       </div>
       <div class="flex items-center gap-2">
         <select v-model="selectedYear" @change="loadAll"
@@ -83,7 +83,7 @@
 
     <!-- ═══ TAB: MITARBEITER ═══ -->
     <div v-if="activeTab === 'employees'" class="space-y-4">
-      <div class="flex justify-end">
+      <div v-if="canWriteBooks" class="flex justify-end">
         <button @click="openEmployeeModal(null)"
           class="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,7 +135,7 @@
               <td class="px-5 py-4 text-sm text-gray-500">
                 {{ fmtDate(emp.start_date) }}
               </td>
-              <td class="px-5 py-4 text-right">
+              <td v-if="canWriteBooks" class="px-5 py-4 text-right">
                 <button @click="openEmployeeModal(emp)"
                   class="text-xs text-emerald-600 hover:text-emerald-800 font-medium underline">
                   Bearbeiten
@@ -168,25 +168,10 @@
             <option v-for="(m, i) in monthNames" :key="i+1" :value="i+1">{{ m }}</option>
           </select>
         </div>
-        <div class="flex items-center gap-2">
-          <!-- Copy from previous month -->
-          <button @click="copyFromLastMonth"
-            :disabled="copying || calculating"
-            :title="prevMonthLabel"
-            class="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 disabled:opacity-50 text-gray-700 text-sm font-medium rounded-xl transition-colors shadow-sm border border-gray-200">
-            <svg v-if="copying" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-            </svg>
-            {{ copying ? 'Kopiere…' : `Vormonat kopieren` }}
-          </button>
-
-          <!-- Calculate current month -->
+        <div v-if="canWriteBooks" class="flex items-center gap-2">
           <button @click="calculateMonth"
-            :disabled="calculating || copying"
+            :disabled="calculating"
+            title="Stunden und Ferien kommen aus dem Kalender"
             class="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shadow-sm">
             <svg v-if="calculating" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -202,11 +187,17 @@
 
       <!-- Month runs -->
       <div v-if="monthRuns.length > 0" class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+        <div class="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
           <span class="text-sm font-semibold text-gray-700">
             {{ monthNames[selectedMonth - 1] }} {{ selectedYear }}
           </span>
-          <span class="text-xs text-gray-500">{{ monthRuns.length }} Mitarbeiter</span>
+          <div class="flex items-center gap-3">
+            <button @click="exportMonthPayslips" :disabled="exportingPayslips"
+              class="text-xs font-semibold text-slate-600 underline disabled:opacity-50">
+              {{ exportingPayslips ? 'PDF…' : 'Alle Lohnblätter' }}
+            </button>
+            <span class="text-xs text-gray-500">{{ monthRuns.length }} Mitarbeiter</span>
+          </div>
         </div>
         <table class="w-full">
           <thead>
@@ -224,11 +215,15 @@
           <tbody class="divide-y divide-gray-50">
             <tr v-for="run in monthRuns" :key="run.id" class="hover:bg-gray-50 transition-colors">
               <td class="px-5 py-4 font-medium text-gray-900">
-                {{ run.employee?.first_name }} {{ run.employee?.last_name }}
+                <div>{{ run.employee?.first_name }} {{ run.employee?.last_name }}</div>
+                <div v-if="run.hours_worked != null || (run.vacation_hours ?? 0) > 0" class="text-xs text-gray-400 font-normal mt-0.5">
+                  <span v-if="run.hours_worked != null">{{ run.hours_worked }} h Kalender</span>
+                  <span v-if="(run.vacation_hours ?? 0) > 0"> · {{ run.vacation_hours }} h Ferien</span>
+                </div>
               </td>
               <td class="px-5 py-4 text-right text-gray-700">{{ chf(run.gross_rappen) }}</td>
               <td class="px-5 py-4 text-right text-red-600 text-sm">
-                -{{ chf(run.ahv_employee_rappen + run.alv_employee_rappen + run.nbu_employee_rappen) }}
+                -{{ chf(run.ahv_employee_rappen + run.alv_employee_rappen + run.nbu_employee_rappen + (run.bvg_employee_rappen ?? 0)) }}
               </td>
               <td class="px-5 py-4 text-right font-semibold text-emerald-700">
                 <div>{{ chf((run as any).total_payout_rappen ?? run.net_rappen) }}</div>
@@ -241,7 +236,7 @@
                 +{{ chf(run.ahv_employer_rappen + run.alv_employer_rappen + run.bu_employer_rappen + ((run as any).bvg_employer_rappen ?? 0)) }}
               </td>
               <td class="px-5 py-4 text-right font-bold text-gray-900">
-                {{ chf(run.gross_rappen + run.ahv_employer_rappen + run.alv_employer_rappen + run.bu_employer_rappen) }}
+                {{ chf(run.gross_rappen + run.ahv_employer_rappen + run.alv_employer_rappen + run.bu_employer_rappen + (run.bvg_employer_rappen ?? 0) + (run.monthly_spesen_rappen ?? 0) + (run.child_allowance_rappen ?? 0)) }}
               </td>
               <td class="px-5 py-4 text-center">
                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
@@ -250,14 +245,20 @@
                 </span>
               </td>
               <td class="px-5 py-4 text-right">
-                <button v-if="run.status === 'draft'" @click="payRun(run)"
-                  :disabled="paying === run.id"
-                  class="text-xs px-3 py-1.5 rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white transition-colors">
-                  Als bezahlt markieren
-                </button>
-                <span v-else class="text-xs text-gray-400">
-                  {{ fmtDate(run.paid_at?.split('T')[0]) }}
-                </span>
+                <div class="flex items-center justify-end gap-2">
+                  <button @click="exportPayslip(run)" :disabled="exportingPayslip === run.id"
+                    class="text-xs px-3 py-1.5 rounded-lg font-medium text-slate-700 bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50">
+                    {{ exportingPayslip === run.id ? 'PDF…' : 'Lohnblatt' }}
+                  </button>
+                  <button v-if="canWriteBooks && run.status === 'draft'" @click="payRun(run)"
+                    :disabled="paying === run.id"
+                    class="text-xs px-3 py-1.5 rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white transition-colors">
+                    Als bezahlt markieren
+                  </button>
+                  <span v-else class="text-xs text-gray-400">
+                    {{ fmtDate(run.paid_at?.split('T')[0]) }}
+                  </span>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -266,7 +267,7 @@
               <td class="px-5 py-3 font-bold text-gray-900">Total</td>
               <td class="px-5 py-3 text-right font-bold">{{ chf(monthRuns.reduce((s,r) => s + r.gross_rappen, 0)) }}</td>
               <td class="px-5 py-3 text-right font-bold text-red-600">
-                -{{ chf(monthRuns.reduce((s,r) => s + r.ahv_employee_rappen + r.alv_employee_rappen + r.nbu_employee_rappen, 0)) }}
+                -{{ chf(monthRuns.reduce((s,r) => s + r.ahv_employee_rappen + r.alv_employee_rappen + r.nbu_employee_rappen + (r.bvg_employee_rappen ?? 0), 0)) }}
               </td>
               <td class="px-5 py-3 text-right font-bold text-emerald-700">
                 {{ chf(monthRuns.reduce((s,r) => s + ((r as any).total_payout_rappen ?? r.net_rappen), 0)) }}
@@ -313,12 +314,20 @@
           :class="profitView === 'overall' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
           Gesamt
         </button>
+        <button @click="profitView = 'budget'"
+          class="px-3 py-1.5 rounded-lg font-medium transition-all"
+          :class="profitView === 'budget' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
+          Budget
+        </button>
         <button @click="profitView = 'instructors'"
           class="px-3 py-1.5 rounded-lg font-medium transition-all"
           :class="profitView === 'instructors' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
           Pro {{ t.staff }}
         </button>
       </div>
+      <p class="text-xs text-gray-400">
+        Gesamt und Budget kommen aus der Buchhaltung. Löhne zählen nur als bezahlte Lohnbuchung, nicht zusätzlich aus der Lohnabrechnung.
+      </p>
 
       <!-- ── OVERALL VIEW ── -->
       <template v-if="profitView === 'overall'">
@@ -346,7 +355,7 @@
           <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Break-Even / Monat</p>
             <p class="text-2xl font-bold text-gray-900">{{ chf(profitability?.summary.break_even_monthly_rappen ?? 0) }}</p>
-            <p class="text-xs text-gray-400 mt-1">Mindest-Umsatz nötig</p>
+            <p class="text-xs text-gray-400 mt-1">Ø Kosten über {{ profitability?.closed_months || 0 }} Monate</p>
           </div>
         </div>
 
@@ -407,7 +416,7 @@
               <div class="flex justify-between items-center">
                 <span class="text-sm text-gray-600">Ø Umsatz / Monat</span>
                 <span class="font-semibold text-emerald-600">
-                  {{ chf(Math.round((profitability?.summary.total_revenue_rappen ?? 0) / 12)) }}
+                  {{ chf(profitability?.summary.avg_monthly_revenue_rappen ?? 0) }}
                 </span>
               </div>
               <div class="border-t border-gray-100 pt-3 flex justify-between items-center">
@@ -417,6 +426,77 @@
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="profitView === 'budget'">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div class="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p class="text-sm font-semibold text-gray-700">Jahresbudget {{ selectedYear }}</p>
+              <p class="text-xs text-gray-400 mt-0.5">
+                {{ budgetSaved ? 'Gespeichertes Soll' : 'Vorschlag aus Vorjahr bzw. wiederkehrenden Buchungen' }} — Ist aus der Buchhaltung.
+              </p>
+            </div>
+            <button
+              v-if="canWriteBooks"
+              type="button"
+              :disabled="savingBudget"
+              class="px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+              @click="saveBudget"
+            >{{ savingBudget ? 'Speichern…' : 'Budget speichern' }}</button>
+          </div>
+          <div v-if="budgetLines.length === 0" class="px-5 py-12 text-center text-gray-400 text-sm">
+            Keine Kategorien oder Buchungen für ein Budget. Zuerst Kategorien in der Buchhaltung anlegen.
+          </div>
+          <div v-else class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100">
+                  <th class="px-5 py-3 text-left">Kategorie</th>
+                  <th class="px-5 py-3 text-right">Soll</th>
+                  <th class="px-5 py-3 text-right">Ist</th>
+                  <th class="px-5 py-3 text-right">Abweichung</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-50">
+                <tr v-for="line in budgetLines" :key="line.key" class="hover:bg-gray-50">
+                  <td class="px-5 py-3">
+                    <p class="font-medium text-gray-900">{{ line.name }}</p>
+                    <p class="text-xs text-gray-400">{{ line.type === 'income' ? 'Einnahme' : 'Ausgabe' }}</p>
+                  </td>
+                  <td class="px-5 py-3 text-right">
+                    <input
+                      v-if="canWriteBooks"
+                      :value="(line.budget_rappen / 100).toFixed(0)"
+                      type="number"
+                      min="0"
+                      step="100"
+                      class="w-28 ml-auto block text-right border border-gray-200 rounded-lg px-2 py-1.5 text-sm"
+                      @change="setBudgetChf(line.key, ($event.target as HTMLInputElement).value)"
+                    >
+                    <span v-else class="font-medium">{{ chf(line.budget_rappen) }}</span>
+                  </td>
+                  <td class="px-5 py-3 text-right text-gray-700">{{ chf(line.actual_rappen) }}</td>
+                  <td class="px-5 py-3 text-right font-semibold"
+                    :class="budgetDeltaClass(line)">
+                    {{ line.delta_rappen > 0 ? '+' : '' }}{{ chf(line.delta_rappen) }}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot class="border-t-2 border-gray-200 bg-gray-50">
+                <tr>
+                  <td class="px-5 py-3 font-bold">Ergebnis Soll / Ist</td>
+                  <td class="px-5 py-3 text-right font-bold">{{ chf(budgetResult.budget) }}</td>
+                  <td class="px-5 py-3 text-right font-bold">{{ chf(budgetResult.actual) }}</td>
+                  <td class="px-5 py-3 text-right font-bold"
+                    :class="budgetResult.actual >= budgetResult.budget ? 'text-emerald-700' : 'text-red-600'">
+                    {{ chf(budgetResult.actual - budgetResult.budget) }}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
       </template>
@@ -433,7 +513,8 @@
           <!-- Summary bar per instructor -->
           <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-gray-100 bg-gray-50">
-              <span class="text-sm font-semibold text-gray-700">Rentabilität pro {{ t.staff }} {{ selectedYear }}</span>
+              <span class="text-sm font-semibold text-gray-700">Deckungsbeitrag pro {{ t.staff }} {{ selectedYear }}</span>
+              <p class="text-xs text-gray-400 mt-0.5">Nur eigener Umsatz und Lohn. Miete, Autos und übrige Gemeinkosten bleiben im Gesamt.</p>
             </div>
             <table class="w-full">
               <thead>
@@ -443,7 +524,7 @@
                   <th class="px-5 py-3 text-right">Lohnkosten AG</th>
                   <th class="px-5 py-3 text-right">Ergebnis</th>
                   <th class="px-5 py-3 text-right">Marge</th>
-                  <th class="px-5 py-3 text-center">Stunden</th>
+                  <th class="px-5 py-3 text-right">Stunden</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-50">
@@ -471,8 +552,8 @@
                     </span>
                     <span v-else class="text-xs text-gray-400">–</span>
                   </td>
-                  <td class="px-5 py-4 text-center text-sm text-gray-500">
-                    {{ inst.payments_count > 0 ? inst.payments_count : '–' }}
+                  <td class="px-5 py-4 text-right text-sm text-gray-500">
+                    {{ inst.hours > 0 ? `${inst.hours} h` : '–' }}
                   </td>
                 </tr>
               </tbody>
@@ -1083,13 +1164,19 @@ interface PayrollRun {
   month: number
   gross_rappen: number
   hours_worked: number | null
+  vacation_hours?: number | null
   ahv_employee_rappen: number
   iv_employee_rappen: number
   alv_employee_rappen: number
   nbu_employee_rappen: number
+  bvg_employee_rappen?: number
   ahv_employer_rappen: number
   alv_employer_rappen: number
   bu_employer_rappen: number
+  bvg_employer_rappen?: number
+  monthly_spesen_rappen?: number
+  child_allowance_rappen?: number
+  total_payout_rappen?: number
   net_rappen: number
   status: 'draft' | 'paid'
   paid_at: string | null
@@ -1105,13 +1192,28 @@ const activeTab = ref<'employees' | 'runs' | 'profitability'>('employees')
 const employees = ref<PayrollEmployee[]>([])
 const runs = ref<PayrollRun[]>([])
 const profitability = ref<any>(null)
+const budgetLines = ref<Array<{
+  key: string
+  type: 'income' | 'expense'
+  category_id: string | null
+  name: string
+  budget_rappen: number
+  actual_rappen: number
+  suggested_rappen: number
+  delta_rappen: number
+}>>([])
+const budgetSaved = ref(false)
+const savingBudget = ref(false)
 
 const showEmployeeModal = ref(false)
 const editingEmployee = ref<PayrollEmployee | null>(null)
 const saving = ref(false)
 const calculating = ref(false)
 const paying = ref<string | null>(null)
-const profitView = ref<'overall' | 'instructors'>('overall')
+const exportingPayslip = ref<string | null>(null)
+const exportingPayslips = ref(false)
+const canWriteBooks = ref(true)
+const profitView = ref<'overall' | 'budget' | 'instructors'>('overall')
 const errorMsg = ref<string | null>(null)
 const staffUsers = ref<Array<{ id: string; first_name: string; last_name: string; email: string; already_linked: boolean }>>([])
 const selectedStaffUserId = ref('')
@@ -1213,8 +1315,21 @@ const maxMonthlyRevenue = computed(() => {
 
 const coverageRatio = computed(() => {
   const s = profitability.value?.summary
-  if (!s || s.break_even_monthly_rappen === 0) return 1
-  return (s.total_revenue_rappen / 12) / s.break_even_monthly_rappen
+  if (!s) return 1
+  if (typeof s.coverage_ratio === 'number') return s.coverage_ratio
+  if (!s.break_even_monthly_rappen) return 1
+  return (s.avg_monthly_revenue_rappen || 0) / s.break_even_monthly_rappen
+})
+
+const budgetResult = computed(() => {
+  const incomeBudget = budgetLines.value.filter(l => l.type === 'income').reduce((s, l) => s + l.budget_rappen, 0)
+  const expenseBudget = budgetLines.value.filter(l => l.type === 'expense').reduce((s, l) => s + l.budget_rappen, 0)
+  const incomeActual = budgetLines.value.filter(l => l.type === 'income').reduce((s, l) => s + l.actual_rappen, 0)
+  const expenseActual = budgetLines.value.filter(l => l.type === 'expense').reduce((s, l) => s + l.actual_rappen, 0)
+  return {
+    budget: incomeBudget - expenseBudget,
+    actual: incomeActual - expenseActual,
+  }
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1266,7 +1381,16 @@ const selfAhvResult = computed(() => {
 
 // ─── Data loading ─────────────────────────────────────────────────────────────
 async function loadAll() {
-  await Promise.all([loadEmployees(), loadRuns(), loadProfitability(), loadLegalInfo()])
+  await Promise.all([loadEmployees(), loadRuns(), loadProfitability(), loadBudget(), loadLegalInfo(), loadAccountantAccess()])
+}
+
+async function loadAccountantAccess() {
+  try {
+    const data = await $fetch('/api/admin/accounting/access')
+    canWriteBooks.value = !data.is_accountant || data.accountant_access === 'write'
+  } catch {
+    canWriteBooks.value = true
+  }
 }
 
 async function loadEmployees() {
@@ -1287,6 +1411,57 @@ async function loadProfitability() {
   try {
     profitability.value = await $fetch(`/api/admin/payroll/profitability?year=${selectedYear.value}`)
   } catch { profitability.value = null }
+}
+
+async function loadBudget() {
+  try {
+    const data = await $fetch<{
+      saved?: boolean
+      lines?: typeof budgetLines.value
+    }>(`/api/admin/accounting/budget?year=${selectedYear.value}`)
+    budgetSaved.value = !!data.saved
+    budgetLines.value = (data.lines || []).map(line => ({
+      ...line,
+      delta_rappen: line.actual_rappen - line.budget_rappen,
+    }))
+  } catch {
+    budgetLines.value = []
+    budgetSaved.value = false
+  }
+}
+
+function setBudgetChf(key: string, raw: string) {
+  const line = budgetLines.value.find(l => l.key === key)
+  if (!line) return
+  line.budget_rappen = Math.max(0, Math.round((Number(raw) || 0) * 100))
+  line.delta_rappen = line.actual_rappen - line.budget_rappen
+}
+
+function budgetDeltaClass(line: { type: string; delta_rappen: number }) {
+  if (line.type === 'income') return line.delta_rappen >= 0 ? 'text-emerald-600' : 'text-red-500'
+  return line.delta_rappen <= 0 ? 'text-emerald-600' : 'text-red-500'
+}
+
+async function saveBudget() {
+  savingBudget.value = true
+  try {
+    await $fetch('/api/admin/accounting/budget', {
+      method: 'PUT',
+      body: {
+        year: selectedYear.value,
+        lines: budgetLines.value.map(line => ({
+          type: line.type,
+          category_id: line.category_id,
+          amount_rappen: line.budget_rappen,
+        })),
+      },
+    })
+    await loadBudget()
+  } catch (e: any) {
+    alert(e?.statusMessage || e?.message || 'Budget speichern fehlgeschlagen')
+  } finally {
+    savingBudget.value = false
+  }
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -1418,49 +1593,6 @@ async function saveEmployee() {
   }
 }
 
-const copying = ref(false)
-
-const prevMonthLabel = computed(() => {
-  let y = selectedYear.value
-  let m = selectedMonth.value - 1
-  if (m === 0) { m = 12; y-- }
-  return `Löhne von ${monthNames[m - 1]} ${y} kopieren und neu berechnen`
-})
-
-async function copyFromLastMonth() {
-  if (employees.value.length === 0) { alert('Keine Mitarbeiter erfasst'); return }
-  // Determine previous month
-  let prevYear = selectedYear.value
-  let prevMonth = selectedMonth.value - 1
-  if (prevMonth === 0) { prevMonth = 12; prevYear-- }
-
-  copying.value = true
-  try {
-    // Fetch previous month's runs to extract hours_worked
-    const prev = await $fetch<{ success: boolean; data: PayrollRun[] }>(
-      `/api/admin/payroll/runs?year=${prevYear}&month=${prevMonth}`
-    )
-    const prevRuns = prev.data ?? []
-    const hoursMap = new Map(prevRuns.map(r => [r.employee_id, r.hours_worked]))
-
-    // Build run list: carry over hours_worked from prev month for hourly employees
-    const runList = employees.value.map(e => ({
-      employee_id: e.id,
-      hours_worked: hoursMap.get(e.id) ?? undefined,
-    }))
-
-    await $fetch('/api/admin/payroll/calculate', {
-      method: 'POST',
-      body: { year: selectedYear.value, month: selectedMonth.value, runs: runList },
-    })
-    await loadRuns()
-  } catch (e: any) {
-    alert(e.data?.message ?? 'Fehler beim Kopieren')
-  } finally {
-    copying.value = false
-  }
-}
-
 async function calculateMonth() {
   if (employees.value.length === 0) {
     alert('Keine Mitarbeiter erfasst')
@@ -1484,12 +1616,53 @@ async function calculateMonth() {
   }
 }
 
+async function downloadPdf(url: string, filename: string) {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('Export fehlgeschlagen')
+  const blob = await res.blob()
+  const href = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = href
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(href)
+}
+
+async function exportPayslip(run: PayrollRun) {
+  exportingPayslip.value = run.id
+  try {
+    const last = (run.employee?.last_name ?? 'mitarbeiter').toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    await downloadPdf(
+      `/api/admin/payroll/runs/${run.id}/payslip`,
+      `lohnblatt_${last}_${run.year}-${String(run.month).padStart(2, '0')}.pdf`,
+    )
+  } catch {
+    alert('Lohnblatt-PDF fehlgeschlagen')
+  } finally {
+    exportingPayslip.value = null
+  }
+}
+
+async function exportMonthPayslips() {
+  exportingPayslips.value = true
+  try {
+    await downloadPdf(
+      `/api/admin/payroll/export-payslips?year=${selectedYear.value}&month=${selectedMonth.value}`,
+      `lohnblaetter_${selectedYear.value}-${String(selectedMonth.value).padStart(2, '0')}.pdf`,
+    )
+  } catch {
+    alert('Monats-PDF fehlgeschlagen')
+  } finally {
+    exportingPayslips.value = false
+  }
+}
+
 async function payRun(run: PayrollRun) {
   if (!confirm(`Lohn für ${run.employee?.first_name} ${run.employee?.last_name} als bezahlt markieren?\n\nDies erstellt automatisch eine Buchung in der Buchhaltung.`)) return
   paying.value = run.id
   try {
     await $fetch(`/api/admin/payroll/runs/${run.id}/pay`, { method: 'POST' })
-    await Promise.all([loadRuns(), loadProfitability()])
+    await Promise.all([loadRuns(), loadProfitability(), loadBudget()])
   } catch (e: any) {
     alert(e.data?.message ?? 'Fehler beim Bezahlen')
   } finally {

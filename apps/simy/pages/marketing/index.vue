@@ -114,6 +114,8 @@
       subtitle="Google Ads und SEO brauchen eine schnelle, lokale Landingpage. Simy generiert sie — SSR, Preise, Bewertungen. Sonst klickt niemand durch."
     />
 
+    <SimyGbpHighlight />
+
     <!-- Why Simy for marketing -->
     <section class="py-20 px-6 bg-gray-950">
       <div class="max-w-4xl mx-auto">
@@ -165,18 +167,18 @@ useHead({
     { name: 'keywords', content: 'marketing terminbetriebe, google ads schweiz, lokales seo, mehr kunden gewinnen' },
     { property: 'og:title', content: 'Marketing für Terminbetriebe – Simy | Mehr Kunden gewinnen' },
     { property: 'og:description', content: 'Google Ads und lokales SEO für Terminbetriebe. Simy bringt dir aktiv neue Kunden.' },
-    { property: 'og:url', content: 'https://simy.ch/marketing' },
+    { property: 'og:url', content: 'https://www.simy.ch/marketing' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/marketing' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/marketing' }],
   script: ldScripts(
     serviceLd({
       name: 'Simy Marketing für Terminbetriebe',
       description: 'Google Ads und lokales SEO für Schweizer Terminbetriebe — verbunden mit dem Simy-Buchungssystem.',
-      url: 'https://simy.ch/marketing',
+      url: 'https://www.simy.ch/marketing',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Marketing', url: 'https://simy.ch/marketing' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Marketing', url: 'https://www.simy.ch/marketing' },
     ]),
   ),
 })

@@ -1,5 +1,3 @@
-import DOMPurify from 'isomorphic-dompurify'
-
 export type HelpRole = 'client' | 'staff' | 'admin'
 
 export interface HelpArticleMeta {
@@ -231,13 +229,7 @@ export function renderHelpMarkdown(markdown: string): string {
   closeCallout()
   closeTable()
 
-  return DOMPurify.sanitize(html.join('\n'), {
-    ALLOWED_TAGS: [
-      'h1', 'h2', 'h3', 'p', 'ul', 'ol', 'li', 'strong', 'em', 'code', 'a', 'br',
-      'aside', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
-    ],
-    ALLOWED_ATTR: ['href', 'class', 'target', 'rel']
-  })
+  return html.join('\n')
 }
 
 export function parseHelpMarkdown(

@@ -3,6 +3,11 @@ import { defineNuxtRouteMiddleware, navigateTo } from '#app'
 import { useAuthStore } from '~/stores/auth'
 import { logger } from '~/utils/logger'
 
+function isAccountantAllowedPath(path: string) {
+  return path === '/admin/accounting' || path.startsWith('/admin/accounting/')
+    || path === '/admin/payroll' || path.startsWith('/admin/payroll/')
+}
+
 export default defineNuxtRouteMiddleware(async (to, from) => {
   // Skip auf Server
   if (process.server) return
@@ -61,9 +66,13 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   }
   
   // Prüfe Admin-Berechtigung
-  if (!authStore.isAdmin) {
+  if (!authStore.isAdmin && !authStore.isAccountant && !authStore.isSuperAdmin) {
     logger.debug('❌ Admin Middleware - Not admin, redirecting to /dashboard')
     return navigateTo('/dashboard')
+  }
+
+  if (authStore.isAccountant && !isAccountantAllowedPath(to.path)) {
+    return navigateTo('/admin/accounting')
   }
   
   logger.debug('✅ Admin Middleware - Access granted')

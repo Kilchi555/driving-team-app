@@ -156,10 +156,10 @@ useHead({
     { name: 'description', content: 'Kontaktiere Simy IT Systems bei Fragen zu Simy, Support oder Partnerships. Antwort innerhalb von 24h.' },
     { property: 'og:title', content: 'Kontakt – Simy' },
     { property: 'og:description', content: 'Schreib uns — wir antworten innerhalb von 24 Stunden.' },
-    { property: 'og:url', content: 'https://simy.ch/kontakt' },
+    { property: 'og:url', content: 'https://www.simy.ch/kontakt' },
     { name: 'robots', content: 'index, follow' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/kontakt' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/kontakt' }],
   script: [
     {
       type: 'application/ld+json',
@@ -167,11 +167,11 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'ContactPage',
         name: 'Kontakt – Simy',
-        url: 'https://simy.ch/kontakt',
+        url: 'https://www.simy.ch/kontakt',
         mainEntity: {
           '@type': 'Organization',
           name: 'Simy IT Systems',
-          url: 'https://simy.ch',
+          url: 'https://www.simy.ch',
           email: 'info@simy.ch',
           address: {
             '@type': 'PostalAddress',

@@ -20,6 +20,7 @@ interface TenantRegistrationData {
   contact_person_last_name: string
   contact_email: string
   contact_phone: string
+  whatsapp_phone?: string
   street: string
   streetNr: string
   zip: string
@@ -107,6 +108,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       contact_person_last_name: '',
       contact_email: '',
       contact_phone: '',
+      whatsapp_phone: '',
       street: '',
       streetNr: '',
       zip: '',
@@ -211,6 +213,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     const sanitizedFirstName = sanitizeString(data.contact_person_first_name, 100)
     const sanitizedLastName = sanitizeString(data.contact_person_last_name, 100)
     const sanitizedPhone = sanitizeString(data.contact_phone, 20)
+    const sanitizedWhatsapp = sanitizeString(data.whatsapp_phone || '', 20)
     const sanitizedStreet = sanitizeString(data.street, 100)
     const sanitizedStreetNr = sanitizeString(data.streetNr, 10)
     const sanitizedCity = sanitizeString(data.city, 100)
@@ -298,6 +301,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         contact_person_last_name: sanitizedLastName,
         contact_email: data.contact_email.toLowerCase().trim(),
         contact_phone: sanitizedPhone,
+        whatsapp_phone: sanitizedWhatsapp || null,
         address: `${sanitizedStreet} ${sanitizedStreetNr}, ${data.zip} ${sanitizedCity}`,
         business_type: resolvedBusinessType,
         // CH: Ausbildung (Fahrschule, Nachhilfe, Musikschule) → MwSt 0%; sonst Normalsatz 8.1%

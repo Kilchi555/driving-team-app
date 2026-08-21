@@ -191,23 +191,23 @@ useHead({
     { name: 'keywords', content: 'fahrschulsoftware, software fahrschule, verwaltungssoftware fahrschule, software für fahrschulen, fahrschule software schweiz' },
     { property: 'og:title', content: 'Fahrschulsoftware Schweiz 2026 – Der komplette Ratgeber' },
     { property: 'og:description', content: 'Was ist die beste Fahrschulsoftware? Vergleich, Funktionen, Kosten. Simy gewinnt.' },
-    { property: 'og:url', content: 'https://simy.ch/fahrschule/software' },
+    { property: 'og:url', content: 'https://www.simy.ch/fahrschule/software' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule/software' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/fahrschule/software' }],
   script: ldScripts(
     softwareAppLd({
       name: 'Simy Fahrschulsoftware',
       description: 'All-in-One Fahrschulsoftware Schweiz: Terminbuchung, Rechnungen, Fahrlehrer-App und Verwaltung.',
-      url: 'https://simy.ch/fahrschule/software',
+      url: 'https://www.simy.ch/fahrschule/software',
     }),
     faqPageLd([
       { q: 'Was kostet Fahrschulsoftware?', a: 'Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. Simy bietet Pläne ab CHF 49/Monat mit 30 Tagen kostenlosem Test.' },
       { q: 'Welche Fahrschulsoftware ist die beste?', a: 'Simy ist eine All-in-One Lösung für Schweizer Fahrschulen mit Terminbuchung, automatischen Rechnungen, Fahrlehrer-App und Website-Generator.' },
     ]),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Fahrschule', url: 'https://simy.ch/fahrschule' },
-      { name: 'Fahrschulsoftware', url: 'https://simy.ch/fahrschule/software' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Fahrschule', url: 'https://www.simy.ch/fahrschule' },
+      { name: 'Fahrschulsoftware', url: 'https://www.simy.ch/fahrschule/software' },
     ]),
   ),
 })

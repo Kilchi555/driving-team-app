@@ -99,24 +99,24 @@ useHead({
     { name: 'description', content: 'Simy 30 Tage kostenlos testen. Keine Kreditkarte nötig. In 5 Minuten startklar. Jetzt All-in-One Software Demo starten.' },
     { property: 'og:title', content: 'Demo & Gratis-Test – Simy | 30 Tage kostenlos' },
     { property: 'og:description', content: 'Simy 30 Tage kostenlos testen — keine Kreditkarte, monatlich kündbar.' },
-    { property: 'og:url', content: 'https://simy.ch/demo' },
+    { property: 'og:url', content: 'https://www.simy.ch/demo' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/demo' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/demo' }],
   script: ldScripts(
     webPageLd({
       name: 'Simy Demo & 30-Tage-Test',
       description: 'Simy 30 Tage kostenlos testen — keine Kreditkarte, alle Kernfeatures freigeschaltet.',
-      url: 'https://simy.ch/demo',
+      url: 'https://www.simy.ch/demo',
     }),
     softwareAppLd({
       name: 'Simy',
       description: 'All-in-One Software Schweiz – 30 Tage gratis testen.',
-      url: 'https://simy.ch/demo',
+      url: 'https://www.simy.ch/demo',
       price: 0,
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Demo', url: 'https://simy.ch/demo' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Demo', url: 'https://www.simy.ch/demo' },
     ]),
   ),
 })

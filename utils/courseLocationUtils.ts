@@ -29,6 +29,46 @@ export function extractCityFromCourseDescription(description: string): string | 
 
 export type CoursePaymentMethod = 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE'
 
+/** Tenant payment settings use lowercase keys; courses store the uppercase enum. */
+export function mapTenantDefaultToCoursePaymentMethod(
+  tenantDefault: string | null | undefined
+): CoursePaymentMethod {
+  if (tenantDefault === 'cash') return 'CASH_ON_SITE'
+  if (tenantDefault === 'invoice') return 'INVOICE'
+  return 'WALLEE'
+}
+
+/** Admin-Anmeldung: vorausgewählte Option aus der Kurs-Zahlungsart. */
+export function coursePaymentMethodToAdminEnrollmentOption(
+  method: CoursePaymentMethod,
+  walleeEnabled?: boolean
+): 'cash' | 'invoice' | 'online_link' {
+  if (method === 'INVOICE') return 'invoice'
+  if (method === 'CASH_ON_SITE') return 'cash'
+  if (walleeEnabled === false) return 'cash'
+  return 'online_link'
+}
+
+/** Firmen-Sammelrechnung bleibt Rechnung; sonst Kurs-Zahlungsart (inkl. Automatisch). */
+export function defaultAdminEnrollmentPaymentOption(
+  course: {
+    payment_method?: CoursePaymentMethod | string | null
+    city?: string | null
+    description?: string | null
+    name?: string | null
+    billing_mode?: string | null
+    company_id?: string | null
+  } | null | undefined,
+  walleeEnabled?: boolean,
+  invoiceEnabled?: boolean
+): 'cash' | 'invoice' | 'online_link' {
+  if (course?.billing_mode === 'company_collective' && course?.company_id) {
+    return 'invoice'
+  }
+  const method = getCoursePaymentMethod(course, walleeEnabled, invoiceEnabled)
+  return coursePaymentMethodToAdminEnrollmentOption(method, walleeEnabled)
+}
+
 /**
  * Determine payment method based on location and tenant Wallee status.
  *

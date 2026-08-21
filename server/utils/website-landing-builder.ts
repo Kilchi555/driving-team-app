@@ -21,7 +21,7 @@ import {
   openingHoursToSchema,
   pickTemplateVariant,
   resolveWorkingTemplate,
-  whatsappUrlFromPhone,
+  whatsappUrlForTenant,
   type LandingTeamMember,
   type OpeningHoursRow,
   type UpcomingCourseCard,
@@ -53,6 +53,7 @@ export type LandingTenantInput = {
   contact_email?: string | null
   email?: string | null
   contact_phone?: string | null
+  whatsapp_phone?: string | null
   phone?: string | null
   address?: string | null
   city?: string | null
@@ -325,7 +326,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
   const hoursRows: OpeningHoursRow[] = formatOpeningHours(hoursTpl)
   const email = input.tenant.contact_email || input.tenant.email || null
   const phone = input.tenant.contact_phone || input.tenant.phone || null
-  const wa = whatsappUrlFromPhone(phone)
+  const wa = whatsappUrlForTenant(input.tenant)
   const addrParts = [
     input.tenant.address,
     input.tenant.postal_code || input.tenant.invoice_zip,
