@@ -282,7 +282,7 @@
               <span>💰 Wie viel kosten Fahrstunden in Zürich?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Auto Fahrstunden kosten CHF 95.- pro 45-Minuten-Lektion in Zürich. Motorrad kostet CHF 95.- und Anhänger CHF 120.-. Hinzu kommt eine einmalige Pauschale von CHF 120.- für die Admin und Versicherung über die gesamte Fahrausbildung (nicht Motorrad).</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Die erste Auto-Lektion kostet CHF 65.–, jede weitere CHF 95.– / 45 Min. Motorrad kostet CHF 95.– und Anhänger CHF 120.–. Hinzu kommt eine einmalige Pauschale von CHF 120.– für die Admin und Versicherung über die gesamte Fahrausbildung (nicht Motorrad).</p>
           </details>
 
           <!-- Q2 -->
@@ -414,7 +414,7 @@
               <span>🎁 Gibt es Rabatte für Fahrstunden-Pakete in Zürich?</span>
               <span class="text-primary-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Nein, aber für eine nachweisbare Empfehlung bekommst du 50.- Rabatt auf deine nächste Fahrstunde. </p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Die erste Auto-Lektion (Kat. B) kostet CHF 65.– statt 95.–. Für eine erfolgreiche Empfehlung erhält der werbende Schüler CHF 30.– Guthaben (Automatik) bzw. CHF 20.– (Schaltung).</p>
           </details>
 
           <!-- Q16 -->
@@ -513,7 +513,7 @@ const jsonLdScripts = [
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
-      { "@type": "Question", "name": "Wie viel kosten Fahrstunden in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Auto Fahrstunden kosten CHF 95.-/45min. Motorrad CHF 95.-/45min (Doppellektion CHF 190.-). Anhänger CHF 120.-/45min (Doppellektion CHF 240.-). Einmalige Pauschale CHF 120.- für Auto/Anhänger-Ausbildung." } },
+      { "@type": "Question", "name": "Wie viel kosten Fahrstunden in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Erste Auto-Lektion CHF 65.–, weitere Auto-Lektionen CHF 95.–/45min. Motorrad CHF 95.–/45min (Doppellektion CHF 190.–). Anhänger CHF 120.–/45min. Einmalige Pauschale CHF 120.– für Auto/Anhänger-Ausbildung." } },
       { "@type": "Question", "name": "Kann ich Fahrstunden in Zürich flexibel buchen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, 7 Tage die Woche. Buche online Morgen, Mittag oder Abend." } },
       { "@type": "Question", "name": "Wie buche ich meine erste Fahrstunde in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Klick auf 'Jetzt buchen', registriere Dich, wähle Datum/Uhrzeit, bestätige. Sofort Bestätigung per Email." } },
       { "@type": "Question", "name": "Wie viele Fahrstunden brauche ich in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Durchschnittlich 15-30 Fahrstunden. Mit regelmässigen Übungen erreichst du dein Ziel schneller." } },

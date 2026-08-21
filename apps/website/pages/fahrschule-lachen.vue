@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Fahrstunden Lachen | Auto fahren lernen ab CHF 95.– | Driving Team</Title>
-      <Meta name="description" content="Fahrstunden in Lachen SZ: Auto fahren lernen ab CHF 95.–/Lektion. Flexible Termine, Prüfung Pfäffikon SZ, 85% Erfolgsquote. Jetzt online buchen!" />
+      <Title>Fahrstunden Lachen | Erste Auto-Lektion CHF 65.– | Driving Team</Title>
+      <Meta name="description" content="Fahrstunden in Lachen SZ: erste Auto-Lektion CHF 65.–, danach CHF 95.–. Flexible Termine, Prüfung Pfäffikon SZ, 85% Erfolgsquote. Jetzt online buchen!" />
       <Meta name="keywords" content="Fahrstunden Lachen, Auto fahren lernen Lachen, Fahrschule Lachen, Fahrschule Lachen SZ, Auto Fahrschule Lachen, Führerschein Lachen" />
-      <Meta property="og:title" content="Fahrstunden Lachen | Auto fahren lernen ab CHF 95.– | Driving Team" />
-      <Meta property="og:description" content="Auto fahren lernen in Lachen SZ. Fahrstunden ab CHF 95.–, flexible Termine, Prüfung Pfäffikon SZ. Jetzt buchen!" />
+      <Meta property="og:title" content="Fahrstunden Lachen | Erste Auto-Lektion CHF 65.– | Driving Team" />
+      <Meta property="og:description" content="Auto fahren lernen in Lachen SZ. Erste Lektion CHF 65.–, danach CHF 95.–. Prüfung Pfäffikon SZ. Jetzt buchen!" />
       <Meta property="og:url" content="https://drivingteam.ch/fahrschule-lachen/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
@@ -18,8 +18,8 @@
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
       <Meta name="twitter:card" content="summary_large_image" />
-      <Meta name="twitter:title" content="Fahrstunden Lachen | Auto fahren lernen ab CHF 95.–" />
-      <Meta name="twitter:description" content="Auto fahren lernen in Lachen SZ. Fahrstunden ab CHF 95.–, Prüfung Pfäffikon SZ. Jetzt anmelden!" />
+      <Meta name="twitter:title" content="Fahrstunden Lachen | Erste Auto-Lektion CHF 65.–" />
+      <Meta name="twitter:description" content="Auto fahren lernen in Lachen SZ. Erste Lektion CHF 65.–, danach CHF 95.–. Prüfung Pfäffikon SZ." />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       <Meta name="date" :content="new Date().toISOString()" />
     </Head>
@@ -35,8 +35,8 @@
         <div class="max-w-3xl">
           <p class="text-primary-200 text-sm font-semibold uppercase tracking-widest mb-3">Fahrschule Driving Team</p>
           <h1 class="heading-lg text-white mb-6">Fahrstunden & Auto Fahrschule Lachen</h1>
-          <p class="text-base xs:text-xl text-white mb-8">Auto fahren lernen in Lachen/SZ – ab CHF 95.–/Lektion, flexible Termine und erfahrene Fahrlehrer. Melde dich an und starte deine Fahrausbildung.</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <p class="text-base xs:text-xl text-white mb-8">Auto fahren lernen in Lachen/SZ – erste Lektion CHF 65.–, danach CHF 95.–. Flexible Termine und erfahrene Fahrlehrer.</p>
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=B&code=ERSTE30" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -52,7 +52,7 @@
 
     <!-- 3. Reviews (grau-50) — bewusst früh für Vertrauen -->
     <ReviewsSection category="lachen" />
-    <UpcomingSlotsSection page="fahrschule-lachen" category="B Automatik" />
+    <UpcomingSlotsSection page="fahrschule-lachen" category="B Automatik" promo-code="ERSTE30" />
 
 
     <!-- 4. Übungsgebiete (weiß) -->
@@ -286,7 +286,7 @@ const jsonLdScripts = [
       { "@type": "Question", "name": "Wie viele Fahrstunden benötige ich in Lachen?", "acceptedAnswer": { "@type": "Answer", "text": "Das hängt von deiner Vorerfahrung und deinem Lerntempo ab. Bei regelmässigem Üben (2-4 Mal pro Woche inkl. privaten Lernfahrten) erreichst du dein Ziel am schnellsten." } },
       { "@type": "Question", "name": "Wie kann ich meine Fahrausbildung beschleunigen?", "acceptedAnswer": { "@type": "Answer", "text": "Optimal wären 2-4 Fahrten pro Woche – zum Beispiel 1 Fahrstunde mit dem Fahrlehrer und 1 private Lernfahrt. Wichtig: genau so fahren, wie es der Fahrlehrer gezeigt hat." } },
       { "@type": "Question", "name": "Wo bietet Driving Team Lachen Fahrstunden an?", "acceptedAnswer": { "@type": "Answer", "text": "Das Tätigkeitsgebiet erstreckt sich von Hinwil bis nach Schwyz und von Horgen bis nach Ziegelbrücke. Wir sind unter anderem aktiv in: Lachen, Pfäffikon SZ, Siebnen, Schübelbach, Galgenen, Altendorf, Wollerau, Freienbach, Richterswil, Wädenswil und Horgen. Treffpunkte sind flexibel – wir holen euch wenn möglich zu Hause oder bei der Arbeit ab." } },
-      { "@type": "Question", "name": "Was kosten Fahrstunden in Lachen?", "acceptedAnswer": { "@type": "Answer", "text": "Fahrstunden starten ab CHF 95.-/45min. Hinzu kommt eine einmalige Admin- und Versicherungspauschale für die gesamte Fahrausbildung." } },
+      { "@type": "Question", "name": "Was kosten Fahrstunden in Lachen?", "acceptedAnswer": { "@type": "Answer", "text": "Die erste Auto-Lektion kostet CHF 65.–, jede weitere CHF 95.– / 45 Min. Hinzu kommt eine einmalige Admin- und Versicherungspauschale für die gesamte Fahrausbildung." } },
       { "@type": "Question", "name": "Welches sind die häufigsten Prüfungsrouten ab Pfäffikon/SZ?", "acceptedAnswer": { "@type": "Answer", "text": "Die häufigsten Prüfungsrouten ab Pfäffikon/SZ führen nach Altendorf/Lachen, Feusisberg/Schindellegi, Wollerau/Samstagern, Freienbach/Richterswil und Rapperswil/Jona." } },
       { "@type": "Question", "name": "Was sind die Voraussetzungen für private Lernfahrten?", "acceptedAnswer": { "@type": "Answer", "text": "Die Begleitperson muss einen gültigen Führerausweis haben, nüchtern sein (0,0 Promille), mindestens 23 Jahre alt sein und die Prüfung vor mindestens 3 Jahren bestanden haben." } },
       { "@type": "Question", "name": "Was ist die Admin- und Versicherungspauschale?", "acceptedAnswer": { "@type": "Answer", "text": "Diese Pauschale wird einmalig für die ganze Fahrausbildung verrechnet. Sie beinhaltet die Aufwände ausserhalb der Fahrlektionen (z.B. Anmeldung zur Führerprüfung) sowie die spezielle Vollkaskoversicherung." } },
