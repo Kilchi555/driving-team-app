@@ -2,14 +2,14 @@
   <div>
     <Head>
       <Title>Driving Team | Auto Fahrschule Zürich & Lachen | 4.9★</Title>
-      <Meta name="description" content="Driving Team – Auto Fahrschule in Zürich-Altstetten & Lachen. 4.9★ (368 Reviews), 85% Prüfungserfolg. Erste Auto-Lektion CHF 65.–, danach CHF 95.–. Jetzt online buchen!" />
+      <Meta name="description" content="Driving Team – Auto Fahrschule in Zürich-Altstetten & Lachen. 4.9★ (368 Reviews), 85% Prüfungserfolg. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–. Jetzt online buchen!" />
       <Meta name="keywords" content="Driving Team, Auto Fahrschule Zürich, Fahrschule Lachen, Fahrstunden Zürich, Fahrlehrer Zürich, Fahrschule Altstetten" />
       <Meta name="author" content="Driving Team" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
       
       <!-- Open Graph -->
       <Meta property="og:title" content="Driving Team | Auto Fahrschule Zürich & Lachen | 4.9★" />
-      <Meta property="og:description" content="Auto Fahrschule Zürich-Altstetten & Lachen. 4.9★, 85% Prüfungserfolg. Erste Auto-Lektion CHF 65.–, danach CHF 95.–." />
+      <Meta property="og:description" content="Auto Fahrschule Zürich-Altstetten & Lachen. 4.9★, 85% Prüfungserfolg. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–." />
       <Meta property="og:image" content="https://drivingteam.ch/images/og-image.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
@@ -24,7 +24,7 @@
       <!-- Twitter Card -->
       <Meta name="twitter:card" content="summary_large_image" />
       <Meta name="twitter:title" content="Driving Team | Auto Fahrschule Zürich & Lachen | 4.9★" />
-      <Meta name="twitter:description" content="Auto Fahrschule Zürich-Altstetten & Lachen – 4.9★, 85% Prüfungserfolg. Erste Auto-Lektion CHF 65.–, danach CHF 95.–." />
+      <Meta name="twitter:description" content="Auto Fahrschule Zürich-Altstetten & Lachen – 4.9★, 85% Prüfungserfolg. Erste Lektion CHF 65.– / 45 Min., danach CHF 95.–." />
       
       <!-- Canonical & Language -->
       <Link rel="canonical" href="https://drivingteam.ch/" />
@@ -45,20 +45,9 @@
           <p class="text-sm md:text-base text-gray-500 font-medium mb-4">
             Auto Fahrschule Zürich-Altstetten &amp; Lachen
           </p>
-          <a
-            href="https://app.simy.ch/booking/availability/driving-team?category=B%20Automatik&code=ERSTE30"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="erste-offer group relative inline-flex flex-col sm:flex-row items-center gap-1 sm:gap-3 overflow-hidden rounded-2xl px-5 py-3 mb-4"
-          >
-            <span class="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-primary-700">Erste Auto-Lektion</span>
-            <span class="flex items-baseline gap-2">
-              <span class="text-2xl md:text-3xl font-black text-primary-700 leading-none">CHF 65.–</span>
-              <span class="text-sm text-gray-500 line-through decoration-gray-400">CHF 95.–</span>
-            </span>
-            <span class="hidden sm:inline text-primary-300">·</span>
-            <span class="text-xs font-medium text-primary-600/80">danach CHF 95.–</span>
-          </a>
+          <div class="mb-4">
+            <ErsteOfferBanner variant="badge" href="/buchen?category=B%20Automatik&code=ERSTE30" />
+          </div>
           <p class="text-sm font-semibold text-primary-700 mb-4">
             4.9★ · 368 Google-Reviews · 85% Prüfungserfolg
           </p>
@@ -252,7 +241,7 @@
             </div>
             <div class="flex flex-col items-center justify-center bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-md py-4 px-2">
               <span class="text-2xl font-black text-white leading-none">65.–</span>
-              <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">erste Auto-Lektion, danach 95.–</span>
+              <span class="text-white/80 text-[10px] font-medium mt-1.5 text-center leading-tight">erste Lektion 45 Min., danach 95.–</span>
             </div>
           </div>
 
@@ -299,7 +288,7 @@
     <StatsSection />
 
     <ReviewsSection category="zuerich" />
-
+    <ErsteOfferBanner href="/buchen?category=B%20Automatik&code=ERSTE30" />
 
     <!-- Courses Section -->
     <section class="py-20 bg-white scroll-mt-20">
@@ -343,7 +332,7 @@
               </li>
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
-                <span>Erste Auto-Lektion CHF 65.– · danach CHF 95.–</span>
+                <span>Erste Lektion CHF 65.– / 45 Min. · danach CHF 95.–</span>
               </li>
               <li class="flex items-center gap-3 text-base md:text-lg text-gray-700">
                 <span class="text-primary-600 font-bold">✓</span>
@@ -821,28 +810,6 @@ useHead({ script: jsonLdScripts })
 </script>
 
 <style scoped>
-.erste-offer {
-  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%);
-  box-shadow: 0 8px 22px -8px rgba(2, 132, 199, 0.4), 0 0 0 1px rgba(14, 165, 233, 0.35);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.erste-offer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.7) 50%, transparent 65%);
-  background-size: 220% 100%;
-  animation: ersteShine 3.2s ease-in-out infinite;
-  pointer-events: none;
-}
-.erste-offer:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 26px -8px rgba(2, 132, 199, 0.5), 0 0 0 1px rgba(14, 165, 233, 0.5);
-}
-@keyframes ersteShine {
-  0%, 55% { background-position: 120% 0; }
-  100% { background-position: -20% 0; }
-}
 .category-card {
   animation: categoryCardSlide 0.6s ease-out forwards;
   opacity: 0;
