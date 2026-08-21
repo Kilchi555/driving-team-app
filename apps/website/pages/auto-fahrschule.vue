@@ -1,10 +1,10 @@
 <template>
   <div>
     <Head>
-      <Title>Auto Fahrschule Zürich & Lachen | Kat. B | ab CHF 95.- | Driving Team</Title>
-      <Meta name="description" content="Auto Fahrschule Zürich & Lachen – Kat. B Führerschein mit 85% Erfolgsquote, ab CHF 95.-/Lektion, flexible Treffpunkte, Prüfung am StVA. Jetzt buchen!" />
-      <Meta property="og:title" content="Auto Fahrschule Zürich & Lachen | Kategorie B | Driving Team" />
-      <Meta property="og:description" content="Auto Fahrschule Zürich & Lachen – Kat. B Führerschein mit 85% Erfolgsquote, ab CHF 95.-/Lektion, flexible Treffpunkte, Prüfung am StVA." />
+      <Title>Auto Fahrschule – Standort wählen | Zürich & Lachen | Driving Team</Title>
+      <Meta name="description" content="Auto Fahrschule Kat. B: Standort Zürich oder Lachen wählen. 85% Erfolgsquote. Erste Lektion CHF 65.–, danach CHF 95.–. Jetzt Fahrstunde buchen." />
+      <Meta property="og:title" content="Auto Fahrschule – Standort wählen | Zürich & Lachen" />
+      <Meta property="og:description" content="Wähle deine Auto-Fahrschule: Zürich-Altstetten oder Lachen SZ. Erste Lektion CHF 65.–, danach CHF 95.–." />
       <Meta property="og:url" content="https://drivingteam.ch/auto-fahrschule/" />
       <Link rel="canonical" href="https://drivingteam.ch/auto-fahrschule/" />
       <Link rel="alternate" hreflang="de-CH" href="https://drivingteam.ch/auto-fahrschule/" />
@@ -23,15 +23,29 @@
       <div class="absolute inset-0 bg-black/40"></div>
       <div class="section-container relative z-10">
         <div class="max-w-3xl">
-          <h1 class="heading-lg text-white mb-4">Auto Fahrschule Kategorie B</h1>
+          <h1 class="heading-lg text-white mb-4">Auto Fahrschule – Standort wählen</h1>
           <!-- Trust Badges -->
           <div class="flex flex-wrap gap-2 mb-4">
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">✅ 85 % Erfolgsquote</span>
-            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">💰 ab CHF 95.– / Lektion</span>
+            <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">💰 Erste Lektion CHF 65.– · danach 95.–</span>
             <span class="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-sm font-semibold px-3 py-1.5 rounded-full">📅 Online buchbar</span>
           </div>
-          <p class="text-base xs:text-xl text-white mb-8">Professionelle Auto-Fahrschule in Zürich & Lachen. Flexible Zeiten, erfahrene Fahrlehrer und hohe Erfolgsquote – vom Lernfahrausweis bis zur Prüfung.</p>
-          <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <p class="text-base xs:text-xl text-white mb-8">Kategorie B in Zürich oder Lachen. Flexible Zeiten, erfahrene Fahrlehrer – vom Lernfahrausweis bis zur Prüfung.</p>
+          <div class="grid sm:grid-cols-3 gap-3 mb-8">
+            <a href="/auto-fahrschule-zuerich/" class="bg-white/15 hover:bg-white/25 rounded-xl p-4 text-left">
+              <p class="font-bold">Fahrschule Zürich</p>
+              <p class="text-xs text-primary-100">Altstetten · Prüfung Albisgütli</p>
+            </a>
+            <a href="/fahrschule-altstetten/" class="bg-white/15 hover:bg-white/25 rounded-xl p-4 text-left">
+              <p class="font-bold">Altstetten</p>
+              <p class="text-xs text-primary-100">Standort & Treffpunkt</p>
+            </a>
+            <a href="/fahrschule-lachen/" class="bg-white/15 hover:bg-white/25 rounded-xl p-4 text-left">
+              <p class="font-bold">Lachen SZ</p>
+              <p class="text-xs text-primary-100">March · Höfe</p>
+            </a>
+          </div>
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=B&code=ERSTE30" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             Fahrstunde buchen (Kat. B)
           </a>
         </div>
@@ -228,7 +242,7 @@
         </div>
 
         <div class="text-center mt-12">
-          <a href="https://app.simy.ch/booking/availability/driving-team?category=B" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
+          <a href="https://app.simy.ch/booking/availability/driving-team?category=B&code=ERSTE30" target="_blank" rel="noopener noreferrer" class="btn-primary bg-white text-primary-600 hover:bg-primary-50 text-lg">
             ✨ Jetzt Termin buchen
           </a>
         </div>
@@ -313,7 +327,7 @@
             Was kostet eine Fahrstunde bei euch?
             <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
           </summary>
-          <p class="text-gray-600 mt-4">Eine Fahrstunde (45 Minuten) kostet ab CHF 95.- (Abendtermine und Wochenende leicht teurer). Wir empfehlen Abopakete: Bei 5 Fahrstunden sparst du gegenüber Einzellektionen. Zusätzlich fallen eine Versicherungspauschale (CHF 120.- einmalig) und der WarmUp + Prüfungsfahrt Kurs (CHF 285.-) an. Kontaktiere uns für aktuelle Preise und individuelle Angebote.</p>
+          <p class="text-gray-600 mt-4">Die erste Auto-Lektion (45 Minuten, Kat. B) kostet CHF 65.–, jede weitere CHF 95.– (Abendtermine und Wochenende leicht teurer). Zusätzlich fallen eine Versicherungspauschale (CHF 120.– einmalig) und der WarmUp + Prüfungsfahrt Kurs (CHF 285.–) an.</p>
         </details>
       </div>
       <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -393,7 +407,7 @@ const jsonLdScripts = [
   { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"Course","name":"Auto Fahrschule - Kategorie B","description":"Professionelle Auto Fahrausbildung für Kategorie B. 85% Erfolgsquote, flexible Fahrstunden, erfahrene Fahrlehrer in Zürich","provider":{"@type":"Organization","name":"Driving Team","url":"https://drivingteam.ch"},"offers":{"@type":"Offer","price":"100-120","priceCurrency":"CHF","url":"https://app.simy.ch/booking/availability/driving-team","availability":"InStock"},"educationLevel":"Intermediate","learningResourceType":"Driving Course","keywords":"Auto Fahrschule, Kategorie B Fahrstunden, Auto Führerschein, Fahrausbildung Zürich"}' },
   { type: 'application/ld+json', innerHTML: JSON.stringify({ "@context": "https://schema.org", "@type": "AggregateRating", "itemReviewed": { "@type": "Course", "name": "Auto Fahrschule - Kategorie B", "url": "https://drivingteam.ch/auto-fahrschule/" }, "ratingValue": 4.9, "bestRating": 5, "worstRating": 1, "ratingCount": 366, "reviewCount": 366 }) },
   { type: 'application/ld+json', innerHTML: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://drivingteam.ch/"},{"@type":"ListItem","position":2,"name":"Auto Fahrschule","item":"https://drivingteam.ch/auto-fahrschule/"}]}' },
-  { type: 'application/ld+json', innerHTML: JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Wieviele Fahrstunden benötige ich?","acceptedAnswer":{"@type":"Answer","text":"Das ist unterschiedlich und hängt von deinem Alter, Erfahrung und Lerntempo ab. Im Durchschnitt benötigen unsere Schüler 15-20 Fahrstunden. Wir beraten dich gerne individuell."}},{"@type":"Question","name":"Wie kann ich meine Fahrausbildung beschleunigen?","acceptedAnswer":{"@type":"Answer","text":"Optimal wären 2-4 Fahrten pro Woche. Das heisst nicht unbedingt 2-4 Fahrlektionen, sondern z.B. 1 Fahrlektion und 1 Mal privat repetieren mit einer Begleitperson."}},{"@type":"Question","name":"Wieso dauert die Fahrstunde 45 Minuten?","acceptedAnswer":{"@type":"Answer","text":"Nach 45 Minuten lässt die Konzentration nach. Dies ist auch an Schulen Standard. Je nach Übungsgebiet können Fahrstunden auch länger ausfallen."}},{"@type":"Question","name":"Was kostet der Führerschein Kategorie B insgesamt?","acceptedAnswer":{"@type":"Answer","text":"Die Gesamtkosten für einen Führerschein der Kategorie B betragen in der Schweiz durchschnittlich CHF 3'500–3'600. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 50), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), VKU-Kurs (CHF 200–300), Fahrstunden (durchschnittlich 15–20 à CHF 100–120), praktische Prüfung (CHF 130) und WAB-Kurs (CHF 350). Die genauen Kosten hängen von der Anzahl der benötigten Fahrstunden ab."}},{"@type":"Question","name":"Was sind die Voraussetzungen für den Führerschein?","acceptedAnswer":{"@type":"Answer","text":"Um einen Führerschein der Kategorie B zu erhalten, benötigst du: Mindestalter von 18 Jahren (oder 17 Jahre beim begleiteten Fahren), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule. Du musst zudem in der Schweiz wohnhaft sein und einen gültigen Ausweis haben."}},{"@type":"Question","name":"Wie lange dauert die komplette Fahrausbildung?","acceptedAnswer":{"@type":"Answer","text":"Die Dauer der Fahrausbildung hängt von deinem Tempo und Lernfortschritt ab. Die Theorieausbildung dauert typischerweise 6–8 Wochen mit 12 Unterrichtsabenden à 90 Minuten. Die praktische Ausbildung mit 15–20 Fahrstunden dauert 2–4 Monate. Insgesamt solltest du mit 4–6 Monaten rechnen, wenn du zügig voranschreitest und regelmässig trainingst."}},{"@type":"Question","name":"Was kostet eine Fahrstunde bei euch?","acceptedAnswer":{"@type":"Answer","text":"Eine Fahrstunde (45 Minuten) kostet ab CHF 95.- (Abendtermine und Wochenende leicht teurer). Wir empfehlen Abopakete. Zusätzlich fallen eine Versicherungspauschale (CHF 120.- einmalig) und der WarmUp + Prüfungsfahrt Kurs (CHF 285.-) an. Kontaktiere uns für aktuelle Preise und individuelle Angebote."}}]}) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Wieviele Fahrstunden benötige ich?","acceptedAnswer":{"@type":"Answer","text":"Das ist unterschiedlich und hängt von deinem Alter, Erfahrung und Lerntempo ab. Im Durchschnitt benötigen unsere Schüler 15-20 Fahrstunden. Wir beraten dich gerne individuell."}},{"@type":"Question","name":"Wie kann ich meine Fahrausbildung beschleunigen?","acceptedAnswer":{"@type":"Answer","text":"Optimal wären 2-4 Fahrten pro Woche. Das heisst nicht unbedingt 2-4 Fahrlektionen, sondern z.B. 1 Fahrlektion und 1 Mal privat repetieren mit einer Begleitperson."}},{"@type":"Question","name":"Wieso dauert die Fahrstunde 45 Minuten?","acceptedAnswer":{"@type":"Answer","text":"Nach 45 Minuten lässt die Konzentration nach. Dies ist auch an Schulen Standard. Je nach Übungsgebiet können Fahrstunden auch länger ausfallen."}},{"@type":"Question","name":"Was kostet der Führerschein Kategorie B insgesamt?","acceptedAnswer":{"@type":"Answer","text":"Die Gesamtkosten für einen Führerschein der Kategorie B betragen in der Schweiz durchschnittlich CHF 3'500–3'600. Dies beinhaltet den Nothelferkurs (ca. CHF 100), Sehtest (CHF 50), Lernfahrausweis (CHF 80), Theorieprüfung (CHF 40), VKU-Kurs (CHF 200–300), Fahrstunden (durchschnittlich 15–20 à CHF 100–120), praktische Prüfung (CHF 130) und WAB-Kurs (CHF 350). Die genauen Kosten hängen von der Anzahl der benötigten Fahrstunden ab."}},{"@type":"Question","name":"Was sind die Voraussetzungen für den Führerschein?","acceptedAnswer":{"@type":"Answer","text":"Um einen Führerschein der Kategorie B zu erhalten, benötigst du: Mindestalter von 18 Jahren (oder 17 Jahre beim begleiteten Fahren), einen bestandenen Nothelferkurs (obligatorisch), einen bestandenen Sehtest, einen gültigen Lernfahrausweis und die Anmeldung in einer Fahrschule. Du musst zudem in der Schweiz wohnhaft sein und einen gültigen Ausweis haben."}},{"@type":"Question","name":"Wie lange dauert die komplette Fahrausbildung?","acceptedAnswer":{"@type":"Answer","text":"Die Dauer der Fahrausbildung hängt von deinem Tempo und Lernfortschritt ab. Die Theorieausbildung dauert typischerweise 6–8 Wochen mit 12 Unterrichtsabenden à 90 Minuten. Die praktische Ausbildung mit 15–20 Fahrstunden dauert 2–4 Monate. Insgesamt solltest du mit 4–6 Monaten rechnen, wenn du zügig voranschreitest und regelmässig trainingst."}},{"@type":"Question","name":"Was kostet eine Fahrstunde bei euch?","acceptedAnswer":{"@type":"Answer","text":"Die erste Auto-Lektion (45 Minuten, Kat. B) kostet CHF 65.–, jede weitere CHF 95.–. Zusätzlich fallen eine Versicherungspauschale (CHF 120.– einmalig) und der WarmUp + Prüfungsfahrt Kurs (CHF 285.–) an."}}]}) },
 ]
 useHead({ script: jsonLdScripts })
 
