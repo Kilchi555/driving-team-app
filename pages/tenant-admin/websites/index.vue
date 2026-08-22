@@ -6,12 +6,17 @@
         <h1 class="sa-page-title">Websites</h1>
         <p class="sa-page-sub">{{ websiteTenants.length }} Kunden mit Website</p>
       </div>
-      <NuxtLink to="/tenant-register?mode=website" class="sa-btn-primary" target="_blank">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        Neuer Website-Kunde
-      </NuxtLink>
+      <div class="flex gap-2 flex-wrap">
+        <NuxtLink to="/tenant-admin/websites/prospects" class="sa-btn-ghost">
+          Prospects
+        </NuxtLink>
+        <NuxtLink to="/tenant-register?mode=website" class="sa-btn-primary" target="_blank">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Neuer Website-Kunde
+        </NuxtLink>
+      </div>
     </div>
 
     <!-- Status Filter Tabs -->
@@ -69,6 +74,13 @@
                   <NuxtLink :to="`/tenant-admin/websites/${t.id}`" class="sa-action-btn sa-action-primary">
                     {{ t.website_status === 'pending_review' ? '🔍 Prüfen' : '✏️ Bearbeiten' }}
                   </NuxtLink>
+                  <NuxtLink
+                    v-if="prospectId(t)"
+                    :to="`/tenant-admin/websites/prospects/${prospectId(t)}`"
+                    class="sa-action-btn"
+                  >
+                    Neu generieren
+                  </NuxtLink>
                   <a :href="`/s/${t.slug}?preview=1`" target="_blank" class="sa-action-btn">
                     👁 Vorschau
                   </a>
@@ -92,7 +104,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 
-definePageMeta({ layout: 'tenant-admin', middleware: ['super-admin'] })
+definePageMeta({ layout: 'tenant-admin', middleware: ['superadmin'] })
 useHead({ title: 'Websites – Simy Super Admin' })
 
 const supabase = getSupabase()
@@ -143,6 +155,11 @@ const statusBadgeClass = (s: string) => ({
   disabled: 'sa-badge-red',
   none: 'sa-badge-neutral',
 }[s] || 'sa-badge-neutral')
+
+const prospectId = (t: { website_notes?: string | null }) => {
+  const m = String(t.website_notes || '').match(/^website_prospect:([0-9a-f-]{36})$/i)
+  return m?.[1] || ''
+}
 
 const getInitials = (name: string) =>
   name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '?'
@@ -197,6 +214,7 @@ const formatDate = (iso: string) => iso
 
 .sa-btn-primary { display:inline-flex; align-items:center; gap:0.5rem; padding:0.5rem 1rem; background:linear-gradient(135deg,#4f46e5,#7c3aed); border:none; border-radius:8px; font-size:0.82rem; font-weight:700; color:white; cursor:pointer; transition:opacity 0.15s; text-decoration:none; }
 .sa-btn-primary:hover { opacity:0.9; }
+.sa-btn-ghost { display:inline-flex; align-items:center; padding:0.5rem 1rem; border-radius:8px; font-size:0.82rem; font-weight:700; color:#cbd5e1; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); text-decoration:none; }
 
 .sa-link-sm { font-size:0.75rem; color:#818cf8; text-decoration:none; }
 .sa-link-sm:hover { text-decoration:underline; }

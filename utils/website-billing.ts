@@ -1,4 +1,6 @@
 export const WEBSITE_SETUP_CHF = 490
+/** Simy SaaS Starter — live calendar / booking. Not included in website-only. */
+export const SIMY_STARTER_CHF = 49
 
 export const WEBSITE_PRICE_ENV = {
   setup: 'STRIPE_PRICE_WEBSITE_SETUP',

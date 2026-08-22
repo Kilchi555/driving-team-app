@@ -9,6 +9,37 @@ import { navigateTo } from '#app'
 
 let listenersBound = false
 let registerStarted = false
+let tokenPersisted = false
+let pendingToken: string | null = null
+let pendingPlatform = 'ios'
+
+async function persistPushToken(token: string, platform: string): Promise<boolean> {
+  pendingToken = token
+  pendingPlatform = platform
+  try {
+    const { getSupabase } = await import('~/utils/supabase')
+    const { data: { session } } = await getSupabase().auth.getSession()
+    if (!session?.access_token) return false
+
+    await $fetch('/api/push/register-token', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: { token, platform },
+    })
+    pendingToken = null
+    tokenPersisted = true
+    return true
+  } catch (e) {
+    console.warn('[Push] Token registration failed:', e)
+    return false
+  }
+}
+
+/** Call after login — FCM often fires before Supabase session is ready. */
+export async function flushPendingPushToken(): Promise<boolean> {
+  if (!pendingToken) return tokenPersisted
+  return persistPushToken(pendingToken, pendingPlatform)
+}
 
 export async function isCapacitorNative(): Promise<boolean> {
   if (import.meta.server) return false
@@ -31,22 +62,8 @@ async function bindPushListeners() {
   const { PushNotifications } = await import('@capacitor/push-notifications')
 
   await PushNotifications.addListener('registration', async (tokenData) => {
-    try {
-      const { getSupabase } = await import('~/utils/supabase')
-      const { data: { session } } = await getSupabase().auth.getSession()
-      if (!session?.access_token) return
-
-      await $fetch('/api/push/register-token', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
-        body: {
-          token: tokenData.value,
-          platform: (window as any).Capacitor?.getPlatform?.() || 'ios',
-        },
-      })
-    } catch (e) {
-      console.warn('[Push] Token registration failed:', e)
-    }
+    const platform = (window as any).Capacitor?.getPlatform?.() || 'ios'
+    await persistPushToken(tokenData.value, platform)
   })
 
   await PushNotifications.addListener('registrationError', (err) => {
@@ -113,7 +130,8 @@ export async function ensureNativePushRegistration(opts?: {
       return status.receive === 'denied' ? 'denied' : 'prompt'
     }
 
-    if (!registerStarted) {
+    await flushPendingPushToken()
+    if (!registerStarted || !tokenPersisted) {
       registerStarted = true
       await PushNotifications.register()
     }

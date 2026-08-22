@@ -59,6 +59,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/send-staff-invite-reminders",
+      "schedule": "10 8 * * *"
+    },
+    {
       "path": "/api/cron/send-idle-student-reminders",
       "schedule": "15 8 * * *"
     },

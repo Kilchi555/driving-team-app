@@ -71,12 +71,13 @@ export default defineEventHandler(async (event) => {
     .eq('id', website.tenant_id)
     .maybeSingle()
 
-  let { data: navPages } = await supabase
+  let navQuery = supabase
     .from('website_pages')
     .select('title, slug, page_type, is_home')
     .eq('website_id', website.id)
-    .eq('is_published', true)
     .order('page_type', { ascending: true })
+  if (!preview) navQuery = navQuery.eq('is_published', true)
+  let { data: navPages } = await navQuery
 
   const addonCount = (navPages || []).filter((p) => !p.is_home && p.slug !== 'index').length
   if (website.is_published && !preview && addonCount === 0 && tenant) {
