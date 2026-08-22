@@ -596,20 +596,21 @@
             </div>
 
             <p
-              v-if="heroAttribution?.photographer"
+              v-for="(credit, ci) in photoCredits"
+              :key="`${credit.photographer}-${ci}`"
               class="lp-photo-credit"
             >
               Photo by
               <a
-                v-if="heroAttribution.photographer_url"
-                :href="heroAttribution.photographer_url"
+                v-if="credit.photographer_url"
+                :href="credit.photographer_url"
                 target="_blank"
                 rel="noopener noreferrer"
-              >{{ heroAttribution.photographer }}</a>
-              <span v-else>{{ heroAttribution.photographer }}</span>
+              >{{ credit.photographer }}</a>
+              <span v-else>{{ credit.photographer }}</span>
               on
               <a
-                :href="heroAttribution.unsplash_url || 'https://unsplash.com/?utm_source=simy&utm_medium=referral'"
+                :href="credit.unsplash_url || 'https://unsplash.com/?utm_source=simy&utm_medium=referral'"
                 target="_blank"
                 rel="noopener noreferrer"
               >Unsplash</a>
@@ -753,6 +754,18 @@ const heroAttribution = computed(() => {
     photographer_url?: string | null
     unsplash_url?: string | null
   }
+})
+
+const photoCredits = computed(() => {
+  const raw = (landing.value?.brand as any)?.stock_credits
+  const list = Array.isArray(raw) ? raw : heroAttribution.value ? [heroAttribution.value] : []
+  const seen = new Set<string>()
+  return list.filter((c: any) => {
+    const key = String(c?.photographer || c?.unsplash_url || '').trim()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).slice(0, 8)
 })
 
 // On app.simy.ch/s/... prefer verified custom domain (SEO)

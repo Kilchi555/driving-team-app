@@ -465,7 +465,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
         },
         {
           n: 2,
-          ...buildConfirmationProcessStep(input.booking_policy || (tenant as any).booking_policy, formal),
+          ...buildConfirmationProcessStep(input.booking_policy || null, formal),
         },
         {
           n: 3,

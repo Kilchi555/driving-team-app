@@ -51,10 +51,11 @@
                   <span :class="['sa-badge', tenant.is_active ? 'sa-badge-green' : 'sa-badge-red']">
                     {{ tenant.is_active ? 'Aktiv' : 'Inaktiv' }}
                   </span>
-                  <span v-if="tenant.is_trial" class="sa-badge sa-badge-amber">Trial</span>
+                  <span v-if="tenant.website_only" class="sa-badge sa-badge-violet">Website-only</span>
+                  <span v-else-if="tenant.is_trial" class="sa-badge sa-badge-amber">Trial</span>
                 </div>
               </td>
-              <td class="sa-cell-muted">{{ tenant.subscription_plan || '—' }}</td>
+              <td class="sa-cell-muted">{{ planLabel(tenant) }}</td>
               <td class="sa-cell-muted">{{ tenant.user_count || 0 }}</td>
               <td @click.stop>
                 <div class="flex items-center gap-2">
@@ -751,6 +752,7 @@
                 <div class="flex items-center gap-6 mt-3 flex-wrap">
                   <label class="sa-check-label"><input v-model="editForm.is_active" type="checkbox" class="sa-check" /> Aktiv</label>
                   <label class="sa-check-label"><input v-model="editForm.is_trial" type="checkbox" class="sa-check" /> Trial</label>
+                  <span v-if="detail?.tenant?.website_only" class="sa-badge sa-badge-violet">Website-only</span>
                   <label class="sa-check-label"><input v-model="editForm.addon_courses_enabled" type="checkbox" class="sa-check" /> Kurse</label>
                   <label class="sa-check-label"><input v-model="editForm.addon_affiliate_enabled" type="checkbox" class="sa-check" /> Affiliate</label>
                 </div>
@@ -1577,6 +1579,15 @@ const closeModal = () => {
   tenantForm.value = { name: '', slug: '', contact_email: '', contact_phone: '', business_type: '', subscription_plan: 'trial', subscription_status: 'active', is_active: true, is_trial: true }
 }
 
+const planLabel = (t: any) => {
+  if (t?.website_only) {
+    if (t.website_hosting_plan === 'care') return 'Website Care'
+    if (t.website_hosting_plan === 'host') return 'Website Host'
+    return 'Website-only'
+  }
+  return t?.subscription_plan || '—'
+}
+
 const formatDate = (d: string) => d ? new Date(d).toLocaleDateString('de-CH') : '—'
 
 const getInitials = (name?: string) => {
@@ -1643,6 +1654,7 @@ onMounted(() => {
 .sa-badge-red    { background:rgba(239,68,68,0.1);   color:#fca5a5; border:1px solid rgba(239,68,68,0.2); }
 .sa-badge-amber  { background:rgba(245,158,11,0.1);  color:#fcd34d; border:1px solid rgba(245,158,11,0.2); }
 .sa-badge-neutral{ background:rgba(100,116,139,0.1); color:#94a3b8; border:1px solid rgba(100,116,139,0.2); }
+.sa-badge-violet { background:rgba(139,92,246,0.12); color:#c4b5fd; border:1px solid rgba(139,92,246,0.25); }
 
 .sa-action-btn {
   font-size:0.72rem; font-weight:500; color:#6366f1;
