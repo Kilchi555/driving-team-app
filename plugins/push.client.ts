@@ -9,16 +9,28 @@ import { defineNuxtPlugin } from '#imports'
 export default defineNuxtPlugin(() => {
   if (import.meta.server) return
 
-  const tryRegister = () => {
-    void flushPendingPushToken()
-    void ensureNativePushRegistration({ request: true })
+  const isLoggedIn = () => {
+    try {
+      return Boolean(useAuthStore().isLoggedIn)
+    } catch {
+      return false
+    }
   }
 
-  let setupDone = false
+  const tryRegister = () => {
+    void flushPendingPushToken()
+    // Never show the OS dialog on the login screen.
+    void ensureNativePushRegistration({ request: isLoggedIn() })
+  }
+
+  let setupStarted = false
   const setup = async () => {
-    if (setupDone) return
-    if (!(await isCapacitorNative())) return
-    setupDone = true
+    if (setupStarted) return
+    setupStarted = true
+    if (!(await isCapacitorNative())) {
+      setupStarted = false
+      return
+    }
 
     try {
       const { getSupabase } = await import('~/utils/supabase')
@@ -51,8 +63,8 @@ export default defineNuxtPlugin(() => {
   const iv = window.setInterval(() => {
     attempts += 1
     void setup()
-    tryRegister()
-    if (setupDone && attempts >= 8) window.clearInterval(iv)
+    if (isLoggedIn()) tryRegister()
+    if (setupStarted && attempts >= 8) window.clearInterval(iv)
     if (attempts >= 15) window.clearInterval(iv)
   }, 1000)
 })

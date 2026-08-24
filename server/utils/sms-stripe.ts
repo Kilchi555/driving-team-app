@@ -157,9 +157,23 @@ export function smsOverageCheckoutLineItem(): Stripe.Checkout.SessionCreateParam
 }
 
 /**
+ * Basil+ (2025-03-31 onward) cannot attach a metered price that has no Billing
+ * Meter. A leftover legacy `usage_type=metered` price will 502 Checkout.
+ */
+export function isBasilCompatibleRecurringPrice(price: {
+  recurring?: { usage_type?: string | null; meter?: string | null } | null
+} | null | undefined): boolean {
+  if (!price) return false
+  const usage = price.recurring?.usage_type
+  if (usage === 'metered' && !price.recurring?.meter) return false
+  return true
+}
+
+/**
  * Like smsOverageCheckoutLineItem, but verifies the price exists in the current
- * Stripe mode (test vs live). Prevents checkout 502 when .env has a live SMS
- * price while STRIPE_SECRET_KEY is sk_test_… (or vice versa).
+ * Stripe mode (test vs live) AND is attachable on Basil. Prevents checkout 502
+ * when .env has a live SMS price while STRIPE_SECRET_KEY is sk_test_… — or when
+ * the configured price is a legacy metered price without a meter.
  */
 export async function smsOverageCheckoutLineItemSafe(): Promise<Stripe.Checkout.SessionCreateParams.LineItem | null> {
   const line = smsOverageCheckoutLineItem()
@@ -169,7 +183,13 @@ export async function smsOverageCheckoutLineItemSafe(): Promise<Stripe.Checkout.
   if (!stripe) return null
 
   try {
-    await stripe.prices.retrieve(line.price)
+    const price = await stripe.prices.retrieve(line.price)
+    if (!isBasilCompatibleRecurringPrice(price)) {
+      logger.warn('⚠️ Skipping SMS overage checkout line — metered price has no Billing Meter (Basil):', {
+        priceId: line.price,
+      })
+      return null
+    }
     return line
   } catch (err: any) {
     logger.warn('⚠️ Skipping SMS overage checkout line — price not available in current Stripe mode:', {
