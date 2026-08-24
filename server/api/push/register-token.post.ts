@@ -2,15 +2,13 @@
 // Saves (or refreshes) an FCM/APNs device token for the current user.
 // Called by plugins/push.client.ts after Capacitor PushNotifications.register().
 
-import { defineEventHandler, readBody, createError, getHeader } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { defineEventHandler, readBody, createError } from 'h3'
+import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization') ?? ''
-  const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
-
-  if (!accessToken) {
+  const authUser = await getAuthUserFromRequest(event)
+  if (!authUser?.id) {
     throw createError({ statusCode: 401, statusMessage: 'Nicht authentifiziert' })
   }
 
@@ -30,24 +28,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Ungültige Plattform' })
   }
 
-  // Resolve user from the access token
-  const supabaseUrl = process.env.SUPABASE_URL!
-  const supabaseAnonKey = process.env.SUPABASE_KEY!
-  const client = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
-  })
-  const { data: { user }, error: authError } = await client.auth.getUser()
-
-  if (authError || !user) {
-    throw createError({ statusCode: 401, statusMessage: 'Ungültiger Token' })
-  }
-
   // Map auth.users.id → public.users.id (sendPushToUser keys off app user id)
   const admin = getSupabaseAdmin()
   const { data: userData, error: userLookupError } = await admin
     .from('users')
     .select('id, tenant_id')
-    .eq('auth_user_id', user.id)
+    .eq('auth_user_id', authUser.id)
     .maybeSingle()
 
   if (userLookupError) {
