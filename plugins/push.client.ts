@@ -10,6 +10,7 @@ export default defineNuxtPlugin(() => {
   if (import.meta.server) return
 
   const tryRegister = () => {
+    void flushPendingPushToken()
     void ensureNativePushRegistration({ request: true })
   }
 
