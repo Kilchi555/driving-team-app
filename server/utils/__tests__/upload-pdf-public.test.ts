@@ -26,7 +26,7 @@ describe('sanitizeStorageFilename', () => {
 })
 
 describe('buildPdfStoragePath', () => {
-  it('never uploads the production-failing Zürich key', () => {
+  it('keeps the object key ASCII-only and free of the course name', () => {
     const { filepath, filename } = buildPdfStoragePath(
       'participant-lists',
       'Teilnehmerliste_Motorrad_Grundkurs_Zürich-Altstetten_-_29.08.2026.pdf',
@@ -34,10 +34,9 @@ describe('buildPdfStoragePath', () => {
       new Date('2026-08-24T08:00:00+02:00'),
     )
     expect(filename).toBe('Teilnehmerliste_Motorrad_Grundkurs_Zuerich-Altstetten_-_29.08.2026.pdf')
-    expect(filepath).toBe(
-      'participant-lists/2026/08/7be38dda-9882-4efc-a2c6-b5e66813f9f7_Teilnehmerliste_Motorrad_Grundkurs_Zuerich-Altstetten_-_29.08.2026.pdf',
-    )
+    expect(filepath).toBe('participant-lists/2026/08/7be38dda-9882-4efc-a2c6-b5e66813f9f7.pdf')
     expect(isValidStorageKey(filepath)).toBe(true)
     expect(filepath.includes('ü')).toBe(false)
+    expect(filepath.includes('Zuerich')).toBe(false)
   })
 })
