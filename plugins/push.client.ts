@@ -14,8 +14,11 @@ export default defineNuxtPlugin(() => {
     void ensureNativePushRegistration({ request: true })
   }
 
-  void (async () => {
+  let setupDone = false
+  const setup = async () => {
+    if (setupDone) return
     if (!(await isCapacitorNative())) return
+    setupDone = true
 
     try {
       const { getSupabase } = await import('~/utils/supabase')
@@ -39,5 +42,17 @@ export default defineNuxtPlugin(() => {
     } catch (e) {
       console.warn('[Push] Setup failed:', e)
     }
-  })()
+  }
+
+  void setup()
+  // Hosted WebView can inject Capacitor after the first JS tick; cookie
+  // login hydrates supabase-js a moment later. Keep trying briefly.
+  let attempts = 0
+  const iv = window.setInterval(() => {
+    attempts += 1
+    void setup()
+    tryRegister()
+    if (setupDone && attempts >= 8) window.clearInterval(iv)
+    if (attempts >= 15) window.clearInterval(iv)
+  }, 1000)
 })
