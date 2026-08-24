@@ -18,6 +18,7 @@ BUILD_NUMBER="$(date +%Y%m%d%H%M)"
 
 REPO_ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$CI_WORKSPACE}"
 INFO_PLIST="$REPO_ROOT/ios/App/App/Info.plist"
+CONFIG="$REPO_ROOT/clients/simy/config.json"
 
 echo "🔢 Setting CFBundleVersion to $BUILD_NUMBER in $INFO_PLIST"
 
@@ -27,5 +28,15 @@ if [ ! -f "$INFO_PLIST" ]; then
 fi
 
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$INFO_PLIST"
+
+# Apple closes a version train after App Store approval. Stamp the marketing
+# version from clients/simy/config.json so Xcode Cloud cannot resubmit 1.0.1.
+if [ -f "$CONFIG" ]; then
+  MARKETING_VERSION="$(python3 -c "import json; print(json.load(open('$CONFIG')).get('version') or '')")"
+  if [ -n "$MARKETING_VERSION" ]; then
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $MARKETING_VERSION" "$INFO_PLIST"
+    echo "✅ CFBundleShortVersionString is now: $MARKETING_VERSION"
+  fi
+fi
 
 echo "✅ CFBundleVersion is now: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$INFO_PLIST")"
