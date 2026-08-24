@@ -182,7 +182,12 @@ export default defineEventHandler(async (event) => {
   let smsOveragePriceId = getSmsOveragePriceId()
   if (smsOveragePriceId) {
     try {
-      await stripe.prices.retrieve(smsOveragePriceId)
+      const smsPrice = await stripe.prices.retrieve(smsOveragePriceId)
+      const { isBasilCompatibleRecurringPrice } = await import('~/server/utils/sms-stripe')
+      if (!isBasilCompatibleRecurringPrice(smsPrice)) {
+        console.warn('⚠️ Skipping SMS overage item — metered price has no Billing Meter (Basil)')
+        smsOveragePriceId = undefined
+      }
     } catch (err: any) {
       console.warn('⚠️ Skipping SMS overage item — price not in current Stripe mode:', err?.message)
       smsOveragePriceId = undefined

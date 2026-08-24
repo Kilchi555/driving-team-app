@@ -1260,7 +1260,7 @@ const startCheckout = async () => {
       showAuthPrompt.value = true
       return
     }
-    error.value = err?.data?.statusMessage || 'Checkout konnte nicht gestartet werden.'
+    error.value = err?.data?.statusMessage || err?.statusMessage || err?.data?.message || 'Checkout konnte nicht gestartet werden.'
   } finally {
     loading.value = false
   }
