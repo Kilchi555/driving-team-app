@@ -5,6 +5,10 @@ import {
 } from '~/utils/planFeatures'
 import { syncFeatureFlags } from '~/server/utils/syncFeatureFlags'
 import { sendEmail } from '~/server/utils/email'
+import {
+  generateSimySubscriptionReceiptPdfSafe,
+  receiptLinesFromStripe,
+} from '~/server/utils/simy-subscription-receipt-pdf'
 import { resolveSubscriptionPeriodEnd } from '~/server/utils/stripe-subscription-period'
 
 export default defineEventHandler(async (event) => {
@@ -513,22 +517,6 @@ function formatChf(amountCents: number): string {
   return (amountCents / 100).toFixed(2)
 }
 
-/** Translate common Stripe English proration/line phrases to German for the email. */
-function localizeInvoiceLineDescription(description: string | null | undefined): string {
-  if (!description) return 'Position'
-  let d = description
-  d = d.replace(/^Unused time on /i, 'Nicht genutzte Zeit: ')
-  d = d.replace(/^Remaining time on /i, 'Anteilige Restzeit: ')
-  d = d.replace(/ after (\d{1,2} \w+ \d{4})/i, ' ab $1')
-  d = d.replace(/\b1 Fahrlehrer Login\b/gi, 'Extra Fahrlehrer-Seat')
-  d = d.replace(/\bGoogle Business Profile Add-on\b/gi, 'Google Business Profile')
-  d = d.replace(/\bEnterprise\b/g, 'Enterprise')
-  d = d.replace(/\bProfessional\b/g, 'Professional')
-  d = d.replace(/\bStarter\b/g, 'Starter')
-  d = d.replace(/\(at CHF ([\d.]+) \/ month\)/gi, '(CHF $1 / Mt.)')
-  d = d.replace(/^(\d+) × /g, '$1 × ')
-  return d
-}
 
 function isProrationLine(line: Stripe.InvoiceLineItem): boolean {
   if ((line as any).proration === true) return true
@@ -576,7 +564,7 @@ async function sendPaymentConfirmationEmail(
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('name, contact_email, subscription_plan, current_period_end, addon_seats, addon_courses_enabled, addon_affiliate_enabled, addon_gbp_enabled')
+    .select('name, contact_email, subscription_plan, current_period_end, addon_seats, addon_courses_enabled, addon_affiliate_enabled, addon_gbp_enabled, invoice_street, invoice_street_nr, invoice_zip, invoice_city, legal_company_name')
     .eq('id', tenantId)
     .single()
 
@@ -618,11 +606,12 @@ async function sendPaymentConfirmationEmail(
 
   const renderLineRows = (items: Stripe.InvoiceLineItem[]) =>
     items.map(line => {
-      const label = localizeInvoiceLineDescription(line.description)
-      const qty = line.quantity && line.quantity > 1 ? ` × ${line.quantity}` : ''
+      const mapped = receiptLinesFromStripe([line])[0]
+      if (!mapped) return ''
+      const qty = mapped.quantity > 1 ? ` × ${mapped.quantity}` : ''
       return `<tr>
-                <td style="padding:10px 16px;font-size:14px;color:#374151;border-bottom:1px solid #f3f4f6">${label}${qty}</td>
-                ${renderAmountCell(line.amount)}
+                <td style="padding:10px 16px;font-size:14px;color:#374151;border-bottom:1px solid #f3f4f6">${mapped.product_name}${qty}</td>
+                ${renderAmountCell(mapped.total_price_rappen)}
               </tr>`
     }).join('')
 
@@ -644,10 +633,32 @@ async function sendPaymentConfirmationEmail(
               </tr>
             </table>` : ''
 
+  const paidAtUnix = (invoice.status_transitions as any)?.paid_at
+    || invoice.created
+    || Math.floor(Date.now() / 1000)
+  const vatAmountRappen = invoice.tax || 0
+  const receiptItems = receiptLinesFromStripe(lines)
+  const receiptNumber = invoice.number || invoice.id
+  const pdfBuffer = await generateSimySubscriptionReceiptPdfSafe({
+    invoiceNumber: receiptNumber,
+    paidAt: new Date(paidAtUnix * 1000),
+    customerName: tenant.legal_company_name || tenant.name || tenantName,
+    customerStreet: [tenant.invoice_street, tenant.invoice_street_nr].filter(Boolean).join(' '),
+    customerZip: tenant.invoice_zip || '',
+    customerCity: tenant.invoice_city || '',
+    customerEmail: tenant.contact_email,
+    items: receiptItems,
+    totalRappen: invoice.amount_paid,
+    vatAmountRappen,
+  })
+
   await sendEmail({
     to: tenant.contact_email,
     senderName: 'Simy',
     subject: `✅ Zahlung bestätigt – CHF ${amountCHF}`,
+    attachments: pdfBuffer
+      ? [{ filename: `Quittung_${receiptNumber}.pdf`, content: pdfBuffer }]
+      : undefined,
     html: `<!DOCTYPE html>
 <html lang="de"><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
@@ -655,14 +666,14 @@ async function sendPaymentConfirmationEmail(
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px">
         <tr><td style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08)">
-          <div style="background:linear-gradient(135deg,#16a34a,#15803d);padding:32px;border-radius:12px 12px 0 0;text-align:center">
+          <div style="background:linear-gradient(135deg,#6000BD,#8B2FE8);padding:32px;border-radius:12px 12px 0 0;text-align:center">
             <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700">Zahlung erfolgreich</h1>
             <p style="margin:8px 0 0;color:rgba(255,255,255,.85);font-size:22px;font-weight:700">CHF ${amountCHF}</p>
           </div>
           <div style="padding:32px">
-            <p style="color:#111827;font-size:15px;margin:0 0 16px">Hallo <strong>${tenantName}</strong>,</p>
+            <p style="color:#111827;font-size:15px;margin:0 0 16px">Guten Tag</p>
             <p style="color:#4b5563;font-size:15px;line-height:1.6;margin:0 0 24px">
-              deine Simy-Abonnementzahlung von <strong>CHF ${amountCHF}</strong> wurde erfolgreich verarbeitet. Danke!
+              Ihre Simy-Abonnementzahlung von <strong>CHF ${amountCHF}</strong> wurde erfolgreich verarbeitet. Die Quittung finden Sie im Anhang.
             </p>
             ${positionsHtml}
             <table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin:0 0 24px">
@@ -689,7 +700,7 @@ async function sendPaymentConfirmationEmail(
             <table width="100%" cellpadding="0" cellspacing="0"><tr>
               <td align="center" style="padding:8px 0 24px">
                 <a href="${baseUrl}/admin/billing"
-                   style="display:inline-block;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600">
+                   style="display:inline-block;background:linear-gradient(135deg,#6000BD,#8B2FE8);color:#fff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600">
                   Abonnement verwalten →
                 </a>
               </td>
