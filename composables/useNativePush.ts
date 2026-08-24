@@ -13,17 +13,28 @@ let tokenPersisted = false
 let pendingToken: string | null = null
 let pendingPlatform = 'ios'
 
+async function resolveAccessToken(): Promise<string | null> {
+  const { getSupabase } = await import('~/utils/supabase')
+  const { data: { session } } = await getSupabase().auth.getSession()
+  if (session?.access_token) return session.access_token
+  // Cookie login (staff/admin) often has no supabase-js session yet.
+  try {
+    const { refreshClientSession } = await import('~/utils/client-session-refresh')
+    const refreshed = await refreshClientSession()
+    return refreshed?.access_token || null
+  } catch {
+    return null
+  }
+}
+
 async function persistPushToken(token: string, platform: string): Promise<boolean> {
   pendingToken = token
   pendingPlatform = platform
   try {
-    const { getSupabase } = await import('~/utils/supabase')
-    const { data: { session } } = await getSupabase().auth.getSession()
-    if (!session?.access_token) return false
-
+    const accessToken = await resolveAccessToken()
     await $fetch('/api/push/register-token', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
       body: { token, platform },
     })
     pendingToken = null
@@ -49,7 +60,7 @@ export async function isCapacitorNative(): Promise<boolean> {
   } catch {
     /* bundle may load before the bridge */
   }
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 60; i++) {
     if ((window as any).Capacitor?.isNativePlatform?.()) return true
     await new Promise(r => setTimeout(r, 50))
   }
