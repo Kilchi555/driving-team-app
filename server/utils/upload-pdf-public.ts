@@ -59,14 +59,11 @@ export function buildPdfStoragePath(
   const safeFolder = toAsciiSegment(folder) || 'files'
   const year = now.getFullYear()
   const month = String(now.getMonth() + 1).padStart(2, '0')
-  const filepath = `${safeFolder}/${year}/${month}/${uniqueToken}_${safeName}`
-  if (isValidStorageKey(filepath)) {
-    return { filepath, filename: safeName }
-  }
-  return {
-    filepath: `${safeFolder}/${year}/${month}/${uniqueToken}.pdf`,
-    filename: safeName,
-  }
+  // Never put user-facing names in the object key. Course titles like
+  // "Zürich-Altstetten" used to fail Supabase `isValidKey` even after
+  // light sanitizing. The download name stays human-readable separately.
+  const filepath = `${safeFolder}/${year}/${month}/${uniqueToken}.pdf`
+  return { filepath, filename: safeName }
 }
 
 export async function uploadPdfAndGetPublicUrl(
