@@ -10,7 +10,7 @@ import { generateDunningPdf, dunningPdfFilename, extractDunningLetterText } from
 import { uploadPdfAndGetPublicUrl } from '~/server/utils/upload-pdf-public'
 import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/tenant-logo-for-pdf'
 import { formatTenantContactPerson } from '~/server/utils/invoice-pdf'
-import { invoicePersonNames } from '~/server/utils/invoice-billing-snapshot'
+import { invoicePersonNames, invoiceQrDebtorName } from '~/server/utils/invoice-billing-snapshot'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event)
@@ -79,8 +79,6 @@ export default defineEventHandler(async (event) => {
       const { generateSwissQRBase64, generateReference } = await import('~/server/utils/swiss-qr')
       const { ref } = generateReference(invoice.invoice_number, tenant.qr_iban)
       scorRef = ref
-      const customerName = invoice.billing_contact_person ||
-        `${invoice.customer_first_name || ''} ${invoice.customer_last_name || ''}`.trim() || 'Kunde'
       qrCodeDataUrl = await generateSwissQRBase64({
         qr_iban: tenant.qr_iban,
         creditor_name: tenant.legal_company_name || tenantName,
@@ -88,7 +86,7 @@ export default defineEventHandler(async (event) => {
         creditor_street_nr: tenant.invoice_street_nr?.trim() || '',
         creditor_zip: tenant.invoice_zip || '',
         creditor_city: tenant.invoice_city || '',
-        debtor_name: customerName,
+        debtor_name: invoiceQrDebtorName(invoice),
         debtor_street: invoice.billing_street || '',
         debtor_street_nr: invoice.billing_street_number || '',
         debtor_zip: invoice.billing_zip || '',
