@@ -250,7 +250,7 @@ export default defineEventHandler(async (event) => {
     : `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`
 
   try {
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
       customer: stripeCustomerId,
       line_items: lineItems,
@@ -277,9 +277,22 @@ export default defineEventHandler(async (event) => {
       } : {}),
       success_url: successUrl,
       cancel_url: `${baseUrl}/upgrade`,
-    })
+    }
 
-    return { id: session.id, url: session.url }
+    try {
+      const session = await stripe.checkout.sessions.create(sessionParams)
+      return { id: session.id, url: session.url }
+    } catch (firstErr: any) {
+      // Legacy metered SMS price (no Billing Meter) 502s the whole checkout.
+      const firstMsg = String(firstErr?.message || '')
+      if (smsLine && /meter/i.test(firstMsg)) {
+        console.warn('⚠️ Retrying checkout without SMS overage line:', firstMsg)
+        sessionParams.line_items = lineItems.filter(item => item.price !== smsLine.price)
+        const session = await stripe.checkout.sessions.create(sessionParams)
+        return { id: session.id, url: session.url }
+      }
+      throw firstErr
+    }
   } catch (stripeErr: any) {
     console.error('❌ Stripe checkout.sessions.create failed', {
       type: stripeErr?.type,
@@ -292,7 +305,14 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 502,
       statusMessage: `Stripe-Fehler (${stripeErr?.type || 'unknown'}): ${stripeErr?.message || 'Checkout konnte nicht erstellt werden'}`,
-      data: { stripe: true, type: stripeErr?.type, code: stripeErr?.code, keyMode, planPriceId },
+      data: {
+        stripe: true,
+        type: stripeErr?.type,
+        code: stripeErr?.code,
+        keyMode,
+        planPriceId,
+        statusMessage: `Stripe-Fehler (${stripeErr?.type || 'unknown'}): ${stripeErr?.message || 'Checkout konnte nicht erstellt werden'}`,
+      },
     })
   }
 })
