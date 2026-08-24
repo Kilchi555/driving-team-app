@@ -101,10 +101,11 @@ export async function emailConvertedInvoice(opts: {
   const { buildInvoiceEmailHtml } = await import('~/server/utils/invoice-email')
   const { loadTenantLogoForPdf, resolveTenantWideLogoUrl } = await import('~/server/utils/tenant-logo-for-pdf')
   const { quoteDocumentLabels } = await import('~/server/utils/invoice-quote')
+  const { invoicePersonNames, invoiceQrDebtorName } = await import('~/server/utils/invoice-billing-snapshot')
 
   const labels = quoteDocumentLabels(false)
   const tenantName = tenant?.legal_company_name || tenant?.name || ''
-  const customerName = invoice.billing_company_name || invoice.billing_contact_person || 'Kunde'
+  const { customerName } = invoicePersonNames(invoice)
   const lineItems = (items || []).map((i: any) => ({
     product_name: i.product_name,
     product_description: i.product_description,
@@ -126,7 +127,7 @@ export async function emailConvertedInvoice(opts: {
         creditor_street_nr: tenant?.invoice_street_nr?.trim() || '',
         creditor_zip: tenant?.invoice_zip || '',
         creditor_city: tenant?.invoice_city || '',
-        debtor_name: customerName,
+        debtor_name: invoiceQrDebtorName(invoice),
         debtor_street: invoice.billing_street || '',
         debtor_street_nr: invoice.billing_street_number || '',
         debtor_zip: invoice.billing_zip || '',

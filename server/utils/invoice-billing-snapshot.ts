@@ -39,6 +39,30 @@ export function invoicePersonNames(
   return { customerName, studentName }
 }
 
+/**
+ * Swiss QR «Zahlbar durch»: billed party, not the contact person or student.
+ * Matches the printed QR-slip name in invoice-pdf.ts.
+ */
+export function invoiceQrDebtorName(
+  invoice: {
+    billing_company_name?: string | null
+    billing_contact_person?: string | null
+    billing_first_name?: string | null
+    billing_last_name?: string | null
+    customer_first_name?: string | null
+    customer_last_name?: string | null
+  },
+  user?: UserAddressLike | null,
+  fallback?: string | null,
+): string {
+  const company = (invoice.billing_company_name || '').trim()
+  if (company) return company
+  const draftPerson = [invoice.billing_first_name, invoice.billing_last_name].filter(Boolean).join(' ').trim()
+  if (draftPerson) return collapseDuplicatePersonName(draftPerson)
+  const { customerName } = invoicePersonNames(invoice, user)
+  return customerName || (fallback || '').trim() || 'Kunde'
+}
+
 export function joinStreetParts(...parts: Array<string | null | undefined>): string {
   const [street, ...rest] = parts
   return joinStreetAndNumber(street, rest.filter(Boolean).join(' ') || null)
