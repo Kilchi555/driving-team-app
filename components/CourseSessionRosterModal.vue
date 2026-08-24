@@ -38,16 +38,35 @@
         </span>
         <button
           type="button"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-40 transition-opacity hover:opacity-90"
+          class="appearance-none inline-flex items-center justify-center gap-1.5 min-w-[6.75rem] px-3 py-1.5 rounded-lg text-xs font-semibold text-white select-none touch-manipulation [-webkit-tap-highlight-color:transparent] disabled:opacity-40 hover:opacity-90"
+          :class="isPreparingPdf ? 'pointer-events-none opacity-70' : ''"
           :style="{ background: primaryColor }"
-          :disabled="isLoading || isPreparingPdf || allParticipants.length === 0"
+          :disabled="isLoading || allParticipants.length === 0"
+          :aria-busy="isPreparingPdf"
           title="Kurs-Teilnehmerliste (alle Teile) als PDF"
           @click="downloadPdf"
         >
-          <svg class="w-3.5 h-3.5" :class="isPreparingPdf ? 'animate-pulse' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            v-if="isPreparingPdf"
+            class="w-3.5 h-3.5 flex-shrink-0 animate-spin"
+            fill="none"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" />
+            <path class="opacity-85" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
+          </svg>
+          <svg
+            v-else
+            class="w-3.5 h-3.5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
           </svg>
-          {{ isPreparingPdf ? 'PDF…' : 'PDF / Druck' }}
+          PDF / Druck
         </button>
       </div>
 
@@ -282,7 +301,10 @@ async function downloadPdf() {
       },
     })
   } catch (err: any) {
-    pdfError.value = err?.data?.statusMessage || err?.message || 'PDF konnte nicht geöffnet werden'
+    const serverMessage = err?.data?.statusMessage || err?.statusMessage
+    pdfError.value = serverMessage && !/Invalid key|upload failed|generation failed/i.test(serverMessage)
+      ? serverMessage
+      : 'Teilnehmerliste konnte nicht erstellt werden. Bitte erneut versuchen.'
   } finally {
     isPreparingPdf.value = false
   }

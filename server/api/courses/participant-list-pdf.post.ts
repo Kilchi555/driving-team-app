@@ -114,8 +114,7 @@ export default defineEventHandler(async (event) => {
     await browser.close()
     browser = null
 
-    const safeCourse = String(roster.course.name || 'Kurs').replace(/[^\w.\-äöüÄÖÜß]+/g, '_')
-    const filename = `Teilnehmerliste_${safeCourse}.pdf`
+    const filename = `Teilnehmerliste_${roster.course.name || 'Kurs'}.pdf`
 
     const uploaded = await uploadPdfAndGetPublicUrl(supabase, {
       folder: 'participant-lists',
@@ -131,8 +130,8 @@ export default defineEventHandler(async (event) => {
     }
     logger.error('❌ Participant list PDF generation failed:', err)
     throw createError({
-      statusCode: 500,
-      statusMessage: `PDF generation failed: ${err?.message || 'unknown error'}`,
+      statusCode: err?.statusCode || 500,
+      statusMessage: err?.statusMessage || 'Teilnehmerliste konnte nicht erstellt werden',
     })
   }
 })
