@@ -57,7 +57,7 @@ export default defineEventHandler(async (event) => {
       .limit(40),
     supabase
       .from('products')
-      .select('id, name, description, price_rappen, is_active')
+      .select('id, name, description, price_rappen, is_active, is_credit_product, credit_amount_rappen')
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('name', { ascending: true }),

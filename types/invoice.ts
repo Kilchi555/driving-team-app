@@ -44,6 +44,8 @@ export interface Invoice {
   payment_method?: string
   paid_at?: string
   paid_amount_rappen: number
+  credit_applied_rappen?: number
+  credit_applied_at?: string
   
   // Mahnwesen (Dunning) — 0 = keine Mahnung, 1 = Zahlungserinnerung, 2 = 1. Mahnung, 3 = 2./letzte Mahnung
   dunning_level?: number
@@ -89,6 +91,8 @@ export interface InvoiceItem {
   sort_order: number
   notes?: string
   created_at: string
+  credit_to_wallet?: boolean
+  credit_amount_rappen?: number | null
 }
 
 export interface InvoicePayment {
@@ -177,6 +181,8 @@ export interface InvoiceItemFormData {
   vat_rate: number
   sort_order: number
   notes?: string
+  credit_to_wallet?: boolean
+  credit_amount_rappen?: number
   // computed fields (not sent to server directly)
   total_price_rappen?: number
   vat_amount_rappen?: number
@@ -269,4 +275,6 @@ export const DEFAULT_INVOICE_ITEM_VALUES: Partial<InvoiceItemFormData> = {
   discount_percent: 0,
   total_price_rappen: 0,
   vat_amount_rappen: 0,
+  credit_to_wallet: false,
+  credit_amount_rappen: 0,
 }
