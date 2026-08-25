@@ -11,6 +11,8 @@ export interface InvoiceLineTemplate {
   details?: string
   price_rappen: number
   product_id?: string
+  credit_to_wallet?: boolean
+  credit_amount_rappen?: number
 }
 
 export function filterInvoiceLineTemplates(

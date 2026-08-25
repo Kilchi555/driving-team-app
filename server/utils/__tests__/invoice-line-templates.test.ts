@@ -231,15 +231,21 @@ describe('filter and group templates', () => {
         { category_code: 'B', rule_type: 'base_price', price_per_minute_rappen: 200, base_duration_minutes: 45 },
       ],
       eventTypes: [{ code: 'lesson', default_duration_minutes: 45 }],
-      products: [{ id: 'p1', name: 'Lernfahrausweis', price_rappen: 5500 }],
+      products: [
+        { id: 'p1', name: 'Lernfahrausweis', price_rappen: 5500 },
+        { id: 'p2', name: '10er-Abo', price_rappen: 90000, is_credit_product: true, credit_amount_rappen: 100000 },
+      ],
     })
 
     expect(filterInvoiceLineTemplates(templates, 'fahrstunde').map((t) => t.kind)).toEqual(['service'])
     expect(filterInvoiceLineTemplates(templates, 'lernfahrausweis').map((t) => t.kind)).toEqual(['product'])
+    const abo = templates.find((t) => t.id === 'product:p2')
+    expect(abo?.credit_to_wallet).toBe(true)
+    expect(abo?.credit_amount_rappen).toBe(100000)
     expect(groupInvoiceLineTemplates(templates).map((g) => g.label)).toEqual(['Dienstleistungen', 'Produkte'])
-    expect(filterInvoiceLineTemplates([
+    expect([...new Set(filterInvoiceLineTemplates([
       ...templates,
       { id: 'course-type:1', kind: 'course', group: 'Kurse', name: 'Verkehrskunde', price_rappen: 19000 },
-    ], '', 16).map((t) => t.group)).toEqual(['Dienstleistungen', 'Kurse', 'Produkte'])
+    ], '', 16).map((t) => t.group))]).toEqual(['Dienstleistungen', 'Kurse', 'Produkte'])
   })
 })

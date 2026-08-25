@@ -8,6 +8,7 @@ import { computeInvoiceDueDate, getTenantInvoiceDueDays } from '~/server/utils/i
 import { getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 import { applyMissingInvoiceBilling } from '~/server/utils/invoice-billing-snapshot'
 import { applyStudentCreditToPayments } from '~/server/utils/apply-student-credit'
+import { resolveInvoiceLineCreditRappen } from '~/server/utils/invoice-credit'
 
 export default defineEventHandler(async (event) => {
   // ✅ Use authenticated user
@@ -100,6 +101,14 @@ export default defineEventHandler(async (event) => {
         paid_with_credit: true,
         data: null,
       }
+    }
+
+    const wantsWalletCredit = !asQuote && invoiceItemsInput.some((item: any) => item.credit_to_wallet)
+    if (wantsWalletCredit && !invoiceData.user_id) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Guthaben-Gutschrift braucht einen Kunden im Stamm.',
+      })
     }
 
     // Compute totals server-side (amounts must be integer rappen, not CHF decimals)
@@ -222,6 +231,23 @@ export default defineEventHandler(async (event) => {
 
     // Create invoice items
     if (invoiceItemsInput.length > 0) {
+      const creditProductIds = Array.from(new Set(
+        invoiceItemsInput
+          .filter((item: any) => item.credit_to_wallet && item.product_id)
+          .map((item: any) => item.product_id as string)
+      ))
+      const creditProductById = new Map<string, { id: string; is_credit_product?: boolean; credit_amount_rappen?: number }>()
+      if (creditProductIds.length > 0) {
+        const { data: creditProducts } = await supabaseAdmin
+          .from('products')
+          .select('id, is_credit_product, credit_amount_rappen')
+          .in('id', creditProductIds)
+          .eq('tenant_id', userProfile.tenant_id)
+        for (const product of creditProducts || []) {
+          creditProductById.set(product.id, product)
+        }
+      }
+
       const invoiceItems = invoiceItemsInput.map((item: any, index: number) => {
         // Strip internal metadata and computed-only fields before inserting
         const {
@@ -229,6 +255,19 @@ export default defineEventHandler(async (event) => {
           payment_method, status,
           ...cleanItem
         } = item
+        const creditToWallet = !asQuote && Boolean(item.credit_to_wallet)
+        const creditAmount = creditToWallet
+          ? resolveInvoiceLineCreditRappen(
+              {
+                credit_to_wallet: true,
+                credit_amount_rappen: item.credit_amount_rappen,
+                total_price_rappen: toRappen(cleanItem.total_price_rappen),
+                quantity: item.quantity,
+                product_id: item.product_id,
+              },
+              item.product_id ? creditProductById.get(item.product_id) : null
+            )
+          : 0
         return {
           ...cleanItem,
           invoice_id: invoice.id,
@@ -238,6 +277,8 @@ export default defineEventHandler(async (event) => {
           unit_price_rappen: toRappen(cleanItem.unit_price_rappen),
           total_price_rappen: toRappen(cleanItem.total_price_rappen),
           vat_amount_rappen: toRappen(cleanItem.vat_amount_rappen),
+          credit_to_wallet: creditToWallet,
+          credit_amount_rappen: creditToWallet ? creditAmount : null,
         }
       })
 
@@ -249,6 +290,22 @@ export default defineEventHandler(async (event) => {
 
       // Stamp invoice_id back on source rows (payments, courses, rooms, vehicles)
       for (const item of asQuote ? [] : invoiceItemsInput) {
+        if (item.appointment_id && !item._open_item_id) {
+          const { error: aptPayErr } = await supabaseAdmin
+            .from('payments')
+            .update({
+              invoice_id: invoice.id,
+              payment_status: 'invoiced',
+              payment_method: 'invoice',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('appointment_id', item.appointment_id)
+            .eq('tenant_id', userProfile.tenant_id)
+            .is('invoice_id', null)
+            .neq('payment_status', 'cancelled')
+          if (aptPayErr) console.warn('[invoice/create] Could not stamp payment by appointment_id:', aptPayErr)
+        }
+
         if (!item._open_item_id || !item._open_item_source_table) continue
         const table = item._open_item_source_table as string
         const sourceId = item._open_item_id as string
@@ -260,6 +317,8 @@ export default defineEventHandler(async (event) => {
             .from('payments')
             .update({
               invoice_id: invoice.id,
+              payment_status: 'invoiced',
+              payment_method: 'invoice',
               updated_at: new Date().toISOString(),
             })
             .eq('id', sourceId)
