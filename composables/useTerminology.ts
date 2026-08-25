@@ -209,6 +209,7 @@ const TERMS: Record<string, Terminology> = {
     businessNoun: 'Praxis',
     progressLabel: 'Verlauf'
   },
+  // Selectable as "Anderes" in tenant-register (business_types.code = generic).
   generic: {
     client: 'Kunde',
     clientsPlural: 'Kunden',
