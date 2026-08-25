@@ -9,6 +9,32 @@
       :class="!isOnlineBookingEnabled ? 'max-w-2xl' : 'max-w-6xl'"
     >
       
+      <div
+        v-if="guestPaidSuccess"
+        class="mb-4 flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg"
+      >
+        <svg class="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-green-800">Zahlung erhalten — dein Termin ist bestätigt.</p>
+          <p class="text-xs text-green-700 mt-0.5">Du erhältst die Bestätigung per E-Mail.</p>
+        </div>
+      </div>
+
+      <div
+        v-if="paymentFailedNotice"
+        class="mb-4 flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg"
+      >
+        <svg class="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-red-800">Zahlung nicht abgeschlossen.</p>
+          <p class="text-xs text-red-700 mt-0.5">Der Platz wurde wieder freigegeben. Bitte buche erneut.</p>
+        </div>
+      </div>
+
       <!-- Already-booked banner: shown when user navigates back after a successful booking -->
       <div
         v-if="justCompletedBooking"
@@ -33,7 +59,7 @@
            entirely — otherwise it's fully interactive underneath the banner
            and a customer could pick + confirm another slot before (or
            instead of) the auto-redirect to the dashboard fires. -->
-      <template v-if="!justCompletedBooking">
+      <template v-if="!justCompletedBooking && !guestPaidSuccess">
 
       <!-- Back Button & Header (booking wizard only — inquiry form has its own brand header) -->
       <div v-if="isOnlineBookingEnabled" class="mb-4 flex items-center gap-4">
@@ -256,63 +282,86 @@
 
         <!-- Step 1: Main Category Selection -->
         <div v-if="currentStep === 1" class="space-y-4">
-          <!-- Main Category Selection Card -->
-          <div class="bg-white shadow rounded-lg p-4">
+          <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deine Hauptkategorie</h2>
-              
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">{{ categoryStepTitle }}</h2>
             </div>
-          
-          <!-- Show only main categories (where parent_category_id is null) -->
-          <div :class="`grid ${getGridClasses(categories.length)} gap-3`">
-            <div 
-              v-for="mainCategory in categories.filter((c: any) => !c.parent_category_id)" 
-              :key="mainCategory.id"
-              @click="selectMainCategory(mainCategory)"
-              class="group cursor-pointer rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-200 transform active:translate-y-0.5"
-              :style="getInteractiveCardStyle(
-                selectedMainCategory?.id === mainCategory.id || hoveredCategoryId === mainCategory.id,
-                hoveredCategoryId === mainCategory.id
-              )"
-              @mouseenter="hoveredCategoryId = mainCategory.id"
-              @mouseleave="hoveredCategoryId = null"
-            >
-              <div class="text-center pt-2 sm:pt-3 md:pt-4">
-                <!-- SVG Icon without circle background -->
-                <div v-if="mainCategory.icon_svg" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-5">
-                  <div class="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="mainCategory.icon_svg"></div>
+
+            <div :class="categoryChoiceGridClass(mainCategories.length, mainCategories)">
+              <div
+                v-for="mainCategory in mainCategories"
+                :key="mainCategory.id"
+                @click="selectMainCategory(mainCategory)"
+                class="group cursor-pointer rounded-2xl p-4 sm:p-5 transition-all duration-200 transform active:translate-y-0.5"
+                :style="getInteractiveCardStyle(
+                  selectedMainCategory?.id === mainCategory.id || hoveredCategoryId === mainCategory.id,
+                  hoveredCategoryId === mainCategory.id
+                )"
+                @mouseenter="hoveredCategoryId = mainCategory.id"
+                @mouseleave="hoveredCategoryId = null"
+              >
+                <div
+                  :class="usesIllustratedCategoryIcon(mainCategory)
+                    ? 'text-center pt-1 sm:pt-2'
+                    : 'flex items-center gap-4 text-left'"
+                >
+                  <div
+                    v-if="mainCategory.icon_svg"
+                    class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-3 sm:mb-4"
+                  >
+                    <div class="w-14 h-14 sm:w-20 sm:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="mainCategory.icon_svg"></div>
+                  </div>
+                  <div
+                    v-else
+                    class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 transition-colors border"
+                    :class="usesIllustratedCategoryIcon(mainCategory) ? 'mx-auto mb-3 sm:mb-4' : ''"
+                    :style="getCategoryBadgeStyle(
+                      mainCategory,
+                      selectedMainCategory?.id === mainCategory.id || hoveredCategoryId === mainCategory.id
+                    )"
+                  >
+                    <span class="text-2xl leading-none">{{ categoryVisualLabel(mainCategory) }}</span>
+                  </div>
+                  <div :class="usesIllustratedCategoryIcon(mainCategory) ? '' : 'min-w-0 flex-1'">
+                    <h3 class="text-base sm:text-lg font-semibold text-gray-900">{{ mainCategory.name }}</h3>
+                    <p v-if="mainCategory.description" class="text-sm text-gray-600 mt-0.5 line-clamp-2">{{ mainCategory.description }}</p>
+                    <div v-if="categoryMetaBadges(mainCategory).length" class="mt-2.5 flex flex-wrap items-center gap-1.5">
+                      <span
+                        v-for="badge in categoryMetaBadges(mainCategory)"
+                        :key="badge.label"
+                        class="text-xs px-2 py-0.5 rounded-full font-semibold"
+                        :class="badge.tone"
+                      >{{ badge.label }}</span>
+                    </div>
+                  </div>
+                  <svg
+                    v-if="!usesIllustratedCategoryIcon(mainCategory)"
+                    class="w-5 h-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
-                <!-- Fallback: code letter with circle -->
-                <div v-else class="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-5 transition-colors border"
-                     :style="getInteractiveBadgeStyle(
-                       selectedMainCategory?.id === mainCategory.id || hoveredCategoryId === mainCategory.id
-                     )">
-                  <span class="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">{{ mainCategory.code }}</span>
-                </div>
-                <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ mainCategory.name }}</h3>
-                <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">{{ mainCategory.description }}</p>
               </div>
             </div>
-          </div>
           </div>
         </div>
 
         <!-- Step 2: Subcategory Selection -->
         <div v-if="currentStep === 2 && selectedMainCategory" class="space-y-4">
-          <!-- Subcategory Selection Card -->
-          <div class="bg-white shadow rounded-lg p-4">
+          <div class="bg-white shadow rounded-lg p-4 sm:p-6">
             <div class="text-center mb-6">
-              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Wähle deine Unterkategorie</h2>
-             
+              <h2 class="text-xl sm:text-2xl font-bold text-gray-900">{{ subcategoryStepTitle }}</h2>
             </div>
 
-            <!-- Show only subcategories for selected main category -->
-            <div :class="`grid ${getGridClasses(selectedMainCategory?.children?.length || 1)} gap-3`">
-            <div 
-              v-for="subCategory in selectedMainCategory?.children || []" 
+            <div :class="categoryChoiceGridClass(selectedMainCategory?.children?.length || 1, selectedMainCategory?.children || [])">
+            <div
+              v-for="subCategory in selectedMainCategory?.children || []"
               :key="subCategory.id"
               @click="selectSubcategory(subCategory)"
-              class="group cursor-pointer rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-200 transform active:translate-y-0.5"
+              class="group cursor-pointer rounded-2xl p-4 sm:p-5 transition-all duration-200 transform active:translate-y-0.5"
               :style="getInteractiveCardStyle(
                 selectedCategory?.id === subCategory.id || hoveredCategoryId === subCategory.id,
                 hoveredCategoryId === subCategory.id
@@ -320,19 +369,52 @@
               @mouseenter="hoveredCategoryId = subCategory.id"
               @mouseleave="hoveredCategoryId = null"
             >
-              <div class="text-center pt-2 sm:pt-3 md:pt-4">
-                <!-- SVG Icon without circle background -->
-                <div v-if="subCategory.icon_svg" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-3 sm:mb-4 md:mb-5">
-                  <div class="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="subCategory.icon_svg"></div>
+              <div
+                :class="usesIllustratedCategoryIcon(subCategory)
+                  ? 'text-center pt-1 sm:pt-2'
+                  : 'flex items-center gap-4 text-left'"
+              >
+                <div
+                  v-if="subCategory.icon_svg"
+                  class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-3 sm:mb-4"
+                >
+                  <div class="w-14 h-14 sm:w-20 sm:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="subCategory.icon_svg"></div>
                 </div>
-                <!-- Fallback: code letter with full-width underline -->
-                <div v-else class="mx-auto mb-3 sm:mb-4 md:mb-5">
-                  <div class="flex justify-center" :style="{ borderBottomWidth: '2px', borderBottomColor: getBrandPrimary() }">
-                    <span class="text-base sm:text-lg md:text-xl font-bold px-3 sm:px-4 md:px-5 pb-2" :style="{ color: getBrandPrimary() }">{{ subCategory.code }}</span>
+                <div
+                  v-else
+                  class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 transition-colors border"
+                  :class="usesIllustratedCategoryIcon(subCategory) ? 'mx-auto mb-3 sm:mb-4' : ''"
+                  :style="getCategoryBadgeStyle(
+                    subCategory,
+                    selectedCategory?.id === subCategory.id || hoveredCategoryId === subCategory.id
+                  )"
+                >
+                  <span
+                    class="font-bold leading-none"
+                    :class="isCompactCategoryCode(subCategory.code) && !subCategory.emoji ? 'text-base sm:text-lg' : 'text-2xl'"
+                  >{{ categoryVisualLabel(subCategory) }}</span>
+                </div>
+                <div :class="usesIllustratedCategoryIcon(subCategory) ? '' : 'min-w-0 flex-1'">
+                  <h3 class="text-base sm:text-lg font-semibold text-gray-900">{{ subCategory.name }}</h3>
+                  <p v-if="subCategory.description" class="text-sm text-gray-600 mt-0.5 line-clamp-2">{{ subCategory.description }}</p>
+                  <div v-if="categoryMetaBadges(subCategory).length" class="mt-2.5 flex flex-wrap items-center gap-1.5">
+                    <span
+                      v-for="badge in categoryMetaBadges(subCategory)"
+                      :key="badge.label"
+                      class="text-xs px-2 py-0.5 rounded-full font-semibold"
+                      :class="badge.tone"
+                    >{{ badge.label }}</span>
                   </div>
                 </div>
-                <h3 class="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">{{ subCategory.name }}</h3>
-                <p class="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-2">{{ subCategory.description }}</p>
+                <svg
+                  v-if="!usesIllustratedCategoryIcon(subCategory)"
+                  class="w-5 h-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
               </div>
             </div>
           </div>
@@ -464,6 +546,15 @@
             <!-- Standard Locations (hidden until canton chosen; '' = show all) -->
             <div v-if="!showCantonStep || selectedCanton !== null">
           <div>
+            <div
+              v-if="!displayableLocations.length && !showTravelOrPickupPlzBox"
+              class="text-center py-8 px-4"
+            >
+              <p class="text-sm font-medium text-gray-800">Kein Standort verfügbar</p>
+              <p class="text-sm text-gray-500 mt-1">
+                Es ist noch kein {{ bookingLabels.staff }} einem Standort zugewiesen — oder die Online-Buchung ist dort nicht aktiv.
+              </p>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div 
                 v-for="location in displayableLocations" 
@@ -506,7 +597,7 @@
           </div><!-- end canton-filtered locations wrapper -->
           
           <!-- Pickup Option (wenn verfügbar) -->
-          <div v-if="isPickupAvailableForCategory" class="mt-6 p-3 sm:p-4 border-2 rounded-xl" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
+          <div v-if="showTravelOrPickupPlzBox" class="mt-6 p-3 sm:p-4 border-2 rounded-xl" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
             <div class="flex flex-col sm:flex-row items-start gap-3">
               <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" :style="{ background: `${primaryColor}33` }">
                 <svg class="w-5 h-5" :style="{ color: primaryColor }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -514,10 +605,17 @@
                 </svg>
               </div>
               <div class="flex-1 w-full">
-                <h3 class="text-sm sm:text-base font-semibold text-gray-900 mb-2">Pickup-Service verfügbar!</h3>
+                <h3 class="text-sm sm:text-base font-semibold text-gray-900 mb-2">
+                  {{ isPickupAvailableForCategory ? 'Pickup-Service verfügbar!' : 'Anfahrt prüfen' }}
+                </h3>
                 <p class="text-xs sm:text-sm text-gray-600 mb-3">
-                  Für diese Kategorie bieten wir auch Abholung an deinemWunschort an. 
-                  Gebe deine Postleitzahl ein, um zu prüfen, ob sie im Pickup-Bereich liegt.
+                  <template v-if="isPickupAvailableForCategory">
+                    Für diese Kategorie bieten wir auch Abholung an deinem Wunschort an.
+                    Gebe deine Postleitzahl ein, um zu prüfen, ob sie im Pickup-Bereich liegt.
+                  </template>
+                  <template v-else>
+                    PLZ eingeben — wir rechnen die Anfahrt (CHF/km) dazu.
+                  </template>
                 </p>
                 <div class="flex flex-col sm:flex-row gap-2">
                   <input 
@@ -555,8 +653,12 @@
                       <p v-if="pickupCheckResult.travelTime !== null && pickupCheckResult.travelTime !== undefined" class="text-gray-600 text-xs mt-1">
                         Fahrzeit: ca. {{ pickupCheckResult.travelTime === 0 ? 5 : pickupCheckResult.travelTime }} Minuten
                       </p>
+                      <p v-if="pickupCheckResult.travelFeeRappen > 0" class="text-gray-800 text-xs mt-1 font-medium">
+                        {{ pickupCheckResult.travelFeeLabel || 'Anfahrt' }}:
+                        CHF {{ (pickupCheckResult.travelFeeRappen / 100).toFixed(2) }}
+                      </p>
                       <button
-                        v-if="pickupCheckResult.available"
+                        v-if="pickupCheckResult.available && isPickupAvailableForCategory"
                         @click="selectPickupOption"
                         class="mt-2 w-full sm:w-auto px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs font-medium"
                       >
@@ -1006,6 +1108,42 @@
             </div>
           </div>
 
+          <div
+            v-if="willHoldUntilPaid && effectiveBookingTotal > 0"
+            class="mt-4 flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg"
+          >
+            <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-sm text-amber-800">
+              <strong>Zuerst zahlen, dann bestätigt.</strong> Der Platz bleibt reserviert, die Buchung gilt erst nach erfolgreicher TWINT- oder Kartenzahlung.
+            </p>
+          </div>
+
+          <div v-if="invoiceVisibleForCustomer && effectiveBookingTotal > 0" class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Zahlungsart</label>
+            <div class="space-y-2">
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                     :class="selectedPaymentMethod === 'wallee' ? '' : 'border-gray-200'"
+                     :style="selectedPaymentMethod === 'wallee' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
+                <input type="radio" v-model="selectedPaymentMethod" value="wallee" class="mt-1 mr-3" />
+                <div>
+                  <div class="font-medium text-gray-900">Online-Zahlung</div>
+                  <div class="text-sm text-gray-600">Kreditkarte, TWINT & mehr</div>
+                </div>
+              </label>
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                     :class="selectedPaymentMethod === 'invoice' ? '' : 'border-gray-200'"
+                     :style="selectedPaymentMethod === 'invoice' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
+                <input type="radio" v-model="selectedPaymentMethod" value="invoice" class="mt-1 mr-3" />
+                <div>
+                  <div class="font-medium text-gray-900">Rechnung</div>
+                  <div class="text-sm text-gray-600">Du erhältst die Rechnung nach dem Termin per E-Mail.</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <!-- Navigation -->
           <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <button
@@ -1015,7 +1153,7 @@
             >
               <span v-if="isCreatingBooking" class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
               <span v-if="isCreatingBooking">Wird erstellt...</span>
-              <span v-else>Buchung bestätigen →</span>
+              <span v-else>{{ confirmBookingButtonLabel }}</span>
             </button>
           </div>
         </div>
@@ -1080,6 +1218,12 @@
                     CHF {{ (previewPriceRappen / 100).toFixed(2) }}
                   </span>
                 </div>
+                <div v-if="previewTravelFeeRappen > 0" class="flex justify-between items-start text-sm">
+                  <span class="text-gray-600">{{ previewTravelFeeLabel || 'Anfahrt' }}:</span>
+                  <span class="font-medium text-gray-900 text-right">
+                    CHF {{ (previewTravelFeeRappen / 100).toFixed(2) }}
+                  </span>
+                </div>
                 <div v-if="previewAdminFeeRappen > 0" class="flex justify-between items-start text-sm">
                   <span class="text-gray-600 flex items-center gap-1">
                     Administrationsgebühr
@@ -1141,7 +1285,19 @@
 
           <!-- Cash payment info (only shown if admin enabled customer visibility) -->
           <div
-            v-if="cashVisibleForCustomer && effectiveBookingTotal > 0"
+            v-if="willHoldUntilPaid && effectiveBookingTotal > 0"
+            class="mt-4 flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg"
+          >
+            <svg class="w-4 h-4 mt-0.5 shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-sm text-amber-800">
+              <strong>Zuerst zahlen, dann bestätigt.</strong> Der Platz bleibt reserviert, die Buchung gilt erst nach erfolgreicher TWINT- oder Kartenzahlung.
+            </p>
+          </div>
+
+          <div
+            v-if="cashVisibleForCustomer && effectiveBookingTotal > 0 && !requirePaymentBeforeConfirm"
             class="mt-4 flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg"
           >
             <svg class="w-4 h-4 mt-0.5 shrink-0 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1186,7 +1342,7 @@
             >
               <span v-if="isCreatingBooking" class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
               <span v-if="isCreatingBooking">Wird erstellt...</span>
-              <span v-else>Buchung bestätigen →</span>
+              <span v-else>{{ confirmBookingButtonLabel }}</span>
             </button>
           </div>
         </div>
@@ -1203,7 +1359,9 @@
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-bold text-gray-900">Fast geschafft!</h2>
-            <p class="text-sm text-gray-500 mt-0.5">Gib deine Kontaktdaten ein um die Buchung abzuschliessen.</p>
+            <p class="text-sm text-gray-500 mt-0.5">
+              {{ willHoldUntilPaid ? 'Gib deine Kontaktdaten ein — danach geht’s zur Zahlung.' : 'Gib deine Kontaktdaten ein um die Buchung abzuschliessen.' }}
+            </p>
           </div>
           <button
             @click="showGuestForm = false; isCreatingBooking = false"
@@ -1462,6 +1620,16 @@
           />
         </div>
 
+        <AcquisitionSourceField
+          v-if="bookingPolicy.ask_acquisition_source"
+          v-model="guestAcquisitionSource"
+          v-model:note="guestAcquisitionNote"
+          label="Woher kennst du uns?"
+          id-prefix="guest-origin"
+          label-class="text-gray-600"
+          required
+        />
+
         <!-- Info note -->
         <p class="text-xs text-gray-400 leading-relaxed">
           Du erhältst nach der Buchung einen SMS-Link um dein kostenloses Konto zu aktivieren und deine Termine zu verwalten.
@@ -1475,7 +1643,7 @@
           :style="{ backgroundColor: getBrandPrimary() }"
         >
           <span v-if="isSubmittingGuestForm" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
-          <span>{{ isSubmittingGuestForm ? 'Buchung wird erstellt…' : 'Jetzt verbindlich buchen →' }}</span>
+          <span>{{ isSubmittingGuestForm ? (willHoldUntilPaid ? 'Weiter zur Zahlung…' : 'Buchung wird erstellt…') : (willHoldUntilPaid ? 'Weiter zur Zahlung →' : 'Jetzt verbindlich buchen →') }}</span>
         </button>
       </form>
     </div>
@@ -2124,10 +2292,15 @@ const bookingPolicy = computed(() => initData.value?.data?.bookingPolicy ?? {
   booking_optional_fields: ['email'],
   location_intake_modes: ['locations'],
   onboarding_sms_enabled: true,
+  ask_acquisition_source: false,
+  require_payment_before_confirm: false,
 })
 const registrationRequired = computed(() => bookingPolicy.value.registration_required === true)
+const requirePaymentBeforeConfirm = computed(() => bookingPolicy.value.require_payment_before_confirm === true)
 const bookingRequiredFields = computed<string[]>(() => bookingPolicy.value.booking_required_fields ?? ['first_name', 'last_name', 'phone'])
 const bookingOptionalFields = computed<string[]>(() => bookingPolicy.value.booking_optional_fields ?? ['email'])
+const guestPaidSuccess = computed(() => String(route.query.guest_paid || '') === '1')
+const paymentFailedNotice = computed(() => String(route.query.payment_failed || '') === '1')
 const locationIntakeModes = computed<Array<'locations' | 'pickup_address' | 'callback'>>(() => {
   const modes = bookingPolicy.value.location_intake_modes
   if (Array.isArray(modes) && modes.length > 0) {
@@ -2140,8 +2313,11 @@ const locationIntakeModes = computed<Array<'locations' | 'pickup_address' | 'cal
 })
 
 const isBookingFieldVisible = (key: string) =>
-  bookingRequiredFields.value.includes(key) || bookingOptionalFields.value.includes(key)
-const isBookingFieldRequired = (key: string) => bookingRequiredFields.value.includes(key)
+  (key === 'email' && willHoldUntilPaid.value)
+  || bookingRequiredFields.value.includes(key)
+  || bookingOptionalFields.value.includes(key)
+const isBookingFieldRequired = (key: string) =>
+  (key === 'email' && willHoldUntilPaid.value) || bookingRequiredFields.value.includes(key)
 
 // ── Guest form state ─────────────────────────────────────────────────────────
 const showGuestForm = ref(false)
@@ -2160,6 +2336,8 @@ const guestStreetNr = ref('')
 const guestZip = ref('')
 const guestCity = ref('')
 const guestProfession = ref('')
+const guestAcquisitionSource = ref('')
+const guestAcquisitionNote = ref('')
 const guestPhoneError = ref<string | null>(null)
 
 // Real-time email/phone ownership check — lets us catch "you already have an
@@ -2557,19 +2735,45 @@ const isPickupAvailableForCategory = computed(() => {
   })
 })
 
+const travelFeeEnabled = ref(false)
+const isTravelFeeLocation = computed(() =>
+  /hausbesuch|zuhause|beim kunden|home visit/i.test(selectedLocation.value?.name || '')
+)
+const showTravelOrPickupPlzBox = computed(() =>
+  isPickupAvailableForCategory.value || (travelFeeEnabled.value && isTravelFeeLocation.value)
+)
+
+watch(() => currentTenant.value?.id, async (tenantId) => {
+  if (!tenantId) {
+    travelFeeEnabled.value = false
+    return
+  }
+  try {
+    const res = await $fetch<{ enabled?: boolean }>('/api/booking/travel-fee', {
+      method: 'POST',
+      body: { tenant_id: tenantId },
+    })
+    travelFeeEnabled.value = res?.enabled === true
+  } catch {
+    travelFeeEnabled.value = false
+  }
+}, { immediate: true })
+
 const bookingSteps = computed(() => {
-  return [
-    { id: 1, label: 'Hauptkat.' },
-    { id: 2, label: 'Unterkat.' },
+  const hasSubcategories = categories.value.some((c: any) => (c.children || []).length > 0)
+  const steps = [
+    { id: 1, label: usesEventTypeCategories.value ? 'Angebot' : bookingLabels.value.categoryLabel },
+    { id: 2, label: 'Unterkategorie' },
     { id: 3, label: 'Dauer' },
     { id: 4, label: 'Standort' },
     { id: 5, label: bookingLabels.value.staff },
     { id: 6, label: 'Termin' },
-    { 
-      id: 7, 
-      label: selectedLocation.value?.isPickup ? 'Adresse' : 'Bestätigung' 
+    {
+      id: 7,
+      label: selectedLocation.value?.isPickup ? 'Adresse' : 'Bestätigung'
     }
   ]
+  return hasSubcategories ? steps : steps.filter(step => step.id !== 2)
 })
 
 const hasFiredBookingStarted = ref(false)
@@ -2615,6 +2819,26 @@ const staffCount = computed(() => availableStaff.value.length)
 const filteredCategories = computed(() => {
   return categories.value
 })
+
+const mainCategories = computed(() =>
+  categories.value.filter((c: any) => !c.parent_category_id)
+)
+
+const usesEventTypeCategories = computed(() =>
+  categories.value.some((c: any) => c._source === 'event_type')
+)
+
+const categoryStepTitle = computed(() =>
+  usesEventTypeCategories.value
+    ? 'Wähle dein Angebot'
+    : `Wähle deine ${bookingLabels.value.categoryLabel}`
+)
+
+const subcategoryStepTitle = computed(() =>
+  usesEventTypeCategories.value
+    ? 'Wähle die Variante'
+    : 'Wähle deine Unterkategorie'
+)
 
 const groupedTimeSlots = computed(() => {
   if (!availableTimeSlots.value || availableTimeSlots.value.length === 0) return []
@@ -2691,6 +2915,47 @@ const getGridClasses = (itemCount: number) => {
   if (itemCount <= 6) return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6'
   if (itemCount <= 8) return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8'
   return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+}
+
+const isCompactCategoryCode = (code: unknown) =>
+  typeof code === 'string' && code.length > 0 && code.length <= 4 && !/\s/.test(code)
+
+const usesIllustratedCategoryIcon = (category: any) => Boolean(category?.icon_svg)
+
+const categoryVisualLabel = (category: any) => {
+  if (category?.emoji) return category.emoji
+  if (isCompactCategoryCode(category?.code)) return category.code
+  const name = String(category?.name || '').trim()
+  return name ? name.charAt(0).toUpperCase() : '•'
+}
+
+const categoryDurationMinutes = (category: any): number | null => {
+  const raw = category?.lesson_duration_minutes
+  const value = Array.isArray(raw) ? raw[0] : raw
+  const minutes = Number(value)
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : null
+}
+
+const categoryMetaBadges = (category: any) => {
+  const badges: Array<{ label: string; tone: string }> = []
+  if (category?.require_payment === false) {
+    badges.push({ label: 'Kostenlos', tone: 'bg-green-100 text-green-700' })
+  }
+  if (category?._source === 'event_type') {
+    const minutes = categoryDurationMinutes(category)
+    if (minutes) {
+      badges.push({ label: `${minutes} Min.`, tone: 'bg-white/80 text-gray-600' })
+    }
+  }
+  return badges
+}
+
+const categoryChoiceGridClass = (itemCount: number, items: any[]) => {
+  const illustrated = items.some((item) => usesIllustratedCategoryIcon(item))
+  if (!illustrated && itemCount <= 2) {
+    return 'grid grid-cols-1 gap-3 max-w-xl mx-auto'
+  }
+  return `grid ${getGridClasses(itemCount)} gap-3`
 }
 
 // Methods
@@ -3166,6 +3431,15 @@ const getInteractiveBadgeStyle = (isSelected: boolean) => {
     borderColor: isSelected ? primary : withAlpha(primary, 0.25),
     color: isSelected ? primary : '#1f2937',
     backgroundColor: isSelected ? withAlpha(primary, 0.18) : lightenColor(primary, 0.93)
+  }
+}
+
+const getCategoryBadgeStyle = (category: any, isSelected: boolean) => {
+  const accent = category?.color || getBrandPrimary()
+  return {
+    borderColor: isSelected ? accent : withAlpha(accent, 0.35),
+    color: isSelected ? accent : '#1f2937',
+    backgroundColor: isSelected ? withAlpha(accent, 0.22) : withAlpha(accent, 0.14)
   }
 }
 
@@ -3666,6 +3940,36 @@ const checkPickupAvailability = async () => {
     logger.debug('✅ Locations with pickup for', categoryCode, ':', pickupLocations.length)
     
     if (pickupLocations.length === 0) {
+      if (travelFeeEnabled.value && currentTenant.value?.id) {
+        try {
+          const fee = await $fetch<{ fee_rappen?: number; label?: string | null; km?: number }>('/api/booking/travel-fee', {
+            method: 'POST',
+            body: {
+              tenant_id: currentTenant.value.id,
+              pickup_plz: pickupPLZ.value,
+              location_type: 'pickup',
+              location_name: selectedLocation.value?.name || 'Hausbesuch',
+            },
+          })
+          pickupCheckResult.value = {
+            available: true,
+            message: fee?.fee_rappen
+              ? `Anfahrt für PLZ ${pickupPLZ.value} ist möglich.`
+              : `PLZ ${pickupPLZ.value} erkannt. Anfahrt erscheint nach der Adresse.`,
+            travelFeeRappen: fee?.fee_rappen || 0,
+            travelFeeLabel: fee?.label || null,
+          }
+        } catch {
+          pickupCheckResult.value = {
+            available: true,
+            message: `PLZ ${pickupPLZ.value} gespeichert. Anfahrt wird beim Bestätigen gerechnet.`,
+          }
+        }
+        isCheckingPickup.value = false
+        await nextTick()
+        document.getElementById('pickup-check-result')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        return
+      }
       pickupCheckResult.value = {
         available: false,
         message: 'Leider bieten wir für diese Kategorie keinen Pickup-Service an.'
@@ -3733,9 +4037,32 @@ const checkPickupAvailability = async () => {
         available: true,
         message: `Pickup möglich! Wir können Sie an Ihrer Adresse abholen.`,
         travelTime: closestLocation.travelTime,
-        location: closestLocation
+        location: closestLocation,
+        travelFeeRappen: 0,
+        travelFeeLabel: null,
       }
       selectedPickupLocation.value = closestLocation
+
+      if (currentTenant.value?.id) {
+        try {
+          const fee = await $fetch<{ fee_rappen?: number; label?: string | null }>('/api/booking/travel-fee', {
+            method: 'POST',
+            body: {
+              tenant_id: currentTenant.value.id,
+              pickup_plz: pickupPLZ.value,
+              location_type: 'pickup',
+              location_name: closestLocation.name,
+            },
+          })
+          pickupCheckResult.value = {
+            ...pickupCheckResult.value,
+            travelFeeRappen: fee?.fee_rappen || 0,
+            travelFeeLabel: fee?.label || null,
+          }
+        } catch (feeErr) {
+          logger.warn('⚠️ Travel fee preview after PLZ check failed:', feeErr)
+        }
+      }
     } else {
       pickupCheckResult.value = {
         available: false,
@@ -4365,12 +4692,32 @@ const bookingCreditRappen = ref(0)
 
 // Total (lesson + admin fee) before discount/credit are applied. Discount and
 // credit reduce from this gross total.
-const previewGrossTotalRappen = computed(() => previewPriceRappen.value + previewAdminFeeRappen.value)
+const previewTravelFeeRappen = ref(0)
+const previewTravelFeeLabel = ref<string | null>(null)
+
+const previewGrossTotalRappen = computed(() => previewPriceRappen.value + previewAdminFeeRappen.value + previewTravelFeeRappen.value)
 
 const effectiveBookingTotal = computed(() => {
   const afterDiscount = Math.max(0, previewGrossTotalRappen.value - (bookingDiscount.value?.discountAmountRappen ?? 0))
   return Math.max(0, afterDiscount - bookingCreditRappen.value)
 })
+
+const willHoldUntilPaid = computed(() =>
+  requirePaymentBeforeConfirm.value
+  && selectedPaymentMethod.value !== 'invoice'
+  && effectiveBookingTotal.value > 0
+)
+const confirmBookingButtonLabel = computed(() =>
+  willHoldUntilPaid.value ? 'Weiter zur Zahlung →' : 'Buchung bestätigen →'
+)
+
+function redirectToCheckoutIfNeeded(result: any): boolean {
+  if (result?.paymentUrl) {
+    window.location.href = result.paymentUrl
+    return true
+  }
+  return false
+}
 
 watch(currentStep, async (step) => {
   if (step === 7 && selectedSlot.value?.id && selectedCategory.value?.code && currentTenant.value?.id) {
@@ -4378,6 +4725,8 @@ watch(currentStep, async (step) => {
     bookingCreditRappen.value = 0
     previewAdminFeeRappen.value = 0
     previewAdminFeeReason.value = null
+    previewTravelFeeRappen.value = 0
+    previewTravelFeeLabel.value = null
 
     // Resolve current user FIRST so we can pass user_id to preview-price for
     // a correct admin-fee calculation (admin fee depends on user history).
@@ -4396,7 +4745,14 @@ watch(currentStep, async (step) => {
           slot_id: selectedSlot.value.id,
           category_code: selectedCategory.value.code,
           tenant_id: currentTenant.value.id,
-          user_id: currentUserId
+          user_id: currentUserId,
+          location_id: selectedLocation.value?.isPickup ? null : selectedLocation.value?.id,
+          location_type: selectedLocation.value?.isPickup ? 'pickup' : selectedLocation.value?.location_type,
+          location_name: selectedLocation.value?.name,
+          pickup_plz: (selectedLocation.value?.isPickup || isTravelFeeLocation.value) ? pickupPLZ.value : null,
+          destination_address: selectedLocation.value?.isPickup
+            ? (pickupAddressDetails.value?.formatted || pickupAddress.value || null)
+            : null,
         }
       }) as any
       if (res?.success) {
@@ -4404,6 +4760,8 @@ watch(currentStep, async (step) => {
         previewAdminFeeRappen.value = res.admin_fee_rappen ?? 0
         previewAdminFeeReason.value = res.admin_fee_reason ?? null
         previewAppointmentNumber.value = res.appointment_number ?? null
+        previewTravelFeeRappen.value = res.travel_fee_rappen ?? 0
+        previewTravelFeeLabel.value = res.travel_fee_label ?? null
       }
     } catch (err) {
       logger.warn('⚠️ Could not load price preview:', err)
@@ -4448,61 +4806,14 @@ const confirmBooking = async () => {
     
     isCreatingBooking.value = true
     
-    // Check auth client-side first (no network roundtrip) — fall back to the
-    // cookie-based API check whenever the local Supabase client session is
-    // missing/ambiguous, not just when getSession() throws. The Supabase JS
-    // client can legitimately resolve with `session: null` (e.g. its access
-    // token expired, or another tab already redeemed the single-use refresh
-    // cookie) while the user is still validly logged in via the httpOnly
-    // cookie — which is what the rest of the app (authStore) relies on. Only
-    // trusting getSession() here caused logged-in customers to be dropped
-    // into the guest/register flow.
-    logger.debug('🔐 Checking authentication status (client-side)...')
-    let isAuthenticated = false
-
-    try {
-      const { data: { session } } = await getSupabase().auth.getSession()
-      isAuthenticated = !!session
-      logger.debug(isAuthenticated ? '✅ User is authenticated (session found)' : '🔑 No local Supabase session')
-    } catch (sessionErr: any) {
-      logger.debug('⚠️ getSession failed:', sessionErr.message)
-    }
-
-    if (!isAuthenticated) {
-      try {
-        await $fetch('/api/auth/current-user')
-        isAuthenticated = true
-        logger.debug('✅ User is authenticated (cookie-based check)')
-
-        // Rehydrate the Supabase client from the httpOnly refresh cookie so
-        // subsequent client-side Supabase calls on this page also see the
-        // session (single-flight — safe to call even if others are already
-        // refreshing).
-        try {
-          const { refreshClientSession } = await import('~/utils/client-session-refresh')
-          await refreshClientSession()
-        } catch { /* non-fatal — booking still proceeds via cookie auth */ }
-      } catch {
-        isAuthenticated = false
-        logger.debug('🔑 No active session (client or cookie)')
-      }
-    }
-    
-    // If not authenticated, decide what to show based on booking policy
-    if (!isAuthenticated) {
-      isCreatingBooking.value = false
-      if (!registrationRequired.value) {
-        // Guest booking allowed — show lightweight contact form
-        logger.debug('👤 Guest booking enabled — showing guest form')
-        guestFormError.value = null   // clear any previous error
-        guestPhoneError.value = null
-        showGuestForm.value = true
-      } else {
-        // Registration is mandatory — show login/register modal
-        logger.debug('🔑 Registration required — showing login modal')
-        showLoginModal.value = true
-        loginModalTab.value = 'register'
-      }
+    // Session alone is not enough: the account must belong to THIS school.
+    // A leftover login from another tenant (or an auth user without a profile)
+    // used to call create-appointment and surface "Access denied".
+    logger.debug('🔐 Checking booking identity for this tenant...')
+    const identity = await resolveBookingCustomer()
+    if (!identity.canBook) {
+      logger.debug('🔑 Not a customer of this tenant — showing auth/guest form', identity.reason)
+      promptBookingIdentity(identity.reason)
       return
     }
     
@@ -4536,15 +4847,19 @@ const confirmBooking = async () => {
       discount_code: bookingDiscount.value?.code,
       discount_amount_rappen: bookingDiscount.value?.discountAmountRappen ?? 0,
       // Store customer pickup PLZ and address on the appointment when booking a pickup lesson
-      customer_pickup_plz: selectedLocation.value?.isPickup ? (pickupPLZ.value || null) : null,
+      customer_pickup_plz: (selectedLocation.value?.isPickup || isTravelFeeLocation.value) ? (pickupPLZ.value || null) : null,
       customer_pickup_address: selectedLocation.value?.isPickup ? (pickupAddressDetails.value?.formatted || pickupAddress.value || null) : null,
       // Cross-domain marketing attribution — forwarded from drivingteam.ch
       marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
       marketing_attribution: (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined,
-      payment_method: invoiceVisibleForCustomer.value ? selectedPaymentMethod.value : undefined,
+      payment_method: selectedPaymentMethod.value,
     } as any)
 
     logger.debug('✅ Appointment created:', result.appointment_id)
+
+    if (redirectToCheckoutIfNeeded(result)) {
+      return
+    }
     
     // Track successful booking completion for conversion funnel
     if (typeof window !== 'undefined' && (window as any).__trackBookingEvent) {
@@ -4552,6 +4867,7 @@ const confirmBooking = async () => {
         appointment_id: result.appointment_id,
         category_code: selectedCategory.value.code,
         slot_id: selectedSlot.value.id,
+        send_meta_purchase: result.send_meta_purchase === true,
       })
     }
 
@@ -4608,11 +4924,11 @@ const confirmBooking = async () => {
     console.error('Error confirming booking:', error)
     isCreatingBooking.value = false
     
-    // Check if it's a 401 Unauthorized error (authentication required)
-    if (error.statusCode === 401 || error.data?.statusCode === 401) {
-      logger.debug('🔑 Authentication required - showing login modal')
-      showLoginModal.value = true
-      loginModalTab.value = 'register' // Default to register for new users
+    const status = error.statusCode || error.data?.statusCode
+    const code = error.data?.code || error.data?.data?.code
+    if (status === 401 || status === 404 || code === 'WRONG_TENANT' || code === 'NO_PROFILE' || /User profile not found|Access denied/i.test(error.statusMessage || error.message || '')) {
+      logger.debug('🔑 Booking identity rejected — showing login/register', { status, code })
+      promptBookingIdentity(code === 'WRONG_TENANT' ? 'wrong_tenant' : 'no_profile')
       return
     }
     
@@ -4659,6 +4975,7 @@ const createAppointmentSecure = async (userData: any) => {
         service_type: selectedServiceType.value,
         marketing_session_id: userData.marketing_session_id,
         marketing_attribution: userData.marketing_attribution,
+        payment_method: userData.payment_method,
       }
     )
     
@@ -4676,7 +4993,9 @@ const createAppointmentSecure = async (userData: any) => {
     return {
       success: true,
       appointment_id: response.appointment_id,
-      reservation: response.reservation
+      reservation: response.reservation,
+      paymentUrl: response.paymentUrl || null,
+      requires_payment: !!response.requires_payment,
     }
     
   } catch (err: any) {
@@ -4698,8 +5017,45 @@ const createAppointmentSecure = async (userData: any) => {
 }
 
 
+async function resolveBookingCustomer(): Promise<{
+  canBook: boolean
+  reason: 'ok' | 'anonymous' | 'no_profile' | 'wrong_tenant'
+}> {
+  try {
+    const res = await $fetch('/api/auth/current-user') as any
+    if (!res?.user) return { canBook: false, reason: 'anonymous' }
+    if (!res?.profile?.id) return { canBook: false, reason: 'no_profile' }
+    const bookingTenantId = currentTenant.value?.id
+    if (bookingTenantId && res.profile.tenant_id && res.profile.tenant_id !== bookingTenantId) {
+      return { canBook: false, reason: 'wrong_tenant' }
+    }
+    return { canBook: true, reason: 'ok' }
+  } catch {
+    return { canBook: false, reason: 'anonymous' }
+  }
+}
+
+function promptBookingIdentity(reason: 'anonymous' | 'no_profile' | 'wrong_tenant') {
+  isCreatingBooking.value = false
+  if (reason === 'anonymous' && !registrationRequired.value) {
+    guestFormError.value = null
+    guestPhoneError.value = null
+    showGuestForm.value = true
+    return
+  }
+  showGuestForm.value = false
+  showLoginModal.value = true
+  loginModalTab.value = 'register'
+}
+
 // Handle successful login/registration
-const handleAuthSuccess = () => {
+const handleAuthSuccess = async () => {
+  const identity = await resolveBookingCustomer()
+  if (!identity.canBook) {
+    promptBookingIdentity(identity.reason)
+    return
+  }
+
   showLoginModal.value = false
 
   // Check if the reservation is still valid
@@ -4836,6 +5192,9 @@ const submitGuestBooking = async () => {
   if (isBookingFieldRequired('zip') && !guestZip.value.trim()) missingRequired.push('PLZ')
   if (isBookingFieldRequired('city') && !guestCity.value.trim()) missingRequired.push('Ort')
   if (isBookingFieldRequired('profession') && !guestProfession.value.trim()) missingRequired.push('Beruf')
+  if (bookingPolicy.ask_acquisition_source && !guestAcquisitionSource.value.trim()) {
+    missingRequired.push('Woher kennst du uns?')
+  }
 
   if (missingRequired.length > 0) {
     guestFormError.value = `Bitte fülle alle Pflichtfelder aus: ${missingRequired.join(', ')}`
@@ -4883,16 +5242,23 @@ const submitGuestBooking = async () => {
         zip: guestZip.value.trim() || undefined,
         city: guestCity.value.trim() || undefined,
         profession: guestProfession.value.trim() || undefined,
+        acquisition_self_reported: guestAcquisitionSource.value || undefined,
+        acquisition_self_reported_note: guestAcquisitionNote.value.trim() || undefined,
         notes: bookingNotes.value || undefined,
         vehicle_mode: selectedVehicleMode.value ?? null,
-        customer_pickup_plz: selectedLocation.value?.isPickup ? (pickupPLZ.value || null) : null,
+        customer_pickup_plz: (selectedLocation.value?.isPickup || isTravelFeeLocation.value) ? (pickupPLZ.value || null) : null,
         customer_pickup_address: selectedLocation.value?.isPickup ? (pickupAddressDetails.value?.formatted || pickupAddress.value || null) : null,
         marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
         marketing_attribution: (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined,
+        payment_method: selectedPaymentMethod.value,
       },
     }) as any
 
     logger.debug('✅ Guest booking confirmed:', result.appointment_id)
+
+    if (redirectToCheckoutIfNeeded(result)) {
+      return
+    }
 
     // Track booking completion
     if (typeof window !== 'undefined' && (window as any).__trackBookingEvent) {
@@ -4900,6 +5266,7 @@ const submitGuestBooking = async () => {
         appointment_id: result.appointment_id,
         category_code: selectedCategory.value?.code,
         guest: true,
+        send_meta_purchase: result.send_meta_purchase === true,
       })
     }
 
@@ -4927,6 +5294,8 @@ const submitGuestBooking = async () => {
     guestZip.value = ''
     guestCity.value = ''
     guestProfession.value = ''
+    guestAcquisitionSource.value = ''
+    guestAcquisitionNote.value = ''
     guestPhoneError.value = null
     guestEmailCheckStatus.value = 'idle'
     guestPhoneCheckStatus.value = 'idle'
@@ -4950,13 +5319,20 @@ const submitGuestBooking = async () => {
       showGuestForm.value = false
       selectedSlot.value = null
       currentStep.value = 6
+    } else if (err.statusCode === 402) {
+      guestFormError.value = err.statusMessage || 'Online-Zahlung ist gerade nicht verfügbar.'
     } else if (err.statusCode === 400) {
-      // Never leak raw technical field-validation messages to the customer
-      guestFormError.value = 'Deine Reservierung ist abgelaufen oder unvollständig. Bitte wähle erneut einen Zeitpunkt.'
-      showGuestForm.value = false
-      selectedSlot.value = null
-      reservationExpiredNotice.value = true
-      currentStep.value = 6
+      const msg = err.statusMessage || err.data?.statusMessage || ''
+      if (/E-Mail|Zahlung|Onlinezahlung/i.test(msg)) {
+        guestFormError.value = msg
+      } else {
+        // Never leak raw technical field-validation messages to the customer
+        guestFormError.value = 'Deine Reservierung ist abgelaufen oder unvollständig. Bitte wähle erneut einen Zeitpunkt.'
+        showGuestForm.value = false
+        selectedSlot.value = null
+        reservationExpiredNotice.value = true
+        currentStep.value = 6
+      }
     } else {
       guestFormError.value = err.statusMessage || 'Buchung fehlgeschlagen. Bitte versuche es erneut.'
     }

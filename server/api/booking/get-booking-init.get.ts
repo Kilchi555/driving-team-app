@@ -130,6 +130,7 @@ export default defineEventHandler(async (event) => {
       parent_category_id: null,
       color: et.default_color || null,
       icon_svg: null,
+      emoji: et.emoji || null,
       children: [],
       _source: 'event_type',
       require_payment: et.require_payment !== false,
@@ -165,6 +166,8 @@ export default defineEventHandler(async (event) => {
     ),
     onboarding_sms_enabled: rawPolicy.onboarding_sms_enabled ?? DEFAULT_BOOKING_POLICY.onboarding_sms_enabled,
     onboarding_email_enabled: rawPolicy.onboarding_email_enabled ?? DEFAULT_BOOKING_POLICY.onboarding_email_enabled,
+    ask_acquisition_source: rawPolicy.ask_acquisition_source === true,
+    require_payment_before_confirm: rawPolicy.require_payment_before_confirm === true,
   }
 
   // Strip booking_policy from tenant object before returning (avoid leaking internal settings)

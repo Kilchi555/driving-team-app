@@ -12,6 +12,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { resolveRoomSettings, isAnyRoomAvailable } from '~/server/utils/room-availability'
+import { bookableUserRoles, resolveLocationStaffAssignments } from '~/server/utils/bookable-locations'
 
 export interface BookingReadinessCheck {
   id: string
@@ -84,18 +85,6 @@ async function loadAllowOnlineBooking(
     logger.warn('⚠️ booking-slot-probe allow_online_booking lookup failed:', e?.message)
   }
   return true
-}
-
-function parseStaffCategories(raw: unknown): string[] {
-  if (Array.isArray(raw)) return raw.map(String)
-  if (typeof raw === 'string') {
-    try {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed.map(String)
-    } catch { /* ignore */ }
-    return raw.split(',').map((c) => c.trim()).filter(Boolean)
-  }
-  return []
 }
 
 async function loadSelectableServices(
@@ -179,7 +168,7 @@ async function loadBookableStaffLocations(
       .from('users')
       .select('id, first_name, last_name, category, is_active, role')
       .eq('tenant_id', tenantId)
-      .eq('role', 'staff')
+      .in('role', bookableUserRoles(isEventTypeBooking))
       .eq('is_active', true),
   ])
 
@@ -188,27 +177,13 @@ async function loadBookableStaffLocations(
   const allStaff = staffResult.data || []
   const locationById = new Map(locations.map((l: any) => [l.id, l]))
   const staffById = new Map(allStaff.map((s: any) => [s.id, s]))
-
-  const staffCategoryMap = new Map<string, string[]>()
-  for (const staff of allStaff) {
-    staffCategoryMap.set(staff.id, parseStaffCategories(staff.category))
-  }
-
-  const staffLocCategoryMap = new Map<string, string[] | null>()
-  for (const sl of staffLocations) {
-    const cats = Array.isArray(sl.available_categories) ? sl.available_categories : null
-    staffLocCategoryMap.set(`${sl.staff_id}:${sl.location_id}`, cats)
-  }
-
-  const getEffectiveCategories = (staffId: string, locationId: string): string[] => {
-    const perStaff = staffLocCategoryMap.get(`${staffId}:${locationId}`)
-    if (Array.isArray(perStaff)) return perStaff
-    const staffCats = staffCategoryMap.get(staffId) || []
-    const loc = locationById.get(locationId)
-    const locCats = Array.isArray(loc?.available_categories) ? loc.available_categories : []
-    if (locCats.length === 0) return staffCats
-    return staffCats.filter((c) => locCats.includes(c))
-  }
+  const assignments = resolveLocationStaffAssignments({
+    categoryCode,
+    isEventTypeBooking,
+    locations,
+    staff: allStaff,
+    staffLocations,
+  })
 
   const pairs: Array<{
     location_id: string
@@ -217,31 +192,19 @@ async function loadBookableStaffLocations(
     staff_name: string
   }> = []
 
-  for (const sl of staffLocations) {
-    const loc = locationById.get(sl.location_id)
-    const staff = staffById.get(sl.staff_id)
-    if (!loc || !staff) continue
-
-    // Staff must be listed on the location (same as booking attach step)
-    const rawIds = loc.staff_ids
-    let staffIds: string[] = []
-    if (Array.isArray(rawIds)) staffIds = rawIds.map(String)
-    else if (typeof rawIds === 'string') {
-      try { staffIds = JSON.parse(rawIds) } catch { staffIds = [] }
+  for (const [locationId, staffIds] of assignments) {
+    const loc = locationById.get(locationId)
+    if (!loc) continue
+    for (const staffId of staffIds) {
+      const staff = staffById.get(staffId)
+      if (!staff) continue
+      pairs.push({
+        location_id: loc.id,
+        location_name: loc.name,
+        staff_id: staff.id,
+        staff_name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim(),
+      })
     }
-    if (!staffIds.includes(sl.staff_id)) continue
-
-    if (!isEventTypeBooking) {
-      const effective = getEffectiveCategories(sl.staff_id, sl.location_id)
-      if (!effective.includes(categoryCode)) continue
-    }
-
-    pairs.push({
-      location_id: loc.id,
-      location_name: loc.name,
-      staff_id: staff.id,
-      staff_name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim(),
-    })
   }
 
   return pairs
