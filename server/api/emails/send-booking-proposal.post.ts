@@ -9,6 +9,7 @@ import { shouldNotifyAssignedStaff } from '~/server/utils/tenant-staff-notify'
 import {
   buildBrandedEmailShell,
   displayName,
+  emailAppointmentAppStoreBlock,
   emailDetailBox,
   emailDetailRow,
   emailSignature,
@@ -402,6 +403,7 @@ function buildCustomerEmail(
     ${details}
     ${status}
     ${emailSignature(tenantName, tenant?.contact_email, primary)}
+    ${emailAppointmentAppStoreBlock()}
   `
 
   return {
@@ -438,6 +440,7 @@ function buildStaffEmail(
     <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">eine neue Buchungsanfrage ist für dich eingegangen:</p>
     ${details}
     ${emailSignature(tenantName, tenant?.contact_email, primary)}
+    ${emailAppointmentAppStoreBlock()}
   `
 
   const subjectBits = [
@@ -539,6 +542,7 @@ function buildGeneralInquiryCustomerEmail(proposal: any, tenant: any) {
     <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">vielen Dank für deine Anfrage bei <strong>${displayName(tenantName)}</strong>. Wir melden uns bald bei dir.</p>
     ${details}
     ${emailSignature(tenantName, tenant?.contact_email, primary)}
+    ${emailAppointmentAppStoreBlock()}
   `
 
   return {

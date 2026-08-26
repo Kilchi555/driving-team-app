@@ -21,6 +21,7 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { daytimePushSendAt } from '~/server/utils/push'
+import { emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
 import { logger } from '~/utils/logger'
 import { getQuery } from 'h3'
 import { getAccountAccessLink } from '~/server/utils/account-access-link'
@@ -542,6 +543,8 @@ function buildEmailHtml(d: EmailData): string {
             </div>
 
             ${d.paymentHtml}
+
+            ${emailAppointmentAppStoreBlock()}
 
             <p style="margin:24px 0 0;font-size:13px;color:#9ca3af">
               Bei Fragen wenden Sie sich bitte an ${d.tenantName}. Bitte antworten Sie nicht auf diese automatische E-Mail.

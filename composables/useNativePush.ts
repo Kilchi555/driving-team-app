@@ -10,20 +10,35 @@ import { navigateTo } from '#app'
 let listenersBound = false
 let registerStarted = false
 let tokenPersisted = false
+let permissionAsked = false
 let pendingToken: string | null = null
 let pendingPlatform = 'ios'
+let nativeCached: boolean | null = null
+
+async function resolveAccessToken(): Promise<string | null> {
+  const { getSupabase } = await import('~/utils/supabase')
+  const { data: { session } } = await getSupabase().auth.getSession()
+  if (session?.access_token) return session.access_token
+  // Cookie login (staff/admin) often has no supabase-js session yet.
+  try {
+    const { refreshClientSession } = await import('~/utils/client-session-refresh')
+    const refreshed = await refreshClientSession()
+    return refreshed?.access_token || null
+  } catch {
+    return null
+  }
+}
 
 async function persistPushToken(token: string, platform: string): Promise<boolean> {
   pendingToken = token
   pendingPlatform = platform
   try {
-    const { getSupabase } = await import('~/utils/supabase')
-    const { data: { session } } = await getSupabase().auth.getSession()
-    if (!session?.access_token) return false
-
+    const accessToken = await resolveAccessToken()
+    // Bearer required — cookie-only POST would be CSRF-able from other sites.
+    if (!accessToken) return false
     await $fetch('/api/push/register-token', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: { Authorization: `Bearer ${accessToken}` },
       body: { token, platform },
     })
     pendingToken = null
@@ -43,16 +58,37 @@ export async function flushPendingPushToken(): Promise<boolean> {
 
 export async function isCapacitorNative(): Promise<boolean> {
   if (import.meta.server) return false
+  if (nativeCached !== null) return nativeCached
+
+  const probe = () => Boolean((window as any).Capacitor?.isNativePlatform?.())
+  if (probe()) {
+    nativeCached = true
+    return true
+  }
+
   try {
     const { Capacitor } = await import('@capacitor/core')
-    if (Capacitor.isNativePlatform()) return true
+    if (Capacitor.isNativePlatform()) {
+      nativeCached = true
+      return true
+    }
   } catch {
     /* bundle may load before the bridge */
   }
-  for (let i = 0; i < 20; i++) {
-    if ((window as any).Capacitor?.isNativePlatform?.()) return true
+
+  for (let i = 0; i < 40; i++) {
+    if (probe()) {
+      nativeCached = true
+      return true
+    }
+    // Safari/Chrome never grow a Capacitor global — don't stall the website.
+    if (i >= 3 && !(window as any).Capacitor) {
+      nativeCached = false
+      return false
+    }
     await new Promise(r => setTimeout(r, 50))
   }
+  nativeCached = false
   return false
 }
 
@@ -121,7 +157,13 @@ export async function ensureNativePushRegistration(opts?: {
     let status = await PushNotifications.checkPermissions()
     const receive = status.receive
 
-    if (opts?.request !== false && receive !== 'granted' && receive !== 'denied') {
+    if (
+      opts?.request !== false
+      && !permissionAsked
+      && receive !== 'granted'
+      && receive !== 'denied'
+    ) {
+      permissionAsked = true
       status = await PushNotifications.requestPermissions()
     }
 
