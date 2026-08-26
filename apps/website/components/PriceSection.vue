@@ -47,7 +47,7 @@
             </ul>
             <p class="text-xs text-gray-500 border-t border-red-200 pt-4">
               <strong>exkl. Versicherungspauschale:</strong> CHF 0.– (privat versichert)<br>
-              <strong>Fahrschul-Motorrad-Miete:</strong> CHF 20.– pro Lektion
+              Eigenes Motorrad, Helm und Schutzausrüstung mitbringen
             </p>
           </div>
 

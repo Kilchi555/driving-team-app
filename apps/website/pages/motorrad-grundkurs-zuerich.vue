@@ -2,10 +2,10 @@
   <div>
     <Head>
       <Title>Motorrad Grundkurs Zürich | CHF 499.- | A1/A35kW/A | Driving Team</Title>
-      <Meta name="description" content="Pflicht-Grundkurs für den Motorrad-Führerschein in Zürich – 12h (3×4h), max. 5 Personen, CHF 499.-, Fahrschulmotorrad verfügbar. Jetzt Platz sichern!" />
+      <Meta name="description" content="Pflicht-Grundkurs für den Motorrad-Führerschein in Zürich – 12h (3×4h), max. 5 Personen, CHF 499.-. Jetzt Platz sichern!" />
       <Meta name="keywords" content="Motorrad Grundkurs Zürich, Motorrad Grundkurs buchen Zürich, PGS Kurs Zürich, Motorrad Kurs Zürich, Motorrad Fahrkurs Zürich, Grundkurs Motorrad Zürich" />
       <Meta property="og:title" content="Motorrad Grundkurs Zürich | CHF 499.- | A1, A35kW, A | Driving Team" />
-      <Meta property="og:description" content="Motorrad Grundkurs in Zürich-Altstetten. CHF 499.- Komplettpreis. 12 Stunden (3×4h). Max. 5 Teilnehmer. Fahrschul-Motorrad verfügbar. Obligatorisch für alle A-Kategorien." />
+      <Meta property="og:description" content="Motorrad Grundkurs in Zürich-Altstetten. CHF 499.- Komplettpreis. 12 Stunden (3×4h). Max. 5 Teilnehmer. Obligatorisch für alle A-Kategorien." />
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs-zuerich/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
@@ -15,7 +15,7 @@
       <Meta property="og:image:height" content="630" />
       <Meta name="twitter:card" content="summary_large_image" />
       <Meta name="twitter:title" content="Motorrad Grundkurs Zürich | CHF 499.- | A1, A35kW, A | Driving Team" />
-      <Meta name="twitter:description" content="Obligatorischer Motorrad Grundkurs in Zürich-Altstetten. CHF 499.- Komplettpreis. 12h (3×4h). Max. 5 Teilnehmer. Fahrschul-Motorrad auf Anfrage. Jetzt buchen!" />
+      <Meta name="twitter:description" content="Obligatorischer Motorrad Grundkurs in Zürich-Altstetten. CHF 499.- Komplettpreis. 12h (3×4h). Max. 5 Teilnehmer. Jetzt buchen!" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
@@ -58,7 +58,8 @@
       :requirements="[
         'Gültiger Lernfahrausweis der Kategorie A1 / A35kW / A',
         'Selbständiges Fahren von A nach B möglich',
-        'Eigenes Motorrad/Roller (Fahrschul-Fahrzeuge für CHF 80.- pro Kursteil auf Anfrage vorhanden)',
+        'Bei unsicherem Fahren: Fahrstunden beim Fahrlehrer vor dem Grundkurs empfohlen',
+        'Eigenes Motorrad/Roller',
         'Eigene Motorrad-Sicherheitsbekleidung inkl. Helm'
       ]"
       :details="[
@@ -68,6 +69,7 @@
         '📍 Treffpunkt: <strong>Bahnhof Zürich-Altstetten, Altstetterplatz 12, 8048 Zürich</strong>'
       ]"
       :important-notes="[
+        'Bei unsicherem Fahren empfehlen wir Fahrstunden beim Fahrlehrer vor dem Grundkurs.',
         'Für Kategorie A1 sind neu ebenfalls die Kursteile 1, 2 & 3 zu absolvieren. (Für Inhaber der Kategorie B ist dann keine praktische Prüfung notwendig.)',
         'Wenn du die Kategorie A1 OHNE GESCHWINDIGKEITSBESCHRÄNKUNG (45km/h) bereits seit mindestens 31.12.2020 besitzt und die Kategorie A beschränkt (35kW) machen willst, dann melde dich nur für den Kursteil 3 an.'
       ]"
@@ -119,11 +121,11 @@
           </details>
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Motorräder stellt Driving Team für den Grundkurs zur Verfügung?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm">Für den Motorrad-Grundkurs bei Driving Team in Zürich müssen Teilnehmende in der Regel ihr eigenes Fahrzeug mitbringen. Solltest du jedoch ein Motorrad oder einen Roller benötigen, bieten wir gegen eine Gebühr von CHF 80.- pro Kursteil die Möglichkeit, ein Fahrzeug auszuleihen. Bitte kontaktiere uns im Voraus, um die Verfügbarkeit zu prüfen.</p>
+            <p class="text-gray-600 mt-4 text-sm">Für den Motorrad-Grundkurs bei Driving Team in Zürich musst du dein eigenes betriebssicheres Motorrad oder deinen Roller mitbringen.</p>
           </details>
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Kann ich meinen eigenen Helm und Schutzkleidung mitbringen?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm">Ja, bei Driving Team in Zürich ist es erforderlich, dass Teilnehmende ihre eigene Motorrad-Sicherheitsbekleidung, einschliesslich eines Motorradhelms, mitbringen. Der Helm ist gesetzlich vorgeschrieben, während Schutzjacke, Hose, Kombis und Handschuhe dringend empfohlen werden. Solltest du keinen Helm oder Schutzkleidung besitzen, bieten wir eine begrenzte Anzahl zur Miete an (CHF 10.- Umtriebsentschädigung pro Nutzung).</p>
+            <p class="text-gray-600 mt-4 text-sm">Ja, bei Driving Team in Zürich ist es erforderlich, dass Teilnehmende ihre eigene Motorrad-Sicherheitsbekleidung, einschliesslich eines Motorradhelms, mitbringen. Der Helm ist gesetzlich vorgeschrieben, während Schutzjacke, Hose, Kombis und Handschuhe dringend empfohlen werden.</p>
           </details>
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Themen werden im Motorrad-Grundkurs behandelt?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
@@ -239,7 +241,7 @@
 import { COURSE_SCHEMA_LOCATIONS } from '~/data/course-schema-locations'
 
 const pgsZuerichSchemaMeta = {
-  description: 'Obligatorischer Motorrad Grundkurs in Zürich-Altstetten für Kategorien A1, A35kW und A. 12 Stunden (3×4h), CHF 499.- Komplettpreis, max. 5 Teilnehmer, Fahrschul-Motorrad auf Anfrage verfügbar.',
+  description: 'Obligatorischer Motorrad Grundkurs in Zürich-Altstetten für Kategorien A1, A35kW und A. 12 Stunden (3×4h), CHF 499.- Komplettpreis, max. 5 Teilnehmer.',
   courseWorkload: 'PT12H',
   educationalLevel: 'Beginner',
   category: 'Motorrad Fahrausbildung',
@@ -249,7 +251,7 @@ const pgsZuerichSchemaMeta = {
 }
 
 const jsonLdScripts = [
-  { type: 'application/ld+json', innerHTML: JSON.stringify({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Was ist ein Motorrad-Grundkurs und warum ist er notwendig?", "acceptedAnswer": {"@type": "Answer", "text": "Ein Motorrad-Grundkurs bei Driving Team Zürich vermittelt essenzielle Fähigkeiten für sicheres Motorradfahren. Er ist gesetzlich vorgeschrieben für alle, die einen Führerschein der Kategorie A1 oder A (beschränkt) anstreben."}}, {"@type": "Question", "name": "Wer muss einen Motorrad-Grundkurs in der Schweiz absolvieren?", "acceptedAnswer": {"@type": "Answer", "text": "In der Schweiz ist der Motorrad-Grundkurs Pflicht für alle, die einen Führerschein der Kategorie A1 oder A (beschränkt) anstreben."}}, {"@type": "Question", "name": "Wie viele Stunden umfasst der Motorrad-Grundkurs bei Driving Team in Zürich?", "acceptedAnswer": {"@type": "Answer", "text": "Der Motorrad-Grundkurs bei Driving Team in Zürich umfasst insgesamt 12 Stunden, aufgeteilt in 3 Kursteile à 4 Stunden."}}, {"@type": "Question", "name": "Welche Motorräder stellt Driving Team für den Grundkurs zur Verfügung?", "acceptedAnswer": {"@type": "Answer", "text": "Teilnehmende bringen in der Regel ihr eigenes Fahrzeug mit. Ein Mietfahrzeug ist für CHF 80.- pro Kursteil verfügbar."}}, {"@type": "Question", "name": "Wie viel kostet der Motorrad-Grundkurs bei Driving Team in Zürich?", "acceptedAnswer": {"@type": "Answer", "text": "Bei Driving Team in Zürich beträgt die Gebühr CHF 499.- für den kompletten Kurs (3 Teile)."}}, {"@type": "Question", "name": "Welche Themen werden im Motorrad-Grundkurs behandelt?", "acceptedAnswer": {"@type": "Answer", "text": "Teil 1: Fahrzeugbeherrschung, Parcours, Betriebssicherheit. Teil 2: Bremsmanöver, Kreisverkehr, Vortrittsregeln. Teil 3: Kurvenfahren, Sozius, Gruppenfahren."}}, {"@type": "Question", "name": "Was passiert bei schlechtem Wetter?", "acceptedAnswer": {"@type": "Answer", "text": "Bei Temperaturen unter 5 Grad oder heftigem Niederschlag kann der Kurs angepasst oder verschoben werden."}}, {"@type": "Question", "name": "Wo findet der Motorrad-Grundkurs statt?", "acceptedAnswer": {"@type": "Answer", "text": "Der Treffpunkt befindet sich direkt vor unserem Lokal: Vulkanstrasse 130b, 8048 Zürich."}}, {"@type": "Question", "name": "Gibt es eine Rückerstattungspolitik?", "acceptedAnswer": {"@type": "Answer", "text": "Frühzeitige Absagen sind kostenlos. Bei Absagen weniger als 14 Tage vor Kursbeginn: CHF 80.- Umtriebsentschädigung."}}, {"@type": "Question", "name": "Welche Sprachen werden angeboten?", "acceptedAnswer": {"@type": "Answer", "text": "Der Kurs wird grundsätzlich auf Deutsch durchgeführt. Auf Anfrage auch auf Englisch."}}, {"@type": "Question", "name": "Wie erhalte ich die unlimitierte Kategorie A?", "acceptedAnswer": {"@type": "Answer", "text": "Nach der beschränkten Kategorie A (35 kW) sind 2 Jahre Fahrpraxis erforderlich, danach folgt eine weitere praktische Prüfung für die unlimitierte Kategorie A."}}]}) },
+  { type: 'application/ld+json', innerHTML: JSON.stringify({"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Was ist ein Motorrad-Grundkurs und warum ist er notwendig?", "acceptedAnswer": {"@type": "Answer", "text": "Ein Motorrad-Grundkurs bei Driving Team Zürich vermittelt essenzielle Fähigkeiten für sicheres Motorradfahren. Er ist gesetzlich vorgeschrieben für alle, die einen Führerschein der Kategorie A1 oder A (beschränkt) anstreben."}}, {"@type": "Question", "name": "Wer muss einen Motorrad-Grundkurs in der Schweiz absolvieren?", "acceptedAnswer": {"@type": "Answer", "text": "In der Schweiz ist der Motorrad-Grundkurs Pflicht für alle, die einen Führerschein der Kategorie A1 oder A (beschränkt) anstreben."}}, {"@type": "Question", "name": "Wie viele Stunden umfasst der Motorrad-Grundkurs bei Driving Team in Zürich?", "acceptedAnswer": {"@type": "Answer", "text": "Der Motorrad-Grundkurs bei Driving Team in Zürich umfasst insgesamt 12 Stunden, aufgeteilt in 3 Kursteile à 4 Stunden."}}, {"@type": "Question", "name": "Welche Motorräder stellt Driving Team für den Grundkurs zur Verfügung?", "acceptedAnswer": {"@type": "Answer", "text": "Teilnehmende bringen ihr eigenes betriebssicheres Motorrad oder ihren Roller mit."}}, {"@type": "Question", "name": "Wie viel kostet der Motorrad-Grundkurs bei Driving Team in Zürich?", "acceptedAnswer": {"@type": "Answer", "text": "Bei Driving Team in Zürich beträgt die Gebühr CHF 499.- für den kompletten Kurs (3 Teile)."}}, {"@type": "Question", "name": "Welche Themen werden im Motorrad-Grundkurs behandelt?", "acceptedAnswer": {"@type": "Answer", "text": "Teil 1: Fahrzeugbeherrschung, Parcours, Betriebssicherheit. Teil 2: Bremsmanöver, Kreisverkehr, Vortrittsregeln. Teil 3: Kurvenfahren, Sozius, Gruppenfahren."}}, {"@type": "Question", "name": "Was passiert bei schlechtem Wetter?", "acceptedAnswer": {"@type": "Answer", "text": "Bei Temperaturen unter 5 Grad oder heftigem Niederschlag kann der Kurs angepasst oder verschoben werden."}}, {"@type": "Question", "name": "Wo findet der Motorrad-Grundkurs statt?", "acceptedAnswer": {"@type": "Answer", "text": "Der Treffpunkt befindet sich direkt vor unserem Lokal: Vulkanstrasse 130b, 8048 Zürich."}}, {"@type": "Question", "name": "Gibt es eine Rückerstattungspolitik?", "acceptedAnswer": {"@type": "Answer", "text": "Frühzeitige Absagen sind kostenlos. Bei Absagen weniger als 14 Tage vor Kursbeginn: CHF 80.- Umtriebsentschädigung."}}, {"@type": "Question", "name": "Welche Sprachen werden angeboten?", "acceptedAnswer": {"@type": "Answer", "text": "Der Kurs wird grundsätzlich auf Deutsch durchgeführt. Auf Anfrage auch auf Englisch."}}, {"@type": "Question", "name": "Wie erhalte ich die unlimitierte Kategorie A?", "acceptedAnswer": {"@type": "Answer", "text": "Nach der beschränkten Kategorie A (35 kW) sind 2 Jahre Fahrpraxis erforderlich, danach folgt eine weitere praktische Prüfung für die unlimitierte Kategorie A."}}]}) },
   { type: 'application/ld+json', innerHTML:  JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://drivingteam.ch/" }, { "@type": "ListItem", "position": 2, "name": "Motorrad Grundkurs", "item": "https://drivingteam.ch/motorrad-grundkurs/" }, { "@type": "ListItem", "position": 3, "name": "Zürich", "item": "https://drivingteam.ch/motorrad-grundkurs-zuerich/" }] }) },
 ]
 useHead({ script: jsonLdScripts })
