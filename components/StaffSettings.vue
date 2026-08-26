@@ -1521,16 +1521,17 @@
     </Teleport>
 
     <!-- Location Settings Modal -->
-    <div v-if="showLocationSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[600]">
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4">
-        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+    <Teleport to="body">
+    <div v-if="showLocationSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[600] p-4">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-sm max-h-[90svh] flex flex-col">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
           <h3 class="text-base font-semibold text-gray-900">Standort-Einstellungen</h3>
           <button @click="showLocationSettingsModal = false" class="text-gray-400 hover:text-gray-600 transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
 
-        <div class="px-5 py-4 space-y-4">
+        <div class="location-settings-scroll px-5 py-4 space-y-4 overflow-y-auto flex-1 min-h-0 overscroll-contain">
           <!-- Location name (read-only) -->
           <div>
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">Standort</p>
@@ -1673,7 +1674,7 @@
           </div>
         </div>
 
-        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
+        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between shrink-0">
           <button
             @click="toggleLocationAssignment(locationModalData.id); showLocationSettingsModal = false"
             class="px-3 py-2 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
@@ -1699,6 +1700,7 @@
         </div>
       </div>
     </div>
+    </Teleport>
 
     <!-- Buffer Settings Modal -->
     <div v-if="showBufferModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[600]">
@@ -4898,5 +4900,9 @@ onBeforeUnmount(() => {
 }
 .peer:checked ~ .tenant-toggle {
   background-color: var(--color-primary, #1E40AF);
+}
+
+.location-settings-scroll {
+  -webkit-overflow-scrolling: touch;
 }
 </style>

@@ -24,11 +24,19 @@ export default defineNuxtPlugin(() => {
   }
 
   let setupStarted = false
+  let iv: number | undefined
+  const stopPolling = () => {
+    if (iv !== undefined) {
+      window.clearInterval(iv)
+      iv = undefined
+    }
+  }
+
   const setup = async () => {
     if (setupStarted) return
     setupStarted = true
     if (!(await isCapacitorNative())) {
-      setupStarted = false
+      stopPolling()
       return
     }
 
@@ -60,11 +68,11 @@ export default defineNuxtPlugin(() => {
   // Hosted WebView can inject Capacitor after the first JS tick; cookie
   // login hydrates supabase-js a moment later. Keep trying briefly.
   let attempts = 0
-  const iv = window.setInterval(() => {
+  iv = window.setInterval(() => {
     attempts += 1
     void setup()
     if (isLoggedIn()) tryRegister()
-    if (setupStarted && attempts >= 8) window.clearInterval(iv)
-    if (attempts >= 15) window.clearInterval(iv)
+    if (setupStarted && attempts >= 8) stopPolling()
+    if (attempts >= 15) stopPolling()
   }, 1000)
 })

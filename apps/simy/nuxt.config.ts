@@ -50,13 +50,17 @@ export default defineNuxtConfig({
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:image', content: 'https://www.simy.ch/og-image.png' },
         { name: 'twitter:site', content: '@simych' },
+        { name: 'theme-color', content: '#6000BD' },
       ],
       link: [
-        { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
-        { rel: 'icon', type: 'image/png', sizes: '48x48', href: '/favicon-48.png' },
+        // Google Search uses the homepage icon; prefer a square PNG larger than 48px.
         { rel: 'icon', type: 'image/png', sizes: '192x192', href: '/favicon-192.png' },
-        { rel: 'icon', type: 'image/png', href: '/simy-favicon.png' },
+        { rel: 'icon', type: 'image/png', sizes: '96x96', href: '/favicon-96.png' },
+        { rel: 'icon', type: 'image/png', sizes: '48x48', href: '/favicon-48.png' },
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', href: '/favicon.ico', sizes: '48x48' },
         { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
+        { rel: 'manifest', href: '/site.webmanifest' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       ],
       script: [

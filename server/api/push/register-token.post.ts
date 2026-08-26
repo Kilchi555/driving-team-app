@@ -2,11 +2,18 @@
 // Saves (or refreshes) an FCM/APNs device token for the current user.
 // Called by plugins/push.client.ts after Capacitor PushNotifications.register().
 
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
+  // Bearer only. Cookie-auth here would let any site CSRF-register its FCM
+  // token onto a logged-in user and receive their appointment pushes.
+  const authHeader = getHeader(event, 'authorization') ?? ''
+  if (!authHeader.startsWith('Bearer ')) {
+    throw createError({ statusCode: 401, statusMessage: 'Nicht authentifiziert' })
+  }
+
   const authUser = await getAuthUserFromRequest(event)
   if (!authUser?.id) {
     throw createError({ statusCode: 401, statusMessage: 'Nicht authentifiziert' })

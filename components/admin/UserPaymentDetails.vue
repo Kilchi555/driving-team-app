@@ -356,7 +356,7 @@
                             <span class="text-xs font-medium whitespace-nowrap" :class="useCustomBillingAddress ? 'text-gray-400' : 'text-gray-800'">Gespeichert</span>
                             <button
                               type="button"
-                              @click="useCustomBillingAddress = !useCustomBillingAddress"
+                              @click="toggleCustomBillingAddress"
                               :class="[
                                 'relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors',
                                 useCustomBillingAddress ? '' : 'bg-gray-300'
@@ -386,27 +386,32 @@
                           <template v-else>
                             <p class="text-gray-500">Keine Firmenadresse hinterlegt.</p>
                             <p class="text-xs text-gray-500">Rechnung geht an <span class="font-medium">{{ displayEmail }}</span></p>
+                            <p class="text-xs text-gray-400">Für eine feste Firmenadresse: Schülerprofil → Rechnungsadresse, oder hier «Abweichend».</p>
                           </template>
                         </div>
                         
                         <div v-else class="space-y-3">
                           <input v-model="customBillingCompanyName" type="text" placeholder="Firmenname (optional)" class="invoice-modal-input w-full" />
                           <input v-model="customBillingContactPerson" type="text" placeholder="Kontaktperson (optional)" class="invoice-modal-input w-full" />
-                          <input v-model="customBillingEmail" type="email" placeholder="E-Mail *" class="invoice-modal-input w-full" />
+                          <div class="grid grid-cols-[minmax(0,1fr)_4.5rem] gap-2">
+                            <input v-model="customBillingStreet" type="text" placeholder="Strasse" class="invoice-modal-input w-full min-w-0" />
+                            <input v-model="customBillingStreetNr" type="text" placeholder="Nr." class="invoice-modal-input w-full min-w-0" />
+                          </div>
+                          <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2">
+                            <input v-model="customBillingZip" type="text" placeholder="PLZ" class="invoice-modal-input w-full min-w-0" />
+                            <input v-model="customBillingCity" type="text" placeholder="Ort" class="invoice-modal-input w-full min-w-0" />
+                          </div>
+                          <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">E-Mail</label>
+                            <input v-model="customBillingEmail" type="email" placeholder="rechnung@firma.ch" class="invoice-modal-input w-full" />
+                            <p class="text-xs text-gray-400 mt-1">Auf der Rechnung und für den Versand.</p>
+                          </div>
                         </div>
                       </div>
                       
                       <div class="rounded-xl border border-gray-200 p-4 space-y-3">
                         <p class="text-xs font-bold uppercase tracking-wider text-gray-400">E-Mail-Versand</p>
-                        <div>
-                          <label class="block text-xs font-medium text-gray-500 mb-1">Empfänger</label>
-                          <input
-                            v-model="invoiceEmail"
-                            type="email"
-                            class="invoice-modal-input w-full"
-                            :placeholder="resolvedInvoiceEmail || 'email@beispiel.ch'"
-                          >
-                        </div>
+                        <p class="text-xs text-gray-500">Geht an <span class="font-medium text-gray-700">{{ resolvedInvoiceEmail || '—' }}</span></p>
                         <div>
                           <label class="block text-xs font-medium text-gray-500 mb-1">Betreff (optional)</label>
                           <input v-model="invoiceSubject" type="text" class="invoice-modal-input w-full" :placeholder="`Rechnung für ${t.appointmentsPlural}`" />
@@ -1236,13 +1241,16 @@ const isCreatingInvoice = ref(false)
 const invoiceAction = ref<'email' | 'pdf' | null>(null)
 const eventTypes = ref<any[]>([])
 
-const invoiceEmail = ref('')
 const invoiceSubject = ref('')
 const invoiceMessage = ref('')
 const useCustomBillingAddress = ref(false)
 const customBillingCompanyName = ref('')
 const customBillingContactPerson = ref('')
 const customBillingEmail = ref('')
+const customBillingStreet = ref('')
+const customBillingStreetNr = ref('')
+const customBillingZip = ref('')
+const customBillingCity = ref('')
 
 // Toast State
 const showToast = ref(false)
@@ -1271,8 +1279,7 @@ const displayEmail = computed(() => {
 })
 
 const resolvedInvoiceEmail = computed(() => {
-  if (invoiceEmail.value) return invoiceEmail.value
-  if (useCustomBillingAddress.value && customBillingEmail.value) return customBillingEmail.value
+  if (useCustomBillingAddress.value) return customBillingEmail.value.trim()
   if (companyBillingAddress.value?.email) return companyBillingAddress.value.email
   return userDetails.value?.email || ''
 })
@@ -1435,12 +1442,30 @@ const closeInvoiceModal = () => {
   showInvoiceModal.value = false
 }
 
+const toggleCustomBillingAddress = () => {
+  const next = !useCustomBillingAddress.value
+  if (next && !customBillingEmail.value) {
+    const company = companyBillingAddress.value
+    customBillingCompanyName.value = customBillingCompanyName.value || company?.company_name || ''
+    customBillingContactPerson.value = customBillingContactPerson.value || company?.contact_person || ''
+    customBillingStreet.value = customBillingStreet.value || company?.street || userDetails.value?.street || ''
+    customBillingStreetNr.value = customBillingStreetNr.value || company?.street_number || userDetails.value?.street_nr || ''
+    customBillingZip.value = customBillingZip.value || company?.zip || userDetails.value?.zip || ''
+    customBillingCity.value = customBillingCity.value || company?.city || userDetails.value?.city || ''
+    customBillingEmail.value = company?.email || userDetails.value?.email || ''
+  }
+  useCustomBillingAddress.value = next
+}
+
 const resetInvoiceModalFields = () => {
   useCustomBillingAddress.value = false
   customBillingCompanyName.value = ''
   customBillingContactPerson.value = ''
   customBillingEmail.value = ''
-  invoiceEmail.value = ''
+  customBillingStreet.value = ''
+  customBillingStreetNr.value = ''
+  customBillingZip.value = ''
+  customBillingCity.value = ''
   invoiceSubject.value = ''
   invoiceMessage.value = ''
 }
@@ -2771,8 +2796,11 @@ const invoiceSelectedAppointments = async () => {
     customBillingCompanyName.value = ''
     customBillingContactPerson.value = ''
     customBillingEmail.value = ''
+    customBillingStreet.value = ''
+    customBillingStreetNr.value = ''
+    customBillingZip.value = ''
+    customBillingCity.value = ''
     
-    invoiceEmail.value = companyBillingAddress.value?.email || userDetails.value?.email || ''
     invoiceSubject.value = `Rechnung für ${selectedAppointments.value.length} ${selectedAppointments.value.length > 1 ? t.value.appointmentsPlural : t.value.appointment}`
     // Nur Intro in die Nachricht — Zahlungsbedingungen/Footer gehen separat auf die Rechnung
     const intro = (invoiceIntroText.value || '').trim()
@@ -2822,7 +2850,7 @@ const buildInvoicePayload = (internalNotes: string) => {
   const billingEmail = resolvedInvoiceEmail.value
 
   if (useCustomBillingAddress.value) {
-    if (!customBillingEmail.value.trim() && !invoiceEmail.value.trim()) throw new Error('E-Mail-Adresse ist erforderlich')
+    if (!customBillingEmail.value.trim()) throw new Error('E-Mail-Adresse ist erforderlich')
   }
 
   const useCompanyBilling = useCustomBillingAddress.value || !!companyBillingAddress.value
@@ -2838,10 +2866,18 @@ const buildInvoicePayload = (internalNotes: string) => {
       ? customBillingContactPerson.value || undefined
       : company?.contact_person || undefined,
     billing_email: billingEmail || undefined,
-    billing_street: company?.street || user?.street || undefined,
-    billing_street_number: company?.street_number || user?.street_nr || undefined,
-    billing_zip: company?.zip || user?.zip || undefined,
-    billing_city: company?.city || user?.city || undefined,
+    billing_street: useCustomBillingAddress.value
+      ? (customBillingStreet.value.trim() || undefined)
+      : (company?.street || user?.street || undefined),
+    billing_street_number: useCustomBillingAddress.value
+      ? (customBillingStreetNr.value.trim() || undefined)
+      : (company?.street_number || user?.street_nr || undefined),
+    billing_zip: useCustomBillingAddress.value
+      ? (customBillingZip.value.trim() || undefined)
+      : (company?.zip || user?.zip || undefined),
+    billing_city: useCustomBillingAddress.value
+      ? (customBillingCity.value.trim() || undefined)
+      : (company?.city || user?.city || undefined),
     billing_country: 'CH',
     billing_vat_number: companyBillingAddress.value?.vat_number || undefined,
     subtotal_rappen: chfToRappen(selectedAppointmentsTotal.value),

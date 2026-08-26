@@ -87,6 +87,16 @@ export async function sha256Hex(input: string): Promise<string> {
     .join('')
 }
 
+export function hasMetaClickId(input: Pick<MetaCapiInput, 'fbclid' | 'fbc'>): boolean {
+  return !!(cleanTrackingToken(input.fbclid) || cleanTrackingToken(input.fbc))
+}
+
+function cleanTrackingToken(value: string | null | undefined): string | null {
+  if (!value) return null
+  const v = String(value).trim()
+  return v && v !== 'undefined' && v !== 'null' ? v : null
+}
+
 function toUnixSeconds(value: Date | string): number {
   const d = typeof value === 'string' ? new Date(value) : value
   return Math.floor(d.getTime() / 1000)
@@ -104,6 +114,12 @@ export async function sendCapiEvent(input: MetaCapiInput): Promise<MetaCapiResul
   const creds = readCreds()
   if (!creds) {
     return { sent: false, reason: 'missing_credentials' }
+  }
+
+  // Purchases without a real Meta click train the pixel on organic/staff bookings.
+  // Require fbclid or _fbc; email/phone/IP alone is not enough.
+  if (input.event_name === 'Purchase' && !hasMetaClickId(input)) {
+    return { sent: false, reason: 'no_click_id' }
   }
 
   // Without any user signal, CAPI can still fire but match rate is near zero.
@@ -221,6 +237,7 @@ export async function recordAndSendCapiEvent(input: MetaCapiInput): Promise<void
   if (row?.id) {
     const uploadStatus =
       result.sent ? 'success'
+        : result.reason === 'no_click_id' ? 'skipped_no_click_id'
         : result.reason === 'no_user_signal' ? 'skipped_no_signal'
           : 'failed'
 

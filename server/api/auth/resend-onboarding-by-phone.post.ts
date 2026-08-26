@@ -83,9 +83,14 @@ export default defineEventHandler(async (event) => {
     // Get tenant info for SMS
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, slug, twilio_from_sender')
+      .select('name, slug, twilio_from_sender, booking_policy')
       .eq('id', tenantId)
       .single()
+
+    const { allowsCustomerAccountActivation } = await import('~/server/utils/customer-account-activation')
+    if (!allowsCustomerAccountActivation((tenant as any)?.booking_policy)) {
+      return { ok: true }
+    }
 
     const terms = await getTenantTerminology(supabase, tenantId)
     const tenantName = tenant?.name || terms.businessNoun || 'Ihr Unternehmen'

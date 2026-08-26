@@ -420,6 +420,16 @@
                 />
               </div>
             </div>
+
+            <AcquisitionSourceField
+              v-if="askAcquisitionSource"
+              v-model="formData.acquisition_self_reported"
+              v-model:note="formData.acquisition_self_reported_note"
+              label="Woher kennst du uns?"
+              id-prefix="register-origin"
+              label-class="text-gray-700"
+              required
+            />
           </div>
 
           <!-- Categories (compact multi-select dropdown) -->
@@ -793,27 +803,37 @@
               <p v-if="fieldErrors.email" class="mt-1 text-sm text-red-600">{{ fieldErrors.email }}</p>
               <!-- Pending user: has been added manually but hasn't registered yet -->
               <div v-if="emailIsPending" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
-                <p class="text-sm font-medium text-amber-800">Konto bereits angelegt — du kannst hier weiter machen</p>
+                <p class="text-sm font-medium text-amber-800">
+                  {{ allowCustomerAccountActivation ? 'Konto bereits angelegt — du kannst hier weiter machen' : 'Du bist bereits erfasst' }}
+                </p>
                 <p class="text-sm text-amber-700">
-                  {{ labels.businessNoun }} hat dich schon erfasst. Fülle das Formular aus und sende ab — wir verknüpfen dein bestehendes Profil und aktivieren dein Konto.
+                  {{ labels.businessNoun }} hat dich schon erfasst.
+                  <template v-if="allowCustomerAccountActivation">
+                    Fülle das Formular aus und sende ab — wir verknüpfen dein bestehendes Profil und aktivieren dein Konto.
+                  </template>
+                  <template v-else>
+                    Du kannst deine Angaben hier ergänzen. Ein Online-Login ist bei diesem Betrieb nicht vorgesehen.
+                  </template>
                 </p>
-                <p class="text-xs text-amber-600">
-                  Optional: Registrierungslink erneut per SMS anfordern.
-                </p>
-                <div v-if="!pendingEmailSmsSent">
-                  <button
-                    type="button"
-                    :disabled="isResendingPendingEmailSms || !formData.phone"
-                    @click="resendOnboardingByEmailUser"
-                    class="text-sm font-medium text-white px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
-                    style="background:#d97706"
-                  >
-                    <span v-if="isResendingPendingEmailSms">Wird gesendet...</span>
-                    <span v-else>Link per SMS anfordern</span>
-                  </button>
-                  <p v-if="!formData.phone" class="text-xs text-amber-600 mt-1">Bitte zuerst Telefonnummer eingeben.</p>
-                </div>
-                <p v-else class="text-sm text-green-700 font-medium">SMS wurde gesendet! Bitte prüfe dein Handy.</p>
+                <template v-if="allowCustomerAccountActivation">
+                  <p class="text-xs text-amber-600">
+                    Optional: Registrierungslink erneut per SMS anfordern.
+                  </p>
+                  <div v-if="!pendingEmailSmsSent">
+                    <button
+                      type="button"
+                      :disabled="isResendingPendingEmailSms || !formData.phone"
+                      @click="resendOnboardingByEmailUser"
+                      class="text-sm font-medium text-white px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                      style="background:#d97706"
+                    >
+                      <span v-if="isResendingPendingEmailSms">Wird gesendet...</span>
+                      <span v-else>Link per SMS anfordern</span>
+                    </button>
+                    <p v-if="!formData.phone" class="text-xs text-amber-600 mt-1">Bitte zuerst Telefonnummer eingeben.</p>
+                  </div>
+                  <p v-else class="text-sm text-green-700 font-medium">SMS wurde gesendet! Bitte prüfe dein Handy.</p>
+                </template>
               </div>
               <!-- Active user: already fully registered -->
               <div v-else-if="fieldErrors.email?.includes('bereits registriert')" class="mt-2 p-3 border rounded-lg" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
@@ -1091,8 +1111,11 @@
               <span v-if="pendingPhoneIsActive">
                 Konto ist bereits aktiv. Bitte melde dich direkt an.
               </span>
-              <span v-else>
+              <span v-else-if="allowCustomerAccountActivation">
                 Konto wurde bereits von {{ labels.businessNoun }} angelegt. Du kannst die Registrierung hier abschliessen — wir verknüpfen dein bestehendes Profil.
+              </span>
+              <span v-else>
+                Eintrag wurde bereits von {{ labels.businessNoun }} angelegt. Du kannst deine Angaben hier ergänzen. Ein Online-Login ist nicht vorgesehen.
               </span>
             </p>
           </div>
@@ -1124,9 +1147,11 @@
         <!-- Pending account: continue here OR resend SMS -->
         <div v-else class="border rounded-lg p-4 mb-5 space-y-2" :style="{ background: `${primaryColor}15`, borderColor: `${primaryColor}33` }">
           <p class="text-sm" :style="{ color: primaryColor }">
-            ✅ Am einfachsten: Formular hier ausfüllen und absenden — dein bestehender Eintrag wird ergänzt und aktiviert.
+            {{ allowCustomerAccountActivation
+              ? 'Am einfachsten: Formular hier ausfüllen und absenden — dein bestehender Eintrag wird ergänzt und aktiviert.'
+              : 'Du kannst das Formular hier ausfüllen — dein bestehender Eintrag wird ergänzt.' }}
           </p>
-          <p class="text-xs text-gray-600">
+          <p v-if="allowCustomerAccountActivation" class="text-xs text-gray-600">
             Alternativ kannst du den Aktivierungslink erneut per SMS anfordern.
           </p>
         </div>
@@ -1160,7 +1185,7 @@
 
           <!-- Pending account: optional SMS resend -->
           <button
-            v-else-if="!pendingPhoneSmsSent"
+            v-else-if="allowCustomerAccountActivation && !pendingPhoneSmsSent"
             type="button"
             @click="resendOnboardingByPhone"
             :disabled="isSendingPendingPhoneSms"
@@ -1239,6 +1264,8 @@ const registrationCategoriesMode = ref<RegistrationFieldMode>('required')
 const registrationLernfahrausweisMode = ref<RegistrationFieldMode>('optional')
 const registrationProposalMode = ref<RegistrationFieldMode>('optional')
 const registrationAccountMode = ref<'hidden' | 'required'>('required')
+const allowCustomerAccountActivation = ref(true)
+const askAcquisitionSource = ref(false)
 
 const isContactFieldVisible = (key: string) =>
   bookingRequiredFields.value.includes(key) || bookingOptionalFields.value.includes(key)
@@ -1257,6 +1284,9 @@ async function loadRegistrationPolicy(slug: string) {
           registration_lernfahrausweis_mode?: RegistrationFieldMode
           registration_proposal_mode?: RegistrationFieldMode
           registration_account_mode?: 'hidden' | 'required'
+          ask_acquisition_source?: boolean
+          allow_customer_account_activation?: boolean
+          onboarding_sms_enabled?: boolean
         }
       }
     }>('/api/booking/get-booking-init', { query: { slug } })
@@ -1282,6 +1312,8 @@ async function loadRegistrationPolicy(slug: string) {
     if (policy.registration_account_mode) {
       registrationAccountMode.value = policy.registration_account_mode
     }
+    allowCustomerAccountActivation.value = policy.allow_customer_account_activation !== false
+    askAcquisitionSource.value = policy.ask_acquisition_source === true
   } catch (e) {
     logger.warn('⚠️ Failed to load registration booking policy, using defaults:', e)
   }
@@ -1460,6 +1492,8 @@ const formData = ref({
   zip: '',
   city: '',
   profession: '',
+  acquisition_self_reported: '',
+  acquisition_self_reported_note: '',
   categories: [] as string[],
   lernfahrausweisNr: '',
   
@@ -1715,6 +1749,9 @@ const proceedBlockReason = computed(() => {
     if (fieldErrors.value.phone) return fieldErrors.value.phone
     if (fieldErrors.value.birthDate) return fieldErrors.value.birthDate
     if (fieldErrors.value.zip) return fieldErrors.value.zip
+    if (askAcquisitionSource.value && !formData.value.acquisition_self_reported) {
+      return 'Bitte angeben, woher du uns kennst.'
+    }
     if (categoriesRequired.value && formData.value.categories.length === 0) {
       return 'Bitte mindestens eine Kategorie wählen.'
     }
@@ -2229,12 +2266,20 @@ const submitRegistration = async () => {
         zip: formData.value.zip?.trim() || null,
         city: formData.value.city?.trim() || null,
         profession: formData.value.profession?.trim() || null,
+        acquisition_self_reported: formData.value.acquisition_self_reported || null,
+        acquisition_self_reported_note: formData.value.acquisition_self_reported_note?.trim() || null,
         categories: formData.value.categories || null,
         lernfahrausweisNr: formData.value.lernfahrausweisNr?.trim() || null,
         tenantId: activeTenantId,
         isAdmin: isAdminRegistration.value,
         referredByCode: refCode || null,
         pendingOnly,
+        marketing_session_id: typeof window !== 'undefined'
+          ? (window as any).__analyticsSessionId || undefined
+          : undefined,
+        marketing_attribution: typeof window !== 'undefined'
+          ? (window as any).__marketingAttribution || (window as any).__dtMarketingAttribution || undefined
+          : undefined,
       })
     })
     if (refCode) clearRefCode()

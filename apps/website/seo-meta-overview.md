@@ -88,12 +88,12 @@ Stand: 2026-05-24 · Quelle: `apps/website/`
 | `/motorboot-fahrstunden-zuerich/` | Motorboot Fahrstunden Zürich \| ab CHF 120.- \| Driving Team | Motorboot Fahrstunden am Zürichsee mit Fahrlehrer Marc – auch abends & samstags, ab CHF 120.-/Lektion, flexible Treffpunkte. Jetzt anmelden! | `pages/motorboot-fahrstunden-zuerich.vue` | — |
 | `/motorboot-theorie/` | Motorboot Theorie \| Bootführerschein \| Driving Team | Motorboot Theoriestunden beim Driving Team. Optimale Vorbereitung auf die Theorieprüfung mit Tipps und Tricks. CHF 90.- pro 45 Minuten in Lachen SZ. | `pages/motorboot-theorie.vue` | — |
 | `/motorrad-a1/` | Motorrad A1 Führerschein Schweiz – 125cc ab 16 \| Driving Team | Ab 16 Jahren auf dem Motorrad – mit dem A1 Führerschein fährst du legal 125cc. Grundkurs & Fahrstunden in Zürich ab CHF 95.-. Jetzt Termin buchen! | `pages/motorrad-a1.vue` | — |
-| `/motorrad-fahrschule-zuerich/` | Motorrad Fahrschule Zürich \| A1, A35kW, A \| Driving Team | Motorrad Fahrschule Zürich für A1, A35kW & A – 85% Erfolgsquote, Fahrschulmotorrad verfügbar, Grundkurs & Fahrstunden. Jetzt direkt online buchen! | `pages/motorrad-fahrschule-zuerich.vue` | — |
-| `/motorrad-fahrschule/` | Motorrad Fahrschule Zürich ✓ A1/A35kW/A \| ab CHF 95.- | Motorrad fahren lernen in Zürich – A1, A35kW & A mit erfahrenen Fahrlehrern und modernen Bikes. Grundkurse & Fahrstunden, ab CHF 95.-. Jetzt anmelden! | `pages/motorrad-fahrschule.vue` | — |
+| `/motorrad-fahrschule-zuerich/` | Motorrad Fahrschule Zürich \| A1, A35kW, A \| Driving Team | Motorrad Fahrschule Zürich für A1, A35kW und A. 85% Erfolgsquote, ab CHF 95.–, Grundkurs in Altstetten. Jetzt buchen. | `pages/motorrad-fahrschule-zuerich.vue` | — |
+| `/motorrad-fahrschule/` | Motorrad Fahrschule Zürich ✓ A1/A35kW/A \| ab CHF 95.- | Motorrad fahren lernen in Zürich – A1, A35kW & A mit erfahrenen Fahrlehrern. Grundkurse & Fahrstunden, ab CHF 95.-. Jetzt anmelden! | `pages/motorrad-fahrschule.vue` | — |
 | `/motorrad-grundkurs-altstetten/` | Motorrad Grundkurs Altstetten \| CHF 499.- \| Driving Team | Pflicht-Grundkurs für Kat. A in Zürich-Altstetten – 12h (3×4h), max. 5 Personen, CHF 499.-. Jetzt deinen Platz online sichern! | `pages/motorrad-grundkurs-altstetten.vue` | — |
 | `/motorrad-grundkurs-einsiedeln/` | Motorrad Grundkurs Einsiedeln \| CHF 600.- \| Driving Team | Motorrad Grundkurs in Einsiedeln – 3×4h praxisorientiert, max. 5 Teilnehmer, CHF 600.-, in Kooperation mit Fahrschule Bisig. Jetzt anmelden! | `pages/motorrad-grundkurs-einsiedeln.vue` | — |
 | `/motorrad-grundkurs-lachen/` | Motorrad Grundkurs Lachen SZ ✓ CHF 570.- \| Max. 5 Pers. | Motorrad Grundkurs in Lachen SZ – 3×4h für alle Motorrad-Kategorien, max. 5 Teilnehmer, CHF 570.-. Jetzt deinen Platz sichern! | `pages/motorrad-grundkurs-lachen.vue` | — |
-| `/motorrad-grundkurs-zuerich/` | Motorrad Grundkurs Zürich ✓ CHF 499.- \| Pflicht für A1/A35kW/A | Pflicht-Grundkurs für den Motorrad-Führerschein in Zürich – 12h (3×4h), max. 5 Personen, CHF 499.-, Fahrschulmotorrad verfügbar. Jetzt Platz sichern! | `pages/motorrad-grundkurs-zuerich.vue` | — |
+| `/motorrad-grundkurs-zuerich/` | Motorrad Grundkurs Zürich ✓ CHF 499.- \| Pflicht für A1/A35kW/A | Pflicht-Grundkurs für den Motorrad-Führerschein in Zürich – 12h (3×4h), max. 5 Personen, CHF 499.-. Jetzt Platz sichern! | `pages/motorrad-grundkurs-zuerich.vue` | — |
 | `/motorrad-grundkurs-zug/` | Motorrad Grundkurs Zug \| DE/EN/IT \| CHF 600.- \| Driving Team | Motorrad Grundkurs in Steinhausen (Zug) – 3×4h auf Deutsch, Englisch oder Italienisch, max. 5 Personen, CHF 600.-. Jetzt anmelden! | `pages/motorrad-grundkurs-zug.vue` | — |
 | `/motorrad-grundkurs/` | Motorrad Grundkurs Schweiz \| A1, A35kW, A \| Driving Team | Motorrad Grundkurs in der ganzen Schweiz – Zürich, Lachen, Zug & Einsiedeln. 3×4h, max. 5 Teilnehmer, ab CHF 499.-. Jetzt deinen Platz sichern! | `pages/motorrad-grundkurs.vue` | — |
 | `/motorrad-weiterbildung/` | Motorrad Weiterbildung Zürich \| Sicherheitskurse \| Driving Team | Motorrad Weiterbildung beim Driving Team. Schräglagen-Training und Prüfungsvorbereitungskurs. CHF 190.- pro Kurs, max. 5 Teilnehmer. Jetzt anmelden! | `pages/motorrad-weiterbildung.vue` | — |
@@ -569,13 +569,13 @@ Stand: 2026-05-24 · Quelle: `apps/website/`
 ### `/motorrad-fahrschule-zuerich/`
 
 - **Title:** Motorrad Fahrschule Zürich | A1, A35kW, A | Driving Team
-- **Meta Description:** Motorrad Fahrschule Zürich für A1, A35kW & A – 85% Erfolgsquote, Fahrschulmotorrad verfügbar, Grundkurs & Fahrstunden. Jetzt direkt online buchen!
+- **Meta Description:** Motorrad Fahrschule Zürich für A1, A35kW und A. 85% Erfolgsquote, ab CHF 95.–, Grundkurs in Altstetten. Jetzt buchen.
 - **Datei:** `pages/motorrad-fahrschule-zuerich.vue`
 
 ### `/motorrad-fahrschule/`
 
 - **Title:** Motorrad Fahrschule Zürich ✓ A1/A35kW/A | ab CHF 95.-
-- **Meta Description:** Motorrad fahren lernen in Zürich – A1, A35kW & A mit erfahrenen Fahrlehrern und modernen Bikes. Grundkurse & Fahrstunden, ab CHF 95.-. Jetzt anmelden!
+- **Meta Description:** Motorrad fahren lernen in Zürich – A1, A35kW & A mit erfahrenen Fahrlehrern. Grundkurse & Fahrstunden, ab CHF 95.-. Jetzt anmelden!
 - **Datei:** `pages/motorrad-fahrschule.vue`
 
 ### `/motorrad-grundkurs-altstetten/`
@@ -599,7 +599,7 @@ Stand: 2026-05-24 · Quelle: `apps/website/`
 ### `/motorrad-grundkurs-zuerich/`
 
 - **Title:** Motorrad Grundkurs Zürich ✓ CHF 499.- | Pflicht für A1/A35kW/A
-- **Meta Description:** Pflicht-Grundkurs für den Motorrad-Führerschein in Zürich – 12h (3×4h), max. 5 Personen, CHF 499.-, Fahrschulmotorrad verfügbar. Jetzt Platz sichern!
+- **Meta Description:** Pflicht-Grundkurs für den Motorrad-Führerschein in Zürich – 12h (3×4h), max. 5 Personen, CHF 499.-. Jetzt Platz sichern!
 - **Datei:** `pages/motorrad-grundkurs-zuerich.vue`
 
 ### `/motorrad-grundkurs-zug/`

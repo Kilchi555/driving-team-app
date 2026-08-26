@@ -19,9 +19,12 @@ import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/ut
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import {
   DEFAULT_BOOKING_POLICY,
+  normalizeRegistrationAccountMode,
   normalizeRegistrationFieldMode,
 } from '~/server/api/admin/booking-policy.get'
 import { randomUUID } from 'crypto'
+import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
+import { saveAcquisitionSelfReport } from '~/server/utils/save-acquisition-self-report'
 
 const CONTACT_FIELD_LABELS: Record<string, string> = {
   first_name: 'Vorname',
@@ -68,6 +71,10 @@ export default defineEventHandler(async (event) => {
       captchaToken,
       referredByCode = null,
       pendingOnly = false,
+      marketing_session_id = null,
+      marketing_attribution = null,
+      acquisition_self_reported = null,
+      acquisition_self_reported_note = null,
     } = body
 
     // Check rate limit (after body is read so we have email and tenantId)
@@ -294,6 +301,32 @@ export default defineEventHandler(async (event) => {
         sourceLabel: 'Registrierung ohne Login',
       })
 
+      if (pendingUserId) {
+        try {
+          await stampFirstTouchAcquisition({
+            userId: pendingUserId,
+            tenantId,
+            email: emailNormalized,
+            phone: sanitizedPhone,
+            attribution: marketing_attribution,
+            marketingSessionId: marketing_session_id,
+          })
+        } catch (err: any) {
+          logger.warn('Register', 'First-touch stamp failed (pending):', err?.message)
+        }
+        try {
+          await saveAcquisitionSelfReport({
+            userId: pendingUserId,
+            tenantId,
+            source: acquisition_self_reported,
+            note: acquisition_self_reported_note,
+            fillFirstTouchIfEmpty: true,
+          })
+        } catch (err: any) {
+          logger.warn('Register', 'Self-report failed (pending):', err?.message)
+        }
+      }
+
       return {
         success: true,
         userId: pendingUserId,
@@ -404,6 +437,12 @@ export default defineEventHandler(async (event) => {
       .maybeSingle()
 
     const rawPolicy = (tenantRow?.booking_policy as Record<string, any>) || {}
+    if (!isAdmin && normalizeRegistrationAccountMode(rawPolicy.registration_account_mode, 'required') === 'hidden') {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Kunden-Login ist für diesen Betrieb nicht aktiviert.',
+      })
+    }
     const bookingRequiredFields: string[] = Array.isArray(rawPolicy.booking_required_fields)
       ? rawPolicy.booking_required_fields
       : DEFAULT_BOOKING_POLICY.booking_required_fields
@@ -883,6 +922,31 @@ export default defineEventHandler(async (event) => {
       source: 'register',
       sourceLabel: 'Kunden-Registrierung',
     })
+
+    try {
+      await stampFirstTouchAcquisition({
+        userId: userProfile.id,
+        tenantId,
+        email: emailNormalized,
+        phone: sanitizedPhone,
+        attribution: marketing_attribution,
+        marketingSessionId: marketing_session_id,
+      })
+    } catch (err: any) {
+      logger.warn('Register', 'First-touch stamp failed:', err?.message)
+    }
+
+    try {
+      await saveAcquisitionSelfReport({
+        userId: userProfile.id,
+        tenantId,
+        source: acquisition_self_reported,
+        note: acquisition_self_reported_note,
+        fillFirstTouchIfEmpty: true,
+      })
+    } catch (err: any) {
+      logger.warn('Register', 'Self-report failed:', err?.message)
+    }
 
     return {
       success: true,

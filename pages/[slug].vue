@@ -184,12 +184,17 @@
               <div>
                 <p class="text-sm font-medium text-amber-800">Account noch nicht aktiviert</p>
                 <p class="text-sm text-amber-700 mt-1">
-                  Sie wurden von {{ brandName || 'Ihrem Unternehmen' }} erfasst, haben die Registrierung aber noch nicht abgeschlossen.
-                  Geben Sie Ihre Telefonnummer ein, um einen neuen Registrierungslink per SMS zu erhalten.
+                  <template v-if="allowCustomerAccountActivation">
+                    Sie wurden von {{ brandName || 'Ihrem Unternehmen' }} erfasst, haben die Registrierung aber noch nicht abgeschlossen.
+                    Geben Sie Ihre Telefonnummer ein, um einen neuen Registrierungslink per SMS zu erhalten.
+                  </template>
+                  <template v-else>
+                    {{ brandName || 'Dieses Unternehmen' }} führt Kunden ohne Online-Login. Bitte kontaktiere uns direkt.
+                  </template>
                 </p>
               </div>
             </div>
-            <div class="flex gap-2">
+            <div v-if="allowCustomerAccountActivation" class="flex gap-2">
               <input
                 v-model="pendingAccount.phone"
                 type="tel"
@@ -341,7 +346,7 @@
 
         <!-- Footer Links -->
         <div class="mt-6 text-center">
-          <p class="text-sm text-gray-600">
+          <p v-if="allowPublicRegister" class="text-sm text-gray-600">
             Noch kein Account? 
             <NuxtLink :to="`/services/${tenantSlug}`" class="font-medium hover:underline" :style="{ color: primaryColor }">
               Registrieren
@@ -462,15 +467,18 @@
           <!-- Not Found: phone — suggest register -->
           <div v-if="resetNotFound === 'phone'" class="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
             <p class="text-sm text-amber-800 font-medium">Diese Telefonnummer ist bei uns nicht hinterlegt.</p>
-            <p class="text-sm text-amber-700">Noch kein Konto? Jetzt kostenlos registrieren.</p>
-            <NuxtLink
-              :to="`/register/${tenantSlug}`"
-              @click="showForgotPasswordModal = false"
-              class="block w-full py-2 px-4 rounded-lg font-medium text-sm text-center text-white transition-colors"
-              :style="{ background: primaryColor }"
-            >
-              Jetzt registrieren
-            </NuxtLink>
+            <template v-if="allowPublicRegister">
+              <p class="text-sm text-amber-700">Noch kein Konto? Jetzt kostenlos registrieren.</p>
+              <NuxtLink
+                :to="`/register/${tenantSlug}`"
+                @click="showForgotPasswordModal = false"
+                class="block w-full py-2 px-4 rounded-lg font-medium text-sm text-center text-white transition-colors"
+                :style="{ background: primaryColor }"
+              >
+                Jetzt registrieren
+              </NuxtLink>
+            </template>
+            <p v-else class="text-sm text-amber-700">Bitte kontaktiere {{ brandName || 'dein Unternehmen' }}.</p>
           </div>
 
           <!-- Success Message -->
@@ -632,6 +640,8 @@ const pendingAccount = ref({
   error: null as string | null,
   success: null as string | null
 })
+const allowPublicRegister = ref(true)
+const allowCustomerAccountActivation = ref(true)
 
 // Password Reset State
 const showForgotPasswordModal = ref(false)
@@ -1242,6 +1252,21 @@ onMounted(async () => {
   try {
     if (!currentTenantBranding.value) {
       await loadTenantBranding(tenantSlug.value)
+    }
+    try {
+      const policyRes = await $fetch<{
+        data?: {
+          bookingPolicy?: {
+            registration_account_mode?: 'hidden' | 'required'
+            allow_customer_account_activation?: boolean
+          }
+        }
+      }>('/api/booking/get-booking-init', { query: { slug: tenantSlug.value } })
+      const policy = policyRes?.data?.bookingPolicy
+      allowPublicRegister.value = policy?.registration_account_mode !== 'hidden'
+      allowCustomerAccountActivation.value = policy?.allow_customer_account_activation !== false
+    } catch {
+      /* keep defaults */
     }
     // Stay on /{slug} even if branding fails — `/` immediately becomes
     // the generic Simy /login and looks like a 1s "login switch".

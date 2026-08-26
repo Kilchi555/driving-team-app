@@ -13,6 +13,7 @@ import {
 } from '~/server/utils/sms-templates'
 import { getAccountAccessLink } from '~/server/utils/account-access-link'
 import { DEFAULT_BOOKING_POLICY } from '~/server/api/admin/booking-policy.get'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 
 export async function notifyCustomerAppointmentChange(opts: {
   tenantId: string
@@ -90,6 +91,7 @@ export async function notifyCustomerAppointmentChange(opts: {
         tenantId: opts.tenantId,
         tenantSlug: tenant.slug,
         userId: user.id,
+        omitAccountCta: user.onboarding_status === 'pending' && !allowsCustomerAccountActivation(policy),
         ...(opts.emailExtras || {}),
       })
       emailSent = true
@@ -111,7 +113,12 @@ export async function notifyCustomerAppointmentChange(opts: {
         hour: '2-digit',
         minute: '2-digit',
       })
-      const { url: accessUrl } = await getAccountAccessLink(supabase, user, tenant.slug || '')
+      const { url: accessUrl, canAccessAccount } = await getAccountAccessLink(
+        supabase,
+        user,
+        tenant.slug || '',
+        { policy }
+      )
       const length: SmsMessageLength = policy.sms_message_length === 'long' ? 'long' : 'short'
       const message =
         opts.type === 'cancelled'
@@ -121,7 +128,7 @@ export async function notifyCustomerAppointmentChange(opts: {
                 dateLabel,
                 timeLabel,
                 reason: opts.cancellationReason,
-                appLink: accessUrl,
+                appLink: canAccessAccount ? accessUrl : undefined,
               },
               length,
             )
@@ -130,7 +137,7 @@ export async function notifyCustomerAppointmentChange(opts: {
                 firstName: user.first_name || 'du',
                 dateLabel,
                 timeLabel,
-                appLink: accessUrl,
+                appLink: canAccessAccount ? accessUrl : undefined,
               },
               length,
             )

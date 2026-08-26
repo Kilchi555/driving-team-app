@@ -135,6 +135,20 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Found user:', { id: user.id, email: user.email, tenant_id: user.tenant_id })
 
+    const { data: onboardingTenant } = await supabaseAdmin
+      .from('tenants')
+      .select('booking_policy')
+      .eq('id', user.tenant_id)
+      .maybeSingle()
+    const { allowsCustomerAccountActivation } = await import('~/server/utils/customer-account-activation')
+    if (!allowsCustomerAccountActivation(onboardingTenant?.booking_policy)) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Online-Konto ist für diesen Betrieb nicht aktiviert. Bitte kontaktiere uns direkt.',
+        message: 'Online-Konto ist für diesen Betrieb nicht aktiviert. Bitte kontaktiere uns direkt.',
+      })
+    }
+
     try {
       const terms = await getTenantTerminology(supabaseAdmin, user.tenant_id)
       businessNoun = terms.businessNoun || businessNoun
