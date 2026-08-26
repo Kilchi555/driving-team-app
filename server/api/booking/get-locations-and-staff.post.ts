@@ -6,7 +6,7 @@
 // STRICT MODE: Only returns locations/staff combinations that are explicitly marked as online bookable in staff_locations table
 
 import { logger } from '~/utils/logger'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { bookableUserRoles, resolveLocationStaffAssignments } from '~/server/utils/bookable-locations'
 
 export default defineEventHandler(async (event) => {
@@ -22,18 +22,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const anonKey = process.env.SUPABASE_ANON_KEY
-
-    if (!anonKey) {
-      console.error('❌ SUPABASE_ANON_KEY not configured')
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    const supabase = createClient(supabaseUrl, anonKey)
+    // Public booking page has no session. Staff names must be read with
+    // service_role — anon can no longer SELECT users (PII leak closed).
+    const supabase = getSupabaseAdmin()
 
     logger.debug('📍 Fetching locations and staff:', { tenant_id, category_code })
 
@@ -82,7 +73,7 @@ export default defineEventHandler(async (event) => {
       // 3. Bookable people — staff only for Fahrschule; consulting also includes admin
       supabase
         .from('users')
-        .select('id, first_name, last_name, email, role, category, is_active, metadata')
+        .select('id, first_name, last_name, role, category, is_active, metadata')
         .eq('tenant_id', tenant_id)
         .in('role', bookableUserRoles(isEventTypeBooking))
         .eq('is_active', true)

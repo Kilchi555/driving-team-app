@@ -301,15 +301,27 @@
                 @mouseleave="hoveredCategoryId = null"
               >
                 <div
-                  :class="usesIllustratedCategoryIcon(mainCategory)
-                    ? 'text-center pt-1 sm:pt-2'
-                    : 'flex items-start gap-3 text-left'"
+                  :class="usesOfferCardLayout(mainCategory)
+                    ? 'flex items-center gap-4 text-left'
+                    : usesIllustratedCategoryIcon(mainCategory)
+                      ? 'text-center pt-1 sm:pt-2'
+                      : 'flex items-start gap-3 text-left'"
                 >
                   <div
                     v-if="mainCategory.icon_svg"
                     class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-3 sm:mb-4"
                   >
                     <div class="w-14 h-14 sm:w-20 sm:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="mainCategory.icon_svg"></div>
+                  </div>
+                  <div
+                    v-else-if="usesOfferCardLayout(mainCategory)"
+                    class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border"
+                    :style="getCategoryBadgeStyle(
+                      mainCategory,
+                      selectedMainCategory?.id === mainCategory.id || hoveredCategoryId === mainCategory.id
+                    )"
+                  >
+                    <span class="text-xl leading-none">{{ mainCategory.emoji || categoryDisplayName(mainCategory).charAt(0) }}</span>
                   </div>
                   <div
                     v-else
@@ -321,13 +333,13 @@
                     )"
                   >
                     <span
-                      class="font-bold leading-none text-center px-0.5 break-all"
+                      class="font-bold leading-none text-center px-0.5"
                       :class="categoryBadgeTextClass(mainCategory)"
                     >{{ categoryVisualLabel(mainCategory) }}</span>
                   </div>
                   <div :class="usesIllustratedCategoryIcon(mainCategory) ? 'min-w-0 px-1' : 'min-w-0 flex-1 overflow-hidden'">
-                    <h3 class="text-[15px] sm:text-base md:text-lg font-semibold text-gray-900 leading-snug break-words">{{ mainCategory.name }}</h3>
-                    <p v-if="mainCategory.description" class="text-sm text-gray-600 mt-1 leading-snug break-words">{{ mainCategory.description }}</p>
+                    <h3 class="text-[15px] sm:text-base md:text-lg font-semibold text-gray-900 leading-snug break-words">{{ categoryDisplayName(mainCategory) }}</h3>
+                    <p v-if="categorySecondaryText(mainCategory)" class="text-sm text-gray-600 mt-1 leading-snug break-words">{{ categorySecondaryText(mainCategory) }}</p>
                     <div v-if="categoryMetaBadges(mainCategory).length" class="mt-2 flex flex-wrap items-center gap-1.5">
                       <span
                         v-for="badge in categoryMetaBadges(mainCategory)"
@@ -398,8 +410,8 @@
                   >{{ categoryVisualLabel(subCategory) }}</span>
                 </div>
                 <div :class="usesIllustratedCategoryIcon(subCategory) ? 'min-w-0 px-1' : 'min-w-0 flex-1 overflow-hidden'">
-                  <h3 class="text-[15px] sm:text-base md:text-lg font-semibold text-gray-900 leading-snug break-words">{{ subCategory.name }}</h3>
-                  <p v-if="subCategory.description" class="text-sm text-gray-600 mt-1 leading-snug break-words">{{ subCategory.description }}</p>
+                  <h3 class="text-[15px] sm:text-base md:text-lg font-semibold text-gray-900 leading-snug break-words">{{ categoryDisplayName(subCategory) }}</h3>
+                  <p v-if="categorySecondaryText(subCategory)" class="text-sm text-gray-600 mt-1 leading-snug break-words">{{ categorySecondaryText(subCategory) }}</p>
                   <div v-if="categoryMetaBadges(subCategory).length" class="mt-2 flex flex-wrap items-center gap-1.5">
                     <span
                       v-for="badge in categoryMetaBadges(subCategory)"
@@ -1681,6 +1693,7 @@
     :selected-category="selectedCategory?.code"
     :tenant-id="currentTenant?.id"
     :primary-color="getBrandPrimary()"
+    :allow-register="bookingPolicy.registration_account_mode !== 'hidden'"
     @close="showLoginModal = false"
     @success="handleAuthSuccess"
   />
@@ -2316,6 +2329,7 @@ const bookingPolicy = computed(() => initData.value?.data?.bookingPolicy ?? {
   booking_optional_fields: ['email'],
   location_intake_modes: ['locations'],
   onboarding_sms_enabled: true,
+  registration_account_mode: 'required',
   ask_acquisition_source: false,
   require_payment_before_confirm: false,
 })
@@ -2391,7 +2405,7 @@ const selectedServiceType = ref<'fahrstunde' | 'theorie' | 'beratung'>('fahrstun
 const serviceTypes = computed(() => [
   {
     id: 'fahrstunde' as const,
-    icon: '🚗',
+    icon: isDrivingSchoolTenant.value ? '🚗' : '📅',
     label: bookingLabels.value.appointment,
     description: 'Direkt online buchen',
     badge: 'Sofort buchbar',
@@ -2420,6 +2434,11 @@ const serviceTypes = computed(() => [
  *  base_price rules, and hiding it entirely on a data hiccup would block booking. */
 const visibleServiceTypes = computed(() =>
   serviceTypes.value.filter(st => st.id === 'fahrstunde' || availableServiceTypes.value.includes(st.id))
+)
+
+/** Fahrschule: Fahrstunde/Theorie/Beratung. Alle anderen: dieser Schritt ist nur ein Dummy. */
+const skipServiceTypeStep = computed(() =>
+  !isDrivingSchoolTenant.value || visibleServiceTypes.value.length <= 1
 )
 
 const selectServiceType = (id: 'fahrstunde' | 'theorie' | 'beratung') => {
@@ -2920,7 +2939,7 @@ const mainCategories = computed(() =>
 )
 
 const usesEventTypeCategories = computed(() =>
-  categories.value.some((c: any) => c._source === 'event_type')
+  !isDrivingSchoolTenant.value || categories.value.some((c: any) => c._source === 'event_type')
 )
 
 const categoryStepTitle = computed(() =>
@@ -3013,14 +3032,38 @@ const getGridClasses = (itemCount: number) => {
 }
 
 const isCompactCategoryCode = (code: unknown) =>
-  typeof code === 'string' && code.length > 0 && code.length <= 4 && !/\s/.test(code)
+  typeof code === 'string' && code.length > 0 && code.length <= 4 && !/[_\s]/.test(code)
+
+const looksLikeInternalSlug = (value: unknown) =>
+  typeof value === 'string' && /_/.test(value)
+
+const categoryDisplayName = (category: any) => {
+  const name = String(category?.name || '').trim()
+  const code = String(category?.code || '').trim()
+  const description = String(category?.description || '').trim()
+  if (name && !looksLikeInternalSlug(name) && name !== code) return name
+  if (name && !looksLikeInternalSlug(name)) return name
+  if (description && !looksLikeInternalSlug(description)) return description
+  if (name) return name.replace(/_/g, ' ')
+  return code.replace(/_/g, ' ') || 'Angebot'
+}
+
+const categorySecondaryText = (category: any) => {
+  const display = categoryDisplayName(category)
+  const description = String(category?.description || '').trim()
+  if (description && description !== display && !looksLikeInternalSlug(description)) return description
+  return ''
+}
 
 const usesIllustratedCategoryIcon = (category: any) => Boolean(category?.icon_svg)
+
+const usesOfferCardLayout = (category: any) =>
+  !isDrivingSchoolTenant.value || category?._source === 'event_type'
 
 const categoryVisualLabel = (category: any) => {
   if (category?.emoji) return category.emoji
   if (isCompactCategoryCode(category?.code)) return category.code
-  const name = String(category?.name || '').trim()
+  const name = categoryDisplayName(category)
   return name ? name.charAt(0).toUpperCase() : '•'
 }
 
@@ -3591,6 +3634,10 @@ const selectDurationOption = async (duration: number) => {
 
   currentStep.value = 4
   saveBookingPrefs()
+
+  if (!isDrivingSchoolTenant.value && allDisplayableLocations.value.length === 1) {
+    await selectLocation(allDisplayableLocations.value[0])
+  }
 }
 
 // NEW: Load pricing for a duration
@@ -3861,6 +3908,10 @@ const selectMainCategory = async (category: any) => {
     }
     
     // Skip subcategory selection and go directly to duration selection
+    if (!isDrivingSchoolTenant.value && durationOptions.value.length === 1) {
+      await selectDurationOption(durationOptions.value[0])
+      return
+    }
     currentStep.value = 3
   } else {
     // Has subcategories - go to subcategory selection
@@ -4231,6 +4282,11 @@ const selectLocation = async (location: any) => {
       await selectInstructor(locked)
       return
     }
+  }
+
+  if (!isDrivingSchoolTenant.value && availableInstructors.value.length === 1) {
+    await selectInstructor(availableInstructors.value[0])
+    return
   }
 
   await waitForPressEffect()
@@ -5762,8 +5818,12 @@ const handleBackButton = async () => {
     }
   }
 
-  // On step 1, go back to step 0 (service selection)
+  // On step 1, go back to step 0 (service selection) — unless that step is skipped
   if (currentStep.value === 1) {
+    if (skipServiceTypeStep.value) {
+      goBackToReferrer()
+      return
+    }
     selectedServiceType.value = 'fahrstunde'
     currentStep.value = 0
   } else if (currentStep.value === 0) {
@@ -6422,6 +6482,18 @@ onMounted(async () => {
             isRestoringPrefs.value = false
           }
           if (!restoredFromHistory) await restoreBookingPrefs()
+          if (skipServiceTypeStep.value && currentStep.value === 0) {
+            selectedServiceType.value = 'fahrstunde'
+            currentStep.value = 1
+            const onlyOffer = mainCategories.value
+            if (
+              !isDrivingSchoolTenant.value
+              && onlyOffer.length === 1
+              && !(onlyOffer[0].children || []).length
+            ) {
+              await selectMainCategory(onlyOffer[0])
+            }
+          }
         }
       } else {
         console.error('❌ No tenant slug provided in URL')
