@@ -66,41 +66,6 @@ export function buildPdfStoragePath(
   return { filepath, filename: safeName }
 }
 
-const GERMAN_TRANSLIT: Record<string, string> = {
-  ä: 'ae',
-  ö: 'oe',
-  ü: 'ue',
-  Ä: 'Ae',
-  Ö: 'Oe',
-  Ü: 'Ue',
-  ß: 'ss',
-}
-
-/**
- * Supabase Storage rejects non-ASCII object keys (`InvalidKey`).
- * Course names like "Zürich-Altstetten" used to keep the umlaut and fail on upload.
- */
-export function sanitizeStorageFilename(filename: string): string {
-  const raw = String(filename || '').trim()
-  const lastDot = raw.lastIndexOf('.')
-  const hasExt = lastDot > 0 && lastDot < raw.length - 1
-  const ext = hasExt ? raw.slice(lastDot + 1) : ''
-  const base = hasExt ? raw.slice(0, lastDot) : raw
-
-  const toAscii = (value: string) =>
-    value
-      .replace(/[äöüÄÖÜß]/g, (ch) => GERMAN_TRANSLIT[ch] ?? '_')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^\w.-]+/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^[._-]+|[._-]+$/g, '')
-
-  const safeBase = toAscii(base) || 'file'
-  const safeExt = (toAscii(ext).replace(/_/g, '') || 'bin')
-  return `${safeBase}.${safeExt}`
-}
-
 export async function uploadPdfAndGetPublicUrl(
   supabase: { storage: any },
   opts: { folder: string; filename: string; pdfBuffer: Buffer }
