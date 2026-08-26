@@ -6,6 +6,8 @@ import { getSupabaseAdmin, getSupabaseServiceRole } from '~/utils/supabase'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { extractColorsFromImageBuffer } from '~/server/utils/extract-logo-colors'
+import { applyTenantBrandColors } from '~/server/utils/apply-tenant-brand-colors'
 
 interface UploadLogoRequest {
   tenantId: string
@@ -275,10 +277,20 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    let colors: { primary: string; secondary: string; accent: string } | null = null
+    if (assetType === 'logo' || assetType === 'logo_wide' || assetType === 'logo_square') {
+      const palette = await extractColorsFromImageBuffer(Buffer.from(fileData))
+      if (palette) {
+        colors = { primary: palette[0], secondary: palette[1], accent: palette[2] }
+        await applyTenantBrandColors(supabase, tenantId, colors)
+      }
+    }
+
     logger.debug('Logo uploaded successfully:', {
       tenantId,
       assetType,
-      url: publicUrl
+      url: publicUrl,
+      colors,
     })
 
     return {
@@ -290,7 +302,8 @@ export default defineEventHandler(async (event) => {
         url: publicUrl,
         format: ext,
         file_size_bytes: fileData.length
-      }
+      },
+      colors,
     }
   } catch (error) {
     logger.error('Error in tenant/upload-logo.post:', error)

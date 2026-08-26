@@ -129,7 +129,7 @@ export default defineEventHandler(async (event) => {
       lesson_duration_minutes: [Number(et.default_duration_minutes)],
       tenant_id: tenant.id,
       parent_category_id: null,
-      color: et.default_color || null,
+      color: tenant.primary_color || et.default_color || null,
       icon_svg: null,
       emoji: et.emoji || null,
       children: [],

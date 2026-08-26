@@ -209,10 +209,7 @@ export type LogoContext = keyof typeof logoContexts
 
 
 /**
- * Extracts brand colors from a logo image using K-means clustering.
- * Returns [primary, secondary, accent] as hex strings suitable for UI use
- * (primary is darkened when the logo color is too light for buttons/text),
- * or null if not enough color data.
+ * Preview helper — the server extracts and persists the same palette.
  */
 const DEFAULT_BRAND_PRIMARIES = new Set(['#3b82f6', '#2563eb', '#0f766e'])
 
@@ -232,130 +229,13 @@ export async function extractColorsFromFile(file: File): Promise<[string, string
 }
 
 export async function extractColorsFromLogo(dataUrl: string): Promise<[string, string, string] | null> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas')
-        canvas.width = 120
-        canvas.height = 120
-        const ctx = canvas.getContext('2d')!
-        ctx.drawImage(img, 0, 0, 120, 120)
-        const data = ctx.getImageData(0, 0, 120, 120).data
-
-        const pixels: [number, number, number][] = []
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3]
-          if (a < 128) continue
-          const lum = (r * 299 + g * 587 + b * 114) / 1000
-          if (lum > 218 || lum < 22) continue
-          if (_getSaturation(r, g, b) < 0.08) continue
-          pixels.push([r, g, b])
-        }
-
-        if (pixels.length < 10) { resolve(null); return }
-
-        const k = 3
-        let centroids: [number, number, number][] = [
-          pixels[0],
-          pixels[Math.floor(pixels.length / 2)],
-          pixels[pixels.length - 1],
-        ]
-
-        for (let iter = 0; iter < 12; iter++) {
-          const clusters: [number, number, number][][] = Array.from({ length: k }, () => [])
-          for (const px of pixels) {
-            let minD = Infinity, best = 0
-            centroids.forEach((c, i) => {
-              const d = _colorDistance(px[0], px[1], px[2], c[0], c[1], c[2])
-              if (d < minD) { minD = d; best = i }
-            })
-            clusters[best].push(px)
-          }
-          centroids = clusters.map((cluster, i) => {
-            if (cluster.length === 0) return centroids[i]
-            const s = cluster.reduce((a, p) => [a[0] + p[0], a[1] + p[1], a[2] + p[2]], [0, 0, 0])
-            return [Math.round(s[0] / cluster.length), Math.round(s[1] / cluster.length), Math.round(s[2] / cluster.length)] as [number, number, number]
-          })
-        }
-
-        centroids.sort((a, b) => _getSaturation(b[0], b[1], b[2]) - _getSaturation(a[0], a[1], a[2]))
-
-        const rawAccent = _rgbToHex(centroids[0][0], centroids[0][1], centroids[0][2])
-        const rawSecondary = _rgbToHex(centroids[1][0], centroids[1][1], centroids[1][2])
-        const rawTertiary = _rgbToHex(centroids[2][0], centroids[2][1], centroids[2][2])
-
-        resolve(_normalizeBrandPalette(rawAccent, rawSecondary, rawTertiary))
-      } catch {
-        resolve(null)
-      }
-    }
-    img.onerror = () => resolve(null)
-    img.src = dataUrl
-  })
-}
-
-/** Darken / diversify extracted logo colors so primary works for buttons & white text. */
-function _normalizeBrandPalette(c0: string, c1: string, c2: string): [string, string, string] {
-  const accent = c0
-  const primary = _ensureUiContrast(c0, 130)
-  let secondary = _ensureUiContrast(c1, 110)
-
-  // Monochrome logos often yield near-identical centroids — derive a darker secondary
-  if (_hexDistance(primary, secondary) < 35) {
-    secondary = _scaleHex(primary, 0.72)
+  try {
+    const res = await $fetch<{ colors: [string, string, string] | null }>('/api/brand/extract-colors', {
+      method: 'POST',
+      body: { logoData: dataUrl },
+    })
+    return res.colors
+  } catch {
+    return null
   }
-
-  let accentOut = c2
-  if (_hexDistance(accent, accentOut) < 25) {
-    accentOut = accent
-  }
-
-  return [primary, secondary, accentOut]
 }
-
-function _ensureUiContrast(hex: string, maxLum: number): string {
-  const [r, g, b] = _hexToRgb(hex)
-  let f = 1
-  while (_luminance(r * f, g * f, b * f) > maxLum && f > 0.35) f -= 0.05
-  return _rgbToHex(Math.round(r * f), Math.round(g * f), Math.round(b * f))
-}
-
-function _scaleHex(hex: string, factor: number): string {
-  const [r, g, b] = _hexToRgb(hex)
-  return _rgbToHex(Math.round(r * factor), Math.round(g * factor), Math.round(b * factor))
-}
-
-function _hexToRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.slice(1), 16)
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-}
-
-function _luminance(r: number, g: number, b: number): number {
-  return (r * 299 + g * 587 + b * 114) / 1000
-}
-
-function _hexDistance(a: string, b: string): number {
-  const [r1, g1, b1] = _hexToRgb(a)
-  const [r2, g2, b2] = _hexToRgb(b)
-  return _colorDistance(r1, g1, b1, r2, g2, b2)
-}
-
-function _rgbToHex(r: number, g: number, b: number): string {
-  return `#${Math.max(0, Math.min(255, r)).toString(16).padStart(2, '0')}${Math.max(0, Math.min(255, g)).toString(16).padStart(2, '0')}${Math.max(0, Math.min(255, b)).toString(16).padStart(2, '0')}`
-}
-function _colorDistance(r1: number, g1: number, b1: number, r2: number, g2: number, b2: number): number {
-  return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2)
-}
-function _getSaturation(r: number, g: number, b: number): number {
-  const rn = r / 255, gn = g / 255, bn = b / 255
-  const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn)
-  const l = (max + min) / 2
-  if (max === min) return 0
-  const d = max - min
-  return d / (l > 0.5 ? 2 - max - min : max + min)
-}
-
-
-
-
