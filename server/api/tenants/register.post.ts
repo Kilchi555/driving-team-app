@@ -142,6 +142,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
 
     let logoFile: File | null = null
     let logoSquareFile: File | null = null
+    let logoBuffer: Buffer | null = null
+    let logoSquareBuffer: Buffer | null = null
 
     // FormData-Felder verarbeiten
     logger.debug('🔍 Processing FormData fields:')
@@ -149,11 +151,13 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       logger.debug(`  Field: ${field.name}, Type: ${field.type}, Filename: ${field.filename}`)
       
       if (field.name === 'logo_file' && field.filename) {
+        logoBuffer = Buffer.from(field.data)
         logoFile = new File([field.data], field.filename, {
           type: field.type || 'image/jpeg'
         })
         logger.debug(`  ✅ Processed logo file: ${field.filename}`)
       } else if (field.name === 'logo_square_file' && field.filename) {
+        logoSquareBuffer = Buffer.from(field.data)
         logoSquareFile = new File([field.data], field.filename, {
           type: field.type || 'image/webp'
         })
@@ -197,6 +201,21 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     logger.debug('✅ Disposable email check passed')
 
     applyWebsiteOnlyDefaults(data)
+
+    const logoForColors = logoBuffer || logoSquareBuffer
+    if (logoForColors?.length) {
+      try {
+        const { extractColorsFromImageBuffer } = await import('~/server/utils/extract-logo-colors')
+        const palette = await extractColorsFromImageBuffer(logoForColors)
+        if (palette) {
+          data.primary_color = palette[0]
+          data.secondary_color = palette[1]
+          data.accent_color = palette[2]
+        }
+      } catch {
+        // Keep client-supplied colors when the image cannot be decoded
+      }
+    }
 
     // Validierung
     const validationError = validateTenantData(data)
@@ -1140,6 +1159,20 @@ async function copyDefaultDataToTenant(
     theoryEnabled,
     consultationEnabled,
   })
+
+  const { data: brand } = await supabase
+    .from('tenants')
+    .select('primary_color, secondary_color, accent_color')
+    .eq('id', tenantId)
+    .maybeSingle()
+  if (brand?.primary_color) {
+    const { applyTenantBrandColors } = await import('~/server/utils/apply-tenant-brand-colors')
+    await applyTenantBrandColors(supabase, tenantId, {
+      primary: brand.primary_color,
+      secondary: brand.secondary_color || brand.primary_color,
+      accent: brand.accent_color || brand.primary_color,
+    })
+  }
 
   // ── 3. Evaluation Categories (+ Criteria + Scale) ────────────────────────
   await applyEvaluationDefaults(supabase, tenantId, businessType)

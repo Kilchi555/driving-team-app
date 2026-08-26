@@ -2908,7 +2908,6 @@ import { ref, computed, onMounted, markRaw, watch, onUnmounted, h, nextTick } fr
 import { navigateTo, useRoute, useRouter } from '#app'
 import { logger } from '~/utils/logger'
 import { compressImage, validateImageFile } from '~/utils/imageCompression'
-import { extractColorsFromLogo } from '~/utils/logoUtils'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { usePrimaryColor } from '~/composables/usePrimaryColor'
 import { useUIStore } from '~/stores/ui'
@@ -4420,7 +4419,10 @@ const processLogoFile = async (file: File, logoType: 'square' | 'wide') => {
     formData.append('assetType', logoType === 'wide' ? 'logo_wide' : 'logo_square')
     formData.append('tenantId', tenantId)
 
-    const response = await $fetch<{ asset: { url: string } }>('/api/tenant/upload-logo', {
+    const response = await $fetch<{
+      asset: { url: string }
+      colors: { primary: string; secondary: string; accent: string } | null
+    }>('/api/tenant/upload-logo', {
       method: 'POST',
       body: formData
     })
@@ -4432,20 +4434,11 @@ const processLogoFile = async (file: File, logoType: 'square' | 'wide') => {
       brandingForm.value.logos.wide = publicUrl
     }
 
-    let colorsApplied = false
-    try {
-      const colors = await extractColorsFromLogo(compressedBase64)
-      if (colors) {
-        brandingForm.value.colors.primary = colors[0]
-        brandingForm.value.colors.secondary = colors[1]
-        brandingForm.value.colors.accent = colors[2]
-        await updateTenantBranding(tenantId, {
-          colors: { ...brandingForm.value.colors },
-        })
-        colorsApplied = true
-      }
-    } catch (colorErr) {
-      logger.warn('Could not extract colors from logo:', colorErr)
+    const colorsApplied = Boolean(response.colors)
+    if (response.colors) {
+      brandingForm.value.colors.primary = response.colors.primary
+      brandingForm.value.colors.secondary = response.colors.secondary
+      brandingForm.value.colors.accent = response.colors.accent
     }
 
     showSuccess(
