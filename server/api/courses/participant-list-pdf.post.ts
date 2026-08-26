@@ -67,6 +67,9 @@ export default defineEventHandler(async (event) => {
   let launchOptions: any
   if (isProduction) {
     const chromium = await getChromium()
+    if (typeof chromium.setGraphicsMode === 'function') {
+      chromium.setGraphicsMode(false)
+    }
     launchOptions = {
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
@@ -129,9 +132,13 @@ export default defineEventHandler(async (event) => {
       try { await browser.close() } catch { /* ignore */ }
     }
     logger.error('❌ Participant list PDF generation failed:', err)
+    const statusMessage = err?.statusMessage
+      || (err?.message && !/Invalid key|upload failed/i.test(err.message)
+        ? 'Teilnehmerliste konnte nicht gerendert werden'
+        : 'Teilnehmerliste konnte nicht erstellt werden')
     throw createError({
-      statusCode: 500,
-      statusMessage: `PDF generation failed: ${err?.message || 'unknown error'}`,
+      statusCode: err?.statusCode || 500,
+      statusMessage,
     })
   }
 })
