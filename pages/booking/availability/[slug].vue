@@ -292,7 +292,7 @@
                 v-for="mainCategory in mainCategories"
                 :key="mainCategory.id"
                 @click="selectMainCategory(mainCategory)"
-                class="group cursor-pointer rounded-2xl p-4 sm:p-5 transition-all duration-200 transform active:translate-y-0.5"
+                class="group min-w-0 w-full cursor-pointer rounded-2xl p-4 sm:p-5 transition-all duration-200 transform active:translate-y-0.5"
                 :style="getInteractiveCardStyle(
                   selectedMainCategory?.id === mainCategory.id || hoveredCategoryId === mainCategory.id,
                   hoveredCategoryId === mainCategory.id
@@ -303,7 +303,7 @@
                 <div
                   :class="usesIllustratedCategoryIcon(mainCategory)
                     ? 'text-center pt-1 sm:pt-2'
-                    : 'flex items-center gap-4 text-left'"
+                    : 'flex items-start gap-3 text-left'"
                 >
                   <div
                     v-if="mainCategory.icon_svg"
@@ -313,19 +313,22 @@
                   </div>
                   <div
                     v-else
-                    class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 transition-colors border"
+                    class="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 transition-colors border"
                     :class="usesIllustratedCategoryIcon(mainCategory) ? 'mx-auto mb-3 sm:mb-4' : ''"
                     :style="getCategoryBadgeStyle(
                       mainCategory,
                       selectedMainCategory?.id === mainCategory.id || hoveredCategoryId === mainCategory.id
                     )"
                   >
-                    <span class="text-2xl leading-none">{{ categoryVisualLabel(mainCategory) }}</span>
+                    <span
+                      class="font-bold leading-none text-center px-0.5 break-all"
+                      :class="categoryBadgeTextClass(mainCategory)"
+                    >{{ categoryVisualLabel(mainCategory) }}</span>
                   </div>
-                  <div :class="usesIllustratedCategoryIcon(mainCategory) ? '' : 'min-w-0 flex-1'">
-                    <h3 class="text-base sm:text-lg font-semibold text-gray-900">{{ mainCategory.name }}</h3>
-                    <p v-if="mainCategory.description" class="text-sm text-gray-600 mt-0.5 line-clamp-2">{{ mainCategory.description }}</p>
-                    <div v-if="categoryMetaBadges(mainCategory).length" class="mt-2.5 flex flex-wrap items-center gap-1.5">
+                  <div :class="usesIllustratedCategoryIcon(mainCategory) ? 'min-w-0 px-1' : 'min-w-0 flex-1 overflow-hidden'">
+                    <h3 class="text-[15px] sm:text-base md:text-lg font-semibold text-gray-900 leading-snug break-words">{{ mainCategory.name }}</h3>
+                    <p v-if="mainCategory.description" class="text-sm text-gray-600 mt-1 leading-snug break-words">{{ mainCategory.description }}</p>
+                    <div v-if="categoryMetaBadges(mainCategory).length" class="mt-2 flex flex-wrap items-center gap-1.5">
                       <span
                         v-for="badge in categoryMetaBadges(mainCategory)"
                         :key="badge.label"
@@ -336,7 +339,7 @@
                   </div>
                   <svg
                     v-if="!usesIllustratedCategoryIcon(mainCategory)"
-                    class="w-5 h-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5"
+                    class="w-5 h-5 shrink-0 text-gray-400 mt-1 transition-transform group-hover:translate-x-0.5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -361,7 +364,7 @@
               v-for="subCategory in selectedMainCategory?.children || []"
               :key="subCategory.id"
               @click="selectSubcategory(subCategory)"
-              class="group cursor-pointer rounded-2xl p-4 sm:p-5 transition-all duration-200 transform active:translate-y-0.5"
+              class="group min-w-0 w-full cursor-pointer rounded-2xl p-4 sm:p-5 transition-all duration-200 transform active:translate-y-0.5"
               :style="getInteractiveCardStyle(
                 selectedCategory?.id === subCategory.id || hoveredCategoryId === subCategory.id,
                 hoveredCategoryId === subCategory.id
@@ -372,7 +375,7 @@
               <div
                 :class="usesIllustratedCategoryIcon(subCategory)
                   ? 'text-center pt-1 sm:pt-2'
-                  : 'flex items-center gap-4 text-left'"
+                  : 'flex items-start gap-3 text-left'"
               >
                 <div
                   v-if="subCategory.icon_svg"
@@ -382,7 +385,7 @@
                 </div>
                 <div
                   v-else
-                  class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 transition-colors border"
+                  class="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 transition-colors border"
                   :class="usesIllustratedCategoryIcon(subCategory) ? 'mx-auto mb-3 sm:mb-4' : ''"
                   :style="getCategoryBadgeStyle(
                     subCategory,
@@ -390,14 +393,14 @@
                   )"
                 >
                   <span
-                    class="font-bold leading-none"
-                    :class="isCompactCategoryCode(subCategory.code) && !subCategory.emoji ? 'text-base sm:text-lg' : 'text-2xl'"
+                    class="font-bold leading-none text-center px-0.5 break-all"
+                    :class="categoryBadgeTextClass(subCategory)"
                   >{{ categoryVisualLabel(subCategory) }}</span>
                 </div>
-                <div :class="usesIllustratedCategoryIcon(subCategory) ? '' : 'min-w-0 flex-1'">
-                  <h3 class="text-base sm:text-lg font-semibold text-gray-900">{{ subCategory.name }}</h3>
-                  <p v-if="subCategory.description" class="text-sm text-gray-600 mt-0.5 line-clamp-2">{{ subCategory.description }}</p>
-                  <div v-if="categoryMetaBadges(subCategory).length" class="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <div :class="usesIllustratedCategoryIcon(subCategory) ? 'min-w-0 px-1' : 'min-w-0 flex-1 overflow-hidden'">
+                  <h3 class="text-[15px] sm:text-base md:text-lg font-semibold text-gray-900 leading-snug break-words">{{ subCategory.name }}</h3>
+                  <p v-if="subCategory.description" class="text-sm text-gray-600 mt-1 leading-snug break-words">{{ subCategory.description }}</p>
+                  <div v-if="categoryMetaBadges(subCategory).length" class="mt-2 flex flex-wrap items-center gap-1.5">
                     <span
                       v-for="badge in categoryMetaBadges(subCategory)"
                       :key="badge.label"
@@ -408,7 +411,7 @@
                 </div>
                 <svg
                   v-if="!usesIllustratedCategoryIcon(subCategory)"
-                  class="w-5 h-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5"
+                  class="w-5 h-5 shrink-0 text-gray-400 mt-1 transition-transform group-hover:translate-x-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1239,10 +1242,10 @@
                 <div
                   v-if="previewAdminFeeRappen > 0"
                   class="flex justify-between items-start text-sm font-medium"
-                  :class="(bookingDiscount || bookingCreditRappen > 0) ? 'text-gray-400' : 'text-gray-900'"
+                  :class="(bookingDiscount || creditAppliedPreviewRappen > 0) ? 'text-gray-400' : 'text-gray-900'"
                 >
                   <span>Zwischensumme:</span>
-                  <span :class="(bookingDiscount || bookingCreditRappen > 0) ? 'line-through' : ''">
+                  <span :class="(bookingDiscount || creditAppliedPreviewRappen > 0) ? 'line-through' : ''">
                     CHF {{ (previewGrossTotalRappen / 100).toFixed(2) }}
                   </span>
                 </div>
@@ -1250,21 +1253,41 @@
                   <span class="text-gray-600">Rabatt:</span>
                   <span class="font-medium text-green-700 text-right">– CHF {{ (bookingDiscount.discountAmountRappen / 100).toFixed(2) }}</span>
                 </div>
-                <div v-if="bookingCreditRappen > 0" class="flex justify-between items-start text-sm">
-                  <span class="text-gray-600">Guthaben:</span>
-                  <span class="font-medium text-right" :style="{ color: primaryColor }">– CHF {{ (Math.min(bookingCreditRappen, Math.max(0, previewGrossTotalRappen - (bookingDiscount?.discountAmountRappen ?? 0))) / 100).toFixed(2) }}</span>
-                </div>
+                <label
+                  v-if="bookingCreditRappen > 0"
+                  class="flex items-start justify-between gap-3 pt-1 cursor-pointer"
+                >
+                  <span class="flex items-start gap-2">
+                    <input
+                      v-model="applyAvailableCredit"
+                      type="checkbox"
+                      class="mt-0.5 rounded border-gray-300"
+                      :style="{ accentColor: primaryColor }"
+                    />
+                    <span>
+                      <span class="block text-sm text-gray-800">Guthaben verrechnen</span>
+                      <span class="block text-xs text-gray-500">Verfügbar CHF {{ (bookingCreditRappen / 100).toFixed(2) }}</span>
+                    </span>
+                  </span>
+                  <span
+                    v-if="creditAppliedPreviewRappen > 0"
+                    class="text-sm font-semibold whitespace-nowrap"
+                    :style="{ color: primaryColor }"
+                  >
+                    – CHF {{ (creditAppliedPreviewRappen / 100).toFixed(2) }}
+                  </span>
+                </label>
                 <div class="flex justify-between items-start text-sm font-semibold pt-1 border-t border-gray-100">
                   <span class="text-gray-800">Total:</span>
                   <span :class="effectiveBookingTotal === 0 ? 'text-green-700' : 'text-gray-900'">
                     {{ effectiveBookingTotal === 0 ? 'Kostenlos ✓' : `CHF ${(effectiveBookingTotal / 100).toFixed(2)}` }}
                   </span>
                 </div>
-                <div v-if="bookingCreditRappen > 0 && effectiveBookingTotal === 0" class="text-xs text-right" :style="{ color: primaryColor }">
-                  Wird automatisch mit deinem Guthaben bezahlt
+                <div v-if="creditAppliedPreviewRappen > 0 && effectiveBookingTotal === 0" class="text-xs text-right" :style="{ color: primaryColor }">
+                  Wird mit deinem Guthaben bezahlt
                 </div>
-                <div v-else-if="bookingCreditRappen > 0" class="text-xs text-right" :style="{ color: primaryColor }">
-                  CHF {{ (bookingCreditRappen / 100).toFixed(2) }} Guthaben wird verrechnet
+                <div v-else-if="creditAppliedPreviewRappen > 0" class="text-xs text-right" :style="{ color: primaryColor }">
+                  CHF {{ (creditAppliedPreviewRappen / 100).toFixed(2) }} Guthaben wird verrechnet
                 </div>
               </template>
             </div>
@@ -1273,7 +1296,7 @@
             <DiscountCodeInput
               v-if="previewPriceRappen > 0 && currentTenant?.id"
               :tenant-id="currentTenant.id"
-              :amount-rappen="previewPriceRappen"
+              :amount-rappen="previewGrossTotalRappen"
               :category-code="selectedCategory?.code"
               :primary-color="getBrandPrimary()"
               :initial-code="(route.query.code as string) || null"
@@ -1890,6 +1913,7 @@ import { useFeatures } from '~/composables/useFeatures'
 import { navigateTo } from '#app'
 import { getSupabase } from '~/utils/supabase'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
+import { snapDuration, type BookingPrefill } from '~/utils/booking-prefill'
 import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
 
 const cashVisibleForCustomer = ref(false)
@@ -2582,6 +2606,77 @@ const applyCategoryDeepLink = async (code: string) => {
   return true
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function prefillFromQuery(): Partial<BookingPrefill> {
+  const durationRaw = Number.parseInt(String(route.query.duration ?? ''), 10)
+  return {
+    category: normalizeCategoryQuery(route.query.category),
+    staffId: typeof route.query.staff === 'string' && UUID_RE.test(route.query.staff)
+      ? route.query.staff
+      : undefined,
+    locationId: typeof route.query.location === 'string' && UUID_RE.test(route.query.location)
+      ? route.query.location
+      : undefined,
+    durationMinutes: Number.isFinite(durationRaw) && durationRaw > 0 ? durationRaw : undefined,
+    pickupPlz: typeof route.query.pickup_plz === 'string' ? route.query.pickup_plz.trim() : undefined,
+    pickupAddress: typeof route.query.pickup_address === 'string'
+      ? String(route.query.pickup_address).trim().slice(0, 200)
+      : undefined,
+  }
+}
+
+/** Apply previous-appointment / URL prefill and jump as far as the data allows. */
+const applyAppointmentPrefill = async (prefs: Partial<BookingPrefill> | null | undefined) => {
+  if (!prefs?.category) return false
+  const ok = await applyCategoryDeepLink(prefs.category)
+  if (!ok) return false
+
+  const resolvedDuration = prefs.durationMinutes
+    ? snapDuration(prefs.durationMinutes, durationOptions.value)
+    : (durationOptions.value.length === 1 ? durationOptions.value[0] : null)
+
+  if (resolvedDuration) {
+    selectedDuration.value = resolvedDuration
+    filters.value.duration_minutes = resolvedDuration
+    currentStep.value = 4
+  } else if (!prefs.locationId && !prefs.pickupPlz && !prefs.staffId) {
+    return true
+  }
+
+  if (prefs.pickupPlz && /^\d{4}$/.test(prefs.pickupPlz)) {
+    pickupPLZ.value = prefs.pickupPlz
+    if (prefs.pickupAddress) pickupAddress.value = prefs.pickupAddress
+    await checkPickupAvailability()
+    if (pickupCheckResult.value?.available && selectedPickupLocation.value) {
+      await selectPickupOption()
+      if (prefs.staffId) {
+        const instructor = availableInstructors.value.find((i: any) => i.id === prefs.staffId)
+        if (instructor) await selectInstructor(instructor)
+      }
+      return true
+    }
+  }
+
+  if (prefs.locationId) {
+    const location = availableLocations.value.find((l: any) => l.id === prefs.locationId)
+    if (!location) {
+      currentStep.value = resolvedDuration ? 4 : currentStep.value
+      return true
+    }
+    await selectLocation(location)
+    if (prefs.staffId) {
+      const instructor = availableInstructors.value.find((i: any) => i.id === prefs.staffId)
+      if (instructor) {
+        await selectInstructor(instructor)
+      }
+    }
+    return true
+  }
+
+  return true
+}
+
 const restoreBookingPrefs = async () => {
   if (!process.client || !slug.value) return
   try {
@@ -2950,12 +3045,25 @@ const categoryMetaBadges = (category: any) => {
   return badges
 }
 
+const categoryBadgeTextClass = (category: any) => {
+  if (category?.emoji) return 'text-2xl'
+  const code = String(category?.code || '')
+  if (isCompactCategoryCode(code) && code.length >= 3) return 'text-xs sm:text-sm'
+  if (isCompactCategoryCode(code)) return 'text-lg sm:text-xl'
+  return 'text-xl sm:text-2xl'
+}
+
 const categoryChoiceGridClass = (itemCount: number, items: any[]) => {
   const illustrated = items.some((item) => usesIllustratedCategoryIcon(item))
-  if (!illustrated && itemCount <= 2) {
-    return 'grid grid-cols-1 gap-3 max-w-xl mx-auto'
+  if (illustrated) {
+    if (itemCount <= 1) return 'grid grid-cols-1 gap-3 max-w-md mx-auto'
+    if (itemCount === 2) return 'grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-3xl mx-auto'
+    return 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'
   }
-  return `grid ${getGridClasses(itemCount)} gap-3`
+  // Text / event-type cards need full width for long names.
+  // Keep 1 or 3 items in a single column so nothing sits alone in a 2-col row.
+  if (itemCount <= 1 || itemCount === 3) return 'grid grid-cols-1 gap-3 max-w-2xl mx-auto'
+  return 'grid grid-cols-1 lg:grid-cols-2 gap-3 max-w-5xl mx-auto items-stretch'
 }
 
 // Methods
@@ -4689,6 +4797,7 @@ const previewAdminFeeReason = ref<string | null>(null)
 const previewAppointmentNumber = ref<number | null>(null)
 const bookingDiscount = ref<{ code: string; discountAmountRappen: number; discountData: any } | null>(null)
 const bookingCreditRappen = ref(0)
+const applyAvailableCredit = ref(true)
 
 // Total (lesson + admin fee) before discount/credit are applied. Discount and
 // credit reduce from this gross total.
@@ -4697,9 +4806,15 @@ const previewTravelFeeLabel = ref<string | null>(null)
 
 const previewGrossTotalRappen = computed(() => previewPriceRappen.value + previewAdminFeeRappen.value + previewTravelFeeRappen.value)
 
+const creditAppliedPreviewRappen = computed(() => {
+  if (!applyAvailableCredit.value || bookingCreditRappen.value <= 0) return 0
+  const afterDiscount = Math.max(0, previewGrossTotalRappen.value - (bookingDiscount.value?.discountAmountRappen ?? 0))
+  return Math.min(bookingCreditRappen.value, afterDiscount)
+})
+
 const effectiveBookingTotal = computed(() => {
   const afterDiscount = Math.max(0, previewGrossTotalRappen.value - (bookingDiscount.value?.discountAmountRappen ?? 0))
-  return Math.max(0, afterDiscount - bookingCreditRappen.value)
+  return Math.max(0, afterDiscount - creditAppliedPreviewRappen.value)
 })
 
 const willHoldUntilPaid = computed(() =>
@@ -4723,6 +4838,7 @@ watch(currentStep, async (step) => {
   if (step === 7 && selectedSlot.value?.id && selectedCategory.value?.code && currentTenant.value?.id) {
     bookingDiscount.value = null
     bookingCreditRappen.value = 0
+    applyAvailableCredit.value = true
     previewAdminFeeRappen.value = 0
     previewAdminFeeReason.value = null
     previewTravelFeeRappen.value = 0
@@ -4770,7 +4886,10 @@ watch(currentStep, async (step) => {
     if (currentUserId) {
       try {
         const creditRes = await $fetch(`/api/student-credits/get-credit?user_id=${currentUserId}`) as any
-        bookingCreditRappen.value = creditRes?.data?.balance_rappen ?? 0
+        const raw = Number(creditRes?.data?.balance_rappen) || 0
+        const frozen = Number(creditRes?.data?.pending_withdrawal_rappen) || 0
+        bookingCreditRappen.value = Math.max(0, raw - frozen)
+        applyAvailableCredit.value = bookingCreditRappen.value > 0
       } catch {
         // not logged in or no credit record - fine
       }
@@ -4853,6 +4972,7 @@ const confirmBooking = async () => {
       marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
       marketing_attribution: (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined,
       payment_method: selectedPaymentMethod.value,
+      apply_available_credit: applyAvailableCredit.value,
     } as any)
 
     logger.debug('✅ Appointment created:', result.appointment_id)
@@ -4976,6 +5096,7 @@ const createAppointmentSecure = async (userData: any) => {
         marketing_session_id: userData.marketing_session_id,
         marketing_attribution: userData.marketing_attribution,
         payment_method: userData.payment_method,
+        apply_available_credit: userData.apply_available_credit !== false,
       }
     )
     
@@ -5251,6 +5372,9 @@ const submitGuestBooking = async () => {
         marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
         marketing_attribution: (typeof window !== 'undefined' && (window as any).__marketingAttribution) || undefined,
         payment_method: selectedPaymentMethod.value,
+        apply_available_credit: applyAvailableCredit.value,
+        discount_code: bookingDiscount.value?.code,
+        discount_amount_rappen: bookingDiscount.value?.discountAmountRappen ?? 0,
       },
     }) as any
 
@@ -6254,71 +6378,13 @@ onMounted(async () => {
             : null
         if (dateHint) preferredDateHint.value = dateHint
 
-        if (prefill === 'true' && route.query.category && route.query.staff && route.query.location && route.query.duration) {
-          logger.debug('🎯 Pre-filling booking from previous appointment:', {
-            category: route.query.category,
-            staff: route.query.staff,
-            location: route.query.location,
-            duration: route.query.duration
-          })
-
-          const found = findCategoryByCode(String(route.query.category))
-          const categoryToSelect = found?.cat
-
-          if (categoryToSelect) {
-            if (found?.parent) selectedMainCategory.value = found.parent
-            selectedServiceType.value = 'fahrstunde'
-            // Pre-select category (this loads staff and locations)
-            await selectSubcategory(categoryToSelect)
-            
-            // Pre-select duration
-            const durationValue = parseInt(route.query.duration as string)
-            if (durationOptions.value.includes(durationValue)) {
-              selectedDuration.value = durationValue
-              filters.value.duration_minutes = durationValue
-            }
-            
-            // Pre-select location
-            const locationToSelect = availableLocations.value.find(l => l.id === route.query.location)
-            if (locationToSelect) {
-              selectedLocation.value = locationToSelect
-              
-              // Filter instructors for this location
-              availableInstructors.value = locationToSelect.available_staff || []
-              
-              // Pre-select instructor
-              const instructorToSelect = availableInstructors.value.find(i => i.id === route.query.staff)
-              if (instructorToSelect) {
-                // Call the actual selectInstructor to load time slots
-                await selectInstructor(instructorToSelect)
-                
-                logger.debug('✅ Pre-filled all data, jumped to step 5 (time selection)')
-              } else {
-                console.warn('⚠️ Instructor not found, staying at step 3')
-                currentStep.value = 4
-              }
-            } else {
-              console.warn('⚠️ Location not found, staying at step 2')
-              currentStep.value = 2
-            }
-          }
-        } else if (prefill === 'partial' && route.query.category) {
-          const categoryParam = normalizeCategoryQuery(route.query.category)
-          logger.debug('🎯 Partial pre-fill: category and/or staff', categoryParam)
-          const ok = await applyCategoryDeepLink(categoryParam)
-          if (ok) {
-            logger.debug('✅ Pre-selected category from website teaser')
-            // Optional location from marketing teaser (location UUID)
-            const locId = route.query.location ? String(route.query.location) : ''
-            if (locId && availableLocations.value?.length) {
-              const locationToSelect = availableLocations.value.find((l: any) => l.id === locId)
-              if (locationToSelect) {
-                selectedLocation.value = locationToSelect
-                logger.debug('✅ Pre-selected location from website teaser')
-              }
-            }
-          } else {
-            console.warn('⚠️ Category not found for partial prefill:', categoryParam)
+        if ((prefill === 'true' || prefill === 'partial') && route.query.category) {
+          logger.debug('🎯 Pre-filling booking from previous appointment / deep link:', route.query)
+          isRestoringPrefs.value = true
+          try {
+            await applyAppointmentPrefill(prefillFromQuery())
+          } finally {
+            isRestoringPrefs.value = false
           }
         } else if (!prefill && lockedStaffId.value && route.query.category) {
           // ?staff=<handle>&category=<code> — pre-select category, staff auto-selects after location pick
@@ -6338,8 +6404,24 @@ onMounted(async () => {
           selectedServiceType.value = 'fahrstunde'
           currentStep.value = 1
         } else if (!prefill) {
-          // No URL-based prefill → restore last session from localStorage
-          await restoreBookingPrefs()
+          let restoredFromHistory = false
+          try {
+            const { data: sessionData } = await getSupabase().auth.getSession()
+            if (sessionData.session) {
+              const history = await $fetch<{ success?: boolean; prefill?: BookingPrefill | null }>(
+                '/api/customer/last-booking-prefs',
+              )
+              if (history?.prefill?.category) {
+                isRestoringPrefs.value = true
+                restoredFromHistory = await applyAppointmentPrefill(history.prefill)
+              }
+            }
+          } catch {
+            // Guest / no usable history — fall back to last browser session
+          } finally {
+            isRestoringPrefs.value = false
+          }
+          if (!restoredFromHistory) await restoreBookingPrefs()
         }
       } else {
         console.error('❌ No tenant slug provided in URL')

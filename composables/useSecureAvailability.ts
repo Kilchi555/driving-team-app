@@ -79,6 +79,8 @@ interface CreateAppointmentOptions {
   marketing_session_id?: string
   /** Customer-selected payment method — 'wallee' (default) or 'invoice' (only honored if tenant allows it). */
   payment_method?: 'wallee' | 'invoice'
+  /** Default true. When false, wallet credit is left unused. */
+  apply_available_credit?: boolean
   /** Decoded marketing attribution blob — used for server-side Google Ads conversion. */
   marketing_attribution?: {
     gclid?: string | null
@@ -204,6 +206,7 @@ export const useSecureAvailability = () => {
           marketing_session_id: options.marketing_session_id,
           marketing_attribution: options.marketing_attribution,
           payment_method: options.payment_method,
+          apply_available_credit: options.apply_available_credit !== false,
         }
       })
 

@@ -1,4 +1,5 @@
 import { logger } from '~/utils/logger'
+import { consumeGiftCardForPayment, giftCardCodeFromPaymentMetadata } from '~/server/utils/consume-gift-card'
 
 export type CreditPaymentInput = {
   id: string
@@ -15,6 +16,7 @@ export type CreditPaymentInput = {
     cancellation_charge_percentage?: number | null
     type?: string | null
   } | null
+  metadata?: { discount_code?: string | null } | null
 }
 
 export type CreditDueRow = CreditPaymentInput & {
@@ -39,6 +41,25 @@ export type ApplyStudentCreditResult = {
 }
 
 const OPEN_STATUSES = new Set(['pending', 'partial', 'processing', 'open'])
+
+export function availableWalletRappen(
+  row?: { balance_rappen?: number | null; pending_withdrawal_rappen?: number | null } | null
+): number {
+  const raw = Math.round(Number(row?.balance_rappen) || 0)
+  const frozen = Math.round(Number(row?.pending_withdrawal_rappen) || 0)
+  return Math.max(0, raw - frozen)
+}
+
+export function emptyCreditApplyResult(paymentIds: string[] = []): ApplyStudentCreditResult {
+  return {
+    credit_used_rappen: 0,
+    credit_remaining_rappen: 0,
+    allocations: [],
+    fully_covered_payment_ids: [],
+    remaining_payment_ids: paymentIds,
+    applied_by_payment_id: {},
+  }
+}
 
 export function remainingDueRappen(p: CreditPaymentInput): number {
   let fullDue = (p.total_amount_rappen || 0) - (p.credit_used_rappen || 0)
@@ -82,8 +103,13 @@ export async function applyStudentCreditToPayments(opts: {
   actorUserId: string
   studentUserId: string
   payments: CreditPaymentInput[]
+  apply?: boolean
 }): Promise<ApplyStudentCreditResult> {
-  const { supabase, tenantId, actorUserId, studentUserId, payments } = opts
+  const { supabase, tenantId, actorUserId, studentUserId, payments, apply = true } = opts
+
+  if (apply === false) {
+    return emptyCreditApplyResult(payments.map(p => p.id))
+  }
 
   if (!studentUserId) {
     throw new Error('No student on selected payments')
@@ -124,7 +150,7 @@ export async function applyStudentCreditToPayments(opts: {
 
   const rawBalance = creditRow?.balance_rappen || 0
   const frozen = creditRow?.pending_withdrawal_rappen || 0
-  const available = Math.max(0, rawBalance - frozen)
+  const available = availableWalletRappen(creditRow)
 
   if (available <= 0) {
     throw new Error('Kein verfügbares Guthaben')
@@ -196,6 +222,16 @@ export async function applyStudentCreditToPayments(opts: {
       await supabase.from('payments').update({ credit_transaction_id: tx.id }).eq('id', p.id)
     }
 
+    if (alloc.fully_covered) {
+      await consumeGiftCardForPayment({
+        supabase,
+        tenantId,
+        paymentId: p.id,
+        redeemedBy: studentUserId,
+        discountCode: giftCardCodeFromPaymentMetadata(p.metadata),
+      })
+    }
+
     if (alloc.fully_covered && p.appointment_id) {
       await supabase
         .from('appointments')
@@ -250,4 +286,118 @@ export async function applyStudentCreditToPayments(opts: {
     remaining_payment_ids: remainingPaymentIds,
     applied_by_payment_id: appliedByPaymentId,
   }
+}
+
+/** Booking/checkout wrapper: never fail the sale if the wallet is empty. */
+export async function applyRequestedStudentCredit(opts: {
+  supabase: any
+  tenantId: string
+  actorUserId: string
+  studentUserId: string
+  payment: CreditPaymentInput
+  apply?: boolean
+}): Promise<{ remaining_due_rappen: number; applied_rappen: number }> {
+  const dueBefore = remainingDueRappen(opts.payment)
+  if (opts.apply === false || dueBefore <= 0 || !opts.studentUserId) {
+    return { remaining_due_rappen: dueBefore, applied_rappen: 0 }
+  }
+
+  try {
+    const applied = await applyStudentCreditToPayments({
+      supabase: opts.supabase,
+      tenantId: opts.tenantId,
+      actorUserId: opts.actorUserId,
+      studentUserId: opts.studentUserId,
+      payments: [opts.payment],
+    })
+    return {
+      remaining_due_rappen: Math.max(0, dueBefore - applied.credit_used_rappen),
+      applied_rappen: applied.credit_used_rappen,
+    }
+  } catch (err: any) {
+    if (err?.message === 'Kein verfügbares Guthaben') {
+      return { remaining_due_rappen: dueBefore, applied_rappen: 0 }
+    }
+    throw err
+  }
+}
+
+/** Put wallet credit back when a pending booking hold is released. */
+export async function refundStudentCreditFromPayment(opts: {
+  supabase: any
+  tenantId: string
+  payment: {
+    id: string
+    user_id?: string | null
+    credit_used_rappen?: number | null
+    appointment_id?: string | null
+  }
+  actorUserId?: string | null
+  notes?: string
+}): Promise<number> {
+  const amount = Math.round(Number(opts.payment.credit_used_rappen) || 0)
+  const userId = opts.payment.user_id
+  if (amount <= 0 || !userId) return 0
+
+  const { data: creditRow } = await opts.supabase
+    .from('student_credits')
+    .select('id, balance_rappen')
+    .eq('user_id', userId)
+    .eq('tenant_id', opts.tenantId)
+    .maybeSingle()
+
+  const current = creditRow?.balance_rappen || 0
+  const next = current + amount
+  const now = new Date().toISOString()
+
+  if (creditRow?.id) {
+    const { error } = await opts.supabase
+      .from('student_credits')
+      .update({ balance_rappen: next, updated_at: now })
+      .eq('id', creditRow.id)
+    if (error) {
+      logger.error('refundStudentCredit: wallet update failed', error)
+      throw new Error('Guthaben konnte nicht zurückgebucht werden')
+    }
+  } else {
+    const { error } = await opts.supabase
+      .from('student_credits')
+      .upsert({
+        user_id: userId,
+        tenant_id: opts.tenantId,
+        balance_rappen: next,
+        updated_at: now,
+      }, { onConflict: 'user_id,tenant_id' })
+    if (error) {
+      logger.error('refundStudentCredit: wallet upsert failed', error)
+      throw new Error('Guthaben konnte nicht zurückgebucht werden')
+    }
+  }
+
+  const { error: txErr } = await opts.supabase.from('credit_transactions').insert({
+    user_id: userId,
+    tenant_id: opts.tenantId,
+    transaction_type: 'refund',
+    amount_rappen: amount,
+    balance_before_rappen: current,
+    balance_after_rappen: next,
+    payment_method: 'credit',
+    reference_id: opts.payment.appointment_id || opts.payment.id,
+    reference_type: opts.payment.appointment_id ? 'appointment' : 'payment',
+    created_by: opts.actorUserId || null,
+    notes: opts.notes || `Guthaben-Rückbuchung (Payment ${opts.payment.id})`,
+    status: 'completed',
+    created_at: now,
+  })
+  if (txErr) {
+    logger.warn('refundStudentCredit: transaction log failed', txErr)
+  }
+
+  await opts.supabase
+    .from('payments')
+    .update({ credit_used_rappen: 0, updated_at: now })
+    .eq('id', opts.payment.id)
+    .eq('tenant_id', opts.tenantId)
+
+  return amount
 }
