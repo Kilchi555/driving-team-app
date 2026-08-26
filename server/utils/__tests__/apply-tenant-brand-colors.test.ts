@@ -22,12 +22,12 @@ function mockSupabase(opts: {
   previousSecondary?: string | null
   eventTypes: Array<{ id: string; default_color: string }>
 }) {
-  const calls: Array<{ table: string; op: string; payload?: any; ids?: string[] }> = []
+  const calls: Array<{ table: string; op: string; payload?: Record<string, unknown>; ids?: string[] }> = []
   return {
     calls,
     from(table: string) {
       return {
-        update(payload: any) {
+        update(payload: Record<string, unknown>) {
           return {
             eq: async () => {
               calls.push({ table, op: 'update', payload })
