@@ -341,6 +341,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: websiteError.message })
   }
 
+  if (landing.brand.primary) {
+    const { applyTenantBrandColors } = await import('~/server/utils/apply-tenant-brand-colors')
+    await applyTenantBrandColors(supabase, user.tenant_id, {
+      primary: landing.brand.primary,
+      secondary: landing.brand.secondary || landing.brand.primary,
+      accent: landing.brand.accent || landing.brand.primary,
+    }, {
+      previousColors: [tenant.primary_color, tenant.secondary_color, tenant.accent_color],
+    })
+  }
+
   const previewUrl = `${siteUrl}?preview=1`
   const liveUrl =
     website.custom_domain_verified && website.custom_domain

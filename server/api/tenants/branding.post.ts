@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
     // Verify tenant exists and is active
     const { data: existingTenant, error: tenantError } = await supabaseAdmin
       .from('tenants')
-      .select('id, name, is_active')
+      .select('id, name, is_active, primary_color, secondary_color, accent_color')
       .eq('id', tenantId)
       .single()
 
@@ -371,20 +371,18 @@ export default defineEventHandler(async (event) => {
     }
 
     if (typeof sanitizedUpdate.primary_color === 'string') {
-      const { isStockEventTypeColor } = await import('~/server/utils/stock-event-type-color')
-      const { data: eventTypes } = await supabaseAdmin
-        .from('event_types')
-        .select('id, default_color')
-        .eq('tenant_id', tenantId)
-      const stockIds = (eventTypes || [])
-        .filter((et: { default_color?: string | null }) => isStockEventTypeColor(et.default_color))
-        .map((et: { id: string }) => et.id)
-      if (stockIds.length > 0) {
-        await supabaseAdmin
-          .from('event_types')
-          .update({ default_color: sanitizedUpdate.primary_color, updated_at: sanitizedUpdate.updated_at })
-          .in('id', stockIds)
-      }
+      const { applyTenantBrandColors } = await import('~/server/utils/apply-tenant-brand-colors')
+      await applyTenantBrandColors(supabaseAdmin, tenantId, {
+        primary: sanitizedUpdate.primary_color,
+        secondary: sanitizedUpdate.secondary_color || updatedTenant.secondary_color,
+        accent: sanitizedUpdate.accent_color || updatedTenant.accent_color || sanitizedUpdate.primary_color,
+      }, {
+        previousColors: [
+          existingTenant.primary_color,
+          existingTenant.secondary_color,
+          existingTenant.accent_color,
+        ],
+      })
     }
 
     // ============ LAYER 8: AUDIT LOGGING ============
