@@ -193,7 +193,7 @@
           </details>
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Brauche ich für A1 ein eigenes Motorrad?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Für die Praktische Grundschulung stellt die Fahrschule Fahrzeuge bereit. Für Fahrstunden im Strassenverkehr benötigst du ein eigenes betriebssicheres Motorrad (A1-konform) – oder du fragst uns nach Optionen. Auf Anfrage haben wir in Zürich Schulfahrzeuge.</p>
+            <p class="text-gray-600 mt-4 text-sm leading-relaxed">Ja. Für Fahrstunden und Grundkurs brauchst du ein eigenes betriebssicheres A1-Motorrad sowie eigenen Helm und Schutzausrüstung.</p>
           </details>
           <details class="bg-white border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Was kostet der A1 Motorrad Führerschein in der Schweiz?<span class="text-primary-500 group-open:rotate-180 transition">▼</span></summary>
