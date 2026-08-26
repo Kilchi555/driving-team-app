@@ -195,7 +195,7 @@ async function uploadFile(file: File, assetType: string) {
       message: t('admin.branding.uploadSuccess')
     }
 
-    emit('uploadComplete', response.asset)
+    emit('uploadComplete', response)
 
     // Clear status after 3 seconds
     setTimeout(() => {
