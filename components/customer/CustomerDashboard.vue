@@ -1100,6 +1100,7 @@ import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useTerminology } from '~/composables/useTerminology'
 import { useTenant } from '~/composables/useTenant'
 import { replacePlaceholders } from '~/utils/reglementPlaceholders'
+import { bookingPrefillToQuery, deriveBookingPrefill, type BookingPrefill } from '~/utils/booking-prefill'
 import { checkFeatureFlag } from '~/utils/featureFlags'
 import { useFeatures } from '~/composables/useFeatures'
 import ProfileModal from './ProfileModal.vue'
@@ -1747,10 +1748,30 @@ const navigateToPayments = async () => {
 }
 
 const navigateToLessonBooking = async () => {
-  // Navigate to booking availability page with tenant slug
   const tenantSlug = getTenantSlugOrAbort('navigateToLessonBooking')
   if (!tenantSlug) return
-  await navigateTo(`/booking/availability/${tenantSlug}`)
+
+  let query: Record<string, string> = {}
+  try {
+    const fromHistory = deriveBookingPrefill(appointments.value)
+    if (fromHistory) {
+      query = bookingPrefillToQuery(fromHistory)
+    } else {
+      const response = await $fetch<{ success?: boolean; prefill?: BookingPrefill | null }>(
+        '/api/customer/last-booking-prefs',
+      )
+      if (response?.prefill?.category) {
+        query = bookingPrefillToQuery(response.prefill)
+      }
+    }
+  } catch (err) {
+    logger.warn('⚠️ Could not derive booking prefill from previous appointments:', err)
+  }
+
+  await navigateTo({
+    path: `/booking/availability/${tenantSlug}`,
+    query,
+  })
 }
 
 const navigateToCourseBooking = async () => {
