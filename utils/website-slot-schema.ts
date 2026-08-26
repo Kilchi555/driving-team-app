@@ -478,7 +478,7 @@ function validateSlotValue(slot: SlotDef, raw: unknown): string {
   if (raw == null) {
     throw createSlotError(slot.id, 'Wert fehlt')
   }
-  const str = String(raw).trim()
+  let str = String(raw).trim()
 
   if (slot.kind === 'enum') {
     if (!slot.enumValues?.includes(str)) {
