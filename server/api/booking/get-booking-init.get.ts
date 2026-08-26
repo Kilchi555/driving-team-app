@@ -6,6 +6,7 @@
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { DEFAULT_BOOKING_POLICY, normalizeLocationIntakeModes, normalizeRegistrationFieldMode, normalizeRegistrationAccountMode } from '~/server/api/admin/booking-policy.get'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { parsePaymentSettings } from '~/server/utils/tenant-default-payment-method'
 
@@ -168,6 +169,7 @@ export default defineEventHandler(async (event) => {
     onboarding_email_enabled: rawPolicy.onboarding_email_enabled ?? DEFAULT_BOOKING_POLICY.onboarding_email_enabled,
     ask_acquisition_source: rawPolicy.ask_acquisition_source === true,
     require_payment_before_confirm: rawPolicy.require_payment_before_confirm === true,
+    allow_customer_account_activation: allowsCustomerAccountActivation(rawPolicy),
   }
 
   // Strip booking_policy from tenant object before returning (avoid leaking internal settings)

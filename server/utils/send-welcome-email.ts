@@ -26,6 +26,7 @@ import {
   escapeHtml,
 } from '~/server/utils/branded-email'
 import { SAAS_TRIAL_LABEL } from '~/utils/saas-trial'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 
 export type WelcomeEmailRole = 'client' | 'staff' | 'admin'
 
@@ -57,13 +58,14 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
   let domainVerified = params.tenantDomainVerified ?? false
   let logoUrl: string | null = null
   let businessType = params.businessType ?? null
+  let bookingPolicy: Record<string, any> | null = null
 
   // Always fetch tenant branding when anything is missing (incl. logo)
   {
     const supabase = getSupabaseAdmin()
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, slug, primary_color, from_email, resend_domain_verified, logo_wide_url, logo_url, logo_square_url, business_type')
+      .select('name, slug, primary_color, from_email, resend_domain_verified, logo_wide_url, logo_url, logo_square_url, business_type, booking_policy')
       .eq('id', tenantId)
       .single()
 
@@ -77,6 +79,7 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
     const rawLogoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
     // Skip base64 data URIs – they bloat the email to 100KB+ and cause bounces
     logoUrl = rawLogoUrl?.startsWith('data:') ? null : rawLogoUrl
+    bookingPolicy = (tenant as any)?.booking_policy ?? null
   }
 
   const terms = await getTenantTerminology(getSupabaseAdmin(), tenantId)
@@ -103,7 +106,16 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
       fromName: safeTenantName,
       fromEmail,
       domainVerified,
-      html: buildUserHtml(role, firstName, safeTenantName, primaryColor, loginUrl, logoUrl, terms),
+      html: buildUserHtml(
+        role,
+        firstName,
+        safeTenantName,
+        primaryColor,
+        loginUrl,
+        logoUrl,
+        terms,
+        role !== 'client' || allowsCustomerAccountActivation(bookingPolicy),
+      ),
     })
   }
 
@@ -192,6 +204,7 @@ function buildUserHtml(
   loginUrl: string,
   logoUrl: string | null = null,
   terms: Terminology = getTerminologyDefaults('driving_school'),
+  includeAppStore = true,
 ): string {
   const isStaff = role === 'staff'
   const name = displayName(tenantName)
@@ -234,7 +247,7 @@ function buildUserHtml(
     <p style="color:#9ca3af;font-size:12px;margin:0;text-align:center;">
       Oder öffne: <a href="${escapeAttr(loginUrl)}" style="color:${primaryColor};">${escapeHtml(loginUrl)}</a>
     </p>
-    ${emailAppStoreBlock()}
+    ${emailAppStoreBlock('Simy auch als iPhone-App verfügbar', includeAppStore)}
     ${emailSignature(tenantName, null, primaryColor)}
   `
 

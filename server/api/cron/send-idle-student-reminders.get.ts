@@ -176,7 +176,9 @@ export default defineEventHandler(async (event) => {
         }
 
         if (sendEmail && student.email) {
-          const access = await getAccountAccessLink(supabase, student, slug)
+          const access = await getAccountAccessLink(supabase, student, slug, {
+            policy: tenant.booking_policy,
+          })
           const pauseUrl = buildIdleStopUrl(student.id)
           const email = buildIdleStudentClientEmail({
             student,
@@ -185,7 +187,7 @@ export default defineEventHandler(async (event) => {
             primaryColor,
             logoUrls: tenant,
             bookingUrl,
-            accountUrl: access.url,
+            accountUrl: access.canAccessAccount ? access.url : '',
             pauseUrl,
             contactEmail: tenant.contact_email,
             idleDays: settings.idleDays,

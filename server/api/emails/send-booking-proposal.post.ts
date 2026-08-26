@@ -16,6 +16,12 @@ import {
   emailStatusBox,
   escapeHtml,
 } from '~/server/utils/branded-email'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
+import {
+  customerPreferredContactIntro,
+  isPreferredContactNoteLine,
+  parsePreferredContactFromNotes,
+} from '~/utils/preferred-contact-method'
 
 interface BookingProposalEmailRequest {
   proposalId: string
@@ -228,6 +234,7 @@ function cleanNotes(notes: string | null | undefined): string {
       if (/^Abholort:/i.test(line)) return false
       if (/^Geburtsdatum:/i.test(line)) return false
       if (/^Beruf:/i.test(line)) return false
+      if (isPreferredContactNoteLine(line)) return false
       return true
     })
     .join('\n')
@@ -283,6 +290,7 @@ function buildProposalDetailRowsHtml(
   const notesClean = cleanNotes(proposal.notes)
   const birthdate = extractTaggedValue(proposal.notes, 'Geburtsdatum')
   const profession = extractTaggedValue(proposal.notes, 'Beruf')
+  const preferredContact = parsePreferredContactFromNotes(proposal.notes)
 
   if (fullName) rows.push(emailDetailRow('Name', escapeHtml(fullName)))
   if (proposal.email) {
@@ -291,6 +299,7 @@ function buildProposalDetailRowsHtml(
   if (proposal.phone) {
     rows.push(emailDetailRow('Telefon', `<a href="tel:${escapeHtml(proposal.phone)}" style="color:${primary}">${escapeHtml(proposal.phone)}</a>`))
   }
+  if (preferredContact) rows.push(emailDetailRow('Bevorzugter Kontakt', escapeHtml(preferredContact)))
   if (birthdate) rows.push(emailDetailRow('Geburtsdatum', escapeHtml(birthdate)))
   if (profession) rows.push(emailDetailRow('Beruf', escapeHtml(profession)))
 
@@ -357,6 +366,8 @@ function buildCustomerEmail(
   if (proposal.category_code) customerRows.push(emailDetailRow(terms.categoryLabel, escapeHtml(proposal.category_code)))
   if (proposal.duration_minutes) customerRows.push(emailDetailRow('Dauer', `${escapeHtml(String(proposal.duration_minutes))} Minuten`))
   customerRows.push(emailDetailRow('Anfrage-Art', escapeHtml(intakeModeLabel(intakeMode))))
+  const preferredContact = parsePreferredContactFromNotes(proposal.notes)
+  if (preferredContact) customerRows.push(emailDetailRow('Bevorzugter Kontakt', escapeHtml(preferredContact)))
   if (intakeMode === 'locations' && location?.name) {
     customerRows.push(emailDetailRow('Standort', `${escapeHtml(location.name)}${location.address ? ` (${escapeHtml(location.address)})` : ''}`))
   }
@@ -389,13 +400,14 @@ function buildCustomerEmail(
     titleColor: '#166534',
     bodyColor: '#166534',
     title: 'Anfrage erhalten',
-    bodyHtml: `Deine Anfrage wurde am ${escapeHtml(createdDate)} erhalten. Wir melden uns in Kürze${contactHint ? ` unter ${contactHint}` : ''}.`,
+    bodyHtml: `Deine Anfrage wurde am ${escapeHtml(createdDate)} erhalten. Wir melden uns in Kürze${preferredContact ? ` per ${escapeHtml(preferredContact)}` : ''}${contactHint ? ` unter ${contactHint}` : ''}.`,
   })
 
   const intro =
-    intakeMode === 'callback'
+    customerPreferredContactIntro(preferredContact)
+    || (intakeMode === 'callback'
       ? 'vielen Dank für deine Anfrage! Wir rufen dich in Kürze zurück.'
-      : 'vielen Dank für deine Buchungsanfrage! Wir haben deine Angaben erhalten und melden uns in Kürze bei dir.'
+      : 'vielen Dank für deine Buchungsanfrage! Wir haben deine Angaben erhalten und melden uns in Kürze bei dir.')
 
   const bodyHtml = `
     <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">Hallo ${escapeHtml(proposal.first_name || '')},</p>
@@ -403,7 +415,7 @@ function buildCustomerEmail(
     ${details}
     ${status}
     ${emailSignature(tenantName, tenant?.contact_email, primary)}
-    ${emailAppointmentAppStoreBlock()}
+    ${emailAppointmentAppStoreBlock(allowsCustomerAccountActivation(tenant?.booking_policy))}
   `
 
   return {
@@ -531,18 +543,22 @@ function buildGeneralInquiryCustomerEmail(proposal: any, tenant: any) {
   const primary = tenant?.primary_color || '#2563eb'
   const tenantName = tenant?.name || 'Simy'
   const notesClean = cleanNotes(proposal.notes)
+  const preferredContact = parsePreferredContactFromNotes(proposal.notes)
+  const intro = customerPreferredContactIntro(preferredContact)
+    || `vielen Dank für deine Anfrage bei <strong>${displayName(tenantName)}</strong>. Wir melden uns bald bei dir.`
 
   const details = emailDetailBox(primary, [
     emailDetailRow('Eingegangen', escapeHtml(createdDate)),
+    preferredContact ? emailDetailRow('Bevorzugter Kontakt', escapeHtml(preferredContact)) : '',
     notesClean ? emailDetailRow('Deine Nachricht', escapeHtml(notesClean)) : '',
   ].join(''))
 
   const bodyHtml = `
     <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">Hallo ${escapeHtml(proposal.first_name || '')},</p>
-    <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">vielen Dank für deine Anfrage bei <strong>${displayName(tenantName)}</strong>. Wir melden uns bald bei dir.</p>
+    <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 20px 0;">${intro}</p>
     ${details}
     ${emailSignature(tenantName, tenant?.contact_email, primary)}
-    ${emailAppointmentAppStoreBlock()}
+    ${emailAppointmentAppStoreBlock(allowsCustomerAccountActivation(tenant?.booking_policy))}
   `
 
   return {
