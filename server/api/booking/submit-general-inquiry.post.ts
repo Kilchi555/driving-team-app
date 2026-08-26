@@ -16,8 +16,12 @@ import { normalizePhoneNumber } from '~/server/utils/sms'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
-import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
-
+import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
+import {
+  PREFERRED_CONTACT_OPTIONS,
+  isPreferredContactMethod,
+  upsertPreferredContactNote,
+} from '~/utils/preferred-contact-method'
 interface MarketingAttributionPayload {
   gclid?: string | null
   gbraid?: string | null
@@ -273,6 +277,7 @@ export default defineEventHandler(async (event) => {
       notes,
       created_by_user_id,
       preferred_time_slots = [],
+      preferred_contact_method,
       marketing_session_id,
       marketing_attribution,
       _hp,
@@ -422,6 +427,29 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Optional: old clients /register may omit this. New form always sends a whitelist value.
+    const contactMethod = isPreferredContactMethod(preferred_contact_method) ? preferred_contact_method : null
+    if (preferred_contact_method && !contactMethod) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Ungültiger Kontaktkanal',
+      })
+    }
+    if (contactMethod) {
+      const methodOpt = PREFERRED_CONTACT_OPTIONS.find(opt => opt.value === contactMethod)
+      if (methodOpt?.requires === 'phone' && !fieldValues.phone) {
+        throw createError({ statusCode: 400, statusMessage: 'Telefon ist für diesen Kontaktkanal nötig' })
+      }
+      if (methodOpt?.requires === 'email' && !fieldValues.email) {
+        throw createError({ statusCode: 400, statusMessage: 'E-Mail ist für diesen Kontaktkanal nötig' })
+      }
+    }
+
+    let storedNotes = notes?.trim() || null
+    if (contactMethod) {
+      storedNotes = upsertPreferredContactNote(storedNotes, contactMethod)
+    }
+
     // Validate location/category only when a location was provided
     if (category_code && location_id) {
       const { data: location, error: locationError } = await supabase
@@ -476,6 +504,23 @@ export default defineEventHandler(async (event) => {
       fields: fieldValues,
     })
 
+    if (resolvedUserId) {
+      try {
+        await stampFirstTouchAcquisition({
+          userId: resolvedUserId,
+          tenantId: tenant_id,
+          email: fieldValues.email,
+          phone: fieldValues.phone,
+          attribution: resolvedAttribution,
+          marketingSessionId: marketing_session_id,
+          fallbackSource: 'organic/direct',
+          fallbackMedium: 'organic',
+        })
+      } catch (err: any) {
+        console.warn('⚠️ Inquiry first-touch stamp failed (non-critical):', err?.message ?? err)
+      }
+    }
+
     // Admin client: anon has INSERT but no SELECT on booking_proposals, so
     // insert().select() fails RLS; also needed once created_by_user_id is set.
     const supabaseAdmin = getSupabaseAdmin()
@@ -496,7 +541,7 @@ export default defineEventHandler(async (event) => {
         house_number: fieldValues.street_nr || null,
         postal_code: fieldValues.zip || null,
         city: fieldValues.city || null,
-        notes: notes?.trim() || null,
+        notes: storedNotes,
         created_by_user_id: resolvedUserId,
         status: 'pending',
         marketing_session_id: marketing_session_id || null,
@@ -546,30 +591,6 @@ export default defineEventHandler(async (event) => {
       } catch (err: any) {
         console.warn('⚠️ Server-side Google Ads inquiry conversion upload failed (non-critical):', err?.message ?? err)
       }
-    }
-
-    try {
-      const normalizedEmail = (fieldValues.email || '').toLowerCase()
-      const normalizedPhone = (fieldValues.phone || '').replace(/\s+/g, '').replace(/^00/, '+')
-      const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
-      const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
-
-      await recordAndSendCapiEvent({
-        appointment_id: proposal.id,
-        tenant_id,
-        event_name: 'Lead',
-        conversion_value_chf: 0,
-        conversion_date_time: new Date(),
-        fbclid: resolvedAttribution?.fbclid ?? null,
-        fbc: resolvedAttribution?.fbc ?? null,
-        fbp: resolvedAttribution?.fbp ?? null,
-        hashed_email: hashedEmail,
-        hashed_phone: hashedPhone,
-        client_ip: ip,
-        user_agent: getHeader(event, 'user-agent') ?? null,
-      })
-    } catch (err: any) {
-      console.warn('⚠️ Meta CAPI Lead upload failed (non-critical):', err?.message ?? err)
     }
 
     try {

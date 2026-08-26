@@ -141,13 +141,18 @@
               <div>
                 <p class="text-sm font-medium text-amber-800">Account noch nicht aktiviert</p>
                 <p class="text-sm text-amber-700 mt-1">
-                  Sie wurden von Ihrem Unternehmen erfasst, haben die Registrierung aber noch nicht abgeschlossen.
-                  Geben Sie Ihre Telefonnummer ein, um einen neuen Onboarding-Link per SMS zu erhalten.
+                  <template v-if="allowCustomerAccountActivation">
+                    Sie wurden von Ihrem Unternehmen erfasst, haben die Registrierung aber noch nicht abgeschlossen.
+                    Geben Sie Ihre Telefonnummer ein, um einen neuen Onboarding-Link per SMS zu erhalten.
+                  </template>
+                  <template v-else>
+                    Dieses Unternehmen führt Kunden ohne Online-Login. Bitte kontaktiere uns direkt.
+                  </template>
                 </p>
               </div>
             </div>
 
-            <div class="flex gap-2">
+            <div v-if="allowCustomerAccountActivation" class="flex gap-2">
               <input
                 v-model="pendingAccount.phone"
                 type="tel"
@@ -415,9 +420,9 @@
 
         <!-- Footer Links -->
         <div class="mt-6 text-center">
-          <p v-if="!isNativeApp" class="text-sm text-gray-600">
+          <p v-if="!isNativeApp && allowPublicRegister" class="text-sm text-gray-600">
             Noch kein Account? 
-            <NuxtLink :to="'/register'" class="font-medium hover:underline" style="color: #7C3AED;">
+            <NuxtLink :to="tenantParam ? `/register/${tenantParam}` : '/register'" class="font-medium hover:underline" style="color: #7C3AED;">
               Registrieren
             </NuxtLink>
           </p>
@@ -535,15 +540,18 @@
           <!-- Not Found: phone — suggest register -->
           <div v-if="resetNotFound === 'phone'" class="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
             <p class="text-sm text-amber-800 font-medium">Diese Telefonnummer ist bei uns nicht hinterlegt.</p>
-            <p class="text-sm text-amber-700">Noch kein Konto? Jetzt kostenlos registrieren.</p>
-            <NuxtLink
-              to="/register"
-              @click="showForgotPasswordModal = false"
-              class="block w-full py-2 px-4 rounded-lg font-medium text-sm text-center text-white transition-colors"
-              style="background: #7C3AED"
-            >
-              Jetzt registrieren
-            </NuxtLink>
+            <template v-if="allowPublicRegister">
+              <p class="text-sm text-amber-700">Noch kein Konto? Jetzt kostenlos registrieren.</p>
+              <NuxtLink
+                :to="tenantParam ? `/register/${tenantParam}` : '/register'"
+                @click="showForgotPasswordModal = false"
+                class="block w-full py-2 px-4 rounded-lg font-medium text-sm text-center text-white transition-colors"
+                style="background: #7C3AED"
+              >
+                Jetzt registrieren
+              </NuxtLink>
+            </template>
+            <p v-else class="text-sm text-amber-700">Bitte kontaktiere dein Unternehmen.</p>
           </div>
 
           <!-- Success Message -->
@@ -676,6 +684,28 @@ const tenantParam = ref(
   (route.query.tenant as string) || 
   ''
 )
+const allowPublicRegister = ref(true)
+const allowCustomerAccountActivation = ref(true)
+
+async function loadAuthPolicy(slug: string) {
+  if (!slug) return
+  try {
+    const res = await $fetch<{
+      success?: boolean
+      data?: {
+        bookingPolicy?: {
+          registration_account_mode?: 'hidden' | 'required'
+          allow_customer_account_activation?: boolean
+        }
+      }
+    }>('/api/booking/get-booking-init', { query: { slug } })
+    const policy = res?.data?.bookingPolicy
+    allowPublicRegister.value = policy?.registration_account_mode !== 'hidden'
+    allowCustomerAccountActivation.value = policy?.allow_customer_account_activation !== false
+  } catch {
+    /* keep defaults */
+  }
+}
 
 // Watch for tenant changes and load tenant
 watch(
@@ -686,10 +716,15 @@ watch(
       tenantParam.value = newTenant
       logger.debug('🏢 Tenant updated from URL:', tenantParam.value)
       loadTenant(tenantParam.value)
+      loadAuthPolicy(tenantParam.value)
     }
   },
   { immediate: true }
 )
+
+if (tenantParam.value) {
+  loadAuthPolicy(tenantParam.value)
+}
 
 // Computed
 const isCheckingSession = computed<boolean>(() => Boolean((loading as any).value ?? loading))

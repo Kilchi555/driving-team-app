@@ -9,7 +9,7 @@ import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/t
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 import { appointmentCountLabel, getTenantTerminology } from '~/server/utils/tenant-terminology'
-import { applyMissingInvoiceBilling, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
+import { applyMissingInvoiceBilling, invoiceQrDebtorName, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
 import { formatBillingPersonLabel, joinStreetAndNumber } from '~/utils/billing-address-map'
 
 export type InvoiceDraftPayload = {
@@ -299,7 +299,7 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
         creditor_street_nr: draft.creditor_street_nr || '',
         creditor_zip: draft.creditor_zip || '',
         creditor_city: draft.creditor_city || '',
-        debtor_name: studentName,
+        debtor_name: invoiceQrDebtorName(draft, null, studentName),
         debtor_street: draft.billing_street || '',
         debtor_street_nr: draft.billing_street_number || draft.billing_street_nr || '',
         debtor_zip: draft.billing_zip || '',

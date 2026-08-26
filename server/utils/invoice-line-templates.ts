@@ -86,6 +86,8 @@ export interface InvoiceLineTemplateProduct {
   description?: string | null
   price_rappen?: number | null
   is_active?: boolean | null
+  is_credit_product?: boolean | null
+  credit_amount_rappen?: number | null
 }
 
 export interface BuildInvoiceLineTemplatesInput {
@@ -390,6 +392,10 @@ export function buildInvoiceLineTemplates(input: BuildInvoiceLineTemplatesInput)
       description: product.description || undefined,
       price_rappen: Number(product.price_rappen) || 0,
       product_id: product.id,
+      credit_to_wallet: Boolean(product.is_credit_product && (product.credit_amount_rappen || 0) > 0),
+      credit_amount_rappen: product.is_credit_product
+        ? Number(product.credit_amount_rappen) || 0
+        : undefined,
     })
   }
 

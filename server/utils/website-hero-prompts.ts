@@ -109,6 +109,36 @@ const INDUSTRY_CHIPS: Record<string, Array<{ label: string; hint: string }>> = {
   ],
 }
 
+const OFFER_STOCK_QUERIES: Array<{ re: RegExp; query: string }> = [
+  { re: /motorrad|motorcycle|\ba1\b|\ba2\b/, query: 'motorcycle riding lesson instructor helmet' },
+  { re: /anhänger|anhaenger|\bbe\b|trailer/, query: 'car towing trailer driving road' },
+  { re: /lastwagen|lkw|truck|\bc1\b|czv/, query: 'truck driving school lesson cab' },
+  { re: /\bbus\b|fahrerlaubnis d/, query: 'bus driver training coach' },
+  { re: /vku|verkehrskunde|theorie/, query: 'traffic theory classroom students teacher' },
+  { re: /\bwab\b/, query: 'advanced driver training course' },
+  { re: /nothelfer|first aid/, query: 'first aid training course classroom' },
+  { re: /taxi/, query: 'taxi driver city street' },
+  { re: /automatik|automatic/, query: 'automatic car driving lesson steering wheel' },
+  { re: /autofahren|personenwagen|fahrlektion|kat(?:egorie)?\.?\s*b\b/, query: 'driving instructor teaching student in car' },
+  { re: /preise|price/, query: 'transparent pricing desk consultation' },
+  { re: /klavier|piano/, query: 'piano lesson teacher student studio' },
+  { re: /gitarre|guitar/, query: 'guitar lesson music teacher student' },
+  { re: /hund|welpe|dog|puppy/, query: 'dog trainer teaching puppy outdoor class' },
+  { re: /massage|wellness/, query: 'professional massage therapy treatment room' },
+  { re: /fitness|training|workout/, query: 'personal training gym natural light' },
+]
+
+/** English Unsplash query for a named offer / section. */
+export function stockQueryForOffer(label: string, businessType?: string | null): string {
+  const raw = String(label || '').trim()
+  if (!raw) return (STOCK_QUERIES[businessKey(businessType)] || STOCK_QUERIES.default)[0]
+  for (const item of OFFER_STOCK_QUERIES) {
+    if (item.re.test(raw.toLowerCase())) return item.query
+  }
+  const industry = (STOCK_QUERIES[businessKey(businessType)] || STOCK_QUERIES.default)[0]
+  return `${raw} ${industry}`.replace(/\s+/g, ' ').trim().slice(0, 90)
+}
+
 /** Map noisy category labels to short English Unsplash keywords. */
 function categoryStockHints(categories: string[] | null | undefined): string[] {
   const hints: string[] = []

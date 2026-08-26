@@ -318,13 +318,11 @@ const filteredUsers = computed<UserPaymentSummary[]>(() => {
   // Status filter
   switch (selectedFilter.value) {
     case 'unpaid':
-      // Show both 'open' (pending/failed) AND 'invoiced' (not yet paid)
-      filtered = filtered.filter(user => user.payment_status === 'open' || user.payment_status === 'invoiced')
+      filtered = filtered.filter(user => user.payment_status === 'open')
       break
     case 'overdue':
-      // Unbezahlt (open oder invoiced) UND ältester Termin liegt in der Vergangenheit
       filtered = filtered.filter(user => {
-        if (user.payment_status !== 'open' && user.payment_status !== 'invoiced') return false
+        if (user.payment_status !== 'open') return false
         if (!user.oldest_appointment_date) return false
         const appointmentTime = new Date(user.oldest_appointment_date).getTime()
         const now = new Date().getTime()

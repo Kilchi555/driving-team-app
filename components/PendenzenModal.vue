@@ -413,6 +413,9 @@
           <div class="rounded-lg border border-gray-200 p-3">
             <h4 class="text-sm font-semibold text-gray-900 mb-2">Kontakt</h4>
             <p class="text-sm text-gray-700">{{ selectedProposal.first_name || '-' }} {{ selectedProposal.last_name || '' }}</p>
+            <p v-if="preferredContactLabel(selectedProposal)" class="text-sm font-medium text-orange-700 mt-1">
+              Bevorzugt: {{ preferredContactLabel(selectedProposal) }}
+            </p>
             <p class="text-xs text-gray-500 mt-1">Kontakt via Buttons unten</p>
           </div>
           <div class="rounded-lg border border-gray-200 p-3">
@@ -445,9 +448,9 @@
           </div>
         </div>
 
-        <div v-if="selectedProposal.notes" class="rounded-lg border border-gray-200 p-3">
+        <div v-if="displayProposalNotes(selectedProposal)" class="rounded-lg border border-gray-200 p-3">
           <h4 class="text-sm font-semibold text-gray-900 mb-2">Bemerkungen</h4>
-          <p class="text-sm text-gray-700 whitespace-pre-line">{{ selectedProposal.notes }}</p>
+          <p class="text-sm text-gray-700 whitespace-pre-line">{{ displayProposalNotes(selectedProposal) }}</p>
         </div>
 
       </div>
@@ -461,6 +464,22 @@
             class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
           >
             📞 Anrufen
+          </a>
+          <a
+            v-if="selectedProposal.phone && preferredContactLabel(selectedProposal) === 'WhatsApp'"
+            :href="whatsappHref(selectedProposal.phone)"
+            target="_blank"
+            rel="noopener"
+            class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+          >
+            WhatsApp
+          </a>
+          <a
+            v-if="selectedProposal.phone && preferredContactLabel(selectedProposal) === 'SMS'"
+            :href="`sms:${selectedProposal.phone}`"
+            class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+          >
+            SMS
           </a>
           <a
             v-if="selectedProposal.email"
@@ -526,6 +545,7 @@
 <script setup lang="ts">
 
 import { logger } from '~/utils/logger'
+import { isPreferredContactNoteLine, parsePreferredContactFromNotes } from '~/utils/preferred-contact-method'
 import { ref, computed, watch, onMounted } from 'vue'
 import { nextTick } from 'vue'
 import { usePendingTasks } from '~/composables/usePendingTasks'
@@ -851,6 +871,22 @@ const getPreferredSlotsLabel = (proposal: any): string[] => {
   return slots
     .filter((s: any) => typeof s?.day_of_week === 'number' && s?.start_time && s?.end_time)
     .map((s: any) => `${weekdayNames[s.day_of_week] || s.day_of_week}: ${s.start_time}-${s.end_time}`)
+}
+
+const preferredContactLabel = (proposal: any) => parsePreferredContactFromNotes(proposal?.notes)
+
+const displayProposalNotes = (proposal: any) =>
+  String(proposal?.notes || '')
+    .split('\n')
+    .map((line: string) => line.trim())
+    .filter((line: string) => line && !isPreferredContactNoteLine(line) && !/^Rückruf erwünscht$/i.test(line))
+    .join('\n')
+    .trim()
+
+const whatsappHref = (phone: string) => {
+  const digits = String(phone || '').replace(/\D/g, '')
+  const intl = digits.startsWith('0') ? `41${digits.slice(1)}` : digits
+  return `https://wa.me/${intl}`
 }
 
 const loadBookingProposals = async () => {

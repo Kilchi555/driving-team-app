@@ -10,6 +10,7 @@ import { logger } from '~/utils/logger'
 import { sendPushToUser } from '~/server/utils/push'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 
 export default defineEventHandler(async (event) => {
   await requireStaffOrInternal(event)
@@ -61,7 +62,7 @@ export default defineEventHandler(async (event) => {
     // 2. Load tenant data + terminology
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('name, contact_email, contact_phone, twilio_from_sender, business_type')
+      .select('name, contact_email, contact_phone, twilio_from_sender, business_type, booking_policy')
       .eq('id', tenantId)
       .single()
 
@@ -130,6 +131,7 @@ export default defineEventHandler(async (event) => {
         tenantEmail: tenant.contact_email,
         tenantPhone: tenant.contact_phone,
         staffLabel: terms.staff,
+        includeAppStore: allowsCustomerAccountActivation((tenant as any).booking_policy),
       })
 
       await sendEmail({

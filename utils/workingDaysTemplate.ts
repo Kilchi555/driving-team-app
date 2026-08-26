@@ -114,6 +114,18 @@ const WORKING_DAYS_FALLBACKS: Record<string, WorkingDaysTemplate> = {
       6: { start: '09:00', end: '14:00' },
     },
   },
+  generic: {
+    days: [1, 2, 3, 4, 5],
+    start_time: '09:00',
+    end_time: '17:00',
+    schedule: {
+      1: { start: '09:00', end: '17:00' },
+      2: { start: '09:00', end: '17:00' },
+      3: { start: '09:00', end: '17:00' },
+      4: { start: '09:00', end: '17:00' },
+      5: { start: '09:00', end: '17:00' },
+    },
+  },
 }
 
 function isValidWorkingDaysTemplate(value: unknown): value is WorkingDaysTemplate {

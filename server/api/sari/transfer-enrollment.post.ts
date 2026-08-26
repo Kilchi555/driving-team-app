@@ -20,6 +20,7 @@ import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure
 import { logger } from '~/utils/logger'
 import { sendTenantEmail, generateCourseTransferEmail } from '~/server/utils/email'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -142,7 +143,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenant } = await supabaseAdmin
     .from('tenants')
-    .select('id, name, sari_enabled, sari_environment')
+    .select('id, name, sari_enabled, sari_environment, booking_policy')
     .eq('id', callerProfile.tenant_id)
     .single()
 
@@ -375,6 +376,7 @@ export default defineEventHandler(async (event) => {
       tenantName: tenant?.name || 'Unternehmen',
       tenantEmail: tenantContact?.contact_email ?? undefined,
       tenantPhone: tenantContact?.contact_phone ?? undefined,
+      includeAppStore: allowsCustomerAccountActivation((tenant as any)?.booking_policy),
     })
 
     sendTenantEmail(callerProfile.tenant_id, {

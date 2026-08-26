@@ -17,6 +17,7 @@ import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { sendEmail } from '~/server/utils/email'
 import { buildIcs } from '~/server/utils/course-staff-notifications'
+import { emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -354,7 +355,8 @@ function buildInstructorReminderEmail(d: {
           <div style="background:#f9fafb;border-radius:10px;padding:16px 20px;margin-bottom:24px">
             <table cellpadding="0" cellspacing="0" width="100%"><tbody>${rowsHtml}</tbody></table>
           </div>
-          <p style="margin:0;font-size:13px;color:#9ca3af">
+          ${emailAppointmentAppStoreBlock()}
+          <p style="margin:16px 0 0;font-size:13px;color:#9ca3af">
             Bei Fragen wende dich bitte direkt an ${d.tenantName}.
           </p>
         </div>

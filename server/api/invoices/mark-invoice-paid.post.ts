@@ -3,6 +3,7 @@
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { applyInvoiceCreditOnPaid } from '~/server/utils/invoice-credit'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -140,5 +141,27 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  return { success: true, invoice_id, paid_amount_rappen: clampedTotal, is_partial: isPartial }
+  let creditAppliedRappen = 0
+  if (!isPartial && invoice.user_id) {
+    try {
+      const creditResult = await applyInvoiceCreditOnPaid({
+        supabase,
+        invoiceId: invoice_id,
+        tenantId: staffUser.tenant_id,
+        userId: invoice.user_id,
+        actorUserId: staffUser.id,
+      })
+      creditAppliedRappen = creditResult.applied_rappen
+    } catch (creditErr: any) {
+      console.warn('⚠️ Invoice paid but wallet credit failed:', creditErr?.message || creditErr)
+    }
+  }
+
+  return {
+    success: true,
+    invoice_id,
+    paid_amount_rappen: clampedTotal,
+    is_partial: isPartial,
+    credit_applied_rappen: creditAppliedRappen,
+  }
 })

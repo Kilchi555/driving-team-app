@@ -18,6 +18,7 @@ import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import {
   buildBrandedEmailShell,
   displayName,
+  emailAppStoreBlock,
   emailCtaButton,
   emailDetailBox,
   emailSignature,
@@ -25,6 +26,7 @@ import {
   escapeHtml,
 } from '~/server/utils/branded-email'
 import { SAAS_TRIAL_LABEL } from '~/utils/saas-trial'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 
 export type WelcomeEmailRole = 'client' | 'staff' | 'admin'
 
@@ -56,13 +58,14 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
   let domainVerified = params.tenantDomainVerified ?? false
   let logoUrl: string | null = null
   let businessType = params.businessType ?? null
+  let bookingPolicy: Record<string, any> | null = null
 
   // Always fetch tenant branding when anything is missing (incl. logo)
   {
     const supabase = getSupabaseAdmin()
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, slug, primary_color, from_email, resend_domain_verified, logo_wide_url, logo_url, logo_square_url, business_type')
+      .select('name, slug, primary_color, from_email, resend_domain_verified, logo_wide_url, logo_url, logo_square_url, business_type, booking_policy')
       .eq('id', tenantId)
       .single()
 
@@ -76,6 +79,7 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
     const rawLogoUrl = tenant?.logo_wide_url || tenant?.logo_url || tenant?.logo_square_url || null
     // Skip base64 data URIs – they bloat the email to 100KB+ and cause bounces
     logoUrl = rawLogoUrl?.startsWith('data:') ? null : rawLogoUrl
+    bookingPolicy = (tenant as any)?.booking_policy ?? null
   }
 
   const terms = await getTenantTerminology(getSupabaseAdmin(), tenantId)
@@ -102,7 +106,16 @@ export async function sendWelcomeEmail(params: SendWelcomeEmailParams): Promise<
       fromName: safeTenantName,
       fromEmail,
       domainVerified,
-      html: buildUserHtml(role, firstName, safeTenantName, primaryColor, loginUrl, logoUrl, terms),
+      html: buildUserHtml(
+        role,
+        firstName,
+        safeTenantName,
+        primaryColor,
+        loginUrl,
+        logoUrl,
+        terms,
+        role !== 'client' || allowsCustomerAccountActivation(bookingPolicy),
+      ),
     })
   }
 
@@ -183,16 +196,6 @@ export async function sendPendingRegistrationConfirmationEmail(params: {
 
 // ─── HTML Builders ─────────────────────────────────────────────────────────────
 
-function appStoreBlock(): string {
-  // Avoid pure black (#000): Apple Mail / Gmail dark mode crush black buttons
-  // into the dark background and mute white text. A near-black fill + white
-  // border (or the official badge) stays readable in both modes.
-  return `<div style="margin:24px 0 0;text-align:center">
-  <p style="margin:0 0 10px;color:#9ca3af;font-size:12px;">Simy auch als iPhone-App verfügbar</p>
-  <a href="https://apps.apple.com/ch/app/simy/id6766244063" style="display:inline-block;background-color:#111827;color:#ffffff !important;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #ffffff;">Laden im App Store</a>
-</div>`
-}
-
 function buildUserHtml(
   role: 'client' | 'staff',
   firstName: string,
@@ -201,6 +204,7 @@ function buildUserHtml(
   loginUrl: string,
   logoUrl: string | null = null,
   terms: Terminology = getTerminologyDefaults('driving_school'),
+  includeAppStore = true,
 ): string {
   const isStaff = role === 'staff'
   const name = displayName(tenantName)
@@ -243,7 +247,7 @@ function buildUserHtml(
     <p style="color:#9ca3af;font-size:12px;margin:0;text-align:center;">
       Oder öffne: <a href="${escapeAttr(loginUrl)}" style="color:${primaryColor};">${escapeHtml(loginUrl)}</a>
     </p>
-    ${appStoreBlock()}
+    ${emailAppStoreBlock('Simy auch als iPhone-App verfügbar', includeAppStore)}
     ${emailSignature(tenantName, null, primaryColor)}
   `
 
@@ -291,7 +295,7 @@ function buildAdminHtml(
     <p style="color:#374151;font-size:14px;margin:16px 0 0;font-weight:600;">
       Pascal<br><span style="color:#6b7280;font-weight:400;">Simy</span>
     </p>
-    ${appStoreBlock()}
+    ${emailAppStoreBlock()}
   `
 
   return buildBrandedEmailShell({

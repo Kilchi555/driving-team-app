@@ -14,7 +14,7 @@ import {
 } from '~/server/utils/invoice-product-lines'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
-import { invoicePersonNames, isPlaceholderBillingEmail, loadUserAddressForInvoice, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
+import { invoicePersonNames, invoiceQrDebtorName, isPlaceholderBillingEmail, loadUserAddressForInvoice, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
 import { isQuoteDocument, quoteAcceptUrl, quoteDocumentLabels } from '~/server/utils/invoice-quote'
 export default defineEventHandler(async (event) => {
   try {
@@ -191,7 +191,7 @@ export default defineEventHandler(async (event) => {
           creditor_street_nr: (tenant as any)?.invoice_street_nr?.trim() || '',
           creditor_zip: (tenant as any)?.invoice_zip || '',
           creditor_city: (tenant as any)?.invoice_city || '',
-          debtor_name: customerName,
+          debtor_name: invoiceQrDebtorName(invoice as any, userAddress),
           debtor_street: invoice.billing_street || userAddress?.street || '',
           debtor_street_nr: (invoice as any).billing_street_number || userAddress?.street_nr || '',
           debtor_zip: invoice.billing_zip || userAddress?.zip || '',

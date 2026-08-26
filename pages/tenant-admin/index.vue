@@ -105,9 +105,10 @@
                   <span :class="['sa-badge', tenant.is_active ? 'sa-badge-green' : 'sa-badge-red']">
                     {{ tenant.is_active ? 'Aktiv' : 'Inaktiv' }}
                   </span>
-                  <span v-if="tenant.is_trial" class="sa-badge sa-badge-amber ml-1">Trial</span>
+                  <span v-if="tenant.website_only" class="sa-badge sa-badge-violet ml-1">Website-only</span>
+                  <span v-else-if="tenant.is_trial" class="sa-badge sa-badge-amber ml-1">Trial</span>
                 </td>
-                <td class="sa-cell-muted">{{ tenant.subscription_plan || '—' }}</td>
+                <td class="sa-cell-muted">{{ planLabel(tenant) }}</td>
                 <td>
                   <span :class="['sa-badge',
                     tenant.wallee_onboarding_status === 'active' ? 'sa-badge-green' :
@@ -120,7 +121,7 @@
                 </td>
                 <td class="sa-cell-muted">{{ formatDate(tenant.created_at) }}</td>
                 <td class="text-right">
-                  <NuxtLink :to="`/tenant-admin/tenants`" class="sa-action-link">Details →</NuxtLink>
+                  <NuxtLink :to="tenantDetailTo(tenant)" class="sa-action-link">Details →</NuxtLink>
                 </td>
               </tr>
             </tbody>
@@ -197,7 +198,7 @@ const quickActions = [
 const loadStats = async () => {
   try {
     const [{ data: tenants }, { data: users }, { data: blocked }] = await Promise.all([
-      supabase.from('tenants').select('id, is_active, is_trial'),
+      supabase.from('tenants').select('id, is_active, is_trial, website_notes'),
       supabase.from('users').select('id'),
       supabase.from('rate_limit_logs').select('id').eq('status', 'blocked'),
     ])
@@ -225,6 +226,22 @@ const loadRecentActivities = async () => {
     description: `Blockiert: ${l.ip_address}${l.email ? ` (${l.email})` : ''}`,
     created_at: l.created_at,
   }))
+}
+
+const planLabel = (t: any) => {
+  if (t?.website_only) {
+    if (t.website_hosting_plan === 'care') return 'Website Care'
+    if (t.website_hosting_plan === 'host') return 'Website Host'
+    return 'Website-only'
+  }
+  return t?.subscription_plan || '—'
+}
+
+const tenantDetailTo = (t: any) => {
+  const m = String(t?.website_notes || '').match(/^website_prospect:([0-9a-f-]{36})$/i)
+  if (m?.[1]) return `/tenant-admin/websites/prospects/${m[1]}`
+  if (t?.website_only) return '/tenant-admin/websites'
+  return '/tenant-admin/tenants'
 }
 
 const formatDate = (d: string) => new Date(d).toLocaleDateString('de-CH')
@@ -400,6 +417,7 @@ onMounted(() => { loadStats(); loadRecentTenants(); loadRecentActivities() })
 .sa-badge-red    { background: rgba(239,68,68,0.1);   color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
 .sa-badge-amber  { background: rgba(245,158,11,0.1);  color: #fcd34d; border: 1px solid rgba(245,158,11,0.2); }
 .sa-badge-neutral{ background: rgba(100,116,139,0.1); color: #94a3b8; border: 1px solid rgba(100,116,139,0.2); }
+.sa-badge-violet { background: rgba(139,92,246,0.12); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.25); }
 
 .sa-action-link { font-size: 0.75rem; color: #6366f1; text-decoration: none; }
 .sa-action-link:hover { color: #a5b4fc; }

@@ -27,6 +27,7 @@
           Anmelden
         </button>
         <button
+          v-if="allowRegister"
           @click="activeTab = 'register'; showForgotPassword = false"
           class="flex-1 py-3 px-4 text-sm font-medium transition-colors"
           :class="activeTab === 'register' ? '' : 'text-gray-600 hover:text-gray-900'"
@@ -548,6 +549,7 @@ interface Props {
   selectedCategory?: string
   tenantId?: string
   primaryColor?: string | undefined
+  allowRegister?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -556,8 +558,11 @@ const props = withDefaults(defineProps<Props>(), {
   selectedStaffId: undefined,
   selectedCategory: undefined,
   tenantId: undefined,
-  primaryColor: undefined
+  primaryColor: undefined,
+  allowRegister: true,
 })
+
+const allowRegister = computed(() => props.allowRegister !== false)
 
 const primaryColor = computed(() => props.primaryColor || tenantPrimary.value || '#111827')
 
@@ -565,7 +570,22 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-const activeTab = ref<'login' | 'register'>(props.initialTab)
+const WRONG_BOOKING_TENANT_MESSAGE =
+  'Dieses Konto gehört zu einer anderen Fahrschule. Bitte registriere dich hier oder melde dich mit dem Konto dieser Fahrschule an.'
+
+const isWrongBookingTenant = () => {
+  if (!props.tenantId) return false
+  const profileTenant = authStore.userProfile?.tenant_id
+  return !!profileTenant && profileTenant !== props.tenantId
+}
+
+const activeTab = ref<'login' | 'register'>(
+  props.allowRegister === false ? 'login' : props.initialTab
+)
+
+watch(() => props.allowRegister, (allowed) => {
+  if (allowed === false && activeTab.value === 'register') activeTab.value = 'login'
+})
 const isLoading = ref(false)
 const error = ref('')
 
@@ -803,6 +823,11 @@ const handleLogin = async () => {
     
     if (sessionRestored) {
       logger.debug('✅ Session restored successfully')
+      if (isWrongBookingTenant()) {
+        error.value = WRONG_BOOKING_TENANT_MESSAGE
+        activeTab.value = 'register'
+        return
+      }
       emit('success')
     } else {
       throw new Error('Failed to restore session after login')
@@ -917,6 +942,11 @@ const handleRegister = async () => {
 
     logger.debug('✅ Registration successful')
 
+    // Replace any leftover client session (e.g. another school's login) with
+    // the new tokens. Without this, current-user still authenticates as the
+    // old account via the Bearer interceptor → "wrong tenant" / retry 409.
+    await hydrateClientSessionAfterLogin(response.session)
+
     // Upload document if selected (uses existing /api/auth/upload-document endpoint)
     if (uploadedDocument.value && response.user?.id) {
       try {
@@ -958,6 +988,10 @@ const handleRegister = async () => {
     
     if (sessionRestored) {
       logger.debug('✅ Session restored successfully after registration')
+      if (isWrongBookingTenant()) {
+        error.value = WRONG_BOOKING_TENANT_MESSAGE
+        return
+      }
       emit('success')
     } else {
       throw new Error('Failed to restore session after registration')
@@ -968,13 +1002,13 @@ const handleRegister = async () => {
     // Server-side duplicate-email or duplicate-phone → surface the login shortcut.
     if (err?.statusCode === 409 || /bereits registriert|already registered/i.test(msg)) {
       if (/telefon|phone|nummer/i.test(msg)) {
-        // Phone number conflict — show as general error since email field isn't the issue
         error.value = msg || 'Diese Telefonnummer ist bereits registriert. Bitte melde dich an oder nutze eine andere Nummer.'
         activeTab.value = 'login'
       } else {
         emailCheckStatus.value = 'taken'
         emailCheckMessage.value = 'Diese E-Mail-Adresse ist bereits registriert.'
-        error.value = ''
+        error.value = 'Dieses Konto existiert bereits. Bitte melde dich an.'
+        switchToLoginWithEmail()
       }
     } else {
       error.value = msg || 'Fehler bei der Registrierung. Bitte versuchen Sie es erneut.'

@@ -721,7 +721,8 @@ async function loadQRCode(d: InvoiceDraft) {
         creditor_street_nr: d.creditor_street_nr || '',
         creditor_zip: d.creditor_zip || '',
         creditor_city: d.creditor_city || '',
-        debtor_name: `${d.billing_first_name || ''} ${d.billing_last_name || ''}`.trim(),
+        debtor_name: (d.billing_company_name || '').trim()
+          || `${d.billing_first_name || ''} ${d.billing_last_name || ''}`.trim(),
         debtor_street: d.billing_street || '',
         debtor_zip: d.billing_zip || '',
         debtor_city: d.billing_city || '',

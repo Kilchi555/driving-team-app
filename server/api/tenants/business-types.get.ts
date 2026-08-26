@@ -38,5 +38,12 @@ export default defineEventHandler(async () => {
   const uiLabelsByCode = new Map((presets || []).map((p: any) => [p.business_type_code, p.ui_labels || {}]))
   const businessTypes = (types || []).map(t => ({ ...t, ui_labels: uiLabelsByCode.get(t.code) || {} }))
 
+  // "Anderes" (generic) stays last so named industries remain easy to scan.
+  businessTypes.sort((a, b) => {
+    if (a.code === 'generic') return 1
+    if (b.code === 'generic') return -1
+    return String(a.name || '').localeCompare(String(b.name || ''), 'de')
+  })
+
   return { businessTypes }
 })

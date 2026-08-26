@@ -48,8 +48,11 @@
                 {{ selectedCompanyId ? '🏢' : selectedCustomerLabel.charAt(0).toUpperCase() }}
               </span>
               <span class="font-medium text-gray-900 truncate">{{ selectedCustomerLabel }}</span>
-              <span class="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium"
-                :class="selectedCompanyId ? 'bg-orange-100 text-orange-700' : 'bg-indigo-50 text-indigo-600'">
+              <span
+                class="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 font-medium"
+                :class="selectedCompanyId ? 'bg-orange-100 text-orange-700' : ''"
+                :style="selectedCompanyId ? undefined : { color: primaryColor, background: `${primaryColor}14` }"
+              >
                 {{ selectedCompanyId ? 'Firma' : 'Kunde' }}
               </span>
             </div>
@@ -87,15 +90,77 @@
                   <p class="text-sm font-medium text-gray-900 truncate">{{ r.name }}</p>
                   <p class="text-xs text-gray-400 truncate">{{ r.subtitle }}</p>
                 </div>
-                <span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium"
-                  :class="r.type === 'company' ? 'bg-orange-100 text-orange-700' : 'bg-indigo-50 text-indigo-600'">
+                <span
+                  class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium"
+                  :class="r.type === 'company' ? 'bg-orange-100 text-orange-700' : ''"
+                  :style="r.type === 'company' ? undefined : { color: primaryColor, background: `${primaryColor}14` }"
+                >
                   {{ r.type === 'company' ? 'Firma' : 'Kunde' }}
                 </span>
               </button>
             </div>
             <p v-else-if="customerSearch.length >= 1 && !isSearchingCustomers"
               class="text-xs text-gray-400 mt-1.5 pl-1">Keine Ergebnisse</p>
+            <button
+              v-if="!creatingNewCustomer"
+              type="button"
+              class="mt-2 text-xs font-medium hover:underline"
+              :style="{ color: primaryColor }"
+              @click="startNewCustomer"
+            >
+              Neukunde anlegen
+            </button>
           </div>
+        </div>
+
+        <div v-if="creatingNewCustomer" class="rounded-xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <h4 class="text-sm font-semibold text-gray-800">Neuer Kunde</h4>
+            <button type="button" class="text-xs text-gray-400 hover:text-gray-600" @click="cancelNewCustomer">
+              Abbrechen
+            </button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Vorname</label>
+              <input v-model="newCustomer.first_name" type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Nachname</label>
+              <input v-model="newCustomer.last_name" type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">E-Mail</label>
+              <input v-model="newCustomer.email" type="email"
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="kunde@beispiel.ch" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Telefon</label>
+              <input v-model="newCustomer.phone" type="tel"
+                class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                placeholder="+41 79 123 45 67" />
+            </div>
+          </div>
+          <p class="text-xs text-gray-500">Vor- oder Nachname, plus E-Mail oder Telefon.</p>
+          <label class="flex items-start gap-2 cursor-pointer">
+            <input v-model="saveNewCustomerToUsers" type="checkbox" class="mt-0.5 rounded border-gray-300"
+              :style="{ accentColor: primaryColor }" />
+            <span>
+              <span class="block text-sm text-gray-800">In den Kundenstamm speichern</span>
+              <span class="block text-xs text-gray-500">Legt den Kunden in der User-Tabelle an, damit Guthaben und Folge-Rechnungen möglich sind.</span>
+            </span>
+          </label>
+          <label v-if="saveNewCustomerToUsers && onboardingInviteAvailable" class="flex items-start gap-2 cursor-pointer">
+            <input v-model="sendOnboardingInvite" type="checkbox" class="mt-0.5 rounded border-gray-300"
+              :style="{ accentColor: primaryColor }" />
+            <span>
+              <span class="block text-sm text-gray-800">{{ onboardingInviteLabel }}</span>
+              <span class="block text-xs text-gray-500">{{ onboardingInviteHint }}</span>
+            </span>
+          </label>
         </div>
 
         <div v-if="asQuote" class="border-t pt-4">
@@ -108,7 +173,7 @@
         <div v-if="!asQuote && (formData.user_id || selectedCompanyId)" class="border-t pt-4">
           <div class="flex items-center justify-between mb-3">
             <h4 class="text-sm font-semibold text-gray-800">Offene Positionen</h4>
-            <button type="button" @click="loadOpenItems" class="text-xs text-blue-600 hover:underline">
+            <button type="button" @click="loadOpenItems" class="text-xs hover:underline" :style="{ color: primaryColor }">
               {{ isLoadingOpenItems ? 'Lädt…' : 'Aktualisieren' }}
             </button>
           </div>
@@ -117,11 +182,13 @@
           <div v-else class="space-y-1.5">
             <label v-for="item in openItems" :key="item.source_id"
               class="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all"
-              :class="selectedOpenItemIds.has(item.source_id) ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'">
+              :class="selectedOpenItemIds.has(item.source_id) ? '' : 'border-gray-200 hover:border-gray-300'"
+              :style="selectedOpenItemIds.has(item.source_id) ? { borderColor: primaryColor, backgroundColor: `${primaryColor}12` } : undefined">
               <input type="checkbox" :value="item.source_id"
                 :checked="selectedOpenItemIds.has(item.source_id)"
                 @change="toggleOpenItem(item)"
-                class="rounded" />
+                class="rounded"
+                :style="{ accentColor: primaryColor }" />
               <div class="flex-1 min-w-0">
                 <!-- Title row -->
                 <div class="flex items-center gap-2 flex-wrap">
@@ -149,7 +216,11 @@
                   <span v-if="item.duration_minutes" class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
                     {{ item.duration_minutes }} Min.
                   </span>
-                  <span v-if="item.appointment_type" class="text-xs px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium capitalize">
+                  <span
+                    v-if="item.appointment_type"
+                    class="text-xs px-1.5 py-0.5 rounded-full font-medium capitalize"
+                    :style="{ color: primaryColor, background: `${primaryColor}14` }"
+                  >
                     {{ item.appointment_type }}
                   </span>
                   <span v-if="item.staff_name" class="text-xs px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
@@ -163,7 +234,7 @@
               <span class="text-sm font-semibold text-gray-700 shrink-0 tabular-nums">CHF {{ (item.amount_rappen / 100).toFixed(2) }}</span>
             </label>
           </div>
-          <div v-if="selectedOpenItemIds.size > 0" class="mt-2 text-xs text-blue-700 font-medium">
+          <div v-if="selectedOpenItemIds.size > 0" class="mt-2 text-xs font-medium" :style="{ color: primaryColor }">
             {{ selectedOpenItemIds.size }} Position(en) ausgewählt — werden automatisch als Rechnungsposten hinzugefügt.
           </div>
         </div>
@@ -320,7 +391,8 @@
 
               <button
                 type="button"
-                class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors"
+                class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium border rounded-xl hover:opacity-80 transition-colors"
+                :style="{ color: primaryColor, background: `${primaryColor}14`, borderColor: `${primaryColor}33` }"
                 @click="addInvoiceItem"
               >
                 <PlusIcon class="h-3.5 w-3.5" />
@@ -466,7 +538,8 @@
               <div class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
                 <span
                   v-if="item.appointment_date && !looksLikeCourseSessionsDescription(item.product_description)"
-                  class="inline-flex items-center gap-1 text-blue-600 font-medium"
+                  class="inline-flex items-center gap-1 font-medium"
+                  :style="{ color: primaryColor }"
                 >
                   <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                   {{ formatDate(item.appointment_date) }}
@@ -478,6 +551,25 @@
                 </span>
                 <span class="text-gray-400">(MwSt: CHF {{ formatCurrency(item.vat_amount_rappen) }})</span>
               </div>
+
+              <label
+                v-if="!asQuote"
+                class="mt-2.5 flex items-start gap-2 cursor-pointer"
+              >
+                <input
+                  v-model="item.credit_to_wallet"
+                  type="checkbox"
+                  class="mt-0.5 rounded border-gray-300"
+                  :style="{ accentColor: primaryColor }"
+                  @change="syncItemCreditAmount(item)"
+                />
+                <span>
+                  <span class="block text-sm text-gray-800">Auf Guthaben gutschreiben</span>
+                  <span class="block text-xs text-gray-500">
+                    CHF {{ formatCurrency(itemCreditRappen(item)) }} wird nach vollständiger Zahlung dem Kunden-Guthaben gutgeschrieben.
+                  </span>
+                </span>
+              </label>
 
               <!-- Optional description (Kursteile als Liste, sonst editierbar) -->
               <div
@@ -539,18 +631,23 @@
                   v-model="applyAvailableCredit"
                   type="checkbox"
                   class="mt-0.5 rounded border-gray-300"
+                  :style="{ accentColor: primaryColor }"
                 />
                 <span>
                   <span class="block text-sm text-gray-800">Guthaben verrechnen</span>
                   <span class="block text-xs text-gray-500">Verfügbar CHF {{ formatCurrency(availableCreditRappen) }}</span>
                 </span>
               </span>
-              <span v-if="applyAvailableCredit && creditToApplyRappen > 0" class="text-sm font-semibold text-blue-600">
+              <span v-if="applyAvailableCredit && creditToApplyRappen > 0" class="text-sm font-semibold" :style="{ color: primaryColor }">
                 −CHF {{ formatCurrency(creditToApplyRappen) }}
               </span>
             </label>
             <p v-if="!asQuote && applyAvailableCredit && creditCoversInvoice" class="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
               Guthaben deckt den gesamten Betrag — es wird keine Rechnung erstellt.
+            </p>
+            <p v-if="!asQuote && walletCreditRappen > 0" class="text-xs rounded-lg px-3 py-2"
+              :style="{ color: primaryColor, background: `${primaryColor}12` }">
+              Nach Zahlung werden CHF {{ formatCurrency(walletCreditRappen) }} dem Guthaben gutgeschrieben.
             </p>
             
             <div class="border-t pt-2 flex justify-between font-medium text-lg">
@@ -633,7 +730,8 @@
           <button
             type="submit"
             :disabled="!canSubmit || isSubmitting"
-            class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            :style="{ background: primaryColor }"
           >
             <ArrowPathIcon v-if="isSubmitting" class="animate-spin h-4 w-4 mr-2" />
             {{ isSubmitting ? 'Wird erstellt...' : (asQuote ? 'Offerte erstellen' : (creditCoversInvoice ? 'Guthaben verrechnen' : 'Rechnung erstellen')) }}
@@ -767,6 +865,7 @@ function searchCustomers() {
 }
 
 function applyCustomer(r: any) {
+  creatingNewCustomer.value = false
   customerResults.value = []
   customerSearch.value = ''
   if (r.type === 'company') {
@@ -884,15 +983,108 @@ const invoiceItems = ref<InvoiceItemFormData[]>([
 ])
 
 // Computed
+const creatingNewCustomer = ref(false)
+const saveNewCustomerToUsers = ref(true)
+const sendOnboardingInvite = ref(false)
+const bookingPolicy = ref({
+  onboarding_sms_enabled: true,
+  onboarding_email_enabled: false,
+})
+const newCustomer = ref({
+  first_name: '',
+  last_name: '',
+  email: '',
+  phone: '',
+})
+
+const onboardingSmsEnabled = computed(() => bookingPolicy.value.onboarding_sms_enabled !== false)
+const onboardingEmailEnabled = computed(() => bookingPolicy.value.onboarding_email_enabled === true)
+const onboardingInviteAvailable = computed(() => onboardingSmsEnabled.value || onboardingEmailEnabled.value)
+
+function defaultSendOnboardingInvite() {
+  return onboardingInviteAvailable.value
+}
+
+const newCustomerName = computed(() =>
+  `${newCustomer.value.first_name || ''} ${newCustomer.value.last_name || ''}`.trim()
+)
+const newCustomerValid = computed(() => {
+  if (!creatingNewCustomer.value) return false
+  const hasName = !!(newCustomer.value.first_name.trim() || newCustomer.value.last_name.trim())
+  const hasContact = !!(newCustomer.value.email.trim() || newCustomer.value.phone.trim())
+  return hasName && hasContact
+})
+
+const onboardingInviteLabel = computed(() => {
+  if (onboardingSmsEnabled.value && onboardingEmailEnabled.value) return 'Onboarding-SMS / E-Mail senden'
+  if (onboardingSmsEnabled.value) return 'Onboarding-SMS senden'
+  return 'Onboarding-E-Mail senden'
+})
+
+const onboardingInviteHint = computed(() => {
+  const wantsSms = onboardingSmsEnabled.value
+  const wantsEmail = onboardingEmailEnabled.value
+  const hasPhone = !!newCustomer.value.phone.trim()
+  const hasEmail = !!newCustomer.value.email.trim()
+  if (wantsSms && wantsEmail) {
+    if (hasPhone && hasEmail) return 'Wie in den Buchungsregeln: SMS und E-Mail mit Link zum Passwort setzen.'
+    if (hasPhone) return 'Wie in den Buchungsregeln: SMS. E-Mail nur mit hinterlegter Adresse.'
+    if (hasEmail) return 'Wie in den Buchungsregeln: E-Mail. SMS nur mit hinterlegter Nummer.'
+    return 'In den Buchungsregeln sind SMS und E-Mail aktiv — Nummer bzw. Adresse eintragen.'
+  }
+  if (wantsSms) {
+    return hasPhone
+      ? 'Wie in den Buchungsregeln geht nur die Onboarding-SMS raus.'
+      : 'In den Buchungsregeln ist nur SMS aktiv — Telefonnummer eintragen.'
+  }
+  return hasEmail
+    ? 'Wie in den Buchungsregeln geht nur die Onboarding-E-Mail raus.'
+    : 'In den Buchungsregeln ist nur E-Mail aktiv — Adresse eintragen.'
+})
+
+function startNewCustomer() {
+  const search = customerSearch.value.trim()
+  creatingNewCustomer.value = true
+  saveNewCustomerToUsers.value = true
+  sendOnboardingInvite.value = defaultSendOnboardingInvite()
+  customerResults.value = []
+  customerSearch.value = ''
+  clearCustomer()
+  showBillingEdit.value = true
+  if (search.includes('@')) {
+    newCustomer.value.email = search
+  }
+}
+
+function cancelNewCustomer() {
+  creatingNewCustomer.value = false
+  saveNewCustomerToUsers.value = true
+  sendOnboardingInvite.value = defaultSendOnboardingInvite()
+  newCustomer.value = { first_name: '', last_name: '', email: '', phone: '' }
+}
+
+watch(
+  [() => newCustomer.value.first_name, () => newCustomer.value.last_name, () => newCustomer.value.email],
+  () => {
+    if (!creatingNewCustomer.value) return
+    formData.value.billing_type = 'individual'
+    formData.value.billing_contact_person = newCustomerName.value
+    if (newCustomer.value.email.trim()) {
+      formData.value.billing_email = newCustomer.value.email.trim()
+    }
+  }
+)
+
 const canSubmit = computed(() => {
-  const hasCustomer = !!(formData.value.user_id || selectedCompanyId.value)
-  return hasCustomer &&
-         invoiceItems.value.length > 0 && 
-         invoiceItems.value.every(item => 
-           item.product_name && 
-           item.quantity > 0 && 
-           item.unit_price_rappen >= 0
-         )
+  const hasExistingCustomer = !!(formData.value.user_id || selectedCompanyId.value)
+  const hasNewCustomer = newCustomerValid.value
+  const itemsOk = invoiceItems.value.length > 0 &&
+    invoiceItems.value.every(item =>
+      item.product_name &&
+      item.quantity > 0 &&
+      item.unit_price_rappen >= 0
+    )
+  return (hasExistingCustomer || hasNewCustomer) && itemsOk
 })
 
 const subtotal = computed(() => {
@@ -915,6 +1107,29 @@ const creditToApplyRappen = computed(() => {
 })
 const displayTotalAmount = computed(() => Math.max(0, totalAmount.value - creditToApplyRappen.value))
 const creditCoversInvoice = computed(() => creditToApplyRappen.value > 0 && displayTotalAmount.value <= 0)
+
+function itemCreditRappen(item: InvoiceItemFormData) {
+  if ((item.credit_amount_rappen || 0) > 0) return item.credit_amount_rappen || 0
+  return Math.max(0, item.total_price_rappen || 0)
+}
+
+function syncItemCreditAmount(item: InvoiceItemFormData) {
+  if (!item.credit_to_wallet) {
+    item.credit_amount_rappen = 0
+    return
+  }
+  if ((item.credit_amount_rappen || 0) <= 0) {
+    item.credit_amount_rappen = Math.max(0, item.total_price_rappen || 0)
+  }
+}
+
+const walletCreditRappen = computed(() => {
+  if (asQuote.value) return 0
+  return invoiceItems.value.reduce((sum, item) => {
+    if (!item.credit_to_wallet) return sum
+    return sum + itemCreditRappen(item)
+  }, 0)
+})
 
 async function loadStudentCredit(userId: string) {
   availableCreditRappen.value = 0
@@ -1043,8 +1258,11 @@ const addItemFromTemplate = (tpl: InvoiceLineTemplate) => {
     unit_price_rappen: tpl.price_rappen || 0,
     vat_rate: defaultVatRate.value,
     sort_order: invoiceItems.value.length,
+    credit_to_wallet: Boolean(tpl.credit_to_wallet),
+    credit_amount_rappen: tpl.credit_amount_rappen || 0,
   } as InvoiceItemFormData
   calculateItemTotal(item)
+  syncItemCreditAmount(item)
   invoiceItems.value.push(item)
   showTemplateMenu.value = false
   templateMenuSearch.value = ''
@@ -1067,7 +1285,10 @@ const applyTemplateToItem = (index: number, tpl: InvoiceLineTemplate) => {
   item.product_description = tpl.details || tpl.description || undefined
   item.unit_price_rappen = tpl.price_rappen || 0
   if (item.vat_rate == null) item.vat_rate = defaultVatRate.value
+  item.credit_to_wallet = Boolean(tpl.credit_to_wallet)
+  item.credit_amount_rappen = tpl.credit_amount_rappen || 0
   calculateItemTotal(item)
+  syncItemCreditAmount(item)
   suggestRow.value = -1
 }
 
@@ -1094,14 +1315,67 @@ const calculateItemTotal = (item: InvoiceItemFormData) => {
   const discountFactor = 1 - ((item.discount_percent || 0) / 100)
   item.total_price_rappen = Math.round(gross * discountFactor)
   item.vat_amount_rappen = Math.round(item.total_price_rappen * item.vat_rate / 100)
+  if (!item.credit_to_wallet) return
+  const tpl = lineTemplates.value.find(t => t.product_id && t.product_id === item.product_id && t.credit_to_wallet)
+  if (tpl?.credit_amount_rappen) {
+    item.credit_amount_rappen = Math.round(tpl.credit_amount_rappen * (item.quantity || 1))
+  } else if (!item.product_id) {
+    item.credit_amount_rappen = item.total_price_rappen
+  }
 }
 
 const createInvoiceHandler = async () => {
   if (!canSubmit.value) return
+
+  if (walletCreditRappen.value > 0 && !formData.value.user_id && !(creatingNewCustomer.value && saveNewCustomerToUsers.value)) {
+    alert('Für die Guthaben-Gutschrift muss der Kunde im Stamm gespeichert werden.')
+    return
+  }
   
   isSubmitting.value = true
   
   try {
+    if (creatingNewCustomer.value && saveNewCustomerToUsers.value && !formData.value.user_id) {
+      try {
+        const created = await $fetch<{
+          success: boolean
+          smsSuccess?: boolean
+          emailSuccess?: boolean
+          inviteSent?: boolean
+          data?: { id: string; first_name?: string; last_name?: string; email?: string }
+        }>(
+          '/api/admin/add-student',
+          {
+            method: 'POST',
+            body: {
+              first_name: newCustomer.value.first_name.trim(),
+              last_name: newCustomer.value.last_name.trim(),
+              email: newCustomer.value.email.trim().toLowerCase(),
+              phone: newCustomer.value.phone.trim(),
+              street: formData.value.billing_street,
+              street_nr: formData.value.billing_street_number,
+              zip: formData.value.billing_zip,
+              city: formData.value.billing_city,
+              send_invite: sendOnboardingInvite.value && onboardingInviteAvailable.value,
+            },
+          }
+        )
+        if (!created?.data?.id) {
+          throw new Error('Kunde konnte nicht angelegt werden')
+        }
+        formData.value.user_id = created.data.id
+        formData.value.billing_contact_person = `${created.data.first_name || ''} ${created.data.last_name || ''}`.trim()
+        if (created.data.email) formData.value.billing_email = created.data.email
+      } catch (createErr: any) {
+        const status = createErr?.statusCode || createErr?.status
+        if (status === 409) {
+          alert('Dieser Kunde existiert bereits (gleiche E-Mail oder Telefon). Bitte aus der Suche wählen.')
+          return
+        }
+        throw createErr
+      }
+    }
+
     // Alle Item-Totale berechnen
     invoiceItems.value.forEach(calculateItemTotal)
     
@@ -1188,6 +1462,19 @@ onMounted(async () => {
     lineTemplates.value = []
   }
 
+  try {
+    const policyRes = await $fetch<{ policy?: { onboarding_sms_enabled?: boolean; onboarding_email_enabled?: boolean } }>(
+      '/api/admin/booking-policy'
+    )
+    if (policyRes?.policy) {
+      bookingPolicy.value = {
+        onboarding_sms_enabled: policyRes.policy.onboarding_sms_enabled !== false,
+        onboarding_email_enabled: policyRes.policy.onboarding_email_enabled === true,
+      }
+    }
+  } catch { /* defaults from booking policy */ }
+  sendOnboardingInvite.value = defaultSendOnboardingInvite()
+
   // Pre-select company if passed in (e.g. opened from company detail modal)
   if (props.initialCompany) {
     applyCustomer({
@@ -1268,5 +1555,11 @@ watch(defaultVatRate, (val) => {
   box-shadow: 0 0 0 1000px #fff inset !important;
   -webkit-text-fill-color: #111827 !important;
   caret-color: #111827 !important;
+}
+
+.invoice-create-modal input:focus,
+.invoice-create-modal textarea:focus,
+.invoice-create-modal select:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF) !important;
 }
 </style>

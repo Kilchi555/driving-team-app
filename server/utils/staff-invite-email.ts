@@ -21,6 +21,29 @@ export function isPlaceholderStaffInviteEmail(email: string | null | undefined):
   return e.includes('@onboarding.simy.ch') || (e.startsWith('pending_') && e.includes('@invite.simy.ch'))
 }
 
+export const STAFF_INVITE_REMINDER_AFTER_DAYS = 3
+
+/** One automatic reminder: pending, real email, still valid, 3+ days old, not reminded yet. */
+export function isDueForStaffInviteReminder(
+  inv: {
+    status?: string | null
+    email?: string | null
+    created_at?: string | null
+    expires_at?: string | null
+    reminder_sent_at?: string | null
+  },
+  now = new Date(),
+): boolean {
+  if (inv.status !== 'pending') return false
+  if (inv.reminder_sent_at) return false
+  if (isPlaceholderStaffInviteEmail(inv.email)) return false
+  if (!inv.created_at || !inv.expires_at) return false
+  if (new Date(inv.expires_at) <= now) return false
+  const dueAt = new Date(inv.created_at)
+  dueAt.setUTCDate(dueAt.getUTCDate() + STAFF_INVITE_REMINDER_AFTER_DAYS)
+  return now >= dueAt
+}
+
 /**
  * True only for the very first staff onboarding of a tenant:
  * no active staff yet, and no other staff invitations (pending/accepted).
@@ -67,6 +90,7 @@ export function buildStaffInviteEmailHtml(opts: {
   showDualLoginHint?: boolean
   primaryColor?: string
   logoUrl?: string | null
+  isReminder?: boolean
 }): string {
   const {
     firstName,
@@ -79,6 +103,7 @@ export function buildStaffInviteEmailHtml(opts: {
     showDualLoginHint = false,
     primaryColor = '#6000BD',
     logoUrl = null,
+    isReminder = false,
   } = opts
 
   const name = displayName(tenantName)
@@ -121,8 +146,11 @@ export function buildStaffInviteEmailHtml(opts: {
       Hallo <strong>${escapeHtml(firstName || '')}</strong>,
     </p>
     <p style="color:#374151;font-size:16px;line-height:1.6;margin:0 0 16px;">
-      du wurdest als <strong>${safeStaff}</strong> bei <strong>${name}</strong> eingeladen.
-      Richte jetzt deinen <strong>${safeStaff}-Login für den Berufsalltag</strong> ein.
+      ${isReminder
+        ? `kurze Erinnerung: du wurdest als <strong>${safeStaff}</strong> bei <strong>${name}</strong> eingeladen.
+      Der Link ist noch gültig — richte jetzt deinen <strong>${safeStaff}-Login für den Berufsalltag</strong> ein.`
+        : `du wurdest als <strong>${safeStaff}</strong> bei <strong>${name}</strong> eingeladen.
+      Richte jetzt deinen <strong>${safeStaff}-Login für den Berufsalltag</strong> ein.`}
     </p>
     ${dualLoginBlock}
     ${emailCtaButton(inviteLink, `${staffLabel}-Konto jetzt erstellen`, primaryColor)}

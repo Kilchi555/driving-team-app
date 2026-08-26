@@ -97,10 +97,10 @@
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">
-              Welche Motorräder stellt Driving Team für die Weiterbildung zur Verfügung?
+              Brauche ich ein eigenes Motorrad für die Weiterbildung?
               <span class="text-primary-500 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 mt-4">Grundsätzlich empfehlen wir diesen Kurs mit dem eigenen Motorrad zu absolvieren. Wer kurzfristig kein Motorrad zur Verfügung hat, kann uns gerne für die Miete eines Fahrschul-Motorrades kontaktieren.</p>
+            <p class="text-gray-600 mt-4">Ja. Die Weiterbildung findet mit deinem eigenen Motorrad statt. Bitte bringe auch eigenen Helm und Schutzausrüstung mit.</p>
           </details>
           <details class="bg-gray-50 border border-gray-100 rounded-xl p-6 cursor-pointer hover:shadow-[0_4px_16px_rgba(1,158,229,0.25)] transition group">
             <summary class="font-semibold text-lg text-gray-900 flex justify-between items-center">

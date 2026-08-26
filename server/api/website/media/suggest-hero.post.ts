@@ -20,6 +20,7 @@ import {
   loadCachedHeroCandidates,
   saveHeroCandidates,
 } from '~/server/utils/website-hero-cache'
+import { searchUnsplashPhotos } from '~/server/utils/website-unsplash'
 
 export type HeroCandidate = {
   id: string
@@ -90,51 +91,25 @@ async function fetchUnsplashCandidates(
 
   for (const query of queries) {
     if (out.length >= 3) break
-    const url = new URL('https://api.unsplash.com/search/photos')
-    url.searchParams.set('query', query)
-    url.searchParams.set('per_page', '12')
-    url.searchParams.set('page', String(page))
-    url.searchParams.set('orientation', 'landscape')
-    url.searchParams.set('content_filter', 'high')
-
-    const res = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Client-ID ${accessKey}`,
-        'Accept-Version': 'v1',
-      },
+    const photos = await searchUnsplashPhotos({
+      query,
+      accessKey,
+      perPage: 12,
+      page,
+      excludeIds: [...seen],
     })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw createError({
-        statusCode: res.status === 401 || res.status === 403 ? 503 : 502,
-        statusMessage:
-          res.status === 401 || res.status === 403
-            ? 'Unsplash nicht konfiguriert oder Key ungültig'
-            : `Unsplash-Fehler (${res.status}): ${text.slice(0, 120)}`,
-      })
-    }
-    const data = await res.json()
-    for (const photo of data?.results || []) {
-      if (!photo?.id || seen.has(photo.id)) continue
+    for (const photo of photos) {
+      if (seen.has(photo.id)) continue
       seen.add(photo.id)
-      const preview =
-        photo.urls?.regular || photo.urls?.full || photo.urls?.small || null
-      if (!preview) continue
-      // Prefer full/regular Unsplash CDN URL for hotlinking (images.unsplash.com)
-      const hotlink = photo.urls?.regular || photo.urls?.full || preview
       out.push({
         id: `unsplash:${photo.id}`,
-        preview_url: preview,
-        hotlink_url: hotlink,
+        preview_url: photo.preview_url,
+        hotlink_url: photo.hotlink_url,
         source: 'stock',
-        photographer: photo.user?.name || null,
-        photographer_url: photo.user?.links?.html
-          ? `${photo.user.links.html}?utm_source=simy&utm_medium=referral`
-          : null,
-        unsplash_url: photo.links?.html
-          ? `${photo.links.html}?utm_source=simy&utm_medium=referral`
-          : null,
-        download_location: photo.links?.download_location || null,
+        photographer: photo.photographer,
+        photographer_url: photo.photographer_url,
+        unsplash_url: photo.unsplash_url,
+        download_location: photo.download_location,
       })
       if (out.length >= 3) break
     }

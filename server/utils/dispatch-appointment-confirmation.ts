@@ -13,6 +13,8 @@ import {
   renderAppointmentNotificationEmail,
   type AppointmentNotificationBody,
 } from '~/server/utils/appointment-notification-email'
+import { resolveAppointmentMeeting } from '~/server/utils/meeting-link'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 
 const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https://app.simy.ch').replace(/\/$/, '')
 
@@ -258,7 +260,7 @@ export async function dispatchAppointmentConfirmation(
 
   const { data: location } = await supabase
     .from('locations')
-    .select('name, address, city')
+    .select('name, address, city, meeting_url')
     .eq('id', appointment.location_id)
     .single()
 
@@ -290,20 +292,20 @@ export async function dispatchAppointmentConfirmation(
   const showPrice = !appointment.event_type_code || BILLABLE_TYPES.has(appointment.event_type_code)
   const isLessonType = !appointment.event_type_code || LESSON_TYPES.has(appointment.event_type_code)
 
-  let meeting_type: 'in_person' | 'phone' | 'online' | undefined
-  let meeting_link: string | undefined
+  let invite: { meeting_type?: string | null; meeting_link?: string | null } | null = null
   if (!isLessonType && user.email) {
-    const { data: invite } = await supabase
+    const { data: inviteRow } = await supabase
       .from('invited_customers')
       .select('meeting_type, meeting_link')
       .eq('appointment_id', appointmentId)
       .ilike('email', user.email)
       .maybeSingle()
-    if (invite) {
-      meeting_type = (invite as any).meeting_type || undefined
-      meeting_link = (invite as any).meeting_link || undefined
-    }
+    invite = inviteRow
   }
+  const { meetingType: meeting_type, meetingLink: meeting_link } = resolveAppointmentMeeting({
+    location,
+    invite,
+  })
 
   let payment = Array.isArray(appointment.payments) ? appointment.payments[0] : appointment.payments
   if (!payment?.total_amount_rappen) {
@@ -361,6 +363,7 @@ export async function dispatchAppointmentConfirmation(
     isLessonType,
     meeting_type,
     meeting_link,
+    omitAccountCta: user.onboarding_status === 'pending' && !allowsCustomerAccountActivation(policy),
   }
 
   if (!skipCustomerEmail) {
@@ -422,7 +425,12 @@ export async function dispatchAppointmentConfirmation(
         hour: '2-digit',
         minute: '2-digit',
       })
-      const { url: accessUrl } = await getAccountAccessLink(supabase, user, tenant.slug || '')
+      const { url: accessUrl, canAccessAccount } = await getAccountAccessLink(
+        supabase,
+        user,
+        tenant.slug || '',
+        { policy }
+      )
       const smsMessage = buildAppointmentConfirmationSms(
         {
           firstName: user.first_name || 'du',
@@ -432,7 +440,7 @@ export async function dispatchAppointmentConfirmation(
             meeting_type === 'phone' || meeting_type === 'online'
               ? undefined
               : locationAddressDisplay || undefined,
-          appLink: accessUrl,
+          appLink: canAccessAccount ? accessUrl : undefined,
         },
         smsLength,
       )

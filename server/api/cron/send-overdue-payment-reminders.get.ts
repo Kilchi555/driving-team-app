@@ -182,11 +182,19 @@ export default defineEventHandler(async (event) => {
     // plain login link is a dead end for them, so route them through their
     // onboarding/activation link instead. Completed accounts get the
     // regular login link, unchanged.
-    const { url: loginLink, isActivationLink } = await getAccountAccessLink(supabase, user, tenantSlug)
+    const policy = (tenant as any)?.booking_policy || {}
+    const { url: loginLink, isActivationLink, canAccessAccount } = await getAccountAccessLink(
+      supabase,
+      user,
+      tenantSlug,
+      { policy }
+    )
     const ctaText = isActivationLink ? 'Konto aktivieren & bezahlen →' : 'Jetzt bezahlen →'
-    const loginHintText = isActivationLink
-      ? `Aktiviere dein Konto unter <a href="${loginLink}" style="color:#dc2626">${loginLink}</a>.`
-      : `Melde dich unter <a href="${loginLink}" style="color:#dc2626">${loginLink}</a> an.`
+    const loginHintText = !canAccessAccount
+      ? `Bitte begleiche den Betrag direkt bei <strong>${tenantName}</strong>.`
+      : isActivationLink
+        ? `Aktiviere dein Konto unter <a href="${loginLink}" style="color:#dc2626">${loginLink}</a>.`
+        : `Melde dich unter <a href="${loginLink}" style="color:#dc2626">${loginLink}</a> an.`
 
     const totalRappen = userPayments.reduce((s: number, p: any) => s + (p.total_amount_rappen || 0), 0)
     const totalCHF    = chf(totalRappen)
@@ -249,11 +257,11 @@ export default defineEventHandler(async (event) => {
               </tfoot>
             </table>
 
-            <div style="text-align:center;margin:24px 0">
+            ${canAccessAccount ? `<div style="text-align:center;margin:24px 0">
               <a href="${loginLink}" style="display:inline-block;padding:14px 32px;background:#dc2626;color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">
                 ${ctaText}
               </a>
-            </div>
+            </div>` : ''}
 
             <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;text-align:center">
               ${loginHintText}

@@ -4,7 +4,7 @@
     <div class="fixed inset-0 bg-gray-900/60 transition-opacity" @click="closeModal"/>
 
     <!-- Modal panel – full-screen sheet on mobile, centered dialog on sm+ -->
-    <div class="admin-modal relative w-full bg-white shadow-xl transition-all
+    <div class="admin-modal invoice-detail-modal relative w-full bg-white shadow-xl transition-all
                 rounded-t-2xl max-h-[95dvh]
                 sm:rounded-2xl sm:max-w-4xl sm:max-h-[90dvh]
                 flex flex-col overflow-hidden">
@@ -285,7 +285,7 @@
                   <a
                     v-if="displayCustomer.email"
                     :href="`mailto:${displayCustomer.email}`"
-                    class="flex items-start gap-2.5 text-gray-700 hover:text-blue-600 transition-colors min-w-0"
+                    class="flex items-start gap-2.5 text-gray-700 tenant-link-hover transition-colors min-w-0"
                   >
                     <svg class="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     <span class="break-all leading-snug">{{ displayCustomer.email }}</span>
@@ -297,7 +297,7 @@
                   <a
                     v-if="displayCustomer.phone"
                     :href="`tel:${displayCustomer.phone}`"
-                    class="flex items-center gap-2.5 text-gray-700 hover:text-blue-600 transition-colors"
+                    class="flex items-center gap-2.5 text-gray-700 tenant-link-hover transition-colors"
                   >
                     <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                     {{ displayCustomer.phone }}
@@ -333,7 +333,8 @@
                   <a
                     v-if="invoice.billing_email || invoice.customer_email"
                     :href="`mailto:${invoice.billing_email || invoice.customer_email}`"
-                    class="mt-3 inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 break-all"
+                    class="mt-3 inline-flex items-center gap-1.5 text-sm hover:opacity-80 break-all"
+                    :style="{ color: primaryColor }"
                   >
                     {{ invoice.billing_email || invoice.customer_email }}
                   </a>
@@ -456,7 +457,8 @@
                   <div class="flex flex-col items-center">
                     <span
                       class="w-2.5 h-2.5 rounded-full ring-4 ring-white flex-shrink-0 mt-1.5"
-                      :class="(invoice as any).sent_at ? 'bg-blue-500' : 'bg-gray-200'"
+                      :class="(invoice as any).sent_at ? '' : 'bg-gray-200'"
+                      :style="(invoice as any).sent_at ? { background: primaryColor } : undefined"
                     />
                     <span v-if="hasHistoryFollowUp" class="w-px flex-1 bg-gray-100 mt-1" />
                   </div>
@@ -547,7 +549,7 @@
                       </div>
                     </div>
                     <p v-if="entry.sent_to" class="text-xs text-gray-400 mt-0.5 truncate">an {{ entry.sent_to }}</p>
-                    <p v-if="entry.new_due_date" class="text-xs text-blue-600 mt-0.5">Neues Ziel: {{ formatDate(entry.new_due_date) }}</p>
+                    <p v-if="entry.new_due_date" class="text-xs mt-0.5" :style="{ color: primaryColor }">Neues Ziel: {{ formatDate(entry.new_due_date) }}</p>
                     <p v-if="entry.fee_rappen > 0" class="text-xs text-gray-400 mt-0.5">+{{ formatCurrency(entry.fee_rappen) }} Gebühr</p>
                   </div>
                 </li>
@@ -597,9 +599,16 @@
 
             <!-- ── Rechnungsübersicht ── -->
             <div class="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
+              <div
+                v-if="!isQuote && (invoice.credit_applied_rappen || 0) > 0"
+                class="mb-4 rounded-xl px-3 py-2 text-xs font-medium"
+                :style="{ color: primaryColor, background: `${primaryColor}12` }"
+              >
+                CHF {{ formatCurrency(invoice.credit_applied_rappen || 0) }} wurden dem Kunden-Guthaben gutgeschrieben.
+              </div>
               <div class="flex items-center justify-between mb-4">
                 <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Positionen</h4>
-                <div v-if="isLoadingDetails" class="flex items-center text-blue-600 text-xs gap-1.5">
+                <div v-if="isLoadingDetails" class="flex items-center text-xs gap-1.5" :style="{ color: primaryColor }">
                   <svg class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
@@ -641,6 +650,9 @@
                           <span v-if="item.appointment_duration_minutes"> · {{ item.appointment_duration_minutes }} Min.</span>
                         </div>
                         <div v-if="item.notes" class="text-xs text-gray-400 mt-0.5 italic">{{ item.notes }}</div>
+                        <div v-if="item.credit_to_wallet" class="text-xs font-medium mt-1" :style="{ color: primaryColor }">
+                          Nach Zahlung +CHF {{ formatCurrency(item.credit_amount_rappen || item.total_price_rappen) }} Guthaben
+                        </div>
                         <div class="text-xs text-gray-400 mt-1">{{ item.quantity }}× · {{ formatCurrency(item.unit_price_rappen) }} / Stk.</div>
                       </div>
                       <div class="text-sm font-semibold text-gray-900 flex-shrink-0">{{ formatCurrency(item.total_price_rappen) }}</div>
@@ -662,6 +674,9 @@
                           <span v-if="item.appointment_duration_minutes"> · {{ item.appointment_duration_minutes }} Min.</span>
                         </div>
                         <div v-if="item.notes" class="text-xs text-gray-400 mt-0.5 italic">{{ item.notes }}</div>
+                        <div v-if="item.credit_to_wallet" class="text-xs font-medium mt-1" :style="{ color: primaryColor }">
+                          Nach Zahlung +CHF {{ formatCurrency(item.credit_amount_rappen || item.total_price_rappen) }} Guthaben
+                        </div>
                       </div>
                       <div class="col-span-2 text-center text-sm text-gray-700">{{ item.quantity }}×</div>
                       <div class="col-span-2 text-right text-sm text-gray-700">{{ formatCurrency(item.unit_price_rappen) }}</div>
@@ -881,6 +896,7 @@
 <script setup lang="ts">
 
 import { defineProps, defineEmits, ref, watch, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import InvoiceStatusBadge from './InvoiceStatusBadge.vue'
 import PaymentStatusBadge from './PaymentStatusBadge.vue'
 import DunningSendDialog from './DunningSendDialog.vue'
@@ -897,6 +913,8 @@ import {
 import { useUIStore } from '~/stores/ui'
 
 const uiStore = useUIStore()
+const { primaryColor: brandingPrimaryColor } = useTenantBranding()
+const primaryColor = computed(() => brandingPrimaryColor.value || '#1E40AF')
 
 interface InvoiceItem {
   id: string
@@ -916,6 +934,8 @@ interface InvoiceItem {
   sort_order?: number
   notes?: string
   created_at?: string
+  credit_to_wallet?: boolean
+  credit_amount_rappen?: number | null
 }
 
 interface Invoice {
@@ -948,6 +968,7 @@ interface Invoice {
   vat_amount_rappen: number
   discount_amount_rappen: number
   total_amount_rappen: number
+  credit_applied_rappen?: number
   notes?: string
   internal_notes?: string
   paid_amount_rappen?: number
@@ -1208,7 +1229,11 @@ const canSendDunning = computed(() => {
 })
 
 const DUNNING_STAGE_LABELS: Record<number, string> = { 1: 'Zahlungserinnerung', 2: '1. Mahnung', 3: '2. / letzte Mahnung' }
-const DUNNING_STAGE_COLORS: Record<number, string> = { 1: '#2563eb', 2: '#d97706', 3: '#dc2626' }
+const DUNNING_STAGE_COLORS = computed<Record<number, string>>(() => ({
+  1: primaryColor.value || '#2563eb',
+  2: '#d97706',
+  3: '#dc2626',
+}))
 
 const dunningStageLabel = (stage: number) => DUNNING_STAGE_LABELS[stage] || `Stufe ${stage}`
 
@@ -1225,7 +1250,7 @@ const outstandingAmountRappen = computed(() => {
 
 const dunningLevelLabel = computed(() => dunningStageLabel(effectiveDunningLevel.value))
 const dunningLevelBadgeStyle = computed(() => {
-  const color = DUNNING_STAGE_COLORS[effectiveDunningLevel.value] || '#6b7280'
+  const color = DUNNING_STAGE_COLORS.value[effectiveDunningLevel.value] || '#6b7280'
   return { background: color + '1a', color }
 })
 
@@ -1842,3 +1867,14 @@ watch(() => props.invoice, (newInvoice) => {
 }, { deep: true });
 
 </script>
+
+<style scoped>
+.tenant-link-hover:hover {
+  color: var(--color-primary, #1E40AF);
+}
+.invoice-detail-modal :deep(input:focus),
+.invoice-detail-modal :deep(textarea:focus),
+.invoice-detail-modal :deep(select:focus) {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+}
+</style>
