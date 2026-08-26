@@ -3634,10 +3634,6 @@ const selectDurationOption = async (duration: number) => {
 
   currentStep.value = 4
   saveBookingPrefs()
-
-  if (!isDrivingSchoolTenant.value && allDisplayableLocations.value.length === 1) {
-    await selectLocation(allDisplayableLocations.value[0])
-  }
 }
 
 // NEW: Load pricing for a duration
@@ -3908,10 +3904,6 @@ const selectMainCategory = async (category: any) => {
     }
     
     // Skip subcategory selection and go directly to duration selection
-    if (!isDrivingSchoolTenant.value && durationOptions.value.length === 1) {
-      await selectDurationOption(durationOptions.value[0])
-      return
-    }
     currentStep.value = 3
   } else {
     // Has subcategories - go to subcategory selection
@@ -4282,11 +4274,6 @@ const selectLocation = async (location: any) => {
       await selectInstructor(locked)
       return
     }
-  }
-
-  if (!isDrivingSchoolTenant.value && availableInstructors.value.length === 1) {
-    await selectInstructor(availableInstructors.value[0])
-    return
   }
 
   await waitForPressEffect()
@@ -6485,14 +6472,6 @@ onMounted(async () => {
           if (skipServiceTypeStep.value && currentStep.value === 0) {
             selectedServiceType.value = 'fahrstunde'
             currentStep.value = 1
-            const onlyOffer = mainCategories.value
-            if (
-              !isDrivingSchoolTenant.value
-              && onlyOffer.length === 1
-              && !(onlyOffer[0].children || []).length
-            ) {
-              await selectMainCategory(onlyOffer[0])
-            }
           }
         }
       } else {
