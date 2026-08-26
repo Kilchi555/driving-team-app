@@ -144,6 +144,18 @@ export default defineEventHandler(async (event) => {
   ) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid staff_manual_discount_permission' })
   }
+  if (body.ask_acquisition_source !== undefined && typeof body.ask_acquisition_source !== 'boolean') {
+    throw createError({ statusCode: 400, statusMessage: 'ask_acquisition_source must be a boolean' })
+  }
+  if (body.staff_record_acquisition_source !== undefined && typeof body.staff_record_acquisition_source !== 'boolean') {
+    throw createError({ statusCode: 400, statusMessage: 'staff_record_acquisition_source must be a boolean' })
+  }
+  if (body.staff_ask_origin_on_appointment !== undefined && typeof body.staff_ask_origin_on_appointment !== 'boolean') {
+    throw createError({ statusCode: 400, statusMessage: 'staff_ask_origin_on_appointment must be a boolean' })
+  }
+  if (body.require_payment_before_confirm !== undefined && typeof body.require_payment_before_confirm !== 'boolean') {
+    throw createError({ statusCode: 400, statusMessage: 'require_payment_before_confirm must be a boolean' })
+  }
 
   // Load current policy and merge
   const { data: current } = await supabase

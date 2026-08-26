@@ -93,6 +93,44 @@
         </div>
       </div>
 
+      <!-- Herkunft erfassen (Staff) -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-800">Staff darf Herkunft eintragen</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Pflichtfeld beim Anlegen. Klick-IDs aus Ads werden nicht überschrieben. Geht nicht an Meta — nur intern.</p>
+          </div>
+          <button
+            type="button"
+            @click="policy.staff_record_acquisition_source = !policy.staff_record_acquisition_source"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
+            :style="policy.staff_record_acquisition_source ? primaryBg : { background: '#e5e7eb' }"
+          >
+            <span
+              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+              :class="policy.staff_record_acquisition_source ? 'translate-x-6' : 'translate-x-1'"
+            />
+          </button>
+        </div>
+        <div class="px-5 py-4 flex items-center justify-between border-t border-gray-50">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-800">Beim Termin im Kalender fragen</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Im Kalender Pflicht, wenn der {{ t.client }} noch keine Herkunft hat. Ads-Klicks bleiben First-Touch. Nicht an Meta.</p>
+          </div>
+          <button
+            type="button"
+            @click="policy.staff_ask_origin_on_appointment = !policy.staff_ask_origin_on_appointment"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
+            :style="policy.staff_ask_origin_on_appointment ? primaryBg : { background: '#e5e7eb' }"
+          >
+            <span
+              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+              :class="policy.staff_ask_origin_on_appointment ? 'translate-x-6' : 'translate-x-1'"
+            />
+          </button>
+        </div>
+      </div>
+
       <!-- Onboarding-SMS (intern, Staff erstellt Schüler) -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="px-5 py-4 flex items-center justify-between">
@@ -378,6 +416,27 @@
         </div>
       </div>
 
+      <!-- Herkunft erfassen (Kunden) -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-800">Kunden nach Herkunft fragen</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Pflichtfeld «Woher kennst du uns?» bei Online-Buchung und Registrierung. Ads-Klicks bleiben First-Touch. Nicht an Meta.</p>
+          </div>
+          <button
+            type="button"
+            @click="policy.ask_acquisition_source = !policy.ask_acquisition_source"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
+            :style="policy.ask_acquisition_source ? primaryBg : { background: '#e5e7eb' }"
+          >
+            <span
+              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+              :class="policy.ask_acquisition_source ? 'translate-x-6' : 'translate-x-1'"
+            />
+          </button>
+        </div>
+      </div>
+
       <!-- Öffentliche Kontaktfelder (Gast-Buchung, Anfrage & Registrierung) -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-50">
@@ -640,6 +699,29 @@
         </div>
       </div>
 
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 flex items-center justify-between gap-4">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-800">Buchung erst nach Onlinezahlung bestätigen</h2>
+            <p class="text-xs text-gray-400 mt-0.5">
+              Der Platz bleibt reserviert, die Buchung gilt erst nach erfolgreicher TWINT- oder Kartenzahlung.
+              Rechnung bleibt sofort bestätigt. Standard: aus — bestehende Betriebe bleiben unverändert.
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="policy.require_payment_before_confirm = !policy.require_payment_before_confirm"
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0"
+            :style="policy.require_payment_before_confirm ? primaryBg : { background: '#e5e7eb' }"
+          >
+            <span
+              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+              :class="policy.require_payment_before_confirm ? 'translate-x-6' : 'translate-x-1'"
+            />
+          </button>
+        </div>
+      </div>
+
       <!-- ══════════════════════════════════════════════════════
            GRUPPE 3: Staff-Berechtigungen
       ══════════════════════════════════════════════════════ -->
@@ -757,6 +839,10 @@ const policy = ref({
   onboarding_sms_enabled: true,
   onboarding_email_enabled: false,
   staff_refund_permission: 'hidden' as 'hidden' | 'request' | 'allowed',
+  ask_acquisition_source: false,
+  staff_record_acquisition_source: false,
+  staff_ask_origin_on_appointment: false,
+  require_payment_before_confirm: false,
 })
 
 const idleClientChannelOptions = [
