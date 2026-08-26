@@ -15,6 +15,7 @@ import { generateAdminEnrollmentNotificationEmail } from '~/server/utils/email-t
 import {
   buildBrandedEmailShell,
   displayName,
+  emailAppointmentAppStoreBlock,
   emailDetailBox,
   emailDetailRow,
   emailSignature,
@@ -353,6 +354,7 @@ export default defineEventHandler(async (event) => {
       ${importantNotice}
       <p style="color:#374151;font-size:16px;line-height:1.6;margin:20px 0 0 0;">Viel Erfolg und Freude beim Kurs!</p>
       ${emailSignature(tenantName, tenant?.contact_email, primary)}
+      ${emailAppointmentAppStoreBlock()}
     `
 
     // 5. Build HTML email with branded shell

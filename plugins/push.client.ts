@@ -9,13 +9,36 @@ import { defineNuxtPlugin } from '#imports'
 export default defineNuxtPlugin(() => {
   if (import.meta.server) return
 
-  const tryRegister = () => {
-    void flushPendingPushToken()
-    void ensureNativePushRegistration({ request: true })
+  const isLoggedIn = () => {
+    try {
+      return Boolean(useAuthStore().isLoggedIn)
+    } catch {
+      return false
+    }
   }
 
-  void (async () => {
-    if (!(await isCapacitorNative())) return
+  const tryRegister = () => {
+    void flushPendingPushToken()
+    // Never show the OS dialog on the login screen.
+    void ensureNativePushRegistration({ request: isLoggedIn() })
+  }
+
+  let setupStarted = false
+  let iv: number | undefined
+  const stopPolling = () => {
+    if (iv !== undefined) {
+      window.clearInterval(iv)
+      iv = undefined
+    }
+  }
+
+  const setup = async () => {
+    if (setupStarted) return
+    setupStarted = true
+    if (!(await isCapacitorNative())) {
+      stopPolling()
+      return
+    }
 
     try {
       const { getSupabase } = await import('~/utils/supabase')
@@ -39,5 +62,17 @@ export default defineNuxtPlugin(() => {
     } catch (e) {
       console.warn('[Push] Setup failed:', e)
     }
-  })()
+  }
+
+  void setup()
+  // Hosted WebView can inject Capacitor after the first JS tick; cookie
+  // login hydrates supabase-js a moment later. Keep trying briefly.
+  let attempts = 0
+  iv = window.setInterval(() => {
+    attempts += 1
+    void setup()
+    if (isLoggedIn()) tryRegister()
+    if (setupStarted && attempts >= 8) stopPolling()
+    if (attempts >= 15) stopPolling()
+  }, 1000)
 })

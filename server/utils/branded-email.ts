@@ -111,6 +111,25 @@ export function buildBrandedEmailShell(p: BrandedEmailShellParams): string {
 </html>`
 }
 
+export const SIMY_APP_STORE_URL = 'https://apps.apple.com/ch/app/simy/id6766244063'
+
+/** Quiet App Store CTA — keep it below the real message, never in the header. */
+export function emailAppStoreBlock(
+  caption = 'Simy auch als iPhone-App verfügbar',
+): string {
+  return `<div style="margin:24px 0 0;text-align:center">
+  <p style="margin:0 0 10px;color:#9ca3af;font-size:12px;">${escapeHtml(caption)}</p>
+  <a href="${SIMY_APP_STORE_URL}" style="display:inline-block;background-color:#111827;color:#ffffff !important;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #ffffff;">Laden im App Store</a>
+</div>`
+}
+
+const APPOINTMENT_APP_CAPTION = 'Mitteilungen und Termine in der iPhone-App'
+
+/** Same block, wording for booking / reminder / cancel mails. */
+export function emailAppointmentAppStoreBlock(): string {
+  return emailAppStoreBlock(APPOINTMENT_APP_CAPTION)
+}
+
 export function emailSignature(tenantName: string, contactEmail?: string | null, primaryColor = '#2563eb'): string {
   const name = displayName(tenantName)
   const mail = contactEmail

@@ -18,6 +18,7 @@ import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import {
   buildBrandedEmailShell,
   displayName,
+  emailAppStoreBlock,
   emailCtaButton,
   emailDetailBox,
   emailSignature,
@@ -183,16 +184,6 @@ export async function sendPendingRegistrationConfirmationEmail(params: {
 
 // ─── HTML Builders ─────────────────────────────────────────────────────────────
 
-function appStoreBlock(): string {
-  // Avoid pure black (#000): Apple Mail / Gmail dark mode crush black buttons
-  // into the dark background and mute white text. A near-black fill + white
-  // border (or the official badge) stays readable in both modes.
-  return `<div style="margin:24px 0 0;text-align:center">
-  <p style="margin:0 0 10px;color:#9ca3af;font-size:12px;">Simy auch als iPhone-App verfügbar</p>
-  <a href="https://apps.apple.com/ch/app/simy/id6766244063" style="display:inline-block;background-color:#111827;color:#ffffff !important;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #ffffff;">Laden im App Store</a>
-</div>`
-}
-
 function buildUserHtml(
   role: 'client' | 'staff',
   firstName: string,
@@ -243,7 +234,7 @@ function buildUserHtml(
     <p style="color:#9ca3af;font-size:12px;margin:0;text-align:center;">
       Oder öffne: <a href="${escapeAttr(loginUrl)}" style="color:${primaryColor};">${escapeHtml(loginUrl)}</a>
     </p>
-    ${appStoreBlock()}
+    ${emailAppStoreBlock()}
     ${emailSignature(tenantName, null, primaryColor)}
   `
 
@@ -291,7 +282,7 @@ function buildAdminHtml(
     <p style="color:#374151;font-size:14px;margin:16px 0 0;font-weight:600;">
       Pascal<br><span style="color:#6b7280;font-weight:400;">Simy</span>
     </p>
-    ${appStoreBlock()}
+    ${emailAppStoreBlock()}
   `
 
   return buildBrandedEmailShell({

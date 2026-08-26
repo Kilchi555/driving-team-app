@@ -7,7 +7,7 @@ import { logger } from '~/utils/logger'
 import { sendPushToUser } from '~/server/utils/push'
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
-import { displayName } from '~/server/utils/branded-email'
+import { displayName, emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
 
 export interface AppointmentNotificationBody {
   email: string
@@ -133,6 +133,7 @@ const TEMPLATES = {
               }
 
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
+              ${emailAppointmentAppStoreBlock()}
             </td>
           </tr>
           <tr>
@@ -180,6 +181,7 @@ const TEMPLATES = {
                 <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Zum Kundenkonto</a>
               </div>
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
+              ${emailAppointmentAppStoreBlock()}
             </td>
           </tr>
           <tr>
@@ -255,6 +257,7 @@ const TEMPLATES = {
               </div>
               
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Beste Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
+              ${emailAppointmentAppStoreBlock()}
             </td>
           </tr>
           <tr>
@@ -329,6 +332,7 @@ const TEMPLATES = {
               </div>
               
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
+              ${emailAppointmentAppStoreBlock()}
             </td>
           </tr>
           <tr>
@@ -375,6 +379,7 @@ const TEMPLATES = {
               ${data.amount ? `<p style="margin:5px 0;color:#374151;"><strong>Betrag:</strong> ${data.amount}</p>` : ''}
             </div>
             <p style="color:#6b7280;font-size:14px;margin:20px 0 0 0;">Der Termin ist in deinem Kalender sichtbar.</p>
+            ${emailAppointmentAppStoreBlock()}
           </td>
         </tr>
         <tr>
