@@ -370,6 +370,23 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    if (typeof sanitizedUpdate.primary_color === 'string') {
+      const { isStockEventTypeColor } = await import('~/server/utils/stock-event-type-color')
+      const { data: eventTypes } = await supabaseAdmin
+        .from('event_types')
+        .select('id, default_color')
+        .eq('tenant_id', tenantId)
+      const stockIds = (eventTypes || [])
+        .filter((et: { default_color?: string | null }) => isStockEventTypeColor(et.default_color))
+        .map((et: { id: string }) => et.id)
+      if (stockIds.length > 0) {
+        await supabaseAdmin
+          .from('event_types')
+          .update({ default_color: sanitizedUpdate.primary_color, updated_at: sanitizedUpdate.updated_at })
+          .in('id', stockIds)
+      }
+    }
+
     // ============ LAYER 8: AUDIT LOGGING ============
     await logAudit({
       user_id: userId,

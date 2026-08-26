@@ -3586,7 +3586,11 @@ const getInteractiveBadgeStyle = (isSelected: boolean) => {
 }
 
 const getCategoryBadgeStyle = (category: any, isSelected: boolean) => {
-  const accent = category?.color || getBrandPrimary()
+  // Public booking follows tenant branding (from the logo). Event-type
+  // default_color is the Simy template indigo/sky and would otherwise win.
+  const accent = (!isDrivingSchoolTenant.value || category?._source === 'event_type')
+    ? getBrandPrimary()
+    : (category?.color || getBrandPrimary())
   return {
     borderColor: isSelected ? accent : withAlpha(accent, 0.35),
     color: isSelected ? accent : '#1f2937',
