@@ -111,11 +111,31 @@ export interface BookingPolicy {
   staff_invoice_permission: 'hidden' | 'create_only' | 'create_and_send'
   /** Staff may enter a free-amount discount + note (e.g. paper voucher). Default off. */
   staff_manual_discount_permission: 'hidden' | 'allowed'
+  /**
+   * When true, public booking + registration ask “Woher kennst du uns?” (optional).
+   * Default false so other tenants are not surprised.
+   */
+  ask_acquisition_source: boolean
+  /**
+   * When true, staff can record origin on create + in the customer profile.
+   * Default false.
+   */
+  staff_record_acquisition_source: boolean
+  /**
+   * When true, EventModal asks origin on a new lesson if the student has none.
+   * Default false — only enable per tenant (Driving Team first).
+   */
+  staff_ask_origin_on_appointment: boolean
   // ── Auto-invoice after appointment completion (default OFF) ────────────────
   /**
    * When true, completing an appointment with payment_method=invoice
    * automatically creates and emails a formal invoice.
    */
+  /**
+   * When true, online appointment booking stays pending until Wallee payment
+   * succeeds. Invoice/cash still confirm immediately. Default false.
+   */
+  require_payment_before_confirm: boolean
   auto_invoice_on_complete: boolean
   /**
    * Who receives the invoice PDF email.
@@ -204,6 +224,10 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   staff_refund_permission: 'hidden',
   staff_invoice_permission: 'create_and_send',
   staff_manual_discount_permission: 'hidden',
+  ask_acquisition_source: false,
+  staff_record_acquisition_source: false,
+  staff_ask_origin_on_appointment: false,
+  require_payment_before_confirm: false,
   auto_invoice_on_complete: false,
   auto_invoice_recipient: 'customer',
   auto_invoice_office_email: null,
@@ -319,6 +343,10 @@ export default defineEventHandler(async (event) => {
     auto_invoice_schedule_day: normalizeAutoInvoiceMonthDay(merged.auto_invoice_schedule_day),
     staff_manual_discount_permission:
       merged.staff_manual_discount_permission === 'allowed' ? 'allowed' : 'hidden',
+    ask_acquisition_source: merged.ask_acquisition_source === true,
+    staff_record_acquisition_source: merged.staff_record_acquisition_source === true,
+    staff_ask_origin_on_appointment: merged.staff_ask_origin_on_appointment === true,
+    require_payment_before_confirm: merged.require_payment_before_confirm === true,
     idle_student_reminder_enabled: idleReminder.enabled,
     idle_student_reminder_days: idleReminder.idleDays,
     idle_student_reminder_resend_days: idleReminder.resendDays,

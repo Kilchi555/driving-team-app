@@ -7,6 +7,7 @@ import { logger } from '~/utils/logger'
 import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
+import { sendOnlinePaymentReceiptsSafe } from '~/server/utils/online-payment-receipt'
 
 const STATUS_MAPPING: Record<string, string> = {
   'PENDING': 'pending',
@@ -62,6 +63,7 @@ export default defineEventHandler(async (event) => {
         id,
         user_id,
         tenant_id,
+        appointment_id,
         wallee_transaction_id,
         payment_status,
         total_amount_rappen,
@@ -186,6 +188,24 @@ export default defineEventHandler(async (event) => {
               errors.push({ paymentId: payment.id, error: updateError.message })
             } else {
               recovered++
+
+              if (
+                (mappedStatus === 'completed' || mappedStatus === 'authorized')
+                && payment.appointment_id
+              ) {
+                try {
+                  const { confirmHeldAppointmentAfterPayment } = await import(
+                    '~/server/utils/wallee-appointment-checkout'
+                  )
+                  await confirmHeldAppointmentAfterPayment({
+                    appointmentId: payment.appointment_id,
+                    tenantId: payment.tenant_id,
+                    paymentStatus: mappedStatus,
+                  })
+                } catch (confirmErr: any) {
+                  logger.warn(`⚠️ Phase 1: could not confirm held appointment for ${payment.id}:`, confirmErr?.message)
+                }
+              }
 
               // Successful course recovery — cancel leftover retry attempts
               if ((mappedStatus === 'completed' || mappedStatus === 'authorized') && payment.metadata?.course_id) {
@@ -341,6 +361,9 @@ export default defineEventHandler(async (event) => {
                 logger.error(`❌ Error completing payment ${payment.id}:`, completeErr)
               } else {
                 recovered++
+                if (mappedStatus === 'completed') {
+                  await sendOnlinePaymentReceiptsSafe(supabase, [payment.id])
+                }
                 try {
                   await supabase.from('webhook_logs').insert({
                     transaction_id: payment.wallee_transaction_id,
@@ -456,6 +479,9 @@ export default defineEventHandler(async (event) => {
               failedReset++
               if (mappedStatus === 'completed' || mappedStatus === 'authorized') {
                 recovered++
+                if (mappedStatus === 'completed') {
+                  await sendOnlinePaymentReceiptsSafe(supabase, [payment.id])
+                }
                 if (payment.metadata?.course_id) {
                   try {
                     await cancelOrphanedSiblingCoursePayments({
@@ -593,8 +619,18 @@ export default defineEventHandler(async (event) => {
       logger.warn('⚠️ Phase 4 (abandoned cleanup) failed:', abandonedErr.message)
     }
 
+    let unpaidHoldsReleased = 0
+    try {
+      const { releaseExpiredUnpaidPendingAppointments } = await import(
+        '~/server/utils/wallee-appointment-checkout'
+      )
+      unpaidHoldsReleased = await releaseExpiredUnpaidPendingAppointments()
+    } catch (holdErr: any) {
+      logger.warn('⚠️ Phase 5 (unpaid hold release) failed:', holdErr?.message)
+    }
+
     const duration = Date.now() - startTime
-    logger.info(`🏁 Recovery cron finished in ${duration}ms — Phase1: ${recovered} recovered / ${failed} failed | Phase2: ${processingReleased} processing released | Phase3: ${failedReset} failed→pending | Phase4: ${abandoned} abandoned cancelled`)
+    logger.info(`🏁 Recovery cron finished in ${duration}ms — Phase1: ${recovered} recovered / ${failed} failed | Phase2: ${processingReleased} processing released | Phase3: ${failedReset} failed→pending | Phase4: ${abandoned} abandoned cancelled | Phase5: ${unpaidHoldsReleased} unpaid holds released`)
 
     return {
       success: true,
@@ -606,6 +642,7 @@ export default defineEventHandler(async (event) => {
         phase2_processing_released: processingReleased,
         phase3_failed_reset: failedReset,
         phase4_abandoned_cancelled: abandoned,
+        phase5_unpaid_holds_released: unpaidHoldsReleased,
         errors: errors.length > 0 ? errors : undefined
       },
       duration_ms: duration

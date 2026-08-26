@@ -18,6 +18,9 @@ import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conve
 import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { syncPaymentRefundTotals } from '~/server/utils/wallee-refund'
+import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-product-purchase'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
+import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -635,6 +638,29 @@ export default defineEventHandler(async (event) => {
     
     logger.info(`✅ Updated ${paymentsToUpdate.length} payment(s) to: ${paymentStatus}`)
 
+    if (paymentStatus === 'completed') {
+      try {
+        const { sendOnlinePaymentReceiptsSafe } = await import('~/server/utils/online-payment-receipt')
+        await sendOnlinePaymentReceiptsSafe(supabase, normalUpdateIds)
+      } catch (receiptErr: any) {
+        logger.warn('⚠️ Quittungsversand (non-fatal):', receiptErr?.message || receiptErr)
+      }
+
+      for (const payment of paymentsToUpdate) {
+        try {
+          await consumeGiftCardForPayment({
+            supabase,
+            tenantId: payment.tenant_id,
+            paymentId: payment.id,
+            redeemedBy: payment.user_id,
+            discountCode: payment.metadata?.discount_code ?? null,
+          })
+        } catch (giftErr: any) {
+          logger.warn('⚠️ Gift-card consume (non-fatal):', giftErr?.message || giftErr)
+        }
+      }
+    }
+
     // ============ LAYER 7b: CANCEL ORPHANED COURSE RETRY ATTEMPTS ============
     // Guest course checkout creates a new payment row on every retry. When one
     // succeeds, cancel leftover pending/failed/processing siblings for the same
@@ -1099,18 +1125,25 @@ export default defineEventHandler(async (event) => {
                     const valueChf = (regData.amount_paid_rappen || payment?.total_amount_rappen || 0) / 100
                     const conversionDateTime = new Date()
 
-                    await sendCapiEvent({
-                      appointment_id: `course_${newReg.id}`,
-                      tenant_id: regData.tenant_id,
-                      event_name: 'Purchase',
-                      conversion_value_chf: valueChf,
-                      conversion_date_time: conversionDateTime,
-                      fbclid: attrRow?.fbclid ?? null,
-                      fbc: attrRow?.fbc ?? null,
-                      fbp: attrRow?.fbp ?? null,
-                      hashed_email: hashedEmail,
-                      hashed_phone: hashedPhone,
-                    })
+                    const { shouldSendMetaBookingConversion } = await import('~/server/utils/meta-booking-conversion')
+                    if (shouldSendMetaBookingConversion({
+                      isFirstCustomerBooking: true,
+                      fbclid: attrRow?.fbclid,
+                      fbc: attrRow?.fbc,
+                    })) {
+                      await sendCapiEvent({
+                        appointment_id: `course_${newReg.id}`,
+                        tenant_id: regData.tenant_id,
+                        event_name: 'Purchase',
+                        conversion_value_chf: valueChf,
+                        conversion_date_time: conversionDateTime,
+                        fbclid: attrRow?.fbclid ?? null,
+                        fbc: attrRow?.fbc ?? null,
+                        fbp: attrRow?.fbp ?? null,
+                        hashed_email: hashedEmail,
+                        hashed_phone: hashedPhone,
+                      })
+                    }
 
                     await recordAndUploadCourseConversion({
                       registration_id: String(newReg.id),
@@ -1443,6 +1476,11 @@ export default defineEventHandler(async (event) => {
         .map(p => p.appointment_id)
       
       if (appointmentIds.length > 0) {
+        const { data: priorAppointments } = await supabase
+          .from('appointments')
+          .select('id, status, user_id, tenant_id')
+          .in('id', appointmentIds)
+
         const appointmentStatus = paymentStatus === 'completed' ? 'confirmed' : 'scheduled'
         
         const updateQuery = supabase
@@ -1452,6 +1490,7 @@ export default defineEventHandler(async (event) => {
             updated_at: new Date().toISOString()
           })
           .in('id', appointmentIds)
+          .in('status', ['pending', 'scheduled', 'confirmed'])
         
         // Don't downgrade a 'confirmed' appointment back to 'scheduled' on AUTHORIZED state
         if (paymentStatus === 'authorized') {
@@ -1464,6 +1503,56 @@ export default defineEventHandler(async (event) => {
           logger.warn('⚠️ Error updating appointments:', appointmentError)
         } else {
           logger.info(`✅ Updated ${appointmentIds.length} appointment(s) to: ${appointmentStatus}`)
+        }
+
+        if (paymentStatus === 'completed') {
+          for (const appt of priorAppointments || []) {
+            if (appt.status !== 'pending' || !appt.user_id || !appt.tenant_id) continue
+            try {
+              const { dispatchAppointmentConfirmation } = await import(
+                '~/server/utils/dispatch-appointment-confirmation'
+              )
+              await dispatchAppointmentConfirmation({
+                appointmentId: appt.id,
+                userId: appt.user_id,
+                tenantId: appt.tenant_id,
+              })
+            } catch (confirmErr: any) {
+              logger.warn('⚠️ Pay-before-confirm confirmation email failed:', confirmErr?.message)
+            }
+            try {
+              const { data: stamped } = await supabase
+                .from('appointments')
+                .select('fbclid, fbc, fbp')
+                .eq('id', appt.id)
+                .maybeSingle()
+              const { data: student } = await supabase
+                .from('users')
+                .select('email, phone')
+                .eq('id', appt.user_id)
+                .maybeSingle()
+              const payment = paymentsToUpdate.find(p => p.appointment_id === appt.id)
+              const { maybeSendMetaBookingPurchase } = await import('~/server/utils/meta-booking-conversion')
+              const { sha256Hex } = await import('~/server/utils/meta-capi')
+              const hashedEmail = student?.email ? await sha256Hex(student.email.trim().toLowerCase()) : null
+              const normalizedPhone = (student?.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+              const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+              await maybeSendMetaBookingPurchase({
+                supabase,
+                appointmentId: appt.id,
+                userId: appt.user_id,
+                tenantId: appt.tenant_id,
+                fbclid: stamped?.fbclid,
+                fbc: stamped?.fbc,
+                fbp: stamped?.fbp,
+                conversionValueChf: (payment?.total_amount_rappen || 0) / 100,
+                hashedEmail,
+                hashedPhone,
+              })
+            } catch (capiErr: any) {
+              logger.warn('⚠️ Meta CAPI after pay-before-confirm failed:', capiErr?.message)
+            }
+          }
         }
       }
     }
@@ -1550,6 +1639,18 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 9: HANDLE CREDIT REFUND FOR FAILED/CANCELLED ============
     if (paymentStatus === 'failed' || paymentStatus === 'cancelled') {
       await handleCreditRefund(paymentsToUpdate)
+      const { releaseUnpaidPendingAppointment } = await import('~/server/utils/wallee-appointment-checkout')
+      for (const payment of paymentsToUpdate) {
+        if (!payment.appointment_id) continue
+        try {
+          await releaseUnpaidPendingAppointment({
+            appointmentId: payment.appointment_id,
+            tenantId: payment.tenant_id,
+          })
+        } catch (releaseErr: any) {
+          logger.warn('⚠️ Could not release unpaid pending appointment:', releaseErr?.message)
+        }
+      }
     }
     
     // ============ LAYER 10: CONFIRM CREDIT DEDUCTION FOR COMPLETED ============
@@ -1799,6 +1900,23 @@ async function processAnonymousSale(sale: any, paymentStatus: string) {
   if (error) {
     logger.error('❌ Error updating anonymous sale:', error)
     return { success: false, error: 'Failed to update sale' }
+  }
+
+  if (paymentStatus === 'completed' && sale.user_id && sale.tenant_id) {
+    const { data: saleItems } = await supabase
+      .from('product_sale_items')
+      .select('product_id, quantity')
+      .eq('product_sale_id', sale.id)
+
+    if (saleItems?.length) {
+      await applyCreditProductsForCompletedSale({
+        supabase,
+        userId: sale.user_id,
+        tenantId: sale.tenant_id,
+        saleId: sale.id,
+        items: saleItems
+      })
+    }
   }
   
   logger.debug('✅ Anonymous sale updated to:', paymentStatus)
@@ -2209,6 +2327,7 @@ async function savePaymentToken(payment: any, transactionId: string) {
     // Call the existing save-payment-token API internally
     await $fetch('/api/wallee/save-payment-token', {
       method: 'POST',
+      headers: { ...internalSecretHeaders() },
       body: {
         transactionId,
         userId: payment.user_id,
