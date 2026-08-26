@@ -8,6 +8,12 @@ import { sendPushToUser } from '~/server/utils/push'
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { displayName, emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
+import { meetingLinkAnchor } from '~/server/utils/meeting-link'
+import {
+  appointmentEmailCtaHtml,
+  resolveAppointmentEmailCta,
+} from '~/server/utils/appointment-notification-cta'
 
 export interface AppointmentNotificationBody {
   email: string
@@ -39,6 +45,10 @@ export interface AppointmentNotificationBody {
   meeting_type?: 'in_person' | 'phone' | 'online'
   meeting_link?: string
   terms?: Terminology
+  /** Hide login / "Zum Kundenkonto" buttons when the tenant disabled customer accounts */
+  omitAccountCta?: boolean
+  /** Hide App Store download when the tenant does not want customer accounts / onboarding */
+  includeAppStore?: boolean
 }
 
 // ========== TEMPLATES - Dynamic with tenant colors ==========
@@ -68,7 +78,7 @@ function buildDetailBox(data: AppointmentNotificationBody, primaryColor: string,
       ? `<p style="margin:5px 0;color:#374151"><strong>Durchführung:</strong> ${meetingTypeLabel}</p>`
       : '',
     data.meeting_type === 'online' && data.meeting_link
-      ? `<p style="margin:5px 0;color:#374151"><strong>Meeting-Link:</strong> <a href="${data.meeting_link}" style="color:${primaryColor}">${data.meeting_link}</a></p>`
+      ? `<p style="margin:5px 0;color:#374151"><strong>Meeting-Link:</strong> ${meetingLinkAnchor(data.meeting_link, primaryColor)}</p>`
       : '',
     data.staffName
       ? `<p style="margin:5px 0;color:#374151"><strong>${terms.staff}:</strong> ${data.staffName}${data.staffPhone ? ` · <a href="tel:${data.staffPhone}" style="color:#374151;text-decoration:none">${data.staffPhone}</a>` : ''}</p>`
@@ -96,10 +106,15 @@ const TEMPLATES = {
     subject: 'Terminbestätigung',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
-      const showPrice = data.showPrice !== false
-      const confirmUrl = data.customerDashboard || (data.tenantSlug
-        ? `https://app.simy.ch/${data.tenantSlug}`
-        : 'https://app.simy.ch/login')
+      const cta = resolveAppointmentEmailCta({
+        type: 'appointment_confirmation',
+        omitAccountCta: data.omitAccountCta,
+        tenantSlug: data.tenantSlug,
+        customerDashboard: data.customerDashboard || data.confirmationLink,
+        showPrice: data.showPrice,
+        isLessonType: data.isLessonType,
+        appointmentNoun: terms.appointment,
+      })
 
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
@@ -120,20 +135,10 @@ const TEMPLATES = {
 
               ${buildDetailBox(data, primaryColor, terms)}
 
-              ${showPrice
-                ? `<p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Überprüfe die Zahlungsdetails in deinem Kundenkonto.</p>
-                   <div style="text-align: center; margin: 30px 0;">
-                     <a href="${confirmUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Jetzt bezahlen</a>
-                   </div>`
-                : (data.isLessonType !== false
-                  ? `<div style="text-align: center; margin: 30px 0;">
-                       <a href="${confirmUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Zum Kundenkonto</a>
-                     </div>`
-                  : '')
-              }
+              ${appointmentEmailCtaHtml(cta, primaryColor)}
 
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
-              ${emailAppointmentAppStoreBlock()}
+              ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}
             </td>
           </tr>
           <tr>
@@ -153,9 +158,13 @@ const TEMPLATES = {
     subject: 'Terminbestätigung',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
-      const dashboardUrl = data.tenantSlug
-        ? `https://app.simy.ch/${data.tenantSlug}`
-        : 'https://app.simy.ch/login'
+      const cta = resolveAppointmentEmailCta({
+        type: 'pending_payment',
+        omitAccountCta: data.omitAccountCta,
+        tenantSlug: data.tenantSlug,
+        customerDashboard: data.customerDashboard,
+        appointmentNoun: terms.appointment,
+      })
 
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
@@ -176,12 +185,9 @@ const TEMPLATES = {
 
               ${buildDetailBox(data, primaryColor, terms)}
 
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte bezahle die offene Zahlung in deinem Kundenkonto.</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">Zum Kundenkonto</a>
-              </div>
+              ${appointmentEmailCtaHtml(cta, primaryColor)}
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
-              ${emailAppointmentAppStoreBlock()}
+              ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}
             </td>
           </tr>
           <tr>
@@ -201,9 +207,13 @@ const TEMPLATES = {
     subject: 'Termin storniert',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
-      const dashboardUrl = data.tenantSlug 
-        ? `https://app.simy.ch/${data.tenantSlug}` 
-        : 'https://app.simy.ch/login'
+      const cta = resolveAppointmentEmailCta({
+        type: 'cancelled',
+        omitAccountCta: data.omitAccountCta,
+        tenantSlug: data.tenantSlug,
+        customerDashboard: data.customerDashboard,
+        appointmentNoun: terms.appointment,
+      })
       
       // ✅ Payment & Refund details
       const wasPaid = data.wasPaid || false
@@ -248,16 +258,10 @@ const TEMPLATES = {
               </div>
               ` : ''}
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Falls du Fragen hast oder einen neuen Termin buchen möchtest, besuche einfach dein Kundenkonto.</p>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
-                  Zum Kundenkonto
-                </a>
-              </div>
+              ${appointmentEmailCtaHtml(cta, primaryColor)}
               
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Beste Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
-              ${emailAppointmentAppStoreBlock()}
+              ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}
             </td>
           </tr>
           <tr>
@@ -278,9 +282,13 @@ const TEMPLATES = {
     subject: 'Termin verschoben - Neue Zeit',
     getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
-      const dashboardUrl = data.tenantSlug 
-        ? `https://app.simy.ch/${data.tenantSlug}` 
-        : 'https://app.simy.ch/login'
+      const cta = resolveAppointmentEmailCta({
+        type: 'rescheduled',
+        omitAccountCta: data.omitAccountCta,
+        tenantSlug: data.tenantSlug,
+        customerDashboard: data.customerDashboard,
+        appointmentNoun: terms.appointment,
+      })
       
       return `
 <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
@@ -323,16 +331,10 @@ const TEMPLATES = {
               </div>
               ` : ''}
               
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">Bitte merke dir den neuen Termin. Du findest ihn auch in deinem Kundenkonto. Falls du Fragen hast, kontaktiere uns bitte.</p>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${dashboardUrl}" style="background-color: ${primaryColor}; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
-                  Zum Kundenkonto
-                </a>
-              </div>
+              ${appointmentEmailCtaHtml(cta, primaryColor)}
               
               <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
-              ${emailAppointmentAppStoreBlock()}
+              ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}
             </td>
           </tr>
           <tr>
@@ -431,7 +433,7 @@ export async function sendAppointmentNotificationEmail(
       const supabase = getSupabaseAdmin()
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('primary_color, slug, logo_wide_url, logo_url, logo_square_url, name, business_type')
+        .select('primary_color, slug, logo_wide_url, logo_url, logo_square_url, name, business_type, booking_policy')
         .eq('id', tenantId)
         .single()
 
@@ -441,6 +443,9 @@ export async function sendAppointmentNotificationEmail(
         logoUrl = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
         if (!body.tenantName && tenant.name) {
           body = { ...body, tenantName: tenant.name }
+        }
+        if (body.includeAppStore === undefined) {
+          body = { ...body, includeAppStore: allowsCustomerAccountActivation(tenant.booking_policy) }
         }
         if (!body.terms) {
           terms = await getTenantTerminology(supabase, tenantId)
@@ -526,7 +531,7 @@ export async function renderAppointmentNotificationEmail(
     const supabase = getSupabaseAdmin()
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('primary_color, slug, logo_wide_url, logo_url, logo_square_url, name')
+      .select('primary_color, slug, logo_wide_url, logo_url, logo_square_url, name, booking_policy')
       .eq('id', body.tenantId)
       .single()
     if (tenant) {
@@ -534,6 +539,9 @@ export async function renderAppointmentNotificationEmail(
       if (tenant.slug) tenantSlug = tenant.slug
       logoUrl = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
       if (!body.tenantName && tenant.name) body = { ...body, tenantName: tenant.name }
+      if (body.includeAppStore === undefined) {
+        body = { ...body, includeAppStore: allowsCustomerAccountActivation(tenant.booking_policy) }
+      }
       if (!body.terms) terms = await getTenantTerminology(supabase, body.tenantId)
     }
   }

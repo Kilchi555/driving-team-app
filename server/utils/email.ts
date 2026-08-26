@@ -143,6 +143,7 @@ export interface AppointmentDeletedEmailParams {
   tenantPhone?: string
   /** Branch staff label (default: Fahrlehrer) */
   staffLabel?: string
+  includeAppStore?: boolean
 }
 
 export function generateAppointmentDeletedEmail(p: AppointmentDeletedEmailParams): string {
@@ -165,7 +166,7 @@ export function generateAppointmentDeletedEmail(p: AppointmentDeletedEmailParams
     ${p.tenantEmail ? `<div class="label">E-Mail</div><div class="value"><a href="mailto:${p.tenantEmail}" style="color:#2563eb">${p.tenantEmail}</a></div>` : ''}
     ${p.tenantPhone ? `<div class="label">Telefon</div><div class="value">${p.tenantPhone}</div>` : ''}
   </div>` : ''}
-  ${emailAppointmentAppStoreBlock()}
+  ${emailAppointmentAppStoreBlock(p.includeAppStore !== false)}
 </div>`
   return emailWrapper(content, p.tenantName)
 }
@@ -179,6 +180,7 @@ export interface CourseTransferEmailParams {
   tenantName: string
   tenantEmail?: string
   tenantPhone?: string
+  includeAppStore?: boolean
 }
 
 export function generateCourseTransferEmail(p: CourseTransferEmailParams): string {
@@ -199,7 +201,7 @@ export function generateCourseTransferEmail(p: CourseTransferEmailParams): strin
     ${p.tenantEmail ? `<div class="label">E-Mail</div><div class="value"><a href="mailto:${p.tenantEmail}" style="color:#2563eb">${p.tenantEmail}</a></div>` : ''}
     ${p.tenantPhone ? `<div class="label">Telefon</div><div class="value">${p.tenantPhone}</div>` : ''}
   </div>` : ''}
-  ${emailAppointmentAppStoreBlock()}
+  ${emailAppointmentAppStoreBlock(p.includeAppStore !== false)}
 </div>`
   return emailWrapper(content, p.tenantName)
 }

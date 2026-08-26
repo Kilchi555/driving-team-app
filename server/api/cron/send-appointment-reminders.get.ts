@@ -22,11 +22,13 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { daytimePushSendAt } from '~/server/utils/push'
 import { emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 import { logger } from '~/utils/logger'
 import { getQuery } from 'h3'
 import { getAccountAccessLink } from '~/server/utils/account-access-link'
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { meetingLinkAnchor, resolveAppointmentMeeting } from '~/server/utils/meeting-link'
 
 const FALLBACK_EVENT_TYPE_LABELS: Record<string, string> = {
   lesson:     'Termin',
@@ -134,11 +136,11 @@ export default defineEventHandler(async (event) => {
 
   // ── 2a. Load locations separately (no direct FK join available) ──
   const locationIds = [...new Set((appointments as any[]).map((a: any) => a.location_id).filter(Boolean))]
-  let locationMap = new Map<string, { name: string; address: string; city: string }>()
+  let locationMap = new Map<string, { name: string; address: string; city: string; meeting_url?: string | null }>()
   if (locationIds.length > 0) {
     const { data: locations } = await supabase
       .from('locations')
-      .select('id, name, address, city')
+      .select('id, name, address, city, meeting_url')
       .in('id', locationIds)
     locationMap = new Map((locations || []).map((l: any) => [l.id, l]))
   }
@@ -253,7 +255,12 @@ export default defineEventHandler(async (event) => {
     // Guest bookings can leave a user "pending" (no password ever set) — a
     // plain login link is a dead end for them, so route the "pay now" CTA
     // through their onboarding/activation link instead.
-    const { url: loginLink, isActivationLink } = await getAccountAccessLink(supabase, user, tenant?.slug || '')
+    const { url: loginLink, isActivationLink, canAccessAccount } = await getAccountAccessLink(
+      supabase,
+      user,
+      tenant?.slug || '',
+      { policy }
+    )
 
     // Date/time formatting
     const aptDate = new Date(apt.start_time)
@@ -270,10 +277,11 @@ export default defineEventHandler(async (event) => {
     const staffName   = apt.staff ? `${apt.staff.first_name} ${apt.staff.last_name}` : null
     const staffPhone  = apt.staff?.phone || null
 
-    // Meeting type from invited_customers (for non-lesson appointments)
-    const inviteData = inviteMap.get(apt.id)
-    const meetingType = inviteData?.meeting_type as 'in_person' | 'phone' | 'online' | undefined
-    const meetingLink = inviteData?.meeting_link
+    const loc = apt.location_id ? locationMap.get(apt.location_id) : null
+    const { meetingType, meetingLink } = resolveAppointmentMeeting({
+      location: loc,
+      invite: inviteMap.get(apt.id),
+    })
 
     // SMS/email meeting point — prefer address (not location name); pickup wins
     let meetingPoint = ''
@@ -284,7 +292,6 @@ export default defineEventHandler(async (event) => {
         meetingPoint = (apt as any).customer_pickup_address
         meetingAddressOnly = meetingPoint
       } else {
-        const loc = apt.location_id ? locationMap.get(apt.location_id) : null
         if (loc?.name) {
           meetingPoint = loc.name
           if (loc.address) meetingPoint += `, ${loc.address}`
@@ -310,7 +317,7 @@ export default defineEventHandler(async (event) => {
     const BILLABLE_TYPES = new Set(['lesson', 'exam', 'theory'])
     const isBillable = !apt.event_type_code || BILLABLE_TYPES.has(apt.event_type_code)
     const payment = isBillable ? (paymentMap.get(apt.id) || null) : null
-    const paymentHtml = payment ? buildPaymentSection(payment, primaryColor, loginLink, isActivationLink) : ''
+    const paymentHtml = payment ? buildPaymentSection(payment, primaryColor, loginLink, isActivationLink, canAccessAccount) : ''
 
     if (channels.sendEmail) {
       const html = buildEmailHtml({
@@ -331,6 +338,7 @@ export default defineEventHandler(async (event) => {
         logoUrl,
         paymentHtml,
         staffLabel: terms.staff,
+        includeAppStore: allowsCustomerAccountActivation(policy),
       })
 
       toInsert.push({
@@ -357,7 +365,9 @@ export default defineEventHandler(async (event) => {
           dateLabel,
           timeLabel: timeStr,
           locationLabel: isPhoneOrOnline ? undefined : (meetingAddressOnly || undefined),
-          appLink: tenant?.slug ? `https://app.simy.ch/${tenant.slug}` : loginLink,
+          appLink: canAccessAccount
+            ? (isActivationLink ? loginLink : (tenant?.slug ? `https://app.simy.ch/${tenant.slug}` : loginLink))
+            : undefined,
         },
         smsLength,
       )
@@ -423,7 +433,7 @@ export default defineEventHandler(async (event) => {
 
 // ── Email builders ─────────────────────────────────────────────
 
-function buildPaymentSection(payment: any, primaryColor: string, loginLink: string, isActivationLink: boolean): string {
+function buildPaymentSection(payment: any, primaryColor: string, loginLink: string, isActivationLink: boolean, canAccessAccount = true): string {
   const amountCHF = (payment.total_amount_rappen / 100).toFixed(2)
   const methodLabel = PAYMENT_METHOD_LABELS[payment.payment_method] || payment.payment_method
 
@@ -436,7 +446,7 @@ function buildPaymentSection(payment: any, primaryColor: string, loginLink: stri
       ? { bg: '#fffbeb', border: '#fde68a', labelColor: '#92400e', dot: '#f59e0b', text: 'Ausstehend' }
       : { bg: '#fef2f2', border: '#fca5a5', labelColor: '#991b1b', dot: '#ef4444', text: 'Fehlgeschlagen' }
 
-  const actionHtml = isPending && payment.payment_method === 'wallee'
+  const actionHtml = isPending && payment.payment_method === 'wallee' && canAccessAccount
     ? `<div style="margin-top:12px"><a href="${loginLink}" style="display:inline-block;padding:10px 24px;background:${primaryColor};color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">${isActivationLink ? 'Konto aktivieren & bezahlen →' : 'Jetzt online zahlen →'}</a></div>`
     : isPending && payment.payment_method === 'cash'
       ? `<p style="margin:8px 0 0;font-size:13px;color:#92400e">Bitte bringen Sie den Betrag in bar mit.</p>`
@@ -474,6 +484,7 @@ interface EmailData {
   logoUrl: string | null
   paymentHtml: string
   staffLabel: string
+  includeAppStore?: boolean
 }
 
 function buildEmailHtml(d: EmailData): string {
@@ -496,7 +507,7 @@ function buildEmailHtml(d: EmailData): string {
     d.staffName     ? [d.staffLabel,    d.staffName + (d.staffPhone ? ` · ${d.staffPhone}` : '')] : null,
     meetingTypeLabel ? ['Durchführung', meetingTypeLabel] : null,
     d.meetingType === 'online' && d.meetingLink
-      ? ['Meeting-Link', `<a href="${d.meetingLink}" style="color:${d.primaryColor}">${d.meetingLink}</a>`]
+      ? ['Meeting-Link', meetingLinkAnchor(d.meetingLink, d.primaryColor)]
       : null,
     d.meetingPoint  ? ['Treffpunkt',   d.meetingPoint] : null,
     d.examLocation  ? ['Prüfungsort',  d.examLocation] : null,
@@ -544,7 +555,7 @@ function buildEmailHtml(d: EmailData): string {
 
             ${d.paymentHtml}
 
-            ${emailAppointmentAppStoreBlock()}
+            ${emailAppointmentAppStoreBlock(d.includeAppStore !== false)}
 
             <p style="margin:24px 0 0;font-size:13px;color:#9ca3af">
               Bei Fragen wenden Sie sich bitte an ${d.tenantName}. Bitte antworten Sie nicht auf diese automatische E-Mail.

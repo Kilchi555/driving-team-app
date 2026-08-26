@@ -139,6 +139,11 @@ export default defineEventHandler(async (event) => {
     const terms = termsMap.get(student.tenant_id) || getTerminologyDefaults(tenant?.business_type)
     const policy = (tenant?.booking_policy as any) ?? {}
 
+    const { allowsCustomerAccountActivation } = await import('~/server/utils/customer-account-activation')
+    if (!allowsCustomerAccountActivation(policy)) {
+      continue
+    }
+
     // Booking-Policy: Reminder gesamt deaktiviert?
     if (policy.registration_reminder_enabled === false) {
       logger.debug(`⏭️ Reminders disabled by policy for tenant ${student.tenant_id}, skipping student ${student.id}`)

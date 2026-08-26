@@ -146,6 +146,18 @@ export default defineEventHandler(async (event) => {
     
     // Pending user: no auth account exists — create one automatically, then proceed with reset
     if (!user.auth_user_id) {
+      const { allowsCustomerAccountActivation } = await import('~/server/utils/customer-account-activation')
+      const pendingTenantId = tenantId || user.tenant_id
+      if (pendingTenantId) {
+        const { data: pendingTenant } = await serviceSupabase
+          .from('tenants')
+          .select('booking_policy')
+          .eq('id', pendingTenantId)
+          .maybeSingle()
+        if (!allowsCustomerAccountActivation(pendingTenant?.booking_policy)) {
+          return { success: true, code: 'ACCOUNT_PENDING', hasSms: false }
+        }
+      }
       console.log('[PasswordReset] User has no auth_user_id (pending) — creating auth user automatically')
 
       if (!user.email) {

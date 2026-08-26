@@ -88,6 +88,13 @@ export default defineEventHandler(async (event) => {
     const onboardingLink = `https://app.simy.ch/onboarding/${newToken}`
     const tenantName = tenant.name || terms.businessNoun
     const policy = (tenant.booking_policy as any) || {}
+    const { allowsCustomerAccountActivation } = await import('~/server/utils/customer-account-activation')
+    if (!allowsCustomerAccountActivation(policy)) {
+      return {
+        success: true,
+        message: 'Falls der Account existiert, wird ein neuer Link versendet.',
+      }
+    }
     const smsEnabled = policy.onboarding_sms_enabled !== false
     const emailEnabled = policy.onboarding_email_enabled === true
 

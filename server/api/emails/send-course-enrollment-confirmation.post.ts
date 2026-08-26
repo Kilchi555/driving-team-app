@@ -22,6 +22,7 @@ import {
   emailStatusBox,
   escapeHtml,
 } from '~/server/utils/branded-email'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 
 type ConfirmationPaymentMethod = 'wallee' | 'cash' | 'admin' | 'invoice' | 'paid' | 'reserve'
 
@@ -105,7 +106,8 @@ export default defineEventHandler(async (event) => {
           business_type,
           logo_wide_url,
           logo_url,
-          logo_square_url
+          logo_square_url,
+          booking_policy
         )
       `)
       .eq('id', courseRegistrationId)
@@ -311,7 +313,9 @@ export default defineEventHandler(async (event) => {
     } else if (isPGS) {
       importantListItems = `
                 <li>Eigenes betriebssicheres Fahrzeug ist Pflicht</li>
+                <li>Eigene Sicherheitsbekleidung inkl. Helm und Handschuhe mitnehmen</li>
                 <li>Selbständiges Fahren ist Voraussetzung für die Teilnahme</li>
+                <li>Bei unsicherem Fahren: Fahrstunden beim Fahrlehrer vor dem Grundkurs empfohlen</li>
                 <li>Gültiger Lern- und/oder Fahrausweis mitnehmen</li>`
       if (isEinsiedeln && isCashPayment) {
         importantListItems += `
@@ -354,7 +358,7 @@ export default defineEventHandler(async (event) => {
       ${importantNotice}
       <p style="color:#374151;font-size:16px;line-height:1.6;margin:20px 0 0 0;">Viel Erfolg und Freude beim Kurs!</p>
       ${emailSignature(tenantName, tenant?.contact_email, primary)}
-      ${emailAppointmentAppStoreBlock()}
+      ${emailAppointmentAppStoreBlock(allowsCustomerAccountActivation(tenant?.booking_policy))}
     `
 
     // 5. Build HTML email with branded shell

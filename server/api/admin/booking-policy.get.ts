@@ -265,6 +265,8 @@ export function normalizeRegistrationAccountMode(
   return fallback
 }
 
+export { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
+
 /** Normalize legacy singular location_intake_mode + new location_intake_modes array. */
 export function normalizeLocationIntakeModes(policy: Partial<BookingPolicy> | Record<string, any> | null | undefined): LocationIntakeMode[] {
   const raw = policy || {}
