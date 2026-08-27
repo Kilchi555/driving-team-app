@@ -50,13 +50,30 @@ function fmtTime(iso: string) {
   })
 }
 
-function apptTitle(course: CourseForNotification, sessions: CourseSessionForNotification[]) {
-  const label = course.course_category?.name || course.name || 'Kurs'
-  const firstStart = sessions
-    .slice()
-    .sort((a, b) => a.start_time.localeCompare(b.start_time))[0]?.start_time
-  const time = firstStart ? fmtTime(firstStart) : ''
-  return `${label} – ab ${time}`
+function courseCalendarLabel(course: CourseForNotification) {
+  return (course.course_category?.name || course.name || 'Kurs')
+    .replace(/\s+-\s+\d{2}\.\d{2}\.\d{4}\s*$/, '')
+    .trim()
+}
+
+function fmtDateShort(iso: string) {
+  return new Date(iso).toLocaleDateString('de-CH', {
+    day: '2-digit', month: '2-digit',
+    timeZone: 'Europe/Zurich',
+  })
+}
+
+/** Title for one calendar block: course name + that block's session date/time. */
+export function staffCourseBlockTitle(
+  course: CourseForNotification,
+  blockSessions: CourseSessionForNotification[],
+) {
+  const label = courseCalendarLabel(course)
+  if (!blockSessions.length) return label
+  const sorted = [...blockSessions].sort((a, b) => a.start_time.localeCompare(b.start_time))
+  const start = sorted[0].start_time
+  const end = sorted[sorted.length - 1].end_time
+  return `${label} · ${fmtDateShort(start)} ${fmtTime(start)}–${fmtTime(end)}`
 }
 
 // ── Core: create/delete appointments for a staff member ───────────────────────
@@ -82,9 +99,9 @@ export async function deleteStaffCourseAppointments(
  */
 function buildAppointmentBlocks(
   sessions: CourseSessionForNotification[],
-): Array<{ startMs: number; endMs: number }> {
+): Array<{ startMs: number; endMs: number; sessions: CourseSessionForNotification[] }> {
   const sorted = [...sessions].sort((a, b) => a.start_time.localeCompare(b.start_time))
-  const raw: Array<{ startMs: number; endMs: number }> = []
+  const raw: Array<{ startMs: number; endMs: number; sessions: CourseSessionForNotification[] }> = []
 
   for (const s of sorted) {
     const startMs = new Date(s.start_time).getTime()
@@ -93,14 +110,16 @@ function buildAppointmentBlocks(
 
     if (last && startMs - last.endMs <= 5 * 60 * 1000) {
       last.endMs = Math.max(last.endMs, endMs)
+      last.sessions.push(s)
     } else {
-      raw.push({ startMs, endMs })
+      raw.push({ startMs, endMs, sessions: [s] })
     }
   }
 
   return raw.map((b) => ({
     startMs: b.startMs - 45 * 60 * 1000,
     endMs:   b.endMs   + 15 * 60 * 1000,
+    sessions: b.sessions,
   }))
 }
 
@@ -111,7 +130,6 @@ export async function createStaffCourseAppointments(
   course: CourseForNotification,
   sessions: CourseSessionForNotification[],
 ) {
-  const title = apptTitle(course, sessions)
   const blocks = buildAppointmentBlocks(sessions)
 
   const rows = blocks.map((b) => ({
@@ -122,7 +140,7 @@ export async function createStaffCourseAppointments(
     end_time:         new Date(b.endMs).toISOString(),
     duration_minutes: Math.round((b.endMs - b.startMs) / 60000),
     event_type_code:  'course',
-    title,
+    title:            staffCourseBlockTitle(course, b.sessions),
     description:      '',
     status:           'confirmed',
     notes:            `course:${course.id}`,
@@ -148,8 +166,8 @@ export function staffCalendarBlocksMatch(
 }
 
 /**
- * Rebuild staff calendar blocks for a course when session times no longer match.
- * Does not send emails — assignment notifications stay on the original assign path.
+ * Rebuild staff calendar blocks for a course when session times no longer match
+ * and notify the instructor about the new dates.
  */
 export async function syncStaffCourseCalendar(
   supabase: SupabaseClient,
@@ -193,6 +211,7 @@ export async function syncStaffCourseCalendar(
     if (staffCalendarBlocksMatch(staffSessions, staffAppts)) continue
     await deleteStaffCourseAppointments(supabase, staffId, course.id)
     await createStaffCourseAppointments(supabase, staffId, course, staffSessions)
+    await notifyStaffCourseTimesChanged(supabase, staffId, course, staffSessions)
     updated++
   }
 
@@ -342,6 +361,85 @@ export async function notifyStaffAssigned(
     })
   } catch (e: any) {
     logger.warn(`⚠️ Staff assignment push failed (non-critical):`, e?.message)
+  }
+}
+
+// ── Notification: session times moved ─────────────────────────────────────────
+
+export async function notifyStaffCourseTimesChanged(
+  supabase: SupabaseClient,
+  staffId: string,
+  course: CourseForNotification,
+  sessions: CourseSessionForNotification[],
+) {
+  if (!staffId) return
+
+  if (!(await shouldNotifyAssignedStaff(supabase, course.tenant_id))) {
+    logger.debug(`⏭️ Skipping staff date-change email — tenant ${course.tenant_id} has ≤1 active staff`)
+    return
+  }
+
+  const { data: staffUser } = await supabase
+    .from('users')
+    .select('first_name, last_name, email')
+    .eq('id', staffId)
+    .single()
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('name, from_email, resend_domain_verified, primary_color, logo_wide_url, logo_url, logo_square_url')
+    .eq('id', course.tenant_id)
+    .single()
+
+  const branding = extractBranding(tenant)
+  const courseLabel = course.course_category?.name || course.name || 'Kurs'
+  const safeSessions = Array.isArray(sessions) ? sessions : []
+  const rows = sessionTable(safeSessions)
+
+  if (staffUser?.email) {
+    const html = emailWrapper(
+      '📅 Kurs-Termine geändert',
+      `<p>Hallo ${staffUser.first_name},</p>
+    <p>Die Termine des folgenden Kurses wurden angepasst. Dein Kalender ist bereits aktualisiert:</p>
+    <p style="font-size:18px;font-weight:700;color:#1e293b;margin:16px 0">${courseLabel}</p>
+    <table><thead><tr>
+      <th>Neues Datum</th><th>Zeit</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+    <p style="margin-top:24px;color:#6b7280;font-size:14px">Bitte prüfe die neuen Zeiten in deinem Kalender.</p>`,
+      branding.name,
+      branding,
+    )
+
+    try {
+      await sendEmail({
+        to: staffUser.email,
+        subject: `Kurs-Termine geändert: ${courseLabel}`,
+        html,
+        fromName: tenant?.name ?? undefined,
+        fromEmail: tenant?.from_email ?? null,
+        domainVerified: tenant?.resend_domain_verified ?? false,
+      })
+      logger.debug(`✅ Date-change email sent to ${staffUser.email}`)
+    } catch (e: any) {
+      logger.warn(`⚠️ Could not send date-change email to ${staffUser.email}:`, e.message)
+    }
+  } else {
+    logger.warn(`⚠️ Staff ${staffId} has no email — skipping date-change email (push still attempted)`)
+  }
+
+  try {
+    const { sendPushToUser } = await import('~/server/utils/push')
+    const first = safeSessions
+      .slice()
+      .sort((a, b) => a.start_time.localeCompare(b.start_time))[0]
+    const when = first ? `${fmtDate(first.start_time)} ${fmtTime(first.start_time)}` : ''
+    await sendPushToUser(staffId, {
+      title: 'Kurs-Termine geändert',
+      body: when ? `${courseLabel} · neu ${when}` : `${courseLabel} · bitte Kalender prüfen`,
+      data: { path: '/dashboard' },
+    })
+  } catch (e: any) {
+    logger.warn(`⚠️ Staff date-change push failed (non-critical):`, e?.message)
   }
 }
 

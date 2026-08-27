@@ -1749,6 +1749,24 @@ showConfirmDialog({
   resizeInfo.revert()
 }
 
+const COURSE_PREP_MS = 45 * 60 * 1000
+const COURSE_WRAP_MS = 15 * 60 * 1000
+
+function formatCourseCalendarEvent(title: string, start: Date | null, end: Date | null) {
+  const raw = (title || 'Kurs')
+    .replace(/\s*[–-]\s*ab\s+\d{1,2}[:.]\d{2}.*$/i, '')
+    .replace(/\s*·\s*\d{2}\.\d{2}\.(\d{4}\s+)?\d{1,2}[:.]\d{2}.*$/u, '')
+    .replace(/\s+-\s+\d{2}\.\d{2}\.\d{4}\s*$/, '')
+    .trim()
+  if (!start || !end) return { name: raw, when: '' }
+  const sessionStart = new Date(start.getTime() + COURSE_PREP_MS)
+  const sessionEnd = new Date(end.getTime() - COURSE_WRAP_MS)
+  const date = sessionStart.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })
+  const from = sessionStart.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+  const to = sessionEnd.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+  return { name: raw, when: `${date} · ${from}–${to}` }
+}
+
   const calendarOptions = ref<CalendarOptions>({
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
     initialView: 'timeGridWeek',
@@ -1879,6 +1897,18 @@ eventContent: (arg) => {
   const eventType = arg.event.extendedProps?.eventType || 'lesson'
   const student = extendedProps?.student || ''
   
+  if (eventType === 'course') {
+    const course = formatCourseCalendarEvent(arg.event.title, arg.event.start, arg.event.end)
+    return {
+      html: `
+        <div class="custom-event">
+          <div class="event-name">${course.name}</div>
+          <div class="event-location event-session-time">${course.when}</div>
+        </div>
+      `
+    }
+  }
+
   if (eventType === 'lesson') {
     // ✅ Bei Fahrstunden: Name und Treffpunkt anzeigen
     return {
@@ -3357,6 +3387,13 @@ defineExpose({
   opacity: 0.9;
   color: white !important;
   text-decoration: none;
+}
+
+.event-session-time {
+  font-size: 8px;
+  font-weight: 600;
+  margin-top: 2px;
+  opacity: 1;
 }
 
 /* === BUTTONS === */
