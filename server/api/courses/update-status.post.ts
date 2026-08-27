@@ -4,7 +4,7 @@ import { requireAdminProfile } from '~/server/utils/auth'
 import { generateWaitlistAvailableEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 
-const VALID_STATUSES = ['draft', 'active', 'scheduled', 'completed', 'cancelled', 'waitlist'] as const
+const VALID_STATUSES = ['draft', 'active', 'scheduled', 'completed', 'cancelled', 'waitlist', 'full', 'running'] as const
 type CourseStatus = typeof VALID_STATUSES[number]
 
 /**
@@ -19,10 +19,10 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<{ courseId: string; status: CourseStatus; notifyWaitlist?: boolean }>(event)
 
   if (!body?.courseId) {
-    throw createError({ statusCode: 400, statusMessage: 'courseId is required' })
+    throw createError({ statusCode: 400, statusMessage: 'Kurs-ID fehlt.' })
   }
   if (!body?.status || !VALID_STATUSES.includes(body.status)) {
-    throw createError({ statusCode: 400, statusMessage: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` })
+    throw createError({ statusCode: 400, statusMessage: `Ungültiger Status. Erlaubt: ${VALID_STATUSES.join(', ')}` })
   }
 
   const supabase = getSupabaseAdmin()
@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (!course) {
-    throw createError({ statusCode: 404, statusMessage: 'Course not found' })
+    throw createError({ statusCode: 404, statusMessage: 'Kurs nicht gefunden.' })
   }
 
   // Business rule: course can only be set to active if instructor and price are set
@@ -71,6 +71,11 @@ export default defineEventHandler(async (event) => {
   if (body.status === 'cancelled') {
     updateData.cancelled_at = new Date().toISOString()
     updateData.cancelled_by = profile.id
+    updateData.is_active = false
+  }
+
+  if (body.status === 'active' || body.status === 'scheduled') {
+    updateData.is_active = true
   }
 
   const { data: updated, error } = await supabase
@@ -81,15 +86,34 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (error) {
-    throw createError({ statusCode: 500, statusMessage: `Status update failed: ${error.message}` })
+    throw createError({ statusCode: 500, statusMessage: `Status konnte nicht gespeichert werden: ${error.message}` })
   }
 
   const wasWaitlist = course.status === 'waitlist'
+  const wasCancelled = course.status === 'cancelled'
   const isNowActive = body.status === 'active' || body.status === 'scheduled'
+  let waitlist: { queued: number; total: number; error?: string } | null = null
+
+  if (wasCancelled && isNowActive) {
+    try {
+      const { syncStaffCourseCalendar } = await import('~/server/utils/course-staff-notifications')
+      await syncStaffCourseCalendar(supabase, {
+        id: course.id,
+        name: course.name,
+        tenant_id: profile.tenant_id,
+      })
+    } catch (calErr: any) {
+      logger.warn('⚠️ Staff calendar resync after course reactivation failed (non-blocking):', calErr?.message || calErr)
+    }
+  }
 
   if (body.notifyWaitlist && wasWaitlist && isNowActive) {
-    notifyWaitlistEntries(supabase, body.courseId, course, profile.tenant_id)
-      .catch((err: any) => logger.warn(`⚠️ Waitlist notification failed: ${err.message}`))
+    try {
+      waitlist = await notifyWaitlistEntries(supabase, body.courseId, course, profile.tenant_id)
+    } catch (err: any) {
+      waitlist = { queued: 0, total: 0, error: err?.message || 'Warteliste konnte nicht benachrichtigt werden.' }
+      logger.warn(`⚠️ Waitlist notification failed: ${waitlist.error}`)
+    }
   }
 
   // Keep auto waitlist placeholders in sync after manual status changes
@@ -103,7 +127,7 @@ export default defineEventHandler(async (event) => {
     logger.warn('⚠️ auto-category-waitlist after status update failed (non-blocking):', syncErr?.message || syncErr)
   }
 
-  return { success: true, course: updated }
+  return { success: true, course: updated, waitlist }
 })
 
 async function notifyWaitlistEntries(
@@ -118,7 +142,7 @@ async function notifyWaitlistEntries(
     .eq('course_id', courseId)
     .in('status', ['waiting', 'offered'])
 
-  if (!entries || entries.length === 0) return
+  if (!entries || entries.length === 0) return { queued: 0, total: 0 }
 
   const { data: tenant } = await supabase
     .from('tenants')
@@ -141,7 +165,7 @@ async function notifyWaitlistEntries(
       return { date, time }
     })
 
-  const base = process.env.NUXT_PUBLIC_APP_URL || 'https://app.drivingteam.ch'
+  const base = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
   const bookingUrl = tenant?.slug ? `${base}/customer/courses/${tenant.slug}#course-${courseId}` : base
 
   const now = new Date().toISOString()
@@ -181,10 +205,15 @@ async function notifyWaitlistEntries(
       }
     })
 
+  if (toQueue.length === 0) {
+    return { queued: 0, total: entries.length, error: 'Keine E-Mail-Adressen auf der Warteliste.' }
+  }
+
   const { error } = await supabase.from('outbound_messages_queue').insert(toQueue)
   if (error) {
     logger.warn(`⚠️ Failed to queue waitlist emails: ${error.message}`)
-  } else {
-    logger.info(`📬 Queued ${toQueue.length} waitlist-available emails for course "${course.name}"`)
+    return { queued: 0, total: entries.length, error: `Wartelisten-Mails konnten nicht eingereiht werden: ${error.message}` }
   }
+  logger.info(`📬 Queued ${toQueue.length} waitlist-available emails for course "${course.name}"`)
+  return { queued: toQueue.length, total: entries.length }
 }

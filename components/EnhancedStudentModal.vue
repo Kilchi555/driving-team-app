@@ -1971,7 +1971,7 @@ const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
 
 /** Termindokumentation / Kriterien-Bewertung */
 const evaluationsEnabled = computed(() =>
-  isFeatureEnabled('evaluations_enabled', isDrivingSchool.value)
+  isFeatureEnabled('evaluations_enabled', true)
 )
 /** Prüfungen: default an bei Fahrschulen, sonst aus — Admin kann zuschalten */
 const examsEnabled = computed(() =>
