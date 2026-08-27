@@ -3,7 +3,14 @@
     <!-- Page Header -->
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-gray-900 mb-2">Bewertungssystem</h1>
-      <p class="text-gray-600">Verwalten Sie Kategorien, Kriterien und Bewertungsskala</p>
+      <p class="text-gray-600">
+        Verwalten Sie Kategorien, Kriterien und Bewertungsskala.
+        Abschalten unter
+        <NuxtLink to="/admin/profile?tab=features" class="underline font-medium" :style="{ color: 'var(--color-primary, #6000BD)' }">
+          Admin → Profil → Funktionen → Termindokumentation
+        </NuxtLink>
+        — dann verschwindet auch der Tab «Bewertungen» in den Pendenzen.
+      </p>
     </div>
 
     <EvaluationSystemManagerInline />
