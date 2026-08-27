@@ -273,7 +273,7 @@ import StaffGuideModal from '~/components/StaffGuideModal.vue'
 interface Props {
   isOpen: boolean
   appointment: any
-  studentCategory: string
+  studentCategory?: string
   currentUser?: any
   eventType?: 'lesson' | 'staff_meeting' // ✅ Neuer Prop
 }
@@ -495,7 +495,9 @@ const openCancelModal = () => {
 // KOMPLETT SAUBERE VERSION - Ersetzen Sie Ihre gesamte loadAllCriteria Funktion mit dieser:
 
 const loadAllCriteria = async () => {
-  if (!props.studentCategory) {
+  // License category (B/A/…) is only required for driving schools.
+  // Generic / per_event_type tenants have no categories — still load topics.
+  if (isDrivingSchool.value && !props.studentCategory) {
     return
   }
   
@@ -1197,7 +1199,7 @@ watch(() => props.isOpen, (isOpen) => {
 // Zusätzlicher Watch für studentCategory
 watch(() => props.studentCategory, (newCategory) => {
   logger.debug('🔄 Student category changed to:', newCategory)
-  if (props.isOpen && newCategory) {
+  if (props.isOpen && (newCategory || !isDrivingSchool.value)) {
     logger.debug('🔄 Reloading criteria for new category...')
     loadAllCriteria()
   }
