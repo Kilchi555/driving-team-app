@@ -55,6 +55,51 @@ export function getBillingPeriodStart(from: Date = new Date()): Date {
   return new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1, 0, 0, 0, 0))
 }
 
+/** Calendar-month key used by SMS quota alerts (`2026-08`). */
+export function calendarSmsQuotaAlertPeriodKey(now: Date = new Date()): string {
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+/**
+ * YYYY-MM from alert period keys, including older Stripe/ISO formats:
+ * `2026-08`, `stripe:2026-08-05T08:11:36.000Z`, `calendar:2026-08-01T00:00:00.000Z`.
+ */
+export function smsQuotaAlertPeriodMonth(periodKey: string | null | undefined): string | null {
+  if (!periodKey) return null
+  const match = String(periodKey).match(/(\d{4}-\d{2})/)
+  return match?.[1] ?? null
+}
+
+/** True when stored and current keys are the same billing month (format-tolerant). */
+export function smsQuotaAlertPeriodsMatch(
+  stored: string | null | undefined,
+  current: string,
+): boolean {
+  if (!stored) return false
+  if (stored === current) return true
+  const storedMonth = smsQuotaAlertPeriodMonth(stored)
+  const currentMonth = smsQuotaAlertPeriodMonth(current)
+  return !!storedMonth && storedMonth === currentMonth
+}
+
+export function parseSmsQuotaAlertState(value: unknown): {
+  period?: string
+  warned80?: boolean
+  warned100?: boolean
+} {
+  let parsed: unknown = value
+  for (let i = 0; i < 2; i++) {
+    if (typeof parsed !== 'string') break
+    try {
+      parsed = JSON.parse(parsed)
+    } catch {
+      return {}
+    }
+  }
+  if (!parsed || typeof parsed !== 'object') return {}
+  return parsed as { period?: string; warned80?: boolean; warned100?: boolean }
+}
+
 export async function getTenantSmsUsage(
   supabase: SupabaseClient,
   tenantId: string,
