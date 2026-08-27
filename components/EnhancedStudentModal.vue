@@ -1464,7 +1464,7 @@
       v-if="showEvaluationModal && selectedAppointmentForEvaluation"
       :is-open="showEvaluationModal"
       :appointment="selectedAppointmentForEvaluation"
-      :student-category="selectedAppointmentForEvaluation.type || selectedStudent?.category?.[0] || 'B'"
+      :student-category="evaluationStudentCategory"
       :current-user="props.currentUser"
       @close="closeEvaluationModal"
       @saved="onEvaluationSaved"
@@ -1983,6 +1983,7 @@ import ConfirmationDialog from '~/components/ConfirmationDialog.vue'
 import CancellationReasonModal from '~/components/CancellationReasonModal.vue'
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue'
 import StudentDetailsEditModal from '~/components/StudentDetailsEditModal.vue'
+import { resolveEvaluationStudentCategory } from '~/utils/evaluation-student-category'
 import BillingAddressEditModal from '~/components/BillingAddressEditModal.vue'
 import CorrespondenceComposeModal from '~/components/admin/CorrespondenceComposeModal.vue'
 
@@ -2438,6 +2439,15 @@ const maxScaleRating = computed(() => {
 // Evaluation Modal State
 const showEvaluationModal = ref(false)
 const selectedAppointmentForEvaluation = ref<any>(null)
+const evaluationStudentCategory = computed(() =>
+  resolveEvaluationStudentCategory({
+    isDrivingSchool: isDrivingSchool.value,
+    appointmentType: selectedAppointmentForEvaluation.value?.appointment_type,
+    type: selectedAppointmentForEvaluation.value?.type,
+    eventTypeCode: selectedAppointmentForEvaluation.value?.event_type_code,
+    userCategory: selectedStudent.value?.category,
+  })
+)
 const showExamResultModal = ref(false)
 
 // ── Refund ────────────────────────────────────────────────────────────────
