@@ -194,11 +194,15 @@ BEGIN
   END LOOP;
 END $$;
 
--- Default Termindokumentation on (previous non-FS signup wrote enabled=false).
-UPDATE public.tenant_settings
+-- Default Termindokumentation on for non-driving-school tenants
+-- (signup previously wrote enabled=false). Do not touch Fahrschulen.
+UPDATE public.tenant_settings ts
 SET
-  setting_value = jsonb_set(setting_value::jsonb, '{enabled}', 'true'::jsonb)::text,
+  setting_value = jsonb_set(ts.setting_value::jsonb, '{enabled}', 'true'::jsonb)::text,
   updated_at = now()
-WHERE setting_key = 'evaluations_enabled'
-  AND category = 'features'
-  AND COALESCE(setting_value::jsonb->>'enabled', 'false') = 'false';
+FROM public.tenants t
+WHERE ts.tenant_id = t.id
+  AND t.business_type IS DISTINCT FROM 'driving_school'
+  AND ts.setting_key = 'evaluations_enabled'
+  AND ts.category = 'features'
+  AND COALESCE(ts.setting_value::jsonb->>'enabled', 'false') = 'false';
