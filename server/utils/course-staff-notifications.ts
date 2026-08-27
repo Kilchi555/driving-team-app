@@ -133,6 +133,75 @@ export async function createStaffCourseAppointments(
   else logger.debug(`✅ ${rows.length} course appointments created for staff ${staffId}`)
 }
 
+/** True when padded staff calendar blocks already match the current session times. */
+export function staffCalendarBlocksMatch(
+  sessions: CourseSessionForNotification[],
+  appointments: Array<{ start_time: string; end_time: string }>,
+): boolean {
+  const expected = buildAppointmentBlocks(sessions)
+  if (expected.length !== appointments.length) return false
+  const exp = expected.map((b) => `${b.startMs}:${b.endMs}`).sort()
+  const act = appointments
+    .map((a) => `${new Date(a.start_time).getTime()}:${new Date(a.end_time).getTime()}`)
+    .sort()
+  return exp.every((value, i) => value === act[i])
+}
+
+/**
+ * Rebuild staff calendar blocks for a course when session times no longer match.
+ * Does not send emails — assignment notifications stay on the original assign path.
+ */
+export async function syncStaffCourseCalendar(
+  supabase: SupabaseClient,
+  course: CourseForNotification,
+): Promise<{ updated: number }> {
+  const { data: sessions, error: sessionError } = await supabase
+    .from('course_sessions')
+    .select('id, start_time, end_time, description, staff_id')
+    .eq('course_id', course.id)
+    .not('staff_id', 'is', null)
+
+  if (sessionError) {
+    logger.warn(`⚠️ Could not load sessions for staff calendar sync (${course.id}):`, sessionError.message)
+    return { updated: 0 }
+  }
+  if (!sessions?.length) return { updated: 0 }
+
+  const staffIds = [...new Set(sessions.map((s) => s.staff_id).filter((id): id is string => !!id))]
+  const { data: appointments, error: apptError } = await supabase
+    .from('appointments')
+    .select('staff_id, start_time, end_time')
+    .eq('notes', `course:${course.id}`)
+    .in('staff_id', staffIds)
+    .is('deleted_at', null)
+
+  if (apptError) {
+    logger.warn(`⚠️ Could not load appointments for staff calendar sync (${course.id}):`, apptError.message)
+    return { updated: 0 }
+  }
+
+  const sessionsByStaff = new Map<string, CourseSessionForNotification[]>()
+  for (const session of sessions) {
+    if (!session.staff_id) continue
+    if (!sessionsByStaff.has(session.staff_id)) sessionsByStaff.set(session.staff_id, [])
+    sessionsByStaff.get(session.staff_id)!.push(session)
+  }
+
+  let updated = 0
+  for (const [staffId, staffSessions] of sessionsByStaff) {
+    const staffAppts = (appointments || []).filter((a) => a.staff_id === staffId)
+    if (staffCalendarBlocksMatch(staffSessions, staffAppts)) continue
+    await deleteStaffCourseAppointments(supabase, staffId, course.id)
+    await createStaffCourseAppointments(supabase, staffId, course, staffSessions)
+    updated++
+  }
+
+  if (updated) {
+    logger.info(`📅 Resynced staff calendar blocks for ${updated} instructor(s) on course ${course.id}`)
+  }
+  return { updated }
+}
+
 // ── Email builders ─────────────────────────────────────────────────────────────
 
 /** Groups sessions that fall on the same day into a single row (start–end of that day). */
