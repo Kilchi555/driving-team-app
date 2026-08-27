@@ -492,8 +492,6 @@ const openCancelModal = () => {
   emit('cancel', props.appointment)
 }
 
-// KOMPLETT SAUBERE VERSION - Ersetzen Sie Ihre gesamte loadAllCriteria Funktion mit dieser:
-
 const loadAllCriteria = async () => {
   // License category (B/A/…) is only required for driving schools.
   // Generic / per_event_type tenants have no categories — still load topics.
@@ -507,10 +505,7 @@ const loadAllCriteria = async () => {
   try {
     // Check if it's a theory lesson
     const isTheoryLesson = props.appointment?.appointment_type === 'theory' || props.appointment?.event_type_code === 'theory'
-    
-    logger.debug('📚 Loading evaluation criteria via Backend API - isTheory:', isTheoryLesson)
-    
-    // Load criteria via backend API (uses auth token automatically)
+
     const response = await $fetch<{ success: boolean, criteria: any[], tenantId: string, error?: string }>('/api/staff/get-evaluation-criteria', {
       query: {
         isTheoryLesson: isTheoryLesson.toString(),
@@ -525,21 +520,7 @@ const loadAllCriteria = async () => {
     const criteria = response.criteria || []
     const tenantIdFromResponse = response.tenantId
     
-    logger.debug('✅ Loaded', criteria.length, 'evaluation criteria')
-    
-    // DEBUG: Analyse der Kriterien
-    const beIncluded = criteria.filter((c: any) => !c.driving_categories || c.driving_categories.length === 0 || c.driving_categories.includes('BE'))
-    const beExcluded = criteria.filter((c: any) => c.driving_categories && c.driving_categories.length > 0 && !c.driving_categories.includes('BE'))
-    
-    logger.debug(`🔍 ANALYSIS: ${beIncluded.length} will be shown for BE, ${beExcluded.length} will be hidden`)
-    logger.debug('🔍 CHECKING FOR RAMPEFAHREN AND SPURVERSATZ:')
-    const rampefahren = criteria.find((c: any) => c.name === 'Rampefahren')
-    const spurversatz = criteria.find((c: any) => c.name === 'Spurversatz')
-    logger.debug('  Rampefahren:', rampefahren ? '✅ FOUND' : '❌ NOT FOUND', rampefahren)
-    logger.debug('  Spurversatz:', spurversatz ? '✅ FOUND' : '❌ NOT FOUND', spurversatz)
-    logger.debug('🚫 HIDDEN (not for BE):', beExcluded.map(c => `${c.name} [${(c.driving_categories || []).join(',')}]`))
-    
-    if (!criteria || criteria.length === 0) {
+    if (!criteria.length) {
       error.value = isDrivingSchool.value
         ? `Keine Bewertungskriterien gefunden für ${isTheoryLesson ? 'Theorie' : (props.studentCategory || 'diese Kategorie')}`
         : 'Keine Bewertungskriterien gefunden — bitte unter Admin → Bewertungssystem Themen anlegen.'
@@ -557,9 +538,6 @@ const loadAllCriteria = async () => {
       // Nutze tenant_id aus der API Response (bereits authentifiziert)
       const tenantId = tenantIdFromResponse || props.appointment?.tenant_id || currentTenant.value?.id
       
-      logger.debug('🔍 Loading categories with tenant_id:', tenantId)
-      
-      // Nur API aufrufen, wenn wir eine tenant_id haben
       if (tenantId) {
         const response = await $fetch('/api/admin/evaluation', {
           method: 'POST',
@@ -571,18 +549,12 @@ const loadAllCriteria = async () => {
         
         if (response?.success) {
           categories = (response.data || []).filter((cat: any) => categoryIds.includes(cat.id))
-          logger.debug('✅ Loaded', categories.length, 'categories from API')
         }
-      } else {
-        logger.warn('⚠️ No tenant_id found, skipping category API call')
       }
     } catch (err) {
-      logger.warn('⚠️ Could not load categories via API, using defaults', err)
+      logger.warn('Could not load evaluation categories via API', err)
     }
 
-    // Kombiniere alle Daten
-    logger.debug('🔍 PRE-FILTER: Processing', criteria.length, 'raw criteria from API')
-    
     const processedCriteria = criteria.map(criterion => {
       const category = categories?.find(cat => cat.id === criterion.category_id)
       // Fallback: use the category name embedded in evaluation_categories (always present, even for global criteria)
@@ -607,19 +579,8 @@ const loadAllCriteria = async () => {
       }
     })
     
-    logger.debug('🔍 POST-MAP: After mapping', processedCriteria.length, 'criteria')
-    
-    const filtered = processedCriteria.filter(item => {
-      if (!item.name) {
-        logger.debug(`⚠️ FILTERED OUT - no name: id=${item.id} driving_categories=${JSON.stringify(item.driving_categories)}`)
-        return false
-      }
-      return true
-    })
-    
-    logger.debug('🔍 POST-FILTER: After name filter', filtered.length, 'criteria')
-    logger.debug('🔍 DROPPED:', processedCriteria.length - filtered.length, 'criteria')
-    
+    const filtered = processedCriteria.filter(item => !!item.name)
+
     // Deduplicate by name+category_name: prefer tenant-specific over global (tenant_id = null)
     const deduped = Object.values(
       filtered.reduce((acc: Record<string, any>, c: any) => {
@@ -644,10 +605,8 @@ const loadAllCriteria = async () => {
       return a.criteria_order - b.criteria_order
     })
 
-    logger.debug('✅ Loaded criteria with new system:', allCriteria.value.length, 'criteria (after filtering out items with no name)')
-
   } catch (err: any) {
-    console.error('❌ Error loading criteria:', err)
+    console.error('Error loading evaluation criteria:', err)
     error.value = err.message || 'Fehler beim Laden der Bewertungskriterien'
   } finally {
     isLoading.value = false
