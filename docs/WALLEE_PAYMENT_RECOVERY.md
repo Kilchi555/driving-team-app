@@ -59,6 +59,7 @@ Automatically recovers stuck payments by:
 - Querying Wallee API for actual transaction status
 - Updating DB if status changed
 - Creating recovery log entries
+- **Phase 5:** releases unpaid pay-before-confirm appointment holds older than 10 minutes (see [PAY_BEFORE_CONFIRM.md](./PAY_BEFORE_CONFIRM.md))
 
 **Setup:** Add to your cron service to run every 10 minutes:
 ```
