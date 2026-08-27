@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { staffCalendarBlocksMatch } from '../course-staff-notifications'
+import { staffCalendarBlocksMatch, staffCourseBlockTitle } from '../course-staff-notifications'
 
 describe('staffCalendarBlocksMatch', () => {
   const sessions = [
@@ -28,5 +28,14 @@ describe('staffCalendarBlocksMatch', () => {
 
   it('detects missing calendar blocks after a cancel/reactivate cycle', () => {
     expect(staffCalendarBlocksMatch(sessions, [])).toBe(false)
+  })
+})
+
+describe('staffCourseBlockTitle', () => {
+  it('uses this block’s session date and time, not the course start', () => {
+    expect(staffCourseBlockTitle(
+      { id: 'c1', name: 'Motorrad Zürich-Altstetten - 12.09.2026', tenant_id: 't1' },
+      [{ id: 's3', start_time: '2026-09-15T15:00:00.000Z', end_time: '2026-09-15T19:00:00.000Z' }],
+    )).toBe('Motorrad Zürich-Altstetten · 15.09. 17:00–21:00')
   })
 })
