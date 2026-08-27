@@ -23,11 +23,11 @@ import { useFeatures } from '~/composables/useFeatures'
 const authStore = useAuthStore()
 const { primaryColor } = useTenantBranding()
 const { logFallbackUsed } = useFallbackLogger()
-const { t, isDrivingSchool } = useTerminology()
+const { t } = useTerminology()
 const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
 
 const evaluationsEnabled = computed(() =>
-  isFeatureEnabled('evaluations_enabled', isDrivingSchool.value)
+  isFeatureEnabled('evaluations_enabled', true)
 )
 
 // ✅ Protect this page - require authentication
