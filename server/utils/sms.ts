@@ -285,7 +285,12 @@ async function maybeSendSmsQuotaAlert(opts: {
   const ratio = opts.usedAfter / opts.included
   if (ratio < 0.8) return
 
-  const periodKey = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, '0')}`
+  const {
+    calendarSmsQuotaAlertPeriodKey,
+    parseSmsQuotaAlertState,
+    smsQuotaAlertPeriodsMatch,
+  } = await import('~/server/utils/sms-quota')
+  const periodKey = calendarSmsQuotaAlertPeriodKey()
   const { data: existing } = await opts.supabase
     .from('tenant_settings')
     .select('id, setting_value')
@@ -293,15 +298,8 @@ async function maybeSendSmsQuotaAlert(opts: {
     .eq('setting_key', 'sms_quota_alerts')
     .maybeSingle()
 
-  let state: any = {}
-  try {
-    state = typeof existing?.setting_value === 'string'
-      ? JSON.parse(existing.setting_value)
-      : (existing?.setting_value || {})
-  } catch {
-    state = {}
-  }
-  if (state.period !== periodKey) {
+  const state: { period?: string; warned80?: boolean; warned100?: boolean } = parseSmsQuotaAlertState(existing?.setting_value)
+  if (!smsQuotaAlertPeriodsMatch(state.period, periodKey)) {
     state.period = periodKey
     state.warned80 = false
     state.warned100 = false
@@ -330,6 +328,30 @@ async function maybeSendSmsQuotaAlert(opts: {
   }
 
   if (!subject || !tenantBody || !adminBody) return
+
+  const value = JSON.stringify(state)
+  if (existing?.id) {
+    const { error: persistError } = await opts.supabase
+      .from('tenant_settings')
+      .update({ setting_value: value })
+      .eq('id', existing.id)
+    if (persistError) {
+      logger.warn('⚠️ SMS quota alert persist failed, skip send:', persistError.message)
+      return
+    }
+  } else {
+    const { error: persistError } = await opts.supabase.from('tenant_settings').insert({
+      tenant_id: opts.tenantId,
+      category: 'sms',
+      setting_key: 'sms_quota_alerts',
+      setting_value: value,
+      setting_type: 'json',
+    })
+    if (persistError) {
+      logger.warn('⚠️ SMS quota alert persist failed, skip send:', persistError.message)
+      return
+    }
+  }
 
   const { sendEmail } = await import('~/server/utils/email')
   const appBase = (process.env.NUXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://app.simy.ch').replace(/\/$/, '')
@@ -383,22 +405,6 @@ async function maybeSendSmsQuotaAlert(opts: {
       return sendEmail({ to, subject, html })
     }),
   )
-
-  const value = JSON.stringify(state)
-  if (existing?.id) {
-    await opts.supabase
-      .from('tenant_settings')
-      .update({ setting_value: value })
-      .eq('id', existing.id)
-  } else {
-    await opts.supabase.from('tenant_settings').insert({
-      tenant_id: opts.tenantId,
-      category: 'sms',
-      setting_key: 'sms_quota_alerts',
-      setting_value: value,
-      setting_type: 'json',
-    })
-  }
 }
 
 function buildSmsQuotaAlertHtml(opts: {
