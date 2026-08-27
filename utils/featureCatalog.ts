@@ -29,7 +29,7 @@ export const FEATURE_CATALOG: Record<string, FeatureCatalogEntry> = {
   },
   evaluations_enabled: {
     displayName: 'Termindokumentation',
-    description: 'Termine dokumentieren und bewerten (Themen, Notizen, Bewertungen)',
+    description: 'Termine dokumentieren (Themen, Notizen, Bewertungen). Aus: der Tab «Bewertungen» in den Pendenzen und das Menü Bewertungssystem verschwinden.',
     icon: '📝',
     sortOrder: 30
   },
@@ -111,9 +111,33 @@ export const FEATURE_CATALOG: Record<string, FeatureCatalogEntry> = {
 
 /** Flags that stay off by default for non-driving-school tenants (even on trial). */
 export const NON_DRIVING_SCHOOL_DEFAULT_OFF = new Set([
-  'evaluations_enabled',
   'exams_enabled',
   'experts_enabled',
   'examiners_enabled',
   'categories_enabled'
 ])
+
+/** Plan sync keeps the admin's explicit on/off instead of resetting from the plan. */
+export const ADMIN_PRESERVED_FEATURE_FLAGS = new Set([
+  'evaluations_enabled',
+])
+
+/**
+ * Resolve enabled state when writing tenant_settings during plan/addon sync.
+ * `existing` is the current DB value when a row already exists.
+ */
+export function resolveSyncedFeatureEnabled(opts: {
+  flag: string
+  planEnables: boolean
+  isDrivingSchool: boolean
+  existing?: boolean
+}): boolean {
+  const { flag, planEnables, isDrivingSchool, existing } = opts
+  if (!isDrivingSchool && NON_DRIVING_SCHOOL_DEFAULT_OFF.has(flag)) {
+    return existing ?? false
+  }
+  if (ADMIN_PRESERVED_FEATURE_FLAGS.has(flag) && typeof existing === 'boolean') {
+    return existing
+  }
+  return planEnables
+}

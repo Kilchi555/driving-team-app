@@ -4,7 +4,12 @@ import {
   ALL_FEATURE_FLAGS,
   type SubscriptionPlan,
 } from '~/utils/planFeatures'
-import { FEATURE_CATALOG, NON_DRIVING_SCHOOL_DEFAULT_OFF } from '~/utils/featureCatalog'
+import {
+  FEATURE_CATALOG,
+  NON_DRIVING_SCHOOL_DEFAULT_OFF,
+  ADMIN_PRESERVED_FEATURE_FLAGS,
+  resolveSyncedFeatureEnabled,
+} from '~/utils/featureCatalog'
 
 function parseEnabled(settingValue: string | null | undefined): boolean | null {
   if (!settingValue) return null
@@ -34,16 +39,19 @@ export async function syncFeatureFlags(
 
   const isDrivingSchool = (tenant?.business_type || 'driving_school') === 'driving_school'
 
-  // Preserve manual opt-in for documentation/exams on non-driving tenants
-  // (plan sync must not force-enable OR wipe these).
+  const keysToPreserve = [
+    ...ADMIN_PRESERVED_FEATURE_FLAGS,
+    ...(!isDrivingSchool ? NON_DRIVING_SCHOOL_DEFAULT_OFF : []),
+  ]
+
   const preserved = new Map<string, boolean>()
-  if (!isDrivingSchool) {
+  if (keysToPreserve.length > 0) {
     const { data: existingRows } = await supabase
       .from('tenant_settings')
       .select('setting_key, setting_value')
       .eq('tenant_id', tenantId)
       .eq('category', 'features')
-      .in('setting_key', [...NON_DRIVING_SCHOOL_DEFAULT_OFF])
+      .in('setting_key', keysToPreserve)
 
     for (const row of existingRows || []) {
       const enabled = parseEnabled(row.setting_value)
@@ -52,10 +60,12 @@ export async function syncFeatureFlags(
   }
 
   const upserts = ALL_FEATURE_FLAGS.map(flag => {
-    let enabled = enabledFlags.has(flag)
-    if (!isDrivingSchool && NON_DRIVING_SCHOOL_DEFAULT_OFF.has(flag)) {
-      enabled = preserved.get(flag) ?? false
-    }
+    const enabled = resolveSyncedFeatureEnabled({
+      flag,
+      planEnables: enabledFlags.has(flag),
+      isDrivingSchool,
+      existing: preserved.has(flag) ? preserved.get(flag) : undefined,
+    })
 
     const catalog = FEATURE_CATALOG[flag]
     const setting_value = catalog

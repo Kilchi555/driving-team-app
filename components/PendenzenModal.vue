@@ -566,7 +566,7 @@ const { t, isDrivingSchool, eventTypeLabel } = useTerminology()
 const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
 
 const evaluationsEnabled = computed(() =>
-  isFeatureEnabled('evaluations_enabled', isDrivingSchool.value)
+  isFeatureEnabled('evaluations_enabled', true)
 )
 const examsEnabled = computed(() =>
   isFeatureEnabled('exams_enabled', isDrivingSchool.value)
