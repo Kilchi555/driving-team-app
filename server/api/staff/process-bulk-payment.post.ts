@@ -252,24 +252,28 @@ export default defineEventHandler(async (event) => {
           if (decision.status === 'completed') {
             updateData.paid_at = now
           }
-          // Append to partial_payments history in metadata
+
+          // Nur echte Teilzahlungs-Historie speichern — nicht bei einer einmaligen Vollzahlung.
           const existingMeta = (paymentDueData as any)?.metadata || {}
           const existingHistory: any[] = existingMeta.partial_payments || []
-
-          // ✅ Falls bereits vorher etwas bezahlt wurde (already_paid_rappen > 0, z.B. direkt bei
-          // der Terminerstellung), aber noch nie in der partial_payments-Historie erfasst wurde,
-          // zuerst rückwirkend einen Eintrag dafür anlegen - sonst würde diese (neue) Zahlung
-          // fälschlich als "1. Zahlung" angezeigt, obwohl es schon eine frühere gab.
           const alreadyPaidRappen = paymentDueData?.already_paid_rappen || 0
-          if (existingHistory.length === 0 && alreadyPaidRappen > 0) {
-            existingHistory.push({
-              amount_rappen: alreadyPaidRappen,
-              paid_at: paymentDueData?.created_at || now
-            })
-          }
+          const isPartialFlow = decision.status === 'partial'
+            || existingHistory.length > 0
+            || alreadyPaidRappen > 0
 
-          existingHistory.push({ amount_rappen: decision.new_amount, paid_at: now })
-          updateData.metadata = { ...existingMeta, partial_payments: existingHistory }
+          if (isPartialFlow) {
+            // Falls bereits vorher etwas bezahlt wurde, aber noch nie in der Historie erfasst
+            // wurde, zuerst rückwirkend einen Eintrag anlegen.
+            if (existingHistory.length === 0 && alreadyPaidRappen > 0) {
+              existingHistory.push({
+                amount_rappen: alreadyPaidRappen,
+                paid_at: paymentDueData?.created_at || now
+              })
+            }
+
+            existingHistory.push({ amount_rappen: decision.new_amount, paid_at: now })
+            updateData.metadata = { ...existingMeta, partial_payments: existingHistory }
+          }
         }
 
         const { error: updateError } = await supabaseAdmin
