@@ -1,13 +1,31 @@
 // server/api/students/check-email.post.ts
-// Real-time email availability check for onboarding
+// Real-time email availability for onboarding / register / guest booking
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
+import { validateEmail } from '~/server/utils/validators'
+import {
+  evaluateClientEmailClaim,
+  PUBLIC_EMAIL_TAKEN_MESSAGE,
+  publicEmailCheckAvailable,
+  resolvePendingUserIdFromOnboardingToken,
+} from '~/server/utils/auth-email-claim'
 
 export default defineEventHandler(async (event) => {
   try {
+    const ip = getClientIP(event) || 'unknown'
+    const rate = await checkRateLimit(ip, 'email_check', 20, 60 * 1000)
+    if (!rate.allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Zu viele Prüfungen. Bitte kurz warten.',
+      })
+    }
+
     const body = await readBody(event)
-    const { email, tenantId } = body
+    const { email, tenantId, token, purpose } = body || {}
 
     if (!email || !tenantId) {
       throw createError({
@@ -16,42 +34,34 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    if (!validateEmail(email).valid) {
       return {
         available: false,
-        message: 'Ungültige E-Mail-Adresse'
+        message: 'Ungültige E-Mail-Adresse',
       }
     }
 
     const supabase = getSupabaseAdmin()
+    const trustedUserId = await resolvePendingUserIdFromOnboardingToken(supabase, token)
+    const claim = await evaluateClientEmailClaim({
+      supabase,
+      email,
+      tenantId,
+      excludeUserId: trustedUserId,
+    })
 
-    // Check if email is already linked to an active CLIENT account in this tenant
-    const { data: existingUserInTenant, error: dbError } = await supabase
-      .from('users')
-      .select('id, auth_user_id')
-      .eq('email', email.trim().toLowerCase())
-      .eq('tenant_id', tenantId)
-      .eq('role', 'client')
-      .not('auth_user_id', 'is', null)
-      .maybeSingle()
-
-    if (dbError) {
-      logger.error('❌ Local users table email check error:', dbError)
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Could not check local email availability'
-      })
-    }
+    const forBooking = purpose === 'booking'
+    const available = trustedUserId && !forBooking
+      ? claim.availableForAccount
+      : publicEmailCheckAvailable(claim, forBooking ? 'booking' : 'account')
 
     return {
-      available: !existingUserInTenant,
-      message: existingUserInTenant
-        ? 'Diese E-Mail-Adresse ist bereits im System registriert (global)'
-        : '✓ E-Mail verfügbar'
+      available,
+      ...(trustedUserId ? { code: claim.code } : {}),
+      message: available
+        ? '✓ E-Mail verfügbar'
+        : (trustedUserId ? claim.message : PUBLIC_EMAIL_TAKEN_MESSAGE),
     }
-
   } catch (error: any) {
     logger.error('❌ Error in check-email API:', error)
     throw createError({

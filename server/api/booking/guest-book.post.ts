@@ -41,7 +41,11 @@ import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
 import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
 import { checkoutAppUrl, createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
-import { incrementAppointmentDiscountUsage, netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
+import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
+import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockCheckoutBenefits } from '~/server/utils/checkout-benefits'
+import { evaluateClientEmailClaim, pendingContactMismatch } from '~/server/utils/auth-email-claim'
+import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
+import { pickAvailableRoomId, resolveRoomSettings, type RoomServiceType } from '~/server/utils/room-availability'
 
 interface GuestBookRequest {
   // Booking identifiers
@@ -65,8 +69,9 @@ interface GuestBookRequest {
   acquisition_self_reported_note?: string
   // Optional booking data
   notes?: string
-  vehicle_mode?: 'school' | 'own' | null
-  room_id?: string | null
+  /** Vehicle option key from category/location vehicle_settings */
+  vehicle_mode?: string | null
+  service_type?: RoomServiceType
   customer_pickup_plz?: string | null
   customer_pickup_address?: string | null
   payment_method?: 'wallee' | 'invoice'
@@ -193,10 +198,10 @@ export default defineEventHandler(async (event) => {
 
   const [phoneCheckResult, emailCheckResult] = await Promise.all([
     phone
-      ? supabase.from('users').select('id, onboarding_status, category').eq('phone', phone).eq('tenant_id', tenantId).maybeSingle()
+      ? supabase.from('users').select('id, onboarding_status, category, phone, email, onboarding_token, onboarding_token_expires').eq('phone', phone).eq('tenant_id', tenantId).maybeSingle()
       : Promise.resolve({ data: null }),
     email
-      ? supabase.from('users').select('id, onboarding_status, category').eq('email', email).eq('tenant_id', tenantId).maybeSingle()
+      ? supabase.from('users').select('id, onboarding_status, category, phone, email, onboarding_token, onboarding_token_expires').eq('email', email).eq('tenant_id', tenantId).maybeSingle()
       : Promise.resolve({ data: null }),
   ])
 
@@ -216,7 +221,7 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 409,
       statusMessage: 'Diese E-Mail-Adresse ist bereits mit einem Konto verbunden. Bitte melde dich an.',
-      data: { code: 'DUPLICATE_EMAIL' },
+      data: { code: 'TENANT_CLIENT_EXISTS' },
     })
   }
 
@@ -232,8 +237,46 @@ export default defineEventHandler(async (event) => {
     (emailCheckResult.data?.onboarding_status === 'pending' ? emailCheckResult.data : null) ||
     (phoneCheckResult.data?.onboarding_status === 'pending' ? phoneCheckResult.data : null)
 
+  if (existingPendingUser && pendingContactMismatch({
+    storedEmail: existingPendingUser.email,
+    storedPhone: existingPendingUser.phone,
+    incomingEmail: email,
+    incomingPhone: phone,
+    matchedByEmail: emailCheckResult.data?.id === existingPendingUser.id,
+    matchedByPhone: phoneCheckResult.data?.id === existingPendingUser.id,
+  })) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Diese Kontaktdaten gehören zu einer offenen Anmeldung mit anderen Angaben. Bitte die ursprüngliche E-Mail und Telefonnummer verwenden oder den Link aus der Nachricht nutzen.',
+      data: { code: 'CONTACT_MISMATCH' },
+    })
+  }
+
+  if (email) {
+    const claim = await evaluateClientEmailClaim({
+      supabase,
+      email,
+      tenantId,
+      excludeUserId: existingPendingUser?.id || null,
+    })
+    if (!claim.availableForGuestBooking) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: claim.message,
+        data: { code: claim.code },
+      })
+    }
+  }
+
   const newUserId = existingPendingUser?.id ?? uuidv4()
-  const onboardingToken = uuidv4()
+  const existingTokenValid = !!(
+    existingPendingUser?.onboarding_token
+    && existingPendingUser.onboarding_token_expires
+    && new Date(existingPendingUser.onboarding_token_expires) > new Date()
+  )
+  const onboardingToken = existingTokenValid
+    ? existingPendingUser!.onboarding_token
+    : uuidv4()
   const tokenExpiry = new Date()
   tokenExpiry.setDate(tokenExpiry.getDate() + 30)
 
@@ -252,8 +295,10 @@ export default defineEventHandler(async (event) => {
     }
     if (body.first_name?.trim()) updatePayload.first_name = body.first_name.trim()
     if (body.last_name?.trim()) updatePayload.last_name = body.last_name.trim()
-    if (phone) updatePayload.phone = phone
-    if (email) updatePayload.email = email
+    const matchedByEmail = emailCheckResult.data?.id === existingPendingUser.id
+    const matchedByPhone = phoneCheckResult.data?.id === existingPendingUser.id
+    if (phone && !matchedByEmail) updatePayload.phone = phone
+    if (email && !matchedByPhone) updatePayload.email = email
     if (body.birthdate?.trim()) updatePayload.birthdate = body.birthdate.trim()
     if (body.street?.trim()) updatePayload.street = body.street.trim()
     if (body.street_nr?.trim()) updatePayload.street_nr = body.street_nr.trim()
@@ -312,8 +357,8 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Guest user created:', newUserId)
   }
 
-  // ── Parallel: pricing + marketing attribution + location name ────────────
-  const [pricingResult, eventPricingResult, marketingAttr, locationResult] = await Promise.all([
+  // ── Parallel: pricing + marketing attribution + location/vehicle settings ─
+  const [pricingResult, eventPricingResult, marketingAttr, locationResult, categorySettingsRes] = await Promise.all([
     supabase
       .from('pricing_rules')
       .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier, admin_fee_rappen, admin_fee_applies_from')
@@ -339,13 +384,25 @@ export default defineEventHandler(async (event) => {
 
     supabase
       .from('locations')
-      .select('name')
+      .select('name, category_vehicle_settings, category_room_settings')
       .eq('id', slot.location_id)
+      .maybeSingle(),
+
+    supabase
+      .from('categories')
+      .select('vehicle_settings, room_settings')
+      .eq('code', body.category_code)
+      .eq('tenant_id', tenantId)
       .maybeSingle(),
   ])
 
   const pricingRule = pricingResult.data || eventPricingResult.data
   const location = locationResult.data
+  const vehicleSettings = resolveVehicleSettings(
+    locationResult.data?.category_vehicle_settings,
+    categorySettingsRes.data?.vehicle_settings,
+    body.category_code
+  )
 
   try {
     await stampFirstTouchAcquisition({
@@ -402,6 +459,11 @@ export default defineEventHandler(async (event) => {
     }
 
     totalAmountRappen = roundToNearest5Rappen(Math.round(price))
+
+    if (body.vehicle_mode) {
+      const vehicleCost = calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes)
+      totalAmountRappen = Math.max(0, totalAmountRappen + vehicleCost)
+    }
   }
 
   // ── Calculate admin fee ───────────────────────────────────────────────────
@@ -468,6 +530,22 @@ export default defineEventHandler(async (event) => {
 
   const sanitizedNotes = body.notes ? sanitizeString(body.notes) : ''
 
+  const roomServiceType: RoomServiceType = body.service_type ?? 'fahrstunde'
+  const roomRule = resolveRoomSettings(
+    locationResult.data?.category_room_settings,
+    categorySettingsRes.data?.room_settings,
+    body.category_code,
+    roomServiceType
+  )
+  let autoAssignedRoomId: string | null = null
+  if (roomRule.mode !== 'none' && roomRule.allowed_room_ids.length > 0) {
+    autoAssignedRoomId = await pickAvailableRoomId(supabase, {
+      allowedRoomIds: roomRule.allowed_room_ids,
+      startTime: slot.start_time,
+      endTime: slot.end_time,
+    })
+  }
+
   // ── Create appointment ────────────────────────────────────────────────────
   // FS: type = category (B), event_type_code = lesson
   // Event-type tenants: slot.category_code is the event type code
@@ -508,7 +586,7 @@ export default defineEventHandler(async (event) => {
       customer_pickup_plz: body.customer_pickup_plz?.trim() || null,
       customer_pickup_address: body.customer_pickup_address?.trim() || null,
       vehicle_mode: body.vehicle_mode ?? null,
-      room_id: body.room_id ?? null,
+      room_id: autoAssignedRoomId,
     })
     .select()
     .single()
@@ -528,6 +606,59 @@ export default defineEventHandler(async (event) => {
   }
 
   logger.debug('✅ Guest appointment created:', newAppointment.id)
+
+  const chosenVehicleOption = vehicleSettings.options?.find(o => o.key === body.vehicle_mode)
+  if (body.vehicle_mode && chosenVehicleOption?.requires_school_vehicle) {
+    const { error: vbErr } = await supabase
+      .from('vehicle_bookings')
+      .insert({
+        vehicle_id: null,
+        tenant_id: tenantId,
+        location_id: slot.location_id,
+        category_code: body.category_code,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        purpose: 'lesson',
+        appointment_id: newAppointment.id,
+        booked_by: newUserId,
+        status: 'confirmed',
+      })
+    if (vbErr) {
+      logger.warn('⚠️ Guest vehicle_bookings placeholder failed (non-fatal):', vbErr.message)
+    }
+  }
+
+  if (autoAssignedRoomId) {
+    const { data: roomConflicts } = await supabase
+      .from('room_bookings')
+      .select('id')
+      .eq('room_id', autoAssignedRoomId)
+      .neq('status', 'cancelled')
+      .lt('start_time', slot.end_time)
+      .gt('end_time', slot.start_time)
+      .limit(1)
+    if ((roomConflicts?.length ?? 0) > 0) {
+      logger.warn('⚠️ Guest room conflict — clearing assigned room:', autoAssignedRoomId)
+      await supabase.from('appointments').update({ room_id: null }).eq('id', newAppointment.id)
+      autoAssignedRoomId = null
+    } else {
+      const { error: rbErr } = await supabase.from('room_bookings').insert({
+        room_id: autoAssignedRoomId,
+        tenant_id: tenantId,
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        purpose: 'lesson',
+        appointment_id: newAppointment.id,
+        booked_by: newUserId,
+        status: 'confirmed',
+      })
+      if (rbErr) {
+        logger.warn('⚠️ Guest room_bookings creation failed (non-fatal):', rbErr.message)
+        await supabase.from('appointments').update({ room_id: null }).eq('id', newAppointment.id)
+        autoAssignedRoomId = null
+      }
+    }
+  }
 
   // Persist pickup as reusable client location (staff LocationSelector / Treffpunkte)
   if (body.customer_pickup_address?.trim()) {
@@ -568,11 +699,30 @@ export default defineEventHandler(async (event) => {
         admin_fee_reason: adminFeeResult.reason,
         ...(holdUntilPaid ? { pay_before_confirm: true } : {}),
         ...(resolvedDiscount.code ? { discount_code: resolvedDiscount.code } : {}),
+        ...(body.vehicle_mode ? { vehicle_mode: body.vehicle_mode, vehicle_cost_rappen: calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes) } : {}),
         ...(travelFeeRappen > 0 ? { travel_fee: { km: travelFee.km, billable_km: travelFee.billable_km, fee_rappen: travelFeeRappen, capped: travelFee.capped, label: travelFee.label } } : {}),
       },
     })
     .select()
     .single()
+
+  if (newPayment?.id && resolvedDiscount.code && validatedDiscountAmount > 0) {
+    const locked = await lockCheckoutBenefits({
+      supabase,
+      tenantId,
+      paymentId: newPayment.id,
+      code: resolvedDiscount.code,
+    })
+    if (!locked.ok) {
+      logger.warn('⚠️ Guest discount could not be locked, aborting booking', locked.reason)
+      await abortCheckoutAfterBenefitLockFail({
+        supabase,
+        paymentId: newPayment.id,
+        appointmentId: newAppointment.id,
+      })
+      throw createError(benefitLockUnavailablePayload(locked.reason))
+    }
+  }
 
   let remainingDue = netAmountRappen
   if (newPayment && body.apply_available_credit !== false && newUserId) {
@@ -660,14 +810,6 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  if (resolvedDiscount.code && validatedDiscountAmount > 0) {
-    incrementAppointmentDiscountUsage({
-      supabase,
-      tenantId,
-      code: resolvedDiscount.code,
-    }).catch(() => {})
-  }
-
   // ── Mark slot as booked ───────────────────────────────────────────────────
   await supabase
     .from('availability_slots')
@@ -716,9 +858,11 @@ export default defineEventHandler(async (event) => {
   const onboardingLink = `https://app.simy.ch/onboarding/${onboardingToken}`
   let onboardingSmsSent = false
   let onboardingEmailSent = false
+  const notifyEmail = (existingPendingUser?.email || email || '').trim() || null
+  const notifyPhone = (existingPendingUser?.phone || phone || '').trim() || null
 
   // Email has priority: if email available and enabled, send email only
-  if (email && emailEnabled) {
+  if (notifyEmail && emailEnabled) {
     const primaryColor = (tenant as any).primary_color || '#2563eb'
     const logoUrl = (tenant as any).logo_wide_url || (tenant as any).logo_url || (tenant as any).logo_square_url || null
     const customerName = `${body.first_name || ''} ${body.last_name || ''}`.trim() || terms.client
@@ -824,19 +968,19 @@ export default defineEventHandler(async (event) => {
     ;(async () => {
       try {
         await sendEmail({
-          to: email,
+          to: notifyEmail,
           subject: `Termin bestätigt — Konto aktivieren bei ${displayTenantName}`,
           html: emailHtml,
           senderName: displayTenantName,
         })
-        logger.debug('✅ Onboarding email sent to guest:', email)
+        logger.debug('✅ Onboarding email sent to guest:', notifyEmail)
       } catch (err: any) {
         logger.warn('⚠️ Onboarding email failed (non-critical):', err.message)
       }
     })()
   }
   // Send SMS only if no email or email not enabled
-  else if (phone && smsEnabled) {
+  else if (notifyPhone && smsEnabled) {
     // Login link lives in the welcome email after registration — keep SMS short
     const message = `Hallo ${body.first_name}! Termin bestätigt. Konto aktivieren (30 Tage): ${onboardingLink}`
 
@@ -845,12 +989,12 @@ export default defineEventHandler(async (event) => {
       try {
         await sendTenantSMS({
           tenantId: tenant.id,
-          to: formatSwissPhoneNumber(phone),
+          to: formatSwissPhoneNumber(notifyPhone),
           message,
           purpose: 'student_onboarding',
           senderName: tenantName,
         })
-        logger.debug('✅ Onboarding SMS sent to guest:', phone)
+        logger.debug('✅ Onboarding SMS sent to guest:', notifyPhone)
       } catch (err: any) {
         logger.warn('⚠️ Onboarding SMS failed (non-critical):', err.message)
       }
@@ -942,10 +1086,27 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const vehicleLabel = body.vehicle_mode
+    ? (vehicleSettings.options?.find(o => o.key === body.vehicle_mode)?.label || null)
+    : null
+  let roomName: string | null = null
+  if (autoAssignedRoomId) {
+    const { data: roomRow } = await supabase
+      .from('rooms')
+      .select('name')
+      .eq('id', autoAssignedRoomId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    roomName = roomRow?.name || null
+  }
+
   return {
     success: true,
     appointment_id: newAppointment.id,
     payment_id: newPayment?.id || null,
+    vehicle_label: vehicleLabel,
+    room_id: autoAssignedRoomId,
+    room_name: roomName,
     send_meta_purchase: sentMetaPurchase,
     requires_payment: !!holdUntilPaid,
     paymentUrl: paymentUrl || null,
