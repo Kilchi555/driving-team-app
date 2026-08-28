@@ -1,0 +1,29 @@
+# Queue a squash merge into main once required checks are green.
+# Branch protection still gates on "Test and lint" and "E2E login"
+# (not Vercel previews). Draft PRs stay unmerged until marked ready.
+name: Auto-merge
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    name: Enable squash auto-merge
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --auto \
+            --squash
