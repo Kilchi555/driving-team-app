@@ -1997,14 +1997,10 @@ async function loadFile(file: File) {
 }
 
 async function parseXlsx(file: File) {
-  const form = new FormData()
-  form.append('file', file)
   isParsingFile.value = true
   try {
-    const parsed = await $fetch<{ header: string[]; rows: Record<string, string>[] }>('/api/admin/parse-import-file', {
-      method: 'POST',
-      body: form,
-    })
+    const { parseXlsxRows } = await import('~/utils/parse-xlsx-rows.client')
+    const parsed = await parseXlsxRows(await file.arrayBuffer())
     if (parsed.header.length === 0 && parsed.rows.length === 0) {
       fileError.value = 'Die Excel-Datei ist leer.'
       return

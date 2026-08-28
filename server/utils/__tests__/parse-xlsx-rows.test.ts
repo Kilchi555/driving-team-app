@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import ExcelJS from 'exceljs'
-import { parseXlsxRows } from '../parse-xlsx-rows'
+import { parseXlsxRows } from '../../../utils/parse-xlsx-rows.client'
 
 describe('parseXlsxRows', () => {
   it('reads the first sheet into header + rows', async () => {
