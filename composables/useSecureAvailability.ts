@@ -44,10 +44,8 @@ interface FetchSlotsOptions {
   end_date: string // YYYY-MM-DD
   duration_minutes?: number
   category_code?: string
-  /** Option key from vehicle settings — passed for logging/filtering */
+  /** Option key from vehicle settings — server resolves capacity policy from stored settings */
   vehicle_mode?: string | null
-  /** When true, filter out slots where no school vehicle is available at the location */
-  requires_school_vehicle?: boolean
   /** Booking service type (fahrstunde/theorie/beratung) — resolves the admin-configured
    *  room rule; slots are filtered out when required and no room is free. */
   service_type?: 'fahrstunde' | 'theorie' | 'beratung' | null
@@ -119,7 +117,6 @@ export const useSecureAvailability = () => {
       if (options.duration_minutes) params.append('duration_minutes', options.duration_minutes.toString())
       if (options.category_code) params.append('category_code', options.category_code)
       if (options.vehicle_mode) params.append('vehicle_mode', options.vehicle_mode)
-      if (options.requires_school_vehicle) params.append('requires_school_vehicle', '1')
       if (options.service_type) params.append('service_type', options.service_type)
 
       const response = await $fetch<{ success: boolean; slots: AvailableSlot[]; count: number }>(
