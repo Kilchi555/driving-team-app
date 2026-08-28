@@ -12,6 +12,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { resolveRoomSettings, isAnyRoomAvailable } from '~/server/utils/room-availability'
+import { isSchoolVehicleAvailable, resolveSlotVehiclePolicy } from '~/server/utils/vehicle-availability'
 import { bookableUserRoles, resolveLocationStaffAssignments } from '~/server/utils/bookable-locations'
 
 export interface BookingReadinessCheck {
@@ -212,8 +213,8 @@ async function loadBookableStaffLocations(
 
 /**
  * Same core filters as GET /api/booking/get-available-slots
- * (lead time, reservation expiry, category, duration + room required for fahrstunde).
- * Skips school-vehicle filter: booking only applies that when vehicle_mode requires it.
+ * (lead time, reservation expiry, category, duration, room required,
+ * school-vehicle policy from stored settings — empty fleet does not hide slots).
  */
 async function countAvailableSlots(
   supabase: SupabaseClient,
@@ -261,13 +262,13 @@ async function countAvailableSlots(
     const [categoryRes, locationRes] = await Promise.all([
       supabase
         .from('categories')
-        .select('room_settings')
+        .select('room_settings, vehicle_settings')
         .eq('code', opts.categoryCode)
         .eq('tenant_id', opts.tenantId)
         .maybeSingle(),
       supabase
         .from('locations')
-        .select('id, category_room_settings')
+        .select('id, category_room_settings, category_vehicle_settings')
         .eq('id', opts.locationId)
         .maybeSingle(),
     ])
@@ -300,6 +301,44 @@ async function countAvailableSlots(
             allowedRoomIds: rule.allowed_room_ids,
             startTime,
             endTime,
+          })
+          if (!available) {
+            for (const id of slotIds) unavailable.add(id)
+          }
+        }),
+      )
+      filtered = filtered.filter((s) => !unavailable.has(s.id))
+    }
+
+    const policy = resolveSlotVehiclePolicy(
+      locationRes.data?.category_vehicle_settings,
+      categoryRes.data?.vehicle_settings ?? null,
+      opts.categoryCode,
+    )
+    if (policy.requiresSchoolVehicle && filtered.length > 0) {
+      const uniqueTimes = new Map<string, { startTime: string; endTime: string; slotIds: string[] }>()
+      for (const slot of filtered) {
+        const key = `${slot.start_time}:${slot.end_time}`
+        if (!uniqueTimes.has(key)) {
+          uniqueTimes.set(key, {
+            startTime: slot.start_time,
+            endTime: slot.end_time,
+            slotIds: [],
+          })
+        }
+        uniqueTimes.get(key)!.slotIds.push(slot.id)
+      }
+
+      const unavailable = new Set<string>()
+      await Promise.all(
+        Array.from(uniqueTimes.values()).map(async ({ startTime, endTime, slotIds }) => {
+          const available = await isSchoolVehicleAvailable(supabase, {
+            tenantId: opts.tenantId,
+            locationId: opts.locationId,
+            categoryCode: opts.categoryCode,
+            startTime,
+            endTime,
+            enforceCapacity: policy.enforceCapacity,
           })
           if (!available) {
             for (const id of slotIds) unavailable.add(id)

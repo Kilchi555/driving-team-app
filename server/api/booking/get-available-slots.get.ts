@@ -21,7 +21,7 @@ import { getSupabase } from '~/server/utils/supabase'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
-import { isSchoolVehicleAvailable } from '~/server/utils/vehicle-availability'
+import { isSchoolVehicleAvailable, resolveSlotVehiclePolicy } from '~/server/utils/vehicle-availability'
 import { resolveRoomSettings, isAnyRoomAvailable, type RoomServiceType } from '~/server/utils/room-availability'
 
 interface AvailableSlot {
@@ -45,9 +45,8 @@ interface GetAvailableSlotsQuery {
   end_date?: string // YYYY-MM-DD
   duration_minutes?: string
   category_code?: string
-  vehicle_mode?: string // option key — passed through to vehicle_bookings check
-  /** '1' or 'true' — tells the API that this option requires a school vehicle (capacity check) */
-  requires_school_vehicle?: string
+  /** Option key from category/location vehicle settings. Policy is resolved server-side. */
+  vehicle_mode?: string
   /** Booking service type — resolves the admin-configured room rule (category + location) */
   service_type?: RoomServiceType
 }
@@ -172,7 +171,7 @@ export default defineEventHandler(async (event: H3Event) => {
     const staffIds = [...new Set(slots?.map(s => s.staff_id) || [])]
     const locationIds = [...new Set(slots?.map(s => s.location_id) || [])]
 
-    const [staffData, locationData, staffLocationsData] = await Promise.all([
+    const [staffData, locationData, staffLocationsData, categoryVehicleRow] = await Promise.all([
       staffIds.length > 0 ? supabase
         .from('users')
         .select('id, first_name, last_name')
@@ -180,7 +179,7 @@ export default defineEventHandler(async (event: H3Event) => {
         .then(res => res.data || []) : Promise.resolve([]),
       locationIds.length > 0 ? supabase
         .from('locations')
-        .select('id, name')
+        .select('id, name, category_vehicle_settings')
         .in('id', locationIds)
         .then(res => res.data || []) : Promise.resolve([]),
       staffIds.length > 0 && locationIds.length > 0 ? supabase
@@ -188,7 +187,16 @@ export default defineEventHandler(async (event: H3Event) => {
         .select('staff_id, location_id, is_online_bookable')
         .in('staff_id', staffIds)
         .in('location_id', locationIds)
-        .then(res => res.data || []) : Promise.resolve([])
+        .then(res => res.data || []) : Promise.resolve([]),
+      query.category_code
+        ? supabase
+            .from('categories')
+            .select('vehicle_settings')
+            .eq('code', query.category_code)
+            .eq('tenant_id', query.tenant_id)
+            .maybeSingle()
+            .then(res => res.data || null)
+        : Promise.resolve(null),
     ])
 
     const staffMap = new Map(staffData.map((s: any) => [s.id, `${s.first_name} ${s.last_name}`]))
@@ -210,14 +218,15 @@ export default defineEventHandler(async (event: H3Event) => {
     })
 
     // ============ LAYER 5: FILTER BY VEHICLE AVAILABILITY ============
-    // When vehicle_mode=school, filter out slots where no school vehicle is available.
-    // Checks are parallelised across unique location+category combinations.
-    const requiresSchoolVehicle =
-      query.requires_school_vehicle === '1' || query.requires_school_vehicle === 'true'
+    // Policy comes from stored vehicle settings, not from client flags.
+    // vehicle_mode only selects which configured option applies.
+    const categoryVehicleSettings = categoryVehicleRow?.vehicle_settings ?? null
+    const locationVehicleSettingsMap = new Map(
+      (locationData as any[]).map((l: any) => [l.id, l.category_vehicle_settings])
+    )
     let vehicleUnavailableSlotIds = new Set<string>()
 
-    if (requiresSchoolVehicle && slots && slots.length > 0 && query.category_code) {
-      // Collect unique location+time combinations to minimise DB queries
+    if (slots && slots.length > 0 && query.category_code) {
       const uniqueLocationTimes = new Map<string, { locationId: string; startTime: string; endTime: string; slotIds: string[] }>()
       for (const slot of slots) {
         const key = `${slot.location_id}:${slot.start_time}:${slot.end_time}`
@@ -234,12 +243,22 @@ export default defineEventHandler(async (event: H3Event) => {
 
       const vehicleChecks = await Promise.all(
         Array.from(uniqueLocationTimes.values()).map(async ({ locationId, startTime, endTime, slotIds }) => {
+          const policy = resolveSlotVehiclePolicy(
+            locationVehicleSettingsMap.get(locationId),
+            categoryVehicleSettings,
+            query.category_code!,
+            query.vehicle_mode
+          )
+          if (!policy.requiresSchoolVehicle) {
+            return { available: true, slotIds }
+          }
           const available = await isSchoolVehicleAvailable(supabase, {
             tenantId: query.tenant_id!,
             locationId,
             categoryCode: query.category_code!,
             startTime,
             endTime,
+            enforceCapacity: policy.enforceCapacity,
           })
           return { available, slotIds }
         })
@@ -252,7 +271,7 @@ export default defineEventHandler(async (event: H3Event) => {
       }
 
       logger.debug('🚗 Vehicle availability check:', {
-        vehicle_mode: 'school',
+        vehicle_mode: query.vehicle_mode || 'default',
         total_slots: slots.length,
         unavailable_due_to_fleet: vehicleUnavailableSlotIds.size,
       })
