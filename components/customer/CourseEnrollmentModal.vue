@@ -1885,6 +1885,9 @@ const getGermanErrorMessage = (error: any): string => {
   if (message.includes('Sie sind bereits für diesen Kurs angemeldet.')) {
     return 'Sie sind bereits für diesen Kurs angemeldet.'
   }
+  if (/Gutschein|Nutzungslimit|Code hat das|Code ist nicht mehr|reserviert/i.test(message)) {
+    return message
+  }
   // SARI deadline/capacity errors (most specific first)
   if (message.includes('Anmeldungsfrist abgelaufen') || message.includes('Anmeldefrist') || message.includes('Deadline violated') || message.includes('DEADLINE_VIOLATED')) {
     return 'Anmeldungsfrist abgelaufen. Der Kurs nimmt keine neuen Anmeldungen mehr an.'
@@ -1952,6 +1955,10 @@ const getGermanErrorMessage = (error: any): string => {
     case 404:
       return 'Die angefragten Daten wurden nicht gefunden.'
     case 409:
+      if (typeof message === 'string' && message.length >= 8 && message.length < 200
+        && /[äöüÄÖÜß]|bereits|Gutschein|Code|Kurs|angemeldet|reserviert|Limit/i.test(message)) {
+        return message
+      }
       return 'Konflikt: Die Aktion konnte nicht ausgeführt werden (z.B. bereits angemeldet).'
     case 500:
       logger.warn('❌ 500 Error. Message:', message?.substring(0, 100))
