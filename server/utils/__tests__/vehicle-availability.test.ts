@@ -24,15 +24,26 @@ function mockSupabase({
     return { count: blockedCount ?? 0, error: blockedError ?? null }
   }
 
-  const chain = (table: string): any => {
-    const self: any = {
+  type QueryResult = { count: number; error: { message: string } | null }
+  type QueryChain = {
+    select: () => QueryChain
+    eq: () => QueryChain
+    contains: () => QueryChain
+    neq: () => QueryChain
+    lt: () => QueryChain
+    gt: () => QueryChain
+    then: (resolve: (value: QueryResult) => unknown) => Promise<unknown>
+  }
+
+  const chain = (table: string): QueryChain => {
+    const self: QueryChain = {
       select: () => self,
       eq: () => self,
       contains: () => self,
       neq: () => self,
       lt: () => self,
       gt: () => self,
-      then: (resolve: (value: any) => unknown) => Promise.resolve(resultFor(table)).then(resolve),
+      then: (resolve) => Promise.resolve(resultFor(table)).then(resolve),
     }
     return self
   }
