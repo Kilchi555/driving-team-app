@@ -4394,11 +4394,6 @@ const generateTimeSlotsForSpecificCombination = async () => {
           start_date: startDate.toISOString().split('T')[0],
           end_date: endDate.toISOString().split('T')[0],
           vehicle_mode: selectedVehicleMode.value ?? undefined,
-          requires_school_vehicle: selectedVehicleMode.value
-            ? !!(effectiveVehicleSettings.value?.options?.find(
-                (o: any) => o.key === selectedVehicleMode.value
-              )?.requires_school_vehicle)
-            : false,
           service_type: selectedServiceType.value,
         })
 
