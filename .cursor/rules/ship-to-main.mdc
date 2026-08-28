@@ -1,0 +1,26 @@
+---
+description: How to ship to production (main) — PRs and required GitHub Actions checks
+alwaysApply: true
+---
+
+# Ship to main
+
+Production (`app.simy.ch`) deploys only from `main`. `main` is protected.
+
+## Always
+
+1. Branch from `origin/main` (not a dirty feature branch). Keep the hotfix small.
+2. Open a PR into `main`. Do not `git push` to `main`.
+3. Non-draft PRs to `main` enable squash auto-merge (`.github/workflows/auto-merge.yml`). GitHub merges only when **Test and lint** and **E2E login** are green. Those come from `.github/workflows/ci.yml`.
+4. Vercel deploys production from `main` after that merge.
+
+## Never
+
+- Treat Cursor / Vercel „6/6“ as enough. That is Bugbot + Vercel previews, not the required Actions jobs. Auto-merge waits only for the two Actions checks.
+- Use git branch `preview` as a staging path. It is stale and is not production.
+- Temporarily drop branch protection to merge, unless the user explicitly asks after Actions failed to start.
+- Open a ready PR into `main` unless it should ship. Keep work-in-progress as a **draft**.
+
+## If required checks never appear
+
+Open https://github.com/Kilchi555/driving-team-app/actions. If `CI` did not start within a minute, push a follow-up commit or re-run the workflow. Auto-merge cannot complete while GitHub still says required checks are expected.
