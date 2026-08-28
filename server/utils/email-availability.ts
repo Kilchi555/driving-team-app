@@ -5,6 +5,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { isPlaceholderStaffInviteEmail } from '~/server/utils/staff-invite-email'
+import { findAuthUserByEmail } from '~/server/utils/auth-email-claim'
 
 export type EmailConflictReason =
   | 'invalid'
@@ -39,36 +40,28 @@ export async function checkEmailAvailableForStaff(opts: {
     return { available: false, reason: 'admin_login' }
   }
 
-  const { data: existingUser } = await opts.supabase
+  let existingQuery = opts.supabase
     .from('users')
     .select('id, role')
     .eq('email', email)
     .eq('is_active', true)
-    .maybeSingle()
 
-  if (existingUser) {
+  if (opts.tenantId) {
+    existingQuery = existingQuery.eq('tenant_id', opts.tenantId)
+  }
+
+  const { data: existingRows } = await existingQuery.limit(2)
+  if (existingRows?.length) {
     return {
       available: false,
       reason: 'user_exists',
-      existingRole: existingUser.role || null,
+      existingRole: existingRows[0].role || null,
     }
   }
 
-  // Auth is global — email cannot be registered twice even without a public.users row
-  try {
-    const { data: byEmail, error } = await opts.supabase.auth.admin.getUserByEmail(email)
-    if (!error && byEmail?.user) {
-      return { available: false, reason: 'auth_exists' }
-    }
-  } catch {
-    // Fallback: listUsers is expensive; only if getUserByEmail unsupported
-    try {
-      const { data: listData } = await opts.supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const hit = listData?.users?.find(u => u.email?.toLowerCase() === email)
-      if (hit) return { available: false, reason: 'auth_exists' }
-    } catch {
-      // If Auth lookup fails, don't block — createUser will catch it later
-    }
+  const authLookup = await findAuthUserByEmail(opts.supabase, email)
+  if (!authLookup.ok || authLookup.user) {
+    return { available: false, reason: 'auth_exists' }
   }
 
   if (opts.tenantId) {
@@ -118,3 +111,5 @@ export function displayStaffInviteEmail(email: string | null | undefined): strin
   if (!email || isPlaceholderStaffInviteEmail(email)) return ''
   return email
 }
+
+export { findAuthUserByEmail } from '~/server/utils/auth-email-claim'
