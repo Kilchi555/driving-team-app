@@ -3,6 +3,7 @@
 // ============================================
 import twilio from 'twilio'
 import { logger } from '~/utils/logger'
+import { resolveSmsSenderName, toAlphanumericSenderId } from '~/server/utils/sms-sender'
 
 let twilioClient: ReturnType<typeof twilio> | null = null
 
@@ -67,38 +68,19 @@ export async function sendSMS({ to, message, senderName }: SendSMSOptions) {
 
     const client = getTwilioClient()
     
-    // Use senderName as alphanumeric sender ID if provided, otherwise use phone number
-    // Alphanumeric sender IDs: max 11 chars, at least 1 letter, letters/numbers/spaces allowed
-    // No special characters or punctuation allowed
+    // Alphanumeric sender IDs: max 11 chars, ≥1 letter, letters/digits/spaces only
+    const cleanSenderName = toAlphanumericSenderId(senderName)
     let from: string
-    if (senderName) {
-      // Convert to alphanumeric sender ID
-      // 1. Replace umlauts/special chars with ASCII equivalents
-      // 2. Remove any remaining non-alphanumeric/space characters
-      // 3. Trim and limit to 11 characters
-      const cleanSenderName = senderName
-        .replace(/ä/gi, 'a')
-        .replace(/ö/gi, 'o')
-        .replace(/ü/gi, 'u')
-        .replace(/ß/g, 'ss')
-        .replace(/[^a-zA-Z0-9 ]/g, '')  // Remove special characters (keep spaces)
-        .trim()
-        .substring(0, 11)  // Max 11 characters
-        .trim()  // Trim again after substring
-      
-      // Check if at least one letter exists (Twilio requirement)
-      const hasLetter = /[a-zA-Z]/.test(cleanSenderName)
-      
-      if (cleanSenderName && hasLetter) {
-        from = cleanSenderName
-        logger.debug(`SMS using Alphanumeric Sender ID: "${from}" (original: "${senderName}")`)
-      } else {
-        from = fromNumber
-        logger.debug(`SMS fallback to phone number (cleaned name "${cleanSenderName}" invalid)`)
-      }
+    if (cleanSenderName) {
+      from = cleanSenderName
+      logger.debug(`SMS using Alphanumeric Sender ID: "${from}" (original: "${senderName}")`)
     } else {
       from = fromNumber
-      logger.debug(`SMS using phone number: "${from}"`)
+      logger.debug(
+        senderName
+          ? `SMS fallback to phone number (cleaned name invalid)`
+          : `SMS using phone number: "${from}"`,
+      )
     }
     
     const result = await client.messages.create({
@@ -177,7 +159,13 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
   const hardStop = opts.hardStop !== undefined
     ? opts.hardStop
     : policy.sms_hard_stop_on_quota === true
-  const resolvedSender = senderName || tenant?.twilio_from_sender || tenant?.name || undefined
+  // Tenant config wins over caller senderName — otherwise "Fahrschule Driving Team"
+  // is truncated to "Fahrschule" and overrides twilio_from_sender "DrivingTeam".
+  const resolvedSender = resolveSmsSenderName({
+    twilioFromSender: tenant?.twilio_from_sender,
+    tenantName: tenant?.name,
+    fallback: senderName,
+  })
 
   let usedBefore = 0
   let included = getIncludedSmsSegments(tenant?.subscription_plan)
