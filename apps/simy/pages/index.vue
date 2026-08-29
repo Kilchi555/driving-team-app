@@ -128,7 +128,6 @@
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <NuxtLink v-for="feat in features" :key="feat.title" :to="feat.link"
             class="group rounded-2xl p-6 border border-gray-100 bg-white hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 block focus:outline-none focus-visible:ring-2"
-            :class="feat.wide ? 'sm:col-span-2 lg:col-span-2 simy-gradient-border' : ''"
             :style="`--tw-ring-color: ${primaryColor}`">
             <SimyIconTile :name="feat.icon" :size="44" :alpha="feat.alpha" class="mb-4" />
             <h3 class="font-bold text-gray-900 mb-1 group-hover:text-gray-800">{{ feat.title }}</h3>
@@ -1012,50 +1011,8 @@
         </div>
 
         <!-- Student View (phone mockup) -->
-        <div v-else class="flex justify-center" style="animation: fadeSlideIn 0.25s ease;">
-          <div class="rounded-[2.5rem] border-4 border-gray-800 overflow-hidden shadow-2xl w-80">
-            <div class="bg-gray-800 py-2 flex justify-center">
-              <div class="w-20 h-1.5 rounded-full bg-gray-600"></div>
-            </div>
-            <div class="bg-white">
-              <div class="px-5 pt-5 pb-6" :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }">
-                <p class="text-white/70 text-xs">Guten Morgen</p>
-                <p class="text-white font-bold text-lg">Hallo Anna 👋</p>
-              </div>
-              <div class="mx-4 -mt-4 bg-white rounded-2xl shadow-lg p-4 mb-4 border border-gray-100">
-                <p class="text-xs font-bold uppercase tracking-wide mb-2" :style="{ color: primaryColor }">Nächster Termin</p>
-                <p class="font-bold text-gray-900">Morgen, 09:00 Uhr</p>
-                <p class="text-sm text-gray-500">90 Min · Thomas Meier</p>
-                <p class="text-xs text-gray-400 mt-1">📍 Bahnhof Uster, Gleis 1</p>
-                <div class="mt-3 flex gap-2">
-                  <button class="flex-1 py-2 rounded-xl text-white text-xs font-bold" :style="{ backgroundColor: primaryColor }">Bestätigen ✓</button>
-                  <button class="flex-1 py-2 rounded-xl text-xs font-bold bg-gray-100 text-gray-600">Absagen</button>
-                </div>
-              </div>
-              <div class="px-4 mb-4">
-                <div class="flex justify-between text-xs mb-1.5">
-                  <span class="font-semibold text-gray-700">Lernfortschritt</span>
-                  <span class="font-bold" :style="{ color: primaryColor }">14 / 20 Std.</span>
-                </div>
-                <div class="w-full bg-gray-100 rounded-full h-2.5">
-                  <div class="h-2.5 rounded-full" :style="{ width: '70%', backgroundColor: primaryColor }"></div>
-                </div>
-              </div>
-              <div class="mx-4 mb-4 rounded-xl p-3 flex items-center justify-between bg-amber-50 border border-amber-200">
-                <div>
-                  <p class="text-xs font-bold text-amber-800">Offene Zahlung</p>
-                  <p class="text-xs text-amber-600">CHF 95.– · Termin 14</p>
-                </div>
-                <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white" :style="{ backgroundColor: primaryColor }">Zahlen →</button>
-              </div>
-            </div>
-            <div class="bg-gray-800 py-2 flex justify-around px-8">
-              <span class="text-gray-400 text-lg">🏠</span>
-              <span class="text-gray-400 text-lg">📅</span>
-              <span class="text-gray-400 text-lg">💳</span>
-              <span class="text-gray-400 text-lg">👤</span>
-            </div>
-          </div>
+        <div v-else class="flex justify-center py-4" style="animation: fadeSlideIn 0.25s ease;">
+          <SimyStudentPortalMock caption="" />
         </div>
 
       </div>
@@ -1083,10 +1040,13 @@
             <h3 class="font-extrabold text-xl mb-1" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">{{ plan.name }}</h3>
             <p class="text-sm mb-4" :class="plan.highlighted ? '' : 'text-gray-400'"
               :style="plan.highlighted ? { color: 'rgba(255,255,255,0.65)' } : {}">{{ plan.tagline }}</p>
-            <div class="flex items-baseline gap-1 mb-5">
-              <span class="text-4xl font-black" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">CHF {{ plan.price }}</span>
-              <span class="text-sm" :class="plan.highlighted ? '' : 'text-gray-400'"
-                :style="plan.highlighted ? { color: 'rgba(255,255,255,0.65)' } : {}">/Monat</span>
+            <div class="mb-5">
+              <div class="flex items-baseline gap-1">
+                <span class="text-4xl font-black" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">CHF {{ plan.price }}</span>
+                <span class="text-sm" :class="plan.highlighted ? '' : 'text-gray-400'"
+                  :style="plan.highlighted ? { color: 'rgba(255,255,255,0.65)' } : {}">/Monat</span>
+              </div>
+              <SimyPriceVatNote compact :on-dark="plan.highlighted" />
             </div>
             <ul class="space-y-2 mb-6 flex-1">
               <li v-for="f in plan.featureList" :key="f" class="flex items-center gap-2 text-sm"
@@ -1109,6 +1069,7 @@
           </div>
         </div>
 
+        <SimyPriceVatNote class="mb-4" />
         <NuxtLink to="/preise" class="text-sm font-medium transition-colors hover:opacity-80" :style="{ color: primaryColor }">
           Alle Features & Preise im Detail vergleichen →
         </NuxtLink>
@@ -1357,7 +1318,7 @@
 
         <!-- Bottom: copyright + legal -->
         <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
-          <span>© {{ currentYear }} Simy · All-in-One Software aus der Schweiz</span>
+          <span>© {{ currentYear }} Simy · All-in-One Software aus der Schweiz · {{ PRICE_VAT_NOTE }}</span>
           <div class="flex flex-wrap items-center justify-center gap-4">
             <NuxtLink to="/impressum" class="hover:text-gray-700 transition-colors">Impressum</NuxtLink>
             <NuxtLink to="/agb" class="hover:text-gray-700 transition-colors">AGB</NuxtLink>
@@ -1521,6 +1482,7 @@ import { useHead, useAsyncData } from 'nuxt/app'
 import { $fetch } from 'ofetch'
 import { getDemoReminderHtml, getDemoInvoiceHtml, getDemoWelcomeHtml } from '../utils/demo-email-templates'
 import { FOUNDER_BLURB_HOME } from '~/data/founder'
+import { PRICE_VAT_NOTE, WALLEE_FEE_FAQ } from '~/data/pricing'
 import { SIMY_BRAND, SIMY_BRAND_STORAGE_KEY, hexToRgb, simyLogoColorFilter } from '~/utils/brand'
 
 const founderBlurbHome = FOUNDER_BLURB_HOME
@@ -1652,7 +1614,7 @@ useHead({
             name: 'Welche Zahlungsmethoden unterstützt Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Für deine Kunden unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.',
+              text: WALLEE_FEE_FAQ,
             },
           },
           {
@@ -1676,7 +1638,7 @@ useHead({
             name: 'Was kostet Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende).',
+              text: `Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`,
             },
           },
         ],
@@ -1983,8 +1945,8 @@ const pains = [
 ]
 
 const features = computed(() => [
-  { icon: 'globe', title: 'Website-Generator', desc: 'SEO-starke Landingpage in Minuten: Preise, Standorte, Bewertungen. Einmalig CHF 490, Hosting ab CHF 19 — ohne die volle Software.', alpha: 0.12, link: '/website', wide: true },
-  { icon: 'map-pin', title: 'Google Business Profile', desc: 'Jahreskalender postet 1–4×/Woche, Foto-Pool geht 1–3×/Woche live, neue Reviews werden automatisch beantwortet. CHF 19/Monat — sonst gehen kostenlose Maps-Klicks verloren.', alpha: 0.11, link: '/features/google-business-profile', wide: true },
+  { icon: 'globe', title: 'Website-Generator', desc: 'SEO-starke Landingpage in Minuten: Preise, Standorte, Bewertungen. Einmalig CHF 490, Hosting ab CHF 19 — ohne die volle Software.', alpha: 0.12, link: '/website' },
+  { icon: 'map-pin', title: 'Google Business Profile', desc: 'Jahreskalender postet 1–4×/Woche, Foto-Pool geht 1–3×/Woche live, neue Reviews werden automatisch beantwortet. CHF 19/Monat — sonst gehen kostenlose Maps-Klicks verloren.', alpha: 0.11, link: '/features/google-business-profile' },
   { icon: 'calendar', title: 'Kalender & Terminplanung', desc: 'Simy-Termine erscheinen in Google/Apple/Outlook. Private Termine dort blockieren automatisch deine Verfügbarkeit — Kunden sehen dort keine freien Slots.', alpha: 0.10, link: '/features/kalender' },
   { icon: 'credit-card', title: 'Rechnungen & TWINT-Zahlungen', desc: 'Online-Zahlung mit TWINT, Debit- und Kreditkarte inkl. PostFinance, Rechnungen mit 2 Klicks erstellt und versendet, Mahnungen und Gutschriften einfach erstellt.', alpha: 0.07, link: '/features/rechnungen' },
   { icon: 'users', title: 'Kundenverwaltung', desc: 'Alle Kundendaten, Fortschritte, Dokumente und Notizen zentral an einem Ort.', alpha: 0.13, link: '/branchen' },
@@ -2048,11 +2010,11 @@ const pricingPlans = computed(() =>
 const faqs = reactive([
   { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein, der 30-Tage-Trial ist vollständig kostenlos und ohne Kreditkarte. Du wirst erst nach dem Trial zur Kasse gebeten – und kannst jederzeit kündigen.', open: false },
   { q: 'Wie funktioniert die Kündigung?', a: 'Du kannst monatlich kündigen. Die Kündigungsfrist beträgt 1 Monat auf Ende des laufenden Monats. Keine Jahresbindung, keine versteckten Kosten.', open: false },
-  { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: 'Für deine Kunden unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.', open: false },
+  { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: WALLEE_FEE_FAQ, open: false },
   { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },
   { q: 'Sind meine Daten sicher?', a: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.', open: false },
-  { q: 'Was kostet Simy?', a: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende).', open: false },
-  { q: 'Was bringt die Google-Business-Automation?', a: 'Simy postet den Jahreskalender (1–4×/Woche), verteilt deinen Foto-Pool (1–3×/Woche), beantwortet neue Google-Reviews automatisch und zeigt Insights. CHF 19/Monat. Sonst gehen kostenlose Maps-Klicks verloren.', open: false },
+  { q: 'Was kostet Simy?', a: `Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`, open: false },
+  { q: 'Was bringt die Google-Business-Automation?', a: `Simy postet den Jahreskalender (1–4×/Woche), verteilt deinen Foto-Pool (1–3×/Woche), beantwortet neue Google-Reviews automatisch und zeigt Insights. CHF 19/Monat. Sonst gehen kostenlose Maps-Klicks verloren. ${PRICE_VAT_NOTE}`, open: false },
 ])
 
 // ─── App Live Demo ───────────────────────────────────────────────────────────

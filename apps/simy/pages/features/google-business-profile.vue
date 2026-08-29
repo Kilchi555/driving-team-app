@@ -29,6 +29,7 @@
         <p class="text-lg text-gray-700 font-medium max-w-2xl mb-10">
           Automatisiere mit Simy dein Google Business Profile für CHF {{ price }}.– pro Monat und gewinne vollautomatisiert und regelmässig Neukunden.
         </p>
+        <SimyPriceVatNote class="mb-8" />
         <div class="flex flex-col sm:flex-row gap-4">
           <a :href="registerCta"
             class="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-white font-bold transition-all hover:opacity-90"
@@ -146,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ADDON_GBP_CHF } from '~/data/pricing'
+import { ADDON_GBP_CHF, PRICE_VAT_NOTE } from '~/data/pricing'
 import { GBP_AUTOMATIONS, GBP_CONTROLS, GBP_INDUSTRIES, GBP_PATH } from '~/data/gbp'
 import { breadcrumbLd, faqPageLd, ldScripts, softwareAppLd, webPageLd } from '~/utils/schema'
 
@@ -165,7 +166,7 @@ const automations = GBP_AUTOMATIONS
 const controls = GBP_CONTROLS
 
 const faqs = [
-  { q: 'Was kostet die Google-Business-Automation?', a: `CHF ${price} pro Monat, zubuchbar zu jedem Simy-Plan (Starter, Professional, Enterprise).` },
+  { q: 'Was kostet die Google-Business-Automation?', a: `CHF ${price} pro Monat, zubuchbar zu jedem Simy-Plan (Starter, Professional, Enterprise). ${PRICE_VAT_NOTE}` },
   { q: 'Warum verliere ich Umsatz ohne gepflegtes Profil?', a: 'Die meisten suchen lokal bei Google Maps, nicht auf deiner Website. Ein stilles Profil mit alten Fotos und unbeantworteten Bewertungen wird weniger gezeigt. Diese kostenlosen Klicks gehen an Betriebe, die ihr Profil nutzen — oft mehrere Tausend Franken Umsatz pro Monat.' },
   { q: 'Was macht Simy konkret im Google Business Profile?', a: 'Jahreskalender: KI plant 12 Monate und postet 1–4× pro Woche inkl. Buchungs-Button. Foto-Pool: du lädst Bilder, Simy veröffentlicht 1–3× pro Woche mit KI-Text. Reviews: neue Bewertungen werden automatisch beantwortet. Plus mehrere Standorte, Profil/Leistungen und Insights (Aufrufe, Anrufe, Website-Klicks, Routen).' },
   { q: 'Muss ich noch selbst bei Google einloggen?', a: 'Einmal verbinden. Danach laufen Kalender, Foto-Pool und Review-Antworten ohne wöchentliches Google-Login.' },
