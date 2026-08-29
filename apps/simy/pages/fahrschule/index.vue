@@ -133,21 +133,22 @@
         </div>
 
         <div class="grid md:grid-cols-6 gap-4">
-          <a
+          <div
             v-for="job in jobs"
             :key="job.href"
-            :href="job.href"
-            class="simy-bento-card rounded-3xl p-7 block"
+            class="simy-bento-card rounded-3xl p-7"
             :class="job.featured ? 'md:col-span-4 md:row-span-2' : 'md:col-span-2'"
           >
-            <SimyIconTile :name="job.icon" :size="job.featured ? 52 : 44" class="mb-5" />
-            <h3 class="font-bold text-gray-900 mb-2" :class="job.featured ? 'text-2xl' : 'text-lg'">{{ job.title }}</h3>
-            <p class="text-sm text-gray-500 leading-relaxed mb-4" :class="job.featured ? 'max-w-md' : ''">{{ job.desc }}</p>
-            <span class="text-xs font-semibold" style="color: var(--brand-primary)">Mehr erfahren →</span>
+            <a :href="job.href" class="block">
+              <SimyIconTile :name="job.icon" :size="job.featured ? 52 : 44" class="mb-5" />
+              <h3 class="font-bold text-gray-900 mb-2" :class="job.featured ? 'text-2xl' : 'text-lg'">{{ job.title }}</h3>
+              <p class="text-sm text-gray-500 leading-relaxed mb-4" :class="job.featured ? 'max-w-md' : ''">{{ job.desc }}</p>
+              <span class="text-xs font-semibold" style="color: var(--brand-primary)">Mehr erfahren →</span>
+            </a>
             <div v-if="job.featured" class="mt-8 hidden sm:block">
               <SimyPickupGadget />
             </div>
-          </a>
+          </div>
         </div>
       </div>
     </section>

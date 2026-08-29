@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-[1.75rem] border border-black/[0.06] bg-[#0c0a12] text-white overflow-hidden shadow-[0_28px_70px_rgba(15,10,30,0.22)]">
+  <div class="rounded-[1.75rem] border border-black/[0.06] bg-[#0c0a12] text-white overflow-hidden shadow-[0_28px_70px_rgba(15,10,30,0.22)]" @click.stop>
     <div class="flex items-center justify-between px-5 py-3 border-b border-white/10">
       <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-white/45">Beispiel · Standort 8610 Uster</p>
       <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" style="background: rgba(var(--brand-rgb),0.35); color: #E8D9FF">
