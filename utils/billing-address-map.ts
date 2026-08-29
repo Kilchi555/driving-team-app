@@ -173,3 +173,54 @@ export function billingLooksLikeCompany(
   const companyName = (company?.name || '').trim().toLowerCase()
   return !!billingName && !!companyName && billingName === companyName
 }
+
+export function billingAddressHasContent(addr: {
+  company_name?: string | null
+  name?: string | null
+  contact_person?: string | null
+  street?: string | null
+  zip?: string | null
+  city?: string | null
+  email?: string | null
+} | null | undefined): boolean {
+  if (!addr || typeof addr !== 'object') return false
+  return !!(
+    (addr.company_name || '').trim() ||
+    (addr.name || '').trim() ||
+    (addr.contact_person || '').trim() ||
+    (addr.street || '').trim() ||
+    (addr.zip || '').trim() ||
+    (addr.city || '').trim() ||
+    (addr.email || '').trim()
+  )
+}
+
+export type DefaultBillingSource = 'private' | 'company' | 'custom'
+
+/**
+ * Invoice default for a newly opened appointment:
+ * keep a defined billing source (saved snapshot or assigned company),
+ * otherwise use the customer's private address.
+ */
+export function resolveDefaultBillingSource(input: {
+  linkedCompany?: { name?: string | null } | null
+  savedBilling?: {
+    company_name?: string | null
+    name?: string | null
+    contact_person?: string | null
+    street?: string | null
+    zip?: string | null
+    city?: string | null
+    email?: string | null
+  } | null
+}): DefaultBillingSource {
+  const savedHasContent = billingAddressHasContent(input.savedBilling)
+  const savedHasCompanyName = !!(input.savedBilling?.company_name || '').trim()
+  const hasLinkedCompany = !!input.linkedCompany
+  const savedLooksLikeCompany = billingLooksLikeCompany(input.savedBilling, input.linkedCompany)
+
+  if (hasLinkedCompany && (!savedHasContent || savedLooksLikeCompany)) return 'company'
+  if (savedHasContent && !savedHasCompanyName) return 'private'
+  if (savedHasContent) return 'custom'
+  return 'private'
+}
