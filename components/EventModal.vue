@@ -1458,7 +1458,7 @@ const { loadProducts, activeProducts, isLoading: isLoadingProducts } = useProduc
 const priceDisplayRef = ref()
 const savedCompanyBillingAddressId = ref<string | null>(null) // ✅ NEU: Company Billing Address ID
 const { t, eventTypeLabel } = useTerminology()
-const tenantName = ref(t.value.businessNoun) // Tenant name for SMS/Email
+const tenantName = ref('') // Display name (not SMS sender) — SMS sender is resolved server-side
 const evaluationCriteria = ref<EvaluationCriteria[]>([]) // ✅ NEU: Evaluationskriterien
 
 // Student Credit Management
@@ -5209,72 +5209,9 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     logger.debug('✅ Appointment soft deleted successfully via API:', updateResult)
     logger.debug('✅ Status set to:', status)
     logger.debug('✅ Deletion reason:', deletionReason)
-    
-    // ✅ NEU: SMS und Email versenden bei Löschung
-    const phoneNumber = props.eventData?.phone || props.eventData?.extendedProps?.phone
-    const studentEmail = props.eventData?.email || props.eventData?.extendedProps?.email
-    const studentName = (props.eventData?.user_name || props.eventData?.student || props.eventData?.extendedProps?.student || t.value.client)
-    const firstName = studentName?.split(' ')[0] || studentName
-    const instructorName = (props.eventData?.instructor || props.eventData?.extendedProps?.instructor || `dein ${t.value.staff}`)
-    const appointmentTime = new Date(props.eventData.start || props.eventData.start_time).toLocaleString('de-CH', {
-      weekday: 'long',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-    
-    // SMS versenden
-    if (phoneNumber) {
-      logger.debug('📱 Sending SMS notification for cancelled appointment...')
-      try {
-        const result = await $fetch('/api/sms/send', {
-          method: 'POST',
-          body: {
-            phone: phoneNumber,
-            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`,
-            senderName: tenantName.value
-          }
-        })
-        logger.debug('✅ SMS sent successfully:', result)
-      } catch (smsError: any) {
-        console.error('❌ Failed to send SMS:', smsError)
-      }
-    } else {
-      logger.debug('⚠️ No phone number available for SMS', { 
-        'eventData.phone': props.eventData?.phone,
-        'extendedProps.phone': props.eventData?.extendedProps?.phone 
-      })
-    }
-    
-    // Email versenden
-    if (studentEmail) {
-      logger.debug('📧 Sending Email notification for cancelled appointment...')
-      try {
-        const result = await $fetch('/api/email/send-appointment-notification', {
-          method: 'POST',
-          body: {
-            email: studentEmail,
-            studentName: firstName,
-            appointmentTime: appointmentTime,
-            staffName: instructorName,
-            cancellationReason: deletionReason,
-            type: 'cancelled',
-            tenantName: tenantName.value,
-            tenantId: props.currentUser?.tenant_id
-          }
-        })
-        logger.debug('✅ Email sent successfully:', result)
-      } catch (emailError: any) {
-        console.error('❌ Failed to send Email:', emailError)
-      }
-    } else {
-      logger.debug('⚠️ No email address available for email notification', {
-        'eventData.email': props.eventData?.email,
-        'extendedProps.email': props.eventData?.extendedProps?.email
-      })
-    }
+
+    // Notifications (email + SMS) are sent by cancel-staff — do not send a second
+    // unbranded copy from the client (SMS sender was used as tenant display name).
     
     // Events emittieren
     emit('appointment-deleted', props.eventData.id)
@@ -7042,10 +6979,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
     try {
       const tenantData = await eventModalApi.getTenantInfo()
       
-      if (tenantData?.twilio_from_sender) {
-        tenantName.value = tenantData.twilio_from_sender
-        logger.debug('🏢 Tenant SMS sender loaded via API (twilio_from_sender):', tenantName.value)
-      } else if (tenantData?.name) {
+      if (tenantData?.name) {
         tenantName.value = tenantData.name
         logger.debug('🏢 Tenant name loaded via API:', tenantName.value)
       }

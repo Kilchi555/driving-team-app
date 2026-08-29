@@ -1,7 +1,7 @@
 /**
  * Shared appointment notification email sender (no HTTP hop).
  */
-import { sendEmail } from '~/server/utils/email'
+import { sendEmail, sendTenantEmail } from '~/server/utils/email'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { sendPushToUser } from '~/server/utils/push'
@@ -229,8 +229,9 @@ const TEMPLATES = {
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
           ${logoRow(logoUrl, data.tenantName || 'Simy')}
           <tr>
-            <td style="background-color: #dc2626; padding: 40px 30px; text-align: center;">
+            <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
               <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Termin storniert</h1>
+              <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85)">${displayName(data.tenantName || terms.businessNoun)}</p>
             </td>
           </tr>
           <tr>
@@ -441,7 +442,7 @@ export async function sendAppointmentNotificationEmail(
         if (tenant.primary_color) primaryColor = tenant.primary_color
         if (tenant.slug) tenantSlug = tenant.slug
         logoUrl = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
-        if (!body.tenantName && tenant.name) {
+        if (tenant.name) {
           body = { ...body, tenantName: tenant.name }
         }
         if (body.includeAppStore === undefined) {
@@ -464,12 +465,14 @@ export async function sendAppointmentNotificationEmail(
     terms,
   )
 
-  const { messageId } = await sendEmail({
-    to: email,
-    subject,
-    html,
-    senderName: body.tenantName || undefined,
-  })
+  const { messageId } = tenantId
+    ? await sendTenantEmail(tenantId, { to: email, subject, html })
+    : await sendEmail({
+        to: email,
+        subject,
+        html,
+        senderName: body.tenantName || undefined,
+      })
 
   logger.debug(`✅ ${type} email sent successfully to ${email}`)
 
@@ -538,7 +541,7 @@ export async function renderAppointmentNotificationEmail(
       if (tenant.primary_color) primaryColor = tenant.primary_color
       if (tenant.slug) tenantSlug = tenant.slug
       logoUrl = tenant.logo_wide_url || tenant.logo_url || tenant.logo_square_url || null
-      if (!body.tenantName && tenant.name) body = { ...body, tenantName: tenant.name }
+      if (tenant.name) body = { ...body, tenantName: tenant.name }
       if (body.includeAppStore === undefined) {
         body = { ...body, includeAppStore: allowsCustomerAccountActivation(tenant.booking_policy) }
       }
