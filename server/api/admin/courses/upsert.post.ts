@@ -5,27 +5,7 @@ import { sendTenantEmail, sendEmail } from '~/server/utils/email'
 import { generateCategoryWaitlistNotificationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
-
-// ── Timezone helper ───────────────────────────────────────────────────────────
-/**
- * Convert a date+time entered as Zurich local time to a proper UTC ISO string.
- * Uses the same DST-aware approach as sari-sync-engine.ts.
- *
- * e.g. "2026-09-16" + "08:00" → "2026-09-16T06:00:00.000Z" (CEST = UTC+2)
- *      "2026-01-10" + "08:00" → "2026-01-10T07:00:00.000Z" (CET  = UTC+1)
- */
-function zurichLocalToUtcIso(dateStr: string, timeStr: string): string {
-  const localStr = `${dateStr}T${timeStr}:00`
-  // Step 1: treat as UTC to get a reference point
-  const asUtc = new Date(localStr + 'Z')
-  // Step 2: find out what Zurich wall-clock shows for that UTC instant
-  const zurichStr = asUtc.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
-  // Step 3: compute the offset between "fake UTC" and "Zurich wall-clock"
-  const zurichFake = new Date(zurichStr.replace(' ', 'T') + 'Z')
-  const offsetMs = asUtc.getTime() - zurichFake.getTime()
-  // Step 4: apply offset to convert local→UTC
-  return new Date(asUtc.getTime() + offsetMs).toISOString()
-}
+import { zurichLocalToUtcIso } from '~/server/utils/zurich-time'
 
 // ── ICS calendar invite generator ────────────────────────────────────────────
 function toIcsDate(dateStr: string, timeStr: string): string {
@@ -401,8 +381,8 @@ export default defineEventHandler(async (event) => {
       // Merge consecutive sessions (gap ≤ 5 min) into blocks
       const blocks: Array<{ startMs: number; endMs: number; date: string; startTime: string; endTime: string }> = []
       for (const s of sorted) {
-        const startMs = new Date(`${s.date}T${s.start_time}:00`).getTime()
-        const endMs   = new Date(`${s.date}T${s.end_time}:00`).getTime()
+        const startMs = new Date(zurichLocalToUtcIso(s.date, s.start_time)).getTime()
+        const endMs   = new Date(zurichLocalToUtcIso(s.date, s.end_time)).getTime()
         const last    = blocks[blocks.length - 1]
         if (last && startMs - last.endMs <= 5 * 60 * 1000) {
           last.endMs = Math.max(last.endMs, endMs)
