@@ -212,44 +212,26 @@ export const useUserDocuments = () => {
     side: 'front' | 'back' = 'front'
   ): Promise<string | null> => {
     try {
-      // Generiere eindeutigen Dateinamen im gleichen Format wie bei Registrierung
-      // Format: {documentType}_{categoryCode}_{side}_{timestamp}.{ext}
-      // Beispiel: lernfahrausweis_B_front_1733849420123.jpg
-      const timestamp = Date.now()
-      const fileExtension = file.name.split('.').pop()
-      
-      let fileName: string
-      if (categoryCode) {
-        // Mit Kategorie: lernfahrausweis_B_front_1733849420123.jpg
-        fileName = `${documentType}_${categoryCode}_${side}_${timestamp}.${fileExtension}`
-      } else {
-        // Ohne Kategorie: license_front_1733849420123.jpg
-        fileName = `${documentType}_${side}_${timestamp}.${fileExtension}`
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('userId', userId)
+      formData.append('type', documentType)
+      formData.append('side', side)
+      if (categoryCode) formData.append('categoryCode', categoryCode)
+
+      const response = await $fetch<{ success?: boolean; path?: string; statusMessage?: string }>(
+        '/api/admin/upload-student-document',
+        { method: 'POST', body: formData },
+      )
+
+      if (!response?.success || !response.path) {
+        throw new Error(response?.statusMessage || 'Upload fehlgeschlagen')
       }
-      
-      // Upload zu Supabase Storage im {userId}/ Ordner (wie bei Registrierung)
-      const storagePath = `${userId}/${fileName}`
-      
-      logger.debug('📤 Uploading file to storage:', {
-        bucket: 'user-documents',
-        path: storagePath,
-        fileName,
-        documentType,
-        categoryCode,
-        side
-      })
-      
-      const { data, error: uploadError } = await supabase.storage
-        .from('user-documents')
-        .upload(storagePath, file)
 
-      if (uploadError) throw uploadError
-
-      logger.debug('✅ File uploaded successfully:', data.path)
-      return data.path
+      return response.path
     } catch (err: any) {
       console.error('Error uploading file:', err)
-      error.value = err.message
+      error.value = err?.data?.statusMessage || err.message
       return null
     }
   }
