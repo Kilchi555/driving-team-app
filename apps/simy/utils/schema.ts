@@ -95,7 +95,8 @@ export function softwareAppLd(opts: {
       '@type': 'Offer',
       price: String(opts.price ?? 0),
       priceCurrency: 'CHF',
-      description: '30 Tage kostenlos testen',
+      valueAddedTaxIncluded: false,
+      description: '30 Tage kostenlos testen. Preise exkl. MwSt., aktuell 0 %, ab Oktober 2026 8.1 %.',
     },
     provider: { '@id': `${SIMY_BASE}/#organization` },
   }
@@ -160,6 +161,7 @@ export function productOffersLd(opts: {
         name: p.name,
         price: String(p.price),
         priceCurrency: 'CHF',
+        valueAddedTaxIncluded: false,
         description: p.description,
         url: opts.url,
         availability: 'https://schema.org/InStock',

@@ -60,14 +60,26 @@ function decline() {
 }
 
 function enableAnalytics() {
-  // GA4 script is always loaded (injected in nuxt.config.ts head).
-  // We only need to update consent so GA4 starts sending data.
-  if (typeof window.gtag === 'function') {
-    window.gtag('consent', 'update', {
+  if (document.getElementById('simy-gtag')) {
+    window.gtag?.('consent', 'update', {
       analytics_storage: 'granted',
       ad_storage: 'granted',
     })
+    return
   }
+  const script = document.createElement('script')
+  script.id = 'simy-gtag'
+  script.async = true
+  script.src = 'https://www.googletagmanager.com/gtag/js?id=G-VZPENJ6FNP'
+  script.onload = () => {
+    window.gtag?.('js', new Date())
+    window.gtag?.('consent', 'update', {
+      analytics_storage: 'granted',
+      ad_storage: 'granted',
+    })
+    window.gtag?.('config', 'G-VZPENJ6FNP')
+  }
+  document.head.appendChild(script)
 }
 </script>
 

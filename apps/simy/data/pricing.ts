@@ -85,3 +85,19 @@ export function withPlatformRef(href: string, explicitRef?: string): string {
 }
 
 export const PRICE_FROM_COPY = `ab CHF ${STARTING_PRICE_CHF}/Monat`
+
+/** Simy is not VAT-registered until Oct 2026; listed prices are net. */
+export const PRICE_VAT_RATE_PERCENT = 0
+/** Swiss standard VAT rate (MWSTG, unchanged since 1.1.2024). */
+export const PRICE_VAT_STANDARD_PERCENT = 8.1
+export const PRICE_VAT_STANDARD_FROM = 'Oktober 2026'
+export const PRICE_VAT_NOTE = `Alle Preise exkl. MwSt. Aktuell beträgt die MwSt. ${PRICE_VAT_RATE_PERCENT} %. Ab ${PRICE_VAT_STANDARD_FROM} gilt der offizielle Normalsatz von ${PRICE_VAT_STANDARD_PERCENT} %.`
+export const PRICE_VAT_NOTE_SHORT = `exkl. MwSt. (aktuell ${PRICE_VAT_RATE_PERCENT} %, ab Okt. 2026 ${PRICE_VAT_STANDARD_PERCENT} %)`
+
+export const WALLEE_FEE_PERCENT = '1.7%'
+export const WALLEE_FEE_NOTE =
+  `Online-Zahlungen (TWINT, Karte) über Wallee: ${WALLEE_FEE_PERCENT} Transaktionsgebühr pro Kundenzahlung — kein monatlicher Aufpreis.`
+export const WALLEE_FEE_PRICE_TIP =
+  'Viele Betriebe heben ihre Preise um 2–3 % an. Die App hat laufende Kosten, die Gebühr ist damit gedeckt, es bleibt ein kleiner Gewinn — und automatische Zahlungen sparen Zeit und Nachfassen.'
+export const WALLEE_FEE_FAQ =
+  `Für deine Kunden unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von ${WALLEE_FEE_PERCENT} pro Zahlung an. ${WALLEE_FEE_PRICE_TIP}`

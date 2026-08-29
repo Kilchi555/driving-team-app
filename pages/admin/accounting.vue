@@ -2,17 +2,17 @@
   <div class="p-4 sm:p-6 space-y-5 max-w-[1600px] mx-auto">
 
     <!-- ═══ PENDING STAFF EXPENSES ═══ -->
-    <div v-if="canWriteBooks && pendingExpenses.length > 0" class="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+    <div v-if="canWriteBooks && pendingStaffExpenses.length > 0" class="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
       <div class="px-5 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold">
-            {{ pendingExpenses.length }}
+            {{ pendingStaffExpenses.length }}
           </span>
           <span class="text-sm font-semibold text-amber-800">Spesen-Einreichungen ausstehend</span>
         </div>
       </div>
       <div class="divide-y divide-gray-50">
-        <div v-for="exp in pendingExpenses" :key="exp.id" class="px-5 py-4 flex items-start gap-4">
+        <div v-for="exp in pendingStaffExpenses" :key="exp.id" class="px-5 py-4 flex items-start gap-4">
           <!-- Receipt thumbnail -->
           <a v-if="exp.receipt_url" :href="exp.receipt_url" target="_blank"
             class="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center hover:opacity-80 transition-opacity">
@@ -49,6 +49,56 @@
               </button>
               <button @click="rejectWithReason(exp)" :disabled="approving === exp.id"
                 class="px-3 py-1.5 bg-white hover:bg-red-50 disabled:opacity-50 text-red-600 border border-red-200 text-xs font-semibold rounded-lg transition-colors">
+                Ablehnen
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="canWriteBooks && pendingInboxExpenses.length > 0" class="bg-white rounded-2xl border border-sky-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-3 bg-sky-50 border-b border-sky-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-500 text-white text-xs font-bold">
+            {{ pendingInboxExpenses.length }}
+          </span>
+          <div>
+            <p class="text-sm font-semibold text-sky-900">E-Mail-Belege zur Freigabe</p>
+            <p class="text-xs text-sky-700">Aus der Inbox ausgelesen — bitte prüfen, dann genehmigen.</p>
+          </div>
+        </div>
+      </div>
+      <div class="divide-y divide-gray-50">
+        <div v-for="exp in pendingInboxExpenses" :key="exp.id" class="px-5 py-4 flex items-start gap-4">
+          <a v-if="exp.receipt_url" :href="exp.receipt_url" target="_blank"
+            class="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center hover:opacity-80 transition-opacity">
+            <img v-if="!exp.receipt_filename?.toLowerCase().endsWith('.pdf')" :src="exp.receipt_url" class="w-full h-full object-cover" alt="Beleg"/>
+            <svg v-else class="w-7 h-7 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+            </svg>
+          </a>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-gray-900">{{ exp.description }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">
+              {{ new Date(exp.entry_date).toLocaleDateString('de-CH') }}
+              <span v-if="exp.source_email"> · {{ exp.source_email }}</span>
+            </p>
+            <p v-if="exp.amount_rappen <= 0" class="text-xs text-amber-700 mt-1">Betrag fehlt — zuerst prüfen.</p>
+          </div>
+          <div class="flex-shrink-0 text-right space-y-2">
+            <p class="text-base font-bold text-gray-900">{{ chf(exp.amount_rappen) }}</p>
+            <div class="flex items-center gap-2 justify-end">
+              <button @click="reviewPendingExpense(exp)"
+                class="px-3 py-1.5 bg-white hover:bg-sky-50 text-sky-800 border border-sky-200 text-xs font-semibold rounded-lg">
+                Prüfen
+              </button>
+              <button @click="handleExpense(exp.id, 'approve')" :disabled="approving === exp.id || exp.amount_rappen <= 0"
+                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg">
+                Genehmigen
+              </button>
+              <button @click="rejectWithReason(exp)" :disabled="approving === exp.id"
+                class="px-3 py-1.5 bg-white hover:bg-red-50 disabled:opacity-50 text-red-600 border border-red-200 text-xs font-semibold rounded-lg">
                 Ablehnen
               </button>
             </div>
@@ -185,6 +235,8 @@
       </div>
     </div>
 
+    <AccountingInboxCard v-if="canWriteBooks"/>
+
     <!-- ═══ KPI CARDS ═══ -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-sm p-5">
@@ -206,6 +258,42 @@
         <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Buchungen</p>
         <p class="text-2xl font-bold text-gray-900">{{ entries.length }}</p>
         <p class="text-xs text-gray-400 mt-1">Buchungen im Journal</p>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+        <div>
+          <p class="text-sm font-semibold text-gray-700">Wallee-Gebühren</p>
+          <p class="text-xs text-gray-400">Pauschal {{ walleeFeeLabel }} auf abgeschlossene Online-Zahlungen · als Aufwand verbuchbar</p>
+          <p class="text-xs text-gray-500 leading-relaxed mt-2 max-w-2xl">{{ walleeFeePriceTip }}</p>
+        </div>
+        <button
+          type="button"
+          :disabled="exportingCsv || !summary.wallee_count"
+          @click="downloadCsv('wallee-fees')"
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 hover:bg-gray-100 disabled:opacity-50"
+        >
+          CSV Gebühren
+        </button>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="rounded-xl bg-slate-50 px-3 py-3">
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Transaktionen</p>
+          <p class="text-lg font-bold text-slate-800">{{ summary.wallee_count || 0 }}</p>
+        </div>
+        <div class="rounded-xl bg-slate-50 px-3 py-3">
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Brutto</p>
+          <p class="text-lg font-bold text-slate-800">{{ chf(summary.wallee_gross_rappen || 0) }}</p>
+        </div>
+        <div class="rounded-xl bg-amber-50 px-3 py-3">
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-amber-600">Gebühren {{ walleeFeeLabel }}</p>
+          <p class="text-lg font-bold text-amber-800">{{ chf(summary.wallee_fee_rappen || 0) }}</p>
+        </div>
+        <div class="rounded-xl bg-emerald-50 px-3 py-3">
+          <p class="text-[11px] font-semibold uppercase tracking-widest text-emerald-600">Netto nach Gebühr</p>
+          <p class="text-lg font-bold text-emerald-800">{{ chf(summary.wallee_net_rappen || 0) }}</p>
+        </div>
       </div>
     </div>
 
@@ -932,7 +1020,7 @@
                 </svg>
                 <div class="text-left">
                   <p class="text-sm font-semibold text-gray-700">{{ uploadingReceipt ? 'Wird hochgeladen…' : 'Foto oder PDF hochladen' }}</p>
-                  <p class="text-xs text-gray-400">Wird automatisch ausgelesen (Betrag, Datum, Lieferant)</p>
+                  <p class="text-xs text-gray-400">Foto und PDF werden automatisch ausgelesen (Betrag, Datum, Lieferant)</p>
                 </div>
                 <input type="file" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.webp"
                   @change="uploadReceipt" :disabled="uploadingReceipt || parsingReceipt"/>
@@ -1235,6 +1323,7 @@ import {
   requiresAccountingReceipt,
   type AccountingDocumentKind,
 } from '~/server/utils/accounting'
+import { WALLEE_FEE_PRICE_TIP, WALLEE_FEE_RATE_LABEL } from '~/utils/wallee-fee'
 
 definePageMeta({ layout: 'admin' })
 
@@ -1280,6 +1369,8 @@ interface AccountingEntry {
   storno_of_id?: string | null
   linked_payment_id?: string | null
   submitted_by_user_id?: string | null
+  source?: string | null
+  source_email?: string | null
   created_at?: string | null
   deleted_at?: string | null
 }
@@ -1305,6 +1396,7 @@ function entriesForMonth(month: number) {
 // ─── Pending staff expenses ───────────────────────────────────────────────────
 interface PendingExpense {
   id: string
+  type?: 'income' | 'expense'
   amount_rappen: number
   description: string
   entry_date: string
@@ -1312,9 +1404,23 @@ interface PendingExpense {
   receipt_filename: string | null
   notes: string | null
   created_at: string
+  source?: string | null
+  source_email?: string | null
+  creditor_name?: string | null
+  creditor_iban?: string | null
+  payment_reference?: string | null
+  vat_rate?: number | null
+  vat_amount_rappen?: number | null
+  category_id?: string | null
+  document_kind?: AccountingDocumentKind | null
+  is_paid?: boolean
+  paid_date?: string | null
+  external_reference?: string | null
   submitter: { first_name: string; last_name: string; email: string } | null
 }
 const pendingExpenses = ref<PendingExpense[]>([])
+const pendingStaffExpenses = computed(() => pendingExpenses.value.filter(e => e.source !== 'email'))
+const pendingInboxExpenses = computed(() => pendingExpenses.value.filter(e => e.source === 'email'))
 const approving = ref<string | null>(null)
 
 async function loadPendingExpenses() {
@@ -1332,7 +1438,8 @@ async function handleExpense(id: string, action: 'approve' | 'reject', reason?: 
       body: { id, action, rejection_reason: reason },
     })
     pendingExpenses.value = pendingExpenses.value.filter(e => e.id !== id)
-    if (action === 'approve') await loadAll() // refresh entries list
+    if (action === 'approve') await loadAll()
+    await loadPendingExpenses()
   } catch (err: any) {
     alert(err.data?.statusMessage ?? 'Fehler')
   } finally {
@@ -1343,6 +1450,32 @@ async function handleExpense(id: string, action: 'approve' | 'reject', reason?: 
 async function rejectWithReason(expense: PendingExpense) {
   const reason = prompt(`Ablehnungsgrund für "${expense.description}":\n(optional)`) ?? ''
   await handleExpense(expense.id, 'reject', reason)
+}
+
+function reviewPendingExpense(expense: PendingExpense) {
+  openEdit({
+    id: expense.id,
+    type: expense.type || 'expense',
+    amount_rappen: expense.amount_rappen,
+    entry_date: expense.entry_date,
+    description: expense.description,
+    category_id: expense.category_id,
+    receipt_url: expense.receipt_url,
+    receipt_filename: expense.receipt_filename,
+    vat_rate: expense.vat_rate,
+    vat_amount_rappen: expense.vat_amount_rappen,
+    creditor_name: expense.creditor_name,
+    creditor_iban: expense.creditor_iban,
+    payment_reference: expense.payment_reference,
+    is_paid: expense.is_paid,
+    paid_date: expense.paid_date,
+    external_reference: expense.external_reference,
+    notes: expense.notes,
+    document_kind: expense.document_kind,
+    source: expense.source,
+    source_email: expense.source_email,
+    created_at: expense.created_at,
+  })
 }
 
 const loading = ref(false)
@@ -1396,7 +1529,17 @@ const vat = ref({
 })
 const entries = ref<AccountingEntry[]>([])
 const categories = ref<AccountingCategory[]>([])
-const summary = ref({ total_income_rappen: 0, total_expense_rappen: 0, result_rappen: 0 })
+const summary = ref({
+  total_income_rappen: 0,
+  total_expense_rappen: 0,
+  result_rappen: 0,
+  wallee_count: 0,
+  wallee_gross_rappen: 0,
+  wallee_fee_rappen: 0,
+  wallee_net_rappen: 0,
+})
+const walleeFeeLabel = WALLEE_FEE_RATE_LABEL
+const walleeFeePriceTip = WALLEE_FEE_PRICE_TIP
 const monthly = ref<{ month: number; label: string; income_rappen: number; expense_rappen: number; result_rappen: number }[]>([])
 const searchQuery = ref('')
 const activeTypeFilter = ref('all')
@@ -1967,11 +2110,6 @@ async function uploadReceipt(e: Event) {
     if (!entryForm.receipt_url) return
 
     uploadingReceipt.value = false
-    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      parseHint.value = 'PDF wird nicht automatisch gelesen — bitte Betrag und Datum prüfen'
-      return
-    }
-
     parsingReceipt.value = true
     try {
       const ocr = await $fetch('/api/staff/parse-receipt', {
@@ -2097,6 +2235,7 @@ async function saveEntry() {
 
     closeEntryModal()
     await loadAll()
+    await loadPendingExpenses()
   } catch (err: unknown) {
     saveError.value = (err as { statusMessage?: string })?.statusMessage ?? 'Fehler beim Speichern'
   } finally {
@@ -2163,7 +2302,7 @@ async function exportArchive() {
   }
 }
 
-async function downloadCsv(kind: 'bookings' | 'journal' | 'accounts') {
+async function downloadCsv(kind: 'bookings' | 'journal' | 'accounts' | 'wallee-fees') {
   exportingCsv.value = true
   try {
     const res = await fetch(`/api/admin/accounting/export-csv?kind=${kind}&year=${selectedYear.value}`)
@@ -2173,6 +2312,7 @@ async function downloadCsv(kind: 'bookings' | 'journal' | 'accounts') {
       bookings: `buchungen-${selectedYear.value}.csv`,
       journal: `journal-${selectedYear.value}.csv`,
       accounts: 'kontenplan.csv',
+      'wallee-fees': `wallee-gebuehren-${selectedYear.value}.csv`,
     }
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')

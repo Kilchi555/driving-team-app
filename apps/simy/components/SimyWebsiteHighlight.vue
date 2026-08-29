@@ -35,6 +35,7 @@
             <p class="text-xs text-gray-400 mt-4">
               Einmalig CHF {{ setup }} · Hosting ab CHF {{ host }}/Mt. · 30 Tage einrichten, Vorschau gratis
             </p>
+            <SimyPriceVatNote class="mt-1" />
           </div>
           <div class="hidden md:block pl-4">
             <SimyProductFrame :preview-host="previewHost" />

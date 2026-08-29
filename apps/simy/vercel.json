@@ -2,7 +2,7 @@
   "regions": ["fra1"],
   "redirects": [
     {
-      "source": "/((?!_nuxt/|_payload|api/|fahrschule|marketing|branchen|vergleich|coaching|consulting|personal-training|nachhilfe|musikschule|hundeschule|massage|preise|demo|kunden|kontakt|impressum|agb|datenschutz|konto-loeschen|features|ueber-uns|partner|website|sitemap|robots\\.txt|screenshots/|devices/|fl|.*\\.(?:png|jpe?g|webp|gif|svg|ico|woff2?|ttf|css|js|map|xml|txt|pdf|json|webmanifest)$).+)",
+      "source": "/((?!_nuxt/|_payload|api/|fahrschule|marketing|branchen|vergleich|coaching|consulting|personal-training|nachhilfe|musikschule|hundeschule|massage|preise|demo|kunden|kontakt|impressum|agb|datenschutz|konto-loeschen|features|ueber-uns|partner|website|sitemap|robots\\.txt|screenshots/|fl|.*\\.(?:png|jpe?g|webp|gif|svg|ico|woff2?|ttf|css|js|map|xml|txt|pdf|json|webmanifest)$).+)",
       "destination": "https://app.simy.ch/$1",
       "permanent": false
     }
@@ -11,6 +11,10 @@
     {
       "source": "/_nuxt/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/(.*)\\.(png|jpe?g|webp|gif|svg|ico|woff2?)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000, immutable" }]
     },
     {
       "source": "/((?!_nuxt).*)",
