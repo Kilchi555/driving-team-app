@@ -92,6 +92,17 @@ export function getDefaultVehicleOption(settings: VehicleSettings): VehicleOptio
   return settings.options.find(o => o.is_default) ?? settings.options[0]
 }
 
+export function resolveVehicleOptionLabel(
+  vehicleMode: string | null | undefined,
+  locationVehicleSettings: Record<string, VehicleSettings> | null | undefined,
+  categoryVehicleSettings: VehicleSettings | null | undefined,
+  categoryCode: string | null | undefined
+): string | null {
+  if (!vehicleMode || !categoryCode) return null
+  const settings = resolveVehicleSettings(locationVehicleSettings, categoryVehicleSettings, categoryCode)
+  return settings.options?.find(option => option.key === vehicleMode)?.label || null
+}
+
 /**
  * Chosen vehicle option for a booking request.
  * Unknown keys fall back to the default — callers cannot invent a policy.
