@@ -1,5 +1,4 @@
 import { logger } from '~/utils/logger'
-import { escapeLikePattern } from '~/server/utils/sql-helpers'
 
 export function giftCardCodeFromPaymentMetadata(metadata: unknown): string | null {
   if (!metadata || typeof metadata !== 'object') return null
@@ -9,6 +8,27 @@ export function giftCardCodeFromPaymentMetadata(metadata: unknown): string | nul
   return trimmed.length > 0 ? trimmed : null
 }
 
+export async function consumeGiftCardViaRpc(opts: {
+  supabase: any
+  tenantId: string
+  code: string
+  paymentId?: string | null
+  redeemedBy?: string | null
+}): Promise<boolean> {
+  const { data, error } = await opts.supabase.rpc('consume_gift_card_for_payment', {
+    p_tenant_id: opts.tenantId,
+    p_code: opts.code.trim(),
+    p_payment_id: opts.paymentId || null,
+    p_redeemed_by: opts.redeemedBy || null,
+  })
+  if (error) {
+    logger.warn('consumeGiftCardViaRpc failed', { message: error.message, tenantId: opts.tenantId })
+    return false
+  }
+  return data === true
+}
+
+/** Immediate redeem (credit enroll). Only succeeds if the card is not reserved. */
 export async function consumeGiftCardByCode(opts: {
   supabase: any
   tenantId: string
@@ -20,26 +40,14 @@ export async function consumeGiftCardByCode(opts: {
     return { consumed: false, alreadyRedeemed: false }
   }
 
-  const now = new Date().toISOString()
-  const { data, error } = await opts.supabase
-    .from('vouchers')
-    .update({
-      redeemed_at: now,
-      redeemed_by: opts.redeemedBy || null,
-      is_active: false,
-    })
-    .ilike('code', escapeLikePattern(code))
-    .eq('tenant_id', opts.tenantId)
-    .is('redeemed_at', null)
-    .select('id')
-    .maybeSingle()
-
-  if (error) {
-    logger.warn('consumeGiftCardByCode failed', { message: error.message, tenantId: opts.tenantId })
-    return { consumed: false, alreadyRedeemed: false }
-  }
-
-  return { consumed: !!data, alreadyRedeemed: !data }
+  const consumed = await consumeGiftCardViaRpc({
+    supabase: opts.supabase,
+    tenantId: opts.tenantId,
+    code,
+    paymentId: null,
+    redeemedBy: opts.redeemedBy,
+  })
+  return { consumed, alreadyRedeemed: !consumed }
 }
 
 export async function consumeGiftCardForPayment(opts: {
@@ -61,11 +69,12 @@ export async function consumeGiftCardForPayment(opts: {
   }
   if (!code) return { consumed: false }
 
-  const result = await consumeGiftCardByCode({
+  const consumed = await consumeGiftCardViaRpc({
     supabase: opts.supabase,
     tenantId: opts.tenantId,
     code,
+    paymentId: opts.paymentId,
     redeemedBy: opts.redeemedBy,
   })
-  return { consumed: result.consumed }
+  return { consumed }
 }

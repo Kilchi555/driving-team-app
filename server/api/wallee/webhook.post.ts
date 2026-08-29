@@ -1169,6 +1169,7 @@ export default defineEventHandler(async (event) => {
                     const discountCode = payment.metadata?.discount_code
                     const tenantIdForDiscount = payment.tenant_id
                     if (!discountCode || !tenantIdForDiscount) continue
+                    if (payment.metadata?.discount_usage_claimed) continue
                     // Escape LIKE wildcards — discountCode originates from payment metadata,
                     // which is attacker-influenced (set from the original enrollment request).
                     const escapedDiscountCode = escapeLikePattern(discountCode)

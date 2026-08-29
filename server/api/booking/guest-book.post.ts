@@ -41,7 +41,8 @@ import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
 import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
 import { checkoutAppUrl, createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
-import { incrementAppointmentDiscountUsage, netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
+import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
+import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockCheckoutBenefits } from '~/server/utils/checkout-benefits'
 
 interface GuestBookRequest {
   // Booking identifiers
@@ -173,14 +174,22 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!slot.is_available) {
-    throw createError({ statusCode: 409, statusMessage: 'Dieser Zeitslot ist nicht mehr verfügbar' })
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Dieser Zeitslot ist nicht mehr verfügbar',
+      data: { code: 'SLOT_UNAVAILABLE' },
+    })
   }
 
   const isReservedBySession = slot.reserved_by_session === body.session_id
   const reservationStillValid = slot.reserved_until && new Date(slot.reserved_until) > new Date()
 
   if (!isReservedBySession || !reservationStillValid) {
-    throw createError({ statusCode: 409, statusMessage: 'Die Reservierung ist abgelaufen. Bitte wähle erneut einen Zeitslot.' })
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Die Reservierung ist abgelaufen. Bitte wähle erneut einen Zeitslot.',
+      data: { code: 'RESERVATION_EXPIRED' },
+    })
   }
 
   // ── Resolve identity by phone/email match ─────────────────────────────────
@@ -574,6 +583,24 @@ export default defineEventHandler(async (event) => {
     .select()
     .single()
 
+  if (newPayment?.id && resolvedDiscount.code && validatedDiscountAmount > 0) {
+    const locked = await lockCheckoutBenefits({
+      supabase,
+      tenantId,
+      paymentId: newPayment.id,
+      code: resolvedDiscount.code,
+    })
+    if (!locked.ok) {
+      logger.warn('⚠️ Guest discount could not be locked, aborting booking', locked.reason)
+      await abortCheckoutAfterBenefitLockFail({
+        supabase,
+        paymentId: newPayment.id,
+        appointmentId: newAppointment.id,
+      })
+      throw createError(benefitLockUnavailablePayload(locked.reason))
+    }
+  }
+
   let remainingDue = netAmountRappen
   if (newPayment && body.apply_available_credit !== false && newUserId) {
     try {
@@ -658,14 +685,6 @@ export default defineEventHandler(async (event) => {
         statusMessage: checkoutErr?.statusMessage || 'Zahlung konnte nicht gestartet werden',
       })
     }
-  }
-
-  if (resolvedDiscount.code && validatedDiscountAmount > 0) {
-    incrementAppointmentDiscountUsage({
-      supabase,
-      tenantId,
-      code: resolvedDiscount.code,
-    }).catch(() => {})
   }
 
   // ── Mark slot as booked ───────────────────────────────────────────────────
