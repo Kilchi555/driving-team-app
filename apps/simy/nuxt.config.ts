@@ -61,15 +61,10 @@ export default defineNuxtConfig({
         { rel: 'icon', href: '/favicon.ico', sizes: '48x48' },
         { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
         { rel: 'manifest', href: '/site.webmanifest' },
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       ],
       script: [
         {
-          src: 'https://www.googletagmanager.com/gtag/js?id=G-VZPENJ6FNP',
-          async: true,
-        },
-        {
-          innerHTML: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied'});gtag('config','G-VZPENJ6FNP');`,
+          innerHTML: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied'});`,
         },
       ],
     },
@@ -78,6 +73,7 @@ export default defineNuxtConfig({
   nitro: {
     minify: true,
     prerender: {
+      crawlLinks: true,
       routes: [
         '/',
         '/sitemap.xml',
@@ -90,6 +86,7 @@ export default defineNuxtConfig({
         '/datenschutz',
         '/impressum',
         '/kontakt',
+        '/konto-loeschen',
         '/branchen',
         '/vergleich',
         '/vergleich/calendly-alternative',
@@ -107,6 +104,9 @@ export default defineNuxtConfig({
         '/fahrschule/software',
         '/fahrschule/buchungssystem',
         '/fahrschule/app',
+        '/fahrschule/schuelerportal',
+        '/fahrschule/dokumentation',
+        '/fahrschule/abholung',
         '/features/kalender',
         '/features/rechnungen',
         '/features/kurse',
@@ -115,8 +115,10 @@ export default defineNuxtConfig({
         '/marketing',
         '/marketing/google-ads',
         '/marketing/seo',
+        '/marketing/seo-anfrage',
       ],
       failOnError: false,
+      ignore: ['/**/app.simy.ch/**'],
     },
   },
 
@@ -146,6 +148,11 @@ export default defineNuxtConfig({
     '/datenschutz': { prerender: true },
     '/impressum': { prerender: true },
     '/kontakt': { prerender: true },
+    '/konto-loeschen': { prerender: true },
     '/_nuxt/**': { headers: { 'Cache-Control': 'public, max-age=31536000, immutable' } },
+    '/**/*.webp': { headers: { 'Cache-Control': 'public, max-age=2592000, immutable' } },
+    '/**/*.jpg': { headers: { 'Cache-Control': 'public, max-age=2592000, immutable' } },
+    '/**/*.png': { headers: { 'Cache-Control': 'public, max-age=2592000, immutable' } },
+    '/**/*.svg': { headers: { 'Cache-Control': 'public, max-age=2592000, immutable' } },
   },
 })

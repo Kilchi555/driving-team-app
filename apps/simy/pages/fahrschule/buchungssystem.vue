@@ -41,6 +41,17 @@
       </div>
     </section>
 
+    <section class="px-6 pb-8">
+      <div class="max-w-5xl mx-auto">
+        <SimyShot
+          src="/screenshots/desktop-calendar.webp"
+          priority
+          alt="Simy Buchungskalender mit Fahrstunden in der Wochenansicht"
+          caption="Zwei-Wege-Sync: Simy im privaten Kalender — Privattermine sperren Slots"
+        />
+      </div>
+    </section>
+
     <!-- How it works -->
     <section id="wie-es-funktioniert" class="py-24 px-6 bg-gray-50">
       <div class="max-w-5xl mx-auto">
@@ -78,6 +89,22 @@
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="py-20 px-6 bg-[#f7f6fa] border-y border-gray-100">
+      <div class="max-w-5xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">Abholung</p>
+          <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Nicht jeder freie Slot ist ein guter Slot</h2>
+          <p class="text-gray-500 leading-relaxed mb-5">
+            Bei eigenem Treffpunkt prüft Simy die Fahrzeit vom Standort und die Lücke zur vorherigen Stunde. Was nicht passt, sieht der Schüler nicht.
+          </p>
+          <a href="/fahrschule/abholung" class="text-sm font-semibold" style="color: var(--brand-primary)">
+            Radius und Fahrzeit erklärt →
+          </a>
+        </div>
+        <SimyPickupGadget />
       </div>
     </section>
 
@@ -147,7 +174,8 @@ const bookingFeatures = [
   { icon: 'link', title: 'Persönlicher Buchungslink', desc: 'Jede Fahrschule und jeder Fahrlehrer erhält einen eigenen Buchungslink — direkt teilbar per WhatsApp, QR-Code oder auf der Website.' },
   { icon: 'phone', title: 'Funktioniert auf jedem Gerät', desc: 'Schüler buchen auf dem Smartphone, Tablet oder Desktop — ohne App-Download. Direkt im Browser.' },
   { icon: 'bell', title: 'Automatische Erinnerungen', desc: 'Simy sendet 24h vor dem Termin automatisch eine E-Mail — SMS nur ohne E-Mail-Adresse. SMS-Segmente sind im Plan inklusive.' },
-  { icon: 'calendar', title: 'Zwei-Wege-Kalender-Sync', desc: 'Simy-Termine erscheinen automatisch in deinem Google Calendar, Apple Calendar oder Outlook. Und umgekehrt: Hast du dort einen privaten Termin eingetragen, blockiert Simy diese Zeit automatisch — Schüler können dann genau dort keinen Slot buchen.' },
+  { icon: 'calendar', title: 'Zwei-Wege-Kalender-Sync (iCal)', desc: 'Simy-Termine erscheinen in Google, Apple oder Outlook. Ein Privattermin dort blockiert die Online-Buchung — ohne extra Sperre in Simy.' },
+  { icon: 'compass', title: 'Treffpunkt im Fahrzeit-Radius', desc: 'Abholung nur, wenn die Fahrzeit in den Radius und in die Lücke passt. Details auf der Abholungsseite.' },
   { icon: 'refresh', title: 'Stornierung & Umbuchung', desc: 'Schüler können Termine selbst absagen oder umbuchen — innerhalb der von dir definierten Fristen.' },
   { icon: 'school', title: 'Multi-Fahrlehrer', desc: 'Jeder Fahrlehrer hat seinen eigenen Kalender. Die Admin-Ansicht zeigt alle Fahrlehrer auf einen Blick.' },
   { icon: 'settings', title: 'Regeln & Puffer', desc: 'Du definierst Mindestvorlaufzeiten, Puffer zwischen Terminen und maximale Buchungen pro Tag.' },

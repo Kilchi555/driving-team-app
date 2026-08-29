@@ -54,92 +54,29 @@
           <p class="text-gray-500 max-w-xl mx-auto text-base">Simy passt sich automatisch an dein Gerät an. Ob auf dem Smartphone zwischen zwei Fahrstunden oder am Computer im Büro — du hast immer alles im Griff.</p>
         </div>
 
-        <!-- Mobile: stacked single device, Desktop: row -->
-        <div class="flex flex-col items-center gap-10 md:flex-row md:items-end md:justify-center md:gap-8">
-
-          <!-- iPhone -->
-          <div class="flex-shrink-0 w-[160px]">
-            <div class="relative rounded-[2.2rem] border-[6px] border-gray-800 shadow-2xl overflow-hidden"
-              style="box-shadow: 0 32px 64px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.12)">
-              <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[52px] h-[14px] bg-gray-800 rounded-b-xl z-10"></div>
-              <div class="bg-white pt-5 pb-4 px-3 space-y-2.5 min-h-[280px]">
-                <div class="h-5 rounded-lg w-3/4" :style="{ background: `var(--brand-primary)`, opacity: '0.15' }"></div>
-                <div class="grid grid-cols-2 gap-1.5">
-                  <div v-for="i in 4" :key="i" class="rounded-xl p-2 space-y-1.5" :style="{ background: `rgba(var(--brand-rgb),0.06)` }">
-                    <div class="h-3 rounded w-2/3" :style="{ background: `var(--brand-primary)`, opacity: '0.3' }"></div>
-                    <div class="h-5 rounded font-black text-xs flex items-center" :style="{ color: `var(--brand-primary)` }">—</div>
-                  </div>
-                </div>
-                <div class="space-y-1">
-                  <div v-for="i in 3" :key="i" class="h-8 rounded-xl flex items-center px-2 gap-2" :style="{ background: i===1 ? `rgba(var(--brand-rgb),0.08)` : '#f9fafb' }">
-                    <div class="w-4 h-4 rounded-full flex-shrink-0" :style="{ background: `var(--brand-primary)`, opacity: '0.5' }"></div>
-                    <div class="h-2 rounded flex-1" style="background: #e5e7eb"></div>
-                  </div>
-                </div>
-                <div class="h-8 rounded-xl w-full" :style="{ background: `var(--brand-primary)` }"></div>
-              </div>
-            </div>
-            <p class="text-center text-xs text-gray-400 mt-3 font-medium">iPhone</p>
+        <div class="grid md:grid-cols-[200px_1fr] gap-6 items-end">
+          <SimyShot
+            src="/screenshots/iphone-calendar.webp"
+            alt="Simy Fahrlehrer-App Kalender auf dem iPhone"
+            device="phone"
+            caption="iPhone"
+            :width="390"
+            :height="844"
+            priority
+          />
+          <div class="space-y-4">
+            <SimyShot
+              src="/screenshots/ipad-calendar.webp"
+              alt="Simy Kalender auf dem iPad"
+              device="tablet"
+              caption="iPad"
+            />
+            <SimyShot
+              src="/screenshots/desktop-calendar.webp"
+              alt="Simy Kalender auf dem Desktop"
+              caption="Desktop"
+            />
           </div>
-
-          <!-- iPad – only visible md+ -->
-          <div class="hidden md:block flex-shrink-0 w-[300px]">
-            <div class="relative rounded-[1.8rem] border-[8px] border-gray-800 shadow-2xl overflow-hidden"
-              style="box-shadow: 0 40px 80px rgba(var(--brand-rgb),0.18), 0 0 0 1px rgba(0,0,0,0.12)">
-              <div class="absolute top-2 left-1/2 -translate-x-1/2 w-[7px] h-[7px] bg-gray-600 rounded-full z-10"></div>
-              <div class="bg-white pt-5 pb-4 px-4 flex gap-3 min-h-[220px]">
-                <!-- Sidebar -->
-                <div class="w-10 flex flex-col gap-2 pt-2">
-                  <div v-for="i in 5" :key="i" class="w-8 h-8 rounded-xl" :style="{ background: i===1 ? `var(--brand-primary)` : `rgba(var(--brand-rgb),0.08)` }"></div>
-                </div>
-                <!-- Content -->
-                <div class="flex-1 space-y-2">
-                  <div class="h-4 w-1/2 rounded" :style="{ background: `rgba(var(--brand-rgb),0.15)` }"></div>
-                  <div class="grid grid-cols-3 gap-2">
-                    <div v-for="i in 3" :key="i" class="rounded-xl p-2 space-y-1" :style="{ background: `rgba(var(--brand-rgb),0.06)` }">
-                      <div class="h-2 rounded w-2/3" :style="{ background: `var(--brand-primary)`, opacity: '0.3' }"></div>
-                      <div class="h-4 rounded w-1/2" style="background: #e5e7eb"></div>
-                    </div>
-                  </div>
-                  <div class="space-y-1.5">
-                    <div v-for="i in 4" :key="i" class="h-7 rounded-lg" :style="{ background: i===2 ? `rgba(var(--brand-rgb),0.1)` : '#f3f4f6' }"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p class="text-center text-xs text-gray-400 mt-3 font-medium">iPad</p>
-          </div>
-
-          <!-- Desktop – hidden on mobile -->
-          <div class="hidden md:block flex-shrink-0 w-[340px]">
-            <div class="rounded-xl border border-gray-200 bg-white shadow-2xl overflow-hidden"
-              style="box-shadow: 0 32px 60px rgba(0,0,0,0.12)">
-              <div class="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center gap-2">
-                <div class="flex gap-1.5">
-                  <div class="w-2.5 h-2.5 rounded-full bg-red-400"></div>
-                  <div class="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
-                  <div class="w-2.5 h-2.5 rounded-full bg-green-400"></div>
-                </div>
-                <div class="flex-1 bg-white rounded-md px-2.5 py-1 text-[10px] text-gray-400 border border-gray-200 text-center truncate">app.simy.ch</div>
-              </div>
-              <div class="p-3 flex gap-3 min-h-[200px]">
-                <div class="w-10 flex flex-col gap-1.5">
-                  <div v-for="i in 6" :key="i" class="w-8 h-6 rounded-lg" :style="{ background: i===1 ? `var(--brand-primary)` : `rgba(var(--brand-rgb),0.07)` }"></div>
-                </div>
-                <div class="flex-1 space-y-2">
-                  <div class="grid grid-cols-7 gap-1">
-                    <div v-for="i in 7" :key="i" class="text-center text-[9px] text-gray-400 font-medium">{{ ['Mo','Di','Mi','Do','Fr','Sa','So'][i-1] }}</div>
-                  </div>
-                  <div class="grid grid-cols-7 gap-1">
-                    <div v-for="i in 28" :key="i" class="h-5 rounded text-[9px] flex items-center justify-center"
-                      :style="[3,8,15,22].includes(i) ? { background: `var(--brand-primary)`, color: 'white' } : { background: '#f3f4f6', color: '#9ca3af' }">{{ i }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p class="text-center text-xs text-gray-400 mt-3 font-medium">Desktop</p>
-          </div>
-
         </div>
       </div>
     </section>
@@ -210,7 +147,7 @@
             </tbody>
           </table>
         </div>
-        <p class="text-xs text-gray-400 text-center mt-4">Angaben basieren auf öffentlich verfügbaren Informationen der jeweiligen Anbieter (Stand Juni 2026). QualiDrive-Preis: pro neu erfasstem Schüler (einmalig), ohne Setup-Pauschale.</p>
+        <p class="text-xs text-gray-400 text-center mt-4">Angaben basieren auf öffentlich verfügbaren Informationen der jeweiligen Anbieter (Stand Juni 2026). QualiDrive-Preis: pro neu erfasstem Schüler (einmalig), ohne Setup-Pauschale. Simy-Preise {{ PRICE_VAT_NOTE_SHORT }}.</p>
       </div>
     </section>
 
@@ -238,6 +175,7 @@
 </template>
 
 <script setup lang="ts">
+import { PRICE_VAT_NOTE_SHORT } from '~/data/pricing'
 import { breadcrumbLd, faqPageLd, ldScripts, softwareAppLd } from '~/utils/schema'
 const { registerCta } = useRegisterCta('driving_school')
 
@@ -276,7 +214,8 @@ const appFeatures = [
   { icon: 'wallet', title: 'Einnahmen-Übersicht', desc: 'Tages-, Wochen- und Monatseinnahmen auf einen Blick. Offene Rechnungen sofort sichtbar.' },
   { icon: 'bell', title: 'Push-Benachrichtigungen', desc: 'Neue Buchungen, Absagen, Zahlungseingänge — du wirst sofort benachrichtigt.' },
   { icon: 'map-pin', title: 'Navigation aus der App', desc: 'Tippe auf eine Adresse und die Navigation startet direkt. Kein Copy-Paste mehr.' },
-  { icon: 'pen', title: 'Fahrstunden dokumentieren', desc: 'Notizen, Fortschritt und Bewertung direkt nach der Fahrstunde eingeben — dauert 30 Sekunden.' },
+  { icon: 'pen', title: 'Fahrstunden dokumentieren', desc: 'Notizen, Fortschritt und Bewertung direkt nach der Fahrstunde — der Schüler sieht denselben Stand im Portal und als PDF.' },
+  { icon: 'users', title: 'Schülerportal daneben', desc: 'Deine App ist für den Unterricht. Der Schüler loggt sich getrennt ein — Termine, Guthaben, Dokumente. Kein Store-Zwang.' },
 ]
 
 const comparison = [
