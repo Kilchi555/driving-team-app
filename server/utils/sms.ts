@@ -4,6 +4,7 @@
 import twilio from 'twilio'
 import { logger } from '~/utils/logger'
 import { resolveSmsSenderName, toAlphanumericSenderId } from '~/server/utils/sms-sender'
+import { buildSimyPlatformEmail } from '~/server/utils/branded-email'
 
 let twilioClient: ReturnType<typeof twilio> | null = null
 
@@ -77,7 +78,7 @@ export async function sendSMS({ to, message, senderName }: SendSMSOptions) {
     } else {
       from = fromNumber
       logger.debug(
-        senderName
+        cleanSenderName === null && senderName
           ? `SMS fallback to phone number (cleaned name invalid)`
           : `SMS using phone number: "${from}"`,
       )
@@ -134,7 +135,7 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
   const {
     countSmsSegments,
     getTenantSmsUsage,
-    getBillingPeriodStart,
+    resolveSmsBillingPeriod,
     SmsQuotaExceededError,
     isSmsOverageWaived,
   } = await import('~/server/utils/sms-quota')
@@ -146,7 +147,7 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
 
   const { data: tenant } = await supabase
     .from('tenants')
-    .select('subscription_plan, booking_policy, stripe_subscription_id, stripe_sms_subscription_item_id, stripe_customer_id, twilio_from_sender, name, contact_email')
+    .select('subscription_plan, booking_policy, stripe_subscription_id, stripe_sms_subscription_item_id, stripe_customer_id, twilio_from_sender, name, contact_email, current_period_start, current_period_end')
     .eq('id', tenantId)
     .single()
 
@@ -167,10 +168,15 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
     fallback: senderName,
   })
 
+  const period = resolveSmsBillingPeriod({
+    currentPeriodStart: tenant?.current_period_start,
+    currentPeriodEnd: tenant?.current_period_end,
+  })
+
   let usedBefore = 0
   let included = getIncludedSmsSegments(tenant?.subscription_plan)
   if (billable) {
-    usedBefore = await getTenantSmsUsage(supabase, tenantId, getBillingPeriodStart())
+    usedBefore = await getTenantSmsUsage(supabase, tenantId, period.start, period.resetAt)
     if (hardStop && usedBefore + segmentCount > included) {
       throw new SmsQuotaExceededError()
     }
@@ -229,7 +235,7 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
       })
     }
 
-    // Soft alerts at 80% / 100% of included quota (once per calendar month)
+    // Soft alerts at 80% / 100% of included quota (once per billing period)
     // → tenant contact + Simy super-admins. Soft-cap continues sending.
     try {
       await maybeSendSmsQuotaAlert({
@@ -243,6 +249,7 @@ export async function sendTenantSMS(opts: SendTenantSMSOptions): Promise<SendTen
         overageChf: Math.max(0, usedAfter - included) * SMS_OVERAGE_CHF_PER_SEGMENT,
         canBillOverage,
         plan: tenant?.subscription_plan || 'trial',
+        period,
       })
     } catch (alertErr: any) {
       logger.warn('⚠️ SMS quota alert failed (non-critical):', alertErr?.message)
@@ -268,12 +275,15 @@ async function maybeSendSmsQuotaAlert(opts: {
   overageChf: number
   canBillOverage: boolean
   plan: string
+  period: import('~/server/utils/sms-quota').SmsBillingPeriod
 }) {
   if (opts.included <= 0) return
   const ratio = opts.usedAfter / opts.included
   if (ratio < 0.8) return
 
-  const periodKey = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, '0')}`
+  const period = opts.period
+  const { parseSmsQuotaAlertState, smsQuotaAlertPeriodsMatch } = await import('~/server/utils/sms-quota')
+  const periodKey = period.periodKey
   const { data: existing } = await opts.supabase
     .from('tenant_settings')
     .select('id, setting_value')
@@ -281,15 +291,8 @@ async function maybeSendSmsQuotaAlert(opts: {
     .eq('setting_key', 'sms_quota_alerts')
     .maybeSingle()
 
-  let state: any = {}
-  try {
-    state = typeof existing?.setting_value === 'string'
-      ? JSON.parse(existing.setting_value)
-      : (existing?.setting_value || {})
-  } catch {
-    state = {}
-  }
-  if (state.period !== periodKey) {
+  const state: { period?: string; warned80?: boolean; warned100?: boolean } = parseSmsQuotaAlertState(existing?.setting_value)
+  if (!smsQuotaAlertPeriodsMatch(state.period, periodKey)) {
     state.period = periodKey
     state.warned80 = false
     state.warned100 = false
@@ -304,20 +307,44 @@ async function maybeSendSmsQuotaAlert(opts: {
     state.warned80 = true
     subject = `SMS-Kontingent aufgebraucht – ${opts.tenantName}`
     if (opts.canBillOverage) {
-      tenantBody = `Euer Inklusiv-Kontingent (${opts.included} Segmente) ist aufgebraucht (${opts.usedAfter} verwendet). Weitere SMS werden mit <strong>CHF 0.15/Segment</strong> verrechnet. Aktueller Überzug ca. <strong>CHF ${opts.overageChf.toFixed(2)}</strong>.`
-      adminBody = `Das SMS-Kontingent ist aufgebraucht. Metered Billing ist aktiv — Überzüge werden verrechnet.`
+      tenantBody = `Euer Inklusiv-Kontingent (${opts.included} Segmente) ist aufgebraucht (${opts.usedAfter} verwendet). Weitere SMS werden mit <strong>CHF 0.15/Segment</strong> verrechnet. Aktueller Überzug ca. <strong>CHF ${opts.overageChf.toFixed(2)}</strong>. Das Kontingent wird am <strong>${period.resetLabel}</strong> zurückgesetzt.`
+      adminBody = `Das SMS-Kontingent ist aufgebraucht. Metered Billing ist aktiv — Überzüge werden verrechnet. Reset am ${period.resetLabel}.`
     } else {
-      tenantBody = `Euer Inklusiv-Kontingent (${opts.included} Segmente) ist aufgebraucht (${opts.usedAfter} verwendet). SMS werden weiter zugestellt (Soft-Cap). Sobald eine Zahlungsmethode hinterlegt ist, werden Überzüge mit CHF 0.15/Segment verrechnet.`
-      adminBody = `Das SMS-Kontingent ist aufgebraucht — aktuell <em>ohne</em> verrechenbare Zahlungsmethode (Soft-Cap).`
+      tenantBody = `Euer Inklusiv-Kontingent (${opts.included} Segmente) ist aufgebraucht (${opts.usedAfter} verwendet). SMS werden weiter zugestellt (Soft-Cap). Sobald eine Zahlungsmethode hinterlegt ist, werden Überzüge mit CHF 0.15/Segment verrechnet. Das Kontingent wird am <strong>${period.resetLabel}</strong> zurückgesetzt.`
+      adminBody = `Das SMS-Kontingent ist aufgebraucht — aktuell <em>ohne</em> verrechenbare Zahlungsmethode (Soft-Cap). Reset am ${period.resetLabel}.`
     }
   } else if (ratio >= 0.8 && !state.warned80) {
     state.warned80 = true
     subject = `SMS-Kontingent bei 80% – ${opts.tenantName}`
-    tenantBody = `Ihr habt <strong>${opts.usedAfter} von ${opts.included}</strong> SMS-Segmenten in diesem Monat verbraucht.${opts.canBillOverage ? ' Überzug: CHF 0.15/Segment.' : ' Soft-Cap: SMS laufen weiter; Verrechnung erst nach Hinterlegen einer Zahlungsmethode.'}`
-    adminBody = `Dieses Unternehmen hat 80&nbsp;% des monatlichen SMS-Kontingents erreicht.`
+    tenantBody = `Ihr habt <strong>${opts.usedAfter} von ${opts.included}</strong> SMS-Segmenten im Zeitraum ${period.rangeLabel} verbraucht.${opts.canBillOverage ? ' Überzug: CHF 0.15/Segment.' : ' Soft-Cap: SMS laufen weiter; Verrechnung erst nach Hinterlegen einer Zahlungsmethode.'} Das Kontingent wird am <strong>${period.resetLabel}</strong> zurückgesetzt.`
+    adminBody = `Dieses Unternehmen hat 80&nbsp;% des monatlichen SMS-Kontingents erreicht (${period.rangeLabel}, Reset am ${period.resetLabel}).`
   }
 
   if (!subject || !tenantBody || !adminBody) return
+
+  const value = JSON.stringify(state)
+  if (existing?.id) {
+    const { error: persistError } = await opts.supabase
+      .from('tenant_settings')
+      .update({ setting_value: value })
+      .eq('id', existing.id)
+    if (persistError) {
+      logger.warn('⚠️ SMS quota alert persist failed, skip send:', persistError.message)
+      return
+    }
+  } else {
+    const { error: persistError } = await opts.supabase.from('tenant_settings').insert({
+      tenant_id: opts.tenantId,
+      category: 'sms',
+      setting_key: 'sms_quota_alerts',
+      setting_value: value,
+      setting_type: 'json',
+    })
+    if (persistError) {
+      logger.warn('⚠️ SMS quota alert persist failed, skip send:', persistError.message)
+      return
+    }
+  }
 
   const { sendEmail } = await import('~/server/utils/email')
   const appBase = (process.env.NUXT_PUBLIC_SITE_URL || process.env.SITE_URL || 'https://app.simy.ch').replace(/\/$/, '')
@@ -367,26 +394,12 @@ async function maybeSendSmsQuotaAlert(opts: {
         bodyText: isTenant ? tenantBody! : adminBody!,
         softCapNote,
         billingUrl,
+        periodRangeLabel: period.rangeLabel,
+        periodResetLabel: period.resetLabel,
       })
       return sendEmail({ to, subject, html })
     }),
   )
-
-  const value = JSON.stringify(state)
-  if (existing?.id) {
-    await opts.supabase
-      .from('tenant_settings')
-      .update({ setting_value: value })
-      .eq('id', existing.id)
-  } else {
-    await opts.supabase.from('tenant_settings').insert({
-      tenant_id: opts.tenantId,
-      category: 'sms',
-      setting_key: 'sms_quota_alerts',
-      setting_value: value,
-      setting_type: 'json',
-    })
-  }
 }
 
 function buildSmsQuotaAlertHtml(opts: {
@@ -404,6 +417,8 @@ function buildSmsQuotaAlertHtml(opts: {
   bodyText: string
   softCapNote: string
   billingUrl: string
+  periodRangeLabel: string
+  periodResetLabel: string
 }): string {
   const accent = opts.isExhausted ? '#dc2626' : '#d97706'
   const accentBg = opts.isExhausted ? '#fef2f2' : '#fffbeb'
@@ -432,21 +447,11 @@ function buildSmsQuotaAlertHtml(opts: {
         ${opts.overageSegments > 0 ? `<div><strong>Überzug:</strong> ${opts.overageSegments} Segmente (ca. CHF ${opts.overageChf.toFixed(2)})</div>` : ''}
       </div>`
 
-  return `<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${title}</title>
-</head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
-  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)">
-    <div style="background:linear-gradient(135deg,#1e293b,#334155);padding:28px 32px">
-      <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8">Simy · SMS</p>
-      <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;line-height:1.25">${title}</h1>
-    </div>
-
-    <div style="padding:28px 32px 32px">
+  return buildSimyPlatformEmail({
+    eyebrow: 'Simy · SMS',
+    title,
+    documentTitle: title,
+    bodyHtml: `
       <p style="margin:0 0 20px;font-size:15px;line-height:1.55;color:#374151">${greeting}</p>
       <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#374151">${opts.bodyText}</p>
 
@@ -458,22 +463,17 @@ function buildSmsQuotaAlertHtml(opts: {
         <div style="height:10px;background:#fff;border-radius:999px;overflow:hidden;border:1px solid ${accentBorder}">
           <div style="height:100%;width:${Math.min(100, opts.pct)}%;background:${barColor};border-radius:999px"></div>
         </div>
-        <p style="margin:10px 0 0;font-size:12px;color:#78716c">SMS-Segmente in diesem Abrechnungsmonat</p>
+        <p style="margin:10px 0 4px;font-size:12px;color:#78716c">Abrechnungszeitraum ${opts.periodRangeLabel}</p>
+        <p style="margin:0;font-size:12px;font-weight:600;color:#57534e">Kontingent wird am ${opts.periodResetLabel} zurückgesetzt</p>
       </div>
 
       ${ctaBlock}
 
       <p style="margin:28px 0 0;padding-top:20px;border-top:1px solid #f3f4f6;font-size:12px;line-height:1.5;color:#9ca3af">
         ${opts.softCapNote}
-      </p>
-    </div>
-
-    <div style="border-top:1px solid #f3f4f6;padding:18px 32px;font-size:12px;color:#9ca3af;text-align:center">
-      ${opts.isTenant ? opts.tenantName : 'Simy'} · Powered by <a href="https://simy.ch" style="color:#9ca3af">Simy.ch</a>
-    </div>
-  </div>
-</body>
-</html>`
+      </p>`,
+    footerHtml: `${opts.isTenant ? opts.tenantName : 'Simy'} · <a href="https://simy.ch" style="color:#9ca3af;text-decoration:none">Simy.ch</a>`,
+  })
 }
 
 // ============================================

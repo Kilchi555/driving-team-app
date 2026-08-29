@@ -14,18 +14,25 @@ import {
 import { getAccountAccessLink } from '~/server/utils/account-access-link'
 import { DEFAULT_BOOKING_POLICY } from '~/server/api/admin/booking-policy.get'
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
+import {
+  parseRescheduleChangedFields,
+  shouldNotifyRescheduleChange,
+} from '~/utils/reschedule-email-triggers'
 
 export async function notifyCustomerAppointmentChange(opts: {
   tenantId: string
   userId: string
   type: 'cancelled' | 'rescheduled'
   appointmentTimeIso: string
+  appointmentId?: string
   /** Already formatted display string for email templates */
   appointmentTimeLabel?: string
   cancellationReason?: string | null
   /** Extra fields forwarded to send-appointment-notification email */
   emailExtras?: Record<string, any>
-}): Promise<{ emailSent: boolean; smsSent: boolean }> {
+  /** Which customer-visible fields changed. Omitted = datetime (legacy). */
+  changedFields?: string[]
+}): Promise<{ emailSent: boolean; smsSent: boolean; skipped?: boolean }> {
   const supabase = getSupabaseAdmin()
   let emailSent = false
   let smsSent = false
@@ -48,12 +55,21 @@ export async function notifyCustomerAppointmentChange(opts: {
   }
 
   const policy = { ...DEFAULT_BOOKING_POLICY, ...((tenant as any).booking_policy || {}) }
+  const changedFields = parseRescheduleChangedFields(opts.changedFields ?? opts.emailExtras?.changedFields)
+
+  if (
+    opts.type === 'rescheduled' &&
+    !shouldNotifyRescheduleChange(policy.reschedule_email_triggers, changedFields)
+  ) {
+    return { emailSent, smsSent, skipped: true }
+  }
+
   const hasEmail = !!(user.email && String(user.email).trim())
   const hasPhone = !!(user.phone && String(user.phone).trim())
   const smsToggle =
     opts.type === 'cancelled'
       ? policy.cancellation_sms_enabled !== false
-      : policy.reschedule_sms_enabled !== false
+      : policy.reschedule_sms_enabled !== false && changedFields.includes('datetime')
 
   const channels = resolveCustomerChannels({
     channel: policy.customer_notification_channel,
@@ -76,6 +92,31 @@ export async function notifyCustomerAppointmentChange(opts: {
       minute: '2-digit',
     })
 
+  let resourceLabels: { vehicleLabel: string | null; roomName: string | null } = {
+    vehicleLabel: null,
+    roomName: null,
+  }
+  if (opts.appointmentId) {
+    const { data: appointment } = await supabase
+      .from('appointments')
+      .select('type, location_id, vehicle_mode, room_id')
+      .eq('id', opts.appointmentId)
+      .eq('tenant_id', opts.tenantId)
+      .maybeSingle()
+    if (appointment) {
+      const { loadAppointmentResourceLabels } = await import(
+        '~/server/utils/appointment-resource-labels'
+      )
+      resourceLabels = await loadAppointmentResourceLabels(supabase, {
+        tenantId: opts.tenantId,
+        categoryCode: appointment.type,
+        locationId: appointment.location_id,
+        vehicleMode: appointment.vehicle_mode,
+        roomId: appointment.room_id,
+      })
+    }
+  }
+
   if (channels.sendEmail && user.email) {
     try {
       const { sendAppointmentNotificationEmail } = await import(
@@ -92,7 +133,10 @@ export async function notifyCustomerAppointmentChange(opts: {
         tenantSlug: tenant.slug,
         userId: user.id,
         omitAccountCta: user.onboarding_status === 'pending' && !allowsCustomerAccountActivation(policy),
+        vehicleLabel: resourceLabels.vehicleLabel,
+        roomName: resourceLabels.roomName,
         ...(opts.emailExtras || {}),
+        changedFields,
       })
       emailSent = true
     } catch (err: any) {

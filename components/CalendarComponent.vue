@@ -16,6 +16,12 @@ import EventModal from './EventModal.vue'
 import EnhancedStudentModal from './EnhancedStudentModal.vue'
 import CourseSessionRosterModal from './CourseSessionRosterModal.vue'
 import { parseCourseIdFromAppointmentNotes } from '~/utils/course-appointment'
+import {
+  DEFAULT_RESCHEDULE_EMAIL_TRIGGERS,
+  normalizeRescheduleEmailTriggers,
+  shouldNotifyRescheduleChange,
+  type RescheduleEmailTrigger,
+} from '~/utils/reschedule-email-triggers'
 import { useCurrentUser } from '~/composables/useCurrentUser'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import { useAppointmentStatus } from '~/composables/useAppointmentStatus'
@@ -399,6 +405,7 @@ const isInitialLoad = ref(true) // Flag für ersten Load
 const showDatePicker = ref(false) // Für Monatskalender-Dropdown
 const currentYear = ref(new Date().getFullYear())
 const tenantName = ref('') // Tenant name for SMS/Email
+const rescheduleEmailTriggers = ref<RescheduleEmailTrigger[]>([...DEFAULT_RESCHEDULE_EMAIL_TRIGGERS])
 const { t, eventTypeLabel } = useTerminology()
 tenantName.value = t.value.businessNoun
 let syncInterval: NodeJS.Timeout | null = null // Interval für Auto-Sync
@@ -1568,7 +1575,7 @@ const handleEventDrop = async (dropInfo: any) => {
       //   logger.debug('⚠️ No phone number available for SMS')
       // }
       
-      // Email / SMS versenden (channel policy)
+      const changedFields: RescheduleEmailTrigger[] = ['datetime']
       logger.debug('📧 Sending notification for rescheduled appointment...')
       try {
         const result = await $fetch('/api/appointments/notify-change', {
@@ -1582,12 +1589,13 @@ const handleEventDrop = async (dropInfo: any) => {
             newTime,
             oldTime: oldStartTime,
             staffName: instructorName,
+            changedFields,
           }
         })
         logger.debug('✅ Reschedule notification sent:', result)
       } catch (notifyError: any) {
         console.error('❌ Failed to send reschedule notification:', notifyError)
-        if (studentEmail) {
+        if (studentEmail && shouldNotifyRescheduleChange(rescheduleEmailTriggers.value, changedFields)) {
           try {
             await $fetch('/api/email/send-appointment-notification', {
               method: 'POST',
@@ -1598,7 +1606,9 @@ const handleEventDrop = async (dropInfo: any) => {
                 newTime: newTime,
                 staffName: instructorName,
                 type: 'rescheduled',
-                tenantId: props.currentUser?.tenant_id
+                tenantId: props.currentUser?.tenant_id,
+                appointmentId: dropInfo.event.id,
+                changedFields,
               }
             })
           } catch { /* ignore */ }
@@ -1637,8 +1647,7 @@ const handleEventDrop = async (dropInfo: any) => {
 
 const studentName = dropInfo.event.extendedProps?.student || 'Unbekannt'
 const studentPhone = dropInfo.event.extendedProps?.phone || 'Keine Nummer'
-
-  // ✅ ENTFERNT: sendSmsOnDrop.value = true (nicht mehr nötig, SMS wird immer versendet)
+const notifyOnDrop = shouldNotifyRescheduleChange(rescheduleEmailTriggers.value, ['datetime'])
 
 showConfirmDialog({
   title: 'Termin verschieben',
@@ -1650,13 +1659,15 @@ showConfirmDialog({
     
     <div class="rounded-lg p-3 border" style="background:${primaryColor.value}15;border-color:${primaryColor.value}33;">
       <div class="text-sm" style="color:${primaryColor.value};">
-        📱 ${t.value.client} wird per E-Mail über die Terminverschiebung informiert.
+        ${notifyOnDrop
+          ? `${t.value.client} wird per E-Mail über die Terminverschiebung informiert.`
+          : `${t.value.client} wird nicht automatisch informiert (in Buchung & Onboarding ausgeschaltet).`}
       </div>
     </div>
   `,
   icon: '🔄',
   type: 'warning',
-  confirmText: 'Verschieben & Benachrichtigen',
+  confirmText: notifyOnDrop ? 'Verschieben & Benachrichtigen' : 'Verschieben',
   cancelText: 'Abbrechen',
   action: moveAction
 })
@@ -1692,6 +1703,36 @@ const handleEventResize = async (resizeInfo: any) => {
       }
       
       logger.debug('✅ Appointment resized via API:', resizeInfo.event.title)
+
+      const changedFields: RescheduleEmailTrigger[] = ['duration']
+      const startLabel = new Date(resizeInfo.event.start).toLocaleString('de-CH', {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      const oldDurationMs = resizeInfo.oldEvent.end.getTime() - resizeInfo.oldEvent.start.getTime()
+      const oldDurationMinutes = Math.round(oldDurationMs / (1000 * 60))
+      try {
+        await $fetch('/api/appointments/notify-change', {
+          method: 'POST',
+          body: {
+            appointmentId: resizeInfo.event.id,
+            userId: resizeInfo.event.extendedProps?.user_id || resizeInfo.event.extendedProps?.userId,
+            type: 'rescheduled',
+            appointmentTimeIso: resizeInfo.event.startStr,
+            appointmentTimeLabel: `${startLabel} (${durationMinutes} Min.)`,
+            newTime: `${startLabel} (${durationMinutes} Min.)`,
+            oldTime: `${startLabel} (${oldDurationMinutes} Min.)`,
+            staffName: resizeInfo.event.extendedProps?.instructor,
+            changedFields,
+          },
+        })
+      } catch (notifyError: any) {
+        console.error('❌ Failed to send duration-change notification:', notifyError)
+      }
       
       if (isModalVisible.value && modalEventData.value?.id === resizeInfo.event.id) {
         modalEventData.value = {
@@ -1719,6 +1760,8 @@ const handleEventResize = async (resizeInfo: any) => {
     }
   }
 
+const notifyOnResize = shouldNotifyRescheduleChange(rescheduleEmailTriggers.value, ['duration'])
+
 showConfirmDialog({
   title: 'Terminlänge ändern',
   message: 'Möchten Sie die Terminlänge wirklich ändern?',
@@ -1728,20 +1771,16 @@ showConfirmDialog({
     <strong>${t.value.client}:</strong> ${resizeInfo.event.extendedProps?.student || 'Unbekannt'}<br><br>
     
     <div class="rounded-lg p-3 border" style="background:${primaryColor.value}15;border-color:${primaryColor.value}33;">
-      <div class="flex items-center gap-2 mb-2">
-        <input type="checkbox" id="sendSmsResize" checked class="rounded border-gray-300">
-        <label for="sendSmsResize" class="font-medium" style="color:${primaryColor.value};">
-          📱 SMS über Änderung senden
-        </label>
-      </div>
-      <div class="text-xs" style="color:${primaryColor.value};">
-        ${t.value.client} wird über die Terminänderung informiert.
+      <div class="text-sm" style="color:${primaryColor.value};">
+        ${notifyOnResize
+          ? `${t.value.client} wird per E-Mail über die Längenänderung informiert.`
+          : `${t.value.client} wird nicht automatisch informiert (in Buchung & Onboarding ausgeschaltet).`}
       </div>
     </div>
   `,
   icon: '📏',
   type: 'warning',
-  confirmText: 'Ändern & Benachrichtigen',
+  confirmText: notifyOnResize ? 'Ändern & Benachrichtigen' : 'Ändern',
   cancelText: 'Abbrechen',
   action: resizeAction
 })
@@ -2399,7 +2438,8 @@ const pasteAppointmentDirectly = async () => {
             eventTypeName: eventTypeName,
             durationMinutes: durationMinutes,
             userId: newAppointment.user_id,
-            tenantId: props.currentUser?.tenant_id
+            tenantId: props.currentUser?.tenant_id,
+            appointmentId: newAppointment.id,
           }
         })
         logger.debug('✅ Confirmation email sent successfully:', result)
@@ -2694,6 +2734,17 @@ onMounted(async () => {
     } catch (error) {
       console.warn('⚠️ Could not load tenant name:', error)
       tenantName.value = t.value.businessNoun
+    }
+
+    try {
+      const policyRes = await $fetch<{ policy?: { reschedule_email_triggers?: RescheduleEmailTrigger[] } }>(
+        '/api/admin/booking-policy',
+      )
+      rescheduleEmailTriggers.value = normalizeRescheduleEmailTriggers(
+        policyRes?.policy?.reschedule_email_triggers,
+      )
+    } catch (error) {
+      console.warn('⚠️ Could not load reschedule email triggers:', error)
     }
     
     // 🔥 NEU: Calendar API Setup
