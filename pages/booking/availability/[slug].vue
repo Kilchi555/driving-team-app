@@ -4838,6 +4838,39 @@ const previewAdminFeeRappen = ref(0)
 const previewAdminFeeReason = ref<string | null>(null)
 const previewAppointmentNumber = ref<number | null>(null)
 const bookingDiscount = ref<{ code: string; discountAmountRappen: number; discountData: any } | null>(null)
+const bookingConfirmError = ref<string | null>(null)
+
+function bookingErrorCode(err: any): string {
+  return err?.data?.code || err?.data?.data?.code || ''
+}
+
+function bookingErrorMessage(err: any): string {
+  return err?.statusMessage || err?.data?.statusMessage || err?.data?.message || err?.message || ''
+}
+
+function isDiscountUnavailableError(err: any): boolean {
+  if (bookingErrorCode(err) === 'DISCOUNT_UNAVAILABLE') return true
+  return /Gutschein|Nutzungslimit|Code hat das|Code kann gerade nicht/i.test(bookingErrorMessage(err))
+}
+
+function isIdentityConflictError(err: any): boolean {
+  const code = bookingErrorCode(err)
+  if (['DUPLICATE_PHONE', 'DUPLICATE_EMAIL', 'TENANT_CLIENT_EXISTS', 'CONTACT_MISMATCH', 'DUPLICATE'].includes(code)) {
+    return true
+  }
+  return /Konto verbunden|bereits registriert|offene Anmeldung|Kontaktdaten gehören/i.test(bookingErrorMessage(err))
+}
+
+function isSlotOrReservationError(err: any): boolean {
+  const code = bookingErrorCode(err)
+  if (code === 'SLOT_UNAVAILABLE' || code === 'RESERVATION_EXPIRED') return true
+  return /Zeitslot|Reservierung ist abgelaufen|nicht mehr verfügbar/i.test(bookingErrorMessage(err))
+}
+
+function discountUnavailableMessage(err: any): string {
+  return bookingErrorMessage(err)
+    || 'Dieser Code kann gerade nicht verwendet werden. Entferne den Code oder versuche es erneut.'
+}
 const bookingCreditRappen = ref(0)
 const applyAvailableCredit = ref(true)
 
@@ -5164,11 +5197,15 @@ const createAppointmentSecure = async (userData: any) => {
   } catch (err: any) {
     logger.error('❌ Appointment creation failed:', err)
     
-    if (err.statusCode === 409) {
-      // Reservation expired
-      error.value = 'Ihre Reservierung ist abgelaufen. Bitte wählen Sie erneut einen Zeitslot.'
-      // Go back to slot selection
+    if (isDiscountUnavailableError(err)) {
+      error.value = discountUnavailableMessage(err)
+    } else if (isIdentityConflictError(err)) {
+      error.value = bookingErrorMessage(err) || 'Diese Kontaktdaten sind bereits registriert. Bitte melde dich an.'
+    } else if (err.statusCode === 409 && isSlotOrReservationError(err)) {
+      error.value = bookingErrorMessage(err) || 'Ihre Reservierung ist abgelaufen. Bitte wählen Sie erneut einen Zeitslot.'
       currentStep.value = 5
+    } else if (err.statusCode === 409) {
+      error.value = bookingErrorMessage(err) || 'Die Buchung konnte nicht abgeschlossen werden. Bitte prüfe deine Angaben.'
     } else {
       error.value = err.statusMessage || 'Buchung fehlgeschlagen. Bitte versuchen Sie es erneut.'
     }
@@ -5477,14 +5514,18 @@ const submitGuestBooking = async () => {
 
   } catch (err: any) {
     logger.error('❌ Guest booking failed:', err)
-    const code = err?.data?.code
-    if (code === 'DUPLICATE_PHONE' || code === 'DUPLICATE_EMAIL') {
-      guestFormError.value = err.statusMessage || 'Diese Kontaktdaten sind bereits registriert. Bitte melde dich an.'
-    } else if (err.statusCode === 409) {
-      guestFormError.value = 'Dieser Zeitslot ist leider nicht mehr verfügbar. Bitte wähle einen anderen.'
+    const code = bookingErrorCode(err)
+    if (isIdentityConflictError(err) || code === 'DUPLICATE_PHONE' || code === 'DUPLICATE_EMAIL') {
+      guestFormError.value = bookingErrorMessage(err) || 'Diese Kontaktdaten sind bereits registriert. Bitte melde dich an.'
+    } else if (isDiscountUnavailableError(err)) {
+      guestFormError.value = `${discountUnavailableMessage(err)} Schliesse dieses Fenster, um den Code zu ändern.`
+    } else if (err.statusCode === 409 && isSlotOrReservationError(err)) {
+      guestFormError.value = bookingErrorMessage(err) || 'Dieser Zeitslot ist leider nicht mehr verfügbar. Bitte wähle einen anderen.'
       showGuestForm.value = false
       selectedSlot.value = null
       currentStep.value = 6
+    } else if (err.statusCode === 409) {
+      guestFormError.value = bookingErrorMessage(err) || 'Die Buchung konnte nicht abgeschlossen werden. Bitte prüfe deine Angaben.'
     } else if (err.statusCode === 402) {
       guestFormError.value = err.statusMessage || 'Online-Zahlung ist gerade nicht verfügbar.'
     } else if (err.statusCode === 400) {

@@ -7,7 +7,8 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getAuthenticatedUser, requireAdminProfile } from '~/server/utils/auth'
+import { incrementStudentCredit, redeemGiftCardForWallet, redeemPromoForWallet, VoucherRedeemError } from '~/server/utils/wallet-atomic'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -33,10 +34,12 @@ export default defineEventHandler(async (event) => {
     const targetUserId = body.target_user_id // For staff redeeming on behalf of a student
     
     let userId: string
+    let staffTenantId: string | null = null
 
     if (authUser && targetUserId && typeof targetUserId === 'string') {
-      // Staff redeeming on behalf of a student
+      const staff = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'tenant_admin'])
       userId = targetUserId
+      staffTenantId = staff.role === 'super_admin' ? null : staff.tenant_id
       logger.debug('🎫 [redeem] Staff redeeming for student:', targetUserId)
     } else if (authUser) {
       // Authenticated user (student or staff for self)
@@ -61,6 +64,10 @@ export default defineEventHandler(async (event) => {
 
     if (userError || !userProfile) {
       throw createError({ statusCode: 404, message: 'User profile not found' })
+    }
+
+    if (staffTenantId && userProfile.tenant_id !== staffTenantId) {
+      throw createError({ statusCode: 403, message: 'Forbidden – tenant mismatch' })
     }
 
     const now = new Date()
@@ -110,19 +117,12 @@ export default defineEventHandler(async (event) => {
         creditAmountRappen: promoCode.credit_amount_rappen,
         code: promoCode.code,
         description: promoCode.description,
-        redemptionPayload: {
-          voucher_id: promoCode.id,
-          user_id: userProfile.id,
-          credit_amount_rappen: promoCode.credit_amount_rappen,
-          redeemed_at: now.toISOString(),
-          tenant_id: userProfile.tenant_id
-        },
-        updateRedemptionCount: async () => {
-          await supabaseAdmin
-            .from('voucher_codes')
-            .update({ current_redemptions: (promoCode.current_redemptions || 0) + 1 })
-            .eq('id', promoCode.id)
-        }
+        alreadyCredited: await redeemPromoForWallet(supabaseAdmin, {
+          userId: userProfile.id,
+          tenantId: userProfile.tenant_id,
+          voucherId: promoCode.id,
+          amountRappen: promoCode.credit_amount_rappen,
+        }),
       })
     }
 
@@ -139,25 +139,33 @@ export default defineEventHandler(async (event) => {
       if (giftCard.redeemed_at) {
         throw createError({ statusCode: 400, message: 'Dieser Gutschein wurde bereits eingelöst' })
       }
+      if (
+        giftCard.reserved_for_payment_id
+        && giftCard.reserved_until
+        && new Date(giftCard.reserved_until) > now
+      ) {
+        throw createError({
+          statusCode: 409,
+          message: 'Dieser Gutschein wird gerade in einer anderen Zahlung verwendet. Warte, bis die Zahlung abgeschlossen oder abgebrochen ist.',
+        })
+      }
       if (giftCard.valid_until && new Date(giftCard.valid_until) < now) {
         throw createError({ statusCode: 400, message: `Dieser Gutschein ist abgelaufen (gültig bis ${new Date(giftCard.valid_until).toLocaleDateString('de-CH')})` })
       }
 
-      const result = await applyCredit({
+      const credited = await redeemGiftCardForWallet(supabaseAdmin, {
+        userId: userProfile.id,
+        tenantId: userProfile.tenant_id,
+        code: giftCard.code,
+      })
+      return await applyCredit({
         supabaseAdmin,
         userProfile,
-        creditAmountRappen: giftCard.amount_rappen,
+        creditAmountRappen: credited.amount_rappen,
         code: giftCard.code,
         description: giftCard.description || giftCard.name,
-        redemptionPayload: null, // vouchers table has its own redeemed_at column
-        updateRedemptionCount: async () => {
-          await supabaseAdmin
-            .from('vouchers')
-            .update({ redeemed_at: now.toISOString(), redeemed_by: userProfile.id, is_active: false })
-            .eq('id', giftCard.id)
-        }
+        alreadyCredited: { old_balance: credited.old_balance, new_balance: credited.new_balance },
       })
-      return result
     }
 
     // Not found in either table
@@ -165,6 +173,9 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     console.error('❌ Error redeeming voucher:', error)
+    if (error instanceof VoucherRedeemError) {
+      throw createError({ statusCode: 400, message: error.message })
+    }
     if (error.statusCode) throw error
     throw createError({
       statusCode: 500,
@@ -180,46 +191,24 @@ async function applyCredit({
   creditAmountRappen,
   code,
   description,
-  redemptionPayload,
-  updateRedemptionCount
+  alreadyCredited,
 }: {
   supabaseAdmin: any
   userProfile: { id: string; tenant_id: string }
   creditAmountRappen: number
   code: string
   description?: string
-  redemptionPayload: Record<string, any> | null
-  updateRedemptionCount: () => Promise<void>
+  alreadyCredited?: { old_balance: number; new_balance: number }
 }) {
-  // Get or create student credit record
-  const { data: studentCredit, error: creditError } = await supabaseAdmin
-    .from('student_credits')
-    .select('id, balance_rappen')
-    .eq('user_id', userProfile.id)
-    .maybeSingle()
+  const credited = alreadyCredited || await incrementStudentCredit(supabaseAdmin, {
+    userId: userProfile.id,
+    tenantId: userProfile.tenant_id,
+    amountRappen: creditAmountRappen,
+  }).then(row => ({ old_balance: row.balance_rappen - creditAmountRappen, new_balance: row.balance_rappen }))
+  const newBalance = credited.new_balance
+  const oldBalance = credited.old_balance
 
-  if (creditError) {
-    throw createError({ statusCode: 500, message: 'Fehler beim Laden des Guthabens' })
-  }
-
-  const oldBalance = studentCredit?.balance_rappen || 0
-  const newBalance = oldBalance + creditAmountRappen
-
-  if (studentCredit) {
-    const { error: updateError } = await supabaseAdmin
-      .from('student_credits')
-      .update({ balance_rappen: newBalance, updated_at: new Date().toISOString() })
-      .eq('id', studentCredit.id)
-    if (updateError) throw createError({ statusCode: 500, message: 'Fehler beim Aktualisieren des Guthabens' })
-  } else {
-    const { error: insertError } = await supabaseAdmin
-      .from('student_credits')
-      .insert({ user_id: userProfile.id, tenant_id: userProfile.tenant_id, balance_rappen: newBalance })
-    if (insertError) throw createError({ statusCode: 500, message: 'Fehler beim Erstellen des Guthabens' })
-  }
-
-  // Credit transaction
-  const { data: creditTransaction, error: txError } = await supabaseAdmin
+  const { error: txError } = await supabaseAdmin
     .from('credit_transactions')
     .insert({
       user_id: userProfile.id,
@@ -233,27 +222,10 @@ async function applyCredit({
       notes: `Gutschein eingelöst: ${code}${description ? ` - ${description}` : ''}`,
       tenant_id: userProfile.tenant_id
     })
-    .select('id')
-    .single()
 
   if (txError) {
-    console.error('❌ Error creating credit transaction:', txError)
-    throw createError({ statusCode: 500, message: 'Fehler beim Erstellen der Transaktion' })
+    logger.warn('⚠️ Credit transaction log failed after redeem (wallet already credited)', txError)
   }
-
-  // Redemption record (only for voucher_codes, not vouchers table)
-  if (redemptionPayload) {
-    const { error: redemptionError } = await supabaseAdmin
-      .from('voucher_redemptions')
-      .insert({ ...redemptionPayload, credit_transaction_id: creditTransaction.id })
-    if (redemptionError) {
-      console.error('❌ Error creating redemption record:', redemptionError)
-      throw createError({ statusCode: 500, message: 'Fehler beim Speichern der Einlösung' })
-    }
-  }
-
-  // Mark as used (updates voucher_codes.current_redemptions or vouchers.redeemed_at)
-  await updateRedemptionCount()
 
   logger.debug('✅ Voucher redeemed:', { code, creditAmountRappen, newBalance })
 

@@ -117,26 +117,15 @@ const confirmPayment = async () => {
       amount: props.payment.total_amount_rappen
     })
     
-    // Direkt in der Datenbank speichern
-    const supabase = getSupabase()
-    
-    const updateData = {
-      payment_status: 'completed',
-      paid_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-    
-    // Payment als completed markieren
-    const { data, error: paymentError } = await supabase
-      .from('payments')
-      .update(updateData)
-      .eq('id', props.payment.id)
-      .eq('tenant_id', props.payment.tenant_id) // ← RLS Filter erforderlich
-      .select() // Return the updated row
-    
-    if (paymentError) {
-      logger.error('CashPaymentConfirmation', 'Supabase error updating payment', paymentError)
-      throw paymentError
+    const result = await $fetch<{ success?: boolean; error?: string }>('/api/payments/manage', {
+      method: 'POST',
+      body: {
+        action: 'mark-completed',
+        paymentId: props.payment.id,
+      },
+    })
+    if (result && result.success === false) {
+      throw new Error(result.error || 'Zahlung konnte nicht bestätigt werden')
     }
     
     logger.info('CashPaymentConfirmation', 'Cash payment confirmed successfully', {
