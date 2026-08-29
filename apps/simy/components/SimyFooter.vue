@@ -46,8 +46,11 @@
           <p class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Features</p>
           <ul class="space-y-2.5">
             <li><a href="/features/kalender" class="footer-link">Kalender & Planung</a></li>
-            <li><a href="/features/rechnungen" class="footer-link">Rechnungen & Kasse</a></li>
-            <li><a href="/features/kurse" class="footer-link">Kursbuchungsseite</a></li>
+            <li><a href="/features/rechnungen" class="footer-link">Rechnungen & Guthaben</a></li>
+            <li><a href="/features/kurse" class="footer-link">Kurse & Warteliste</a></li>
+            <li><a href="/fahrschule/schuelerportal" class="footer-link">Schülerportal</a></li>
+            <li><a href="/fahrschule/dokumentation" class="footer-link">Dokumentation & PDF</a></li>
+            <li><a href="/fahrschule/abholung" class="footer-link">Abholung & Radius</a></li>
             <li><a href="/website" class="footer-link">Website-Generator</a></li>
             <li><a href="/features/google-business-profile" class="footer-link">Google Business Profile</a></li>
             <li><a href="/marketing" class="footer-link">Marketing</a></li>
@@ -86,6 +89,7 @@
         </div>
       </div>
 
+      <p class="text-xs text-gray-600 mb-4">{{ PRICE_VAT_NOTE }}</p>
       <div class="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <p class="text-xs text-gray-600">© {{ new Date().getFullYear() }} Simy IT Systems · Pascal Kilchenmann · <a href="mailto:info@simy.ch" class="hover:text-gray-400 transition-colors">info@simy.ch</a></p>
         <div class="flex gap-4 text-xs">
@@ -106,6 +110,7 @@ import {
   SIMY_BRAND_STORAGE_KEY,
   simyLogoColorFilter,
 } from '~/utils/brand'
+import { PRICE_VAT_NOTE } from '~/data/pricing'
 
 const props = defineProps<{
   logoSrc?: string | null

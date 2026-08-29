@@ -90,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+import { PRICE_VAT_NOTE_SHORT } from '~/data/pricing'
 import { breadcrumbLd, ldScripts, softwareAppLd, webPageLd } from '~/utils/schema'
 const { registerCta } = useRegisterCta()
 
@@ -127,7 +128,7 @@ const steps = [
   { title: 'Registrieren', desc: 'Angaben zu deinem Betrieb und Team eingeben — fertig. Keine weiteren Angaben nötig.' },
   { title: 'Einrichten', desc: 'Setup-Wizard führt dich durch Kategorien, Preise und Standorte.' },
   { title: 'Ausprobieren', desc: '30 Tage alle Features nutzen — Terminbuchung, Rechnungen, App, Website.' },
-  { title: 'Entscheiden', desc: 'Nach 30 Tagen ab CHF 49/Mt. oder gratis kündigen — ohne Diskussion.' },
+  { title: 'Entscheiden', desc: `Nach 30 Tagen ab CHF 49/Mt. (${PRICE_VAT_NOTE_SHORT}) oder gratis kündigen — ohne Diskussion.` },
 ]
 
 const trialFeatures = [
