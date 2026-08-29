@@ -37,7 +37,8 @@ import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
-import { incrementAppointmentDiscountUsage, netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
+import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
+import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockCheckoutBenefits } from '~/server/utils/checkout-benefits'
 import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
@@ -869,6 +870,23 @@ export default defineEventHandler(async (event: H3Event) => {
       logger.warn('⚠️ Warning: Appointment created, but payment record failed.')
     } else {
       logger.debug('✅ Payment record created successfully:', newPayment.id)
+      if (discountCodeToTrack && tenantId) {
+        const locked = await lockCheckoutBenefits({
+          supabase,
+          tenantId,
+          paymentId: newPayment.id,
+          code: discountCodeToTrack,
+        })
+        if (!locked.ok) {
+          logger.warn('⚠️ Discount could not be locked, aborting booking', locked.reason)
+          await abortCheckoutAfterBenefitLockFail({
+            supabase,
+            paymentId: newPayment.id,
+            appointmentId: newAppointment.id,
+          })
+          throw createError(benefitLockUnavailablePayload(locked.reason))
+        }
+      }
     }
 
     let remainingDue = netAmountRappen
@@ -969,14 +987,6 @@ export default defineEventHandler(async (event: H3Event) => {
           statusMessage: checkoutErr?.statusMessage || 'Zahlung konnte nicht gestartet werden',
         })
       }
-    }
-
-    if (discountCodeToTrack && tenantId) {
-      incrementAppointmentDiscountUsage({
-        supabase,
-        tenantId,
-        code: discountCodeToTrack,
-      }).catch(() => {})
     }
 
     // ============ LAYER 9: Mark all reserved slots as definitively booked ============

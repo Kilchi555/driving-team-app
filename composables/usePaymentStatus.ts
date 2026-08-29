@@ -75,6 +75,10 @@ export const usePaymentStatus = () => {
     
     try {
       logger.debug('🔄 Updating payment status:', update)
+
+      if (['completed', 'authorized', 'paid', 'succeeded'].includes(update.status)) {
+        throw new Error('Zahlungsstatus completed darf nur über die Server-API gesetzt werden')
+      }
       
       // Update payment record
       const { error: paymentError } = await supabase
