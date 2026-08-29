@@ -209,6 +209,7 @@
       :title="`SEO-Website für ${v.navLabel}`"
       :subtitle="`Eine schnelle Landingpage für ${v.navLabel} — mit Preisen, Standorten und Bewertungen. Vorschau sofort, live erst wenn du bereit bist.`"
       :preview-host="`simy.ch/s/deine-${v.slug}`"
+      :industry="v.slug"
     />
 
     <SimyGbpHighlight :business-type="v.businessType" :slug="v.slug" />

@@ -35,7 +35,7 @@ export default defineNuxtConfig({
     head: {
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
-      htmlAttrs: { lang: 'de' },
+      htmlAttrs: { lang: 'de', class: 'simy-motion' },
       titleTemplate: '%s',
       meta: [
         { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
@@ -66,6 +66,9 @@ export default defineNuxtConfig({
         {
           innerHTML: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied'});`,
         },
+      ],
+      noscript: [
+        { innerHTML: '<style>html.simy-motion section,html.simy-motion footer,html.simy-motion [data-reveal],html.simy-motion [data-reveal-stagger]>:*,html.simy-motion [data-reveal-split]>*{opacity:1!important;transform:none!important;animation:none!important}</style>' },
       ],
     },
   },
