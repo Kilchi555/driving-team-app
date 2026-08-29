@@ -9,6 +9,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateUUID } from '~/server/utils/validators'
+import { isRefundedPaymentStatus } from '~/utils/payment-status'
 
 interface ConfirmCashRequest {
   paymentId: string
@@ -141,6 +142,10 @@ export default defineEventHandler(async (event) => {
         details: auditDetails
       })
       throw createError({ statusCode: 404, statusMessage: 'Cash payment not found' })
+    }
+
+    if (isRefundedPaymentStatus(payment.payment_status)) {
+      throw createError({ statusCode: 409, statusMessage: 'Rückvergütete Zahlungen können nicht als bezahlt markiert werden.' })
     }
 
     // Check if already completed

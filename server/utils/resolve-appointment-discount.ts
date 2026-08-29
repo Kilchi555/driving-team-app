@@ -1,5 +1,6 @@
 import { matchesDiscountCategoryFilter } from '~/server/utils/discount-category-filter'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
+import { incrementDiscountUsageAtomic, incrementVoucherCodeRedemptionAtomic } from '~/server/utils/wallet-atomic'
 import { logger } from '~/utils/logger'
 
 export type AppointmentDiscountSource = 'voucher_code' | 'gift_card' | 'discount' | null
@@ -189,9 +190,9 @@ export async function incrementAppointmentDiscountUsage(opts: {
   supabase: any
   tenantId: string
   code: string
-}): Promise<void> {
+}): Promise<boolean> {
   const escaped = escapeLikePattern(opts.code.trim())
-  if (!escaped || !opts.tenantId) return
+  if (!escaped || !opts.tenantId) return true
 
   try {
     const { data: disc } = await opts.supabase
@@ -202,11 +203,7 @@ export async function incrementAppointmentDiscountUsage(opts: {
       .maybeSingle()
 
     if (disc) {
-      await opts.supabase
-        .from('discounts')
-        .update({ usage_count: (disc.usage_count ?? 0) + 1 })
-        .eq('id', disc.id)
-      return
+      return incrementDiscountUsageAtomic(opts.supabase, disc.id)
     }
 
     const { data: vc } = await opts.supabase
@@ -217,12 +214,11 @@ export async function incrementAppointmentDiscountUsage(opts: {
       .maybeSingle()
 
     if (vc) {
-      await opts.supabase
-        .from('voucher_codes')
-        .update({ current_redemptions: (vc.current_redemptions ?? 0) + 1 })
-        .eq('id', vc.id)
+      return incrementVoucherCodeRedemptionAtomic(opts.supabase, vc.id)
     }
+    return true
   } catch (e: any) {
-    logger.warn('⚠️ Failed to increment discount usage (non-critical):', e.message)
+    logger.warn('⚠️ Failed to increment discount usage:', e.message)
+    return false
   }
 }

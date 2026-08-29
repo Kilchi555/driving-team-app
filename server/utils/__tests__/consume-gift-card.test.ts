@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   consumeGiftCardByCode,
+  consumeGiftCardForPayment,
   giftCardCodeFromPaymentMetadata,
 } from '../consume-gift-card'
 
@@ -12,48 +13,12 @@ describe('giftCardCodeFromPaymentMetadata', () => {
   })
 })
 
-function mockVoucherClient(results: Array<{ data: { id: string } | null }>) {
-  let calls = 0
-  return {
-    from(table: string) {
-      expect(table).toBe('vouchers')
-      return {
-        update() {
-          return {
-            ilike() {
-              return {
-                eq() {
-                  return {
-                    is() {
-                      return {
-                        select() {
-                          return {
-                            async maybeSingle() {
-                              const result = results[calls] || { data: null }
-                              calls += 1
-                              return { data: result.data, error: null }
-                            },
-                          }
-                        },
-                      }
-                    },
-                  }
-                },
-              }
-            },
-          }
-        },
-      }
-    },
-  }
-}
-
 describe('consumeGiftCardByCode', () => {
-  it('consumes the first redeem and rejects the second CAS update', async () => {
-    const supabase = mockVoucherClient([
-      { data: { id: 'voucher-1' } },
-      { data: null },
-    ])
+  it('redeems only via the unreserved RPC and does not fall back to a table update', async () => {
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({ data: true, error: null })
+      .mockResolvedValueOnce({ data: false, error: null })
+    const supabase = { rpc, from: vi.fn() }
 
     const first = await consumeGiftCardByCode({
       supabase,
@@ -70,5 +35,35 @@ describe('consumeGiftCardByCode', () => {
 
     expect(first).toEqual({ consumed: true, alreadyRedeemed: false })
     expect(second).toEqual({ consumed: false, alreadyRedeemed: true })
+    expect(supabase.from).not.toHaveBeenCalled()
+    expect(rpc).toHaveBeenNthCalledWith(1, 'consume_gift_card_for_payment', {
+      p_tenant_id: 't1',
+      p_code: 'GIFT-1',
+      p_payment_id: null,
+      p_redeemed_by: 'user-1',
+    })
+  })
+})
+
+describe('consumeGiftCardForPayment', () => {
+  it('never falls back to an unscoped table consume', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: false, error: null })
+    const supabase = { rpc, from: vi.fn() }
+
+    await expect(consumeGiftCardForPayment({
+      supabase,
+      tenantId: 't1',
+      paymentId: 'pay-1',
+      discountCode: 'GIFT-1',
+      redeemedBy: 'user-1',
+    })).resolves.toEqual({ consumed: false })
+
+    expect(supabase.from).not.toHaveBeenCalled()
+    expect(rpc).toHaveBeenCalledWith('consume_gift_card_for_payment', {
+      p_tenant_id: 't1',
+      p_code: 'GIFT-1',
+      p_payment_id: 'pay-1',
+      p_redeemed_by: 'user-1',
+    })
   })
 })
