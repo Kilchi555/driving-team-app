@@ -107,6 +107,24 @@
       </div>
     </section>
 
+    <section class="py-20 px-6 bg-[#f7f6fa] border-y border-gray-100">
+      <div class="max-w-5xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">Warteliste</p>
+          <h2 class="text-3xl font-extrabold text-gray-900 mb-4">VKU voll — niemand mehr im Chat</h2>
+          <p class="text-gray-500 leading-relaxed mb-6">
+            Ist der Kurs ausgebucht, trägt sich der Interessent auf die Warteliste. Du siehst die Reihenfolge im Admin. Nachrücken, wenn ein Platz frei wird — statt Nummern in WhatsApp.
+          </p>
+          <ol class="space-y-3 text-sm text-gray-700">
+            <li><strong>1.</strong> Kurs mit Platzlimit veröffentlichen.</li>
+            <li><strong>2.</strong> Anmeldung oder Warteliste — je nach Restplätzen.</li>
+            <li><strong>3.</strong> Freiwerdender Platz: du holst die nächste Person nach.</li>
+          </ol>
+        </div>
+        <SimyWaitlistMock />
+      </div>
+    </section>
+
     <SimyWebsiteHighlight
       title="Kursseite braucht eine echte Website davor"
       subtitle="Google findet zuerst die Landingpage — dann die Kursbuchung. Simy baut beides, die Website auch allein."
@@ -131,12 +149,13 @@
 <script setup lang="ts">
 import { VERTICAL_ICON_BY_SLUG } from '~/utils/icons'
 import { breadcrumbLd, ldScripts, softwareAppLd, webPageLd } from '~/utils/schema'
+import { WALLEE_FEE_PERCENT, WALLEE_FEE_PRICE_TIP } from '~/data/pricing'
 const { registerCta } = useRegisterCta()
 
 useHead({
   title: 'Kursbuchungsseite – Gruppenkurse online verkaufen | Simy',
   meta: [
-    { name: 'description', content: 'Kursbuchungsseite für Schweizer Dienstleister: Plätze, Anmeldung, Online-Zahlung und Warteliste. Ideal für Fahrschule, Hundeschule, Musikschule und Nachhilfe. 30 Tage gratis.' },
+    { name: 'description', content: 'Kursbuchungsseite mit Warteliste: VKU, Theorie und Gruppenkurse online. Plätze sichtbar, Nachrücken statt WhatsApp. 30 Tage gratis.' },
     { name: 'keywords', content: 'kursbuchungsseite, kursverwaltung software, gruppenkurs buchen, online kursanmeldung schweiz, welpenkurs software, theoriekurs buchung' },
     { property: 'og:title', content: 'Kursbuchungsseite – Gruppenkurse online verkaufen | Simy' },
     { property: 'og:description', content: 'Kunden melden sich selbst zu Kursen an und zahlen online — Plätze und Rechnung unter Kontrolle.' },
@@ -165,8 +184,8 @@ useHead({
 const courseFeatures = [
   { icon: 'school', title: 'Eigene Kursseite', desc: 'Öffentlicher Link mit Branding — Kunden sehen Datum, Ort, Preis und freie Plätze.' },
   { icon: 'users', title: 'Platzkontingente', desc: 'Maximale Teilnehmerzahl, Restplätze live — keine Überbuchung per WhatsApp.' },
-  { icon: 'credit-card', title: 'Online-Zahlung', desc: 'Anmeldung mit TWINT, Karte oder QR-Rechnung — je nach Plan und Setup.' },
-  { icon: 'clipboard', title: 'Warteliste', desc: 'Wenn der Kurs voll ist, landen Interessenten auf der Warteliste statt im Chat.' },
+  { icon: 'credit-card', title: 'Online-Zahlung', desc: `Anmeldung mit TWINT, Karte oder QR-Rechnung — ${WALLEE_FEE_PERCENT} Transaktionsgebühr. ${WALLEE_FEE_PRICE_TIP}` },
+  { icon: 'clipboard', title: 'Warteliste', desc: 'Kurs voll? Interessenten reihen sich ein. Du holst nach, wenn ein Platz frei wird — ohne Chat-Nummer.' },
   { icon: 'calendar', title: 'Neben Einzelterminen', desc: '1:1-Buchung und Gruppenkurse in derselben All-in-One Software.' },
   { icon: 'bell', title: 'Erinnerungen', desc: 'Automatische Bestätigung und Reminder an Teilnehmer — weniger No-Shows.' },
 ]

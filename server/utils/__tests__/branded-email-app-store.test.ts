@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { emailAppStoreBlock, emailAppointmentAppStoreBlock } from '../branded-email'
+import {
+  buildSimyPlatformEmail,
+  emailAppStoreBlock,
+  emailAppointmentAppStoreBlock,
+  SIMY_LOGO_URL,
+} from '../branded-email'
 
 describe('emailAppStoreBlock', () => {
   it('renders the App Store CTA by default', () => {
@@ -15,5 +20,19 @@ describe('emailAppStoreBlock', () => {
 
   it('keeps the appointment caption when enabled', () => {
     expect(emailAppointmentAppStoreBlock(true)).toContain('Mitteilungen und Termine in der iPhone-App')
+  })
+})
+
+describe('buildSimyPlatformEmail', () => {
+  it('uses the Simy logo, purple header and eyebrow', () => {
+    const html = buildSimyPlatformEmail({
+      eyebrow: 'Simy · Termin',
+      title: 'Termin verschoben',
+      bodyHtml: '<p>Hallo</p>',
+    })
+    expect(html).toContain(SIMY_LOGO_URL)
+    expect(html).toContain('Simy · Termin')
+    expect(html).toContain('Termin verschoben')
+    expect(html).toContain('#6000BD')
   })
 })

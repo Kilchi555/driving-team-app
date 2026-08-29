@@ -27,6 +27,12 @@ describe('getTerminologyDefaults', () => {
     expect(t.appointment).toBe('Beratung')
     expect(t.appointmentsPlural).toBe('Beratungen')
     expect(t.businessNoun).toBe('Consulting-Unternehmen')
+    expect(t.documentationLabel).toBe('Dokumentation')
+  })
+
+  it('keeps Bewertungen as the Fahrschul documentation tab', () => {
+    expect(getTerminologyDefaults('driving_school').documentationLabel).toBe('Bewertungen')
+    expect(getTerminologyDefaults('generic').documentationLabel).toBe('Dokumentation')
   })
 
   it('returns mental_coach labels', () => {

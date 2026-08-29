@@ -45,6 +45,8 @@ Mindestens ein Name bleibt immer erforderlich.
 
 **Terminbestätigungen versenden** und **Staff bei Anfragen & Online-Buchungen benachrichtigen**.
 
+**Kunde bei Terminänderung informieren** — welche Änderungen eine E-Mail (und SMS, falls aktiv) auslösen. Standard: nur Datum oder Startzeit. Optional zusätzlich: Dauer, zugewiesener Staff, Treffpunkt, Fahrzeug/Raum. Alle Haken aus = keine Benachrichtigung beim Bearbeiten.
+
 Zusätzlich unter **Einstellungen → Online-Buchung**: öffentliche Portal-Links und die **Mindest-Vorlaufzeit** in Stunden.
 
 ## Rückerstattungen durch Staff
