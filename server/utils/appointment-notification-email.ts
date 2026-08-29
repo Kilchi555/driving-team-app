@@ -7,7 +7,12 @@ import { logger } from '~/utils/logger'
 import { sendPushToUser } from '~/server/utils/push'
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
-import { displayName, emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
+import {
+  buildSimyPlatformEmail,
+  displayName,
+  emailAppointmentAppStoreBlock,
+  simyCtaButton,
+} from '~/server/utils/branded-email'
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 import { meetingLinkAnchor } from '~/server/utils/meeting-link'
 import {
@@ -44,7 +49,15 @@ export interface AppointmentNotificationBody {
   isLessonType?: boolean
   meeting_type?: 'in_person' | 'phone' | 'online'
   meeting_link?: string
+  /** When set, missing vehicle/room labels are loaded from the appointment */
+  appointmentId?: string | null
+  /** Shown only when the booking used a vehicle option */
+  vehicleLabel?: string | null
+  /** Shown only when a room was auto-assigned */
+  roomName?: string | null
   terms?: Terminology
+  /** Which fields triggered a reschedule mail (datetime, duration, staff, …) */
+  changedFields?: string[]
   /** Hide login / "Zum Kundenkonto" buttons when the tenant disabled customer accounts */
   omitAccountCta?: boolean
   /** Hide App Store download when the tenant does not want customer accounts / onboarding */
@@ -85,6 +98,12 @@ function buildDetailBox(data: AppointmentNotificationBody, primaryColor: string,
       : '',
     (!isPhoneOrOnline && data.location)
       ? `<p style="margin:5px 0;color:#374151"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#6b7280">${data.locationAddress}</span>` : ''}</p>`
+      : '',
+    data.vehicleLabel
+      ? `<p style="margin:5px 0;color:#374151"><strong>Fahrzeug:</strong> ${data.vehicleLabel}</p>`
+      : '',
+    data.roomName
+      ? `<p style="margin:5px 0;color:#374151"><strong>Raum:</strong> ${data.roomName}</p>`
       : '',
     (showPrice && data.amount)
       ? `<p style="margin:5px 0;color:#374151"><strong>Betrag:</strong> ${data.amount}</p>`
@@ -205,8 +224,9 @@ const TEMPLATES = {
   
   cancelled: {
     subject: 'Termin storniert',
-    getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
+    getHtml: (data: AppointmentNotificationBody, _primaryColor: string, _logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
+      const tenantName = data.tenantName || terms.businessNoun
       const cta = resolveAppointmentEmailCta({
         type: 'cancelled',
         omitAccountCta: data.omitAccountCta,
@@ -214,75 +234,57 @@ const TEMPLATES = {
         customerDashboard: data.customerDashboard,
         appointmentNoun: terms.appointment,
       })
-      
-      // ✅ Payment & Refund details
+      const ctaHtml = cta
+        ? `${cta.leadIn ? `<p style="margin:24px 0 0;font-size:15px;line-height:1.55;color:#374151">${cta.leadIn}</p>` : ''}${simyCtaButton(cta.href, cta.label)}`
+        : ''
+
       const wasPaid = data.wasPaid || false
       const chargePercentage = data.chargePercentage || 0
       const refundAmount = data.refundAmount
       const chargeAmount = data.chargeAmount
-      
-      return `
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
-    <tr>
-      <td>
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
-          ${logoRow(logoUrl, data.tenantName || 'Simy')}
-          <tr>
-            <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Termin storniert</h1>
-              <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85)">${displayName(data.tenantName || terms.businessNoun)}</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 30px;">
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
-              
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">leider wurde dein Termin storniert.</p>
-              
-              <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Stornierter Termin:</strong> ${data.appointmentTime}</p>` : ''}
-                ${data.cancellationReason ? `<p style="margin: 5px 0; color: #374151;"><strong>Grund:</strong> ${data.cancellationReason}</p>` : ''}
-              </div>
-              
-              ${wasPaid || chargePercentage > 0 ? `
-              <div style="background-color: #f0f9ff; border-left: 4px solid #0284c7; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                <p style="margin: 0 0 10px 0; color: #374151; font-weight: bold;">Zahlungsinformationen:</p>
-                ${wasPaid ? `<p style="margin: 5px 0; color: #374151;">✅ Termin war bereits bezahlt</p>` : `<p style="margin: 5px 0; color: #374151;">ℹ️ Termin war noch nicht bezahlt</p>`}
-                ${chargePercentage === 0 ? `
-                  <p style="margin: 5px 0; color: #10b981; font-weight: bold;">✅ Kostenlose Stornierung (keine Verrechnung)</p>
-                  ${wasPaid && refundAmount ? `<p style="margin: 5px 0; color: #10b981;">💰 Rückerstattung auf Guthaben: ${refundAmount}</p>` : ''}
-                ` : `
-                  <p style="margin: 5px 0; color: #dc2626; font-weight: bold;">⚠️ Stornierungsgebühr: ${chargePercentage}%</p>
-                  ${chargeAmount ? `<p style="margin: 5px 0; color: #dc2626;">Zu zahlender Betrag: ${chargeAmount}</p>` : ''}
-                `}
-              </div>
-              ` : ''}
-              
-              ${appointmentEmailCtaHtml(cta, primaryColor)}
-              
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Beste Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
-              ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color: #f9fafb; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; border-radius: 0 0 8px 8px;">
-              <p style="color: #6b7280; font-size: 12px; margin: 0;">Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-      `
+
+      const paymentCard = wasPaid || chargePercentage > 0
+        ? `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:14px;padding:16px 18px;margin:12px 0 0">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6000BD">Zahlung</p>
+        ${wasPaid ? `<p style="margin:0 0 4px;font-size:14px;color:#374151">Termin war bereits bezahlt</p>` : `<p style="margin:0 0 4px;font-size:14px;color:#374151">Termin war noch nicht bezahlt</p>`}
+        ${chargePercentage === 0
+          ? `<p style="margin:0;font-size:14px;font-weight:700;color:#047857">Kostenlose Stornierung${wasPaid && refundAmount ? ` · Guthaben ${refundAmount}` : ''}</p>`
+          : `<p style="margin:0;font-size:14px;font-weight:700;color:#b91c1c">Stornierungsgebühr ${chargePercentage}%${chargeAmount ? ` · ${chargeAmount}` : ''}</p>`}
+      </div>`
+        : ''
+
+      return buildSimyPlatformEmail({
+        eyebrow: 'Simy · Termin',
+        title: 'Termin storniert',
+        subtitle: displayName(tenantName),
+        documentTitle: 'Termin storniert',
+        bodyHtml: `
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#374151">Hallo ${firstName},</p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#374151">leider wurde dein Termin storniert.</p>
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:16px 18px">
+        ${data.appointmentTime ? `<p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#991b1b">${data.appointmentTime}</p>` : ''}
+        ${data.cancellationReason ? `<p style="margin:0;font-size:13px;color:#7f1d1d">Grund: ${data.cancellationReason}</p>` : ''}
+      </div>
+      ${paymentCard}
+      ${ctaHtml}
+      <p style="margin:28px 0 0;font-size:15px;line-height:1.55;color:#374151">Beste Grüsse,<br><strong>${displayName(tenantName)}</strong></p>
+      ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}`,
+        footerHtml: `${displayName(tenantName)} · <a href="https://simy.ch" style="color:#9ca3af;text-decoration:none">Simy.ch</a>`,
+      })
     }
   },
   
   rescheduled: {
-    subject: 'Termin verschoben - Neue Zeit',
-    getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
+    subject: 'Termin geändert',
+    getHtml: (data: AppointmentNotificationBody, _primaryColor: string, _logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
+      const tenantName = data.tenantName || terms.businessNoun
+      const changed = Array.isArray(data.changedFields) ? data.changedFields : []
+      const isDatetimeChange = changed.length === 0 || changed.includes('datetime')
+      const heading = isDatetimeChange ? 'Termin verschoben' : 'Termin geändert'
+      const intro = isDatetimeChange
+        ? 'dein Termin wurde auf einen neuen Zeitpunkt verschoben.'
+        : 'dein Termin wurde angepasst. Bitte prüfe die neuen Angaben.'
       const cta = resolveAppointmentEmailCta({
         type: 'rescheduled',
         omitAccountCta: data.omitAccountCta,
@@ -290,65 +292,45 @@ const TEMPLATES = {
         customerDashboard: data.customerDashboard,
         appointmentNoun: terms.appointment,
       })
-      
-      return `
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
-    <tr>
-      <td>
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
-          ${logoRow(logoUrl, data.tenantName || 'Simy')}
-          <tr>
-            <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Termin verschoben</h1>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 30px;">
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
-              
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">dein Termin wurde auf einen neuen Zeitpunkt verschoben:</p>
-              
-              <!-- Alter Termin - durchgestrichen -->
-              ${data.oldTime ? `
-              <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0 10px 0; border-radius: 4px;">
-                <p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>❌ Alter Termin:</strong> ${data.oldTime}</p>
-                ${data.staffName ? `<p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>${terms.staff}:</strong> ${data.staffName}</p>` : ''}
-                ${data.location ? `<p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px">${data.locationAddress}</span>` : ''}</p>` : ''}
-              </div>
-              ` : ''}
-              
-              <!-- Pfeil nach unten -->
-              <div style="text-align: center; margin: 10px 0;">
-                <p style="font-size: 32px; margin: 0; color: #16a34a;">⬇️</p>
-              </div>
-              
-              <!-- Neuer Termin - hervorgehoben -->
-              ${data.newTime ? `
-              <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; margin: 10px 0 20px 0; border-radius: 4px;">
-                <p style="margin: 5px 0; color: #065f46; font-size: 18px;"><strong>✅ Neuer Termin:</strong> ${data.newTime}</p>
-                ${data.staffName ? `<p style="margin: 5px 0; color: #065f46;"><strong>${terms.staff}:</strong> ${data.staffName}</p>` : ''}
-                ${data.location ? `<p style="margin: 5px 0; color: #065f46;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#047857">${data.locationAddress}</span>` : ''}</p>` : ''}
-              </div>
-              ` : ''}
-              
-              ${appointmentEmailCtaHtml(cta, primaryColor)}
-              
-              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${displayName(data.tenantName || terms.businessNoun)}</strong></p>
-              ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}
-            </td>
-          </tr>
-          <tr>
-            <td style="background-color: #f9fafb; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; border-radius: 0 0 8px 8px;">
-              <p style="color: #6b7280; font-size: 12px; margin: 0;">Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-      `
+      const ctaHtml = cta
+        ? `${cta.leadIn ? `<p style="margin:24px 0 0;font-size:15px;line-height:1.55;color:#374151">${cta.leadIn}</p>` : ''}${simyCtaButton(cta.href, cta.label)}`
+        : ''
+
+      const oldCard = data.oldTime
+        ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:16px 18px;margin:0 0 10px">
+        <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#b91c1c">Bisher</p>
+        <p style="margin:0;font-size:16px;font-weight:700;color:#991b1b;text-decoration:line-through">${data.oldTime}</p>
+        ${data.staffName ? `<p style="margin:8px 0 0;font-size:13px;color:#991b1b;text-decoration:line-through">${terms.staff}: ${data.staffName}</p>` : ''}
+        ${data.location ? `<p style="margin:4px 0 0;font-size:13px;color:#991b1b;text-decoration:line-through">Ort: ${data.location}${data.locationAddress ? `<br><span style="font-size:12px">${data.locationAddress}</span>` : ''}</p>` : ''}
+      </div>`
+        : ''
+
+      const newCard = data.newTime
+        ? `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:14px;padding:16px 18px;margin:0 0 8px">
+        <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6000BD">Neu</p>
+        <p style="margin:0;font-size:18px;font-weight:800;color:#4c1d95">${data.newTime}</p>
+        ${data.staffName ? `<p style="margin:8px 0 0;font-size:13px;color:#5b21b6">${terms.staff}: ${data.staffName}</p>` : ''}
+        ${data.location ? `<p style="margin:4px 0 0;font-size:13px;color:#5b21b6">Ort: ${data.location}${data.locationAddress ? `<br><span style="font-size:12px;color:#6d28d9">${data.locationAddress}</span>` : ''}</p>` : ''}
+        ${data.vehicleLabel ? `<p style="margin:4px 0 0;font-size:13px;color:#5b21b6">Fahrzeug: ${data.vehicleLabel}</p>` : ''}
+        ${data.roomName ? `<p style="margin:4px 0 0;font-size:13px;color:#5b21b6">Raum: ${data.roomName}</p>` : ''}
+      </div>`
+        : ''
+
+      return buildSimyPlatformEmail({
+        eyebrow: 'Simy · Termin',
+        title: heading,
+        subtitle: displayName(tenantName),
+        documentTitle: heading,
+        bodyHtml: `
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#374151">Hallo ${firstName},</p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#374151">${intro}</p>
+      ${oldCard}
+      ${newCard}
+      ${ctaHtml}
+      <p style="margin:28px 0 0;font-size:15px;line-height:1.55;color:#374151">Freundliche Grüsse,<br><strong>${displayName(tenantName)}</strong></p>
+      ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}`,
+        footerHtml: `${displayName(tenantName)} · <a href="https://simy.ch" style="color:#9ca3af;text-decoration:none">Simy.ch</a>`,
+      })
     }
   }
   ,
@@ -379,6 +361,8 @@ const TEMPLATES = {
               ${data.eventTypeName ? `<p style="margin:5px 0;color:#374151;"><strong>Art:</strong> ${data.eventTypeName}</p>` : ''}
               <p style="margin:5px 0;color:#374151;"><strong>${terms.client}:</strong> ${data.studentName}</p>
               ${data.location ? `<p style="margin:5px 0;color:#374151;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#6b7280">${data.locationAddress}</span>` : ''}</p>` : ''}
+              ${data.vehicleLabel ? `<p style="margin:5px 0;color:#374151;"><strong>Fahrzeug:</strong> ${data.vehicleLabel}</p>` : ''}
+              ${data.roomName ? `<p style="margin:5px 0;color:#374151;"><strong>Raum:</strong> ${data.roomName}</p>` : ''}
               ${data.amount ? `<p style="margin:5px 0;color:#374151;"><strong>Betrag:</strong> ${data.amount}</p>` : ''}
             </div>
             <p style="color:#6b7280;font-size:14px;margin:20px 0 0 0;">Der Termin ist in deinem Kalender sichtbar.</p>
@@ -409,10 +393,39 @@ export type AppointmentNotificationResult = {
   messageId?: string
 }
 
+async function enrichResourceLabels(
+  body: AppointmentNotificationBody
+): Promise<AppointmentNotificationBody> {
+  if (!body.tenantId || !body.appointmentId) return body
+  if (body.vehicleLabel !== undefined || body.roomName !== undefined) return body
+  try {
+    const supabase = getSupabaseAdmin()
+    const { data: appointment } = await supabase
+      .from('appointments')
+      .select('type, location_id, vehicle_mode, room_id')
+      .eq('id', body.appointmentId)
+      .eq('tenant_id', body.tenantId)
+      .maybeSingle()
+    if (!appointment) return body
+    const { loadAppointmentResourceLabels } = await import('~/server/utils/appointment-resource-labels')
+    const labels = await loadAppointmentResourceLabels(supabase, {
+      tenantId: body.tenantId,
+      categoryCode: appointment.type,
+      locationId: appointment.location_id,
+      vehicleMode: appointment.vehicle_mode,
+      roomId: appointment.room_id,
+    })
+    return { ...body, vehicleLabel: labels.vehicleLabel, roomName: labels.roomName }
+  } catch (err: any) {
+    logger.warn('⚠️ Could not load appointment resource labels for email:', err?.message)
+    return body
+  }
+}
+
 export async function sendAppointmentNotificationEmail(
   input: AppointmentNotificationBody
 ): Promise<AppointmentNotificationResult> {
-  let body = { ...input }
+  let body = await enrichResourceLabels({ ...input })
   const { email, studentName, type, tenantId } = body
 
   if (!email || !studentName || !type) {
@@ -457,7 +470,17 @@ export async function sendAppointmentNotificationEmail(
     }
   }
 
-  const subject = template.subject
+  const isDatetimeReschedule =
+    type !== 'rescheduled' ||
+    !Array.isArray(body.changedFields) ||
+    body.changedFields.length === 0 ||
+    body.changedFields.includes('datetime')
+  const subject =
+    type === 'rescheduled'
+      ? isDatetimeReschedule
+        ? 'Termin verschoben - Neue Zeit'
+        : 'Termin geändert'
+      : template.subject
   const html = template.getHtml(
     { ...body, tenantSlug: tenantSlug ?? body.tenantSlug ?? undefined },
     primaryColor,
@@ -491,10 +514,14 @@ export async function sendAppointmentNotificationEmail(
           : 'Ein Termin wurde storniert.',
       },
       rescheduled: {
-        title: '🔄 Termin verschoben',
+        title: isDatetimeReschedule ? '🔄 Termin verschoben' : '🔄 Termin geändert',
         body: body.newTime
-          ? `Neuer Termin: ${body.newTime}`
-          : 'Dein Termin wurde auf einen neuen Zeitpunkt verschoben.',
+          ? isDatetimeReschedule
+            ? `Neuer Termin: ${body.newTime}`
+            : `Aktueller Termin: ${body.newTime}`
+          : isDatetimeReschedule
+            ? 'Dein Termin wurde auf einen neuen Zeitpunkt verschoben.'
+            : 'Dein Termin wurde angepasst.',
       },
       pending_payment: {
         title: '💳 Zahlung ausstehend',
@@ -517,11 +544,18 @@ export async function sendAppointmentNotificationEmail(
   return { success: true, type, email, subject, html, messageId }
 }
 
+export function renderAppointmentDetailHtml(
+  data: AppointmentNotificationBody,
+  terms: Terminology = getTerminologyDefaults('driving_school')
+): string {
+  return buildDetailBox(data, '#2563eb', terms)
+}
+
 /** Render only (for outbound queue fallback). */
 export async function renderAppointmentNotificationEmail(
   input: AppointmentNotificationBody
 ): Promise<{ subject: string; html: string; tenantName?: string }> {
-  let body = { ...input }
+  let body = await enrichResourceLabels({ ...input })
   const template = TEMPLATES[body.type as keyof typeof TEMPLATES]
   if (!template) throw new Error(`Unknown notification type: ${body.type}`)
 
