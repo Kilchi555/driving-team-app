@@ -25,6 +25,16 @@ import logger from '~/utils/logger'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif', 'application/pdf']
+const EXT_TO_MIME: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  pdf: 'application/pdf',
+}
 
 export default defineEventHandler(async (event) => {
   try {
@@ -105,9 +115,13 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 6: Validate file type
-    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-      logger.warn('⚠️ Document upload: Invalid file type', { fileType: file.type })
+    const fileExt = (file.filename?.split('.').pop() || '').toLowerCase()
+    const mimeType = ALLOWED_FILE_TYPES.includes(file.type)
+      ? file.type
+      : EXT_TO_MIME[fileExt] || ''
+
+    if (!mimeType || !ALLOWED_FILE_TYPES.includes(mimeType)) {
+      logger.warn('⚠️ Document upload: Invalid file type', { fileType: file.type, fileExt })
       throw createError({
         statusCode: 400,
         statusMessage: 'Invalid file type. Only JPG, PNG, and PDF are allowed.'
@@ -140,8 +154,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ LAYER 9: Validate filename
-    const fileExt = file.filename?.split('.').pop() || 'jpg'
-    if (!/^[a-z0-9]+$/.test(fileExt.toLowerCase())) {
+    if (!fileExt || !/^[a-z0-9]+$/.test(fileExt)) {
       logger.warn('⚠️ Document upload: Invalid file extension', { ext: fileExt })
       throw createError({
         statusCode: 400,
@@ -163,7 +176,7 @@ export default defineEventHandler(async (event) => {
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('user-documents')
       .upload(fileName, file.data, {
-        contentType: file.type,
+        contentType: mimeType,
         upsert: true // Overwrite if path collision (same ms timestamp)
       })
 
