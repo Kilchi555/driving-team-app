@@ -65,6 +65,6 @@ Accepted extensions remain `.csv`, `.tsv`, `.xlsx`.
 |------|------|
 | `utils/parse-xlsx-rows.client.ts` | exceljs table parse |
 | `pages/admin/data-management.vue` | File UI + CSV/XLSX loaders |
-| `utils/__tests__/…` / `server/utils/__tests__/parse-xlsx-rows.test.ts` | Parser tests (if present) |
+| `server/utils/__tests__/parse-xlsx-rows.test.ts` | Parser unit tests |
 | `components/customer/CourseEnrollmentModal.vue` | 409 / statusMessage surfacing |
 | `package.json` | `exceljs` dependency; no admin `xlsx` import |
