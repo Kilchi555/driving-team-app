@@ -187,16 +187,18 @@
       <div class="max-w-3xl mx-auto text-center">
         <p class="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Preise</p>
         <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Transparent & fair</h2>
-        <p class="text-gray-500 mb-8 text-sm">Ab CHF 49 / Monat. Alle Features inklusive. Monatlich kündbar. 30 Tage kostenlos testen.</p>
+        <p class="text-gray-500 mb-8 text-sm">Ab CHF 49 / Monat. Alle Features inklusive. Monatlich kündbar. 30 Tage kostenlos testen. Alle Preise exkl. MwSt. Aktuell 0 %. Ab Oktober 2026 gilt der offizielle Normalsatz von 8.1 %.</p>
         <div class="grid sm:grid-cols-2 gap-4 text-left max-w-xl mx-auto mb-8">
           <div class="bg-white rounded-2xl p-5 border border-gray-100">
             <p class="text-xs font-bold uppercase text-gray-400 mb-1">Starter</p>
             <p class="text-2xl font-extrabold text-gray-900">CHF 49<span class="text-sm font-normal text-gray-400">/Mo</span></p>
+            <p class="text-[11px] text-gray-400 mt-1">exkl. MwSt. (aktuell 0 %, ab Okt. 2026 8.1 %)</p>
             <p class="text-xs text-gray-500 mt-2">1 Fahrlehrer · alle Features · unbegrenzte Schüler</p>
           </div>
           <div class="bg-[#6000BD] rounded-2xl p-5 border border-purple-700">
             <p class="text-xs font-bold uppercase text-purple-200 mb-1">Team</p>
             <p class="text-2xl font-extrabold text-white">CHF 89<span class="text-sm font-normal text-purple-200">/Mo</span></p>
+            <p class="text-[11px] text-purple-200/80 mt-1">exkl. MwSt. (aktuell 0 %, ab Okt. 2026 8.1 %)</p>
             <p class="text-xs text-purple-200 mt-2">Bis 5 Fahrlehrer · Multi-Standort · Analytik</p>
           </div>
         </div>
@@ -264,6 +266,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { definePageMeta, useHead } from '#imports'
+import { WALLEE_FEE_PRICE_TIP, WALLEE_FEE_RATE_LABEL } from '~/utils/wallee-fee'
 
 definePageMeta({ layout: false })
 
@@ -381,7 +384,7 @@ const painPoints = [
 
 const features = [
   { icon: '📅', title: 'Online-Buchung & Kalender', desc: 'Schüler buchen Fahrstunden direkt online. Automatische Sync mit deinem Kalender.' },
-  { icon: '💳', title: 'Zahlungen & Rechnungen', desc: 'TWINT, Kreditkarte, PostFinance. Rechnungen automatisch erstellt und per E-Mail versendet.' },
+  { icon: '💳', title: 'Zahlungen & Rechnungen', desc: `TWINT, Kreditkarte, PostFinance. Rechnungen automatisch. ${WALLEE_FEE_RATE_LABEL} Transaktionsgebühr — viele heben die Preise um 2–3 % an, damit die App-Kosten gedeckt sind und ein kleiner Gewinn bleibt.` },
   { icon: '👥', title: 'Schülerverwaltung', desc: 'Alle Daten, Lernfortschritte, Dokumente und Notizen zentral und übersichtlich.' },
   { icon: '🔔', title: 'Automatische Erinnerungen', desc: 'Terminerinnerungen, Zahlungsfristen und Prüfungshinweise – Simy erinnert statt du.' },
   { icon: '🎓', title: 'Prüfungsverwaltung', desc: 'Prüfungen erfassen, Experten zuweisen, Ergebnisse tracken und dokumentieren.' },
@@ -423,7 +426,7 @@ const faqs = [
   },
   {
     q: 'Welche Zahlungsmethoden unterstützt Simy?',
-    a: 'Simy unterstützt TWINT, Kreditkarten (Visa, Mastercard), Debitkarte und PostFinance. Zahlungen werden direkt in deinem Dashboard verwaltet.',
+    a: `Simy unterstützt TWINT, Kreditkarten (Visa, Mastercard), Debitkarte und PostFinance. Für Online-Zahlungen via Wallee gilt eine Transaktionsgebühr von ${WALLEE_FEE_RATE_LABEL}. ${WALLEE_FEE_PRICE_TIP}`,
   },
   {
     q: 'Kann ich Simy mit mehreren Fahrlehrern nutzen?',

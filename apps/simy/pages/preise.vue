@@ -33,11 +33,14 @@
             </div>
             <h3 class="font-extrabold text-xl mb-1" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">{{ plan.name }}</h3>
             <p class="text-sm mb-5" :style="plan.highlighted ? 'color: rgba(255,255,255,0.65)' : 'color: #9ca3af'">{{ plan.tagline }}</p>
-            <div class="flex items-baseline gap-1 mb-6">
-              <span class="text-4xl font-black" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">
-                CHF {{ plan.price }}
-              </span>
-              <span class="text-sm" :style="plan.highlighted ? 'color: rgba(255,255,255,0.6)' : 'color: #9ca3af'">/Monat</span>
+            <div class="mb-6">
+              <div class="flex items-baseline gap-1">
+                <span class="text-4xl font-black" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">
+                  CHF {{ plan.price }}
+                </span>
+                <span class="text-sm" :style="plan.highlighted ? 'color: rgba(255,255,255,0.6)' : 'color: #9ca3af'">/Monat</span>
+              </div>
+              <SimyPriceVatNote compact :on-dark="plan.highlighted" />
             </div>
             <ul class="space-y-2.5 mb-8 flex-1">
               <li v-for="f in plan.features" :key="f.text"
@@ -62,6 +65,7 @@
 
         <!-- Feature comparison note -->
         <p class="text-center text-sm text-gray-400">Alle Pläne: DSGVO-konform, Schweizer Server, monatlich kündbar. <a href="#vergleich" class="underline hover:text-gray-600">Vollständiger Feature-Vergleich ↓</a></p>
+        <SimyPriceVatNote class="text-center mt-2" />
       </div>
     </section>
 
@@ -93,6 +97,7 @@
               <p class="text-xs text-gray-500 mt-1">Hosting + max. 1h Support / Monat</p>
             </div>
           </div>
+          <SimyPriceVatNote class="mt-4" />
           <a
             :href="websiteRegisterCta"
             class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm"
@@ -173,7 +178,7 @@
               </div>
               <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-green-50 text-green-700">Inklusive</span>
             </div>
-            <p class="text-xs text-gray-500 leading-relaxed">In jedem Plan enthalten. Es fällt eine Transaktionsgebühr von <strong>1.7%</strong> pro Kundenzahlung an — kein monatlicher Aufpreis.</p>
+            <p class="text-xs text-gray-500 leading-relaxed">In jedem Plan enthalten. Es fällt eine Transaktionsgebühr von <strong>{{ walleeFeePercent }}</strong> pro Kundenzahlung an — kein monatlicher Aufpreis. {{ walleeFeePriceTip }}</p>
           </div>
 
         </div>
@@ -287,13 +292,15 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { breadcrumbLd, faqPageLd, ldScripts, productOffersLd } from '~/utils/schema'
-import { ADDON_GBP_CHF, STARTING_PRICE_CHF, WEBSITE_CARE_CHF, WEBSITE_HOST_CHF, WEBSITE_SETUP_CHF } from '~/data/pricing'
+import { ADDON_GBP_CHF, PRICE_VAT_NOTE, STARTING_PRICE_CHF, WEBSITE_CARE_CHF, WEBSITE_HOST_CHF, WEBSITE_SETUP_CHF, WALLEE_FEE_FAQ, WALLEE_FEE_PERCENT, WALLEE_FEE_PRICE_TIP } from '~/data/pricing'
 const { registerCta } = useRegisterCta()
 const { websiteRegisterCta } = useWebsiteRegisterCta()
 const websiteSetup = WEBSITE_SETUP_CHF
 const websiteHost = WEBSITE_HOST_CHF
 const websiteCare = WEBSITE_CARE_CHF
 const gbpAddon = ADDON_GBP_CHF
+const walleeFeePercent = WALLEE_FEE_PERCENT
+const walleeFeePriceTip = WALLEE_FEE_PRICE_TIP
 
 const openFaq = ref<number | null>(null)
 
@@ -375,12 +382,13 @@ const comparison: { label: string; starter: boolean | string; pro: boolean | str
 const faqs = [
   { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein. Die 30 Tage sind vollständig kostenlos und ohne Kreditkarte. Du wirst erst danach zur Kasse gebeten — und kannst jederzeit kündigen.' },
   { q: 'Kann ich jederzeit upgraden oder downgraden?', a: 'Ja. Planwechsel sind jederzeit möglich und wirken sofort. Beim Upgrade wird der Differenzbetrag anteilsmässig für die verbleibenden Tage des Monats berechnet. Beim Downgrade erhältst du eine Gutschrift auf die nächste Rechnung. Keine Wartezeit, keine manuelle Freischaltung.' },
-  { q: 'Wie funktioniert die Abrechnung?', a: 'Wir stellen monatlich per TWINT, Kreditkarte oder Banküberweisung in Rechnung. Bei Jahresabo wird einmal jährlich abgerechnet.' },
+  { q: 'Wie funktioniert die Abrechnung?', a: `Wir stellen monatlich per TWINT, Kreditkarte oder Banküberweisung in Rechnung. Bei Jahresabo wird einmal jährlich abgerechnet. ${PRICE_VAT_NOTE}` },
   { q: 'Wie funktionieren SMS?', a: 'Jeder Plan enthält SMS-Segmente (Starter 20, Professional 50, Enterprise 100 pro Monat). Bestätigungen und Erinnerungen gehen primär per E-Mail; SMS nur wenn keine E-Mail vorhanden ist. Über das Kontingent hinaus verrechnen wir CHF 0.15 pro Segment automatisch auf der nächsten Rechnung.' },
   { q: 'Was passiert mit meinen Daten, wenn ich kündige?', a: 'Du kannst alle deine Daten jederzeit exportieren. Nach der Kündigung werden die Daten für 30 Tage gespeichert, dann endgültig gelöscht.' },
   { q: 'Gibt es Rabatte für mehrere Standorte?', a: 'Ja, für Betriebe mit mehreren Standorten haben wir individuelle Enterprise-Angebote. Kontaktiere uns für ein massgeschneidertes Angebot.' },
   { q: 'Kann ich nur eine Website ohne Software-Abo?', a: `Ja. Der Website-Generator ist ein eigenes Produkt: einmalig CHF ${WEBSITE_SETUP_CHF} beim Live-Gang, danach Host CHF ${WEBSITE_HOST_CHF} oder Care CHF ${WEBSITE_CARE_CHF} (inkl. max. 1 Stunde Support / Monat). Details auf der Website-Seite.` },
   { q: 'Was bringt die Google-Business-Automation?', a: `CHF ${ADDON_GBP_CHF}/Monat. Simy postet den Jahreskalender automatisch, verteilt freigegebene Fotos, beantwortet neue Google-Reviews automatisch und zeigt Insights (Aufrufe, Anrufe, Website-Klicks). Sonst gehen kostenlose Maps-Klicks verloren.` },
+  { q: 'Was kostet die Online-Zahlung via Wallee?', a: WALLEE_FEE_FAQ },
 ]
 
 useHead(() => ({
@@ -418,5 +426,5 @@ useHead(() => ({
 <style scoped>
 .faq-enter-active, .faq-leave-active { transition: all 0.2s ease; overflow: hidden; }
 .faq-enter-from, .faq-leave-to { max-height: 0; opacity: 0; }
-.faq-enter-to, .faq-leave-from { max-height: 300px; opacity: 1; }
+.faq-enter-to, .faq-leave-from { max-height: 480px; opacity: 1; }
 </style>

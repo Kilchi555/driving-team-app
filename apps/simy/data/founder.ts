@@ -1,4 +1,6 @@
 /** Short founder transfer blurbs for Final-CTA (not long About copy). */
+export const FOUNDER_PHOTO_WEBP = '/pascal-founder.webp'
+export const FOUNDER_PHOTO_JPG = '/pascal-founder.jpg'
 export const FOUNDER_BLURB_HOME =
   'Genervt von Tool-Chaos und Handarbeit hat er 2025 Simy gebaut — damit Dienstleister arbeiten statt administrieren. Seit 2026 für Dienstleister und KMU in der Schweiz.'
 
