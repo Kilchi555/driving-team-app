@@ -38,18 +38,7 @@
               </a>
             </div>
           </div>
-          <figure class="mx-auto w-full max-w-[320px] md:max-w-[380px]">
-            <img
-              src="/gbp-example.webp"
-              alt="Beispiel-Google-Profil: Fahrschule Seeblick mit Beitrag, Bewertung und geöffneten Zeiten"
-              width="900"
-              height="1350"
-              class="w-full rounded-[1.75rem] shadow-xl ring-1 ring-black/5"
-              loading="lazy"
-              decoding="async"
-            />
-            <figcaption class="mt-3 text-center text-xs text-gray-400">Beispiel-Profil — Posts und Reviews laufen über Simy</figcaption>
-          </figure>
+          <SimyGbpMock :business-type="businessType" :slug="slug" />
         </div>
       </div>
     </div>
