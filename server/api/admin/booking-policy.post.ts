@@ -15,6 +15,10 @@ import {
   normalizeCustomerNotificationChannel,
 } from '~/server/utils/customer-notification-channel'
 import { parseIdleStudentReminderSettings } from '~/server/utils/idle-student-reminder-settings'
+import {
+  isRescheduleEmailTrigger,
+  normalizeRescheduleEmailTriggers,
+} from '~/utils/reschedule-email-triggers'
 
 const VALID_FIELDS = new Set([
   'first_name', 'last_name', 'phone', 'email',
@@ -156,6 +160,16 @@ export default defineEventHandler(async (event) => {
   if (body.require_payment_before_confirm !== undefined && typeof body.require_payment_before_confirm !== 'boolean') {
     throw createError({ statusCode: 400, statusMessage: 'require_payment_before_confirm must be a boolean' })
   }
+  if (body.reschedule_email_triggers !== undefined) {
+    if (!Array.isArray(body.reschedule_email_triggers)) {
+      throw createError({ statusCode: 400, statusMessage: 'reschedule_email_triggers must be an array' })
+    }
+    const invalid = body.reschedule_email_triggers.filter((t: unknown) => !isRescheduleEmailTrigger(t))
+    if (invalid.length > 0) {
+      throw createError({ statusCode: 400, statusMessage: `Invalid reschedule_email_triggers: ${invalid.join(', ')}` })
+    }
+    body.reschedule_email_triggers = normalizeRescheduleEmailTriggers(body.reschedule_email_triggers)
+  }
 
   // Load current policy and merge
   const { data: current } = await supabase
@@ -170,6 +184,10 @@ export default defineEventHandler(async (event) => {
     ...currentPolicy,
     ...body,
   }
+
+  updatedPolicy.reschedule_email_triggers = normalizeRescheduleEmailTriggers(
+    updatedPolicy.reschedule_email_triggers,
+  )
 
   const idleReminder = parseIdleStudentReminderSettings(updatedPolicy)
   updatedPolicy.idle_student_reminder_enabled = idleReminder.enabled
