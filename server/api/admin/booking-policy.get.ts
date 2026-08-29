@@ -1,6 +1,11 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { parseIdleStudentReminderSettings } from '~/server/utils/idle-student-reminder-settings'
+import {
+  DEFAULT_RESCHEDULE_EMAIL_TRIGGERS,
+  normalizeRescheduleEmailTriggers,
+  type RescheduleEmailTrigger,
+} from '~/utils/reschedule-email-triggers'
 
 export interface BookingPolicy {
   // ── Internal (staff creates student) ──────────────────────────────────────
@@ -102,6 +107,11 @@ export interface BookingPolicy {
   cancellation_sms_enabled: boolean
   /** SMS on appointment reschedule (default true) */
   reschedule_sms_enabled: boolean
+  /**
+   * Which appointment edits notify the customer (email + SMS per channel policy).
+   * Default: only date / start time. Empty array = never on edit.
+   */
+  reschedule_email_triggers: RescheduleEmailTrigger[]
   /** SMS for payment reminders (default true) */
   payment_reminder_sms_enabled: boolean
   /** SMS for course session reminders to participants (default true) */
@@ -219,6 +229,7 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   sms_overage_waived_until: null,
   cancellation_sms_enabled: true,
   reschedule_sms_enabled: true,
+  reschedule_email_triggers: [...DEFAULT_RESCHEDULE_EMAIL_TRIGGERS],
   payment_reminder_sms_enabled: true,
   course_reminder_sms_enabled: true,
   staff_refund_permission: 'hidden',
@@ -349,6 +360,7 @@ export default defineEventHandler(async (event) => {
     staff_record_acquisition_source: merged.staff_record_acquisition_source === true,
     staff_ask_origin_on_appointment: merged.staff_ask_origin_on_appointment === true,
     require_payment_before_confirm: merged.require_payment_before_confirm === true,
+    reschedule_email_triggers: normalizeRescheduleEmailTriggers(merged.reschedule_email_triggers),
     idle_student_reminder_enabled: idleReminder.enabled,
     idle_student_reminder_days: idleReminder.idleDays,
     idle_student_reminder_resend_days: idleReminder.resendDays,

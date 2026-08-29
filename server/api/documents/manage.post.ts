@@ -4,8 +4,8 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logAudit } from '~/server/utils/audit'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logger } from '~/utils/logger'
+import { isAllowedUserDocumentType } from '~/utils/document-types'
 
-const ALLOWED_DOC_TYPES = ['lernfahrausweis', 'medical_certificate', 'license', 'id_card', 'passport', 'other']
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024 // 10MB
 
 export default defineEventHandler(async (event) => {
@@ -72,8 +72,7 @@ export default defineEventHandler(async (event) => {
       const { document_data } = body
       if (!document_data) throw createError({ statusCode: 400, statusMessage: 'Missing document_data' })
 
-      // Validate document type
-      if (!ALLOWED_DOC_TYPES.includes(document_data.document_type)) {
+      if (!isAllowedUserDocumentType(document_data.document_type)) {
         throw createError({ statusCode: 400, statusMessage: 'Invalid document type' })
       }
 
