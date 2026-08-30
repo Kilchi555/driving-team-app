@@ -172,6 +172,9 @@ describe('isUniqueAuthUserIdViolation', () => {
   })
 })
 
+type QueryRow = { id: string }
+type QueryResult = { data: QueryRow[] | QueryRow | null; error: null }
+
 function mockSupabase(opts: {
   tenantClient?: { id: string } | null
   authUser?: { id: string } | null
@@ -180,16 +183,16 @@ function mockSupabase(opts: {
 }) {
   return {
     from: (table: string) => {
-      const result = table === 'users' && opts.linkedIds
+      const result: QueryResult = table === 'users' && opts.linkedIds
         ? { data: opts.linkedIds.map(id => ({ id })), error: null }
         : { data: opts.tenantClient ?? null, error: null }
-      const chain: any = {
+      const chain = {
         select: () => chain,
         eq: () => chain,
         not: () => chain,
         neq: () => chain,
         maybeSingle: async () => ({ data: opts.tenantClient ?? null, error: null }),
-        then: (resolve: any) => resolve(result),
+        then: (resolve: (value: QueryResult) => unknown) => resolve(result),
       }
       return chain
     },
@@ -208,7 +211,7 @@ function mockSupabase(opts: {
         },
       },
     },
-  } as any
+  }
 }
 
 describe('claimOrCreateAuthUser', () => {

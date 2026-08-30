@@ -394,12 +394,7 @@
                         </div>
                         
                         <div v-else class="space-y-3">
-                          <CompanySearchInput
-                            v-model="customBillingCompanyName"
-                            placeholder="Firma suchen oder neuen Namen"
-                            input-class="invoice-modal-input w-full"
-                            @select="onCustomBillingCompanyPicked"
-                          />
+                          <input v-model="customBillingCompanyName" type="text" placeholder="Firmenname (optional)" class="invoice-modal-input w-full" />
                           <input v-model="customBillingContactPerson" type="text" placeholder="Kontaktperson (optional)" class="invoice-modal-input w-full" />
                           <div class="grid grid-cols-[minmax(0,1fr)_4.5rem] gap-2">
                             <input v-model="customBillingStreet" type="text" placeholder="Strasse" class="invoice-modal-input w-full min-w-0" />
@@ -1126,8 +1121,6 @@ import { getSupabase } from '~/utils/supabase'
 import { isInvoicedPayment } from '~/utils/payment-invoiced'
 import { isWalleeCollectedPayment, WALLEE_FEE_RATE_LABEL, walleeFeeRappen } from '~/utils/wallee-fee'
 import { splitGrossVat } from '~/utils/vat'
-import CompanySearchInput from '~/components/CompanySearchInput.vue'
-import { assignCompanyToUser, companyToBilling, ensureCompanyLinked, type CompanySearchHit } from '~/composables/useCompanyLink'
 
 const authStore = useAuthStore()
 const supabase = getSupabase()
@@ -1518,24 +1511,6 @@ const toggleCustomBillingAddress = () => {
     customBillingEmail.value = company?.email || userDetails.value?.email || ''
   }
   useCustomBillingAddress.value = next
-}
-
-async function onCustomBillingCompanyPicked(company: CompanySearchHit) {
-  const fields = companyToBilling(company, userDetails.value)
-  customBillingCompanyName.value = fields.company_name
-  customBillingContactPerson.value = fields.contact_person
-  customBillingStreet.value = fields.street
-  customBillingStreetNr.value = fields.street_number
-  customBillingZip.value = fields.zip
-  customBillingCity.value = fields.city
-  customBillingEmail.value = fields.email || customBillingEmail.value
-  if (userDetails.value?.id) {
-    try {
-      await assignCompanyToUser(userDetails.value.id, company.id, true)
-    } catch (err: any) {
-      console.warn('Firma konnte nicht verknüpft werden:', err?.message)
-    }
-  }
 }
 
 const resetInvoiceModalFields = () => {
@@ -2946,23 +2921,6 @@ const buildInvoicePayload = async (internalNotes: string) => {
 
   if (useCustomBillingAddress.value) {
     if (!customBillingEmail.value.trim()) throw new Error('E-Mail-Adresse ist erforderlich')
-  }
-
-  if (useCustomBillingAddress.value && customBillingCompanyName.value.trim() && user?.id) {
-    try {
-      await ensureCompanyLinked({
-        userId: user.id,
-        companyName: customBillingCompanyName.value,
-        contactPerson: customBillingContactPerson.value,
-        email: customBillingEmail.value,
-        street: customBillingStreet.value,
-        streetNr: customBillingStreetNr.value,
-        zip: customBillingZip.value,
-        city: customBillingCity.value,
-      })
-    } catch (err: any) {
-      console.warn('Firma konnte nicht verknüpft werden:', err?.message)
-    }
   }
 
   const useCompanyBilling = useCustomBillingAddress.value || !!company
