@@ -144,7 +144,7 @@ html {
     transform: none;
   }
 
-  html.simy-motion section:first-of-type:not(:has(.text-center)):not(:has(.grid.md\\:grid-cols-2)):not(:has(.grid.lg\\:grid-cols-2)) {
+  html.simy-motion section:first-of-type:not(:has(.text-center)):not(:has(.grid.md\:grid-cols-2)):not(:has(.grid.lg\:grid-cols-2)) {
     animation: simyEnter 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
@@ -161,13 +161,13 @@ html {
   html.simy-motion section:first-of-type .text-center > *:nth-child(7) { animation-delay: 0.35s; }
   html.simy-motion section:first-of-type .text-center > *:nth-child(n+8) { animation-delay: 0.38s; }
 
-  html.simy-motion section:first-of-type .grid.md\\:grid-cols-2 > *:first-child,
-  html.simy-motion section:first-of-type .grid.lg\\:grid-cols-2 > *:first-child {
+  html.simy-motion section:first-of-type .grid.md\:grid-cols-2 > *:first-child,
+  html.simy-motion section:first-of-type .grid.lg\:grid-cols-2 > *:first-child {
     opacity: 0;
     animation: simyEnterLeft 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
-  html.simy-motion section:first-of-type .grid.md\\:grid-cols-2 > *:last-child,
-  html.simy-motion section:first-of-type .grid.lg\\:grid-cols-2 > *:last-child {
+  html.simy-motion section:first-of-type .grid.md\:grid-cols-2 > *:last-child,
+  html.simy-motion section:first-of-type .grid.lg\:grid-cols-2 > *:last-child {
     opacity: 0;
     animation: simyEnterRight 0.9s 0.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
@@ -219,6 +219,19 @@ html {
 @keyframes simyEnterRight {
   from { opacity: 0; transform: translate3d(22px, 10px, 0); }
   to   { opacity: 1; transform: none; }
+}
+
+@media print {
+  html.simy-motion section,
+  html.simy-motion footer,
+  html.simy-motion [data-reveal],
+  html.simy-motion [data-reveal-stagger] > *,
+  html.simy-motion [data-reveal-split] > * {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
