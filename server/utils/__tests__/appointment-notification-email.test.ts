@@ -39,6 +39,21 @@ describe('cancelled appointment email branding', () => {
     })
     expect(html).toContain('background-color: #2563eb')
     expect(html).toContain('Fahrschule Driving Team')
+    expect(html).not.toContain('Simy · Termin')
     expect(html).not.toMatch(/background-color:\s*#dc2626;\s*padding:\s*40px/)
+  })
+
+  it('keeps reschedule mail on tenant branding too', async () => {
+    const { html } = await renderAppointmentNotificationEmail({
+      email: 'a@b.ch',
+      studentName: 'Max Muster',
+      type: 'rescheduled',
+      oldTime: 'Freitag, 28.08.2026, 10:00',
+      newTime: 'Samstag, 29.08.2026, 11:00',
+      tenantName: 'Fahrschule Driving Team',
+    })
+    expect(html).toContain('background-color: #2563eb')
+    expect(html).toContain('Fahrschule Driving Team')
+    expect(html).not.toContain('Simy · Termin')
   })
 })
