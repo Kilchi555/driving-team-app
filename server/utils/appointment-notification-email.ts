@@ -8,10 +8,8 @@ import { sendPushToUser } from '~/server/utils/push'
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import {
-  buildSimyPlatformEmail,
   displayName,
   emailAppointmentAppStoreBlock,
-  simyCtaButton,
 } from '~/server/utils/branded-email'
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 import { meetingLinkAnchor } from '~/server/utils/meeting-link'
@@ -224,9 +222,9 @@ const TEMPLATES = {
   
   cancelled: {
     subject: 'Termin storniert',
-    getHtml: (data: AppointmentNotificationBody, _primaryColor: string, _logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
-      const tenantName = data.tenantName || terms.businessNoun
+      const tenantName = displayName(data.tenantName || terms.businessNoun)
       const cta = resolveAppointmentEmailCta({
         type: 'cancelled',
         omitAccountCta: data.omitAccountCta,
@@ -234,51 +232,73 @@ const TEMPLATES = {
         customerDashboard: data.customerDashboard,
         appointmentNoun: terms.appointment,
       })
-      const ctaHtml = cta
-        ? `${cta.leadIn ? `<p style="margin:24px 0 0;font-size:15px;line-height:1.55;color:#374151">${cta.leadIn}</p>` : ''}${simyCtaButton(cta.href, cta.label)}`
-        : ''
 
       const wasPaid = data.wasPaid || false
       const chargePercentage = data.chargePercentage || 0
       const refundAmount = data.refundAmount
       const chargeAmount = data.chargeAmount
 
-      const paymentCard = wasPaid || chargePercentage > 0
-        ? `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:14px;padding:16px 18px;margin:12px 0 0">
-        <p style="margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6000BD">Zahlung</p>
-        ${wasPaid ? `<p style="margin:0 0 4px;font-size:14px;color:#374151">Termin war bereits bezahlt</p>` : `<p style="margin:0 0 4px;font-size:14px;color:#374151">Termin war noch nicht bezahlt</p>`}
-        ${chargePercentage === 0
-          ? `<p style="margin:0;font-size:14px;font-weight:700;color:#047857">Kostenlose Stornierung${wasPaid && refundAmount ? ` · Guthaben ${refundAmount}` : ''}</p>`
-          : `<p style="margin:0;font-size:14px;font-weight:700;color:#b91c1c">Stornierungsgebühr ${chargePercentage}%${chargeAmount ? ` · ${chargeAmount}` : ''}</p>`}
-      </div>`
-        : ''
+      return `
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+    <tr>
+      <td>
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+          ${logoRow(logoUrl, tenantName)}
+          <tr>
+            <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Termin storniert</h1>
+              <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85)">${tenantName}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">leider wurde dein Termin storniert.</p>
 
-      return buildSimyPlatformEmail({
-        eyebrow: 'Simy · Termin',
-        title: 'Termin storniert',
-        subtitle: displayName(tenantName),
-        documentTitle: 'Termin storniert',
-        bodyHtml: `
-      <p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#374151">Hallo ${firstName},</p>
-      <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#374151">leider wurde dein Termin storniert.</p>
-      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:16px 18px">
-        ${data.appointmentTime ? `<p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#991b1b">${data.appointmentTime}</p>` : ''}
-        ${data.cancellationReason ? `<p style="margin:0;font-size:13px;color:#7f1d1d">Grund: ${data.cancellationReason}</p>` : ''}
-      </div>
-      ${paymentCard}
-      ${ctaHtml}
-      <p style="margin:28px 0 0;font-size:15px;line-height:1.55;color:#374151">Beste Grüsse,<br><strong>${displayName(tenantName)}</strong></p>
-      ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}`,
-        footerHtml: `${displayName(tenantName)} · <a href="https://simy.ch" style="color:#9ca3af;text-decoration:none">Simy.ch</a>`,
-      })
+              <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                ${data.appointmentTime ? `<p style="margin: 5px 0; color: #374151;"><strong>Stornierter Termin:</strong> ${data.appointmentTime}</p>` : ''}
+                ${data.cancellationReason ? `<p style="margin: 5px 0; color: #374151;"><strong>Grund:</strong> ${data.cancellationReason}</p>` : ''}
+              </div>
+
+              ${wasPaid || chargePercentage > 0 ? `
+              <div style="background-color: #f0f9ff; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <p style="margin: 0 0 10px 0; color: #374151; font-weight: bold;">Zahlungsinformationen:</p>
+                ${wasPaid ? `<p style="margin: 5px 0; color: #374151;">Termin war bereits bezahlt</p>` : `<p style="margin: 5px 0; color: #374151;">Termin war noch nicht bezahlt</p>`}
+                ${chargePercentage === 0 ? `
+                  <p style="margin: 5px 0; color: #10b981; font-weight: bold;">Kostenlose Stornierung</p>
+                  ${wasPaid && refundAmount ? `<p style="margin: 5px 0; color: #10b981;">Rückerstattung auf Guthaben: ${refundAmount}</p>` : ''}
+                ` : `
+                  <p style="margin: 5px 0; color: #dc2626; font-weight: bold;">Stornierungsgebühr: ${chargePercentage}%</p>
+                  ${chargeAmount ? `<p style="margin: 5px 0; color: #dc2626;">Zu zahlender Betrag: ${chargeAmount}</p>` : ''}
+                `}
+              </div>
+              ` : ''}
+
+              ${appointmentEmailCtaHtml(cta, primaryColor)}
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Beste Grüsse,<br><strong>${tenantName}</strong></p>
+              ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; border-radius: 0 0 8px 8px;">
+              <p style="color: #6b7280; font-size: 12px; margin: 0;">Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>`
     }
   },
-  
+
   rescheduled: {
     subject: 'Termin geändert',
-    getHtml: (data: AppointmentNotificationBody, _primaryColor: string, _logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
+    getHtml: (data: AppointmentNotificationBody, primaryColor: string, logoUrl: string | null = null, terms: Terminology = getTerminologyDefaults('driving_school')) => {
       const firstName = data.studentName?.split(' ')[0] || data.studentName
-      const tenantName = data.tenantName || terms.businessNoun
+      const tenantName = displayName(data.tenantName || terms.businessNoun)
       const changed = Array.isArray(data.changedFields) ? data.changedFields : []
       const isDatetimeChange = changed.length === 0 || changed.includes('datetime')
       const heading = isDatetimeChange ? 'Termin verschoben' : 'Termin geändert'
@@ -292,45 +312,59 @@ const TEMPLATES = {
         customerDashboard: data.customerDashboard,
         appointmentNoun: terms.appointment,
       })
-      const ctaHtml = cta
-        ? `${cta.leadIn ? `<p style="margin:24px 0 0;font-size:15px;line-height:1.55;color:#374151">${cta.leadIn}</p>` : ''}${simyCtaButton(cta.href, cta.label)}`
-        : ''
 
-      const oldCard = data.oldTime
-        ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:16px 18px;margin:0 0 10px">
-        <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#b91c1c">Bisher</p>
-        <p style="margin:0;font-size:16px;font-weight:700;color:#991b1b;text-decoration:line-through">${data.oldTime}</p>
-        ${data.staffName ? `<p style="margin:8px 0 0;font-size:13px;color:#991b1b;text-decoration:line-through">${terms.staff}: ${data.staffName}</p>` : ''}
-        ${data.location ? `<p style="margin:4px 0 0;font-size:13px;color:#991b1b;text-decoration:line-through">Ort: ${data.location}${data.locationAddress ? `<br><span style="font-size:12px">${data.locationAddress}</span>` : ''}</p>` : ''}
-      </div>`
-        : ''
+      return `
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+    <tr>
+      <td>
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+          ${logoRow(logoUrl, tenantName)}
+          <tr>
+            <td style="background-color: ${primaryColor}; padding: 40px 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">${heading}</h1>
+              <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85)">${tenantName}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hallo ${firstName},</p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">${intro}</p>
 
-      const newCard = data.newTime
-        ? `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:14px;padding:16px 18px;margin:0 0 8px">
-        <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6000BD">Neu</p>
-        <p style="margin:0;font-size:18px;font-weight:800;color:#4c1d95">${data.newTime}</p>
-        ${data.staffName ? `<p style="margin:8px 0 0;font-size:13px;color:#5b21b6">${terms.staff}: ${data.staffName}</p>` : ''}
-        ${data.location ? `<p style="margin:4px 0 0;font-size:13px;color:#5b21b6">Ort: ${data.location}${data.locationAddress ? `<br><span style="font-size:12px;color:#6d28d9">${data.locationAddress}</span>` : ''}</p>` : ''}
-        ${data.vehicleLabel ? `<p style="margin:4px 0 0;font-size:13px;color:#5b21b6">Fahrzeug: ${data.vehicleLabel}</p>` : ''}
-        ${data.roomName ? `<p style="margin:4px 0 0;font-size:13px;color:#5b21b6">Raum: ${data.roomName}</p>` : ''}
-      </div>`
-        : ''
+              ${data.oldTime ? `
+              <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0 10px 0; border-radius: 4px;">
+                <p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>Alter Termin:</strong> ${data.oldTime}</p>
+                ${data.staffName ? `<p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>${terms.staff}:</strong> ${data.staffName}</p>` : ''}
+                ${data.location ? `<p style="margin: 5px 0; color: #991b1b; text-decoration: line-through;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px">${data.locationAddress}</span>` : ''}</p>` : ''}
+              </div>
+              ` : ''}
 
-      return buildSimyPlatformEmail({
-        eyebrow: 'Simy · Termin',
-        title: heading,
-        subtitle: displayName(tenantName),
-        documentTitle: heading,
-        bodyHtml: `
-      <p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#374151">Hallo ${firstName},</p>
-      <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#374151">${intro}</p>
-      ${oldCard}
-      ${newCard}
-      ${ctaHtml}
-      <p style="margin:28px 0 0;font-size:15px;line-height:1.55;color:#374151">Freundliche Grüsse,<br><strong>${displayName(tenantName)}</strong></p>
-      ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}`,
-        footerHtml: `${displayName(tenantName)} · <a href="https://simy.ch" style="color:#9ca3af;text-decoration:none">Simy.ch</a>`,
-      })
+              ${data.newTime ? `
+              <div style="background-color: #f0fdf4; border-left: 4px solid ${primaryColor}; padding: 15px; margin: 10px 0 20px 0; border-radius: 4px;">
+                <p style="margin: 5px 0; color: #065f46; font-size: 18px;"><strong>Neuer Termin:</strong> ${data.newTime}</p>
+                ${data.staffName ? `<p style="margin: 5px 0; color: #065f46;"><strong>${terms.staff}:</strong> ${data.staffName}</p>` : ''}
+                ${data.location ? `<p style="margin: 5px 0; color: #065f46;"><strong>Ort:</strong> ${data.location}${data.locationAddress ? `<br><span style="font-size:13px;color:#047857">${data.locationAddress}</span>` : ''}</p>` : ''}
+                ${data.vehicleLabel ? `<p style="margin: 5px 0; color: #065f46;"><strong>Fahrzeug:</strong> ${data.vehicleLabel}</p>` : ''}
+                ${data.roomName ? `<p style="margin: 5px 0; color: #065f46;"><strong>Raum:</strong> ${data.roomName}</p>` : ''}
+              </div>
+              ` : ''}
+
+              ${appointmentEmailCtaHtml(cta, primaryColor)}
+
+              <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0 0 0;">Freundliche Grüsse,<br><strong>${tenantName}</strong></p>
+              ${emailAppointmentAppStoreBlock(data.includeAppStore !== false)}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 30px; border-top: 1px solid #e5e7eb; text-align: center; border-radius: 0 0 8px 8px;">
+              <p style="color: #6b7280; font-size: 12px; margin: 0;">Dies ist eine automatisch generierte E-Mail. Bitte antworte nicht auf diese E-Mail.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>`
     }
   }
   ,
