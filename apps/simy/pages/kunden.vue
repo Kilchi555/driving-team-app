@@ -50,14 +50,18 @@
               </div>
             </div>
             <div class="flex items-center gap-4">
-              <img
-                src="/pascal-business-2-round.png"
-                alt="Pascal Kilchenmann"
-                class="w-12 h-12 rounded-full object-cover"
-                width="48"
-                height="48"
-                loading="lazy"
-              />
+              <picture>
+                <source type="image/webp" srcset="/pascal-founder.webp" />
+                <img
+                  src="/pascal-founder.jpg"
+                  alt="Pascal Kilchenmann"
+                  class="w-12 h-12 rounded-full object-cover"
+                  width="48"
+                  height="48"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
               <div>
                 <p class="font-bold text-gray-900">Pascal Kilchenmann</p>
                 <p class="text-sm text-gray-400">Driving Team, Zürich — 3 Standorte, 4 Mitarbeitende</p>

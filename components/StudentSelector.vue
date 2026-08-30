@@ -220,6 +220,8 @@ interface Student {
   street_nr?: string | null
   zip?: string | null
   city?: string | null
+  acquisition_at?: string | null
+  acquisition_self_reported?: string | null
 }
 
 // Props
@@ -351,7 +353,9 @@ const loadStudentsFromDB = async () => {
     street: user.street || null,
     street_nr: user.street_nr || null,
     zip: user.zip || null,
-    city: user.city || null
+    city: user.city || null,
+    acquisition_at: user.acquisition_at || null,
+    acquisition_self_reported: user.acquisition_self_reported || null,
   }))
 
   availableStudents.value = typedStudents
@@ -461,7 +465,11 @@ const handleStudentAdded = async (newStudent: any) => {
     phone: studentData.phone || '',
     category: studentData.category || '',
     assigned_staff_id: studentData.assigned_staff_id || '',
-    preferred_location_id: studentData.preferred_location_id || undefined
+    preferred_location_id: studentData.preferred_location_id || undefined,
+    street: studentData.street || null,
+    street_nr: studentData.street_nr || null,
+    zip: studentData.zip || null,
+    city: studentData.city || null,
   }
   
   availableStudents.value.unshift(typedStudent)

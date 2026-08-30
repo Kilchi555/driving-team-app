@@ -124,9 +124,12 @@
             <p class="text-[12px] font-medium mb-2" style="color: var(--brand-primary)">{{ plan.badge }}</p>
             <h3 class="font-semibold text-xl text-gray-900 mb-1">{{ plan.name }}</h3>
             <p class="text-sm text-gray-400 mb-5">{{ plan.tagline }}</p>
-            <div class="flex items-baseline gap-1 mb-6">
-              <span class="text-4xl text-gray-900 simy-display">CHF {{ plan.price }}</span>
-              <span class="text-sm text-gray-400">{{ plan.suffix }}</span>
+            <div class="mb-6">
+              <div class="flex items-baseline gap-1">
+                <span class="text-4xl text-gray-900 simy-display">CHF {{ plan.price }}</span>
+                <span class="text-sm text-gray-400">{{ plan.suffix }}</span>
+              </div>
+              <SimyPriceVatNote compact />
             </div>
             <ul class="space-y-2.5 mb-8 flex-1">
               <li v-for="item in plan.items" :key="item" class="flex items-start gap-2.5 text-sm text-gray-700">
@@ -155,6 +158,7 @@
             Kostenlos starten — Vorschau in Minuten →
           </a>
           <p class="text-xs text-gray-400 mt-3">Kein Abo beim Start. Zahlung erst bei Live oder nach 30 Tagen Hosting-Wahl.</p>
+          <SimyPriceVatNote class="mt-2" />
         </div>
       </div>
     </section>
@@ -265,7 +269,7 @@
 </template>
 
 <script setup lang="ts">
-import { WEBSITE_CARE_CHF, WEBSITE_HOST_CHF, WEBSITE_SETUP_CHF } from '~/data/pricing'
+import { PRICE_VAT_NOTE, WEBSITE_CARE_CHF, WEBSITE_HOST_CHF, WEBSITE_SETUP_CHF } from '~/data/pricing'
 import { breadcrumbLd, faqPageLd, howToLd, ldScripts, productOffersLd, webPageLd } from '~/utils/schema'
 
 const { websiteRegisterCta } = useWebsiteRegisterCta()
@@ -358,7 +362,7 @@ const branchenLinks = [
 ]
 
 const faqs = [
-  { q: 'Was kostet eine Simy-Website?', a: `Einmalig CHF ${setup} beim Live-Gang, danach Hosting CHF ${host}/Monat oder Care CHF ${care}/Monat (inkl. max. 1 Stunde Support). 30 Tage kannst du einrichten und die Vorschau teilen — ohne Zahlung.` },
+  { q: 'Was kostet eine Simy-Website?', a: `Einmalig CHF ${setup} beim Live-Gang, danach Hosting CHF ${host}/Monat oder Care CHF ${care}/Monat (inkl. max. 1 Stunde Support). 30 Tage kannst du einrichten und die Vorschau teilen — ohne Zahlung. ${PRICE_VAT_NOTE}` },
   { q: 'Muss ich die volle Simy-Software nehmen?', a: 'Nein. Das Website-Produkt ist eigenständig. Du startest über diese Seite, landest im Website-Admin und kannst später auf die volle Software erweitern.' },
   { q: 'Wann muss ich bezahlen?', a: 'Erst wenn die Homepage bereit ist und du live schaltest — oder wenn du nach 30 Tagen ein Hosting-Abo wählst. Es gibt keine automatische Belastung beim Registrieren.' },
   { q: 'Kann ich meine bestehende Domain nutzen?', a: 'Ja. Im Website-Admin verbindest du zuerst deine bestehende Domain. Hast du noch keine, prüfst du die Verfügbarkeit und kaufst sie bei Infomaniak — danach trägst du die DNS-Einträge ein.' },

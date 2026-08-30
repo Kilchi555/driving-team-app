@@ -71,10 +71,19 @@
                 <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="calendar" :size="16" /></span><span>Kalender & Planung</span>
               </a>
               <a href="/features/rechnungen" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="wallet" :size="16" /></span><span>Rechnungen & Kasse</span>
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="wallet" :size="16" /></span><span>Rechnungen & Guthaben</span>
               </a>
               <a href="/features/kurse" class="nav-dropdown-item">
-                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="school" :size="16" /></span><span>Kursbuchungsseite</span>
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="school" :size="16" /></span><span>Kurse & Warteliste</span>
+              </a>
+              <a href="/fahrschule/schuelerportal" class="nav-dropdown-item">
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="users" :size="16" /></span><span>Schülerportal</span>
+              </a>
+              <a href="/fahrschule/dokumentation" class="nav-dropdown-item">
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="graduate" :size="16" /></span><span>Dokumentation & PDF</span>
+              </a>
+              <a href="/fahrschule/abholung" class="nav-dropdown-item">
+                <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="compass" :size="16" /></span><span>Abholung & Radius</span>
               </a>
               <a href="/website" class="nav-dropdown-item">
                 <span class="nav-dropdown-icon" style="color: var(--brand-primary)"><SimyIcon name="globe" :size="16" /></span><span>Website-Generator</span>
@@ -170,8 +179,11 @@
 
         <p class="text-xs font-bold uppercase tracking-widest text-gray-400 px-3 pt-3 pb-1">Features</p>
         <a href="/features/kalender" class="mobile-nav-link" @click="mobileOpen=false">Kalender & Planung</a>
-        <a href="/features/rechnungen" class="mobile-nav-link" @click="mobileOpen=false">Rechnungen & Kasse</a>
-        <a href="/features/kurse" class="mobile-nav-link" @click="mobileOpen=false">Kursbuchungsseite</a>
+        <a href="/features/rechnungen" class="mobile-nav-link" @click="mobileOpen=false">Rechnungen & Guthaben</a>
+        <a href="/features/kurse" class="mobile-nav-link" @click="mobileOpen=false">Kurse & Warteliste</a>
+        <a href="/fahrschule/schuelerportal" class="mobile-nav-link" @click="mobileOpen=false">Schülerportal</a>
+        <a href="/fahrschule/dokumentation" class="mobile-nav-link" @click="mobileOpen=false">Dokumentation & PDF</a>
+        <a href="/fahrschule/abholung" class="mobile-nav-link" @click="mobileOpen=false">Abholung & Radius</a>
         <a href="/website" class="mobile-nav-link" @click="mobileOpen=false">Website-Generator</a>
         <a href="/features/google-business-profile" class="mobile-nav-link" @click="mobileOpen=false">Google Business Profile</a>
         <a href="/features/kalender" class="mobile-nav-link" @click="mobileOpen=false">Online-Buchung</a>
