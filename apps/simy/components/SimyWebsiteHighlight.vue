@@ -2,7 +2,7 @@
   <section class="py-20 px-6" data-reveal>
     <div class="max-w-5xl mx-auto">
       <div class="simy-gradient-border p-8 md:p-12 overflow-hidden">
-        <div class="relative grid md:grid-cols-2 gap-10 items-center">
+        <div class="relative grid md:grid-cols-2 gap-10 items-start">
           <div>
             <div
               class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold mb-5"
@@ -35,9 +35,10 @@
             <p class="text-xs text-gray-400 mt-4">
               Einmalig CHF {{ setup }} · Hosting ab CHF {{ host }}/Mt. · 30 Tage einrichten, Vorschau gratis
             </p>
+            <SimyPriceVatNote class="mt-1" />
           </div>
-          <div class="hidden md:block pl-4">
-            <SimyProductFrame :preview-host="previewHost" />
+          <div class="md:pl-4">
+            <SimyProductFrame :preview-host="previewHost" :industry="industry" />
           </div>
         </div>
       </div>
@@ -52,6 +53,7 @@ withDefaults(defineProps<{
   title?: string
   subtitle?: string
   previewHost?: string
+  industry?: string
 }>(), {
   title: 'SEO- und AI-Website in Minuten — nicht in Wochen',
   subtitle: 'Simy generiert eine schnelle Landingpage mit Preisen, Standorten und Bewertungen. Im Hintergrund liegen strukturierte Daten — so verstehen Google und ChatGPT deinen Betrieb. Vorschau sofort, live erst wenn du bereit bist.',

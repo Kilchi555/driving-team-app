@@ -136,7 +136,7 @@
         <div class="px-5 py-4 flex items-center justify-between">
           <div>
             <h2 class="text-sm font-semibold text-gray-800">Onboarding-SMS versenden</h2>
-            <p class="text-xs text-gray-400 mt-0.5">{{ t.clientsPlural }} erhalten beim Erstellen durch den Staff automatisch einen SMS-Link zur Kontoaktivierung.</p>
+            <p class="text-xs text-gray-400 mt-0.5">{{ t.clientsPlural }} erhalten beim Erstellen durch den Staff automatisch einen SMS-Link zur Kontoaktivierung. Aus = auch keine öffentliche Aktivierungs-SMS und keine «Konto aktivieren»-Buttons in Kundenmails (sofern Account/Login ebenfalls aus ist).</p>
           </div>
           <button
             type="button"
@@ -522,7 +522,7 @@
                 Aus (nur Anfrage)
               </button>
             </div>
-            <p class="mt-2 text-xs text-gray-400">Aus = kein Passwort-Schritt. Kontakt wird als pending Kunde gespeichert.</p>
+            <p class="mt-2 text-xs text-gray-400">Aus = kein Passwort-Schritt. Kontakt wird als pending Kunde gespeichert. Zusammen mit ausgeschalteter Onboarding-SMS/E-Mail gibt es kein öffentliches Kunden-Login und keine Aktivierungs-Buttons in Mails.</p>
           </div>
           <div>
             <p class="text-xs font-medium text-gray-600 mb-2">Kategorie-Auswahl</p>
@@ -675,6 +675,51 @@
         </div>
       </div>
 
+      <!-- Kunde bei Terminänderung -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-50">
+          <h2 class="text-sm font-semibold text-gray-800">Kunde bei Terminänderung informieren</h2>
+          <p class="text-xs text-gray-400 mt-0.5">
+            E-Mail (und SMS, falls aktiv) nur bei den gewählten Änderungen. Standard: nur Datum oder Startzeit.
+          </p>
+        </div>
+        <div class="px-5 py-4 space-y-3">
+          <button
+            v-for="opt in rescheduleTriggerOptions"
+            :key="opt.value"
+            type="button"
+            class="w-full text-left rounded-xl border-2 px-4 py-3 transition-colors"
+            :class="isRescheduleTriggerEnabled(opt.value)
+              ? ''
+              : 'border-gray-100 hover:border-gray-200'"
+            :style="isRescheduleTriggerEnabled(opt.value) ? primaryBgLight : {}"
+            @click="toggleRescheduleTrigger(opt.value)"
+          >
+            <div class="flex items-start gap-3">
+              <span
+                class="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border-2"
+                :class="isRescheduleTriggerEnabled(opt.value) ? 'border-transparent' : 'border-gray-300 bg-white'"
+                :style="isRescheduleTriggerEnabled(opt.value) ? primaryBg : {}"
+              >
+                <svg
+                  v-if="isRescheduleTriggerEnabled(opt.value)"
+                  class="h-2.5 w-2.5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                </svg>
+              </span>
+              <div>
+                <p class="text-sm font-semibold text-gray-800">{{ opt.label }}</p>
+                <p class="mt-0.5 text-xs text-gray-500">{{ opt.description }}</p>
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <!-- Staff-Benachrichtigung -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="px-5 py-4 flex items-center justify-between">
@@ -801,6 +846,11 @@
 import { ref, onMounted } from 'vue'
 import { usePrimaryColor } from '~/composables/usePrimaryColor'
 import { useUIStore } from '~/stores/ui'
+import {
+  DEFAULT_RESCHEDULE_EMAIL_TRIGGERS,
+  normalizeRescheduleEmailTriggers,
+  type RescheduleEmailTrigger,
+} from '~/utils/reschedule-email-triggers'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
@@ -838,6 +888,7 @@ const policy = ref({
   idle_student_reminder_client_channel: 'email_first' as 'email' | 'sms' | 'email_first' | 'sms_first',
   onboarding_sms_enabled: true,
   onboarding_email_enabled: false,
+  reschedule_email_triggers: [...DEFAULT_RESCHEDULE_EMAIL_TRIGGERS] as RescheduleEmailTrigger[],
   staff_refund_permission: 'hidden' as 'hidden' | 'request' | 'allowed',
   ask_acquisition_source: false,
   staff_record_acquisition_source: false,
@@ -857,6 +908,48 @@ const registrationModeOptions = [
   { value: 'optional' as const, label: 'Optional' },
   { value: 'required' as const, label: 'Pflicht' },
 ]
+
+const rescheduleTriggerOptions: Array<{
+  value: RescheduleEmailTrigger
+  label: string
+  description: string
+}> = [
+  {
+    value: 'datetime',
+    label: 'Datum oder Startzeit',
+    description: 'Kunde wird informiert, sobald sich Tag oder Uhrzeit ändert — auch um eine Minute.',
+  },
+  {
+    value: 'duration',
+    label: 'Dauer / Endzeit',
+    description: 'Wenn die Terminlänge angepasst wird, ohne dass der Start sich ändert.',
+  },
+  {
+    value: 'staff',
+    label: t.value.staff,
+    description: `Wenn ein anderer ${t.value.staff} zugewiesen wird.`,
+  },
+  {
+    value: 'location',
+    label: 'Treffpunkt / Standort',
+    description: 'Wenn der Treffpunkt, die Filiale oder die Abholadresse wechselt.',
+  },
+  {
+    value: 'resource',
+    label: 'Fahrzeug oder Raum',
+    description: 'Wenn Fahrzeug, Fahrzeugmodus oder Raum geändert wird.',
+  },
+]
+
+const isRescheduleTriggerEnabled = (trigger: RescheduleEmailTrigger) =>
+  policy.value.reschedule_email_triggers.includes(trigger)
+
+const toggleRescheduleTrigger = (trigger: RescheduleEmailTrigger) => {
+  const current = [...policy.value.reschedule_email_triggers]
+  policy.value.reschedule_email_triggers = current.includes(trigger)
+    ? current.filter(t => t !== trigger)
+    : [...current, trigger]
+}
 
 const locationIntakeOptions = [
   {
@@ -990,6 +1083,9 @@ const loadPolicy = async () => {
       if (!['hidden', 'required'].includes(policy.value.registration_account_mode)) {
         policy.value.registration_account_mode = 'required'
       }
+      policy.value.reschedule_email_triggers = normalizeRescheduleEmailTriggers(
+        policy.value.reschedule_email_triggers,
+      )
     }
   } catch (err: any) {
     uiStore.addNotification({ type: 'error', title: 'Fehler', message: 'Einstellungen konnten nicht geladen werden.' })

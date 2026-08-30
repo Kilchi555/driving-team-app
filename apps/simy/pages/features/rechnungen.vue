@@ -19,13 +19,13 @@
           Feature — Rechnungen & Kasse
         </div>
         <h1 class="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
-          Rechnungen & Kasse —<br/>
+          Rechnungen & Guthaben —<br/>
           <span style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-            Geld läuft von selbst ein
+            derselbe Stand für beide
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mb-10 leading-relaxed">
-          Simy erstellt Rechnungen automatisch und versendet sie per E-Mail. Bei Online-Zahlung (TWINT/Kreditkarte) laufen Erinnerungen vollautomatisch. Bezahlt der Kunde per Rechnung, versendest du Mahnungen mit wenigen Klicks. Du siehst jederzeit, wer was bezahlt hat.
+          Rechnungen per E-Mail, TWINT und QR. Pakete, Teilzahlung und Rückzahlung auf denselben Weg — Schüler und Admin sehen denselben Stand. Kein Excel daneben.
         </p>
         <div class="flex flex-col sm:flex-row gap-4">
           <a :href="registerCta"
@@ -44,7 +44,7 @@
           <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
             <div>
               <p class="font-bold text-gray-900 text-sm">Rechnung #2026-0148</p>
-              <p class="text-xs text-gray-400">Studio Nord · 20.05.2026</p>
+              <p class="text-xs text-gray-400">Fahrschule · 20.05.2026</p>
             </div>
             <span class="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-700">Bezahlt ✓</span>
           </div>
@@ -66,6 +66,20 @@
           </div>
         </div>
         <p class="text-xs text-center text-gray-400 mt-3">Automatisch erstellt · Automatisch versendet · TWINT bezahlt</p>
+      </div>
+    </section>
+
+    <section class="py-16 px-6 bg-[#f7f6fa] border-y border-gray-100">
+      <div class="max-w-5xl mx-auto">
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-3 text-center">Wenn nicht die ganze Ausbildung auf einmal kommt</h2>
+        <p class="text-gray-500 text-center mb-10 max-w-2xl mx-auto">Drei Abläufe, ein Dossier. Kein separates Tool für Pakete oder Rückzahlungen.</p>
+        <div class="grid md:grid-cols-3 gap-5">
+          <div v-for="job in moneyJobs" :key="job.title" class="rounded-3xl bg-white border border-gray-100 p-6">
+            <SimyIconTile :name="job.icon" :size="44" class="mb-4" />
+            <h3 class="font-bold text-gray-900 mb-2">{{ job.title }}</h3>
+            <p class="text-sm text-gray-500 leading-relaxed">{{ job.desc }}</p>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -125,15 +139,16 @@
 
 <script setup lang="ts">
 import { breadcrumbLd, ldScripts, softwareAppLd, webPageLd } from '~/utils/schema'
+import { WALLEE_FEE_PERCENT, WALLEE_FEE_PRICE_TIP } from '~/data/pricing'
 const { registerCta } = useRegisterCta()
 
 useHead({
-  title: 'Rechnungen & Kasse – Simy | TWINT, QR-Rechnung, Automatik',
+  title: 'Rechnungen & Guthaben – TWINT, QR, Teilzahlung | Simy',
   meta: [
-    { name: 'description', content: 'Simy automatisiert Rechnungen für Schweizer Dienstleister. TWINT, QR-Rechnung, Kreditkarte. Zahlungseingang automatisch erfasst. 30 Tage kostenlos testen.' },
-    { name: 'keywords', content: 'rechnung software schweiz, twint online zahlung, qr rechnung software, kasse terminbuchung' },
-    { property: 'og:title', content: 'Rechnungen & Kasse – Simy | Automatische Abrechnung' },
-    { property: 'og:description', content: 'Rechnungen automatisch erstellt, versendet und eingetrieben. TWINT, QR-Rechnung, Kreditkarte.' },
+    { name: 'description', content: 'Rechnungen, Guthaben, Teilzahlung und Rückzahlung für Schweizer Betriebe. TWINT, QR-Rechnung, derselbe Stand für Kunde und Admin. 30 Tage kostenlos.' },
+    { name: 'keywords', content: 'guthaben fahrschule, teilzahlung fahrschule, qr rechnung software, twint online zahlung, rückzahlung fahrstunde' },
+    { property: 'og:title', content: 'Rechnungen & Guthaben – Simy' },
+    { property: 'og:description', content: 'Pakete, Teilzahlung, Rückzahlung — ein Stand für Schüler und Kasse.' },
     { property: 'og:url', content: 'https://www.simy.ch/features/rechnungen' },
   ],
   link: [{ rel: 'canonical', href: 'https://www.simy.ch/features/rechnungen' }],
@@ -157,7 +172,8 @@ useHead({
 })
 
 const invoiceLines = [
-  { desc: '4× Sitzung 45 Min', amount: '340.–' },
+  { desc: '4× Fahrstunde 45 Min', amount: '380.–' },
+  { desc: 'Guthaben verrechnet', amount: '–40.–' },
 ]
 
 const paymentMethods = [
@@ -167,11 +183,17 @@ const paymentMethods = [
   { icon: 'credit-card', name: 'PostFinance', desc: 'E-Finance' },
 ]
 
+const moneyJobs = [
+  { icon: 'package', title: 'Guthaben / Stundenpakete', desc: 'Paket kaufen, Abzug pro Lektion. Das Guthaben hängt am Schüler — nicht an einer Excel-Spalte.' },
+  { icon: 'wallet', title: 'Teilzahlung', desc: 'Teilbetrag buchen, Rest bleibt offen. Schüler und Admin sehen denselben Stand.' },
+  { icon: 'refresh', title: 'Rückzahlung', desc: 'Online bezahlt? Die Rückzahlung geht denselben Weg zurück. Der Vorgang bleibt im Dossier nachvollziehbar.' },
+]
+
 const invoiceFeatures = [
   { icon: 'zap', title: 'Automatische Erstellung', desc: 'Nach jedem Termin erstellt Simy automatisch die Rechnung — ohne dein Zutun.' },
   { icon: 'mail', title: 'Direktversand per E-Mail', desc: 'Rechnung direkt per E-Mail an den Kunden — mit Zahlungslink und PDF-Anhang.' },
   { icon: 'bell', title: 'Zahlungserinnerungen', desc: 'Mit Online-Zahlung: vollautomatisch. Bei E-Mail-Rechnung: Mahnung mit wenigen Klicks versenden — schnell und einfach.' },
-  { icon: 'credit-card', title: 'TWINT & Online-Zahlung', desc: 'Kunden zahlen per TWINT, Kreditkarte oder QR-Rechnung — alles ohne Extra-Setup.' },
+  { icon: 'credit-card', title: 'TWINT & Online-Zahlung', desc: `Kunden zahlen per TWINT, Kreditkarte oder QR-Rechnung — ${WALLEE_FEE_PERCENT} Transaktionsgebühr, kein Monatsaufpreis. ${WALLEE_FEE_PRICE_TIP}` },
   { icon: 'chart', title: 'Einnahmen-Übersicht', desc: 'Tages-, Wochen- und Monatsumsatz auf einen Blick. Offene und bezahlte Rechnungen sortiert.' },
   { icon: 'package', title: 'Guthaben-System', desc: 'Kunden kaufen Pakete im Voraus. Guthaben wird automatisch abgezogen.' },
   { icon: 'clipboard', title: 'Steuer-Export', desc: 'Alle Transaktionen als CSV exportieren — direkt für die Steuererklärung oder den Treuhänder.' },

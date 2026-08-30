@@ -88,6 +88,131 @@ export function gbpIndustry(businessType?: string | null, slug?: string | null):
   return GBP_INDUSTRIES.find((i) => i.businessType === t) || GBP_INDUSTRIES[0]
 }
 
+export type GbpMock = {
+  name: string
+  category: string
+  area: string
+  cover: string
+  postImage: string
+  postTitle: string
+  postWhen: string
+  postBody: string
+  reviewInitial: string
+  reviewName: string
+  reviewText: string
+}
+
+export const GBP_MOCKS: Record<string, GbpMock> = {
+  fahrschule: {
+    name: 'Fahrschule Seeblick',
+    category: 'Fahrschule',
+    area: 'Zürich-Seefeld',
+    cover: '/heroes/fahrschule.webp',
+    postImage: '/heroes/gbp-post-fahrschule.webp',
+    postTitle: 'VKU nächste Woche — noch 3 Plätze',
+    postWhen: 'vor 2 Tagen',
+    postBody: 'Theorie-Unterricht startet nächste Woche. Platz jetzt sichern.',
+    reviewInitial: 'A',
+    reviewName: 'Anna M.',
+    reviewText: 'Sehr geduldige Erklärungen, Prüfung im ersten Versuch bestanden.',
+  },
+  coaching: {
+    name: 'Praxis Seeblick',
+    category: 'Coaching',
+    area: 'Zürich-Seefeld',
+    cover: '/heroes/coaching.webp',
+    postImage: '/heroes/gbp-post-coaching.webp',
+    postTitle: 'Freie Erstgespräche nächste Woche',
+    postWhen: 'vor 2 Tagen',
+    postBody: 'Zwei Kennenlern-Slots sind noch offen. Jetzt online buchen.',
+    reviewInitial: 'L',
+    reviewName: 'Lena K.',
+    reviewText: 'Klare Struktur, ruhige Atmosphäre — nach drei Sitzungen merke ich den Unterschied.',
+  },
+  consulting: {
+    name: 'Seeblick Consulting',
+    category: 'Unternehmensberatung',
+    area: 'Zürich-Seefeld',
+    cover: '/heroes/consulting.webp',
+    postImage: '/heroes/gbp-post-consulting.webp',
+    postTitle: 'Workshop-Termine im April',
+    postWhen: 'vor 2 Tagen',
+    postBody: 'Strategie-Kickoffs für KMU — noch 2 Plätze frei.',
+    reviewInitial: 'M',
+    reviewName: 'Marc B.',
+    reviewText: 'Präzise, pünktlich, ohne Berater-Sprech. Klare Empfehlung.',
+  },
+  'personal-training': {
+    name: 'Studio Seeblick',
+    category: 'Personal Trainer',
+    area: 'Zürich-Seefeld',
+    cover: '/heroes/personal-training.webp',
+    postImage: '/heroes/gbp-post-personal-training.webp',
+    postTitle: 'Probetraining — 3 Slots frei',
+    postWhen: 'vor 2 Tagen',
+    postBody: 'Neue 06:30-Slots ab Montag. Jetzt buchen.',
+    reviewInitial: 'J',
+    reviewName: 'Julia R.',
+    reviewText: 'Endlich ein Trainer, der den Plan anpasst. Nach 8 Wochen messbar fitter.',
+  },
+  nachhilfe: {
+    name: 'Nachhilfe Seeblick',
+    category: 'Nachhilfe',
+    area: 'Zürich-Seefeld',
+    cover: '/heroes/nachhilfe.webp',
+    postImage: '/heroes/gbp-post-nachhilfe.webp',
+    postTitle: 'Mathe-Intensiv vor den Prüfungen',
+    postWhen: 'vor 2 Tagen',
+    postBody: 'Noch 4 Plätze in der Prüfungsvorbereitung.',
+    reviewInitial: 'S',
+    reviewName: 'Sarah T.',
+    reviewText: 'Unser Sohn hat die Note um zwei Stufen verbessert.',
+  },
+  musikschule: {
+    name: 'Musikschule Seeblick',
+    category: 'Musikschule',
+    area: 'Zürich-Seefeld',
+    cover: '/heroes/musikschule.webp',
+    postImage: '/heroes/gbp-post-musikschule.webp',
+    postTitle: 'Klavier-Schnupperstunde',
+    postWhen: 'vor 2 Tagen',
+    postBody: 'Zwei Probelektionen diese Woche noch frei.',
+    reviewInitial: 'N',
+    reviewName: 'Nina W.',
+    reviewText: 'Geduldiger Unterricht, unser Kind übt endlich freiwillig.',
+  },
+  hundeschule: {
+    name: 'Hundeschule Seeblick',
+    category: 'Hundeschule',
+    area: 'Zürich-Seefeld',
+    cover: '/heroes/hundeschule.webp',
+    postImage: '/heroes/gbp-post-hundeschule.webp',
+    postTitle: 'Welpenkurs startet Samstag',
+    postWhen: 'vor 2 Tagen',
+    postBody: 'Noch 3 Plätze in der neuen Gruppe.',
+    reviewInitial: 'T',
+    reviewName: 'Tobias L.',
+    reviewText: 'Unser Hund ist nach drei Lektionen deutlich ruhiger an der Leine.',
+  },
+  massage: {
+    name: 'Praxis Seeblick',
+    category: 'Massage',
+    area: 'Zürich-Seefeld',
+    cover: '/heroes/massage.webp',
+    postImage: '/heroes/gbp-post-massage.webp',
+    postTitle: 'Freie 60′-Termine diese Woche',
+    postWhen: 'vor 2 Tagen',
+    postBody: 'Zwei Abendslots noch offen — online buchen.',
+    reviewInitial: 'E',
+    reviewName: 'Elena S.',
+    reviewText: 'Ruhige Praxis, präzise Arbeit. Die Nackenprobleme sind weg.',
+  },
+}
+
+export function gbpMock(industry: GbpIndustry): GbpMock {
+  return GBP_MOCKS[industry.slug] || GBP_MOCKS.fahrschule
+}
+
 export function gbpHighlightCopy(industry: GbpIndustry) {
   return {
     eyebrow: 'Google Business Profile',

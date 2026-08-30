@@ -49,21 +49,26 @@
         </div>
         
         <!-- Rabatt Anzeige - direkt im blauen Bereich -->
-        <div v-if="getDiscountAmount() > 0" class="flex justify-between items-center py-2 border-t border-black/10">
-          <div class="flex items-center">
-            <span class="text-sm font-medium" :style="primaryText">Rabatt</span>
-            <span v-if="getDiscountReason()" class="text-xs ml-2 opacity-75" :style="primaryText">({{ getDiscountReason() }})</span>
+        <div v-if="getDiscountAmount() > 0" class="py-2 border-t border-black/10">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center min-w-0">
+              <span class="text-sm font-medium" :style="primaryText">Rabatt</span>
+              <span v-if="getDiscountReason()" class="text-xs ml-2 opacity-75 truncate" :style="primaryText">({{ getDiscountReason() }})</span>
+            </div>
+            <div class="flex items-center space-x-2 shrink-0">
+              <span class="text-sm font-bold" :style="primaryText">- CHF {{ (roundToNearestFranken(Math.round(getDiscountAmount() * 100)) / 100).toFixed(2) }}</span>
+              <button 
+                v-if="props.allowDiscountEdit"
+                @click="removeDiscount"
+                class="text-red-500 hover:text-red-700 text-xs ml-2"
+              >
+                ✕
+              </button>
+            </div>
           </div>
-          <div class="flex items-center space-x-2">
-            <span class="text-sm font-bold" :style="primaryText">- CHF {{ (roundToNearestFranken(Math.round(getDiscountAmount() * 100)) / 100).toFixed(2) }}</span>
-            <button 
-              v-if="props.allowDiscountEdit"
-              @click="removeDiscount"
-              class="text-red-500 hover:text-red-700 text-xs ml-2"
-            >
-              ✕
-            </button>
-          </div>
+          <ul v-if="appliedDiscountHints.length" class="mt-1 space-y-0.5">
+            <li v-for="hint in appliedDiscountHints" :key="hint" class="text-xs text-gray-500">{{ hint }}</li>
+          </ul>
         </div>
         
         <!-- Admin-Fee Anzeige -->
@@ -165,11 +170,39 @@
           </div>
         </div>
         
-        <!-- Ressourcen-Aufschläge (Raum / Fahrzeug) -->
-        <div v-if="(props.resourceSurcharges || []).length > 0" class="py-2 border-t border-black/10">
+        <!-- Anfahrt (km) -->
+        <div v-if="travelSurcharges.length > 0" class="py-2 border-t border-black/10">
+          <div class="space-y-1.5">
+            <div v-for="surcharge in travelSurcharges" :key="surcharge.label"
+              class="flex justify-between items-center">
+              <span class="text-sm text-gray-700">{{ surcharge.label }}</span>
+              <span class="text-sm font-semibold text-gray-700">
+                CHF {{ (surcharge.rappen / 100).toFixed(2) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fahrzeug-Option (Schule / Eigen) -->
+        <div v-if="vehicleModeSurcharge" class="py-2 border-t border-black/10">
+          <div class="flex justify-between items-center">
+            <span class="text-sm font-medium" :style="primaryText">{{ vehicleModeSurcharge.label }}</span>
+            <span
+              class="text-sm font-semibold"
+              :class="vehicleModeSurcharge.rappen < 0 ? 'text-green-700' : 'text-gray-700'"
+            >
+              <template v-if="vehicleModeSurcharge.rappen < 0">− CHF {{ (Math.abs(vehicleModeSurcharge.rappen) / 100).toFixed(2) }}</template>
+              <template v-else-if="vehicleModeSurcharge.rappen > 0">CHF {{ (vehicleModeSurcharge.rappen / 100).toFixed(2) }}</template>
+              <template v-else>Kein Aufpreis</template>
+            </span>
+          </div>
+        </div>
+
+        <!-- Ressourcen-Aufschläge (Raum / Flottenfahrzeug) -->
+        <div v-if="otherResourceSurcharges.length > 0" class="py-2 border-t border-black/10">
           <div class="space-y-1.5">
             <div class="text-sm font-medium" :style="primaryText">Ressourcen</div>
-            <div v-for="surcharge in props.resourceSurcharges" :key="surcharge.label"
+            <div v-for="surcharge in otherResourceSurcharges" :key="surcharge.label"
               class="flex justify-between items-center">
               <span class="text-sm text-gray-700">{{ surcharge.label }}</span>
               <span class="text-sm font-semibold text-gray-700">
@@ -220,26 +253,32 @@
         
         <!-- Rabatt und Produkte Buttons - zwischen Gesamtpreis und Zahlungsarten -->
 
-        <div v-if="props.allowDiscountEdit || props.allowProductEdit" class="border-t pt-3">
-          <div class="flex justify-center space-x-3">
-            <!-- ✅ RABATT BUTTON: Immer anzeigen wenn erlaubt -->
+        <div v-if="props.allowDiscountEdit || props.allowProductEdit || showVehicleButton" class="border-t pt-3">
+          <div class="flex justify-center gap-2">
             <button
               v-if="props.allowDiscountEdit"
-              @click="showDiscountSelector = true"
-              class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border transition-colors hover:opacity-90"
+              @click="openDiscountSelector"
+              class="px-3 py-2 text-sm font-medium rounded-xl border transition-colors hover:opacity-90"
               :style="{ ...primaryBgLight, ...primaryText, borderColor: 'color-mix(in srgb, var(--color-primary, #111827) 25%, transparent)' }"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
               Rabatt
             </button>
 
             <button
-              v-if="props.allowProductEdit"
-              @click="showProductSelector = true"
-              class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl border transition-colors hover:opacity-90"
+              v-if="showVehicleButton"
+              @click="openVehicleSelector"
+              class="px-3 py-2 text-sm font-medium rounded-xl border transition-colors hover:opacity-90"
               :style="{ ...primaryBgLight, ...primaryText, borderColor: 'color-mix(in srgb, var(--color-primary, #111827) 25%, transparent)' }"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+              Fahrzeuge
+            </button>
+
+            <button
+              v-if="props.allowProductEdit"
+              @click="openProductSelector"
+              class="px-3 py-2 text-sm font-medium rounded-xl border transition-colors hover:opacity-90"
+              :style="{ ...primaryBgLight, ...primaryText, borderColor: 'color-mix(in srgb, var(--color-primary, #111827) 25%, transparent)' }"
+            >
               Produkte
             </button>
           </div>
@@ -285,6 +324,80 @@
             </div>
           </div>
         </div>
+
+        <div v-if="showVehicleSelector && showVehicleButton" class="border-t pt-3">
+          <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-3">
+            <div v-if="props.vehicleOptions.length > 0" class="space-y-2">
+              <p class="text-xs font-medium text-gray-500">Preismodell</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div
+                  v-for="option in props.vehicleOptions"
+                  :key="option.key"
+                  @click="selectVehicleOption(option.key)"
+                  class="bg-white border rounded-xl p-3 cursor-pointer hover:shadow-md transition-all duration-200"
+                  :style="props.selectedVehicleMode === option.key
+                    ? { borderColor: 'var(--color-primary, #6b7280)', background: 'color-mix(in srgb, var(--color-primary, #111827) 6%, white)' }
+                    : {}"
+                >
+                  <div class="text-sm font-medium text-gray-800">{{ option.label }}</div>
+                  <div class="mt-1 text-sm font-semibold" :class="vehicleOptionCostRappen(option) < 0 ? 'text-green-700' : ''" :style="vehicleOptionCostRappen(option) >= 0 ? primaryText : {}">
+                    <template v-if="vehicleOptionCostRappen(option) < 0">− CHF {{ (Math.abs(vehicleOptionCostRappen(option)) / 100).toFixed(2) }} Rabatt</template>
+                    <template v-else-if="vehicleOptionCostRappen(option) > 0">+ CHF {{ (vehicleOptionCostRappen(option) / 100).toFixed(2) }}</template>
+                    <template v-else>Kein Aufpreis</template>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="showFleetPicker" class="space-y-1.5" :class="props.vehicleOptions.length > 0 ? 'border-t border-gray-200 pt-3' : ''">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-medium text-gray-500">Schulfahrzeug reservieren</p>
+                <svg v-if="props.isCheckingVehicleAvailability" class="w-3.5 h-3.5 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              </div>
+              <label class="flex items-center gap-2.5 p-2 rounded-lg bg-white hover:bg-gray-50 cursor-pointer">
+                <input type="radio" :checked="!props.selectedVehicleId" @change="emit('vehicle-id-changed', null)" class="text-blue-500" />
+                <span class="text-sm text-gray-600">Kein Fahrzeug reservieren</span>
+              </label>
+              <label
+                v-for="v in props.fleetVehicles"
+                :key="v.id"
+                class="flex items-center justify-between gap-2.5 p-2 rounded-lg bg-white hover:bg-gray-50 cursor-pointer"
+                :class="{ 'opacity-50': !v.is_available && props.selectedVehicleId !== v.id }"
+              >
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <input type="radio" :checked="props.selectedVehicleId === v.id" @change="emit('vehicle-id-changed', v.id)" class="text-blue-500 flex-shrink-0" />
+                  <span class="text-sm text-gray-800 truncate">{{ v.name }}</span>
+                </div>
+                <span v-if="v.id === props.savedVehicleId && props.selectedStudent" class="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
+                  Reserviert für {{ props.selectedStudent.first_name }}
+                </span>
+                <span v-else-if="v.is_available" class="text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full flex-shrink-0">frei</span>
+                <span v-else class="text-xs font-medium text-red-500 bg-red-50 px-2 py-0.5 rounded-full flex-shrink-0">
+                  {{ v.conflicts[0] ? formatFleetConflict(v.conflicts[0]) : 'belegt' }}
+                </span>
+              </label>
+              <p
+                v-if="props.selectedVehicleId && props.fleetVehicles.find(v => v.id === props.selectedVehicleId && !v.is_available)"
+                class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2"
+              >
+                Dieses Fahrzeug ist im gewählten Zeitfenster bereits vergeben. Trotzdem speichern?
+              </p>
+            </div>
+
+            <div class="flex justify-end">
+              <button
+                type="button"
+                @click="showVehicleSelector = false"
+                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
         
         <!-- ✅ RABATT-SELECTOR -->
         <div v-if="showDiscountSelector" class="border-t pt-3">
@@ -292,8 +405,9 @@
             
             <div class="space-y-4">
               
-              <!-- Verfügbare Gutscheine -->
+              <!-- Schnellwahl: nur Rabatte ohne Code -->
               <div v-if="availableDiscounts.length > 0" class="space-y-3">
+                <p class="text-xs font-medium text-gray-500">Schnellwahl</p>
                 <div class="grid grid-cols-2 gap-2">
                   <div 
                     v-for="discount in availableDiscounts" 
@@ -839,14 +953,17 @@ import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import {
+  billingAddressHasContent,
   billingFieldsFromCompany,
   billingFieldsFromPerson,
-  billingLooksLikeCompany,
+  emptyBillingFormFields,
+  resolveDefaultBillingSource,
 } from '~/utils/billing-address-map'
 import { watch } from 'vue'
 import { useWalleeStatus } from '~/composables/useWalleeStatus'
 import { useCashPaymentSettings } from '~/composables/useCashPaymentSettings'
 import { roundToNearest5Rappen as roundToNearestFranken } from '~/utils/rounding'
+import { extractDiscountCodeFromReason, perUserLimitHint } from '~/utils/discount-code-match'
 
 // Erweiterte Props
 interface Props {
@@ -871,7 +988,28 @@ interface Props {
   studentCredit?: any // ✅ NEU: Student credit information
   isLoadingCredit?: boolean // ✅ NEU: Loading state for credit
   isCalculatingPrice?: boolean
-  resourceSurcharges?: { label: string; rappen: number }[] // Raum- / Fahrzeugkosten
+  categoryCode?: string | null
+  resourceSurcharges?: { label: string; rappen: number; type?: 'vehicle' | 'room' | 'travel' | 'vehicle_mode' }[] // Raum / Fahrzeug / Anfahrt / Eigenfahrzeug
+  vehicleOptions?: Array<{
+    key: string
+    label: string
+    description?: string
+    cost_type: 'none' | 'surcharge' | 'discount'
+    cost_rappen: number
+    per_minute: boolean
+    requires_school_vehicle?: boolean
+  }>
+  selectedVehicleMode?: string | null
+  allowVehicleEdit?: boolean
+  fleetVehicles?: Array<{
+    id: string
+    name: string
+    is_available: boolean
+    conflicts: Array<{ start: string; end: string }>
+  }>
+  selectedVehicleId?: string | null
+  savedVehicleId?: string | null
+  isCheckingVehicleAvailability?: boolean
   // True when pricePerMinute came from a hardcoded offline fallback instead of
   // the tenant's live pricing_rules (see EventModal.vue calculateOfflinePrice()).
   isPriceFallback?: boolean
@@ -896,9 +1034,44 @@ const props = withDefaults(defineProps<Props>(), {
   isLoadingCredit: false,
   isCalculatingPrice: false,
   resourceSurcharges: () => [],
+  vehicleOptions: () => [],
+  selectedVehicleMode: null,
+  allowVehicleEdit: true,
+  fleetVehicles: () => [],
+  selectedVehicleId: null,
+  savedVehicleId: null,
+  isCheckingVehicleAvailability: false,
   isPriceFallback: false,
   priceManuallyEntered: false,
 })
+
+const travelSurcharges = computed(() =>
+  (props.resourceSurcharges || []).filter((s) => s.type === 'travel')
+)
+const vehicleModeSurcharge = computed(() =>
+  (props.resourceSurcharges || []).find((s) => s.type === 'vehicle_mode') || null
+)
+const otherResourceSurcharges = computed(() =>
+  (props.resourceSurcharges || []).filter((s) => s.type !== 'travel' && s.type !== 'vehicle_mode')
+)
+const showVehicleButton = computed(() =>
+  props.allowVehicleEdit && (props.vehicleOptions?.length ?? 0) > 0
+)
+
+const selectedVehicleOption = computed(() =>
+  props.vehicleOptions?.find((o) => o.key === props.selectedVehicleMode) || null
+)
+
+const showFleetPicker = computed(() => {
+  if ((props.fleetVehicles?.length ?? 0) === 0) return false
+  if (selectedVehicleOption.value && selectedVehicleOption.value.requires_school_vehicle === false) return false
+  return true
+})
+
+const formatFleetConflict = (c: { start: string; end: string }) => {
+  const fmt = (iso: string) => new Date(iso).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })
+  return `${fmt(c.start)}–${fmt(c.end)}`
+}
 
 // Emits
 const emit = defineEmits<{
@@ -914,6 +1087,8 @@ const emit = defineEmits<{
   'cash-already-paid-changed': [value: boolean] // Emit wenn "bereits bezahlt" Toggle geändert
   'manual-price-entered': [totalChf: number] // Staff hat den Fallback-Preis manuell korrigiert
   'manual-price-reset': [] // Staff möchte den manuell erfassten Preis erneut ändern
+  'vehicle-mode-changed': [optionKey: string]
+  'vehicle-id-changed': [vehicleId: string | null]
 }>()
 
 // Composables
@@ -964,6 +1139,35 @@ watch(
 // State
 const showProductSelector = ref(false)
 const showDiscountSelector = ref(false) // ✅ NEU: Für Gutschein-Auswahl
+const showVehicleSelector = ref(false)
+
+const openDiscountSelector = () => {
+  showDiscountSelector.value = true
+  showProductSelector.value = false
+  showVehicleSelector.value = false
+}
+const openProductSelector = () => {
+  showProductSelector.value = true
+  showDiscountSelector.value = false
+  showVehicleSelector.value = false
+}
+const openVehicleSelector = () => {
+  showVehicleSelector.value = true
+  showDiscountSelector.value = false
+  showProductSelector.value = false
+}
+
+const vehicleOptionCostRappen = (option: { cost_type: string; cost_rappen: number; per_minute: boolean }) => {
+  if (!option || option.cost_type === 'none') return 0
+  const rappen = option.per_minute
+    ? Math.round(option.cost_rappen * (props.durationMinutes || 45))
+    : option.cost_rappen
+  return option.cost_type === 'discount' ? -rappen : rappen
+}
+
+const selectVehicleOption = (optionKey: string) => {
+  emit('vehicle-mode-changed', optionKey)
+}
 const availableDiscounts = ref<any[]>([]) // ✅ NEU: Verfügbare Gutscheine
 const isLoadingDiscounts = ref(false) // ✅ NEU: Loading state für Gutscheine
 
@@ -971,6 +1175,7 @@ const isLoadingDiscounts = ref(false) // ✅ NEU: Loading state für Gutscheine
 const discountCodeInput = ref('')
 const isValidatingCode = ref(false)
 const codeError = ref<string | null>(null)
+const appliedDiscountHints = ref<string[]>([])
 
 // ✅ NEU: Payment State für Edit-Modus
 const existingPayment = ref<any>(null)
@@ -990,6 +1195,7 @@ const adjustmentNotification = ref<any>(null)
 const isLoadingStudentBilling = ref(false)
 const isEditingBillingAddress = ref(false)
 const billingSource = ref<'private' | 'company' | 'custom' | null>(null)
+let billingSourceSeq = 0
 const linkedCompany = ref<any>(null)
 const showCompanySearch = ref(false)
 const companySearch = ref('')
@@ -1061,13 +1267,7 @@ const invoiceData = ref({
   notes: ''
 })
 
-const addressHasContent = (addr: any): boolean => {
-  if (!addr || typeof addr !== 'object') return false
-  return !!(
-    addr.company_name || addr.name || addr.contact_person ||
-    addr.street || addr.zip || addr.city || addr.email
-  )
-}
+const addressHasContent = (addr: any): boolean => billingAddressHasContent(addr)
 
 const formatAddressLines = (addr: any): string => {
   if (!addr) return 'Keine Rechnungsadresse gefunden'
@@ -1123,7 +1323,7 @@ onMounted(async () => {
       if (!studentBillingAddress.value) {
         await loadBillingAddressFromExistingPayments(props.selectedStudent.id)
       }
-      await applyDefaultBillingSource()
+      await applyDefaultBillingSource({ replaceExplicitChoice: true })
     } else {
       logger.debug('💡 PriceDisplay onMounted: No student selected yet')
     }
@@ -1139,10 +1339,10 @@ onMounted(async () => {
 watch(cashAlreadyPaid, (val) => {
   emit('cash-already-paid-changed', val)
 })
-watch(selectedPaymentMethod, (method) => {
+watch(selectedPaymentMethod, async (method) => {
   if (method !== 'cash') cashAlreadyPaid.value = false
   if (method === 'invoice') {
-    applyDefaultBillingSource()
+    await applyDefaultBillingSource()
   }
 })
 
@@ -1159,6 +1359,7 @@ watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId
     if (newStudentId && newStudentId !== oldStudentId) {
       logger.debug('👤 Student changed, loading billing address for:', newStudentId)
       
+      billingSourceSeq += 1
       billingSource.value = null
       linkedCompany.value = null
       showCompanySearch.value = false
@@ -1166,6 +1367,7 @@ watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId
       companyResults.value = []
       pendingCompanyAssign.value = null
       studentBillingAddress.value = null
+      invoiceData.value = emptyBillingFormFields()
       companyNameSuggest.value = []
       showCompanyNameSuggest.value = false
       customBillingDataModal.value = {
@@ -1180,7 +1382,7 @@ watch(() => props.selectedStudent?.id, async (newStudentId: string, oldStudentId
       if (!studentBillingAddress.value) {
         await loadBillingAddressFromExistingPayments(newStudentId)
       }
-      await applyDefaultBillingSource()
+      await applyDefaultBillingSource({ replaceExplicitChoice: true })
     }
   } catch (watchError: any) {
     console.warn('⚠️ Error in student change watcher:', watchError.message)
@@ -1255,6 +1457,7 @@ const fillInvoiceFromCustomerAddress = async () => {
     logger.debug('⚠️ No selectedStudent — cannot fill customer address')
     return
   }
+  const studentId = student.id
 
   const hasAddress = !!(student.street || student.zip || student.city || student.street_nr || student.street_number)
   if (!hasAddress) {
@@ -1263,6 +1466,7 @@ const fillInvoiceFromCustomerAddress = async () => {
       const res = await $fetch<{ user: any }>('/api/admin/get-user-for-edit', {
         query: { user_id: student.id },
       })
+      if (props.selectedStudent?.id !== studentId) return
       if (res?.user) {
         student = { ...student, ...res.user }
       }
@@ -1271,6 +1475,7 @@ const fillInvoiceFromCustomerAddress = async () => {
     }
   }
 
+  if (props.selectedStudent?.id !== studentId) return
   invoiceData.value = billingFieldsFromPerson(student)
   logger.debug('✅ Filled form from customer address:', {
     contact_person: invoiceData.value.contact_person,
@@ -1288,9 +1493,16 @@ const syncPreviewFromInvoiceData = () => {
 }
 
 const applyPrivateAddress = async () => {
+  const studentId = props.selectedStudent?.id
+  const previous = studentBillingAddress.value
+  const keepPersistedPrivateId = !!(previous?.id && !(previous.company_name || '').trim())
   await fillInvoiceFromCustomerAddress()
+  if (studentId && props.selectedStudent?.id !== studentId) return
   billingSource.value = 'private'
-  syncPreviewFromInvoiceData()
+  studentBillingAddress.value = {
+    ...(keepPersistedPrivateId ? { id: previous.id } : {}),
+    ...invoiceData.value,
+  }
   isEditingBillingAddress.value = false
 }
 
@@ -1307,62 +1519,68 @@ const applyLinkedCompanyAddress = () => {
   applyCompanyFields(linkedCompany.value)
 }
 
-const applyDefaultBillingSource = async () => {
+const fillInvoiceFromSavedBilling = () => {
+  const saved = studentBillingAddress.value
+  if (!saved) return
+  invoiceData.value = {
+    company_name: saved.company_name || '',
+    contact_person: saved.contact_person || '',
+    email: saved.email || '',
+    phone: saved.phone || '',
+    street: saved.street || '',
+    street_number: saved.street_number || '',
+    zip: saved.zip || '',
+    city: saved.city || '',
+    country: saved.country || 'Schweiz',
+    vat_number: saved.vat_number || '',
+    company_register_number: saved.company_register_number || '',
+    notes: saved.notes || '',
+  }
+}
+
+const applyDefaultBillingSource = async (opts?: { replaceExplicitChoice?: boolean }) => {
   if (!props.selectedStudent?.id) return
+  if (selectedPaymentMethod.value !== 'invoice') return
+  if (billingSource.value && !opts?.replaceExplicitChoice) return
+
+  const seq = ++billingSourceSeq
+  const studentId = props.selectedStudent.id
 
   if (!linkedCompany.value && props.selectedStudent.company_id) {
     try {
       const res: any = await $fetch('/api/admin/companies', { query: { id: props.selectedStudent.company_id } })
+      if (seq !== billingSourceSeq || props.selectedStudent?.id !== studentId) return
       linkedCompany.value = res?.companies?.[0] || linkedCompany.value
     } catch (err: any) {
       console.warn('⚠️ Could not load linked company:', err?.message)
     }
   }
 
-  if (
-    linkedCompany.value &&
-    (!addressHasContent(studentBillingAddress.value) || billingLooksLikeCompany(studentBillingAddress.value, linkedCompany.value))
-  ) {
+  if (seq !== billingSourceSeq || props.selectedStudent?.id !== studentId) return
+
+  const source = resolveDefaultBillingSource({
+    linkedCompany: linkedCompany.value,
+    savedBilling: studentBillingAddress.value,
+  })
+
+  if (source === 'company' && linkedCompany.value) {
     applyCompanyFields(linkedCompany.value)
     return
   }
 
-  if (addressHasContent(studentBillingAddress.value) && !studentBillingAddress.value.company_name) {
-    billingSource.value = 'private'
-    invoiceData.value = {
-      company_name: studentBillingAddress.value.company_name || '',
-      contact_person: studentBillingAddress.value.contact_person || '',
-      email: studentBillingAddress.value.email || '',
-      phone: studentBillingAddress.value.phone || '',
-      street: studentBillingAddress.value.street || '',
-      street_number: studentBillingAddress.value.street_number || '',
-      zip: studentBillingAddress.value.zip || '',
-      city: studentBillingAddress.value.city || '',
-      country: studentBillingAddress.value.country || 'Schweiz',
-      vat_number: studentBillingAddress.value.vat_number || '',
-      company_register_number: studentBillingAddress.value.company_register_number || '',
-      notes: studentBillingAddress.value.notes || '',
-    }
+  if (source === 'custom' && addressHasContent(studentBillingAddress.value)) {
+    billingSource.value = 'custom'
+    fillInvoiceFromSavedBilling()
     return
   }
 
-  if (addressHasContent(studentBillingAddress.value)) {
-    billingSource.value = 'custom'
-    invoiceData.value = {
-      company_name: studentBillingAddress.value.company_name || '',
-      contact_person: studentBillingAddress.value.contact_person || '',
-      email: studentBillingAddress.value.email || '',
-      phone: studentBillingAddress.value.phone || '',
-      street: studentBillingAddress.value.street || '',
-      street_number: studentBillingAddress.value.street_number || '',
-      zip: studentBillingAddress.value.zip || '',
-      city: studentBillingAddress.value.city || '',
-      country: studentBillingAddress.value.country || 'Schweiz',
-      vat_number: studentBillingAddress.value.vat_number || '',
-      company_register_number: studentBillingAddress.value.company_register_number || '',
-      notes: studentBillingAddress.value.notes || '',
-    }
+  if (source === 'private' && addressHasContent(studentBillingAddress.value) && !(studentBillingAddress.value.company_name || '').trim()) {
+    billingSource.value = 'private'
+    fillInvoiceFromSavedBilling()
+    return
   }
+
+  await applyPrivateAddress()
 }
 
 const toggleCompanySearch = () => {
@@ -1595,9 +1813,9 @@ const loadAvailableDiscounts = async () => {
     const { loadDiscounts, availableDiscounts: discountsFromComposable } = useDiscounts()
     await loadDiscounts()
     
-    // ✅ Filter für nur 'fixed' Rabatte, nicht voucher
+    // Staff tiles: fixed, not a credit voucher, and no promo code
     availableDiscounts.value = (discountsFromComposable.value || [])
-      .filter((d: any) => d.discount_type === 'fixed' && !d.is_voucher)
+      .filter((d: any) => d.discount_type === 'fixed' && !d.is_voucher && !String(d.code || '').trim())
       .sort((a: any, b: any) => parseFloat(a.discount_value) - parseFloat(b.discount_value))
     
     logger.debug('✅ Loaded available fixed discounts:', availableDiscounts.value.length)
@@ -1662,17 +1880,22 @@ const applyDiscountCode = async () => {
       body: {
         code,
         amount_rappen: amountRappen,
-        context: 'appointment'
+        context: 'appointment',
+        user_id: props.selectedStudent?.id || null,
+        appointment_id: props.appointmentId || null,
+        categoryCode: props.categoryCode || null,
       }
     }) as any
 
     if (res.isValid && res.discount_amount_rappen > 0) {
       const discountChf = res.discount_amount_rappen / 100
+      appliedDiscountHints.value = Array.isArray(res.hints) ? res.hints : []
       emit('discount-changed', discountChf, 'fixed', `Code: ${code.toUpperCase()}`, false)
       showDiscountSelector.value = false
       discountCodeInput.value = ''
       codeError.value = null
     } else {
+      appliedDiscountHints.value = []
       codeError.value = res.error || 'Ungültiger Code'
     }
   } catch (err: any) {
@@ -1683,6 +1906,7 @@ const applyDiscountCode = async () => {
 }
 
 const removeDiscount = () => {
+  appliedDiscountHints.value = []
   emit('discount-changed', 0, 'fixed', '', false)
 }
 
@@ -1740,6 +1964,41 @@ const getDiscountReason = () => {
   // Im Create-Modus: Verwende Props
   return props.discountReason || ''
 }
+
+watch(
+  () => ({
+    reason: props.discountReason || existingPayment.value?.discount_reason || '',
+    studentId: props.selectedStudent?.id || null,
+    amount: props.discount || 0,
+    appointmentId: props.appointmentId || null,
+  }),
+  async ({ reason, studentId, amount, appointmentId }) => {
+    const code = extractDiscountCodeFromReason(reason)
+    if (!code || amount <= 0) {
+      if (amount <= 0) appliedDiscountHints.value = []
+      return
+    }
+    try {
+      const res = await $fetch('/api/discounts/validate', {
+        method: 'POST',
+        body: {
+          code,
+          amount_rappen: Math.round(getBasePrice() * 100) || 100,
+          context: 'appointment',
+          user_id: studentId,
+          appointment_id: appointmentId,
+          categoryCode: props.categoryCode || null,
+        }
+      }) as any
+      appliedDiscountHints.value = Array.isArray(res.hints) && res.hints.length
+        ? res.hints
+        : (perUserLimitHint(res.max_per_user) ? [perUserLimitHint(res.max_per_user)!] : [])
+    } catch {
+      // Keep the last hint if the metadata lookup fails
+    }
+  },
+  { immediate: true }
+)
 
 // ✅ NEU: Products aus bestehender Payment oder Props
 const getProducts = () => {
@@ -2246,7 +2505,8 @@ const paymentStatusBadge = computed(() => {
     partial: { label: 'Teilzahlung', class: 'bg-orange-100 text-orange-800' },
     failed: { label: 'Fehlgeschlagen', class: 'bg-red-100 text-red-800' },
     authorized: { label: 'Autorisiert', class: 'bg-blue-100 text-blue-800' },
-    refunded: { label: 'Rückerstattet', class: 'bg-green-100 text-green-800' },
+    refunded: { label: 'Rückvergütet', class: 'bg-blue-100 text-blue-800' },
+    partially_refunded: { label: 'Teilweise rückvergütet', class: 'bg-blue-100 text-blue-800' },
     refunding: { label: 'Rückerstattung läuft', class: 'bg-yellow-100 text-yellow-800' },
     voided: { label: 'Storniert', class: 'bg-gray-200 text-gray-800' }
   }

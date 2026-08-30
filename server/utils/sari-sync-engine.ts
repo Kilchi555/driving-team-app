@@ -11,6 +11,7 @@ import {
   matchSariInstructorToStaff,
   lookupExternalInstructorEmail,
   createStaffCourseAppointments,
+  syncStaffCourseCalendar,
   notifyStaffAssigned,
   sendExternalInstructorInvite,
   notifyAdminMissingExternalEmail,
@@ -18,6 +19,7 @@ import {
 } from '~/server/utils/course-staff-notifications'
 import { getTenantDefaultPaymentMethod } from '~/server/utils/tenant-default-payment-method'
 import { mapTenantDefaultToCoursePaymentMethod, type CoursePaymentMethod } from '~/utils/courseLocationUtils'
+import { sariCourseDisplayName } from '~/server/utils/sari-course-title'
 
 export interface SyncResult {
   success: boolean
@@ -304,12 +306,6 @@ export class SARISyncEngine {
       ? `${firstSession.address.address}, ${firstSession.address.zip} ${firstSession.address.city}`
       : ''
     
-    // Parse group start date
-    const groupDate = group.date ? new Date(group.date.replace(' ', 'T')) : new Date()
-    const formattedDate = groupDate.toLocaleDateString('de-CH', { 
-      day: '2-digit', month: '2-digit', year: 'numeric' 
-    })
-
     // Standard VKU/PGS settings
     // VKU: 12 participants per course
     // PGS: 5 participants per course
@@ -331,7 +327,7 @@ export class SARISyncEngine {
     const courseData = {
       tenant_id: this.tenantId,
       category: courseType,
-      name: `${group.name} - ${formattedDate}`,
+      name: sariCourseDisplayName(group.name, sessions, group.date),
       description: location, // Just the address: street, number, zip, city
       max_participants: maxParticipants,
       current_participants: currentParticipants,
@@ -774,6 +770,21 @@ export class SARISyncEngine {
       }
     } catch (postSyncErr: any) {
       logger.warn('⚠️ Post-sync staff match/notification failed (non-fatal):', postSyncErr.message)
+    }
+
+    // Assigned instructors keep their staff_id, so the block above skips them.
+    // Session times can still change in SARI — rebuild calendar blocks when they drift.
+    try {
+      const { data: courseForCal } = await this.supabase
+        .from('courses')
+        .select('id, name, tenant_id, category, course_category:course_categories(name, icon)')
+        .eq('id', courseId)
+        .single()
+      if (courseForCal) {
+        await syncStaffCourseCalendar(this.supabase, courseForCal as any)
+      }
+    } catch (calErr: any) {
+      logger.warn('⚠️ Staff calendar resync after SARI session update failed (non-fatal):', calErr.message)
     }
 
     return { courseId, sessionsCreated, participantsSynced }

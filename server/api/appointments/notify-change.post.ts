@@ -5,6 +5,7 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { notifyCustomerAppointmentChange } from '~/server/utils/notify-customer-appointment-change'
+import { parseRescheduleChangedFields } from '~/utils/reschedule-email-triggers'
 
 export default defineEventHandler(async (event) => {
   const auth = await getAuthenticatedUser(event)
@@ -21,6 +22,7 @@ export default defineEventHandler(async (event) => {
     oldTime,
     newTime,
     staffName,
+    changedFields,
   } = body || {}
 
   if (!type || !['cancelled', 'rescheduled'].includes(type)) {
@@ -64,10 +66,15 @@ export default defineEventHandler(async (event) => {
   }
   if (!iso) iso = new Date().toISOString()
 
+  const sanitizedChangedFields = Array.isArray(changedFields)
+    ? parseRescheduleChangedFields(changedFields)
+    : undefined
+
   const result = await notifyCustomerAppointmentChange({
     tenantId: dbUser.tenant_id,
     userId,
     type,
+    appointmentId,
     appointmentTimeIso: iso,
     appointmentTimeLabel: appointmentTimeLabel || newTime || undefined,
     cancellationReason: cancellationReason || null,
@@ -75,7 +82,9 @@ export default defineEventHandler(async (event) => {
       oldTime,
       newTime,
       staffName,
+      changedFields: sanitizedChangedFields,
     },
+    changedFields: sanitizedChangedFields,
   })
 
   return { success: true, ...result }

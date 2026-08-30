@@ -61,7 +61,7 @@ const sections = [
   },
   {
     title: '4. Preise und Zahlung',
-    content: 'Die Preise sind dem aktuellen Preisblatt unter simy.ch/preise zu entnehmen. Alle Preise verstehen sich in CHF zuzüglich allfälliger Mehrwertsteuer. Die Abrechnung erfolgt monatlich oder jährlich im Voraus per TWINT, Kreditkarte oder Rechnung.',
+    content: 'Die Preise sind dem aktuellen Preisblatt unter simy.ch/preise zu entnehmen. Alle Preise verstehen sich in CHF exklusive Mehrwertsteuer. Aktuell beträgt die MwSt. 0 %. Ab Oktober 2026 gilt der offizielle Normalsatz von 8.1 %. Die Abrechnung erfolgt monatlich oder jährlich im Voraus per TWINT, Kreditkarte oder Rechnung.',
   },
   {
     title: '4a. Planwechsel',

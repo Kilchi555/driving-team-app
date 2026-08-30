@@ -55,6 +55,7 @@
           </NuxtLink>
         </div>
         <p class="text-sm text-gray-400">Keine Kreditkarte · Monatlich kündbar · Schweizer Server</p>
+        <SimyPriceVatNote class="mt-2" />
       </div>
     </section>
 
@@ -255,6 +256,7 @@ useHead(() => ({
             '@type': 'Offer',
             price: String(STARTING_PRICE_CHF),
             priceCurrency: 'CHF',
+            valueAddedTaxIncluded: false,
           },
         },
       }),

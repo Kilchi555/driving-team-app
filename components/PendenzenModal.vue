@@ -55,7 +55,7 @@
             :style="activeTab === 'bewertungen' && pendingCount === 0 ? { borderBottomColor: 'var(--color-primary, #111827)', color: 'var(--color-primary, #111827)' } : {}"
             @click="activeTab = 'bewertungen'"
           >
-            Bewertungen
+            {{ t.documentationLabel }}
           </button>
           <button
             :class="[
@@ -187,8 +187,10 @@
           <div v-if="evaluationAppointments.length === 0" class="flex items-center justify-center py-8">
             <div class="text-center px-4">
               <div class="text-6xl mb-4">✅</div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Bewertungen ausstehend!</h3>
-              <p class="text-gray-600 mb-4">Alle {{ t.appointmentsPlural }} bewertet</p>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine {{ t.documentationLabel }} ausstehend!</h3>
+              <p class="text-gray-600 mb-4">
+                Alle {{ t.appointmentsPlural }} {{ isDrivingSchool ? 'bewertet' : 'dokumentiert' }}
+              </p>
             </div>
           </div>
 
@@ -359,7 +361,7 @@
       v-if="showEvaluationModal"
       :is-open="showEvaluationModal"
       :appointment="selectedAppointment"
-      :student-category="getStudentCategory(selectedAppointment)"
+      :student-category="evaluationStudentCategory(selectedAppointment)"
       :current-user="props.currentUser"
       @close="closeEvaluationModal"
       @saved="onEvaluationSaved"
@@ -561,12 +563,16 @@ import LoadingLogo from '~/components/LoadingLogo.vue'
 import CancellationReasonModal from '~/components/CancellationReasonModal.vue'
 import { useTerminology } from '~/composables/useTerminology'
 import { useFeatures } from '~/composables/useFeatures'
+import { resolveEvaluationStudentCategory } from '~/utils/evaluation-student-category'
 
 const { t, isDrivingSchool, eventTypeLabel } = useTerminology()
 const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
 
 const evaluationsEnabled = computed(() =>
-  isFeatureEnabled('evaluations_enabled', isDrivingSchool.value)
+  isFeatureEnabled('evaluations_enabled', true)
+)
+const documentationStatusNoun = computed(() =>
+  isDrivingSchool.value ? 'Bewertung' : t.value.documentationLabel
 )
 const examsEnabled = computed(() =>
   isFeatureEnabled('exams_enabled', isDrivingSchool.value)
@@ -951,36 +957,14 @@ const getAppointmentFormattedTime = (appointment: any, type: 'start' | 'end') =>
   return appointment?.formattedEndTime || formatLocalTime(appointment?.end_time)
 }
 
-// Hilfsfunktion für Student Category
-const getStudentCategory = (appointment: any) => {
-  // Priorität: 1. appointment_type, 2. type, 3. Erste Kategorie aus User-Kategorien, 4. Fallback 'A'
-  let category = appointment?.appointment_type || appointment?.type || 'A'
-  
-  // Wenn der User mehrere Kategorien hat (z.B. 'B,A'), verwende den Termin-Typ
-  // oder die erste Kategorie aus der User-Kategorie-Liste
-  if (!category || category === 'A') {
-    const rawCategory = appointment?.users?.category
-    if (rawCategory) {
-      // category kann ein String ('B,A'), ein Array (['B','A']), oder ein einzelner Wert sein
-      if (Array.isArray(rawCategory)) {
-        category = rawCategory[0] ?? 'A'
-      } else if (typeof rawCategory === 'string') {
-        category = rawCategory.split(',')[0] ?? 'A'
-      } else {
-        category = String(rawCategory)
-      }
-    }
-  }
-  
-  logger.debug('🔥 getStudentCategory called:', {
-    userCategory: appointment?.users?.category,
+const evaluationStudentCategory = (appointment: any) =>
+  resolveEvaluationStudentCategory({
+    isDrivingSchool: isDrivingSchool.value,
     appointmentType: appointment?.appointment_type,
-    appointmentTypeField: appointment?.type,
+    type: appointment?.type,
     eventTypeCode: appointment?.event_type_code,
-    finalCategory: category
+    userCategory: appointment?.users?.category,
   })
-  return category
-}
 
 const openEvaluation = (appointment: any) => {
   if (!evaluationsEnabled.value && appointment?.event_type_code !== 'exam') {
@@ -992,16 +976,6 @@ const openEvaluation = (appointment: any) => {
     return
   }
 
-  logger.debug('🔥 PendenzenModal - opening evaluation for:', appointment.id)
-  
-  logger.debug('🔥 Student category debug:', {
-    userCategory: appointment.users?.category,
-    appointmentType: appointment.type,
-    eventTypeCode: appointment.event_type_code,
-    appointmentTypeField: appointment.appointment_type,
-    finalCategory: getStudentCategory(appointment)
-  })
-  
   // ✅ PRÜFE OB ES EINE PRÜFUNG IST
   if (appointment.event_type_code === 'exam') {
     logger.debug('📝 Exam detected - showing exam result modal')
@@ -1457,11 +1431,11 @@ const getPriorityText = (appointment: any) => {
   const yesterdayString = yesterday.toDateString()
   
   if (appointmentDate === today) {
-    return 'Bewertung: Offen'
+    return `${documentationStatusNoun.value}: Offen`
   } else if (appointmentDate === yesterdayString) {
-    return 'Bewertung: Fällig'
+    return `${documentationStatusNoun.value}: Fällig`
   } else {
-    return 'Bewertung: Überfällig'
+    return `${documentationStatusNoun.value}: Überfällig`
   }
 }
 

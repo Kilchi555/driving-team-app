@@ -1063,7 +1063,8 @@ async function validateEmailRealtime() {
         method: 'POST',
         body: {
           email: form.email.trim().toLowerCase(),
-          tenantId: userData.value?.tenant_id
+          tenantId: userData.value?.tenant_id,
+          token,
         }
       }) as any
       
@@ -1224,6 +1225,10 @@ onMounted(async () => {
     if (userData.value.profession) form.profession = userData.value.profession
     if (userData.value.category && Array.isArray(userData.value.category)) {
       form.categories = userData.value.category
+    }
+
+    if (form.email) {
+      validateEmailRealtime()
     }
 
     // Load dynamic categories
@@ -1701,6 +1706,7 @@ const completeOnboarding = async () => {
     if (completeError.value) {
       console.error('❌ Complete error details:', completeError.value)
       const data = completeError.value.data || {}
+      const code = data.code || data.data?.code
       let errorMessage =
         data.statusMessage ||
         data.message ||
@@ -1709,15 +1715,16 @@ const completeOnboarding = async () => {
         'Unbekannter Fehler'
       const tip = data.tip || data.data?.tip
 
-      // Provide more helpful error messages for common cases
-      if (/duplicate|already.*(registered|exist)|bereits/i.test(errorMessage)) {
-        errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere E-Mail oder melde dich direkt an.'
-      } else if (/password|passwort/i.test(errorMessage) && !/wähle|mindestens|lecks/i.test(errorMessage)) {
-        errorMessage = 'Das Passwort erfüllt nicht die Anforderungen (mindestens 12 Zeichen, nicht in Datenlecks bekannt).'
-      } else if (/token|abgelaufen|ungültig/i.test(errorMessage) && /invalid|expired|token/i.test(errorMessage)) {
-        errorMessage = 'Der Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.'
-      } else if (/onboarding completion failed/i.test(errorMessage)) {
-        errorMessage = 'Die Registrierung konnte nicht abgeschlossen werden. Bitte versuche es erneut.'
+      if (!code) {
+        if (/duplicate|already.*(registered|exist)|bereits/i.test(errorMessage)) {
+          errorMessage = 'Diese E-Mail-Adresse ist bereits registriert. Bitte verwende eine andere E-Mail oder melde dich direkt an.'
+        } else if (/password|passwort/i.test(errorMessage) && !/wähle|mindestens|lecks/i.test(errorMessage)) {
+          errorMessage = 'Das Passwort erfüllt nicht die Anforderungen (mindestens 12 Zeichen, nicht in Datenlecks bekannt).'
+        } else if (/token|abgelaufen|ungültig/i.test(errorMessage) && /invalid|expired|token/i.test(errorMessage)) {
+          errorMessage = 'Der Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.'
+        } else if (/onboarding completion failed/i.test(errorMessage)) {
+          errorMessage = 'Die Registrierung konnte nicht abgeschlossen werden. Bitte versuche es erneut.'
+        }
       }
 
       showErrorMessage(errorMessage, tip)

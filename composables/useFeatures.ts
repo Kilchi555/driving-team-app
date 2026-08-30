@@ -126,7 +126,8 @@ export function useFeatures() {
       for (const [key, catalog] of Object.entries(FEATURE_CATALOG)) {
         if (seenKeys.has(key)) continue
         if (catalog.drivingSchoolOnly && !isDrivingSchool) continue
-        flags[key] = false
+        const defaultOn = key === 'evaluations_enabled'
+        flags[key] = defaultOn
         definitions.push({
           key,
           displayName: catalog.displayName,
@@ -134,7 +135,7 @@ export function useFeatures() {
           icon: catalog.icon,
           isVisible: true,
           sortOrder: catalog.sortOrder,
-          isEnabled: false
+          isEnabled: defaultOn
         })
       }
 
