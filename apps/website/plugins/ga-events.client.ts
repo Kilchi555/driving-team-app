@@ -117,7 +117,7 @@ export default defineNuxtPlugin(() => {
     let href = target.getAttribute('href') ?? ''
 
     // Match all outbound simy.ch links (booking AND customer/course links)
-    if (href.includes('simy.ch')) {
+    if (href.includes('simy.ch') || href.startsWith('/buchen') || href.includes('/buchen?') || href.startsWith('/go/buchen')) {
       // Rewrite BEFORE reading final href / navigating — closes pre-mount race.
       enrichSimyAnchor(target)
       href = target.getAttribute('href') ?? href
@@ -189,7 +189,9 @@ export default defineNuxtPlugin(() => {
     const target = (e.target as HTMLElement)?.closest?.('a') as HTMLAnchorElement | null
     if (!target) return
     const href = target.getAttribute('href') ?? ''
-    if (href.includes('simy.ch')) enrichSimyAnchor(target)
+    if (href.includes('simy.ch') || href.startsWith('/buchen') || href.includes('/buchen?') || href.startsWith('/go/buchen')) {
+      enrichSimyAnchor(target)
+    }
   }, { capture: true })
 
   // GA4 only on generic form submit. Meta Lead must fire on *successful* inquiry

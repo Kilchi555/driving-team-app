@@ -26,6 +26,19 @@ const PROBE_URL =
   '?code=ERSTE30&utm_source=google&utm_medium=cpc' +
   '&utm_campaign={campaignid}&utm_content={adgroupid}&utm_term={keyword}'
 const SITELINK_URL = `https://drivingteam.ch/${PROBE_PATH}/?code=ERSTE30`
+const LEAKY_SITELINK = /fahrschule-preise|auto-fahrschule-zuerich-preis|\/team\/?(\?|$)|motorrad|vku-kurs/i
+const OFFER_SITELINKS = [
+  {
+    linkText: 'Erste Lektion CHF 65',
+    description1: 'Nur die 1. Lektion',
+    description2: 'danach 95.– / 45 Min',
+  },
+  {
+    linkText: 'Jetzt online buchen',
+    description1: 'Kat. B Automatik',
+    description2: 'Bahnhof Altstetten',
+  },
+] as const
 
 type Headline = { text: string; pinnedField?: string }
 type Description = { text: string; pinnedField?: string }
@@ -158,7 +171,7 @@ export default defineEventHandler(async (event) => {
       urls,
       resource_name: row.campaignAsset?.resourceName ?? '',
       is_probe: urls.some(isProbeUrl),
-      is_leaky: !urls.some(isProbeUrl),
+      is_leaky: urls.some((u) => LEAKY_SITELINK.test(String(u))),
     }
   })
   const leakySitelinks = sitelinks.filter((s) => s.is_leaky && !s.is_probe)
@@ -189,7 +202,7 @@ export default defineEventHandler(async (event) => {
     sitelinks: {
       existing: sitelinks.map((s) => ({ text: s.text, urls: s.urls, leaky: s.is_leaky, probe: s.is_probe })),
       unlink: leakySitelinks.map((s) => s.text),
-      add_offer: !hasProbeSitelink,
+      add_offer: OFFER_SITELINKS.filter((s) => !sitelinks.some((e) => e.text === s.linkText)).map((s) => s.linkText),
     },
   }
 
@@ -257,35 +270,41 @@ export default defineEventHandler(async (event) => {
     else unlinkErrors.push(unlinkRes.data)
   }
 
-  let sitelinkAction = hasProbeSitelink ? 'already_present' : 'skipped'
+  const sitelinkCreates: string[] = []
   let sitelinkError: unknown
-  if (!hasProbeSitelink) {
+  const missingOffers = OFFER_SITELINKS.filter((s) => !sitelinks.some((e) => e.text === s.linkText))
+  for (const offer of missingOffers) {
     const assetRes = await mutate(customerId, headers, 'assets', [{
       create: {
         sitelinkAsset: {
-          linkText: 'Erste Lektion CHF 65',
-          description1: 'Nur die 1. Lektion',
-          description2: 'danach 95.– / 45 Min',
+          linkText: offer.linkText,
+          description1: offer.description1,
+          description2: offer.description2,
         },
         finalUrls: [SITELINK_URL],
       },
     }], false)
     const assetName = assetRes.data?.results?.[0]?.resourceName
     if (!assetRes.ok || !assetName) {
-      sitelinkAction = 'asset_failed'
       sitelinkError = assetRes.data
-    } else {
-      const linkRes = await mutate(customerId, headers, 'campaignAssets', [{
-        create: {
-          campaign: `customers/${customerId}/campaigns/${CAMPAIGN_ID}`,
-          asset: assetName,
-          fieldType: 'SITELINK',
-        },
-      }], false)
-      sitelinkAction = linkRes.ok ? 'created' : 'link_failed'
-      if (!linkRes.ok) sitelinkError = linkRes.data
+      break
     }
+    const linkRes = await mutate(customerId, headers, 'campaignAssets', [{
+      create: {
+        campaign: `customers/${customerId}/campaigns/${CAMPAIGN_ID}`,
+        asset: assetName,
+        fieldType: 'SITELINK',
+      },
+    }], false)
+    if (!linkRes.ok) {
+      sitelinkError = linkRes.data
+      break
+    }
+    sitelinkCreates.push(offer.linkText)
   }
+  const sitelinkAction = sitelinkCreates.length
+    ? `created:${sitelinkCreates.join(',')}`
+    : (hasProbeSitelink ? 'already_present' : 'skipped')
 
   logger.info(`[gads-fix-probe-landing] ads=${adsUpdated.length} keywords=${keywordsUpdated} sitelinks_unlinked=${unlinked.length} sitelink=${sitelinkAction}`)
 

@@ -14,7 +14,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   if (import.meta.server) return
 
   const enrichBookingLinks = () => {
-    document.querySelectorAll('a[href*="simy.ch"]').forEach((link) => {
+    document.querySelectorAll('a[href*="simy.ch"], a[href^="/buchen"], a[href*="/buchen?"], a[href^="/go/buchen"]').forEach((link) => {
       enrichSimyAnchor(link as HTMLAnchorElement)
     })
   }
