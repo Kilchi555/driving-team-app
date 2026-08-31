@@ -141,13 +141,18 @@
               <div>
                 <p class="text-sm font-medium text-amber-800">Account noch nicht aktiviert</p>
                 <p class="text-sm text-amber-700 mt-1">
-                  Sie wurden von Ihrem Unternehmen erfasst, haben die Registrierung aber noch nicht abgeschlossen.
-                  Geben Sie Ihre Telefonnummer ein, um einen neuen Onboarding-Link per SMS zu erhalten.
+                  <template v-if="allowCustomerAccountActivation">
+                    Sie wurden von Ihrem Unternehmen erfasst, haben die Registrierung aber noch nicht abgeschlossen.
+                    Geben Sie Ihre Telefonnummer ein, um einen neuen Onboarding-Link per SMS zu erhalten.
+                  </template>
+                  <template v-else>
+                    Dieses Unternehmen führt Kunden ohne Online-Login. Bitte kontaktiere uns direkt.
+                  </template>
                 </p>
               </div>
             </div>
 
-            <div class="flex gap-2">
+            <div v-if="allowCustomerAccountActivation" class="flex gap-2">
               <input
                 v-model="pendingAccount.phone"
                 type="tel"
@@ -415,9 +420,9 @@
 
         <!-- Footer Links -->
         <div class="mt-6 text-center">
-          <p v-if="!isNativeApp" class="text-sm text-gray-600">
+          <p v-if="!isNativeApp && allowPublicRegister" class="text-sm text-gray-600">
             Noch kein Account? 
-            <NuxtLink :to="'/register'" class="font-medium hover:underline" style="color: #7C3AED;">
+            <NuxtLink :to="tenantParam ? `/register/${tenantParam}` : '/register'" class="font-medium hover:underline" style="color: #7C3AED;">
               Registrieren
             </NuxtLink>
           </p>
@@ -429,6 +434,14 @@
             <NuxtLink to="/" class="text-sm text-gray-500 hover:text-gray-700 transition-colors">
               Zurück zur Startseite
             </NuxtLink>
+          </div>
+
+          <div class="mt-3 flex items-center justify-center gap-3 text-xs text-gray-400">
+            <NuxtLink to="/agb" class="hover:text-gray-600 transition-colors">AGB</NuxtLink>
+            <span>·</span>
+            <NuxtLink to="/datenschutz" class="hover:text-gray-600 transition-colors">Datenschutz</NuxtLink>
+            <span>·</span>
+            <a href="https://simy.ch/impressum" target="_blank" rel="noopener" class="hover:text-gray-600 transition-colors">Impressum</a>
           </div>
         </div>
       </div>
@@ -527,15 +540,18 @@
           <!-- Not Found: phone — suggest register -->
           <div v-if="resetNotFound === 'phone'" class="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
             <p class="text-sm text-amber-800 font-medium">Diese Telefonnummer ist bei uns nicht hinterlegt.</p>
-            <p class="text-sm text-amber-700">Noch kein Konto? Jetzt kostenlos registrieren.</p>
-            <NuxtLink
-              to="/register"
-              @click="showForgotPasswordModal = false"
-              class="block w-full py-2 px-4 rounded-lg font-medium text-sm text-center text-white transition-colors"
-              style="background: #7C3AED"
-            >
-              Jetzt registrieren
-            </NuxtLink>
+            <template v-if="allowPublicRegister">
+              <p class="text-sm text-amber-700">Noch kein Konto? Jetzt kostenlos registrieren.</p>
+              <NuxtLink
+                :to="tenantParam ? `/register/${tenantParam}` : '/register'"
+                @click="showForgotPasswordModal = false"
+                class="block w-full py-2 px-4 rounded-lg font-medium text-sm text-center text-white transition-colors"
+                style="background: #7C3AED"
+              >
+                Jetzt registrieren
+              </NuxtLink>
+            </template>
+            <p v-else class="text-sm text-amber-700">Bitte kontaktiere dein Unternehmen.</p>
           </div>
 
           <!-- Success Message -->
@@ -617,6 +633,7 @@ import { useTenant } from '~/composables/useTenant'
 import { useMFAFlow } from '~/composables/useMFAFlow'
 import { logger } from '~/utils/logger'
 import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
+import { adminHomePath, withWebsiteOnlyFlag } from '~/utils/website-only'
 
 // Meta
 definePageMeta({
@@ -667,6 +684,28 @@ const tenantParam = ref(
   (route.query.tenant as string) || 
   ''
 )
+const allowPublicRegister = ref(true)
+const allowCustomerAccountActivation = ref(true)
+
+async function loadAuthPolicy(slug: string) {
+  if (!slug) return
+  try {
+    const res = await $fetch<{
+      success?: boolean
+      data?: {
+        bookingPolicy?: {
+          registration_account_mode?: 'hidden' | 'required'
+          allow_customer_account_activation?: boolean
+        }
+      }
+    }>('/api/booking/get-booking-init', { query: { slug } })
+    const policy = res?.data?.bookingPolicy
+    allowPublicRegister.value = policy?.registration_account_mode !== 'hidden'
+    allowCustomerAccountActivation.value = policy?.allow_customer_account_activation !== false
+  } catch {
+    /* keep defaults */
+  }
+}
 
 // Watch for tenant changes and load tenant
 watch(
@@ -677,10 +716,15 @@ watch(
       tenantParam.value = newTenant
       logger.debug('🏢 Tenant updated from URL:', tenantParam.value)
       loadTenant(tenantParam.value)
+      loadAuthPolicy(tenantParam.value)
     }
   },
   { immediate: true }
 )
+
+if (tenantParam.value) {
+  loadAuthPolicy(tenantParam.value)
+}
 
 // Computed
 const isCheckingSession = computed<boolean>(() => Boolean((loading as any).value ?? loading))
@@ -761,6 +805,8 @@ const handlePasskeyLogin = async () => {
       let redirectPath = '/'
       if (role === 'admin' || role === 'tenant_admin' || role === 'superadmin') {
         redirectPath = '/admin/dashboard'
+      } else if (role === 'accountant') {
+        redirectPath = '/admin/accounting'
       } else if (role === 'staff') {
         redirectPath = '/staff/dashboard'
       } else if (role === 'client') {
@@ -796,6 +842,8 @@ const handleBackupCodeLogin = async () => {
       let redirectPath = '/'
       if (role === 'admin' || role === 'tenant_admin' || role === 'superadmin') {
         redirectPath = '/admin/dashboard'
+      } else if (role === 'accountant') {
+        redirectPath = '/admin/accounting'
       } else if (role === 'staff') {
         redirectPath = '/staff/dashboard'
       } else if (role === 'client') {
@@ -987,6 +1035,9 @@ const handleLogin = async () => {
     if (response.profile) {
       authStore.userProfile = response.profile
       authStore.userRole = response.profile.role || ''
+      if (response.profile.website_only) {
+        authStore.tenantTrialInfo = withWebsiteOnlyFlag(authStore.tenantTrialInfo, true) as any
+      }
       logger.debug('✅ User profile from login response:', response.profile.email)
     } else {
       // Fallback: fetch profile via API
@@ -1021,7 +1072,7 @@ const handleLogin = async () => {
         if (supabase) {
           const { data: tenant, error: tenantError } = await supabase
             .from('tenants')
-            .select('slug')
+            .select('slug, website_only')
             .eq('id', user.tenant_id)
             .single()
           
@@ -1029,10 +1080,15 @@ const handleLogin = async () => {
             console.error('❌ Error loading tenant:', tenantError)
           } else if (tenant?.slug) {
             logger.debug('✅ Found tenant slug:', tenant.slug)
+            if (tenant.website_only) {
+              authStore.tenantTrialInfo = withWebsiteOnlyFlag(authStore.tenantTrialInfo, true) as any
+            }
             
             // Weiterleitung basierend auf Rolle
             if (user.role === 'admin' || user.role === 'tenant_admin') {
-              redirectPath = '/admin'
+              redirectPath = adminHomePath(!!tenant.website_only)
+            } else if (user.role === 'accountant') {
+              redirectPath = '/admin/accounting'
             } else if (user.role === 'staff') {
               redirectPath = '/dashboard'
             } else {
@@ -1122,7 +1178,7 @@ const handleLogin = async () => {
       pendingAccount.value.success = null
     } else if (errorMsg?.includes('User not found')) {
       loginError.value = 'Benutzername und/oder Passwort ist falsch.'
-    } else if (errorMsg?.includes('disabled')) {
+    } else if (/\b(account|user)\b.*\bdisabled\b|\bdisabled\b.*\b(account|user)\b/i.test(errorMsg || '')) {
       loginError.value = 'Ihr Account wurde deaktiviert. Bitte kontaktieren Sie den Administrator.'
     } else if (errorMsg?.includes('network') || errorMsg?.includes('timeout')) {
       loginError.value = 'Verbindungsfehler. Bitte überprüfen Sie Ihre Internetverbindung.'
@@ -1165,13 +1221,18 @@ const handleMFAVerify = async () => {
     } else if (user.tenant_id) {
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('slug')
+        .select('slug, website_only')
         .eq('id', user.tenant_id)
         .single()
       
       if (tenant?.slug) {
+        if (tenant.website_only) {
+          authStore.tenantTrialInfo = withWebsiteOnlyFlag(authStore.tenantTrialInfo, true) as any
+        }
         if (user.role === 'admin' || user.role === 'tenant_admin') {
-          redirectPath = '/admin'
+          redirectPath = adminHomePath(!!tenant.website_only)
+        } else if (user.role === 'accountant') {
+          redirectPath = '/admin/accounting'
         } else if (user.role === 'staff') {
           redirectPath = '/dashboard'
         } else {
@@ -1373,11 +1434,16 @@ onMounted(async () => {
     }
     
     logger.debug('✅ User profile found, redirecting...')
+    if (!authStore.tenantTrialInfo && user.tenant_id) {
+      await authStore.loadTenantTrialInfo()
+    }
     let redirectPath = '/customer-dashboard'
     if (user?.role === 'super_admin') {
       redirectPath = '/tenant-admin'
     } else if (user?.role === 'admin' || user?.role === 'tenant_admin') {
-      redirectPath = '/admin'
+      redirectPath = adminHomePath(!!authStore.tenantTrialInfo?.website_only)
+    } else if (user?.role === 'accountant') {
+      redirectPath = '/admin/accounting'
     } else if (user?.role === 'staff') {
       redirectPath = '/dashboard'
     }

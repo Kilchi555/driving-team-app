@@ -38,6 +38,7 @@
       :requirements="[
         'Gültiger Lernfahrausweis der Kategorie A1/A',
         'Selbständiges Fahren von A nach B möglich',
+        'Bei unsicherem Fahren: Fahrstunden beim Fahrlehrer vor dem Grundkurs empfohlen',
         'Eigenes Motorrad/Roller inkl. Sicherheitsbekleidung mitbringen'
       ]"
       :details="[
@@ -47,6 +48,7 @@
         '📍 Treffpunkt: <strong>Herrengasse 17, 8853 Lachen/SZ</strong>'
       ]"
       :important-notes="[
+        'Bei unsicherem Fahren empfehlen wir Fahrstunden beim Fahrlehrer vor dem Grundkurs.',
         'Für Kategorie A1 sind neu ebenfalls die Kursteile 1, 2 & 3 zu absolvieren. (Für Inhaber der Kategorie B ist dann keine praktische Prüfung notwendig.)',
         'Wenn du die Kategorie A1 OHNE GESCHWINDIGKEITSBESCHRÄNKUNG (45km/h) bereits seit mindestens 31.12.2020 besitzt und die Kategorie A beschränkt (35kW) machen willst, dann melde dich nur für den Kursteil 3 an.'
       ]"
@@ -91,7 +93,7 @@
         </details>
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
           <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Motorräder stellt Driving Team für den Grundkurs zur Verfügung?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
-          <p class="text-gray-600 mt-4 text-sm">Für den Motorrad-Grundkurs bei Driving Team in Lachen müssen Teilnehmende in der Regel ihr eigenes Fahrzeug mitbringen.</p>
+          <p class="text-gray-600 mt-4 text-sm">Für den Motorrad-Grundkurs bei Driving Team in Lachen musst du dein eigenes betriebssicheres Motorrad oder deinen Roller sowie Helm und Schutzausrüstung mitbringen.</p>
         </details>
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
           <summary class="font-semibold text-gray-900 flex justify-between items-center">Kann ich meinen eigenen Helm und Schutzkleidung mitbringen?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>

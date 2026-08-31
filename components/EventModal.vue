@@ -164,9 +164,9 @@
               v-model="formData.duration_minutes"
               :available-durations="Array.isArray(availableDurations) ? availableDurations : [45]"
               :price-per-minute="displayPricePerMinute"
-              :disabled="props?.mode === 'edit' && isPastAppointment"
-              :show-buttons="!(props?.mode === 'edit' && isPastAppointment)"
-              :is-past-appointment="props?.mode === 'edit' && isPastAppointment"
+              :disabled="false"
+              :show-buttons="true"
+              :is-past-appointment="false"
               :mode="props?.mode || 'create'"
               :selected-student="selectedStudent"
               :appointment-id="props.eventData?.id"
@@ -177,6 +177,31 @@
             />
             
 
+          </div>
+
+          <!-- Fokus für diese Lektion: Themen mit Notiz vormerken, ohne Bewertung -->
+          <div
+            v-if="isLessonType(formData.eventType) && selectedStudent && !showEventTypeSelection && props.mode !== 'view'"
+            class="py-2"
+          >
+            <details class="group rounded-xl border border-gray-200 bg-white" :open="plannedTopics.length > 0">
+              <summary class="flex items-center justify-between px-3 py-2.5 cursor-pointer select-none list-none">
+                <span class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  🎯 Geplante Themen
+                  <span v-if="plannedTopics.length > 0" class="text-xs font-semibold px-1.5 py-0.5 rounded-full text-white" :style="primaryBg">{{ plannedTopics.length }}</span>
+                </span>
+                <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div class="px-3 pb-3">
+                <TopicNotePicker
+                  v-model="plannedTopics"
+                  :student-category="formData.type || ''"
+                  :is-theory-lesson="formData.appointment_type === 'theory'"
+                />
+              </div>
+            </details>
           </div>
 
           <!-- Time Section (nicht bei Ferien) -->
@@ -196,6 +221,15 @@
               @update:end-time="handleEndTimeUpdate"
               @time-changed="handleTimeChanged"
             />
+            <button
+              v-if="durationRefundPreview && durationRefundChoiceConfirmed"
+              type="button"
+              class="mt-2 w-full text-left text-sm font-medium text-gray-800 hover:text-gray-950"
+              @click="showDurationRefundModal = true"
+            >
+              CHF {{ (durationRefundPreview.amountRappen / 100).toFixed(2) }}
+              {{ durationRefundDestination === 'wallee' ? 'wird auf Karte zurückvergütet' : 'wird dem Guthaben gutgeschrieben' }}
+            </button>
           </div>
 
           <!-- Ferien: Von / Bis Datepicker (ersetzt TimeSelector vollständig) -->
@@ -548,14 +582,14 @@
           <button
             v-if="props.mode !== 'view'"
             @click="handleSaveAppointment"
-            :disabled="!isFormValidWithManualInput || isLoading || (props.mode === 'edit' && isPastAppointment) || (formData.selectedSpecialType === 'vacation' && vacationCapacityStatus !== null && !vacationCapacityStatus.allowed)"
+            :disabled="!isFormValidWithManualInput || isLoading || (props.mode === 'edit' && isPastAppointment && !durationChangedFromOriginal) || (formData.selectedSpecialType === 'vacation' && vacationCapacityStatus !== null && !vacationCapacityStatus.allowed)"
             :class="[
               'flex items-center gap-1.5 px-5 py-2 text-sm font-semibold rounded-xl transition-colors',
-              (props.mode === 'edit' && isPastAppointment)
+              (props.mode === 'edit' && isPastAppointment && !durationChangedFromOriginal)
                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 : 'disabled:opacity-40'
             ]"
-            :style="!(props.mode === 'edit' && isPastAppointment) ? primaryBg : {}"
+            :style="!(props.mode === 'edit' && isPastAppointment && !durationChangedFromOriginal) ? primaryBg : {}"
           >
             <svg v-if="isLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
             <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -564,6 +598,60 @@
         </div>
       </div>
 
+    </div>
+
+    <div
+      v-if="showDurationRefundModal && durationRefundPreview"
+      class="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"
+    >
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5">
+        <h3 class="text-base font-semibold text-gray-900">Dauer reduziert</h3>
+        <p class="mt-1 text-xs text-gray-400">
+          {{ durationRefundPreview.oldMinutes }} → {{ durationRefundPreview.newMinutes }} Min
+        </p>
+        <p class="mt-3 text-2xl font-semibold tracking-tight text-gray-900">
+          CHF {{ (durationRefundPreview.amountRappen / 100).toFixed(2) }}
+        </p>
+        <p class="mt-1 text-sm text-gray-500">
+          {{ durationRefundDestination === 'wallee' ? 'wird auf Karte zurückvergütet' : 'wird dem Guthaben gutgeschrieben' }}
+        </p>
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            class="rounded-xl border px-3 py-3 text-sm font-medium transition-colors"
+            :class="durationRefundDestination === 'wallet' ? 'border-blue-400 bg-blue-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
+            @click="durationRefundDestination = 'wallet'"
+          >
+            Guthaben
+          </button>
+          <button
+            v-if="durationRefundPreview.canWallee"
+            type="button"
+            class="rounded-xl border px-3 py-3 text-sm font-medium transition-colors"
+            :class="durationRefundDestination === 'wallee' ? 'border-blue-400 bg-blue-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'"
+            @click="durationRefundDestination = 'wallee'"
+          >
+            Karte
+          </button>
+        </div>
+        <div class="mt-4 flex gap-2">
+          <button
+            type="button"
+            class="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50"
+            @click="cancelDurationRefundChoice"
+          >
+            Zurück
+          </button>
+          <button
+            type="button"
+            class="flex-1 py-2 rounded-xl text-sm font-semibold text-white"
+            :style="primaryBg"
+            @click="confirmDurationRefundChoice"
+          >
+            Übernehmen
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- ConfirmationDialog für Löschen -->
@@ -736,9 +824,9 @@
           </div>
         </div>
 
-        <!-- ── Refund-Destination: nur für Staff bei kostenloser Stornierung einer bezahlten Lektion ── -->
+        <!-- ── Refund-Destination: nur Allowlist-Staff bei Wallee-Zahlung mit Restbetrag ── -->
         <div
-          v-if="cancellationStep === 2 && cancellationType === 'staff' && cancellationPolicyResult?.calculation?.chargePercentage === 0 && staffPaymentData?.payment_status === 'completed' && staffPaymentData?.wallee_transaction_id"
+          v-if="cancellationStep === 2 && cancellationType === 'staff' && canStaffChooseWalleeRefund && (cancellationPolicyResult?.calculation?.chargePercentage ?? 0) < 100"
           class="mb-4"
         >
           <p class="text-sm font-semibold text-gray-700 mb-2">Rückerstattung an Kunden:</p>
@@ -907,6 +995,7 @@
 
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { logger } from '~/utils/logger'
+import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { useTerminology } from '~/composables/useTerminology'
 import { useSmsService } from '~/composables/useSmsService'
 const { primaryBg } = usePrimaryColor()
@@ -931,6 +1020,7 @@ import ExamLocationSelector from '~/components/ExamLocationSelector.vue'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import PostAppointmentModal from './PostAppointmentModal.vue'
 import LoadingLogo from '~/components/LoadingLogo.vue'
+import TopicNotePicker, { type PlannedTopic } from '~/components/TopicNotePicker.vue'
 
 
 // Composables
@@ -1173,6 +1263,37 @@ const selectedLessonType = ref('lesson')
  *  discovery ↔ consulting every time the user picks a student or re-inits. */
 const createEventTypeDefaultsApplied = ref(false)
 
+// ── Vorgemerkte Themen ("Fokus für diese Lektion") ─────────────────────────
+// Unbewertete Themen-Vormerkungen für diesen Termin — werden beim späteren
+// Bewerten (EvaluationModal) automatisch vorausgewählt angezeigt.
+const plannedTopics = ref<PlannedTopic[]>([])
+
+const loadPlannedTopics = async (appointmentId: string) => {
+  try {
+    const response = await $fetch<{ success: boolean; data: PlannedTopic[] }>('/api/staff/get-planned-topics', {
+      query: { appointment_id: appointmentId }
+    })
+    plannedTopics.value = response?.data || []
+  } catch (err) {
+    logger.warn('⚠️ Could not load planned topics:', err)
+    plannedTopics.value = []
+  }
+}
+
+const savePlannedTopics = async (appointmentId: string) => {
+  try {
+    await $fetch('/api/staff/save-planned-topics', {
+      method: 'POST',
+      body: {
+        appointment_id: appointmentId,
+        topics: plannedTopics.value
+      }
+    })
+  } catch (err) {
+    logger.warn('⚠️ Could not save planned topics (non-critical):', err)
+  }
+}
+
 // ── Ferien-Bereich ──────────────────────────────────────────────────────────
 const vacationEndDate = ref('')
 
@@ -1282,6 +1403,43 @@ const manualChargePercentage = ref<number | null>(null) // ✅ NEW: Staff choice
 // Wallee refund destination choice for staff cancellations
 const staffRefundDestination = ref<'wallet' | 'wallee'>('wallet')
 const staffPaymentData = ref<any>(null) // cached payment row for refund destination UI
+const durationRefundDestination = ref<'wallet' | 'wallee'>('wallet')
+const showDurationRefundModal = ref(false)
+const durationRefundChoiceConfirmed = ref(false)
+const durationRefundPreviewKey = ref('')
+const durationRefundPreview = ref<{
+  amountRappen: number
+  oldMinutes: number
+  newMinutes: number
+  canWallee: boolean
+} | null>(null)
+
+const originalDurationMinutes = computed(() => {
+  const event = props.eventData
+  if (!event) return 0
+  return Number(
+    event.duration_minutes
+    || event.duration
+    || event.extendedProps?.duration_minutes
+    || event.extendedProps?.duration
+    || 0,
+  )
+})
+
+const durationChangedFromOriginal = computed(() => {
+  if (props.mode !== 'edit' || !originalDurationMinutes.value) return false
+  return Number(formData.value.duration_minutes) !== originalDurationMinutes.value
+})
+const canStaffChooseWalleeRefund = computed(() => {
+  const email = props.currentUser?.email || props.currentUser?.profile?.email
+  if (!canInitiateWalleeRefund(email)) return false
+  if (staffPaymentData.value?.payment_status !== 'completed') return false
+  if (!staffPaymentData.value?.wallee_transaction_id) return false
+  const remaining = (staffPaymentData.value.total_amount_rappen || 0)
+    - (staffPaymentData.value.credit_used_rappen || 0)
+    - (staffPaymentData.value.refunded_amount_rappen || 0)
+  return remaining > 0
+})
 const authStore = useAuthStore()
 // ✅ NEU: Track ob der Titel vom Benutzer manuell bearbeitet wurde
 const titleManuallyEdited = ref(false)
@@ -1300,7 +1458,7 @@ const { loadProducts, activeProducts, isLoading: isLoadingProducts } = useProduc
 const priceDisplayRef = ref()
 const savedCompanyBillingAddressId = ref<string | null>(null) // ✅ NEU: Company Billing Address ID
 const { t, eventTypeLabel } = useTerminology()
-const tenantName = ref(t.value.businessNoun) // Tenant name for SMS/Email
+const tenantName = ref('') // Display name (not SMS sender) — SMS sender is resolved server-side
 const evaluationCriteria = ref<EvaluationCriteria[]>([]) // ✅ NEU: Evaluationskriterien
 
 // Student Credit Management
@@ -1520,6 +1678,86 @@ const getLocationTextForTitle = (location: any, student: any): string => {
   return location.name || location.address || 'Unbekannter Ort'
 }
 
+function durationReductionAmountRappen(payment: any, oldMinutes: number, newMinutes: number) {
+  if (!payment?.lesson_price_rappen || !oldMinutes || newMinutes >= oldMinutes) return 0
+  const pricePerMinute = payment.lesson_price_rappen / oldMinutes
+  return Math.round((oldMinutes - newMinutes) * pricePerMinute)
+}
+
+function canWalleeRefundDurationDifference(payment: any, amountRappen: number) {
+  const email = props.currentUser?.email || props.currentUser?.profile?.email
+  if (!canInitiateWalleeRefund(email)) return false
+  if (payment?.payment_method !== 'wallee') return false
+  if (payment?.payment_status !== 'completed') return false
+  const remaining = (payment.total_amount_rappen || 0)
+    - (payment.credit_used_rappen || 0)
+    - (payment.refunded_amount_rappen || 0)
+  return remaining >= amountRappen && amountRappen > 0
+}
+
+function confirmDurationRefundChoice() {
+  durationRefundChoiceConfirmed.value = true
+  showDurationRefundModal.value = false
+}
+
+function cancelDurationRefundChoice() {
+  showDurationRefundModal.value = false
+  durationRefundChoiceConfirmed.value = false
+  durationRefundPreview.value = null
+  durationRefundPreviewKey.value = ''
+  durationRefundDestination.value = 'wallet'
+  if (originalDurationMinutes.value) {
+    formData.value.duration_minutes = originalDurationMinutes.value
+    calculateEndTime()
+  }
+}
+
+async function refreshDurationRefundPreview() {
+  if (
+    props.mode !== 'edit'
+    || !props.eventData?.id
+    || !originalDurationMinutes.value
+    || Number(formData.value.duration_minutes) >= originalDurationMinutes.value
+  ) {
+    durationRefundPreview.value = null
+    durationRefundChoiceConfirmed.value = false
+    durationRefundPreviewKey.value = ''
+    showDurationRefundModal.value = false
+    return
+  }
+
+  try {
+    const payment = await eventModalApi.getPaymentByAppointment(props.eventData.id)
+    const amountRappen = durationReductionAmountRappen(
+      payment,
+      originalDurationMinutes.value,
+      Number(formData.value.duration_minutes),
+    )
+    if (payment?.payment_status !== 'completed' || amountRappen <= 0) {
+      durationRefundPreview.value = null
+      durationRefundChoiceConfirmed.value = false
+      showDurationRefundModal.value = false
+      return
+    }
+    const key = `${originalDurationMinutes.value}-${formData.value.duration_minutes}-${amountRappen}`
+    durationRefundPreview.value = {
+      amountRappen,
+      oldMinutes: originalDurationMinutes.value,
+      newMinutes: Number(formData.value.duration_minutes),
+      canWallee: canWalleeRefundDurationDifference(payment, amountRappen),
+    }
+    if (key !== durationRefundPreviewKey.value) {
+      durationRefundPreviewKey.value = key
+      durationRefundChoiceConfirmed.value = false
+      durationRefundDestination.value = 'wallet'
+      showDurationRefundModal.value = true
+    }
+  } catch (err: any) {
+    logger.warn('Could not load duration-refund preview:', err?.message)
+    durationRefundPreview.value = null
+  }
+}
+
 // ✅ NEUE FUNKTION: Handle appointment save
 const handleSaveAppointment = async () => {
   const saveStartTime = performance.now()
@@ -1607,6 +1845,11 @@ const handleSaveAppointment = async () => {
     return
   }
   // ────────────────────────────────────────────────────────────────────────
+
+  if (durationRefundPreview.value && !durationRefundChoiceConfirmed.value) {
+    showDurationRefundModal.value = true
+    return
+  }
 
   try {
     logger.debug('💾 Starting appointment save...')
@@ -1771,6 +2014,17 @@ const handleSaveAppointment = async () => {
             .catch((error: any) => logger.warn('⚠️ Failed to save products (non-critical):', error.message))
         )
       }
+
+      // Save planned topics / "Fokus für diese Lektion" (non-critical).
+      // Always call — even with an empty list — so topics unselected during
+      // this edit are properly removed on the server, too.
+      if (savedAppointment?.id && isLessonType(formData.value.eventType)) {
+        parallelOperations.push(
+          savePlannedTopics(savedAppointment.id)
+            .then(() => logger.debug('✅ Planned topics saved successfully'))
+            .catch((error: any) => logger.warn('⚠️ Failed to save planned topics (non-critical):', error.message))
+        )
+      }
       
       // Wait for all parallel operations to complete
       if (parallelOperations.length > 0) {
@@ -1898,34 +2152,59 @@ const handleSaveAppointment = async () => {
             logger.error('Payment', 'Failed to update payment via API:', paymentUpdateError)
           }
           
-          // ✅ Only credit student balance if payment was already completed
-          if (originalPaymentData.payment_status === 'completed') {
-            // ✅ Add credit via secure API
-            try {
-              await $fetch('/api/staff/credit-transaction', {
-                method: 'POST',
-                body: {
-                  user_id: originalAppointmentData.user_id,
-                  amount_rappen: creditAmountRappen,
-                  reason: `Gutschrift für Dauer-Reduktion: ${originalAppointmentData.duration_minutes}min → ${formData.value.duration_minutes}min`,
-                  type: 'duration_reduction_credit',
-                  reference_type: 'appointment',
-                  reference_id: savedAppointment.id
-                }
-              })
-              
-              logger.debug('✅ Student credit updated via API:', {
-                studentId: originalAppointmentData.user_id,
-                creditAmount: (creditAmountRappen / 100).toFixed(2)
-              })
-              
-              showSuccess('Guthaben hinzugefügt', `CHF ${(creditAmountRappen / 100).toFixed(2)} wurde dem Guthaben hinzugefügt.`)
-            } catch (creditError: any) {
-              logger.error('StudentCredit', 'Failed to update credit via API:', creditError)
-              showError('Fehler', 'Guthaben konnte nicht hinzugefügt werden.')
+          // Completed payments: wallet credit or Wallee refund (staff choice)
+          if (originalPaymentData.payment_status === 'completed' && creditAmountRappen > 0) {
+            const refundToWallee = durationRefundDestination.value === 'wallee'
+              && canWalleeRefundDurationDifference(originalPaymentData, creditAmountRappen)
+
+            if (refundToWallee) {
+              try {
+                await $fetch('/api/payments/refund-request', {
+                  method: 'POST',
+                  body: {
+                    payment_id: originalPaymentData.id,
+                    amount_rappen: creditAmountRappen,
+                    reason: `Dauer reduziert: ${originalAppointmentData.duration_minutes}min → ${formData.value.duration_minutes}min`,
+                    price_correction: true,
+                  },
+                })
+                showSuccess(
+                  'Rückzahlung ausgelöst',
+                  `CHF ${(creditAmountRappen / 100).toFixed(2)} werden auf das Zahlungsmittel zurückerstattet (3–5 Werktage).`,
+                )
+              } catch (refundError: any) {
+                logger.error('DurationRefund', 'Wallee refund failed after duration reduction:', refundError)
+                showError(
+                  'Rückzahlung fehlgeschlagen',
+                  refundError?.data?.statusMessage || refundError?.message || 'Die Dauer ist gespeichert. Rückzahlung bitte im Schülerprofil erneut auslösen.',
+                )
+              }
+            } else {
+              try {
+                await $fetch('/api/staff/credit-transaction', {
+                  method: 'POST',
+                  body: {
+                    user_id: originalAppointmentData.user_id,
+                    amount_rappen: creditAmountRappen,
+                    reason: `Gutschrift für Dauer-Reduktion: ${originalAppointmentData.duration_minutes}min → ${formData.value.duration_minutes}min`,
+                    type: 'duration_reduction_credit',
+                    reference_type: 'appointment',
+                    reference_id: savedAppointment.id
+                  }
+                })
+
+                logger.debug('✅ Student credit updated via API:', {
+                  studentId: originalAppointmentData.user_id,
+                  creditAmount: (creditAmountRappen / 100).toFixed(2)
+                })
+
+                showSuccess('Guthaben hinzugefügt', `CHF ${(creditAmountRappen / 100).toFixed(2)} wurde dem Guthaben hinzugefügt.`)
+              } catch (creditError: any) {
+                logger.error('StudentCredit', 'Failed to update credit via API:', creditError)
+                showError('Fehler', 'Guthaben konnte nicht hinzugefügt werden.')
+              }
             }
           } else {
-            // For pending payments, just notify about price adjustment (no credit transaction)
             logger.debug('ℹ️ Payment is pending - price adjusted but no credit given')
           }
         }
@@ -2156,7 +2435,8 @@ const handleSaveAppointment = async () => {
 // }
 
 // ✅ Payment Method State für späteres Speichern
-const selectedPaymentMethod = ref<string>('wallee') // ✅ Standard: wallee
+const selectedPaymentMethod = ref<string>('wallee')
+const tenantDefaultPaymentMethod = ref<string>('wallee')
 const selectedPaymentData = ref<any>(null)
 const selectedInvoiceAddress = ref<any>(null)
 const cashAlreadyPaid = ref<boolean>(false)
@@ -2303,6 +2583,11 @@ const {
   isChargeableEventType,
   requiresCategory,
 } = modalForm
+
+watch(
+  () => [props.eventData?.id, formData.value.duration_minutes] as const,
+  () => { refreshDurationRefundPreview() },
+)
 
 watch(() => formData.value.type, async (newType) => {
   if (isPopulating.value) return
@@ -4274,12 +4559,6 @@ const handlePriceChanged = (price: number) => {
 const handleDurationChanged = (newDuration: number) => {
   logger.debug('⏱️ Duration changed to:', newDuration)
   
-  // ❌ Vergangene Termine können nicht mehr geändert werden
-  if (isPastAppointment.value) {
-    logger.debug('🚫 Cannot change duration for past appointment')
-    return
-  }
-
   markDurationManuallyChosen()
   formData.value.duration_minutes = newDuration
   calculateEndTime()
@@ -4634,8 +4913,7 @@ const resetForm = () => {
   error.value = ''
   isLoading.value = false
   
-  // ✅ NEU: Standard-Zahlungsmethode beim Reset setzen
-  selectedPaymentMethod.value = 'wallee'
+  selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
   cashAlreadyPaid.value = false
   resetDurationManuallyChosen()
 }
@@ -4931,72 +5209,9 @@ const performSoftDelete = async (deletionReason: string, status: string = 'cance
     logger.debug('✅ Appointment soft deleted successfully via API:', updateResult)
     logger.debug('✅ Status set to:', status)
     logger.debug('✅ Deletion reason:', deletionReason)
-    
-    // ✅ NEU: SMS und Email versenden bei Löschung
-    const phoneNumber = props.eventData?.phone || props.eventData?.extendedProps?.phone
-    const studentEmail = props.eventData?.email || props.eventData?.extendedProps?.email
-    const studentName = (props.eventData?.user_name || props.eventData?.student || props.eventData?.extendedProps?.student || t.value.client)
-    const firstName = studentName?.split(' ')[0] || studentName
-    const instructorName = (props.eventData?.instructor || props.eventData?.extendedProps?.instructor || `dein ${t.value.staff}`)
-    const appointmentTime = new Date(props.eventData.start || props.eventData.start_time).toLocaleString('de-CH', {
-      weekday: 'long',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-    
-    // SMS versenden
-    if (phoneNumber) {
-      logger.debug('📱 Sending SMS notification for cancelled appointment...')
-      try {
-        const result = await $fetch('/api/sms/send', {
-          method: 'POST',
-          body: {
-            phone: phoneNumber,
-            message: `Hallo ${firstName},\n\nDein Termin mit ${instructorName} am ${appointmentTime} wurde storniert.\n\nGrund: ${deletionReason}\n\nBeste Grüsse\n${tenantName.value}`,
-            senderName: tenantName.value
-          }
-        })
-        logger.debug('✅ SMS sent successfully:', result)
-      } catch (smsError: any) {
-        console.error('❌ Failed to send SMS:', smsError)
-      }
-    } else {
-      logger.debug('⚠️ No phone number available for SMS', { 
-        'eventData.phone': props.eventData?.phone,
-        'extendedProps.phone': props.eventData?.extendedProps?.phone 
-      })
-    }
-    
-    // Email versenden
-    if (studentEmail) {
-      logger.debug('📧 Sending Email notification for cancelled appointment...')
-      try {
-        const result = await $fetch('/api/email/send-appointment-notification', {
-          method: 'POST',
-          body: {
-            email: studentEmail,
-            studentName: firstName,
-            appointmentTime: appointmentTime,
-            staffName: instructorName,
-            cancellationReason: deletionReason,
-            type: 'cancelled',
-            tenantName: tenantName.value,
-            tenantId: props.currentUser?.tenant_id
-          }
-        })
-        logger.debug('✅ Email sent successfully:', result)
-      } catch (emailError: any) {
-        console.error('❌ Failed to send Email:', emailError)
-      }
-    } else {
-      logger.debug('⚠️ No email address available for email notification', {
-        'eventData.email': props.eventData?.email,
-        'extendedProps.email': props.eventData?.extendedProps?.email
-      })
-    }
+
+    // Notifications (email + SMS) are sent by cancel-staff — do not send a second
+    // unbranded copy from the client (SMS sender was used as tenant display name).
     
     // Events emittieren
     emit('appointment-deleted', props.eventData.id)
@@ -6182,28 +6397,24 @@ const handleEditModeLessonType = async () => {
           }) as { success?: boolean, preferred_payment_method?: string }
           
           if (paymentMethodResponse.success) {
-            selectedPaymentMethod.value = paymentMethodResponse.preferred_payment_method || 'wallee'
+            selectedPaymentMethod.value = paymentMethodResponse.preferred_payment_method || tenantDefaultPaymentMethod.value
             logger.debug('💳 Payment method loaded from secure API:', paymentMethodResponse.preferred_payment_method)
           } else {
-            logger.debug('ℹ️ No payment preference found, using default: wallee')
-            selectedPaymentMethod.value = 'wallee'
+            selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
           }
         } catch (error: any) {
-          logger.debug('ℹ️ Could not load payment preferences via API, using default: wallee', error.message)
-          selectedPaymentMethod.value = 'wallee' // Standard
-          logger.debug('💳 Using default payment method: wallee')
+          logger.debug('ℹ️ Could not load payment preferences via API, using tenant default', error.message)
+          selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
         }
       }
     }
   } catch (paymentErr) {
     logger.debug('⚠️ Could not load payment method, using default: wallee')
-    selectedPaymentMethod.value = 'wallee'
+    selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
   }
   
-  // ✅ NEU: Standard-Zahlungsmethode setzen falls noch nicht gesetzt
   if (!selectedPaymentMethod.value) {
-    selectedPaymentMethod.value = 'wallee'
-    logger.debug('💳 Default payment method set to wallee (fallback)')
+    selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
   }
   
   // ✅ NEU: Wenn ein Student geladen wurde, lade auch dessen Zahlungspräferenzen
@@ -6222,8 +6433,7 @@ const handleCreateMode = async () => {
     }
     logger.debug('🎯 CREATE MODE: Applied tenant default event type:', defaults)
 
-    // ✅ NEU: Standard-Zahlungsmethode für Create-Mode setzen
-    selectedPaymentMethod.value = 'wallee'
+    selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
 
     // ✅ NEU: Standard-Kategorie für Create-Mode setzen (driving_school only)
     if (requiresCategory.value) {
@@ -6733,6 +6943,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
       selectedExamLocation.value = null
       selectedLessonType.value = 'lesson'
       showEventTypeSelection.value = false
+      plannedTopics.value = []
     }
     isInitializing.value = true
     // Fresh create defaults each time the modal opens
@@ -6768,10 +6979,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
     try {
       const tenantData = await eventModalApi.getTenantInfo()
       
-      if (tenantData?.twilio_from_sender) {
-        tenantName.value = tenantData.twilio_from_sender
-        logger.debug('🏢 Tenant SMS sender loaded via API (twilio_from_sender):', tenantName.value)
-      } else if (tenantData?.name) {
+      if (tenantData?.name) {
         tenantName.value = tenantData.name
         logger.debug('🏢 Tenant name loaded via API:', tenantName.value)
       }
@@ -6788,6 +6996,8 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
       tenantName.value = t.value.businessNoun
     }
     
+    await loadTenantDefaultPaymentMethod()
+
     try {
       if (props.eventData && props.eventData.id) {
         logger.debug('📝 Editing existing appointment')
@@ -6803,6 +7013,11 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
         
         // ✅ SCHRITT 3: Edit-Mode LessonType handling
         await handleEditModeLessonType()
+
+        // ✅ Vorgemerkte Themen ("Fokus für diese Lektion") laden
+        if (props.eventData.id) {
+          await loadPlannedTopics(props.eventData.id)
+        }
       } else if (props.eventData && props.eventData.isPasteOperation) {
         // ✅ PASTE OPERATION: Spezielle Behandlung für kopierte Termine
         logger.debug('📋 Initializing pasted appointment')
@@ -6892,6 +7107,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
         // ✅ DANN: resetForm aufrufen, aber mit korrekten Werten überschreiben
         resetForm()
         selectedExamLocation.value = null
+        plannedTopics.value = []
         
         // ✅ SOFORT: Kalenderdaten setzen (bevor andere Funktionen sie überschreiben)
         formData.value.startDate = startDate
@@ -6917,8 +7133,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
           eventType: formData.value.eventType
         })
         
-        // ✅ NEU: Standard-Zahlungsmethode für neue Termine setzen
-        selectedPaymentMethod.value = 'wallee'
+        selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
         
         // ✅ WICHTIG: Nicht initializeFormData aufrufen - wir haben die Zeit schon oben extrahiert!
         // initializeFormData würde die Zeit NOCHMAL auslesen und dabei die falsche Zeit einsetzen
@@ -7067,18 +7282,26 @@ const loadUserPaymentPreferences = async (userId: string) => {
     }) as { success?: boolean, preferred_payment_method?: string }
     
     if (paymentMethodResponse.success) {
-      let paymentMethod = paymentMethodResponse.preferred_payment_method || 'wallee'
-      if (paymentMethod === 'twint' || paymentMethod === 'wallee') {
+      let paymentMethod = paymentMethodResponse.preferred_payment_method || tenantDefaultPaymentMethod.value
+      if (paymentMethod === 'twint' || paymentMethod === 'online') {
         paymentMethod = 'wallee'
-        logger.debug('💳 Mapped payment method to "wallee" for better UX:', paymentMethodResponse.preferred_payment_method)
       }
       selectedPaymentMethod.value = paymentMethod
     } else {
-      selectedPaymentMethod.value = 'wallee' // Default
+      selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
     }
   } catch (error: any) {
-    logger.debug('ℹ️ Could not load payment preferences via API, using default: wallee', error.message)
-    selectedPaymentMethod.value = 'wallee'
+    logger.debug('ℹ️ Could not load payment preferences via API, using tenant default', error.message)
+    selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+  }
+}
+
+const loadTenantDefaultPaymentMethod = async () => {
+  try {
+    const res = await $fetch<{ default_payment_method?: string }>('/api/settings/cash-payment-settings')
+    tenantDefaultPaymentMethod.value = res.default_payment_method || 'wallee'
+  } catch (error: any) {
+    logger.debug('ℹ️ Could not load tenant default payment method:', error?.message)
   }
 }
 

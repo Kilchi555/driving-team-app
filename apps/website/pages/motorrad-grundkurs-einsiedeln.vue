@@ -38,6 +38,7 @@
       :requirements="[
         'Gültiger Lernfahrausweis der Kategorie A1/A',
         'Selbständiges Fahren von A nach B möglich',
+        'Bei unsicherem Fahren: Fahrstunden beim Fahrlehrer vor dem Grundkurs empfohlen',
         'Eigenes Motorrad/Roller',
         'Eigene Motorrad-Sicherheitsbekleidung inkl. Helm'
       ]"
@@ -48,6 +49,7 @@
         '📍 Treffpunkt: <strong>Fahrschule Bisig, Bennauerstrasse 48, 8836 Bennau</strong>'
       ]"
       :important-notes="[
+        'Bei unsicherem Fahren empfehlen wir Fahrstunden beim Fahrlehrer vor dem Grundkurs.',
         'Für Kategorie A1 sind neu ebenfalls die Kursteile 1, 2 & 3 zu absolvieren. (Für Inhaber der Kategorie B ist dann keine praktische Prüfung notwendig.)',
         'Wenn du die Kategorie A1 OHNE GESCHWINDIGKEITSBESCHRÄNKUNG (45km/h) bereits seit mindestens 31.12.2020 besitzt und die Kategorie A beschränkt (35kW) machen willst, dann melde dich nur für den Kursteil 3 an.'
       ]"
@@ -116,7 +118,7 @@
         </details>
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
           <summary class="font-semibold text-gray-900 flex justify-between items-center">Kann ich meinen eigenen Helm und Schutzkleidung mitbringen?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
-          <p class="text-gray-600 mt-4 text-sm">Ja, beim Driving Team ist es erforderlich, dass Teilnehmende ihre eigene Motorrad-Sicherheitsbekleidung, einschliesslich eines Motorradhelms, mitbringen. Solltest du keinen Helm oder Schutzkleidung besitzen, bieten wir eine begrenzte Anzahl an Helmen, Jacken und Hosen zur Miete an (CHF 10.- Umtriebsentschädigung pro Nutzung).</p>
+          <p class="text-gray-600 mt-4 text-sm">Ja, beim Driving Team ist es erforderlich, dass Teilnehmende ihre eigene Motorrad-Sicherheitsbekleidung, einschliesslich eines Motorradhelms, mitbringen.</p>
         </details>
         <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
           <summary class="font-semibold text-gray-900 flex justify-between items-center">Welche Themen werden im Motorrad-Grundkurs behandelt?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>

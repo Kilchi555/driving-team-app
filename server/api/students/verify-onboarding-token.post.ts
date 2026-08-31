@@ -70,7 +70,7 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 4: Get tenant name and slug (with tenant isolation)
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('name, slug, id, from_email, contact_email, business_type')
+      .select('name, slug, id, from_email, contact_email, business_type, booking_policy')
       .eq('id', user.tenant_id)
       .single()
 
@@ -91,6 +91,14 @@ export default defineEventHandler(async (event) => {
         .maybeSingle()
       if (preset?.ui_labels && typeof preset.ui_labels === 'object') {
         ui_labels = preset.ui_labels as Record<string, string>
+      }
+    }
+
+    const { allowsCustomerAccountActivation } = await import('~/server/utils/customer-account-activation')
+    if (!allowsCustomerAccountActivation((tenant as any).booking_policy)) {
+      return {
+        success: false,
+        message: 'Online-Konto ist für diesen Betrieb nicht aktiviert.',
       }
     }
 

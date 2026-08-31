@@ -55,6 +55,7 @@
           </NuxtLink>
         </div>
         <p class="text-sm text-gray-400">Keine Kreditkarte · Monatlich kündbar · Schweizer Server</p>
+        <SimyPriceVatNote class="mt-2" />
       </div>
     </section>
 
@@ -185,9 +186,14 @@
       </div>
     </section>
 
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
+    <SimyWebsiteHighlight
+      title="Plus: eine SEO-Website, die die anderen nicht haben"
+      subtitle="Buchungstools enden beim Kalender. Simy generiert zusätzlich eine schnelle, lokale Landingpage — auch als eigenes Produkt ohne Software-Abo."
+    />
+
+    <section class="simy-closer py-20 px-6">
       <div class="max-w-xl mx-auto text-center">
-        <h2 class="text-3xl font-black text-white mb-4">Bereit für weniger Tools?</h2>
+        <h2 class="text-3xl font-extrabold text-white mb-4 simy-display">Bereit für weniger Tools?</h2>
         <p class="text-white/80 mb-8">30 Tage kostenlos — keine Kreditkarte.</p>
         <a
           :href="ctaUrl"
@@ -215,7 +221,7 @@ const c = computed(() => props.comparison)
 const { registerCta: ctaUrl } = useRegisterCta()
 const openFaq = ref<number | null>(0)
 const others = computed(() => COMPARISONS.filter((x) => x.slug !== props.comparison.slug))
-const canonical = computed(() => `https://simy.ch/vergleich/${props.comparison.slug}`)
+const canonical = computed(() => `https://www.simy.ch/vergleich/${props.comparison.slug}`)
 
 useHead(() => ({
   title: props.comparison.title,
@@ -241,7 +247,7 @@ useHead(() => ({
         description: props.comparison.verdict,
         url: canonical.value,
         inLanguage: 'de-CH',
-        isPartOf: { '@type': 'WebSite', name: 'Simy', url: 'https://simy.ch' },
+        isPartOf: { '@type': 'WebSite', name: 'Simy', url: 'https://www.simy.ch' },
         about: {
           '@type': 'SoftwareApplication',
           name: 'Simy',
@@ -250,6 +256,7 @@ useHead(() => ({
             '@type': 'Offer',
             price: String(STARTING_PRICE_CHF),
             priceCurrency: 'CHF',
+            valueAddedTaxIncluded: false,
           },
         },
       }),
@@ -272,8 +279,8 @@ useHead(() => ({
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
-          { '@type': 'ListItem', position: 2, name: 'Vergleich', item: 'https://simy.ch/vergleich' },
+          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://www.simy.ch/' },
+          { '@type': 'ListItem', position: 2, name: 'Vergleich', item: 'https://www.simy.ch/vergleich' },
           {
             '@type': 'ListItem',
             position: 3,

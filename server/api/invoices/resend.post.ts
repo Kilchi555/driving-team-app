@@ -14,7 +14,8 @@ import {
 } from '~/server/utils/invoice-product-lines'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
-import { invoicePersonNames, isPlaceholderBillingEmail, loadUserAddressForInvoice, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
+import { invoicePersonNames, invoiceQrDebtorName, isPlaceholderBillingEmail, loadUserAddressForInvoice, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
+import { isQuoteDocument, quoteAcceptUrl, quoteDocumentLabels } from '~/server/utils/invoice-quote'
 export default defineEventHandler(async (event) => {
   try {
     const { invoiceId } = await readBody(event)
@@ -172,7 +173,12 @@ export default defineEventHandler(async (event) => {
     // QR-Code generieren
     let qrCodeDataUrl: string | null = null
     let scorRef: string | null = invoice.payment_reference || null
-    const qrIban = (tenant as any)?.qr_iban || null
+    const asQuote = isQuoteDocument((invoice as any).document_kind)
+    const labels = quoteDocumentLabels(asQuote)
+    const acceptUrl = asQuote && (invoice as any).public_token
+      ? quoteAcceptUrl((invoice as any).public_token)
+      : null
+    const qrIban = asQuote ? null : ((tenant as any)?.qr_iban || null)
     if (qrIban) {
       try {
         const { generateSwissQRBase64, generateReference } = await import('~/server/utils/swiss-qr')
@@ -185,7 +191,7 @@ export default defineEventHandler(async (event) => {
           creditor_street_nr: (tenant as any)?.invoice_street_nr?.trim() || '',
           creditor_zip: (tenant as any)?.invoice_zip || '',
           creditor_city: (tenant as any)?.invoice_city || '',
-          debtor_name: customerName,
+          debtor_name: invoiceQrDebtorName(invoice as any, userAddress),
           debtor_street: invoice.billing_street || userAddress?.street || '',
           debtor_street_nr: (invoice as any).billing_street_number || userAddress?.street_nr || '',
           debtor_zip: invoice.billing_zip || userAddress?.zip || '',
@@ -202,7 +208,12 @@ export default defineEventHandler(async (event) => {
       customerName,
       invoiceNumber: invoice.invoice_number,
       invoiceDate: invoice.invoice_date,
-      dueDate: invoice.due_date,
+      dueDate: (invoice as any).valid_until || invoice.due_date,
+      documentTitle: labels.emailKindLabel,
+      dateLabel: labels.dateLabel,
+      dueLabel: labels.dueLabel,
+      acceptUrl,
+      isQuote: asQuote,
       items: finalItems,
       subtotalRappen: invoiceSubtotalRappen,
       discountRappen: invoice.discount_amount_rappen || 0,
@@ -230,7 +241,11 @@ export default defineEventHandler(async (event) => {
       const pdfBuffer = await generateInvoicePdf({
         invoiceNumber: invoice.invoice_number,
         invoiceDate: invoice.invoice_date,
-        dueDate: invoice.due_date,
+        dueDate: (invoice as any).valid_until || invoice.due_date,
+        documentTitle: labels.documentTitle,
+        dateLabel: labels.dateLabel,
+        dueLabel: labels.dueLabel,
+        paymentBlockTitle: labels.paymentBlockTitle,
         tenantName: (tenant as any)?.legal_company_name || tenantName,
         tenantStreet,
         tenantZip: (tenant as any)?.invoice_zip || '',
@@ -280,7 +295,7 @@ export default defineEventHandler(async (event) => {
         footerText,
         appointmentLabel: terms.appointment || 'Termin',
       })
-      pdfAttachments = [{ filename: `Rechnung_${invoice.invoice_number}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
+      pdfAttachments = [{ filename: `${labels.filenamePrefix}_${invoice.invoice_number}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }]
     } catch (pdfErr: any) {
       console.warn('⚠️ PDF-Generierung fehlgeschlagen (non-fatal):', pdfErr.message)
     }
@@ -288,7 +303,7 @@ export default defineEventHandler(async (event) => {
     // E-Mail versenden
     await sendEmail({
       to: billingEmail,
-      subject: `Rechnung ${invoice.invoice_number} – ${tenantName}`,
+      subject: `${labels.subjectPrefix} ${invoice.invoice_number} – ${tenantName}`,
       html,
       fromName: tenantName,
       fromEmail: (tenant as any)?.from_email ?? null,

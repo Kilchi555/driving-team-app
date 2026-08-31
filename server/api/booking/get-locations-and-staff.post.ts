@@ -6,7 +6,8 @@
 // STRICT MODE: Only returns locations/staff combinations that are explicitly marked as online bookable in staff_locations table
 
 import { logger } from '~/utils/logger'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { bookableUserRoles, resolveLocationStaffAssignments } from '~/server/utils/bookable-locations'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -21,18 +22,9 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const anonKey = process.env.SUPABASE_ANON_KEY
-
-    if (!anonKey) {
-      console.error('❌ SUPABASE_ANON_KEY not configured')
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    const supabase = createClient(supabaseUrl, anonKey)
+    // Public booking page has no session. Staff names must be read with
+    // service_role — anon can no longer SELECT users (PII leak closed).
+    const supabase = getSupabaseAdmin()
 
     logger.debug('📍 Fetching locations and staff:', { tenant_id, category_code })
 
@@ -78,12 +70,12 @@ export default defineEventHandler(async (event) => {
         .eq('is_active', true)
         .eq('location_type', 'standard'),
 
-      // 3. All active staff for tenant
+      // 3. Bookable people — staff only for Fahrschule; consulting also includes admin
       supabase
         .from('users')
-        .select('id, first_name, last_name, email, role, category, is_active, metadata')
+        .select('id, first_name, last_name, role, category, is_active, metadata')
         .eq('tenant_id', tenant_id)
-        .eq('role', 'staff')
+        .in('role', bookableUserRoles(isEventTypeBooking))
         .eq('is_active', true)
     ])
 
@@ -109,60 +101,14 @@ export default defineEventHandler(async (event) => {
       staff: allStaff?.length || 0
     })
 
-    // Build staff category map
-    const staffCategoryMap = new Map<string, string[]>()
-    
-    if (allStaff) {
-      allStaff.forEach((staff: any) => {
-        let categories = staff.category || []
-        if (typeof categories === 'string') {
-          try {
-            categories = JSON.parse(categories)
-          } catch (e) {
-            logger.warn('⚠️ Could not parse categories for staff:', staff.id)
-            categories = []
-          }
-        }
-        staffCategoryMap.set(staff.id, Array.isArray(categories) ? categories : [])
-      })
-    }
-
-    // Map staff_id:location_id → per-staff location categories
-    const staffLocCategoryMap = new Map<string, string[] | null>()
-    for (const sl of staffLocations || []) {
-      const key = `${sl.staff_id}:${sl.location_id}`
-      const cats = Array.isArray(sl.available_categories) ? sl.available_categories : null
-      staffLocCategoryMap.set(key, cats)
-    }
-
-    const locationById = new Map((allStandardLocations || []).map((loc: any) => [loc.id, loc]))
-
-    // Effective categories for a staff×location pair
-    const getEffectiveCategories = (staffId: string, locationId: string): string[] => {
-      const key = `${staffId}:${locationId}`
-      const perStaff = staffLocCategoryMap.get(key)
-      if (Array.isArray(perStaff)) return perStaff
-
-      const staffCats = staffCategoryMap.get(staffId) || []
-      const loc = locationById.get(locationId)
-      const locCats = Array.isArray(loc?.available_categories) ? loc.available_categories : []
-      if (locCats.length === 0) return staffCats
-      return staffCats.filter((c) => locCats.includes(c))
-    }
-
-    // Locations that have at least one online-bookable staff offering this category
-    // (or any online-bookable staff for event-type bookings)
-    const matchingLocationIds = new Set<string>()
-    for (const sl of staffLocations || []) {
-      if (isEventTypeBooking) {
-        matchingLocationIds.add(sl.location_id)
-        continue
-      }
-      const effective = getEffectiveCategories(sl.staff_id, sl.location_id)
-      if (effective.includes(category_code)) {
-        matchingLocationIds.add(sl.location_id)
-      }
-    }
+    const assignments = resolveLocationStaffAssignments({
+      categoryCode: category_code,
+      isEventTypeBooking,
+      locations: allStandardLocations || [],
+      staff: allStaff || [],
+      staffLocations: staffLocations || [],
+    })
+    const matchingLocationIds = new Set(assignments.keys())
 
     logger.debug('📍 Locations matching category via staff_locations:', {
       count: matchingLocationIds.size,
@@ -233,21 +179,12 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // 6. Attach staff to locations — only if online bookable AND offers this category at this location
+    // 6. Attach the staff already resolved for this category / event type
     locationsMap.forEach((locationEntry, locationId) => {
-      const locationStaffIds = locationEntry.staff_ids || []
-      
-      locationStaffIds.forEach((staffId: string) => {
+      const assignedIds = assignments.get(locationId) || []
+      assignedIds.forEach((staffId: string) => {
         const staff = allStaff?.find(s => s.id === staffId)
         if (!staff) return
-
-        const isOnlineBookable = staffLocations?.some(sl => 
-          sl.staff_id === staffId && sl.location_id === locationId && sl.is_online_bookable === true
-        )
-        if (!isOnlineBookable) return
-
-        const effectiveCats = getEffectiveCategories(staffId, locationId)
-        if (!isEventTypeBooking && !effectiveCats.includes(category_code)) return
 
         const metadata = (staff.metadata && typeof staff.metadata === 'object') ? staff.metadata as Record<string, unknown> : {}
         const photoUrl =
@@ -260,7 +197,7 @@ export default defineEventHandler(async (event) => {
           first_name: staff.first_name || 'Unknown',
           last_name: staff.last_name || 'Staff',
           category: staff.category,
-          available_categories: effectiveCats,
+          available_categories: [category_code],
           is_online_bookable: true,
           photo_url: photoUrl
         })

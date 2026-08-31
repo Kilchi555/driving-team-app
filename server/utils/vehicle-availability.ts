@@ -24,11 +24,15 @@ export interface VehicleOption {
   /** Pre-selected option in the wizard */
   is_default: boolean
   /**
-   * Whether this option requires a school vehicle from the fleet.
-   * When true, a vehicle_bookings placeholder is created on booking
-   * and the slot is filtered out when fleet capacity is exhausted.
+   * Whether this option uses a school vehicle (placeholder booking).
+   * Capacity hiding is controlled separately by enforce_capacity.
    */
   requires_school_vehicle?: boolean
+  /**
+   * hard capacity: hide slots when no matching school vehicle exists.
+   * unset / false: empty fleet is a setup gap; only a booked-out fleet hides slots.
+   */
+  enforce_capacity?: boolean
 }
 
 export interface VehicleSettings {
@@ -89,10 +93,56 @@ export function getDefaultVehicleOption(settings: VehicleSettings): VehicleOptio
 }
 
 /**
+ * Chosen vehicle option for a booking request.
+ * Unknown keys fall back to the default — callers cannot invent a policy.
+ */
+export function resolveBookedVehicleOption(
+  settings: VehicleSettings,
+  vehicleMode?: string | null
+): VehicleOption | null {
+  if (settings.mode !== 'options' || !settings.options?.length) return null
+  if (vehicleMode) {
+    const match = settings.options.find(o => o.key === vehicleMode)
+    if (match) return match
+  }
+  return getDefaultVehicleOption(settings)
+}
+
+export type SlotVehiclePolicy = {
+  requiresSchoolVehicle: boolean
+  enforceCapacity: boolean
+}
+
+/**
+ * Capacity policy comes from stored category/location settings, never from
+ * client query flags. vehicleMode only selects which configured option applies.
+ */
+export function resolveSlotVehiclePolicy(
+  locationVehicleSettings: Record<string, VehicleSettings> | null | undefined,
+  categoryVehicleSettings: VehicleSettings | null | undefined,
+  categoryCode: string,
+  vehicleMode?: string | null
+): SlotVehiclePolicy {
+  const settings = resolveVehicleSettings(
+    locationVehicleSettings,
+    categoryVehicleSettings,
+    categoryCode
+  )
+  const option = resolveBookedVehicleOption(settings, vehicleMode)
+  return {
+    requiresSchoolVehicle: !!option?.requires_school_vehicle,
+    enforceCapacity: !!option?.requires_school_vehicle && !!option?.enforce_capacity,
+  }
+}
+
+/**
  * Check whether a school vehicle is available at a given location for a
  * category and time window, using vehicle_bookings as source of truth.
  *
- * Returns true when the fleet has capacity, false when fully booked.
+ * Returns true when the fleet has capacity, or when no matching school
+ * vehicles are configured (no constraint to enforce). Returns false only
+ * when a fleet exists and every matching vehicle is already booked —
+ * unless enforceCapacity is on, in which case an empty fleet also blocks.
  *
  * NOTE: Call this only for options where school vehicles are required
  *       (i.e. when the school needs to provide at least one vehicle).
@@ -105,12 +155,14 @@ export async function isSchoolVehicleAvailable(
     categoryCode,
     startTime,
     endTime,
+    enforceCapacity = false,
   }: {
     tenantId: string
     locationId: string
     categoryCode: string
     startTime: string
     endTime: string
+    enforceCapacity?: boolean
   }
 ): Promise<boolean> {
   const [fleetResult, blockedResult] = await Promise.all([
@@ -132,8 +184,9 @@ export async function isSchoolVehicleAvailable(
       .gt('end_time', startTime),
   ])
 
-  if (fleetResult.error || fleetResult.count === null || fleetResult.count === 0) return false
+  const fleetCount = fleetResult.error ? 0 : (fleetResult.count ?? 0)
+  if (fleetCount <= 0) return !enforceCapacity
   if (blockedResult.error) return false
 
-  return (blockedResult.count ?? 0) < fleetResult.count
+  return (blockedResult.count ?? 0) < fleetCount
 }

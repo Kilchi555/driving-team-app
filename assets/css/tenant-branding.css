@@ -339,80 +339,46 @@ html body div[class*="fixed"][class*="inset-0"] label {
   color: #9CA3AF !important; /* Lighter gray for all labels in modals */
 }
 
-/* === ADMIN MODAL OVERRIDES === */
-/* Admin modals should always have white text on dark inputs */
-/* MAXIMUM SPECIFICITY - überschreibt alles andere */
-html body .admin-modal input,
-html body .admin-modal select,
-html body .admin-modal textarea,
-html body .fixed.inset-0 .admin-modal input,
-html body .fixed.inset-0 .admin-modal select,
-html body .fixed.inset-0 .admin-modal textarea,
-html body div.admin-modal input,
-html body div.admin-modal select,
-html body div.admin-modal textarea,
-html body div.fixed.inset-0 .admin-modal input,
-html body div.fixed.inset-0 .admin-modal select,
-html body div.fixed.inset-0 .admin-modal textarea,
-.admin-modal input,
-.admin-modal select,
-.admin-modal textarea,
-.fixed.inset-0 .admin-modal input,
-.fixed.inset-0 .admin-modal select,
-.fixed.inset-0 .admin-modal textarea {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
+/* === GLOBAL PLACEHOLDER COLOR === */
+/* Placeholders should read as muted gray hints, not the same near-black as
+   real input text. Some browsers otherwise render them at near-full opacity.
+   -webkit-text-fill-color must be set explicitly too: it's what Safari/iOS
+   actually paints glyphs with, it's inherited from the input's own forced
+   #111/black fill color below (div[class*="fixed"] input), and simply
+   setting `color` on ::placeholder does not reset it. */
+::placeholder {
+  color: #9ca3af !important; /* gray-400 */
+  -webkit-text-fill-color: #9ca3af !important;
+  opacity: 1 !important;
 }
 
-/* ULTIMATE OVERRIDE für Admin-Layout Inputs */
-html body .admin-layout input,
+/* === ADMIN INPUTS: weiss mit schwarzer Schrift === */
+html body .admin-modal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="color"]),
+html body .admin-modal select,
+html body .admin-modal textarea,
+html body .admin-layout input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="color"]),
 html body .admin-layout select,
 html body .admin-layout textarea,
-html body div.admin-layout input,
-html body div.admin-layout select,
-html body div.admin-layout textarea {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
+html body div[class*="fixed"] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="color"]),
+html body div[class*="fixed"] select,
+html body div[class*="fixed"] textarea {
+  color: #111 !important;
+  -webkit-text-fill-color: #111;
+  caret-color: #111;
+  background-color: #fff !important;
+  border-color: #d1d5db !important;
+  color-scheme: light;
 }
 
 .admin-modal input::placeholder,
 .admin-modal textarea::placeholder,
 html body .admin-modal input::placeholder,
-html body .admin-modal textarea::placeholder {
-  color: #9ca3af !important; /* gray-400 */
-}
-
-/* === NUCLEAR OPTION - ÜBERSCHREIBT ALLES === */
-/* Für absolut hartnäckige Inputs die alle anderen Regeln ignorieren */
-html body .admin-layout input[style],
-html body .admin-layout select[style], 
-html body .admin-layout textarea[style],
-html body .admin-layout input[class],
-html body .admin-layout select[class],
-html body .admin-layout textarea[class],
-html body div[class*="fixed"] input,
-html body div[class*="fixed"] select,
-html body div[class*="fixed"] textarea {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
-}
-
-/* Spezifische Override für Tailwind-Klassen */
-html body .admin-layout input[class*="text-gray"],
-html body .admin-layout select[class*="text-gray"],
-html body .admin-layout textarea[class*="text-gray"],
-html body .admin-layout input[class*="bg-gray"],
-html body .admin-layout select[class*="bg-gray"],
-html body .admin-layout textarea[class*="bg-gray"],
-html body .admin-layout input[class*="bg-white"]:not([class*="session"]),
-html body .admin-layout select[class*="bg-white"]:not([class*="session"]),
-html body .admin-layout textarea[class*="bg-white"]:not([class*="session"]) {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
+html body .admin-modal textarea::placeholder,
+html body .admin-layout input::placeholder,
+html body .admin-layout textarea::placeholder {
+  color: #6b7280 !important;
+  -webkit-text-fill-color: #6b7280;
+  opacity: 1;
 }
 
 /* Session input fields should have proper contrast */
@@ -441,6 +407,7 @@ html body .admin-layout .wz-setup textarea[class] {
 html body .admin-layout .wz-setup input::placeholder,
 html body .admin-layout .wz-setup textarea::placeholder {
   color: #9ca3af !important;
+  -webkit-text-fill-color: #9ca3af !important;
 }
 
 /* === EVENT MODAL OVERRIDE === */
@@ -469,6 +436,32 @@ input[type="checkbox"].keep-checkbox {
   appearance: auto;
   -webkit-appearance: auto;
   -moz-appearance: auto;
+}
+
+/* Invoice/Offerte create modal: keep fields white even under html.dark / data-theme=dark */
+html.dark .invoice-create-modal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+html[data-theme="dark"] .invoice-create-modal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+html.dark .invoice-create-modal textarea,
+html[data-theme="dark"] .invoice-create-modal textarea,
+html.dark .invoice-create-modal select,
+html[data-theme="dark"] .invoice-create-modal select,
+html body .invoice-create-modal input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+html body .invoice-create-modal textarea,
+html body .invoice-create-modal select {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  caret-color: #111827 !important;
+  border-color: #d1d5db !important;
+  color-scheme: light !important;
+}
+
+html.dark .invoice-create-modal input::placeholder,
+html[data-theme="dark"] .invoice-create-modal input::placeholder,
+html body .invoice-create-modal input::placeholder,
+html body .invoice-create-modal textarea::placeholder {
+  color: #9ca3af !important;
+  -webkit-text-fill-color: #9ca3af !important;
 }
 
 /* === PRINT STYLES === */

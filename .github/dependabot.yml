@@ -1,0 +1,26 @@
+# Weekly version bumps. Security patches also come from Dependabot
+# security updates (enabled on the repo). Keep the PR cap low so
+# this does not flood the queue next to product work.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      production-patches:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      development:
+        dependency-type: development
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2

@@ -10,6 +10,7 @@ import {
   isLandingPayload,
   WEBSITE_TEMPLATE_ID,
 } from '~/utils/website-slot-schema'
+import { applyWebsiteEditorExtras } from '~/server/utils/website-apply-editor-extras'
 
 function appBaseUrl(event: any) {
   const fromEnv =
@@ -68,8 +69,27 @@ export default defineEventHandler(async (event) => {
   if (!page || !isLandingPayload(page.blocks)) {
     throw createError({
       statusCode: 404,
-      statusMessage: 'Page payload missing — bitte zuerst Wizard / Generate ausführen',
+      statusMessage: 'Page payload missing — Editor neu laden.',
     })
+  }
+
+  const { data: tenantRow } = await supabase
+    .from('tenants')
+    .select('website_only, website_setup_paid_at, website_hosting_plan, trial_ends_at')
+    .eq('id', user.tenant_id)
+    .maybeSingle()
+  if (publish) {
+    const { websitePublishBlockedMessage, websitePublishBlockedReason } = await import(
+      '~/server/utils/website-billing'
+    )
+    const blocked = websitePublishBlockedReason(tenantRow)
+    if (blocked) {
+      throw createError({
+        statusCode: 402,
+        statusMessage: websitePublishBlockedMessage(blocked),
+        data: { code: 'website_payment_required', reason: blocked },
+      })
+    }
   }
 
   const isHome = !!page.is_home || page.page_type === 'home'
@@ -86,6 +106,9 @@ export default defineEventHandler(async (event) => {
     const result = applySlotPatch(page.blocks, slots)
     nextPayload = result.payload
     applied = result.applied
+    if (isHome && body?.extras && typeof body.extras === 'object') {
+      nextPayload = applyWebsiteEditorExtras(nextPayload, body.extras)
+    }
   } catch (err: any) {
     throw createError({
       statusCode: err?.statusCode || 400,
@@ -133,8 +156,17 @@ export default defineEventHandler(async (event) => {
     if (publish) {
       websiteUpdate.is_published = true
       websiteUpdate.last_published_at = now
+      websiteUpdate.addon_pages_enabled = true
     }
     await supabase.from('website_tenants').update(websiteUpdate).eq('id', website.id)
+
+    if (body?.extras && typeof body.extras === 'object' && 'whatsapp_phone' in body.extras) {
+      const raw = String((body.extras as { whatsapp_phone?: unknown }).whatsapp_phone || '').trim()
+      await supabase
+        .from('tenants')
+        .update({ whatsapp_phone: raw || null, updated_at: now })
+        .eq('id', user.tenant_id)
+    }
   } else if (publish && !website.is_published) {
     // Publishing an add-on implies site is live
     await supabase
@@ -164,6 +196,20 @@ export default defineEventHandler(async (event) => {
 
   if (publish) {
     await supabase.from('tenants').update({ website_status: 'live' }).eq('id', user.tenant_id)
+    if (isHome) {
+      try {
+        const { ensureWebsiteSeoPages } = await import('~/server/utils/website-ensure-seo-pages')
+        const { data: fullTenant } = await supabase.from('tenants').select('*').eq('id', user.tenant_id).maybeSingle()
+        await ensureWebsiteSeoPages(supabase, {
+          website: { ...website, addon_pages_enabled: true },
+          tenant: fullTenant || tenant,
+          baseUrl: base,
+          publish: true,
+        })
+      } catch (err: any) {
+        console.warn('[slots-save] seo pages skipped:', err?.message)
+      }
+    }
     await notifySuperadminsWebsitePublished({
       tenantId: user.tenant_id,
       tenantName: `${tenant?.name || website.subdomain}${isHome ? '' : ` — ${page.title}`}`,

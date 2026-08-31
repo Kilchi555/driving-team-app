@@ -14,6 +14,10 @@ import { navigateTo, definePageMeta } from '#imports'
 definePageMeta({ layout: false })
 
 onMounted(() => {
-  navigateTo('/login')
+  let lastTenant: string | null = null
+  try {
+    lastTenant = localStorage.getItem('last_tenant_slug')
+  } catch { /* ignore */ }
+  navigateTo(lastTenant ? `/${lastTenant}` : '/login')
 })
 </script>

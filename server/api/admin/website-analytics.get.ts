@@ -1,93 +1,116 @@
-import { createClient } from '@supabase/supabase-js'
-import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireAdminProfile } from '~/server/utils/auth'
+
+const EMPTY = {
+  totalViews: 0,
+  ctaClicks: 0,
+  topPages: [] as { page: string; views: number }[],
+  sources: {} as Record<string, number>,
+  devices: {} as Record<string, number>,
+  daily: [] as { date: string; views: number }[],
+}
+
+function classifyReferrer(referrer: string | null, eventUrl: string | null): string {
+  if (!referrer) return 'direct'
+  let host = ''
+  let eventHost = ''
+  try { host = new URL(referrer).hostname.replace(/^www\./, '') } catch { /* ignore */ }
+  try { eventHost = eventUrl ? new URL(eventUrl).hostname.replace(/^www\./, '') : '' } catch { /* ignore */ }
+  const h = host.toLowerCase()
+  if (!h) return 'direct'
+  if (eventHost && h === eventHost) return 'internal'
+  if (h.includes('localhost') || h.endsWith('.simy.ch') || h === 'app.simy.ch') return 'internal'
+  if (/google\.|bing\.|yahoo\.|duckduckgo\.|ecosia\.|search\.brave/.test(h)) return 'search'
+  if (/facebook\.|instagram\.|tiktok\.|linkedin\.|twitter\.|x\.com|whatsapp\./.test(h)) return 'social'
+  return 'other'
+}
+
+function classifyDevice(ua: string | null): string {
+  const u = (ua || '').toLowerCase()
+  if (!u) return 'desktop'
+  if (/ipad|tablet/.test(u)) return 'tablet'
+  if (/mobile|iphone|android/.test(u)) return 'mobile'
+  return 'desktop'
+}
+
+function pagePath(eventUrl: string | null, subdomain: string | null): string {
+  if (!eventUrl) return '/'
+  try {
+    const u = new URL(eventUrl)
+    let path = u.pathname || '/'
+    if (subdomain && path.startsWith(`/s/${subdomain}`)) {
+      path = path.slice(`/s/${subdomain}`.length) || '/'
+    }
+    return `${path}${u.hash || ''}`
+  } catch {
+    return eventUrl
+  }
+}
 
 export default defineEventHandler(async (event) => {
-  // ✅ SECURITY: Only super_admin can access analytics across all tenants.
-  // Bearer header with HTTP-only-cookie fallback + token refresh, instead of
-  // a raw Bearer-only check that would 401 whenever the client's access
-  // token had just expired.
-  const authUser = await getAuthenticatedUser(event)
+  const profile = await requireAdminProfile(event, ['admin', 'tenant_admin', 'super_admin'])
+  const supabase = getSupabaseAdmin()
 
-  if (!authUser) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
-
-  if (authUser.role !== 'super_admin') {
-    throw createError({ statusCode: 403, statusMessage: 'Only super_admin can access this endpoint' })
-  }
-
-  const supabaseUrl = process.env.SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!supabaseUrl || !supabaseServiceKey) throw createError({ statusCode: 500, message: 'Supabase not configured' })
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey)
-  const query = getQuery(event)
-  const days = Number(query.days) || 30
-
+  const days = Math.min(Math.max(Number(getQuery(event).days) || 30, 1), 365)
   const since = new Date()
   since.setDate(since.getDate() - days)
-  const sinceStr = since.toISOString().split('T')[0]
+  const sinceIso = since.toISOString()
 
-  // Top pages
-  const { data: topPages } = await supabase
-    .from('page_analytics')
-    .select('page, views')
-    .gte('date', sinceStr)
-    .order('views', { ascending: false })
+  const { data: website } = await supabase
+    .from('website_tenants')
+    .select('id, subdomain')
+    .eq('tenant_id', profile.tenant_id)
+    .maybeSingle()
 
-  // Aggregate top pages
-  const pageMap: Record<string, number> = {}
-  for (const row of topPages || []) {
-    pageMap[row.page] = (pageMap[row.page] || 0) + row.views
+  if (!website?.id) return EMPTY
+
+  const { data: rows, error } = await supabase
+    .from('website_analytics_events')
+    .select('event_type, event_url, referrer, user_agent, created_at')
+    .eq('website_id', website.id)
+    .in('event_type', ['pageview', 'page_view', 'cta_click'])
+    .gte('created_at', sinceIso)
+    .limit(20000)
+
+  if (error) {
+    console.error('[website-analytics] query failed:', error.message)
+    throw createError({ statusCode: 500, statusMessage: 'Analytics konnten nicht geladen werden' })
   }
-  const topPagesSorted = Object.entries(pageMap)
+
+  const pageMap: Record<string, number> = {}
+  const sourceMap: Record<string, number> = {}
+  const deviceMap: Record<string, number> = {}
+  const dailyMap: Record<string, number> = {}
+  const views = (rows || []).filter((r) => r.event_type === 'pageview' || r.event_type === 'page_view')
+  const clicks = (rows || []).filter((r) => r.event_type === 'cta_click')
+
+  for (const row of views) {
+    const page = pagePath(row.event_url, website.subdomain)
+    pageMap[page] = (pageMap[page] || 0) + 1
+
+    const source = classifyReferrer(row.referrer, row.event_url)
+    sourceMap[source] = (sourceMap[source] || 0) + 1
+
+    const device = classifyDevice(row.user_agent)
+    deviceMap[device] = (deviceMap[device] || 0) + 1
+
+    const date = String(row.created_at).slice(0, 10)
+    dailyMap[date] = (dailyMap[date] || 0) + 1
+  }
+
+  const topPages = Object.entries(pageMap)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 15)
     .map(([page, views]) => ({ page, views }))
 
-  // Traffic sources
-  const { data: sourceData } = await supabase
-    .from('page_analytics')
-    .select('referrer_type, views')
-    .gte('date', sinceStr)
-
-  const sourceMap: Record<string, number> = {}
-  for (const row of sourceData || []) {
-    sourceMap[row.referrer_type] = (sourceMap[row.referrer_type] || 0) + row.views
-  }
-
-  // Device breakdown
-  const { data: deviceData } = await supabase
-    .from('page_analytics')
-    .select('device_type, views')
-    .gte('date', sinceStr)
-
-  const deviceMap: Record<string, number> = {}
-  for (const row of deviceData || []) {
-    deviceMap[row.device_type] = (deviceMap[row.device_type] || 0) + row.views
-  }
-
-  // Daily trend (last 30 days)
-  const { data: dailyData } = await supabase
-    .from('page_analytics')
-    .select('date, views')
-    .gte('date', sinceStr)
-    .order('date', { ascending: true })
-
-  const dailyMap: Record<string, number> = {}
-  for (const row of dailyData || []) {
-    dailyMap[row.date] = (dailyMap[row.date] || 0) + row.views
-  }
   const daily = Object.entries(dailyMap)
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([date, views]) => ({ date, views }))
 
-  // Total views
-  const totalViews = Object.values(pageMap).reduce((a, b) => a + b, 0)
-
   return {
-    totalViews,
-    topPages: topPagesSorted,
+    totalViews: views.length,
+    ctaClicks: clicks.length,
+    topPages,
     sources: sourceMap,
     devices: deviceMap,
     daily,

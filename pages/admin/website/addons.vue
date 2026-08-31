@@ -15,7 +15,7 @@
     <div v-else-if="!enabled" class="card locked">
       <h2>Noch nicht freigeschaltet</h2>
       <p>
-        SEO-Unterseiten gehören zum Premium-Website-Paket. Nach dem Veröffentlichen im Wizard
+        SEO-Unterseiten gehören zum Premium-Website-Paket. Nach dem Veröffentlichen im Editor
         werden sie automatisch freigeschaltet — sonst Simy kontaktieren.
       </p>
     </div>

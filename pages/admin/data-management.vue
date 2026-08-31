@@ -121,13 +121,14 @@
               isDragging 
                 ? 'scale-105' 
                 : 'border-gray-300 hover:border-gray-400',
-              fileMeta.name ? 'border-green-400 bg-green-50' : ''
+              fileMeta.name ? 'border-green-400 bg-green-50' : '',
+              isParsingFile ? 'pointer-events-none opacity-80' : ''
             ]"
             :style="isDragging ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
             @dragover.prevent="onDragOver"
             @dragleave.prevent="onDragLeave"
             @drop.prevent="onDrop"
-            @click="fileInputRef?.click()"
+            @click="!isParsingFile && fileInputRef?.click()"
           >
             <input
               ref="fileInputRef"
@@ -138,8 +139,11 @@
             />
             <div class="px-6 py-12 text-center">
               <div class="mx-auto mb-4 w-12 h-12 rounded-full flex items-center justify-center"
-                   :class="fileMeta.name ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'">
-                <svg v-if="fileMeta.name" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                   :class="isParsingFile ? 'bg-blue-50 text-blue-500' : fileMeta.name ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'">
+                <svg v-if="isParsingFile" class="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-width="2" d="M12 4a8 8 0 018 8"></path>
+                </svg>
+                <svg v-else-if="fileMeta.name" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 6a2 2 0 114 0 2 2 0 01-4 0zm8 0a2 2 0 114 0 2 2 0 01-4 0z" clip-rule="evenodd"></path>
                 </svg>
                 <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -147,12 +151,14 @@
                 </svg>
               </div>
               <p class="text-lg font-medium text-gray-900 mb-2">
-                {{ fileMeta.name ? fileMeta.name : 'Datei hierher ziehen oder klicken' }}
+                {{ isParsingFile ? 'Datei wird gelesen…' : fileMeta.name ? fileMeta.name : 'Datei hierher ziehen oder klicken' }}
               </p>
               <p class="text-sm text-gray-500">
-                {{ fileMeta.name 
-                  ? `${formatBytes(fileMeta.size)} · ${rows.length.toLocaleString()} Zeilen · ${columns.length} Spalten`
-                  : 'CSV, TSV oder Excel (.xlsx) — Trennzeichen wird automatisch erkannt'
+                {{ isParsingFile
+                  ? 'Bitte warten, grosse Excel-Dateien können ein paar Sekunden brauchen.'
+                  : fileMeta.name 
+                    ? `${formatBytes(fileMeta.size)} · ${rows.length.toLocaleString()} Zeilen · ${columns.length} Spalten`
+                    : 'CSV, TSV oder Excel (.xlsx) — Trennzeichen wird automatisch erkannt'
                 }}
               </p>
             </div>
@@ -166,7 +172,7 @@
           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
         </svg>
         <div>
-          <p class="text-sm font-medium text-red-800">Dateiformat nicht unterstützt</p>
+          <p class="text-sm font-medium text-red-800">Datei konnte nicht geladen werden</p>
           <p class="text-sm text-red-700 mt-0.5">{{ fileError }}</p>
           <p class="text-xs text-red-600 mt-1">Unterstützte Formate: <strong>.csv</strong>, <strong>.tsv</strong>, <strong>.xlsx</strong></p>
         </div>
@@ -1561,7 +1567,6 @@ import { useAuthStore } from '~/stores/auth'
 import { formatDateTime } from '~/utils/dateUtils'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useTerminology } from '~/composables/useTerminology'
-import * as XLSX from 'xlsx'
 
 const ACCEPTED_EXTENSIONS = ['.csv', '.tsv', '.xlsx']
 const ACCEPTED_MIME_TYPES = [
@@ -1572,6 +1577,7 @@ const ACCEPTED_MIME_TYPES = [
 ]
 
 const fileError = ref('')
+const isParsingFile = ref(false)
 
 function getFileExtension(name: string): string {
   return name.slice(name.lastIndexOf('.')).toLowerCase()
@@ -1962,6 +1968,7 @@ function onDragOver() { isDragging.value = true }
 function onDragLeave() { isDragging.value = false }
 async function onDrop(e: DragEvent) {
   isDragging.value = false
+  if (isParsingFile.value) return
   const file = e.dataTransfer?.files?.[0]
   if (!file) return
   await loadFile(file)
@@ -1990,32 +1997,23 @@ async function loadFile(file: File) {
 }
 
 async function parseXlsx(file: File) {
-  const buffer = await file.arrayBuffer()
-  const workbook = XLSX.read(buffer, { type: 'array' })
-  const sheetName = workbook.SheetNames[0]
-  const worksheet = workbook.Sheets[sheetName]
-  const data: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' })
-
-  if (data.length === 0) {
-    fileError.value = 'Die Excel-Datei ist leer.'
-    return
-  }
-
-  const header = (data[0] as any[]).map(c => String(c ?? '').trim())
-  columns.value = header
-  rows.value = []
-  for (let i = 1; i < data.length; i++) {
-    const rowArr = data[i] as any[]
-    // Skip completely empty rows
-    if (rowArr.every(cell => cell === '' || cell == null)) continue
-    const row: Row = {}
-    for (let c = 0; c < header.length; c++) {
-      row[header[c]] = rowArr[c] ?? ''
+  isParsingFile.value = true
+  try {
+    const { parseXlsxRows } = await import('~/utils/parse-xlsx-rows.client')
+    const parsed = await parseXlsxRows(await file.arrayBuffer())
+    if (parsed.header.length === 0 && parsed.rows.length === 0) {
+      fileError.value = 'Die Excel-Datei ist leer.'
+      return
     }
-    rows.value.push(row)
+    columns.value = parsed.header
+    rows.value = parsed.rows
+    Object.keys(visibleColumnsMap).forEach(k => delete visibleColumnsMap[k])
+    for (const col of columns.value) visibleColumnsMap[col] = true
+  } catch (err: any) {
+    fileError.value = err?.data?.statusMessage || err?.message || 'Excel-Datei konnte nicht gelesen werden.'
+  } finally {
+    isParsingFile.value = false
   }
-  Object.keys(visibleColumnsMap).forEach(k => delete visibleColumnsMap[k])
-  for (const col of columns.value) visibleColumnsMap[col] = true
 }
 
 function parseCsv(text: string) {

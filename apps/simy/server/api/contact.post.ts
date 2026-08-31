@@ -95,7 +95,7 @@ export default defineEventHandler(async (event) => {
           <a href="https://app.simy.ch/tenant-register" style="display:inline-block;background:#6000BD;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;">Kostenlos starten →</a>
         </td></tr>
         <tr><td style="background:#f9fafb;padding:16px 30px;border-top:1px solid #e5e7eb;">
-          <p style="color:#9ca3af;font-size:11px;margin:0;">Simy IT Systems · Pascal Kilchenmann · <a href="https://simy.ch" style="color:#9ca3af;">simy.ch</a></p>
+          <p style="color:#9ca3af;font-size:11px;margin:0;">Simy IT Systems · Pascal Kilchenmann · <a href="https://www.simy.ch" style="color:#9ca3af;">simy.ch</a></p>
         </td></tr>
       </table>
     </td></tr>

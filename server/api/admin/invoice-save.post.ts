@@ -30,6 +30,7 @@ export default defineEventHandler(async (event) => {
 
   const allowedFields = [
     'due_date',
+    'valid_until',
     'billing_company_name',
     'billing_contact_person',
     'billing_street',

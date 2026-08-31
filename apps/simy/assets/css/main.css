@@ -14,7 +14,242 @@ html {
   scroll-behavior: smooth;
 }
 
-@keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes simyEnter {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+.simy-display {
+  letter-spacing: -0.05em;
+  line-height: 1.02;
+  font-weight: 650;
+}
+
+.simy-float {
+  animation: simyFloat 7s ease-in-out infinite;
+}
+.simy-float-delay {
+  animation-delay: 1.4s;
+}
+@keyframes simyFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+.simy-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: auto;
+  width: 42rem;
+  height: 42rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(var(--brand-rgb), 0.22) 0%, transparent 68%);
+  filter: blur(8px);
+}
+
+.simy-gradient-border {
+  position: relative;
+  background: #fff;
+  border-radius: 1.5rem;
+}
+.simy-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(var(--brand-rgb), 0.55), rgba(var(--brand-2-rgb), 0.2), rgba(var(--brand-rgb), 0.08));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.simy-glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 8px 32px rgba(15, 10, 30, 0.08);
+}
+
+.simy-closer {
+  background:
+    radial-gradient(800px 280px at 50% -10%, rgba(var(--brand-rgb), 0.28), transparent 70%),
+    #0c0a12;
+}
+
+/* Vue/Linear-style hairline grid — quieter than purple blobs */
+.simy-grid {
+  background-image:
+    linear-gradient(rgba(12, 10, 18, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(12, 10, 18, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: center top;
+}
+.simy-grid-fade {
+  mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+}
+
+.simy-shot {
+  position: relative;
+  overflow: hidden;
+  background: #f4f2f8;
+  border: 1px solid rgba(15, 10, 30, 0.08);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 24px 60px rgba(15, 10, 30, 0.1);
+}
+.simy-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.simy-bento-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(15, 10, 30, 0.07);
+  background: #fff;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.simy-bento-card:hover {
+  border-color: rgba(var(--brand-rgb), 0.28);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(15, 10, 30, 0.07);
+}
+
+/* Scroll / load motion — Linear-style ease, never bounce */
+@media (prefers-reduced-motion: no-preference) {
+  html.simy-motion section:not(:first-of-type):not(.is-in),
+  html.simy-motion footer:not(.is-in),
+  html.simy-motion [data-reveal]:not(section):not(.is-in) {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+  }
+
+  html.simy-motion section:not(:first-of-type),
+  html.simy-motion footer,
+  html.simy-motion [data-reveal]:not(section) {
+    transition:
+      opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html.simy-motion section:not(:first-of-type).is-in,
+  html.simy-motion footer.is-in,
+  html.simy-motion [data-reveal]:not(section).is-in {
+    opacity: 1;
+    transform: none;
+  }
+
+  html.simy-motion section:first-of-type:not(:has(.text-center)):not(:has(.grid.md\:grid-cols-2)):not(:has(.grid.lg\:grid-cols-2)) {
+    animation: simyEnter 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  html.simy-motion section:first-of-type .text-center > * {
+    opacity: 0;
+    animation: simyEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  html.simy-motion section:first-of-type .text-center > *:nth-child(1) { animation-delay: 0.05s; }
+  html.simy-motion section:first-of-type .text-center > *:nth-child(2) { animation-delay: 0.1s; }
+  html.simy-motion section:first-of-type .text-center > *:nth-child(3) { animation-delay: 0.15s; }
+  html.simy-motion section:first-of-type .text-center > *:nth-child(4) { animation-delay: 0.2s; }
+  html.simy-motion section:first-of-type .text-center > *:nth-child(5) { animation-delay: 0.25s; }
+  html.simy-motion section:first-of-type .text-center > *:nth-child(6) { animation-delay: 0.3s; }
+  html.simy-motion section:first-of-type .text-center > *:nth-child(7) { animation-delay: 0.35s; }
+  html.simy-motion section:first-of-type .text-center > *:nth-child(n+8) { animation-delay: 0.38s; }
+
+  html.simy-motion section:first-of-type .grid.md\:grid-cols-2 > *:first-child,
+  html.simy-motion section:first-of-type .grid.lg\:grid-cols-2 > *:first-child {
+    opacity: 0;
+    animation: simyEnterLeft 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  html.simy-motion section:first-of-type .grid.md\:grid-cols-2 > *:last-child,
+  html.simy-motion section:first-of-type .grid.lg\:grid-cols-2 > *:last-child {
+    opacity: 0;
+    animation: simyEnterRight 0.9s 0.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  html.simy-motion section:not(:first-of-type):not(.is-in) [data-reveal-stagger] > * {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+  html.simy-motion section:not(:first-of-type).is-in [data-reveal-stagger] > * {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  html.simy-motion section:not(:first-of-type).is-in [data-reveal-stagger] > *:nth-child(1) { transition-delay: 0.04s; }
+  html.simy-motion section:not(:first-of-type).is-in [data-reveal-stagger] > *:nth-child(2) { transition-delay: 0.09s; }
+  html.simy-motion section:not(:first-of-type).is-in [data-reveal-stagger] > *:nth-child(3) { transition-delay: 0.14s; }
+  html.simy-motion section:not(:first-of-type).is-in [data-reveal-stagger] > *:nth-child(4) { transition-delay: 0.19s; }
+  html.simy-motion section:not(:first-of-type).is-in [data-reveal-stagger] > *:nth-child(5) { transition-delay: 0.24s; }
+  html.simy-motion section:not(:first-of-type).is-in [data-reveal-stagger] > *:nth-child(6) { transition-delay: 0.29s; }
+  html.simy-motion section:not(:first-of-type).is-in [data-reveal-stagger] > *:nth-child(7) { transition-delay: 0.34s; }
+  html.simy-motion section:not(:first-of-type).is-in [data-reveal-stagger] > *:nth-child(n+8) { transition-delay: 0.38s; }
+
+  html.simy-motion section:not(:first-of-type):not(.is-in) [data-reveal-split] > *:first-child {
+    opacity: 0;
+    transform: translate3d(-22px, 10px, 0);
+  }
+  html.simy-motion section:not(:first-of-type):not(.is-in) [data-reveal-split] > *:last-child {
+    opacity: 0;
+    transform: translate3d(22px, 10px, 0);
+  }
+  html.simy-motion section:not(:first-of-type).is-in [data-reveal-split] > * {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  html.simy-motion section:not(:first-of-type).is-in [data-reveal-split] > *:last-child {
+    transition-delay: 0.1s;
+  }
+}
+
+@keyframes simyEnterLeft {
+  from { opacity: 0; transform: translate3d(-22px, 10px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes simyEnterRight {
+  from { opacity: 0; transform: translate3d(22px, 10px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media print {
+  html.simy-motion section,
+  html.simy-motion footer,
+  html.simy-motion [data-reveal],
+  html.simy-motion [data-reveal-stagger] > *,
+  html.simy-motion [data-reveal-split] > * {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.simy-motion section,
+  html.simy-motion footer,
+  html.simy-motion [data-reveal],
+  html.simy-motion [data-reveal-stagger] > *,
+  html.simy-motion [data-reveal-split] > * {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+  .simy-glow {
+    filter: none;
+  }
+  .simy-float,
+  .simy-float-delay {
+    animation: none;
+  }
 }

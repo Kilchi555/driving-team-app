@@ -70,6 +70,8 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight />
+
     <!-- Final CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
       <div class="max-w-xl mx-auto text-center">
@@ -88,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+import { PRICE_VAT_NOTE_SHORT } from '~/data/pricing'
 import { breadcrumbLd, ldScripts, softwareAppLd, webPageLd } from '~/utils/schema'
 const { registerCta } = useRegisterCta()
 
@@ -97,24 +100,24 @@ useHead({
     { name: 'description', content: 'Simy 30 Tage kostenlos testen. Keine Kreditkarte nötig. In 5 Minuten startklar. Jetzt All-in-One Software Demo starten.' },
     { property: 'og:title', content: 'Demo & Gratis-Test – Simy | 30 Tage kostenlos' },
     { property: 'og:description', content: 'Simy 30 Tage kostenlos testen — keine Kreditkarte, monatlich kündbar.' },
-    { property: 'og:url', content: 'https://simy.ch/demo' },
+    { property: 'og:url', content: 'https://www.simy.ch/demo' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/demo' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/demo' }],
   script: ldScripts(
     webPageLd({
       name: 'Simy Demo & 30-Tage-Test',
       description: 'Simy 30 Tage kostenlos testen — keine Kreditkarte, alle Kernfeatures freigeschaltet.',
-      url: 'https://simy.ch/demo',
+      url: 'https://www.simy.ch/demo',
     }),
     softwareAppLd({
       name: 'Simy',
       description: 'All-in-One Software Schweiz – 30 Tage gratis testen.',
-      url: 'https://simy.ch/demo',
+      url: 'https://www.simy.ch/demo',
       price: 0,
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Demo', url: 'https://simy.ch/demo' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Demo', url: 'https://www.simy.ch/demo' },
     ]),
   ),
 })
@@ -125,7 +128,7 @@ const steps = [
   { title: 'Registrieren', desc: 'Angaben zu deinem Betrieb und Team eingeben — fertig. Keine weiteren Angaben nötig.' },
   { title: 'Einrichten', desc: 'Setup-Wizard führt dich durch Kategorien, Preise und Standorte.' },
   { title: 'Ausprobieren', desc: '30 Tage alle Features nutzen — Terminbuchung, Rechnungen, App, Website.' },
-  { title: 'Entscheiden', desc: 'Nach 30 Tagen ab CHF 49/Mt. oder gratis kündigen — ohne Diskussion.' },
+  { title: 'Entscheiden', desc: `Nach 30 Tagen ab CHF 49/Mt. (${PRICE_VAT_NOTE_SHORT}) oder gratis kündigen — ohne Diskussion.` },
 ]
 
 const trialFeatures = [

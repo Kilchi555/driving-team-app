@@ -87,13 +87,7 @@
               </div>
               <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 0.–</p>
             </div>
-            <div class="flex justify-between items-start py-3">
-              <div>
-                <p class="font-semibold text-gray-900">Fahrlektion mit Fahrschul-Motorrad</p>
-                <p class="text-gray-600 text-sm">Nur Doppellektionen und nur Fahrlektionen vor dem Grundkurs.</p>
-              </div>
-              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 115.–</p>
-            </div>
+            <p class="text-sm text-gray-600 pt-2">Eigenes Motorrad, Helm und Schutzausrüstung mitbringen.</p>
           </div>
         </details>
 
@@ -107,6 +101,13 @@
             <span class="transition group-open:rotate-180">▼</span>
           </summary>
           <div class="px-6 pb-6 space-y-3 border-t border-gray-100">
+            <div class="flex justify-between items-start py-3 border-b border-gray-100">
+              <div>
+                <p class="font-semibold text-gray-900">Erste Auto-Lektion 45min</p>
+                <p class="text-gray-600 text-sm">Nur die erste bestätigte Fahrstunde Kategorie B (Automatik oder Schaltung).</p>
+              </div>
+              <p class="font-bold text-primary-600 text-lg whitespace-nowrap ml-4">CHF 65.–</p>
+            </div>
             <div class="flex justify-between items-start py-3 border-b border-gray-100">
               <div>
                 <p class="font-semibold text-gray-900">Auto Einzellektion 45min</p>

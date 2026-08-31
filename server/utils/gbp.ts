@@ -31,12 +31,14 @@ export interface GbpLocationRow {
 
 export type ReviewReplyMode = 'off' | 'suggest' | 'auto_ge_4' | 'auto_all'
 export type PhotoMode = 'off' | 'approved_only' | 'pool_auto'
+export type PostMode = 'off' | 'calendar'
 
 export interface GbpAutomationSettings {
   review_reply_mode: ReviewReplyMode
   posts_per_week: number
   photos_per_week: number
   photo_mode: PhotoMode
+  post_mode: PostMode
   brand_voice: string | null
   keywords: string[]
   default_cta_type: string | null
@@ -45,10 +47,11 @@ export interface GbpAutomationSettings {
 }
 
 export const GBP_AUTOMATION_DEFAULTS: GbpAutomationSettings = {
-  review_reply_mode: 'suggest',
+  review_reply_mode: 'auto_all',
   posts_per_week: 2,
   photos_per_week: 2,
-  photo_mode: 'off',
+  photo_mode: 'approved_only',
+  post_mode: 'calendar',
   brand_voice: null,
   keywords: [],
   default_cta_type: 'BOOK',
@@ -223,6 +226,7 @@ export async function ensureTenantGbpDefaults(tenantId: string) {
     posts_per_week: GBP_AUTOMATION_DEFAULTS.posts_per_week,
     photos_per_week: GBP_AUTOMATION_DEFAULTS.photos_per_week,
     photo_mode: GBP_AUTOMATION_DEFAULTS.photo_mode,
+    post_mode: GBP_AUTOMATION_DEFAULTS.post_mode,
     default_cta_type: GBP_AUTOMATION_DEFAULTS.default_cta_type,
     timezone: GBP_AUTOMATION_DEFAULTS.timezone,
     keywords: [],
@@ -278,6 +282,7 @@ export async function getGbpAutomationSettings(
     posts_per_week: Number(merged.posts_per_week ?? GBP_AUTOMATION_DEFAULTS.posts_per_week),
     photos_per_week: Number(merged.photos_per_week ?? GBP_AUTOMATION_DEFAULTS.photos_per_week),
     photo_mode: (merged.photo_mode as PhotoMode) || GBP_AUTOMATION_DEFAULTS.photo_mode,
+    post_mode: (merged.post_mode as PostMode) || GBP_AUTOMATION_DEFAULTS.post_mode,
     brand_voice: (merged.brand_voice as string | null) ?? null,
     keywords: parseKeywords(merged.keywords),
     default_cta_type: (merged.default_cta_type as string | null) ?? GBP_AUTOMATION_DEFAULTS.default_cta_type,
@@ -496,9 +501,25 @@ export async function deleteGbpPost(tenantId: string, postName: string) {
   return res.ok ? { success: true } : res.json()
 }
 
+async function parseGbpJson(res: Response, label: string) {
+  const text = await res.text()
+  let data: any = {}
+  if (text) {
+    try {
+      data = JSON.parse(text)
+    } catch {
+      throw new Error(`${label} returned non-JSON (${res.status})`)
+    }
+  }
+  if (!res.ok || data?.error) {
+    throw new Error(data?.error?.message || `${label} failed (${res.status})`)
+  }
+  return data
+}
+
 /**
- * Upload a photo to GBP (media).
- * photoUrl must be a publicly accessible URL.
+ * Upload a photo to GBP via bytes (startUpload → dataRef).
+ * Avoids Google fetching our storage URL (Cloudflare / x-robots-tag often 502s sourceUrl).
  */
 export async function uploadGbpPhoto(
   tenantId: string,
@@ -508,23 +529,66 @@ export async function uploadGbpPhoto(
   description?: string | null
 ) {
   return withLocation(tenantId, locationId, async (accessToken, loc) => {
+    const src = await fetch(photoUrl)
+    if (!src.ok) {
+      throw new Error(`Foto-URL nicht erreichbar (${src.status})`)
+    }
+    const raw = Buffer.from(await src.arrayBuffer())
+
+    const sharp = (await import('sharp')).default
+    const jpeg = await sharp(raw, { animated: false, failOn: 'none' })
+      .rotate()
+      .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 85, mozjpeg: true })
+      .toBuffer()
+
+    if (jpeg.length < 10240) {
+      throw new Error('Foto zu klein für Google (min. 10 KB)')
+    }
+
+    const parent = `${loc.gbp_account_name}/${loc.gbp_location_id}`
+    const startRes = await fetch(`${GBP_REVIEWS_BASE}/${parent}/media:startUpload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+    const start = await parseGbpJson(startRes, 'GBP startUpload')
+    const resourceName = start?.resourceName as string | undefined
+    if (!resourceName) {
+      throw new Error('GBP startUpload lieferte keinen resourceName')
+    }
+
+    const bytesRes = await fetch(
+      `https://mybusiness.googleapis.com/upload/v1/media/${resourceName}?upload_type=media`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'image/jpeg',
+        },
+        body: jpeg,
+      }
+    )
+    if (!bytesRes.ok) {
+      const t = await bytesRes.text().catch(() => '')
+      throw new Error(t.slice(0, 180) || `GBP bytes upload failed (${bytesRes.status})`)
+    }
+
     const payload: Record<string, unknown> = {
       mediaFormat: 'PHOTO',
       locationAssociation: { category },
-      sourceUrl: photoUrl,
+      dataRef: { resourceName },
     }
-    if (description?.trim() && category !== 'COVER') {
-      payload.description = description.trim()
+    if (description?.trim() && category !== 'COVER' && category !== 'PROFILE') {
+      payload.description = description.trim().slice(0, 1000)
     }
-    const res = await fetch(
-      `${GBP_REVIEWS_BASE}/${loc.gbp_account_name}/${loc.gbp_location_id}/media`,
-      {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      }
-    )
-    return res.json()
+
+    const createRes = await fetch(`${GBP_REVIEWS_BASE}/${parent}/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    return parseGbpJson(createRes, 'GBP media create')
   })
 }
 

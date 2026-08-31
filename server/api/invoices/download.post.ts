@@ -13,7 +13,8 @@ import {
 } from '~/server/utils/invoice-product-lines'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
-import { invoicePersonNames, loadUserAddressForInvoice, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
+import { invoicePersonNames, invoiceQrDebtorName, loadUserAddressForInvoice, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
+import { isQuoteDocument, quoteDocumentLabels } from '~/server/utils/invoice-quote'
 
 export default defineEventHandler(async (event) => {
   const { invoiceId } = await readBody(event)
@@ -157,7 +158,9 @@ export default defineEventHandler(async (event) => {
   // QR-Code generieren
   let qrCodeDataUrl: string | null = null
   let generatedPaymentRef: string | null = null
-  const qrIban = (tenant as any)?.qr_iban || null
+  const asQuote = isQuoteDocument((invoice as any).document_kind)
+  const labels = quoteDocumentLabels(asQuote)
+  const qrIban = asQuote ? null : ((tenant as any)?.qr_iban || null)
   if (qrIban) {
     try {
       const { generateSwissQRBase64, generateReference } = await import('~/server/utils/swiss-qr')
@@ -170,7 +173,7 @@ export default defineEventHandler(async (event) => {
         creditor_street_nr: (tenant as any)?.invoice_street_nr?.trim() || '',
         creditor_zip: (tenant as any)?.invoice_zip || '',
         creditor_city: (tenant as any)?.invoice_city || '',
-        debtor_name: customerName,
+        debtor_name: invoiceQrDebtorName(invoice as any, userAddress),
         debtor_street: invoice.billing_street || userAddress?.street || '',
         debtor_street_nr: (invoice as any).billing_street_number || userAddress?.street_nr || '',
         debtor_zip: invoice.billing_zip || userAddress?.zip || '',
@@ -188,7 +191,11 @@ export default defineEventHandler(async (event) => {
   const pdfBuffer = await generateInvoicePdf({
     invoiceNumber: invoice.invoice_number,
     invoiceDate: invoice.invoice_date,
-    dueDate: invoice.due_date,
+    dueDate: (invoice as any).valid_until || invoice.due_date,
+    documentTitle: labels.documentTitle,
+    dateLabel: labels.dateLabel,
+    dueLabel: labels.dueLabel,
+    paymentBlockTitle: labels.paymentBlockTitle,
     tenantName: (tenant as any)?.legal_company_name || (tenant as any)?.name || '',
     tenantStreet,
     tenantZip: (tenant as any)?.invoice_zip || '',
@@ -242,7 +249,7 @@ export default defineEventHandler(async (event) => {
   })
 
   // HTTPS URL required for native Capacitor Browser.open() (data: URLs do not work)
-  const filename = `Rechnung_${invoice.invoice_number}.pdf`
+  const filename = `${labels.filenamePrefix}_${invoice.invoice_number}.pdf`
   const { pdfUrl } = await uploadPdfAndGetPublicUrl(supabase, {
     folder: 'invoices',
     filename,

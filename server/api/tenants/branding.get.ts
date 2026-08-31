@@ -115,7 +115,7 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
       .from('tenants')
       .select(`
         id, name, slug,
-        contact_email, contact_phone, address,
+        contact_email, contact_phone, whatsapp_phone, address,
         primary_color, secondary_color, accent_color,
         success_color, warning_color, error_color, info_color,
         background_color, surface_color, text_color, text_secondary_color,
@@ -127,7 +127,8 @@ export default defineEventHandler(async (event): Promise<TenantBrandingResponse>
         custom_css, custom_js, default_theme, allow_theme_switch,
         wallee_enabled,
         business_type, twilio_from_sender, default_vat_rate,
-        invoice_intro_text, invoice_payment_terms, invoice_footer_text
+        invoice_intro_text, invoice_payment_terms, invoice_footer_text,
+        quote_intro_text, quote_terms_text, quote_footer_text
       `)
       .eq('is_active', true)
 

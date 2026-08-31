@@ -3,7 +3,7 @@
     <SimyNav />
 
     <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
-    <section class="relative overflow-hidden pt-20 pb-28 px-6">
+    <section class="relative pt-20 pb-36 px-6">
       <!-- Background gradient blob -->
       <div class="absolute inset-0 pointer-events-none">
         <div class="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full opacity-[0.07]"
@@ -28,7 +28,7 @@
           </span>
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Online-Buchungssystem, automatische Rechnungen, Fahrlehrer-App und Website — alles in Simy. Keine Insellösungen, kein Excel.
+          Schüler buchen, sehen ihren Fortschritt und ihr Guthaben. Du siehst den Betrieb. Buchung, Portal, Rechnungen und Website — ohne Excel.
         </p>
 
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
@@ -67,6 +67,25 @@
             <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
             DSGVO-konform
           </span>
+        </div>
+      </div>
+
+      <div class="relative max-w-5xl mx-auto mt-16 px-0">
+        <div class="relative">
+          <SimyShot
+            :src="shots.desktopCalendar"
+            alt="Simy Wochenkalender mit Fahrstunden und Kursblock"
+            caption="Echte Ansicht — nicht eine Attrappe"
+          />
+          <div class="hidden md:block absolute -bottom-8 -right-2 w-[200px] drop-shadow-2xl">
+            <SimyShot
+              :src="shots.iphoneCalendar"
+              alt="Simy Kalender auf dem iPhone"
+              device="phone"
+              :width="390"
+              :height="844"
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -113,72 +132,53 @@
           <p class="text-gray-500 text-lg max-w-xl mx-auto">Vom ersten Schüler-Kontakt bis zur bezahlten Rechnung — Simy deckt den ganzen Workflow ab.</p>
         </div>
 
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="feature in features" :key="feature.title"
-            class="bg-white rounded-3xl p-7 border border-gray-100 hover:-translate-y-1 transition-all duration-300 group hover:border-[color:rgba(var(--brand-rgb),0.25)]">
-            <SimyIconTile :name="feature.icon" :size="48" class="mb-5 group-hover:scale-110 transition-transform" />
-            <h3 class="font-bold text-gray-900 mb-2 text-lg">{{ feature.title }}</h3>
-            <p class="text-sm text-gray-500 leading-relaxed mb-4">{{ feature.desc }}</p>
-            <a v-if="feature.link" :href="feature.link" class="text-xs font-semibold transition-colors" style="color: var(--brand-primary)">
-              Mehr erfahren →
+        <div class="grid md:grid-cols-6 gap-4">
+          <div
+            v-for="job in jobs"
+            :key="job.href"
+            class="simy-bento-card rounded-3xl p-7"
+            :class="job.featured ? 'md:col-span-4 md:row-span-2' : 'md:col-span-2'"
+          >
+            <a :href="job.href" class="block">
+              <SimyIconTile :name="job.icon" :size="job.featured ? 52 : 44" class="mb-5" />
+              <h3 class="font-bold text-gray-900 mb-2" :class="job.featured ? 'text-2xl' : 'text-lg'">{{ job.title }}</h3>
+              <p class="text-sm text-gray-500 leading-relaxed mb-4" :class="job.featured ? 'max-w-md' : ''">{{ job.desc }}</p>
+              <span class="text-xs font-semibold" style="color: var(--brand-primary)">Mehr erfahren →</span>
             </a>
+            <div v-if="job.featured" class="mt-8 hidden sm:block">
+              <SimyPickupGadget />
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ── Website Generator Highlight ─────────────────────────────────────── -->
-    <section class="py-24 px-6">
-      <div class="max-w-5xl mx-auto">
-        <div class="rounded-3xl p-10 md:p-14 relative overflow-hidden border"
-          style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.04) 0%, rgba(var(--brand-2-rgb),0.06) 100%); border-color: rgba(var(--brand-rgb),0.15)">
-          <div class="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10 pointer-events-none"
-            style="background: radial-gradient(circle, var(--brand-secondary), transparent); transform: translate(30%, -30%)"></div>
-          <div class="relative grid md:grid-cols-2 gap-10 items-center">
-            <div>
-              <div class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold mb-5 border"
-                style="background: rgba(var(--brand-rgb),0.08); color: var(--brand-primary); border-color: rgba(var(--brand-rgb),0.2)">
-                Website-Generator
-              </div>
-              <h2 class="text-3xl font-extrabold text-gray-900 mb-4">High-Converting Landingpage in Minuten</h2>
-              <p class="text-gray-500 leading-relaxed mb-6">Simy baut aus deinen Daten eine SEO-starke Landingpage mit Online-Terminbuchung, Preisen und Bewertungen — SSR, schnell, bereit für Google.</p>
-              <ul class="space-y-3 mb-8">
-                <li v-for="item in websiteFeatures" :key="item" class="flex items-center gap-3 text-sm text-gray-700">
-                  <svg class="w-5 h-5 flex-shrink-0" style="color: var(--brand-primary)" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                  </svg>
-                  {{ item }}
-                </li>
-              </ul>
-              <a href="https://app.simy.ch/admin/website/setup"
-                class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90"
-                style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
-                Website jetzt generieren →
-              </a>
-            </div>
-            <div class="hidden md:block">
-              <div class="rounded-2xl bg-white border border-gray-100 p-6 shadow-xl">
-                <div class="flex items-center gap-2 mb-4">
-                  <div class="w-3 h-3 rounded-full bg-red-400"></div>
-                  <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
-                  <div class="w-3 h-3 rounded-full bg-green-400"></div>
-                  <div class="ml-2 flex-1 h-5 rounded bg-gray-100 text-xs flex items-center justify-center text-gray-400 font-mono">simy.ch/fahrschule-muster</div>
-                </div>
-                <div class="space-y-2">
-                  <div class="h-24 rounded-xl" style="background: linear-gradient(135deg, rgba(var(--brand-rgb),0.12), rgba(var(--brand-2-rgb),0.12))"></div>
-                  <div class="grid grid-cols-3 gap-2">
-                    <div class="h-14 rounded-lg bg-gray-50 border border-gray-100"></div>
-                    <div class="h-14 rounded-lg bg-gray-50 border border-gray-100"></div>
-                    <div class="h-14 rounded-lg bg-gray-50 border border-gray-100"></div>
-                  </div>
-                  <div class="h-3 w-3/4 rounded bg-gray-100"></div>
-                  <div class="h-3 w-1/2 rounded bg-gray-100"></div>
-                  <div class="h-8 w-1/3 rounded-lg mt-2" style="background: rgba(var(--brand-rgb),0.15)"></div>
-                </div>
-              </div>
-            </div>
-          </div>
+    <SimyWebsiteHighlight
+      title="High-Converting Landingpage in Minuten"
+      subtitle="Simy baut aus deinen Daten eine SEO-starke Landingpage mit Online-Terminbuchung, Preisen und Bewertungen — SSR, schnell, bereit für Google."
+      preview-host="simy.ch/s/fahrschule-muster"
+    />
+
+    <SimyGbpHighlight business-type="driving_school" slug="fahrschule" />
+
+    <section class="py-24 px-6" data-reveal>
+      <div class="max-w-5xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">Für Betriebsleiter</p>
+          <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Ein Blick, vier Fragen</h2>
+          <p class="text-gray-500 mb-6 leading-relaxed">Kein zweites Kontrollzentrum. Das Admin-Dashboard beantwortet, was den Tag steuert.</p>
+          <ul class="space-y-3 text-sm text-gray-700">
+            <li class="flex gap-2"><span style="color: var(--brand-primary)">✓</span> Wer hat offen?</li>
+            <li class="flex gap-2"><span style="color: var(--brand-primary)">✓</span> Wer hat keine nächste Stunde?</li>
+            <li class="flex gap-2"><span style="color: var(--brand-primary)">✓</span> Welche Kurse sind voll oder auf der Warteliste?</li>
+            <li class="flex gap-2"><span style="color: var(--brand-primary)">✓</span> Was ist heute gebucht?</li>
+          </ul>
         </div>
+        <SimyShot
+          :src="shots.desktopDashboard"
+          alt="Simy Admin-Dashboard mit Umsatz, offenen Beträgen und Pendenzen"
+          caption="Dieselbe Ansicht auf Tablet und Handy"
+        />
       </div>
     </section>
 
@@ -268,7 +268,7 @@
     </section>
 
     <!-- ── Final CTA ─────────────────────────────────────────────────────────── -->
-    <section class="py-28 px-6" style="background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)">
+    <section class="simy-closer py-28 px-6">
       <div class="max-w-2xl mx-auto text-center">
         <SimyFounderNote :blurb="founderBlurbHome" compact />
         <h2 class="text-4xl font-black text-white mb-5">Bereit, deine Fahrschule auf Autopilot zu stellen?</h2>
@@ -292,22 +292,25 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { FOUNDER_BLURB_HOME } from '~/data/founder'
+import { FAHRSCHULE_JOBS, FAHRSCHULE_SCREENSHOTS as shots } from '~/data/fahrschule-jobs'
+import { PRICE_VAT_NOTE } from '~/data/pricing'
 const { registerCta } = useRegisterCta('driving_school')
+const jobs = FAHRSCHULE_JOBS
 
 const founderBlurbHome = FOUNDER_BLURB_HOME
 
 useHead({
   title: 'Fahrschulsoftware Schweiz – Buchung, App & Website | Simy',
   meta: [
-    { name: 'description', content: 'Fahrschulsoftware für die Schweiz: Online-Buchungssystem, automatische Rechnungen, Fahrlehrer-App und Website — alles in Simy. 30 Tage kostenlos.' },
-    { name: 'keywords', content: 'fahrschulsoftware, fahrschulsoftware schweiz, buchungssystem fahrschule, fahrlehrer app, website fahrschule, online terminbuchung fahrschule' },
+    { name: 'description', content: 'Fahrschulsoftware Schweiz: Online-Buchung, Schülerportal, Dokumentation mit PDF, Guthaben, Warteliste und Abholung im Fahrzeit-Radius. 30 Tage kostenlos.' },
+    { name: 'keywords', content: 'fahrschulsoftware, fahrschulsoftware schweiz, schülerportal fahrschule, fahrstunden dokumentieren, abholung fahrschule, guthaben fahrschule, warteliste vku' },
     { property: 'og:title', content: 'Fahrschulsoftware Schweiz – Buchung, App & Website | Simy' },
     { property: 'og:description', content: 'Fahrschulsoftware mit Online-Buchung, Rechnungen, App und Website — alles in Simy. 30 Tage kostenlos testen.' },
-    { property: 'og:url', content: 'https://simy.ch/fahrschule' },
+    { property: 'og:url', content: 'https://www.simy.ch/fahrschule' },
     { name: 'twitter:title', content: 'Fahrschulsoftware Schweiz | Simy' },
     { name: 'twitter:description', content: 'Fahrschulsoftware mit Buchung, Rechnungen, App und Website. 30 Tage gratis.' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/fahrschule' }],
   script: [
     {
       type: 'application/ld+json',
@@ -327,9 +330,11 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
         mainEntity: [
-          { '@type': 'Question', name: 'Was kostet Simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: 'Simy bietet Pläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos — keine Kreditkarte nötig.' } },
+          { '@type': 'Question', name: 'Was kostet Simy für Fahrschulen?', acceptedAnswer: { '@type': 'Answer', text: `Simy bietet Pläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos — keine Kreditkarte nötig. ${PRICE_VAT_NOTE}` } },
           { '@type': 'Question', name: 'Wie lange dauert die Einrichtung?', acceptedAnswer: { '@type': 'Answer', text: 'In der Regel unter 15 Minuten. Der Setup-Wizard führt durch alle Schritte.' } },
-          { '@type': 'Question', name: 'Können meine Schüler selbst Termine buchen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink, den du auf deiner Website oder per WhatsApp teilen kannst.' } },
+          { '@type': 'Question', name: 'Können meine Schüler selbst Termine buchen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink. Im Schülerportal sehen sie Termine, Fortschritt, Guthaben und Dokumente.' } },
+          { '@type': 'Question', name: 'Sehen Schüler ihre Bewertungen?', acceptedAnswer: { '@type': 'Answer', text: 'Ja. Dokumentierte Bewertungen sind im Portal sichtbar. Schule und Schüler können das PDF exportieren.' } },
+          { '@type': 'Question', name: 'Wie funktioniert die Abholung?', acceptedAnswer: { '@type': 'Answer', text: 'Radius in Fahrzeit-Minuten. Der Schüler wählt den Treffpunkt. Was zeitlich nicht passt, ist nicht buchbar.' } },
         ],
       }),
     },
@@ -339,8 +344,8 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
-          { '@type': 'ListItem', position: 2, name: 'Fahrschule', item: 'https://simy.ch/fahrschule' },
+          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://www.simy.ch/' },
+          { '@type': 'ListItem', position: 2, name: 'Fahrschule', item: 'https://www.simy.ch/fahrschule' },
         ],
       }),
     },
@@ -362,22 +367,6 @@ const pains = [
   { icon: 'refresh', title: 'Kein Überblick', text: 'Wer hat was bezahlt? Welcher Schüler braucht wie viele Stunden noch? Diese Fragen kosten täglich wertvolle Zeit.' },
 ]
 
-const features = [
-  { icon: 'calendar', title: 'Online-Terminbuchung', desc: 'Schüler buchen selbst — per Link, rund um die Uhr. Simy-Termine synchronisieren mit deinem privaten Kalender. Private Termine dort blockieren automatisch deine Verfügbarkeit.', link: '/fahrschule/buchungssystem' },
-  { icon: 'school', title: 'Kursbuchungsseite', desc: 'Theorie, VKU und Nothelfer online verkaufen: Plätze, Anmeldung und Zahlung auf einer Kursseite — neben den Fahrstunden.', link: '/features/kurse' },
-  { icon: 'wallet', title: 'Einfache Rechnungsstellung', desc: 'Rechnungen automatisch erstellt und per E-Mail versendet. Mit Online-Zahlung laufen Erinnerungen vollautomatisch — bei Rechnungsversand ist das Mahnen mit wenigen Klicks erledigt.', link: null },
-  { icon: 'phone', title: 'Fahrlehrer-App', desc: 'Dein Kalender, deine Schüler, deine Einnahmen — alles auf dem Smartphone, immer aktuell.', link: '/fahrschule/app' },
-  { icon: 'globe', title: 'Website-Generator', desc: 'Simy erstellt eine SEO-starke Landingpage mit Online-Terminbuchung, Preisen und Bewertungen — live unter /s/dein-slug.', link: 'https://app.simy.ch/admin/website/setup' },
-  { icon: 'chart', title: 'Statistiken & Berichte', desc: 'Einnahmen, Fahrstunden, Prüfungsquote — alle Zahlen auf einen Blick.', link: null },
-]
-
-const websiteFeatures = [
-  'SSR-Landingpage mit Online-Terminbuchung',
-  'Preise & Bewertungen aus Simy',
-  'SEO: Title, Description, FAQ & JSON-LD',
-  'Schnell, mobil, branchenfähig',
-  'Live unter /s/dein-slug',
-]
 
 const testimonials = [
   { name: 'Pascal Kilchenmann', school: 'Driving Team, Zürich', quote: 'Simy hat unsere Administration komplett digitalisiert. Wir sparen täglich Stunden an Büroarbeit und unsere Schüler lieben die einfache Online-Buchung.' },
@@ -385,13 +374,17 @@ const testimonials = [
 ]
 
 const faqs = [
-  { q: 'Was kostet Simy für Fahrschulen?', a: 'Simy bietet verschiedene Pläne ab CHF 49/Monat. Du kannst 30 Tage vollständig kostenlos testen — ohne Kreditkarte.' },
+  { q: 'Was kostet Simy für Fahrschulen?', a: `Simy bietet verschiedene Pläne ab CHF 49/Monat. Du kannst 30 Tage vollständig kostenlos testen — ohne Kreditkarte. ${PRICE_VAT_NOTE}` },
   { q: 'Wie lange dauert die Einrichtung?', a: 'In der Regel bist du in unter 15 Minuten startklar. Der Setup-Wizard führt dich durch alle Schritte: Kategorien, Preise, Standorte und Fahrlehrer.' },
-  { q: 'Können meine Schüler selbst Termine buchen?', a: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink, den du auf deiner Website oder in WhatsApp teilen kannst.' },
-  { q: 'Kann ich Theorie- und VKU-Kurse online verkaufen?', a: 'Ja. Mit der Kursbuchungsseite melden sich Schüler selbst an, freie Plätze sind sichtbar — ideal für Theorie, VKU und Nothelfer neben den Fahrstunden.' },
+  { q: 'Können meine Schüler selbst Termine buchen?', a: 'Ja. Jede Fahrschule erhält einen personalisierten Buchungslink. Im Schülerportal sehen sie Termine, Fortschritt, Guthaben und hochgeladene Dokumente.' },
+  { q: 'Sehen Schüler ihre Bewertungen?', a: 'Ja. Was du nach der Stunde dokumentierst, ist im Portal sichtbar. Schule und Schüler können das PDF exportieren.' },
+  { q: 'Wie funktioniert die Abholung?', a: 'Du setzt einen Radius in Fahrzeit-Minuten. Der Schüler wählt den Treffpunkt. Liegt die Adresse zu weit weg oder passt die Fahrt nicht zwischen zwei Stunden, erscheint der Slot nicht.' },
+  { q: 'Kann ich Theorie- und VKU-Kurse online verkaufen?', a: 'Ja. Mit der Kursbuchungsseite melden sich Schüler selbst an, freie Plätze sind sichtbar. Ist der Kurs voll, landen Interessenten auf der Warteliste statt im Chat.' },
   { q: 'Funktioniert Simy auch auf dem Smartphone?', a: 'Ja. Die Fahrlehrer-App läuft auf iOS und Android. Deine Schüler können den Buchungslink direkt im Browser öffnen.' },
   { q: 'Sind meine Daten in der Schweiz gespeichert?', a: 'Ja. Simy speichert alle Daten auf Schweizer Servern und ist vollständig DSGVO-konform.' },
-  { q: 'Kann ich Simy zusammen mit meiner bestehenden Website nutzen?', a: 'Ja. Du kannst einfach den Buchungslink auf deiner Website einbinden. Optional generiert Simy auch eine komplette Website für dich.' },
+  { q: 'Kann ich Simy zusammen mit meiner bestehenden Website nutzen?', a: 'Ja. Du kannst den Buchungslink auf deiner bestehenden Website einbinden — oder eine komplette SEO-Website von Simy generieren lassen.' },
+  { q: 'Kann ich nur eine Website ohne die volle Software?', a: 'Ja. Der Website-Generator ist eigenständig: einmalig CHF 490 beim Live-Gang, Hosting ab CHF 19/Monat. 30 Tage Vorschau gratis. Alle Details auf der Website-Generator-Seite.' },
+  { q: 'Kann Simy mein Google-Unternehmensprofil für die Fahrschule automatisieren?', a: 'Ja. Jahreskalender postet 1–4×/Woche, Foto-Pool 1–3×/Woche, neue Reviews werden automatisch beantwortet. CHF 19/Monat. Wer «Fahrschule in der Nähe» googelt, soll dich in Maps sehen.' },
 ]
 </script>
 

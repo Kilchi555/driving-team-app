@@ -152,7 +152,7 @@
                   <input
                     :ref="el => { if (el) fileInputRefs[category.code] = el as HTMLInputElement }"
                     type="file"
-                    accept="image/*,application/pdf"
+                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf,.heic,.heif"
                     class="hidden"
                     @change="(e) => uploadDocument(e, category.code, category.name)"
                   />
@@ -375,7 +375,7 @@
                 <input
                   :ref="el => { if (el) fileInputRefs[category.code] = el as HTMLInputElement }"
                   type="file"
-                  accept="image/*,application/pdf"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf,.heic,.heif"
                   class="hidden"
                   @change="(e) => uploadDocument(e, category.code, category.name)"
                 />
@@ -402,54 +402,82 @@
           <p class="text-sm text-green-700">{{ successMessage }}</p>
         </div>
 
-        <!-- Account Deletion (Apple/Google compliant in-app account deletion) -->
-        <div class="border-t border-red-100 pt-6 mt-2">
-          <h3 class="text-lg font-semibold text-red-700 mb-2">Konto löschen</h3>
-          <p class="text-sm text-gray-600 mb-3">
-            Diese Aktion ist unwiderruflich. Dein Konto und deine persönlichen Daten werden gelöscht.
-            Rechnungen, Zahlungen und Audit-Logs bleiben aus gesetzlichen Gründen (CH Buchhaltungspflicht) 10 Jahre erhalten.
-            Offene Beträge müssen vorher beglichen sein — sonst ist die Löschung nicht möglich.
+        <!-- No further lessons -->
+        <div v-if="!isEditMode" class="rounded-xl border border-gray-100 p-4 space-y-3">
+          <p class="text-sm font-medium text-gray-800">Brauchst du noch Fahrstunden?</p>
+          <p v-if="lessonsStopped" class="text-sm text-gray-600">
+            Wir erinnern dich nicht mehr an den nächsten Termin.
+            <button type="button" class="underline underline-offset-2" :disabled="lessonsBusy" @click="resumeLessons">
+              Doch wieder Termine wollen
+            </button>
           </p>
+          <div v-else class="flex flex-col sm:flex-row gap-2">
+            <button
+              type="button"
+              class="flex-1 py-2 px-3 rounded-lg bg-gray-900 text-white text-sm font-medium disabled:opacity-50"
+              :disabled="lessonsBusy"
+              @click="stopLessons('exam_passed')"
+            >
+              Prüfung bestanden
+            </button>
+            <button
+              type="button"
+              class="flex-1 py-2 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-800 disabled:opacity-50"
+              :disabled="lessonsBusy"
+              @click="stopLessons('stopped')"
+            >
+              Keine Fahrstunden mehr
+            </button>
+          </div>
+        </div>
+
+        <!-- Account deletion: required in-app by Apple/Google, kept out of the way -->
+        <div class="border-t border-gray-100 pt-4 mt-2">
           <button
             v-if="!showDeleteConfirm"
+            type="button"
+            class="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
             @click="showDeleteConfirm = true"
-            class="px-4 py-2 border border-red-300 text-red-700 hover:bg-red-50 rounded-lg transition-colors text-sm font-medium"
           >
             Konto löschen
           </button>
 
-          <div v-else class="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
-            <p class="text-sm text-red-800 font-medium">
-              Bist du sicher? Diese Aktion kann nicht rückgängig gemacht werden.
+          <div v-else class="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+            <p class="text-sm font-medium text-gray-900">Konto wirklich löschen?</p>
+            <p class="text-xs text-gray-600">
+              Persönliche Daten werden entfernt. Rechnungen, Zahlungen und Audit-Logs bleiben
+              10 Jahre (Buchhaltungspflicht). Offene Beträge müssen zuerst beglichen sein.
             </p>
             <p class="text-sm text-gray-700">
-              Gib zur Bestätigung <span class="font-mono font-bold text-red-700">LÖSCHEN</span> ein:
+              Zur Bestätigung <span class="font-mono font-semibold">LÖSCHEN</span> eingeben:
             </p>
             <input
               v-model="deleteConfirmText"
               type="text"
               placeholder="LÖSCHEN"
-              class="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent font-mono"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent font-mono text-sm"
               :disabled="isDeletingAccount"
             />
             <div class="flex gap-2">
               <button
-                @click="cancelDeleteAccount"
+                type="button"
+                class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-white rounded-lg text-sm font-medium disabled:opacity-50"
                 :disabled="isDeletingAccount"
-                class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                @click="cancelDeleteAccount"
               >
                 Abbrechen
               </button>
               <button
-                @click="handleDeleteAccount"
+                type="button"
+                class="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 :disabled="deleteConfirmText !== 'LÖSCHEN' || isDeletingAccount"
-                class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                @click="handleDeleteAccount"
               >
-                <span v-if="isDeletingAccount">Wird gelöscht...</span>
-                <span v-else>Konto endgültig löschen</span>
+                <span v-if="isDeletingAccount">Wird gelöscht…</span>
+                <span v-else>Endgültig löschen</span>
               </button>
             </div>
-            <p v-if="deleteError" class="text-xs text-red-700 mt-2">{{ deleteError }}</p>
+            <p v-if="deleteError" class="text-xs text-red-700">{{ deleteError }}</p>
           </div>
         </div>
       </div>
@@ -465,6 +493,7 @@ import { useUIStore } from '~/stores/ui'
 import { useAuthStore } from '~/stores/auth'
 import { useUserDocuments } from '~/composables/useUserDocuments'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { compressPhotoForUpload } from '~/utils/imageCompression'
 
 interface Category {
   code: string
@@ -500,6 +529,8 @@ const headerStyle = computed(() => ({
 }))
 
 const isEditMode = ref(false)
+const lessonsStopped = ref(false)
+const lessonsBusy = ref(false)
 
 const formData = ref({
   firstName: '',
@@ -541,6 +572,45 @@ const loadUserData = () => {
     logger.debug('📋 Final formData:', formData.value)
   } catch (err: any) {
     console.error('❌ Error loading user profile:', err)
+  }
+}
+
+const loadLessonsStatus = async () => {
+  try {
+    const res = await $fetch<{ stopped?: boolean }>('/api/idle-reminder/status')
+    lessonsStopped.value = !!res.stopped
+  } catch {
+    lessonsStopped.value = false
+  }
+}
+
+const stopLessons = async (reason: 'exam_passed' | 'stopped') => {
+  lessonsBusy.value = true
+  try {
+    await $fetch('/api/idle-reminder/stop', { method: 'POST', body: { reason } })
+    lessonsStopped.value = true
+    successMessage.value = reason === 'exam_passed'
+      ? 'Glückwunsch — wir erinnern dich nicht mehr an den nächsten Termin.'
+      : 'Notiert — wir erinnern dich nicht mehr an den nächsten Termin.'
+    showSuccess('Gespeichert', successMessage.value)
+  } catch (err: any) {
+    showError('Fehler', err?.data?.statusMessage || err?.message || 'Konnte nicht gespeichert werden')
+  } finally {
+    lessonsBusy.value = false
+  }
+}
+
+const resumeLessons = async () => {
+  lessonsBusy.value = true
+  try {
+    await $fetch('/api/idle-reminder/stop', { method: 'POST', body: { action: 'resume' } })
+    lessonsStopped.value = false
+    successMessage.value = 'Du kannst wieder Termine buchen. Erinnerungen sind wieder aktiv.'
+    showSuccess('Gespeichert', successMessage.value)
+  } catch (err: any) {
+    showError('Fehler', err?.data?.statusMessage || err?.message || 'Konnte nicht gespeichert werden')
+  } finally {
+    lessonsBusy.value = false
   }
 }
 
@@ -647,22 +717,32 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
     
     logger.debug('📤 Uploading document for user:', userId, 'File:', file.name)
     
-    // Check file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-      throw new Error(`Die gewählte Datei ist ${(file.size / (1024 * 1024)).toFixed(2)} MB groß. Maximale Größe: 10 MB.`)
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+    let uploadFile = file
+
+    if (!isPdf) {
+      try {
+        uploadFile = await compressPhotoForUpload(file)
+      } catch (compressErr: any) {
+        throw new Error(compressErr?.message || 'Foto konnte nicht gelesen werden. Bitte als JPG oder PNG speichern.')
+      }
+    } else if (file.size > 4 * 1024 * 1024) {
+      throw new Error('PDF ist zu groß (max. 4 MB). Bitte komprimieren oder ein Foto hochladen.')
     }
-    
-    // Use secure API for upload instead of direct storage access
+
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', uploadFile)
     formData.append('documentType', 'id_document')
-    
-    logger.debug('📤 Uploading file via secure API')
-    
+    if (categoryCode && categoryCode !== 'all') {
+      formData.append('categoryCode', categoryCode)
+    }
+
+    logger.debug('📤 Uploading file via secure API', uploadFile.name, uploadFile.size)
+
     const response = await $fetch('/api/customer/upload-document', {
       method: 'POST',
       body: formData
-    })
+    }) as any
 
     if (!response.success) {
       throw new Error('Upload fehlgeschlagen')
@@ -679,7 +759,15 @@ const uploadDocument = async (event: Event, categoryCode: string, categoryName: 
     setTimeout(() => { successMessage.value = '' }, 3000)
   } catch (err: any) {
     console.error('❌ Error uploading document:', err)
-    error.value = err?.message || 'Fehler beim Hochladen'
+    error.value =
+      err?.data?.statusMessage ||
+      err?.statusMessage ||
+      (typeof err?.data === 'string' ? err.data : '') ||
+      err?.message ||
+      'Fehler beim Hochladen'
+    if (error.value === 'Request failed' || /\[POST\]/i.test(error.value)) {
+      error.value = 'Upload fehlgeschlagen. Bitte ein Foto unter 10 MB als JPG oder PNG versuchen.'
+    }
     showError('Fehler', error.value)
   } finally {
     isUploading.value = false
@@ -795,7 +883,9 @@ const handleImageError = (e: Event) => {
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
     isEditMode.value = false
+    cancelDeleteAccount()
     loadUserData()
+    loadLessonsStatus()
     // Use categories from props if provided
     if (props.categories) {
       categories.value = props.categories

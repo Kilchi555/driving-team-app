@@ -64,6 +64,12 @@ export interface Terminology {
    * (z.B. "Fortschritt" bei Fahrschulen, "Verlauf" bei Consulting).
    */
   progressLabel: string
+
+  /**
+   * Pendenzen-Tab für Termindokumentation
+   * (Fahrschule: "Bewertungen", andere Branchen: "Dokumentation").
+   */
+  documentationLabel: string
 }
 
 const TERMS: Record<string, Terminology> = {
@@ -79,7 +85,8 @@ const TERMS: Record<string, Terminology> = {
     categoriesLabel: 'Kategorien',
     categoryLabel: 'Kategorie',
     businessNoun: 'Fahrschule',
-    progressLabel: 'Fortschritt'
+    progressLabel: 'Fortschritt',
+    documentationLabel: 'Bewertungen'
   },
   // 'mental_coach' is the actual business_type code used by business_types /
   // tenant-register.vue. 'coaching' is kept as an alias for any legacy data.
@@ -95,7 +102,8 @@ const TERMS: Record<string, Terminology> = {
     categoriesLabel: 'Themenbereiche',
     categoryLabel: 'Themenbereich',
     businessNoun: 'Coaching-Praxis',
-    progressLabel: 'Verlauf'
+    progressLabel: 'Verlauf',
+    documentationLabel: 'Dokumentation'
   },
   consulting: {
     client: 'Kunde',
@@ -109,7 +117,8 @@ const TERMS: Record<string, Terminology> = {
     categoriesLabel: 'Leistungsbereiche',
     categoryLabel: 'Leistungsbereich',
     businessNoun: 'Consulting-Unternehmen',
-    progressLabel: 'Verlauf'
+    progressLabel: 'Verlauf',
+    documentationLabel: 'Dokumentation'
   },
   coaching: {
     client: 'Kunde',
@@ -123,7 +132,8 @@ const TERMS: Record<string, Terminology> = {
     categoriesLabel: 'Themenbereiche',
     categoryLabel: 'Themenbereich',
     businessNoun: 'Coaching-Praxis',
-    progressLabel: 'Verlauf'
+    progressLabel: 'Verlauf',
+    documentationLabel: 'Dokumentation'
   },
   therapy: {
     client: 'Patient',
@@ -137,7 +147,8 @@ const TERMS: Record<string, Terminology> = {
     categoriesLabel: 'Behandlungsbereiche',
     categoryLabel: 'Behandlungsbereich',
     businessNoun: 'Praxis',
-    progressLabel: 'Verlauf'
+    progressLabel: 'Verlauf',
+    documentationLabel: 'Dokumentation'
   },
   tutoring: {
     client: 'Schüler',
@@ -151,7 +162,8 @@ const TERMS: Record<string, Terminology> = {
     categoriesLabel: 'Fächer',
     categoryLabel: 'Fach',
     businessNoun: 'Nachhilfeschule',
-    progressLabel: 'Fortschritt'
+    progressLabel: 'Fortschritt',
+    documentationLabel: 'Dokumentation'
   },
   fitness: {
     client: 'Kunde',
@@ -165,7 +177,8 @@ const TERMS: Record<string, Terminology> = {
     categoriesLabel: 'Trainingsbereiche',
     categoryLabel: 'Trainingsbereich',
     businessNoun: 'Personal-Training-Studio',
-    progressLabel: 'Verlauf'
+    progressLabel: 'Verlauf',
+    documentationLabel: 'Dokumentation'
   },
   music_school: {
     client: 'Schüler',
@@ -179,7 +192,8 @@ const TERMS: Record<string, Terminology> = {
     categoriesLabel: 'Instrumente',
     categoryLabel: 'Instrument',
     businessNoun: 'Musikschule',
-    progressLabel: 'Fortschritt'
+    progressLabel: 'Fortschritt',
+    documentationLabel: 'Dokumentation'
   },
   dog_training: {
     client: 'Hundehalter',
@@ -193,7 +207,8 @@ const TERMS: Record<string, Terminology> = {
     categoriesLabel: 'Trainingsbereiche',
     categoryLabel: 'Trainingsbereich',
     businessNoun: 'Hundeschule',
-    progressLabel: 'Verlauf'
+    progressLabel: 'Verlauf',
+    documentationLabel: 'Dokumentation'
   },
   massage: {
     client: 'Kunde',
@@ -207,8 +222,10 @@ const TERMS: Record<string, Terminology> = {
     categoriesLabel: 'Behandlungsarten',
     categoryLabel: 'Behandlungsart',
     businessNoun: 'Praxis',
-    progressLabel: 'Verlauf'
+    progressLabel: 'Verlauf',
+    documentationLabel: 'Dokumentation'
   },
+  // Selectable as "Anderes" in tenant-register (business_types.code = generic).
   generic: {
     client: 'Kunde',
     clientsPlural: 'Kunden',
@@ -221,7 +238,8 @@ const TERMS: Record<string, Terminology> = {
     categoriesLabel: 'Kategorien',
     categoryLabel: 'Kategorie',
     businessNoun: 'Unternehmen',
-    progressLabel: 'Verlauf'
+    progressLabel: 'Verlauf',
+    documentationLabel: 'Dokumentation'
   }
 }
 
@@ -235,8 +253,25 @@ const FALLBACK_BUSINESS_TYPE = 'driving_school'
  * useTenantBranding()).
  */
 export function getTerminologyDefaults(businessType: string | undefined | null): Terminology {
-  const key = businessType && TERMS[businessType] ? businessType : FALLBACK_BUSINESS_TYPE
-  return TERMS[key]
+  if (businessType && TERMS[businessType]) return TERMS[businessType]
+  // Unknown industry must not inherit Fahrschule copy. Missing type stays legacy default.
+  if (businessType) return TERMS.generic
+  return TERMS[FALLBACK_BUSINESS_TYPE]
+}
+
+export function websiteExtraServiceHints(businessType?: string | null): string[] {
+  if (isDrivingSchoolBusinessType(businessType)) {
+    return ['Probestunde', 'Administrationsgebühr', 'Prüfungsfahrt']
+  }
+  const t = getTerminologyDefaults(businessType)
+  return [`Probe-${t.appointment}`, 'Erstgespräch', t.appointment]
+}
+
+export function websiteExtraProductHints(businessType?: string | null): string[] {
+  if (isDrivingSchoolBusinessType(businessType)) {
+    return ['Lehrmittel', 'Geschenkgutschein']
+  }
+  return ['Gutschein', 'Material', 'Abo']
 }
 
 /** Merge DB `ui_labels` over code defaults (same pattern as staff register). */
@@ -328,8 +363,10 @@ export function useTerminology() {
   const businessType = computed<string>(() => {
     const raw = (currentTenantBranding.value as any)?.business_type
       || (currentTenantBranding.value as any)?.businessType
-      || FALLBACK_BUSINESS_TYPE
-    return TERMS[raw] ? raw : FALLBACK_BUSINESS_TYPE
+      || ''
+    if (raw && TERMS[raw]) return raw
+    if (raw) return 'generic'
+    return FALLBACK_BUSINESS_TYPE
   })
 
   const t = computed<Terminology>(() => {

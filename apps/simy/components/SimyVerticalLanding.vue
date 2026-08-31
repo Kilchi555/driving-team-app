@@ -98,7 +98,7 @@
       </div>
     </section>
 
-    <section id="features" class="py-24 px-6 bg-gray-50">
+    <section id="features" class="py-24 px-6 bg-gray-50" data-reveal>
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-16">
           <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary)">{{ v.featuresEyebrow }}</p>
@@ -107,7 +107,7 @@
         </div>
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div
-            v-for="feature in v.features"
+            v-for="feature in featureCards"
             :key="feature.title"
             class="bg-white rounded-3xl p-7 border border-gray-100 hover:border-gray-200 hover:-translate-y-1 transition-all duration-300"
           >
@@ -205,13 +205,22 @@
       :subtitle="`Nur Reviews, die zu ${v.navLabel} passen — live gefiltert.`"
     />
 
+    <SimyWebsiteHighlight
+      :title="`SEO-Website für ${v.navLabel}`"
+      :subtitle="`Eine schnelle Landingpage für ${v.navLabel} — mit Preisen, Standorten und Bewertungen. Vorschau sofort, live erst wenn du bereit bist.`"
+      :preview-host="`simy.ch/s/deine-${v.slug}`"
+      :industry="v.slug"
+    />
+
+    <SimyGbpHighlight :business-type="v.businessType" :slug="v.slug" />
+
     <section class="py-24 px-6">
       <div class="max-w-2xl mx-auto">
         <div class="text-center mb-12">
           <h2 class="text-3xl font-extrabold text-gray-900">Häufige Fragen</h2>
         </div>
         <div class="space-y-3">
-          <div v-for="(faq, i) in v.faqs" :key="i" class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div v-for="(faq, i) in faqItems" :key="i" class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <button
               class="w-full flex items-center justify-between px-6 py-5 text-left font-semibold text-gray-900 hover:bg-gray-50 transition-colors"
               @click="openFaq = openFaq === i ? null : i"
@@ -235,10 +244,10 @@
       </div>
     </section>
 
-    <section class="py-28 px-6" style="background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%)">
+    <section class="simy-closer py-28 px-6">
       <div class="max-w-2xl mx-auto text-center">
         <SimyFounderNote :blurb="founderBlurb" compact />
-        <h2 class="text-3xl md:text-4xl font-black text-white mb-5">{{ v.finalTitle }}</h2>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-5 simy-display">{{ v.finalTitle }}</h2>
         <p class="text-white/80 text-lg mb-10">{{ v.finalSub }}</p>
         <a
           :href="ctaUrl"
@@ -260,6 +269,7 @@ import { computed, ref } from 'vue'
 import type { SimyVertical } from '~/data/verticals'
 import { VERTICALS } from '~/data/verticals'
 import { founderBlurbForSlug } from '~/data/founder'
+import { GBP_PRICE_CHF, gbpIndustry } from '~/data/gbp'
 
 const props = defineProps<{ vertical: SimyVertical }>()
 
@@ -268,6 +278,23 @@ const { registerCta: ctaUrl } = useRegisterCta(() => props.vertical.businessType
 const founderBlurb = computed(() => founderBlurbForSlug(props.vertical.slug))
 const openFaq = ref<number | null>(0)
 const trust = ['Keine Kreditkarte nötig', 'In Minuten startklar', 'Swiss Made', 'DSG-konform']
+
+const industry = computed(() => gbpIndustry(props.vertical.businessType, props.vertical.slug))
+const featureCards = computed(() => [
+  ...props.vertical.features,
+  {
+    icon: 'map-pin',
+    title: 'Google Business Profile',
+    desc: `Jahreskalender, Foto-Pool und automatische Review-Antworten für CHF ${GBP_PRICE_CHF}/Monat. Wer «${industry.value.search}» googelt, klickt Maps — sonst gehen ${industry.value.lost} verloren.`,
+  },
+])
+const faqItems = computed(() => [
+  ...props.vertical.faqs,
+  {
+    q: `Kann Simy mein Google-Unternehmensprofil für ${props.vertical.navLabel} automatisieren?`,
+    a: `Ja. Für CHF ${GBP_PRICE_CHF}/Monat. Ohne gepflegtes Profil gehen kostenlose Klicks auf «${industry.value.search}» verloren — und damit ${industry.value.lost}.`,
+  },
+])
 
 const related = computed(() =>
   VERTICALS.filter((x) => x.slug !== props.vertical.slug)
@@ -280,7 +307,7 @@ const related = computed(() =>
     ])
 )
 
-const canonical = computed(() => `https://simy.ch/${props.vertical.slug}`)
+const canonical = computed(() => `https://www.simy.ch/${props.vertical.slug}`)
 
 useHead(() => ({
   title: props.vertical.title,
@@ -317,7 +344,7 @@ useHead(() => ({
         provider: {
           '@type': 'Organization',
           name: 'Simy IT Systems',
-          url: 'https://simy.ch',
+          url: 'https://www.simy.ch',
         },
       }),
     },
@@ -326,7 +353,7 @@ useHead(() => ({
       children: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
-        mainEntity: props.vertical.faqs.map((f) => ({
+        mainEntity: faqItems.value.map((f) => ({
           '@type': 'Question',
           name: f.q,
           acceptedAnswer: { '@type': 'Answer', text: f.a },
@@ -339,8 +366,8 @@ useHead(() => ({
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://simy.ch/' },
-          { '@type': 'ListItem', position: 2, name: 'Branchen', item: 'https://simy.ch/branchen' },
+          { '@type': 'ListItem', position: 1, name: 'Simy', item: 'https://www.simy.ch/' },
+          { '@type': 'ListItem', position: 2, name: 'Branchen', item: 'https://www.simy.ch/branchen' },
           { '@type': 'ListItem', position: 3, name: props.vertical.navLabel, item: canonical.value },
         ],
       }),

@@ -1,6 +1,6 @@
 /** Shared JSON-LD builders for simy.ch */
 
-export const SIMY_BASE = 'https://simy.ch'
+export const SIMY_BASE = 'https://www.simy.ch'
 
 export const SIMY_ORG: Record<string, unknown> = {
   '@type': 'Organization',
@@ -31,7 +31,7 @@ export const SIMY_WEBSITE: Record<string, unknown> = {
   inLanguage: 'de-CH',
   publisher: { '@id': `${SIMY_BASE}/#organization` },
   description:
-    'All-in-One Software aus der Schweiz: Online-Buchung, Abrechnung, Kundenverwaltung und App für Selbständige und KMUs.',
+    'All-in-One Software aus der Schweiz: Online-Buchung, Website-Generator, Abrechnung, Kundenverwaltung und App für Selbständige und KMUs.',
 }
 
 export type BreadcrumbItem = { name: string; url: string }
@@ -95,7 +95,8 @@ export function softwareAppLd(opts: {
       '@type': 'Offer',
       price: String(opts.price ?? 0),
       priceCurrency: 'CHF',
-      description: '30 Tage kostenlos testen',
+      valueAddedTaxIncluded: false,
+      description: '30 Tage kostenlos testen. Preise exkl. MwSt., aktuell 0 %, ab Oktober 2026 8.1 %.',
     },
     provider: { '@id': `${SIMY_BASE}/#organization` },
   }
@@ -160,12 +161,31 @@ export function productOffersLd(opts: {
         name: p.name,
         price: String(p.price),
         priceCurrency: 'CHF',
+        valueAddedTaxIncluded: false,
         description: p.description,
         url: opts.url,
         availability: 'https://schema.org/InStock',
         priceValidUntil: `${new Date().getFullYear() + 1}-12-31`,
       })),
     },
+  }
+}
+
+export function howToLd(opts: {
+  name: string
+  description: string
+  steps: { name: string; text: string }[]
+}) {
+  return {
+    '@type': 'HowTo',
+    name: opts.name,
+    description: opts.description,
+    step: opts.steps.map((s, i) => ({
+      '@type': 'HowToStep',
+      position: i + 1,
+      name: s.name,
+      text: s.text,
+    })),
   }
 }
 

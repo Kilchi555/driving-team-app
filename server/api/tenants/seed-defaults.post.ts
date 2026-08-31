@@ -98,7 +98,7 @@ export default defineEventHandler(async (event) => {
     // 1) Load tenant including branding colors
     const { data: tenant, error: tenantErr } = await supabase
       .from('tenants')
-      .select('id, name, business_type, primary_color, secondary_color')
+      .select('id, name, business_type, primary_color, secondary_color, accent_color')
       .eq('id', tenant_id)
       .single()
 
@@ -313,6 +313,13 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 500, statusMessage: `Upsert setting ${s.category}.${s.key} failed: ${setErr.message}` })
       }
     }
+
+    const { applyTenantBrandColors } = await import('~/server/utils/apply-tenant-brand-colors')
+    await applyTenantBrandColors(supabase, tenant_id, {
+      primary: primaryColor,
+      secondary: secondaryColor || primaryColor,
+      accent: tenant.accent_color || primaryColor,
+    }, { previousColors: [primaryColor, secondaryColor] })
 
     return {
       success: true,

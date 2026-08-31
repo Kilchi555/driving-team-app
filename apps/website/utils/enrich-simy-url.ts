@@ -51,6 +51,18 @@ export function enrichSimyUrl(href: string, options?: { referrer?: string | null
     if (blob && !url.searchParams.has('dt_attr')) {
       url.searchParams.set('dt_attr', blob)
     }
+
+    // First-class click IDs survive even if dt_attr is stripped or session_id
+    // is reminted on app.simy.ch — the booking plugin reads these from the URL.
+    const attr = getWebsiteAttribution()
+    if (attr) {
+      for (const key of ['gclid', 'gbraid', 'wbraid', 'fbclid'] as const) {
+        const value = attr[key]
+        if (value && !url.searchParams.has(key)) {
+          url.searchParams.set(key, value)
+        }
+      }
+    }
     if (metaConsentGiven && !url.searchParams.has('mc')) {
       url.searchParams.set('mc', '1')
     }

@@ -29,6 +29,17 @@ def load_client_config
   JSON.parse(File.read(config_path))
 end
 
+def connect_api_key
+  p8 = File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8")
+  UI.user_error!("App Store Connect .p8 missing: #{p8}") unless File.exist?(p8)
+  app_store_connect_api_key(
+    key_id:        ENV['APPLE_API_KEY_ID'],
+    issuer_id:     ENV['APPLE_API_ISSUER_ID'],
+    key_filepath:  p8,
+    in_house:      false,
+  )
+end
+
 # ─── iOS Platform ─────────────────────────────────────────────────────────────
 
 platform :ios do
@@ -38,24 +49,23 @@ platform :ios do
   # ---------------------------------------------------------------------------
   lane :sync_certificates do
     client = load_client_config
+    setup_ci if is_ci
+
+    git_url = ENV['MATCH_GIT_URL'].to_s.strip
+    git_url = 'https://github.com/Kilchi555/simy-certificates.git' if git_url.empty?
+    UI.user_error!('MATCH_PASSWORD is missing (GitHub secret / .env). Needed to decrypt Match certs.') if ENV['MATCH_PASSWORD'].to_s.strip.empty?
+    UI.user_error!('MATCH_GIT_TOKEN is missing. CI needs a PAT with access to the Match repo.') if ENV['MATCH_GIT_TOKEN'].to_s.strip.empty?
 
     match(
       type:                'appstore',
       app_identifier:      client['bundleId'],
-      git_url:             ENV['MATCH_GIT_URL'],
+      git_url:             git_url,
+      git_branch:          'main',
       git_basic_authorization: Base64.strict_encode64("x-access-token:#{ENV['MATCH_GIT_TOKEN']}"),
-      readonly:            is_ci,                    # Don't create new certs in CI
+      readonly:            is_ci,
       team_id:             ENV['APPLE_TEAM_ID'],
-      api_key_path:        nil,
-      api_key: {
-        key_id:      ENV['APPLE_API_KEY_ID'],
-        issuer_id:   ENV['APPLE_API_ISSUER_ID'],
-        key_content: ENV['APPLE_API_KEY_CONTENT'] || File.read(
-          File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8")
-        ),
-        is_key_content_base64: !!ENV['APPLE_API_KEY_CONTENT'],
-        in_house: false,
-      }
+      skip_confirmation:    true,
+      api_key:             connect_api_key,
     )
   end
 
@@ -65,14 +75,8 @@ platform :ios do
   lane :create_app do
     client = load_client_config
 
-    api_key = app_store_connect_api_key(
-      key_id:        ENV['APPLE_API_KEY_ID'],
-      issuer_id:     ENV['APPLE_API_ISSUER_ID'],
-      key_filepath:  File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8"),
-      in_house:      false,
-    )
-
     produce(
+      api_key:        connect_api_key,
       app_identifier: client['bundleId'],
       app_name:       client['appName'],
       language:       'German',
@@ -82,18 +86,10 @@ platform :ios do
     )
   end
 
-  # ---------------------------------------------------------------------------
-  # deploy: Full pipeline — build, upload to TestFlight or App Store
-  #
-  # Uses Xcode's "Automatic Signing" (CODE_SIGN_STYLE = Automatic) — no Match
-  # setup required. Xcode itself pulls certs/profiles from Apple Developer
-  # Portal at build time, using the team configured via DEVELOPMENT_TEAM
-  # in project.pbxproj.
-  #
-  # If you ever want a deterministic, git-managed certs/profiles workflow,
-  # set up Match and re-enable the `sync_certificates` lane.
-  # ---------------------------------------------------------------------------
+  # deploy: Match signing (CI has no Apple ID) → TestFlight or App Store
   lane :deploy do
+    setup_ci if is_ci
+
     client     = load_client_config
     target     = ENV['DEPLOY_TARGET'] || 'testflight'
     version    = client['version']
@@ -102,19 +98,11 @@ platform :ios do
 
     UI.message("🚀 Deploying #{app_name} (#{bundle_id}) v#{version} → #{target}")
 
-    # Build App Store Connect API key — used for both signing (build_app) and upload
-    api_key = app_store_connect_api_key(
-      key_id:        ENV['APPLE_API_KEY_ID'],
-      issuer_id:     ENV['APPLE_API_ISSUER_ID'],
-      key_filepath:  File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APPLE_API_KEY_ID']}.p8"),
-      in_house:      false,
-    )
+    api_key = connect_api_key
 
-    # 1. Generate capacitor.config.json + sync iOS project for the right client
     sh("cd .. && CLIENT=#{client['clientId']} node scripts/gen-cap-config.mjs")
     sh('cd .. && npx cap sync ios')
 
-    # 2. Update version and build number
     increment_version_number(
       version_number: version,
       xcodeproj: 'ios/App/App.xcodeproj'
@@ -124,21 +112,51 @@ platform :ios do
       xcodeproj: 'ios/App/App.xcodeproj'
     )
 
-    # 2b. Patch per-client display name in Info.plist
     set_info_plist_value(
       path: 'ios/App/App/Info.plist',
       key: 'CFBundleDisplayName',
       value: app_name
     )
 
-    # 2c. Strip Dev-only App Transport Security exceptions (NSAllowsArbitraryLoads etc.)
-    #     They are required for local Live-Reload but Apple may reject the submission otherwise.
-    #     The original Info.plist is backed up to Info.plist.bak and restored after the build.
     sh('cd .. && fastlane/strip-ats.sh')
 
-    # 3. Build the app (SPM-based project — no .xcworkspace)
-    #    Automatic signing: api_key lets Xcode pull the Distribution profile from
-    #    Apple Developer Portal at build time (no local Distribution cert required).
+    sync_certificates
+    profile_name = ENV["sigh_#{bundle_id}_appstore_profile-name"]
+    profile_path = ENV["sigh_#{bundle_id}_appstore_profile-path"]
+    UI.user_error!("Match installed no App Store profile for #{bundle_id}. Run locally: CLIENT=#{client['clientId']} bundle exec fastlane ios sync_certificates") if profile_name.to_s.empty?
+
+    team_id = ENV['APPLE_TEAM_ID'].to_s.strip
+    team_id = client.dig('ios', 'teamId').to_s.strip if team_id.empty?
+    UI.user_error!('APPLE_TEAM_ID missing') if team_id.empty?
+
+    # Xcode 16+ ignores ~/Library/MobileDevice/Provisioning Profiles
+    require 'fileutils'
+    profile_dirs = [
+      File.expand_path('~/Library/MobileDevice/Provisioning Profiles'),
+      File.expand_path('~/Library/Developer/Xcode/UserData/Provisioning Profiles'),
+    ]
+    profile_dirs.each { |dir| FileUtils.mkdir_p(dir) }
+    if profile_path.to_s != '' && File.exist?(profile_path)
+      install_provisioning_profile(path: profile_path)
+      src = File.expand_path(profile_path)
+      profile_dirs.each do |dir|
+        dest = File.expand_path(File.join(dir, File.basename(src)))
+        next if src == dest
+        FileUtils.cp(src, dest)
+      end
+    end
+
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: 'ios/App/App.xcodeproj',
+      team_id: team_id,
+      targets: ['App'],
+      bundle_identifier: bundle_id,
+      code_sign_identity: 'Apple Distribution',
+      profile_name: profile_name,
+      build_configurations: ['Release', 'Debug'],
+    )
+
     build_app(
       project:              'ios/App/App.xcodeproj',
       scheme:               'App',
@@ -147,13 +165,17 @@ platform :ios do
       output_directory:     './build',
       output_name:          "#{client['clientId']}.ipa",
       clean:                true,
-      xcargs:               "-allowProvisioningUpdates DEVELOPMENT_TEAM='#{ENV['APPLE_TEAM_ID']}'",
+      skip_profile_detection: true,
+      xcargs:               "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{team_id} PROVISIONING_PROFILE_SPECIFIER='#{profile_name}'",
       export_options: {
-        signingStyle:                 'automatic',
-        teamID:                       ENV['APPLE_TEAM_ID'],
-        uploadBitcode:                false,
-        uploadSymbols:                true,
-        compileBitcode:               false,
+        signingStyle: 'manual',
+        teamID:       team_id,
+        provisioningProfiles: {
+          bundle_id => profile_name,
+        },
+        uploadBitcode:  false,
+        uploadSymbols:  true,
+        compileBitcode: false,
       }
     )
 

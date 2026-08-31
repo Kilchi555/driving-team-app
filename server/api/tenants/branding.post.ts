@@ -118,7 +118,7 @@ export default defineEventHandler(async (event) => {
     // Verify tenant exists and is active
     const { data: existingTenant, error: tenantError } = await supabaseAdmin
       .from('tenants')
-      .select('id, name, is_active')
+      .select('id, name, is_active, primary_color, secondary_color, accent_color')
       .eq('id', tenantId)
       .single()
 
@@ -310,7 +310,7 @@ export default defineEventHandler(async (event) => {
       // Brand identity
       'brand_name', 'tagline', 'description',
       // Contact (tenant's own — they can update)
-      'contact_email', 'contact_phone', 'address',
+      'contact_email', 'contact_phone', 'whatsapp_phone', 'address',
       'street', 'street_nr', 'zip', 'city', 'country',
       // Messaging
       'twilio_from_sender',
@@ -367,6 +367,21 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 500,
         statusMessage: 'Update failed - no rows affected'
+      })
+    }
+
+    if (typeof sanitizedUpdate.primary_color === 'string') {
+      const { applyTenantBrandColors } = await import('~/server/utils/apply-tenant-brand-colors')
+      await applyTenantBrandColors(supabaseAdmin, tenantId, {
+        primary: sanitizedUpdate.primary_color,
+        secondary: sanitizedUpdate.secondary_color || updatedTenant.secondary_color,
+        accent: sanitizedUpdate.accent_color || updatedTenant.accent_color || sanitizedUpdate.primary_color,
+      }, {
+        previousColors: [
+          existingTenant.primary_color,
+          existingTenant.secondary_color,
+          existingTenant.accent_color,
+        ],
       })
     }
 

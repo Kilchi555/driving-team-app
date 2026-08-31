@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { requireFeature } from '~/server/utils/require-feature'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getGbpAutomationSettings, resolveGbpLocation } from '~/server/utils/gbp'
-import { generateGbpAiText, type GbpAiTextContext, type GbpAiTextMode, type GbpAiTextTone } from '~/server/utils/gbp-automation'
+import { generateGbpAiText, adaptKeywordsForGbpLocation, type GbpAiTextContext, type GbpAiTextMode, type GbpAiTextTone } from '~/server/utils/gbp-automation'
 import { getGbpLocationIdFromEvent } from '~/server/utils/gbp-location-param'
 
 /**
@@ -53,10 +53,10 @@ export default defineEventHandler(async (event) => {
   const { getTerminologyDefaults } = await import('~/composables/useTerminology')
   const terms = getTerminologyDefaults(tenant?.business_type)
 
-  const mergedKeywords = [...new Set([
+  const mergedKeywords = adaptKeywordsForGbpLocation([
     ...(settings.keywords ?? []),
     ...(body.keywords ?? []),
-  ])].filter(Boolean)
+  ], locationTitle)
 
   let imageBase64 = body.imageBase64?.trim() || null
   let imageMediaType = body.imageMediaType || null

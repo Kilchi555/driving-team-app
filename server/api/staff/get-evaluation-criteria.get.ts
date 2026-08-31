@@ -47,8 +47,29 @@ export default defineEventHandler(async (event) => {
       console.error(`[${new Date().toLocaleTimeString()}] ❌ Error loading evaluation criteria:`, criteriaError)
     }
 
-    const criteria = criteriaRows || []
-    console.log(`[${new Date().toLocaleTimeString()}] ✅ Loaded ${isTheoryLesson ? 'theory' : 'practical'} criteria (tenant only): ${criteria.length}`)
+    let criteria = criteriaRows || []
+
+    // Non-Fahrschule templates are all is_theory=false. A mis-tagged theory
+    // appointment must still show the session topics instead of an empty list.
+    if (isTheoryLesson && criteria.length === 0) {
+      const { data: fallbackRows } = await supabase
+        .from('evaluation_criteria')
+        .select(`
+          id,
+          name,
+          description,
+          is_active,
+          display_order,
+          category_id,
+          driving_categories,
+          evaluation_categories!inner(tenant_id, is_theory, name, id, display_order)
+        `)
+        .eq('is_active', true)
+        .eq('tenant_id', user.tenant_id)
+        .eq('evaluation_categories.tenant_id', user.tenant_id)
+        .order('evaluation_categories(display_order), display_order', { ascending: true })
+      criteria = fallbackRows || []
+    }
     
     // Sort by category display_order, then by criteria display_order
     criteria.sort((a, b) => {

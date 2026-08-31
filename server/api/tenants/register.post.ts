@@ -20,6 +20,7 @@ interface TenantRegistrationData {
   contact_person_last_name: string
   contact_email: string
   contact_phone: string
+  whatsapp_phone?: string
   street: string
   streetNr: string
   zip: string
@@ -51,6 +52,8 @@ interface TenantRegistrationData {
   pricing_json?: string          // JSON array of PricingItem objects
   /** Platform tenant→tenant referral code (?ref= on tenant-register) */
   platform_referral_code?: string
+  /** '1' only for /tenant-register?product=website — never set by the default Simy flow */
+  website_only?: string
 }
 
 interface RegistrationResponse {
@@ -105,6 +108,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       contact_person_last_name: '',
       contact_email: '',
       contact_phone: '',
+      whatsapp_phone: '',
       street: '',
       streetNr: '',
       zip: '',
@@ -133,10 +137,13 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       custom_categories_json: '',
       staff_json: '',
       platform_referral_code: '',
+      website_only: '',
     }
 
     let logoFile: File | null = null
     let logoSquareFile: File | null = null
+    let logoBuffer: Buffer | null = null
+    let logoSquareBuffer: Buffer | null = null
 
     // FormData-Felder verarbeiten
     logger.debug('🔍 Processing FormData fields:')
@@ -144,11 +151,13 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
       logger.debug(`  Field: ${field.name}, Type: ${field.type}, Filename: ${field.filename}`)
       
       if (field.name === 'logo_file' && field.filename) {
+        logoBuffer = Buffer.from(field.data)
         logoFile = new File([field.data], field.filename, {
           type: field.type || 'image/jpeg'
         })
         logger.debug(`  ✅ Processed logo file: ${field.filename}`)
       } else if (field.name === 'logo_square_file' && field.filename) {
+        logoSquareBuffer = Buffer.from(field.data)
         logoSquareFile = new File([field.data], field.filename, {
           type: field.type || 'image/webp'
         })
@@ -191,6 +200,23 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     }
     logger.debug('✅ Disposable email check passed')
 
+    applyWebsiteOnlyDefaults(data)
+
+    const logoForColors = logoBuffer || logoSquareBuffer
+    if (logoForColors?.length) {
+      try {
+        const { extractColorsFromImageBuffer } = await import('~/server/utils/extract-logo-colors')
+        const palette = await extractColorsFromImageBuffer(logoForColors)
+        if (palette) {
+          data.primary_color = palette[0]
+          data.secondary_color = palette[1]
+          data.accent_color = palette[2]
+        }
+      } catch {
+        // Keep client-supplied colors when the image cannot be decoded
+      }
+    }
+
     // Validierung
     const validationError = validateTenantData(data)
     if (validationError) {
@@ -206,6 +232,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     const sanitizedFirstName = sanitizeString(data.contact_person_first_name, 100)
     const sanitizedLastName = sanitizeString(data.contact_person_last_name, 100)
     const sanitizedPhone = sanitizeString(data.contact_phone, 20)
+    const sanitizedWhatsapp = sanitizeString(data.whatsapp_phone || '', 20)
     const sanitizedStreet = sanitizeString(data.street, 100)
     const sanitizedStreetNr = sanitizeString(data.streetNr, 10)
     const sanitizedCity = sanitizeString(data.city, 100)
@@ -293,6 +320,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         contact_person_last_name: sanitizedLastName,
         contact_email: data.contact_email.toLowerCase().trim(),
         contact_phone: sanitizedPhone,
+        whatsapp_phone: sanitizedWhatsapp || null,
         address: `${sanitizedStreet} ${sanitizedStreetNr}, ${data.zip} ${sanitizedCity}`,
         business_type: resolvedBusinessType,
         // CH: Ausbildung (Fahrschule, Nachhilfe, Musikschule) → MwSt 0%; sonst Normalsatz 8.1%
@@ -345,6 +373,10 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
           ? data.selected_categories.split(',').map(c => c.trim()).filter(Boolean)
           : null,
         working_days_template: defaultWorkingDaysTemplate,
+        // Default register never sends website_only — column default stays false.
+        ...(data.website_only === '1' || data.website_only === 'true'
+          ? { website_only: true, website_status: 'pending_review' }
+          : {}),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -721,6 +753,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         customer_number: newTenant.customer_number,
         contact_email: newTenant.contact_email,
         business_type: newTenant.business_type,
+        website_only: !!newTenant.website_only,
         has_logo: !!logoUrl,
         duration_ms: Date.now() - startTime
       }
@@ -737,7 +770,8 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
         contact_email: newTenant.contact_email,
         logo_url: newTenant.logo_url,
         primary_color: newTenant.primary_color,
-        secondary_color: newTenant.secondary_color
+        secondary_color: newTenant.secondary_color,
+        website_only: !!newTenant.website_only
       }
     }
     
@@ -772,7 +806,51 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
 /**
  * Validiert die Tenant-Registrierungsdaten
  */
+function isWebsiteOnlyPayload(data: TenantRegistrationData) {
+  return data.website_only === '1' || data.website_only === 'true'
+}
+
+function guessSwissZip(city?: string) {
+  const c = String(city || '').trim().toLowerCase()
+  const map: Record<string, string> = {
+    'zürich': '8000',
+    zurich: '8000',
+    bern: '3000',
+    basel: '4000',
+    luzern: '6000',
+    winterthur: '8400',
+    'st. gallen': '9000',
+    'st.gallen': '9000',
+    genf: '1200',
+    lausanne: '1000',
+    lugano: '6900',
+    biel: '2500',
+    thun: '3600',
+  }
+  return map[c] || '8000'
+}
+
+function applyWebsiteOnlyDefaults(data: TenantRegistrationData) {
+  if (!isWebsiteOnlyPayload(data)) return
+  if (!data.legal_company_name?.trim()) data.legal_company_name = data.name
+  if (!data.contact_person_first_name?.trim()) {
+    const local = String(data.contact_email || '').split('@')[0]
+    const first = local.split(/[._-]/)[0]
+    data.contact_person_first_name = first
+      ? first.charAt(0).toUpperCase() + first.slice(1)
+      : 'Admin'
+  }
+  if (!data.contact_person_last_name?.trim()) {
+    data.contact_person_last_name = data.name?.trim().split(/\s+/)[0] || 'Konto'
+  }
+  if (!data.street?.trim()) data.street = data.city?.trim() || 'Adresse folgt'
+  if (!data.streetNr?.trim()) data.streetNr = '1'
+  if (!data.zip?.trim()) data.zip = guessSwissZip(data.city)
+}
+
 function validateTenantData(data: TenantRegistrationData): string | null {
+  const websiteOnly = isWebsiteOnlyPayload(data)
+
   if (!data.name?.trim()) {
     return 'Fahrschul-Name ist erforderlich'
   }
@@ -816,7 +894,7 @@ function validateTenantData(data: TenantRegistrationData): string | null {
     return 'Kontaktperson Nachname ist erforderlich'
   }
 
-  if (!data.contact_phone?.trim()) {
+  if (!websiteOnly && !data.contact_phone?.trim()) {
     return 'Telefonnummer ist erforderlich'
   }
 
@@ -829,28 +907,30 @@ function validateTenantData(data: TenantRegistrationData): string | null {
   ) {
     return 'Bitte echte Firmendaten verwenden.'
   }
-  const phoneDigits = data.contact_phone.replace(/\D/g, '')
-  if (/(.)\1{5,}/.test(phoneDigits)) {
-    return 'Bitte eine gültige Telefonnummer angeben.'
+  if (data.contact_phone?.trim()) {
+    const phoneDigits = data.contact_phone.replace(/\D/g, '')
+    if (/(.)\1{5,}/.test(phoneDigits)) {
+      return 'Bitte eine gültige Telefonnummer angeben.'
+    }
   }
   if (/^1234$/.test(data.zip.trim()) && placeholderNames.test(data.city.trim())) {
     return 'Bitte echte Adressdaten verwenden.'
   }
 
-  if (!data.street?.trim()) {
+  if (!websiteOnly && !data.street?.trim()) {
     return 'Straße ist erforderlich'
   }
 
-  if (!data.streetNr?.trim()) {
+  if (!websiteOnly && !data.streetNr?.trim()) {
     return 'Hausnummer ist erforderlich'
   }
 
-  if (!data.zip?.trim()) {
+  if (!websiteOnly && !data.zip?.trim()) {
     return 'PLZ ist erforderlich'
   }
 
   // PLZ Validierung (4-stellige Schweizer PLZ)
-  if (!/^[0-9]{4}$/.test(data.zip)) {
+  if (data.zip?.trim() && !/^[0-9]{4}$/.test(data.zip)) {
     return 'PLZ muss 4 Ziffern haben'
   }
 
@@ -1079,6 +1159,20 @@ async function copyDefaultDataToTenant(
     theoryEnabled,
     consultationEnabled,
   })
+
+  const { data: brand } = await supabase
+    .from('tenants')
+    .select('primary_color, secondary_color, accent_color')
+    .eq('id', tenantId)
+    .maybeSingle()
+  if (brand?.primary_color) {
+    const { applyTenantBrandColors } = await import('~/server/utils/apply-tenant-brand-colors')
+    await applyTenantBrandColors(supabase, tenantId, {
+      primary: brand.primary_color,
+      secondary: brand.secondary_color || brand.primary_color,
+      accent: brand.accent_color || brand.primary_color,
+    })
+  }
 
   // ── 3. Evaluation Categories (+ Criteria + Scale) ────────────────────────
   await applyEvaluationDefaults(supabase, tenantId, businessType)

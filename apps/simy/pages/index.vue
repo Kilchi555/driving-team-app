@@ -17,19 +17,15 @@
 
     <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
     <section class="relative overflow-hidden pt-10 pb-16 px-6">
-      <div class="absolute -top-40 -right-40 w-[700px] h-[700px] rounded-full opacity-10 pointer-events-none"
-        style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
-      <div class="absolute -bottom-20 -left-20 w-[500px] h-[500px] rounded-full opacity-8 pointer-events-none"
-        style="background: radial-gradient(circle, var(--brand-accent), transparent)"></div>
+      <div class="simy-glow -top-48 left-1/2 -translate-x-1/2" />
 
       <div class="relative max-w-5xl mx-auto text-center">
-        <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
-          :style="{ background: `rgba(var(--brand-rgb), 0.07)`, color: primaryColor, borderColor: `rgba(var(--brand-rgb), 0.28)` }">
-          <span class="w-2 h-2 rounded-full animate-pulse" :style="{ background: primaryColor }"></span>
+        <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold mb-6"
+          :style="{ background: `rgba(var(--brand-rgb), 0.07)`, color: primaryColor }">
           30 Tage kostenlos testen
         </div>
 
-        <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-gray-900 mb-5 leading-tight">
+        <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mb-5 simy-display">
           Dein KMU.<br>
           <span :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }">
             Auf Autopilot.
@@ -37,27 +33,28 @@
         </h1>
 
         <p class="text-lg md:text-xl text-gray-500 max-w-2xl mx-auto mb-8 leading-relaxed">
-          Online-Buchung, automatische Abrechnung und Kundenverwaltung für Schweizer Dienstleister —
+          Online-Buchung, Website-Generator, automatische Abrechnung und Kundenverwaltung für Schweizer Dienstleister —
           Coaching, Consulting, Fahrschule und mehr. Damit du wieder arbeitest statt administrierst.
         </p>
 
         <div class="flex flex-col sm:flex-row gap-4 justify-center mb-4">
           <a href="#" @click.prevent="goToRegister"
-            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-xl transition-all hover:scale-105"
+            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full text-white font-bold text-lg shadow-xl transition-all hover:opacity-90"
             :style="{ background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`, boxShadow: `0 8px 30px rgba(var(--brand-rgb), 0.35)` }">
             <svg v-if="isNavigatingToRegister && logoTokenUploading" class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
             <svg v-else class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
             30 Tage gratis testen
           </a>
           <a href="#branding-preview"
-            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-lg border-2 transition-all"
+            class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-semibold text-lg border transition-all"
             :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }"
             @mouseenter="(e) => (e.currentTarget as HTMLElement).style.background = `rgba(var(--brand-rgb), 0.05)`"
             @mouseleave="(e) => (e.currentTarget as HTMLElement).style.background = 'transparent'">
             In deinen Farben testen
           </a>
         </div>
-        <p class="text-sm text-gray-400 mb-8">Keine Kreditkarte · Monatlich kündbar · Schweizer Server</p>
+        <p class="text-sm text-gray-400 mb-3">Keine Kreditkarte · Monatlich kündbar · Schweizer Server</p>
+        <p class="text-xs text-gray-400 mb-8">50+ Betriebe · Swiss Hosting · DSGVO · 30 Tage Vorschau</p>
 
         <div class="relative mx-auto max-w-2xl pt-10 md:pt-14">
           <div
@@ -120,17 +117,17 @@
     />
 
     <!-- ── Features ──────────────────────────────────────────────────────────── -->
-    <section id="features" class="py-20 px-6 bg-white">
+    <section id="features" class="py-20 px-6 bg-white" data-reveal>
       <div class="max-w-6xl mx-auto">
         <div class="text-center mb-14">
-          <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Features</p>
-          <h2 class="text-4xl font-extrabold text-gray-900 mb-4">Alles was dein Betrieb braucht</h2>
+          <p class="text-xs font-semibold mb-3" style="color: var(--brand-primary);">Features</p>
+          <h2 class="text-4xl font-extrabold text-gray-900 mb-4 simy-display">Alles was dein Betrieb braucht</h2>
           <p class="text-gray-500 text-lg max-w-xl mx-auto">Von der Online-Terminbuchung bis zur TWINT-Abrechnung – in einer einzigen Schweizer Plattform.</p>
         </div>
 
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <NuxtLink v-for="feat in features" :key="feat.title" :to="feat.link"
-            class="group rounded-2xl p-6 border border-gray-100 bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300 block focus:outline-none focus-visible:ring-2"
+            class="group rounded-2xl p-6 border border-gray-100 bg-white hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 block focus:outline-none focus-visible:ring-2"
             :style="`--tw-ring-color: ${primaryColor}`">
             <SimyIconTile :name="feat.icon" :size="44" :alpha="feat.alpha" class="mb-4" />
             <h3 class="font-bold text-gray-900 mb-1 group-hover:text-gray-800">{{ feat.title }}</h3>
@@ -153,6 +150,13 @@
         </div>
       </div>
     </section>
+
+    <SimyWebsiteHighlight
+      title="Nur eine Website? Geht auch — überzeugend."
+      subtitle="SEO-starke Landingpage in Minuten: Preise, Standorte, Bewertungen. Einmalig CHF 490, Hosting ab CHF 19. Vorschau gratis, live wenn du bereit bist."
+    />
+
+    <SimyGbpHighlight />
 
     <!-- ── Branding Preview Section ────────────────────────────────────────── -->
     <section id="branding-preview" class="py-20 px-6 bg-white border-y border-gray-100">
@@ -1007,50 +1011,8 @@
         </div>
 
         <!-- Student View (phone mockup) -->
-        <div v-else class="flex justify-center" style="animation: fadeSlideIn 0.25s ease;">
-          <div class="rounded-[2.5rem] border-4 border-gray-800 overflow-hidden shadow-2xl w-80">
-            <div class="bg-gray-800 py-2 flex justify-center">
-              <div class="w-20 h-1.5 rounded-full bg-gray-600"></div>
-            </div>
-            <div class="bg-white">
-              <div class="px-5 pt-5 pb-6" :style="{ background: `linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))` }">
-                <p class="text-white/70 text-xs">Guten Morgen</p>
-                <p class="text-white font-bold text-lg">Hallo Anna 👋</p>
-              </div>
-              <div class="mx-4 -mt-4 bg-white rounded-2xl shadow-lg p-4 mb-4 border border-gray-100">
-                <p class="text-xs font-bold uppercase tracking-wide mb-2" :style="{ color: primaryColor }">Nächster Termin</p>
-                <p class="font-bold text-gray-900">Morgen, 09:00 Uhr</p>
-                <p class="text-sm text-gray-500">90 Min · Thomas Meier</p>
-                <p class="text-xs text-gray-400 mt-1">📍 Bahnhof Uster, Gleis 1</p>
-                <div class="mt-3 flex gap-2">
-                  <button class="flex-1 py-2 rounded-xl text-white text-xs font-bold" :style="{ backgroundColor: primaryColor }">Bestätigen ✓</button>
-                  <button class="flex-1 py-2 rounded-xl text-xs font-bold bg-gray-100 text-gray-600">Absagen</button>
-                </div>
-              </div>
-              <div class="px-4 mb-4">
-                <div class="flex justify-between text-xs mb-1.5">
-                  <span class="font-semibold text-gray-700">Lernfortschritt</span>
-                  <span class="font-bold" :style="{ color: primaryColor }">14 / 20 Std.</span>
-                </div>
-                <div class="w-full bg-gray-100 rounded-full h-2.5">
-                  <div class="h-2.5 rounded-full" :style="{ width: '70%', backgroundColor: primaryColor }"></div>
-                </div>
-              </div>
-              <div class="mx-4 mb-4 rounded-xl p-3 flex items-center justify-between bg-amber-50 border border-amber-200">
-                <div>
-                  <p class="text-xs font-bold text-amber-800">Offene Zahlung</p>
-                  <p class="text-xs text-amber-600">CHF 95.– · Termin 14</p>
-                </div>
-                <button class="text-xs font-bold px-3 py-1.5 rounded-lg text-white" :style="{ backgroundColor: primaryColor }">Zahlen →</button>
-              </div>
-            </div>
-            <div class="bg-gray-800 py-2 flex justify-around px-8">
-              <span class="text-gray-400 text-lg">🏠</span>
-              <span class="text-gray-400 text-lg">📅</span>
-              <span class="text-gray-400 text-lg">💳</span>
-              <span class="text-gray-400 text-lg">👤</span>
-            </div>
-          </div>
+        <div v-else class="flex justify-center py-4" style="animation: fadeSlideIn 0.25s ease;">
+          <SimyStudentPortalMock caption="" />
         </div>
 
       </div>
@@ -1078,10 +1040,13 @@
             <h3 class="font-extrabold text-xl mb-1" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">{{ plan.name }}</h3>
             <p class="text-sm mb-4" :class="plan.highlighted ? '' : 'text-gray-400'"
               :style="plan.highlighted ? { color: 'rgba(255,255,255,0.65)' } : {}">{{ plan.tagline }}</p>
-            <div class="flex items-baseline gap-1 mb-5">
-              <span class="text-4xl font-black" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">CHF {{ plan.price }}</span>
-              <span class="text-sm" :class="plan.highlighted ? '' : 'text-gray-400'"
-                :style="plan.highlighted ? { color: 'rgba(255,255,255,0.65)' } : {}">/Monat</span>
+            <div class="mb-5">
+              <div class="flex items-baseline gap-1">
+                <span class="text-4xl font-black" :class="plan.highlighted ? 'text-white' : 'text-gray-900'">CHF {{ plan.price }}</span>
+                <span class="text-sm" :class="plan.highlighted ? '' : 'text-gray-400'"
+                  :style="plan.highlighted ? { color: 'rgba(255,255,255,0.65)' } : {}">/Monat</span>
+              </div>
+              <SimyPriceVatNote compact :on-dark="plan.highlighted" />
             </div>
             <ul class="space-y-2 mb-6 flex-1">
               <li v-for="f in plan.featureList" :key="f" class="flex items-center gap-2 text-sm"
@@ -1104,6 +1069,7 @@
           </div>
         </div>
 
+        <SimyPriceVatNote class="mb-4" />
         <NuxtLink to="/preise" class="text-sm font-medium transition-colors hover:opacity-80" :style="{ color: primaryColor }">
           Alle Features & Preise im Detail vergleichen →
         </NuxtLink>
@@ -1114,8 +1080,8 @@
     <section class="py-12 px-6" :style="{ background: `rgba(var(--brand-rgb), 0.04)` }">
       <div class="max-w-3xl mx-auto text-center">
         <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--brand-primary);">Optional: Wachstum</p>
-        <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Mehr Kunden? Google Ads &amp; lokales SEO</h2>
-        <p class="text-gray-500 mb-6">Zusätzlich zur Software — Managed Ads und SEO für Schweizer Dienstleistungsbetriebe.</p>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-3">Mehr Kunden? Google Ads, SEO und Google Business</h2>
+        <p class="text-gray-500 mb-6">Zusätzlich zur Software — Managed Ads, lokales SEO und Google-Business-Automation für CHF 19/Monat.</p>
         <div class="flex flex-wrap justify-center gap-3">
           <NuxtLink to="/marketing/google-ads"
             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
@@ -1126,6 +1092,11 @@
             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold border transition-all"
             :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }">
             Lokales SEO →
+          </NuxtLink>
+          <NuxtLink to="/features/google-business-profile"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold border transition-all"
+            :style="{ borderColor: `rgba(var(--brand-rgb), 0.3)`, color: primaryColor }">
+            Google Business →
           </NuxtLink>
           <NuxtLink to="/marketing"
             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors">
@@ -1177,11 +1148,11 @@
     </section>
 
     <!-- ── Final CTA ──────────────────────────────────────────────────────────── -->
-    <section class="py-24 px-6" style="background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);">
+    <section class="simy-closer py-24 px-6">
       <div class="max-w-3xl mx-auto text-center">
         <SimyFounderNote :blurb="founderBlurbHome" />
 
-        <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight">
+        <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4 simy-display">
           Bereit, dein Unternehmen<br>auf Autopilot zu schalten?
         </h2>
         <p class="text-lg mb-10" style="color: rgba(255,255,255,0.7);">Starte heute mit 30 Tagen kostenlos – keine Kreditkarte, monatlich kündbar.</p>
@@ -1302,6 +1273,7 @@
               <li><NuxtLink to="/marketing" class="text-gray-500 hover:text-gray-900 transition-colors">Marketing-Übersicht</NuxtLink></li>
               <li><NuxtLink to="/marketing/google-ads" class="text-gray-500 hover:text-gray-900 transition-colors">Google Ads</NuxtLink></li>
               <li><NuxtLink to="/marketing/seo" class="text-gray-500 hover:text-gray-900 transition-colors">Lokales SEO</NuxtLink></li>
+              <li><NuxtLink to="/features/google-business-profile" class="text-gray-500 hover:text-gray-900 transition-colors">Google Business Profile</NuxtLink></li>
               <li><NuxtLink to="/partner" class="text-gray-500 hover:text-gray-900 transition-colors">Partner werden</NuxtLink></li>
             </ul>
           </div>
@@ -1346,7 +1318,7 @@
 
         <!-- Bottom: copyright + legal -->
         <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
-          <span>© {{ currentYear }} Simy · All-in-One Software aus der Schweiz</span>
+          <span>© {{ currentYear }} Simy · All-in-One Software aus der Schweiz · {{ PRICE_VAT_NOTE }}</span>
           <div class="flex flex-wrap items-center justify-center gap-4">
             <NuxtLink to="/impressum" class="hover:text-gray-700 transition-colors">Impressum</NuxtLink>
             <NuxtLink to="/agb" class="hover:text-gray-700 transition-colors">AGB</NuxtLink>
@@ -1510,6 +1482,7 @@ import { useHead, useAsyncData } from 'nuxt/app'
 import { $fetch } from 'ofetch'
 import { getDemoReminderHtml, getDemoInvoiceHtml, getDemoWelcomeHtml } from '../utils/demo-email-templates'
 import { FOUNDER_BLURB_HOME } from '~/data/founder'
+import { PRICE_VAT_NOTE, WALLEE_FEE_FAQ } from '~/data/pricing'
 import { SIMY_BRAND, SIMY_BRAND_STORAGE_KEY, hexToRgb, simyLogoColorFilter } from '~/utils/brand'
 
 const founderBlurbHome = FOUNDER_BLURB_HOME
@@ -1526,16 +1499,16 @@ useHead({
   title: 'Simy – Online-Buchungssystem & All-in-One Software Schweiz',
   htmlAttrs: { lang: 'de' },
   meta: [
-    { name: 'description', content: 'All-in-One Software aus der Schweiz: Online-Buchung, automatische Rechnungen mit TWINT, Mitarbeiter-App, Marketing & SEO. Für Dienstleister und KMU. 30 Tage kostenlos.' },
-    { name: 'keywords', content: 'Online-Buchungssystem Schweiz, Online-Terminbuchung, All-in-One Software, Kundenverwaltung, Rechnungssoftware Schweiz, Marketing Software Schweiz' },
+    { name: 'description', content: 'All-in-One Software aus der Schweiz: Online-Buchung, Website-Generator, automatische Rechnungen mit TWINT, Mitarbeiter-App, Marketing & SEO. Für Dienstleister und KMU. 30 Tage kostenlos.' },
+    { name: 'keywords', content: 'Online-Buchungssystem Schweiz, Website-Generator Schweiz, Online-Terminbuchung, All-in-One Software, Kundenverwaltung, Rechnungssoftware Schweiz, Marketing Software Schweiz, Google Business Profile automatisieren, Google Maps Ranking Schweiz' },
     { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
     { name: 'author', content: 'Simy' },
     // Open Graph
     { property: 'og:title', content: 'Simy – Online-Buchungssystem & All-in-One Software Schweiz' },
     { property: 'og:description', content: 'Online-Buchung, Abrechnung & Kundenverwaltung für Schweizer Dienstleister und KMU. 30 Tage kostenlos testen.' },
     { property: 'og:type', content: 'website' },
-    { property: 'og:url', content: 'https://simy.ch/' },
-    { property: 'og:image', content: 'https://simy.ch/og-image.png' },
+    { property: 'og:url', content: 'https://www.simy.ch/' },
+    { property: 'og:image', content: 'https://www.simy.ch/og-image.png' },
     { property: 'og:image:width', content: '1200' },
     { property: 'og:image:height', content: '630' },
     { property: 'og:image:alt', content: 'Simy All-in-One Software – Dashboard Screenshot' },
@@ -1545,13 +1518,13 @@ useHead({
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: 'Simy – Online-Buchungssystem & All-in-One Software Schweiz' },
     { name: 'twitter:description', content: 'Online-Buchung, Abrechnung & Kundenverwaltung für Schweizer Dienstleister und KMU. 30 Tage kostenlos testen.' },
-    { name: 'twitter:image', content: 'https://simy.ch/og-image.png' },
+    { name: 'twitter:image', content: 'https://www.simy.ch/og-image.png' },
     { name: 'twitter:image:alt', content: 'Simy All-in-One Software – Dashboard Screenshot' },
   ],
   link: [
-    { rel: 'canonical', href: 'https://simy.ch/' },
-    { rel: 'alternate', hreflang: 'de-CH', href: 'https://simy.ch/' },
-    { rel: 'alternate', hreflang: 'x-default', href: 'https://simy.ch/' },
+    { rel: 'canonical', href: 'https://www.simy.ch/' },
+    { rel: 'alternate', hreflang: 'de-CH', href: 'https://www.simy.ch/' },
+    { rel: 'alternate', hreflang: 'x-default', href: 'https://www.simy.ch/' },
   ],
   script: [
     {
@@ -1560,13 +1533,13 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'SoftwareApplication',
         name: 'Simy',
-        url: 'https://simy.ch',
+        url: 'https://www.simy.ch',
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web, iOS, Android',
         description: 'All-in-One Software für die Schweiz: Online-Buchung, automatische Abrechnung, Kundenverwaltung & Kommunikation.',
         softwareVersion: '2.0',
         datePublished: '2023-01-01',
-        screenshot: 'https://simy.ch/og-image.png',
+        screenshot: 'https://www.simy.ch/og-image.png',
         offers: {
           '@type': 'Offer',
           price: '0',
@@ -1576,7 +1549,7 @@ useHead({
         provider: {
           '@type': 'Organization',
           name: 'Simy',
-          url: 'https://simy.ch',
+          url: 'https://www.simy.ch',
           areaServed: { '@type': 'Country', name: 'Switzerland' },
         },
         featureList: [
@@ -1597,10 +1570,10 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'Organization',
         name: 'Simy',
-        url: 'https://simy.ch',
+        url: 'https://www.simy.ch',
         logo: {
           '@type': 'ImageObject',
-          url: 'https://simy.ch/simy-logo.png',
+          url: 'https://www.simy.ch/simy-logo.png',
           width: 200,
           height: 60,
         },
@@ -1641,7 +1614,7 @@ useHead({
             name: 'Welche Zahlungsmethoden unterstützt Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Für deine Kunden unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.',
+              text: WALLEE_FEE_FAQ,
             },
           },
           {
@@ -1665,7 +1638,7 @@ useHead({
             name: 'Was kostet Simy?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende).',
+              text: `Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`,
             },
           },
         ],
@@ -1837,89 +1810,16 @@ const colorsExtracted = ref(false)
 const logoToken = ref<string | null>(null)
 const logoTokenUploading = ref(false)
 
-function rgbToHex(r: number, g: number, b: number): string {
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
-}
-
-function colorDistance(r1: number, g1: number, b1: number, r2: number, g2: number, b2: number): number {
-  return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2)
-}
-
-function getSaturation(r: number, g: number, b: number): number {
-  const rn = r / 255, gn = g / 255, bn = b / 255
-  const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn)
-  const l = (max + min) / 2
-  if (max === min) return 0
-  const d = max - min
-  return d / (l > 0.5 ? 2 - max - min : max + min)
-}
-
 async function extractColorsFromLogo(dataUrl: string): Promise<[string, string, string] | null> {
-  return new Promise((resolve) => {
-    const img = new Image()
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas')
-        canvas.width = 120
-        canvas.height = 120
-        const ctx = canvas.getContext('2d')!
-        ctx.drawImage(img, 0, 0, 120, 120)
-        const data = ctx.getImageData(0, 0, 120, 120).data
-
-        const pixels: [number, number, number][] = []
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3]
-          if (a < 128) continue
-          const lum = (r * 299 + g * 587 + b * 114) / 1000
-          // skip near-white and near-black
-          if (lum > 218 || lum < 22) continue
-          // skip very desaturated (grey)
-          if (getSaturation(r, g, b) < 0.08) continue
-          pixels.push([r, g, b])
-        }
-
-        if (pixels.length < 10) { resolve(null); return }
-
-        // K-means with k=3, 12 iterations
-        const k = 3
-        let centroids: [number, number, number][] = [
-          pixels[0],
-          pixels[Math.floor(pixels.length / 2)],
-          pixels[pixels.length - 1],
-        ]
-
-        for (let iter = 0; iter < 12; iter++) {
-          const clusters: [number, number, number][][] = Array.from({ length: k }, () => [])
-          for (const px of pixels) {
-            let minD = Infinity, best = 0
-            centroids.forEach((c, i) => {
-              const d = colorDistance(px[0], px[1], px[2], c[0], c[1], c[2])
-              if (d < minD) { minD = d; best = i }
-            })
-            clusters[best].push(px)
-          }
-          centroids = clusters.map((cluster, i) => {
-            if (cluster.length === 0) return centroids[i]
-            const s = cluster.reduce((a, p) => [a[0] + p[0], a[1] + p[1], a[2] + p[2]], [0, 0, 0])
-            return [Math.round(s[0] / cluster.length), Math.round(s[1] / cluster.length), Math.round(s[2] / cluster.length)] as [number, number, number]
-          })
-        }
-
-        // Sort by saturation descending (most vibrant first)
-        centroids.sort((a, b) => getSaturation(b[0], b[1], b[2]) - getSaturation(a[0], a[1], a[2]))
-
-        resolve([
-          rgbToHex(centroids[0][0], centroids[0][1], centroids[0][2]),
-          rgbToHex(centroids[1][0], centroids[1][1], centroids[1][2]),
-          rgbToHex(centroids[2][0], centroids[2][1], centroids[2][2]),
-        ])
-      } catch {
-        resolve(null)
-      }
-    }
-    img.onerror = () => resolve(null)
-    img.src = dataUrl
-  })
+  try {
+    const res = await $fetch<{ colors: [string, string, string] | null }>('/api/brand/extract-colors', {
+      method: 'POST',
+      body: { logoData: dataUrl },
+    })
+    return res.colors
+  } catch {
+    return null
+  }
 }
 
 async function convertImageToWebP(file: File): Promise<string> {
@@ -2045,11 +1945,13 @@ const pains = [
 ]
 
 const features = computed(() => [
+  { icon: 'globe', title: 'Website-Generator', desc: 'SEO-starke Landingpage in Minuten: Preise, Standorte, Bewertungen. Einmalig CHF 490, Hosting ab CHF 19 — ohne die volle Software.', alpha: 0.12, link: '/website' },
+  { icon: 'map-pin', title: 'Google Business Profile', desc: 'Jahreskalender postet 1–4×/Woche, Foto-Pool geht 1–3×/Woche live, neue Reviews werden automatisch beantwortet. CHF 19/Monat — sonst gehen kostenlose Maps-Klicks verloren.', alpha: 0.11, link: '/features/google-business-profile' },
   { icon: 'calendar', title: 'Kalender & Terminplanung', desc: 'Simy-Termine erscheinen in Google/Apple/Outlook. Private Termine dort blockieren automatisch deine Verfügbarkeit — Kunden sehen dort keine freien Slots.', alpha: 0.10, link: '/features/kalender' },
   { icon: 'credit-card', title: 'Rechnungen & TWINT-Zahlungen', desc: 'Online-Zahlung mit TWINT, Debit- und Kreditkarte inkl. PostFinance, Rechnungen mit 2 Klicks erstellt und versendet, Mahnungen und Gutschriften einfach erstellt.', alpha: 0.07, link: '/features/rechnungen' },
   { icon: 'users', title: 'Kundenverwaltung', desc: 'Alle Kundendaten, Fortschritte, Dokumente und Notizen zentral an einem Ort.', alpha: 0.13, link: '/branchen' },
   { icon: 'phone', title: 'Mitarbeiter-App (iOS & Android)', desc: 'Native App für unterwegs – Kalender, Kunden, Rechnungen und Push-Erinnerungen immer griffbereit.', alpha: 0.10, link: '/features/rechnungen' },
-  { icon: 'globe', title: 'Online-Buchungssystem', desc: 'Kunden buchen freie Termine selbstständig – mit Bestätigung, Erinnerungen und Multi-Mitarbeiter-Sync.', alpha: 0.12, link: '/features/kalender' },
+  { icon: 'link', title: 'Online-Buchungssystem', desc: 'Kunden buchen freie Termine selbstständig – mit Bestätigung, Erinnerungen und Multi-Mitarbeiter-Sync.', alpha: 0.12, link: '/features/kalender' },
   { icon: 'chart', title: 'Auswertungen & Statistiken', desc: 'Umsatz, Auslastung, No-Show-Rate, Top-Kunden – alle wichtigen Kennzahlen auf einen Blick.', alpha: 0.09, link: '/branchen' },
   { icon: 'graduate', title: 'Fortschritt & Dokumentation', desc: 'Sessions dokumentieren, Ziele tracken und Bewertungen erfassen. Alles an einem Ort.', alpha: 0.12, link: '/branchen' },
   { icon: 'label', title: 'Ressourcen-Management', desc: 'Räume, Geräte oder Fahrzeuge verwalten und Verfügbarkeiten übersichtlich planen.', alpha: 0.07, link: '/branchen' },
@@ -2108,10 +2010,11 @@ const pricingPlans = computed(() =>
 const faqs = reactive([
   { q: 'Brauche ich eine Kreditkarte für den Trial?', a: 'Nein, der 30-Tage-Trial ist vollständig kostenlos und ohne Kreditkarte. Du wirst erst nach dem Trial zur Kasse gebeten – und kannst jederzeit kündigen.', open: false },
   { q: 'Wie funktioniert die Kündigung?', a: 'Du kannst monatlich kündigen. Die Kündigungsfrist beträgt 1 Monat auf Ende des laufenden Monats. Keine Jahresbindung, keine versteckten Kosten.', open: false },
-  { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: 'Für deine Kunden unterstützen wir TWINT, PostFinance, Kreditkarte und Banküberweisung – alles integriert und ohne extra Setup. Für Online-Zahlungen via Wallee fällt eine Transaktionsgebühr von 1.7% pro Zahlung an.', open: false },
+  { q: 'Welche Zahlungsmethoden unterstützt Simy?', a: WALLEE_FEE_FAQ, open: false },
   { q: 'Kann ich von einem Plan upgraden?', a: 'Ja, jederzeit. Dein Upgrade wird sofort aktiv und anteilig verrechnet. Du verlierst keine Daten.', open: false },
   { q: 'Sind meine Daten sicher?', a: 'Ja. Simy betreibt alle Daten auf Schweizer Servern, ist DSGVO-konform und verwendet Ende-zu-Ende-Verschlüsselung für sensible Daten.', open: false },
-  { q: 'Was kostet Simy?', a: 'Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende).', open: false },
+  { q: 'Was kostet Simy?', a: `Simy bietet verschiedene Preispläne ab CHF 49/Monat. Die ersten 30 Tage sind vollständig kostenlos – keine Kreditkarte. Danach monatlich kündbar (30 Tage Frist auf Monatsende). ${PRICE_VAT_NOTE}`, open: false },
+  { q: 'Was bringt die Google-Business-Automation?', a: `Simy postet den Jahreskalender (1–4×/Woche), verteilt deinen Foto-Pool (1–3×/Woche), beantwortet neue Google-Reviews automatisch und zeigt Insights. CHF 19/Monat. Sonst gehen kostenlose Maps-Klicks verloren. ${PRICE_VAT_NOTE}`, open: false },
 ])
 
 // ─── App Live Demo ───────────────────────────────────────────────────────────

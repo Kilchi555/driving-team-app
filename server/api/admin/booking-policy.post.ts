@@ -14,6 +14,11 @@ import {
   VALID_CUSTOMER_NOTIFICATION_CHANNELS,
   normalizeCustomerNotificationChannel,
 } from '~/server/utils/customer-notification-channel'
+import { parseIdleStudentReminderSettings } from '~/server/utils/idle-student-reminder-settings'
+import {
+  isRescheduleEmailTrigger,
+  normalizeRescheduleEmailTriggers,
+} from '~/utils/reschedule-email-triggers'
 
 const VALID_FIELDS = new Set([
   'first_name', 'last_name', 'phone', 'email',
@@ -143,6 +148,28 @@ export default defineEventHandler(async (event) => {
   ) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid staff_manual_discount_permission' })
   }
+  if (body.ask_acquisition_source !== undefined && typeof body.ask_acquisition_source !== 'boolean') {
+    throw createError({ statusCode: 400, statusMessage: 'ask_acquisition_source must be a boolean' })
+  }
+  if (body.staff_record_acquisition_source !== undefined && typeof body.staff_record_acquisition_source !== 'boolean') {
+    throw createError({ statusCode: 400, statusMessage: 'staff_record_acquisition_source must be a boolean' })
+  }
+  if (body.staff_ask_origin_on_appointment !== undefined && typeof body.staff_ask_origin_on_appointment !== 'boolean') {
+    throw createError({ statusCode: 400, statusMessage: 'staff_ask_origin_on_appointment must be a boolean' })
+  }
+  if (body.require_payment_before_confirm !== undefined && typeof body.require_payment_before_confirm !== 'boolean') {
+    throw createError({ statusCode: 400, statusMessage: 'require_payment_before_confirm must be a boolean' })
+  }
+  if (body.reschedule_email_triggers !== undefined) {
+    if (!Array.isArray(body.reschedule_email_triggers)) {
+      throw createError({ statusCode: 400, statusMessage: 'reschedule_email_triggers must be an array' })
+    }
+    const invalid = body.reschedule_email_triggers.filter((t: unknown) => !isRescheduleEmailTrigger(t))
+    if (invalid.length > 0) {
+      throw createError({ statusCode: 400, statusMessage: `Invalid reschedule_email_triggers: ${invalid.join(', ')}` })
+    }
+    body.reschedule_email_triggers = normalizeRescheduleEmailTriggers(body.reschedule_email_triggers)
+  }
 
   // Load current policy and merge
   const { data: current } = await supabase
@@ -157,6 +184,19 @@ export default defineEventHandler(async (event) => {
     ...currentPolicy,
     ...body,
   }
+
+  updatedPolicy.reschedule_email_triggers = normalizeRescheduleEmailTriggers(
+    updatedPolicy.reschedule_email_triggers,
+  )
+
+  const idleReminder = parseIdleStudentReminderSettings(updatedPolicy)
+  updatedPolicy.idle_student_reminder_enabled = idleReminder.enabled
+  updatedPolicy.idle_student_reminder_days = idleReminder.idleDays
+  updatedPolicy.idle_student_reminder_resend_days = idleReminder.resendDays
+  updatedPolicy.idle_student_reminder_notify_client = idleReminder.notifyClient
+  updatedPolicy.idle_student_reminder_notify_staff = idleReminder.notifyStaff
+  updatedPolicy.idle_student_reminder_notify_admin = idleReminder.notifyAdmin
+  updatedPolicy.idle_student_reminder_client_channel = idleReminder.clientChannel
 
   // Prefer array; migrate legacy singular if array missing
   if (Array.isArray(body.location_intake_modes) && body.location_intake_modes.length > 0) {

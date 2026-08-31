@@ -35,7 +35,9 @@ export type AddonBuildContext = {
     contact_phone?: string | null
     address?: string | null
     city?: string | null
+    invoice_city?: string | null
     postal_code?: string | null
+    invoice_zip?: string | null
   }
   formal_address?: 'sie' | 'du'
   bookingUrl: string
@@ -199,7 +201,7 @@ export function buildAddonPage(ctx: AddonBuildContext): LandingPagePayload {
       phone: ctx.tenant.contact_phone || null,
       address: ctx.tenant.address || null,
       city: ctx.tenant.city || ctx.inputs.city || null,
-      postal_code: ctx.tenant.postal_code || null,
+      postal_code: ctx.tenant.postal_code || ctx.tenant.invoice_zip || null,
     },
   })
 

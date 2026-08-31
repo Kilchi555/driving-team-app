@@ -288,7 +288,7 @@
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Rückerstattung auf</span>
-                <span class="text-gray-700">Zahlungsmittel (3–5 Werktage)</span>
+                <span class="text-gray-700">IBAN ****{{ savedIbanLast4 }} (1–3 Werktage)</span>
               </div>
             </div>
             <p v-if="withdrawalError" class="text-red-600 text-xs">{{ withdrawalError }}</p>
@@ -312,15 +312,10 @@
               </svg>
             </div>
             <p class="font-semibold text-gray-900">
-              {{ withdrawalMethod === 'wallee' ? 'Rückerstattung eingeleitet!' : 'Antrag eingereicht!' }}
+              Antrag eingereicht!
             </p>
             <p class="text-sm text-gray-500">
-              <template v-if="withdrawalMethod === 'wallee'">
-                CHF {{ Number(withdrawalAmountInput).toFixed(2) }} werden auf dein Zahlungsmittel zurückerstattet (3–5 Werktage).
-              </template>
-              <template v-else>
-                CHF {{ Number(withdrawalAmountInput).toFixed(2) }} werden in 1–3 Werktagen auf dein Konto überwiesen.
-              </template>
+              CHF {{ Number(withdrawalAmountInput).toFixed(2) }} werden in 1–3 Werktagen auf dein Konto überwiesen.
             </p>
             <button type="button" class="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700" @click="closeWithdrawalModal">
               Schliessen
@@ -490,7 +485,7 @@ const creditTransactions = ref<any[]>([])
 const isLoadingCreditTransactions = ref(false)
 const showRedeemModal = ref(false)
 const withdrawalStep = ref<'iban' | 'edit-iban' | 'amount' | 'confirm' | 'success'>('iban')
-const withdrawalMethod = ref<'wallee' | 'iban'>('wallee')
+const withdrawalMethod = ref<'iban'>('iban')
 const ibanInput = ref('')
 const accountHolderInput = ref('')
 const streetInput = ref('')
@@ -787,14 +782,8 @@ async function submitWithdrawal() {
       body: { amountRappen: Math.round(amountChf * 100) }
     }) as any
     if (res?.success) {
-      withdrawalMethod.value = res.method || 'iban'
-      if (res.method === 'wallee') {
-        // Balance already deducted server-side — refresh from server
-        await refreshWallet()
-      } else {
-        // IBAN path: amount is frozen (pending)
-        pendingWithdrawalRappen.value += Math.round(amountChf * 100)
-      }
+      withdrawalMethod.value = 'iban'
+      pendingWithdrawalRappen.value += Math.round(amountChf * 100)
       withdrawalStep.value = 'success'
       emit('balanceUpdated')
     }

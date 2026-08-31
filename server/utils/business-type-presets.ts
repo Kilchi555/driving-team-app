@@ -278,6 +278,7 @@ export async function applyEvaluationDefaults(supabase: SupabaseAdmin, tenantId:
     )
     logger.debug(`✅ Copied ${evalCats.length} evaluation categories for ${businessType}`)
 
+    // Includes educational_content text templates for driving_school.
     const { data: criteria, error: criErr } = await supabase
       .from('evaluation_criteria')
       .select('*')

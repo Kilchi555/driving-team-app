@@ -1,5 +1,11 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { parseIdleStudentReminderSettings } from '~/server/utils/idle-student-reminder-settings'
+import {
+  DEFAULT_RESCHEDULE_EMAIL_TRIGGERS,
+  normalizeRescheduleEmailTriggers,
+  type RescheduleEmailTrigger,
+} from '~/utils/reschedule-email-triggers'
 
 export interface BookingPolicy {
   // ── Internal (staff creates student) ──────────────────────────────────────
@@ -60,6 +66,15 @@ export interface BookingPolicy {
   registration_reminder_days: number
   registration_reminder_email_enabled: boolean
   registration_reminder_sms_enabled: boolean
+  /** Email idle clients (and optionally staff/admin) who have not booked for idle_student_reminder_days. */
+  idle_student_reminder_enabled: boolean
+  idle_student_reminder_days: number
+  idle_student_reminder_resend_days: number
+  idle_student_reminder_notify_client: boolean
+  idle_student_reminder_notify_staff: boolean
+  idle_student_reminder_notify_admin: boolean
+  /** How to reach idle clients: email only, SMS only, or whichever exists with a priority. */
+  idle_student_reminder_client_channel: 'email' | 'sms' | 'email_first' | 'sms_first'
   onboarding_sms_enabled: boolean
   onboarding_email_enabled: boolean
   /** SMS confirmation (gated further by customer_notification_channel) */
@@ -92,6 +107,11 @@ export interface BookingPolicy {
   cancellation_sms_enabled: boolean
   /** SMS on appointment reschedule (default true) */
   reschedule_sms_enabled: boolean
+  /**
+   * Which appointment edits notify the customer (email + SMS per channel policy).
+   * Default: only date / start time. Empty array = never on edit.
+   */
+  reschedule_email_triggers: RescheduleEmailTrigger[]
   /** SMS for payment reminders (default true) */
   payment_reminder_sms_enabled: boolean
   /** SMS for course session reminders to participants (default true) */
@@ -101,11 +121,31 @@ export interface BookingPolicy {
   staff_invoice_permission: 'hidden' | 'create_only' | 'create_and_send'
   /** Staff may enter a free-amount discount + note (e.g. paper voucher). Default off. */
   staff_manual_discount_permission: 'hidden' | 'allowed'
+  /**
+   * When true, public booking + registration ask “Woher kennst du uns?” (optional).
+   * Default false so other tenants are not surprised.
+   */
+  ask_acquisition_source: boolean
+  /**
+   * When true, staff can record origin on create + in the customer profile.
+   * Default false.
+   */
+  staff_record_acquisition_source: boolean
+  /**
+   * When true, EventModal asks origin on a new lesson if the student has none.
+   * Default false — only enable per tenant (Driving Team first).
+   */
+  staff_ask_origin_on_appointment: boolean
   // ── Auto-invoice after appointment completion (default OFF) ────────────────
   /**
    * When true, completing an appointment with payment_method=invoice
    * automatically creates and emails a formal invoice.
    */
+  /**
+   * When true, online appointment booking stays pending until Wallee payment
+   * succeeds. Invoice/cash still confirm immediately. Default false.
+   */
+  require_payment_before_confirm: boolean
   auto_invoice_on_complete: boolean
   /**
    * Who receives the invoice PDF email.
@@ -171,6 +211,13 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   registration_reminder_days: 7,
   registration_reminder_email_enabled: true,
   registration_reminder_sms_enabled: true,
+  idle_student_reminder_enabled: false,
+  idle_student_reminder_days: 30,
+  idle_student_reminder_resend_days: 14,
+  idle_student_reminder_notify_client: true,
+  idle_student_reminder_notify_staff: true,
+  idle_student_reminder_notify_admin: true,
+  idle_student_reminder_client_channel: 'email_first',
   onboarding_sms_enabled: true,
   onboarding_email_enabled: false,
   confirmation_sms_enabled: true,
@@ -182,11 +229,16 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   sms_overage_waived_until: null,
   cancellation_sms_enabled: true,
   reschedule_sms_enabled: true,
+  reschedule_email_triggers: [...DEFAULT_RESCHEDULE_EMAIL_TRIGGERS],
   payment_reminder_sms_enabled: true,
   course_reminder_sms_enabled: true,
   staff_refund_permission: 'hidden',
   staff_invoice_permission: 'create_and_send',
   staff_manual_discount_permission: 'hidden',
+  ask_acquisition_source: false,
+  staff_record_acquisition_source: false,
+  staff_ask_origin_on_appointment: false,
+  require_payment_before_confirm: false,
   auto_invoice_on_complete: false,
   auto_invoice_recipient: 'customer',
   auto_invoice_office_email: null,
@@ -223,6 +275,8 @@ export function normalizeRegistrationAccountMode(
   }
   return fallback
 }
+
+export { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 
 /** Normalize legacy singular location_intake_mode + new location_intake_modes array. */
 export function normalizeLocationIntakeModes(policy: Partial<BookingPolicy> | Record<string, any> | null | undefined): LocationIntakeMode[] {
@@ -266,6 +320,7 @@ export default defineEventHandler(async (event) => {
     ...DEFAULT_BOOKING_POLICY,
     ...(tenant?.booking_policy ?? {}),
   }
+  const idleReminder = parseIdleStudentReminderSettings(merged)
   const policy: BookingPolicy = {
     ...merged,
     location_intake_modes: normalizeLocationIntakeModes(merged),
@@ -301,6 +356,18 @@ export default defineEventHandler(async (event) => {
     auto_invoice_schedule_day: normalizeAutoInvoiceMonthDay(merged.auto_invoice_schedule_day),
     staff_manual_discount_permission:
       merged.staff_manual_discount_permission === 'allowed' ? 'allowed' : 'hidden',
+    ask_acquisition_source: merged.ask_acquisition_source === true,
+    staff_record_acquisition_source: merged.staff_record_acquisition_source === true,
+    staff_ask_origin_on_appointment: merged.staff_ask_origin_on_appointment === true,
+    require_payment_before_confirm: merged.require_payment_before_confirm === true,
+    reschedule_email_triggers: normalizeRescheduleEmailTriggers(merged.reschedule_email_triggers),
+    idle_student_reminder_enabled: idleReminder.enabled,
+    idle_student_reminder_days: idleReminder.idleDays,
+    idle_student_reminder_resend_days: idleReminder.resendDays,
+    idle_student_reminder_notify_client: idleReminder.notifyClient,
+    idle_student_reminder_notify_staff: idleReminder.notifyStaff,
+    idle_student_reminder_notify_admin: idleReminder.notifyAdmin,
+    idle_student_reminder_client_channel: idleReminder.clientChannel,
   }
 
   return { success: true, policy }

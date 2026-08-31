@@ -117,6 +117,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
     type PaymentRow = {
       user_id: string | null
       appointment_id: string | null
+      invoice_id: string | null
       payment_status: string | null
       paid_at: string | null
       total_amount_rappen: number | null
@@ -178,6 +179,7 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
           .select(`
             user_id,
             appointment_id,
+            invoice_id,
             payment_status,
             paid_at,
             total_amount_rappen,
@@ -237,17 +239,13 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
     const processedUsers: UserPaymentSummary[] = usersData.map(user => {
       const userPayments = paymentsByUserId.get(user.id) || []
 
-      // Find open payments and their appointment start_times (from joined data)
-      // Exclude payments linked to soft-deleted appointments (unless include_deleted is set)
+      // Open = unpaid and not yet invoiced. Verrechnete Termine gehören in die Rechnungsübersicht.
       const openPayments = userPayments.filter(p => {
         const apt = p.appointments
         if (!includeDeleted && apt?.deleted_at) return false
-        return (
-          p.payment_status === 'pending' ||
-          p.payment_status === 'failed' ||
-          p.payment_status === 'invoiced' ||
-          p.payment_status === 'invoice'
-        )
+        const invoiced = p.payment_status === 'invoiced' || p.payment_status === 'invoice' || !!p.invoice_id
+        if (invoiced) return false
+        return p.payment_status === 'pending' || p.payment_status === 'failed'
       })
 
       // Find oldest open appointment date using the joined appointment data
@@ -279,8 +277,6 @@ export default defineEventHandler(async (event): Promise<ApiResponse> => {
         (p.payment_status === 'pending' || p.payment_status === 'failed') && (includeDeleted || !p.appointments?.deleted_at)
       ).length
 
-      // Calculate total unpaid amount: pending/failed (not yet paid) + invoiced (billed but not received)
-      // Exclude payments linked to soft-deleted appointments (unless include_deleted is set)
       const totalUnpaidAmount = openPayments.reduce((sum, payment) => {
         return sum + ((payment.total_amount_rappen || 0) / 100)
       }, 0)

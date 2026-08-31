@@ -206,11 +206,18 @@ export default defineEventHandler(async (event) => {
     // plain login link is a dead end for them, so route them through their
     // onboarding/activation link instead. Completed accounts get the
     // regular login link, unchanged.
-    const { url: loginLink, isActivationLink } = await getAccountAccessLink(supabase, user, tenantSlug)
+    const { url: loginLink, isActivationLink, canAccessAccount } = await getAccountAccessLink(
+      supabase,
+      user,
+      tenantSlug,
+      { policy }
+    )
     const ctaText = isActivationLink ? 'Konto aktivieren & bezahlen →' : 'Jetzt online zahlen →'
-    const loginHintText = isActivationLink
-      ? `Aktiviere dein Konto unter <a href="${loginLink}" style="color:${primaryColor}">${loginLink}</a> und bezahle dort deine offenen Beträge.`
-      : `Melde dich unter <a href="${loginLink}" style="color:${primaryColor}">${loginLink}</a> an und bezahle dort deine offenen Beträge.`
+    const loginHintText = !canAccessAccount
+      ? `Bitte begleiche den Betrag direkt bei <strong>${tenantName}</strong>.`
+      : isActivationLink
+        ? `Aktiviere dein Konto unter <a href="${loginLink}" style="color:${primaryColor}">${loginLink}</a> und bezahle dort deine offenen Beträge.`
+        : `Melde dich unter <a href="${loginLink}" style="color:${primaryColor}">${loginLink}</a> an und bezahle dort deine offenen Beträge.`
 
     const effectiveDays = testUserId ? [testReminderDay!] : REMINDER_DAYS
 
@@ -293,11 +300,11 @@ export default defineEventHandler(async (event) => {
               </tfoot>
             </table>
 
-            <div style="text-align:center;margin:24px 0">
+            ${canAccessAccount ? `<div style="text-align:center;margin:24px 0">
               <a href="${loginLink}" style="display:inline-block;padding:14px 32px;background:${primaryColor};color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">
                 ${ctaText}
               </a>
-            </div>
+            </div>` : ''}
 
             <p style="margin:16px 0 0;font-size:13px;color:#9ca3af;text-align:center">
               ${loginHintText}
@@ -342,7 +349,7 @@ export default defineEventHandler(async (event) => {
           firstName: user.first_name || 'du',
           amountChf: totalCHF,
           count: userPayments.length,
-          appLink: loginLink,
+          appLink: canAccessAccount ? loginLink : null,
           length: smsLength,
         })
         toInsert.push({

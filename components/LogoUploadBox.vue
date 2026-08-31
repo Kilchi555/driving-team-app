@@ -91,7 +91,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits
 const emit = defineEmits<{
-  'logo-updated': [logoType: string, logoUrl: string | null]
+  'logo-updated': [logoType: string, logoUrl: string | null, colors?: { primary: string; secondary: string; accent: string } | null]
 }>()
 
 // Local state
@@ -184,12 +184,15 @@ const handleFileSelect = async (event: Event) => {
     formData.append('assetType', props.logoType === 'wide' ? 'logo_wide' : 'logo_square')
     formData.append('tenantId', props.tenantId)
 
-    const response = await $fetch<{ asset: { url: string } }>('/api/tenant/upload-logo', {
+    const response = await $fetch<{
+      asset: { url: string }
+      colors?: { primary: string; secondary: string; accent: string } | null
+    }>('/api/tenant/upload-logo', {
       method: 'POST',
       body: formData
     })
 
-    emit('logo-updated', props.logoType, response.asset.url)
+    emit('logo-updated', props.logoType, response.asset.url, response.colors)
   } catch (err: any) {
     console.error('Logo upload failed:', err)
     if (err.message?.includes('nicht unterstützt') || err.message?.includes('Failed to load')) {

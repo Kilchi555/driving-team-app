@@ -9,6 +9,7 @@ import { logger } from '~/utils/logger'
 import { SESSION_STORAGE_KEY } from '~/utils/session-persistence'
 import { pathnameIncludesAffiliateDashboard } from '~/utils/affiliate-dashboard-path'
 import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
+import { isTenantLoginPath } from '~/utils/public-paths'
 
 // Types
 interface TenantTrialInfo {
@@ -16,6 +17,9 @@ interface TenantTrialInfo {
   trial_ends_at: string | null
   subscription_plan: string | null
   current_period_end: string | null
+  website_only?: boolean
+  website_setup_paid_at?: string | null
+  website_hosting_plan?: string | null
 }
 
 interface UserProfile {
@@ -30,6 +34,11 @@ interface UserProfile {
   preferred_payment_method?: string | null
   tenant?: TenantTrialInfo | null
   can_edit_guide?: boolean
+  admin_level?: string | null
+  is_primary_admin?: boolean
+  linked_admin_user_id?: string | null
+  can_switch_accounts?: boolean
+  impersonating?: boolean
 }
 
 export const useAuthStore = defineStore('authV2', () => {
@@ -53,6 +62,7 @@ const isAdmin = computed(() => {
   const isStaff = computed(() => userRole.value === 'staff')
   const isClient = computed(() => userRole.value === 'client')
   const isSuperAdmin = computed(() => userRole.value === 'super_admin')
+  const isAccountant = computed(() => userRole.value === 'accountant')
   const hasProfile = computed(() => !!userProfile.value)
   
   const userDisplayName = computed(() => {
@@ -315,6 +325,12 @@ const isAdmin = computed(() => {
       if (fromBranding) return fromBranding
     } catch { /* branding composable unavailable */ }
 
+    try {
+      const path = window.location?.pathname || ''
+      const first = path.split('/').filter(Boolean)[0]
+      if (first && isTenantLoginPath(path)) return first
+    } catch { /* ignore */ }
+
     return null
   }
 
@@ -332,6 +348,43 @@ const isAdmin = computed(() => {
    *   race where logout navigates to /login and unmounts the layout before
    *   the caller can navigate to /{slug}). Default true.
    */
+  const switchAccount = async (targetUserId: string) => {
+    loading.value = true
+    errorMessage.value = null
+    try {
+      const response = await $fetch('/api/auth/switch-account', {
+        method: 'POST',
+        body: { target_user_id: targetUserId },
+      }) as any
+
+      if (!response?.success || !response.user || !response.session) {
+        throw new Error(response?.message || 'Wechsel fehlgeschlagen')
+      }
+
+      user.value = {
+        id: response.user.id,
+        email: response.user.email,
+        user_metadata: response.user.user_metadata,
+      } as any
+
+      if (response.profile) {
+        userProfile.value = response.profile
+        userRole.value = response.profile.role || ''
+      }
+
+      const slug = (userProfile.value as any)?.tenant_slug
+      if (slug) persistTenantSlug(slug)
+
+      await hydrateClientSessionAfterLogin(response.session)
+      return { redirectPath: response.redirectPath || '/dashboard' }
+    } catch (err: any) {
+      errorMessage.value = err?.data?.statusMessage || err?.message || 'Wechsel fehlgeschlagen'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const logout = async (options?: { redirect?: boolean }) => {
     const shouldRedirect = options?.redirect !== false
     loading.value = true
@@ -423,7 +476,7 @@ const isAdmin = computed(() => {
       if (shouldRedirect && process.client) {
         const { navigateTo } = await import('#app')
         const { getLoginPath } = await import('~/utils/redirect-to-login')
-        await navigateTo(getLoginPath(tenantSlug))
+        await navigateTo(getLoginPath(tenantSlug), { replace: true })
       }
 
       return { tenantSlug }
@@ -436,7 +489,7 @@ const isAdmin = computed(() => {
         try {
           const { navigateTo } = await import('#app')
           const { getLoginPath } = await import('~/utils/redirect-to-login')
-          await navigateTo(getLoginPath(tenantSlug))
+          await navigateTo(getLoginPath(tenantSlug), { replace: true })
         } catch {
           // Ignore errors in fallback redirect
         }
@@ -466,6 +519,9 @@ const isAdmin = computed(() => {
           trial_ends_at: data.trial_ends_at ?? null,
           subscription_plan: data.subscription_plan ?? null,
           current_period_end: data.current_period_end ?? null,
+          website_only: !!data.website_only,
+          website_setup_paid_at: data.website_setup_paid_at ?? null,
+          website_hosting_plan: data.website_hosting_plan ?? null,
         }
         logger.debug('✅ Tenant trial info loaded:', tenantTrialInfo.value)
       }
@@ -480,7 +536,18 @@ const isAdmin = computed(() => {
       userProfile.value = p
       userRole.value = p.role || ''
       if (p.tenant) {
-        tenantTrialInfo.value = p.tenant
+        tenantTrialInfo.value = {
+          ...p.tenant,
+          website_only: !!p.tenant.website_only || !!(p as any).website_only,
+        }
+      } else if ((p as any).website_only) {
+        tenantTrialInfo.value = {
+          is_trial: tenantTrialInfo.value?.is_trial ?? false,
+          trial_ends_at: tenantTrialInfo.value?.trial_ends_at ?? null,
+          subscription_plan: tenantTrialInfo.value?.subscription_plan ?? null,
+          current_period_end: tenantTrialInfo.value?.current_period_end ?? null,
+          website_only: true,
+        }
       }
       const slug = (p as any).tenant_slug || (p as any).tenant?.slug
       if (slug) persistTenantSlug(slug)
@@ -688,6 +755,7 @@ const isAdmin = computed(() => {
     isStaff,
     isClient,
     isSuperAdmin,
+    isAccountant,
     hasProfile,
     userDisplayName,
     userInitials,
@@ -697,6 +765,7 @@ const isAdmin = computed(() => {
     restoreSession,
     login,
     register,
+    switchAccount,
     logout,
     fetchUserProfile,
     loadTenantTrialInfo,

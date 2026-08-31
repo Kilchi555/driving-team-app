@@ -6,6 +6,7 @@ import {
   ensureTenantGbpDefaults,
   getGbpAutomationSettings,
   type PhotoMode,
+  type PostMode,
   type ReviewReplyMode,
 } from '~/server/utils/gbp'
 
@@ -24,6 +25,7 @@ export default defineEventHandler(async (event) => {
     posts_per_week?: number
     photos_per_week?: number
     photo_mode?: PhotoMode
+    post_mode?: PostMode
     brand_voice?: string | null
     keywords?: string[]
     default_cta_type?: string | null
@@ -58,6 +60,7 @@ export default defineEventHandler(async (event) => {
   if (body.posts_per_week != null) patch.posts_per_week = body.posts_per_week
   if (body.photos_per_week != null) patch.photos_per_week = body.photos_per_week
   if (body.photo_mode != null) patch.photo_mode = body.photo_mode
+  if (body.post_mode != null) patch.post_mode = body.post_mode
   if (body.brand_voice !== undefined) patch.brand_voice = body.brand_voice
   if (body.keywords != null) patch.keywords = body.keywords
   if (body.default_cta_type !== undefined) patch.default_cta_type = body.default_cta_type
@@ -86,6 +89,7 @@ export default defineEventHandler(async (event) => {
         posts_per_week: defaults.posts_per_week,
         photos_per_week: defaults.photos_per_week,
         photo_mode: defaults.photo_mode,
+        post_mode: defaults.post_mode,
         brand_voice: defaults.brand_voice,
         keywords: defaults.keywords,
         default_cta_type: defaults.default_cta_type,
