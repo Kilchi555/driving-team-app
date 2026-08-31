@@ -98,19 +98,6 @@ export default defineEventHandler(async (event) => {
     if (!user?.email?.trim() || !row.user_id || !row.tenant_id) continue
 
     const policy = ((tenant as any)?.booking_policy || {}) as Record<string, any>
-    if (row.status === 'pending') {
-      candidates.push({
-        appointmentId: row.id,
-        userId: row.user_id,
-        tenantId: row.tenant_id,
-        tenantName: (tenant as any)?.name || '',
-        email: user.email,
-        name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-        createdAt: row.created_at,
-        skipReason: 'awaiting_payment',
-      })
-      continue
-    }
     if (
       !policyAllowsCustomerNotification(policy, 'confirmation', 'email')
       && !policyAllowsCustomerNotification(policy, 'confirmation', 'sms')
