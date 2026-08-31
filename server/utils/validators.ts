@@ -22,6 +22,8 @@ export function sanitizeString(value: string | null | undefined, maxLength: numb
     .replace(/<script[^>]*>.*?<\/script>/gi, '')
     .replace(/<[^>]+>/g, '') // Remove HTML tags
     .replace(/javascript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/vbscript:/gi, '')
     .replace(/on\w+\s*=/gi, '') // Remove event handlers
   
   return sanitized

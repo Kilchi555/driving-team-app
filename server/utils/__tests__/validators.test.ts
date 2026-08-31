@@ -44,6 +44,11 @@ describe('String Validators', () => {
       expect(sanitizeString(eventPayload)).not.toContain('onclick')
     })
 
+    it('should strip data: and vbscript: schemes', () => {
+      expect(sanitizeString('data:text/html,hi')).not.toContain('data:')
+      expect(sanitizeString('vbscript:msgbox(1)')).not.toContain('vbscript:')
+    })
+
     it('should respect maxLength', () => {
       const longString = 'a'.repeat(100)
       expect(sanitizeString(longString, 50)).toHaveLength(50)
