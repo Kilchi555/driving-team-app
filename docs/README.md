@@ -344,6 +344,24 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused, source-verified ops/dev notes (prefer these over root historical markdown reports):
+
+| Runbook | Covers |
+|---------|--------|
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin lockout recovery when passkeys/backup codes are gone |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Client session cache / HMR restore |
+| [NATIVE_PUSH_REGISTRATION.md](./NATIVE_PUSH_REGISTRATION.md) | Capacitor push after login, cookie auth, pending FCM token |
+| [GADS_ERSTE30_OFFER.md](./GADS_ERSTE30_OFFER.md) | Auto ZH first-lesson CHF 65 Ads enable (no budget raise) |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Wallee payment recovery & debug |
+| [PAYMENT_PROVIDERS.md](./PAYMENT_PROVIDERS.md) | Wallee / Stripe provider setup |
+| [SERVER_SIDE_CONVERSION_SETUP.md](./SERVER_SIDE_CONVERSION_SETUP.md) | Google Ads server-side conversions |
+| [ANDROID_PLAY_SUBMISSION.md](./ANDROID_PLAY_SUBMISSION.md) | Play Store submission |
+| [APP_STORE_SUBMISSION.md](./APP_STORE_SUBMISSION.md) | iOS App Store submission |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
