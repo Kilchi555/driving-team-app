@@ -407,8 +407,8 @@
               <div class="text-xs text-gray-500 mt-0.5">backup.dump</div>
             </div>
             <div class="bg-emerald-50 rounded-xl p-3 text-center">
-              <div class="text-sm font-semibold text-emerald-700">{{ backupData.restoreReport.rows?.filter((r: any) => r.backup === r.live).length }}/{{ backupData.restoreReport.rows?.length }}</div>
-              <div class="text-xs text-gray-500 mt-0.5">Tabellen identisch</div>
+              <div class="text-sm font-semibold text-emerald-700">{{ backupData.restoreReport.rows?.length || 0 }}</div>
+              <div class="text-xs text-gray-500 mt-0.5">Tabellen im Restore</div>
             </div>
             <div class="bg-gray-50 rounded-xl p-3 text-center">
               <div class="text-sm font-semibold text-gray-900">pg_restore</div>
@@ -435,16 +435,23 @@
               <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 <div v-for="row in backupData.restoreReport.rows" :key="row.table"
                   class="rounded-lg border p-2.5"
-                  :class="row.backup === row.live ? 'border-emerald-100 bg-emerald-50' : 'border-amber-100 bg-amber-50'"
+                  :class="hasLiveCount(row) && row.backup === row.live
+                    ? 'border-emerald-100 bg-emerald-50'
+                    : hasLiveCount(row)
+                      ? 'border-amber-100 bg-amber-50'
+                      : 'border-gray-100 bg-gray-50'"
                 >
                   <div class="text-[10px] font-mono text-gray-400 mb-0.5 truncate">{{ row.table }}</div>
                   <div class="text-lg font-bold leading-tight"
-                    :class="row.backup === row.live ? 'text-emerald-700' : 'text-amber-700'"
+                    :class="hasLiveCount(row) && row.backup !== row.live ? 'text-amber-700' : 'text-emerald-700'"
                   >
                     {{ Number(row.backup || 0).toLocaleString('de-CH') }}
                   </div>
-                  <div class="text-[10px] mt-1" :class="row.backup === row.live ? 'text-emerald-600' : 'text-amber-600'">
-                    {{ row.backup === row.live ? '✓' : '≠' }} Live: {{ Number(row.live || 0).toLocaleString('de-CH') }}
+                  <div class="text-[10px] mt-1" :class="hasLiveCount(row) && row.backup !== row.live ? 'text-amber-600' : 'text-gray-500'">
+                    <template v-if="hasLiveCount(row)">
+                      {{ row.backup === row.live ? '✓' : '≠' }} Live: {{ Number(row.live).toLocaleString('de-CH') }}
+                    </template>
+                    <template v-else>nur Restore (kein Live-Zugriff)</template>
                   </div>
                 </div>
               </div>
@@ -456,13 +463,13 @@
               <div v-else class="overflow-x-auto">
                 <table class="w-full text-xs">
                   <thead><tr class="text-left text-gray-500 border-b border-gray-100">
-                    <th class="pb-2 pr-4 font-medium">Name</th>
+                    <th class="pb-2 pr-4 font-medium">ID</th>
                     <th class="pb-2 pr-4 font-medium">Rolle</th>
                     <th class="pb-2 font-medium">Erstellt</th>
                   </tr></thead>
                   <tbody class="divide-y divide-gray-50">
                     <tr v-for="u in backupData.restoreReport.samples.users" :key="u.id" class="hover:bg-gray-50">
-                      <td class="py-2 pr-4 font-medium text-gray-800">{{ u.name }}</td>
+                      <td class="py-2 pr-4 font-mono text-gray-600">{{ u.id }}</td>
                       <td class="py-2 pr-4"><span class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">{{ u.role }}</span></td>
                       <td class="py-2 text-gray-400">{{ u.created_at?.slice(0,10) }}</td>
                     </tr>
@@ -704,6 +711,10 @@ const showGitHubModal = ref(false)
 const showRestoreModal = ref(false)
 const selectedRestoreRun = ref<any>(null)
 const activeRestoreTab = ref('counts')
+
+function hasLiveCount(row: { live?: string | number | null }) {
+  return row?.live !== undefined && row?.live !== null && row?.live !== ''
+}
 
 const restoreTabs = [
   { id: 'counts', label: 'Zeilenzahlen' },
