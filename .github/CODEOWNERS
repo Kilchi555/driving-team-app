@@ -1,0 +1,5 @@
+# Ownership for high-risk trees. Review-from-owners is not required
+# (solo maintainer). This documents who is accountable.
+/server/ @Kilchi555
+/migrations/ @Kilchi555
+/.github/ @Kilchi555
