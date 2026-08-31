@@ -21,8 +21,18 @@ export function sanitizeString(value: string | null | undefined, maxLength: numb
     // Remove potential XSS vectors
     .replace(/<script[^>]*>.*?<\/script>/gi, '')
     .replace(/<[^>]+>/g, '') // Remove HTML tags
-    .replace(/javascript:/gi, '')
     .replace(/on\w+\s*=/gi, '') // Remove event handlers
+
+  // Repeat so stacked schemes like data:javascript: do not survive one pass.
+  // Only match at a boundary so "metadata:" stays intact.
+  let previous = ''
+  while (previous !== sanitized) {
+    previous = sanitized
+    sanitized = sanitized
+      .replace(/(^|[\s"'(\\[<=])javascript:/gi, '$1')
+      .replace(/(^|[\s"'(\\[<=])data:/gi, '$1')
+      .replace(/(^|[\s"'(\\[<=])vbscript:/gi, '$1')
+  }
   
   return sanitized
 }
