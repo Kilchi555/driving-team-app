@@ -61,14 +61,14 @@ function headers(accessToken) {
 
 async function gaql(customerId, hdrs, query) {
   const res = await fetch(
-    `https://googleads.googleapis.com/${GADS_VERSION}/customers/${customerId}/googleAds:searchStream`,
+    `https://googleads.googleapis.com/${GADS_VERSION}/customers/${customerId}/googleAds:search`,
     { method: 'POST', headers: hdrs, body: JSON.stringify({ query }) },
   )
-  const data = await res.json()
+  const text = await res.text()
+  let data
+  try { data = JSON.parse(text) } catch { throw new Error(text.slice(0, 800)) }
   if (!res.ok) throw new Error(JSON.stringify(data).slice(0, 800))
-  const rows = []
-  for (const batch of (Array.isArray(data) ? data : [data])) rows.push(...(batch.results ?? []))
-  return rows
+  return data.results ?? []
 }
 
 async function mutate(customerId, hdrs, resource, operations, partialFailure = true) {
@@ -118,7 +118,7 @@ const [adRows, kwRows, sitelinkRows] = await Promise.all([
     SELECT
       campaign_asset.resource_name, asset.sitelink_asset.link_text, asset.final_urls
     FROM campaign_asset
-    WHERE campaign.id = ${CAMPAIGN_ID}
+    WHERE campaign_asset.campaign = 'customers/${customerId}/campaigns/${CAMPAIGN_ID}'
       AND campaign_asset.field_type = 'SITELINK'
       AND campaign_asset.status != 'REMOVED'
   `),
