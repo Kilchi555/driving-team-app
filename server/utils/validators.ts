@@ -21,9 +21,10 @@ export function sanitizeString(value: string | null | undefined, maxLength: numb
     // Remove potential XSS vectors
     .replace(/<script[^>]*>.*?<\/script>/gi, '')
     .replace(/<[^>]+>/g, '') // Remove HTML tags
-    .replace(/javascript:/gi, '')
-    .replace(/data:/gi, '')
-    .replace(/vbscript:/gi, '')
+    // Only strip URL schemes at a boundary so "metadata:" stays intact.
+    .replace(/(^|[\s"'(\\[<=])javascript:/gi, '$1')
+    .replace(/(^|[\s"'(\\[<=])data:/gi, '$1')
+    .replace(/(^|[\s"'(\\[<=])vbscript:/gi, '$1')
     .replace(/on\w+\s*=/gi, '') // Remove event handlers
   
   return sanitized
