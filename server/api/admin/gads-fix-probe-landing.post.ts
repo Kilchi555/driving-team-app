@@ -222,9 +222,6 @@ export default defineEventHandler(async (event) => {
       }
     }
     if (!updated) {
-      if (ad.ad_group_ad_resource_name) {
-        await mutate(customerId, headers, 'adGroupAds', [{ remove: ad.ad_group_ad_resource_name }], false)
-      }
       const createRes = await mutate(customerId, headers, 'adGroupAds', [{
         create: {
           adGroup: ad.ad_group_resource_name,
@@ -244,6 +241,9 @@ export default defineEventHandler(async (event) => {
         adsErrors.push({ ad_group: ad.ad_group, error: createRes.data })
         logger.warn('[gads-fix-probe-landing] RSA recreate failed', ad.ad_group, JSON.stringify(createRes.data).slice(0, 300))
         continue
+      }
+      if (ad.ad_group_ad_resource_name) {
+        await mutate(customerId, headers, 'adGroupAds', [{ remove: ad.ad_group_ad_resource_name }], false)
       }
     }
     adsUpdated.push(ad.ad_group)
