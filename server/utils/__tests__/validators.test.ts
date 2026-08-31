@@ -53,6 +53,11 @@ describe('String Validators', () => {
       expect(sanitizeString('metadata: pickup')).toBe('metadata: pickup')
     })
 
+    it('should strip stacked URL schemes', () => {
+      expect(sanitizeString('data:javascript:alert(1)')).not.toContain('javascript:')
+      expect(sanitizeString('javascript:data:text/html,hi')).not.toContain('data:')
+    })
+
     it('should respect maxLength', () => {
       const longString = 'a'.repeat(100)
       expect(sanitizeString(longString, 50)).toHaveLength(50)
