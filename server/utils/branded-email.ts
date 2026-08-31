@@ -111,6 +111,83 @@ export function buildBrandedEmailShell(p: BrandedEmailShellParams): string {
 </html>`
 }
 
+export const SIMY_PRIMARY = '#6000BD'
+export const SIMY_GRADIENT = 'linear-gradient(135deg,#6000BD,#8B2FE8)'
+export const SIMY_LOGO_URL = 'https://simy.ch/simy-logo.png'
+export const SIMY_APP_STORE_URL = 'https://apps.apple.com/ch/app/simy/id6766244063'
+
+/** Platform chrome used by Simy-branded mails (quota alerts, appointment changes). */
+export function buildSimyPlatformEmail(opts: {
+  eyebrow: string
+  title: string
+  subtitle?: string
+  documentTitle?: string
+  bodyHtml: string
+  footerHtml?: string
+}): string {
+  const subtitle = opts.subtitle
+    ? `<p style="margin:8px 0 0;font-size:14px;line-height:1.4;color:rgba(255,255,255,.78)">${opts.subtitle}</p>`
+    : ''
+  const footer = opts.footerHtml
+    || `<a href="https://simy.ch" style="color:#9ca3af;text-decoration:none">Simy.ch</a>`
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${escapeHtml(opts.documentTitle || opts.title)}</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <div style="max-width:560px;margin:32px auto;padding:0 16px">
+    <div style="text-align:center;padding:0 0 18px">
+      <a href="https://simy.ch" style="text-decoration:none">
+        <img src="${SIMY_LOGO_URL}" alt="Simy" width="120" style="max-width:120px;height:auto;display:inline-block;border:0">
+      </a>
+    </div>
+    <div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.07)">
+      <div style="background:${SIMY_GRADIENT};padding:28px 32px">
+        <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72)">${escapeHtml(opts.eyebrow)}</p>
+        <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;line-height:1.25">${opts.title}</h1>
+        ${subtitle}
+      </div>
+      <div style="padding:28px 32px 32px">
+        ${opts.bodyHtml}
+      </div>
+      <div style="border-top:1px solid #f3f4f6;padding:18px 32px;font-size:12px;color:#9ca3af;text-align:center">
+        ${footer}
+      </div>
+    </div>
+  </div>
+</body>
+</html>`
+}
+
+export function simyCtaButton(href: string, label: string): string {
+  return `<div style="text-align:center;margin:28px 0 8px">
+  <a href="${escapeAttr(href)}" style="display:inline-block;background:${SIMY_GRADIENT};color:#fff;text-decoration:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700">${escapeHtml(label)}</a>
+</div>`
+}
+
+/** Quiet App Store CTA — keep it below the real message, never in the header. */
+export function emailAppStoreBlock(
+  caption = 'Simy auch als iPhone-App verfügbar',
+  enabled = true,
+): string {
+  if (!enabled) return ''
+  return `<div style="margin:24px 0 0;text-align:center">
+  <p style="margin:0 0 10px;color:#9ca3af;font-size:12px;">${escapeHtml(caption)}</p>
+  <a href="${SIMY_APP_STORE_URL}" style="display:inline-block;background-color:#111827;color:#ffffff !important;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid #ffffff;">Laden im App Store</a>
+</div>`
+}
+
+const APPOINTMENT_APP_CAPTION = 'Mitteilungen und Termine in der iPhone-App'
+
+/** Same block, wording for booking / reminder / cancel mails. */
+export function emailAppointmentAppStoreBlock(enabled = true): string {
+  return emailAppStoreBlock(APPOINTMENT_APP_CAPTION, enabled)
+}
+
 export function emailSignature(tenantName: string, contactEmail?: string | null, primaryColor = '#2563eb'): string {
   const name = displayName(tenantName)
   const mail = contactEmail

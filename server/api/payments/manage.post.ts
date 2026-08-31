@@ -2,6 +2,8 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
+import { isRefundedPaymentStatus } from '~/utils/payment-status'
 
 interface ManagePaymentsBody {
   action: 'create' | 'mark-completed' | 'delete' | 'load-user' | 'load-appointment' | 'switch-to-invoice'
@@ -95,13 +97,17 @@ export default defineEventHandler(async (event) => {
 
       const { data: existing, error: loadError } = await supabaseAdmin
         .from('payments')
-        .select('id, tenant_id, payment_method, payment_status')
+        .select('id, tenant_id, payment_method, payment_status, user_id, metadata')
         .eq('id', body.paymentId)
         .eq('tenant_id', dbUser.tenant_id)
         .maybeSingle()
 
       if (loadError || !existing) {
         throw new Error('Payment not found')
+      }
+
+      if (isRefundedPaymentStatus(existing.payment_status)) {
+        throw new Error('Rückvergütete Zahlungen können nicht als bezahlt markiert werden.')
       }
 
       const method = String(existing.payment_method || '')
@@ -125,6 +131,14 @@ export default defineEventHandler(async (event) => {
       if (error) {
         throw new Error(error.message)
       }
+
+      await consumeGiftCardForPayment({
+        supabase: supabaseAdmin,
+        tenantId: existing.tenant_id,
+        paymentId: existing.id,
+        redeemedBy: existing.user_id,
+        discountCode: existing.metadata?.discount_code ?? null,
+      })
 
       logger.debug('✅ Payment marked as completed')
 

@@ -34,6 +34,8 @@ interface Staff {
   buffer_minutes?: number
   max_travel_minutes?: number | null
   home_plz?: string | null
+  /** Modal PLZ of this staff's online-bookable standard locations (teaching base). */
+  base_postal_codes?: string[]
 }
 
 interface Category {
@@ -90,6 +92,7 @@ interface Appointment {
   type: string
   location?: {
     postal_code?: string
+    location_type?: string
   }
 }
 
@@ -184,6 +187,8 @@ export class AvailabilityCalculator {
         }
       }
       
+      this.assignBasePostalCodes(staff, locations)
+
       const workingHours = await this.loadWorkingHours(staffWithBookableLocations)
       const appointments = await this.loadAppointments(staffWithBookableLocations, options.startDate, options.endDate)
       const busyTimes = await this.loadExternalBusyTimes(staffWithBookableLocations, options.startDate, options.endDate, options.tenantId)
@@ -501,6 +506,36 @@ export class AvailabilityCalculator {
   }
 
   /**
+   * Teaching base = the postal code that appears most often among a staff
+   * member's online-bookable standard locations (e.g. 8048 for Altstetten).
+   * Ties keep every winning PLZ. max_travel never blocks a return to this base.
+   */
+  private assignBasePostalCodes(staff: Staff[], locations: Location[]): void {
+    for (const member of staff) {
+      const plzs = locations
+        .filter((loc) => loc.location_type === 'standard' && loc.postal_code && loc._staff_categories?.[member.id] !== undefined)
+        .map((loc) => loc.postal_code as string)
+
+      const counts = new Map<string, number>()
+      for (const plz of plzs) {
+        counts.set(plz, (counts.get(plz) || 0) + 1)
+      }
+      if (counts.size === 0) {
+        member.base_postal_codes = []
+        continue
+      }
+      const max = Math.max(...counts.values())
+      member.base_postal_codes = [...counts.entries()]
+        .filter(([, n]) => n === max)
+        .map(([plz]) => plz)
+
+      if (member.base_postal_codes.length > 0) {
+        logger.debug(`🏠 Staff ${member.first_name} ${member.last_name}: teaching base PLZ ${member.base_postal_codes.join(', ')}`)
+      }
+    }
+  }
+
+  /**
    * Load working hours for staff
    */
   private async loadWorkingHours(staffIds: string[]): Promise<StaffWorkingHours[]> {
@@ -577,7 +612,7 @@ export class AvailabilityCalculator {
     if (locationIds.length > 0) {
       const { data: locationData, error: locError } = await this.supabase
         .from('locations')
-        .select('id, postal_code')
+        .select('id, postal_code, location_type')
         .in('id', locationIds)
 
       if (locError) {
@@ -1045,10 +1080,16 @@ export class AvailabilityCalculator {
       }
     }
 
-    // Max travel check: if the staff has configured a max_travel_minutes,
-    // find where the instructor is coming from (previous appointment or home PLZ)
-    // and block this slot if the travel time exceeds their preference.
+    // Max travel: don't offer a *far* next stop (e.g. Uster after Zürich).
+    // Returning to the teaching base, or coming back from a customer pickup,
+    // is never blocked — travel time + buffer above still apply.
+    const destIsTeachingBase = !!(
+      params.newLocationPostalCode &&
+      params.staff?.base_postal_codes?.includes(params.newLocationPostalCode)
+    )
+
     if (
+      !destIsTeachingBase &&
       params.newLocationPostalCode &&
       params.maxTravelMinutes != null &&
       params.maxTravelMinutes > 0
@@ -1068,12 +1109,14 @@ export class AvailabilityCalculator {
         let fromPlz: string | null = null
         const prevAptTime = prevApt ? new Date(prevApt.end_time).getTime() : 0
         const prevBusyTime = prevBusy ? new Date(prevBusy.end_time).getTime() : 0
-        if (prevAptTime >= prevBusyTime && prevApt?.location?.postal_code) {
+        const prevAptIsPickup = prevApt?.location?.location_type === 'pickup'
+        if (prevAptTime >= prevBusyTime && prevApt?.location?.postal_code && !prevAptIsPickup) {
           fromPlz = prevApt.location.postal_code
         } else if (prevBusyTime > prevAptTime && prevBusy?.postal_code) {
           fromPlz = prevBusy.postal_code
         }
-        // No home_plz fallback: if there's no prior appointment, we don't restrict the slot
+        // Pickup as last stop, or no prior appointment: do not apply max_travel
+        // (returning from a student address to a Treffpunkt is always allowed).
 
         if (fromPlz && fromPlz !== params.newLocationPostalCode) {
           const travelTime = await this.getTravelTimeForSlot(fromPlz, params.newLocationPostalCode, params.slotStart)

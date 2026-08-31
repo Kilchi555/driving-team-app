@@ -1,15 +1,26 @@
-import { getSupabase } from '~/utils/supabase'
 import { defineEventHandler, readBody, createError } from 'h3'
 import { validateEmail } from '~/server/utils/validators'
 import { logger } from '~/utils/logger'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
+import { AuthEmailClaimCode, evaluateClientEmailClaim } from '~/server/utils/auth-email-claim'
 
 export default defineEventHandler(async (event) => {
   try {
+    const ip = getClientIP(event) || 'unknown'
+    const rate = await checkRateLimit(ip, 'email_check', 20, 60 * 1000)
+    if (!rate.allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Zu viele Prüfungen. Bitte kurz warten.',
+      })
+    }
+
     const body = await readBody(event)
     const { email, tenantId } = body
 
-    // Validate inputs
-    if (!email || !validateEmail(email)) {
+    if (!email || !validateEmail(email).valid) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Ungültige E-Mail-Adresse'
@@ -23,32 +34,18 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Create service role client to bypass RLS
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceSupabase = getSupabaseAdmin()
+    const emailNorm = email.toLowerCase().trim()
 
-    if (!serviceRoleKey) {
-      console.error('❌ SUPABASE_SERVICE_ROLE_KEY not configured')
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
-
-    // Check if email exists in this tenant
     const { data: existingUser, error } = await serviceSupabase
       .from('users')
-      .select('id, first_name, last_name, auth_user_id')
-      .eq('email', email.toLowerCase().trim())
+      .select('id, auth_user_id')
+      .eq('email', emailNorm)
       .eq('tenant_id', tenantId)
-      .single()
+      .maybeSingle()
 
     if (error && error.code !== 'PGRST116') {
-      // PGRST116 = "no rows found" which is expected
-      console.error('❌ Database error:', error)
+      logger.error('❌ Database error:', error)
       throw createError({
         statusCode: 500,
         statusMessage: 'Fehler beim Prüfen der E-Mail'
@@ -56,19 +53,31 @@ export default defineEventHandler(async (event) => {
     }
 
     const isPending = !!(existingUser && !existingUser.auth_user_id)
-    logger.debug('Check email exists', 'Email:', email, 'Exists:', !!existingUser, 'Pending:', isPending)
+    if (existingUser) {
+      return {
+        exists: true,
+        isPending,
+        message: isPending
+          ? 'E-Mail existiert, Account noch nicht aktiviert'
+          : 'E-Mail existiert bereits'
+      }
+    }
 
+    const claim = await evaluateClientEmailClaim({
+      supabase: serviceSupabase,
+      email: emailNorm,
+      tenantId,
+    })
+
+    // Do not reveal global Auth occupancy on this public form.
+    const exists = claim.code === AuthEmailClaimCode.TENANT_CLIENT_EXISTS
     return {
-      exists: !!existingUser,
-      isPending,
-      message: isPending
-        ? 'E-Mail existiert, Account noch nicht aktiviert'
-        : existingUser
-          ? 'E-Mail existiert bereits'
-          : 'E-Mail ist verfügbar'
+      exists,
+      isPending: false,
+      message: exists ? 'E-Mail existiert bereits' : 'E-Mail ist verfügbar'
     }
   } catch (error: any) {
-    console.error('❌ Check email error:', error)
+    logger.error('❌ Check email error:', error)
 
     if (error.statusCode) {
       throw error
@@ -76,7 +85,7 @@ export default defineEventHandler(async (event) => {
 
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Fehler beim Prüfen der E-Mail'
+      statusMessage: 'Fehler beim Prüfen der E-Mail'
     })
   }
 })

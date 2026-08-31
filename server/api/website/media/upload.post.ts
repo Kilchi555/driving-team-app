@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
   const fileField = form.find((f) => f.name === 'file')
   const slot = (slotField?.data?.toString() || '') as WebsiteUploadSlot
   if (!isWebsiteImageSlot(slot) && !isWebsiteVideoSlot(slot)) {
-    throw createError({ statusCode: 400, statusMessage: 'slot must be logo, hero, or hero_video' })
+    throw createError({ statusCode: 400, statusMessage: 'slot must be logo, hero, service, team, or hero_video' })
   }
   if (!fileField?.data?.length) {
     throw createError({ statusCode: 400, statusMessage: 'file required' })
@@ -96,7 +96,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Image path ─────────────────────────────────────────────────────────────
-  const maxBytes = slot === 'hero' ? 12 * 1024 * 1024 : 6 * 1024 * 1024
+  const maxBytes = slot === 'hero' ? 12 * 1024 * 1024 : slot === 'service' ? 8 * 1024 * 1024 : 6 * 1024 * 1024
   if (fileBuf.length > maxBytes) {
     throw createError({
       statusCode: 413,
@@ -153,7 +153,7 @@ export default defineEventHandler(async (event) => {
     .eq('tenant_id', user.tenant_id)
     .maybeSingle()
 
-  if (website?.id) {
+  if (website?.id && (slot === 'logo' || slot === 'hero')) {
     const patch =
       slot === 'logo'
         ? { logo_url: webpUrl, updated_at: new Date().toISOString() }

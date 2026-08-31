@@ -8,6 +8,7 @@ import { logAudit } from '~/server/utils/audit'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateUUID } from '~/server/utils/validators'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { canInitiateWalleeRefund, actorEmailFromAuth } from '~/utils/wallee-refund-access'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -215,7 +216,9 @@ export default defineEventHandler(async (event) => {
         chargePercentage,
         staffId: userData.id,
         cancelledBy: cancelledBy === 'customer' ? 'customer' : 'staff',
-        refundDestination: refundDestination || 'wallet',
+        refundDestination: refundDestination === 'wallee' && canInitiateWalleeRefund(actorEmailFromAuth(authUser))
+          ? 'wallee'
+          : 'wallet',
       }
     }) as any
 

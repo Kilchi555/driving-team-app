@@ -10,6 +10,7 @@ import {
 } from '~/server/utils/course-staff-notifications'
 import { logger } from '~/utils/logger'
 import { sendEmail } from '~/server/utils/email'
+import { emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
 
 /**
  * POST /api/admin/courses/cancel-course
@@ -400,6 +401,7 @@ function buildCancellationEmail({
 
                   <p style="margin:20px 0 5px 0;font-size:15px;">Freundliche Grüsse,<br>${tenantName}</p>
                   ${tenantEmail ? `<p style="margin:8px 0 0 0;font-size:12px;color:#6b7280;">${tenantEmail}</p>` : ''}
+                  ${emailAppointmentAppStoreBlock()}
                 </td>
               </tr>
 

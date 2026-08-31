@@ -4,7 +4,7 @@
 // Text und HTML. Wird sowohl von der Vorschau- als auch der Versand-Route
 // genutzt, damit Vorschau und tatsächlicher Versand exakt übereinstimmen.
 
-import { invoicePersonNames } from '~/server/utils/invoice-billing-snapshot'
+import { invoicePersonNames, invoiceQrDebtorName } from '~/server/utils/invoice-billing-snapshot'
 import { createError } from 'h3'
 import {
   DUNNING_SETTINGS_DEFAULTS, DunningSettingsRow, getStageDef, daysOverdue,
@@ -38,6 +38,9 @@ export async function prepareDunning(supabase: SupabaseClient, opts: PrepareDunn
     .single()
   if (invoiceError || !invoice) throw createError({ statusCode: 404, statusMessage: 'Rechnung nicht gefunden' })
   if (invoice.tenant_id !== opts.tenantId) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  if ((invoice as any).document_kind === 'quote') {
+    throw createError({ statusCode: 422, statusMessage: 'Offerten können nicht gemahnt werden' })
+  }
 
   // invoices_with_details wurde vor Einführung des Mahnwesens erstellt (SELECT i.*
   // wird beim Anlegen der View fixiert) und enthält die neuen dunning_*-Spalten
@@ -122,7 +125,7 @@ export async function prepareDunning(supabase: SupabaseClient, opts: PrepareDunn
         creditor_street_nr: (tenant as any)?.invoice_street_nr?.trim() || '',
         creditor_zip: (tenant as any)?.invoice_zip || '',
         creditor_city: (tenant as any)?.invoice_city || '',
-        debtor_name: customerName,
+        debtor_name: invoiceQrDebtorName(invoice),
         debtor_street: invoice.billing_street || '',
         debtor_street_nr: invoice.billing_street_number || '',
         debtor_zip: invoice.billing_zip || '',

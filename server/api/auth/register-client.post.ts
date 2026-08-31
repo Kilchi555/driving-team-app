@@ -17,11 +17,15 @@ import {
 } from '~/server/utils/validators'
 import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { claimOrCreateAuthUser } from '~/server/utils/auth-email-claim'
 import {
   DEFAULT_BOOKING_POLICY,
+  normalizeRegistrationAccountMode,
   normalizeRegistrationFieldMode,
 } from '~/server/api/admin/booking-policy.get'
 import { randomUUID } from 'crypto'
+import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
+import { saveAcquisitionSelfReport } from '~/server/utils/save-acquisition-self-report'
 
 const CONTACT_FIELD_LABELS: Record<string, string> = {
   first_name: 'Vorname',
@@ -68,6 +72,10 @@ export default defineEventHandler(async (event) => {
       captchaToken,
       referredByCode = null,
       pendingOnly = false,
+      marketing_session_id = null,
+      marketing_attribution = null,
+      acquisition_self_reported = null,
+      acquisition_self_reported_note = null,
     } = body
 
     // Check rate limit (after body is read so we have email and tenantId)
@@ -294,6 +302,32 @@ export default defineEventHandler(async (event) => {
         sourceLabel: 'Registrierung ohne Login',
       })
 
+      if (pendingUserId) {
+        try {
+          await stampFirstTouchAcquisition({
+            userId: pendingUserId,
+            tenantId,
+            email: emailNormalized,
+            phone: sanitizedPhone,
+            attribution: marketing_attribution,
+            marketingSessionId: marketing_session_id,
+          })
+        } catch (err: any) {
+          logger.warn('Register', 'First-touch stamp failed (pending):', err?.message)
+        }
+        try {
+          await saveAcquisitionSelfReport({
+            userId: pendingUserId,
+            tenantId,
+            source: acquisition_self_reported,
+            note: acquisition_self_reported_note,
+            fillFirstTouchIfEmpty: true,
+          })
+        } catch (err: any) {
+          logger.warn('Register', 'Self-report failed (pending):', err?.message)
+        }
+      }
+
       return {
         success: true,
         userId: pendingUserId,
@@ -404,6 +438,12 @@ export default defineEventHandler(async (event) => {
       .maybeSingle()
 
     const rawPolicy = (tenantRow?.booking_policy as Record<string, any>) || {}
+    if (!isAdmin && normalizeRegistrationAccountMode(rawPolicy.registration_account_mode, 'required') === 'hidden') {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Kunden-Login ist für diesen Betrieb nicht aktiviert.',
+      })
+    }
     const bookingRequiredFields: string[] = Array.isArray(rawPolicy.booking_required_fields)
       ? rawPolicy.booking_required_fields
       : DEFAULT_BOOKING_POLICY.booking_required_fields
@@ -540,85 +580,17 @@ export default defineEventHandler(async (event) => {
       logger.debug('Register', '✅ No existing user to claim — will create new profile')
     }
 
-    // 1. Create auth user (or recover orphaned auth if email already in auth.users)
-    logger.debug('Register', '🔐 Creating auth user for:', email)
-    let authUserId: string
-    const { data: authData, error: authError } = await serviceSupabase.auth.admin.createUser({
+    logger.debug('Register', '🔐 Creating or claiming auth user for:', email)
+    const { authUserId } = await claimOrCreateAuthUser({
+      supabase: serviceSupabase,
       email: emailNormalized,
-      password: password,
-      email_confirm: true,
-      user_metadata: {
-        first_name: sanitizedFirstName,
-        last_name: sanitizedLastName
-      }
+      password,
+      firstName: sanitizedFirstName,
+      lastName: sanitizedLastName,
+      tenantId,
+      excludeUserId: claimableUser?.id || null,
     })
-
-    if (authError) {
-      const authMsg = (authError.message || '').toLowerCase()
-      if (authMsg.includes('already') || authMsg.includes('registered')) {
-        // Auth exists but public.users may be claimable / unlinked — recover like onboarding does
-        logger.debug('Register', '🔍 Auth user already exists — attempting orphan recovery...')
-        try {
-          const { data: byEmail, error: byEmailErr } = await serviceSupabase.auth.admin.getUserByEmail(emailNormalized)
-          let recovered = byEmail?.user
-          if (byEmailErr || !recovered) {
-            const { data: listData } = await serviceSupabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-            recovered = listData?.users?.find(u => u.email?.toLowerCase() === emailNormalized)
-          }
-          if (!recovered) {
-            throw createError({
-              statusCode: 409,
-              statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.',
-              data: { code: 'DUPLICATE_EMAIL' }
-            })
-          }
-          // Ensure no OTHER public.users row already owns this auth id
-          const { data: linkedElsewhere } = await serviceSupabase
-            .from('users')
-            .select('id')
-            .eq('auth_user_id', recovered.id)
-            .neq('id', claimableUser?.id || '00000000-0000-0000-0000-000000000000')
-            .maybeSingle()
-          if (linkedElsewhere) {
-            throw createError({
-              statusCode: 409,
-              statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.',
-              data: { code: 'DUPLICATE_EMAIL' }
-            })
-          }
-          const { error: updateAuthError } = await serviceSupabase.auth.admin.updateUserById(recovered.id, {
-            password,
-            email_confirm: true,
-            user_metadata: { first_name: sanitizedFirstName, last_name: sanitizedLastName }
-          })
-          if (updateAuthError) {
-            throw createError({
-              statusCode: 500,
-              statusMessage: `Fehler beim Aktualisieren des bestehenden Kontos. Bitte kontaktiere ${businessNoun}.`,
-            })
-          }
-          authUserId = recovered.id
-          logger.debug('Register', '✅ Orphaned auth user recovered:', authUserId)
-        } catch (err: any) {
-          if (err.statusCode) throw err
-          console.error('❌ Auth orphan recovery failed:', err)
-          throw createError({
-            statusCode: 409,
-            statusMessage: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melden Sie sich an.',
-            data: { code: 'DUPLICATE_EMAIL' }
-          })
-        }
-      } else {
-        console.error('❌ Auth creation error:', authError)
-        throw createError({
-          statusCode: 400,
-          statusMessage: authError.message || 'Fehler bei der Authentifizierung'
-        })
-      }
-    } else {
-      authUserId = authData.user.id
-      logger.debug('Register', '✅ Auth user created:', authUserId)
-    }
+    logger.debug('Register', '✅ Auth user ready:', authUserId)
 
     // 2. Update claimable user OR create new profile
     logger.debug('Register', '👤 Resolving user profile for:', email)
@@ -883,6 +855,31 @@ export default defineEventHandler(async (event) => {
       source: 'register',
       sourceLabel: 'Kunden-Registrierung',
     })
+
+    try {
+      await stampFirstTouchAcquisition({
+        userId: userProfile.id,
+        tenantId,
+        email: emailNormalized,
+        phone: sanitizedPhone,
+        attribution: marketing_attribution,
+        marketingSessionId: marketing_session_id,
+      })
+    } catch (err: any) {
+      logger.warn('Register', 'First-touch stamp failed:', err?.message)
+    }
+
+    try {
+      await saveAcquisitionSelfReport({
+        userId: userProfile.id,
+        tenantId,
+        source: acquisition_self_reported,
+        note: acquisition_self_reported_note,
+        fillFirstTouchIfEmpty: true,
+      })
+    } catch (err: any) {
+      logger.warn('Register', 'Self-report failed:', err?.message)
+    }
 
     return {
       success: true,

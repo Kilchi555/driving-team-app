@@ -4,7 +4,7 @@
     <div class="fixed inset-0 bg-gray-900/60 transition-opacity" @click="closeModal"/>
 
     <!-- Modal panel – full-screen sheet on mobile, centered dialog on sm+ -->
-    <div class="admin-modal relative w-full bg-white shadow-xl transition-all
+    <div class="admin-modal invoice-detail-modal relative w-full bg-white shadow-xl transition-all
                 rounded-t-2xl max-h-[95dvh]
                 sm:rounded-2xl sm:max-w-4xl sm:max-h-[90dvh]
                 flex flex-col overflow-hidden">
@@ -20,9 +20,15 @@
           <!-- Title block -->
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2 min-w-0">
-              <h3 class="text-base font-semibold text-gray-900 truncate">
-                {{ isEditing ? 'Bearbeiten' : (invoice?.invoice_number || 'Rechnung') }}
-              </h3>
+              <div class="min-w-0">
+                <h3 class="text-base font-semibold text-gray-900 truncate">
+                  {{ isEditing ? 'Bearbeiten' : (documentDisplayNumber(invoice) || (isQuote ? 'Offerte' : 'Rechnung')) }}
+                </h3>
+                <p
+                  v-if="!isEditing && !isQuote && invoice?.quote_number && invoice.quote_number !== invoice.invoice_number"
+                  class="text-xs text-gray-400 truncate"
+                >aus Offerte {{ invoice.quote_number }}</p>
+              </div>
             </div>
           </div>
 
@@ -61,7 +67,7 @@
                       <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     </span>
                     <span>
-                      <span class="block text-sm font-medium text-gray-900">Rechnung</span>
+                      <span class="block text-sm font-medium text-gray-900">{{ isQuote ? 'Offerte' : 'Rechnung' }}</span>
                       <span class="block text-xs text-gray-400">Original-PDF herunterladen</span>
                     </span>
                   </button>
@@ -85,6 +91,7 @@
 
               <!-- Primary CTA -->
               <button
+                v-if="!isQuote"
                 type="button"
                 class="inline-flex items-center gap-1.5 h-9 px-3 sm:px-3.5 rounded-xl text-sm font-semibold text-white bg-emerald-600 shadow-sm shadow-emerald-600/25 hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-1 transition-colors"
                 @click="openMarkPaidDialog"
@@ -117,7 +124,17 @@
                   </button>
                   <button type="button" class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50" role="menuitem" @click="onAction('send')">
                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                    Rechnung versenden
+                    {{ isQuote ? 'Offerte versenden' : 'Rechnung versenden' }}
+                  </button>
+                  <button
+                    v-if="isQuote && invoice?.status !== 'cancelled' && !invoice?.accepted_at"
+                    type="button"
+                    class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    role="menuitem"
+                    @click="onAction('convert')"
+                  >
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Als Rechnung übernehmen
                   </button>
                   <button
                     v-if="canSendDunning"
@@ -132,7 +149,7 @@
                   <div class="my-1 border-t border-gray-100"></div>
                   <button type="button" class="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-sm text-red-600 hover:bg-red-50" role="menuitem" @click="onAction('cancel')">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    Stornieren
+                    {{ isQuote ? 'Ablehnen' : 'Stornieren' }}
                   </button>
                 </div>
               </div>
@@ -181,7 +198,7 @@
 
           <!-- Loading state -->
           <div v-if="!invoice" class="text-center py-12 text-gray-500">
-            Lade Rechnungsdetails...
+            {{ isQuote ? 'Lade Offertendetails…' : 'Lade Rechnungsdetails…' }}
           </div>
 
           <template v-else>
@@ -190,47 +207,67 @@
             <div class="rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-50 to-white p-4 sm:p-5">
               <div class="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
                 <div class="flex items-baseline gap-2 min-w-0">
-                  <p class="text-xs font-medium text-gray-400 uppercase tracking-wide whitespace-nowrap">Rechnungsbetrag</p>
+                  <p class="text-xs font-medium text-gray-400 uppercase tracking-wide whitespace-nowrap">{{ isQuote ? 'Offertenbetrag' : 'Rechnungsbetrag' }}</p>
                   <p class="text-2xl font-semibold text-gray-900 tracking-tight whitespace-nowrap">{{ formatCurrency(invoice.total_amount_rappen) }}</p>
                 </div>
                 <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-shrink-0">
-                  <span
-                    v-if="effectiveDunningLevel > 0"
-                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
-                    :style="dunningLevelBadgeStyle"
-                  >{{ dunningLevelLabel }}</span>
-                  <InvoiceStatusBadge v-else :status="invoice.status" />
-                  <PaymentStatusBadge :status="invoice.payment_status" />
+                  <template v-if="isQuote">
+                    <InvoiceStatusBadge v-if="quoteShowsInvoiceStatus(quoteState)" :status="invoice.status" />
+                    <span
+                      v-else
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                      :class="QUOTE_LIFECYCLE_BADGE_CLASS[quoteState]"
+                    >{{ QUOTE_LIFECYCLE_LABELS[quoteState] }}</span>
+                  </template>
+                  <template v-else>
+                    <span
+                      v-if="effectiveDunningLevel > 0"
+                      class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
+                      :style="dunningLevelBadgeStyle"
+                    >{{ dunningLevelLabel }}</span>
+                    <InvoiceStatusBadge v-else :status="invoice.status" />
+                    <PaymentStatusBadge :status="invoice.payment_status" />
+                  </template>
                 </div>
               </div>
 
-              <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div class="rounded-xl bg-white/80 border border-gray-100 px-3 py-2.5">
-                  <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Bezahlt</p>
-                  <p class="text-sm font-semibold text-emerald-600 mt-0.5">{{ formatCurrency(invoice.paid_amount_rappen || 0) }}</p>
-                </div>
-                <div class="rounded-xl bg-white/80 border border-gray-100 px-3 py-2.5">
-                  <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Offen</p>
-                  <p class="text-sm font-semibold mt-0.5" :class="outstandingAmountRappen > 0 ? 'text-amber-600' : 'text-gray-900'">
-                    {{ formatCurrency(outstandingAmountRappen) }}
-                  </p>
-                </div>
+              <div class="mt-4 grid gap-3" :class="isQuote ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4'">
+                <template v-if="!isQuote">
+                  <div class="rounded-xl bg-white/80 border border-gray-100 px-3 py-2.5">
+                    <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Bezahlt</p>
+                    <p class="text-sm font-semibold text-emerald-600 mt-0.5">{{ formatCurrency(invoice.paid_amount_rappen || 0) }}</p>
+                  </div>
+                  <div class="rounded-xl bg-white/80 border border-gray-100 px-3 py-2.5">
+                    <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Offen</p>
+                    <p class="text-sm font-semibold mt-0.5" :class="outstandingAmountRappen > 0 ? 'text-amber-600' : 'text-gray-900'">
+                      {{ formatCurrency(outstandingAmountRappen) }}
+                    </p>
+                  </div>
+                </template>
                 <div class="rounded-xl bg-white/80 border border-gray-100 px-3 py-2.5">
                   <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Erstellt</p>
                   <p class="text-sm font-medium text-gray-900 mt-0.5">{{ formatDate(invoice.created_at) }}</p>
                 </div>
                 <div class="rounded-xl bg-white/80 border border-gray-100 px-3 py-2.5">
-                  <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Fällig</p>
+                  <p class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">{{ isQuote ? 'Gültig bis' : 'Fällig' }}</p>
                   <template v-if="isEditing">
                     <input
-                      v-model="safeEditedInvoice.due_date"
+                      :value="isQuote ? ((safeEditedInvoice as any).valid_until || safeEditedInvoice.due_date) : safeEditedInvoice.due_date"
                       type="date"
                       class="mt-0.5 w-full px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      @input="onValidityDateInput(($event.target as HTMLInputElement).value)"
                     >
                   </template>
                   <template v-else>
-                    <p class="text-sm font-medium mt-0.5" :class="isOverdue(effectiveDueDate) ? 'text-red-600' : 'text-gray-900'">
-                      {{ invoice.due_date || invoice.dunning_due_date ? formatDate(effectiveDueDate) : '—' }}
+                    <p
+                      class="text-sm font-medium mt-0.5"
+                      :class="isQuote
+                        ? (quoteState === 'expired' ? 'text-red-600' : 'text-gray-900')
+                        : (isOverdue(effectiveDueDate) ? 'text-red-600' : 'text-gray-900')"
+                    >
+                      {{ isQuote
+                        ? (quoteValidUntil ? formatDate(quoteValidUntil) : '—')
+                        : (invoice.due_date || invoice.dunning_due_date ? formatDate(effectiveDueDate) : '—') }}
                     </p>
                   </template>
                 </div>
@@ -248,7 +285,7 @@
                   <a
                     v-if="displayCustomer.email"
                     :href="`mailto:${displayCustomer.email}`"
-                    class="flex items-start gap-2.5 text-gray-700 hover:text-blue-600 transition-colors min-w-0"
+                    class="flex items-start gap-2.5 text-gray-700 tenant-link-hover transition-colors min-w-0"
                   >
                     <svg class="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                     <span class="break-all leading-snug">{{ displayCustomer.email }}</span>
@@ -260,7 +297,7 @@
                   <a
                     v-if="displayCustomer.phone"
                     :href="`tel:${displayCustomer.phone}`"
-                    class="flex items-center gap-2.5 text-gray-700 hover:text-blue-600 transition-colors"
+                    class="flex items-center gap-2.5 text-gray-700 tenant-link-hover transition-colors"
                   >
                     <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                     {{ displayCustomer.phone }}
@@ -278,7 +315,7 @@
 
               <!-- Rechnungsadresse -->
               <section class="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
-                <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Rechnungsadresse</h4>
+                <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">{{ isQuote ? 'Adresse' : 'Rechnungsadresse' }}</h4>
 
                 <template v-if="!isEditing">
                   <p class="text-sm font-semibold text-gray-900">{{ invoice.billing_company_name || displayCustomer.name || '—' }}</p>
@@ -296,7 +333,8 @@
                   <a
                     v-if="invoice.billing_email || invoice.customer_email"
                     :href="`mailto:${invoice.billing_email || invoice.customer_email}`"
-                    class="mt-3 inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 break-all"
+                    class="mt-3 inline-flex items-center gap-1.5 text-sm hover:opacity-80 break-all"
+                    :style="{ color: primaryColor }"
                   >
                     {{ invoice.billing_email || invoice.customer_email }}
                   </a>
@@ -387,10 +425,10 @@
               <div class="flex items-start justify-between gap-3 mb-4">
                 <div>
                   <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Verlauf</h4>
-                  <p class="text-sm text-gray-500 mt-0.5">Versand &amp; Mahnwesen</p>
+                  <p class="text-sm text-gray-500 mt-0.5">{{ isQuote ? 'Versand & Status' : 'Versand & Mahnwesen' }}</p>
                 </div>
                 <button
-                  v-if="canSendDunning || effectiveDunningLevel > 0"
+                  v-if="!isQuote && (canSendDunning || effectiveDunningLevel > 0)"
                   type="button"
                   class="text-xs font-medium text-gray-500 hover:text-gray-800 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 transition-colors flex-shrink-0"
                   @click="toggleDunningPause"
@@ -414,28 +452,64 @@
                   </div>
                 </li>
 
-                <!-- Rechnung versendet -->
-                <li class="relative flex gap-3" :class="shippingDunningEntries.length || dunningLog.length ? 'pb-5' : ''">
+                <!-- Versendet -->
+                <li class="relative flex gap-3" :class="hasHistoryFollowUp ? 'pb-5' : ''">
                   <div class="flex flex-col items-center">
                     <span
                       class="w-2.5 h-2.5 rounded-full ring-4 ring-white flex-shrink-0 mt-1.5"
-                      :class="(invoice as any).sent_at ? 'bg-blue-500' : 'bg-gray-200'"
+                      :class="(invoice as any).sent_at ? '' : 'bg-gray-200'"
+                      :style="(invoice as any).sent_at ? { background: primaryColor } : undefined"
                     />
-                    <span v-if="shippingDunningEntries.length || dunningLog.length" class="w-px flex-1 bg-gray-100 mt-1" />
+                    <span v-if="hasHistoryFollowUp" class="w-px flex-1 bg-gray-100 mt-1" />
                   </div>
                   <div class="min-w-0 flex-1 pt-0.5">
                     <div class="flex items-baseline justify-between gap-2">
                       <p class="text-sm font-medium" :class="(invoice as any).sent_at ? 'text-gray-900' : 'text-gray-400'">
-                        {{ (invoice as any).sent_at ? 'Rechnung versendet' : 'Noch nicht versendet' }}
+                        {{ (invoice as any).sent_at
+                          ? (isQuote ? 'Offerte versendet' : 'Rechnung versendet')
+                          : 'Noch nicht versendet' }}
                       </p>
                       <time v-if="(invoice as any).sent_at" class="text-xs text-gray-400 whitespace-nowrap">{{ formatDateTime((invoice as any).sent_at) }}</time>
                     </div>
                   </div>
                 </li>
 
+                <li v-if="isQuote && (invoice as any).accepted_at" class="relative flex gap-3">
+                  <div class="flex flex-col items-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-white flex-shrink-0 mt-1.5" />
+                  </div>
+                  <div class="min-w-0 flex-1 pt-0.5">
+                    <div class="flex items-baseline justify-between gap-2">
+                      <p class="text-sm font-medium text-gray-900">Angenommen</p>
+                      <time class="text-xs text-gray-400 whitespace-nowrap">{{ formatDateTime((invoice as any).accepted_at) }}</time>
+                    </div>
+                  </div>
+                </li>
+
+                <li v-else-if="isQuote && ((invoice as any).declined_at || invoice.status === 'cancelled')" class="relative flex gap-3">
+                  <div class="flex flex-col items-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-gray-400 ring-4 ring-white flex-shrink-0 mt-1.5" />
+                  </div>
+                  <div class="min-w-0 flex-1 pt-0.5">
+                    <div class="flex items-baseline justify-between gap-2">
+                      <p class="text-sm font-medium text-gray-900">{{ (invoice as any).declined_at ? 'Abgelehnt' : 'Zurückgezogen' }}</p>
+                      <time v-if="(invoice as any).declined_at" class="text-xs text-gray-400 whitespace-nowrap">{{ formatDateTime((invoice as any).declined_at) }}</time>
+                    </div>
+                  </div>
+                </li>
+
+                <li v-else-if="isQuote && quoteState === 'expired'" class="relative flex gap-3">
+                  <div class="flex flex-col items-center">
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-400 ring-4 ring-white flex-shrink-0 mt-1.5" />
+                  </div>
+                  <div class="min-w-0 flex-1 pt-0.5">
+                    <p class="text-sm font-medium text-red-600">Abgelaufen</p>
+                  </div>
+                </li>
+
                 <!-- Mahnungen -->
                 <li
-                  v-for="(entry, idx) in (dunningLog.length ? dunningLog : shippingDunningEntries)"
+                  v-for="(entry, idx) in (isQuote ? [] : (dunningLog.length ? dunningLog : shippingDunningEntries))"
                   :key="entry.id"
                   class="relative flex gap-3"
                   :class="idx < (dunningLog.length ? dunningLog : shippingDunningEntries).length - 1 ? 'pb-5' : ''"
@@ -475,12 +549,12 @@
                       </div>
                     </div>
                     <p v-if="entry.sent_to" class="text-xs text-gray-400 mt-0.5 truncate">an {{ entry.sent_to }}</p>
-                    <p v-if="entry.new_due_date" class="text-xs text-blue-600 mt-0.5">Neues Ziel: {{ formatDate(entry.new_due_date) }}</p>
+                    <p v-if="entry.new_due_date" class="text-xs mt-0.5" :style="{ color: primaryColor }">Neues Ziel: {{ formatDate(entry.new_due_date) }}</p>
                     <p v-if="entry.fee_rappen > 0" class="text-xs text-gray-400 mt-0.5">+{{ formatCurrency(entry.fee_rappen) }} Gebühr</p>
                   </div>
                 </li>
 
-                <li v-if="!shippingDunningEntries.length && !dunningLog.length && (canSendDunning || effectiveDunningLevel > 0)" class="relative flex gap-3 pt-1">
+                <li v-if="!isQuote && !shippingDunningEntries.length && !dunningLog.length && (canSendDunning || effectiveDunningLevel > 0)" class="relative flex gap-3 pt-1">
                   <div class="flex flex-col items-center">
                     <span class="w-2.5 h-2.5 rounded-full bg-gray-200 ring-4 ring-white flex-shrink-0 mt-1.5" />
                   </div>
@@ -490,7 +564,7 @@
             </section>
 
             <!-- ── Zahlungshistorie ── -->
-            <div v-if="invoicePaymentsHistory.length > 0" class="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
+            <div v-if="!isQuote && invoicePaymentsHistory.length > 0" class="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
               <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Zahlungshistorie</h4>
               <div class="space-y-2">
                 <div
@@ -525,9 +599,16 @@
 
             <!-- ── Rechnungsübersicht ── -->
             <div class="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5">
+              <div
+                v-if="!isQuote && (invoice.credit_applied_rappen || 0) > 0"
+                class="mb-4 rounded-xl px-3 py-2 text-xs font-medium"
+                :style="{ color: primaryColor, background: `${primaryColor}12` }"
+              >
+                CHF {{ formatCurrency(invoice.credit_applied_rappen || 0) }} wurden dem Kunden-Guthaben gutgeschrieben.
+              </div>
               <div class="flex items-center justify-between mb-4">
                 <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Positionen</h4>
-                <div v-if="isLoadingDetails" class="flex items-center text-blue-600 text-xs gap-1.5">
+                <div v-if="isLoadingDetails" class="flex items-center text-xs gap-1.5" :style="{ color: primaryColor }">
                   <svg class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
@@ -569,6 +650,9 @@
                           <span v-if="item.appointment_duration_minutes"> · {{ item.appointment_duration_minutes }} Min.</span>
                         </div>
                         <div v-if="item.notes" class="text-xs text-gray-400 mt-0.5 italic">{{ item.notes }}</div>
+                        <div v-if="item.credit_to_wallet" class="text-xs font-medium mt-1" :style="{ color: primaryColor }">
+                          Nach Zahlung +CHF {{ formatCurrency(item.credit_amount_rappen || item.total_price_rappen) }} Guthaben
+                        </div>
                         <div class="text-xs text-gray-400 mt-1">{{ item.quantity }}× · {{ formatCurrency(item.unit_price_rappen) }} / Stk.</div>
                       </div>
                       <div class="text-sm font-semibold text-gray-900 flex-shrink-0">{{ formatCurrency(item.total_price_rappen) }}</div>
@@ -590,6 +674,9 @@
                           <span v-if="item.appointment_duration_minutes"> · {{ item.appointment_duration_minutes }} Min.</span>
                         </div>
                         <div v-if="item.notes" class="text-xs text-gray-400 mt-0.5 italic">{{ item.notes }}</div>
+                        <div v-if="item.credit_to_wallet" class="text-xs font-medium mt-1" :style="{ color: primaryColor }">
+                          Nach Zahlung +CHF {{ formatCurrency(item.credit_amount_rappen || item.total_price_rappen) }} Guthaben
+                        </div>
                       </div>
                       <div class="col-span-2 text-center text-sm text-gray-700">{{ item.quantity }}×</div>
                       <div class="col-span-2 text-right text-sm text-gray-700">{{ formatCurrency(item.unit_price_rappen) }}</div>
@@ -656,10 +743,10 @@
               </div>
             </div>
 
-            <!-- Notes + Rechnungstexte -->
+            <!-- Notes + Dokumenttexte -->
             <div v-if="invoice.notes || invoice.payment_terms || invoice.footer_text || isEditing">
               <div class="bg-gray-50 rounded-xl p-4 space-y-4">
-                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Rechnungstexte</h4>
+                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">{{ isQuote ? 'Offertentexte' : 'Rechnungstexte' }}</h4>
 
                 <!-- Einleitungstext -->
                 <div v-if="isEditing || invoice.notes">
@@ -669,28 +756,29 @@
                     v-model="safeEditedInvoice.notes"
                     rows="3"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    :placeholder="tenantInvoiceTexts.invoice_intro_text || 'Einleitungstext…'"
+                    :placeholder="(isQuote ? tenantInvoiceTexts.quote_intro_text : tenantInvoiceTexts.invoice_intro_text) || 'Einleitungstext…'"
                   />
                   <p v-else class="text-sm text-gray-700 whitespace-pre-line">{{ invoice.notes }}</p>
                 </div>
 
-                <!-- Zahlungsbedingungen -->
+                <!-- Bedingungen -->
                 <div v-if="isEditing || invoice.payment_terms">
-                  <label class="block text-xs font-medium text-gray-500 mb-1.5">Zahlungsbedingungen</label>
+                  <label class="block text-xs font-medium text-gray-500 mb-1.5">{{ isQuote ? 'Gültigkeit / Bedingungen' : 'Zahlungsbedingungen' }}</label>
                   <textarea
                     v-if="isEditing"
                     ref="paymentTermsRef"
                     v-model="safeEditedInvoice.payment_terms"
                     rows="2"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    :placeholder="tenantInvoiceTexts.invoice_payment_terms || 'Zahlungsbedingungen…'"
+                    :placeholder="(isQuote ? tenantInvoiceTexts.quote_terms_text : tenantInvoiceTexts.invoice_payment_terms) || (isQuote ? 'Gültigkeit…' : 'Zahlungsbedingungen…')"
                   />
                   <p v-if="isEditing" class="text-xs text-gray-400 mt-1">
                     <button
                       type="button"
                       class="inline-flex items-center bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded font-mono transition-colors"
-                      @click="insertDueDatePlaceholder"
-                    >+ {due_date}</button> einfügen – wird durch das Fälligkeitsdatum der Rechnung ersetzt
+                      @click="insertDatePlaceholder"
+                    >+ {{ isQuote ? '{valid_until}' : '{due_date}' }}</button>
+                    {{ isQuote ? 'einfügen – wird durch das Gültigkeitsdatum ersetzt' : 'einfügen – wird durch das Fälligkeitsdatum der Rechnung ersetzt' }}
                   </p>
                   <p v-else class="text-sm text-gray-700 whitespace-pre-line">{{ invoice.payment_terms }}</p>
                 </div>
@@ -703,7 +791,7 @@
                     v-model="safeEditedInvoice.footer_text"
                     rows="2"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    :placeholder="tenantInvoiceTexts.invoice_footer_text || 'Abschlusstext…'"
+                    :placeholder="(isQuote ? tenantInvoiceTexts.quote_footer_text : tenantInvoiceTexts.invoice_footer_text) || 'Abschlusstext…'"
                   />
                   <p v-else class="text-sm text-gray-700 whitespace-pre-line">{{ invoice.footer_text }}</p>
                 </div>
@@ -808,15 +896,25 @@
 <script setup lang="ts">
 
 import { defineProps, defineEmits, ref, watch, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 import InvoiceStatusBadge from './InvoiceStatusBadge.vue'
 import PaymentStatusBadge from './PaymentStatusBadge.vue'
 import DunningSendDialog from './DunningSendDialog.vue'
 // ProductSelectorModal entfernt (Rechnung ist read-only bzgl. Positionen)
 import type { InvoiceStatus, PaymentStatus } from '~/types/invoice'
 import { looksLikeCourseSessionsDescription, displayCourseSessionsDescription } from '~/utils/format-course-sessions'
+import {
+  documentDisplayNumber,
+  quoteLifecycle,
+  quoteShowsInvoiceStatus,
+  QUOTE_LIFECYCLE_LABELS,
+  QUOTE_LIFECYCLE_BADGE_CLASS,
+} from '~/server/utils/invoice-quote'
 import { useUIStore } from '~/stores/ui'
 
 const uiStore = useUIStore()
+const { primaryColor: brandingPrimaryColor } = useTenantBranding()
+const primaryColor = computed(() => brandingPrimaryColor.value || '#1E40AF')
 
 interface InvoiceItem {
   id: string
@@ -836,13 +934,23 @@ interface InvoiceItem {
   sort_order?: number
   notes?: string
   created_at?: string
+  credit_to_wallet?: boolean
+  credit_amount_rappen?: number | null
 }
 
 interface Invoice {
   id: string
   invoice_number: string
+  quote_number?: string
+  document_kind?: 'invoice' | 'quote'
   status: InvoiceStatus
   payment_status: PaymentStatus
+  valid_until?: string
+  accepted_at?: string
+  declined_at?: string
+  sent_at?: string
+  payment_terms?: string
+  footer_text?: string
   user_id?: string
   // Customer information (read-only, comes from user relationship)
   customer_first_name?: string
@@ -860,6 +968,7 @@ interface Invoice {
   vat_amount_rappen: number
   discount_amount_rappen: number
   total_amount_rappen: number
+  credit_applied_rappen?: number
   notes?: string
   internal_notes?: string
   paid_amount_rappen?: number
@@ -950,12 +1059,37 @@ const onPdfMenuAction = async (kind: 'invoice' | 'dunning') => {
   else await downloadDunningPdf()
 }
 
-const onAction = (kind: 'edit' | 'send' | 'dunning' | 'cancel') => {
+const isQuote = computed(() => (props.invoice as any)?.document_kind === 'quote')
+const quoteState = computed(() => quoteLifecycle(props.invoice as any))
+const quoteValidUntil = computed(() => {
+  const inv = props.invoice as any
+  return inv?.valid_until || inv?.due_date || ''
+})
+const hasHistoryFollowUp = computed(() => {
+  if (isQuote.value) {
+    const inv = props.invoice as any
+    return !!(inv?.accepted_at || inv?.declined_at || inv?.status === 'cancelled' || quoteState.value === 'expired')
+  }
+  return !!(shippingDunningEntries.value.length || dunningLog.value.length)
+})
+
+function onValidityDateInput(value: string) {
+  if (!editedInvoice.value) return
+  if (isQuote.value) {
+    ;(editedInvoice.value as any).valid_until = value
+    editedInvoice.value.due_date = value
+  } else {
+    editedInvoice.value.due_date = value
+  }
+}
+
+const onAction = (kind: 'edit' | 'send' | 'dunning' | 'cancel' | 'convert') => {
   closeHeaderMenus()
   if (kind === 'edit') startEditing()
   else if (kind === 'send') emit('send', props.invoice?.id || '')
   else if (kind === 'dunning') showDunningDialog.value = true
   else if (kind === 'cancel') emit('cancel', props.invoice?.id || '')
+  else if (kind === 'convert') emit('convert', props.invoice?.id || '')
 }
 
 const onDocumentPointerDown = (e: Event) => {
@@ -981,7 +1115,7 @@ const downloadPdf = async () => {
     })
     if (res?.pdfUrl) {
       const { openPdf } = await import('~/utils/openPdf')
-      await openPdf(res.pdfUrl, res.filename || `Rechnung_${props.invoice.invoice_number}.pdf`)
+      await openPdf(res.pdfUrl, res.filename || `${isQuote.value ? 'Offerte' : 'Rechnung'}_${documentDisplayNumber(props.invoice)}.pdf`)
     } else {
       uiStore.showError('PDF', 'Keine PDF-URL erhalten')
     }
@@ -1090,12 +1224,16 @@ const dunningPaused = ref(false)
 
 const canSendDunning = computed(() => {
   const inv = props.invoice
-  if (!inv) return false
+  if (!inv || isQuote.value) return false
   return inv.status !== 'draft' && inv.status !== 'cancelled' && inv.payment_status !== 'paid'
 })
 
 const DUNNING_STAGE_LABELS: Record<number, string> = { 1: 'Zahlungserinnerung', 2: '1. Mahnung', 3: '2. / letzte Mahnung' }
-const DUNNING_STAGE_COLORS: Record<number, string> = { 1: '#2563eb', 2: '#d97706', 3: '#dc2626' }
+const DUNNING_STAGE_COLORS = computed<Record<number, string>>(() => ({
+  1: primaryColor.value || '#2563eb',
+  2: '#d97706',
+  3: '#dc2626',
+}))
 
 const dunningStageLabel = (stage: number) => DUNNING_STAGE_LABELS[stage] || `Stufe ${stage}`
 
@@ -1112,7 +1250,7 @@ const outstandingAmountRappen = computed(() => {
 
 const dunningLevelLabel = computed(() => dunningStageLabel(effectiveDunningLevel.value))
 const dunningLevelBadgeStyle = computed(() => {
-  const color = DUNNING_STAGE_COLORS[effectiveDunningLevel.value] || '#6b7280'
+  const color = DUNNING_STAGE_COLORS.value[effectiveDunningLevel.value] || '#6b7280'
   return { background: color + '1a', color }
 })
 
@@ -1210,12 +1348,12 @@ const onDunningSent = async (_invoiceId: string) => {
 // Reactive state für detaillierte Zahlungsdaten
 const paymentTermsRef = ref<HTMLTextAreaElement | null>(null)
 
-const insertDueDatePlaceholder = () => {
+const insertDatePlaceholder = () => {
   const el = paymentTermsRef.value
   if (!el) return
   const start = el.selectionStart ?? el.value.length
   const end = el.selectionEnd ?? el.value.length
-  const placeholder = '{due_date}'
+  const placeholder = isQuote.value ? '{valid_until}' : '{due_date}'
   const current = (safeEditedInvoice.value as any).payment_terms || ''
   const newVal = current.slice(0, start) + placeholder + current.slice(end)
   if (editedInvoice.value) {
@@ -1228,7 +1366,15 @@ const insertDueDatePlaceholder = () => {
 }
 
 const isLoadingDetails = ref(false)
-const tenantInvoiceTexts = ref<{ invoice_intro_text?: string | null, invoice_payment_terms?: string | null, invoice_footer_text?: string | null, default_vat_rate?: number }>({})
+const tenantInvoiceTexts = ref<{
+  invoice_intro_text?: string | null
+  invoice_payment_terms?: string | null
+  invoice_footer_text?: string | null
+  quote_intro_text?: string | null
+  quote_terms_text?: string | null
+  quote_footer_text?: string | null
+  default_vat_rate?: number
+}>({})
   const fallbackPayment = ref<any | null>(null)
   const appointmentStartTime = ref<string | null>(null)
   const appointmentEventTypeCode = ref<string | null>(null)
@@ -1256,6 +1402,7 @@ const emit = defineEmits<{
   close: []
   edit: [id: string]
   send: [id: string]
+  convert: [id: string]
   markAsPaid: [id: string]
   cancel: [id: string]
   updated: [id: string]
@@ -1311,6 +1458,9 @@ const loadDetailedData = async () => {
         invoice_intro_text: settings?.invoice_intro_text || null,
         invoice_payment_terms: settings?.invoice_payment_terms || null,
         invoice_footer_text: settings?.invoice_footer_text || null,
+        quote_intro_text: settings?.quote_intro_text || null,
+        quote_terms_text: settings?.quote_terms_text || null,
+        quote_footer_text: settings?.quote_footer_text || null,
         default_vat_rate: settings?.default_vat_rate != null ? parseFloat(settings.default_vat_rate) : 0,
       }
     } catch (e) {
@@ -1319,9 +1469,9 @@ const loadDetailedData = async () => {
 
     // Payments, Zahlungshistorie und Mahnwesen parallel laden
     await Promise.all([
-      loadInvoicePayments(),
-      loadInvoicePaymentsHistory(),
-      loadDunningLog(),
+      isQuote.value ? Promise.resolve() : loadInvoicePayments(),
+      isQuote.value ? Promise.resolve() : loadInvoicePaymentsHistory(),
+      isQuote.value ? Promise.resolve() : loadDunningLog(),
     ])
     if (generation !== _loadDetailsGeneration) return
 
@@ -1656,6 +1806,9 @@ const saveChanges = async () => {
         invoice_id: props.invoice.id,
         update_data: {
           due_date: editedInvoice.value.due_date,
+          valid_until: isQuote.value
+            ? ((editedInvoice.value as any).valid_until || editedInvoice.value.due_date)
+            : undefined,
           billing_company_name: editedInvoice.value.billing_company_name,
           billing_contact_person: editedInvoice.value.billing_contact_person,
           billing_street: editedInvoice.value.billing_street,
@@ -1714,3 +1867,14 @@ watch(() => props.invoice, (newInvoice) => {
 }, { deep: true });
 
 </script>
+
+<style scoped>
+.tenant-link-hover:hover {
+  color: var(--color-primary, #1E40AF);
+}
+.invoice-detail-modal :deep(input:focus),
+.invoice-detail-modal :deep(textarea:focus),
+.invoice-detail-modal :deep(select:focus) {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+}
+</style>

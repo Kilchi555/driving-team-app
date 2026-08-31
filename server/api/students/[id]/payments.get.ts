@@ -115,6 +115,7 @@ export default defineEventHandler(async (event) => {
         metadata,
         paid_at,
         refunded_at,
+        refunded_amount_rappen,
         created_at,
         notes,
         wallee_transaction_id,

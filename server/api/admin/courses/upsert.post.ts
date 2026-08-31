@@ -5,27 +5,7 @@ import { sendTenantEmail, sendEmail } from '~/server/utils/email'
 import { generateCategoryWaitlistNotificationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
-
-// ── Timezone helper ───────────────────────────────────────────────────────────
-/**
- * Convert a date+time entered as Zurich local time to a proper UTC ISO string.
- * Uses the same DST-aware approach as sari-sync-engine.ts.
- *
- * e.g. "2026-09-16" + "08:00" → "2026-09-16T06:00:00.000Z" (CEST = UTC+2)
- *      "2026-01-10" + "08:00" → "2026-01-10T07:00:00.000Z" (CET  = UTC+1)
- */
-function zurichLocalToUtcIso(dateStr: string, timeStr: string): string {
-  const localStr = `${dateStr}T${timeStr}:00`
-  // Step 1: treat as UTC to get a reference point
-  const asUtc = new Date(localStr + 'Z')
-  // Step 2: find out what Zurich wall-clock shows for that UTC instant
-  const zurichStr = asUtc.toLocaleString('sv-SE', { timeZone: 'Europe/Zurich' })
-  // Step 3: compute the offset between "fake UTC" and "Zurich wall-clock"
-  const zurichFake = new Date(zurichStr.replace(' ', 'T') + 'Z')
-  const offsetMs = asUtc.getTime() - zurichFake.getTime()
-  // Step 4: apply offset to convert local→UTC
-  return new Date(asUtc.getTime() + offsetMs).toISOString()
-}
+import { zurichLocalToUtcIso } from '~/server/utils/zurich-time'
 
 // ── ICS calendar invite generator ────────────────────────────────────────────
 function toIcsDate(dateStr: string, timeStr: string): string {
@@ -372,20 +352,9 @@ export default defineEventHandler(async (event) => {
   )
 
   if (internalSessions.length > 0) {
-    // Determine the earliest session date for the title suffix
-    const earliestDate = internalSessions
-      .map((s: any) => s.date as string)
-      .sort()[0]
-    const dateLabel = new Date(earliestDate + 'T12:00:00').toLocaleDateString('de-CH', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-    })
-    const courseLabel = courseData.course_name || courseData.category || 'Kurs'
-    // Use start time of the earliest session for the title (e.g. "07:30")
-    const earliestSession = internalSessions
-      .slice()
-      .sort((a: any, b: any) => (a.date + a.start_time).localeCompare(b.date + b.start_time))[0]
-    const startTimeLabel = earliestSession?.start_time || ''
-    const apptTitle = `${courseLabel} – ab ${startTimeLabel}`
+    const courseLabel = String(courseData.course_name || courseData.category || 'Kurs')
+      .replace(/\s+-\s+\d{2}\.\d{2}\.\d{4}\s*$/, '')
+      .trim()
 
     // On update: remove old course appointments for this course before recreating
     if (courseId) {
@@ -410,21 +379,25 @@ export default defineEventHandler(async (event) => {
       )
 
       // Merge consecutive sessions (gap ≤ 5 min) into blocks
-      const blocks: Array<{ startMs: number; endMs: number }> = []
+      const blocks: Array<{ startMs: number; endMs: number; date: string; startTime: string; endTime: string }> = []
       for (const s of sorted) {
-        const startMs = new Date(`${s.date}T${s.start_time}:00`).getTime()
-        const endMs   = new Date(`${s.date}T${s.end_time}:00`).getTime()
+        const startMs = new Date(zurichLocalToUtcIso(s.date, s.start_time)).getTime()
+        const endMs   = new Date(zurichLocalToUtcIso(s.date, s.end_time)).getTime()
         const last    = blocks[blocks.length - 1]
         if (last && startMs - last.endMs <= 5 * 60 * 1000) {
           last.endMs = Math.max(last.endMs, endMs)
+          last.endTime = s.end_time
         } else {
-          blocks.push({ startMs, endMs })
+          blocks.push({ startMs, endMs, date: s.date, startTime: s.start_time, endTime: s.end_time })
         }
       }
 
       for (const b of blocks) {
         const paddedStart = b.startMs - 45 * 60 * 1000
         const paddedEnd   = b.endMs   + 15 * 60 * 1000
+        const dateLabel = new Date(`${b.date}T12:00:00`).toLocaleDateString('de-CH', {
+          day: '2-digit', month: '2-digit',
+        })
         apptRows.push({
           tenant_id:        profile.tenant_id,
           staff_id:         staffId,
@@ -433,7 +406,7 @@ export default defineEventHandler(async (event) => {
           end_time:         new Date(paddedEnd).toISOString(),
           duration_minutes: Math.round((paddedEnd - paddedStart) / 60000),
           event_type_code:  'course',
-          title:            apptTitle,
+          title:            `${courseLabel} · ${dateLabel} ${b.startTime}–${b.endTime}`,
           description:      '',
           status:           'confirmed',
           notes:            `course:${savedCourseId}`,
@@ -817,7 +790,7 @@ ${extLogoHtml}
     }
   }
 
-  // Keep auto waitlist placeholders in sync (e.g. demote when new dates go live)
+  // Keep the category's auto waitlist placeholder in sync (e.g. after code/name changes)
   try {
     const { syncAutoCategoryWaitlists } = await import('~/server/utils/auto-category-waitlist')
     await syncAutoCategoryWaitlists(supabase, {

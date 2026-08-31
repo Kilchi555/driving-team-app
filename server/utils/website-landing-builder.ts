@@ -4,14 +4,16 @@
  * Local SEO defaults: business + city first (not SaaS booking jargon).
  * Premium (CHF 490): team/courses shells, map/hours/legal/WhatsApp, richer schema.
  */
-import { getTerminologyDefaults } from '~/composables/useTerminology'
+import { getTerminologyDefaults, isDrivingSchoolBusinessType } from '~/composables/useTerminology'
 import {
   buildLocalFaqs,
   buildLocalSeoDefaults,
-  extractCityFromAddress,
+  resolveWebsiteCity,
   schemaBusinessType,
 } from '~/server/utils/website-local-seo'
 import { buildConfirmationProcessStep } from '~/server/utils/website-confirmation-copy'
+import { withPickupMeetingPoint } from '~/server/utils/website-pickup'
+import { tenantPublicSocialLinks } from '~/server/utils/website-public-tenant'
 import {
   formatOpeningHours,
   mapsEmbedUrl,
@@ -19,7 +21,7 @@ import {
   openingHoursToSchema,
   pickTemplateVariant,
   resolveWorkingTemplate,
-  whatsappUrlFromPhone,
+  whatsappUrlForTenant,
   type LandingTeamMember,
   type OpeningHoursRow,
   type UpcomingCourseCard,
@@ -32,6 +34,7 @@ export type LandingService = {
   duration_minutes?: number | null
   price_cents?: number | null
   category?: string | null
+  image_url?: string | null
 }
 
 export type LandingTestimonial = {
@@ -50,10 +53,13 @@ export type LandingTenantInput = {
   contact_email?: string | null
   email?: string | null
   contact_phone?: string | null
+  whatsapp_phone?: string | null
   phone?: string | null
   address?: string | null
   city?: string | null
+  invoice_city?: string | null
   postal_code?: string | null
+  invoice_zip?: string | null
   primary_color?: string | null
   secondary_color?: string | null
   accent_color?: string | null
@@ -62,6 +68,7 @@ export type LandingTenantInput = {
   working_days_template?: unknown
   company_type?: string | null
   uid_number?: string | null
+  legal_company_name?: string | null
   first_name?: string | null
   last_name?: string | null
   google_review_places?: unknown
@@ -101,6 +108,16 @@ export type LandingBuildInput = {
   /** Live-injected at read time; optional at build */
   team?: LandingTeamMember[]
   courses?: UpcomingCourseCard[]
+  /** Wizard-entered products; Simy catalog is merged live */
+  products?: Array<{
+    id: string
+    name: string
+    description?: string
+    price_cents?: number | null
+    category?: string | null
+    source?: 'db' | 'custom'
+    image_url?: string | null
+  }>
   slots?: import('~/server/utils/website-premium').WebsiteTeaserSlotCard[]
   gallery?: Array<{ url: string; alt?: string }>
   hide_powered_by?: boolean
@@ -114,6 +131,12 @@ export type LandingBuildInput = {
   }
   /** Tenant booking_policy — drives confirmation channel copy in process step */
   booking_policy?: Record<string, any> | null
+  /** Tenant-entered selling points (not category names) */
+  usps?: string[]
+  /** Public meeting points beyond the HQ address */
+  meeting_points?: Array<{ id?: string; name: string; address?: string }>
+  /** Tenant has pickup mode + at least one pickup-enabled location */
+  pickup?: boolean
 }
 
 export type LandingBlock =
@@ -121,10 +144,12 @@ export type LandingBlock =
   | { type: 'services'; content: Record<string, any> }
   | { type: 'team'; content: Record<string, any> }
   | { type: 'courses'; content: Record<string, any> }
+  | { type: 'products'; content: Record<string, any> }
   | { type: 'slots'; content: Record<string, any> }
   | { type: 'gallery'; content: Record<string, any> }
   | { type: 'process'; content: Record<string, any> }
   | { type: 'testimonials'; content: Record<string, any> }
+  | { type: 'pages'; content: Record<string, any> }
   | { type: 'faq'; content: Record<string, any> }
   | { type: 'cta'; content: Record<string, any> }
   | { type: 'contact'; content: Record<string, any> }
@@ -144,15 +169,24 @@ export type LandingPagePayload = {
     hero_image_url: string | null
     hero_video_url?: string | null
     formal_address: 'sie' | 'du'
+    font_pair?: string | null
     hero_image_source?: 'own' | 'stock' | 'ai' | null
     hero_attribution?: HeroAttribution | null
     hide_powered_by?: boolean
     template?: 'classic' | 'bold' | 'editorial'
+    usps?: string[]
+    website_team?: LandingTeamMember[]
   }
   bookingUrl: string
   siteUrl: string
   blocks: LandingBlock[]
   schema: Record<string, any>
+  nav_slots?: {
+    services: boolean
+    products: boolean
+    courses: boolean
+    team: boolean
+  }
 }
 
 function moneyCHF(cents?: number | null) {
@@ -165,7 +199,43 @@ function moneyCHF(cents?: number | null) {
   }).format(value)
 }
 
+export function isSimyAvailabilityUrl(url?: string | null) {
+  return /\/booking\/availability\//i.test(String(url || ''))
+}
+
+export function isSimyCommerceUrl(url?: string | null) {
+  const u = String(url || '')
+  return (
+    isSimyAvailabilityUrl(u) ||
+    /\/shop(\?|#|$)/i.test(u) ||
+    /\/customer\/courses\//i.test(u)
+  )
+}
+
+export function websiteInquireUrl(
+  whatsappUrl?: string | null,
+  itemName?: string | null,
+  intent: 'inquire' | 'order' = 'inquire',
+) {
+  const wa = String(whatsappUrl || '').trim()
+  if (wa) {
+    const name = String(itemName || '').trim()
+    const text =
+      intent === 'order'
+        ? name
+          ? `Hallo, ich möchte «${name}» bestellen.`
+          : 'Hallo, ich möchte ein Produkt bestellen.'
+        : name
+          ? `Hallo, ich interessiere mich für «${name}».`
+          : 'Hallo, ich möchte mich anmelden / einen Termin anfragen.'
+    return `${wa.split('?')[0]}?text=${encodeURIComponent(text)}`
+  }
+  return '#kontakt'
+}
+
 function serviceBookUrl(bookingUrl: string, category?: string | null) {
+  if (!bookingUrl) return bookingUrl
+  if (!isSimyAvailabilityUrl(bookingUrl)) return bookingUrl
   if (!category) return bookingUrl
   const cat = String(category).trim()
   if (!cat) return bookingUrl
@@ -173,11 +243,32 @@ function serviceBookUrl(bookingUrl: string, category?: string | null) {
   return `${bookingUrl}${sep}category=${encodeURIComponent(cat)}`
 }
 
+function fallbackServiceDescription(
+  s: { name?: string | null; category?: string | null; duration_minutes?: number | null },
+  t: { appointment: string },
+) {
+  const mins = s.duration_minutes || 45
+  const key = `${s.category || ''} ${s.name || ''}`.toLowerCase()
+  if (/\bbe\b|anhänger/.test(key)) {
+    return `Anhänger Kat. BE — Rangieren, Sichern und Fahren mit Gespann, ${mins} Min.`
+  }
+  if (/\b(a1|a35|motorrad|\ba\b)\b/.test(key)) {
+    return `Motorrad-Ausbildung — ${mins} Min. Balance, Kurven und Verkehrssicherheit.`
+  }
+  if (/\b(b|auto|personenwagen)\b/.test(key)) {
+    return `Fahrlektionen Kategorie B — Auto, ${mins} Min. pro Einheit, mit klarem Lernziel.`
+  }
+  if (/theorie/.test(key)) {
+    return `Theorieunterricht — kompakt, prüfungsnah, ${mins} Min.`
+  }
+  return `${t.appointment} — ${mins} Min., transparent buchbar.`
+}
+
 export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
   const t = getTerminologyDefaults(input.tenant.business_type)
+  const isDriving = isDrivingSchoolBusinessType(input.tenant.business_type)
   const name = input.tenant.name?.trim() || 'Unser Angebot'
-  const city =
-    extractCityFromAddress(input.tenant.address, input.tenant.city) || cityHint(input.tenant) || ''
+  const city = resolveWebsiteCity(input.tenant) || cityHint(input.tenant) || ''
   const formal = input.formal_address === 'du' ? 'du' : 'sie'
   const local = buildLocalSeoDefaults({
     name,
@@ -198,16 +289,15 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
   const seoDescription = input.seo_description?.trim() || local.description
   const seoKeywords = input.seo_keywords?.trim() || local.keywords
 
-  const services = input.services.slice(0, 8).map((s) => ({
+  const services = input.services.slice(0, 12).map((s) => ({
     id: s.id,
     name: s.name,
-    description:
-      s.description?.trim() ||
-      `Professionelle ${t.appointment} — Dauer ${s.duration_minutes || 60} Min.`,
+    description: s.description?.trim() || fallbackServiceDescription(s, t),
     duration_minutes: s.duration_minutes || null,
     price_label: moneyCHF(s.price_cents),
     price_cents: s.price_cents ?? null,
     category: s.category || null,
+    image_url: s.image_url || null,
     book_url: serviceBookUrl(input.bookingUrl, s.category || s.name),
   }))
 
@@ -222,24 +312,47 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
     }))
 
   const rating = input.stats?.avg_rating && input.stats.avg_rating > 0 ? input.stats.avg_rating : null
-  const faqs = buildLocalFaqs(t, name, formal, input.tenant.business_type, city || null)
+  const faqs = buildLocalFaqs(
+    t,
+    name,
+    formal,
+    input.tenant.business_type,
+    city || null,
+    services.map((s) => s.name).filter(Boolean),
+    !!input.pickup,
+  )
 
   const hoursTpl = resolveWorkingTemplate(input.tenant)
   const hoursRows: OpeningHoursRow[] = formatOpeningHours(hoursTpl)
   const email = input.tenant.contact_email || input.tenant.email || null
   const phone = input.tenant.contact_phone || input.tenant.phone || null
-  const wa = whatsappUrlFromPhone(phone)
-  const addrParts = [input.tenant.address, input.tenant.postal_code, city || input.tenant.city]
+  const wa = whatsappUrlForTenant(input.tenant)
+  const addrParts = [
+    input.tenant.address,
+    input.tenant.postal_code || input.tenant.invoice_zip,
+    city || input.tenant.city || input.tenant.invoice_city,
+  ]
   const mapEmbed = mapsEmbedUrl(addrParts)
   const mapLink = mapsExternalUrl(addrParts)
 
-  const trust: Array<{ value: string; label: string; icon: string }> = [
-    { value: 'Online', label: 'Jederzeit buchbar', icon: 'clock' },
-  ]
+  const uspsAll = (input.usps || []).map((u) => String(u || '').trim()).filter(Boolean).slice(0, 8)
+  const usps = uspsAll.slice(0, 4)
+  const trust: Array<{ value: string; label: string; icon: string }> = []
   if (rating) trust.push({ value: `${rating}★`, label: 'Bewertung', icon: 'star' })
-  else trust.push({ value: 'CH', label: 'Schweiz', icon: 'shield' })
-  if (wa) trust.push({ value: 'WhatsApp', label: 'Direkt schreiben', icon: 'chat' })
-  else trust.push({ value: 'SMS', label: 'Erinnerungen', icon: 'chat' })
+  if (usps.length) {
+    for (const u of usps) {
+      trust.push({
+        value: u.length > 22 ? `${u.slice(0, 20)}…` : u,
+        label: u,
+        icon: 'check',
+      })
+    }
+  } else {
+    trust.push({ value: 'Online', label: 'Jederzeit buchbar', icon: 'clock' })
+    if (!rating) trust.push({ value: 'CH', label: 'Schweiz', icon: 'shield' })
+    if (wa) trust.push({ value: 'WhatsApp', label: 'Direkt schreiben', icon: 'chat' })
+    else trust.push({ value: 'SMS', label: 'Erinnerungen', icon: 'chat' })
+  }
 
   const blocks: LandingBlock[] = [
     {
@@ -265,19 +378,44 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
         title: city ? `${t.appointmentsPlural} ${city}` : `Unsere ${t.appointmentsPlural}`,
         description:
           formal === 'du'
-            ? `Wähle dein Format — Preise transparent, Buchung in wenigen Klicks.`
-            : `Wählen Sie Ihr Format — Preise transparent, Buchung in wenigen Klicks.`,
+            ? `Wähle dein Angebot — Preise transparent, Buchung in wenigen Klicks.`
+            : `Wählen Sie Ihr Angebot — Preise transparent, Buchung in wenigen Klicks.`,
         services,
       },
     },
   ]
+
+  const products = (input.products || []).slice(0, 12).map((p) => ({
+    id: p.id,
+    name: p.name,
+    description: p.description || '',
+    price_label: moneyCHF(p.price_cents),
+    price_cents: p.price_cents ?? null,
+    category: p.category || null,
+    source: p.source || 'custom',
+    image_url: p.image_url || null,
+  }))
+  if (products.length) {
+    blocks.push({
+      type: 'products',
+      content: {
+        eyebrow: 'Produkte',
+        title: isDriving ? 'Produkte & Lehrmittel' : 'Produkte',
+        description:
+          formal === 'du'
+            ? 'Material, Gutscheine und weiteres — transparent mit Preis.'
+            : 'Material, Gutscheine und weiteres — transparent mit Preis.',
+        products,
+      },
+    })
+  }
 
   const slots = input.slots || []
   blocks.push({
     type: 'slots',
     content: {
       eyebrow: 'Termine',
-      title: formal === 'du' ? 'Nächste freie Fahrstunden' : 'Nächste freie Fahrstunden',
+      title: `Nächste freie ${t.appointmentsPlural}`,
       description:
         formal === 'du'
           ? 'Aktuelle Verfügbarkeit — mit Klick öffnest du den Live-Kalender.'
@@ -318,16 +456,20 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
           title: 'Online buchen',
           text:
             formal === 'du'
-              ? 'Wähle Termin, Kategorie und Treffpunkt in wenigen Klicks.'
-              : 'Wählen Sie Termin, Kategorie und Treffpunkt in wenigen Klicks.',
+              ? input.pickup
+                ? `Wähle Termin, ${t.categoryLabel} und Treffpunkt — oder einen Wunschort im Radius.`
+                : `Wähle Termin, ${t.categoryLabel} und Treffpunkt in wenigen Klicks.`
+              : input.pickup
+                ? `Wählen Sie Termin, ${t.categoryLabel} und Treffpunkt — oder einen Wunschort im Radius.`
+                : `Wählen Sie Termin, ${t.categoryLabel} und Treffpunkt in wenigen Klicks.`,
         },
         {
           n: 2,
-          ...buildConfirmationProcessStep(input.booking_policy || (tenant as any).booking_policy, formal),
+          ...buildConfirmationProcessStep(input.booking_policy || null, formal),
         },
         {
           n: 3,
-          title: formal === 'du' ? 'Losfahren' : 'Losfahren',
+          title: isDriving ? 'Losfahren' : formal === 'du' ? 'Loslegen' : 'Loslegen',
           text: `${name} begleitet ${formal === 'du' ? 'dich' : 'Sie'} Schritt für Schritt.`,
         },
       ],
@@ -356,8 +498,12 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
       title: 'Nächste Kurstermine',
       description:
         formal === 'du'
-          ? 'VKU, Nothilfe und weitere Kurse — aktuell aus dem System.'
-          : 'VKU, Nothilfe und weitere Kurse — aktuell aus dem System.',
+          ? isDriving
+            ? 'VKU, Nothilfe und weitere Kurse — aktuell aus dem System.'
+            : 'Aktuelle Kurstermine — direkt aus dem System.'
+          : isDriving
+            ? 'VKU, Nothilfe und weitere Kurse — aktuell aus dem System.'
+            : 'Aktuelle Kurstermine — direkt aus dem System.',
       items: courses,
       cta_text: 'Alle Kurse',
       cta_url: input.tenant.slug
@@ -430,8 +576,8 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
       email: channels.email ? email : null,
       phone: channels.phone ? phone : null,
       address: input.tenant.address || null,
-      city: city || input.tenant.city || null,
-      postal_code: input.tenant.postal_code || null,
+      city: city || input.tenant.city || input.tenant.invoice_city || null,
+      postal_code: input.tenant.postal_code || input.tenant.invoice_zip || null,
       whatsapp_url: channels.whatsapp ? wa : null,
       channels,
       map_embed_url: mapEmbed,
@@ -444,6 +590,13 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
         formal === 'du'
           ? 'Kurz melden — wir antworten so rasch wie möglich.'
           : 'Kurz melden — wir antworten so rasch wie möglich.',
+      meeting_points: withPickupMeetingPoint(input.meeting_points || [], !!input.pickup)
+        .map((p, i) => ({
+          id: p.id || `mp-${i}`,
+          name: String(p.name).trim(),
+          address: String(p.address || '').trim() || null,
+        })),
+      social: tenantPublicSocialLinks(input.tenant),
       impressum_url: `${legalBase}/impressum`,
       datenschutz_url: `${legalBase}/datenschutz`,
       legal_links: [
@@ -465,9 +618,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
   const minPrice = priced.length ? Math.min(...priced.map((s) => Number(s.price_cents))) : null
   const priceRange = minPrice != null ? `CHF ${Math.round(minPrice / 100)}+` : undefined
 
-  const sameAs: string[] = []
-  if (input.tenant.website_instagram) sameAs.push(String(input.tenant.website_instagram))
-  if (input.tenant.website_facebook) sameAs.push(String(input.tenant.website_facebook))
+  const sameAs = tenantPublicSocialLinks(input.tenant).map((s) => s.href)
 
   const geo =
     input.tenant.latitude != null && input.tenant.longitude != null
@@ -512,13 +663,17 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
         address: {
           '@type': 'PostalAddress',
           streetAddress: input.tenant.address || undefined,
-          addressLocality: city || input.tenant.city || undefined,
-          postalCode: input.tenant.postal_code || undefined,
+          addressLocality: city || input.tenant.city || input.tenant.invoice_city || undefined,
+          postalCode: input.tenant.postal_code || input.tenant.invoice_zip || undefined,
           addressCountry: 'CH',
         },
         openingHoursSpecification: openingHoursToSchema(hoursTpl),
         ...(geo ? { geo, hasMap: mapLink || undefined } : mapLink ? { hasMap: mapLink } : {}),
         ...(sameAs.length ? { sameAs } : {}),
+        ...(input.tenant.uid_number ? { taxID: String(input.tenant.uid_number).trim() } : {}),
+        ...(input.tenant.legal_company_name
+          ? { legalName: String(input.tenant.legal_company_name).trim() }
+          : {}),
         ...(services.length
           ? {
               hasOfferCatalog: {
@@ -660,10 +815,13 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
       hero_image_url: input.tenant.hero_image_url || null,
       hero_video_url: null,
       formal_address: formal,
+      font_pair: 'syne-manrope',
       hero_image_source: input.hero_image_source || null,
       hero_attribution: input.hero_attribution || null,
       hide_powered_by: input.hide_powered_by !== false,
       template,
+      usps: uspsAll,
+      website_team: team,
     },
     bookingUrl: input.bookingUrl,
     siteUrl: input.siteUrl,
@@ -673,7 +831,7 @@ export function buildLandingPage(input: LandingBuildInput): LandingPagePayload {
 }
 
 function cityHint(tenant: LandingTenantInput) {
-  return tenant.city?.trim() || null
+  return tenant.city?.trim() || tenant.invoice_city?.trim() || null
 }
 
 export function slugifySubdomain(raw: string) {

@@ -1,11 +1,11 @@
 <template>
   <div>
     <Head>
-      <Title>Motorrad Fahrschule Zürich-Altstetten | Ab CHF 95.- | Driving Team</Title>
-      <Meta name="description" content="Motorrad Fahrschule Zürich für A1, A35kW & A – 85% Erfolgsquote, ab CHF 95.-, Fahrschulmotorrad verfügbar. Grundkurs & Fahrstunden. Jetzt buchen!" />
-      <Meta name="keywords" content="Motorrad Fahrschule Zürich, Motorrad Fahrstunden Zürich, Motorrad Führerschein Zürich, A1 Zürich, A35kW Zürich, Motorrad Grundkurs Zürich, Motorrad Prüfung Albisgütli, Fahrschule Motorrad Zürich-Altstetten" />
-      <Meta property="og:title" content="Motorrad Fahrschule Zürich | A1, A35kW, A | Driving Team" />
-      <Meta property="og:description" content="Motorrad Fahrschule Zürich für A1, A35kW & A. Fahrschul-Motorrad verfügbar. Grundkurs Zürich-Altstetten. 85% Erfolgsquote. Prüfung am Albisgütli." />
+      <Title>Motorrad Fahrschule Zürich | A1, A35kW, A | ab CHF 95.–</Title>
+      <Meta name="description" content="Motorrad Fahrschule Zürich für A1, A35kW und A. 85% Erfolgsquote, ab CHF 95.–, Grundkurs in Altstetten. Jetzt buchen." />
+      <Meta name="keywords" content="Motorrad Fahrschule Zürich, Motorrad Fahrstunden Zürich, Motorrad Führerschein Zürich, A1 Zürich, A35kW Zürich, Motorrad Grundkurs Zürich" />
+      <Meta property="og:title" content="Motorrad Fahrschule Zürich | A1, A35kW, A | ab CHF 95.–" />
+      <Meta property="og:description" content="Motorrad Fahrschule Zürich für A1, A35kW & A. Grundkurs Zürich-Altstetten. 85% Erfolgsquote. Prüfung am Albisgütli." />
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-fahrschule-zuerich/" />
       <Meta property="og:type" content="website" />
       <Link rel="canonical" href="https://drivingteam.ch/motorrad-fahrschule-zuerich/" />
@@ -14,8 +14,8 @@
       <Meta property="og:image:height" content="630" />
       <Meta property="og:locale" content="de_CH" />
       <Meta name="twitter:card" content="summary_large_image" />
-      <Meta name="twitter:title" content="Motorrad Fahrschule Zürich | A1 A35kW A ab CHF 95.- | Driving Team" />
-      <Meta name="twitter:description" content="Motorrad Fahrschule Zürich für A1, A35kW & A. Fahrschul-Motorrad verfügbar. Grundkurs Zürich. 85% Erfolgsquote. Prüfung Albisgütli. Jetzt buchen!" />
+      <Meta name="twitter:title" content="Motorrad Fahrschule Zürich | A1, A35kW, A | ab CHF 95.–" />
+      <Meta name="twitter:description" content="Motorrad Fahrschule Zürich für A1, A35kW & A. Grundkurs Zürich. 85% Erfolgsquote. Prüfung Albisgütli. Jetzt buchen!" />
       <Meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     </Head>
 
@@ -39,34 +39,34 @@
       <div class="absolute inset-0 bg-gradient-to-t from-red-900/60 via-red-800/30 to-transparent"></div>
 
       <div class="section-container relative z-10">
-        <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div class="text-white">
             <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full mb-6 border border-white/20">
               <span class="text-xl">🏍️</span>
               <span class="text-sm font-semibold">Motorrad Fahrschule Zürich</span>
             </div>
 
-            <h1 class="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
               Motorrad Fahrschule<br/>
               <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-100">Zürich</span>
             </h1>
 
-            <p class="text-lg text-white/90 mb-8 leading-relaxed max-w-lg">
-              A1, A35kW und A Ausbildung direkt in Zürich-Altstetten. Fahrschul-Motorrad vor Ort verfügbar. Grundkurs, Fahrstunden und Prüfungsvorbereitung – alles aus einer Hand.
+            <p class="text-base sm:text-lg text-white/90 mb-6 sm:mb-8 leading-relaxed max-w-2xl">
+              A1, A35kW und A Ausbildung direkt in Zürich-Altstetten. Grundkurs, Fahrstunden und Prüfungsvorbereitung – alles aus einer Hand. Bitte eigenes Motorrad, Helm und Schutzausrüstung mitbringen.
             </p>
 
-            <div class="flex gap-8 mb-10">
+            <div class="flex gap-4 sm:gap-8 mb-8 sm:mb-10">
               <div>
-                <p class="text-4xl font-black text-yellow-300">85%</p>
-                <p class="text-sm text-white/70">Erfolgsquote</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">85%</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Erfolgsquote</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">CHF 190</p>
-                <p class="text-sm text-white/70">pro Doppellektion</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">CHF 190</p>
+                <p class="text-[11px] sm:text-sm text-white/70">pro Doppellektion</p>
               </div>
               <div>
-                <p class="text-4xl font-black text-yellow-300">3</p>
-                <p class="text-sm text-white/70">Kategorien: A1, A35, A</p>
+                <p class="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 whitespace-nowrap">3</p>
+                <p class="text-[11px] sm:text-sm text-white/70">Kategorien: A1, A35, A</p>
               </div>
             </div>
 
@@ -89,26 +89,26 @@
           </div>
 
           <!-- Right: Trust-Cards -->
-          <div class="hidden md:grid grid-cols-2 gap-4">
+          <div class="hidden lg:grid grid-cols-2 gap-4">
             <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 transition">
               <p class="text-4xl mb-3">🏍️</p>
-              <p class="font-bold mb-1">Fahrschul-Motorrad</p>
-              <p class="text-sm text-white/70">CHF 20.- pro Lektion in Zürich mietbar</p>
+              <p class="font-bold mb-1">Eigenes Motorrad</p>
+              <p class="text-[11px] sm:text-sm text-white/70">Helm und Schutzausrüstung selbst mitbringen</p>
             </div>
             <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 transition">
               <p class="text-4xl mb-3">🎯</p>
               <p class="font-bold mb-1">Grundkurs Zürich</p>
-              <p class="text-sm text-white/70">Manöverkurs direkt in Zürich-Altstetten</p>
+              <p class="text-[11px] sm:text-sm text-white/70">Manöverkurs direkt in Zürich-Altstetten</p>
             </div>
             <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-white hover:bg-white/15 transition">
               <p class="text-4xl mb-3">🌍</p>
               <p class="font-bold mb-1">Mehrsprachig</p>
-              <p class="text-sm text-white/70">Deutsch, Englisch & Albanisch möglich</p>
+              <p class="text-[11px] sm:text-sm text-white/70">Deutsch, Englisch & Albanisch möglich</p>
             </div>
             <div class="bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 backdrop-blur-md border border-yellow-300/40 rounded-2xl p-6 text-white hover:border-yellow-300/60 transition">
               <p class="text-4xl mb-3">⭐</p>
               <p class="font-bold mb-1">{{ LOCATION_ZUERICH.rating.value }} / 5.0</p>
-              <p class="text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} Bewertungen</p>
+              <p class="text-[11px] sm:text-sm text-white/70">{{ LOCATION_ZUERICH.rating.count }} Bewertungen</p>
             </div>
           </div>
         </div>
@@ -126,7 +126,7 @@
             Die <strong>Motorrad Fahrschule Driving Team</strong> bietet alle Kategorien (A1, A35kW, A) mit Standort in <strong>Zürich-Altstetten</strong> an. Grundkurs, Fahrstunden und Prüfungsvorbereitung – alles aus einer Hand und direkt im Gebiet, wo die Prüfung am <strong>Prüfungszentrum Albisgütli</strong> stattfindet.
           </p>
           <p>
-            <strong>Wichtig für Einsteiger:</strong> Du hast noch kein Motorrad? Kein Problem. Unser Fahrschul-Motorrad (Kat. A35kW) steht dir für nur <strong>CHF 20.- pro Lektion</strong> zur Verfügung.
+            <strong>Was du mitbringst:</strong> ein eigenes betriebssicheres Motorrad sowie Helm und Schutzausrüstung. Wir begleiten dich von den ersten Metern bis zur Prüfung.
           </p>
         </div>
       </div>
@@ -176,7 +176,7 @@
             <ul class="space-y-2 text-sm text-white/90 mb-5">
               <li class="flex items-start gap-2"><span class="text-yellow-300 font-bold mt-0.5">✓</span> Beschränkt auf 35kW</li>
               <li class="flex items-start gap-2"><span class="text-yellow-300 font-bold mt-0.5">✓</span> Alle gängigen Strassenmotorräder</li>
-              <li class="flex items-start gap-2"><span class="text-yellow-300 font-bold mt-0.5">✓</span> Fahrschul-Motorrad verfügbar</li>
+              <li class="flex items-start gap-2"><span class="text-yellow-300 font-bold mt-0.5">✓</span> Eigenes Motorrad, Helm und Schutzausrüstung</li>
               <li class="flex items-start gap-2"><span class="text-yellow-300 font-bold mt-0.5">✓</span> Upgrade zu Kat. A nach 2 Jahren</li>
             </ul>
             <a href="https://app.simy.ch/booking/availability/driving-team?category=A" target="_blank" rel="noopener noreferrer" class="block text-center bg-white text-red-600 font-bold py-2.5 px-4 rounded-lg hover:bg-yellow-50 transition text-sm">
@@ -388,7 +388,7 @@
             <div class="px-6 pb-5 ml-14 text-sm text-gray-600 leading-relaxed">
               <p class="mb-2">Wir machen nur <strong>Doppellektionen</strong> (90 Min., CHF 190.-) – das macht mehr Sinn beim Motorrad als kurze Einzel-Einheiten. Treffpunkt: Altstetterplatz 12, 8048 Zürich (Bahnhof Zürich-Altstetten).</p>
               <div class="mt-2 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-800">
-                <strong>Fahrschul-Motorrad:</strong> Du hast kein eigenes Motorrad? Unser A35kW-Schulungsmotorrad ist für CHF 20.- pro Lektion mietbar (nur für Fahrstunden vor dem Grundkurs).
+                <strong>Mitbringen:</strong> eigenes betriebssicheres Motorrad, Helm und Schutzausrüstung.
               </div>
             </div>
           </details>
@@ -439,10 +439,6 @@
             <div class="flex items-center justify-between px-8 py-4 hover:bg-red-50 transition">
               <span class="font-semibold text-gray-800">Doppellektion 90 Minuten <span class="text-sm text-gray-400 font-normal">(Standard)</span></span>
               <span class="inline-block bg-red-100 text-red-700 font-bold px-4 py-2 rounded-lg">CHF 190.-</span>
-            </div>
-            <div class="flex items-center justify-between px-8 py-4 hover:bg-red-50 transition">
-              <span class="font-semibold text-gray-800">Fahrschul-Motorrad mieten <span class="text-sm text-gray-400 font-normal">(pro Lektion)</span></span>
-              <span class="font-bold text-gray-900">CHF 20.-</span>
             </div>
             <div class="flex items-center justify-between px-8 py-4 hover:bg-red-50 transition">
               <span class="font-semibold text-gray-800">Admin- & Versicherungspauschale</span>
@@ -555,19 +551,19 @@
                 <h3 class="text-xl font-bold mb-6">Motorrad Fahrstunden mit Pascal</h3>
                 <div class="grid grid-cols-2 gap-4 mb-6">
                   <div class="bg-white/10 rounded-xl p-4 text-center">
-                    <p class="text-3xl font-black text-yellow-300">85%</p>
+                    <p class="text-2xl sm:text-3xl font-black text-yellow-300 whitespace-nowrap">85%</p>
                     <p class="text-sm text-white/80 mt-1">Erfolgsquote</p>
                   </div>
                   <div class="bg-white/10 rounded-xl p-4 text-center">
-                    <p class="text-3xl font-black text-yellow-300">15+</p>
+                    <p class="text-2xl sm:text-3xl font-black text-yellow-300 whitespace-nowrap">15+</p>
                     <p class="text-sm text-white/80 mt-1">Jahre Erfahrung</p>
                   </div>
                   <div class="bg-white/10 rounded-xl p-4 text-center">
-                    <p class="text-3xl font-black text-yellow-300">A1</p>
+                    <p class="text-2xl sm:text-3xl font-black text-yellow-300 whitespace-nowrap">A1</p>
                     <p class="text-sm text-white/80 mt-1">bis Kat. A</p>
                   </div>
                   <div class="bg-white/10 rounded-xl p-4 text-center">
-                    <p class="text-3xl font-black text-yellow-300">2</p>
+                    <p class="text-2xl sm:text-3xl font-black text-yellow-300 whitespace-nowrap">2</p>
                     <p class="text-sm text-white/80 mt-1">Sprachen</p>
                   </div>
                 </div>
@@ -603,7 +599,7 @@
       <div class="max-w-4xl mx-auto px-4 text-center">
         <h2 class="text-4xl md:text-5xl font-black mb-6">Bereit für deine Motorrad Fahrschule in Zürich?</h2>
         <p class="text-xl text-red-100 mb-8 max-w-2xl mx-auto">
-          A1, A35kW oder A – wir begleiten dich durch die gesamte Ausbildung in Zürich. Fahrschul-Motorrad verfügbar, Grundkurs vor Ort.
+          A1, A35kW oder A – wir begleiten dich durch die gesamte Ausbildung in Zürich. Grundkurs vor Ort. Eigenes Motorrad, Helm und Schutzausrüstung mitbringen.
         </p>
         <a
           href="https://app.simy.ch/booking/availability/driving-team?category=A"
@@ -626,10 +622,10 @@
         <div class="space-y-3">
           <details class="group bg-gray-50 border border-gray-200 rounded-xl overflow-hidden hover:border-red-300 transition cursor-pointer">
             <summary class="font-bold text-gray-900 flex justify-between items-center px-6 py-5 select-none group-open:bg-red-50">
-              <span>🏍️ Kann ich mir in Zürich ein Fahrschul-Motorrad ausleihen?</span>
+              <span>🏍️ Brauche ich in Zürich ein eigenes Motorrad?</span>
               <span class="text-red-600 group-open:rotate-180 transition">▼</span>
             </summary>
-            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Ja! In Zürich-Altstetten haben wir ein Fahrschul-Motorrad (Kat. A35kW) zur Verfügung, das du für CHF 20.- pro Lektion mieten kannst. Das gilt für Fahrstunden vor dem Grundkurs. Helm und Schutzausrüstung müssen selbst mitgebracht werden.</p>
+            <p class="text-gray-600 px-6 pb-5 text-sm leading-relaxed">Ja. Für Fahrstunden und Grundkurs brauchst du ein eigenes betriebssicheres Motorrad sowie eigenen Helm und Schutzausrüstung.</p>
           </details>
 
           <details class="group bg-gray-50 border border-gray-200 rounded-xl overflow-hidden hover:border-red-300 transition cursor-pointer">
@@ -815,7 +811,7 @@ const jsonLdScripts = [
       "@type": ["DrivingSchool", "LocalBusiness"],
       "@id": "https://drivingteam.ch/motorrad-fahrschule-zuerich/#driving-school",
       "name": "Motorrad Fahrschule Zürich – Driving Team",
-      "description": "Professionelle Motorrad Fahrschule in Zürich-Altstetten. Kategorien A1, A35kW und A. Fahrschul-Motorrad verfügbar. Grundkurs in Zürich. 85% Erfolgsquote.",
+      "description": "Professionelle Motorrad Fahrschule in Zürich-Altstetten. Kategorien A1, A35kW und A. Grundkurs in Zürich. 85% Erfolgsquote.",
       "url": "https://drivingteam.ch/motorrad-fahrschule-zuerich/",
       "telephone": "+41444310033",
       "image": "https://drivingteam.ch/images/categories/motorrad-fahrschule-hero.webp",
@@ -910,7 +906,7 @@ const jsonLdScripts = [
       "@context": "https://schema.org",
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "Kann ich in Zürich ein Fahrschul-Motorrad ausleihen?", "acceptedAnswer": { "@type": "Answer", "text": "Ja! In Zürich-Altstetten steht ein Fahrschul-Motorrad (Kat. A35kW) für CHF 20.- pro Lektion zur Verfügung. Schutzausrüstung muss selbst mitgebracht werden." } },
+        { "@type": "Question", "name": "Brauche ich in Zürich ein eigenes Motorrad?", "acceptedAnswer": { "@type": "Answer", "text": "Ja. Für Fahrstunden und Grundkurs brauchst du ein eigenes betriebssicheres Motorrad sowie eigenen Helm und Schutzausrüstung." } },
         { "@type": "Question", "name": "Was kostet eine Motorrad Fahrstunde in Zürich?", "acceptedAnswer": { "@type": "Answer", "text": "Eine Doppellektion (90 Minuten) kostet CHF 190.-. Es gibt keine Admin-Pauschale für Motorrad – das spart gegenüber der Autoausbildung bis zu CHF 120.-." } },
         { "@type": "Question", "name": "Wo findet die Motorrad Fahrprüfung in Zürich statt?", "acceptedAnswer": { "@type": "Answer", "text": "Am Prüfungszentrum Albisgütli in Zürich. Manöver am Platz (Spurgasse, Slalom, 8-fahren, Vollbremsung) + Strassenfahrt." } },
         { "@type": "Question", "name": "Ist der Grundkurs für Motorrad in Zürich obligatorisch?", "acceptedAnswer": { "@type": "Answer", "text": "Ja, für alle Kategorien obligatorisch. Ausnahme: Wer A1 nach 01.01.2021 erworben hat und zu A35kW wechselt, ist vom Grundkurs befreit." } },

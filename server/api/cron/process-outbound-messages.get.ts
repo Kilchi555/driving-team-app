@@ -1,7 +1,7 @@
 // server/api/cron/process-outbound-messages.post.ts
-import { defineEventHandler, createError } from 'h3'
+import { defineEventHandler, createError, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
-import { Resend } from 'resend'
+import { sendEmail, sendTenantEmail } from '~/server/utils/email'
 import { sendSMS, sendTenantSMS } from '~/server/utils/sms'
 import { sendPushToUser } from '~/server/utils/push'
 
@@ -56,7 +56,6 @@ export default defineEventHandler(async (event) => {
     console.log(`[OutboundMessageProcessor] 📝 Found ${messages.length} pending messages to process`)
 
     const resendApiKey = process.env.RESEND_API_KEY
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@drivingteam.ch'
     const needsEmail = messages.some((m: any) => m.channel === 'email')
     if (needsEmail && !resendApiKey) {
       console.error('[OutboundMessageProcessor] ❌ RESEND_API_KEY not configured. Cannot send emails.')
@@ -65,7 +64,6 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'RESEND_API_KEY not configured'
       })
     }
-    const resend = resendApiKey ? new Resend(resendApiKey) : null
 
     let sentCount = 0
     let failedCount = 0
@@ -79,7 +77,7 @@ export default defineEventHandler(async (event) => {
           .eq('id', message.id)
 
         if (message.channel === 'email') {
-          if (!resend) {
+          if (!resendApiKey) {
             await supabase
               .from('outbound_messages_queue')
               .update({ status: 'failed', error_message: 'RESEND_API_KEY not configured', failed_at: new Date().toISOString() })
@@ -97,58 +95,88 @@ export default defineEventHandler(async (event) => {
             continue
           }
 
-          const { data: emailResult, error: emailError } = await resend.emails.send({
-            from: message.context_data?.tenant_name
-              ? `${message.context_data.tenant_name} <${fromEmail}>`
-              : fromEmail,
-            to: message.recipient_email,
-            subject: message.subject,
-            html: message.body,
-          })
+          const ctxPre = message.context_data || {}
+          if (ctxPre.stage === 'appointment_confirmation' && ctxPre.appointment_id) {
+            const { data: queuedAppt } = await supabase
+              .from('appointments')
+              .select('start_time, status')
+              .eq('id', ctxPre.appointment_id)
+              .maybeSingle()
+            const queuedStatus = String(queuedAppt?.status || '')
+            const startMs = queuedAppt?.start_time ? new Date(queuedAppt.start_time).getTime() : NaN
+            if (
+              queuedStatus === 'cancelled'
+              || queuedStatus === 'canceled'
+              || (Number.isFinite(startMs) && startMs < Date.now() - 30 * 60 * 1000)
+            ) {
+              console.log(`[OutboundMessageProcessor] ⏭️ Skipping stale appointment confirmation ${message.id}`)
+              await supabase
+                .from('outbound_messages_queue')
+                .update({ status: 'failed', error_message: 'Appointment already started or cancelled', failed_at: new Date().toISOString() })
+                .eq('id', message.id)
+              failedCount++
+              continue
+            }
+          }
 
-          if (emailError) {
+          let emailResult: { messageId: string }
+          try {
+            emailResult = message.tenant_id
+              ? await sendTenantEmail(message.tenant_id, {
+                  to: message.recipient_email,
+                  subject: message.subject,
+                  html: message.body,
+                })
+              : await sendEmail({
+                  to: message.recipient_email,
+                  subject: message.subject,
+                  html: message.body,
+                  fromName: message.context_data?.tenant_name,
+                })
+          } catch (emailError: any) {
             console.error(`[OutboundMessageProcessor] ❌ Failed to send email for message ${message.id}:`, emailError)
             await supabase
               .from('outbound_messages_queue')
               .update({ status: 'failed', error_message: emailError.message, failed_at: new Date().toISOString() })
               .eq('id', message.id)
             failedCount++
-          } else {
-            console.log(`[OutboundMessageProcessor] ✅ Email sent for message ${message.id}. Resend ID:`, emailResult?.id)
-            const sentAt = new Date().toISOString()
-            await supabase
-              .from('outbound_messages_queue')
-              .update({ status: 'sent', sent_at: sentAt, resend_message_id: emailResult?.id })
-              .eq('id', message.id)
-
-            // Marketing campaigns: mark lead contact time so repeat cooldown works
-            const ctx = message.context_data || {}
-            if (ctx.type === 'marketing' && ctx.campaign_id && ctx.lead_id) {
-              await supabase
-                .from('email_campaign_leads')
-                .update({
-                  status: 'sent',
-                  sent_at: sentAt,
-                  outbound_message_id: message.id,
-                })
-                .eq('campaign_id', ctx.campaign_id)
-                .eq('lead_id', ctx.lead_id)
-                .in('status', ['queued', 'sending', 'sent'])
-            }
-
-            // Appointment confirmation queue fallback → mark appointment delivered
-            if (ctx.stage === 'appointment_confirmation' && ctx.appointment_id) {
-              await supabase
-                .from('appointments')
-                .update({
-                  confirmation_email_status: 'sent',
-                  confirmation_email_sent_at: sentAt,
-                  updated_at: sentAt,
-                })
-                .eq('id', ctx.appointment_id)
-            }
-            sentCount++
+            continue
           }
+
+          console.log(`[OutboundMessageProcessor] ✅ Email sent for message ${message.id}. Resend ID:`, emailResult.messageId)
+          const sentAt = new Date().toISOString()
+          await supabase
+            .from('outbound_messages_queue')
+            .update({ status: 'sent', sent_at: sentAt, resend_message_id: emailResult.messageId })
+            .eq('id', message.id)
+
+          // Marketing campaigns: mark lead contact time so repeat cooldown works
+          const ctx = message.context_data || {}
+          if (ctx.type === 'marketing' && ctx.campaign_id && ctx.lead_id) {
+            await supabase
+              .from('email_campaign_leads')
+              .update({
+                status: 'sent',
+                sent_at: sentAt,
+                outbound_message_id: message.id,
+              })
+              .eq('campaign_id', ctx.campaign_id)
+              .eq('lead_id', ctx.lead_id)
+              .in('status', ['queued', 'sending', 'sent'])
+          }
+
+          // Appointment confirmation queue fallback → mark appointment delivered
+          if (ctx.stage === 'appointment_confirmation' && ctx.appointment_id) {
+            await supabase
+              .from('appointments')
+              .update({
+                confirmation_email_status: 'sent',
+                confirmation_email_sent_at: sentAt,
+                updated_at: sentAt,
+              })
+              .eq('id', ctx.appointment_id)
+          }
+          sentCount++
         } else         if (message.channel === 'sms') {
           if (!message.recipient_phone || !message.body) {
             console.warn(`[OutboundMessageProcessor] ⚠️ Skipping SMS message ${message.id} due to missing data:`, { recipient_phone: message.recipient_phone, body: message.body })
@@ -226,16 +254,32 @@ export default defineEventHandler(async (event) => {
               body: message.body,
               data: { path },
             })
-            // Best-effort: mark sent even with 0 devices (no token / Firebase unset)
-            // so the queue does not retry forever. Confirmation already uses the same model.
-            console.log(
-              `[OutboundMessageProcessor] ✅ Push processed for message ${message.id} (sent=${result.sent}, configured=${result.configured})`,
-            )
-            await supabase
-              .from('outbound_messages_queue')
-              .update({ status: 'sent', sent_at: new Date().toISOString() })
-              .eq('id', message.id)
-            sentCount++
+            if (result.sent > 0) {
+              console.log(
+                `[OutboundMessageProcessor] ✅ Push sent for message ${message.id} (sent=${result.sent})`,
+              )
+              await supabase
+                .from('outbound_messages_queue')
+                .update({ status: 'sent', sent_at: new Date().toISOString() })
+                .eq('id', message.id)
+              sentCount++
+            } else {
+              const reason = result.configured
+                ? 'No registered device token'
+                : 'Firebase push not configured'
+              console.warn(
+                `[OutboundMessageProcessor] ⚠️ Push not delivered for message ${message.id}: ${reason}`,
+              )
+              await supabase
+                .from('outbound_messages_queue')
+                .update({
+                  status: 'failed',
+                  error_message: reason,
+                  failed_at: new Date().toISOString(),
+                })
+                .eq('id', message.id)
+              failedCount++
+            }
           } catch (pushError: any) {
             console.error(`[OutboundMessageProcessor] ❌ Failed to send push for message ${message.id}:`, pushError)
             await supabase

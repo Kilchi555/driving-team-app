@@ -1,5 +1,9 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import {
+  assertGithubSecretName,
+  encryptGithubActionsSecret,
+} from '~/server/utils/github-actions-secret-encrypt'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { loadRotationLog, saveRotationLog } from './credential-status.get'
 
@@ -55,23 +59,12 @@ async function rotateGithubSecret(token: string, secretName: string, value: stri
   })
   if (!keyRes.ok) throw new Error(`GitHub key ${keyRes.status}`)
   const { key_id, key: pubKeyB64 } = await keyRes.json()
+  if (typeof key_id !== 'string' || typeof pubKeyB64 !== 'string') {
+    throw new Error('GitHub public key response invalid')
+  }
+  const encrypted = await encryptGithubActionsSecret(pubKeyB64, value)
 
-  // Encrypt with libsodium (tweetnacl compatible via Web Crypto isn't available server-side,
-  // so we use the Node.js compatible approach via dynamic import of tweetnacl-sealed-box)
-  // Instead, we call the GitHub API directly using pre-encrypted value via the shell approach
-  // We use a fetch-based implementation with Node's built-in crypto via Buffer
-  const { execSync } = await import('child_process')
-  const encrypted = execSync(
-    `python3 -c "
-import base64, nacl.public
-pub = nacl.public.PublicKey(base64.b64decode('${pubKeyB64}'))
-box = nacl.public.SealedBox(pub)
-print(base64.b64encode(box.encrypt(b'''${value.replace(/'/g, "\\'")}''')).decode())
-"`,
-    { encoding: 'utf8' },
-  ).trim()
-
-  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/actions/secrets/${secretName}`, {
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/actions/secrets/${encodeURIComponent(secretName)}`, {
     method: 'PUT',
     headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
     body: JSON.stringify({ encrypted_value: encrypted, key_id }),
@@ -100,25 +93,32 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'credentialKey, value und targets sind erforderlich' })
   }
 
+  let secretName: string
+  try {
+    secretName = assertGithubSecretName(credentialKey)
+  } catch {
+    throw createError({ statusCode: 400, message: 'credentialKey ist ungültig' })
+  }
+
   const results: Record<string, string> = {}
 
   if (targets.includes('vercel')) {
     const vercelToken = process.env.VERCEL_API_TOKEN
     if (!vercelToken) throw createError({ statusCode: 500, message: 'VERCEL_API_TOKEN nicht konfiguriert' })
-    results.vercel = await rotateInVercel(vercelToken, credentialKey, value)
+    results.vercel = await rotateInVercel(vercelToken, secretName, value)
   }
 
   if (targets.includes('github')) {
     const githubToken = process.env.GH_API_TOKEN || process.env.SIMY_GITHUB_PAT
     if (!githubToken) throw createError({ statusCode: 500, message: 'GH_API_TOKEN nicht konfiguriert' })
-    await rotateGithubSecret(githubToken, credentialKey, value)
+    await rotateGithubSecret(githubToken, secretName, value)
     results.github = 'updated'
   }
 
   // Rotation-Log speichern
   const log = await loadRotationLog()
-  log[credentialKey] = new Date().toISOString()
+  log[secretName] = new Date().toISOString()
   await saveRotationLog(log)
 
-  return { success: true, results, rotatedAt: log[credentialKey] }
+  return { success: true, results, rotatedAt: log[secretName] }
 })

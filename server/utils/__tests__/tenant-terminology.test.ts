@@ -15,10 +15,10 @@ import {
 import { generateAppointmentDeletedEmail } from '../email'
 
 describe('getTerminologyDefaults', () => {
-  it('returns driving_school for null/undefined/unknown', () => {
+  it('returns driving_school for null/undefined, generic for unknown types', () => {
     expect(getTerminologyDefaults(null).staff).toBe('Fahrlehrer')
     expect(getTerminologyDefaults(undefined).appointment).toBe('Fahrstunde')
-    expect(getTerminologyDefaults('unknown_type').businessNoun).toBe('Fahrschule')
+    expect(getTerminologyDefaults('unknown_type').businessNoun).toBe('Unternehmen')
   })
 
   it('returns consulting labels', () => {
@@ -27,6 +27,12 @@ describe('getTerminologyDefaults', () => {
     expect(t.appointment).toBe('Beratung')
     expect(t.appointmentsPlural).toBe('Beratungen')
     expect(t.businessNoun).toBe('Consulting-Unternehmen')
+    expect(t.documentationLabel).toBe('Dokumentation')
+  })
+
+  it('keeps Bewertungen as the Fahrschul documentation tab', () => {
+    expect(getTerminologyDefaults('driving_school').documentationLabel).toBe('Bewertungen')
+    expect(getTerminologyDefaults('generic').documentationLabel).toBe('Dokumentation')
   })
 
   it('returns mental_coach labels', () => {

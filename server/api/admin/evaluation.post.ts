@@ -55,8 +55,8 @@ export default defineEventHandler(async (event) => {
 
       const { data, error } = await supabase
         .from('evaluation_categories')
-        .select('id, tenant_id, name, description, display_order, category_code, is_active, created_at')
-        .or(`tenant_id.eq.${effectiveTenantId},tenant_id.is.null`)
+        .select('id, tenant_id, name, description, color, display_order, is_active, created_at')
+        .eq('tenant_id', effectiveTenantId)
         .order('display_order', { ascending: true })
 
       if (error) throw error
@@ -113,7 +113,7 @@ export default defineEventHandler(async (event) => {
         .from('evaluation_criteria')
         .select('id, category_id, tenant_id, name, description, display_order, is_active, created_at')
         .eq('category_id', category_data?.id)
-        .or(`tenant_id.eq.${category_data?.tenant_id || effectiveTenantId},tenant_id.is.null`)
+        .eq('tenant_id', category_data?.tenant_id || effectiveTenantId)
         .order('display_order', { ascending: true })
 
       if (error) throw error

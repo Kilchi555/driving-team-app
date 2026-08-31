@@ -25,6 +25,7 @@ import { z } from 'zod'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
+import { lockCheckoutBenefits, releaseCheckoutBenefits } from '~/server/utils/checkout-benefits'
 
 const ProcessPublicPaymentSchema = z.object({
   enrollmentId:  z.string().uuid().optional(),
@@ -420,6 +421,29 @@ export default defineEventHandler(async (event) => {
     }
     
     logger.debug('✅ Payment record created:', paymentRecord.id)
+
+    const checkoutDiscountCode = typeof metadata?.discount_code === 'string' ? metadata.discount_code : null
+    if (checkoutDiscountCode && tenantId) {
+      const locked = await lockCheckoutBenefits({
+        supabase,
+        tenantId,
+        paymentId: paymentRecord.id,
+        code: checkoutDiscountCode,
+      })
+      if (!locked.ok) {
+        await releaseCheckoutBenefits({
+          supabase,
+          tenantId,
+          paymentId: paymentRecord.id,
+          metadata: { discount_code: checkoutDiscountCode, discount_usage_claimed: false },
+        })
+        await supabase.from('payments').delete().eq('id', paymentRecord.id)
+        throw createError({
+          statusCode: 409,
+          statusMessage: locked.reason || 'Dieser Code kann gerade nicht verwendet werden',
+        })
+      }
+    }
     
     // Helper: sanitize any string to printable ASCII only (Wallee requirement)
     const toAscii = (value: string): string => value

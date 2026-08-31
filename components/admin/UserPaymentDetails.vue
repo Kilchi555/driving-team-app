@@ -124,7 +124,8 @@
                   <!-- Aktionen für fehlgeschlagene Zahlungen -->
                   <button
                     :disabled="isUpdatingPayment"
-                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50"
+                    :style="{ background: primaryColor }"
                     @click="resendAllSelectedConfirmations"
                   >
                     <svg v-if="isUpdatingPayment" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -142,7 +143,8 @@
                   <!-- Aktionen für aktive Termine -->
                   <button
                     :disabled="isUpdatingPayment"
-                    class="mr-2 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    class="mr-2 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50"
+                    :style="{ background: primaryColor }"
                     @click="invoiceSelectedAppointments"
                   >
 
@@ -255,7 +257,8 @@
                 <button
                   type="button"
                   :disabled="isUpdatingPayment"
-                  class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 sm:ml-3 sm:w-auto sm:text-sm"
+                  class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 sm:ml-3 sm:w-auto sm:text-sm"
+                  :style="{ background: primaryColor }"
                   @click="invoiceSelectedAppointments"
                 >
                   <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -356,7 +359,7 @@
                             <span class="text-xs font-medium whitespace-nowrap" :class="useCustomBillingAddress ? 'text-gray-400' : 'text-gray-800'">Gespeichert</span>
                             <button
                               type="button"
-                              @click="useCustomBillingAddress = !useCustomBillingAddress"
+                              @click="toggleCustomBillingAddress"
                               :class="[
                                 'relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors',
                                 useCustomBillingAddress ? '' : 'bg-gray-300'
@@ -386,27 +389,32 @@
                           <template v-else>
                             <p class="text-gray-500">Keine Firmenadresse hinterlegt.</p>
                             <p class="text-xs text-gray-500">Rechnung geht an <span class="font-medium">{{ displayEmail }}</span></p>
+                            <p class="text-xs text-gray-400">Für eine feste Firmenadresse: Schülerprofil → Rechnungsadresse, oder hier «Abweichend».</p>
                           </template>
                         </div>
                         
                         <div v-else class="space-y-3">
                           <input v-model="customBillingCompanyName" type="text" placeholder="Firmenname (optional)" class="invoice-modal-input w-full" />
                           <input v-model="customBillingContactPerson" type="text" placeholder="Kontaktperson (optional)" class="invoice-modal-input w-full" />
-                          <input v-model="customBillingEmail" type="email" placeholder="E-Mail *" class="invoice-modal-input w-full" />
+                          <div class="grid grid-cols-[minmax(0,1fr)_4.5rem] gap-2">
+                            <input v-model="customBillingStreet" type="text" placeholder="Strasse" class="invoice-modal-input w-full min-w-0" />
+                            <input v-model="customBillingStreetNr" type="text" placeholder="Nr." class="invoice-modal-input w-full min-w-0" />
+                          </div>
+                          <div class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2">
+                            <input v-model="customBillingZip" type="text" placeholder="PLZ" class="invoice-modal-input w-full min-w-0" />
+                            <input v-model="customBillingCity" type="text" placeholder="Ort" class="invoice-modal-input w-full min-w-0" />
+                          </div>
+                          <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">E-Mail</label>
+                            <input v-model="customBillingEmail" type="email" placeholder="rechnung@firma.ch" class="invoice-modal-input w-full" />
+                            <p class="text-xs text-gray-400 mt-1">Auf der Rechnung und für den Versand.</p>
+                          </div>
                         </div>
                       </div>
                       
                       <div class="rounded-xl border border-gray-200 p-4 space-y-3">
                         <p class="text-xs font-bold uppercase tracking-wider text-gray-400">E-Mail-Versand</p>
-                        <div>
-                          <label class="block text-xs font-medium text-gray-500 mb-1">Empfänger</label>
-                          <input
-                            v-model="invoiceEmail"
-                            type="email"
-                            class="invoice-modal-input w-full"
-                            :placeholder="resolvedInvoiceEmail || 'email@beispiel.ch'"
-                          >
-                        </div>
+                        <p class="text-xs text-gray-500">Geht an <span class="font-medium text-gray-700">{{ resolvedInvoiceEmail || '—' }}</span></p>
                         <div>
                           <label class="block text-xs font-medium text-gray-500 mb-1">Betreff (optional)</label>
                           <input v-model="invoiceSubject" type="text" class="invoice-modal-input w-full" :placeholder="`Rechnung für ${t.appointmentsPlural}`" />
@@ -467,27 +475,43 @@
           <div class="flex items-start justify-between gap-4 flex-wrap">
             <!-- Avatar + name + role + contact -->
             <div class="flex items-center gap-3 min-w-0">
-              <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0" :class="avatarBgClass">
+              <div
+                class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                :class="avatarBgClass"
+                :style="userDetails?.role === 'client' ? { background: primaryColor } : undefined"
+              >
                 {{ (displayName || '?').charAt(0).toUpperCase() }}
               </div>
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
                   <p class="text-base font-semibold text-gray-900 truncate">{{ displayName }}</p>
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0" :class="roleClass">{{ roleLabel }}</span>
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0"
+                    :class="roleClass"
+                    :style="userDetails?.role === 'client' ? brandSoftStyle : undefined"
+                  >{{ roleLabel }}</span>
                 </div>
                 <div class="mt-0.5 flex items-center gap-3 text-sm text-gray-500 flex-wrap">
-                  <a :href="emailLink" class="hover:text-blue-600 truncate max-w-[240px]">{{ displayEmail }}</a>
-                  <a v-if="userDetails?.phone" :href="phoneLink" class="hover:text-blue-600 flex-shrink-0">{{ userDetails.phone }}</a>
+                  <a :href="emailLink" class="tenant-link-hover truncate max-w-[240px]">{{ displayEmail }}</a>
+                  <a v-if="userDetails?.phone" :href="phoneLink" class="tenant-link-hover flex-shrink-0">{{ userDetails.phone }}</a>
                 </div>
               </div>
             </div>
 
             <!-- Payment method + company billing -->
             <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
-              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="paymentMethodClass">
+              <span
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                :class="paymentMethodClass"
+                :style="userDetails?.preferred_payment_method === 'invoice' ? brandSoftStyle : undefined"
+              >
                 {{ paymentMethodLabel }}
               </span>
-              <span v-if="hasCompanyBilling" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+              <span
+                v-if="hasCompanyBilling"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                :style="brandSoftStyle"
+              >
                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/></svg>
                 Firmenrechnung
               </span>
@@ -496,8 +520,11 @@
 
           <!-- Stats -->
           <div class="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2 flex-wrap">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600">
-              <span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"/>
+            <span
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+              :style="brandSoftStyle"
+            >
+              <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :style="{ background: primaryColor }"/>
               {{ totalAppointments }} Termine
             </span>
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
@@ -523,8 +550,8 @@
               <span class="font-medium text-gray-800">{{ companyBillingAddress.company_name }}</span>
               <span>{{ companyBillingAddress.contact_person }}</span>
               <span>{{ companyBillingAddress.street }} {{ companyBillingAddress.street_number || '' }}, {{ companyBillingAddress.zip }} {{ companyBillingAddress.city }}</span>
-              <a :href="`mailto:${companyBillingAddress.email}`" class="text-blue-600 hover:underline">{{ companyBillingAddress.email }}</a>
-              <a v-if="companyBillingAddress.phone" :href="`tel:${companyBillingAddress.phone}`" class="text-blue-600 hover:underline">{{ companyBillingAddress.phone }}</a>
+              <a :href="`mailto:${companyBillingAddress.email}`" class="hover:underline" :style="{ color: primaryColor }">{{ companyBillingAddress.email }}</a>
+              <a v-if="companyBillingAddress.phone" :href="`tel:${companyBillingAddress.phone}`" class="hover:underline" :style="{ color: primaryColor }">{{ companyBillingAddress.phone }}</a>
               <span v-if="companyBillingAddress.vat_number" class="text-gray-400">MwSt: {{ companyBillingAddress.vat_number }}</span>
             </div>
           </div>
@@ -591,12 +618,20 @@
                     </p>
                     <p class="text-xs text-gray-500">Mit {{ appointment.staff?.first_name || '—' }} · {{ appointment.duration_minutes }}min</p>
                   </div>
-                  <p class="text-sm font-semibold text-gray-900 whitespace-nowrap">{{ formatCurrency(calculateAppointmentAmount(appointment)) }}</p>
+                  <div class="text-right">
+                    <p class="text-sm font-semibold text-gray-900 whitespace-nowrap">{{ formatCurrency(calculateAppointmentAmount(appointment)) }}</p>
+                    <p v-if="walleeFeeChf(appointment) > 0" class="text-[11px] text-amber-700">Gebühr {{ walleeFeeLabel }}: {{ formatCurrency(walleeFeeChf(appointment)) }}</p>
+                  </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-1.5">
                   <span class="text-xs text-gray-500">{{ formatDate(appointment.start_time) }}, {{ formatTime(appointment.start_time) }}</span>
                   <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="getStatusClass(appointment.status)">{{ getStatusLabel(appointment.status) }}</span>
-                  <span v-if="appointment.payment_method" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="getPaymentMethodClass(appointment.payment_method)">{{ getPaymentMethodLabel(appointment.payment_method) }}</span>
+                  <span
+                    v-if="appointment.payment_method"
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                    :class="getPaymentMethodClass(appointment.payment_method)"
+                    :style="appointment.payment_method === 'invoice' ? brandSoftStyle : undefined"
+                  >{{ getPaymentMethodLabel(appointment.payment_method) }}</span>
                 </div>
                 <p v-if="appointment.deleted_at" class="text-xs text-red-600 font-medium">Gelöscht: {{ formatPaymentDateTime(appointment.deleted_at) }}</p>
               </div>
@@ -689,9 +724,11 @@ v-for="appointment in filteredAppointments" :key="appointment.id"
                   </td>
                       <td class="px-6 py-4 whitespace-nowrap">
                         <span
-v-if="appointment.payment_method" 
-                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                              :class="getPaymentMethodClass(appointment.payment_method)">
+                          v-if="appointment.payment_method"
+                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                          :class="getPaymentMethodClass(appointment.payment_method)"
+                          :style="appointment.payment_method === 'invoice' ? brandSoftStyle : undefined"
+                        >
                           {{ getPaymentMethodLabel(appointment.payment_method) }}
                         </span>
                         <span v-else class="text-gray-400 text-sm">
@@ -701,6 +738,9 @@ v-if="appointment.payment_method"
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div>
                       <div class="font-medium">{{ formatCurrency(calculateAppointmentAmount(appointment)) }}</div>
+                      <div v-if="walleeFeeChf(appointment) > 0 && !hasPriceDetails(appointment)" class="text-xs text-amber-700 mt-1">
+                        Wallee-Gebühr {{ walleeFeeLabel }}: {{ formatCurrency(walleeFeeChf(appointment)) }}
+                      </div>
                       
                       <!-- Detaillierte Preisaufschlüsselung direkt in der Tabelle -->
                       <div v-if="hasPriceDetails(appointment)" class="mt-2 space-y-1">
@@ -755,6 +795,14 @@ v-if="(appointment.credit_used || 0) > 0"
                           <span>Bereits bezahlt:</span>
                           <span>-{{ formatCurrency(appointment.amount_paid || 0) }}</span>
                         </div>
+
+                        <div
+                          v-if="walleeFeeChf(appointment) > 0"
+                          class="flex justify-between text-xs text-amber-700 pt-1 border-t border-gray-100"
+                        >
+                          <span>Wallee-Gebühr {{ walleeFeeLabel }}:</span>
+                          <span>{{ formatCurrency(walleeFeeChf(appointment)) }}</span>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -769,6 +817,7 @@ v-if="(appointment.credit_used || 0) > 0"
                           appointment.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
                           appointment.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           appointment.payment_status === 'failed' ? 'bg-red-100 text-red-800' :
+                          isInvoicedPayment(appointment) ? 'bg-orange-100 text-orange-800' :
                           'bg-gray-100 text-gray-800'
                         ]"
                       >
@@ -793,6 +842,7 @@ v-if="(appointment.credit_used || 0) > 0"
                           appointment.payment_status === 'partial' ? 'Teilzahlung' :
                           appointment.payment_status === 'pending' ? 'Ausstehend' :
                           appointment.payment_status === 'failed' ? 'Fehlgeschlagen' :
+                          isInvoicedPayment(appointment) ? 'Verrechnet' :
                           appointment.payment_status
                         }}
                       </span>
@@ -881,7 +931,8 @@ v-if="(appointment.credit_used || 0) > 0"
                         <button
                           v-if="appointment.payment_status === 'pending' && appointment.payment_method !== 'wallee' && appointment.status !== 'verrechnet'"
                           :disabled="isConvertingToOnline"
-                          class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                          class="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50"
+                          :style="brandSoftStyle"
                           title="Zu Online-Zahlung konvertieren"
                           @click="convertAppointmentToOnline(appointment)"
                         >
@@ -1034,7 +1085,8 @@ v-if="(appointment.credit_used || 0) > 0"
         Als bezahlt markieren
       </button>
       <button
-        class="w-full text-left px-4 py-2 text-xs text-blue-700 hover:bg-blue-50 border-b border-gray-200 flex items-center"
+        class="w-full text-left px-4 py-2 text-xs border-b border-gray-200 flex items-center hover:opacity-80"
+        :style="{ color: primaryColor }"
         @click.stop="switchToCash(appointments.find(a => a.id === openInvoiceMenu)!)"
       >
         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1066,9 +1118,13 @@ import Toast from '~/components/Toast.vue'
 import { logger } from '~/utils/logger'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
+import { isInvoicedPayment } from '~/utils/payment-invoiced'
+import { isWalleeCollectedPayment, WALLEE_FEE_RATE_LABEL, walleeFeeRappen } from '~/utils/wallee-fee'
+import { splitGrossVat } from '~/utils/vat'
 
 const authStore = useAuthStore()
 const supabase = getSupabase()
+const walleeFeeLabel = WALLEE_FEE_RATE_LABEL
 const {
   primaryColor: brandingPrimaryColor,
   brandName,
@@ -1079,6 +1135,10 @@ const {
   defaultVatRate,
 } = useTenantBranding()
 const primaryColor = computed(() => brandingPrimaryColor.value || '#1E40AF')
+const brandSoftStyle = computed(() => ({
+  color: primaryColor.value,
+  backgroundColor: `${primaryColor.value}14`,
+}))
 const primaryGradient = computed(() => {
   const hex = primaryColor.value.replace('#', '')
   const num = parseInt(hex, 16)
@@ -1127,6 +1187,7 @@ interface Appointment {
   status: string
   type: string
   payment_status?: string // ✅ Wichtig für Failed Payments Filter!
+  invoice_id?: string | null
   payment_method?: string
   payment_method_name?: string
   total_amount?: number
@@ -1236,13 +1297,16 @@ const isCreatingInvoice = ref(false)
 const invoiceAction = ref<'email' | 'pdf' | null>(null)
 const eventTypes = ref<any[]>([])
 
-const invoiceEmail = ref('')
 const invoiceSubject = ref('')
 const invoiceMessage = ref('')
 const useCustomBillingAddress = ref(false)
 const customBillingCompanyName = ref('')
 const customBillingContactPerson = ref('')
 const customBillingEmail = ref('')
+const customBillingStreet = ref('')
+const customBillingStreetNr = ref('')
+const customBillingZip = ref('')
+const customBillingCity = ref('')
 
 // Toast State
 const showToast = ref(false)
@@ -1271,8 +1335,7 @@ const displayEmail = computed(() => {
 })
 
 const resolvedInvoiceEmail = computed(() => {
-  if (invoiceEmail.value) return invoiceEmail.value
-  if (useCustomBillingAddress.value && customBillingEmail.value) return customBillingEmail.value
+  if (useCustomBillingAddress.value) return customBillingEmail.value.trim()
   if (companyBillingAddress.value?.email) return companyBillingAddress.value.email
   return userDetails.value?.email || ''
 })
@@ -1296,7 +1359,7 @@ const roleLabel = computed(() => {
 
 const roleClass = computed(() => {
   const classes: Record<string, string> = {
-    'client': 'bg-blue-50 text-blue-700',
+    'client': '',
     'staff': 'bg-emerald-50 text-emerald-700',
     'admin': 'bg-purple-50 text-purple-700'
   }
@@ -1305,7 +1368,7 @@ const roleClass = computed(() => {
 
 const avatarBgClass = computed(() => {
   const classes: Record<string, string> = {
-    'client': 'bg-blue-500',
+    'client': '',
     'staff': 'bg-emerald-500',
     'admin': 'bg-purple-500'
   }
@@ -1326,7 +1389,7 @@ const paymentMethodLabel = computed(() => {
 const paymentMethodClass = computed(() => {
   const classes: Record<string, string> = {
     'cash': 'bg-amber-50 text-amber-700',
-    'invoice': 'bg-blue-50 text-blue-700',
+    'invoice': '',
     'twint': 'bg-purple-50 text-purple-700',
     'stripe_card': 'bg-emerald-50 text-emerald-700',
     'debit_card': 'bg-gray-100 text-gray-600'
@@ -1371,7 +1434,7 @@ const isAppointmentSelectable = (appointment: Appointment) => {
   // 1. They're marked as verrechnet/paid in appointment status
   // 2. OR they have a payment_status that's already completed/invoiced
   // But we still want invoice action buttons visible for invoiced payments!
-  const hasInvoicedPayment = appointment.payment_status === 'invoiced'
+  const hasInvoicedPayment = isInvoicedPayment(appointment)
   const isNotSelectableByStatus = appointment.status === 'verrechnet' || appointment.status === 'paid'
   
   // If it's invoiced, it's still selectable for actions, just not for checkboxes
@@ -1435,12 +1498,30 @@ const closeInvoiceModal = () => {
   showInvoiceModal.value = false
 }
 
+const toggleCustomBillingAddress = () => {
+  const next = !useCustomBillingAddress.value
+  if (next && !customBillingEmail.value) {
+    const company = companyBillingAddress.value
+    customBillingCompanyName.value = customBillingCompanyName.value || company?.company_name || ''
+    customBillingContactPerson.value = customBillingContactPerson.value || company?.contact_person || ''
+    customBillingStreet.value = customBillingStreet.value || company?.street || userDetails.value?.street || ''
+    customBillingStreetNr.value = customBillingStreetNr.value || company?.street_number || userDetails.value?.street_nr || ''
+    customBillingZip.value = customBillingZip.value || company?.zip || userDetails.value?.zip || ''
+    customBillingCity.value = customBillingCity.value || company?.city || userDetails.value?.city || ''
+    customBillingEmail.value = company?.email || userDetails.value?.email || ''
+  }
+  useCustomBillingAddress.value = next
+}
+
 const resetInvoiceModalFields = () => {
   useCustomBillingAddress.value = false
   customBillingCompanyName.value = ''
   customBillingContactPerson.value = ''
   customBillingEmail.value = ''
-  invoiceEmail.value = ''
+  customBillingStreet.value = ''
+  customBillingStreetNr.value = ''
+  customBillingZip.value = ''
+  customBillingCity.value = ''
   invoiceSubject.value = ''
   invoiceMessage.value = ''
 }
@@ -1499,7 +1580,7 @@ const loadUserAppointments = async () => {
     for (const appointment of (appointmentsData || [])) {
       const payment = paymentsData.find(p => p.appointment_id === appointment.id)
       // ✅ isPaid should be true for both 'completed' AND 'invoiced' payments
-      const isPaid = payment?.payment_status === 'completed' || payment?.payment_status === 'invoiced'
+      const isPaid = payment?.payment_status === 'completed' || isInvoicedPayment(payment)
       
       // Merge Zahlungsstatus und Methode in Termin-Datensatz
       // ✅ If appointment is cancelled, show 'cancelled' status regardless of payment status
@@ -1623,6 +1704,7 @@ const loadUserAppointments = async () => {
         staff_id: appointment.staff_id,
         staff: appointment.staff,
         payment_status: payment?.payment_status || 'pending', // ✅ KRITISCH: payment_status hinzufügen!
+        invoice_id: payment?.invoice_id || null,
         payment_method: payment?.payment_method,
         payment_method_name: payment?.payment_method ? getPaymentMethodLabel(payment.payment_method) : '',
         total_amount: payment ? (payment.total_amount_rappen || 0) / 100 : 0,
@@ -1676,6 +1758,16 @@ const loadUserAppointments = async () => {
 }
 
 
+const walleeFeeChf = (appointment: Appointment): number => {
+  if (!isWalleeCollectedPayment({
+    payment_method: appointment.payment_method,
+    payment_status: appointment.payment_status,
+    refunded_at: appointment.refunded_at,
+  })) return 0
+  const grossRappen = Math.round((appointment.total_amount || 0) * 100)
+  return walleeFeeRappen(grossRappen) / 100
+}
+
 const getPaymentMethodLabel = (method: string): string => {
   const labels: Record<string, string> = {
     'cash': 'Bar',
@@ -1692,7 +1784,7 @@ const getPaymentMethodLabel = (method: string): string => {
 const getPaymentMethodClass = (method: string): string => {
   const classes: Record<string, string> = {
     'cash': 'bg-yellow-100 text-yellow-800',
-    'invoice': 'bg-blue-100 text-blue-800',
+    'invoice': '',
     'wallee': 'bg-green-100 text-green-800',
     'credit': 'bg-yellow-100 text-yellow-800',
     'twint': 'bg-green-100 text-green-800', 
@@ -1844,7 +1936,8 @@ const getPaymentStatusTimestamp = (appointment: any): string | null => {
     case 'completed':
       return appointment.paid_at || null
     case 'invoiced':
-      return appointment.paid_at || null
+    case 'invoice':
+      return appointment.paid_at || appointment.updated_at || null
     case 'refunded':
       return appointment.refunded_at || appointment.paid_at || null
     case 'failed':
@@ -2771,8 +2864,11 @@ const invoiceSelectedAppointments = async () => {
     customBillingCompanyName.value = ''
     customBillingContactPerson.value = ''
     customBillingEmail.value = ''
+    customBillingStreet.value = ''
+    customBillingStreetNr.value = ''
+    customBillingZip.value = ''
+    customBillingCity.value = ''
     
-    invoiceEmail.value = companyBillingAddress.value?.email || userDetails.value?.email || ''
     invoiceSubject.value = `Rechnung für ${selectedAppointments.value.length} ${selectedAppointments.value.length > 1 ? t.value.appointmentsPlural : t.value.appointment}`
     // Nur Intro in die Nachricht — Zahlungsbedingungen/Footer gehen separat auf die Rechnung
     const intro = (invoiceIntroText.value || '').trim()
@@ -2815,19 +2911,19 @@ const getSelectedAppointmentRows = (): SelectedAppointmentRow[] => {
   }).filter((apt): apt is SelectedAppointmentRow => apt !== null)
 }
 
-const buildInvoicePayload = (internalNotes: string) => {
+const buildInvoicePayload = async (internalNotes: string) => {
   const rows = getSelectedAppointmentRows()
   if (rows.length === 0) throw new Error('Keine gültigen Termine gefunden')
 
   const billingEmail = resolvedInvoiceEmail.value
+  const user = userDetails.value
+  const company = companyBillingAddress.value
 
   if (useCustomBillingAddress.value) {
-    if (!customBillingEmail.value.trim() && !invoiceEmail.value.trim()) throw new Error('E-Mail-Adresse ist erforderlich')
+    if (!customBillingEmail.value.trim()) throw new Error('E-Mail-Adresse ist erforderlich')
   }
 
-  const useCompanyBilling = useCustomBillingAddress.value || !!companyBillingAddress.value
-  const company = companyBillingAddress.value
-  const user = userDetails.value
+  const useCompanyBilling = useCustomBillingAddress.value || !!company
   const invoiceFormData = {
     user_id: user?.id || '',
     billing_type: (useCompanyBilling ? 'company' : 'individual') as 'company' | 'individual',
@@ -2838,10 +2934,18 @@ const buildInvoicePayload = (internalNotes: string) => {
       ? customBillingContactPerson.value || undefined
       : company?.contact_person || undefined,
     billing_email: billingEmail || undefined,
-    billing_street: company?.street || user?.street || undefined,
-    billing_street_number: company?.street_number || user?.street_nr || undefined,
-    billing_zip: company?.zip || user?.zip || undefined,
-    billing_city: company?.city || user?.city || undefined,
+    billing_street: useCustomBillingAddress.value
+      ? (customBillingStreet.value.trim() || undefined)
+      : (company?.street || user?.street || undefined),
+    billing_street_number: useCustomBillingAddress.value
+      ? (customBillingStreetNr.value.trim() || undefined)
+      : (company?.street_number || user?.street_nr || undefined),
+    billing_zip: useCustomBillingAddress.value
+      ? (customBillingZip.value.trim() || undefined)
+      : (company?.zip || user?.zip || undefined),
+    billing_city: useCustomBillingAddress.value
+      ? (customBillingCity.value.trim() || undefined)
+      : (company?.city || user?.city || undefined),
     billing_country: 'CH',
     billing_vat_number: companyBillingAddress.value?.vat_number || undefined,
     subtotal_rappen: chfToRappen(selectedAppointmentsTotal.value),
@@ -2855,7 +2959,7 @@ const buildInvoicePayload = (internalNotes: string) => {
 
   const invoiceItems = rows.map((appointment, index) => {
     const unitPriceRappen = chfToRappen(appointment.amount || 0)
-    const vatAmount = Math.round(unitPriceRappen * defaultVatRate.value / 100)
+    const vatAmount = splitGrossVat(unitPriceRappen, defaultVatRate.value).vat
     return {
       product_name: appointment.title || t.value.appointment,
       product_description: `Termin am ${new Date(appointment.start_time).toLocaleDateString('de-CH')}`,
@@ -2877,7 +2981,7 @@ const buildInvoicePayload = (internalNotes: string) => {
 }
 
 const createInvoiceFromSelection = async (internalNotes: string) => {
-  const { invoiceFormData, invoiceItems } = buildInvoicePayload(internalNotes)
+  const { invoiceFormData, invoiceItems } = await buildInvoicePayload(internalNotes)
   const { createInvoice } = useInvoices()
   const result = await createInvoice(invoiceFormData, invoiceItems)
   if (result.error || !result.data) throw new Error(result.error || 'Rechnung konnte nicht erstellt werden')
@@ -3159,6 +3263,12 @@ onMounted(async () => {
 
 <style scoped>
 .invoice-modal-input {
-  @apply w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300;
+  @apply w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:outline-none focus:ring-2;
+}
+.invoice-modal-input:focus {
+  --tw-ring-color: var(--color-primary, #1E40AF);
+}
+.tenant-link-hover:hover {
+  color: var(--color-primary, #1E40AF);
 }
 </style>

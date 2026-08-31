@@ -27,4 +27,4 @@ Der Banner **Lernfahrausweis hochladen** auf dem Dashboard öffnet ebenfalls das
 
 ## Konto löschen
 
-Unten: **Konto löschen** → Bestätigungswort **LÖSCHEN** eingeben → **Konto endgültig löschen**. Das ist unwiderruflich.
+Ganz unten im Profil, kleiner Link **Konto löschen**. Danach Bestätigungswort **LÖSCHEN** eingeben. Das ist unwiderruflich.

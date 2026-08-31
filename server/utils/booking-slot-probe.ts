@@ -12,6 +12,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { resolveRoomSettings, isAnyRoomAvailable } from '~/server/utils/room-availability'
+import { isSchoolVehicleAvailable, resolveSlotVehiclePolicy } from '~/server/utils/vehicle-availability'
+import { bookableUserRoles, resolveLocationStaffAssignments } from '~/server/utils/bookable-locations'
 
 export interface BookingReadinessCheck {
   id: string
@@ -84,18 +86,6 @@ async function loadAllowOnlineBooking(
     logger.warn('⚠️ booking-slot-probe allow_online_booking lookup failed:', e?.message)
   }
   return true
-}
-
-function parseStaffCategories(raw: unknown): string[] {
-  if (Array.isArray(raw)) return raw.map(String)
-  if (typeof raw === 'string') {
-    try {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed.map(String)
-    } catch { /* ignore */ }
-    return raw.split(',').map((c) => c.trim()).filter(Boolean)
-  }
-  return []
 }
 
 async function loadSelectableServices(
@@ -179,7 +169,7 @@ async function loadBookableStaffLocations(
       .from('users')
       .select('id, first_name, last_name, category, is_active, role')
       .eq('tenant_id', tenantId)
-      .eq('role', 'staff')
+      .in('role', bookableUserRoles(isEventTypeBooking))
       .eq('is_active', true),
   ])
 
@@ -188,27 +178,13 @@ async function loadBookableStaffLocations(
   const allStaff = staffResult.data || []
   const locationById = new Map(locations.map((l: any) => [l.id, l]))
   const staffById = new Map(allStaff.map((s: any) => [s.id, s]))
-
-  const staffCategoryMap = new Map<string, string[]>()
-  for (const staff of allStaff) {
-    staffCategoryMap.set(staff.id, parseStaffCategories(staff.category))
-  }
-
-  const staffLocCategoryMap = new Map<string, string[] | null>()
-  for (const sl of staffLocations) {
-    const cats = Array.isArray(sl.available_categories) ? sl.available_categories : null
-    staffLocCategoryMap.set(`${sl.staff_id}:${sl.location_id}`, cats)
-  }
-
-  const getEffectiveCategories = (staffId: string, locationId: string): string[] => {
-    const perStaff = staffLocCategoryMap.get(`${staffId}:${locationId}`)
-    if (Array.isArray(perStaff)) return perStaff
-    const staffCats = staffCategoryMap.get(staffId) || []
-    const loc = locationById.get(locationId)
-    const locCats = Array.isArray(loc?.available_categories) ? loc.available_categories : []
-    if (locCats.length === 0) return staffCats
-    return staffCats.filter((c) => locCats.includes(c))
-  }
+  const assignments = resolveLocationStaffAssignments({
+    categoryCode,
+    isEventTypeBooking,
+    locations,
+    staff: allStaff,
+    staffLocations,
+  })
 
   const pairs: Array<{
     location_id: string
@@ -217,31 +193,19 @@ async function loadBookableStaffLocations(
     staff_name: string
   }> = []
 
-  for (const sl of staffLocations) {
-    const loc = locationById.get(sl.location_id)
-    const staff = staffById.get(sl.staff_id)
-    if (!loc || !staff) continue
-
-    // Staff must be listed on the location (same as booking attach step)
-    const rawIds = loc.staff_ids
-    let staffIds: string[] = []
-    if (Array.isArray(rawIds)) staffIds = rawIds.map(String)
-    else if (typeof rawIds === 'string') {
-      try { staffIds = JSON.parse(rawIds) } catch { staffIds = [] }
+  for (const [locationId, staffIds] of assignments) {
+    const loc = locationById.get(locationId)
+    if (!loc) continue
+    for (const staffId of staffIds) {
+      const staff = staffById.get(staffId)
+      if (!staff) continue
+      pairs.push({
+        location_id: loc.id,
+        location_name: loc.name,
+        staff_id: staff.id,
+        staff_name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim(),
+      })
     }
-    if (!staffIds.includes(sl.staff_id)) continue
-
-    if (!isEventTypeBooking) {
-      const effective = getEffectiveCategories(sl.staff_id, sl.location_id)
-      if (!effective.includes(categoryCode)) continue
-    }
-
-    pairs.push({
-      location_id: loc.id,
-      location_name: loc.name,
-      staff_id: staff.id,
-      staff_name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim(),
-    })
   }
 
   return pairs
@@ -249,8 +213,8 @@ async function loadBookableStaffLocations(
 
 /**
  * Same core filters as GET /api/booking/get-available-slots
- * (lead time, reservation expiry, category, duration + room required for fahrstunde).
- * Skips school-vehicle filter: booking only applies that when vehicle_mode requires it.
+ * (lead time, reservation expiry, category, duration, room required,
+ * school-vehicle policy from stored settings — empty fleet does not hide slots).
  */
 async function countAvailableSlots(
   supabase: SupabaseClient,
@@ -298,13 +262,13 @@ async function countAvailableSlots(
     const [categoryRes, locationRes] = await Promise.all([
       supabase
         .from('categories')
-        .select('room_settings')
+        .select('room_settings, vehicle_settings')
         .eq('code', opts.categoryCode)
         .eq('tenant_id', opts.tenantId)
         .maybeSingle(),
       supabase
         .from('locations')
-        .select('id, category_room_settings')
+        .select('id, category_room_settings, category_vehicle_settings')
         .eq('id', opts.locationId)
         .maybeSingle(),
     ])
@@ -337,6 +301,44 @@ async function countAvailableSlots(
             allowedRoomIds: rule.allowed_room_ids,
             startTime,
             endTime,
+          })
+          if (!available) {
+            for (const id of slotIds) unavailable.add(id)
+          }
+        }),
+      )
+      filtered = filtered.filter((s) => !unavailable.has(s.id))
+    }
+
+    const policy = resolveSlotVehiclePolicy(
+      locationRes.data?.category_vehicle_settings,
+      categoryRes.data?.vehicle_settings ?? null,
+      opts.categoryCode,
+    )
+    if (policy.requiresSchoolVehicle && filtered.length > 0) {
+      const uniqueTimes = new Map<string, { startTime: string; endTime: string; slotIds: string[] }>()
+      for (const slot of filtered) {
+        const key = `${slot.start_time}:${slot.end_time}`
+        if (!uniqueTimes.has(key)) {
+          uniqueTimes.set(key, {
+            startTime: slot.start_time,
+            endTime: slot.end_time,
+            slotIds: [],
+          })
+        }
+        uniqueTimes.get(key)!.slotIds.push(slot.id)
+      }
+
+      const unavailable = new Set<string>()
+      await Promise.all(
+        Array.from(uniqueTimes.values()).map(async ({ startTime, endTime, slotIds }) => {
+          const available = await isSchoolVehicleAvailable(supabase, {
+            tenantId: opts.tenantId,
+            locationId: opts.locationId,
+            categoryCode: opts.categoryCode,
+            startTime,
+            endTime,
+            enforceCapacity: policy.enforceCapacity,
           })
           if (!available) {
             for (const id of slotIds) unavailable.add(id)

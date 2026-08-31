@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div class="fixed inset-0 z-[300] bg-black/50 flex items-end sm:items-center justify-center" @click.self="$emit('close')">
+    <div class="fixed inset-0 z-[10050] bg-black/50 flex items-end sm:items-center justify-center" @click.self="$emit('close')">
       <div class="bg-white w-full sm:max-w-3xl rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[92svh] sm:max-h-[85vh] overflow-hidden">
 
         <!-- Header -->
@@ -339,6 +339,7 @@ import ViewLinks from '~/components/guide/ViewLinks.vue'
 
 const props = defineProps<{
   initialCriterionId?: string | null
+  initialCriterionName?: string | null
   canEdit?: boolean
 }>()
 
@@ -558,63 +559,34 @@ const loadData = async () => {
     )
     if (!profile?.tenant_id) return
 
-    // Load both tenant-specific and global categories; prefer tenant-specific when names clash
+    // Only tenant-owned categories/criteria — never global templates
     const { data: cats } = await supabase
       .from('evaluation_categories')
-      .select('id, name, color, display_order')
+      .select('id, name, color, display_order, tenant_id')
       .eq('is_active', true)
-      .or(`tenant_id.eq.${profile.tenant_id},tenant_id.is.null`)
+      .eq('tenant_id', profile.tenant_id)
       .order('display_order')
 
-    // Build raw category lookup: id → name (needed to remap criteria later)
-    const rawCatIdToName = new Map((cats || []).map((c: any) => [c.id, c.name]))
-
-    // Deduplicate by name: tenant-specific overrides global
-    const catMap = new Map<string, any>()
-    for (const c of (cats || [])) {
-      const existing = catMap.get(c.name)
-      if (!existing || !existing.tenant_id) catMap.set(c.name, c)
-    }
-    const allCats = Array.from(catMap.values()).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
-
-    // Build preferred category lookup: name → preferred (deduped) id
-    const catNameToPreferredId = new Map(allCats.map(c => [c.name, c.id]))
-
+    const allCats = (cats || []).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
     if (!allCats.length) return
 
     const { data: crit } = await supabase
       .from('evaluation_criteria')
       .select('id, name, description, category_id, display_order, staff_content, tenant_id, driving_categories')
       .eq('is_active', true)
-      .or(`tenant_id.eq.${profile.tenant_id},tenant_id.is.null`)
+      .eq('tenant_id', profile.tenant_id)
       .order('category_id, display_order')
 
-    const critMap = new Map<string, any>()
-    for (const c of (crit || [])) {
-      const existing = critMap.get(c.name)
-      if (!existing || (!existing.tenant_id && c.tenant_id) || (!existing.staff_content && c.staff_content)) critMap.set(c.name, c)
-    }
+    allCriteria.value = crit || []
 
-    // Remap each criterion's category_id to the preferred (deduped) category id
-    // This resolves mismatches where global criteria point to global category IDs
-    // but the dedup prefers the tenant-specific category ID for the same name
-    allCriteria.value = Array.from(critMap.values()).map(c => {
-      const catName = rawCatIdToName.get(c.category_id)
-      const preferredId = catName ? catNameToPreferredId.get(catName) : null
-      return preferredId ? { ...c, category_id: preferredId } : c
-    })
-
-    // Only keep categories that have at least one criterion after remapping
     const usedCatIds = new Set(allCriteria.value.map(c => c.category_id))
     categories.value = allCats.filter(c => usedCatIds.has(c.id))
 
     const catById = new Map(categories.value.map(c => [c.id, c]))
     allCriteria.value = allCriteria.value.map(c => ({ ...c, category_name: catById.get(c.category_id)?.name || '' }))
 
-    if (props.initialCriterionId) {
-      const found = allCriteria.value.find(c => c.id === props.initialCriterionId)
-      if (found) activeCriterion.value = found
-    }
+    const initial = findInitialCriterion(props.initialCriterionId, props.initialCriterionName)
+    if (initial) activeCriterion.value = initial
     if (!activeCriterion.value && flatCriteria.value.length > 0) activeCriterion.value = flatCriteria.value[0]
   } finally {
     isLoading.value = false
@@ -623,11 +595,20 @@ const loadData = async () => {
 
 onMounted(loadData)
 
-watch(() => props.initialCriterionId, (id) => {
-  if (id && allCriteria.value.length) {
-    const found = allCriteria.value.find(c => c.id === id)
-    if (found) activeCriterion.value = found
+const findInitialCriterion = (id?: string | null, name?: string | null) => {
+  if (id) {
+    const byId = allCriteria.value.find(c => c.id === id)
+    if (byId) return byId
   }
+  if (name) {
+    return allCriteria.value.find(c => c.name === name) || null
+  }
+  return null
+}
+
+watch(() => [props.initialCriterionId, props.initialCriterionName], ([id, name]) => {
+  const found = findInitialCriterion(id, name)
+  if (found) activeCriterion.value = found
 })
 </script>
 

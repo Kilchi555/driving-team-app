@@ -109,6 +109,13 @@
       </div>
     </section>
 
+    <SimyWebsiteHighlight
+      title="Werbung ohne starke Website verpufft"
+      subtitle="Google Ads und SEO brauchen eine schnelle, lokale Landingpage. Simy generiert sie — SSR, Preise, Bewertungen. Sonst klickt niemand durch."
+    />
+
+    <SimyGbpHighlight />
+
     <!-- Why Simy for marketing -->
     <section class="py-20 px-6 bg-gray-950">
       <div class="max-w-4xl mx-auto">
@@ -133,7 +140,7 @@
     </section>
 
     <!-- CTA -->
-    <section class="py-24 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
+    <section class="simy-closer py-24 px-6">
       <div class="max-w-2xl mx-auto text-center">
         <h2 class="text-4xl font-black text-white mb-5">Bereit, mehr Kunden zu gewinnen?</h2>
         <p class="text-white/70 text-lg mb-10">Starte kostenlos mit der Software und frage uns nach unserem Marketing-Paket.</p>
@@ -160,18 +167,18 @@ useHead({
     { name: 'keywords', content: 'marketing terminbetriebe, google ads schweiz, lokales seo, mehr kunden gewinnen' },
     { property: 'og:title', content: 'Marketing für Terminbetriebe – Simy | Mehr Kunden gewinnen' },
     { property: 'og:description', content: 'Google Ads und lokales SEO für Terminbetriebe. Simy bringt dir aktiv neue Kunden.' },
-    { property: 'og:url', content: 'https://simy.ch/marketing' },
+    { property: 'og:url', content: 'https://www.simy.ch/marketing' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/marketing' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/marketing' }],
   script: ldScripts(
     serviceLd({
       name: 'Simy Marketing für Terminbetriebe',
       description: 'Google Ads und lokales SEO für Schweizer Terminbetriebe — verbunden mit dem Simy-Buchungssystem.',
-      url: 'https://simy.ch/marketing',
+      url: 'https://www.simy.ch/marketing',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Marketing', url: 'https://simy.ch/marketing' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Marketing', url: 'https://www.simy.ch/marketing' },
     ]),
   ),
 })

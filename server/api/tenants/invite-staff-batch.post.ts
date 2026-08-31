@@ -24,6 +24,7 @@ interface StaffEntry {
   last_name: string
   phone?: string
   email?: string
+  is_self?: boolean
 }
 
 export default defineEventHandler(async (event) => {
@@ -206,7 +207,8 @@ export default defineEventHandler(async (event) => {
         invitation_token: token,
         invited_by: invitedBy,
         expires_at: expiresAt.toISOString(),
-        status: 'pending'
+        status: 'pending',
+        link_to_admin: entry.is_self === true && !!invitedBy,
       })
       .select('id')
       .single()

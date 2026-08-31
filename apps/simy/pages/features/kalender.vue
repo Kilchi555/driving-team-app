@@ -37,47 +37,14 @@
       </div>
     </section>
 
-    <!-- Calendar UI mockup -->
-    <section class="py-10 px-6 bg-gray-50 border-y border-gray-100">
-      <div class="max-w-2xl mx-auto">
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-lg overflow-hidden">
-          <!-- Mockup header -->
-          <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-            <div class="flex items-center gap-2">
-              <div class="w-2 h-2 rounded-full bg-red-400"></div>
-              <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
-              <div class="w-2 h-2 rounded-full bg-green-400"></div>
-            </div>
-            <span class="text-xs text-gray-400 font-medium">Simy — Kalender</span>
-            <div></div>
-          </div>
-          <!-- Weekday header -->
-          <div class="grid grid-cols-5 text-center border-b border-gray-50">
-            <div v-for="day in days" :key="day.label"
-              class="py-2 text-xs font-bold"
-              :class="day.today ? 'text-white' : 'text-gray-400'"
-              :style="day.today ? 'background: rgba(var(--brand-rgb),0.08)' : ''">
-              <div>{{ day.label }}</div>
-              <div class="text-lg font-black" :style="day.today ? 'color: var(--brand-primary)' : 'color: #374151'">{{ day.num }}</div>
-            </div>
-          </div>
-          <!-- Time slots -->
-          <div class="grid grid-cols-5 divide-x divide-gray-50">
-            <div v-for="(col, ci) in calendarSlots" :key="ci" class="space-y-1 p-1.5">
-              <div v-for="slot in col" :key="slot.time"
-                class="rounded-lg px-2 py-1.5 text-xs"
-                :class="slot.empty ? 'bg-gray-50' : ''"
-                :style="slot.empty ? '' : `background: ${slot.color}15; border-left: 3px solid ${slot.color}`">
-                <div v-if="!slot.empty">
-                  <div class="font-bold" :style="`color: ${slot.color}`">{{ slot.time }}</div>
-                  <div class="text-gray-600 truncate">{{ slot.name }}</div>
-                </div>
-                <div v-else class="text-gray-300 text-center py-0.5">·</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <p class="text-xs text-center text-gray-400 mt-3">Alle Mitarbeiter auf einen Blick — live synchronisiert</p>
+    <section class="py-10 px-6 bg-[#f7f6fa] border-y border-gray-100">
+      <div class="max-w-5xl mx-auto">
+        <SimyShot
+          src="/screenshots/desktop-calendar.webp"
+          alt="Simy Wochenkalender — echte Produktansicht"
+          caption="iCal: Simy-Termine im privaten Kalender · Privattermine sperren Buchungen"
+          priority
+        />
       </div>
     </section>
 
@@ -99,6 +66,11 @@
         </div>
       </div>
     </section>
+
+    <SimyWebsiteHighlight
+      title="Kalender allein reicht nicht — Kunden müssen dich finden"
+      subtitle="Die Simy-Website ist die öffentliche Seite vor dem Buchungskalender. SEO, Preise, Bewertungen — dann erst der Termin."
+    />
 
     <!-- CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
@@ -128,63 +100,27 @@ useHead({
     { name: 'keywords', content: 'terminplanung software schweiz, online buchungskalender, kalender app dienstleister' },
     { property: 'og:title', content: 'Kalender & Terminplanung – Simy | Stundenplan auf Autopilot' },
     { property: 'og:description', content: 'Multi-Mitarbeiter-Kalender, iCal-Sync, automatische Erinnerungen. Alles synchronisiert.' },
-    { property: 'og:url', content: 'https://simy.ch/features/kalender' },
+    { property: 'og:url', content: 'https://www.simy.ch/features/kalender' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/features/kalender' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/features/kalender' }],
   script: ldScripts(
     webPageLd({
       name: 'Kalender & Terminplanung – Simy',
       description: 'Multi-Mitarbeiter-Kalender mit Online-Buchung, iCal-Sync und Erinnerungen.',
-      url: 'https://simy.ch/features/kalender',
+      url: 'https://www.simy.ch/features/kalender',
     }),
     softwareAppLd({
       name: 'Simy Kalender',
       description: 'Terminplanung und Kalender-Sync für Schweizer Selbständige und KMUs.',
-      url: 'https://simy.ch/features/kalender',
+      url: 'https://www.simy.ch/features/kalender',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Features', url: 'https://simy.ch/features/kalender' },
-      { name: 'Kalender', url: 'https://simy.ch/features/kalender' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Features', url: 'https://www.simy.ch/features/kalender' },
+      { name: 'Kalender', url: 'https://www.simy.ch/features/kalender' },
     ]),
   ),
 })
-
-const days = [
-  { label: 'Mo', num: '19', today: false },
-  { label: 'Di', num: '20', today: false },
-  { label: 'Mi', num: '21', today: true },
-  { label: 'Do', num: '22', today: false },
-  { label: 'Fr', num: '23', today: false },
-]
-
-const calendarSlots = [
-  [
-    { time: '08:00', name: 'Marc H.', color: 'var(--brand-primary)', empty: false },
-    { empty: true },
-    { time: '14:00', name: 'Lena K.', color: 'var(--brand-primary)', empty: false },
-  ],
-  [
-    { empty: true },
-    { time: '10:00', name: 'Tom B.', color: '#059669', empty: false },
-    { time: '15:00', name: 'Workshop', color: '#DC2626', empty: false },
-  ],
-  [
-    { time: '09:00', name: 'Lisa M.', color: '#0891B2', empty: false },
-    { time: '11:00', name: 'Kurs', color: '#EA580C', empty: false },
-    { empty: true },
-  ],
-  [
-    { time: '08:00', name: 'Jan F.', color: 'var(--brand-primary)', empty: false },
-    { empty: true },
-    { time: '16:00', name: 'Anna S.', color: 'var(--brand-primary)', empty: false },
-  ],
-  [
-    { empty: true },
-    { time: '10:30', name: 'Nils P.', color: '#059669', empty: false },
-    { time: '14:00', name: 'Rita Z.', color: '#059669', empty: false },
-  ],
-]
 
 const calFeatures = [
   { icon: 'refresh', title: 'Echtzeit-Synchronisation', desc: 'Änderungen sind sofort sichtbar — für dich, alle Mitarbeiter und deine Kunden.' },

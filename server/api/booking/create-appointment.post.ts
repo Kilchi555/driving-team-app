@@ -37,14 +37,19 @@ import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
-import { matchesDiscountCategoryFilter } from '~/server/utils/discount-category-filter'
-import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
+import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
+import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockCheckoutBenefits } from '~/server/utils/checkout-benefits'
 import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 import { resolveRoomSettings, pickAvailableRoomId, type RoomServiceType } from '~/server/utils/room-availability'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
-import { mergeAttributionFields } from '~/server/utils/marketing-attribution-merge'
+import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
+import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
+import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
+import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
+import { createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
+import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -93,6 +98,8 @@ interface CreateAppointmentRequest {
   service_type?: RoomServiceType
   /** Customer-selected payment method. Only 'invoice' is honored, and only when the tenant has explicitly enabled it — otherwise falls back to 'wallee'. */
   payment_method?: 'wallee' | 'invoice'
+  /** Default true: apply available wallet credit before checkout / invoice. */
+  apply_available_credit?: boolean
 }
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -168,7 +175,11 @@ export default defineEventHandler(async (event: H3Event) => {
 
     if (userProfileError || !userData) {
       logger.warn('❌ User profile not found for authenticated user')
-      throw createError({ statusCode: 404, statusMessage: 'User profile not found' })
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Bitte melde dich an oder registriere dich',
+        data: { code: 'NO_PROFILE' }
+      })
     }
 
     tenantId = userData.tenant_id
@@ -325,7 +336,11 @@ export default defineEventHandler(async (event: H3Event) => {
     // Verify slot belongs to user's tenant
     if (slot.tenant_id !== tenantId) {
       logger.warn('❌ Slot does not belong to user tenant')
-      throw createError({ statusCode: 403, statusMessage: 'Access denied' })
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Dieses Konto gehört zu einer anderen Fahrschule',
+        data: { code: 'WRONG_TENANT' }
+      })
     }
 
     // ============ LAYER 6: CREATE APPOINTMENT ============ 
@@ -506,6 +521,42 @@ export default defineEventHandler(async (event: H3Event) => {
       adminFeeAppliesFromRule,
     })
     const adminFeeRappen = adminFeeResult.adminFeeRappen
+    const travelFee = await quoteTravelFee(tenantId!, {
+      locationId: slot.location_id,
+      locationType: body.customer_pickup_plz || body.customer_pickup_address ? 'pickup' : null,
+      destinationAddress: body.customer_pickup_address,
+      pickupPlz: body.customer_pickup_plz,
+    })
+    const travelFeeRappen = travelFee.fee_rappen || 0
+
+    let resolvedPaymentMethod: 'wallee' | 'invoice' = 'wallee'
+    if (body.payment_method === 'invoice') {
+      const { data: paymentSettingRow } = await supabase
+        .from('tenant_settings')
+        .select('setting_value')
+        .eq('tenant_id', tenantId)
+        .eq('category', 'payment')
+        .eq('setting_key', 'payment_settings')
+        .maybeSingle()
+      const tenantPaymentSettings = paymentSettingRow?.setting_value
+        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
+        : {}
+      if (tenantPaymentSettings.invoice_payments_enabled === true) {
+        resolvedPaymentMethod = 'invoice'
+      } else {
+        logger.warn('⚠️ Customer requested invoice payment but tenant has not enabled it — falling back to wallee', { tenantId })
+      }
+    }
+
+    const { data: tenantPayPolicy } = await supabase
+      .from('tenants')
+      .select('booking_policy, slug, wallee_enabled')
+      .eq('id', tenantId)
+      .maybeSingle()
+    const mayHoldUntilPaid =
+      tenantPayPolicy?.booking_policy?.require_payment_before_confirm === true
+      && resolvedPaymentMethod === 'wallee'
+
     logger.debug('💼 Admin fee decision (booking flow):', {
       user_id: userData.id,
       category: body.category_code,
@@ -533,31 +584,12 @@ export default defineEventHandler(async (event: H3Event) => {
     })
     
     // Prefer client payload; always merge DB + booking_redirects by session so
-    // Fahrstunden bookings keep gclid when only session_id crossed domains.
-    let marketingAttr: MarketingAttributionPayload | null = body.marketing_attribution ?? null
-    if (body.marketing_session_id) {
-      const { data: attrRow } = await supabase
-        .from('marketing_attributions')
-        .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
-        .eq('session_id', body.marketing_session_id)
-        .maybeSingle()
-      if (attrRow) {
-        marketingAttr = mergeAttributionFields(attrRow, marketingAttr) as MarketingAttributionPayload
-      }
-
-      if (!marketingAttr?.gclid && !marketingAttr?.gbraid && !marketingAttr?.wbraid) {
-        const { data: redirectRow } = await supabase
-          .from('booking_redirects')
-          .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
-          .eq('session_id', body.marketing_session_id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        if (redirectRow) {
-          marketingAttr = mergeAttributionFields(marketingAttr, redirectRow) as MarketingAttributionPayload
-        }
-      }
-    }
+    // Fahrstunden bookings keep gclid/fbclid when only session_id crossed domains.
+    const marketingAttr = await resolveMarketingAttribution(
+      supabase,
+      body.marketing_session_id,
+      body.marketing_attribution,
+    )
 
     // Auto-assign a room (never chosen by the customer) — pick the first free
     // room from the admin-configured pool for this category+location+service type.
@@ -591,7 +623,7 @@ export default defineEventHandler(async (event: H3Event) => {
         event_type_code: eventTypeRes.data?.code || body.appointment_type || 'lesson',
         title: appointmentTitle, // "{Vorname} {Name} - {Ort}"
         description: sanitizedNotes || '', // Use notes as description, or empty string
-        status: 'confirmed', // Status: confirmed (not booked)
+        status: mayHoldUntilPaid ? 'pending' : 'confirmed',
         original_price_rappen: totalAmountRappen, // Add default price
         source: 'online',
         created_by: userData.id,
@@ -758,153 +790,29 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     }
 
-    if (body.discount_code && body.discount_amount_rappen && body.discount_amount_rappen > 0) {
-      try {
-        const discountCode = body.discount_code
-        let discountFound = false
+    const grossAmountRappen = totalAmountRappen + adminFeeRappen + travelFeeRappen
 
-        // 1. Try voucher_codes table (type must be 'discount', not 'credit'; applies to appointments)
-        const { data: voucherData } = await supabase
-          .from('voucher_codes')
-          .select('discount_type, discount_value, max_discount_rappen, valid_from, valid_until, is_active, type, applies_to, max_redemptions, current_redemptions')
-          .ilike('code', discountCode)
-          .eq('tenant_id', tenantId!)
-          .eq('is_active', true)
-          .maybeSingle()
-
-        if (voucherData) {
-          const isDiscountType = voucherData.type && voucherData.type !== 'credit'
-          const appliesTo = voucherData.applies_to || 'appointments'
-          const appliesToAppointments = appliesTo === 'all' || appliesTo === 'appointments'
-          const now = new Date()
-          const validFrom = voucherData.valid_from ? new Date(voucherData.valid_from) : null
-          const validUntil = voucherData.valid_until ? new Date(voucherData.valid_until) : null
-          const withinPeriod = (!validFrom || now >= validFrom) && (!validUntil || now <= validUntil)
-          const withinLimit = !voucherData.max_redemptions || (voucherData.current_redemptions ?? 0) < voucherData.max_redemptions
-
-          if (isDiscountType && appliesToAppointments && withinPeriod && withinLimit) {
-            if (voucherData.discount_type === 'percentage') {
-              validatedDiscountAmount = Math.round((totalAmountRappen * voucherData.discount_value) / 100)
-              if (voucherData.max_discount_rappen) {
-                validatedDiscountAmount = Math.min(validatedDiscountAmount, voucherData.max_discount_rappen)
-              }
-            } else if (voucherData.discount_type === 'fixed') {
-              // voucher_codes.discount_value is stored in Rappen
-              validatedDiscountAmount = voucherData.discount_value || 0
-            }
-            discountFound = true
-          }
-        }
-
-        // 2. Try vouchers table (purchased gift cards from shop – full amount as discount)
-        if (!discountFound) {
-          const { data: giftCard } = await supabase
-            .from('vouchers')
-            .select('amount_rappen, redeemed_at, valid_until, is_active')
-            .ilike('code', discountCode)
-            .eq('tenant_id', tenantId!)
-            .eq('is_active', true)
-            .maybeSingle()
-
-          if (giftCard && !giftCard.redeemed_at) {
-            const now = new Date()
-            const withinPeriod = !giftCard.valid_until || new Date(giftCard.valid_until) >= now
-            if (withinPeriod) {
-              validatedDiscountAmount = giftCard.amount_rappen
-              discountFound = true
-            }
-          }
-        }
-
-        // 3. Try discounts table
-        if (!discountFound) {
-          const { data: discountData } = await supabase
-            .from('discounts')
-            .select('discount_type, discount_value, max_discount_rappen, valid_from, valid_until, is_active, first_lesson_only, usage_limit, usage_count, category_filter')
-            .ilike('code', discountCode)
-            .eq('tenant_id', tenantId!)
-            .eq('is_active', true)
-            .maybeSingle()
-
-          if (discountData) {
-            const now = new Date()
-            const validFrom = discountData.valid_from ? new Date(discountData.valid_from) : null
-            const validUntil = discountData.valid_until ? new Date(discountData.valid_until) : null
-            const withinPeriod = (!validFrom || now >= validFrom) && (!validUntil || now <= validUntil)
-            const withinLimit = !discountData.usage_limit || (discountData.usage_count ?? 0) < discountData.usage_limit
-            const categoryOk = matchesDiscountCategoryFilter(discountData.category_filter, body.category_code)
-
-            if (withinPeriod && withinLimit && categoryOk) {
-              // Check first_lesson_only: appointment just inserted counts, so <= 1 means first lesson
-              let firstLessonOk = true
-              if (discountData.first_lesson_only) {
-                const { count: apptCount } = await supabase
-                  .from('appointments')
-                  .select('id', { count: 'exact', head: true })
-                  .eq('user_id', userData.id)
-                  .eq('tenant_id', tenantId!)
-                  .in('status', ['confirmed', 'completed'])
-                firstLessonOk = (apptCount ?? 0) <= 1
-              }
-
-              if (firstLessonOk) {
-                if (discountData.discount_type === 'percentage') {
-                  validatedDiscountAmount = Math.round((totalAmountRappen * discountData.discount_value) / 100)
-                  if (discountData.max_discount_rappen) {
-                    validatedDiscountAmount = Math.min(validatedDiscountAmount, discountData.max_discount_rappen)
-                  }
-                } else if (discountData.discount_type === 'fixed') {
-                  // discounts.discount_value is stored in Franken → convert to Rappen
-                  validatedDiscountAmount = Math.round((discountData.discount_value || 0) * 100)
-                } else if (discountData.discount_type === 'free_lesson') {
-                  validatedDiscountAmount = totalAmountRappen
-                }
-                discountFound = true
-              }
-            }
-          }
-        }
-
-        validatedDiscountAmount = Math.min(validatedDiscountAmount, totalAmountRappen)
-        logger.debug('💸 Discount validated:', { code: discountCode, amount: validatedDiscountAmount, found: discountFound })
-      } catch (discountErr: any) {
-        logger.warn('⚠️ Discount validation failed (non-critical):', discountErr.message)
-      }
+    if (body.discount_code) {
+      const resolved = await resolveAppointmentDiscount({
+        supabase,
+        tenantId: tenantId!,
+        code: body.discount_code,
+        lessonAmountRappen: totalAmountRappen,
+        capAtRappen: grossAmountRappen,
+        categoryCode: body.category_code,
+        userId: userData.id,
+      })
+      validatedDiscountAmount = resolved.amountRappen
+    } else {
+      validatedDiscountAmount = Math.min(validatedDiscountAmount, grossAmountRappen)
     }
 
-    // ============ LAYER 7b.5: INCREMENT USAGE COUNT ============
     const discountCodeToTrack = validatedDiscountAmount > 0
       ? (body.discount_code || autoDiscountCode)
       : null
     const effectiveDiscountCode = body.discount_code || autoDiscountCode
-
-    // Lesson price + admin fee, then discount applied on top.
-    const grossAmountRappen = totalAmountRappen + adminFeeRappen
-    const netAmountRappen = Math.max(0, grossAmountRappen - validatedDiscountAmount)
-
-    // ============ LAYER 7c: RESOLVE PAYMENT METHOD ============
-    // Default to 'wallee'. A customer-requested 'invoice' is only honored if
-    // the tenant has explicitly enabled it in tenant_settings — otherwise we
-    // silently fall back to wallee so a spoofed request body can't be used
-    // to avoid online payment.
-    let resolvedPaymentMethod: 'wallee' | 'invoice' = 'wallee'
-    if (body.payment_method === 'invoice') {
-      const { data: paymentSettingRow } = await supabase
-        .from('tenant_settings')
-        .select('setting_value')
-        .eq('tenant_id', tenantId)
-        .eq('category', 'payment')
-        .eq('setting_key', 'payment_settings')
-        .maybeSingle()
-      const tenantPaymentSettings = paymentSettingRow?.setting_value
-        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
-        : {}
-      if (tenantPaymentSettings.invoice_payments_enabled === true) {
-        resolvedPaymentMethod = 'invoice'
-      } else {
-        logger.warn('⚠️ Customer requested invoice payment but tenant has not enabled it — falling back to wallee', { tenantId })
-      }
-    }
+    const netAmountRappen = netAfterAppointmentDiscount(grossAmountRappen, validatedDiscountAmount)
+    const applyAvailableCredit = body.apply_available_credit !== false
 
     // ============ LAYER 8: CREATE PAYMENT ============ 
     logger.debug('💳 Creating payment record for appointment...', {
@@ -935,7 +843,9 @@ export default defineEventHandler(async (event: H3Event) => {
       metadata: {
         category: body.category_code || null,
         admin_fee_reason: adminFeeResult.reason,
-        ...(effectiveDiscountCode ? { discount_code: effectiveDiscountCode, discount_auto_applied: !body.discount_code } : {})
+        ...(mayHoldUntilPaid ? { pay_before_confirm: true } : {}),
+        ...(effectiveDiscountCode ? { discount_code: effectiveDiscountCode, discount_auto_applied: !body.discount_code } : {}),
+        ...(travelFeeRappen > 0 ? { travel_fee: { km: travelFee.km, billable_km: travelFee.billable_km, fee_rappen: travelFeeRappen, capped: travelFee.capped, label: travelFee.label } } : {}),
       },
       currency: 'CHF',
       created_by: newAppointment.user_id
@@ -960,48 +870,123 @@ export default defineEventHandler(async (event: H3Event) => {
       logger.warn('⚠️ Warning: Appointment created, but payment record failed.')
     } else {
       logger.debug('✅ Payment record created successfully:', newPayment.id)
+      if (discountCodeToTrack && tenantId) {
+        const locked = await lockCheckoutBenefits({
+          supabase,
+          tenantId,
+          paymentId: newPayment.id,
+          code: discountCodeToTrack,
+        })
+        if (!locked.ok) {
+          logger.warn('⚠️ Discount could not be locked, aborting booking', locked.reason)
+          await abortCheckoutAfterBenefitLockFail({
+            supabase,
+            paymentId: newPayment.id,
+            appointmentId: newAppointment.id,
+          })
+          throw createError(benefitLockUnavailablePayload(locked.reason))
+        }
+      }
     }
 
-    // ============ LAYER 8.5: INCREMENT DISCOUNT USAGE COUNT ============
-    if (discountCodeToTrack && tenantId) {
-      ;(async () => {
-        try {
-          // Try discounts table first
-          const { data: disc } = await supabase
-            .from('discounts')
-            .select('id, usage_count')
-            .ilike('code', discountCodeToTrack)
-            .eq('tenant_id', tenantId)
-            .maybeSingle()
-
-          if (disc) {
-            await supabase
-              .from('discounts')
-              .update({ usage_count: (disc.usage_count ?? 0) + 1 })
-              .eq('id', disc.id)
-            logger.debug('📊 Discount usage_count incremented:', discountCodeToTrack)
-            return
-          }
-
-          // Try voucher_codes table
-          const { data: vc } = await supabase
-            .from('voucher_codes')
-            .select('id, current_redemptions')
-            .ilike('code', discountCodeToTrack)
-            .eq('tenant_id', tenantId)
-            .maybeSingle()
-
-          if (vc) {
-            await supabase
-              .from('voucher_codes')
-              .update({ current_redemptions: (vc.current_redemptions ?? 0) + 1 })
-              .eq('id', vc.id)
-            logger.debug('📊 Voucher current_redemptions incremented:', discountCodeToTrack)
-          }
-        } catch (e: any) {
-          logger.warn('⚠️ Failed to increment discount usage (non-critical):', e.message)
+    let remainingDue = netAmountRappen
+    if (newPayment && applyAvailableCredit && newAppointment.user_id) {
+      try {
+        const creditResult = await applyRequestedStudentCredit({
+          supabase,
+          tenantId: tenantId!,
+          actorUserId: userData.id,
+          studentUserId: newAppointment.user_id,
+          payment: newPayment,
+          apply: true,
+        })
+        remainingDue = creditResult.remaining_due_rappen
+        if (creditResult.applied_rappen > 0) {
+          logger.info('💳 Booking wallet credit applied', {
+            paymentId: newPayment.id,
+            appliedRappen: creditResult.applied_rappen,
+            remainingDue,
+          })
         }
-      })()
+      } catch (creditErr: any) {
+        logger.error('❌ Booking wallet credit failed:', creditErr?.message)
+        if (mayHoldUntilPaid) {
+          await releaseUnpaidPendingAppointment({ appointmentId: newAppointment.id, tenantId })
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Guthaben konnte nicht verrechnet werden',
+          })
+        }
+      }
+    }
+
+    let holdUntilPaid = shouldHoldAppointmentUntilPaid({
+      requirePaymentBeforeConfirm: tenantPayPolicy?.booking_policy?.require_payment_before_confirm === true,
+      paymentMethod: resolvedPaymentMethod,
+      amountRappen: remainingDue,
+    })
+    if (mayHoldUntilPaid && !holdUntilPaid) {
+      await supabase
+        .from('appointments')
+        .update({ status: 'confirmed', updated_at: new Date().toISOString() })
+        .eq('id', newAppointment.id)
+        .eq('status', 'pending')
+    }
+
+    if (holdUntilPaid && !newPayment) {
+      await releaseUnpaidPendingAppointment({ appointmentId: newAppointment.id, tenantId })
+      throw createError({ statusCode: 500, statusMessage: 'Zahlung konnte nicht erstellt werden' })
+    }
+
+    let paymentUrl: string | undefined
+    if (holdUntilPaid && newPayment) {
+      if (!tenantPayPolicy?.wallee_enabled) {
+        await releaseUnpaidPendingAppointment({ appointmentId: newAppointment.id, tenantId })
+        throw createError({
+          statusCode: 402,
+          statusMessage: 'Online-Zahlung ist für dieses Unternehmen nicht aktiviert.',
+        })
+      }
+      if (!(userData.email || '').trim()) {
+        await releaseUnpaidPendingAppointment({ appointmentId: newAppointment.id, tenantId })
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Für die Onlinezahlung ist eine E-Mail-Adresse erforderlich.',
+        })
+      }
+
+      const existingMeta = (newPayment.metadata && typeof newPayment.metadata === 'object')
+        ? newPayment.metadata
+        : {}
+      await supabase
+        .from('payments')
+        .update({
+          metadata: { ...existingMeta, pay_before_confirm: true },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', newPayment.id)
+        .eq('tenant_id', tenantId)
+
+      try {
+        const checkout = await createWalleeCheckoutForPayment({
+          paymentId: newPayment.id,
+          tenantId: tenantId!,
+          customerEmail: userData.email!,
+          customerName: `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'Kunde',
+          customerId: userData.id,
+          appointmentId: newAppointment.id,
+          startTime: slot.start_time,
+          durationMinutes: slot.duration_minutes,
+        })
+        paymentUrl = checkout.paymentUrl
+      } catch (checkoutErr: any) {
+        logger.error('❌ Pay-before-confirm checkout failed:', checkoutErr?.message)
+        await releaseUnpaidPendingAppointment({ appointmentId: newAppointment.id, tenantId })
+        throw createError({
+          statusCode: checkoutErr?.statusCode || 502,
+          statusMessage: checkoutErr?.statusMessage || 'Zahlung konnte nicht gestartet werden',
+        })
+      }
     }
 
     // ============ LAYER 9: Mark all reserved slots as definitively booked ============
@@ -1067,18 +1052,19 @@ export default defineEventHandler(async (event: H3Event) => {
       logger.warn('⚠️ Could not queue availability recalc after booking (non-critical):', err.message)
     })
 
-    // Direct dispatch (no nested HTTP). Awaits Resend; on failure queues for cron.
-    try {
-      const { dispatchAppointmentConfirmation } = await import(
-        '~/server/utils/dispatch-appointment-confirmation'
-      )
-      await dispatchAppointmentConfirmation({
-        appointmentId: newAppointment.id,
-        userId: userData.id,
-        tenantId: tenantId,
-      })
-    } catch (err: any) {
-      logger.warn('⚠️ Could not send appointment confirmation email (non-critical):', err?.message)
+    if (!holdUntilPaid) {
+      try {
+        const { dispatchAppointmentConfirmation } = await import(
+          '~/server/utils/dispatch-appointment-confirmation'
+        )
+        await dispatchAppointmentConfirmation({
+          appointmentId: newAppointment.id,
+          userId: userData.id,
+          tenantId: tenantId,
+        })
+      } catch (err: any) {
+        logger.warn('⚠️ Could not send appointment confirmation email (non-critical):', err?.message)
+      }
     }
 
     // ============ LAYER 11: SERVER-SIDE GOOGLE ADS CONVERSION UPLOAD ============
@@ -1094,7 +1080,15 @@ export default defineEventHandler(async (event: H3Event) => {
 
         // Conversion value: net amount after discount, fallback to gross.
         // normalizeConversionValueChf inside the uploader floors CHF 0 free bookings.
-        const conversionValueChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
+        const lessonPriceChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
+        const { resolveBookingConversionValue } = await import('~/server/utils/conversion-value')
+        const conversionValue = await resolveBookingConversionValue({
+          tenantId,
+          categoryCode: body.category_code,
+          eventTypeCode: body.appointment_type,
+          isNewCustomer,
+          lessonPriceChf,
+        })
 
         await recordAndUploadConversion({
           appointment_id: newAppointment.id,
@@ -1102,10 +1096,11 @@ export default defineEventHandler(async (event: H3Event) => {
           gclid: marketingAttr.gclid ?? null,
           gbraid: marketingAttr.gbraid ?? null,
           wbraid: marketingAttr.wbraid ?? null,
-          conversion_value_chf: conversionValueChf,
+          conversion_value_chf: conversionValue.value_chf,
           conversion_date_time: new Date(),
           hashed_email: hashedEmail,
           hashed_phone: hashedPhone,
+          is_new_customer: isNewCustomer,
         })
       } catch (err: any) {
         logger.warn('⚠️ Server-side Google Ads conversion upload failed (non-critical):', err?.message ?? err)
@@ -1115,37 +1110,37 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // ============ LAYER 11b: META CONVERSIONS API (CAPI) UPLOAD ============
-    // Fire-and-forget. Sends a Purchase event to Meta's CAPI even when the browser
-    // Pixel fires too — Meta deduplicates via event_id. Requires at least one user
-    // signal (fbclid, fbc, fbp, email, or phone) to be meaningful.
-    ;(async () => {
-      try {
-        const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
-        const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
-        const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
-        const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+    // Awaited: Vercel freezes the isolate after the response. Pixel still fires
+    // in the browser — Meta deduplicates via event_id.
+    let sentMetaPurchase = false
+    try {
+      const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
+      const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+      const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
+      const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
 
-        const conversionValueChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
-
-        await recordAndSendCapiEvent({
-          appointment_id: newAppointment.id,
-          tenant_id: tenantId ?? null,
-          event_name: 'Purchase',
-          conversion_value_chf: conversionValueChf,
-          conversion_date_time: new Date(),
-          fbclid: marketingAttr?.fbclid ?? null,
-          fbc: marketingAttr?.fbc ?? null,
-          fbp: marketingAttr?.fbp ?? null,
-          hashed_email: hashedEmail,
-          hashed_phone: hashedPhone,
-          client_ip: ipAddress ?? null,
-          user_agent: getHeader(event, 'user-agent') ?? null,
-          event_source_url: getHeader(event, 'referer') ?? null,
-        })
-      } catch (err: any) {
-        logger.warn('⚠️ Meta CAPI upload failed (non-critical):', err?.message ?? err)
-      }
-    })()
+      const { maybeSendMetaBookingPurchase } = await import('~/server/utils/meta-booking-conversion')
+      sentMetaPurchase = tenantId
+        ? await maybeSendMetaBookingPurchase({
+            supabase,
+            appointmentId: newAppointment.id,
+            userId: userData.id,
+            tenantId,
+            fbclid: marketingAttr?.fbclid,
+            fbc: marketingAttr?.fbc,
+            fbp: marketingAttr?.fbp,
+            conversionValueChf: (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100,
+            hashedEmail,
+            hashedPhone,
+            clientIp: ipAddress ?? null,
+            userAgent: getHeader(event, 'user-agent') ?? null,
+            eventSourceUrl: getHeader(event, 'referer') ?? null,
+            deferUntilPaid: !!holdUntilPaid,
+          })
+        : false
+    } catch (err: any) {
+      logger.warn('⚠️ Meta CAPI upload failed (non-critical):', err?.message ?? err)
+    }
 
     // ============ LAYER 12: LINK booking_events.completed TO APPOINTMENT ============
     // Closes the first-party funnel so we can answer "which marketing session
@@ -1165,62 +1160,35 @@ export default defineEventHandler(async (event: H3Event) => {
       })()
     }
 
-    // ============ LAYER 13: STORE ACQUISITION ATTRIBUTION ON USER ============
-    // For new customers only, and only if not already set.
-    // This lets us attribute ALL future bookings and revenue back to the original
-    // marketing source — enabling true LTV-per-channel analysis.
-    if (isNewCustomer && (marketingAttr || body.marketing_session_id)) {
-      ;(async () => {
-        try {
-          // Resolve referrer page from booking_redirects if we have a marketing_session_id
-          let referrerPage: string | null = null
-          if (body.marketing_session_id) {
-            const { data: redirect } = await supabase
-              .from('booking_redirects')
-              .select('referrer_page')
-              .eq('session_id', body.marketing_session_id)
-              .maybeSingle()
-            referrerPage = redirect?.referrer_page ?? null
-          }
-
-          const source = marketingAttr?.utm_source ?? (referrerPage ? 'organic/direct' : null)
-          const medium = marketingAttr?.utm_medium ?? (marketingAttr?.gclid ? 'cpc' : referrerPage ? 'organic' : null)
-
-          // Also read utm_term from booking_redirects if not in marketingAttr
-          let utmTerm = marketingAttr?.utm_term ?? null
-          if (!utmTerm && body.marketing_session_id) {
-            const { data: redirectTerm } = await supabase
-              .from('booking_redirects')
-              .select('utm_term')
-              .eq('session_id', body.marketing_session_id)
-              .maybeSingle()
-            utmTerm = redirectTerm?.utm_term ?? null
-          }
-
-          await supabase
-            .from('users')
-            .update({
-              acquisition_source: source,
-              acquisition_medium: medium,
-              acquisition_campaign: marketingAttr?.utm_campaign ?? null,
-              acquisition_term: utmTerm,
-              acquisition_referrer_page: referrerPage,
-              acquisition_gclid: marketingAttr?.gclid ?? null,
-              acquisition_at: new Date().toISOString(),
-            })
-            .eq('id', userData.id)
-            .is('acquisition_at', null) // Never overwrite existing attribution
-        } catch (err: any) {
-          logger.warn('⚠️ Could not write acquisition attribution to user (non-critical):', err?.message ?? err)
-        }
-      })()
+    // ============ LAYER 13: FIRST-TOUCH ON USER (never overwrite) ============
+    try {
+      if (tenantId) await stampFirstTouchAcquisition({
+        userId: userData.id,
+        tenantId,
+        email: userData.email,
+        phone: userData.phone,
+        attribution: marketingAttr,
+        marketingSessionId: body.marketing_session_id,
+        fallbackSource: isNewCustomer ? 'organic/direct' : undefined,
+        fallbackMedium: isNewCustomer ? 'organic' : undefined,
+        lookupAttributedProposal: true,
+        supabase,
+      })
+    } catch (err: any) {
+      logger.warn('⚠️ Could not write first-touch acquisition (non-critical):', err?.message ?? err)
     }
 
     // ============ LAYER 10: RETURN RESPONSE ============
     return {
       success: true,
       appointment_id: newAppointment.id,
-      message: 'Appointment created successfully.',
+      payment_id: newPayment?.id || null,
+      send_meta_purchase: sentMetaPurchase,
+      requires_payment: !!holdUntilPaid,
+      paymentUrl: paymentUrl || null,
+      message: holdUntilPaid
+        ? 'Platz reserviert. Bitte Zahlung abschliessen.'
+        : 'Appointment created successfully.',
       reservation: {
         slot_id: body.slot_id,
         start_time: slot.start_time,

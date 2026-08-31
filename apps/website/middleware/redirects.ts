@@ -5,10 +5,12 @@ export default defineNuxtRouteMiddleware((to, from) => {
     '/categories/motorrad': '/motorrad-fahrschule/',
     '/categories/lastwagen': '/lastwagen-fahrschule/',
     '/categories/taxi': '/taxi-fahrschule/',
-    '/pricing': '/preise/',
-    '/about': '/uber-uns/',
+    '/pricing': '/fahrschule-preise/',
+    '/about': '/team/',
     '/contact': '/kontakt/',
-    '/faq': '/',
+    // Keep in sync with vercel.json — leftover .vue must not serve conflicting canonicals
+    '/fahrschule-pfaeffikon': '/fahrschule-pfaeffikon-sz/',
+    '/fahrschule-pfaeffikon/': '/fahrschule-pfaeffikon-sz/',
   }
 
   const redirectUrl = redirects[to.path]

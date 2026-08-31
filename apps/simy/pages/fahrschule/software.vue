@@ -153,9 +153,39 @@
             </tbody>
           </table>
         </div>
+        <SimyPriceVatNote class="mt-3" />
       </section>
 
     </div>
+
+    <div class="max-w-4xl mx-auto px-6 pb-16 space-y-16">
+      <section>
+        <h2 class="text-3xl font-extrabold text-gray-900 mb-4">Was Simy sichtbar macht — ohne Assistenten</h2>
+        <p class="text-gray-600 leading-relaxed mb-6">
+          Dokumentation, Portal und Abholung gehören zum Betrieb. Simy zeigt denselben Stand Lehrer und Schüler. Die nächste Stunde planst du.
+        </p>
+        <div class="grid sm:grid-cols-3 gap-4">
+          <a href="/fahrschule/dokumentation" class="rounded-2xl border border-gray-100 p-5 hover:border-gray-200">
+            <h3 class="font-bold text-gray-900 mb-1 text-sm">Dokumentation & PDF</h3>
+            <p class="text-xs text-gray-500">Bewertungen nach der Stunde. Schüler sehen den Stand.</p>
+          </a>
+          <a href="/fahrschule/schuelerportal" class="rounded-2xl border border-gray-100 p-5 hover:border-gray-200">
+            <h3 class="font-bold text-gray-900 mb-1 text-sm">Schülerportal</h3>
+            <p class="text-xs text-gray-500">Termine, Guthaben, Dokumente — ein Login.</p>
+          </a>
+          <a href="/fahrschule/abholung" class="rounded-2xl border border-gray-100 p-5 hover:border-gray-200">
+            <h3 class="font-bold text-gray-900 mb-1 text-sm">Abholung im Radius</h3>
+            <p class="text-xs text-gray-500">Fahrzeit in Minuten, nicht Luftlinie.</p>
+          </a>
+        </div>
+      </section>
+    </div>
+
+    <SimyWebsiteHighlight
+      title="Fahrschul-Website ohne Agentur"
+      subtitle="SEO-Landingpage mit Preisen, Standorten und Bewertungen — in Minuten, nicht in Wochen. Auch ohne die volle Software."
+      preview-host="simy.ch/s/fahrschule-muster"
+    />
 
     <!-- Final CTA -->
     <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
@@ -175,6 +205,7 @@
 </template>
 
 <script setup lang="ts">
+import { PRICE_VAT_NOTE, WALLEE_FEE_FAQ, WALLEE_FEE_PERCENT } from '~/data/pricing'
 import { breadcrumbLd, faqPageLd, ldScripts, softwareAppLd } from '~/utils/schema'
 const { registerCta } = useRegisterCta('driving_school')
 
@@ -185,23 +216,24 @@ useHead({
     { name: 'keywords', content: 'fahrschulsoftware, software fahrschule, verwaltungssoftware fahrschule, software für fahrschulen, fahrschule software schweiz' },
     { property: 'og:title', content: 'Fahrschulsoftware Schweiz 2026 – Der komplette Ratgeber' },
     { property: 'og:description', content: 'Was ist die beste Fahrschulsoftware? Vergleich, Funktionen, Kosten. Simy gewinnt.' },
-    { property: 'og:url', content: 'https://simy.ch/fahrschule/software' },
+    { property: 'og:url', content: 'https://www.simy.ch/fahrschule/software' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/fahrschule/software' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/fahrschule/software' }],
   script: ldScripts(
     softwareAppLd({
       name: 'Simy Fahrschulsoftware',
       description: 'All-in-One Fahrschulsoftware Schweiz: Terminbuchung, Rechnungen, Fahrlehrer-App und Verwaltung.',
-      url: 'https://simy.ch/fahrschule/software',
+      url: 'https://www.simy.ch/fahrschule/software',
     }),
     faqPageLd([
-      { q: 'Was kostet Fahrschulsoftware?', a: 'Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. Simy bietet Pläne ab CHF 49/Monat mit 30 Tagen kostenlosem Test.' },
+      { q: 'Was kostet Fahrschulsoftware?', a: `Fahrschulsoftware kostet je nach Anbieter zwischen CHF 29 und CHF 199 pro Monat. Simy bietet Pläne ab CHF 49/Monat mit 30 Tagen kostenlosem Test. ${PRICE_VAT_NOTE}` },
       { q: 'Welche Fahrschulsoftware ist die beste?', a: 'Simy ist eine All-in-One Lösung für Schweizer Fahrschulen mit Terminbuchung, automatischen Rechnungen, Fahrlehrer-App und Website-Generator.' },
+      { q: 'Was kostet die Online-Zahlung via Wallee?', a: WALLEE_FEE_FAQ },
     ]),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Fahrschule', url: 'https://simy.ch/fahrschule' },
-      { name: 'Fahrschulsoftware', url: 'https://simy.ch/fahrschule/software' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Fahrschule', url: 'https://www.simy.ch/fahrschule' },
+      { name: 'Fahrschulsoftware', url: 'https://www.simy.ch/fahrschule/software' },
     ]),
   ),
 })
@@ -233,11 +265,11 @@ const featureCats = [
   },
   {
     title: 'Rechnungen & Kasse', icon: 'wallet', color: '#059669', tag: 'Must-Have',
-    features: ['Automatische Rechnungserstellung', 'TWINT & Online-Zahlung (CH)', 'Automatische Erinnerungen bei Online-Zahlung', 'Guthaben-System', 'QR-Rechnung', 'Exportfunktion'],
+    features: ['Automatische Rechnungserstellung', `TWINT & Online-Zahlung (CH), ${WALLEE_FEE_PERCENT}`, 'Automatische Erinnerungen bei Online-Zahlung', 'Guthaben-System', 'QR-Rechnung', 'Exportfunktion'],
   },
   {
     title: 'Schülerverwaltung', icon: 'graduate', color: '#0891B2', tag: 'Must-Have',
-    features: ['Schülerprofil mit Geschichte', 'Fahrstunden-Counter', 'Prüfungsdaten', 'Dokumente & Notizen', 'Massenkommunikation', 'Filterfunktionen'],
+    features: ['Schülerportal mit Login', 'Bewertungen & PDF-Export', 'Dokumente (z. B. Lernfahrausweis)', 'Guthaben-Stand sichtbar', 'Fahrstunden-Counter', 'Filterfunktionen'],
   },
   {
     title: 'Website & Marketing', icon: 'globe', color: '#EA580C', tag: 'Empfohlen',

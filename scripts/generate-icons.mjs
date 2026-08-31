@@ -158,6 +158,22 @@ async function generateAndroidIcons() {
       .toFile(join(outDir, 'ic_launcher_foreground.png'))
   }
   console.log(`  ✅ ${ANDROID_ICONS.length} Android icon densities generated`)
+
+  // Brand colors for the launch theme (referenced by styles.xml)
+  const valuesDir = join(androidResDir, 'values')
+  mkdirSync(valuesDir, { recursive: true })
+  const primary = config.primaryColor || '#7C3AED'
+  const accent = config.accentColor || primary
+  const background = config.backgroundColor || '#ffffff'
+  writeFileSync(join(valuesDir, 'colors.xml'), `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">${primary}</color>
+    <color name="colorPrimaryDark">${primary}</color>
+    <color name="colorAccent">${accent}</color>
+    <color name="splash_background">${background}</color>
+</resources>
+`)
+  console.log('  ✅ Android colors.xml generated from client config')
 }
 
 async function generateSplashScreens() {

@@ -117,6 +117,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       const isStripeRequest = url.includes('/api/stripe/')
       const isCourseAdminRetryable =
         url.includes('/api/courses/send-participant-list')
+        || url.includes('/api/courses/participant-list-pdf')
       if ((isStripeRequest || isCourseAdminRetryable) && status === 401) {
         console.debug('ℹ️ Auth-retryable 401 - letting the page retry/handle it (no reload)')
         const d = (response as any)?._data
@@ -252,10 +253,11 @@ export default defineNuxtPlugin((nuxtApp) => {
             }
           }
           
-          // Last resort: if nothing worked, we have a problem - but we should never reach here
+          // Last resort: tenant login if we know the slug, otherwise generic /login
           if (!redirectPath) {
             console.error('❌ No tenant slug found for redirect! This should not happen.')
-            redirectPath = '/'
+            const { getLoginPath } = await import('~/utils/redirect-to-login')
+            redirectPath = getLoginPath()
           }
 
           // Clear auth state

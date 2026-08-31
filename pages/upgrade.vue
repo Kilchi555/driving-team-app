@@ -318,7 +318,7 @@
           <div class="flex items-start justify-between mb-3">
             <div>
               <p class="font-bold text-gray-900 text-sm">Online-Zahlungen für deine Kunden</p>
-              <p class="text-xs text-gray-400 mt-0.5">Kreditkarte, TWINT & mehr via Wallee · Inklusive im Plan · 1.7% Transaktionsgebühr pro Zahlung</p>
+              <p class="text-xs text-gray-400 mt-0.5">Kreditkarte, TWINT & mehr via Wallee · Inklusive im Plan · {{ walleeFeeLabel }} Transaktionsgebühr pro Zahlung</p>
             </div>
             <span class="text-xs font-bold px-2.5 py-1 rounded-lg"
               style="background: rgba(var(--brand-rgb), 0.08); color: var(--brand-primary);">
@@ -330,7 +330,8 @@
               <span v-if="withWallee">
                 ✅ <strong>Mit Online-Zahlungen:</strong> Wir richten dein Wallee-Konto ein (ca. 5 Werktage).
                 Die Abrechnung startet erst wenn alles aktiv ist — du hast 30 Tage Zeit.
-                Es fällt eine Transaktionsgebühr von <strong>1.7%</strong> pro Zahlung deiner {{ t.clientsPlural }} an.
+                Es fällt eine Transaktionsgebühr von <strong>{{ walleeFeeLabel }}</strong> pro Zahlung deiner {{ t.clientsPlural }} an.
+                {{ walleeFeePriceTip }}
               </span>
               <span v-else>
                 ℹ️ <strong>Ohne Online-Zahlungen:</strong> Nur Bar- und Rechnungszahlung.
@@ -678,7 +679,7 @@
     <footer class="border-t border-gray-100 py-8 px-6 text-center">
       <img :src="logoPreview || '/simy-logo.png'" alt="Simy" class="h-7 mx-auto mb-4 opacity-40" :style="{ filter: logoColorFilter }" />
       <p class="text-xs text-gray-400 mb-4">
-        Alle Preise in CHF exkl. MwSt. · Zahlungsabwicklung via Stripe · Jederzeit kündbar
+        Alle Preise in CHF exkl. MwSt. (aktuell 0 %, ab Okt. 2026 8.1 %) · Zahlungsabwicklung via Stripe · Jederzeit kündbar
       </p>
       <button
         @click="openBillingPortal"
@@ -730,12 +731,16 @@ const { t } = useTerminology()
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useLazyFetch, useHead, useRoute } from '#imports'
 import { PLANS, SMS_OVERAGE_CHF_PER_SEGMENT } from '~/utils/planFeatures'
+import { WALLEE_FEE_PRICE_TIP, WALLEE_FEE_RATE_LABEL } from '~/utils/wallee-fee'
 import { useTrialFeatures } from '~/composables/useTrialFeatures'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { refreshClientSession } from '~/utils/client-session-refresh'
 import type { PricingResponse } from '~/server/api/stripe/prices.get'
 
 definePageMeta({ layout: 'minimal' })
+
+const walleeFeeLabel = WALLEE_FEE_RATE_LABEL
+const walleeFeePriceTip = WALLEE_FEE_PRICE_TIP
 
 // ─── Branding ─────────────────────────────────────────────────────────────────
 const DEFAULT_PRIMARY = '#6000BD'
@@ -1260,7 +1265,7 @@ const startCheckout = async () => {
       showAuthPrompt.value = true
       return
     }
-    error.value = err?.data?.statusMessage || 'Checkout konnte nicht gestartet werden.'
+    error.value = err?.data?.statusMessage || err?.statusMessage || err?.data?.message || 'Checkout konnte nicht gestartet werden.'
   } finally {
     loading.value = false
   }

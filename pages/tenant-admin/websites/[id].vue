@@ -21,6 +21,9 @@
         <a :href="`/s/${tenant?.slug}?preview=1`" target="_blank" class="sa-btn-ghost">
           👁 Vorschau öffnen
         </a>
+        <NuxtLink v-if="prospectReviewTo" :to="prospectReviewTo" class="sa-btn-ghost">
+          Neu generieren
+        </NuxtLink>
         <button v-if="tenant?.website_status === 'pending_review'" @click="showApproveModal = true"
           class="sa-btn-success">
           ✅ Freigeben & Link senden
@@ -109,6 +112,7 @@
               </button>
             </div>
           </div>
+          <p class="sa-field-hint">Stehen auf der Home unter Angebot. Bestehende Leistungen mit gleichem Namen bekommen den Preis.</p>
           <button @click="form.prices.push({ label: '', value: '', note: '' })" class="sa-btn-ghost mt-4">
             + Preis hinzufügen
           </button>
@@ -126,8 +130,9 @@
                 <input v-model="s.email" type="email" class="sa-input" placeholder="E-Mail" />
                 <input v-model="s.phone" class="sa-input" placeholder="Telefon" />
                 <input v-model="s.languages" class="sa-input" placeholder="DE, EN, IT" />
-                <div class="flex items-center gap-2">
-                  <input type="checkbox" v-model="s.create_login" id="login_{{ i }}" class="sa-check" />
+                <p v-if="tenant?.website_only" class="sa-hint-inline">Nur Anzeige auf der Website — Login ist Simy Starter.</p>
+                <div v-else class="flex items-center gap-2">
+                  <input type="checkbox" v-model="s.create_login" :id="`login_${i}`" class="sa-check" />
                   <label :for="`login_${i}`" class="sa-label" style="margin:0">simy-Login erstellen</label>
                 </div>
               </div>
@@ -138,6 +143,7 @@
               </button>
             </div>
           </div>
+          <p class="sa-field-hint">Erscheinen im Team-Block der Vorschau. Keine Benutzerkonten.</p>
           <button @click="form.staff.push({ first_name:'', last_name:'', email:'', phone:'', languages:'', create_login: false })"
             class="sa-btn-ghost mt-4">
             + Mitarbeiter hinzufügen
@@ -231,6 +237,9 @@
             <a :href="`/s/${tenant.slug}?preview=1`" target="_blank" class="sa-quick-link">
               🌐 Website-Vorschau öffnen
             </a>
+            <NuxtLink v-if="prospectReviewTo" :to="prospectReviewTo" class="sa-quick-link">
+              🔄 Website neu generieren
+            </NuxtLink>
             <NuxtLink :to="`/tenant-admin/tenants`" class="sa-quick-link">
               ⚙️ Tenant-Einstellungen
             </NuxtLink>
@@ -286,9 +295,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
-definePageMeta({ layout: 'tenant-admin', middleware: ['super-admin'] })
+definePageMeta({ layout: 'tenant-admin', middleware: ['superadmin'] })
 
 const route = useRoute()
 const supabase = getSupabase()
@@ -296,6 +305,10 @@ const { showSuccess, showError } = useUIStore()
 
 const tenantId = route.params.id as string
 const tenant = ref<any>(null)
+const prospectReviewTo = computed(() => {
+  const m = String(tenant.value?.website_notes || '').match(/^website_prospect:([0-9a-f-]{36})$/i)
+  return m?.[1] ? `/tenant-admin/websites/prospects/${m[1]}` : ''
+})
 const loading = ref(true)
 const saving = ref(false)
 const approving = ref(false)
@@ -341,25 +354,13 @@ const form = ref({
   staff: [] as { first_name: string; last_name: string; email: string; phone: string; languages: string; create_login: boolean }[],
 })
 
-onMounted(async () => {
-  // Load tenant data
-  const { data: t } = await supabase
-    .from('tenants')
-    .select('*')
-    .eq('id', tenantId)
-    .single()
+const authHeaders = async () => {
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}
+}
 
-  if (!t) { loading.value = false; return }
+const applyCms = (t: any, prices?: any[], staff?: any[]) => {
   tenant.value = t
-
-  // Load staff
-  const { data: staff } = await supabase
-    .from('users')
-    .select('id, first_name, last_name, email, phone, role')
-    .eq('tenant_id', tenantId)
-    .eq('role', 'staff')
-
-  // Populate form
   form.value = {
     name: t.name || '',
     slug: t.slug || '',
@@ -371,18 +372,30 @@ onMounted(async () => {
     primary_color: t.primary_color || '#3B82F6',
     secondary_color: t.secondary_color || '#10B981',
     website_notes: t.website_notes || '',
-    prices: t.website_prices || [],
-    staff: (staff || []).map(s => ({
+    prices: prices?.length ? prices : [],
+    staff: (staff || []).map((s: any) => ({
       first_name: s.first_name || '',
       last_name: s.last_name || '',
       email: s.email || '',
       phone: s.phone || '',
       languages: s.languages || '',
-      create_login: true,
+      create_login: false,
     })),
   }
+}
 
-  useHead({ title: `${t.name} – Website bearbeiten` })
+onMounted(async () => {
+  try {
+    const res = await $fetch<any>(`/api/tenant-admin/websites/${tenantId}`, {
+      headers: await authHeaders(),
+    })
+    if (!res?.tenant) { loading.value = false; return }
+    applyCms(res.tenant, res.prices, res.staff)
+    useHead({ title: `${res.tenant.name} – Website bearbeiten` })
+  } catch {
+    loading.value = false
+    return
+  }
 
   // Load website add-on unlock + pages
   const { data: websiteRow } = await supabase
@@ -409,6 +422,7 @@ const toggleAddonPages = async (enabled: boolean) => {
   try {
     const res = await $fetch<any>(`/api/tenant-admin/websites/${tenantId}/addon-unlock`, {
       method: 'POST',
+      headers: await authHeaders(),
       body: { enabled },
     })
     addonPagesEnabled.value = !!res.addon_pages_enabled
@@ -422,25 +436,21 @@ const toggleAddonPages = async (enabled: boolean) => {
 
 const save = async () => {
   saving.value = true
-  const { error } = await supabase
-    .from('tenants')
-    .update({
-      name: form.value.name,
-      slug: form.value.slug,
-      contact_email: form.value.contact_email,
-      contact_phone: form.value.contact_phone,
-      address: form.value.address,
-      website_domain: form.value.website_domain,
-      description: form.value.description,
-      primary_color: form.value.primary_color,
-      secondary_color: form.value.secondary_color,
-      website_notes: form.value.website_notes,
-      website_prices: form.value.prices,
+  try {
+    const res = await $fetch<any>(`/api/tenant-admin/websites/${tenantId}`, {
+      method: 'PATCH',
+      headers: await authHeaders(),
+      body: {
+        ...form.value,
+        staff: form.value.staff,
+        prices: form.value.prices,
+      },
     })
-    .eq('id', tenantId)
-
-  if (error) showError('Fehler', error.message)
-  else { showSuccess('Gespeichert', 'Änderungen wurden übernommen.'); tenant.value = { ...tenant.value, ...form.value } }
+    applyCms(res.tenant, res.prices, res.staff)
+    showSuccess('Gespeichert', 'Preise und Mitarbeiter sind auf der Vorschau.')
+  } catch (err: any) {
+    showError('Fehler', err?.data?.statusMessage || err?.message || 'Speichern fehlgeschlagen')
+  }
   saving.value = false
 }
 
@@ -523,6 +533,8 @@ const formatDate = (iso: string) => iso
 @media (max-width:640px) { .cms-form-grid { grid-template-columns:1fr; } }
 .col-span-2 { grid-column:span 2; }
 
+.sa-field-hint, .sa-hint-inline { font-size:0.75rem; color:#64748b; margin:0.35rem 0 0.75rem; }
+.sa-hint-inline { margin:0; align-self:center; }
 .sa-label { display:block; font-size:0.72rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.375rem; }
 .sa-input { width:100%; padding:0.5rem 0.75rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:8px; font-size:0.82rem; color:#e2e8f0; outline:none; transition:border-color 0.15s; box-sizing:border-box; }
 .sa-input:focus { border-color:rgba(99,102,241,0.5); }

@@ -1,7 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
 import { setAuthCookies } from '~/server/utils/cookies'
 import { logger } from '~/utils/logger'
+import { getSupabaseAdmin, getSupabaseAnon } from '~/server/utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
 
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceRoleKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !serviceRoleKey || !supabaseAnonKey) {
       throw createError({
@@ -25,8 +25,8 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const adminSupabase = getSupabaseAdmin()
+    const supabase = getSupabaseAnon()
 
     // Verify code first (before attempting password login)
     const { data: user, error: userError } = await adminSupabase

@@ -16,10 +16,6 @@
           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-600 text-gray-700 hover:bg-gray-50 transition-colors">
           Add-on Seiten
         </NuxtLink>
-        <NuxtLink to="/admin/website/setup"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-600 text-gray-700 hover:bg-gray-50 transition-colors">
-          Neu generieren
-        </NuxtLink>
         <NuxtLink to="/admin/website-analytics"
           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-600 hover:opacity-90 transition-colors"
           :style="{ background: primaryColor }">
@@ -27,6 +23,8 @@
         </NuxtLink>
       </div>
     </div>
+
+    <WebsiteDomainConnect :primary-color="primaryColor" />
 
     <!-- KPI Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -162,6 +160,7 @@ const selectedLead = ref<any>(null)
 const loadingLeads = ref(true)
 
 const newLeads = ref<any[]>([])
+const ctaClicks = ref<number | null>(null)
 
 const kpis = computed(() => {
   const all = newLeads.value
@@ -170,15 +169,19 @@ const kpis = computed(() => {
   return [
     { label: 'Leads gesamt', value: String(all.length), trend: 0 },
     { label: 'Diese Woche', value: String(thisWeek), trend: 0 },
-    { label: 'Conversion Rate', value: '–', trend: 0 },
+    { label: 'Button-Klicks', value: ctaClicks.value == null ? '–' : String(ctaClicks.value), trend: 0 },
     { label: 'Ø Antwortzeit', value: '–', trend: 0 },
   ]
 })
 
 onMounted(async () => {
   try {
-    const res = await $fetch<{ leads: any[] }>('/api/website/leads')
+    const [res, analytics] = await Promise.all([
+      $fetch<{ leads: any[] }>('/api/website/leads'),
+      $fetch<{ ctaClicks?: number }>('/api/admin/website-analytics', { query: { days: 30 } }).catch(() => null),
+    ])
     newLeads.value = res?.leads || []
+    if (typeof analytics?.ctaClicks === 'number') ctaClicks.value = analytics.ctaClicks
   } catch {
     newLeads.value = []
   } finally {

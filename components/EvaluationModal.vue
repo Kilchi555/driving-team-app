@@ -137,10 +137,20 @@
               class="bg-gray-50 rounded-lg p-3 border border-gray-200"
             >
               <div class="flex items-start justify-between mb-3">
-                <div class="flex-1">
-                  <h4 class="font-medium text-gray-900">
+                <div class="flex-1 min-w-0 flex items-center gap-2">
+                  <h4 class="font-medium text-gray-900 leading-snug">
                     {{ getCriteriaById(criteriaId)?.name }}
-                  </h4>         
+                  </h4>
+                  <button
+                    type="button"
+                    @click.stop="openGuide(criteriaId)"
+                    title="Lerninhalt öffnen"
+                    class="flex-shrink-0 w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 hover:bg-indigo-100 transition-colors"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25"/>
+                    </svg>
+                  </button>
                 </div>
                 
                 <button
@@ -197,6 +207,7 @@
               Suchen Sie oben nach Bewertungspunkten und klicken Sie diese an, um die {{ t.appointment }} zu bewerten.
             </p>
           </div>
+
         </div>
       </div>
 
@@ -236,25 +247,33 @@
 
   </div>
   </Teleport>
+
+  <StaffGuideModal
+    v-if="showGuide"
+    :initial-criterion-id="guideCriterionId"
+    :initial-criterion-name="guideCriterionName"
+    :can-edit="currentUser?.can_edit_guide === true || currentUser?.role === 'admin' || currentUser?.role === 'tenant_admin'"
+    @close="showGuide = false"
+  />
 </template>
 
 <script setup lang="ts">
 
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
 // import { getSupabase } from '~/utils/supabase'
-import { formatDate } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import { useTenant } from '~/composables/useTenant'
 const { primaryBg, primaryText } = usePrimaryColor()
 // Importiere den CriteriaEvaluationData-Typ
 import { usePendingTasks, type CriteriaEvaluationData } from '~/composables/usePendingTasks'
 import { useTerminology } from '~/composables/useTerminology'
+import StaffGuideModal from '~/components/StaffGuideModal.vue'
 
 // Props
 interface Props {
   isOpen: boolean
   appointment: any
-  studentCategory: string
+  studentCategory?: string
   currentUser?: any
   eventType?: 'lesson' | 'staff_meeting' // ✅ Neuer Prop
 }
@@ -301,7 +320,6 @@ const newlyRatedCriteria = ref<string[]>([]) // Track which criteria were newly 
 const allCriteriaRatings = ref<Record<string, number[]>>({}) // Bewertungen des aktuellen Termins
 const historyRatings = ref<Record<string, number[]>>({}) // Historische Bewertungen früherer Termine (für Dropdown-Farben)
 const historyNotes = ref<Record<string, string>>({}) // Aktuellste Note pro Criteria (für Dropdown-Anzeige)
-
 
 // Computed
 
@@ -474,10 +492,10 @@ const openCancelModal = () => {
   emit('cancel', props.appointment)
 }
 
-// KOMPLETT SAUBERE VERSION - Ersetzen Sie Ihre gesamte loadAllCriteria Funktion mit dieser:
-
 const loadAllCriteria = async () => {
-  if (!props.studentCategory) {
+  // License category (B/A/…) is only required for driving schools.
+  // Generic / per_event_type tenants have no categories — still load topics.
+  if (isDrivingSchool.value && !props.studentCategory) {
     return
   }
   
@@ -487,10 +505,7 @@ const loadAllCriteria = async () => {
   try {
     // Check if it's a theory lesson
     const isTheoryLesson = props.appointment?.appointment_type === 'theory' || props.appointment?.event_type_code === 'theory'
-    
-    logger.debug('📚 Loading evaluation criteria via Backend API - isTheory:', isTheoryLesson)
-    
-    // Load criteria via backend API (uses auth token automatically)
+
     const response = await $fetch<{ success: boolean, criteria: any[], tenantId: string, error?: string }>('/api/staff/get-evaluation-criteria', {
       query: {
         isTheoryLesson: isTheoryLesson.toString(),
@@ -505,21 +520,7 @@ const loadAllCriteria = async () => {
     const criteria = response.criteria || []
     const tenantIdFromResponse = response.tenantId
     
-    logger.debug('✅ Loaded', criteria.length, 'evaluation criteria')
-    
-    // DEBUG: Analyse der Kriterien
-    const beIncluded = criteria.filter((c: any) => !c.driving_categories || c.driving_categories.length === 0 || c.driving_categories.includes('BE'))
-    const beExcluded = criteria.filter((c: any) => c.driving_categories && c.driving_categories.length > 0 && !c.driving_categories.includes('BE'))
-    
-    logger.debug(`🔍 ANALYSIS: ${beIncluded.length} will be shown for BE, ${beExcluded.length} will be hidden`)
-    logger.debug('🔍 CHECKING FOR RAMPEFAHREN AND SPURVERSATZ:')
-    const rampefahren = criteria.find((c: any) => c.name === 'Rampefahren')
-    const spurversatz = criteria.find((c: any) => c.name === 'Spurversatz')
-    logger.debug('  Rampefahren:', rampefahren ? '✅ FOUND' : '❌ NOT FOUND', rampefahren)
-    logger.debug('  Spurversatz:', spurversatz ? '✅ FOUND' : '❌ NOT FOUND', spurversatz)
-    logger.debug('🚫 HIDDEN (not for BE):', beExcluded.map(c => `${c.name} [${(c.driving_categories || []).join(',')}]`))
-    
-    if (!criteria || criteria.length === 0) {
+    if (!criteria.length) {
       error.value = isDrivingSchool.value
         ? `Keine Bewertungskriterien gefunden für ${isTheoryLesson ? 'Theorie' : (props.studentCategory || 'diese Kategorie')}`
         : 'Keine Bewertungskriterien gefunden — bitte unter Admin → Bewertungssystem Themen anlegen.'
@@ -537,9 +538,6 @@ const loadAllCriteria = async () => {
       // Nutze tenant_id aus der API Response (bereits authentifiziert)
       const tenantId = tenantIdFromResponse || props.appointment?.tenant_id || currentTenant.value?.id
       
-      logger.debug('🔍 Loading categories with tenant_id:', tenantId)
-      
-      // Nur API aufrufen, wenn wir eine tenant_id haben
       if (tenantId) {
         const response = await $fetch('/api/admin/evaluation', {
           method: 'POST',
@@ -551,18 +549,12 @@ const loadAllCriteria = async () => {
         
         if (response?.success) {
           categories = (response.data || []).filter((cat: any) => categoryIds.includes(cat.id))
-          logger.debug('✅ Loaded', categories.length, 'categories from API')
         }
-      } else {
-        logger.warn('⚠️ No tenant_id found, skipping category API call')
       }
     } catch (err) {
-      logger.warn('⚠️ Could not load categories via API, using defaults', err)
+      logger.warn('Could not load evaluation categories via API', err)
     }
 
-    // Kombiniere alle Daten
-    logger.debug('🔍 PRE-FILTER: Processing', criteria.length, 'raw criteria from API')
-    
     const processedCriteria = criteria.map(criterion => {
       const category = categories?.find(cat => cat.id === criterion.category_id)
       // Fallback: use the category name embedded in evaluation_categories (always present, even for global criteria)
@@ -587,19 +579,8 @@ const loadAllCriteria = async () => {
       }
     })
     
-    logger.debug('🔍 POST-MAP: After mapping', processedCriteria.length, 'criteria')
-    
-    const filtered = processedCriteria.filter(item => {
-      if (!item.name) {
-        logger.debug(`⚠️ FILTERED OUT - no name: id=${item.id} driving_categories=${JSON.stringify(item.driving_categories)}`)
-        return false
-      }
-      return true
-    })
-    
-    logger.debug('🔍 POST-FILTER: After name filter', filtered.length, 'criteria')
-    logger.debug('🔍 DROPPED:', processedCriteria.length - filtered.length, 'criteria')
-    
+    const filtered = processedCriteria.filter(item => !!item.name)
+
     // Deduplicate by name+category_name: prefer tenant-specific over global (tenant_id = null)
     const deduped = Object.values(
       filtered.reduce((acc: Record<string, any>, c: any) => {
@@ -624,10 +605,8 @@ const loadAllCriteria = async () => {
       return a.criteria_order - b.criteria_order
     })
 
-    logger.debug('✅ Loaded criteria with new system:', allCriteria.value.length, 'criteria (after filtering out items with no name)')
-
   } catch (err: any) {
-    console.error('❌ Error loading criteria:', err)
+    console.error('Error loading evaluation criteria:', err)
     error.value = err.message || 'Fehler beim Laden der Bewertungskriterien'
   } finally {
     isLoading.value = false
@@ -691,6 +670,16 @@ const removeCriteria = (criteriaId: string) => {
 
 const getCriteriaById = (criteriaId: string) => {
   return allCriteria.value.find(c => c.id === criteriaId)
+}
+
+const showGuide = ref(false)
+const guideCriterionId = ref<string | null>(null)
+const guideCriterionName = ref<string | null>(null)
+
+const openGuide = (criteriaId: string) => {
+  guideCriterionId.value = criteriaId
+  guideCriterionName.value = getCriteriaById(criteriaId)?.name || null
+  showGuide.value = true
 }
 
 const setCriteriaRating = (criteriaId: string, rating: number) => {
@@ -897,11 +886,18 @@ const loadCurrentAppointmentEvaluations = async () => {
           start_time: props.appointment?.start_time
         }
         
-        // ✅ WICHTIG: Nicht automatisch zu selectedCriteriaOrder hinzufügen!
-        // Der User muss das Kriterium explizit im Dropdown anklicken
-        // if (!selectedCriteriaOrder.value.includes(criteriaId)) {
-        //   selectedCriteriaOrder.value.push(criteriaId)
-        // }
+        // ✅ WICHTIG: Bereits bewertete Themen NICHT automatisch zu
+        // selectedCriteriaOrder hinzufügen — der User muss sie explizit im
+        // Dropdown anklicken.
+        //
+        // Ausnahme: Themen, die im EventModal als "Fokus für diese Lektion"
+        // vorgemerkt wurden (Notiz vorhanden, aber noch keine Bewertung) —
+        // die zeigen wir automatisch als Karte an, sonst müsste man sie hier
+        // erneut suchen, was den Sinn der Vormerkung untergraben würde.
+        const isPlannedTopic = (note.criteria_rating == null) && !!(note.criteria_note && note.criteria_note.trim())
+        if (isPlannedTopic && !selectedCriteriaOrder.value.includes(criteriaId)) {
+          selectedCriteriaOrder.value.push(criteriaId)
+        }
       })
       return true
     }
@@ -1162,7 +1158,7 @@ watch(() => props.isOpen, (isOpen) => {
 // Zusätzlicher Watch für studentCategory
 watch(() => props.studentCategory, (newCategory) => {
   logger.debug('🔄 Student category changed to:', newCategory)
-  if (props.isOpen && newCategory) {
+  if (props.isOpen && (newCategory || !isDrivingSchool.value)) {
     logger.debug('🔄 Reloading criteria for new category...')
     loadAllCriteria()
   }

@@ -322,11 +322,8 @@
                   </div>
                   <span
                     v-if="evaluationsEnabled"
-                    :class="[
-                    'px-2 py-1 text-xs font-medium rounded-full',
-                    lesson.evaluations && lesson.evaluations.length > 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  ]">
-                    {{ lesson.evaluations && lesson.evaluations.length > 0 ? 'Bewertet' : 'Unbewertet' }}
+                    :class="['px-2 py-1 text-xs font-medium rounded-full', getLessonStatus(lesson).classes]">
+                    {{ getLessonStatus(lesson).label }}
                   </span>
                 </div>
                 
@@ -668,7 +665,7 @@
                   >
                     <div
                       v-if="showPaymentActionsDropdown"
-                      class="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50"
+                      class="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50"
                     >
                       <button
                         @click="showCashDepositModal = true; showPaymentActionsDropdown = false"
@@ -690,6 +687,19 @@
                           🎁
                         </span>
                         Code einlösen
+                      </button>
+
+                      <button
+                        v-if="canApplyManualVoucher"
+                        @click="openManualVoucherModal(); showPaymentActionsDropdown = false"
+                        class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-100 text-amber-700 shrink-0">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </span>
+                        Gutschein erfassen
                       </button>
 
                       <button
@@ -892,6 +902,14 @@
                         <template v-if="payment.appointment?.duration_minutes"> · {{ payment.appointment.duration_minutes }} min</template>
                         <template v-if="payment.appointment?.staff"> · {{ payment.appointment.staff.first_name }}</template>
                       </div>
+                      <button
+                        v-if="canCancelPaymentAppointment(payment)"
+                        type="button"
+                        @click.stop="openCancelFromPayment(payment)"
+                        class="mt-1.5 text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        Absagen
+                      </button>
                     </div>
 
                     <!-- Right column: status badge (wider, right-aligned) -->
@@ -932,16 +950,18 @@
                         </span>
                       </div>
 
-                      <!-- Refund Button (nur wenn completed + wallee + Permission vorhanden) -->
-                      <button
-                        v-if="payment.payment_status === 'completed' && payment.payment_method === 'wallee' && canSeeRefundButton"
-                        @click.stop="openRefundModal(payment)"
-                        class="mt-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors"
-                        :class="isAdminRole
-                          ? 'border-red-200 text-red-600 hover:bg-red-50'
-                          : 'border-gray-200 text-gray-500 hover:bg-gray-50'"
+                      <p
+                        v-if="payment.refunded_amount_rappen > 0 && walleeRemainingRappen(payment) > 0"
+                        class="mt-1 text-[11px] text-gray-400"
                       >
-                        {{ isAdminRole || bookingPolicy?.staff_refund_permission === 'allowed' ? '↩ Rückerstattung' : '↩ Antrag stellen' }}
+                        Bereits erstattet: CHF {{ (payment.refunded_amount_rappen / 100).toFixed(2) }}
+                      </p>
+                      <button
+                        v-if="canRefundPayment(payment)"
+                        @click.stop="openRefundModal(payment)"
+                        class="mt-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        ↩ Wallee-Rückerstattung
                       </button>
                     </div>
                   </div>
@@ -1444,7 +1464,7 @@
       v-if="showEvaluationModal && selectedAppointmentForEvaluation"
       :is-open="showEvaluationModal"
       :appointment="selectedAppointmentForEvaluation"
-      :student-category="selectedAppointmentForEvaluation.type || selectedStudent?.category?.[0] || 'B'"
+      :student-category="evaluationStudentCategory"
       :current-user="props.currentUser"
       @close="closeEvaluationModal"
       @saved="onEvaluationSaved"
@@ -1457,14 +1477,17 @@
         <div v-if="showRefundModal" class="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4" @click.self="showRefundModal = false">
           <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
             <h3 class="text-base font-bold text-gray-900">
-              {{ isAdminRole || bookingPolicy?.staff_refund_permission === 'allowed' ? 'Rückerstattung auslösen' : 'Rückerstattung beantragen' }}
+              Wallee-Rückerstattung
             </h3>
 
             <div v-if="refundSuccess" class="flex items-center gap-2 text-green-700 bg-green-50 rounded-xl p-3 text-sm">
               <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
               </svg>
-              {{ isAdminRole || bookingPolicy?.staff_refund_permission === 'allowed' ? 'Rückerstattung erfolgreich ausgelöst.' : 'Antrag erfolgreich eingereicht. Der Admin wird informiert.' }}
+              Rückerstattung erfolgreich ausgelöst.
+            </div>
+            <div v-else-if="refundError" class="text-sm text-red-700 bg-red-50 rounded-xl p-3">
+              {{ refundError }}
             </div>
 
             <template v-else>
@@ -1475,10 +1498,10 @@
                   type="number"
                   step="0.05"
                   min="0.05"
-                  :max="refundPayment ? ((refundPayment.total_amount_rappen - (refundPayment.credit_used_rappen || 0)) / 100).toFixed(2) : ''"
+                  :max="refundPayment ? (walleeRemainingRappen(refundPayment) / 100).toFixed(2) : ''"
                   class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
                 />
-                <p class="text-xs text-gray-400 mt-1">Max: CHF {{ refundPayment ? ((refundPayment.total_amount_rappen - (refundPayment.credit_used_rappen || 0)) / 100).toFixed(2) : '—' }}</p>
+                <p class="text-xs text-gray-400 mt-1">Max. noch erstattbar: CHF {{ refundPayment ? (walleeRemainingRappen(refundPayment) / 100).toFixed(2) : '—' }}</p>
               </div>
 
               <div>
@@ -1504,7 +1527,7 @@
                   class="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-colors"
                   :style="{ background: 'var(--color-primary, #3B82F6)' }"
                 >
-                  {{ isSubmittingRefund ? 'Wird verarbeitet…' : (isAdminRole || bookingPolicy?.staff_refund_permission === 'allowed' ? 'Rückerstattung auslösen' : 'Antrag senden') }}
+                  {{ isSubmittingRefund ? 'Wird verarbeitet…' : 'Rückerstattung auslösen' }}
                 </button>
               </div>
             </template>
@@ -1596,6 +1619,67 @@
     </div>
   </Teleport>
 
+  <!-- Manual voucher (amount + note) -->
+  <Teleport to="body">
+    <div v-if="showManualVoucherModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50" @click="showManualVoucherModal = false"></div>
+      <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <button @click="showManualVoucherModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+        <h2 class="text-lg font-bold text-gray-900 mb-1">Gutschein erfassen</h2>
+        <p class="text-sm text-gray-500 mb-4">
+          Betrag und Vermerk für <strong>{{ props.selectedStudent?.first_name }} {{ props.selectedStudent?.last_name }}</strong> — z.B. Papiergutschein.
+        </p>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Betrag</label>
+            <div class="flex items-stretch rounded-lg border border-gray-300 overflow-hidden bg-white focus-within:ring-2 focus-within:ring-gray-400">
+              <span class="inline-flex items-center px-3 text-xs font-medium text-gray-500 bg-gray-50 border-r border-gray-200 shrink-0">CHF</span>
+              <input
+                v-model="manualVoucherAmount"
+                type="number"
+                min="0"
+                step="0.05"
+                placeholder="0.00"
+                class="flex-1 min-w-0 px-3 py-2 text-sm border-0 focus:outline-none focus:ring-0"
+                @keydown.enter.prevent="submitManualVoucher"
+              />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Vermerk</label>
+            <input
+              v-model="manualVoucherNote"
+              type="text"
+              placeholder="Papiercode / Grund (optional)"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+              @keydown.enter.prevent="submitManualVoucher"
+            />
+          </div>
+          <p v-if="manualVoucherSuccess" class="text-green-700 text-sm font-medium bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-center gap-2">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            {{ manualVoucherSuccess }}
+          </p>
+          <p v-if="manualVoucherError" class="text-red-600 text-xs">{{ manualVoucherError }}</p>
+          <div class="flex gap-2 pt-1">
+            <button @click="showManualVoucherModal = false" class="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm">Abbrechen</button>
+            <button
+              @click="submitManualVoucher"
+              :disabled="isSubmittingManualVoucher"
+              class="flex-1 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors hover:opacity-90"
+              :style="{ backgroundColor: secondaryColor || '#22C55E' }"
+            >
+              {{ isSubmittingManualVoucher ? 'Wird gespeichert…' : 'Gutschreiben' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
   <!-- Credit Transactions Modal -->
   <Teleport to="body">
     <div v-if="showCreditTransactionsModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -1635,7 +1719,7 @@
                   <span class="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">Kat. {{ tx.affiliate_category }}</span>
                 </div>
                 <div v-if="tx.affiliate_referred_name" class="text-xs text-gray-500 mt-0.5 ml-4">{{ tx.affiliate_referred_name }}</div>
-                <div v-if="tx.notes && tx.transaction_type !== 'voucher'" class="text-xs text-gray-400 mt-0.5 ml-4">{{ cleanTxNote(tx.notes) }}</div>
+                <div v-if="cleanTxNote(tx.notes)" class="text-xs text-gray-400 mt-0.5 ml-4">{{ cleanTxNote(tx.notes) }}</div>
                 <div class="text-xs text-gray-400 mt-0.5 ml-4">{{ formatTxDate(tx.created_at) }}</div>
               </div>
               <div class="text-right ml-4 flex-shrink-0">
@@ -1873,6 +1957,7 @@
 
 import { ref, computed, toRefs, watch, onUnmounted, onMounted } from 'vue'
 import { logger } from '~/utils/logger'
+import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { openPdf } from '~/utils/openPdf'
 import { getSupabase } from '~/utils/supabase'
 import { useUserDocuments, type UserDocument } from '~/composables/useUserDocuments'
@@ -1886,7 +1971,7 @@ const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
 
 /** Termindokumentation / Kriterien-Bewertung */
 const evaluationsEnabled = computed(() =>
-  isFeatureEnabled('evaluations_enabled', isDrivingSchool.value)
+  isFeatureEnabled('evaluations_enabled', true)
 )
 /** Prüfungen: default an bei Fahrschulen, sonst aus — Admin kann zuschalten */
 const examsEnabled = computed(() =>
@@ -1898,6 +1983,7 @@ import ConfirmationDialog from '~/components/ConfirmationDialog.vue'
 import CancellationReasonModal from '~/components/CancellationReasonModal.vue'
 import RedeemVoucherModal from '~/components/customer/RedeemVoucherModal.vue'
 import StudentDetailsEditModal from '~/components/StudentDetailsEditModal.vue'
+import { resolveEvaluationStudentCategory } from '~/utils/evaluation-student-category'
 import BillingAddressEditModal from '~/components/BillingAddressEditModal.vue'
 import CorrespondenceComposeModal from '~/components/admin/CorrespondenceComposeModal.vue'
 
@@ -2317,6 +2403,14 @@ const isSubmittingDeposit = ref(false)
 // ── Redeem Voucher (Staff on behalf of student) ────────────
 const showRedeemVoucherModal = ref(false)
 
+// ── Manual voucher (amount + note, same as EventModal paper voucher) ──
+const showManualVoucherModal = ref(false)
+const manualVoucherAmount = ref<number | ''>('')
+const manualVoucherNote = ref('')
+const manualVoucherError = ref('')
+const manualVoucherSuccess = ref('')
+const isSubmittingManualVoucher = ref(false)
+
 // ── Credit Transactions History ────────────────────────────
 const showCreditTransactionsModal = ref(false)
 const creditTransactions = ref<any[]>([])
@@ -2345,6 +2439,15 @@ const maxScaleRating = computed(() => {
 // Evaluation Modal State
 const showEvaluationModal = ref(false)
 const selectedAppointmentForEvaluation = ref<any>(null)
+const evaluationStudentCategory = computed(() =>
+  resolveEvaluationStudentCategory({
+    isDrivingSchool: isDrivingSchool.value,
+    appointmentType: selectedAppointmentForEvaluation.value?.appointment_type,
+    type: selectedAppointmentForEvaluation.value?.type,
+    eventTypeCode: selectedAppointmentForEvaluation.value?.event_type_code,
+    userCategory: selectedStudent.value?.category,
+  })
+)
 const showExamResultModal = ref(false)
 
 // ── Refund ────────────────────────────────────────────────────────────────
@@ -2354,10 +2457,12 @@ const refundAmount = ref('')
 const refundReason = ref('')
 const isSubmittingRefund = ref(false)
 const refundSuccess = ref(false)
+const refundError = ref('')
 
 const bookingPolicy = ref<{
   staff_refund_permission?: 'hidden' | 'request' | 'allowed'
   staff_invoice_permission?: 'hidden' | 'create_only' | 'create_and_send'
+  staff_manual_discount_permission?: 'hidden' | 'allowed'
   registration_required?: boolean
 } | null>(null)
 
@@ -2368,29 +2473,61 @@ const showOnboardingPendingWarning = computed(() => {
   return bookingPolicy.value?.registration_required === true
 })
 const isAdminRole = computed(() => ['admin', 'superadmin'].includes(props.currentUser?.role ?? ''))
+const canApplyManualVoucher = computed(() => {
+  const role = props.currentUser?.role ?? ''
+  if (['admin', 'superadmin', 'super_admin', 'tenant_admin'].includes(role)) return true
+  return bookingPolicy.value?.staff_manual_discount_permission === 'allowed'
+})
 
 // Invoice permission für Staff
 const staffInvoicePerm = computed(() => bookingPolicy.value?.staff_invoice_permission ?? 'create_and_send')
 const canCreateInvoice = computed(() => isAdminRole.value || staffInvoicePerm.value !== 'hidden')
 const canSendInvoice = computed(() => isAdminRole.value || staffInvoicePerm.value === 'create_and_send')
 const canSeeRefundButton = computed(() => {
-  if (isAdminRole.value) return true
-  const perm = bookingPolicy.value?.staff_refund_permission
-  return perm === 'request' || perm === 'allowed'
+  return canInitiateWalleeRefund(props.currentUser?.email || props.currentUser?.profile?.email)
 })
+
+const walleeRemainingRappen = (payment: any) => {
+  const captured = (payment.total_amount_rappen || 0) - (payment.credit_used_rappen || 0)
+  return Math.max(0, captured - (payment.refunded_amount_rappen || 0))
+}
+
+const canRefundPayment = (payment: any) => {
+  if (!canSeeRefundButton.value) return false
+  if (payment.payment_method !== 'wallee') return false
+  if (!['completed', 'partially_refunded'].includes(payment.payment_status)) return false
+  return walleeRemainingRappen(payment) > 0
+}
+
+const canCancelPaymentAppointment = (payment: any) => {
+  const apt = payment?.appointment
+  return !!(apt?.id && apt.status !== 'cancelled' && !apt.deleted_at)
+}
+
+const openCancelFromPayment = (payment: any) => {
+  const apt = payment?.appointment
+  if (!apt?.id) return
+  cancellationAppointment.value = {
+    ...apt,
+    student_name: props.selectedStudent?.first_name,
+    users: { first_name: props.selectedStudent?.first_name },
+  }
+  showCancellationReasonModal.value = true
+}
 
 const openRefundModal = (payment: any) => {
   refundPayment.value = payment
-  const maxChf = ((payment.total_amount_rappen - (payment.credit_used_rappen || 0)) / 100).toFixed(2)
-  refundAmount.value = maxChf
+  refundAmount.value = (walleeRemainingRappen(payment) / 100).toFixed(2)
   refundReason.value = ''
   refundSuccess.value = false
+  refundError.value = ''
   showRefundModal.value = true
 }
 
 const submitRefund = async () => {
   if (!refundPayment.value || !refundAmount.value) return
   isSubmittingRefund.value = true
+  refundError.value = ''
   try {
     const amountRappen = Math.round(parseFloat(refundAmount.value) * 100)
     await $fetch('/api/payments/refund-request', {
@@ -2406,6 +2543,7 @@ const submitRefund = async () => {
     setTimeout(() => { showRefundModal.value = false }, 1500)
   } catch (err: any) {
     console.error('❌ Refund error:', err)
+    refundError.value = err?.data?.statusMessage || err?.statusMessage || err?.message || 'Rückerstattung fehlgeschlagen'
   } finally {
     isSubmittingRefund.value = false
   }
@@ -2972,6 +3110,33 @@ const closeModal = () => {
 // Open Reminder Modal for Pending Student
 const openReminderModal = () => {
   emit('open-reminder-modal', selectedStudent.value)
+}
+
+// Status-Badge einer Lektion: unterscheidet zwischen "Bewertet" (mind. eine
+// echte Bewertung), "Geplant" (nur vorgemerkte Themen ohne Rating — via
+// TopicNotePicker), "Ungeplant" (künftiger Termin ganz ohne Vormerkung) und
+// "Unbewertet" (vergangener Termin ohne jede Bewertung/Vormerkung).
+// Nutzt lesson.allEvaluations statt lesson.evaluations, da letzteres für die
+// Fortschritts-Ansicht auf "neu/geändert" gefiltert ist und daher auch bei
+// vorhandenen Bewertungen leer sein kann.
+const getLessonStatus = (lesson: any): { label: string; classes: string } => {
+  const allEvals = lesson.allEvaluations || lesson.evaluations || []
+  const hasRating = allEvals.some((e: any) => e.criteria_rating != null)
+  if (hasRating) {
+    return { label: 'Bewertet', classes: 'bg-green-100 text-green-800' }
+  }
+
+  const hasPlannedTopics = allEvals.length > 0
+  if (hasPlannedTopics) {
+    return { label: 'Geplant', classes: 'bg-blue-100 text-blue-800' }
+  }
+
+  const isFuture = new Date(lesson.start_time).getTime() > Date.now()
+  if (isFuture) {
+    return { label: 'Ungeplant', classes: 'bg-gray-100 text-gray-600' }
+  }
+
+  return { label: 'Unbewertet', classes: 'bg-yellow-100 text-yellow-800' }
 }
 
 // Check if current user can evaluate this lesson
@@ -3803,6 +3968,67 @@ async function submitCashDeposit() {
   }
 }
 
+function openManualVoucherModal() {
+  manualVoucherAmount.value = ''
+  manualVoucherNote.value = ''
+  manualVoucherError.value = ''
+  manualVoucherSuccess.value = ''
+  showManualVoucherModal.value = true
+}
+
+async function submitManualVoucher() {
+  manualVoucherError.value = ''
+  manualVoucherSuccess.value = ''
+  const amount = Number(manualVoucherAmount.value)
+  if (!amount || amount <= 0) {
+    manualVoucherError.value = 'Bitte gültigen Betrag eingeben'
+    return
+  }
+
+  const userId = props.selectedStudent?.id
+  if (!userId) {
+    manualVoucherError.value = `${t.value.client}-ID fehlt`
+    return
+  }
+
+  isSubmittingManualVoucher.value = true
+  try {
+    const supabaseClient = getSupabase()
+    const { data: { session } } = await supabaseClient.auth.getSession()
+    const token = session?.access_token
+    const res = await $fetch<{ success: boolean, data?: { newBalance: number } }>('/api/student-credits/manual-voucher', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: {
+        user_id: userId,
+        amount_rappen: Math.round(amount * 100),
+        notes: manualVoucherNote.value.trim()
+      }
+    })
+
+    if (res?.data?.newBalance != null) {
+      studentBalance.value = res.data.newBalance
+    } else {
+      studentBalance.value = (studentBalance.value || 0) + Math.round(amount * 100)
+    }
+
+    manualVoucherSuccess.value = `CHF ${amount.toFixed(2)} gutgeschrieben`
+    emit('studentUpdated', { id: userId })
+    if (showCreditTransactionsModal.value) {
+      openCreditTransactionsModal()
+    }
+
+    setTimeout(() => {
+      showManualVoucherModal.value = false
+      manualVoucherSuccess.value = ''
+    }, 1600)
+  } catch (e: any) {
+    manualVoucherError.value = e?.data?.message || e?.statusMessage || e?.message || 'Fehler beim Erfassen'
+  } finally {
+    isSubmittingManualVoucher.value = false
+  }
+}
+
 // ── Redeem Voucher ─────────────────────────────────────────
 function handleVoucherRedeemed(newBalance: number) {
   studentBalance.value = newBalance
@@ -3835,7 +4061,7 @@ function getCreditTransactionLabel(tx: any): string {
     refund: 'Rückerstattung',
     topup: 'Guthaben aufgeladen',
     credit_topup: 'Guthaben aufgeladen',
-    voucher: 'Gutschein eingelöst',
+    voucher: tx.reference_type === 'manual' ? 'Gutschein erfasst' : 'Gutschein eingelöst',
     manual: 'Manuelle Buchung',
     cash_deposit: 'Bar-Einzahlung',
     cancellation: 'Stornierung',
@@ -3865,6 +4091,7 @@ function cleanTxNote(note: string): string {
   let cleaned = note.replace(/\s*\([^)]*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[^)]*\)/gi, '').trim()
   // Remove voucher code from "Gutschein eingelöst: CODE" or "Gutschein eingelöst: CODE - Description"
   cleaned = cleaned.replace(/^Gutschein eingelöst:\s*[A-Z0-9_-]+\s*(-\s*)?/i, '').trim()
+  cleaned = cleaned.replace(/^Gutschein erfasst:\s*/i, '').trim()
   return cleaned
 }
 

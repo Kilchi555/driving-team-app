@@ -212,6 +212,9 @@
                   Unterrichts-Guide bearbeiten
                 </span>
               </th>
+              <th v-if="canManageSwitchGrants" class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Konto-Wechsel
+              </th>
               <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">E-Mail</th>
             </tr>
           </thead>
@@ -332,6 +335,18 @@
                 <span v-else class="text-xs text-gray-300">—</span>
               </td>
 
+              <td v-if="canManageSwitchGrants" class="px-5 py-3.5" @click.stop>
+                <button
+                  v-if="canEditSwitchGrantsFor(user)"
+                  type="button"
+                  class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100"
+                  @click="openSwitchGrants(user)"
+                >
+                  Freigaben
+                </button>
+                <span v-else class="text-xs text-gray-300">—</span>
+              </td>
+
               <td class="px-5 py-3.5">
                 <p class="text-sm text-gray-700">
                   <template v-if="user.is_invitation && isPlaceholderInviteEmail(user.email)">
@@ -347,14 +362,14 @@
 
             <!-- Loading deleted users -->
             <tr v-if="selectedStatus === 'deleted' && isLoadingDeleted">
-              <td :colspan="activeTab === 'staff' ? 6 : 5" class="px-6 py-12 text-center text-gray-400">
+              <td :colspan="tableColspan" class="px-6 py-12 text-center text-gray-400">
                 <div class="text-sm">Gelöschte Benutzer werden geladen…</div>
               </td>
             </tr>
 
             <!-- Empty State -->
             <tr v-else-if="filteredUsers.length === 0">
-              <td :colspan="activeTab === 'staff' ? 6 : 5" class="px-6 py-12 text-center text-gray-500">
+              <td :colspan="tableColspan" class="px-6 py-12 text-center text-gray-500">
                 <div class="text-lg">👤 Keine Benutzer gefunden</div>
                 <div class="text-sm mt-2">
                   {{ selectedStatus === 'deleted' ? 'Keine gelöschten Benutzer vorhanden' : searchTerm ? 'Versuchen Sie eine andere Suche' : 'Erstellen Sie den ersten Benutzer' }}
@@ -1054,6 +1069,12 @@
       </div>
     </div>
   </div>
+  <AdminAccountSwitchGrantsModal
+    :open="!!switchGrantsActor"
+    :actor-id="switchGrantsActor?.id || null"
+    :actor-name="switchGrantsActor ? `${switchGrantsActor.first_name || ''} ${switchGrantsActor.last_name || ''}`.trim() : ''"
+    @close="switchGrantsActor = null"
+  />
 </template>
 
 <script setup lang="ts">
@@ -1111,6 +1132,27 @@ const route = useRoute()
 const isPrivatkundenPage = computed(() => false)
 const activeTab = ref<string>('staff')
 const togglingGuideEdit = ref<string | null>(null)
+const switchGrantsActor = ref<User | null>(null)
+const canManageSwitchGrants = computed(() => {
+  const p = authStore.userProfile
+  if (!p || p.role !== 'admin') return false
+  if (p.admin_level === 'sub_admin') return false
+  return true
+})
+const tableColspan = computed(() => {
+  let n = 5
+  if (activeTab.value === 'staff') n += 1
+  if (canManageSwitchGrants.value) n += 1
+  return n
+})
+const canEditSwitchGrantsFor = (user: User) => {
+  if (user.is_invitation || user.deleted_at || !user.is_active) return false
+  if (user.role === 'staff') return true
+  return user.admin_level === 'sub_admin'
+}
+const openSwitchGrants = (user: User) => {
+  switchGrantsActor.value = user
+}
 const tabs = computed(() => {
   if (isPrivatkundenPage.value) {
     return [{ id: 'customers', name: 'Privatkunden' }]
@@ -2425,8 +2467,6 @@ onActivated(async () => {
   background-color: var(--color-primary, #1E40AF);
 }
 
-/* ✅ LOKALE CSS-REGELN FÜR USER-MODAL INPUTS */
-/* Überschreibt Tailwind-Klassen mit höherer Spezifität */
 .admin-modal input[type="text"],
 .admin-modal input[type="email"], 
 .admin-modal input[type="password"],
@@ -2435,31 +2475,28 @@ onActivated(async () => {
 .admin-modal input[type="date"],
 .admin-modal select,
 .admin-modal textarea {
-  color: white !important;
-  background-color: #374151 !important; /* gray-700 */
-  border-color: #6b7280 !important; /* gray-500 */
+  color: #111 !important;
+  background-color: #fff !important;
+  border-color: #d1d5db !important;
 }
 
-/* Placeholder-Texte grau */
 .admin-modal input::placeholder,
 .admin-modal textarea::placeholder {
-  color: #9ca3af !important; /* gray-400 */
+  color: #6b7280 !important;
 }
 
-/* Focus States */
 .admin-modal input:focus,
 .admin-modal select:focus,
 .admin-modal textarea:focus {
-  color: white !important;
-  background-color: #374151 !important;
-  border-color: #10b981 !important; /* green-500 */
+  color: #111 !important;
+  background-color: #fff !important;
+  border-color: #10b981 !important;
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
 }
 
-/* Select Options */
 .admin-modal select option {
-  color: white !important;
-  background-color: #374151 !important;
+  color: #111 !important;
+  background-color: #fff !important;
 }
 
 /* Animation für Loading Spinner */

@@ -5,6 +5,7 @@ import { logger } from '~/utils/logger'
 import { roundToNearest5Rappen } from '~/utils/rounding'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { matchesDiscountCategoryFilter } from '~/server/utils/discount-category-filter'
+import { lockCheckoutBenefits, releaseCheckoutBenefits } from '~/server/utils/checkout-benefits'
 
 /**
  * POST /api/appointments/apply-discount
@@ -134,11 +135,6 @@ export default defineEventHandler(async (event) => {
       }
       discountAmountRappen = Math.min(discountAmountRappen, grossRappen)
       discountCode = voucherData.code
-
-      // Increment usage
-      supabase.from('voucher_codes').update({
-        current_redemptions: (voucherData.current_redemptions || 0) + 1
-      }).eq('id', voucherData.id).then(() => {})
     }
 
     // 2. Try vouchers (gift cards)
@@ -246,15 +242,20 @@ export default defineEventHandler(async (event) => {
       }
       discountAmountRappen = Math.min(discountAmountRappen, grossRappen)
       discountCode = discountData.code
-
-      // Increment usage count
-      supabase.from('discounts').update({
-        usage_count: (discountData.usage_count || 0) + 1
-      }).eq('id', discountData.id).then(() => {})
     }
 
     if (!discountCode || discountAmountRappen <= 0) {
       return { isValid: false, error: 'Ungültiger Rabattcode' }
+    }
+
+    const locked = await lockCheckoutBenefits({
+      supabase,
+      tenantId,
+      paymentId,
+      code: discountCode,
+    })
+    if (!locked.ok) {
+      return { isValid: false, error: locked.reason || 'Dieser Code kann gerade nicht verwendet werden' }
     }
 
     // ── Recalculate totals ────────────────────────────────────────────────────
@@ -299,12 +300,19 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    const nextMetadata = {
+      ...meta,
+      discount_code: discountCode,
+      discount_usage_claimed: true,
+    }
+
     const [paymentUpdate, appointmentUpdate] = await Promise.all([
       supabase
         .from('payments')
         .update({
           discount_amount_rappen: discountAmountRappen,
-          total_amount_rappen: newTotal
+          total_amount_rappen: newTotal,
+          metadata: nextMetadata,
         })
         .eq('id', paymentId),
 
@@ -321,6 +329,12 @@ export default defineEventHandler(async (event) => {
 
     if (paymentUpdate.error) {
       logger.error('❌ Failed to update payment with discount:', paymentUpdate.error)
+      await releaseCheckoutBenefits({
+        supabase,
+        tenantId,
+        paymentId,
+        metadata: { discount_code: discountCode, discount_usage_claimed: true },
+      })
       throw createError({ statusCode: 500, statusMessage: 'Fehler beim Speichern des Rabatts' })
     }
 

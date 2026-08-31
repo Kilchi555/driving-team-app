@@ -29,6 +29,8 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getTenantsWithMultipleStaff } from '~/server/utils/tenant-staff-notify'
+import { emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
+import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 import { getQuery } from 'h3'
 
 export default defineEventHandler(async (event) => {
@@ -259,6 +261,7 @@ export default defineEventHandler(async (event) => {
           courseName, dateStr, timeRange,
           location: session.custom_location || null,
           tenantName, primaryColor, logoUrl, dashboardLink,
+          includeAppStore: allowsCustomerAccountActivation(policy),
         }),
         status:   'pending',
         send_at:  now.toISOString(),
@@ -434,6 +437,7 @@ function buildParticipantReminderEmail(d: {
   firstName: string; courseName: string; dateStr: string; timeRange: string
   location: string | null; tenantName: string; primaryColor: string
   logoUrl: string | null; dashboardLink: string
+  includeAppStore?: boolean
 }): string {
   const rows: [string, string][] = [
     ['Kurs', d.courseName], ['Datum', d.dateStr], ['Zeit', d.timeRange],
@@ -467,7 +471,8 @@ function buildParticipantReminderEmail(d: {
               <a href="${d.dashboardLink}" style="display:inline-block;background:${d.primaryColor};color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600">Meine Kurse ansehen →</a>
             </td></tr>
           </table>
-          <p style="margin:0;font-size:13px;color:#9ca3af">Bei Fragen wenden Sie sich bitte an ${d.tenantName}.</p>
+          ${emailAppointmentAppStoreBlock(d.includeAppStore !== false)}
+          <p style="margin:16px 0 0;font-size:13px;color:#9ca3af">Bei Fragen wenden Sie sich bitte an ${d.tenantName}.</p>
         </div>
         <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">
           <p style="margin:0;font-size:12px;color:#9ca3af">${d.tenantName} · Powered by <a href="https://simy.ch" style="color:#9ca3af;text-decoration:underline">Simy.ch</a></p>
@@ -559,6 +564,8 @@ function buildStaffReminderEmail(d: {
             <tbody>${d.participants.length > 0 ? participantRows : emptyRow}</tbody>
           </table>
         </div>
+
+        <div style="padding:0 32px 8px">${emailAppointmentAppStoreBlock()}</div>
 
         <!-- Footer -->
         <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">

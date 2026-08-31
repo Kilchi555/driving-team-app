@@ -18,6 +18,10 @@ import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
+import { availableWalletRappen } from '~/server/utils/apply-student-credit'
+import { consumeGiftCardByCode } from '~/server/utils/consume-gift-card'
+import { incrementAppointmentDiscountUsage } from '~/server/utils/resolve-appointment-discount'
+import { deductStudentCredit, InsufficientAvailableCreditError } from '~/server/utils/wallet-atomic'
 import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conversion'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
@@ -503,6 +507,7 @@ const handler = defineEventHandler(async (event) => {
 
     let validatedDiscountAmount = 0
     let validatedDiscountCode: string | null = null
+    let validatedDiscountSource: 'gift_card' | 'discount' | null = null
 
     if (discountCode) {
       try {
@@ -558,6 +563,7 @@ const handler = defineEventHandler(async (event) => {
             }
             validatedDiscountAmount = Math.min(validatedDiscountAmount, effectiveBasePrice)
             validatedDiscountCode = discountCode
+            validatedDiscountSource = discountRow.is_gift_card ? 'gift_card' : 'discount'
           }
         }
       } catch (discountErr: any) {
@@ -571,19 +577,60 @@ const handler = defineEventHandler(async (event) => {
     if (guestUserId && finalAmount > 0) {
       const { data: creditData } = await supabase
         .from('student_credits')
-        .select('id, balance_rappen')
+        .select('id, balance_rappen, pending_withdrawal_rappen')
         .eq('user_id', guestUserId)
         .eq('tenant_id', tenantId)
         .maybeSingle()
 
-      const availableCredit = creditData?.balance_rappen ?? 0
+      const rawCreditBalance = Math.round(Number(creditData?.balance_rappen) || 0)
+      const availableCredit = availableWalletRappen(creditData)
 
       if (availableCredit >= finalAmount) {
         logger.info(`💳 Covering course enrollment fully with credit (CHF ${(finalAmount / 100).toFixed(2)})`)
 
-        // Deduct credit
-        const newBalance = availableCredit - finalAmount
-        await supabase.from('student_credits').update({ balance_rappen: newBalance, updated_at: new Date().toISOString() }).eq('id', creditData!.id)
+        if (validatedDiscountCode) {
+          if (validatedDiscountSource === 'gift_card') {
+            const gift = await consumeGiftCardByCode({
+              supabase,
+              tenantId,
+              code: validatedDiscountCode,
+              redeemedBy: guestUserId,
+            })
+            if (!gift.consumed) {
+              throw createError({
+                statusCode: 409,
+                statusMessage: 'Dieser Gutschein wird gerade in einer anderen Zahlung verwendet oder ist bereits eingelöst.',
+              })
+            }
+          } else {
+            const claimed = await incrementAppointmentDiscountUsage({
+              supabase,
+              tenantId,
+              code: validatedDiscountCode,
+            })
+            if (!claimed) {
+              throw createError({
+                statusCode: 409,
+                statusMessage: 'Dieser Code hat das Nutzungslimit erreicht. Entferne den Code, um ohne Rabatt weiterzumachen.',
+              })
+            }
+          }
+        }
+
+        let newBalance = rawCreditBalance - finalAmount
+        try {
+          const deducted = await deductStudentCredit(supabase, {
+            userId: guestUserId,
+            tenantId,
+            amountRappen: finalAmount,
+          })
+          newBalance = deducted.balance_rappen
+        } catch (creditErr: any) {
+          if (creditErr instanceof InsufficientAvailableCreditError) {
+            throw createError({ statusCode: 400, statusMessage: creditErr.message })
+          }
+          throw creditErr
+        }
 
         // Log credit transaction
         await supabase.from('credit_transactions').insert({
@@ -591,7 +638,7 @@ const handler = defineEventHandler(async (event) => {
           tenant_id: tenantId,
           transaction_type: 'payment',
           amount_rappen: -finalAmount,
-          balance_before_rappen: availableCredit,
+          balance_before_rappen: rawCreditBalance,
           balance_after_rappen: newBalance,
           payment_method: 'credit',
           reference_type: 'course',
@@ -704,7 +751,7 @@ const handler = defineEventHandler(async (event) => {
         // Awaited: Vercel freezes after response; fire-and-forget was dropping uploads.
         try {
           const { resolveMarketingAttribution } = await import('~/server/utils/resolve-marketing-attribution')
-          const attrRow = await resolveMarketingAttribution(supabase, marketingSessionId)
+          const attrRow = await resolveMarketingAttribution(supabase, marketingSessionId, marketingAttribution)
 
           const hashedEmail = finalEmail ? await sha256Hex(finalEmail.trim().toLowerCase()) : null
           const normalizedPhone = (finalPhone ?? '').replace(/\s+/g, '').replace(/^00/, '+')

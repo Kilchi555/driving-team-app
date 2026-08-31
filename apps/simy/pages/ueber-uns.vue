@@ -8,7 +8,7 @@
           style="background: radial-gradient(circle, var(--brand-primary), transparent)"></div>
       </div>
       <div class="relative max-w-5xl mx-auto">
-        <div class="grid md:grid-cols-2 gap-16 items-center mb-24">
+        <div class="grid md:grid-cols-2 gap-16 items-center">
           <!-- Story -->
           <div>
             <div class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider mb-6 border"
@@ -18,7 +18,7 @@
             <h1 class="text-4xl font-black text-gray-900 mb-5 leading-tight">Gebaut aus der Praxis — für Dienstleister</h1>
             <p class="text-gray-500 leading-relaxed mb-4">Simy wurde von Pascal Kilchenmann gegründet — aktiver Fahrlehrer und Inhaber der Driving Team Fahrschule in Zürich. Die erste Version entstand, weil wir die täglich frustrierenden Admin-Aufgaben satt hatten.</p>
             <p class="text-gray-500 leading-relaxed mb-4">Was als interne Lösung startete, ist heute eine Plattform für Schweizer Dienstleister — von Fahrschule über Coaching bis Consulting. Wir bauen Simy für uns selbst — und für alle, die arbeiten wollen statt verwalten.</p>
-            <p class="text-gray-500 leading-relaxed">Unser Ziel: Software + Website + Marketing aus einer Hand. Damit sich Betriebe auf das konzentrieren können, was sie wirklich können — und lieben.</p>
+            <p class="text-gray-500 leading-relaxed">Unser Ziel: Software + <a href="/website" class="font-semibold underline" style="color: var(--brand-primary)">Website</a> + Marketing aus einer Hand. Damit sich Betriebe auf das konzentrieren können, was sie wirklich können — und lieben.</p>
           </div>
           <!-- Numbers -->
           <div class="space-y-4">
@@ -33,30 +33,27 @@
           </div>
         </div>
 
-        <!-- Team -->
-        <div>
-          <h2 class="text-2xl font-extrabold text-gray-900 mb-8">Das Team</h2>
-          <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-            <div v-for="member in team" :key="member.name"
-              class="rounded-2xl p-6 border border-gray-100 hover:border-gray-200 transition-all text-center">
-              <img
-                v-if="member.photo"
-                :src="member.photo"
-                :alt="member.name"
-                class="w-16 h-16 rounded-2xl object-cover mx-auto mb-4"
-                width="64"
-                height="64"
-                loading="lazy"
-              />
-              <div
-                v-else
-                class="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-black mx-auto mb-4"
-                style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))"
-              >{{ member.name[0] }}</div>
-              <h3 class="font-bold text-gray-900 mb-1">{{ member.name }}</h3>
-              <p class="text-xs text-gray-400 mb-2">{{ member.role }}</p>
-              <p class="text-sm text-gray-500">{{ member.bio }}</p>
-            </div>
+      </div>
+    </section>
+
+    <section class="pb-24 px-6">
+      <div class="max-w-5xl mx-auto">
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-8">Das Team</h2>
+        <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+          <div v-for="member in team" :key="member.name"
+            class="rounded-2xl p-6 border border-gray-100 hover:border-gray-200 transition-all text-center">
+            <img
+              :src="member.photo"
+              :alt="member.name"
+              class="w-28 h-28 md:w-32 md:h-32 rounded-full object-cover mx-auto mb-5"
+              width="128"
+              height="128"
+              loading="lazy"
+              decoding="async"
+            />
+            <h3 class="font-bold text-gray-900 mb-1">{{ member.name }}</h3>
+            <p class="text-xs text-gray-400 mb-2">{{ member.role }}</p>
+            <p class="text-sm text-gray-500">{{ member.bio }}</p>
           </div>
         </div>
       </div>
@@ -89,19 +86,19 @@ useHead({
     { name: 'description', content: 'Simy wurde aus der Praxis gebaut. Erfahre unsere Geschichte, Mission und Team. Schweizer All-in-One Software für Dienstleister — seit 2022.' },
     { property: 'og:title', content: 'Über Simy – All-in-One Software aus der Praxis' },
     { property: 'og:description', content: 'Simy wurde aus der Praxis gebaut — für alle, die arbeiten statt verwalten wollen.' },
-    { property: 'og:url', content: 'https://simy.ch/ueber-uns' },
+    { property: 'og:url', content: 'https://www.simy.ch/ueber-uns' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/ueber-uns' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/ueber-uns' }],
   script: ldScripts(
     webPageLd({
       name: 'Über Simy',
       description: 'Simy — All-in-One Software aus der Schweiz für Dienstleister und KMU.',
-      url: 'https://simy.ch/ueber-uns',
+      url: 'https://www.simy.ch/ueber-uns',
       type: 'AboutPage',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Über uns', url: 'https://simy.ch/ueber-uns' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Über uns', url: 'https://www.simy.ch/ueber-uns' },
     ]),
   ),
 })
@@ -110,12 +107,12 @@ const facts = [
   { value: '2022', label: 'Gegründet in der Schweiz', desc: 'Aus der Praxis — für Dienstleister' },
   { value: '50+', label: 'Betriebe vertrauen Simy', desc: 'Täglich aktive Nutzer in der ganzen Schweiz' },
   { value: '100%', label: 'Swiss Made', desc: 'Team, Server und Support in der Schweiz' },
-  { value: '3', label: 'Produkte unter einem Dach', desc: 'Software + Website + Marketing' },
+  { value: '3', label: 'Produkte unter einem Dach', desc: 'Software + Website-Generator + Marketing' },
 ]
 
 const team = [
-  { name: 'Pascal Kilchenmann', role: 'Gründer & CEO', photo: '/pascal-business-2-round.png', bio: 'Fahrlehrer seit 2011, Inhaber Driving Team Zürich. Hat Simy gebaut, weil er die eigene Admin-Hölle satt hatte.' },
-  { name: 'Dev Team', role: 'Engineering', bio: 'Schweizer Software-Entwickler, die täglich mit Kunden sprechen und sofort reagieren.' },
-  { name: 'Support', role: 'Customer Success', bio: 'Persönliche Betreuung auf Deutsch — erreichbar per E-Mail, Chat und Telefon.' },
+  { name: 'Pascal Kilchenmann', role: 'Gründer & CEO', photo: '/pascal-founder.webp', bio: 'Fahrlehrer seit 2011, Inhaber Driving Team Zürich. Hat Simy gebaut, weil er die eigene Admin-Hölle satt hatte.' },
+  { name: 'Dev Team', role: 'Engineering', photo: '/team-dev.webp', bio: 'Schweizer Software-Entwickler, die täglich mit Kunden sprechen und sofort reagieren.' },
+  { name: 'Support', role: 'Customer Success', photo: '/team-support.webp', bio: 'Persönliche Betreuung auf Deutsch — erreichbar per E-Mail, Chat und Telefon.' },
 ]
 </script>

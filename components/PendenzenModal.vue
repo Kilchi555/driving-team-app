@@ -55,7 +55,7 @@
             :style="activeTab === 'bewertungen' && pendingCount === 0 ? { borderBottomColor: 'var(--color-primary, #111827)', color: 'var(--color-primary, #111827)' } : {}"
             @click="activeTab = 'bewertungen'"
           >
-            Bewertungen
+            {{ t.documentationLabel }}
           </button>
           <button
             :class="[
@@ -187,8 +187,10 @@
           <div v-if="evaluationAppointments.length === 0" class="flex items-center justify-center py-8">
             <div class="text-center px-4">
               <div class="text-6xl mb-4">✅</div>
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine Bewertungen ausstehend!</h3>
-              <p class="text-gray-600 mb-4">Alle {{ t.appointmentsPlural }} bewertet</p>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Keine {{ t.documentationLabel }} ausstehend!</h3>
+              <p class="text-gray-600 mb-4">
+                Alle {{ t.appointmentsPlural }} {{ isDrivingSchool ? 'bewertet' : 'dokumentiert' }}
+              </p>
             </div>
           </div>
 
@@ -359,7 +361,7 @@
       v-if="showEvaluationModal"
       :is-open="showEvaluationModal"
       :appointment="selectedAppointment"
-      :student-category="getStudentCategory(selectedAppointment)"
+      :student-category="evaluationStudentCategory(selectedAppointment)"
       :current-user="props.currentUser"
       @close="closeEvaluationModal"
       @saved="onEvaluationSaved"
@@ -413,6 +415,9 @@
           <div class="rounded-lg border border-gray-200 p-3">
             <h4 class="text-sm font-semibold text-gray-900 mb-2">Kontakt</h4>
             <p class="text-sm text-gray-700">{{ selectedProposal.first_name || '-' }} {{ selectedProposal.last_name || '' }}</p>
+            <p v-if="preferredContactLabel(selectedProposal)" class="text-sm font-medium text-orange-700 mt-1">
+              Bevorzugt: {{ preferredContactLabel(selectedProposal) }}
+            </p>
             <p class="text-xs text-gray-500 mt-1">Kontakt via Buttons unten</p>
           </div>
           <div class="rounded-lg border border-gray-200 p-3">
@@ -445,9 +450,9 @@
           </div>
         </div>
 
-        <div v-if="selectedProposal.notes" class="rounded-lg border border-gray-200 p-3">
+        <div v-if="displayProposalNotes(selectedProposal)" class="rounded-lg border border-gray-200 p-3">
           <h4 class="text-sm font-semibold text-gray-900 mb-2">Bemerkungen</h4>
-          <p class="text-sm text-gray-700 whitespace-pre-line">{{ selectedProposal.notes }}</p>
+          <p class="text-sm text-gray-700 whitespace-pre-line">{{ displayProposalNotes(selectedProposal) }}</p>
         </div>
 
       </div>
@@ -461,6 +466,22 @@
             class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
           >
             📞 Anrufen
+          </a>
+          <a
+            v-if="selectedProposal.phone && preferredContactLabel(selectedProposal) === 'WhatsApp'"
+            :href="whatsappHref(selectedProposal.phone)"
+            target="_blank"
+            rel="noopener"
+            class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+          >
+            WhatsApp
+          </a>
+          <a
+            v-if="selectedProposal.phone && preferredContactLabel(selectedProposal) === 'SMS'"
+            :href="`sms:${selectedProposal.phone}`"
+            class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+          >
+            SMS
           </a>
           <a
             v-if="selectedProposal.email"
@@ -526,6 +547,7 @@
 <script setup lang="ts">
 
 import { logger } from '~/utils/logger'
+import { isPreferredContactNoteLine, parsePreferredContactFromNotes } from '~/utils/preferred-contact-method'
 import { ref, computed, watch, onMounted } from 'vue'
 import { nextTick } from 'vue'
 import { usePendingTasks } from '~/composables/usePendingTasks'
@@ -541,12 +563,16 @@ import LoadingLogo from '~/components/LoadingLogo.vue'
 import CancellationReasonModal from '~/components/CancellationReasonModal.vue'
 import { useTerminology } from '~/composables/useTerminology'
 import { useFeatures } from '~/composables/useFeatures'
+import { resolveEvaluationStudentCategory } from '~/utils/evaluation-student-category'
 
 const { t, isDrivingSchool, eventTypeLabel } = useTerminology()
 const { isEnabled: isFeatureEnabled, load: loadFeatures } = useFeatures()
 
 const evaluationsEnabled = computed(() =>
-  isFeatureEnabled('evaluations_enabled', isDrivingSchool.value)
+  isFeatureEnabled('evaluations_enabled', true)
+)
+const documentationStatusNoun = computed(() =>
+  isDrivingSchool.value ? 'Bewertung' : t.value.documentationLabel
 )
 const examsEnabled = computed(() =>
   isFeatureEnabled('exams_enabled', isDrivingSchool.value)
@@ -853,6 +879,22 @@ const getPreferredSlotsLabel = (proposal: any): string[] => {
     .map((s: any) => `${weekdayNames[s.day_of_week] || s.day_of_week}: ${s.start_time}-${s.end_time}`)
 }
 
+const preferredContactLabel = (proposal: any) => parsePreferredContactFromNotes(proposal?.notes)
+
+const displayProposalNotes = (proposal: any) =>
+  String(proposal?.notes || '')
+    .split('\n')
+    .map((line: string) => line.trim())
+    .filter((line: string) => line && !isPreferredContactNoteLine(line) && !/^Rückruf erwünscht$/i.test(line))
+    .join('\n')
+    .trim()
+
+const whatsappHref = (phone: string) => {
+  const digits = String(phone || '').replace(/\D/g, '')
+  const intl = digits.startsWith('0') ? `41${digits.slice(1)}` : digits
+  return `https://wa.me/${intl}`
+}
+
 const loadBookingProposals = async () => {
   if (!props.currentUser?.id) return
 
@@ -915,36 +957,14 @@ const getAppointmentFormattedTime = (appointment: any, type: 'start' | 'end') =>
   return appointment?.formattedEndTime || formatLocalTime(appointment?.end_time)
 }
 
-// Hilfsfunktion für Student Category
-const getStudentCategory = (appointment: any) => {
-  // Priorität: 1. appointment_type, 2. type, 3. Erste Kategorie aus User-Kategorien, 4. Fallback 'A'
-  let category = appointment?.appointment_type || appointment?.type || 'A'
-  
-  // Wenn der User mehrere Kategorien hat (z.B. 'B,A'), verwende den Termin-Typ
-  // oder die erste Kategorie aus der User-Kategorie-Liste
-  if (!category || category === 'A') {
-    const rawCategory = appointment?.users?.category
-    if (rawCategory) {
-      // category kann ein String ('B,A'), ein Array (['B','A']), oder ein einzelner Wert sein
-      if (Array.isArray(rawCategory)) {
-        category = rawCategory[0] ?? 'A'
-      } else if (typeof rawCategory === 'string') {
-        category = rawCategory.split(',')[0] ?? 'A'
-      } else {
-        category = String(rawCategory)
-      }
-    }
-  }
-  
-  logger.debug('🔥 getStudentCategory called:', {
-    userCategory: appointment?.users?.category,
+const evaluationStudentCategory = (appointment: any) =>
+  resolveEvaluationStudentCategory({
+    isDrivingSchool: isDrivingSchool.value,
     appointmentType: appointment?.appointment_type,
-    appointmentTypeField: appointment?.type,
+    type: appointment?.type,
     eventTypeCode: appointment?.event_type_code,
-    finalCategory: category
+    userCategory: appointment?.users?.category,
   })
-  return category
-}
 
 const openEvaluation = (appointment: any) => {
   if (!evaluationsEnabled.value && appointment?.event_type_code !== 'exam') {
@@ -956,16 +976,6 @@ const openEvaluation = (appointment: any) => {
     return
   }
 
-  logger.debug('🔥 PendenzenModal - opening evaluation for:', appointment.id)
-  
-  logger.debug('🔥 Student category debug:', {
-    userCategory: appointment.users?.category,
-    appointmentType: appointment.type,
-    eventTypeCode: appointment.event_type_code,
-    appointmentTypeField: appointment.appointment_type,
-    finalCategory: getStudentCategory(appointment)
-  })
-  
   // ✅ PRÜFE OB ES EINE PRÜFUNG IST
   if (appointment.event_type_code === 'exam') {
     logger.debug('📝 Exam detected - showing exam result modal')
@@ -1421,11 +1431,11 @@ const getPriorityText = (appointment: any) => {
   const yesterdayString = yesterday.toDateString()
   
   if (appointmentDate === today) {
-    return 'Bewertung: Offen'
+    return `${documentationStatusNoun.value}: Offen`
   } else if (appointmentDate === yesterdayString) {
-    return 'Bewertung: Fällig'
+    return `${documentationStatusNoun.value}: Fällig`
   } else {
-    return 'Bewertung: Überfällig'
+    return `${documentationStatusNoun.value}: Überfällig`
   }
 }
 

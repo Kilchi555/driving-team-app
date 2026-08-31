@@ -15,15 +15,44 @@
 
       <!-- Profile Header -->
       <div class="px-5 pt-2 pb-4 flex items-center justify-between flex-shrink-0">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0 bg-blue-700" :style="primaryColor ? { background: primaryColor } : {}">
-            {{ localUser.first_name?.charAt(0) || '?' }}{{ localUser.last_name?.charAt(0) || '' }}
-          </div>
-          <div>
+        <div class="flex items-center gap-3 min-w-0">
+          <component
+            :is="canOpenAccountSwitch ? 'button' : 'div'"
+            type="button"
+            class="relative flex-shrink-0"
+            :class="canOpenAccountSwitch ? 'cursor-pointer' : ''"
+            :title="canOpenAccountSwitch ? 'Konto wechseln' : undefined"
+            :aria-label="canOpenAccountSwitch ? 'Konto wechseln' : undefined"
+            @click="canOpenAccountSwitch && (showAccountSwitch = true)"
+          >
+            <div
+              class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg bg-blue-700"
+              :style="primaryColor ? { background: primaryColor } : {}"
+            >
+              {{ localUser.first_name?.charAt(0) || '?' }}{{ localUser.last_name?.charAt(0) || '' }}
+            </div>
+            <span
+              v-if="canOpenAccountSwitch"
+              class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-gray-200 flex items-center justify-center"
+              aria-hidden="true"
+            >
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+            </span>
+          </component>
+          <div class="min-w-0">
             <div class="flex items-center gap-1.5">
-              <span class="font-semibold text-gray-900 text-base leading-tight">
+              <component
+                :is="canOpenAccountSwitch ? 'button' : 'div'"
+                type="button"
+                class="font-semibold text-gray-900 text-base leading-tight text-left truncate"
+                :class="canOpenAccountSwitch ? 'cursor-pointer hover:underline' : ''"
+                :title="canOpenAccountSwitch ? 'Konto wechseln' : undefined"
+                @click="canOpenAccountSwitch && (showAccountSwitch = true)"
+              >
                 {{ localUser.first_name }} {{ localUser.last_name }}
-              </span>
+              </component>
               <button
                 @click="openEditProfile"
                 title="Profil bearbeiten"
@@ -34,7 +63,22 @@
                 </svg>
               </button>
             </div>
-            <div class="text-xs text-gray-500 mt-0.5 capitalize">{{ props.currentUser?.role?.replace('_', ' ') }}</div>
+            <button
+              v-if="canOpenAccountSwitch"
+              type="button"
+              class="text-xs font-medium mt-0.5 inline-flex items-center gap-0.5"
+              :style="primaryColor ? { color: primaryColor } : {}"
+              :class="primaryColor ? '' : 'text-blue-700'"
+              @click="showAccountSwitch = true"
+            >
+              Konto wechseln
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <div v-else class="text-xs text-gray-500 mt-0.5 capitalize">
+              {{ props.currentUser?.role?.replace('_', ' ') }}
+            </div>
           </div>
         </div>
         <button
@@ -1477,16 +1521,17 @@
     </Teleport>
 
     <!-- Location Settings Modal -->
-    <div v-if="showLocationSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[600]">
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4">
-        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+    <Teleport to="body">
+    <div v-if="showLocationSettingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[600] p-4">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-sm max-h-[90svh] flex flex-col">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
           <h3 class="text-base font-semibold text-gray-900">Standort-Einstellungen</h3>
           <button @click="showLocationSettingsModal = false" class="text-gray-400 hover:text-gray-600 transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
 
-        <div class="px-5 py-4 space-y-4">
+        <div class="location-settings-scroll px-5 py-4 space-y-4 overflow-y-auto flex-1 min-h-0 overscroll-contain">
           <!-- Location name (read-only) -->
           <div>
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-0.5">Standort</p>
@@ -1629,7 +1674,7 @@
           </div>
         </div>
 
-        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
+        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between shrink-0">
           <button
             @click="toggleLocationAssignment(locationModalData.id); showLocationSettingsModal = false"
             class="px-3 py-2 text-sm text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
@@ -1655,6 +1700,7 @@
         </div>
       </div>
     </div>
+    </Teleport>
 
     <!-- Buffer Settings Modal -->
     <div v-if="showBufferModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[600]">
@@ -1690,9 +1736,9 @@
           <div class="space-y-2 border-t border-gray-100 pt-4">
             <label class="block text-sm font-semibold text-gray-700">Maximaler Anfahrtsweg</label>
             <p class="text-sm text-gray-500">
-              Wenn nach einem Termin der nächste Slot an einem anderen Standort liegt und die Fahrzeit diesen Wert überschreitet, wird der Slot online nicht angeboten.<br>
-              Liegt kein vorheriger Termin, gibt es keine Einschränkung.<br>
-              Beispiel: 15 Min. → Uster-Slots werden nach einem Zürich-Termin nicht angeboten (35 min Fahrzeit).<br>
+              Gilt für den Weg zu einem anderen Treffpunkt. Überschreitet die Fahrzeit diesen Wert, wird der Slot online nicht angeboten.<br>
+              Die Rückfahrt zu deinem Haupt-Treffpunkt und die Rückkehr nach einem Pickup (Schüleradresse) werden nicht blockiert — nur Fahrzeit plus Puffer müssen passen.<br>
+              Beispiel: 15 Min. → Uster-Slots nach einem Zürich-Termin werden nicht angeboten (35 min Fahrzeit). Zürich nach einem Uster-Pickup schon.<br>
               <span class="text-gray-400">0 = deaktiviert</span>
             </p>
             <div class="flex items-center gap-3">
@@ -2088,6 +2134,7 @@
     :can-edit="props.currentUser?.can_edit_guide === true || props.currentUser?.role === 'admin' || props.currentUser?.role === 'tenant_admin'"
     @close="showStaffGuide = false"
   />
+  <AccountSwitchModal :open="showAccountSwitch" @close="showAccountSwitch = false" />
 </template>
 
 <script setup lang="ts">
@@ -2157,6 +2204,10 @@ const emit = defineEmits<{
 // Tenant composable — on staff calendar (app host) currentTenant is often unset
 const { tenantSlug, loadTenant, currentTenant } = useTenant()
 const authStore = useAuthStore()
+const showAccountSwitch = ref(false)
+const canOpenAccountSwitch = computed(() =>
+  !!(authStore.userProfile?.can_switch_accounts || props.currentUser?.can_switch_accounts)
+)
 const resolvedTenantSlug = ref<string | null>(null)
 
 const tenantDisplayName = computed(
@@ -4849,5 +4900,9 @@ onBeforeUnmount(() => {
 }
 .peer:checked ~ .tenant-toggle {
   background-color: var(--color-primary, #1E40AF);
+}
+
+.location-settings-scroll {
+  -webkit-overflow-scrolling: touch;
 }
 </style>

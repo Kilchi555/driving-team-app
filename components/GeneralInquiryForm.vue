@@ -114,7 +114,7 @@
               color: brandPrimary,
             }"
           >
-            Du musst keinen Treffpunkt wählen — wir rufen dich an und klären den Termin gemeinsam.
+            Du musst keinen Treffpunkt wählen — wir melden uns über den Kanal, den du unten wählst.
           </div>
 
           <div
@@ -322,6 +322,27 @@
                 :style="fieldFocusStyle"
                 @input="onPhoneInput"
               />
+            </div>
+          </div>
+
+          <div v-if="preferredContactOptions.length" class="space-y-2">
+            <label class="block text-sm font-medium text-slate-700">
+              Wie dürfen wir dich kontaktieren? <span class="text-red-500">*</span>
+            </label>
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <button
+                v-for="opt in preferredContactOptions"
+                :key="opt.value"
+                type="button"
+                class="inquiry-chip text-center"
+                :class="{ 'inquiry-chip--active': preferredContactMethod === opt.value }"
+                :style="preferredContactMethod === opt.value
+                  ? { backgroundColor: brandPrimary, borderColor: brandPrimary, color: '#fff' }
+                  : { borderColor: withAlphaLocal(brandPrimary, 0.28), color: brandPrimary, backgroundColor: withAlphaLocal(brandPrimary, 0.06) }"
+                @click="preferredContactMethod = opt.value"
+              >
+                {{ opt.label }}
+              </button>
             </div>
           </div>
 
@@ -540,6 +561,11 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { logger } from '~/utils/logger'
 import { getBrandPrimary } from '~/utils/colors'
+import {
+  PREFERRED_CONTACT_OPTIONS,
+  preferredContactNoteLine,
+  type PreferredContactMethod,
+} from '~/utils/preferred-contact-method'
 
 const { t } = useTerminology()
 
@@ -641,6 +667,7 @@ const zip = ref('')
 const city = ref('')
 const profession = ref('')
 const message = ref('')
+const preferredContactMethod = ref<PreferredContactMethod | ''>('')
 const honeypot = ref('')
 const selectedCategory = ref(props.initial_category || '')
 const selectedLocation = ref(props.initial_location || '')
@@ -725,7 +752,7 @@ const intakeModeOptions = computed(() => {
   const labels: Record<string, { label: string; hint: string }> = {
     locations: { label: 'Treffpunkt wählen', hint: 'Filiale / Standort auswählen' },
     pickup_address: { label: 'Abholung', hint: 'Wunsch-Abholadresse angeben' },
-    callback: { label: 'Rückruf', hint: 'Wir rufen dich an' },
+    callback: { label: 'Rückruf', hint: 'Wir melden uns bei dir' },
   }
   return availableIntakeModes.value.map(value => ({ value, ...labels[value] }))
 })
@@ -807,7 +834,7 @@ const formDescription = computed(() => {
     return 'Hast du Fragen? Wir freuen uns auf deine Nachricht.'
   }
   if (locationIntakeMode.value === 'callback') {
-    return 'Hinterlasse deine Kontaktdaten — wir rufen dich an und finden einen passenden Termin.'
+    return 'Hinterlasse deine Kontaktdaten — wir melden uns und finden einen passenden Termin.'
   }
   if (locationIntakeMode.value === 'pickup_address') {
     return 'Sag uns Kategorie, Wunschzeiten und Abholadresse — wir melden uns mit Vorschlägen.'
@@ -845,6 +872,23 @@ const hasValidTimeSlots = computed(() => {
   })
 })
 
+const preferredContactOptions = computed(() =>
+  PREFERRED_CONTACT_OPTIONS.filter((opt) => {
+    if (opt.requires === 'phone') return isFieldVisible('phone')
+    if (opt.requires === 'email') return isFieldVisible('email')
+    return true
+  }),
+)
+
+const hasValidPreferredContact = computed(() => {
+  if (!preferredContactOptions.value.length) return true
+  const selected = preferredContactOptions.value.find(opt => opt.value === preferredContactMethod.value)
+  if (!selected) return false
+  if (selected.requires === 'phone') return !!phone.value.trim()
+  if (selected.requires === 'email') return !!email.value.trim()
+  return true
+})
+
 const isFormValid = computed(() => {
   const requiredOk = requiredFields.value.every(key => !!fieldValue(key)?.trim())
 
@@ -863,11 +907,20 @@ const isFormValid = computed(() => {
       && locationOk
       && selectedDuration.value
       && hasValidTimeSlots.value
+      && hasValidPreferredContact.value
     )
   }
 
-  return !!(requiredOk && message.value?.trim())
+  return !!(requiredOk && message.value?.trim() && hasValidPreferredContact.value)
 })
+
+watch(preferredContactOptions, (opts) => {
+  if (opts.some(opt => opt.value === preferredContactMethod.value)) return
+  preferredContactMethod.value =
+    (locationIntakeMode.value === 'callback' && opts.some(opt => opt.value === 'phone'))
+      ? 'phone'
+      : (opts[0]?.value || '')
+}, { immediate: true })
 
 watch(locationIntakeMode, (mode) => {
   if (mode !== 'locations') {
@@ -1107,11 +1160,19 @@ const submitInquiry = async () => {
       }
     }
 
+    if (preferredContactOptions.value.length && !hasValidPreferredContact.value) {
+      error.value = 'Bitte wähle, wie wir dich kontaktieren dürfen'
+      return
+    }
+
     isSubmitting.value = true
 
     const extraNoteParts: string[] = []
     if (locationIntakeMode.value === 'callback') {
       extraNoteParts.push('Rückruf erwünscht')
+    }
+    if (preferredContactMethod.value) {
+      extraNoteParts.push(preferredContactNoteLine(preferredContactMethod.value))
     }
     if (locationIntakeMode.value === 'pickup_address' && (street.value.trim() || zip.value.trim() || city.value.trim())) {
       const addr = [street.value.trim(), streetNr.value.trim()].filter(Boolean).join(' ')
@@ -1136,6 +1197,7 @@ const submitInquiry = async () => {
       birthdate: birthdate.value.trim() || null,
       profession: profession.value.trim() || null,
       notes: combinedNotes,
+      preferred_contact_method: preferredContactMethod.value || null,
       location_intake_mode: locationIntakeMode.value,
       _hp: honeypot.value || undefined,
       marketing_session_id: (typeof window !== 'undefined' && (window as any).__analyticsSessionId) || undefined,
@@ -1195,6 +1257,7 @@ const closeModal = () => {
   city.value = ''
   profession.value = ''
   message.value = ''
+  preferredContactMethod.value = ''
   selectedCategory.value = props.initial_category || ''
   selectedLocation.value = props.initial_location || ''
   selectedDuration.value = props.initial_duration || null

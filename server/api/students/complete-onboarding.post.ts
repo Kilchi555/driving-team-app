@@ -5,12 +5,13 @@ import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { logAudit } from '~/server/utils/audit'
-import { sanitizeString } from '~/server/utils/validators'
+import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { sendWelcomeEmail } from '~/server/utils/send-welcome-email'
 import { notifyTenantAdminsNewClient } from '~/server/utils/notify-new-client-registration'
+import { claimOrCreateAuthUser, isUniqueAuthUserIdViolation, messageForAuthEmailClaimCode } from '~/server/utils/auth-email-claim'
 
 export default defineEventHandler(async (event) => {
   let businessNoun = 'Unternehmen'
@@ -35,7 +36,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // ✅ LAYER 2: Input validation
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (email && !validateEmail(email).valid) {
       logger.warn('⚠️ Complete onboarding: Invalid email format', { email })
       throw createError({
         statusCode: 400,
@@ -135,6 +136,20 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ Found user:', { id: user.id, email: user.email, tenant_id: user.tenant_id })
 
+    const { data: onboardingTenant } = await supabaseAdmin
+      .from('tenants')
+      .select('booking_policy')
+      .eq('id', user.tenant_id)
+      .maybeSingle()
+    const { allowsCustomerAccountActivation } = await import('~/server/utils/customer-account-activation')
+    if (!allowsCustomerAccountActivation(onboardingTenant?.booking_policy)) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Online-Konto ist für diesen Betrieb nicht aktiviert. Bitte kontaktiere uns direkt.',
+        message: 'Online-Konto ist für diesen Betrieb nicht aktiviert. Bitte kontaktiere uns direkt.',
+      })
+    }
+
     try {
       const terms = await getTenantTerminology(supabaseAdmin, user.tenant_id)
       businessNoun = terms.businessNoun || businessNoun
@@ -151,128 +166,25 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 6: Check if email is already linked to an active CLIENT account (within same tenant)
-    // Only block if another CLIENT (role='client') has this email — a staff member using the
-    // same email is fine (cross-role sharing the same auth.users account via orphan recovery).
-    const { data: existingPublicUser } = await supabaseAdmin
-      .from('users')
-      .select('id, auth_user_id, first_name, last_name, role')
-      .eq('email', email.toLowerCase().trim())
-      .eq('tenant_id', user.tenant_id)
-      .eq('role', 'client')
-      .not('auth_user_id', 'is', null)
-      .maybeSingle()
-
-    if (existingPublicUser && existingPublicUser.id !== user.id) {
+    if (user.auth_user_id) {
       throw createError({
         statusCode: 409,
-        message: 'Diese E-Mail-Adresse ist bereits mit einem anderen Konto verknüpft. Bitte verwende eine andere E-Mail-Adresse oder melde dich direkt an.'
+        message: 'Du hast bereits ein Konto. Bitte melde dich direkt an.',
+        data: { code: 'ALREADY_ONBOARDED' },
       })
     }
 
-    if (existingPublicUser && existingPublicUser.id === user.id && existingPublicUser.auth_user_id) {
-      // This user already completed onboarding
-      throw createError({
-        statusCode: 409,
-        message: 'Du hast bereits ein Konto. Bitte melde dich direkt an.'
-      })
-    }
-
-    // ✅ LAYER 7: Create Auth User (or recover existing orphaned auth user)
-    logger.debug('👤 Creating auth user for email:', email)
-    let resolvedAuthUserId: string
-
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email,
-      password: password,
-      email_confirm: true,
-      user_metadata: {
-        first_name: firstName,
-        last_name: lastName
-      }
+    logger.debug('👤 Creating or claiming auth user for email:', email)
+    const { authUserId: resolvedAuthUserId } = await claimOrCreateAuthUser({
+      supabase: supabaseAdmin,
+      email: email.toLowerCase().trim(),
+      password,
+      firstName,
+      lastName,
+      tenantId: user.tenant_id,
+      excludeUserId: user.id,
     })
-
-    if (authError) {
-      logger.warn('⚠️ Complete onboarding: Auth user creation error', { error: authError.message })
-
-      if (authError.message.toLowerCase().includes('already') || authError.message.toLowerCase().includes('registered')) {
-        // Auth user exists but public.users.auth_user_id is null (orphaned auth record).
-        // Recover: find the existing auth user, update their password, then link them.
-        logger.debug('🔍 Auth user already exists - attempting recovery for orphaned record...')
-
-        try {
-          // Try to get the user directly via their email
-          const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserByEmail(email)
-          
-          if (userError || !userData?.user) {
-            logger.warn('⚠️ Could not find auth user by email:', email)
-            // Fallback: List users if direct lookup fails (slower but more reliable)
-            const { data: listData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-
-            if (listError) {
-              logger.error('❌ Could not list auth users for recovery:', { error: listError })
-              throw createError({ statusCode: 500, message: 'Fehler bei der Kontosuche. Bitte versuche es später erneut.' })
-            }
-
-            const orphanedAuthUser = listData?.users?.find(
-              u => u.email?.toLowerCase() === email.toLowerCase().trim()
-            )
-
-            if (!orphanedAuthUser) {
-              throw createError({ statusCode: 409, message: 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich direkt an.' })
-            }
-
-            // Update password and metadata for the recovered auth user
-            const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(orphanedAuthUser.id, {
-              password: password,
-              email_confirm: true,
-              user_metadata: { first_name: firstName, last_name: lastName }
-            })
-
-            if (updateAuthError) {
-              logger.error('❌ Could not update orphaned auth user:', updateAuthError.message)
-              throw createError({ statusCode: 500, message: 'Fehler beim Aktualisieren des Benutzerkontos.' })
-            }
-
-            resolvedAuthUserId = orphanedAuthUser.id
-            logger.debug('✅ Orphaned auth user recovered and password updated:', orphanedAuthUser.id)
-          } else {
-            // Direct lookup worked — update password for this auth user
-            const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(userData.user.id, {
-              password: password,
-              email_confirm: true,
-              user_metadata: { first_name: firstName, last_name: lastName }
-            })
-
-            if (updateAuthError) {
-              logger.error('❌ Could not update existing auth user:', updateAuthError.message)
-              throw createError({ statusCode: 500, message: 'Fehler beim Aktualisieren des Benutzerkontos.' })
-            }
-
-            resolvedAuthUserId = userData.user.id
-            logger.debug('✅ Existing auth user recovered and password updated:', userData.user.id)
-          }
-        } catch (err: any) {
-          if (err.statusCode) throw err
-          logger.error('❌ Recovery failed:', err)
-          throw createError({ statusCode: 500, message: `Fehler bei der Kontoaktivierung. Bitte kontaktiere ${businessNoun}.` })
-        }
-
-      } else if (authError.message.includes('password')) {
-        throw createError({
-          statusCode: 400,
-          message: 'Das Passwort entspricht nicht den Anforderungen. Bitte wähle ein stärkeres Passwort.'
-        })
-      } else {
-        throw createError({
-          statusCode: 409,
-          message: 'Fehler beim Erstellen des Benutzerkontos'
-        })
-      }
-    } else {
-      resolvedAuthUserId = authData.user.id
-      logger.debug('✅ Auth user created:', { id: authData.user.id, email: authData.user.email })
-    }
+    logger.debug('✅ Auth user ready:', resolvedAuthUserId)
 
     // ✅ LAYER 7: Update user record with all data
     // Ensure category stored as array - support both old (category) and new (categories) format
@@ -319,18 +231,26 @@ export default defineEventHandler(async (event) => {
 
     if (updateError) {
       logger.error('❌ Complete onboarding: User update error', { error: updateError.message, userId: user.id })
-      
-      // Provide user-friendly error messages
+
+      if (isUniqueAuthUserIdViolation(updateError)) {
+        throw createError({
+          statusCode: 409,
+          message: messageForAuthEmailClaimCode('AUTH_LINKED_ELSEWHERE') || 'Diese E-Mail-Adresse ist bereits mit einem anderen Konto verknüpft.',
+          data: { code: 'AUTH_LINKED_ELSEWHERE' },
+        })
+      }
+
       let userMessage = 'Fehler beim Speichern der Profildaten'
-      if (updateError.message.includes('duplicate')) {
+      if (updateError.code === '23505' || updateError.message.includes('duplicate')) {
         userMessage = 'Ein Benutzer mit diesen Daten existiert bereits.'
       } else if (updateError.message.includes('constraint')) {
         userMessage = 'Die eingegebenen Daten sind ungültig. Bitte überprüfe deine Angaben.'
       }
-      
+
       throw createError({
         statusCode: 400,
-        message: userMessage
+        message: userMessage,
+        data: { code: 'PROFILE_UPDATE_FAILED' },
       })
     }
 
@@ -578,6 +498,7 @@ export default defineEventHandler(async (event) => {
     })
     
     const statusCode = error.statusCode || 500
+    const errorCode = typeof error.data?.code === 'string' ? error.data.code : undefined
     // Prefer the concrete German message from createError; never leak the English fallback
     // when a nested throw used `message` instead of `statusMessage`.
     const rawMessage =
@@ -585,8 +506,7 @@ export default defineEventHandler(async (event) => {
       error.message ||
       `Die Registrierung konnte nicht abgeschlossen werden. Bitte versuche es erneut oder kontaktiere ${businessNoun}.`
 
-    // Map leftover English / technical messages to clear German UX copy
-    const statusMessage = humanizeOnboardingError(rawMessage, statusCode, businessNoun)
+    const statusMessage = humanizeOnboardingError(rawMessage, statusCode, businessNoun, errorCode)
     
     throw createError({
       statusCode,
@@ -594,36 +514,32 @@ export default defineEventHandler(async (event) => {
       message: statusMessage,
       data: {
         ...(error.data || {}),
+        code: error.data?.code,
         tip: onboardingErrorTip(statusMessage, statusCode, businessNoun),
       },
     })
   }
 })
 
-function humanizeOnboardingError(raw: string, statusCode: number, businessNoun = 'Unternehmen'): string {
-  const msg = (raw || '').trim()
-  const lower = msg.toLowerCase()
+function humanizeOnboardingError(raw: string, statusCode: number, businessNoun = 'Unternehmen', code?: string): string {
+  const fromCode = code ? messageForAuthEmailClaimCode(code) : null
+  if (fromCode && code !== 'AVAILABLE') return fromCode
 
-  if (lower.includes('onboarding completion failed')) {
-    return 'Die Registrierung konnte nicht abgeschlossen werden. Bitte versuche es erneut.'
+  if (code === 'ALREADY_ONBOARDED') {
+    return 'Du hast bereits ein Konto. Bitte melde dich direkt an.'
   }
-  if (lower.includes('missing required') || lower.includes('invalid email')) {
-    return 'Bitte prüfe E-Mail und Passwort und versuche es erneut.'
+  if (code === 'WEAK_PASSWORD') {
+    return 'Das Passwort entspricht nicht den Anforderungen. Bitte wähle ein stärkeres Passwort.'
   }
-  if (lower.includes('invalid or expired') || lower.includes('token has expired') || lower.includes('user lookup failed') || lower.includes('user not found')) {
-    return 'Dieser Registrierungslink ist ungültig oder abgelaufen. Bitte fordere einen neuen Link an.'
+  if (code === 'CONTACT_MISMATCH') {
+    return 'Diese Kontaktdaten gehören zu einer offenen Anmeldung mit anderen Angaben.'
   }
-  if (lower.includes('too many attempts')) {
-    return 'Zu viele Versuche. Bitte warte kurz und versuche es danach erneut.'
-  }
-  if (lower.includes('already') && (lower.includes('registered') || lower.includes('konto') || lower.includes('email'))) {
-    return msg.includes('Bitte') ? msg : 'Diese E-Mail-Adresse ist bereits registriert. Bitte melde dich direkt an.'
-  }
-  if (statusCode >= 500 && (/^[A-Za-z0-9_:\-\s.]+$/.test(msg) && !/[äöüÄÖÜß]/.test(msg))) {
-    // Likely an English/technical 500 — don't show it raw
+
+  const msg = (raw || '').trim()
+  if (statusCode >= 500 && msg && !/[äöüÄÖÜß]/.test(msg) && !/\b(Fehler|Bitte|Konto)\b/i.test(msg)) {
     return `Ein technischer Fehler ist aufgetreten. Bitte versuche es erneut oder kontaktiere ${businessNoun}.`
   }
-  return msg
+  return msg || `Die Registrierung konnte nicht abgeschlossen werden. Bitte versuche es erneut oder kontaktiere ${businessNoun}.`
 }
 
 function onboardingErrorTip(message: string, statusCode: number, businessNoun = 'Unternehmen'): string | undefined {

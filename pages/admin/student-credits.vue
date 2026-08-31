@@ -739,36 +739,8 @@ const loadPendingWithdrawals = async () => {
 }
 
 const processWithdrawal = async (withdrawal: any) => {
-  try {
-    processingWithdrawalId.value = withdrawal.id
-    
-    logger.debug('💳 Processing withdrawal:', {
-      userId: withdrawal.user_id,
-      amount: (withdrawal.pending_withdrawal_rappen / 100).toFixed(2)
-    })
-
-    const response = await $fetch('/api/student-credits/process-withdrawal-wallee', {
-      method: 'POST',
-      body: {
-        studentId: withdrawal.user_id
-      }
-    })
-
-    if (response.success) {
-      logger.debug('✅ Withdrawal processed successfully:', response)
-      // Reload withdrawals list
-      await loadPendingWithdrawals()
-      // Show success notification
-      alert(`✅ Auszahlung verarbeitet!\n\nBetrag: CHF ${(withdrawal.pending_withdrawal_rappen / 100).toFixed(2)}\nWallee Refund ID: ${response.walleeRefundId}`)
-    } else {
-      alert(`❌ Fehler: ${response.error}`)
-    }
-  } catch (err: any) {
-    console.error('❌ Error processing withdrawal:', err)
-    alert(`❌ Fehler beim Verarbeiten der Auszahlung: ${err.message}`)
-  } finally {
-    processingWithdrawalId.value = null
-  }
+  alert('Guthaben-Auszahlungen über Wallee sind deaktiviert. Bitte als Banküberweisung markieren.')
+  await completeWithdrawal(withdrawal)
 }
 
 // Mark single withdrawal as completed (after bank transfer)

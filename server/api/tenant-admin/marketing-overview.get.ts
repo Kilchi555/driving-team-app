@@ -74,11 +74,15 @@ export default defineEventHandler(async (event) => {
         .order('date', { ascending: false })
         .limit(1000),
 
-      supabase
-        .from('booking_events')
-        .select('created_at, event_type, page, referrer, session_id')
-        .gte('created_at', sinceISO)
-        .limit(20000),
+      (() => {
+        let qb = supabase
+          .from('booking_events')
+          .select('created_at, event_type, page, referrer, session_id, tenant_id, step, step_label')
+          .gte('created_at', sinceISO)
+          .limit(20000)
+        if (tenantId) qb = qb.eq('tenant_id', tenantId)
+        return qb
+      })(),
 
       supabase
         .from('booking_redirects')
@@ -222,6 +226,38 @@ export default defineEventHandler(async (event) => {
       conversionRate: Math.round(conversionRate * 100) / 100,
       bookingFunnelRate: Math.round(bookingFunnelRate * 100) / 100,
     }
+
+    // Wizard drop-off: unique sessions that reached each step (labels come from the tenant UI)
+    type WizardAgg = { step: number; label: string; sessions: Set<string>; labelCounts: Map<string, number> }
+    const wizardMap = new Map<number, WizardAgg>()
+    for (const e of bookingEvents as any[]) {
+      if (e.event_type !== 'step' || e.step == null) continue
+      const step = Number(e.step)
+      if (!Number.isFinite(step) || step < 0 || step > 7) continue
+      if (!wizardMap.has(step)) {
+        wizardMap.set(step, { step, label: e.step_label || `Schritt ${step}`, sessions: new Set(), labelCounts: new Map() })
+      }
+      const row = wizardMap.get(step)!
+      if (e.session_id) row.sessions.add(e.session_id)
+      if (e.step_label) row.labelCounts.set(e.step_label, (row.labelCounts.get(e.step_label) ?? 0) + 1)
+    }
+    const wizardSteps = Array.from(wizardMap.values())
+      .sort((a, b) => a.step - b.step)
+      .map((row, i, arr) => {
+        const sessions = row.sessions.size
+        const prevSessions = i === 0 ? sessions : arr[i - 1].sessions.size
+        const topLabel = [...row.labelCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? row.label
+        return {
+          step: row.step,
+          label: topLabel,
+          sessions,
+          dropOffPct: prevSessions > 0 ? Math.round(((prevSessions - sessions) / prevSessions) * 1000) / 10 : 0,
+        }
+      })
+
+    const biggestWizardDrop = [...wizardSteps]
+      .filter((s) => s.sessions >= 5 && s.dropOffPct >= 25)
+      .sort((a, b) => b.dropOffPct - a.dropOffPct)[0]
 
     // ============ 5. DAILY TREND ============
     type DayRow = { date: string; sessions: number; clicks: number; bookings: number; spend: number; impressions: number }
@@ -406,6 +442,17 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    if (biggestWizardDrop) {
+      quickWins.push({
+        severity: biggestWizardDrop.dropOffPct >= 40 ? 'high' : 'medium',
+        category: 'Booking-Wizard',
+        title: `Drop-off bei «${biggestWizardDrop.label}» (${biggestWizardDrop.dropOffPct}%)`,
+        detail: `${biggestWizardDrop.sessions} Sessions erreichen diesen Schritt — der grösste Absprung im Buchungs-Wizard.`,
+        metric: `−${biggestWizardDrop.dropOffPct}%`,
+        action: 'Diesen Wizard-Schritt vereinfachen',
+      })
+    }
+
     // 9.5: Booking-Funnel Drop-off
     if (viewedEvents > 30 && bookingFunnelRate < 30) {
       quickWins.push({
@@ -546,6 +593,7 @@ export default defineEventHandler(async (event) => {
         impressions: v.impressions,
       })),
       funnel,
+      wizardSteps,
       trend,
       topQueries,
       topPages,

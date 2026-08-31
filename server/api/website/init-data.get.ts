@@ -7,6 +7,8 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getTerminologyDefaults } from '~/composables/useTerminology'
 import { filterLeafCategories } from '~/server/utils/category-groups'
 import { loadWebsiteServices } from '~/server/utils/website-services'
+import { hasUsableGoogleReviews, usableGoogleReviewPlaces } from '~/utils/website-google-reviews'
+import { loadWebsitePublicLocations } from '~/server/utils/website-public-tenant'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -53,6 +55,11 @@ export default defineEventHandler(async (event) => {
     let existingSeo: { title?: string; description?: string; keywords?: string } | null = null
     let landingServiceDescriptions: Record<string, string> = {}
     let landingTestimonials: Array<{ id: string; author: string; text: string; rating: number }> = []
+    let landingExtraServices: any[] = []
+    let landingExtraProducts: any[] = []
+    let landingUsps: string[] = []
+    let landingTeam: any[] = []
+    let landingMeetingPoints: any[] = []
     let contactChannels: { phone: boolean; email: boolean; whatsapp: boolean; form: boolean } | null =
       null
     if (website?.id) {
@@ -80,7 +87,50 @@ export default defineEventHandler(async (event) => {
           if (s?.id && typeof s.description === 'string' && s.description.trim()) {
             landingServiceDescriptions[String(s.id)] = s.description
           }
+          if (s?.id && String(s.id).startsWith('extra-')) {
+            const cents = Number(s.price_cents)
+            landingExtraServices.push({
+              id: String(s.id),
+              name: String(s.name || ''),
+              duration_minutes: s.duration_minutes ?? null,
+              price_chf: Number.isFinite(cents) ? Math.round(cents / 100) : null,
+              description: String(s.description || ''),
+              image_url: s.image_url || null,
+            })
+          }
         }
+      }
+      const productsBlock = Array.isArray(landing?.blocks)
+        ? landing.blocks.find((b: any) => b?.type === 'products')
+        : null
+      const listedProducts = productsBlock?.content?.products
+      if (Array.isArray(listedProducts)) {
+        for (const p of listedProducts) {
+          const custom =
+            p?.source === 'custom' ||
+            String(p?.id || '').startsWith('product-') ||
+            String(p?.id || '').startsWith('wiz-product-')
+          if (!custom) continue
+          const cents = Number(p.price_cents)
+          landingExtraProducts.push({
+            id: String(p.id),
+            name: String(p.name || ''),
+            price_chf: Number.isFinite(cents) ? Math.round(cents / 100) : null,
+            description: String(p.description || ''),
+            image_url: p.image_url || null,
+          })
+        }
+      }
+      if (Array.isArray(landing?.brand?.usps)) {
+        landingUsps = landing.brand.usps.map((u: any) => String(u || '').trim()).filter(Boolean)
+      }
+      if (Array.isArray(landing?.brand?.website_team)) {
+        landingTeam = landing.brand.website_team
+      } else {
+        const teamBlock = Array.isArray(landing?.blocks)
+          ? landing.blocks.find((b: any) => b?.type === 'team')
+          : null
+        if (Array.isArray(teamBlock?.content?.members)) landingTeam = teamBlock.content.members
       }
       const testimonialsBlock = Array.isArray(landing?.blocks)
         ? landing.blocks.find((b: any) => b?.type === 'testimonials')
@@ -115,15 +165,26 @@ export default defineEventHandler(async (event) => {
           form: contactBlock.content.form_enabled !== false,
         }
       }
+      if (Array.isArray(contactBlock?.content?.meeting_points)) {
+        landingMeetingPoints = contactBlock.content.meeting_points
+      }
     }
 
     // ============ 2. GET STAFF MEMBERS (for testimonials/team info) ============
     const { data: staffMembers } = await supabase
       .from('users')
-      .select('id, first_name, last_name, email, phone, role')
+      .select('id, first_name, last_name, email, phone, role, is_active')
       .eq('tenant_id', tenant_id)
-      .eq('role', 'staff')
-      .limit(5)
+      .eq('is_active', true)
+      .in('role', ['staff', 'admin'])
+      .limit(12)
+
+    let publicLocations: Awaited<ReturnType<typeof loadWebsitePublicLocations>> = []
+    try {
+      publicLocations = await loadWebsitePublicLocations(supabase, tenant_id)
+    } catch {
+      publicLocations = []
+    }
 
     // ============ 3. GET ALL CATEGORIES ============
     const { data: categories } = await supabase
@@ -135,6 +196,26 @@ export default defineEventHandler(async (event) => {
 
     // ============ 4. GET PRICING RULES (services) ============
     const services = await loadWebsiteServices(supabase, tenant_id)
+
+    let catalogProducts: Array<{
+      id: string
+      name: string
+      description: string
+      price_chf: number | null
+      category: string | null
+    }> = []
+    try {
+      const { loadWebsiteCatalogProducts } = await import('~/server/utils/website-products')
+      catalogProducts = (await loadWebsiteCatalogProducts(supabase, tenant_id)).map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price_chf: p.price_cents != null ? Math.round(p.price_cents / 100) : null,
+        category: p.category,
+      }))
+    } catch {
+      catalogProducts = []
+    }
 
     // ============ 5. GET TESTIMONIALS (5-star ratings) ============
     const { data: testimonials } = await supabase
@@ -183,12 +264,12 @@ export default defineEventHandler(async (event) => {
 
     // ============ 8. PREPARE SUGGESTED BIO (industry-aware local SEO) ============
     const terms = getTerminologyDefaults(tenant?.business_type)
-    const { buildLocalSeoDefaults } = await import('~/server/utils/website-local-seo')
+    const { buildLocalSeoDefaults, resolveWebsiteCity } = await import('~/server/utils/website-local-seo')
     const leafNames = leafCategories.map((c: any) => c.name).filter(Boolean)
     const localSeo = buildLocalSeoDefaults({
       name: tenant?.name || '',
       business_type: tenant?.business_type,
-      city: tenant?.city || null,
+      city: resolveWebsiteCity(tenant) || null,
       address: tenant?.address || null,
       categories: leafNames,
       formal_address: formalAddress,
@@ -200,14 +281,10 @@ export default defineEventHandler(async (event) => {
       website?.logo_url || tenant?.logo_url || tenant?.logo_square_url || null
     const heroImageUrl = website?.hero_image_url || null
 
-    let googleReviewPlaces: Array<{ name?: string; place_id?: string }> = []
-    try {
-      const raw = (tenant as any)?.google_review_places
-      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
-      if (Array.isArray(parsed)) googleReviewPlaces = parsed
-    } catch {
-      googleReviewPlaces = []
-    }
+    const googleReviewPlaces = usableGoogleReviewPlaces((tenant as any)?.google_review_places, {
+      subdomain: website?.subdomain || tenant?.slug,
+      name: tenant?.name,
+    })
 
     return {
       success: true,
@@ -219,16 +296,32 @@ export default defineEventHandler(async (event) => {
           hero_image_url: heroImageUrl,
         },
         google_reviews: {
-          enabled: googleReviewPlaces.some((p) => p?.place_id),
+          enabled: hasUsableGoogleReviews((tenant as any)?.google_review_places, {
+            subdomain: website?.subdomain || tenant?.slug,
+            name: tenant?.name,
+          }),
           places: googleReviewPlaces,
         },
         terminology: terms,
         staff: (staffMembers || []).map((s: any) => ({
           id: s.id,
-          name: `${s.first_name} ${s.last_name}`,
+          name: `${s.first_name || ''} ${s.last_name || ''}`.trim(),
           email: s.email,
-          phone: s.phone
+          phone: s.phone,
+          role: s.role,
         })),
+        locations: publicLocations.map((l) => ({
+          id: l.id,
+          name: l.name,
+          address: l.address || '',
+          city: l.city || '',
+        })),
+        extra_services: landingExtraServices,
+        extra_products: landingExtraProducts,
+        products: catalogProducts,
+        usps: landingUsps,
+        landing_team: landingTeam,
+        meeting_points: landingMeetingPoints,
         categories: leafCategories.map((c: any) => ({
           id: c.id,
           code: c.code,

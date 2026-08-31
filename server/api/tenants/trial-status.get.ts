@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('tenants')
-    .select('is_trial, trial_ends_at, subscription_plan, current_period_end')
+    .select('is_trial, trial_ends_at, subscription_plan, current_period_end, website_only, website_setup_paid_at, website_hosting_plan')
     .eq('id', tenantId)
     .single()
 
@@ -33,5 +33,8 @@ export default defineEventHandler(async (event) => {
     trial_ends_at: data.trial_ends_at,
     subscription_plan: data.subscription_plan,
     current_period_end: data.current_period_end,
+    website_only: !!data.website_only,
+    website_setup_paid_at: data.website_setup_paid_at ?? null,
+    website_hosting_plan: data.website_hosting_plan ?? null,
   }
 })

@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   if (!userProfile) throw createError({ statusCode: 403, message: 'User profile not found' })
 
   const query = getQuery(event)
-  const { page = '1', limit = '20', status, payment_status, user_id, search, has_dunning } = query
+  const { page = '1', limit = '20', status, payment_status, user_id, search, has_dunning, document_kind } = query
 
   const pageNum = parseInt(page as string) || 1
   const limitNum = Math.min(parseInt(limit as string) || 20, 100)
@@ -31,6 +31,7 @@ export default defineEventHandler(async (event) => {
       .from('invoices_with_details')
       .select('*', { count: 'exact' })
       .eq('tenant_id', userProfile.tenant_id)
+      .eq('document_kind', document_kind === 'quote' ? 'quote' : 'invoice')
 
     if (status) {
       const statuses = (status as string).split(',')
@@ -52,7 +53,7 @@ export default defineEventHandler(async (event) => {
 
     if (search) {
       const searchTerm = search as string
-      q = q.or(`invoice_number.ilike.%${searchTerm}%,customer_first_name.ilike.%${searchTerm}%,customer_last_name.ilike.%${searchTerm}%`)
+      q = q.or(`invoice_number.ilike.%${searchTerm}%,quote_number.ilike.%${searchTerm}%,billing_company_name.ilike.%${searchTerm}%,customer_first_name.ilike.%${searchTerm}%,customer_last_name.ilike.%${searchTerm}%`)
     }
 
     q = q.order('created_at', { ascending: false }).range(from, to)

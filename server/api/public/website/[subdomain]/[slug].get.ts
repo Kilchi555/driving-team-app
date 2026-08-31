@@ -77,13 +77,14 @@ export default defineEventHandler(async (event) => {
     .eq('id', website.tenant_id)
     .maybeSingle()
 
-  // Sibling nav: published add-on pages
-  const { data: navPages } = await supabase
+  // Sibling nav: published add-on pages (all pages in preview)
+  let navQuery = supabase
     .from('website_pages')
     .select('title, slug, page_type, is_home')
     .eq('website_id', website.id)
-    .eq('is_published', true)
     .order('page_type', { ascending: true })
+  if (!preview) navQuery = navQuery.eq('is_published', true)
+  const { data: navPages } = await navQuery
 
   const { applyLivePricesToLanding } = await import('~/server/utils/website-live-prices')
   const { enrichLandingPremium } = await import('~/server/utils/website-enrich-landing')
@@ -94,6 +95,9 @@ export default defineEventHandler(async (event) => {
       website.custom_domain_verified && website.custom_domain
         ? `https://${website.custom_domain}`
         : undefined,
+    navPages: navPages || [],
+    pageSlug: page.slug,
+    pageTitle: page.title,
   })
 
   setWebsitePublicCache(event, {

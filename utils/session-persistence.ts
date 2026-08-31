@@ -74,6 +74,9 @@ export interface PersistentSession {
     trial_ends_at: string | null
     subscription_plan: string | null
     current_period_end: string | null
+    website_only?: boolean
+    website_setup_paid_at?: string | null
+    website_hosting_plan?: string | null
   }
   timestamp: number
   expiresIn: number // 24 hours = 86400000 ms

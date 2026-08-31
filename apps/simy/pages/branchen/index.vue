@@ -15,7 +15,7 @@
           Simy für deine Branche
         </h1>
         <p class="text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
-          Terminbuchung, Team-Kalender, Kunden und Schweizer QR-Rechnungen — mit branchenspezifischen Vorlagen.
+          Terminbuchung, Team-Kalender, SEO-Website, Kunden und Schweizer QR-Rechnungen — mit branchenspezifischen Vorlagen.
         </p>
       </div>
     </section>
@@ -42,7 +42,12 @@
       </div>
     </section>
 
-    <section class="py-20 px-6" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))">
+    <SimyWebsiteHighlight
+      title="Website für jede Branche — ohne Agentur"
+      subtitle="Dieselbe SEO-starke Landingpage, mit Vorlagen für Fahrschule, Coaching, Training und mehr. Vorschau gratis, live ab CHF 490 einmalig."
+    />
+
+    <section class="simy-closer py-20 px-6">
       <div class="max-w-2xl mx-auto text-center text-white">
         <h2 class="text-3xl font-black mb-4">Nicht sicher, welche Vorlage?</h2>
         <p class="text-white/80 mb-8">Starte den Setup-Wizard — du wählst die Branche in 30 Sekunden.</p>
@@ -93,7 +98,7 @@ const branchenCards = [
 
 const branchenItems = branchenCards.map((c) => ({
   name: c.label,
-  url: `https://simy.ch${c.href}`,
+  url: `https://www.simy.ch${c.href}`,
 }))
 
 useHead({
@@ -102,22 +107,22 @@ useHead({
     {
       name: 'description',
       content:
-        'Online-Terminbuchung und Branchen-Software für Fahrschule, Coaching, Consulting, Personal Training, Nachhilfe, Musikschule, Hundeschule und Massage. Schweizer Buchungssystem mit QR-Rechnung.',
+        'Online-Terminbuchung, SEO-Website und Branchen-Software für Fahrschule, Coaching, Consulting, Personal Training, Nachhilfe, Musikschule, Hundeschule und Massage. Schweizer Buchungssystem mit QR-Rechnung.',
     },
     { property: 'og:title', content: 'Online-Terminbuchung nach Branche – Simy Schweiz' },
-    { property: 'og:url', content: 'https://simy.ch/branchen' },
+    { property: 'og:url', content: 'https://www.simy.ch/branchen' },
   ],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/branchen' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/branchen' }],
   script: ldScripts(
     itemListLd({
       name: 'Simy Branchen – Online-Terminbuchung Schweiz',
       description: 'Branchenspezifische All-in-One Software und Online-Buchung für Schweizer Dienstleister.',
-      url: 'https://simy.ch/branchen',
+      url: 'https://www.simy.ch/branchen',
       items: branchenItems,
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'Branchen', url: 'https://simy.ch/branchen' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'Branchen', url: 'https://www.simy.ch/branchen' },
     ]),
   ),
 })

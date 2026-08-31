@@ -1,79 +1,78 @@
+import { watch } from 'vue'
+import { defineNuxtPlugin } from '#imports'
+
 /**
- * Nuxt client plugin — sets up Capacitor Push Notifications.
- * Runs only in the native app (iOS / Android); silently skips in the browser.
- *
- * Flow:
- *  1. Check / request permission
- *  2. Register with FCM / APNs → receive device token
- *  3. POST token to /api/push/register-token (authenticated)
- *  4. Listen for incoming notifications and taps
+ * Native push: bind listeners, then request OS permission after login.
+ * Do not ask on the login screen (Play review). Do ask as soon as a session exists.
  */
 
-import { defineNuxtPlugin, navigateTo } from '#imports'
+export default defineNuxtPlugin(() => {
+  if (import.meta.server) return
 
-export default defineNuxtPlugin(async () => {
-  if (process.server) return
-  if (!(window as any).Capacitor?.isNativePlatform?.()) return
-
-  try {
-    const { PushNotifications } = await import('@capacitor/push-notifications')
-
-    // ── 1. Permission ─────────────────────────────────────────────────────────
-    let permStatus = await PushNotifications.checkPermissions()
-    if (permStatus.receive === 'prompt') {
-      permStatus = await PushNotifications.requestPermissions()
+  const isLoggedIn = () => {
+    try {
+      return Boolean(useAuthStore().isLoggedIn)
+    } catch {
+      return false
     }
-    if (permStatus.receive !== 'granted') {
-      console.info('[Push] Permission not granted, skipping registration.')
+  }
+
+  const tryRegister = () => {
+    void flushPendingPushToken()
+    // Never show the OS dialog on the login screen.
+    void ensureNativePushRegistration({ request: isLoggedIn() })
+  }
+
+  let setupStarted = false
+  let iv: number | undefined
+  const stopPolling = () => {
+    if (iv !== undefined) {
+      window.clearInterval(iv)
+      iv = undefined
+    }
+  }
+
+  const setup = async () => {
+    if (setupStarted) return
+    setupStarted = true
+    if (!(await isCapacitorNative())) {
+      stopPolling()
       return
     }
 
-    // ── 2. Register with platform push service ────────────────────────────────
-    await PushNotifications.register()
+    try {
+      const { getSupabase } = await import('~/utils/supabase')
+      const supabase = getSupabase()
 
-    // ── 3. Token received → save to backend ──────────────────────────────────
-    await PushNotifications.addListener('registration', async (tokenData) => {
-      try {
-        const supabase = useSupabaseClient()
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.access_token) return
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) tryRegister()
 
-        await $fetch('/api/push/register-token', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${session.access_token}` },
-          body: {
-            token: tokenData.value,
-            platform: (window as any).Capacitor.getPlatform() as 'ios' | 'android',
-          },
-        })
-      } catch (e) {
-        console.warn('[Push] Token registration failed:', e)
-      }
-    })
+      supabase.auth.onAuthStateChange((_event, nextSession) => {
+        if (nextSession) tryRegister()
+      })
 
-    // ── 4. Registration error ─────────────────────────────────────────────────
-    await PushNotifications.addListener('registrationError', (err) => {
-      console.error('[Push] Registration error:', JSON.stringify(err))
-    })
-
-    // ── 5. Foreground notification (show as in-app banner via console for now) ─
-    await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.info('[Push] Foreground notification:', notification.title)
-    })
-
-    // ── 6. Notification tap → navigate if data.path is a safe in-app path ───
-    await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-      const path = action.notification.data?.path as string | undefined
-      if (
-        typeof path === 'string'
-        && path.startsWith('/')
-        && !path.startsWith('//')
-        && !path.includes('://')
-      ) {
-        navigateTo(path)
-      }
-    })
-  } catch (e) {
-    console.warn('[Push] Setup failed:', e)
+      const authStore = useAuthStore()
+      watch(
+        () => authStore.isLoggedIn,
+        (loggedIn) => {
+          if (loggedIn) tryRegister()
+        },
+        { immediate: true },
+      )
+    } catch (e) {
+      console.warn('[Push] Setup failed:', e)
+    }
   }
+
+  void setup()
+  // Hosted WebView can inject Capacitor after the first JS tick; cookie
+  // login hydrates supabase-js a moment later. Keep trying briefly.
+  let attempts = 0
+  iv = window.setInterval(() => {
+    attempts += 1
+    void setup()
+    if (isLoggedIn()) tryRegister()
+    if (setupStarted && attempts >= 8) stopPolling()
+    if (attempts >= 15) stopPolling()
+  }, 1000)
 })

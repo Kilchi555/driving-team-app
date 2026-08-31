@@ -36,6 +36,7 @@ export default defineEventHandler(async (event) => {
       receipt_url,
       receipt_filename:     receipt_filename ?? null,
       notes:                notes?.trim() ?? null,
+      document_kind:        'spesen',
       approval_status:      'pending',
       submitted_by_user_id: profile.id,
       created_by:           profile.id,

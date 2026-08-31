@@ -184,12 +184,17 @@
               <div>
                 <p class="text-sm font-medium text-amber-800">Account noch nicht aktiviert</p>
                 <p class="text-sm text-amber-700 mt-1">
-                  Sie wurden von {{ brandName || 'Ihrem Unternehmen' }} erfasst, haben die Registrierung aber noch nicht abgeschlossen.
-                  Geben Sie Ihre Telefonnummer ein, um einen neuen Registrierungslink per SMS zu erhalten.
+                  <template v-if="allowCustomerAccountActivation">
+                    Sie wurden von {{ brandName || 'Ihrem Unternehmen' }} erfasst, haben die Registrierung aber noch nicht abgeschlossen.
+                    Geben Sie Ihre Telefonnummer ein, um einen neuen Registrierungslink per SMS zu erhalten.
+                  </template>
+                  <template v-else>
+                    {{ brandName || 'Dieses Unternehmen' }} führt Kunden ohne Online-Login. Bitte kontaktiere uns direkt.
+                  </template>
                 </p>
               </div>
             </div>
-            <div class="flex gap-2">
+            <div v-if="allowCustomerAccountActivation" class="flex gap-2">
               <input
                 v-model="pendingAccount.phone"
                 type="tel"
@@ -341,7 +346,7 @@
 
         <!-- Footer Links -->
         <div class="mt-6 text-center">
-          <p class="text-sm text-gray-600">
+          <p v-if="allowPublicRegister" class="text-sm text-gray-600">
             Noch kein Account? 
             <NuxtLink :to="`/services/${tenantSlug}`" class="font-medium hover:underline" :style="{ color: primaryColor }">
               Registrieren
@@ -462,15 +467,18 @@
           <!-- Not Found: phone — suggest register -->
           <div v-if="resetNotFound === 'phone'" class="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
             <p class="text-sm text-amber-800 font-medium">Diese Telefonnummer ist bei uns nicht hinterlegt.</p>
-            <p class="text-sm text-amber-700">Noch kein Konto? Jetzt kostenlos registrieren.</p>
-            <NuxtLink
-              :to="`/register/${tenantSlug}`"
-              @click="showForgotPasswordModal = false"
-              class="block w-full py-2 px-4 rounded-lg font-medium text-sm text-center text-white transition-colors"
-              :style="{ background: primaryColor }"
-            >
-              Jetzt registrieren
-            </NuxtLink>
+            <template v-if="allowPublicRegister">
+              <p class="text-sm text-amber-700">Noch kein Konto? Jetzt kostenlos registrieren.</p>
+              <NuxtLink
+                :to="`/register/${tenantSlug}`"
+                @click="showForgotPasswordModal = false"
+                class="block w-full py-2 px-4 rounded-lg font-medium text-sm text-center text-white transition-colors"
+                :style="{ background: primaryColor }"
+              >
+                Jetzt registrieren
+              </NuxtLink>
+            </template>
+            <p v-else class="text-sm text-amber-700">Bitte kontaktiere {{ brandName || 'dein Unternehmen' }}.</p>
           </div>
 
           <!-- Success Message -->
@@ -517,6 +525,7 @@ import { useUIStore } from '~/stores/ui'
 import { useMFAFlow } from '~/composables/useMFAFlow'
 import { getSupabase } from '~/utils/supabase'
 import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
+import { adminHomePath, withWebsiteOnlyFlag } from '~/utils/website-only'
 
 logger.debug('📄 [slug].vue imports completed')
 
@@ -567,7 +576,10 @@ const reservedRoutes = [
   'debug-other-events', 'optimized-workflow-test',
   'tenant-test', 'tenant-demo', 'tenant-debug', 'tenant-start', 'customers',
   'AdminEventTypes', 'wallee-corrected-test',
-  'helvetia-offerte'
+  'helvetia-offerte',
+  'o',
+  'pause',
+  'unsubscribe'
   // NOTE: 'login' is intentionally NOT in this list - it should be handled by [slug].vue or /login/[tenant].vue
 ]
 
@@ -628,6 +640,8 @@ const pendingAccount = ref({
   error: null as string | null,
   success: null as string | null
 })
+const allowPublicRegister = ref(true)
+const allowCustomerAccountActivation = ref(true)
 
 // Password Reset State
 const showForgotPasswordModal = ref(false)
@@ -734,6 +748,9 @@ const handleLogin = async () => {
     if (response.profile) {
       authStore.userProfile = response.profile
       authStore.userRole = response.profile.role || ''
+      if (response.profile.website_only) {
+        authStore.tenantTrialInfo = withWebsiteOnlyFlag(authStore.tenantTrialInfo, true) as any
+      }
       logger.debug('✅ User profile from login response:', response.profile.email)
     } else {
       // Fallback: fetch profile via API
@@ -812,7 +829,7 @@ const handleLogin = async () => {
     
     // Redirect based on role (fallback)
     if (user?.role === 'admin' || user?.role === 'tenant_admin') {
-      router.push('/admin')
+      router.push(adminHomePath(!!(response.profile?.website_only || authStore.tenantTrialInfo?.website_only)))
     } else if (user?.role === 'staff') {
       router.push('/dashboard')
     } else {
@@ -920,13 +937,16 @@ const handleMFAVerify = async () => {
     if (user.tenant_id) {
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('slug')
+        .select('slug, website_only')
         .eq('id', user.tenant_id)
         .single()
       
       if (tenant?.slug) {
+        if (tenant.website_only) {
+          authStore.tenantTrialInfo = withWebsiteOnlyFlag(authStore.tenantTrialInfo, true) as any
+        }
         if (user.role === 'admin' || user.role === 'tenant_admin') {
-          redirectPath = '/admin'
+          redirectPath = adminHomePath(!!tenant.website_only)
         } else if (user.role === 'staff') {
           redirectPath = '/dashboard'
         } else {
@@ -996,7 +1016,8 @@ const handleLogout = async () => {
     } else if (currentTenantBranding.value?.slug) {
       router.push(`/${currentTenantBranding.value.slug}`)
     } else {
-      router.push('/')
+      const { getLoginPath } = await import('~/utils/redirect-to-login')
+      router.push(getLoginPath())
     }
   } catch (error) {
     console.error('Logout error:', error)
@@ -1232,11 +1253,23 @@ onMounted(async () => {
     if (!currentTenantBranding.value) {
       await loadTenantBranding(tenantSlug.value)
     }
-    if (!currentTenantBranding.value && brandingError.value) {
-      // Unbekannter Slug -> zurück zur Auswahl
-      router.push('/')
-      return
+    try {
+      const policyRes = await $fetch<{
+        data?: {
+          bookingPolicy?: {
+            registration_account_mode?: 'hidden' | 'required'
+            allow_customer_account_activation?: boolean
+          }
+        }
+      }>('/api/booking/get-booking-init', { query: { slug: tenantSlug.value } })
+      const policy = policyRes?.data?.bookingPolicy
+      allowPublicRegister.value = policy?.registration_account_mode !== 'hidden'
+      allowCustomerAccountActivation.value = policy?.allow_customer_account_activation !== false
+    } catch {
+      /* keep defaults */
     }
+    // Stay on /{slug} even if branding fails — `/` immediately becomes
+    // the generic Simy /login and looks like a 1s "login switch".
   } catch (error) {
     console.error('Failed to load tenant branding:', error)
   }
@@ -1295,9 +1328,13 @@ onMounted(async () => {
       }
 
       logger.debug('✅ User profile found, redirecting...')
+      if (!authStore.tenantTrialInfo && user.tenant_id) {
+        await authStore.loadTenantTrialInfo()
+      }
       let autoPath = '/customer-dashboard'
-      if (user?.role === 'admin' || user?.role === 'tenant_admin') autoPath = '/admin'
-      else if (user?.role === 'staff') autoPath = '/dashboard'
+      if (user?.role === 'admin' || user?.role === 'tenant_admin') {
+        autoPath = adminHomePath(!!authStore.tenantTrialInfo?.website_only)
+      } else if (user?.role === 'staff') autoPath = '/dashboard'
 
       const deepCandidates = [
         route.query.returnTo as string | undefined,

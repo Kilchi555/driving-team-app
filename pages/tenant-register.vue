@@ -15,8 +15,8 @@
             </svg>
           </div>
           <div>
-            <h1 class="text-lg sm:text-xl font-bold tracking-tight">{{ isWebsiteMode ? 'Website-Kunde anlegen' : `${labels.businessNoun} registrieren` }}</h1>
-            <p class="text-blue-200 text-xs sm:text-sm mt-0.5">{{ isWebsiteMode ? 'Kundendaten erfassen – Website wird automatisch generiert' : `${labels.businessNoun} auf Autopilot – in wenigen Minuten startklar` }}</p>
+            <h1 class="text-lg sm:text-xl font-bold tracking-tight">{{ isWebsiteMode ? 'Website-Kunde anlegen' : isWebsiteOnlySignup ? 'Website erstellen' : `${labels.businessNoun} registrieren` }}</h1>
+            <p class="text-blue-200 text-xs sm:text-sm mt-0.5">{{ isWebsiteMode ? 'Kundendaten erfassen – Website wird automatisch generiert' : isWebsiteOnlySignup ? 'In wenigen Minuten online – inkl. Admin-Login' : `${labels.businessNoun} auf Autopilot – in wenigen Minuten startklar` }}</p>
           </div>
         </div>
         <div class="absolute -right-4 -top-4 w-32 h-32 bg-white/5 rounded-full pointer-events-none"></div>
@@ -69,7 +69,105 @@
       <form v-if="currentStep !== SUCCESS_STEP" @submit.prevent="submitRegistration" class="px-6 sm:px-10 py-6 sm:py-8">
 
         <!-- ═══ STEP 0: Grunddaten ═══ -->
-        <div v-if="currentStep === 0" class="space-y-8">
+        <div v-if="currentStep === 0 && isWebsiteOnlySignup" class="space-y-6">
+          <div>
+            <h2 class="text-base font-semibold text-gray-900 mb-1">Website in wenigen Minuten</h2>
+            <p class="text-sm text-gray-500 mb-4">Vier Angaben reichen — den Rest richtest du nach dem Login im Wizard ein.</p>
+            <div class="max-w-sm">
+              <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Branche *</label>
+              <select v-model="formData.business_type" required
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
+                <option value="" disabled>Bitte wählen…</option>
+                <option v-for="bt in businessTypes" :key="bt.code" :value="bt.code">{{ bt.name }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Firmenname *</label>
+              <input v-model="formData.name" type="text" required :placeholder="`z.B. ${labels.businessNoun} Muster`"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
+              <p v-if="formData.slug" class="text-xs text-gray-400 mt-1.5">
+                Vorschau: <span class="font-mono">simy.ch/s/{{ formData.slug }}</span>
+                <span v-if="slugCheck === 'available'" class="text-green-600"> · verfügbar</span>
+                <span v-else-if="slugCheck === 'taken' || slugCheck === 'reserved'" class="text-red-500"> · bitte Firmenname anpassen</span>
+              </p>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Ort *</label>
+              <input v-model="formData.city" type="text" required placeholder="Zürich"
+                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">E-Mail *</label>
+              <input
+                v-model="adminEmailEarly"
+                type="email"
+                required
+                placeholder="dein@login.ch"
+                @blur="checkAdminEmail(adminEmailEarly)"
+                @input="onAdminEmailInput(adminEmailEarly)"
+                :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
+                  emailCheck === 'taken'     ? 'border-red-300 focus:ring-red-400' :
+                  emailCheck === 'available' ? 'border-green-300 focus:ring-green-400' :
+                  'border-gray-200 focus:ring-blue-500']"
+              >
+              <p v-if="emailCheck === 'taken'" class="text-xs text-red-500 mt-1">
+                Diese E-Mail ist bereits registriert — <a href="/login" class="underline font-medium">Einloggen</a>
+              </p>
+            </div>
+            <div class="sm:col-span-2 space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort *</label>
+                <input
+                  v-model="adminForm.password"
+                  :type="showPw ? 'text' : 'password'"
+                  required
+                  minlength="12"
+                  autocomplete="new-password"
+                  name="new-password"
+                  id="website-admin-password"
+                  @input="onAdminPasswordInput"
+                  :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
+                    adminForm.password && !passwordValid ? 'border-red-300 focus:ring-red-500' :
+                    adminForm.password && passwordValid ? 'border-green-300 focus:ring-green-500' :
+                    'border-gray-200 focus:ring-blue-500']"
+                  placeholder="Mindestens 12 Zeichen"
+                >
+                <div class="flex items-center justify-between mt-1.5">
+                  <button type="button" @click="useGeneratedPassword" class="text-xs font-semibold text-blue-600 underline">
+                    Sicheres Passwort vorschlagen
+                  </button>
+                  <button type="button" @click="showPw = !showPw" class="text-xs text-gray-500 hover:text-gray-700">
+                    {{ showPw ? 'Verbergen' : 'Anzeigen' }}
+                  </button>
+                </div>
+                <p v-if="passwordError" class="text-xs text-red-600 mt-1">{{ passwordError }}</p>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Passwort bestätigen *</label>
+                <input
+                  v-model="adminForm.passwordConfirm"
+                  :type="showPw ? 'text' : 'password'"
+                  required
+                  minlength="12"
+                  autocomplete="new-password"
+                  name="confirm-password"
+                  id="website-admin-password-confirm"
+                  :class="['w-full px-4 py-2.5 border rounded-xl focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm',
+                    adminForm.passwordConfirm && passwordMismatch ? 'border-red-300 focus:ring-red-500' :
+                    adminForm.passwordConfirm && !passwordMismatch && passwordValid ? 'border-green-300 focus:ring-green-500' :
+                    'border-gray-200 focus:ring-blue-500']"
+                  placeholder="Passwort wiederholen"
+                >
+                <p v-if="passwordMismatch" class="text-xs text-red-600 mt-1">Passwörter stimmen nicht überein.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="currentStep === 0" class="space-y-8">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-4">Deine Branche</h2>
             <div class="max-w-sm">
@@ -148,6 +246,12 @@
                 <input v-model="formData.contact_phone" type="tel" required placeholder="+41 44 123 45 67"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">WhatsApp</label>
+                <input v-model="formData.whatsapp_phone" type="tel" placeholder="+41 79 123 45 67"
+                  class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
+                <p class="text-xs text-gray-400 mt-1">Handy-Nummer aus der WhatsApp-App. Festnetz funktioniert dort nicht.</p>
+              </div>
               <!-- Primäre E-Mail – wird für Login, Kontakt & Versand verwendet -->
               <div class="sm:col-span-2">
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
@@ -224,13 +328,13 @@
                 <input v-model="formData.uid_number" type="text" placeholder="CHE-123.456.789"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
-              <div>
+              <div v-if="!isWebsiteOnlySignup">
                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Anzahl {{ labels.staffPlural }}</label>
                 <input v-model="formData.staff_count" type="number" min="1" max="999" placeholder="1"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
               <div class="sm:col-span-2">
-                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Website</label>
+                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">{{ isWebsiteOnlySignup ? 'Bestehende Domain (optional)' : 'Website' }}</label>
                 <input v-model="formData.website_url" type="url" placeholder="https://www.ihre-firma.ch"
                   class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors text-sm">
               </div>
@@ -899,12 +1003,18 @@
         <div v-if="currentStep === 3" class="space-y-5">
           <div>
             <h2 class="text-base font-semibold text-gray-900 mb-0.5">
-              Wie können Kunden Termine bei dir buchen?
+              {{ isWebsiteOnlySignup ? 'Wo und wie sind Sie erreichbar?' : 'Wie können Kunden Termine bei dir buchen?' }}
             </h2>
             <p class="text-sm text-gray-500">
-              Lege fest, welche Buchungsarten verfügbar sind: vor Ort, per Telefonanruf
-              oder als Online-Call (z.B. Zoom, Google Meet, Teams).
-              {{ isDrivingSchool ? ` Bei Fahrschulen ist mindestens ein Treffpunkt nötig.` : ' Mindestens eine Option.' }}
+              <template v-if="isWebsiteOnlySignup">
+                Standorte und Kanäle erscheinen auf der Website (Adresse, Karte, Telefon, WhatsApp).
+                {{ isDrivingSchool ? ' Bei Fahrschulen ist mindestens ein Treffpunkt nötig.' : ' Mindestens eine Option.' }}
+              </template>
+              <template v-else>
+                Lege fest, welche Buchungsarten verfügbar sind: vor Ort, per Telefonanruf
+                oder als Online-Call (z.B. Zoom, Google Meet, Teams).
+                {{ isDrivingSchool ? ` Bei Fahrschulen ist mindestens ein Treffpunkt nötig.` : ' Mindestens eine Option.' }}
+              </template>
             </p>
           </div>
 
@@ -1220,7 +1330,7 @@
               </div>
             </div>
 
-            <div>
+            <div v-if="!isWebsiteOnlySignup">
               <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Zahlungsdaten (für QR-Rechnungen)</p>
               <div class="space-y-3">
                 <div>
@@ -1243,7 +1353,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
               </svg>
               Erweiterte Einstellungen
-              <span class="text-xs font-normal text-gray-400">(E-Mail & SMS Absender — optional, kann nach dem Login gesetzt werden)</span>
+              <span class="text-xs font-normal text-gray-400">{{ isWebsiteOnlySignup ? '(E-Mail Absender — optional, kann nach dem Login gesetzt werden)' : '(E-Mail & SMS Absender — optional, kann nach dem Login gesetzt werden)' }}</span>
             </button>
 
             <div v-if="showAdvancedBranding" class="mt-4 space-y-5">
@@ -1280,8 +1390,8 @@
               </div>
             </div>
 
-            <!-- SMS Absender -->
-            <div class="border-t border-gray-100 pt-4">
+            <!-- SMS Absender (Simy booking only — hidden for website-only signup) -->
+            <div v-if="!isWebsiteOnlySignup" class="border-t border-gray-100 pt-4">
               <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
                 SMS Absender
               </p>
@@ -1501,7 +1611,7 @@
                 Der <strong>Admin-Login</strong> (<span class="font-mono">{{ adminForm.email || adminEmailEarly }}</span>)
                 bleibt für Einstellungen &amp; Auswertungen.
                 Trage unten eine <strong>andere E-Mail</strong> für den {{ labels.staff }}-Login ein —
-                dorthin senden wir die Einladung.
+                dorthin senden wir die Einladung. Danach kannst du in der App zwischen beiden Konten wechseln.
               </p>
             </div>
           </div>
@@ -1628,8 +1738,9 @@
               <div class="space-y-1.5 text-sm">
                 <p class="font-semibold text-gray-900">{{ formData.name }}</p>
                 <p class="text-gray-500 text-xs font-mono">simy.ch/{{ formData.slug }}</p>
-                <p class="text-gray-600">{{ formData.contact_person_first_name }} {{ formData.contact_person_last_name }}</p>
-                <p class="text-gray-600 text-xs">{{ formData.street }} {{ formData.streetNr }}, {{ formData.zip }} {{ formData.city }}</p>
+                <p v-if="!isWebsiteOnlySignup" class="text-gray-600">{{ formData.contact_person_first_name }} {{ formData.contact_person_last_name }}</p>
+                <p v-if="isWebsiteOnlySignup" class="text-gray-600 text-xs">{{ formData.city }}</p>
+                <p v-else class="text-gray-600 text-xs">{{ formData.street }} {{ formData.streetNr }}, {{ formData.zip }} {{ formData.city }}</p>
               </div>
             </div>
 
@@ -1644,7 +1755,7 @@
             </div>
 
             <!-- Kategorien (nur wenn der Schritt nicht übersprungen wurde) -->
-            <div v-if="!skipsCategories" class="rounded-2xl bg-blue-50 border border-blue-100 p-4">
+            <div v-if="!isWebsiteOnlySignup && !skipsCategories" class="rounded-2xl bg-blue-50 border border-blue-100 p-4">
               <p class="text-xs font-bold text-blue-400 uppercase tracking-wide mb-2.5">{{ labels.categoriesLabel }}</p>
               <div class="flex items-baseline gap-1.5">
                 <span class="text-2xl font-bold text-blue-700">{{ effectiveCategoryCount }}</span>
@@ -1653,7 +1764,7 @@
             </div>
 
             <!-- Preise -->
-            <div class="rounded-2xl bg-violet-50 border border-violet-100 p-4 sm:col-span-2">
+            <div v-if="!isWebsiteOnlySignup" class="rounded-2xl bg-violet-50 border border-violet-100 p-4 sm:col-span-2">
               <p class="text-xs font-bold text-violet-400 uppercase tracking-wide mb-2.5">Preise</p>
               <div class="space-y-2">
                 <div v-for="cat in pricingGroups" :key="cat.id">
@@ -1683,7 +1794,7 @@
             </div>
 
             <!-- Standorte -->
-            <div class="rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
+            <div v-if="!isWebsiteOnlySignup" class="rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
               <p class="text-xs font-bold text-emerald-400 uppercase tracking-wide mb-2.5">Standorte</p>
               <div class="space-y-1">
                 <p v-for="(loc, i) in locationsForSubmit" :key="i" class="text-sm text-gray-700 font-medium">
@@ -1695,7 +1806,7 @@
             </div>
 
             <!-- Fahrlehrer -->
-            <div v-if="staffList.some(s => s.first_name && s.email)"
+            <div v-if="!isWebsiteOnlySignup && staffList.some(s => s.first_name && s.email)"
               class="sm:col-span-2 rounded-2xl bg-gray-50 border border-gray-100 p-4">
               <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2.5">Einladungen</p>
               <div class="space-y-2">
@@ -1729,6 +1840,7 @@
               Ich akzeptiere die <NuxtLink to="/agb" target="_blank" class="text-blue-600 hover:underline font-medium">Nutzungsbedingungen</NuxtLink>
               und die <NuxtLink to="/datenschutz" target="_blank" class="text-blue-600 hover:underline font-medium">Datenschutzerklärung</NuxtLink>
               (inkl. <NuxtLink to="/avv" target="_blank" class="text-blue-600 hover:underline font-medium">AVV</NuxtLink>).
+              <a href="https://simy.ch/impressum" target="_blank" class="text-blue-600 hover:underline font-medium">Impressum</a>
             </span>
           </div>
         </div>
@@ -1827,7 +1939,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
-            einrichten
+            {{ isWebsiteOnlySignup ? 'Website erstellen' : 'einrichten' }}
           </button>
         </div>
 
@@ -1836,7 +1948,7 @@
              the two real fields — a second confirm-password was stealing the fill.
              Names match staff register: password + new-password (not confirm-password). -->
         <div
-          v-if="currentStep !== 5"
+          v-if="currentStep !== 5 && !(isWebsiteOnlySignup && currentStep === 0)"
           aria-hidden="true"
           class="pm-mirror"
         >
@@ -1858,7 +1970,7 @@
               </svg>
             </div>
             <h2 class="text-xl font-bold text-gray-900 mb-1">{{ formData.name }} ist startklar!</h2>
-            <p class="text-sm text-gray-500">Alles wurde erfolgreich auf Autopilot eingerichtet.</p>
+            <p class="text-sm text-gray-500">{{ isWebsiteOnlySignup ? 'Konto erstellt — als Nächstes Texte, Domain und Live im Website-Wizard.' : 'Alles wurde erfolgreich auf Autopilot eingerichtet.' }}</p>
             <div v-if="createdCustomerNumber" class="inline-flex items-center gap-2 mt-3 bg-blue-50 border border-blue-100 rounded-xl px-3 py-1.5">
               <span class="text-xs text-blue-500 font-medium">Kundennummer</span>
               <span class="font-mono font-bold text-blue-800">{{ createdCustomerNumber }}</span>
@@ -1866,7 +1978,28 @@
           </div>
 
           <!-- Autopilot Checkliste -->
-          <div class="rounded-2xl border border-gray-200 overflow-hidden mb-5">
+          <div v-if="isWebsiteOnlySignup" class="rounded-2xl border border-gray-200 overflow-hidden mb-5">
+            <div class="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
+              <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">Nächste Schritte</p>
+            </div>
+            <div class="divide-y divide-gray-100">
+              <div v-for="item in [
+                { done: true, label: 'Website-Konto erstellt' },
+                { done: true, label: 'Vorschau bereit nach Login' },
+                { done: false, label: 'Inhalte im Wizard prüfen' },
+                { done: false, label: 'Domain verbinden & live schalten' },
+              ]" :key="item.label" class="flex items-center gap-3 px-4 py-2.5">
+                <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                  :class="item.done ? 'bg-green-500' : 'bg-gray-200'">
+                  <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <span class="text-sm text-gray-700" :class="item.done ? 'font-medium' : 'text-gray-400'">{{ item.label }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="rounded-2xl border border-gray-200 overflow-hidden mb-5">
             <div class="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
               <p class="text-xs font-bold text-gray-500 uppercase tracking-wide">Autopilot Setup-Status</p>
             </div>
@@ -2076,19 +2209,25 @@ definePageMeta({ layout: false })
 const LOADING_STEP = 8
 const SUCCESS_STEP = 9
 
+const route = useRoute()
+const isWebsiteMode = computed(() => route.query.mode === 'website')
+const isWebsiteOnlySignup = computed(
+  () => route.query.product === 'website' || route.query.mode === 'website',
+)
+
 // ─── Steps ─────────────────────────────────────────────────────────────────
 // Computed statt fixem Array, da 'Kategorien' und 'Mitarbeiter' je nach
 // Branche anders heissen (z.B. Consulting: 'Leistungsbereiche'/'Berater').
 // Bei per_event_type (Consulting, Mental Coach) wird der Kategorien-Schritt
 // übersprungen — Preise hängen an Leistungen, nicht an Bereichen.
 const allStepDefs = computed(() => [
-  { id: 0, title: 'Grunddaten', skip: false },
-  { id: 1, title: labels.value.categoriesLabel, skip: pricingMode.value === 'per_event_type' },
-  { id: 2, title: 'Preise', skip: false },
-  { id: 3, title: 'Standorte', skip: false },
-  { id: 4, title: 'Branding', skip: false },
-  { id: 5, title: 'Admin', skip: false },
-  { id: 6, title: labels.value.staffPlural, skip: false },
+  { id: 0, title: isWebsiteOnlySignup.value ? 'Konto' : 'Grunddaten', skip: false },
+  { id: 1, title: labels.value.categoriesLabel, skip: isWebsiteOnlySignup.value || pricingMode.value === 'per_event_type' },
+  { id: 2, title: 'Preise', skip: isWebsiteOnlySignup.value },
+  { id: 3, title: 'Standorte', skip: isWebsiteOnlySignup.value },
+  { id: 4, title: 'Branding', skip: isWebsiteOnlySignup.value },
+  { id: 5, title: 'Admin', skip: isWebsiteOnlySignup.value },
+  { id: 6, title: labels.value.staffPlural, skip: isWebsiteOnlySignup.value },
   { id: 7, title: 'Bestätigung', skip: false },
 ])
 const steps = computed(() => allStepDefs.value.filter(s => !s.skip))
@@ -2107,6 +2246,7 @@ const formData = ref({
   contact_person_last_name: '',
   contact_email: '',
   contact_phone: '',
+  whatsapp_phone: '',
   admin_birthdate: '',
   street: '',
   streetNr: '',
@@ -3089,6 +3229,23 @@ const passwordError = computed(() => {
 const canProceed = computed(() => {
   switch (currentStep.value) {
     case 0:
+      if (isWebsiteOnlySignup.value) {
+        return !!(formData.value.business_type &&
+                  formData.value.name &&
+                  formData.value.city &&
+                  formData.value.slug &&
+                  formData.value.slug.length >= 3 &&
+                  adminEmailEarly.value &&
+                  adminEmailEarly.value.includes('@') &&
+                  adminForm.value.password &&
+                  adminForm.value.passwordConfirm &&
+                  passwordValid.value &&
+                  !passwordMismatch.value &&
+                  hibpStatus.value !== 'pwned' &&
+                  hibpStatus.value !== 'checking') &&
+               slugCheck.value !== 'taken' && slugCheck.value !== 'reserved' && slugCheck.value !== 'checking' &&
+               (emailCheck.value === 'available' || emailCheck.value === 'error')
+      }
       return !!(formData.value.business_type &&
                 formData.value.name && formData.value.legal_company_name && formData.value.slug &&
                 formData.value.contact_person_first_name && formData.value.contact_person_last_name &&
@@ -3148,6 +3305,13 @@ const credentialSaveRedirect = computed(() => {
 const nextStep = async () => {
   if (!canProceed.value || currentStep.value >= 7) return
 
+  if (currentStep.value === 0 && isWebsiteOnlySignup.value) {
+    applyWebsiteOnlySignupDefaults()
+    currentStep.value = 7
+    scrollRegisterToTop()
+    return
+  }
+
   // Need pricingMode before deciding whether to skip categories
   if (currentStep.value === 0) {
     await loadEventTypeTemplates()
@@ -3156,6 +3320,7 @@ const nextStep = async () => {
   let next = currentStep.value + 1
   // per_event_type: skip categories step (prices are per Leistung, not Bereich)
   if (next === 1 && pricingMode.value === 'per_event_type') next = 2
+  if (next === 6 && isWebsiteOnlySignup.value) next = 7
 
   if (next === 1) loadTemplateCategories()
   if (next === 2) loadEventTypeTemplates()
@@ -3166,8 +3331,14 @@ const nextStep = async () => {
 
 const previousStep = () => {
   if (currentStep.value <= 0) return
+  if (currentStep.value === 7 && isWebsiteOnlySignup.value) {
+    currentStep.value = 0
+    scrollRegisterToTop()
+    return
+  }
   let prev = currentStep.value - 1
   if (prev === 1 && pricingMode.value === 'per_event_type') prev = 0
+  if (prev === 6 && isWebsiteOnlySignup.value) prev = 5
   currentStep.value = prev
   scrollRegisterToTop()
 }
@@ -3342,8 +3513,41 @@ const applyAdminFromCompany = () => {
 }
 
 // ─── Submit ────────────────────────────────────────────────────────────────
+function guessSwissZip(city: string) {
+  const c = city.trim().toLowerCase()
+  const map: Record<string, string> = {
+    'zürich': '8000', zurich: '8000', bern: '3000', basel: '4000',
+    luzern: '6000', winterthur: '8400', 'st. gallen': '9000', 'st.gallen': '9000',
+    genf: '1200', lausanne: '1000', lugano: '6900', biel: '2500', thun: '3600',
+  }
+  return map[c] || '8000'
+}
+
+function applyWebsiteOnlySignupDefaults() {
+  if (!isWebsiteOnlySignup.value) return
+  const name = formData.value.name.trim()
+  const email = adminEmailEarly.value.trim()
+  const city = formData.value.city.trim()
+  formData.value.legal_company_name = name
+  formData.value.contact_email = email
+  adminForm.value.email = email
+  const local = email.split('@')[0] || 'Admin'
+  const first = local.split(/[._-]/)[0]
+  const firstName = first ? first.charAt(0).toUpperCase() + first.slice(1) : 'Admin'
+  const lastName = name.split(/\s+/)[0] || 'Konto'
+  formData.value.contact_person_first_name = firstName
+  formData.value.contact_person_last_name = lastName
+  adminForm.value.first_name = firstName
+  adminForm.value.last_name = lastName
+  if (!formData.value.street.trim()) formData.value.street = city || 'Adresse folgt'
+  if (!formData.value.streetNr.trim()) formData.value.streetNr = '1'
+  if (!formData.value.zip.trim()) formData.value.zip = guessSwissZip(city)
+  if (formData.value.slug.length >= 3) checkSlug(formData.value.slug)
+}
+
 const submitRegistration = async () => {
   if (!canSubmit.value) return
+  applyWebsiteOnlySignupDefaults()
 
   currentStep.value = LOADING_STEP
   error.value = null
@@ -3355,16 +3559,21 @@ const submitRegistration = async () => {
     if (e === adminEmailForStaffCompare.value) return false
     return true
   })
-  initSetupProgress(filledStaffPreview.length > 0)
+  initSetupProgress(!isWebsiteOnlySignup.value && filledStaffPreview.length > 0)
   startRegisterSubProgress()
 
   try {
     const fd = new FormData()
 
+    const websiteOnlyOmit = new Set(['staff_count', 'qr_iban', 'twilio_from_sender', 'website_only'])
     Object.entries(formData.value).forEach(([key, value]) => {
+      if (key === 'website_only') return
+      if (isWebsiteOnlySignup.value && websiteOnlyOmit.has(key)) return
       const v = value?.toString().trim()
       if (v) fd.append(key, v)
     })
+    // Only the website product URL sets this. Default /tenant-register never sends it.
+    if (isWebsiteOnlySignup.value) fd.append('website_only', '1')
 
     // Selected category IDs (only template IDs — custom categories sent separately).
     // Always send the field so an intentional empty selection is distinguishable
@@ -3531,15 +3740,7 @@ const submitRegistration = async () => {
     createdTenantId.value       = response.tenant.id
     const registrationToken     = response.registration_token as string | undefined
 
-    // If website mode: set website_status to pending_review
-    if (isWebsiteMode.value && response.tenant.id) {
-      try {
-        await getSupabase()
-          .from('tenants')
-          .update({ website_status: 'pending_review' })
-          .eq('id', response.tenant.id)
-      } catch (_) {}
-    }
+    // website_status is set server-side when website_only=1 (register.post).
 
     // 2. Create admin user (dedicated endpoint)
     let adminRes: any
@@ -3589,8 +3790,9 @@ const submitRegistration = async () => {
       last_name: s.last_name.trim(),
       phone: s.phone.trim() || undefined,
       email: (s.email || '').trim(),
+      is_self: staffAdminIsSelf.value && s === staffList.value[0],
     }))
-    if (filledStaff.length > 0) {
+    if (!isWebsiteOnlySignup.value && filledStaff.length > 0) {
       setProgressActive('staff')
       try {
         const inviteRes = await $fetch('/api/tenants/invite-staff-batch', {
@@ -3686,6 +3888,7 @@ watch(() => formData.value.name, (newName: string) => {
       .replace(/\s+/g, '-')
       .replace(/--+/g, '-')
       .replace(/^-|-$/g, '')
+    if (formData.value.slug.length >= 3) checkSlug(formData.value.slug)
   }
   if (newName && !legalNameManuallyEdited.value) {
     formData.value.legal_company_name = newName
@@ -3779,7 +3982,10 @@ watch(() => formData.value.business_type, (newType, oldType) => {
 }, { flush: 'sync' })
 
 // ─── LocalStorage ─────────────────────────────────────────────────────────
-const STORAGE_KEY = 'tenant-registration-data'
+// Website-only drafts stay isolated so a Simy register in progress is never overwritten.
+const STORAGE_KEY = isWebsiteOnlySignup.value
+  ? 'tenant-registration-data-website'
+  : 'tenant-registration-data'
 // Plain (non-reactive) flag, not a ref — it only needs to be readable
 // synchronously by the flush:'sync' watcher above during loadFromStorage(),
 // never by the template.
@@ -3867,8 +4073,6 @@ const loadFromStorage = () => {
 
 watch([formData, adminForm, adminEmailEarly, adminSameAsCompany, currentStep, locationsList, meetingChannels, staffList, staffAdminIsSelf, selectedCategoryIds, pricingRows, customEventTypes, logoPreview, logoSquarePreview], saveToStorage, { deep: true })
 
-const route = useRoute()
-const isWebsiteMode = computed(() => route.query.mode === 'website')
 function darkenHex(hex: string, amount: number): string {
   const h = hex.replace('#', '')
   const r = Math.round(parseInt(h.slice(0, 2), 16) * (1 - amount))
@@ -3970,6 +4174,9 @@ onMounted(async () => {
   // Draft may have been saved on the categories step; bump past it when skipped.
   if (currentStep.value === 1 && pricingMode.value === 'per_event_type') {
     currentStep.value = 2
+  }
+  if (isWebsiteOnlySignup.value && currentStep.value === 6) {
+    currentStep.value = 7
   }
 
   // Pre-load categories/event-types if a saved draft resumes past those steps

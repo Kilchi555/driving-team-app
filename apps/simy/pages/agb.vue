@@ -8,7 +8,11 @@
           <span class="text-gray-600">AGB</span>
         </nav>
         <h1 class="text-3xl font-black text-gray-900 mb-3">Allgemeine Geschäftsbedingungen</h1>
-        <p class="text-sm text-gray-400 mb-12">Stand: Mai 2026 · Simy IT Systems, Schweiz</p>
+        <p class="text-sm text-gray-400 mb-6">Stand: 18. August 2026 · Simy IT Systems Kilchenmann, Schweiz</p>
+
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800 mb-10">
+          <p><strong>Hinweis:</strong> Diese Seite ist eine Kurzübersicht. Die rechtsverbindliche, vollständige Fassung der AGB (inkl. SLA, Haftungsregelung, Datenexport-/Wechselrecht und Empfehlungsprogramm) gilt ausschliesslich unter <a href="https://app.simy.ch/agb" class="underline font-semibold">app.simy.ch/agb</a> und wird bei der Registrierung akzeptiert.</p>
+        </div>
 
         <div class="prose prose-gray max-w-none space-y-10">
           <div v-for="section in sections" :key="section.title">
@@ -28,16 +32,16 @@ import { breadcrumbLd, ldScripts, webPageLd } from '~/utils/schema'
 useHead({
   title: 'AGB – Simy | Allgemeine Geschäftsbedingungen',
   meta: [{ name: 'description', content: 'Allgemeine Geschäftsbedingungen der Simy IT Systems.' }],
-  link: [{ rel: 'canonical', href: 'https://simy.ch/agb' }],
+  link: [{ rel: 'canonical', href: 'https://www.simy.ch/agb' }],
   script: ldScripts(
     webPageLd({
       name: 'AGB – Simy',
       description: 'Allgemeine Geschäftsbedingungen der Simy IT Systems.',
-      url: 'https://simy.ch/agb',
+      url: 'https://www.simy.ch/agb',
     }),
     breadcrumbLd([
-      { name: 'Simy', url: 'https://simy.ch/' },
-      { name: 'AGB', url: 'https://simy.ch/agb' },
+      { name: 'Simy', url: 'https://www.simy.ch/' },
+      { name: 'AGB', url: 'https://www.simy.ch/agb' },
     ]),
   ),
 })
@@ -45,7 +49,7 @@ useHead({
 const sections = [
   {
     title: '1. Geltungsbereich',
-    content: 'Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für alle Verträge zwischen Simy IT Systems (nachfolgend "Simy") und ihren Kunden (nachfolgend "Nutzer") im Zusammenhang mit der Nutzung der Simy-Softwareplattform und zugehöriger Dienstleistungen.',
+    content: 'Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für alle Verträge zwischen Simy IT Systems Kilchenmann, Einzelfirma (nachfolgend "Simy") und ihren gewerblichen Kunden (nachfolgend "Nutzer") im Zusammenhang mit der Nutzung der Simy-Softwareplattform und zugehöriger Dienstleistungen. Diese AGB gelten ausschliesslich für Unternehmen und andere gewerbliche Nutzer (B2B); Verbraucher im Sinne des Konsumentenrechts sind von der Nutzung ausgeschlossen.',
   },
   {
     title: '2. Vertragsschluss',
@@ -57,7 +61,7 @@ const sections = [
   },
   {
     title: '4. Preise und Zahlung',
-    content: 'Die Preise sind dem aktuellen Preisblatt unter simy.ch/preise zu entnehmen. Alle Preise verstehen sich in CHF inkl. MwSt. Die Abrechnung erfolgt monatlich oder jährlich im Voraus per TWINT, Kreditkarte oder Rechnung.',
+    content: 'Die Preise sind dem aktuellen Preisblatt unter simy.ch/preise zu entnehmen. Alle Preise verstehen sich in CHF exklusive Mehrwertsteuer. Aktuell beträgt die MwSt. 0 %. Ab Oktober 2026 gilt der offizielle Normalsatz von 8.1 %. Die Abrechnung erfolgt monatlich oder jährlich im Voraus per TWINT, Kreditkarte oder Rechnung.',
   },
   {
     title: '4a. Planwechsel',
@@ -68,12 +72,12 @@ const sections = [
     content: 'Der Nutzer kann den Vertrag jederzeit mit einer Frist von 30 Tagen auf Ende des laufenden Abrechnungsmonats kündigen. Die Kündigung erfolgt über das Nutzer-Dashboard oder per E-Mail an support@simy.ch.',
   },
   {
-    title: '6. Datenschutz',
-    content: 'Simy verarbeitet personenbezogene Daten gemäss der Datenschutzerklärung unter simy.ch/datenschutz. Alle Daten werden auf Schweizer Servern gespeichert und sind DSGVO-konform verarbeitet.',
+    title: '6. Datenschutz und Auftragsverarbeitung',
+    content: 'Simy verarbeitet personenbezogene Daten gemäss der Datenschutzerklärung unter simy.ch/datenschutz. Soweit der Kunde über die Plattform Personendaten seiner eigenen Kunden/Schüler verarbeitet, handelt Simy als Auftragsverarbeiter gemäss dem Auftragsverarbeitungsvertrag (AVV), abrufbar unter app.simy.ch/avv, der mit der Registrierung Vertragsbestandteil wird.',
   },
   {
     title: '7. Haftung',
-    content: 'Simy haftet nur für Schäden, die durch grobe Fahrlässigkeit oder Vorsatz von Simy verursacht wurden. Die Haftung für mittelbare Schäden, entgangenen Gewinn oder Datenverlust ist ausgeschlossen.',
+    content: 'Simy haftet für direkte Schäden aus schuldhafter Pflichtverletzung bis maximal zur Höhe einer Jahresabonnementgebühr des Kunden. Für indirekte Schäden, entgangenen Gewinn und Datenverlust (sofern der Kunde keine eigenen Backups erstellt hat) haftet Simy nicht, soweit gesetzlich zulässig. Diese Beschränkungen gelten nicht bei Vorsatz, grober Fahrlässigkeit oder Personenschäden. Details regelt Ziffer 11 der vollständigen AGB unter app.simy.ch/agb.',
   },
   {
     title: '8. Anwendbares Recht',

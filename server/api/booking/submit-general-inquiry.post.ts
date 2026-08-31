@@ -4,7 +4,7 @@
 // - Specific request: contact info + category + location + duration + preferred_time_slots
 // Contact field requirements follow tenant booking_policy.booking_required_fields
 
-import { defineEventHandler, readBody, createError, getRequestIP } from 'h3'
+import { defineEventHandler, readBody, createError, getRequestIP, getHeader } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { v4 as uuidv4 } from 'uuid'
 import { recordAndUploadInquiryConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
@@ -15,8 +15,13 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
-import { mergeAttributionFields } from '~/server/utils/marketing-attribution-merge'
-
+import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
+import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
+import {
+  PREFERRED_CONTACT_OPTIONS,
+  isPreferredContactMethod,
+  upsertPreferredContactNote,
+} from '~/utils/preferred-contact-method'
 interface MarketingAttributionPayload {
   gclid?: string | null
   gbraid?: string | null
@@ -272,6 +277,7 @@ export default defineEventHandler(async (event) => {
       notes,
       created_by_user_id,
       preferred_time_slots = [],
+      preferred_contact_method,
       marketing_session_id,
       marketing_attribution,
       _hp,
@@ -421,6 +427,29 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Optional: old clients /register may omit this. New form always sends a whitelist value.
+    const contactMethod = isPreferredContactMethod(preferred_contact_method) ? preferred_contact_method : null
+    if (preferred_contact_method && !contactMethod) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Ungültiger Kontaktkanal',
+      })
+    }
+    if (contactMethod) {
+      const methodOpt = PREFERRED_CONTACT_OPTIONS.find(opt => opt.value === contactMethod)
+      if (methodOpt?.requires === 'phone' && !fieldValues.phone) {
+        throw createError({ statusCode: 400, statusMessage: 'Telefon ist für diesen Kontaktkanal nötig' })
+      }
+      if (methodOpt?.requires === 'email' && !fieldValues.email) {
+        throw createError({ statusCode: 400, statusMessage: 'E-Mail ist für diesen Kontaktkanal nötig' })
+      }
+    }
+
+    let storedNotes = notes?.trim() || null
+    if (contactMethod) {
+      storedNotes = upsertPreferredContactNote(storedNotes, contactMethod)
+    }
+
     // Validate location/category only when a location was provided
     if (category_code && location_id) {
       const { data: location, error: locationError } = await supabase
@@ -462,31 +491,11 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Prefer client payload, always merge DB + booking_redirects so click IDs
-    // survive when only session_id was forwarded from drivingteam.ch.
-    let resolvedAttribution: MarketingAttributionPayload | null = marketing_attribution ?? null
-    if (marketing_session_id) {
-      const { data: attrRow } = await supabase
-        .from('marketing_attributions')
-        .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, fbc, fbp')
-        .eq('session_id', marketing_session_id)
-        .maybeSingle()
-      if (attrRow) {
-        resolvedAttribution = mergeAttributionFields(attrRow, resolvedAttribution) as MarketingAttributionPayload
-      }
-      if (!resolvedAttribution?.gclid && !resolvedAttribution?.gbraid && !resolvedAttribution?.wbraid) {
-        const { data: redirectRow } = await supabase
-          .from('booking_redirects')
-          .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
-          .eq('session_id', marketing_session_id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        if (redirectRow) {
-          resolvedAttribution = mergeAttributionFields(resolvedAttribution, redirectRow) as MarketingAttributionPayload
-        }
-      }
-    }
+    const resolvedAttribution = await resolveMarketingAttribution(
+      supabase,
+      marketing_session_id,
+      marketing_attribution,
+    )
 
     const resolvedUserId = await resolveInquiryUserId({
       tenantId: tenant_id,
@@ -494,6 +503,23 @@ export default defineEventHandler(async (event) => {
       categoryCode: category_code || null,
       fields: fieldValues,
     })
+
+    if (resolvedUserId) {
+      try {
+        await stampFirstTouchAcquisition({
+          userId: resolvedUserId,
+          tenantId: tenant_id,
+          email: fieldValues.email,
+          phone: fieldValues.phone,
+          attribution: resolvedAttribution,
+          marketingSessionId: marketing_session_id,
+          fallbackSource: 'organic/direct',
+          fallbackMedium: 'organic',
+        })
+      } catch (err: any) {
+        console.warn('⚠️ Inquiry first-touch stamp failed (non-critical):', err?.message ?? err)
+      }
+    }
 
     // Admin client: anon has INSERT but no SELECT on booking_proposals, so
     // insert().select() fails RLS; also needed once created_by_user_id is set.
@@ -515,7 +541,7 @@ export default defineEventHandler(async (event) => {
         house_number: fieldValues.street_nr || null,
         postal_code: fieldValues.zip || null,
         city: fieldValues.city || null,
-        notes: notes?.trim() || null,
+        notes: storedNotes,
         created_by_user_id: resolvedUserId,
         status: 'pending',
         marketing_session_id: marketing_session_id || null,

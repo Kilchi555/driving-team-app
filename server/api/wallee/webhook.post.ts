@@ -17,6 +17,10 @@ import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conversion'
 import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
+import { syncPaymentRefundTotals } from '~/server/utils/wallee-refund'
+import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-product-purchase'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
+import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -634,6 +638,29 @@ export default defineEventHandler(async (event) => {
     
     logger.info(`✅ Updated ${paymentsToUpdate.length} payment(s) to: ${paymentStatus}`)
 
+    if (paymentStatus === 'completed') {
+      try {
+        const { sendOnlinePaymentReceiptsSafe } = await import('~/server/utils/online-payment-receipt')
+        await sendOnlinePaymentReceiptsSafe(supabase, normalUpdateIds)
+      } catch (receiptErr: any) {
+        logger.warn('⚠️ Quittungsversand (non-fatal):', receiptErr?.message || receiptErr)
+      }
+
+      for (const payment of paymentsToUpdate) {
+        try {
+          await consumeGiftCardForPayment({
+            supabase,
+            tenantId: payment.tenant_id,
+            paymentId: payment.id,
+            redeemedBy: payment.user_id,
+            discountCode: payment.metadata?.discount_code ?? null,
+          })
+        } catch (giftErr: any) {
+          logger.warn('⚠️ Gift-card consume (non-fatal):', giftErr?.message || giftErr)
+        }
+      }
+    }
+
     // ============ LAYER 7b: CANCEL ORPHANED COURSE RETRY ATTEMPTS ============
     // Guest course checkout creates a new payment row on every retry. When one
     // succeeds, cancel leftover pending/failed/processing siblings for the same
@@ -1098,18 +1125,25 @@ export default defineEventHandler(async (event) => {
                     const valueChf = (regData.amount_paid_rappen || payment?.total_amount_rappen || 0) / 100
                     const conversionDateTime = new Date()
 
-                    await sendCapiEvent({
-                      appointment_id: `course_${newReg.id}`,
-                      tenant_id: regData.tenant_id,
-                      event_name: 'Purchase',
-                      conversion_value_chf: valueChf,
-                      conversion_date_time: conversionDateTime,
-                      fbclid: attrRow?.fbclid ?? null,
-                      fbc: attrRow?.fbc ?? null,
-                      fbp: attrRow?.fbp ?? null,
-                      hashed_email: hashedEmail,
-                      hashed_phone: hashedPhone,
-                    })
+                    const { shouldSendMetaBookingConversion } = await import('~/server/utils/meta-booking-conversion')
+                    if (shouldSendMetaBookingConversion({
+                      isFirstCustomerBooking: true,
+                      fbclid: attrRow?.fbclid,
+                      fbc: attrRow?.fbc,
+                    })) {
+                      await sendCapiEvent({
+                        appointment_id: `course_${newReg.id}`,
+                        tenant_id: regData.tenant_id,
+                        event_name: 'Purchase',
+                        conversion_value_chf: valueChf,
+                        conversion_date_time: conversionDateTime,
+                        fbclid: attrRow?.fbclid ?? null,
+                        fbc: attrRow?.fbc ?? null,
+                        fbp: attrRow?.fbp ?? null,
+                        hashed_email: hashedEmail,
+                        hashed_phone: hashedPhone,
+                      })
+                    }
 
                     await recordAndUploadCourseConversion({
                       registration_id: String(newReg.id),
@@ -1135,6 +1169,7 @@ export default defineEventHandler(async (event) => {
                     const discountCode = payment.metadata?.discount_code
                     const tenantIdForDiscount = payment.tenant_id
                     if (!discountCode || !tenantIdForDiscount) continue
+                    if (payment.metadata?.discount_usage_claimed) continue
                     // Escape LIKE wildcards — discountCode originates from payment metadata,
                     // which is attacker-influenced (set from the original enrollment request).
                     const escapedDiscountCode = escapeLikePattern(discountCode)
@@ -1442,6 +1477,11 @@ export default defineEventHandler(async (event) => {
         .map(p => p.appointment_id)
       
       if (appointmentIds.length > 0) {
+        const { data: priorAppointments } = await supabase
+          .from('appointments')
+          .select('id, status, user_id, tenant_id')
+          .in('id', appointmentIds)
+
         const appointmentStatus = paymentStatus === 'completed' ? 'confirmed' : 'scheduled'
         
         const updateQuery = supabase
@@ -1451,6 +1491,7 @@ export default defineEventHandler(async (event) => {
             updated_at: new Date().toISOString()
           })
           .in('id', appointmentIds)
+          .in('status', ['pending', 'scheduled', 'confirmed'])
         
         // Don't downgrade a 'confirmed' appointment back to 'scheduled' on AUTHORIZED state
         if (paymentStatus === 'authorized') {
@@ -1465,34 +1506,52 @@ export default defineEventHandler(async (event) => {
           logger.info(`✅ Updated ${appointmentIds.length} appointment(s) to: ${appointmentStatus}`)
         }
 
-        // Safety net: if booking-time confirmation never landed, retry after Wallee pay.
         if (paymentStatus === 'completed') {
-          for (const payment of paymentsToUpdate) {
-            if (!payment.appointment_id || !payment.user_id || !payment.tenant_id) continue
+          for (const appt of priorAppointments || []) {
+            if (appt.status !== 'pending' || !appt.user_id || !appt.tenant_id) continue
             try {
-              const { data: appt } = await supabase
-                .from('appointments')
-                .select('id, confirmation_email_sent_at, confirmation_email_status')
-                .eq('id', payment.appointment_id)
-                .maybeSingle()
-              if (appt?.confirmation_email_sent_at || appt?.confirmation_email_status === 'sent') continue
-              if (appt?.confirmation_email_status === 'queued') continue
-
               const { dispatchAppointmentConfirmation } = await import(
                 '~/server/utils/dispatch-appointment-confirmation'
               )
               await dispatchAppointmentConfirmation({
-                appointmentId: payment.appointment_id,
-                userId: payment.user_id,
-                tenantId: payment.tenant_id,
-                skipStaffNotification: false,
+                appointmentId: appt.id,
+                userId: appt.user_id,
+                tenantId: appt.tenant_id,
               })
-              logger.info('✅ Post-Wallee confirmation dispatch for appointment', payment.appointment_id)
             } catch (confirmErr: any) {
-              logger.warn(
-                '⚠️ Post-Wallee confirmation dispatch failed (non-fatal):',
-                confirmErr?.message || confirmErr
-              )
+              logger.warn('⚠️ Pay-before-confirm confirmation email failed:', confirmErr?.message)
+            }
+            try {
+              const { data: stamped } = await supabase
+                .from('appointments')
+                .select('fbclid, fbc, fbp')
+                .eq('id', appt.id)
+                .maybeSingle()
+              const { data: student } = await supabase
+                .from('users')
+                .select('email, phone')
+                .eq('id', appt.user_id)
+                .maybeSingle()
+              const payment = paymentsToUpdate.find(p => p.appointment_id === appt.id)
+              const { maybeSendMetaBookingPurchase } = await import('~/server/utils/meta-booking-conversion')
+              const { sha256Hex } = await import('~/server/utils/meta-capi')
+              const hashedEmail = student?.email ? await sha256Hex(student.email.trim().toLowerCase()) : null
+              const normalizedPhone = (student?.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
+              const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
+              await maybeSendMetaBookingPurchase({
+                supabase,
+                appointmentId: appt.id,
+                userId: appt.user_id,
+                tenantId: appt.tenant_id,
+                fbclid: stamped?.fbclid,
+                fbc: stamped?.fbc,
+                fbp: stamped?.fbp,
+                conversionValueChf: (payment?.total_amount_rappen || 0) / 100,
+                hashedEmail,
+                hashedPhone,
+              })
+            } catch (capiErr: any) {
+              logger.warn('⚠️ Meta CAPI after pay-before-confirm failed:', capiErr?.message)
             }
           }
         }
@@ -1581,6 +1640,18 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 9: HANDLE CREDIT REFUND FOR FAILED/CANCELLED ============
     if (paymentStatus === 'failed' || paymentStatus === 'cancelled') {
       await handleCreditRefund(paymentsToUpdate)
+      const { releaseUnpaidPendingAppointment } = await import('~/server/utils/wallee-appointment-checkout')
+      for (const payment of paymentsToUpdate) {
+        if (!payment.appointment_id) continue
+        try {
+          await releaseUnpaidPendingAppointment({
+            appointmentId: payment.appointment_id,
+            tenantId: payment.tenant_id,
+          })
+        } catch (releaseErr: any) {
+          logger.warn('⚠️ Could not release unpaid pending appointment:', releaseErr?.message)
+        }
+      }
     }
     
     // ============ LAYER 10: CONFIRM CREDIT DEDUCTION FOR COMPLETED ============
@@ -1830,6 +1901,23 @@ async function processAnonymousSale(sale: any, paymentStatus: string) {
   if (error) {
     logger.error('❌ Error updating anonymous sale:', error)
     return { success: false, error: 'Failed to update sale' }
+  }
+
+  if (paymentStatus === 'completed' && sale.user_id && sale.tenant_id) {
+    const { data: saleItems } = await supabase
+      .from('product_sale_items')
+      .select('product_id, quantity')
+      .eq('product_sale_id', sale.id)
+
+    if (saleItems?.length) {
+      await applyCreditProductsForCompletedSale({
+        supabase,
+        userId: sale.user_id,
+        tenantId: sale.tenant_id,
+        saleId: sale.id,
+        items: saleItems
+      })
+    }
   }
   
   logger.debug('✅ Anonymous sale updated to:', paymentStatus)
@@ -2240,6 +2328,7 @@ async function savePaymentToken(payment: any, transactionId: string) {
     // Call the existing save-payment-token API internally
     await $fetch('/api/wallee/save-payment-token', {
       method: 'POST',
+      headers: { ...internalSecretHeaders() },
       body: {
         transactionId,
         userId: payment.user_id,
@@ -2636,40 +2725,47 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
 }
 
 // ============ WALLEE REFUND WEBHOOK HANDLER ============
-// Called when Wallee sends a Refund entity event (SUCCESSFUL or FAILED).
-// - SUCCESSFUL: confirms our optimistic 'refunded' status (usually a no-op).
-// - FAILED:     reverts the payment to 'completed' so staff can investigate / retry.
+// Updates the payment_refunds ledger row, then recalculates remaining/status.
 async function handleWalleeRefundWebhook(
   body: WalleeWebhookPayload,
   supabase: any,
   webhookLogId?: string
 ): Promise<{ success: boolean; status?: string; message: string }> {
   const refundId = body.entityId.toString()
-  const refundState = body.state // e.g. 'SUCCESSFUL', 'FAILED', 'PENDING'
+  const refundState = body.state
   const spaceId = body.spaceId
 
   logger.info('🔔 Wallee REFUND webhook:', { refundId, refundState, spaceId })
 
-  // Only act on terminal states
   if (refundState !== 'SUCCESSFUL' && refundState !== 'FAILED') {
     logger.info(`⏭️ Refund webhook non-terminal state (${refundState}), skipping`)
     return { success: true, message: `Refund ${refundState} acknowledged, no action needed` }
   }
 
-  // ── 1. Look up payment by wallee_refund_id ───────────────────────────────
-  let payment: any = null
+  let ledger: { id: string; payment_id: string } | null = null
 
   const { data: byRefundId } = await supabase
-    .from('payments')
-    .select('id, payment_status, tenant_id, wallee_transaction_id, total_amount_rappen')
+    .from('payment_refunds')
+    .select('id, payment_id')
     .eq('wallee_refund_id', refundId)
     .maybeSingle()
 
   if (byRefundId) {
-    payment = byRefundId
+    ledger = byRefundId
   } else {
-    // ── 2. Fallback: fetch Refund from Wallee API → get transaction ID ────
-    logger.info(`⚠️ No payment found by wallee_refund_id=${refundId}, fetching from Wallee API…`)
+    const { data: paymentByCol } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('wallee_refund_id', refundId)
+      .maybeSingle()
+
+    if (paymentByCol) {
+      ledger = { id: '', payment_id: paymentByCol.id }
+    }
+  }
+
+  if (!ledger) {
+    logger.info(`⚠️ No ledger row for refundId=${refundId}, fetching from Wallee API…`)
     try {
       const WalleeModule = await import('wallee')
       let WalleeSDK: any = null
@@ -2677,41 +2773,37 @@ async function handleWalleeRefundWebhook(
       else if (WalleeModule.default?.api?.RefundService) WalleeSDK = WalleeModule.default
       else if (WalleeModule.api?.RefundService) WalleeSDK = WalleeModule
 
-      if (WalleeSDK) {
-        // Resolve credentials from the spaceId that originated the webhook
-        let walleeCredentials: { spaceId: number; userId: number; apiSecret: string } | null = null
-        if (spaceId) {
-          try {
-            const { data: tenantBySpace } = await supabase
-              .from('tenants')
-              .select('id')
-              .eq('wallee_space_id', spaceId)
-              .maybeSingle()
-            if (tenantBySpace?.id) {
-              walleeCredentials = await getWalleeConfigBySpace(tenantBySpace.id, spaceId)
-            }
-          } catch (e: any) {
-            logger.warn('⚠️ Could not resolve credentials for refund webhook:', e.message)
-          }
-        }
-
-        if (walleeCredentials) {
-          const config = getWalleeSDKConfig(walleeCredentials.spaceId, walleeCredentials.userId, walleeCredentials.apiSecret)
-          const refundService = new WalleeSDK.api.RefundService(config)
-          const refundEntity = (await refundService.read(walleeCredentials.spaceId, parseInt(refundId)))?.body
-
-          const transactionId = refundEntity?.transaction?.id?.toString()
-          if (transactionId) {
-            const { data: byTxId } = await supabase
-              .from('payments')
-              .select('id, payment_status, tenant_id, wallee_transaction_id, total_amount_rappen')
-              .eq('wallee_transaction_id', transactionId)
-              .maybeSingle()
-            if (byTxId) {
-              payment = byTxId
-              // Backfill wallee_refund_id so future webhooks hit directly
-              await supabase.from('payments').update({ wallee_refund_id: refundId }).eq('id', byTxId.id)
-              logger.info('✅ Found payment via Wallee API fallback, refund ID backfilled:', byTxId.id)
+      if (WalleeSDK && spaceId) {
+        const { data: tenantBySpace } = await supabase
+          .from('tenants')
+          .select('id')
+          .eq('wallee_space_id', spaceId)
+          .maybeSingle()
+        if (tenantBySpace?.id) {
+          const walleeCredentials = await getWalleeConfigBySpace(tenantBySpace.id, spaceId)
+          if (walleeCredentials) {
+            const config = getWalleeSDKConfig(walleeCredentials.spaceId, walleeCredentials.userId, walleeCredentials.apiSecret)
+            const refundService = new WalleeSDK.api.RefundService(config)
+            const refundEntity = (await refundService.read(walleeCredentials.spaceId, parseInt(refundId)))?.body
+            const transactionId = refundEntity?.transaction?.id?.toString()
+            if (transactionId) {
+              const { data: byTxId } = await supabase
+                .from('payments')
+                .select('id, tenant_id')
+                .eq('wallee_transaction_id', transactionId)
+                .maybeSingle()
+              if (byTxId) {
+                ledger = { id: '', payment_id: byTxId.id }
+                await supabase.from('payment_refunds').upsert({
+                  tenant_id: byTxId.tenant_id,
+                  payment_id: byTxId.id,
+                  wallee_refund_id: refundId,
+                  amount_rappen: Math.round((refundEntity?.amount || 0) * 100) || 1,
+                  status: refundState === 'SUCCESSFUL' ? 'successful' : 'failed',
+                  idempotency_key: `webhook-${refundId}`,
+                  updated_at: new Date().toISOString(),
+                }, { onConflict: 'payment_id,idempotency_key' })
+              }
             }
           }
         }
@@ -2721,49 +2813,35 @@ async function handleWalleeRefundWebhook(
     }
   }
 
-  if (!payment) {
+  if (!ledger) {
     logger.warn('⚠️ Refund webhook: payment not found for refundId:', refundId)
     return { success: false, message: 'Payment not found for refund ID' }
   }
 
-  // ── 3. Handle terminal state ──────────────────────────────────────────────
-  if (refundState === 'SUCCESSFUL') {
-    // Confirm our optimistic 'refunded' status
-    if (payment.payment_status !== 'refunded') {
-      await supabase
-        .from('payments')
-        .update({ payment_status: 'refunded', refunded_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-        .eq('id', payment.id)
-      logger.info('✅ Refund SUCCESSFUL — payment status confirmed as refunded:', payment.id)
-    } else {
-      logger.info('✅ Refund SUCCESSFUL — payment already marked refunded:', payment.id)
-    }
-    return { success: true, status: 'refunded', message: 'Refund confirmed successful' }
+  if (ledger.id) {
+    await supabase.from('payment_refunds').update({
+      status: refundState === 'SUCCESSFUL' ? 'successful' : 'failed',
+      updated_at: new Date().toISOString(),
+    }).eq('id', ledger.id)
   }
 
-  // refundState === 'FAILED'
-  // Revert payment to 'completed' so the admin can see and retry/handle manually
-  logger.error(`❌ Wallee REFUND FAILED for payment ${payment.id} (refundId: ${refundId})`)
+  const synced = await syncPaymentRefundTotals(supabase, ledger.payment_id)
 
-  await supabase
-    .from('payments')
-    .update({
-      payment_status: 'completed',
-      wallee_refund_id: null,
-      notes: `⚠️ Wallee-Rückerstattung FEHLGESCHLAGEN (refundId: ${refundId}). Bitte manuell prüfen und erneut veranlassen.`,
-      updated_at: new Date().toISOString(),
+  if (refundState === 'FAILED') {
+    logger.error('🚨 Wallee REFUND FAILED — ledger marked failed, remaining recalculated.', {
+      paymentId: ledger.payment_id,
+      refundId,
+      remainingChf: (synced.remainingRefundableRappen / 100).toFixed(2),
     })
-    .eq('id', payment.id)
+    return { success: true, status: 'failed', message: 'Refund failed — remaining amount restored' }
+  }
 
-  // Log loudly — an admin needs to act
-  logger.error('🚨 ADMIN ACTION REQUIRED: Wallee refund failed, payment reverted to completed.', {
-    paymentId: payment.id,
-    refundId,
-    amount: `CHF ${((payment.total_amount_rappen || 0) / 100).toFixed(2)}`,
-    tenantId: payment.tenant_id,
+  logger.info('✅ Refund SUCCESSFUL — ledger synced:', {
+    paymentId: ledger.payment_id,
+    paymentStatus: synced.paymentStatus,
+    remainingChf: (synced.remainingRefundableRappen / 100).toFixed(2),
   })
-
-  return { success: true, status: 'reverted_to_completed', message: 'Refund failed — payment reverted to completed' }
+  return { success: true, status: synced.paymentStatus, message: 'Refund confirmed' }
 }
 
 // ============ UPDATE SESSION PARTICIPANT COUNTS ============

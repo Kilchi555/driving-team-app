@@ -9,7 +9,7 @@
       <Meta property="og:url" content="https://drivingteam.ch/motorrad-grundkurs-altstetten/" />
       <Meta property="og:type" content="website" />
       <Meta property="og:locale" content="de_CH" />
-      <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-zuerich/" />
+      <Link rel="canonical" href="https://drivingteam.ch/motorrad-grundkurs-altstetten/" />
       <Meta property="og:image" content="https://drivingteam.ch/images/courses/motorrad-grundkurs-hero.webp" />
       <Meta property="og:image:width" content="1200" />
       <Meta property="og:image:height" content="630" />
@@ -43,7 +43,8 @@
       :requirements="[
         'Gültiger Lernfahrausweis der Kategorie A1 / A35kW / A',
         'Selbständiges Fahren von A nach B möglich',
-        'Eigenes Motorrad/Roller (Fahrschul-Fahrzeuge für CHF 80.- pro Kursteil auf Anfrage vorhanden)',
+        'Bei unsicherem Fahren: Fahrstunden beim Fahrlehrer vor dem Grundkurs empfohlen',
+        'Eigenes Motorrad/Roller',
         'Eigene Motorrad-Sicherheitsbekleidung inkl. Helm'
       ]"
       :details="[
@@ -53,6 +54,7 @@
         '📍 Treffpunkt: <strong>Vulkanstrasse 130b, 8048 Zürich-Altstetten</strong>'
       ]"
       :important-notes="[
+        'Bei unsicherem Fahren empfehlen wir Fahrstunden beim Fahrlehrer vor dem Grundkurs.',
         'Für Kategorie A1 sind ebenfalls die Kursteile 1, 2 & 3 zu absolvieren.',
         'Wenn du die Kategorie A1 OHNE GESCHWINDIGKEITSBESCHRÄNKUNG bereits seit mind. 31.12.2020 besitzt und Kat. A (35kW) machen willst, melde dich nur für Kursteil 3 an.'
       ]"
@@ -98,7 +100,7 @@
           </details>
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Was kostet der Motorrad Grundkurs in Altstetten?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm">Der komplette Motorrad Grundkurs in Zürich-Altstetten kostet <strong>CHF 499.-</strong> (3 Kursteile à CHF 190.-). Falls du ein Fahrschul-Motorrad benötigst, fallen CHF 80.- pro Kursteil zusätzlich an. Helm-Miete: CHF 10.- Umtriebsentschädigung.</p>
+            <p class="text-gray-600 mt-4 text-sm">Der komplette Motorrad Grundkurs in Zürich-Altstetten kostet <strong>CHF 499.-</strong> (3 Kursteile à CHF 190.-). Bitte bringe dein eigenes Motorrad oder deinen Roller sowie Helm und Schutzkleidung mit.</p>
           </details>
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Ist der Motorrad Grundkurs in Altstetten obligatorisch?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
@@ -110,7 +112,11 @@
           </details>
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Muss ich mein eigenes Motorrad mitbringen?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
-            <p class="text-gray-600 mt-4 text-sm">In der Regel ja. Du kannst jedoch gegen eine Gebühr von <strong>CHF 80.- pro Kursteil</strong> ein Motorrad von uns ausleihen. Bitte kontaktiere uns im Voraus, um die Verfügbarkeit zu prüfen.</p>
+            <p class="text-gray-600 mt-4 text-sm">Ja. Bitte bringe dein eigenes betriebssicheres Motorrad oder deinen Roller sowie Helm und Schutzausrüstung mit.</p>
+          </details>
+          <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
+            <summary class="font-semibold text-gray-900 flex justify-between items-center">Was, wenn ich mich auf dem Motorrad noch unsicher fühle?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
+            <p class="text-gray-600 mt-4 text-sm">Dann empfehlen wir Fahrstunden beim Fahrlehrer vor dem Grundkurs. In persönlichen 1-zu-1 Fahrstunden übst du die grundlegende Handhabung, damit du sicher vorbereitet in den Kurs kommst.</p>
           </details>
           <details class="bg-white border border-gray-200 rounded-lg p-6 cursor-pointer group">
             <summary class="font-semibold text-gray-900 flex justify-between items-center">Was wird im Motorrad Grundkurs geübt?<span class="text-primary-500 group-open:rotate-180 transition hover:text-primary-700">▼</span></summary>
@@ -193,7 +199,8 @@ const jsonLdScripts = [
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "Wo findet der Motorrad Grundkurs in Altstetten statt?", "acceptedAnswer": { "@type": "Answer", "text": "Vulkanstrasse 130b, 8048 Zürich-Altstetten. Gut erreichbar mit Tram 2, 3, 8 bis Altstetten." } },
-      { "@type": "Question", "name": "Was kostet der Motorrad Grundkurs Altstetten?", "acceptedAnswer": { "@type": "Answer", "text": "CHF 499.- für alle 3 Kursteile (à CHF 190.-). Motorrad-Miete CHF 80.- pro Kursteil." } },
+      { "@type": "Question", "name": "Was kostet der Motorrad Grundkurs Altstetten?", "acceptedAnswer": { "@type": "Answer", "text": "CHF 499.- für alle 3 Kursteile (à CHF 190.-). Eigenes Motorrad oder Roller mitbringen." } },
+      { "@type": "Question", "name": "Was, wenn ich mich auf dem Motorrad noch unsicher fühle?", "acceptedAnswer": { "@type": "Answer", "text": "Dann empfehlen wir Fahrstunden beim Fahrlehrer vor dem Grundkurs." } },
       { "@type": "Question", "name": "Wie viele Stunden dauert der Motorrad Grundkurs?", "acceptedAnswer": { "@type": "Answer", "text": "12 Stunden in 3 Kursteilen à 4 Stunden." } }
     ]
   }) }

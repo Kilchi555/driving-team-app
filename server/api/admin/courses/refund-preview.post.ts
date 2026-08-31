@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
   if (reg.payment_id) {
     const { data: paymentData } = await supabase
       .from('payments')
-      .select('id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, tenant_id')
+      .select('id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, tenant_id, refunded_amount_rappen')
       .eq('id', reg.payment_id)
       .single()
     payment = paymentData
@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
     // Also try reverse lookup
     const { data: paymentData } = await supabase
       .from('payments')
-      .select('id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, tenant_id')
+      .select('id, payment_status, total_amount_rappen, credit_used_rappen, wallee_transaction_id, tenant_id, refunded_amount_rappen')
       .eq('course_registration_id', enrollmentId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -134,25 +134,27 @@ export default defineEventHandler(async (event) => {
   // Calculate amounts
   const totalPaidRappen = payment?.total_amount_rappen ?? 0
   const creditUsedRappen = payment?.credit_used_rappen ?? 0
+  const alreadyRefundedRappen = payment?.refunded_amount_rappen ?? 0
   const walleeCapturedRappen = Math.round(
     Math.round((totalPaidRappen - creditUsedRappen) / 5) * 5
   )
+  const remainingWalleeRappen = Math.max(0, walleeCapturedRappen - alreadyRefundedRappen)
   const refundAmountRappen = Math.round(totalPaidRappen * refundPercentage / 100)
-  const walleeRefundAmountRappen = Math.min(refundAmountRappen, walleeCapturedRappen)
+  const walleeRefundAmountRappen = Math.min(refundAmountRappen, remainingWalleeRappen)
   const creditRefundAmountRappen = refundAmountRappen - walleeRefundAmountRappen
 
   const canRefundViaWallee =
-    payment?.payment_status === 'completed' &&
+    ['completed', 'partially_refunded'].includes(payment?.payment_status) &&
     !!payment?.wallee_transaction_id &&
-    walleeCapturedRappen > 0 &&
-    !!payment?.tenant_id  // tenant_id required to load Wallee config
+    remainingWalleeRappen > 0 &&
+    !!payment?.tenant_id
 
   const refundBlockedReason: string | null = (() => {
     if (!payment) return null
     if (payment.payment_status !== 'completed') return `Zahlung ist nicht abgeschlossen (Status: ${payment.payment_status})`
     if (!payment.tenant_id) return 'Keine Tenant-ID für diese Zahlung — manuelle Rückerstattung via Wallee-Dashboard erforderlich'
     if (!payment.wallee_transaction_id) return 'Keine Wallee Transaction ID gefunden — manuelle Rückerstattung via Wallee-Dashboard erforderlich'
-    if (walleeCapturedRappen <= 0) return 'Betrag wurde vollständig mit Guthaben bezahlt — keine Wallee-Rückerstattung möglich'
+    if (remainingWalleeRappen <= 0) return 'Betrag wurde bereits via Wallee erstattet oder vollständig mit Guthaben bezahlt'
     return null
   })()
 
@@ -175,6 +177,8 @@ export default defineEventHandler(async (event) => {
           totalPaidChf: totalPaidRappen / 100,
           creditUsedChf: creditUsedRappen / 100,
           walleeCapturedChf: walleeCapturedRappen / 100,
+          alreadyRefundedChf: alreadyRefundedRappen / 100,
+          remainingWalleeChf: remainingWalleeRappen / 100,
           hasTenantId: !!payment.tenant_id,
         }
       : null,

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="article">
+    <div>
 
       <!-- Reading Progress Bar -->
       <div class="fixed top-0 left-0 z-50 h-1 bg-primary-500 transition-all duration-100" :style="{ width: readingProgress + '%' }" />
@@ -62,9 +62,7 @@
 
             <!-- Main Content -->
             <article ref="articleRef">
-              <div class="article-content">
-                <ContentRenderer :value="article" />
-              </div>
+              <div class="article-content" v-html="article.html" />
 
               <!-- Tags -->
               <div v-if="article.keywords" class="mt-12 pt-8 border-t border-gray-100 flex flex-wrap gap-2">
@@ -193,70 +191,49 @@
         </div>
       </section>
     </div>
-
-    <!-- 404 -->
-    <div v-else class="section-container py-20 text-center">
-      <h1 class="heading-lg mb-4">Artikel nicht gefunden</h1>
-      <p class="text-gray-600 mb-8">Dieser Artikel existiert leider nicht oder wurde verschoben.</p>
-      <a href="/blog/" class="btn-primary">Zurück zum Blog</a>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 const route = useRoute()
-const slug = route.params.slug as string
+const slug = String(route.params.slug || '')
+const article = getBlogArticle(slug)
 
-const { data: article } = await useAsyncData(`blog-${slug}`, () =>
-  queryCollection('blog').path(`/blog/${slug}`).first()
-)
+if (!article) {
+  throw createError({ statusCode: 404, statusMessage: 'Blog article not found' })
+}
 
-// SSR-safe SEO meta – direct string values after awaited useAsyncData for correct prerender output
-// seoTitle in frontmatter allows a shorter title tag without changing the displayed article title
-const seoTitle = article.value
-  ? `${(article.value as any).seoTitle ?? article.value.title} | Driving Team`
-  : 'Blog | Driving Team Fahrschule'
-const seoDescription = article.value?.description ?? ''
-const seoOgImage = `https://drivingteam.ch${article.value?.ogImage ?? '/images/og-image.webp'}`
+const seoTitle = `${article.seoTitle ?? article.title} | Driving Team`
+const seoDescription = article.description
+const seoOgImage = `https://drivingteam.ch${article.ogImage ?? '/images/og-image.webp'}`
 
 useSeoMeta({
   title: seoTitle,
   description: seoDescription,
-  ogTitle: article.value?.title ?? '',
+  ogTitle: article.title,
   ogDescription: seoDescription,
   ogUrl: `https://drivingteam.ch/blog/${slug}/`,
   ogType: 'article',
   ogImage: seoOgImage,
-  robots: article.value
-    ? 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1'
-    : 'noindex, nofollow',
+  robots: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
 })
-
-if (!article.value) {
-  throw createError({ statusCode: 404, statusMessage: 'Blog article not found' })
-}
 
 useHead({
   link: [
     { rel: 'canonical', href: `https://drivingteam.ch/blog/${slug}/` },
   ],
   meta: [
-    { property: 'article:published_time', content: article.value?.date ?? '' },
-    { property: 'article:modified_time', content: article.value?.dateModified ?? article.value?.date ?? '' },
-    { name: 'keywords', content: article.value?.keywords ?? '' },
+    { property: 'article:published_time', content: article.date },
+    { property: 'article:modified_time', content: article.dateModified || article.date },
+    { name: 'keywords', content: article.keywords || '' },
   ],
 })
 
-const { data: allArticles } = await useAsyncData(`blog-related-${slug}`, () =>
-  queryCollection('blog').select('title', 'slug', 'date', 'category').all()
-)
-
-const relatedArticles = computed(() => {
-  if (!allArticles.value || !article.value) return []
-  return allArticles.value
-    .filter(a => a.slug !== article.value!.slug)
+const relatedArticles = computed(() =>
+  listBlogArticles()
+    .filter(a => a.slug !== article.slug)
     .slice(0, 3)
-})
+)
 
 const articleUrl = computed(() =>
   `https://drivingteam.ch/blog/${slug}/`
@@ -326,8 +303,7 @@ async function copyLink() {
 
 // JSON-LD
 const jsonLd = computed(() => {
-  if (!article.value) return []
-  const a = article.value
+  const a = article
   const url = articleUrl.value
   return [
     {
@@ -390,7 +366,7 @@ useHead({ script: jsonLd })
 .article-content code { background: #f3f4f6; color: #015a85; border-radius: 0.25rem; padding: 0.125rem 0.375rem; font-size: 0.875rem; font-family: ui-monospace, monospace; }
 .article-content pre { background: #1e293b; color: #e2e8f0; border-radius: 0.5rem; padding: 1.25rem; overflow-x: auto; margin: 1.5rem 0; }
 .article-content pre code { background: none; color: inherit; padding: 0; }
-.article-content table { font-size: 0.875rem; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); width: 100%; }
+.article-content table { font-size: 0.875rem; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); width: 100%; border-collapse: collapse; }
 .article-content th { background: #017cb3; color: #fff; font-weight: 600; padding: 0.75rem 1rem; text-align: left; }
 .article-content td { padding: 0.625rem 1rem; border-bottom: 1px solid #f3f4f6; }
 .article-content tr:nth-child(even) td { background: #f9fafb; }
