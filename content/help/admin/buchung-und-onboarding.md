@@ -43,9 +43,11 @@ Mindestens ein Name bleibt immer erforderlich.
 
 **Onboarding-E-Mail nach Gast-Buchung** — nur sinnvoll, wenn Registrierung nicht obligatorisch ist.
 
-**Terminbestätigungen versenden** und **Staff bei Anfragen & Online-Buchungen benachrichtigen**.
+**Kunden-Benachrichtigungen (E-Mail / SMS)** — Master-Schalter plus pro Nachricht E-Mail und SMS: Terminbestätigung, Erinnerung am Vortag, Absage, Verschiebung, Zahlungserinnerung, Kurs-Erinnerung, Kurs-Anmeldung. Kanal-Priorität (E-Mail zuerst / SMS zuerst / beides) gilt nur für eingeschaltete Kanäle. Zahlungserinnerungen brauchen zusätzlich die Methoden unter **Einstellungen → Zahlungen**. Onboarding, Registrierungs-Erinnerung, Pause, Rechnungen und App-Push stehen separat.
 
-**Kunde bei Terminänderung informieren** — welche Änderungen eine E-Mail (und SMS, falls aktiv) auslösen. Standard: nur Datum oder Startzeit. Optional zusätzlich: Dauer, zugewiesener Staff, Treffpunkt, Fahrzeug/Raum. Alle Haken aus = keine Benachrichtigung beim Bearbeiten.
+**Staff bei Anfragen & Online-Buchungen benachrichtigen**.
+
+**Kunde bei Terminänderung informieren** — welche Änderungen eine Nachricht auslösen, wenn Verschiebung oben aktiv ist. Standard: nur Datum oder Startzeit. Optional zusätzlich: Dauer, zugewiesener Staff, Treffpunkt, Fahrzeug/Raum. Alle Haken aus = keine Benachrichtigung beim Bearbeiten.
 
 Zusätzlich unter **Einstellungen → Online-Buchung**: öffentliche Portal-Links und die **Mindest-Vorlaufzeit** in Stunden.
 

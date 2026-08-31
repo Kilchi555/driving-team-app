@@ -238,16 +238,13 @@ export default defineEventHandler(async (event) => {
 
     const tenant = tenantMap.get(apt.tenant_id)
     const policy = (tenant as any)?.booking_policy || {}
-    const reminderSmsEnabled = policy.reminder_sms_enabled !== false
     const smsLength = policy.sms_message_length === 'long' ? 'long' : 'short'
-    const { resolveCustomerChannels } = await import('~/server/utils/customer-notification-channel')
-    const channels = resolveCustomerChannels({
-      channel: policy.customer_notification_channel,
-      hasEmail,
-      hasPhone,
-      emailEnabled: true,
-      smsEnabled: reminderSmsEnabled,
-    })
+    const { resolvePolicyCustomerChannels } = await import('~/server/utils/customer-notification-channel')
+    const channels = resolvePolicyCustomerChannels(policy, 'reminder', { hasEmail, hasPhone })
+    if (!channels.sendEmail && !channels.sendSms) {
+      skipped++
+      continue
+    }
     const terms = termsMap.get(apt.tenant_id) || getTerminologyDefaults(tenant?.business_type)
     const tenantName   = tenant?.name || terms.businessNoun
     const primaryColor = tenant?.primary_color || '#2563eb'
