@@ -6,6 +6,9 @@ on:
     - cron: '0 5 * * 1'
   workflow_dispatch: # allow manual trigger anytime
 
+permissions:
+  contents: read
+
 jobs:
   seo-report:
     runs-on: ubuntu-latest
