@@ -49,6 +49,10 @@ describe('String Validators', () => {
       expect(sanitizeString('vbscript:msgbox(1)')).not.toContain('vbscript:')
     })
 
+    it('should keep ordinary text that contains data: as a substring', () => {
+      expect(sanitizeString('metadata: pickup')).toBe('metadata: pickup')
+    })
+
     it('should respect maxLength', () => {
       const longString = 'a'.repeat(100)
       expect(sanitizeString(longString, 50)).toHaveLength(50)
