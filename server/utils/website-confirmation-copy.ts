@@ -2,14 +2,17 @@
  * Process-step copy for booking confirmation channel.
  * Source of truth: tenants.booking_policy (same as real confirmation sends).
  */
-import { normalizeCustomerNotificationChannel } from '~/server/utils/customer-notification-channel'
+import {
+  normalizeCustomerNotificationChannel,
+  policyAllowsCustomerNotification,
+} from '~/server/utils/customer-notification-channel'
 
 export function buildConfirmationProcessStep(
   policy: Record<string, any> | null | undefined,
   formal: 'du' | 'sie' = 'sie',
 ): { title: string; text: string } {
-  const emailOn = policy?.confirmation_email_enabled !== false
-  const smsOn = policy?.confirmation_sms_enabled !== false
+  const emailOn = policyAllowsCustomerNotification(policy, 'confirmation', 'email')
+  const smsOn = policyAllowsCustomerNotification(policy, 'confirmation', 'sms')
   const channel = normalizeCustomerNotificationChannel(policy?.customer_notification_channel)
 
   let mode: 'email' | 'sms' | 'both' | 'generic'

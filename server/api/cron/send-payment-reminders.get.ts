@@ -175,14 +175,8 @@ export default defineEventHandler(async (event) => {
 
     const tenant = tenantMap.get(userPayments[0].tenant_id)
     const policy = (tenant as any)?.booking_policy || {}
-    const { resolveCustomerChannels } = await import('~/server/utils/customer-notification-channel')
-    const channels = resolveCustomerChannels({
-      channel: policy.customer_notification_channel,
-      hasEmail,
-      hasPhone,
-      emailEnabled: true,
-      smsEnabled: policy.payment_reminder_sms_enabled !== false,
-    })
+    const { resolvePolicyCustomerChannels } = await import('~/server/utils/customer-notification-channel')
+    const channels = resolvePolicyCustomerChannels(policy, 'payment_reminder', { hasEmail, hasPhone })
     // Push is always attempted alongside email/SMS
     // (email/sms still respect tenant channel policy)
 

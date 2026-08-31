@@ -210,7 +210,7 @@ export default defineEventHandler(async (event) => {
   const toInsert: any[] = []
   let skipped = 0
 
-  const { resolveCustomerChannels } = await import('~/server/utils/customer-notification-channel')
+  const { resolvePolicyCustomerChannels } = await import('~/server/utils/customer-notification-channel')
   const { buildCourseReminderSms } = await import('~/server/utils/sms-templates')
 
   for (const item of registrations) {
@@ -222,13 +222,7 @@ export default defineEventHandler(async (event) => {
 
     const hasEmail = !!(testEmail || (item.email && String(item.email).trim()))
     const hasPhone = !!(item.phone && String(item.phone).trim())
-    const channels = resolveCustomerChannels({
-      channel: policy.customer_notification_channel,
-      hasEmail,
-      hasPhone,
-      emailEnabled: true,
-      smsEnabled: policy.course_reminder_sms_enabled !== false,
-    })
+    const channels = resolvePolicyCustomerChannels(policy, 'course_reminder', { hasEmail, hasPhone })
 
     if (!channels.sendEmail && !channels.sendSms) { skipped++; continue }
 

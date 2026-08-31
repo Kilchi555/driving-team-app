@@ -145,6 +145,12 @@ export default defineEventHandler(async (event) => {
 
     const course = enrollment.courses as any
     const tenant = enrollment.tenants as any
+    const { policyAllowsCustomerNotification } = await import(
+      '~/server/utils/customer-notification-channel'
+    )
+    const sendCustomerEmail = testEmail
+      ? true
+      : policyAllowsCustomerNotification(tenant?.booking_policy, 'course_enrollment', 'email')
 
     const { getTenantTerminology } = await import('~/server/utils/tenant-terminology')
     const terms = await getTenantTerminology(supabase, tenant?.id)
@@ -162,7 +168,32 @@ export default defineEventHandler(async (event) => {
           : (course?.price_per_participant_rappen ?? 0)
     const price = (effectivePriceRappen / 100).toFixed(2)
     const isPartial = !!(enrollment as any).is_partial_enrollment
-    
+    const tenantFrom = {
+      fromName: tenant?.name || undefined,
+      fromEmail: tenant?.from_email ?? null,
+      domainVerified: !!tenant?.resend_domain_verified,
+    }
+
+    if (!sendCustomerEmail) {
+      logger.debug('⏭️ Course enrollment customer email skipped (policy)')
+      notifyAdminOfEnrollment({
+        tenant,
+        enrollment,
+        course,
+        paymentMethod,
+        price,
+        isPartial,
+        terms,
+        tenantFrom,
+      })
+      return {
+        success: true,
+        message: 'Customer email skipped (policy)',
+        email: enrollment.email,
+        skipped: true,
+      }
+    }
+
     // Fetch course category to get email_important_notice
     let courseCategory: any = null
     if (course?.category && tenant?.id) {
@@ -377,12 +408,6 @@ export default defineEventHandler(async (event) => {
 
     // 5. Send via central email util (tenant from_email when domain verified)
     try {
-      const tenantFrom = {
-        fromName: tenant?.name || undefined,
-        fromEmail: tenant?.from_email ?? null,
-        domainVerified: !!tenant?.resend_domain_verified,
-      }
-
       await sendEmail({
         ...enrollmentEmail,
         ...tenantFrom,
@@ -393,35 +418,16 @@ export default defineEventHandler(async (event) => {
           : 'platform fallback',
       })
 
-      // Send admin notification (non-blocking)
-      if (tenant?.contact_email) {
-        const firstSession = (course?.course_sessions || []).sort((a: any, b: any) =>
-          new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-        )[0]
-        const courseDate = firstSession?.start_time
-          ? new Date(firstSession.start_time).toLocaleDateString('de-CH', {
-              weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zurich'
-            })
-          : undefined
-        const adminPrice = price + (isPartial ? ' (Teilbuchung)' : '')
-        const { subject: adminSubject, html: adminHtml } = generateAdminEnrollmentNotificationEmail({
-          participantFirstName: enrollment.first_name || '',
-          participantLastName: enrollment.last_name || '',
-          participantEmail: enrollment.email,
-          courseName: course?.name || '',
-          courseDate,
-          courseLocation: course?.description || undefined,
-          paymentMethod: adminPaymentMethodLabel(paymentMethod, terms.businessNoun),
-          paymentAmount: adminPrice,
-          tenantName: tenant.name
-        })
-        sendEmail({
-          to: tenant.contact_email,
-          subject: adminSubject,
-          html: adminHtml,
-          ...tenantFrom,
-        }).catch((err: any) => logger.warn('⚠️ Admin notification email failed:', err.message))
-      }
+      notifyAdminOfEnrollment({
+        tenant,
+        enrollment,
+        course,
+        paymentMethod,
+        price,
+        isPartial,
+        terms,
+        tenantFrom,
+      })
 
       return {
         success: true,
@@ -457,6 +463,47 @@ export default defineEventHandler(async (event) => {
     })
   }
 })
+
+function notifyAdminOfEnrollment(opts: {
+  tenant: any
+  enrollment: any
+  course: any
+  paymentMethod: ConfirmationPaymentMethod
+  price: string
+  isPartial: boolean
+  terms: { businessNoun: string }
+  tenantFrom: { fromName?: string; fromEmail: string | null; domainVerified: boolean }
+}) {
+  const { tenant, enrollment, course, paymentMethod, price, isPartial, terms, tenantFrom } = opts
+  if (!tenant?.contact_email) return
+
+  const firstSession = (course?.course_sessions || []).sort((a: any, b: any) =>
+    new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+  )[0]
+  const courseDate = firstSession?.start_time
+    ? new Date(firstSession.start_time).toLocaleDateString('de-CH', {
+        weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Zurich'
+      })
+    : undefined
+  const adminPrice = price + (isPartial ? ' (Teilbuchung)' : '')
+  const { subject: adminSubject, html: adminHtml } = generateAdminEnrollmentNotificationEmail({
+    participantFirstName: enrollment.first_name || '',
+    participantLastName: enrollment.last_name || '',
+    participantEmail: enrollment.email,
+    courseName: course?.name || '',
+    courseDate,
+    courseLocation: course?.description || undefined,
+    paymentMethod: adminPaymentMethodLabel(paymentMethod, terms.businessNoun),
+    paymentAmount: adminPrice,
+    tenantName: tenant.name
+  })
+  sendEmail({
+    to: tenant.contact_email,
+    subject: adminSubject,
+    html: adminHtml,
+    ...tenantFrom,
+  }).catch((err: any) => logger.warn('⚠️ Admin notification email failed:', err.message))
+}
 
 // Helper function to format sessions for email
 function formatSessionsForEmail(sessions: any[]): string {

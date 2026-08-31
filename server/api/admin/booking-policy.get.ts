@@ -55,6 +55,11 @@ export interface BookingPolicy {
    */
   registration_account_mode: 'hidden' | 'required'
   // ── Confirmation & Onboarding ──────────────────────────────────────────────
+  /**
+   * Master switch for customer confirmations & reminders (email + SMS).
+   * Does not affect staff mails, invoices, receipts, or onboarding/idle toggles.
+   */
+  customer_notifications_enabled: boolean
   confirmation_email_enabled: boolean
   confirmation_email_mode: 'always' | 'after_registration' | 'never'
   /**
@@ -79,6 +84,8 @@ export interface BookingPolicy {
   onboarding_email_enabled: boolean
   /** SMS confirmation (gated further by customer_notification_channel) */
   confirmation_sms_enabled: boolean
+  /** Appointment reminder email (day before). Default on for existing tenants. */
+  reminder_email_enabled: boolean
   /** SMS reminder (gated further by customer_notification_channel) */
   reminder_sms_enabled: boolean
   /**
@@ -103,8 +110,12 @@ export interface BookingPolicy {
    * After that, normal metered billing applies again.
    */
   sms_overage_waived_until: string | null
+  /** Cancellation email (default true) */
+  cancellation_email_enabled: boolean
   /** SMS on appointment cancellation (default true) */
   cancellation_sms_enabled: boolean
+  /** Reschedule email (default true; still gated by reschedule_email_triggers) */
+  reschedule_email_enabled: boolean
   /** SMS on appointment reschedule (default true) */
   reschedule_sms_enabled: boolean
   /**
@@ -112,10 +123,16 @@ export interface BookingPolicy {
    * Default: only date / start time. Empty array = never on edit.
    */
   reschedule_email_triggers: RescheduleEmailTrigger[]
+  /** Payment reminder email (default true; still gated by payment-method settings) */
+  payment_reminder_email_enabled: boolean
   /** SMS for payment reminders (default true) */
   payment_reminder_sms_enabled: boolean
+  /** Course session reminder email (default true) */
+  course_reminder_email_enabled: boolean
   /** SMS for course session reminders to participants (default true) */
   course_reminder_sms_enabled: boolean
+  /** Course enrollment confirmation email (default true) */
+  course_enrollment_email_enabled: boolean
   // ── Staff permissions ──────────────────────────────────────────────────────
   staff_refund_permission: 'hidden' | 'request' | 'allowed'
   staff_invoice_permission: 'hidden' | 'create_only' | 'create_and_send'
@@ -204,6 +221,7 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   registration_lernfahrausweis_mode: 'optional',
   registration_proposal_mode: 'optional',
   registration_account_mode: 'required',
+  customer_notifications_enabled: true,
   confirmation_email_enabled: true,
   confirmation_email_mode: 'always',
   staff_booking_notification_enabled: true,
@@ -221,17 +239,23 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   onboarding_sms_enabled: true,
   onboarding_email_enabled: false,
   confirmation_sms_enabled: true,
+  reminder_email_enabled: true,
   reminder_sms_enabled: true,
   customer_notification_channel: 'email_first',
   sms_message_length: 'short',
   sms_hard_stop_on_quota: false,
   sms_overage_waived: false,
   sms_overage_waived_until: null,
+  cancellation_email_enabled: true,
   cancellation_sms_enabled: true,
+  reschedule_email_enabled: true,
   reschedule_sms_enabled: true,
   reschedule_email_triggers: [...DEFAULT_RESCHEDULE_EMAIL_TRIGGERS],
+  payment_reminder_email_enabled: true,
   payment_reminder_sms_enabled: true,
+  course_reminder_email_enabled: true,
   course_reminder_sms_enabled: true,
+  course_enrollment_email_enabled: true,
   staff_refund_permission: 'hidden',
   staff_invoice_permission: 'create_and_send',
   staff_manual_discount_permission: 'hidden',
@@ -340,6 +364,13 @@ export default defineEventHandler(async (event) => {
       merged.registration_account_mode,
       DEFAULT_BOOKING_POLICY.registration_account_mode
     ),
+    customer_notifications_enabled: merged.customer_notifications_enabled !== false,
+    reminder_email_enabled: merged.reminder_email_enabled !== false,
+    cancellation_email_enabled: merged.cancellation_email_enabled !== false,
+    reschedule_email_enabled: merged.reschedule_email_enabled !== false,
+    payment_reminder_email_enabled: merged.payment_reminder_email_enabled !== false,
+    course_reminder_email_enabled: merged.course_reminder_email_enabled !== false,
+    course_enrollment_email_enabled: merged.course_enrollment_email_enabled !== false,
     staff_booking_notification_enabled: merged.staff_booking_notification_enabled !== false,
     auto_invoice_on_complete: merged.auto_invoice_on_complete === true,
     auto_invoice_recipient: VALID_AUTO_INVOICE_RECIPIENTS.includes(
