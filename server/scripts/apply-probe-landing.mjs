@@ -194,9 +194,6 @@ for (const ad of adsPlan.filter((a) => a.needs_update)) {
     if (patch.ok) updated = true
   }
   if (!updated) {
-    if (ad.ad_group_ad_resource_name) {
-      await mutate(customerId, hdrs, 'adGroupAds', [{ remove: ad.ad_group_ad_resource_name }], false)
-    }
     const createRes = await mutate(customerId, hdrs, 'adGroupAds', [{
       create: {
         adGroup: ad.ad_group_resource_name,
@@ -215,6 +212,9 @@ for (const ad of adsPlan.filter((a) => a.needs_update)) {
     if (!createRes.ok) {
       adsErrors.push({ ad_group: ad.ad_group, error: createRes.data })
       continue
+    }
+    if (ad.ad_group_ad_resource_name) {
+      await mutate(customerId, hdrs, 'adGroupAds', [{ remove: ad.ad_group_ad_resource_name }], false)
     }
   }
   adsUpdated.push(ad.ad_group)
