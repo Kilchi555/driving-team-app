@@ -1,3 +1,4 @@
+import { randomInt } from 'crypto'
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
@@ -12,9 +13,7 @@ import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 function generateCode(length = 8): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  const bytes = new Uint8Array(length)
-  crypto.getRandomValues(bytes)
-  return Array.from(bytes).map(b => chars[b % chars.length]).join('')
+  return Array.from({ length }, () => chars[randomInt(chars.length)]).join('')
 }
 
 export default defineEventHandler(async (event) => {
