@@ -165,11 +165,6 @@ export interface BookingPolicy {
   require_payment_before_confirm: boolean
   auto_invoice_on_complete: boolean
   /**
-   * When true, a completed Wallee/online payment emails a Quittung PDF.
-   * Default false — staff can still send receipts manually.
-   */
-  auto_receipt_on_online_payment: boolean
-  /**
    * Who receives the invoice PDF email.
    * - customer: student's billing email
    * - office: predefined office/admin email (for print + postal)
@@ -269,7 +264,6 @@ export const DEFAULT_BOOKING_POLICY: BookingPolicy = {
   staff_ask_origin_on_appointment: false,
   require_payment_before_confirm: false,
   auto_invoice_on_complete: false,
-  auto_receipt_on_online_payment: false,
   auto_invoice_recipient: 'customer',
   auto_invoice_office_email: null,
   auto_invoice_schedule: 'off',
@@ -379,7 +373,6 @@ export default defineEventHandler(async (event) => {
     course_enrollment_email_enabled: merged.course_enrollment_email_enabled !== false,
     staff_booking_notification_enabled: merged.staff_booking_notification_enabled !== false,
     auto_invoice_on_complete: merged.auto_invoice_on_complete === true,
-    auto_receipt_on_online_payment: merged.auto_receipt_on_online_payment === true,
     auto_invoice_recipient: VALID_AUTO_INVOICE_RECIPIENTS.includes(
       merged.auto_invoice_recipient as AutoInvoiceRecipient
     )

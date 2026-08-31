@@ -3,13 +3,11 @@
 // Queues course session reminder emails/SMS for next-day sessions.
 //
 // Schedule: daily at 07:00 UTC (09:00 Zürich summer / 08:00 winter)
-// Window:   course_sessions starting on the next calendar day in Europe/Zurich
-//           (00:00 tomorrow → 00:00 day after)
+// Window:   course_sessions starting between NOW()+20h and NOW()+28h
 //
 // Participant notification (email / SMS / both via customer_notification_channel):
 //  - Course name, date, time, location, dashboard link
-//  - Skipped if participant does not attend this Teil
-//    (swap-out, individual session, or partial start)
+//  - Skipped if participant has swapped out this session (custom_sessions)
 //
 // Staff/admin email (1 per session) — email only:
 //  - Internal staff: looked up via staff_id → users.email
@@ -33,12 +31,6 @@ import { logger } from '~/utils/logger'
 import { getTenantsWithMultipleStaff } from '~/server/utils/tenant-staff-notify'
 import { emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
-import {
-  buildSessionTeilMap,
-  filterRegistrationsForSession,
-  getZurichNextDayWindow,
-  registrationShouldReceiveSessionReminder,
-} from '~/server/utils/course-reminders'
 import { getQuery } from 'h3'
 
 export default defineEventHandler(async (event) => {
@@ -59,7 +51,8 @@ export default defineEventHandler(async (event) => {
   const testRegistrationId = typeof query.test_registration_id === 'string' ? query.test_registration_id : null
   const testEmail = typeof query.test_email === 'string' ? query.test_email : null
 
-  const { start: windowStart, end: windowEnd } = getZurichNextDayWindow(now)
+  const windowStart = new Date(now.getTime() + 20 * 60 * 60 * 1000)
+  const windowEnd   = new Date(now.getTime() + 28 * 60 * 60 * 1000)
 
   if (testRegistrationId) {
     logger.debug(`🧪 TEST MODE: registration ${testRegistrationId}${testEmail ? ` → ${testEmail}` : ''}`)
@@ -75,7 +68,6 @@ export default defineEventHandler(async (event) => {
 
   const REG_SELECT = `
     id, course_id, tenant_id, custom_sessions,
-    is_partial_enrollment, partial_start_session, individual_session_number,
     email, first_name, last_name, phone,
     street, zip, city,
     course:courses!course_registrations_course_id_fkey ( id, name, tenant_id )
@@ -93,19 +85,15 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'Registration not found or not confirmed' })
     }
 
-    const { data: courseSessions } = await supabase
+    const { data: sessions } = await supabase
       .from('course_sessions')
       .select('id, course_id, tenant_id, session_number, start_time, end_time, custom_location, staff_id, instructor_type, external_instructor_email, external_instructor_name')
       .eq('course_id', reg.course_id)
+      .gte('start_time', now.toISOString())
+      .order('start_time', { ascending: true })
+      .limit(1)
 
-    const teilMap = buildSessionTeilMap((courseSessions || []) as any[])
-    const nowIso = now.toISOString()
-    const session = ((courseSessions || []) as any[])
-      .filter((s: any) => s.start_time >= nowIso)
-      .sort((a: any, b: any) => String(a.start_time).localeCompare(String(b.start_time)))
-      .find((s: any) => registrationShouldReceiveSessionReminder(reg, s, teilMap))
-
-    if (session) {
+    for (const session of (sessions || []) as any[]) {
       sessionsMap.set(session.id, session)
       sessionParticipants.set(session.id, [reg])
       registrations.push({ ...reg, session })
@@ -130,34 +118,22 @@ export default defineEventHandler(async (event) => {
 
     logger.debug(`📋 Found ${sessions.length} session(s) in window`)
 
-    const windowSessions = (sessions as any[]).filter((session) => session.course?.status === 'active')
-    if (windowSessions.length === 0) {
-      logger.debug('ℹ️ No active-course sessions in window')
-      return { success: true, queued_participants: 0, queued_staff: 0, skipped: 0, duration_ms: Date.now() - startTime }
-    }
-    const courseIds = [...new Set(windowSessions.map((session) => session.course_id).filter(Boolean))]
+    for (const session of sessions as any[]) {
+      // Only send for active courses
+      if (session.course?.status !== 'active') continue
 
-    const { data: allCourseSessions } = courseIds.length > 0
-      ? await supabase
-          .from('course_sessions')
-          .select('id, course_id, session_number, start_time')
-          .in('course_id', courseIds)
-      : { data: [] as any[] }
-
-    const teilMap = buildSessionTeilMap((allCourseSessions || []) as any[])
-
-    const { data: regs } = courseIds.length > 0
-      ? await supabase
-          .from('course_registrations')
-          .select(REG_SELECT)
-          .in('course_id', courseIds)
-          .eq('status', 'confirmed')
-          .is('deleted_at', null)
-      : { data: [] as any[] }
-
-    for (const session of windowSessions) {
       sessionsMap.set(session.id, session)
-      const regList = filterRegistrationsForSession((regs || []) as any[], session, teilMap)
+      const sessionNumberStr = String(session.session_number)
+
+      const { data: regs } = await supabase
+        .from('course_registrations')
+        .select(REG_SELECT)
+        .eq('course_id', session.course_id)
+        .eq('status', 'confirmed')
+        .is('deleted_at', null)
+        .or(`custom_sessions.is.null,custom_sessions->>${sessionNumberStr}.is.null`)
+
+      const regList = (regs || []) as any[]
       sessionParticipants.set(session.id, regList)
 
       for (const reg of regList) {

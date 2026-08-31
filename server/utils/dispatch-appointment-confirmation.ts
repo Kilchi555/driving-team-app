@@ -15,8 +15,6 @@ import {
 } from '~/server/utils/appointment-notification-email'
 import { resolveAppointmentMeeting } from '~/server/utils/meeting-link'
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
-import { loadAppointmentResourceLabels } from '~/server/utils/appointment-resource-labels'
-import { shouldDeferConfirmationUntilPaid } from '~/server/utils/pay-before-confirm'
 
 const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https://app.simy.ch').replace(/\/$/, '')
 
@@ -40,7 +38,7 @@ export type DispatchAppointmentConfirmationResult = {
 
 async function markConfirmationStatus(
   appointmentId: string,
-  status: 'sent' | 'queued' | 'skipped' | 'failed' | 'awaiting_payment',
+  status: 'sent' | 'queued' | 'skipped' | 'failed',
   sentAt: boolean
 ) {
   const supabase = getSupabaseAdmin()
@@ -123,24 +121,6 @@ export async function dispatchAppointmentConfirmation(
     return { success: true, skipped: true, reason: 'cancelled' }
   }
 
-  if (status === 'pending') {
-    const { data: holdPayments } = await supabase
-      .from('payments')
-      .select('payment_status, metadata')
-      .eq('appointment_id', appointmentId)
-
-    if (shouldDeferConfirmationUntilPaid(status, holdPayments || [])) {
-      await markConfirmationStatus(appointmentId, 'awaiting_payment', false)
-      logger.debug('⏭️ Skipping confirmation — unpaid pay-before-confirm hold', { appointmentId })
-      return {
-        success: true,
-        skipped: true,
-        reason: 'awaiting_payment',
-        message: 'Confirmation deferred until payment',
-      }
-    }
-  }
-
   // Never confirm a lesson that already happened (late Wallee pay, backdated staff entry).
   const PAST_GRACE_MS = 30 * 60 * 1000
   if (existingAppt?.start_time) {
@@ -195,7 +175,7 @@ export async function dispatchAppointmentConfirmation(
     .select(`
       id, title, start_time, end_time, duration_minutes, event_type_code, type,
       staff_id, confirmation_token, location_id, customer_pickup_address, source, created_by,
-      original_price_rappen, vehicle_mode, room_id,
+      original_price_rappen,
       payments ( id, total_amount_rappen, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_status )
     `)
     .eq('id', appointmentId)
@@ -330,14 +310,6 @@ export async function dispatchAppointmentConfirmation(
     invite,
   })
 
-  const resourceLabels = await loadAppointmentResourceLabels(supabase, {
-    tenantId,
-    categoryCode: appointment.type,
-    locationId: appointment.location_id,
-    vehicleMode: (appointment as any).vehicle_mode,
-    roomId: (appointment as any).room_id,
-  })
-
   let payment = Array.isArray(appointment.payments) ? appointment.payments[0] : appointment.payments
   if (!payment?.total_amount_rappen) {
     const { data: payRow } = await supabase
@@ -394,8 +366,6 @@ export async function dispatchAppointmentConfirmation(
     isLessonType,
     meeting_type,
     meeting_link,
-    vehicleLabel: resourceLabels.vehicleLabel,
-    roomName: resourceLabels.roomName,
     omitAccountCta: user.onboarding_status === 'pending' && !allowsCustomerAccountActivation(policy),
   }
 
@@ -510,8 +480,6 @@ export async function dispatchAppointmentConfirmation(
         eventTypeName,
         durationMinutes,
         showPrice,
-        vehicleLabel: resourceLabels.vehicleLabel,
-        roomName: resourceLabels.roomName,
       }
       try {
         await sendAppointmentNotificationEmail(staffPayload)
