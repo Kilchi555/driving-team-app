@@ -2637,6 +2637,16 @@ const openLinkAction = async (link: LinkAction) => {
     showErrorToast('Link nicht verfügbar', 'Keine gültige URL vorhanden.')
     return
   }
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      showErrorToast('Link nicht verfügbar', 'Nur http(s)-Links werden geöffnet.')
+      return
+    }
+  } catch {
+    showErrorToast('Link nicht verfügbar', 'Keine gültige URL vorhanden.')
+    return
+  }
   linkActionTarget.value = { ...link, url }
 }
 

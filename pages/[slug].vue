@@ -808,10 +808,17 @@ const handleLogin = async () => {
       } catch { /* ignore */ }
 
       const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
+      let baseOrigin = ''
+      try { baseOrigin = new URL(baseUrl).origin } catch { /* ignore */ }
       for (const raw of candidates) {
         if (!raw) continue
         let relativeUrl = decodeURIComponent(String(raw))
-        if (relativeUrl.startsWith(baseUrl)) relativeUrl = relativeUrl.replace(baseUrl, '')
+        try {
+          const abs = new URL(relativeUrl, baseUrl)
+          if (baseOrigin && abs.origin === baseOrigin) {
+            relativeUrl = `${abs.pathname}${abs.search}${abs.hash}`
+          }
+        } catch { /* keep relativeUrl */ }
         if (relativeUrl.startsWith('/') && !relativeUrl.startsWith('//')) {
           try { sessionStorage.removeItem('redirect_after_login') } catch { /* ignore */ }
           return relativeUrl

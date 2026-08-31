@@ -44,6 +44,20 @@ describe('String Validators', () => {
       expect(sanitizeString(eventPayload)).not.toContain('onclick')
     })
 
+    it('should strip data: and vbscript: schemes', () => {
+      expect(sanitizeString('data:text/html,hi')).not.toContain('data:')
+      expect(sanitizeString('vbscript:msgbox(1)')).not.toContain('vbscript:')
+    })
+
+    it('should keep ordinary text that contains data: as a substring', () => {
+      expect(sanitizeString('metadata: pickup')).toBe('metadata: pickup')
+    })
+
+    it('should strip stacked URL schemes', () => {
+      expect(sanitizeString('data:javascript:alert(1)')).not.toContain('javascript:')
+      expect(sanitizeString('javascript:data:text/html,hi')).not.toContain('data:')
+    })
+
     it('should respect maxLength', () => {
       const longString = 'a'.repeat(100)
       expect(sanitizeString(longString, 50)).toHaveLength(50)
