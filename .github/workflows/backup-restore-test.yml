@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Install rclone + PostgreSQL 17 client
         env:
-          RCLONE_VERSION: 1.69.3
+          PINNED_RCLONE_VERSION: 1.69.3
         run: |
           set -euo pipefail
           sudo apt-get update -qq
@@ -39,9 +39,9 @@ jobs:
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y postgresql-client-17
           curl -fsSL -o /tmp/rclone.zip \
-            "https://github.com/rclone/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip"
+            "https://github.com/rclone/rclone/releases/download/v${PINNED_RCLONE_VERSION}/rclone-v${PINNED_RCLONE_VERSION}-linux-amd64.zip"
           unzip -qo /tmp/rclone.zip -d /tmp
-          sudo install -m 0755 "/tmp/rclone-v${RCLONE_VERSION}-linux-amd64/rclone" /usr/local/bin/rclone
+          sudo install -m 0755 "/tmp/rclone-v${PINNED_RCLONE_VERSION}-linux-amd64/rclone" /usr/local/bin/rclone
           rclone version
 
       - name: Configure rclone
