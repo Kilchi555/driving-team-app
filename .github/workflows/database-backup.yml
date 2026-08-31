@@ -6,6 +6,9 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   backup:
     runs-on: ubuntu-latest
@@ -26,8 +29,9 @@ jobs:
       - name: Dump schema (plain SQL – lesbar)
         env:
           PGSSLMODE: require
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          /usr/lib/postgresql/17/bin/pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" \
             --schema-only \
             -f schema.sql
           echo "✅ Schema: $(du -sh schema.sql | cut -f1)"
@@ -35,18 +39,55 @@ jobs:
       - name: Dump full backup (custom format – komprimiert)
         env:
           PGSSLMODE: require
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          /usr/lib/postgresql/17/bin/pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" \
             --format=custom \
             --compress=9 \
             -f backup.dump
           echo "✅ Backup: $(du -sh backup.dump | cut -f1)"
 
       - name: Install rclone
+        env:
+          PINNED_RCLONE_VERSION: 1.69.3
         run: |
-          curl -sSL https://rclone.org/install.sh | sudo bash -s beta 2>/dev/null
-          mkdir -p ~/.config/rclone
-          printf '[r2]\ntype = s3\nprovider = Cloudflare\naccess_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}\nsecret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}\nendpoint = ${{ secrets.R2_ENDPOINT }}\nno_check_bucket = true\n\n[supabase]\ntype = s3\nprovider = Other\naccess_key_id = ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}\nsecret_access_key = ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}\nendpoint = https://unyjaetebnaexaflpyoc.supabase.co/storage/v1/s3\nregion = auto\nno_check_bucket = true\n' > ~/.config/rclone/rclone.conf
+          set -euo pipefail
+          sudo apt-get install -y unzip
+          curl -fsSL -o /tmp/rclone.zip \
+            "https://github.com/rclone/rclone/releases/download/v${PINNED_RCLONE_VERSION}/rclone-v${PINNED_RCLONE_VERSION}-linux-amd64.zip"
+          unzip -qo /tmp/rclone.zip -d /tmp
+          sudo install -m 0755 "/tmp/rclone-v${PINNED_RCLONE_VERSION}-linux-amd64/rclone" /usr/local/bin/rclone
+          rclone version
+
+      - name: Configure rclone
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          SUPABASE_S3_ACCESS_KEY_ID: ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}
+          SUPABASE_S3_SECRET_ACCESS_KEY: ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.config/rclone"
+          {
+            echo '[r2]'
+            echo 'type = s3'
+            echo 'provider = Cloudflare'
+            echo "access_key_id = ${R2_ACCESS_KEY_ID}"
+            echo "secret_access_key = ${R2_SECRET_ACCESS_KEY}"
+            echo "endpoint = ${R2_ENDPOINT}"
+            echo 'no_check_bucket = true'
+            echo
+            echo '[supabase]'
+            echo 'type = s3'
+            echo 'provider = Other'
+            echo "access_key_id = ${SUPABASE_S3_ACCESS_KEY_ID}"
+            echo "secret_access_key = ${SUPABASE_S3_SECRET_ACCESS_KEY}"
+            echo 'endpoint = https://unyjaetebnaexaflpyoc.supabase.co/storage/v1/s3'
+            echo 'region = auto'
+            echo 'no_check_bucket = true'
+          } > "$HOME/.config/rclone/rclone.conf"
 
       - name: Upload to Cloudflare R2
         run: |
@@ -56,11 +97,13 @@ jobs:
           echo "✅ R2 Upload: ${{ secrets.R2_BUCKET }}/$DATE (schema.sql + backup.dump)"
 
       - name: Sync Supabase Storage → R2
+        env:
+          SUPABASE_S3_ACCESS_KEY_ID: ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}
         run: |
           # Inkrementell: nur neue/geänderte Dateien werden übertragen.
           # Erste Ausführung ~700 MB, danach nur Deltas.
           # Ziel: r2:driving-team-backups/storage/<bucket>/...
-          if [ -z "${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}" ]; then
+          if [ -z "$SUPABASE_S3_ACCESS_KEY_ID" ]; then
             echo "⚠️  SUPABASE_S3_ACCESS_KEY_ID nicht gesetzt – Storage-Backup übersprungen."
             echo "    Bitte in GitHub Secrets hinterlegen (Supabase → Storage → S3 Access Keys)."
             exit 0

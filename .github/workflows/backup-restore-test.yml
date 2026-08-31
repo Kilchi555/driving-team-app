@@ -6,6 +6,9 @@ on:
     - cron: '0 3 * * 1'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   restore-test:
     runs-on: ubuntu-latest
@@ -27,17 +30,38 @@ jobs:
 
     steps:
       - name: Install rclone + PostgreSQL 17 client
+        env:
+          PINNED_RCLONE_VERSION: 1.69.3
         run: |
+          set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y postgresql-common
+          sudo apt-get install -y postgresql-common unzip
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y postgresql-client-17
-          curl -sSL https://rclone.org/install.sh | sudo bash -s beta 2>/dev/null
+          curl -fsSL -o /tmp/rclone.zip \
+            "https://github.com/rclone/rclone/releases/download/v${PINNED_RCLONE_VERSION}/rclone-v${PINNED_RCLONE_VERSION}-linux-amd64.zip"
+          unzip -qo /tmp/rclone.zip -d /tmp
+          sudo install -m 0755 "/tmp/rclone-v${PINNED_RCLONE_VERSION}-linux-amd64/rclone" /usr/local/bin/rclone
+          rclone version
 
       - name: Configure rclone
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         run: |
-          mkdir -p ~/.config/rclone
-          printf '[r2]\ntype = s3\nprovider = Cloudflare\naccess_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}\nsecret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}\nendpoint = ${{ secrets.R2_ENDPOINT }}\nno_check_bucket = true\n' > ~/.config/rclone/rclone.conf
+          set -euo pipefail
+          umask 077
+          mkdir -p "$HOME/.config/rclone"
+          {
+            echo '[r2]'
+            echo 'type = s3'
+            echo 'provider = Cloudflare'
+            echo "access_key_id = ${R2_ACCESS_KEY_ID}"
+            echo "secret_access_key = ${R2_SECRET_ACCESS_KEY}"
+            echo "endpoint = ${R2_ENDPOINT}"
+            echo 'no_check_bucket = true'
+          } > "$HOME/.config/rclone/rclone.conf"
 
       - name: Find latest backup in R2
         id: latest
@@ -143,22 +167,21 @@ jobs:
         env:
           PGPASSWORD: testpassword
         run: |
-          echo "=== Zeilenzahlen: Backup vs. Live ==="
+          echo "=== Zeilenzahlen im Restore (kein Live-DB-Zugriff) ==="
           TABLES="users appointments tenants payments locations exam_results course_sessions course_registrations student_credits credit_transactions invoices notes"
           REPORT_ROWS=""
           for TABLE in $TABLES; do
             RESTORED=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -c "SELECT COUNT(*) FROM public.$TABLE;" 2>/dev/null | tr -d ' \n')
-            LIVE=$(/usr/lib/postgresql/17/bin/psql "${{ secrets.SUPABASE_DB_URL }}" -t -c "SELECT COUNT(*) FROM public.$TABLE;" 2>/dev/null | tr -d ' \n')
-            echo "  $TABLE: backup=$RESTORED live=$LIVE"
+            echo "  $TABLE: backup=$RESTORED"
             if [ -n "$REPORT_ROWS" ]; then REPORT_ROWS="$REPORT_ROWS,"; fi
-            REPORT_ROWS="$REPORT_ROWS{\"table\":\"$TABLE\",\"backup\":\"$RESTORED\",\"live\":\"$LIVE\"}"
+            REPORT_ROWS="$REPORT_ROWS{\"table\":\"$TABLE\",\"backup\":\"$RESTORED\"}"
           done
 
           # Stichproben: nicht-sensitive Felder
           echo "=== Stichproben aus Backup ==="
 
           USERS_SAMPLE=$(/usr/lib/postgresql/17/bin/psql -h localhost -U postgres -d restore_test -t -A -F'|' \
-            -c "SELECT id, first_name, last_name, role, created_at FROM users ORDER BY created_at DESC LIMIT 10;" 2>/dev/null | \
+            -c "SELECT id, role, created_at FROM users ORDER BY created_at DESC LIMIT 10;" 2>/dev/null | \
             python3 -c "
           import sys, json
           rows = []
@@ -166,8 +189,8 @@ jobs:
               line = line.strip()
               if not line: continue
               parts = line.split('|')
-              if len(parts) >= 5:
-                  rows.append({'id': parts[0], 'name': parts[1]+' '+parts[2], 'role': parts[3], 'created_at': parts[4]})
+              if len(parts) >= 3:
+                  rows.append({'id': parts[0], 'role': parts[1], 'created_at': parts[2]})
           print(json.dumps(rows))
           ")
 
