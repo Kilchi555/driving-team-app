@@ -27,7 +27,7 @@ import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env
 import { hasAnyAttribution, type AttributionFields } from '~/server/utils/marketing-attribution-merge'
 
 const BOT_PATTERNS = /bot|crawl|spider|slurp|prerender|headless|lighthouse|pagespeed|python-requests|curl\/|wget|axios|node-fetch/i
-const ALLOWED_CATEGORIES = new Set(['B', 'BE', 'A', 'A1', 'BPT', 'C', 'boot'])
+const ALLOWED_CATEGORIES = new Set(['B', 'B Automatik', 'BE', 'A', 'A1', 'BPT', 'C', 'boot'])
 const BOOKING_BASE_URL = 'https://app.simy.ch/booking/availability/driving-team'
 
 function str(v: unknown): string | null {
@@ -103,6 +103,8 @@ export default defineEventHandler(async (event) => {
 
   const dtAttr = encodeAttributionServer(attribution)
   const params = new URLSearchParams({ category, session_id: sessionId })
+  const code = str(query.code)
+  if (code) params.set('code', code)
   if (dtAttr) params.set('dt_attr', dtAttr)
   for (const key of ['gclid', 'gbraid', 'wbraid', 'fbclid'] as const) {
     const value = attribution[key]

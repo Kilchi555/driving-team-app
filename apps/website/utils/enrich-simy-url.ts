@@ -26,12 +26,28 @@ export function getWebsiteAttribution(): MarketingAttribution | null {
   return ((window as any).__dtMarketingAttribution as MarketingAttribution | null | undefined) ?? null
 }
 
+function isSiteBuchenPath(pathname: string): boolean {
+  return pathname.replace(/\/$/, '') === '/buchen' || pathname.replace(/\/$/, '') === '/go/buchen'
+}
+
+/** Same-tab /buchen hops need the same click IDs as app.simy.ch links. */
+export function isEnrichableBookingHref(href: string | null | undefined): boolean {
+  if (!href) return false
+  try {
+    const url = new URL(href, 'https://drivingteam.ch')
+    if (url.hostname.includes('simy.ch')) return true
+    return isSiteBuchenPath(url.pathname)
+  } catch {
+    return href.includes('simy.ch') || href.startsWith('/buchen') || href.startsWith('/go/buchen')
+  }
+}
+
 /**
  * Returns an enriched absolute (or relative) URL. Does not mutate the input.
  * Safe to call repeatedly — existing session_id / dt_attr are left alone.
  */
 export function enrichSimyUrl(href: string, options?: { referrer?: string | null }): string {
-  if (!href || !href.includes('simy.ch')) return href
+  if (!isEnrichableBookingHref(href)) return href
 
   try {
     const url = new URL(href, window.location.href)
@@ -67,7 +83,7 @@ export function enrichSimyUrl(href: string, options?: { referrer?: string | null
       url.searchParams.set('mc', '1')
     }
 
-    const isBookingPath = url.pathname.includes('/booking/')
+    const isBookingPath = url.pathname.includes('/booking/') || isSiteBuchenPath(url.pathname)
     const referrer = options?.referrer ?? (isBookingPath ? window.location.href : null)
     if (referrer && !url.searchParams.has('referrer') && isBookingPath) {
       url.searchParams.set('referrer', referrer)
@@ -86,8 +102,8 @@ export function enrichSimyUrl(href: string, options?: { referrer?: string | null
 /** Mutate an anchor's href in place. Returns true if the href changed. */
 export function enrichSimyAnchor(anchor: HTMLAnchorElement): boolean {
   const href = anchor.getAttribute('href')
-  if (!href || !href.includes('simy.ch')) return false
-  const next = enrichSimyUrl(href)
+  if (!isEnrichableBookingHref(href)) return false
+  const next = enrichSimyUrl(href!)
   if (next === href) return false
   anchor.setAttribute('href', next)
   return true

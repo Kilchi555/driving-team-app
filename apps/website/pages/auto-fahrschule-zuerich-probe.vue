@@ -25,14 +25,12 @@
         <h1 class="erste-h1">Erste Lektion 45 Min.<br /><span>CHF 30.– Rabatt</span></h1>
         <p class="erste-sub">
           Kategorie B Automatik oder Schaltung in Zürich-Altstetten.
-          Code <strong>ERSTE30</strong> — nur für die erste Lektion (45 Min.).
+          CHF 30.– Rabatt ist in der Buchung schon hinterlegt — nur für die erste Lektion (45 Min.).
           Danach CHF 95.– / 45 Min.
         </p>
         <div class="erste-cta">
           <a
             :href="bookingUrl"
-            target="_blank"
-            rel="noopener noreferrer"
             class="erste-btn"
           >
             Erste Lektion buchen
@@ -50,15 +48,15 @@
       <h2>So funktioniert’s</h2>
       <ul>
         <li>Online Termin wählen (B Automatik oder B Schaltung)</li>
-        <li>Code <strong>ERSTE30</strong> eingeben → CHF 30.– weniger auf die erste Lektion (45 Min.)</li>
+        <li>Rabatt von CHF 30.– ist vorausgefüllt — nur die erste Lektion (45 Min.)</li>
         <li>Treffpunkt Bahnhof Zürich-Altstetten</li>
         <li>Gilt nur für die erste bestätigte Fahrstunde — nicht für Motorrad, LKW oder andere Kategorien</li>
       </ul>
       <p class="erste-note">
         Effektiver Preis der ersten Lektion (45 Min.): <strong>CHF 65.–</strong> statt CHF 95.–.
       </p>
-      <a :href="bookingUrl" target="_blank" rel="noopener noreferrer" class="erste-btn erste-btn--ink">
-        Jetzt mit Code buchen
+      <a :href="bookingUrl" class="erste-btn erste-btn--ink">
+        Jetzt buchen
       </a>
     </section>
   </div>
@@ -68,7 +66,7 @@
 definePageMeta({ layout: 'default' })
 
 const bookingUrl =
-  'https://app.simy.ch/booking/availability/driving-team?category=B&code=ERSTE30&utm_content=ag_probe'
+  '/buchen?category=B%20Automatik&code=ERSTE30&utm_content=ag_probe'
 
 useHead({
   script: [
@@ -97,7 +95,7 @@ useHead({
           price: '65',
           priceCurrency: 'CHF',
           availability: 'https://schema.org/InStock',
-          url: bookingUrl,
+          url: `https://drivingteam.ch${bookingUrl}`,
           description: 'CHF 30.– Rabatt auf die erste Lektion (statt CHF 95.–)',
         },
         aggregateRating: {
