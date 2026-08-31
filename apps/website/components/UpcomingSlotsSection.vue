@@ -140,13 +140,25 @@ const categoryForLink = computed(
   () => data.value?.default_category || props.category || 'B Automatik',
 )
 
+/** Keep attribution first-party: hop via drivingteam.ch/buchen instead of app.simy.ch. */
+function toSiteBooking(url: string) {
+  try {
+    const parsed = new URL(url, 'https://drivingteam.ch')
+    const isSimyBooking = parsed.hostname.includes('simy.ch') && parsed.pathname.includes('/booking/')
+    if (!isSimyBooking) return url
+    const qs = parsed.searchParams.toString().replace(/\+/g, '%20')
+    return qs ? `/buchen?${qs}` : '/buchen'
+  } catch {
+    return url
+  }
+}
+
 function withPromo(url: string) {
   const code = props.promoCode?.trim()
-  if (!code) return url
   try {
     const parsed = new URL(url, 'https://app.simy.ch')
-    if (!parsed.searchParams.get('code')) parsed.searchParams.set('code', code)
-    return `${parsed.origin}${parsed.pathname}?${parsed.searchParams.toString().replace(/\+/g, '%20')}`
+    if (code && !parsed.searchParams.get('code')) parsed.searchParams.set('code', code)
+    return toSiteBooking(`${parsed.origin}${parsed.pathname}?${parsed.searchParams.toString().replace(/\+/g, '%20')}`)
   } catch {
     return url
   }
@@ -160,7 +172,7 @@ function buildBookingUrl(opts: { proposal?: boolean } = {}) {
   if (loc) params.set('location', loc)
   if (opts.proposal) params.set('proposal', '1')
   if (props.promoCode?.trim()) params.set('code', props.promoCode.trim())
-  return `${bookingBase.value}?${params.toString().replace(/\+/g, '%20')}`
+  return toSiteBooking(`${bookingBase.value}?${params.toString().replace(/\+/g, '%20')}`)
 }
 
 const allUrl = computed(() => buildBookingUrl())
