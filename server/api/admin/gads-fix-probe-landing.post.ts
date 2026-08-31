@@ -47,18 +47,16 @@ function isProbeUrl(url: unknown): boolean {
   return String(url ?? '').includes(PROBE_PATH)
 }
 
-async function gaql(customerId: string, headers: Record<string, string>, query: string): Promise<any[]> {
+async function gaql(customerId: string, headers: Record<string, string>, query: string): Promise<{ rows: any[]; error?: string }> {
   const res = await fetch(
-    `https://googleads.googleapis.com/${GADS_VERSION}/customers/${customerId}/googleAds:searchStream`,
+    `https://googleads.googleapis.com/${GADS_VERSION}/customers/${customerId}/googleAds:search`,
     { method: 'POST', headers, body: JSON.stringify({ query }) },
   )
-  const data = await res.json() as any
-  if (!res.ok) throw new Error(JSON.stringify(data).slice(0, 500))
-  const rows: any[] = []
-  for (const batch of (Array.isArray(data) ? data : [data])) {
-    rows.push(...(batch.results ?? []))
-  }
-  return rows
+  const text = await res.text()
+  let data: any
+  try { data = JSON.parse(text) } catch { return { rows: [], error: text.slice(0, 400) } }
+  if (!res.ok) return { rows: [], error: JSON.stringify(data).slice(0, 400) }
+  return { rows: data.results ?? [] }
 }
 
 async function mutate(
@@ -89,8 +87,7 @@ export default defineEventHandler(async (event) => {
   const headers = buildGadsHeaders(gads, accessToken)
   const customerId = gads.customerId
 
-  const [adRows, kwRows, sitelinkRows] = await Promise.all([
-    gaql(customerId, headers, `
+  const adsQuery = await gaql(customerId, headers, `
       SELECT
         ad_group.id, ad_group.name, ad_group.status, ad_group.resource_name,
         ad_group_ad.resource_name, ad_group_ad.status,
@@ -105,8 +102,8 @@ export default defineEventHandler(async (event) => {
         AND ad_group.status = 'ENABLED'
         AND ad_group_ad.status = 'ENABLED'
         AND ad_group_ad.ad.type = 'RESPONSIVE_SEARCH_AD'
-    `),
-    gaql(customerId, headers, `
+    `)
+  const kwQuery = await gaql(customerId, headers, `
       SELECT
         ad_group.name, ad_group.status,
         ad_group_criterion.resource_name,
@@ -120,17 +117,22 @@ export default defineEventHandler(async (event) => {
         AND ad_group_criterion.status = 'ENABLED'
         AND ad_group_criterion.type = 'KEYWORD'
         AND ad_group_criterion.negative = false
-    `),
-    gaql(customerId, headers, `
+    `)
+  const sitelinkQuery = await gaql(customerId, headers, `
       SELECT
         campaign_asset.resource_name, campaign_asset.status,
         asset.resource_name, asset.sitelink_asset.link_text, asset.final_urls
       FROM campaign_asset
-      WHERE campaign.id = ${CAMPAIGN_ID}
+      WHERE campaign_asset.campaign = 'customers/${customerId}/campaigns/${CAMPAIGN_ID}'
         AND campaign_asset.field_type = 'SITELINK'
         AND campaign_asset.status != 'REMOVED'
-    `),
-  ])
+    `)
+  if (adsQuery.error) {
+    return { ok: false, reason: 'ads_query_failed', error: adsQuery.error }
+  }
+  const adRows = adsQuery.rows
+  const kwRows = kwQuery.rows
+  const sitelinkRows = sitelinkQuery.rows
 
   const adsPlan = adRows.map((row) => {
     const current = (row.adGroupAd?.ad?.finalUrls ?? []) as string[]
@@ -204,6 +206,10 @@ export default defineEventHandler(async (event) => {
       unlink: leakySitelinks.map((s) => s.text),
       add_offer: OFFER_SITELINKS.filter((s) => !sitelinks.some((e) => e.text === s.linkText)).map((s) => s.linkText),
     },
+    query_errors: {
+      keywords: kwQuery.error,
+      sitelinks: sitelinkQuery.error,
+    },
   }
 
   if (dryRun) return report
@@ -262,7 +268,9 @@ export default defineEventHandler(async (event) => {
 
   const unlinked: string[] = []
   const unlinkErrors: unknown[] = []
-  if (leakySitelinks.length) {
+  if (sitelinkQuery.error) {
+    unlinkErrors.push({ skipped: true, error: sitelinkQuery.error })
+  } else if (leakySitelinks.length) {
     const unlinkRes = await mutate(customerId, headers, 'campaignAssets', leakySitelinks.map((s) => ({
       remove: s.resource_name,
     })))
@@ -272,7 +280,10 @@ export default defineEventHandler(async (event) => {
 
   const sitelinkCreates: string[] = []
   let sitelinkError: unknown
-  const missingOffers = OFFER_SITELINKS.filter((s) => !sitelinks.some((e) => e.text === s.linkText))
+  const missingOffers = sitelinkQuery.error
+    ? []
+    : OFFER_SITELINKS.filter((s) => !sitelinks.some((e) => e.text === s.linkText))
+  if (sitelinkQuery.error) sitelinkError = sitelinkQuery.error
   for (const offer of missingOffers) {
     const assetRes = await mutate(customerId, headers, 'assets', [{
       create: {
