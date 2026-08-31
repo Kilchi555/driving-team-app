@@ -25,6 +25,13 @@ export interface IcsUrlInspectionFail {
 
 export type IcsUrlInspection = IcsUrlInspectionOk | IcsUrlInspectionFail
 
+/** True for exact host or a subdomain of it. Blocks `calendar.google.com.evil.com`. */
+export function hostnameIsOrSubdomain(host: string, domain: string): boolean {
+  const h = host.toLowerCase()
+  const d = domain.toLowerCase()
+  return h === d || h.endsWith(`.${d}`)
+}
+
 /** Normalize webcal/http → https and trim. */
 export function normalizeIcsUrl(raw: string): string {
   return String(raw || '')
@@ -71,7 +78,7 @@ export function inspectIcsUrlShape(raw: string): IcsUrlInspection {
 
   // Google Calendar web UI (not the secret iCal feed)
   if (
-    host.includes('calendar.google.com') &&
+    hostnameIsOrSubdomain(host, 'calendar.google.com') &&
     (path.includes('/calendar/u/') ||
       path === '/calendar/r' ||
       path.startsWith('/calendar/r/') ||
@@ -87,7 +94,7 @@ export function inspectIcsUrlShape(raw: string): IcsUrlInspection {
 
   // Outlook web calendar (not ICS publish link)
   if (
-    (host.includes('outlook.live.com') || host.includes('outlook.office.com') || host.includes('outlook.office365.com')) &&
+    (hostnameIsOrSubdomain(host, 'outlook.live.com') || hostnameIsOrSubdomain(host, 'outlook.office.com') || hostnameIsOrSubdomain(host, 'outlook.office365.com')) &&
     (path.includes('/calendar/view') || path.includes('/mail/') || full.includes('path=/calendar'))
   ) {
     return {
