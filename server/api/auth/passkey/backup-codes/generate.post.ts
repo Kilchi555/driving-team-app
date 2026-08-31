@@ -7,7 +7,7 @@
  */
 
 import { defineEventHandler, createError } from 'h3'
-import { randomBytes, scryptSync } from 'crypto'
+import { randomBytes, randomInt, scryptSync } from 'crypto'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logPasskeyEvent, getRequestContext, isPasskeyEnabledForRole } from '~/server/utils/passkey'
@@ -18,10 +18,9 @@ const SCRYPT_COST = 16384 // 2^14 — same default as Node's recommended
 function generateCode(): string {
   // 8 chars from a friendly alphabet (no 0/O/1/I confusion). Ergonomic to type.
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  const bytes = randomBytes(8)
   let code = ''
   for (let i = 0; i < 8; i++) {
-    code += alphabet[bytes[i] % alphabet.length]
+    code += alphabet[randomInt(alphabet.length)]
   }
   // Format as XXXX-XXXX for readability
   return `${code.slice(0, 4)}-${code.slice(4)}`
