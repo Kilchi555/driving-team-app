@@ -60,25 +60,16 @@ export default defineEventHandler(async (event) => {
         supabase.from('users').select('id, role').eq('email', normalized).maybeSingle()
       ])
 
+      // Public probe: tenants + public.users only. Never probe Auth here —
+      // Auth-only hits are an email oracle. Staff invites use
+      // /api/staff/check-invite-email; registration APIs claim/create Auth themselves.
       if (existingTenant || existingUser) {
         result.email = {
           available: false,
           reason: existingUser?.role === 'admin' ? 'admin' : 'taken',
         }
       } else {
-        // Also block emails that exist only in Auth (no public.users row yet).
-        // Do not call auth.admin.getUserByEmail — it is not in supabase-js v2.
-        const { findAuthUserByEmail } = await import('~/server/utils/auth-email-claim')
-        const authLookup = await findAuthUserByEmail(supabase, normalized)
-        if (!authLookup.ok) {
-          // Fail open for the public probe (rate-limited). Invite API fails closed.
-          result.email = { available: true }
-        } else if (authLookup.user) {
-          // Do not distinguish Auth-only hits on this public endpoint (enumeration).
-          result.email = { available: false, reason: 'taken' }
-        } else {
-          result.email = { available: true }
-        }
+        result.email = { available: true }
       }
     }
   }
