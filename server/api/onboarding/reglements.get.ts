@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
 
     // ✅ LAYER 2: Rate Limiting (20 requests per hour per token)
     const rateLimitKey = `onboarding_reglements:${token}`
-    const rateLimitResult = await checkRateLimit(rateLimitKey, 20, 3600 * 1000)
+    const rateLimitResult = await checkRateLimit(rateLimitKey, 'onboarding_reglements', 20, 3600 * 1000)
     if (!rateLimitResult.allowed) {
       throw createError({
         statusCode: 429,

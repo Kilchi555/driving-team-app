@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
       3,
       60 * 60 * 1000 // 1 hour window
     )
-    if (!canProceed) {
+    if (!canProceed.allowed) {
       throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen. Bitte warten Sie eine Stunde.' })
     }
 

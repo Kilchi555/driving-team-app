@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   if (!authUser) throw createError({ statusCode: 401, message: 'Unauthorized' })
 
   // Rate-limit OTP attempts: max 5 per 15 minutes per IP
-  const rateLimit = await checkRateLimit(ipAddress, 'confirm_payout_otp', 5, 15 * 60)
+  const rateLimit = await checkRateLimit(ipAddress, 'confirm_payout_otp', 5, 15 * 60 * 1000)
   if (!rateLimit.allowed) {
     throw createError({ statusCode: 429, statusMessage: 'Zu viele Versuche. Bitte warte kurz.' })
   }
