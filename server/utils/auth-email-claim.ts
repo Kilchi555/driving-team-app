@@ -101,23 +101,28 @@ export type AuthUserLookup =
   | { ok: true; user: { id: string } | null }
   | { ok: false }
 
+/**
+ * Resolve an Auth user by email via service-role RPC.
+ *
+ * Do NOT call `supabase.auth.admin.getUserByEmail` — it does not exist in
+ * supabase-js v2 (throws TypeError). That bug blocked all staff invites after
+ * 2026-08-30 with a false "already in Auth" error.
+ *
+ * Requires `public.lookup_auth_user_id_by_email` (sql_migrations/20260901_…).
+ */
 export async function findAuthUserByEmail(
   supabase: SupabaseClient,
   email: string,
 ): Promise<AuthUserLookup> {
   const normalized = String(email || '').trim().toLowerCase()
   if (!normalized) return { ok: true, user: null }
+
   try {
-    const { data, error } = await supabase.auth.admin.getUserByEmail(normalized)
-    if (error) {
-      const msg = (error.message || '').toLowerCase()
-      const status = (error as { status?: number }).status
-      if (status === 404 || msg.includes('not found') || msg.includes('unable to find') || msg.includes('no user')) {
-        return { ok: true, user: null }
-      }
-      return { ok: false }
-    }
-    return { ok: true, user: data?.user?.id ? { id: data.user.id } : null }
+    const { data, error } = await supabase.rpc('lookup_auth_user_id_by_email', {
+      p_email: normalized,
+    })
+    if (error) return { ok: false }
+    return { ok: true, user: data ? { id: String(data) } : null }
   } catch {
     return { ok: false }
   }

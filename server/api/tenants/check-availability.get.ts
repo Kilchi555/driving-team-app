@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     'unknown'
 
   // Rate limit: 60 availability checks per IP per minute
-  const rateLimit = await checkRateLimit(ipAddress, 'check_availability', 60, 60)
+  const rateLimit = await checkRateLimit(ipAddress, 'check_availability', 60, 60 * 1000)
   if (!rateLimit.allowed) {
     throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen. Bitte warten.' })
   }
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const result: {
     slug?: { available: boolean; reason?: 'invalid' | 'reserved' | 'taken' }
-    email?: { available: boolean; reason?: 'invalid' | 'taken' | 'admin' | 'auth' }
+    email?: { available: boolean; reason?: 'invalid' | 'taken' | 'admin' }
   } = {}
 
   if (slug) {
@@ -66,17 +66,19 @@ export default defineEventHandler(async (event) => {
           reason: existingUser?.role === 'admin' ? 'admin' : 'taken',
         }
       } else {
-        // Also block emails that exist only in Auth (no public.users row yet)
-        let authTaken = false
-        try {
-          const { data: byEmail, error } = await supabase.auth.admin.getUserByEmail(normalized)
-          authTaken = !error && !!byEmail?.user
-        } catch {
-          authTaken = false
+        // Also block emails that exist only in Auth (no public.users row yet).
+        // Do not call auth.admin.getUserByEmail — it is not in supabase-js v2.
+        const { findAuthUserByEmail } = await import('~/server/utils/auth-email-claim')
+        const authLookup = await findAuthUserByEmail(supabase, normalized)
+        if (!authLookup.ok) {
+          // Fail open for the public probe (rate-limited). Invite API fails closed.
+          result.email = { available: true }
+        } else if (authLookup.user) {
+          // Do not distinguish Auth-only hits on this public endpoint (enumeration).
+          result.email = { available: false, reason: 'taken' }
+        } else {
+          result.email = { available: true }
         }
-        result.email = authTaken
-          ? { available: false, reason: 'auth' }
-          : { available: true }
       }
     }
   }

@@ -1230,18 +1230,23 @@ const checkInviteEmail = (val: string) => {
   inviteEmailCheck.value = 'checking'
   inviteEmailDebounce = setTimeout(async () => {
     try {
-      const res = await $fetch<{ email?: { available: boolean; reason?: string } }>('/api/tenants/check-availability', {
+      const res = await $fetch<{
+        email?: { available: boolean; reason?: string; message?: string }
+      }>('/api/staff/check-invite-email', {
         query: { email },
       })
       if (res.email?.available) {
         inviteEmailCheck.value = 'available'
       } else {
         inviteEmailCheck.value = 'taken'
-        inviteEmailTakenMsg.value = res.email?.reason === 'admin'
-          ? 'Das ist die Admin-E-Mail — bitte eine andere für den Staff-Login wählen.'
-          : res.email?.reason === 'auth'
-            ? 'Diese E-Mail ist bereits in Auth registriert.'
-            : 'Diese E-Mail ist bereits registriert.'
+        inviteEmailTakenMsg.value = res.email?.message
+          || (res.email?.reason === 'admin'
+            ? 'Das ist die Admin-E-Mail — bitte eine andere für den Staff-Login wählen.'
+            : res.email?.reason === 'auth'
+              ? 'Diese E-Mail ist bereits mit einem Login verknüpft.'
+              : res.email?.reason === 'lookup_failed'
+                ? 'Die E-Mail konnte gerade nicht geprüft werden. Bitte erneut versuchen.'
+                : 'Diese E-Mail ist bereits registriert.')
       }
     } catch {
       inviteEmailCheck.value = 'error'
