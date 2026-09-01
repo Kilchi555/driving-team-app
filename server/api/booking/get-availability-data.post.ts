@@ -68,8 +68,8 @@ export default defineEventHandler(async (event) => {
         .select('id, staff_id, start_time, end_time, event_title, sync_source')
         .eq('tenant_id', tenant_id)
         .eq('staff_id', staff_id)
-        .gte('start_time', start_date)
-        .lte('end_time', end_date)
+        .lt('start_time', end_date)
+        .gt('end_time', start_date)
 
       if (busyError) {
         console.warn('⚠️ Error fetching busy times:', busyError)
@@ -87,8 +87,8 @@ export default defineEventHandler(async (event) => {
         .eq('staff_id', staff_id)
         .not('status', 'eq', 'deleted')
         .is('deleted_at', null)
-        .gte('start_time', start_date)
-        .lte('end_time', end_date)
+        .lt('start_time', end_date)
+        .gt('end_time', start_date)
 
       if (aptError) {
         console.warn('⚠️ Error fetching appointments:', aptError)

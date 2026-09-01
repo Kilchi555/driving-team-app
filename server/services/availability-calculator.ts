@@ -20,6 +20,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { wallTimeToUtc, parseWorkingTimeParts, DEFAULT_TIMEZONE } from '~/server/utils/zurich-wall-time'
 import { isWithinTimeWindows } from '~/utils/travelTimeValidation'
+import { applyTimeRangeOverlap } from '~/server/utils/time-range-overlap'
 
 // Types
 interface Staff {
@@ -588,19 +589,22 @@ export class AvailabilityCalculator {
   }
 
   /**
-   * Load appointments (booked slots)
+   * Load appointments that overlap [startDate, endDate].
+   * Must use overlap (not start_time BETWEEN) so multi-day blocks stay blocking.
    */
   private async loadAppointments(staffIds: string[], startDate: Date, endDate: Date): Promise<Appointment[]> {
     if (staffIds.length === 0) return []
 
-    const { data: appointments, error: appointmentsError } = await this.supabase
-      .from('appointments')
-      .select('id, staff_id, location_id, start_time, end_time, duration_minutes, status, type')
-      .in('staff_id', staffIds)
-      .not('status', 'eq', 'deleted')
-      .is('deleted_at', null)
-      .gte('start_time', startDate.toISOString())
-      .lte('start_time', endDate.toISOString())
+    const { data: appointments, error: appointmentsError } = await applyTimeRangeOverlap(
+      this.supabase
+        .from('appointments')
+        .select('id, staff_id, location_id, start_time, end_time, duration_minutes, status, type')
+        .in('staff_id', staffIds)
+        .not('status', 'eq', 'deleted')
+        .is('deleted_at', null),
+      startDate,
+      endDate,
+    )
 
     if (appointmentsError) throw appointmentsError
 
@@ -630,17 +634,20 @@ export class AvailabilityCalculator {
   }
 
   /**
-   * Load external busy times (from external calendars)
+   * Load external busy times that overlap [startDate, endDate].
+   * A Ferien event that started last week must still block today's slots.
    */
   private async loadExternalBusyTimes(staffIds: string[], startDate: Date, endDate: Date, tenantId?: string): Promise<ExternalBusyTime[]> {
     if (staffIds.length === 0) return []
 
-    let query = this.supabase
-      .from('external_busy_times')
-      .select('id, staff_id, start_time, end_time, tenant_id, postal_code')
-      .in('staff_id', staffIds)
-      .gte('start_time', startDate.toISOString())
-      .lte('start_time', endDate.toISOString())
+    let query = applyTimeRangeOverlap(
+      this.supabase
+        .from('external_busy_times')
+        .select('id, staff_id, start_time, end_time, tenant_id, postal_code')
+        .in('staff_id', staffIds),
+      startDate,
+      endDate,
+    )
 
     if (tenantId) {
       query = query.eq('tenant_id', tenantId)
