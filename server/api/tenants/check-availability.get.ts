@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const result: {
     slug?: { available: boolean; reason?: 'invalid' | 'reserved' | 'taken' }
-    email?: { available: boolean; reason?: 'invalid' | 'taken' | 'admin' | 'auth' }
+    email?: { available: boolean; reason?: 'invalid' | 'taken' | 'admin' }
   } = {}
 
   if (slug) {
@@ -71,12 +71,13 @@ export default defineEventHandler(async (event) => {
         const { findAuthUserByEmail } = await import('~/server/utils/auth-email-claim')
         const authLookup = await findAuthUserByEmail(supabase, normalized)
         if (!authLookup.ok) {
-          // Fail open for the public availability probe (rate-limited); invite API fails closed.
+          // Fail open for the public probe (rate-limited). Invite API fails closed.
           result.email = { available: true }
+        } else if (authLookup.user) {
+          // Do not distinguish Auth-only hits on this public endpoint (enumeration).
+          result.email = { available: false, reason: 'taken' }
         } else {
-          result.email = authLookup.user
-            ? { available: false, reason: 'auth' }
-            : { available: true }
+          result.email = { available: true }
         }
       }
     }
