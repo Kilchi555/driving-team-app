@@ -29,7 +29,13 @@ describe('isRelevantFile', () => {
     expect(isRelevantFile('app', 'ios/App/AppDelegate.swift')).toBe(false)
     expect(isRelevantFile('app', 'add_tenant_id_to_locations.sql')).toBe(false)
     expect(isRelevantFile('app', 'server/utils/__tests__/vat.test.ts')).toBe(false)
-    expect(isRelevantFile('website', 'apps/website/seo-meta-overview.md')).toBe(false)
+    expect(isRelevantFile('website', 'README.md')).toBe(false)
+  })
+
+  it('treats marketing-site markdown as live content, not docs', () => {
+    expect(isRelevantFile('website', 'apps/website/content/blog/vku-kurs-verkehrskunde-sicherheit.md')).toBe(true)
+    expect(isRelevantFile('website', 'apps/website/seo-meta-overview.md')).toBe(true)
+    expect(isRelevantFile('app', 'apps/website/content/blog/vku-kurs-verkehrskunde-sicherheit.md')).toBe(false)
   })
 })
 
@@ -124,6 +130,23 @@ describe('decide', () => {
       changedFiles: ['apps/website/nuxt.config.ts'],
     })
     expect(result.skip).toBe(false)
+  })
+
+  it('builds website production when only a blog post changed', () => {
+    const result = decide({
+      project: 'website',
+      vercelEnv: 'production',
+      changedFiles: ['apps/website/content/blog/theorieprufung-tipps-zuerich.md'],
+    })
+    expect(result.skip).toBe(false)
+  })
+
+  it('skips simy-app preview when this commit is only tests, even if the PR also has app files', () => {
+    const result = decide({
+      ...appPreview,
+      changedFiles: ['server/utils/__tests__/vat.test.ts', 'README.md'],
+    })
+    expect(result.skip).toBe(true)
   })
 
   it('forces a build when the commit message asks for it', () => {

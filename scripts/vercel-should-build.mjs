@@ -54,10 +54,17 @@ export function normalizeFile(file) {
   return String(file || '').replace(/\\/g, '/').replace(/^\.\//, '')
 }
 
+function isMarketingSitePath(name) {
+  return name.startsWith('apps/website/') || name.startsWith('apps/simy/')
+}
+
 export function isIgnoredEverywhere(file) {
   const name = normalizeFile(file)
   if (!name) return true
-  if (name.endsWith('.md') || name.endsWith('.mdc') || name.endsWith('.sql')) return true
+  if (name.endsWith('.sql')) return true
+  // Blog/CMS markdown under the marketing sites is live Nuxt Content.
+  // Repo-root and docs/*.md stay ignored so they do not rebuild the app.
+  if ((name.endsWith('.md') || name.endsWith('.mdc')) && !isMarketingSitePath(name)) return true
   if (IGNORE_EXACT.has(name)) return true
   if (IGNORE_PREFIXES.some((prefix) => name.startsWith(prefix))) return true
   if (name.includes('/__tests__/')) return true
