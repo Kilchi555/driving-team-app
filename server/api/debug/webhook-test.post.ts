@@ -7,6 +7,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 
 export default defineEventHandler(async (event) => {
   // ✅ SECURITY: Only super_admin may trigger test webhooks. Bearer header
@@ -29,6 +30,7 @@ export default defineEventHandler(async (event) => {
     // Now call the actual webhook handler
     const response = await $fetch('/api/wallee/webhook', {
       method: 'POST',
+      headers: internalSecretHeaders(),
       body: {
         entityId: body.entityId,
         state: body.state,
