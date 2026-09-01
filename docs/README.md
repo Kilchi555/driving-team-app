@@ -344,6 +344,20 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused, source-verified runbooks for ops and engineers. Prefer these over root historical reports for current behavior.
+
+| Runbook | Covers |
+|---------|--------|
+| [GADS_PROBE_LANDING.md](./GADS_PROBE_LANDING.md) | Auto ZH Ads → first-lesson landing, sitelink GAQL resilience, `/buchen` attribution hop |
+| [DATABASE_BACKUP.md](./DATABASE_BACKUP.md) | Nightly R2 dumps, GFS retention, weekly restore-test, `PINNED_RCLONE_VERSION` |
+| [GITHUB_ACTIONS_SECRET_ENCRYPT.md](./GITHUB_ACTIONS_SECRET_ENCRYPT.md) | libsodium sealed-box for Actions secrets, super-admin rotate-credential |
+
+Also on `main`: [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md), [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md), [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md), [SARI_SOAP_COURSES_V3_API.md](./SARI_SOAP_COURSES_V3_API.md), [SERVER_SIDE_CONVERSION_SETUP.md](./SERVER_SIDE_CONVERSION_SETUP.md), [SECURITY.md](../SECURITY.md) (private vulnerability disclosure).
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
