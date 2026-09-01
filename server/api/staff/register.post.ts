@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('📝 Staff registration request:', { email, firstName, lastName, ipAddress })
 
     // ✅ LAYER 2: Rate limiting (5 registrations per hour per IP)
-    const rateLimit = await checkRateLimit(ipAddress, 'staff_register', 5, 3600, email)
+    const rateLimit = await checkRateLimit(ipAddress, 'staff_register', 5, 3600 * 1000, email)
     if (!rateLimit.allowed) {
       logger.warn('⚠️ Rate limit exceeded for staff registration:', ipAddress)
       throw createError({

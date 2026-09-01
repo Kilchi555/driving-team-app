@@ -44,11 +44,12 @@ export async function checkSARIRateLimit(
     // Use user_id as the limiter key (authenticated users)
     const key = `sari:${userId}:${operation}`
     
-    const result = await checkRateLimit(key, config.maxRequests, config.windowMs)
+    const result = await checkRateLimit(key, `sari_${operation}`, config.maxRequests, config.windowMs)
     
     return {
       allowed: result.allowed,
-      retryAfter: result.retryAfter,
+      // formatRateLimitError expects milliseconds
+      retryAfter: result.reset || result.retryAfter * 1000,
     }
   } catch (error) {
     console.error('Error checking SARI rate limit:', error)

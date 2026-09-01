@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
 
     // Rate limit
     const rateLimitKey = `upcoming_courses:${user.id}`
-    const rateLimitResult = await checkRateLimit(rateLimitKey, 30, 60 * 1000)
+    const rateLimitResult = await checkRateLimit(rateLimitKey, 'upcoming_course_registrations', 30, 60 * 1000)
     if (!rateLimitResult.allowed) throw createError({ statusCode: 429, statusMessage: 'Too many requests' })
 
     const supabase = getSupabaseAdmin()

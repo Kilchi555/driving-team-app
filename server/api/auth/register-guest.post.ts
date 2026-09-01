@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
 
     // Rate limiting - max 5 registrations per email per hour
     const rateLimitKey = `register_guest_${email.toLowerCase()}`
-    const rateLimitResult = await checkRateLimit(rateLimitKey, 5, 3600)
+    const rateLimitResult = await checkRateLimit(rateLimitKey, 'register_guest', 5, 3600 * 1000)
     if (!rateLimitResult.allowed) {
       throw createError({
         statusCode: 429,

@@ -7,7 +7,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 
 export default defineEventHandler(async (event) => {
   const ip = getClientIP(event)
-  const rate = await checkRateLimit(ip, 'accountant_accept', 8, 3600)
+  const rate = await checkRateLimit(ip, 'accountant_accept', 8, 3600 * 1000)
   if (!rate.allowed) {
     throw createError({ statusCode: 429, statusMessage: 'Zu viele Versuche. Bitte später erneut.' })
   }

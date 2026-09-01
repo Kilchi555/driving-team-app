@@ -86,7 +86,7 @@ export default defineEventHandler(async (event: H3Event) => {
       10, // max 10 per minute
       60000
     )
-    if (!canProceed) {
+    if (!canProceed.allowed) {
       await logAudit({
         user_id: requestingUserId,
         action: 'resend_onboarding_sms',

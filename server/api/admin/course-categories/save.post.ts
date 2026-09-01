@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     if (!['admin'].includes(user.role || '')) throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
 
     const rateLimitKey = `category_save:${user.id}`
-    const rateLimitResult = await checkRateLimit(rateLimitKey, 20, 60 * 1000)
+    const rateLimitResult = await checkRateLimit(rateLimitKey, 'admin_course_category_save', 20, 60 * 1000)
     if (!rateLimitResult.allowed) throw createError({ statusCode: 429, statusMessage: 'Too many requests' })
 
     const tenantId = user.tenant_id

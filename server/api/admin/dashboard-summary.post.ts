@@ -94,7 +94,7 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 2: RATE LIMITING ============
     const rateLimitKey = `dashboard_summary:${user.id}`
-    const rateLimitResult = await checkRateLimit(rateLimitKey, 20, 60 * 1000) // 20 requests per minute
+    const rateLimitResult = await checkRateLimit(rateLimitKey, 'admin_dashboard_summary', 20, 60 * 1000) // 20 requests per minute
     if (!rateLimitResult.allowed) {
       throw createError({ statusCode: 429, statusMessage: 'Too many requests. Please try again later.' })
     }
