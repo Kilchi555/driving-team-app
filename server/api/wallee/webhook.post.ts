@@ -19,7 +19,8 @@ import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from 
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { syncPaymentRefundTotals } from '~/server/utils/wallee-refund'
 import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-product-purchase'
-import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
+import { internalSecretHeaders, isInternalSecretRequest } from '~/server/utils/require-staff-or-internal'
+import { classifyWalleeWebhookTimestamp, shouldShortCircuitWalleeWebhook } from '~/server/utils/wallee-webhook-replay'
 import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
@@ -81,6 +82,43 @@ export default defineEventHandler(async (event) => {
     // Security is provided by verifying the transaction exists in the Wallee API (Layer 4 fallback).
     const rawBody = await readRawBody(event) || ''
     const body = JSON.parse(rawBody) as WalleeWebhookPayload
+
+    const timeClass = classifyWalleeWebhookTimestamp(body.timestamp)
+    let alreadyProcessedSameState = false
+    if (body.entityId && body.state) {
+      let dupQuery = supabase
+        .from('webhook_logs')
+        .select('id')
+        .eq('transaction_id', String(body.entityId))
+        .eq('wallee_state', String(body.state))
+        .eq('success', true)
+        .limit(1)
+      if (body.spaceId != null) {
+        dupQuery = dupQuery.eq('space_id', body.spaceId) as any
+      }
+      const { data: priorRows } = await dupQuery
+      alreadyProcessedSameState = !!(priorRows && priorRows.length)
+    }
+    const replay = shouldShortCircuitWalleeWebhook({
+      timeClass,
+      alreadyProcessedSameState,
+      isInternal: isInternalSecretRequest(event)
+    })
+    if (replay.skip) {
+      logger.info(`↩️ Wallee webhook ignored: ${replay.reason}`, {
+        entityId: body.entityId,
+        state: body.state,
+        timeClass
+      })
+      return { success: true, ignored: replay.reason }
+    }
+    if (timeClass === 'stale') {
+      logger.warn('⚠️ Wallee webhook timestamp is older than 15 minutes — processing anyway (first delivery of this state)', {
+        entityId: body.entityId,
+        state: body.state,
+        timestamp: body.timestamp
+      })
+    }
     
     // 🔍 DEBUG: Log the entire payload to understand structure
     logger.info('🔔 WEBHOOK PAYLOAD RECEIVED:', JSON.stringify(body, null, 2))
