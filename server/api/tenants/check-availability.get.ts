@@ -66,17 +66,18 @@ export default defineEventHandler(async (event) => {
           reason: existingUser?.role === 'admin' ? 'admin' : 'taken',
         }
       } else {
-        // Also block emails that exist only in Auth (no public.users row yet)
-        let authTaken = false
-        try {
-          const { data: byEmail, error } = await supabase.auth.admin.getUserByEmail(normalized)
-          authTaken = !error && !!byEmail?.user
-        } catch {
-          authTaken = false
+        // Also block emails that exist only in Auth (no public.users row yet).
+        // Do not call auth.admin.getUserByEmail — it is not in supabase-js v2.
+        const { findAuthUserByEmail } = await import('~/server/utils/auth-email-claim')
+        const authLookup = await findAuthUserByEmail(supabase, normalized)
+        if (!authLookup.ok) {
+          // Fail open for the public availability probe (rate-limited); invite API fails closed.
+          result.email = { available: true }
+        } else {
+          result.email = authLookup.user
+            ? { available: false, reason: 'auth' }
+            : { available: true }
         }
-        result.email = authTaken
-          ? { available: false, reason: 'auth' }
-          : { available: true }
       }
     }
   }

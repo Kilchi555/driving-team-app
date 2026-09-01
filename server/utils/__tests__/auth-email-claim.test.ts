@@ -198,10 +198,12 @@ function mockSupabase(opts: {
     },
     auth: {
       admin: {
-        getUserByEmail: async () => ({
-          data: opts.authUser ? { user: opts.authUser } : { user: null },
-          error: opts.authUser ? null : { message: 'User not found', status: 404 },
-        }),
+        getUserByEmail: async () => {
+          throw new Error('getUserByEmail must not be used — missing in supabase-js v2')
+        },
+        // Used by claimOrCreateAuthUser tests via findAuthUserByEmail mock path:
+        // tests mock getUserByEmail historically; claimOrCreateAuthUser now goes through
+        // findAuthUserByEmail which uses RPC. Override rpc below.
         createUser: async () => ({
           data: opts.createUser?.id ? { user: { id: opts.createUser.id } } : { user: null },
           error: opts.createUser?.error || null,
@@ -210,6 +212,15 @@ function mockSupabase(opts: {
           throw new Error('updateUserById must not be used for email claim')
         },
       },
+    },
+    rpc: async (fn: string, args: { p_email?: string }) => {
+      if (fn !== 'lookup_auth_user_id_by_email') {
+        return { data: null, error: { message: `unexpected rpc ${fn}` } }
+      }
+      if (opts.authUser && args?.p_email) {
+        return { data: opts.authUser.id, error: null }
+      }
+      return { data: null, error: null }
     },
   }
 }
