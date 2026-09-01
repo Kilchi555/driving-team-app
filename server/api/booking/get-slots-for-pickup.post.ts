@@ -20,6 +20,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { applyTimeRangeOverlap, slotOverlapsAnyBusy } from '~/server/utils/time-range-overlap'
 
 interface PickupSlotRequest {
   tenant_id: string
@@ -183,9 +184,28 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'Failed to fetch available slots' })
     }
 
-    const rawSlots = slots || []
+    let rawSlots = slots || []
     if (rawSlots.length === 0) {
       return { success: true, slots: [], count: 0, travel_check_applied: true }
+    }
+
+    const pickupBusyStaffIds = staff_id
+      ? [staff_id]
+      : [...new Set(rawSlots.map(s => s.staff_id))]
+    const { data: pickupBusyTimes } = await applyTimeRangeOverlap(
+      supabase
+        .from('external_busy_times')
+        .select('staff_id, start_time, end_time')
+        .eq('tenant_id', tenant_id)
+        .in('staff_id', pickupBusyStaffIds),
+      `${start_date}T00:00:00Z`,
+      `${end_date}T23:59:59Z`,
+    )
+    if (pickupBusyTimes?.length) {
+      rawSlots = rawSlots.filter(s => !slotOverlapsAnyBusy(s, pickupBusyTimes))
+      if (rawSlots.length === 0) {
+        return { success: true, slots: [], count: 0, travel_check_applied: true }
+      }
     }
 
     // ── Enrich with staff / location names ────────────────────────────────────

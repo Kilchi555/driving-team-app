@@ -14,6 +14,7 @@ import { logger } from '~/utils/logger'
 import { resolveRoomSettings, isAnyRoomAvailable } from '~/server/utils/room-availability'
 import { isSchoolVehicleAvailable, resolveSlotVehiclePolicy } from '~/server/utils/vehicle-availability'
 import { bookableUserRoles, resolveLocationStaffAssignments } from '~/server/utils/bookable-locations'
+import { applyTimeRangeOverlap, slotOverlapsAnyBusy } from '~/server/utils/time-range-overlap'
 
 export interface BookingReadinessCheck {
   id: string
@@ -255,6 +256,21 @@ async function countAvailableSlots(
   }
 
   let filtered = slots || []
+
+  if (filtered.length > 0) {
+    const { data: busyTimes } = await applyTimeRangeOverlap(
+      supabase
+        .from('external_busy_times')
+        .select('staff_id, start_time, end_time')
+        .eq('tenant_id', opts.tenantId)
+        .eq('staff_id', opts.staffId),
+      `${opts.startDate}T00:00:00Z`,
+      `${opts.endDate}T23:59:59Z`,
+    )
+    if (busyTimes?.length) {
+      filtered = filtered.filter((s) => !slotOverlapsAnyBusy(s, busyTimes))
+    }
+  }
 
   // Same room gate as get-available-slots when service_type is set
   const serviceType = opts.serviceType || 'fahrstunde'

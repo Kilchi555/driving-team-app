@@ -38,6 +38,7 @@ import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
 import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
+import { findStaffBusyOverlap } from '~/server/utils/time-range-overlap'
 import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockCheckoutBenefits } from '~/server/utils/checkout-benefits'
 import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
@@ -209,6 +210,20 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({
         statusCode: 409,
         statusMessage: 'Slot not found. Please select a different slot.'
+      })
+    }
+
+    const busyOverlap = await findStaffBusyOverlap(supabase, {
+      staffId: slot.staff_id,
+      startTime: slot.start_time,
+      endTime: slot.end_time,
+      tenantId: slot.tenant_id,
+    })
+    if (busyOverlap) {
+      logger.warn('❌ Slot overlaps external busy time:', body.slot_id)
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Dieser Termin liegt in einer gesperrten Zeit. Bitte wähle einen anderen Slot.',
       })
     }
 

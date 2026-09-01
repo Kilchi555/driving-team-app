@@ -22,6 +22,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { findStaffBusyOverlap } from '~/server/utils/time-range-overlap'
 
 interface ReserveSlotRequest {
   slot_id: string
@@ -107,6 +108,24 @@ export default defineEventHandler(async (event: H3Event) => {
 
     if (!isAvailable) {
       throw createError({ statusCode: 409, statusMessage: 'Slot is no longer available' })
+    }
+
+    const busyOverlap = await findStaffBusyOverlap(supabaseAdmin, {
+      staffId: currentSlot.staff_id,
+      startTime: currentSlot.start_time,
+      endTime: currentSlot.end_time,
+      tenantId: currentSlot.tenant_id,
+    })
+    if (busyOverlap) {
+      logger.warn('❌ Slot overlaps external busy time', {
+        slot_id: body.slot_id,
+        staff_id: currentSlot.staff_id,
+        busy_id: busyOverlap.id,
+      })
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Dieser Termin liegt in einer gesperrten Zeit. Bitte wähle einen anderen Slot.',
+      })
     }
 
     // Simple update – admin client bypasses RLS, PostgreSQL row-level locking
