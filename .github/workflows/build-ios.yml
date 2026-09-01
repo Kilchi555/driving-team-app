@@ -27,7 +27,7 @@ jobs:
     outputs:
       clients: ${{ steps.resolve.outputs.clients }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Resolve clients to build
         id: resolve
@@ -56,7 +56,7 @@ jobs:
         client: ${{ fromJson(needs.setup.outputs.clients) }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
