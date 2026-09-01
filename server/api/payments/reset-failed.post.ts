@@ -49,8 +49,8 @@ export default defineEventHandler(async (event) => {
 
     // ============ LAYER 2: RATE LIMITING ============
     const rateLimitKey = `reset_payment:${authenticatedUserId}`
-    const canProceed = await checkRateLimit(rateLimitKey, 10, 60000) // 10 per minute
-    if (!canProceed) {
+    const canProceed = await checkRateLimit(rateLimitKey, 'reset_failed_payment', 10, 60 * 1000) // 10 per minute
+    if (!canProceed.allowed) {
       throw createError({ statusCode: 429, statusMessage: 'Too many requests. Please try again later.' })
     }
 

@@ -80,7 +80,7 @@ export default defineEventHandler(async (event): Promise<RegistrationResponse> =
     }
 
     // ✅ LAYER 2: Rate limiting (3 tenant registrations per hour per IP)
-    const rateLimit = await checkRateLimit(ipAddress, 'tenant_register', 3, 3600)
+    const rateLimit = await checkRateLimit(ipAddress, 'tenant_register', 3, 3600 * 1000)
     if (!rateLimit.allowed) {
       logger.warn('⚠️ Rate limit exceeded for tenant registration:', ipAddress)
       throw createError({

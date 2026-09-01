@@ -109,8 +109,9 @@ export default defineEventHandler(async (event) => {
     const rateLimitKey = `document_upload_${token}`
     const rateLimitResult = await checkRateLimit(
       rateLimitKey,
+      'document_upload_onboarding',
       10, // max 10 uploads
-      3600 // per hour
+      3600 * 1000 // per hour
     )
 
     if (!rateLimitResult.allowed) {

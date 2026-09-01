@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
     const profile = await requireAdminProfile(event)
 
     const rateLimitKey = `room_update:${profile.id}`
-    const rateLimitResult = await checkRateLimit(rateLimitKey, 20, 60 * 1000)
+    const rateLimitResult = await checkRateLimit(rateLimitKey, 'admin_room_update', 20, 60 * 1000)
     if (!rateLimitResult.allowed) throw createError({ statusCode: 429, statusMessage: 'Too many requests' })
 
     const body = await readBody(event)

@@ -115,6 +115,22 @@ async function getConsecutiveBlockCount(
   }
 }
 
+export type RateLimitResult = {
+  allowed: boolean
+  remaining: number
+  limit: number
+  /** Milliseconds until the window resets */
+  reset: number
+  /** Seconds until retry is allowed (ceil of reset/1000) — for API clients */
+  retryAfter: number
+}
+
+/**
+ * Persistent rate limit check.
+ *
+ * Signature: checkRateLimit(key, operation, maxRequests?, windowMs?, email?, tenantId?)
+ * `windowMs` is milliseconds. Prefer `3600 * 1000` for one hour — bare `3600` is 3.6s.
+ */
 export async function checkRateLimit(
   ipAddress: string,
   operation: keyof typeof LIMITS | string = 'register',
@@ -122,12 +138,36 @@ export async function checkRateLimit(
   windowMs?: number,
   email?: string,
   tenantId?: string
-): Promise<{ allowed: boolean; remaining: number; limit: number; reset: number }> {
+): Promise<RateLimitResult> {
+  // Compat: older call sites used checkRateLimit(key, maxRequests, windowMs)
+  if (typeof operation === 'number') {
+    const legacyMax = operation
+    const legacyWindow = typeof maxRequests === 'number' ? maxRequests : undefined
+    console.warn(
+      `⚠️ checkRateLimit called without operation name (key=${String(ipAddress).slice(0, 48)}). ` +
+        'Use checkRateLimit(key, operation, max, windowMs).',
+    )
+    operation = 'legacy_unscoped'
+    maxRequests = legacyMax
+    windowMs = legacyWindow
+  }
+
   const now = Date.now()
   const config = LIMITS[operation as keyof typeof LIMITS] || { maxRequests: maxRequests || 10, windowMs: windowMs || 60000 }
   const max = maxRequests ?? config.maxRequests
   const baseWindow = windowMs ?? config.windowMs
   const key = `${operation}:${ipAddress}`
+
+  if (typeof baseWindow === 'number' && baseWindow > 0 && baseWindow < 1000) {
+    console.warn(
+      `⚠️ checkRateLimit windowMs=${baseWindow} for ${operation} looks like seconds; expected milliseconds`,
+    )
+  }
+
+  const withRetry = (result: Omit<RateLimitResult, 'retryAfter'>): RateLimitResult => ({
+    ...result,
+    retryAfter: Math.max(1, Math.ceil((result.reset || 0) / 1000)),
+  })
   
   // Check in-memory cache first
   const cached = requestCache.get(key)
@@ -140,16 +180,16 @@ export async function checkRateLimit(
       cached.count++
     }
     
-    return { allowed, remaining, limit: max, reset }
+    return withRetry({ allowed, remaining, limit: max, reset })
   }
   
   // Query Supabase for requests in the time window
   const supabase = getSupabaseClient()
-  const allowed = { allowed: true, remaining: max - 1, limit: max, reset: 0 }
+  const allowedFallback = withRetry({ allowed: true, remaining: max - 1, limit: max, reset: 0 })
   
   if (!supabase) {
     // Fallback to in-memory if Supabase not available
-    return allowed
+    return allowedFallback
   }
   
   try {
@@ -169,7 +209,7 @@ export async function checkRateLimit(
 
     if (error) {
       console.warn('⚠️ Failed to query rate limit logs:', error.message)
-      return allowed
+      return allowedFallback
     }
 
     const count = logs?.length || 0
@@ -211,10 +251,10 @@ export async function checkRateLimit(
       .then(() => {})
       .catch(() => {})
 
-    return { allowed: isAllowed, remaining, limit: max, reset }
+    return withRetry({ allowed: isAllowed, remaining, limit: max, reset })
   } catch (err: any) {
     console.warn('⚠️ Rate limit check error:', err.message)
-    return allowed
+    return allowedFallback
   }
 }
 

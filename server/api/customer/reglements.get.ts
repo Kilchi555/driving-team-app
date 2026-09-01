@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
 
     // ✅ LAYER 4: Rate Limiting (50 requests per hour per user)
     const rateLimitKey = `customer_reglements:${userProfile.id}`
-    const rateLimitResult = await checkRateLimit(rateLimitKey, 50, 3600 * 1000)
+    const rateLimitResult = await checkRateLimit(rateLimitKey, 'customer_reglements', 50, 3600 * 1000)
     if (!rateLimitResult.allowed) {
       throw createError({
         statusCode: 429,

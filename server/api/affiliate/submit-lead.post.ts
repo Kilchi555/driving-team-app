@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
     3,
     60 * 60 * 1000
   )
-  if (!canProceed) {
+  if (!canProceed.allowed) {
     throw createError({ statusCode: 429, message: 'Zu viele Anfragen. Bitte versuche es später erneut.' })
   }
 

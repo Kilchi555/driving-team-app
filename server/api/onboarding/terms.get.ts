@@ -22,6 +22,7 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 1: RATE LIMITING ============
     const rateLimitResult = await checkRateLimit(
       `onboarding_terms:${token}`,
+      'onboarding_terms',
       20, // 20 requests per hour per token
       3600 * 1000
     )

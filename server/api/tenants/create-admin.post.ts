@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     'unknown'
 
   // Rate limit: 5 admin creations per IP per hour
-  const rateLimit = await checkRateLimit(ipAddress, 'create_admin', 5, 3600)
+  const rateLimit = await checkRateLimit(ipAddress, 'create_admin', 5, 3600 * 1000)
   if (!rateLimit.allowed) {
     throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen. Bitte warten.' })
   }

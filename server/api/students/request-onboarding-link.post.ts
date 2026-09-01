@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
     // Rate limit: max 5 requests per email per hour
     const rateLimitKey = `request_onboarding_${email.toLowerCase()}`
-    const rateLimitResult = await checkRateLimit(rateLimitKey, 5, 3600)
+    const rateLimitResult = await checkRateLimit(rateLimitKey, 'request_onboarding_link', 5, 3600 * 1000)
 
     if (!rateLimitResult.allowed) {
       logger.warn('⚠️ Request onboarding link: Rate limit exceeded', { email })

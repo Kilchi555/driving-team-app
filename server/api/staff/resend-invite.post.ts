@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
     }
 
-    const rateLimit = await checkRateLimit(user.id, 'staff_invite_resend', 10, 3600)
+    const rateLimit = await checkRateLimit(user.id, 'staff_invite_resend', 10, 3600 * 1000)
     if (!rateLimit.allowed) {
       const retryAfterSec = Math.max(1, Math.ceil((rateLimit.reset || 60000) / 1000))
       throw createError({
