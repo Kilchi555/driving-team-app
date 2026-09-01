@@ -4,8 +4,9 @@
 #
 # Blocking today: unit tests + lint on the test suite, plus Playwright
 # login and tenant isolation. PRs hit the Vercel simy-app preview
-# (needs VERCEL_AUTOMATION_BYPASS_SECRET). Pushes to main stay on
-# https://app.simy.ch.
+# (needs VERCEL_AUTOMATION_BYPASS_SECRET) when that project actually
+# builds. Docs / Dependabot / ignored-build PRs fall back to
+# https://app.simy.ch. Pushes to main stay on production.
 #
 # Report-only: npm audit. Production deps currently include unfixed
 # highs/criticals (xlsx has no patch; nuxt/vite pull more). Failing the
@@ -68,6 +69,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           E2E_PREVIEW_SHA: ${{ github.event.pull_request.head.sha }}
+          E2E_PREVIEW_REF: ${{ github.head_ref }}
+          E2E_PREVIEW_MESSAGE: ${{ github.event.pull_request.title }}
+          E2E_PREVIEW_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: node scripts/wait-for-simy-preview.mjs
 
       - name: Setup Node.js
@@ -89,7 +93,12 @@ jobs:
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           E2E_BASE_URL: ${{ github.event_name == 'pull_request' && steps.preview.outputs.url || 'https://app.simy.ch' }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+          using_preview=false
+          case "${E2E_BASE_URL}" in
+            https://app.simy.ch|https://app.simy.ch/) ;;
+            *) using_preview=true ;;
+          esac
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "$using_preview" = true ] && [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
             echo "VERCEL_AUTOMATION_BYPASS_SECRET is not set"
             exit 1
           fi

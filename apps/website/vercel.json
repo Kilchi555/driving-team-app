@@ -1,4 +1,15 @@
 {
+  "ignoreCommand": "node ../../scripts/vercel-should-build.mjs website",
+  "git": {
+    "deploymentEnabled": {
+      "dependabot/**": false,
+      "dependabot/*": false,
+      "renovate/**": false,
+      "cursor/engineering-documentation-updates-*": false,
+      "bot-report/**": false,
+      "bot-report/*": false
+    }
+  },
   "redirects": [
     {
       "source": "/:path*",
