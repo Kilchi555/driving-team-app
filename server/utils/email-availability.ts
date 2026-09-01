@@ -105,7 +105,7 @@ export function emailConflictMessage(
         ? `Diese E-Mail ist bereits als Admin registriert. Für den ${staffLabel}-Login eine andere Adresse wählen.`
         : 'Diese E-Mail ist bereits registriert. Bitte eine andere Adresse wählen.'
     case 'auth_exists':
-      return 'Diese E-Mail ist bereits in Auth registriert. Bitte eine andere Adresse wählen.'
+      return 'Diese E-Mail ist bereits mit einem Login verknüpft. Bitte eine andere Adresse für den Staff-Zugang wählen.'
     case 'lookup_failed':
       return 'Die E-Mail konnte gerade nicht geprüft werden. Bitte versuche es erneut.'
     case 'pending_invite':
