@@ -23,6 +23,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { isSchoolVehicleAvailable, resolveSlotVehiclePolicy } from '~/server/utils/vehicle-availability'
 import { resolveRoomSettings, isAnyRoomAvailable, type RoomServiceType } from '~/server/utils/room-availability'
+import { applyTimeRangeOverlap, slotOverlapsAnyBusy } from '~/server/utils/time-range-overlap'
 
 interface AvailableSlot {
   id: string
@@ -144,7 +145,7 @@ export default defineEventHandler(async (event: H3Event) => {
       slotsQuery = slotsQuery.eq('category_code', query.category_code)
     }
 
-    const { data: slots, error: slotsError } = await slotsQuery
+    const { data: rawSlots, error: slotsError } = await slotsQuery
 
     if (slotsError) {
       logger.error('❌ Error fetching slots:', slotsError)
@@ -154,8 +155,29 @@ export default defineEventHandler(async (event: H3Event) => {
       })
     }
 
+    // Hide stale slots that overlap a multi-day external event (e.g. Ferien)
+    // even if the precomputed table has not been recalculated yet.
+    let slots = rawSlots || []
+    if (slots.length > 0) {
+      const busyStaffIds = query.staff_id
+        ? [query.staff_id]
+        : [...new Set(slots.map(s => s.staff_id))]
+      const { data: busyTimes } = await applyTimeRangeOverlap(
+        supabase
+          .from('external_busy_times')
+          .select('staff_id, start_time, end_time')
+          .eq('tenant_id', query.tenant_id)
+          .in('staff_id', busyStaffIds),
+        `${query.start_date}T00:00:00Z`,
+        `${query.end_date}T23:59:59Z`,
+      )
+      if (busyTimes?.length) {
+        slots = slots.filter(s => !slotOverlapsAnyBusy(s, busyTimes))
+      }
+    }
+
     logger.debug('📊 Slots query result:', {
-      count: slots?.length || 0,
+      count: slots.length,
       filters: {
         tenant_id: query.tenant_id,
         staff_id: query.staff_id,

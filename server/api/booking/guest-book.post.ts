@@ -38,6 +38,7 @@ import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
+import { findStaffBusyOverlap } from '~/server/utils/time-range-overlap'
 import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
 import { checkoutAppUrl, createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
@@ -175,6 +176,20 @@ export default defineEventHandler(async (event) => {
 
   if (slotErr || !slot) {
     throw createError({ statusCode: 404, statusMessage: 'Zeitslot nicht gefunden' })
+  }
+
+  const busyOverlap = await findStaffBusyOverlap(supabase, {
+    staffId: slot.staff_id,
+    startTime: slot.start_time,
+    endTime: slot.end_time,
+    tenantId: tenantId,
+  })
+  if (busyOverlap) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Dieser Termin liegt in einer gesperrten Zeit. Bitte wähle einen anderen Slot.',
+      data: { code: 'SLOT_UNAVAILABLE' },
+    })
   }
 
   if (!slot.is_available) {
