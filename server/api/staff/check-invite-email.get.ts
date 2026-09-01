@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
   }
 
-  const rateLimit = await checkRateLimit(user.id, 'staff_invite_email_check', 60, 60)
+  const rateLimit = await checkRateLimit(user.id, 'staff_invite_email_check', 60, 60 * 1000)
   if (!rateLimit.allowed) {
     throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen. Bitte warten.' })
   }
