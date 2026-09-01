@@ -53,29 +53,31 @@ function writeOutput(url, skipped = false) {
   console.log(skipped ? `Preview skipped, using ${url}` : `Preview ready: ${url}`)
 }
 
-async function listChangedFiles() {
+async function loadHeadCommit() {
   // Same window Vercel uses (HEAD^ HEAD): only this commit, not the whole PR.
   try {
     const commit = await gh(`/repos/${repo}/commits/${sha}`)
     const files = (commit.files || []).map((file) => file.filename).filter(Boolean)
-    if (files.length >= COMMIT_FILE_CAP) return null
-    return files
+    return {
+      files: files.length >= COMMIT_FILE_CAP ? null : files,
+      message: commit.commit?.message || '',
+    }
   } catch (error) {
-    console.log(`Could not list files for ${sha.slice(0, 7)}: ${error.message}`)
-    return null
+    console.log(`Could not load commit ${sha.slice(0, 7)}: ${error.message}`)
+    return { files: null, message: '' }
   }
 }
 
 async function previewWouldBeSkipped() {
-  const changedFiles = await listChangedFiles()
+  const head = await loadHeadCommit()
   const result = decide({
     project: 'app',
     vercelEnv: 'preview',
     branch: process.env.E2E_PREVIEW_REF || '',
-    commitMessage: process.env.E2E_PREVIEW_MESSAGE || '',
+    commitMessage: head.message,
     authorLogin: process.env.E2E_PREVIEW_AUTHOR || '',
     productionUrl: PRODUCTION_FALLBACK_URL,
-    changedFiles,
+    changedFiles: head.files,
   })
   if (result.skip) {
     console.log(`[vercel-should-build] skip: ${result.reason}`)
