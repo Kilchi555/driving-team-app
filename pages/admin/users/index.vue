@@ -1240,7 +1240,7 @@ const checkInviteEmail = (val: string) => {
         inviteEmailTakenMsg.value = res.email?.reason === 'admin'
           ? 'Das ist die Admin-E-Mail — bitte eine andere für den Staff-Login wählen.'
           : res.email?.reason === 'auth'
-            ? 'Diese E-Mail ist bereits in Auth registriert.'
+            ? 'Diese E-Mail ist bereits mit einem Login verknüpft.'
             : 'Diese E-Mail ist bereits registriert.'
       }
     } catch {
