@@ -20,6 +20,9 @@ import {
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
   let invitedEmailForAudit: string | undefined
+  let auditTenantId: string | undefined
+  let auditUserId: string | undefined
+  let auditFailReason: string | undefined
   try {
     const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim()
       || getHeader(event, 'x-real-ip')
@@ -53,6 +56,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Authentication required',
       })
     }
+    auditUserId = user.id
 
     logger.debug('✅ User authenticated:', user.email, 'User ID:', user.id)
 
@@ -90,6 +94,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: `Kein Tenant gefunden für User: ${user.email}`,
       })
     }
+    auditTenantId = userProfile.tenant_id
 
     if (userProfile.role !== 'admin') {
       throw createError({
@@ -168,6 +173,7 @@ export default defineEventHandler(async (event) => {
     })
     if (!availability.available) {
       const terms = await getTenantTerminology(serviceSupabase, userProfile.tenant_id)
+      auditFailReason = availability.reason || 'unavailable'
       const conflict = createError({
         statusCode: availability.reason === 'lookup_failed'
           ? 503
@@ -324,13 +330,16 @@ export default defineEventHandler(async (event) => {
     const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown'
     await logAudit({
       action: 'staff_invitation_created',
-      tenant_id: (error as any).tenant_id,
+      user_id: auditUserId || (error as any).user_id,
+      tenant_id: auditTenantId || (error as any).tenant_id,
       resource_type: 'staff_invitation',
       ip_address: ipAddress,
       status: 'failed',
       error_message: error.statusMessage || error.message,
       details: {
         invited_email: (error as any).email || invitedEmailForAudit,
+        reason: auditFailReason || (error as any).reason || undefined,
+        status_code: error.statusCode || 500,
         duration_ms: Date.now() - startTime,
       },
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
