@@ -10,8 +10,8 @@ import {
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 
 /**
- * Authenticated staff-invite email probe for admins.
- * Public /api/tenants/check-availability must not expose Auth-only hits.
+ * Authenticated staff-invite email probe for admins (includes Auth).
+ * Public /api/tenants/check-availability only checks tenants + public.users.
  */
 export default defineEventHandler(async (event) => {
   const user = await getAuthenticatedUser(event)
