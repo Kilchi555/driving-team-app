@@ -101,23 +101,70 @@ export type AuthUserLookup =
   | { ok: true; user: { id: string } | null }
   | { ok: false }
 
+/**
+ * Resolve an Auth user by email.
+ *
+ * Do NOT call `supabase.auth.admin.getUserByEmail` — it does not exist in
+ * supabase-js v2 (throws TypeError). That bug blocked all staff invites after
+ * 2026-08-30 with a false "already in Auth" error.
+ */
 export async function findAuthUserByEmail(
   supabase: SupabaseClient,
   email: string,
 ): Promise<AuthUserLookup> {
   const normalized = String(email || '').trim().toLowerCase()
   if (!normalized) return { ok: true, user: null }
+
   try {
-    const { data, error } = await supabase.auth.admin.getUserByEmail(normalized)
-    if (error) {
-      const msg = (error.message || '').toLowerCase()
-      const status = (error as { status?: number }).status
-      if (status === 404 || msg.includes('not found') || msg.includes('unable to find') || msg.includes('no user')) {
-        return { ok: true, user: null }
-      }
-      return { ok: false }
+    const { data, error } = await supabase.rpc('lookup_auth_user_id_by_email', {
+      p_email: normalized,
+    })
+    if (!error) {
+      return { ok: true, user: data ? { id: String(data) } : null }
     }
-    return { ok: true, user: data?.user?.id ? { id: data.user.id } : null }
+    // Missing RPC (pre-migration) → fall through to GoTrue admin filter
+    const code = (error as { code?: string }).code
+    const msg = (error.message || '').toLowerCase()
+    const missingFn = code === '42883' || msg.includes('does not exist') || msg.includes('could not find')
+    if (!missingFn) return { ok: false }
+  } catch {
+    // fall through
+  }
+
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceKey) return { ok: false }
+
+    const url = new URL(`${supabaseUrl.replace(/\/$/, '')}/auth/v1/admin/users`)
+    url.searchParams.set('email', normalized)
+
+    const headers = new Headers({
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+    })
+    // New-format keys must not be sent as JWT bearer (see supabase-admin.ts)
+    if (serviceKey.startsWith('sb_secret_') || serviceKey.startsWith('sb_publishable_')) {
+      headers.delete('Authorization')
+    }
+
+    const res = await fetch(url.toString(), { headers })
+    if (res.status === 404) return { ok: true, user: null }
+    if (!res.ok) return { ok: false }
+
+    const body = await res.json() as {
+      id?: string
+      user?: { id?: string }
+      users?: Array<{ id?: string; email?: string | null }>
+    }
+
+    if (body?.user?.id) return { ok: true, user: { id: body.user.id } }
+    if (body?.id) return { ok: true, user: { id: body.id } }
+
+    const match = (body?.users || []).find(
+      (u) => (u.email || '').trim().toLowerCase() === normalized && u.id,
+    )
+    return { ok: true, user: match?.id ? { id: match.id } : null }
   } catch {
     return { ok: false }
   }

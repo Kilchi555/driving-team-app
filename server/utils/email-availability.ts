@@ -12,6 +12,7 @@ export type EmailConflictReason =
   | 'admin_login'
   | 'user_exists'
   | 'auth_exists'
+  | 'lookup_failed'
   | 'pending_invite'
 
 export interface EmailConflictResult {
@@ -60,7 +61,12 @@ export async function checkEmailAvailableForStaff(opts: {
   }
 
   const authLookup = await findAuthUserByEmail(opts.supabase, email)
-  if (!authLookup.ok || authLookup.user) {
+  if (!authLookup.ok) {
+    // Never treat lookup failures as "already registered" — that blocked every invite
+    // when getUserByEmail (missing in supabase-js v2) threw.
+    return { available: false, reason: 'lookup_failed' }
+  }
+  if (authLookup.user) {
     return { available: false, reason: 'auth_exists' }
   }
 
@@ -100,6 +106,8 @@ export function emailConflictMessage(
         : 'Diese E-Mail ist bereits registriert. Bitte eine andere Adresse wählen.'
     case 'auth_exists':
       return 'Diese E-Mail ist bereits in Auth registriert. Bitte eine andere Adresse wählen.'
+    case 'lookup_failed':
+      return 'Die E-Mail konnte gerade nicht geprüft werden. Bitte versuche es erneut.'
     case 'pending_invite':
       return 'Für diese E-Mail existiert bereits eine offene Einladung. Bitte «E-Mail erneut» nutzen.'
     default:

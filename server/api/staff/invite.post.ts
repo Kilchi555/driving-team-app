@@ -19,6 +19,7 @@ import {
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
+  let invitedEmailForAudit: string | undefined
   try {
     const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim()
       || getHeader(event, 'x-real-ip')
@@ -43,6 +44,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     const staffEmail = emailCandidate
+    invitedEmailForAudit = staffEmail
 
     const user = await getAuthenticatedUser(event)
     if (!user) {
@@ -166,10 +168,17 @@ export default defineEventHandler(async (event) => {
     })
     if (!availability.available) {
       const terms = await getTenantTerminology(serviceSupabase, userProfile.tenant_id)
-      throw createError({
-        statusCode: availability.reason === 'pending_invite' || availability.reason === 'user_exists' || availability.reason === 'auth_exists' ? 409 : 400,
+      const conflict = createError({
+        statusCode: availability.reason === 'lookup_failed'
+          ? 503
+          : availability.reason === 'pending_invite' || availability.reason === 'user_exists' || availability.reason === 'auth_exists'
+            ? 409
+            : 400,
         statusMessage: emailConflictMessage(availability, terms.staff || 'Mitarbeiter'),
       })
+      ;(conflict as any).tenant_id = userProfile.tenant_id
+      ;(conflict as any).email = staffEmail
+      throw conflict
     }
 
     if (sanitizedPhone) {
@@ -321,7 +330,7 @@ export default defineEventHandler(async (event) => {
       status: 'failed',
       error_message: error.statusMessage || error.message,
       details: {
-        invited_email: (error as any).email,
+        invited_email: (error as any).email || invitedEmailForAudit,
         duration_ms: Date.now() - startTime,
       },
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
