@@ -58,13 +58,20 @@ function isMarketingSitePath(name) {
   return name.startsWith('apps/website/') || name.startsWith('apps/simy/')
 }
 
+/** In-app help articles are read from disk at runtime by /api/help/articles. */
+export function isAppHelpArticle(name) {
+  const file = normalizeFile(name)
+  if (!file.startsWith('content/help/') || !file.endsWith('.md')) return false
+  return !file.endsWith('/README.md') && file !== 'content/help/README.md'
+}
+
 export function isIgnoredEverywhere(file) {
   const name = normalizeFile(file)
   if (!name) return true
   if (name.endsWith('.sql')) return true
   // Blog/CMS markdown under the marketing sites is live Nuxt Content.
-  // Repo-root and docs/*.md stay ignored so they do not rebuild the app.
-  if ((name.endsWith('.md') || name.endsWith('.mdc')) && !isMarketingSitePath(name)) return true
+  // Help articles ship with the app. Other markdown stays ignored.
+  if ((name.endsWith('.md') || name.endsWith('.mdc')) && !isMarketingSitePath(name) && !isAppHelpArticle(name)) return true
   if (IGNORE_EXACT.has(name)) return true
   if (IGNORE_PREFIXES.some((prefix) => name.startsWith(prefix))) return true
   if (name.includes('/__tests__/')) return true

@@ -37,6 +37,12 @@ describe('isRelevantFile', () => {
     expect(isRelevantFile('website', 'apps/website/seo-meta-overview.md')).toBe(true)
     expect(isRelevantFile('app', 'apps/website/content/blog/vku-kurs-verkehrskunde-sicherheit.md')).toBe(false)
   })
+
+  it('treats in-app help articles as app content', () => {
+    expect(isRelevantFile('app', 'content/help/admin/buchhaltung-und-lohn.md')).toBe(true)
+    expect(isRelevantFile('app', 'content/help/README.md')).toBe(false)
+    expect(isRelevantFile('website', 'content/help/admin/buchhaltung-und-lohn.md')).toBe(false)
+  })
 })
 
 describe('isDependabotRef', () => {
@@ -128,6 +134,15 @@ describe('decide', () => {
       project: 'website',
       vercelEnv: 'preview',
       changedFiles: ['apps/website/nuxt.config.ts'],
+    })
+    expect(result.skip).toBe(false)
+  })
+
+  it('builds app production when only a help article changed', () => {
+    const result = decide({
+      project: 'app',
+      vercelEnv: 'production',
+      changedFiles: ['content/help/client/fahrstunde-buchen.md'],
     })
     expect(result.skip).toBe(false)
   })
