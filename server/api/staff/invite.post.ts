@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('✅ User authenticated:', user.email, 'User ID:', user.id)
 
-    const rateLimit = await checkRateLimit(user.id, 'staff_invite', 10, 3600)
+    const rateLimit = await checkRateLimit(user.id, 'staff_invite', 10, 3600 * 1000)
     if (!rateLimit.allowed) {
       logger.warn('⚠️ Rate limit exceeded for staff invitation:', user.email)
       throw createError({
