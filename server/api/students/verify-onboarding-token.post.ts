@@ -19,8 +19,9 @@ export default defineEventHandler(async (event) => {
     const rateLimitKey = `verify_onboarding_${token.substring(0, 20)}`
     const rateLimitResult = await checkRateLimit(
       rateLimitKey,
+      'verify_onboarding_token',
       10, // max 10 attempts
-      3600 // per hour
+      3600 * 1000 // per hour
     )
 
     if (!rateLimitResult.allowed) {

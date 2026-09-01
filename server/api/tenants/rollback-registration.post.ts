@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     'unknown'
 
   // Rate limit: 10 rollback attempts per IP per hour
-  const rateLimit = await checkRateLimit(ipAddress, 'rollback_registration', 10, 3600)
+  const rateLimit = await checkRateLimit(ipAddress, 'rollback_registration', 10, 3600 * 1000)
   if (!rateLimit.allowed) {
     throw createError({ statusCode: 429, statusMessage: 'Zu viele Anfragen. Bitte warten.' })
   }

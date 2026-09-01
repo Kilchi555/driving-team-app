@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
       30, // max 30 per minute
       60000
     )
-    if (!canProceed) {
+    if (!canProceed.allowed) {
       await logAudit({
         user_id: authenticatedUserId,
         action: 'customer_get_payment_page_data',
