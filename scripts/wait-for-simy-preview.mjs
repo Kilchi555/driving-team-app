@@ -18,8 +18,7 @@ const sha = process.env.E2E_PREVIEW_SHA
 const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN
 const timeoutMs = Number(process.env.E2E_PREVIEW_TIMEOUT_MS || 8 * 60 * 1000)
 const pollMs = 8000
-const compareBase = process.env.E2E_PREVIEW_BASE || 'main'
-const COMPARE_FILE_CAP = 300
+const COMMIT_FILE_CAP = 300
 
 if (!repo || !sha || !token) {
   console.error('Need GITHUB_REPOSITORY, E2E_PREVIEW_SHA, and GITHUB_TOKEN')
@@ -55,13 +54,14 @@ function writeOutput(url, skipped = false) {
 }
 
 async function listChangedFiles() {
+  // Same window Vercel uses (HEAD^ HEAD): only this commit, not the whole PR.
   try {
-    const cmp = await gh(`/repos/${repo}/compare/${encodeURIComponent(compareBase)}...${sha}`)
-    const files = (cmp.files || []).map((file) => file.filename).filter(Boolean)
-    if (files.length >= COMPARE_FILE_CAP) return null
+    const commit = await gh(`/repos/${repo}/commits/${sha}`)
+    const files = (commit.files || []).map((file) => file.filename).filter(Boolean)
+    if (files.length >= COMMIT_FILE_CAP) return null
     return files
   } catch (error) {
-    console.log(`Could not compare ${compareBase}...${sha.slice(0, 7)}: ${error.message}`)
+    console.log(`Could not list files for ${sha.slice(0, 7)}: ${error.message}`)
     return null
   }
 }

@@ -69,7 +69,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           E2E_PREVIEW_SHA: ${{ github.event.pull_request.head.sha }}
-          E2E_PREVIEW_BASE: ${{ github.event.pull_request.base.ref }}
           E2E_PREVIEW_REF: ${{ github.head_ref }}
           E2E_PREVIEW_MESSAGE: ${{ github.event.pull_request.title }}
           E2E_PREVIEW_AUTHOR: ${{ github.event.pull_request.user.login }}
