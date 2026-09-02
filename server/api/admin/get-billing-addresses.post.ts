@@ -1,45 +1,60 @@
 // server/api/admin/get-billing-addresses.post.ts
-// Get billing addresses for students
+// Staff/admin: company billing addresses for students in the caller's tenant only.
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireAdminProfile } from '~/server/utils/auth'
+import {
+  assertUsersBelongToTenant,
+  chunkIds,
+  normalizeIdList,
+} from '~/server/utils/admin-f01-access'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, [
+    'admin',
+    'staff',
+    'tenant_admin',
+    'super_admin',
+  ])
+
   const body = await readBody(event)
-  const { studentIds } = body
+  const studentIds = normalizeIdList(body?.studentIds, 'studentIds')
 
-  if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
-    throw createError({
-      statusCode: 400,
-      message: 'studentIds array is required and must not be empty'
-    })
-  }
+  const supabase = getSupabaseAdmin()
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  // Server-side tenant ownership — never trust client studentIds alone
+  const verifiedIds = await assertUsersBelongToTenant(
+    supabase,
+    studentIds,
+    profile.tenant_id
   )
 
   try {
-    // Get billing addresses for these students
-    const { data: companyBillingAddresses, error: billingAddressError } = await supabase
-      .from('company_billing_addresses')
-      .select('*')
-      .in('user_id', studentIds)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+    const companyBillingAddresses: Record<string, unknown>[] = []
+    for (const chunk of chunkIds(verifiedIds)) {
+      const { data, error: billingAddressError } = await supabase
+        .from('company_billing_addresses')
+        .select('*')
+        .in('user_id', chunk)
+        .eq('tenant_id', profile.tenant_id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
 
-    if (billingAddressError) throw billingAddressError
+      if (billingAddressError) throw billingAddressError
+      if (data?.length) companyBillingAddresses.push(...data)
+    }
 
     return {
       success: true,
-      data: companyBillingAddresses || []
+      data: companyBillingAddresses,
     }
   } catch (err: any) {
+    if (err?.statusCode) throw err
     console.error('❌ Error loading billing addresses:', err)
     throw createError({
       statusCode: err.statusCode || 500,
-      message: err.message || 'Failed to load billing addresses'
+      message: err.message || 'Failed to load billing addresses',
     })
   }
 })
