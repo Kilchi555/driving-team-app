@@ -5,9 +5,29 @@
 import { createError } from 'h3'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+/** Absolute ceiling for enrichment payloads (abuse / DoS bound). */
+export const MAX_USER_IDS = 5000
+
+/**
+ * Chunk size for PostgREST `.in()` filters (URL / request size safety).
+ * customers.vue may post the full student list; tenants can exceed 500.
+ */
+export const IN_QUERY_CHUNK = 200
+
+/** Split an id list into fixed-size chunks for safe `.in()` queries. */
+export function chunkIds(ids: string[], size: number = IN_QUERY_CHUNK): string[][] {
+  if (size <= 0) return [ids]
+  const chunks: string[][] = []
+  for (let i = 0; i < ids.length; i += size) {
+    chunks.push(ids.slice(i, i + size))
+  }
+  return chunks
+}
+
 /**
  * Ensure every user id belongs to the caller's tenant.
  * Returns the verified ids (deduped). Throws 403 if any id is foreign/missing.
+ * Membership checks are chunked so large tenant lists do not break enrichment.
  */
 export async function assertUsersBelongToTenant(
   supabase: SupabaseClient,
@@ -18,21 +38,30 @@ export async function assertUsersBelongToTenant(
   if (unique.length === 0) {
     throw createError({ statusCode: 400, message: 'No valid user ids provided' })
   }
-  if (unique.length > 500) {
-    throw createError({ statusCode: 400, message: 'Too many user ids (max 500)' })
+  if (unique.length > MAX_USER_IDS) {
+    throw createError({
+      statusCode: 400,
+      message: `Too many user ids (max ${MAX_USER_IDS})`,
+    })
   }
 
-  const { data, error } = await supabase
-    .from('users')
-    .select('id')
-    .in('id', unique)
-    .eq('tenant_id', tenantId)
+  const allowed = new Set<string>()
+  for (const chunk of chunkIds(unique)) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .in('id', chunk)
+      .eq('tenant_id', tenantId)
 
-  if (error) {
-    throw createError({ statusCode: 500, message: 'Failed to verify user tenant membership' })
+    if (error) {
+      throw createError({ statusCode: 500, message: 'Failed to verify user tenant membership' })
+    }
+
+    for (const row of data || []) {
+      if (row?.id) allowed.add(row.id)
+    }
   }
 
-  const allowed = new Set((data || []).map((row: { id: string }) => row.id))
   if (allowed.size !== unique.length) {
     throw createError({ statusCode: 403, message: 'Forbidden – user not in tenant' })
   }

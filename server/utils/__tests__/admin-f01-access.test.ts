@@ -8,12 +8,16 @@ vi.mock('~/server/utils/auth', () => ({
 type QueryResult = { data: Array<{ id: string }> | null; error: null }
 
 function mockSupabaseReturning(rows: Array<{ id: string }>): SupabaseClient {
-  const result: QueryResult = { data: rows, error: null }
+  const byId = new Map(rows.map((row) => [row.id, row]))
   return {
     from: () => ({
       select: () => ({
-        in: () => ({
-          eq: async () => result,
+        in: (_column: string, ids: string[]) => ({
+          eq: async () => {
+            const data = ids.map((id) => byId.get(id)).filter(Boolean) as Array<{ id: string }>
+            const result: QueryResult = { data, error: null }
+            return result
+          },
         }),
       }),
     }),
@@ -40,6 +44,18 @@ describe('admin-f01-access', () => {
     })
   })
 
+  describe('chunkIds', () => {
+    it('splits lists into fixed-size chunks', async () => {
+      const { chunkIds } = await import('../admin-f01-access')
+      expect(chunkIds(['a', 'b', 'c', 'd', 'e'], 2)).toEqual([
+        ['a', 'b'],
+        ['c', 'd'],
+        ['e'],
+      ])
+      expect(chunkIds(['a'], 200)).toEqual([['a']])
+    })
+  })
+
   describe('assertUsersBelongToTenant', () => {
     it('throws 403 when any user is outside the tenant', async () => {
       const { assertUsersBelongToTenant } = await import('../admin-f01-access')
@@ -57,6 +73,24 @@ describe('admin-f01-access', () => {
           'tenant-a'
         )
       ).resolves.toEqual(['u1', 'u2'])
+    })
+
+    it('accepts more than 500 ids by chunking membership checks', async () => {
+      const { assertUsersBelongToTenant, IN_QUERY_CHUNK } = await import('../admin-f01-access')
+      const ids = Array.from({ length: 501 }, (_, i) => `u${i}`)
+      const rows = ids.map((id) => ({ id }))
+      await expect(
+        assertUsersBelongToTenant(mockSupabaseReturning(rows), ids, 'tenant-a')
+      ).resolves.toEqual(ids)
+      expect(ids.length).toBeGreaterThan(IN_QUERY_CHUNK)
+    })
+
+    it('rejects payloads above the absolute max', async () => {
+      const { assertUsersBelongToTenant, MAX_USER_IDS } = await import('../admin-f01-access')
+      const ids = Array.from({ length: MAX_USER_IDS + 1 }, (_, i) => `u${i}`)
+      await expect(
+        assertUsersBelongToTenant(mockSupabaseReturning([]), ids, 'tenant-a')
+      ).rejects.toMatchObject({ statusCode: 400 })
     })
   })
 })
