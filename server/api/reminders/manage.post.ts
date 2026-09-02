@@ -37,9 +37,16 @@ export default defineEventHandler(async (event) => {
 
       logger.debug('📋 Logging sent reminder')
 
+      // F-05b: always stamp caller's tenant so staff SELECT RLS can isolate rows
+      const tenantId = user.tenant_id || user.profile?.tenant_id || null
+      const actorUserId = user.db_user_id || user.profile?.id || null
+
       const { data, error } = await supabaseAdmin
         .from('reminder_logs')
         .insert({
+          tenant_id: tenantId,
+          user_id: body.userId || actorUserId,
+          appointment_id: body.appointmentId || null,
           channel: body.channel,
           recipient: body.recipient,
           subject: body.subject || null,
@@ -71,9 +78,15 @@ export default defineEventHandler(async (event) => {
 
       logger.debug('📋 Logging failed reminder')
 
+      const tenantId = user.tenant_id || user.profile?.tenant_id || null
+      const actorUserId = user.db_user_id || user.profile?.id || null
+
       const { data, error } = await supabaseAdmin
         .from('reminder_logs')
         .insert({
+          tenant_id: tenantId,
+          user_id: body.userId || actorUserId,
+          appointment_id: body.appointmentId || null,
           channel: body.channel,
           recipient: body.recipient,
           subject: body.subject || null,
