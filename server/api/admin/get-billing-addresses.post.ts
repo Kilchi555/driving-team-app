@@ -4,7 +4,11 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
-import { assertUsersBelongToTenant, normalizeIdList } from '~/server/utils/admin-f01-access'
+import {
+  assertUsersBelongToTenant,
+  chunkIds,
+  normalizeIdList,
+} from '~/server/utils/admin-f01-access'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event, [
@@ -27,19 +31,23 @@ export default defineEventHandler(async (event) => {
   )
 
   try {
-    const { data: companyBillingAddresses, error: billingAddressError } = await supabase
-      .from('company_billing_addresses')
-      .select('*')
-      .in('user_id', verifiedIds)
-      .eq('tenant_id', profile.tenant_id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+    const companyBillingAddresses: Record<string, unknown>[] = []
+    for (const chunk of chunkIds(verifiedIds)) {
+      const { data, error: billingAddressError } = await supabase
+        .from('company_billing_addresses')
+        .select('*')
+        .in('user_id', chunk)
+        .eq('tenant_id', profile.tenant_id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
 
-    if (billingAddressError) throw billingAddressError
+      if (billingAddressError) throw billingAddressError
+      if (data?.length) companyBillingAddresses.push(...data)
+    }
 
     return {
       success: true,
-      data: companyBillingAddresses || [],
+      data: companyBillingAddresses,
     }
   } catch (err: any) {
     if (err?.statusCode) throw err

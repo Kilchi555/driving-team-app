@@ -4,7 +4,11 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
-import { assertUsersBelongToTenant, normalizeIdList } from '~/server/utils/admin-f01-access'
+import {
+  assertUsersBelongToTenant,
+  chunkIds,
+  normalizeIdList,
+} from '~/server/utils/admin-f01-access'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event, [
@@ -25,16 +29,20 @@ export default defineEventHandler(async (event) => {
   )
 
   try {
-    const { data: allLessonInstructors, error: lessonError } = await supabase
-      .from('appointments')
-      .select('user_id, staff_id')
-      .in('user_id', verifiedIds)
-      .eq('tenant_id', profile.tenant_id)
-      .not('staff_id', 'is', null)
+    const allLessonInstructors: Array<{ user_id: string; staff_id: string }> = []
+    for (const chunk of chunkIds(verifiedIds)) {
+      const { data, error: lessonError } = await supabase
+        .from('appointments')
+        .select('user_id, staff_id')
+        .in('user_id', chunk)
+        .eq('tenant_id', profile.tenant_id)
+        .not('staff_id', 'is', null)
 
-    if (lessonError) throw lessonError
+      if (lessonError) throw lessonError
+      if (data?.length) allLessonInstructors.push(...data)
+    }
 
-    if (!allLessonInstructors || allLessonInstructors.length === 0) {
+    if (allLessonInstructors.length === 0) {
       return {
         success: true,
         data: {
@@ -45,22 +53,26 @@ export default defineEventHandler(async (event) => {
     }
 
     const uniqueInstructorIds = [
-      ...new Set(allLessonInstructors.map((l: { staff_id: string }) => l.staff_id)),
+      ...new Set(allLessonInstructors.map((l) => l.staff_id)),
     ]
 
-    const { data: instructors, error: instructorError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .in('id', uniqueInstructorIds)
-      .eq('tenant_id', profile.tenant_id)
+    const instructors: Array<{ id: string; first_name: string; last_name: string }> = []
+    for (const chunk of chunkIds(uniqueInstructorIds)) {
+      const { data, error: instructorError } = await supabase
+        .from('users')
+        .select('id, first_name, last_name')
+        .in('id', chunk)
+        .eq('tenant_id', profile.tenant_id)
 
-    if (instructorError) throw instructorError
+      if (instructorError) throw instructorError
+      if (data?.length) instructors.push(...data)
+    }
 
     return {
       success: true,
       data: {
         allLessonInstructors,
-        instructorData: instructors || [],
+        instructorData: instructors,
       },
     }
   } catch (err: any) {
