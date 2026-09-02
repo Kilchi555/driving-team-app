@@ -1,5 +1,7 @@
 # Wallee Payment Recovery System
 
+> **Replay / duplicate guards (Sep 2026):** See [`WALLEE_WEBHOOK_REPLAY.md`](./WALLEE_WEBHOOK_REPLAY.md) for short-circuit rules (`already_processed`, `future_timestamp`, stale-but-first-delivery still processes). This page covers logging and the pending-payment recovery cron.
+
 ## Problem
 Payments were stuck in `pending` status even though Wallee had processed them as `FULFILL` (completed). This happened because:
 
