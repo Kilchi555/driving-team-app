@@ -1,62 +1,77 @@
-import { defineEventHandler, readBody } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+// server/api/admin/remove-user-device.post.ts
+// Authenticated user may delete only their own devices.
+// Ownership is taken from the session (auth.users id), never from the client body.
+
+import { defineEventHandler, readBody, createError } from 'h3'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
   try {
+    const authUser = await getAuthenticatedUser(event)
+    if (!authUser?.id) {
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    }
+
     const body = await readBody(event)
-    const { deviceId, userId } = body
+    const deviceId = typeof body?.deviceId === 'string' ? body.deviceId.trim() : ''
 
-    if (!deviceId || !userId) {
-      return {
-        success: false,
-        error: 'Device ID and User ID are required'
-      }
+    if (!deviceId) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Device ID is required',
+      })
     }
 
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    // user_devices.user_id stores auth.users.id (see DeviceManager.vue load path)
+    const ownerAuthUserId = authUser.id as string
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Supabase URL or Service Role Key not configured.')
+    // If client sends userId, it must match the session — ignore foreign IDs
+    if (body?.userId && body.userId !== ownerAuthUserId && body.userId !== authUser.db_user_id) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden – cannot delete another user\'s device',
+      })
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const supabase = getSupabaseAdmin()
 
-    logger.debug('Removing device:', deviceId, 'for user:', userId)
+    logger.debug('Removing device:', deviceId, 'for auth user:', ownerAuthUserId)
 
-    // Delete device using service role (bypasses RLS)
     const { data, error } = await supabase
       .from('user_devices')
       .delete()
       .eq('id', deviceId)
-      .eq('user_id', userId) // Extra security check
+      .eq('user_id', ownerAuthUserId)
       .select()
 
     if (error) {
       console.error('Error removing device:', error)
-      return {
-        success: false,
-        error: error.message,
-        details: error
-      }
+      throw createError({
+        statusCode: 500,
+        statusMessage: error.message || 'Failed to remove device',
+      })
+    }
+
+    if (!data || data.length === 0) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Device not found',
+      })
     }
 
     return {
       success: true,
       message: 'Device removed successfully',
-      data: data
+      data,
     }
-
   } catch (error: any) {
+    if (error?.statusCode) throw error
     console.error('Error in remove-user-device API:', error)
-    return {
-      success: false,
-      error: error.message
-    }
+    throw createError({
+      statusCode: 500,
+      statusMessage: error?.message || 'Failed to remove device',
+    })
   }
 })
-
-
-
-
