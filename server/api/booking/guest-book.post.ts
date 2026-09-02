@@ -47,7 +47,13 @@ import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockC
 import { evaluateClientEmailClaim, pendingContactMismatch } from '~/server/utils/auth-email-claim'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 import { pickAvailableRoomId, resolveRoomSettings, type RoomServiceType } from '~/server/utils/room-availability'
-import { guestBookingPriceRuleType, invalidDrivingLessonBasePriceReason } from '~/server/utils/guest-booking-price-rule'
+import {
+  guestBookingPriceRuleType,
+  guestSlotCategoryMismatchReason,
+  invalidDrivingLessonBasePriceReason,
+  invalidPersistedLessonPricingReason,
+  normalizeGuestSlotServiceType,
+} from '~/server/utils/guest-booking-price-rule'
 
 interface GuestBookRequest {
   // Booking identifiers
@@ -209,6 +215,27 @@ export default defineEventHandler(async (event) => {
       statusCode: 409,
       statusMessage: 'Die Reservierung ist abgelaufen. Bitte wähle erneut einen Zeitslot.',
       data: { code: 'RESERVATION_EXPIRED' },
+    })
+  }
+
+  // Bind price/category to the reserved slot — clients must not swap to a
+  // cheaper category_code while holding a different availability slot.
+  const categoryMismatch = guestSlotCategoryMismatchReason({
+    slotCategoryCode: slot.category_code,
+    bodyCategoryCode: body.category_code,
+  })
+  if (categoryMismatch) {
+    logger.warn('❌ Guest booking rejected: category does not match reserved slot', {
+      reason: categoryMismatch,
+      slot_category_code: slot.category_code,
+      body_category_code: body.category_code,
+      slot_id: body.slot_id,
+      tenant_id: tenantId,
+    })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Die gewählte Kategorie passt nicht zum reservierten Zeitslot.',
+      data: { code: 'CATEGORY_SLOT_MISMATCH' },
     })
   }
 
@@ -381,10 +408,26 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Guest user created:', newUserId)
   }
 
-  // Match online booking UI (/api/booking/get-pricing): price by service type,
-  // never "newest active rule for category" (that could pick consultation/admin_fee
-  // at CHF 0 and silently undercharge a real lesson).
-  const roomServiceType: RoomServiceType = body.service_type ?? 'fahrstunde'
+  // Slot-based guest checkout only books Fahrstunden. Theorie/Beratung use the
+  // proposal flow in the UI — accepting them here lets attackers load CHF-0
+  // consultation/theory rules while still creating a lesson on a reserved slot.
+  const serviceTypeNorm = normalizeGuestSlotServiceType(body.service_type)
+  if (!serviceTypeNorm.ok) {
+    logger.warn('❌ Guest booking rejected: spoofed non-lesson service_type on slot booking', {
+      reason: serviceTypeNorm.reason,
+      service_type: body.service_type,
+      slot_id: body.slot_id,
+      category_code: body.category_code,
+      tenant_id: tenantId,
+    })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Theorie- und Beratungsanfragen können nicht über den Zeitslot-Checkout gebucht werden.',
+      data: { code: 'INVALID_SERVICE_TYPE' },
+    })
+  }
+  const roomServiceType: RoomServiceType = serviceTypeNorm.serviceType
+  // Always base_price for slot guest bookings (matches get-pricing for fahrstunde).
   const lessonRuleType = guestBookingPriceRuleType(roomServiceType)
 
   // ── Parallel: pricing + marketing attribution + location/vehicle settings ─
@@ -619,11 +662,29 @@ export default defineEventHandler(async (event) => {
   // ── Create appointment ────────────────────────────────────────────────────
   // FS: type = category (B), event_type_code = lesson/theory
   // Event-type tenants: slot.category_code is the event type code
+  // Slot guest bookings are always Fahrstunden → lesson (unless event_price path).
   const resolvedEventTypeCode = eventPricingResult.data
     ? body.category_code
-    : roomServiceType === 'theorie'
-      ? 'theory'
-      : 'lesson'
+    : 'lesson'
+
+  const lessonPriceMismatch = invalidPersistedLessonPricingReason({
+    persistedEventTypeCode: resolvedEventTypeCode,
+    ruleTypeUsed: lessonRuleType,
+  })
+  if (lessonPriceMismatch) {
+    logger.error('❌ Guest booking aborted: pricing rule does not match persisted lesson type', {
+      reason: lessonPriceMismatch,
+      resolvedEventTypeCode,
+      lessonRuleType,
+      category_code: body.category_code,
+      tenant_id: tenantId,
+    })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Der Preis für diese Fahrstunde konnte nicht ermittelt werden.',
+      data: { code: 'SERVICE_TYPE_PRICE_MISMATCH' },
+    })
+  }
 
   const { data: newAppointment, error: apptErr } = await supabase
     .from('appointments')
