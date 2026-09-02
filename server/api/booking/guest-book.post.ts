@@ -876,6 +876,10 @@ export default defineEventHandler(async (event) => {
       metadata: {
         source: 'guest_booking',
         admin_fee_reason: adminFeeResult.reason,
+        ...(freePublicEvent ? { free_public_event: true, allow_zero_completion: true } : {}),
+        ...(validatedDiscountAmount > 0 && netAmountRappen <= 0
+          ? { allow_zero_completion: true }
+          : {}),
         ...(holdUntilPaid ? { pay_before_confirm: true } : {}),
         ...(resolvedDiscount.code ? { discount_code: resolvedDiscount.code } : {}),
         ...(body.vehicle_mode ? { vehicle_mode: body.vehicle_mode, vehicle_cost_rappen: calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes) } : {}),

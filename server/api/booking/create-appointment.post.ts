@@ -898,6 +898,10 @@ export default defineEventHandler(async (event: H3Event) => {
       metadata: {
         category: body.category_code || null,
         admin_fee_reason: adminFeeResult.reason,
+        ...(freePublicEvent ? { free_public_event: true, allow_zero_completion: true } : {}),
+        ...(validatedDiscountAmount > 0 && netAmountRappen <= 0
+          ? { allow_zero_completion: true }
+          : {}),
         ...(mayHoldUntilPaid ? { pay_before_confirm: true } : {}),
         ...(effectiveDiscountCode ? { discount_code: effectiveDiscountCode, discount_auto_applied: !body.discount_code } : {}),
         ...(travelFeeRappen > 0 ? { travel_fee: { km: travelFee.km, billable_km: travelFee.billable_km, fee_rappen: travelFeeRappen, capped: travelFee.capped, label: travelFee.label } } : {}),
