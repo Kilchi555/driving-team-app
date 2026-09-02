@@ -33,15 +33,26 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: 'Slot not found' })
     }
 
-    // Fetch base_price + admin_fee rules + vehicle settings in parallel
+    // Fetch base_price (FS) or event_price (per_event_type) + admin_fee + vehicle settings
     const effectiveLocationId = location_id || slot.location_id
-    const [basePriceRuleRes, adminFeeRuleRes, locationRes, categoryRes] = await Promise.all([
+    const [basePriceRuleRes, eventPriceRuleRes, adminFeeRuleRes, locationRes, categoryRes] = await Promise.all([
       supabase
         .from('pricing_rules')
         .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
         .eq('category_code', category_code)
         .eq('tenant_id', tenant_id)
         .eq('rule_type', 'base_price')
+        .lte('valid_from', new Date().toISOString())
+        .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
+        .maybeSingle(),
+      // per_event_type tenants: category_code is an event_types.code
+      supabase
+        .from('pricing_rules')
+        .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
+        .eq('event_type_code', category_code)
+        .eq('tenant_id', tenant_id)
+        .eq('rule_type', 'event_price')
+        .eq('is_active', true)
         .lte('valid_from', new Date().toISOString())
         .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
         .maybeSingle(),
@@ -67,8 +78,9 @@ export default defineEventHandler(async (event) => {
         .maybeSingle(),
     ])
 
-    const pricingRule = basePriceRuleRes.data
-    const adminFeeRule = adminFeeRuleRes.data
+    const usingBasePrice = !!basePriceRuleRes.data
+    const pricingRule = basePriceRuleRes.data || eventPriceRuleRes.data
+    const adminFeeRule = usingBasePrice ? adminFeeRuleRes.data : null
     const vehicleSettings = resolveVehicleSettings(
       locationRes.data?.category_vehicle_settings,
       categoryRes.data?.vehicle_settings,
@@ -118,15 +130,22 @@ export default defineEventHandler(async (event) => {
         ? 'discount'
         : null
 
-    // ── Admin fee (only when user_id known and rule exists) ────────────────
-    const adminFeeResult = await calculateAdminFee({
-      supabase,
-      userId: user_id || null,
-      tenantId: tenant_id,
-      categoryCode: category_code,
-      adminFeeRappenFromRule: adminFeeRule?.admin_fee_rappen,
-      adminFeeAppliesFromRule: adminFeeRule?.admin_fee_applies_from,
-    })
+    // ── Admin fee (FS categories only; event_price bookings skip it) ────────
+    const adminFeeResult = usingBasePrice
+      ? await calculateAdminFee({
+          supabase,
+          userId: user_id || null,
+          tenantId: tenant_id,
+          categoryCode: category_code,
+          adminFeeRappenFromRule: adminFeeRule?.admin_fee_rappen,
+          adminFeeAppliesFromRule: adminFeeRule?.admin_fee_applies_from,
+        })
+      : {
+          adminFeeRappen: 0,
+          applies: false,
+          reason: 'no_rule' as const,
+          appointmentNumber: 0,
+        }
 
     const lessonPlusVehicle = Math.max(0, lessonPrice + rawVehicleCost)
     const totalRappen = lessonPlusVehicle + adminFeeResult.adminFeeRappen

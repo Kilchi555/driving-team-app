@@ -430,8 +430,8 @@ export default defineEventHandler(async (event) => {
   // Always base_price for slot guest bookings (matches get-pricing for fahrstunde).
   const lessonRuleType = guestBookingPriceRuleType(roomServiceType)
 
-  // ── Parallel: pricing + marketing attribution + location/vehicle settings ─
-  const [pricingResult, eventPricingResult, adminFeeRuleResult, marketingAttr, locationResult, categorySettingsRes] = await Promise.all([
+  // ── Parallel: pricing + event type + marketing + location/vehicle settings ─
+  const [pricingResult, eventPricingResult, adminFeeRuleResult, eventTypeResult, marketingAttr, locationResult, categorySettingsRes] = await Promise.all([
     supabase
       .from('pricing_rules')
       .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier')
@@ -466,6 +466,16 @@ export default defineEventHandler(async (event) => {
       .limit(1)
       .maybeSingle(),
 
+    // per_event_type tenants (and free Erstgespräch): body.category_code is an
+    // event_types.code — needed for require_payment=false free public events.
+    supabase
+      .from('event_types')
+      .select('code, require_payment, public_bookable')
+      .eq('tenant_id', tenantId)
+      .eq('code', body.category_code)
+      .eq('is_active', true)
+      .maybeSingle(),
+
     resolveMarketingAttribution(supabase, body.marketing_session_id, body.marketing_attribution),
 
     supabase
@@ -484,6 +494,10 @@ export default defineEventHandler(async (event) => {
 
   const pricingRule = pricingResult.data || eventPricingResult.data
   const location = locationResult.data
+  const freePublicEvent =
+    !!eventTypeResult.data &&
+    eventTypeResult.data.require_payment === false &&
+    eventTypeResult.data.public_bookable !== false
   const vehicleSettings = resolveVehicleSettings(
     locationResult.data?.category_vehicle_settings,
     categorySettingsRes.data?.vehicle_settings,
@@ -554,10 +568,12 @@ export default defineEventHandler(async (event) => {
 
   // Prefer category base_price; fall back to per-event-type event_price
   // (same as authenticated create-appointment). Never silently book at CHF 0
-  // because no rule existed at all.
+  // because no rule existed — except intentional free public events
+  // (require_payment=false, e.g. Erstgespräch / discovery) which have no
+  // event_price row by design (register uses free_event toggle only).
   const usingBasePriceRule = !!pricingResult.data
   const usingEventPriceRule = !usingBasePriceRule && !!eventPricingResult.data
-  if (!usingBasePriceRule && !usingEventPriceRule) {
+  if (!usingBasePriceRule && !usingEventPriceRule && !freePublicEvent) {
     logger.error('❌ Guest booking aborted: no pricing rule for category/event', {
       category_code: body.category_code,
       lessonRuleType,
@@ -565,15 +581,17 @@ export default defineEventHandler(async (event) => {
     })
     throw createError({
       statusCode: 503,
-      statusMessage: 'Der Preis für diese Fahrstunde konnte nicht ermittelt werden. Bitte versuche es erneut oder kontaktiere uns direkt.',
+      statusMessage: 'Der Preis für diese Buchung konnte nicht ermittelt werden. Bitte versuche es erneut oder kontaktiere uns direkt.',
     })
   }
 
   // Fahrstunden may still net to CHF 0 via Rabatt/Gutschein/Guthaben later.
   // Abort only when the base_price rule itself is missing or CHF 0 — not when
-  // a valid event_price row is what priced this booking (per_event_type tenants).
+  // a valid event_price row is what priced this booking (per_event_type tenants),
+  // and not for intentional free public events.
   const basePriceProblem = invalidDrivingLessonBasePriceReason({
     ruleType: usingBasePriceRule ? 'base_price' : 'event_price',
+    allowFreePublicEvent: freePublicEvent,
     hasPricingRule: usingBasePriceRule,
     pricePerMinuteRappen: pricingResult.data?.price_per_minute_rappen,
   })
@@ -585,6 +603,7 @@ export default defineEventHandler(async (event) => {
       tenant_id: tenantId,
       hasPricingRule: usingBasePriceRule,
       usingEventPriceRule,
+      freePublicEvent,
       price_per_minute_rappen: pricingResult.data?.price_per_minute_rappen ?? null,
     })
     throw createError({
@@ -594,8 +613,8 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Calculate admin fee ───────────────────────────────────────────────────
-  // Only driving lessons use the admin_fee rule. Theory/consultation bookings
-  // skip it (same as staff create-appointment / get-pricing).
+  // Admin fee is a driving-school category concept — skip for event_price /
+  // free public event bookings (no category admin_fee rows exist there).
   const adminFeeRuleRappen = Number(adminFeeRuleResult.data?.admin_fee_rappen || 0)
   const adminFeeAppliesFromRule = adminFeeRuleResult.data?.admin_fee_applies_from != null
     ? Number(adminFeeRuleResult.data.admin_fee_applies_from)
@@ -605,10 +624,10 @@ export default defineEventHandler(async (event) => {
     userId: newUserId,
     tenantId,
     categoryCode: body.category_code,
-    adminFeeRappenFromRule: lessonRuleType === 'base_price' ? adminFeeRuleRappen : 0,
-    adminFeeAppliesFromRule: lessonRuleType === 'base_price' ? adminFeeAppliesFromRule : null,
+    adminFeeRappenFromRule: usingBasePriceRule ? adminFeeRuleRappen : 0,
+    adminFeeAppliesFromRule: usingBasePriceRule ? adminFeeAppliesFromRule : null,
   })
-  const adminFeeRappen = lessonRuleType === 'base_price' ? adminFeeResult.adminFeeRappen : 0
+  const adminFeeRappen = usingBasePriceRule ? adminFeeResult.adminFeeRappen : 0
   const travelFee = await quoteTravelFee(tenantId, {
     locationId: slot.location_id,
     locationType: body.customer_pickup_plz || body.customer_pickup_address ? 'pickup' : null,
@@ -679,22 +698,30 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Create appointment ────────────────────────────────────────────────────
-  // FS: type = category (B), event_type_code = lesson/theory
-  // Event-type tenants: slot.category_code is the event type code
-  // Slot guest bookings are always Fahrstunden → lesson (unless event_price path).
-  const resolvedEventTypeCode = eventPricingResult.data
-    ? body.category_code
-    : 'lesson'
+  // FS: type = category (B), event_type_code = lesson
+  // Event-type tenants: body.category_code / slot.category_code is the event type
+  // Free public events (discovery/intake) also persist their event_types.code —
+  // never fall back to 'lesson' just because they have no event_price row.
+  const resolvedEventTypeCode =
+    eventTypeResult.data?.code
+    || (usingEventPriceRule ? body.category_code : null)
+    || 'lesson'
+
+  const ruleTypeUsedForGuard = usingBasePriceRule
+    ? 'base_price'
+    : usingEventPriceRule
+      ? 'event_price'
+      : (freePublicEvent ? 'event_price' : lessonRuleType)
 
   const lessonPriceMismatch = invalidPersistedLessonPricingReason({
     persistedEventTypeCode: resolvedEventTypeCode,
-    ruleTypeUsed: lessonRuleType,
+    ruleTypeUsed: ruleTypeUsedForGuard,
   })
   if (lessonPriceMismatch) {
     logger.error('❌ Guest booking aborted: pricing rule does not match persisted lesson type', {
       reason: lessonPriceMismatch,
       resolvedEventTypeCode,
-      lessonRuleType,
+      ruleTypeUsedForGuard,
       category_code: body.category_code,
       tenant_id: tenantId,
     })
