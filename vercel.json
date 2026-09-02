@@ -102,6 +102,10 @@
       "schedule": "0 6 * * 1"
     },
     {
+      "path": "/api/cron/detect-suspicious-zero-payments",
+      "schedule": "30 6 * * *"
+    },
+    {
       "path": "/api/cron/auto-invoice-scheduled",
       "schedule": "20 6 * * *"
     },
