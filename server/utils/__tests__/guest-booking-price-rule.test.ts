@@ -153,4 +153,12 @@ describe('invalidDrivingLessonBasePriceReason', () => {
       pricePerMinuteRappen: 211.1111,
     })).toBeNull()
   })
+
+  it('skips when priced via event_price (per_event_type tenants have no base_price row)', () => {
+    expect(invalidDrivingLessonBasePriceReason({
+      ruleType: 'event_price',
+      hasPricingRule: false,
+      pricePerMinuteRappen: null,
+    })).toBeNull()
+  })
 })
