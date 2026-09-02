@@ -56,6 +56,25 @@ describe('admin-f01-access', () => {
     })
   })
 
+  describe('fetchAllPages', () => {
+    it('pages until a short page is returned', async () => {
+      const { fetchAllPages, POSTGREST_PAGE_SIZE } = await import('../admin-f01-access')
+      const calls: Array<[number, number]> = []
+      const full = Array.from({ length: POSTGREST_PAGE_SIZE }, (_, i) => ({ id: i }))
+      const partial = [{ id: POSTGREST_PAGE_SIZE }]
+      const rows = await fetchAllPages<{ id: number }>(async (from, to) => {
+        calls.push([from, to])
+        if (from === 0) return { data: full, error: null }
+        return { data: partial, error: null }
+      })
+      expect(rows).toHaveLength(POSTGREST_PAGE_SIZE + 1)
+      expect(calls).toEqual([
+        [0, POSTGREST_PAGE_SIZE - 1],
+        [POSTGREST_PAGE_SIZE, POSTGREST_PAGE_SIZE * 2 - 1],
+      ])
+    })
+  })
+
   describe('assertUsersBelongToTenant', () => {
     it('throws 403 when any user is outside the tenant', async () => {
       const { assertUsersBelongToTenant } = await import('../admin-f01-access')

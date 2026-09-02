@@ -14,6 +14,9 @@ export const MAX_USER_IDS = 5000
  */
 export const IN_QUERY_CHUNK = 200
 
+/** PostgREST default max rows per response — must page or results truncate silently. */
+export const POSTGREST_PAGE_SIZE = 1000
+
 /** Split an id list into fixed-size chunks for safe `.in()` queries. */
 export function chunkIds(ids: string[], size: number = IN_QUERY_CHUNK): string[][] {
   if (size <= 0) return [ids]
@@ -22,6 +25,34 @@ export function chunkIds(ids: string[], size: number = IN_QUERY_CHUNK): string[]
     chunks.push(ids.slice(i, i + size))
   }
   return chunks
+}
+
+type PageResult<T> = { data: T[] | null; error: { message?: string } | null }
+
+/**
+ * Exhaust a PostgREST query that may exceed the default 1000-row cap.
+ * `fetchPage(from, to)` must apply `.range(from, to)` (inclusive).
+ */
+export async function fetchAllPages<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<PageResult<T>>
+): Promise<T[]> {
+  const out: T[] = []
+  let from = 0
+  for (;;) {
+    const to = from + POSTGREST_PAGE_SIZE - 1
+    const { data, error } = await fetchPage(from, to)
+    if (error) {
+      throw createError({
+        statusCode: 500,
+        message: error.message || 'Failed to fetch paged query',
+      })
+    }
+    if (!data?.length) break
+    out.push(...data)
+    if (data.length < POSTGREST_PAGE_SIZE) break
+    from += POSTGREST_PAGE_SIZE
+  }
+  return out
 }
 
 /**

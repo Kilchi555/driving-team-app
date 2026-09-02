@@ -7,6 +7,7 @@ import { requireAdminProfile } from '~/server/utils/auth'
 import {
   assertUsersBelongToTenant,
   chunkIds,
+  fetchAllPages,
   normalizeIdList,
 } from '~/server/utils/admin-f01-access'
 
@@ -31,15 +32,18 @@ export default defineEventHandler(async (event) => {
   try {
     const allLessonInstructors: Array<{ user_id: string; staff_id: string }> = []
     for (const chunk of chunkIds(verifiedIds)) {
-      const { data, error: lessonError } = await supabase
-        .from('appointments')
-        .select('user_id, staff_id')
-        .in('user_id', chunk)
-        .eq('tenant_id', profile.tenant_id)
-        .not('staff_id', 'is', null)
-
-      if (lessonError) throw lessonError
-      if (data?.length) allLessonInstructors.push(...data)
+      // Page past PostgREST's silent 1000-row cap per id-chunk
+      const rows = await fetchAllPages<{ user_id: string; staff_id: string }>(
+        (from, to) =>
+          supabase
+            .from('appointments')
+            .select('user_id, staff_id')
+            .in('user_id', chunk)
+            .eq('tenant_id', profile.tenant_id)
+            .not('staff_id', 'is', null)
+            .range(from, to)
+      )
+      if (rows.length) allLessonInstructors.push(...rows)
     }
 
     if (allLessonInstructors.length === 0) {
@@ -58,14 +62,19 @@ export default defineEventHandler(async (event) => {
 
     const instructors: Array<{ id: string; first_name: string; last_name: string }> = []
     for (const chunk of chunkIds(uniqueInstructorIds)) {
-      const { data, error: instructorError } = await supabase
-        .from('users')
-        .select('id, first_name, last_name')
-        .in('id', chunk)
-        .eq('tenant_id', profile.tenant_id)
-
-      if (instructorError) throw instructorError
-      if (data?.length) instructors.push(...data)
+      const rows = await fetchAllPages<{
+        id: string
+        first_name: string
+        last_name: string
+      }>((from, to) =>
+        supabase
+          .from('users')
+          .select('id, first_name, last_name')
+          .in('id', chunk)
+          .eq('tenant_id', profile.tenant_id)
+          .range(from, to)
+      )
+      if (rows.length) instructors.push(...rows)
     }
 
     return {
