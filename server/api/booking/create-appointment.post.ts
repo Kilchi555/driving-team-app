@@ -51,7 +51,7 @@ import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
 import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
 import { createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
-import { invalidDrivingLessonBasePriceReason } from '~/server/utils/guest-booking-price-rule'
+import { guestSlotCategoryMismatchReason, invalidDrivingLessonBasePriceReason } from '~/server/utils/guest-booking-price-rule'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -211,6 +211,24 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({
         statusCode: 409,
         statusMessage: 'Slot not found. Please select a different slot.'
+      })
+    }
+
+    const categoryMismatch = guestSlotCategoryMismatchReason({
+      slotCategoryCode: slot.category_code,
+      bodyCategoryCode: body.category_code,
+    })
+    if (categoryMismatch) {
+      logger.warn('❌ Category does not match reserved slot:', {
+        reason: categoryMismatch,
+        slot_category_code: slot.category_code,
+        body_category_code: body.category_code,
+        slot_id: body.slot_id,
+      })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Die gewählte Kategorie passt nicht zum reservierten Zeitslot.',
+        data: { code: 'CATEGORY_SLOT_MISMATCH' },
       })
     }
 
