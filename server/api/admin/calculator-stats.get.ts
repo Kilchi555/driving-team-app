@@ -2,7 +2,7 @@
 // Platform marketing calculator aggregates — super_admin only.
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { requireSuperAdmin } from '~/server/utils/admin-f01-access'
+import { requireSuperAdmin } from '~/server/utils/require-super-admin'
 
 export default defineEventHandler(async (event) => {
   await requireSuperAdmin(event)

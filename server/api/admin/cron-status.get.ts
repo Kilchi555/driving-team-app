@@ -3,7 +3,7 @@
 // Service role is used AFTER authentication — never publicly.
 
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { requireSuperAdmin } from '~/server/utils/admin-f01-access'
+import { requireSuperAdmin } from '~/server/utils/require-super-admin'
 
 export default defineEventHandler(async (event) => {
   await requireSuperAdmin(event)
