@@ -47,7 +47,7 @@ import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockC
 import { evaluateClientEmailClaim, pendingContactMismatch } from '~/server/utils/auth-email-claim'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 import { pickAvailableRoomId, resolveRoomSettings, type RoomServiceType } from '~/server/utils/room-availability'
-import { guestBookingPriceRuleType } from '~/server/utils/guest-booking-price-rule'
+import { guestBookingPriceRuleType, invalidDrivingLessonBasePriceReason } from '~/server/utils/guest-booking-price-rule'
 
 interface GuestBookRequest {
   // Booking identifiers
@@ -507,6 +507,28 @@ export default defineEventHandler(async (event) => {
       const vehicleCost = calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes)
       totalAmountRappen = Math.max(0, totalAmountRappen + vehicleCost)
     }
+  }
+
+  // Fahrstunden may still net to CHF 0 via Rabatt/Gutschein/Guthaben later.
+  // Abort only when the base pricing rule itself is missing or CHF 0.
+  const basePriceProblem = invalidDrivingLessonBasePriceReason({
+    ruleType: lessonRuleType,
+    hasPricingRule: !!pricingResult.data,
+    pricePerMinuteRappen: pricingResult.data?.price_per_minute_rappen,
+  })
+  if (basePriceProblem) {
+    logger.error('❌ Guest booking aborted: invalid driving-lesson base price', {
+      reason: basePriceProblem,
+      category_code: body.category_code,
+      lessonRuleType,
+      tenant_id: tenantId,
+      hasPricingRule: !!pricingResult.data,
+      price_per_minute_rappen: pricingResult.data?.price_per_minute_rappen ?? null,
+    })
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Der Preis für diese Fahrstunde konnte nicht ermittelt werden. Bitte versuche es erneut oder kontaktiere uns direkt.',
+    })
   }
 
   // ── Calculate admin fee ───────────────────────────────────────────────────
