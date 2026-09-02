@@ -264,7 +264,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
           credit_to_deduct: creditToDeduct,
         })
         await logFallbackUsed({
-          source: 'suspicious-zero-payment',
+          source: 'suspicious-zero-payment-block',
           level: 'error',
           message: `Payment process blocked: ${zeroReason}`,
           tenantId,
