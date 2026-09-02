@@ -110,6 +110,21 @@ describe('invalidPersistedLessonPricingReason (adversarial)', () => {
       ruleTypeUsed: 'theory',
     })).toBeNull()
   })
+
+  it('does not apply to per_event_type codes (session/discovery/workshop)', () => {
+    expect(invalidPersistedLessonPricingReason({
+      persistedEventTypeCode: 'discovery',
+      ruleTypeUsed: 'event_price',
+    })).toBeNull()
+    expect(invalidPersistedLessonPricingReason({
+      persistedEventTypeCode: 'session',
+      ruleTypeUsed: 'event_price',
+    })).toBeNull()
+    expect(invalidPersistedLessonPricingReason({
+      persistedEventTypeCode: 'workshop',
+      ruleTypeUsed: 'event_price',
+    })).toBeNull()
+  })
 })
 
 describe('invalidDrivingLessonBasePriceReason', () => {
@@ -159,6 +174,14 @@ describe('invalidDrivingLessonBasePriceReason', () => {
       ruleType: 'event_price',
       hasPricingRule: false,
       pricePerMinuteRappen: null,
+    })).toBeNull()
+  })
+
+  it('allows intentional free public events even without a base_price row', () => {
+    expect(invalidDrivingLessonBasePriceReason({
+      ruleType: 'base_price',
+      hasPricingRule: false,
+      allowFreePublicEvent: true,
     })).toBeNull()
   })
 })
