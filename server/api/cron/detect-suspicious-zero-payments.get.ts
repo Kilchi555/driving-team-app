@@ -2,13 +2,15 @@
  * GET /api/cron/detect-suspicious-zero-payments
  *
  * Daily detector for the guest-booking CHF-0 pricing amp:
- * online practical lessons (or unknown type) with lesson_price=0 + total=0,
- * not cancelled, and without a documented free benefit (discount / voucher /
- * free metadata / payment_method=free).
+ * online practical lessons with lesson_price=0 + total=0, not cancelled,
+ * without a documented free benefit (discount / voucher / free metadata /
+ * payment_method=free).
  *
- * Only **new** payment IDs (not already logged under
- * `fallback:suspicious-zero-payment`) get error_logs + email — so a 48h
- * lookback with a daily schedule does not spam the same cases.
+ * Dedupes only against prior **cron digest** alerts
+ * (`data.alert_channel = cron_digest`), not against process-time blocks
+ * (`fallback:suspicious-zero-payment-block`). Email is attempted first;
+ * the digest marker is written only after a successful send so a failed
+ * mail can retry on the next run.
  *
  * Schedule: daily 06:30 UTC (vercel.json).
  */
@@ -20,6 +22,7 @@ import { logFallbackUsed } from '~/server/utils/log-fallback'
 
 const LOOKBACK_HOURS = 48
 const LOG_COMPONENT = 'fallback:suspicious-zero-payment'
+const ALERT_CHANNEL = 'cron_digest'
 const DASHBOARD_HINT = 'https://app.simy.ch/tenant-admin/errors'
 
 function isDocumentedFree(payment: {
@@ -92,8 +95,6 @@ export default defineEventHandler(async (event) => {
       eventCode === 'practical' ||
       eventCode === 'fahrstunde'
     if (isPractical) return true
-    // Non-lesson event types (discovery/intake/…) may legitimately be CHF 0.
-    // Still flag the classic amp: completed as "credit" with zero credit used.
     return (
       p.payment_status === 'completed' &&
       p.payment_method === 'credit' &&
@@ -105,22 +106,24 @@ export default defineEventHandler(async (event) => {
     return { success: true, found: 0, new: 0, message: 'No suspicious zero payments' }
   }
 
-  // Dedupe: skip payment IDs we already alerted on (any time).
+  // Dedupe only prior successful cron digests — not process-time block logs.
   const candidateIds = suspicious.map((p: any) => p.id as string)
+  let alreadyAlerted = new Set<string>()
   const { data: priorLogs, error: priorErr } = await supabase
     .from('error_logs')
     .select('data')
     .eq('component', LOG_COMPONENT)
     .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+    .filter('data->>payment_id', 'in', `(${candidateIds.join(',')})`)
+    .filter('data->>alert_channel', 'eq', ALERT_CHANNEL)
 
   if (priorErr) {
-    logger.warn('⚠️ Could not load prior zero-payment alerts, proceeding without dedupe:', priorErr.message)
-  }
-
-  const alreadyAlerted = new Set<string>()
-  for (const row of priorLogs || []) {
-    const pid = row?.data && typeof row.data === 'object' ? (row.data as any).payment_id : null
-    if (typeof pid === 'string' && candidateIds.includes(pid)) alreadyAlerted.add(pid)
+    logger.warn('⚠️ Could not load prior zero-payment digests, proceeding without dedupe:', priorErr.message)
+  } else {
+    for (const row of priorLogs || []) {
+      const pid = row?.data && typeof row.data === 'object' ? (row.data as any).payment_id : null
+      if (typeof pid === 'string') alreadyAlerted.add(pid)
+    }
   }
 
   const fresh = suspicious.filter((p: any) => !alreadyAlerted.has(p.id))
@@ -130,29 +133,8 @@ export default defineEventHandler(async (event) => {
       found: suspicious.length,
       new: 0,
       skipped_already_alerted: alreadyAlerted.size,
-      message: 'All matching payments were already alerted',
+      message: 'All matching payments were already digest-alerted',
     }
-  }
-
-  for (const p of fresh) {
-    const apt = Array.isArray(p.appointments) ? p.appointments[0] : p.appointments
-    await logFallbackUsed({
-      source: 'suspicious-zero-payment',
-      level: 'error',
-      message: `Suspicious online CHF-0 payment ${p.id} (status=${p.payment_status}, method=${p.payment_method})`,
-      tenantId: p.tenant_id,
-      userId: p.user_id,
-      details: {
-        payment_id: p.id,
-        appointment_id: apt?.id || null,
-        event_type_code: apt?.event_type_code || null,
-        type: apt?.type || null,
-        start_time: apt?.start_time || null,
-        payment_status: p.payment_status,
-        payment_method: p.payment_method,
-        created_at: p.created_at,
-      },
-    })
   }
 
   const { data: superAdmins } = await supabase
@@ -163,6 +145,8 @@ export default defineEventHandler(async (event) => {
 
   const recipients = (superAdmins || []).map(u => u.email).filter(Boolean) as string[]
   let emailed = 0
+  let emailOk = false
+
   if (recipients.length > 0) {
     const lines = fresh.slice(0, 30).map((p: any) => {
       const apt = Array.isArray(p.appointments) ? p.appointments[0] : p.appointments
@@ -188,17 +172,45 @@ export default defineEventHandler(async (event) => {
         `,
       })
       emailed = recipients.length
+      emailOk = true
     } catch (err: any) {
       logger.warn('⚠️ Could not email super_admins about zero payments:', err?.message)
     }
+  } else {
+    logger.warn('⚠️ No super_admin recipients for zero-payment digest')
   }
 
-  logger.error(`🚨 detect-suspicious-zero-payments: new=${fresh.length} matched=${suspicious.length}`)
+  // Always land in Error Monitoring. Mark alert_channel=cron_digest only when
+  // the email actually went out — otherwise the next run can retry the digest.
+  for (const p of fresh) {
+    const apt = Array.isArray(p.appointments) ? p.appointments[0] : p.appointments
+    await logFallbackUsed({
+      source: 'suspicious-zero-payment',
+      level: 'error',
+      message: `Suspicious online CHF-0 payment ${p.id} (status=${p.payment_status}, method=${p.payment_method})`,
+      tenantId: p.tenant_id,
+      userId: p.user_id,
+      details: {
+        payment_id: p.id,
+        appointment_id: apt?.id || null,
+        event_type_code: apt?.event_type_code || null,
+        type: apt?.type || null,
+        start_time: apt?.start_time || null,
+        payment_status: p.payment_status,
+        payment_method: p.payment_method,
+        created_at: p.created_at,
+        ...(emailOk ? { alert_channel: ALERT_CHANNEL } : { alert_channel: 'cron_pending' }),
+      },
+    })
+  }
+
+  logger.error(`🚨 detect-suspicious-zero-payments: new=${fresh.length} matched=${suspicious.length} emailed=${emailOk}`)
   return {
     success: true,
     found: suspicious.length,
     new: fresh.length,
     skipped_already_alerted: alreadyAlerted.size,
     emailed,
+    email_ok: emailOk,
   }
 })
