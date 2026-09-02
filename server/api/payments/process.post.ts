@@ -20,6 +20,8 @@ import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { buildMerchantReference } from '~/utils/merchantReference'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { suspiciousZeroPaymentCompletionReason } from '~/server/utils/zero-payment-completion'
+import { logFallbackUsed } from '~/server/utils/log-fallback'
 
 interface PaymentProcessRequest {
   // CHANGED: Now takes existing paymentId instead of creating new payment
@@ -125,7 +127,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
         .maybeSingle(),
       supabaseAdmin
         .from('payments')
-        .select('id, user_id, tenant_id, total_amount_rappen, credit_used_rappen, payment_method, payment_status, description, metadata, wallee_transaction_id, appointments(id, start_time, duration_minutes, staff:users!staff_id(first_name, last_name))')
+        .select('id, user_id, tenant_id, total_amount_rappen, lesson_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen, payment_method, payment_status, description, metadata, wallee_transaction_id, appointments(id, start_time, duration_minutes, staff:users!staff_id(first_name, last_name))')
         .eq('id', body.paymentId)
         .eq('tenant_id', tenantId)
         .single()
@@ -240,6 +242,63 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
 
     // ============ LAYER 9: IF FULLY COVERED BY CREDIT → COMPLETE PAYMENT ============
     if (finalAmountToPay <= 0) {
+      const zeroReason = suspiciousZeroPaymentCompletionReason({
+        totalAmountRappen: payment.total_amount_rappen,
+        lessonPriceRappen: (payment as any).lesson_price_rappen,
+        discountAmountRappen: (payment as any).discount_amount_rappen,
+        voucherDiscountRappen: (payment as any).voucher_discount_rappen,
+        creditToDeductRappen: creditToDeduct,
+        creditAlreadyUsedRappen: amountAlreadyUsed,
+        paymentMethod: payment.payment_method,
+        metadata: payment.metadata && typeof payment.metadata === 'object'
+          ? payment.metadata as Record<string, unknown>
+          : null,
+      })
+      if (zeroReason) {
+        logger.error('❌ Refusing to complete suspicious CHF-0 payment without credit/benefit', {
+          reason: zeroReason,
+          payment_id: payment.id,
+          tenant_id: tenantId,
+          total_amount_rappen: payment.total_amount_rappen,
+          lesson_price_rappen: (payment as any).lesson_price_rappen ?? null,
+          credit_to_deduct: creditToDeduct,
+        })
+        await logFallbackUsed({
+          source: 'suspicious-zero-payment',
+          level: 'error',
+          message: `Payment process blocked: ${zeroReason}`,
+          tenantId,
+          userId: userData.id,
+          details: {
+            payment_id: payment.id,
+            reason: zeroReason,
+            total_amount_rappen: payment.total_amount_rappen,
+            lesson_price_rappen: (payment as any).lesson_price_rappen ?? null,
+          },
+        })
+        // Release processing lock so staff can fix the amount and retry.
+        if (claimedLock) {
+          await supabaseAdmin
+            .from('payments')
+            .update({ payment_status: 'pending', updated_at: new Date().toISOString() })
+            .eq('id', payment.id)
+            .eq('payment_status', 'processing')
+        }
+        await logAudit({
+          user_id: authenticatedUserId,
+          action: 'process_payment_suspicious_zero',
+          status: 'failed',
+          error_message: zeroReason,
+          ip_address: ipAddress,
+          details: { ...auditDetails, reason: zeroReason },
+        })
+        throw createError({
+          statusCode: 422,
+          statusMessage: 'Diese Zahlung hat Betrag CHF 0 ohne Guthaben, Rabatt oder Freischaltung und kann nicht als bezahlt markiert werden.',
+          data: { code: 'SUSPICIOUS_ZERO_PAYMENT', reason: zeroReason },
+        })
+      }
+
       logger.debug('✅ Payment fully covered by credit, completing payment...')
 
       // Deduct credit from student_credits
