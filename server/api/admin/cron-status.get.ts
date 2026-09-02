@@ -1,17 +1,17 @@
 // server/api/admin/cron-status.get.ts
-// Admin endpoint to check cron job status and execution history
+// Super-admin only: cron job status + automatic payment pipeline overview.
+// Service role is used AFTER authentication — never publicly.
 
 import { getSupabaseAdmin } from '~/utils/supabase'
+import { requireSuperAdmin } from '~/server/utils/require-super-admin'
 
 export default defineEventHandler(async (event) => {
+  await requireSuperAdmin(event)
+
   try {
-    // ✅ Use Admin client to bypass RLS
     const supabase = getSupabaseAdmin()
-    
-    // Get current time
     const now = new Date()
-    
-    // Check if there's a cron_logs table (for tracking executions)
+
     let cronLogs: any[] = []
     try {
       const { data: logs, error: logsError } = await supabase
@@ -19,101 +19,108 @@ export default defineEventHandler(async (event) => {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(20)
-      
+
       if (!logsError && logs) {
         cronLogs = logs
       }
     } catch (err) {
       console.warn('⚠️ cron_logs table may not exist:', err)
     }
-    
-    // Check pending automatic payments (authorized, waiting for capture)
-    // Zeige ALLE autorisierten Zahlungen mit scheduled_payment_date (auch zukünftige)
-    const { data: pendingPayments, error: pendingError } = await supabase
+
+    const { data: pendingPayments } = await supabase
       .from('payments')
-      .select('id, appointment_id, scheduled_payment_date, automatic_payment_processed, payment_status, created_at, wallee_transaction_id')
+      .select('id, appointment_id, scheduled_payment_date, automatic_payment_processed, payment_status, created_at, wallee_transaction_id, tenant_id')
       .eq('payment_status', 'authorized')
       .eq('automatic_payment_processed', false)
       .not('scheduled_payment_date', 'is', null)
-    
-    // Check overdue payments (should have been captured but weren't)
-    const { data: overduePayments, error: overdueError } = await supabase
+
+    const { data: overduePayments } = await supabase
       .from('payments')
-      .select('id, appointment_id, scheduled_payment_date, automatic_payment_processed, payment_status, created_at, wallee_transaction_id')
+      .select('id, appointment_id, scheduled_payment_date, automatic_payment_processed, payment_status, created_at, wallee_transaction_id, tenant_id')
       .eq('payment_status', 'authorized')
       .eq('automatic_payment_processed', false)
       .not('scheduled_payment_date', 'is', null)
-      .lt('scheduled_payment_date', new Date(Date.now() - 60 * 60 * 1000).toISOString()) // 1 hour ago
-    
-    // Check payments waiting for authorization
-    const { data: waitingAuthPayments, error: waitingAuthError } = await supabase
+      .lt('scheduled_payment_date', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+
+    const { data: waitingAuthPayments } = await supabase
       .from('payments')
-      .select('id, appointment_id, scheduled_authorization_date, payment_status, created_at')
+      .select('id, appointment_id, scheduled_authorization_date, payment_status, created_at, tenant_id')
       .eq('payment_status', 'pending')
       .eq('automatic_payment_consent', true)
       .not('scheduled_authorization_date', 'is', null)
       .lte('scheduled_authorization_date', now.toISOString())
-    
-    // Get recent automatic payments that were processed
-    const { data: processedPayments, error: processedError } = await supabase
+
+    const { data: processedPayments } = await supabase
       .from('payments')
-      .select('id, appointment_id, automatic_payment_processed_at, payment_status, created_at')
+      .select('id, appointment_id, automatic_payment_processed_at, payment_status, created_at, tenant_id')
       .eq('automatic_payment_processed', true)
       .order('automatic_payment_processed_at', { ascending: false })
       .limit(10)
-    
-    // Count payments by status
-    const { data: paymentStats, error: statsError } = await supabase
-      .from('payments')
-      .select('payment_status, automatic_payment_processed, automatic_payment_consent')
-    
+
+    // Aggregate via count queries — avoid loading every payment row into memory
+    const [
+      { count: total },
+      { count: pending },
+      { count: authorized },
+      { count: completed },
+      { count: withAutomaticConsent },
+      { count: processed },
+    ] = await Promise.all([
+      supabase.from('payments').select('*', { count: 'exact', head: true }),
+      supabase.from('payments').select('*', { count: 'exact', head: true }).eq('payment_status', 'pending'),
+      supabase.from('payments').select('*', { count: 'exact', head: true }).eq('payment_status', 'authorized'),
+      supabase.from('payments').select('*', { count: 'exact', head: true }).eq('payment_status', 'completed'),
+      supabase.from('payments').select('*', { count: 'exact', head: true }).eq('automatic_payment_consent', true),
+      supabase.from('payments').select('*', { count: 'exact', head: true }).eq('automatic_payment_processed', true),
+    ])
+
     const stats = {
-      total: paymentStats?.length || 0,
-      pending: paymentStats?.filter(p => p.payment_status === 'pending').length || 0,
-      authorized: paymentStats?.filter(p => p.payment_status === 'authorized').length || 0,
-      completed: paymentStats?.filter(p => p.payment_status === 'completed').length || 0,
-      withAutomaticConsent: paymentStats?.filter(p => (p as any).automatic_payment_consent === true).length || 0,
-      processed: paymentStats?.filter(p => p.automatic_payment_processed === true).length || 0
+      total: total || 0,
+      pending: pending || 0,
+      authorized: authorized || 0,
+      completed: completed || 0,
+      withAutomaticConsent: withAutomaticConsent || 0,
+      processed: processed || 0,
     }
-    
+
     return {
       success: true,
       timestamp: now.toISOString(),
       cronJobs: {
         'cleanup-expired-invitations': {
           path: '/api/cron/cleanup-expired-invitations',
-          schedule: '0 2 * * *', // Daily at 2 AM
+          schedule: '0 2 * * *',
           description: 'Removes expired invitation links',
-          nextRun: getNextCronTime('0 2 * * *')
+          nextRun: getNextCronTime('0 2 * * *'),
         },
         'calculate-availability': {
           path: '/api/cron/calculate-availability',
-          schedule: '0 2 * * *', // Daily at 2 AM
+          schedule: '0 2 * * *',
           description: 'Recalculates available booking slots for all staff members',
-          nextRun: getNextCronTime('0 2 * * *')
+          nextRun: getNextCronTime('0 2 * * *'),
         },
         'sync-sari-courses': {
           path: '/api/cron/sync-sari-courses',
-          schedule: '0 * * * *', // Every hour
+          schedule: '0 * * * *',
           description: 'Syncs courses from SARI system',
-          nextRun: getNextCronTime('0 * * * *')
+          nextRun: getNextCronTime('0 * * * *'),
         },
         'process-automatic-payments': {
           path: '/api/cron/process-automatic-payments',
-          schedule: '0 * * * *', // Every hour
+          schedule: '0 * * * *',
           description: 'Captures authorized payments and authorizes pending payments',
           nextRun: getNextCronTime('0 * * * *'),
           pendingPayments: pendingPayments?.length || 0,
           overduePayments: overduePayments?.length || 0,
           waitingAuth: waitingAuthPayments?.length || 0,
-          recentProcessed: processedPayments?.length || 0
+          recentProcessed: processedPayments?.length || 0,
         },
         'sync-external-calendars': {
           path: '/api/cron/sync-external-calendars',
-          schedule: '0 0 * * *', // Daily at midnight
+          schedule: '0 0 * * *',
           description: 'Syncs external calendar integrations',
-          nextRun: getNextCronTime('0 0 * * *')
-        }
+          nextRun: getNextCronTime('0 0 * * *'),
+        },
       },
       pendingPayments: pendingPayments || [],
       overduePayments: overduePayments || [],
@@ -124,44 +131,34 @@ export default defineEventHandler(async (event) => {
       vercel: {
         cronConfigured: true,
         cronFile: 'vercel.json',
-        note: 'Cron jobs are configured in vercel.json. Check Vercel dashboard for execution logs.'
-      }
+        note: 'Cron jobs are configured in vercel.json. Check Vercel dashboard for execution logs.',
+      },
     }
   } catch (error: any) {
+    if (error?.statusCode) throw error
     console.error('❌ Error checking cron status:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to check cron status'
+      statusMessage: error.message || 'Failed to check cron status',
     })
   }
 })
 
-// Helper function to calculate next cron run time
 function getNextCronTime(cronExpression: string): string {
-  // Simple calculation for common patterns
-  // "0 * * * *" = every hour at minute 0
-  // "0 0 * * *" = daily at midnight
-  // "0 2 * * *" = daily at 2 AM
-  
   const now = new Date()
   const next = new Date(now)
-  
+
   if (cronExpression === '0 * * * *') {
-    // Next hour at minute 0
     next.setHours(now.getHours() + 1, 0, 0, 0)
   } else if (cronExpression === '0 0 * * *') {
-    // Next midnight
     next.setDate(now.getDate() + 1)
     next.setHours(0, 0, 0, 0)
   } else if (cronExpression === '0 2 * * *') {
-    // Next 2 AM
     next.setHours(2, 0, 0, 0)
     if (next <= now) {
-      // If 2 AM has already passed today, schedule for tomorrow
       next.setDate(now.getDate() + 1)
     }
   }
-  
+
   return next.toISOString()
 }
-

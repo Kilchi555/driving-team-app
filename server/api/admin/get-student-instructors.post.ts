@@ -1,68 +1,95 @@
 // server/api/admin/get-student-instructors.post.ts
-// Get all instructors for a list of students
+// Staff/admin: instructor mapping for students in the caller's tenant only.
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireAdminProfile } from '~/server/utils/auth'
+import {
+  assertUsersBelongToTenant,
+  chunkIds,
+  fetchAllPages,
+  normalizeIdList,
+} from '~/server/utils/admin-f01-access'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, [
+    'admin',
+    'staff',
+    'tenant_admin',
+    'super_admin',
+  ])
+
   const body = await readBody(event)
-  const { studentIds } = body
+  const studentIds = normalizeIdList(body?.studentIds, 'studentIds')
 
-  if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
-    throw createError({
-      statusCode: 400,
-      message: 'studentIds array is required and must not be empty'
-    })
-  }
-
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  const supabase = getSupabaseAdmin()
+  const verifiedIds = await assertUsersBelongToTenant(
+    supabase,
+    studentIds,
+    profile.tenant_id
   )
 
   try {
-    // Get all appointments for these students
-    const { data: allLessonInstructors, error: lessonError } = await supabase
-      .from('appointments')
-      .select('user_id, staff_id')
-      .in('user_id', studentIds)
-      .not('staff_id', 'is', null)
+    const allLessonInstructors: Array<{ user_id: string; staff_id: string }> = []
+    for (const chunk of chunkIds(verifiedIds)) {
+      // Page past PostgREST's silent 1000-row cap per id-chunk
+      const rows = await fetchAllPages<{ user_id: string; staff_id: string }>(
+        (from, to) =>
+          supabase
+            .from('appointments')
+            .select('user_id, staff_id')
+            .in('user_id', chunk)
+            .eq('tenant_id', profile.tenant_id)
+            .not('staff_id', 'is', null)
+            .range(from, to)
+      )
+      if (rows.length) allLessonInstructors.push(...rows)
+    }
 
-    if (lessonError) throw lessonError
-
-    if (!allLessonInstructors || allLessonInstructors.length === 0) {
+    if (allLessonInstructors.length === 0) {
       return {
         success: true,
         data: {
           allLessonInstructors: [],
-          instructorData: []
-        }
+          instructorData: [],
+        },
       }
     }
 
-    // Get unique instructor IDs
-    const uniqueInstructorIds = [...new Set(allLessonInstructors.map((l: any) => l.staff_id))]
+    const uniqueInstructorIds = [
+      ...new Set(allLessonInstructors.map((l) => l.staff_id)),
+    ]
 
-    // Get instructor details
-    const { data: instructors, error: instructorError } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .in('id', uniqueInstructorIds)
-
-    if (instructorError) throw instructorError
+    const instructors: Array<{ id: string; first_name: string; last_name: string }> = []
+    for (const chunk of chunkIds(uniqueInstructorIds)) {
+      const rows = await fetchAllPages<{
+        id: string
+        first_name: string
+        last_name: string
+      }>((from, to) =>
+        supabase
+          .from('users')
+          .select('id, first_name, last_name')
+          .in('id', chunk)
+          .eq('tenant_id', profile.tenant_id)
+          .range(from, to)
+      )
+      if (rows.length) instructors.push(...rows)
+    }
 
     return {
       success: true,
       data: {
         allLessonInstructors,
-        instructorData: instructors || []
-      }
+        instructorData: instructors,
+      },
     }
   } catch (err: any) {
+    if (err?.statusCode) throw err
     console.error('❌ Error loading student instructors:', err)
     throw createError({
       statusCode: err.statusCode || 500,
-      message: err.message || 'Failed to load student instructors'
+      message: err.message || 'Failed to load student instructors',
     })
   }
 })
