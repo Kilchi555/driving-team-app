@@ -6,8 +6,11 @@
  * not cancelled, and without a documented free benefit (discount / voucher /
  * free metadata / payment_method=free).
  *
- * Writes error_logs rows (Error Monitoring) and emails super_admins when
- * anything new shows up. Schedule: daily 06:30 UTC (vercel.json).
+ * Only **new** payment IDs (not already logged under
+ * `fallback:suspicious-zero-payment`) get error_logs + email — so a 48h
+ * lookback with a daily schedule does not spam the same cases.
+ *
+ * Schedule: daily 06:30 UTC (vercel.json).
  */
 import { defineEventHandler, getHeader, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
@@ -16,6 +19,7 @@ import { logger } from '~/utils/logger'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
 
 const LOOKBACK_HOURS = 48
+const LOG_COMPONENT = 'fallback:suspicious-zero-payment'
 const DASHBOARD_HINT = 'https://app.simy.ch/tenant-admin/errors'
 
 function isDocumentedFree(payment: {
@@ -98,10 +102,39 @@ export default defineEventHandler(async (event) => {
   })
 
   if (suspicious.length === 0) {
-    return { success: true, found: 0, message: 'No suspicious zero payments' }
+    return { success: true, found: 0, new: 0, message: 'No suspicious zero payments' }
   }
 
-  for (const p of suspicious) {
+  // Dedupe: skip payment IDs we already alerted on (any time).
+  const candidateIds = suspicious.map((p: any) => p.id as string)
+  const { data: priorLogs, error: priorErr } = await supabase
+    .from('error_logs')
+    .select('data')
+    .eq('component', LOG_COMPONENT)
+    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+
+  if (priorErr) {
+    logger.warn('⚠️ Could not load prior zero-payment alerts, proceeding without dedupe:', priorErr.message)
+  }
+
+  const alreadyAlerted = new Set<string>()
+  for (const row of priorLogs || []) {
+    const pid = row?.data && typeof row.data === 'object' ? (row.data as any).payment_id : null
+    if (typeof pid === 'string' && candidateIds.includes(pid)) alreadyAlerted.add(pid)
+  }
+
+  const fresh = suspicious.filter((p: any) => !alreadyAlerted.has(p.id))
+  if (fresh.length === 0) {
+    return {
+      success: true,
+      found: suspicious.length,
+      new: 0,
+      skipped_already_alerted: alreadyAlerted.size,
+      message: 'All matching payments were already alerted',
+    }
+  }
+
+  for (const p of fresh) {
     const apt = Array.isArray(p.appointments) ? p.appointments[0] : p.appointments
     await logFallbackUsed({
       source: 'suspicious-zero-payment',
@@ -131,7 +164,7 @@ export default defineEventHandler(async (event) => {
   const recipients = (superAdmins || []).map(u => u.email).filter(Boolean) as string[]
   let emailed = 0
   if (recipients.length > 0) {
-    const lines = suspicious.slice(0, 30).map((p: any) => {
+    const lines = fresh.slice(0, 30).map((p: any) => {
       const apt = Array.isArray(p.appointments) ? p.appointments[0] : p.appointments
       return `<li><code>${p.id}</code> — ${p.payment_status}/${p.payment_method} — ${apt?.event_type_code || apt?.type || '?'} @ ${apt?.start_time || p.created_at}</li>`
     }).join('')
@@ -139,12 +172,12 @@ export default defineEventHandler(async (event) => {
     try {
       await sendEmail({
         to: recipients,
-        subject: `[Simy] ${suspicious.length} verdächtige CHF-0 Online-Zahlung(en)`,
+        subject: `[Simy] ${fresh.length} neue verdächtige CHF-0 Online-Zahlung(en)`,
         html: `
           <div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:640px;margin:0 auto;padding:24px">
             <h1 style="font-size:18px;color:#111827">Verdächtige CHF-0 Online-Zahlungen</h1>
             <p style="font-size:14px;color:#374151">
-              In den letzten ${LOOKBACK_HOURS}h: <strong>${suspicious.length}</strong> Online-Zahlung(en)
+              <strong>${fresh.length}</strong> neue Online-Zahlung(en) (Lookback ${LOOKBACK_HOURS}h)
               mit Lesson+Total = CHF 0 ohne Rabatt/Gutschein/Free-Flag.
             </p>
             <ul style="font-size:13px;color:#111827">${lines}</ul>
@@ -160,6 +193,12 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  logger.error(`🚨 detect-suspicious-zero-payments: found ${suspicious.length}`)
-  return { success: true, found: suspicious.length, emailed }
+  logger.error(`🚨 detect-suspicious-zero-payments: new=${fresh.length} matched=${suspicious.length}`)
+  return {
+    success: true,
+    found: suspicious.length,
+    new: fresh.length,
+    skipped_already_alerted: alreadyAlerted.size,
+    emailed,
+  }
 })
