@@ -47,6 +47,7 @@ import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockC
 import { evaluateClientEmailClaim, pendingContactMismatch } from '~/server/utils/auth-email-claim'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 import { pickAvailableRoomId, resolveRoomSettings, type RoomServiceType } from '~/server/utils/room-availability'
+import { guestBookingPriceRuleType } from '~/server/utils/guest-booking-price-rule'
 
 interface GuestBookRequest {
   // Booking identifiers
@@ -380,13 +381,20 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Guest user created:', newUserId)
   }
 
+  // Match online booking UI (/api/booking/get-pricing): price by service type,
+  // never "newest active rule for category" (that could pick consultation/admin_fee
+  // at CHF 0 and silently undercharge a real lesson).
+  const roomServiceType: RoomServiceType = body.service_type ?? 'fahrstunde'
+  const lessonRuleType = guestBookingPriceRuleType(roomServiceType)
+
   // ── Parallel: pricing + marketing attribution + location/vehicle settings ─
-  const [pricingResult, eventPricingResult, marketingAttr, locationResult, categorySettingsRes] = await Promise.all([
+  const [pricingResult, eventPricingResult, adminFeeRuleResult, marketingAttr, locationResult, categorySettingsRes] = await Promise.all([
     supabase
       .from('pricing_rules')
-      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier, admin_fee_rappen, admin_fee_applies_from')
+      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier')
       .eq('tenant_id', tenantId)
       .eq('category_code', body.category_code)
+      .eq('rule_type', lessonRuleType)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -394,12 +402,24 @@ export default defineEventHandler(async (event) => {
 
     supabase
       .from('pricing_rules')
-      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier, admin_fee_rappen, admin_fee_applies_from')
+      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier')
       .eq('tenant_id', tenantId)
       .eq('event_type_code', body.category_code)
       .eq('rule_type', 'event_price')
       .eq('is_active', true)
       .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+
+    // Admin fee lives on rule_type=admin_fee — not on base_price/consultation rows
+    // (those often carry applies_from=999 which would falsely mark the fee exempt).
+    supabase
+      .from('pricing_rules')
+      .select('admin_fee_rappen, admin_fee_applies_from')
+      .eq('tenant_id', tenantId)
+      .eq('category_code', body.category_code)
+      .eq('rule_type', 'admin_fee')
+      .eq('is_active', true)
       .limit(1)
       .maybeSingle(),
 
@@ -490,15 +510,21 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Calculate admin fee ───────────────────────────────────────────────────
+  // Only driving lessons use the admin_fee rule. Theory/consultation bookings
+  // skip it (same as staff create-appointment / get-pricing).
+  const adminFeeRuleRappen = Number(adminFeeRuleResult.data?.admin_fee_rappen || 0)
+  const adminFeeAppliesFromRule = adminFeeRuleResult.data?.admin_fee_applies_from != null
+    ? Number(adminFeeRuleResult.data.admin_fee_applies_from)
+    : null
   const adminFeeResult = await calculateAdminFee({
     supabase,
     userId: newUserId,
     tenantId,
     categoryCode: body.category_code,
-    adminFeeRappenFromRule: pricingRule?.admin_fee_rappen ?? undefined,
-    adminFeeAppliesFromRule: pricingRule?.admin_fee_applies_from ?? undefined,
+    adminFeeRappenFromRule: lessonRuleType === 'base_price' ? adminFeeRuleRappen : 0,
+    adminFeeAppliesFromRule: lessonRuleType === 'base_price' ? adminFeeAppliesFromRule : null,
   })
-  const adminFeeRappen = adminFeeResult.adminFeeRappen
+  const adminFeeRappen = lessonRuleType === 'base_price' ? adminFeeResult.adminFeeRappen : 0
   const travelFee = await quoteTravelFee(tenantId, {
     locationId: slot.location_id,
     locationType: body.customer_pickup_plz || body.customer_pickup_address ? 'pickup' : null,
@@ -553,7 +579,6 @@ export default defineEventHandler(async (event) => {
 
   const sanitizedNotes = body.notes ? sanitizeString(body.notes) : ''
 
-  const roomServiceType: RoomServiceType = body.service_type ?? 'fahrstunde'
   const roomRule = resolveRoomSettings(
     locationResult.data?.category_room_settings,
     categorySettingsRes.data?.room_settings,
@@ -570,11 +595,13 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Create appointment ────────────────────────────────────────────────────
-  // FS: type = category (B), event_type_code = lesson
+  // FS: type = category (B), event_type_code = lesson/theory
   // Event-type tenants: slot.category_code is the event type code
   const resolvedEventTypeCode = eventPricingResult.data
     ? body.category_code
-    : 'lesson'
+    : roomServiceType === 'theorie'
+      ? 'theory'
+      : 'lesson'
 
   const { data: newAppointment, error: apptErr } = await supabase
     .from('appointments')
