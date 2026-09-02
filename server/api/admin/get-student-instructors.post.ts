@@ -1,31 +1,35 @@
 // server/api/admin/get-student-instructors.post.ts
-// Get all instructors for a list of students
+// Staff/admin: instructor mapping for students in the caller's tenant only.
 
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireAdminProfile } from '~/server/utils/auth'
+import { assertUsersBelongToTenant, normalizeIdList } from '~/server/utils/admin-f01-access'
 
 export default defineEventHandler(async (event) => {
+  const profile = await requireAdminProfile(event, [
+    'admin',
+    'staff',
+    'tenant_admin',
+    'super_admin',
+  ])
+
   const body = await readBody(event)
-  const { studentIds } = body
+  const studentIds = normalizeIdList(body?.studentIds, 'studentIds')
 
-  if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
-    throw createError({
-      statusCode: 400,
-      message: 'studentIds array is required and must not be empty'
-    })
-  }
-
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  const supabase = getSupabaseAdmin()
+  const verifiedIds = await assertUsersBelongToTenant(
+    supabase,
+    studentIds,
+    profile.tenant_id
   )
 
   try {
-    // Get all appointments for these students
     const { data: allLessonInstructors, error: lessonError } = await supabase
       .from('appointments')
       .select('user_id, staff_id')
-      .in('user_id', studentIds)
+      .in('user_id', verifiedIds)
+      .eq('tenant_id', profile.tenant_id)
       .not('staff_id', 'is', null)
 
     if (lessonError) throw lessonError
@@ -35,19 +39,20 @@ export default defineEventHandler(async (event) => {
         success: true,
         data: {
           allLessonInstructors: [],
-          instructorData: []
-        }
+          instructorData: [],
+        },
       }
     }
 
-    // Get unique instructor IDs
-    const uniqueInstructorIds = [...new Set(allLessonInstructors.map((l: any) => l.staff_id))]
+    const uniqueInstructorIds = [
+      ...new Set(allLessonInstructors.map((l: { staff_id: string }) => l.staff_id)),
+    ]
 
-    // Get instructor details
     const { data: instructors, error: instructorError } = await supabase
       .from('users')
       .select('id, first_name, last_name')
       .in('id', uniqueInstructorIds)
+      .eq('tenant_id', profile.tenant_id)
 
     if (instructorError) throw instructorError
 
@@ -55,14 +60,15 @@ export default defineEventHandler(async (event) => {
       success: true,
       data: {
         allLessonInstructors,
-        instructorData: instructors || []
-      }
+        instructorData: instructors || [],
+      },
     }
   } catch (err: any) {
+    if (err?.statusCode) throw err
     console.error('❌ Error loading student instructors:', err)
     throw createError({
       statusCode: err.statusCode || 500,
-      message: err.message || 'Failed to load student instructors'
+      message: err.message || 'Failed to load student instructors',
     })
   }
 })
