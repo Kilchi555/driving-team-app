@@ -111,38 +111,45 @@ export const useReminderService = () => {
       }) as any
 
       logger.debug('✅ SMS sent successfully via API')
-      
-      // Log the reminder in database
-      const { error: logError } = await supabase
-        .from('reminder_logs')
-        .insert({
+
+      // F-05b: write reminder_logs via service-role API (no client INSERT)
+      const { data: { session: smsSession } } = await supabase.auth.getSession()
+      await $fetch('/api/reminders/manage', {
+        method: 'POST',
+        headers: smsSession?.access_token
+          ? { Authorization: `Bearer ${smsSession.access_token}` }
+          : undefined,
+        body: {
+          action: result.success ? 'log-sent' : 'log-failed',
           channel: 'sms',
           recipient: phoneNumber,
           body: message,
-          status: result.success ? 'sent' : 'failed',
           error_message: result.error || null,
-          sent_at: new Date().toISOString()
-        })
-
-      if (logError) {
-        console.error('❌ Error logging SMS reminder:', logError)
-      }
+        },
+      }).catch((err: any) => {
+        logger.error('Error logging SMS reminder:', err)
+      })
 
       return { success: true }
     } catch (error: any) {
       console.error('❌ Error sending SMS reminder:', error)
-      
-      // Log failed attempt
-      await supabase
-        .from('reminder_logs')
-        .insert({
+
+      const { data: { session: smsFailSession } } = await supabase.auth.getSession()
+      await $fetch('/api/reminders/manage', {
+        method: 'POST',
+        headers: smsFailSession?.access_token
+          ? { Authorization: `Bearer ${smsFailSession.access_token}` }
+          : undefined,
+        body: {
+          action: 'log-failed',
           channel: 'sms',
           recipient: phoneNumber,
           body: message,
-          status: 'failed',
           error_message: error.message,
-          sent_at: new Date().toISOString()
-        })
+        },
+      }).catch((err: any) => {
+        logger.error('Error logging failed SMS reminder:', err)
+      })
       
       return { success: false, error: error.message }
     }
@@ -175,22 +182,24 @@ export const useReminderService = () => {
         },
       )
 
-      const { error: logError } = await supabase
-        .from('reminder_logs')
-        .insert({
+      // F-05b: write reminder_logs via service-role API (no client INSERT)
+      const pushFailed = result.configured === false || result.sent === 0
+      await $fetch('/api/reminders/manage', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: {
+          action: pushFailed ? 'log-failed' : 'log-sent',
           channel: 'push',
           recipient: userId,
           body: message,
-          status: result.configured === false ? 'failed' : 'sent',
+          userId,
           error_message: result.configured === false
             ? 'Firebase nicht konfiguriert'
             : (result.sent === 0 ? 'Kein Gerät registriert' : null),
-          sent_at: new Date().toISOString(),
-        })
-
-      if (logError) {
-        console.error('❌ Error logging push reminder:', logError)
-      }
+        },
+      }).catch((err: any) => {
+        logger.error('Error logging push reminder:', err)
+      })
 
       return { success: true }
     } catch (error: any) {
