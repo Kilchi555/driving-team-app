@@ -2,17 +2,15 @@
  * Cron: Send tenant check-in emails
  * POST /api/cron/send-checkin-emails
  *
- * Runs daily. Sends a friendly check-in email to tenants at:
- *   - Day 7  after registration: "Alles OK?"
- *   - Day 30 after registration: "Wie läuft's?"
+ * Runs daily. Sends a friendly check-in at day 7 after registration.
+ * No 30-day check-in: trial is 30 days, so that mail would collide with trial-end emails.
  */
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { verifyCronToken } from '~/server/utils/cron'
 
 const WINDOWS = [
-  { days: 7,  subject: 'Wie läuft Simy bisher für dich? 👋', label: '7-Tage' },
-  { days: 30, subject: 'Ein Monat Simy – wie zufrieden bist du? 🎯', label: '30-Tage' },
+  { days: 7, subject: 'Wie läuft Simy bisher für dich? 👋', label: '7-Tage' },
 ]
 
 export default defineEventHandler(async (event) => {
@@ -47,7 +45,7 @@ export default defineEventHandler(async (event) => {
           to: tenant.contact_email,
           subject,
           senderName: 'Pascal von Simy',
-          html: buildCheckinEmail({ firstName, tenantName: tenant.name, loginUrl, baseUrl, days }),
+          html: buildCheckinEmail({ firstName, loginUrl, baseUrl }),
         })
         totalSent++
         console.log(`📧 ${label} check-in sent to ${tenant.contact_email}`)
@@ -60,21 +58,11 @@ export default defineEventHandler(async (event) => {
   return { success: true, sent: totalSent }
 })
 
-function buildCheckinEmail({ firstName, tenantName, loginUrl, baseUrl, days }: {
+function buildCheckinEmail({ firstName, loginUrl, baseUrl }: {
   firstName: string
-  tenantName: string
   loginUrl: string
   baseUrl: string
-  days: number
 }) {
-  const intro = days === 7
-    ? `Du nutzt Simy jetzt seit einer Woche – wie läuft es so weit für dich?`
-    : `Du nutzt Simy nun seit einem Monat. Wir hoffen, es läuft alles nach deinen Vorstellungen!`
-
-  const question = days === 7
-    ? `Läuft alles nach Plan? Gibt es etwas, wobei wir dir helfen können?`
-    : `Bist du mit Simy zufrieden? Haben wir deine Erwartungen erfüllt?`
-
   return `<!DOCTYPE html>
 <html lang="de">
 <body style="margin:0;padding:0;font-family:Helvetica,Arial,sans-serif;background:#f4f4f4;">
@@ -85,7 +73,7 @@ function buildCheckinEmail({ firstName, tenantName, loginUrl, baseUrl, days }: {
         <tr>
           <td style="background:linear-gradient(135deg,#6000BD,#8B2FE8);padding:36px;text-align:center;">
             <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">
-              ${days === 7 ? '👋 Kurzes Hallo nach einer Woche!' : '🎯 Wie läuft es nach einem Monat?'}
+              👋 Kurzes Hallo nach einer Woche!
             </h1>
           </td>
         </tr>
@@ -93,8 +81,8 @@ function buildCheckinEmail({ firstName, tenantName, loginUrl, baseUrl, days }: {
         <tr>
           <td style="padding:36px 36px 24px;">
             <p style="color:#111;font-size:16px;margin:0 0 16px;">Hallo <strong>${firstName}</strong>,</p>
-            <p style="color:#444;font-size:15px;line-height:1.65;margin:0 0 16px;">${intro}</p>
-            <p style="color:#444;font-size:15px;line-height:1.65;margin:0 0 24px;">${question}</p>
+            <p style="color:#444;font-size:15px;line-height:1.65;margin:0 0 16px;">Du nutzt Simy jetzt seit einer Woche – wie läuft es so weit für dich?</p>
+            <p style="color:#444;font-size:15px;line-height:1.65;margin:0 0 24px;">Läuft alles nach Plan? Gibt es etwas, wobei wir dir helfen können?</p>
 
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f7ff;border-radius:8px;border:1px solid #e9d5ff;margin-bottom:28px;">
               <tr>
