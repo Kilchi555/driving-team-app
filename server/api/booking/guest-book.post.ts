@@ -552,11 +552,29 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Prefer category base_price; fall back to per-event-type event_price
+  // (same as authenticated create-appointment). Never silently book at CHF 0
+  // because no rule existed at all.
+  const usingBasePriceRule = !!pricingResult.data
+  const usingEventPriceRule = !usingBasePriceRule && !!eventPricingResult.data
+  if (!usingBasePriceRule && !usingEventPriceRule) {
+    logger.error('❌ Guest booking aborted: no pricing rule for category/event', {
+      category_code: body.category_code,
+      lessonRuleType,
+      tenant_id: tenantId,
+    })
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Der Preis für diese Fahrstunde konnte nicht ermittelt werden. Bitte versuche es erneut oder kontaktiere uns direkt.',
+    })
+  }
+
   // Fahrstunden may still net to CHF 0 via Rabatt/Gutschein/Guthaben later.
-  // Abort only when the base pricing rule itself is missing or CHF 0.
+  // Abort only when the base_price rule itself is missing or CHF 0 — not when
+  // a valid event_price row is what priced this booking (per_event_type tenants).
   const basePriceProblem = invalidDrivingLessonBasePriceReason({
-    ruleType: lessonRuleType,
-    hasPricingRule: !!pricingResult.data,
+    ruleType: usingBasePriceRule ? 'base_price' : 'event_price',
+    hasPricingRule: usingBasePriceRule,
     pricePerMinuteRappen: pricingResult.data?.price_per_minute_rappen,
   })
   if (basePriceProblem) {
@@ -565,7 +583,8 @@ export default defineEventHandler(async (event) => {
       category_code: body.category_code,
       lessonRuleType,
       tenant_id: tenantId,
-      hasPricingRule: !!pricingResult.data,
+      hasPricingRule: usingBasePriceRule,
+      usingEventPriceRule,
       price_per_minute_rappen: pricingResult.data?.price_per_minute_rappen ?? null,
     })
     throw createError({
