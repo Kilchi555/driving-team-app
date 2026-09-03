@@ -106,6 +106,29 @@ export function getBillingPeriodEnd(from: Date = new Date()): Date {
 }
 
 /**
+ * Shift by ±1 calendar month in UTC without Date month-overflow
+ * (e.g. 31 Jan − 1 month must be 31 Dec, not an overflow into Feb/Mar).
+ */
+export function shiftUtcMonth(from: Date, deltaMonths: number): Date {
+  const y = from.getUTCFullYear()
+  const m = from.getUTCMonth()
+  const absolute = y * 12 + m + deltaMonths
+  const targetYear = Math.floor(absolute / 12)
+  const targetMonth = ((absolute % 12) + 12) % 12
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate()
+  const day = Math.min(from.getUTCDate(), lastDay)
+  return new Date(Date.UTC(
+    targetYear,
+    targetMonth,
+    day,
+    from.getUTCHours(),
+    from.getUTCMinutes(),
+    from.getUTCSeconds(),
+    from.getUTCMilliseconds(),
+  ))
+}
+
+/**
  * Calendar-month fallback (UTC). Used when Stripe period fields are missing/stale.
  */
 export function resolveCalendarSmsBillingPeriod(from: Date = new Date()): SmsBillingPeriod {
@@ -135,12 +158,11 @@ export function resolveSmsBillingPeriod(opts: {
 
   // Production often has period end from Stripe but null start — derive ~1 month back.
   if (!start && resetAt) {
-    start = new Date(resetAt.getTime())
-    start.setUTCMonth(start.getUTCMonth() - 1)
+    start = shiftUtcMonth(resetAt, -1)
   }
   // Start without end — one calendar month forward from start.
   if (start && !resetAt) {
-    resetAt = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, start.getUTCDate(), start.getUTCHours(), start.getUTCMinutes(), start.getUTCSeconds(), start.getUTCMilliseconds()))
+    resetAt = shiftUtcMonth(start, 1)
   }
 
   if (!start || !resetAt) {
