@@ -1135,25 +1135,20 @@
             </p>
           </div>
 
-          <div v-if="invoiceVisibleForCustomer && effectiveBookingTotal > 0" class="mt-4">
+          <div v-if="showOnlinePaymentPicker" class="mt-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">Zahlungsart</label>
             <div class="space-y-2">
-              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                     :class="selectedPaymentMethod === 'wallee' ? '' : 'border-gray-200'"
-                     :style="selectedPaymentMethod === 'wallee' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
-                <input type="radio" v-model="selectedPaymentMethod" value="wallee" class="mt-1 mr-3" />
+              <label
+                v-for="choice in onlinePaymentChoices"
+                :key="choice.key"
+                class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                :class="selectedPaymentMethod === choice.key ? '' : 'border-gray-200'"
+                :style="selectedPaymentMethod === choice.key ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
+              >
+                <input type="radio" v-model="selectedPaymentMethod" :value="choice.key" class="mt-1 mr-3" />
                 <div>
-                  <div class="font-medium text-gray-900">Online-Zahlung</div>
-                  <div class="text-sm text-gray-600">Kreditkarte, TWINT & mehr</div>
-                </div>
-              </label>
-              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                     :class="selectedPaymentMethod === 'invoice' ? '' : 'border-gray-200'"
-                     :style="selectedPaymentMethod === 'invoice' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
-                <input type="radio" v-model="selectedPaymentMethod" value="invoice" class="mt-1 mr-3" />
-                <div>
-                  <div class="font-medium text-gray-900">Rechnung</div>
-                  <div class="text-sm text-gray-600">Du erhältst die Rechnung nach dem Termin per E-Mail.</div>
+                  <div class="font-medium text-gray-900">{{ choice.title }}</div>
+                  <div class="text-sm text-gray-600">{{ choice.hint }}</div>
                 </div>
               </label>
             </div>
@@ -1331,38 +1326,20 @@
             </p>
           </div>
 
-          <div
-            v-if="cashVisibleForCustomer && effectiveBookingTotal > 0 && !requirePaymentBeforeConfirm"
-            class="mt-4 flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg"
-          >
-            <svg class="w-4 h-4 mt-0.5 shrink-0 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <p class="text-sm text-green-800">
-              <strong>Barzahlung möglich</strong> — du kannst auch direkt bei {{ bookingLabels.businessNoun }} bar bezahlen. Die Rechnung erhältst du nach dem Termin.
-            </p>
-          </div>
-
-          <!-- Payment method selector (only shown if admin enabled invoice for customers) -->
-          <div v-if="invoiceVisibleForCustomer && effectiveBookingTotal > 0" class="mt-4">
+          <div v-if="showOnlinePaymentPicker" class="mt-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">Zahlungsart</label>
             <div class="space-y-2">
-              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                     :class="selectedPaymentMethod === 'wallee' ? '' : 'border-gray-200'"
-                     :style="selectedPaymentMethod === 'wallee' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
-                <input type="radio" v-model="selectedPaymentMethod" value="wallee" class="mt-1 mr-3" />
+              <label
+                v-for="choice in onlinePaymentChoices"
+                :key="choice.key"
+                class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                :class="selectedPaymentMethod === choice.key ? '' : 'border-gray-200'"
+                :style="selectedPaymentMethod === choice.key ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
+              >
+                <input type="radio" v-model="selectedPaymentMethod" :value="choice.key" class="mt-1 mr-3" />
                 <div>
-                  <div class="font-medium text-gray-900">Online-Zahlung</div>
-                  <div class="text-sm text-gray-600">Kreditkarte, TWINT & mehr</div>
-                </div>
-              </label>
-              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                     :class="selectedPaymentMethod === 'invoice' ? '' : 'border-gray-200'"
-                     :style="selectedPaymentMethod === 'invoice' ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}">
-                <input type="radio" v-model="selectedPaymentMethod" value="invoice" class="mt-1 mr-3" />
-                <div>
-                  <div class="font-medium text-gray-900">Rechnung</div>
-                  <div class="text-sm text-gray-600">Du erhältst die Rechnung nach dem Termin per E-Mail.</div>
+                  <div class="font-medium text-gray-900">{{ choice.title }}</div>
+                  <div class="text-sm text-gray-600">{{ choice.hint }}</div>
                 </div>
               </label>
             </div>
@@ -1929,10 +1906,17 @@ import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import { snapDuration, type BookingPrefill } from '~/utils/booking-prefill'
 import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
 
-const cashVisibleForCustomer = ref(false)
-const invoiceVisibleForCustomer = ref(false)
-// 'wallee' stays the default so nothing changes for tenants that haven't opted in to invoice.
-const selectedPaymentMethod = ref<'wallee' | 'invoice'>('wallee')
+type OnlinePayMethod = 'wallee' | 'invoice' | 'cash'
+const onlinePaymentMethods = ref<OnlinePayMethod[]>(['wallee'])
+const selectedPaymentMethod = ref<OnlinePayMethod>('wallee')
+const onlinePaymentChoiceLabels: Record<OnlinePayMethod, { title: string; hint: string }> = {
+  wallee: { title: 'Online-Zahlung', hint: 'Kreditkarte, TWINT & mehr' },
+  invoice: { title: 'Rechnung', hint: 'Du erhältst die Rechnung nach dem Termin per E-Mail.' },
+  cash: { title: 'Barzahlung', hint: 'Du zahlst bar vor Ort beim Termin.' },
+}
+const onlinePaymentChoices = computed(() =>
+  onlinePaymentMethods.value.map((key) => ({ key, ...onlinePaymentChoiceLabels[key] }))
+)
 
 // Page Meta
 // @ts-ignore - definePageMeta is a Nuxt compiler macro
@@ -2297,11 +2281,21 @@ function applyBookingInitPayload(payload: any) {
   if (typeof payload.pickup_travel_check === 'boolean') {
     pickupTravelCheckFromInit.value = payload.pickup_travel_check
   }
-  if (typeof payload.cash_visible_for_customer === 'boolean') {
-    cashVisibleForCustomer.value = payload.cash_visible_for_customer
+  const allowedMethods = ['wallee', 'invoice', 'cash'] as const
+  if (Array.isArray(payload.online_payment_methods)) {
+    const next = payload.online_payment_methods.filter((method: string): method is OnlinePayMethod =>
+      (allowedMethods as readonly string[]).includes(method)
+    )
+    if (next.length > 0) onlinePaymentMethods.value = next
   }
-  if (typeof payload.invoice_payments_enabled === 'boolean') {
-    invoiceVisibleForCustomer.value = payload.invoice_payments_enabled
+  const defaultMethod = payload.default_online_payment_method
+  if (
+    (defaultMethod === 'wallee' || defaultMethod === 'invoice' || defaultMethod === 'cash')
+    && onlinePaymentMethods.value.includes(defaultMethod)
+  ) {
+    selectedPaymentMethod.value = defaultMethod
+  } else if (!onlinePaymentMethods.value.includes(selectedPaymentMethod.value)) {
+    selectedPaymentMethod.value = onlinePaymentMethods.value[0]
   }
 }
 
@@ -4892,9 +4886,12 @@ const effectiveBookingTotal = computed(() => {
   return Math.max(0, afterDiscount - creditAppliedPreviewRappen.value)
 })
 
+const showOnlinePaymentPicker = computed(() =>
+  onlinePaymentChoices.value.length > 1 && effectiveBookingTotal.value > 0
+)
 const willHoldUntilPaid = computed(() =>
   requirePaymentBeforeConfirm.value
-  && selectedPaymentMethod.value !== 'invoice'
+  && selectedPaymentMethod.value === 'wallee'
   && effectiveBookingTotal.value > 0
 )
 const confirmBookingButtonLabel = computed(() =>

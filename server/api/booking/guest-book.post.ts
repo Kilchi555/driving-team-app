@@ -40,8 +40,8 @@ import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
 import { findStaffBusyOverlap } from '~/server/utils/time-range-overlap'
 import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
-import { parsePaymentSettings } from '~/server/utils/tenant-default-payment-method'
 import {
+  loadOnlineBookingPaymentPolicy,
   onlineBookingPaymentProvider,
   resolveOnlineBookingPaymentMethod,
 } from '~/server/utils/resolve-online-booking-payment-method'
@@ -87,7 +87,7 @@ interface GuestBookRequest {
   service_type?: RoomServiceType
   customer_pickup_plz?: string | null
   customer_pickup_address?: string | null
-  payment_method?: 'wallee' | 'invoice'
+  payment_method?: 'wallee' | 'invoice' | 'cash'
   apply_available_credit?: boolean
   discount_code?: string
   discount_amount_rappen?: number
@@ -653,23 +653,17 @@ export default defineEventHandler(async (event) => {
   const validatedDiscountAmount = resolvedDiscount.amountRappen
   const netAmountRappen = netAfterAppointmentDiscount(grossAmountRappen, validatedDiscountAmount)
 
-  let invoicePaymentsEnabled = false
-  if (body.payment_method === 'invoice') {
-    const { data: paymentSettingRow } = await supabase
-      .from('tenant_settings')
-      .select('setting_value')
-      .eq('tenant_id', tenantId)
-      .eq('category', 'payment')
-      .eq('setting_key', 'payment_settings')
-      .maybeSingle()
-    invoicePaymentsEnabled = parsePaymentSettings(paymentSettingRow?.setting_value).invoice_payments_enabled === true
-  }
+  const paymentPolicy = await loadOnlineBookingPaymentPolicy(supabase, tenantId, tenant.wallee_enabled)
   const paymentResolve = resolveOnlineBookingPaymentMethod({
     requested: body.payment_method,
-    invoicePaymentsEnabled,
+    policy: paymentPolicy,
   })
-  if (paymentResolve.rejectedInvoice) {
-    logger.warn('⚠️ Guest requested invoice payment but tenant has not enabled it — falling back to wallee', { tenantId })
+  if (paymentResolve.rejectedRequest) {
+    logger.warn('⚠️ Guest requested a payment method that is not enabled for online booking — using tenant default', {
+      tenantId,
+      requested: body.payment_method,
+      resolved: paymentResolve.method,
+    })
   }
   let resolvedPaymentMethod = paymentResolve.method
 
