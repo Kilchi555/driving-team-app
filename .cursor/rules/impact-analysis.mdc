@@ -5,11 +5,59 @@ alwaysApply: false
 
 # Impact Analysis Before Changes
 
-Before implementing any significant change, do NOT modify code immediately.
+Before implementing any significant change, do **NOT** modify application code immediately.
 
-First analyze the repository and determine the potential change blast radius.
+First analyze the repository, consult the architecture docs below, and produce an **IMPLEMENTATION GATE**.
 
-## 1. Understand the requested change
+## Architecture docs (mandatory inputs)
+
+Always consider these files when assessing impact:
+
+| Doc | Use for |
+|-----|---------|
+| `.cursor/docs/architecture-hotspots.md` | P0/P1/P2 hotspots, blast radius, required regressions |
+| `.cursor/docs/change-risk-guide.md` | LOW / MEDIUM / HIGH / CRITICAL tiers |
+| `.cursor/docs/dependency-map.md` | Dependency chains and shared hubs |
+| `.cursor/docs/system-map.md` | Auth, tenant, payment, and data flows |
+| `.cursor/docs/impact-matrix.md` | Area × risk quick reference |
+
+Do not invent architecture. If a doc and the code disagree, trust the **code search**, mark the doc gap as `NEEDS VERIFICATION`.
+
+## Critical rule
+
+DO NOT modify application code until Impact Analysis is complete and the Implementation Gate is written.
+
+If a P0 area is involved and effects are not sufficiently understood:
+
+**BLOCK IMPLEMENTATION — NEEDS VERIFICATION**
+
+Never invent dependencies, behavior, database relationships, security properties, or test coverage.
+
+---
+
+## 1. Change classification
+
+Classify every relevant change at the start (multiple allowed):
+
+```
+CHANGE CLASS:
+* UI
+* Component
+* Shared Component
+* Composable
+* Store
+* API
+* Database
+* RLS
+* Authentication
+* Authorization
+* Middleware
+* Payment
+* External Integration
+* Configuration
+```
+
+## 2. Understand the requested change
 
 Determine:
 
@@ -18,145 +66,194 @@ Determine:
 * What should the new behavior be?
 * What existing behavior must remain unchanged?
 
-Do not make assumptions without clearly labeling them.
+Label every assumption as `ASSUMPTION`. Do not present guesses as facts.
 
-## 2. Analyze dependencies
+## 3. Hotspot detection
 
-Search the repository and identify:
+Check against `.cursor/docs/architecture-hotspots.md` (and code search):
+
+1. Does the change touch a **P0** hotspot?
+2. Does it touch a **P1** hotspot?
+3. Does it touch a **dependency** of a P0/P1 hotspot?
+4. Is a **shared** component / composable / store changed?
+5. Is an **API**, **database query**, **RLS policy**, or **middleware** changed?
+
+**P0 hotspots (this project):**
+
+* Server auth gate
+* Auth store / session plugins
+* Multi-tenant isolation
+* Supabase clients / admin client
+* RLS policies
+* Wallee payments
+* Stripe SaaS / trial middleware
+
+**P1 hotspots (this project):**
+
+* EventModal / composables
+* Availability / booking engine
+* Route / server middleware
+* (also treat admin layout, terminology/branding, pricing, cron platform, super-admin as elevated when touched — see hotspots doc)
+
+If any answer is yes, **raise** expected impact / risk / test level. Never classify such a change as routine LOW work.
+
+## 4. Dependency analysis (evidence over assumption)
+
+Search the repository. Identify:
 
 * directly affected files
-* indirectly affected files
-* shared components
-* composables
-* stores
-* API routes
-* server logic
-* database queries
-* Supabase tables
-* RLS policies
-* authentication
-* authorization
-* middleware
-* types/interfaces
-* external integrations
-* payments
-* emails/notifications
-* cronjobs/background jobs
-* environment variables
-* tests
-* relevant user flows
+* indirectly affected files / consumers
+* shared components, composables, stores
+* API routes, server utils
+* database queries, Supabase tables, RLS
+* authentication / authorization / middleware
+* payments, webhooks, emails/notifications, crons
+* types/interfaces, env/config, tests, user flows
 
-Trace dependencies at least 2–3 levels deep where relevant.
+Trace dependencies **2–3 levels deep** where relevant.
 
-## 3. Classify impact
+**Evidence rules:**
 
-Classify every relevant finding as:
+* Forbidden phrasing: “That probably won’t affect other areas.”
+* Perform a real dependency search (imports, symbol usage, route/middleware wiring, table references).
+* If search finds nothing relevant: write **`NO DEPENDENCY FOUND`** (and still note residual risk if the file is a hotspot).
+* If analysis is inconclusive: write **`NEEDS VERIFICATION`**.
 
-**DIRECT**
+Classify findings:
 
-Code or configuration that must probably change.
+* **DIRECT** — must probably change
+* **INDIRECT** — depends on changed behavior
+* **POTENTIAL** — shared dependency; verify even if it looks untouched
 
-**INDIRECT**
+**Dependency-driven tests:** choose tests from the real graph, not a generic checklist.
 
-Code that may be affected because it depends on the changed behavior.
+Example: shared composable with 8 consumers → include those consumers (or their critical flows) in regression analysis.
 
-**POTENTIAL**
+## 5. Risk assessment and escalation
 
-Areas that appear unaffected but should be verified because they share dependencies.
+Risk levels:
 
-## 4. Risk assessment
+* 🔴 **HIGH** — realistic chance of breaking existing functionality
+* 🟠 **MEDIUM** — possible side effects / regression
+* 🟢 **LOW** — unlikely meaningful impact
 
-Use:
+Also map to `.cursor/docs/change-risk-guide.md` tiers: LOW / MEDIUM / HIGH / **CRITICAL**.
 
-🔴 HIGH — realistic possibility of breaking existing functionality
+### Hard escalation (must NOT be 🟢 LOW)
 
-🟠 MEDIUM — possible side effects or regression risk
+A change must **not** be rated LOW risk if it involves any of:
 
-🟢 LOW — unlikely to cause meaningful impact
+* Authentication
+* Authorization
+* `tenant_id` / multi-tenant isolation
+* Supabase Admin Client
+* RLS
+* Wallee
+* Stripe
+* Webhooks
+* Booking / availability
+* Central middleware (route or server)
 
-Pay particular attention to:
+When uncertain: choose the **higher** risk.
 
-* authentication
-* authorization
-* Supabase RLS
-* multi-tenant isolation
-* admin/superadmin permissions
-* database schema
-* API contracts
-* shared components
-* shared composables
-* payment functionality
-* existing user data
-* URLs/SEO
-* external integrations
+P0 hotspot involvement → treat as **HIGH** or **CRITICAL**, never LOW/MEDIUM convenience ratings.
 
-## 5. Breaking-change check
+## 6. Breaking-change check
 
 Explicitly determine whether the change could:
 
-* change an API contract
-* change a database schema
-* change a database query
-* change RLS behavior
-* change authentication/authorization
-* change an existing TypeScript interface
-* change existing user behavior
-* affect another tenant
-* affect existing records
-* break an integration
-* change a URL or route
+* change an API contract, DB schema/query, or RLS behavior
+* change authentication / authorization
+* change a TypeScript interface or existing user behavior
+* affect another tenant or existing records
+* break an integration, URL, or route
 
-If yes, clearly mark it as:
+If yes, mark **BREAKING CHANGE** or **HIGH RISK CHANGE**.
 
-**BREAKING CHANGE**
+## 7. Security escalation
 
-or
+If the change involves auth, roles, tenant isolation, RLS, or admin-client queries, verify at least:
 
-**HIGH RISK CHANGE**
+* Tenant A sees only Tenant A data
+* Tenant B sees only Tenant B data
+* Admin sees only allowed tenant data
+* Superadmin behavior (intentional cross-tenant only)
+* Unauthenticated access denied where required
+* Direct API calls (not only UI)
+* `tenant_id` manipulation resistance
+* Admin-client queries still filter by tenant
+* Relevant RLS policies still correct
 
-## 6. Test impact
+Record results under **Security Verification**. Incomplete understanding → `NEEDS VERIFICATION` / block if P0.
 
-Determine exactly which tests are relevant after implementation:
+## 8. Payment escalation
 
-* unit tests
-* integration tests
-* API tests
-* database tests
-* RLS/security tests
-* E2E tests
-* regression tests
-* manual UI verification
+If Wallee or Stripe is involved, verify at least:
 
-Do not recommend irrelevant tests just for the sake of having more tests.
+* Amount
+* Tenant
+* User
+* Payment status
+* Webhook handling
+* Duplicate webhook / idempotency
+* Error / recovery paths
+* Credits (if in path)
+* Trial / subscription status (Stripe / tenant gates)
 
-## 7. Manual verification
+## 9. Test level
 
-If UI or user behavior is affected, specify exactly what should be checked manually.
-
-Include relevant:
-
-* pages
-* user roles
-* desktop/mobile
-* loading states
-* empty states
-* error states
-* permission states
-* edge cases
-
-## 8. Required output
-
-Before changing code, produce:
+Select tests from the dependency graph, then set:
 
 ```
-IMPACT SUMMARY
+TEST LEVEL:
+L0 — Lint / Typecheck
+L1 — Targeted Unit / Component
+L2 — Integration
+L3 — E2E / User Flow
+L4 — Security / Multi-Tenant Regression
+L5 — Full Regression
+```
+
+Minimums:
+
+| Situation | Minimum |
+|-----------|---------|
+| P0 hotspot | **L3**; Security / tenant / RLS / admin-client → **L4** |
+| P1 hotspot | **L2**; user-facing flows → **L3** |
+| Shared component / composable / store | **L2** + consumer regression from the graph |
+| Auth / tenant / RLS | **L4** |
+| Payment (Wallee / Stripe / webhooks) | **L3** + payment-specific checks (section 8) |
+
+Do not recommend irrelevant tests. Prefer existing suites (`e2e/login`, `e2e/isolation`, Vitest under `server/utils/__tests__`, etc.) when they match the graph; otherwise specify manual verification and mark automation gaps `NEEDS VERIFICATION`.
+
+## 10. Manual verification
+
+If UI or user behavior is affected, specify exactly what to check:
+
+* pages, roles, desktop/mobile
+* loading / empty / error / permission states
+* edge cases from the dependency graph
+
+## 11. Implementation gate (required output)
+
+Before changing application code, output:
+
+```
+IMPLEMENTATION GATE
 
 Change:
 …
 
+CHANGE CLASS:
+…
+
+Hotspots:
+(none | P0: … | P1: … | dependency of …)
+
 Blast Radius: Small / Medium / Large
 
 Risk: 🔴 HIGH / 🟠 MEDIUM / 🟢 LOW
+(Risk guide tier: LOW / MEDIUM / HIGH / CRITICAL)
 
 Direct Impact:
 …
@@ -167,20 +264,16 @@ Indirect Impact:
 Potential Impact:
 …
 
-Security Impact:
-None / Low / Medium / High
+Dependency Evidence:
+(search summary | NO DEPENDENCY FOUND | NEEDS VERIFICATION)
 
-Database Impact:
-None / Low / Medium / High
+Security Impact: None / Low / Medium / High
+Database Impact: None / Low / Medium / High
+Multi-Tenant Impact: None / Low / Medium / High
+Regression Risk: Low / Medium / High
+Breaking Change: Yes / No
 
-Multi-Tenant Impact:
-None / Low / Medium / High
-
-Regression Risk:
-Low / Medium / High
-
-Breaking Change:
-Yes / No
+TEST LEVEL: L0–L5
 
 Required Tests:
 …
@@ -188,20 +281,20 @@ Required Tests:
 Manual Verification:
 …
 
+Security Verification:
+(none | checklist results | NEEDS VERIFICATION)
+
+Database Verification:
+(none | migrations/RLS/queries reviewed | NEEDS VERIFICATION)
+
 Recommendation:
 SAFE TO IMPLEMENT
 or
 IMPLEMENT WITH CAUTION
 or
 INVESTIGATE BEFORE IMPLEMENTING
+or
+BLOCK IMPLEMENTATION — NEEDS VERIFICATION
 ```
 
-## 9. Critical rule
-
-DO NOT modify application code until the Impact Analysis is complete.
-
-If something cannot be established from the repository, write:
-
-**NEEDS VERIFICATION**
-
-Never invent dependencies, behavior, database relationships, security properties or test coverage.
+Only after this gate may application code be modified — unless the gate is **BLOCK IMPLEMENTATION — NEEDS VERIFICATION**, in which case stop and gather evidence first.
