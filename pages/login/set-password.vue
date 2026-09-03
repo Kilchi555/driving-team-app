@@ -178,6 +178,11 @@ import { useRoute } from '#app'
 import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import {
+  sessionFingerprint,
+  shouldSoftSucceedAuthUrlStep,
+  stripSensitiveAuthParams,
+} from '~/utils/auth-url-session'
 
 const route = useRoute()
 
@@ -269,21 +274,72 @@ const setPassword = async () => {
   }
 }
 
+/** Strip invite/recovery secrets from the address bar after they are consumed. */
+function clearSensitiveAuthParamsFromUrl() {
+  if (typeof window === 'undefined') return
+  window.history.replaceState(
+    {},
+    document.title,
+    stripSensitiveAuthParams(window.location.href)
+  )
+}
+
+async function readSessionFingerprint(supabase: ReturnType<typeof getSupabase>) {
+  const { data } = await supabase.auth.getSession()
+  return sessionFingerprint(data.session)
+}
+
+/**
+ * Fail closed on leftover sessions. Soft-succeed only when evidence shows this
+ * page load consumed the invite URL (token match, session replace, or fresh PKCE race).
+ * Does not clear the URL on failure — caller must only strip after success.
+ */
+async function acceptAuthCallOrExistingSession(
+  supabase: ReturnType<typeof getSupabase>,
+  authError: { message?: string } | null,
+  sessionBefore: ReturnType<typeof sessionFingerprint>,
+  expectedAccessToken?: string | null
+) {
+  const sessionAfter = authError ? await readSessionFingerprint(supabase) : sessionBefore
+  if (
+    shouldSoftSucceedAuthUrlStep({
+      authError,
+      sessionBefore,
+      sessionAfter,
+      expectedAccessToken,
+    })
+  ) {
+    if (authError) {
+      logger.debug('Auth URL step soft-ok after', authError.message)
+    }
+    return
+  }
+  throw authError
+}
+
 // Establish invite/recovery session from URL, then load user metadata
 onMounted(async () => {
   try {
     const supabase = getSupabase()
+    let consumedSensitiveUrl = false
 
     // 1) Implicit/hash flow (common for invite + recovery redirects)
     const hashParams = new URLSearchParams(window.location.hash.substring(1))
     const accessToken = hashParams.get('access_token')
     const refreshToken = hashParams.get('refresh_token')
     if (accessToken && refreshToken) {
+      const sessionBefore = await readSessionFingerprint(supabase)
       const { error: setSessionError } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
       })
-      if (setSessionError) throw setSessionError
+      await acceptAuthCallOrExistingSession(
+        supabase,
+        setSessionError,
+        sessionBefore,
+        accessToken
+      )
+      consumedSensitiveUrl = true
     } else {
       // 2) PKCE / token_hash query flow
       const query = new URLSearchParams(window.location.search)
@@ -291,15 +347,24 @@ onMounted(async () => {
       const otpType = query.get('type')
       const code = query.get('code')
       if (tokenHash && otpType) {
+        const sessionBefore = await readSessionFingerprint(supabase)
         const { error: otpError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
           type: otpType as 'invite' | 'recovery' | 'signup' | 'email',
         })
-        if (otpError) throw otpError
+        await acceptAuthCallOrExistingSession(supabase, otpError, sessionBefore)
+        consumedSensitiveUrl = true
       } else if (code) {
+        const sessionBefore = await readSessionFingerprint(supabase)
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-        if (exchangeError) throw exchangeError
+        await acceptAuthCallOrExistingSession(supabase, exchangeError, sessionBefore)
+        consumedSensitiveUrl = true
       }
+    }
+
+    // Only strip secrets after a successful (or proven soft-ok) consume
+    if (consumedSensitiveUrl) {
+      clearSensitiveAuthParamsFromUrl()
     }
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()

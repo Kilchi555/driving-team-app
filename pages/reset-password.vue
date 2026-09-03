@@ -152,6 +152,11 @@ import { navigateTo } from '#app'
 import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import {
+  sessionFingerprint,
+  shouldSoftSucceedAuthUrlStep,
+  stripSensitiveAuthParams,
+} from '~/utils/auth-url-session'
 
 
 // State
@@ -238,17 +243,41 @@ onMounted(async () => {
     if (accessToken && refreshToken) {
       // Establish recovery session in the browser Supabase client (anon key + user tokens)
       const supabase = getSupabase()
+      const { data: beforeData } = await supabase.auth.getSession()
+      const sessionBefore = sessionFingerprint(beforeData.session)
+
       const { data, error: setSessionError } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
       })
-      
-      if (setSessionError) {
-        throw setSessionError
+
+      const { data: afterData } = await supabase.auth.getSession()
+      const sessionAfter = sessionFingerprint(afterData.session || data.session)
+
+      if (
+        !shouldSoftSucceedAuthUrlStep({
+          authError: setSessionError,
+          sessionBefore,
+          sessionAfter,
+          expectedAccessToken: accessToken,
+        })
+      ) {
+        throw setSessionError || new Error('No valid recovery session')
       }
-      
-      logger.debug('Session set successfully:', data.session?.user?.email)
-      resolvedEmail.value = data.session?.user?.email || ''
+
+      // Only clear URL after the recovery tokens were actually applied
+      window.history.replaceState(
+        {},
+        document.title,
+        stripSensitiveAuthParams(window.location.href)
+      )
+
+      const email =
+        data.session?.user?.email ||
+        afterData.session?.user?.email ||
+        ''
+      logger.debug('Session set successfully:', email)
+      resolvedEmail.value = email
       isLoading.value = false
     } else {
       // Check if we already have a valid session using httpOnly cookies
