@@ -49,8 +49,8 @@ import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-at
 import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
 import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
 import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
-import { parsePaymentSettings } from '~/server/utils/tenant-default-payment-method'
 import {
+  loadOnlineBookingPaymentPolicy,
   onlineBookingPaymentProvider,
   resolveOnlineBookingPaymentMethod,
 } from '~/server/utils/resolve-online-booking-payment-method'
@@ -103,8 +103,8 @@ interface CreateAppointmentRequest {
    *  rule for this category+location. The room itself is auto-assigned server-side, never
    *  chosen by the customer. */
   service_type?: RoomServiceType
-  /** Customer-selected payment method. Only 'invoice' is honored, and only when the tenant has explicitly enabled it — otherwise falls back to 'wallee'. */
-  payment_method?: 'wallee' | 'invoice'
+  /** Customer-selected payment method. Honored only when the tenant enabled that method for online booking. */
+  payment_method?: 'wallee' | 'invoice' | 'cash'
   /** Default true: apply available wallet credit before checkout / invoice. */
   apply_available_credit?: boolean
 }
@@ -589,31 +589,28 @@ export default defineEventHandler(async (event: H3Event) => {
     })
     const travelFeeRappen = travelFee.fee_rappen || 0
 
-    let invoicePaymentsEnabled = false
-    if (body.payment_method === 'invoice') {
-      const { data: paymentSettingRow } = await supabase
-        .from('tenant_settings')
-        .select('setting_value')
-        .eq('tenant_id', tenantId)
-        .eq('category', 'payment')
-        .eq('setting_key', 'payment_settings')
-        .maybeSingle()
-      invoicePaymentsEnabled = parsePaymentSettings(paymentSettingRow?.setting_value).invoice_payments_enabled === true
-    }
-    const paymentResolve = resolveOnlineBookingPaymentMethod({
-      requested: body.payment_method,
-      invoicePaymentsEnabled,
-    })
-    if (paymentResolve.rejectedInvoice) {
-      logger.warn('⚠️ Customer requested invoice payment but tenant has not enabled it — falling back to wallee', { tenantId })
-    }
-    const resolvedPaymentMethod = paymentResolve.method
-
     const { data: tenantPayPolicy } = await supabase
       .from('tenants')
       .select('booking_policy, slug, wallee_enabled')
       .eq('id', tenantId)
       .maybeSingle()
+    const paymentPolicy = await loadOnlineBookingPaymentPolicy(
+      supabase,
+      tenantId!,
+      tenantPayPolicy?.wallee_enabled
+    )
+    const paymentResolve = resolveOnlineBookingPaymentMethod({
+      requested: body.payment_method,
+      policy: paymentPolicy,
+    })
+    if (paymentResolve.rejectedRequest) {
+      logger.warn('⚠️ Customer requested a payment method that is not enabled for online booking — using tenant default', {
+        tenantId,
+        requested: body.payment_method,
+        resolved: paymentResolve.method,
+      })
+    }
+    const resolvedPaymentMethod = paymentResolve.method
     const mayHoldUntilPaid =
       tenantPayPolicy?.booking_policy?.require_payment_before_confirm === true
       && resolvedPaymentMethod === 'wallee'

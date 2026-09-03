@@ -9,6 +9,11 @@ import { DEFAULT_BOOKING_POLICY, normalizeLocationIntakeModes, normalizeRegistra
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { parsePaymentSettings } from '~/server/utils/tenant-default-payment-method'
+import {
+  onlineBookingAllowedMethods,
+  onlineBookingFallbackMethod,
+  paymentPolicyFromTenantSettings,
+} from '~/server/utils/resolve-online-booking-payment-method'
 
 function parseFeatureEnabled(raw: unknown, fallback: boolean): boolean {
   if (raw == null) return fallback
@@ -38,7 +43,7 @@ export default defineEventHandler(async (event) => {
   // Resolve slug to tenant
   const { data: tenant, error: tenantErr } = await supabase
     .from('tenants')
-    .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, logo_square_url, logo_wide_url, booking_policy')
+    .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, logo_square_url, logo_wide_url, booking_policy, wallee_enabled')
     .eq('slug', slug)
     .single()
 
@@ -179,6 +184,12 @@ export default defineEventHandler(async (event) => {
   let pickupTravelCheck = false
   let cashVisibleForCustomer = false
   let invoicePaymentsEnabled = false
+  const paymentPolicy = paymentPolicyFromTenantSettings({
+    settings: {},
+    walleeEnabled: (tenant as any).wallee_enabled,
+  })
+  let onlinePaymentMethods = onlineBookingAllowedMethods(paymentPolicy)
+  let defaultOnlinePaymentMethod = onlineBookingFallbackMethod(paymentPolicy)
   try {
     const { data: settingRows } = await settingsPromise
     for (const row of settingRows ?? []) {
@@ -188,20 +199,26 @@ export default defineEventHandler(async (event) => {
         pickupTravelCheck = parseFeatureEnabled(row.setting_value, false)
       } else if (row.setting_key === 'payment_settings') {
         const payment = parsePaymentSettings(row.setting_value)
-        cashVisibleForCustomer =
-          (payment.cash_payments_enabled ?? true)
-          && payment.cash_payment_visibility === 'customers_and_staff'
-        invoicePaymentsEnabled = !!payment.invoice_payments_enabled
+        const resolvedPolicy = paymentPolicyFromTenantSettings({
+          settings: payment,
+          walleeEnabled: (tenant as any).wallee_enabled,
+        })
+        cashVisibleForCustomer = resolvedPolicy.cashEnabledForCustomers
+        invoicePaymentsEnabled = resolvedPolicy.invoiceEnabled
+        onlinePaymentMethods = onlineBookingAllowedMethods(resolvedPolicy)
+        defaultOnlinePaymentMethod = onlineBookingFallbackMethod(resolvedPolicy)
       }
     }
   } catch {
     // Keep defaults if settings lookup fails
   }
 
+  const { wallee_enabled: _walleeEnabled, ...tenantWithoutSecrets } = tenantPublic as any
+
   return {
     success: true,
     data: {
-      tenant: tenantPublic,
+      tenant: tenantWithoutSecrets,
       categories,
       locationsCount,
       bookingPolicy,
@@ -210,6 +227,8 @@ export default defineEventHandler(async (event) => {
       pickup_travel_check: pickupTravelCheck,
       cash_visible_for_customer: cashVisibleForCustomer,
       invoice_payments_enabled: invoicePaymentsEnabled,
+      online_payment_methods: onlinePaymentMethods,
+      default_online_payment_method: defaultOnlinePaymentMethod,
     },
   }
 })
