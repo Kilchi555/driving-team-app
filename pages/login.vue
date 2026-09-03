@@ -32,7 +32,15 @@
         </div>
 
         <!-- Login Form / MFA Form -->
-        <form v-if="!mfaFlow.state.value.requiresMFA" @submit.prevent="handleLogin" class="space-y-4" novalidate>
+        <form
+          v-if="!mfaFlow.state.value.requiresMFA"
+          method="post"
+          action="/api/auth/credential-save-ack"
+          autocomplete="on"
+          @submit.prevent="handleLogin"
+          class="space-y-4"
+          novalidate
+        >
           <!-- Email Input -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
@@ -42,6 +50,7 @@
               id="email"
               v-model="loginForm.email"
               type="email"
+              name="username"
               autocomplete="username"
               class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:border-transparent transition-colors"
               :class="[
@@ -64,6 +73,7 @@
                 id="password"
                 v-model="loginForm.password"
                 :type="showPassword ? 'text' : 'password'"
+                name="password"
                 autocomplete="current-password"
                 class="w-full px-3 py-2 pr-10 rounded-lg focus:ring-2 focus:border-transparent transition-colors"
                 :class="[
@@ -633,6 +643,7 @@ import { useTenant } from '~/composables/useTenant'
 import { useMFAFlow } from '~/composables/useMFAFlow'
 import { logger } from '~/utils/logger'
 import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
+import { saveCredentials } from '~/utils/save-credentials'
 import { adminHomePath, withWebsiteOnlyFlag } from '~/utils/website-only'
 
 // Meta
@@ -979,6 +990,7 @@ const handleLogin = async () => {
   isLoading.value = true
   loginError.value = null
   passkeyRequiredBanner.value = false
+  showPassword.value = false
 
   try {
     logger.debug('🔑 Starting login attempt for:', loginForm.value.email)
@@ -1019,6 +1031,14 @@ const handleLogin = async () => {
 
     // Normales Login erfolgreich
     logger.debug('✅ Login successful')
+
+    // AJAX/SPA login never triggers the browser save prompt by itself.
+    void saveCredentials(
+      loginForm.value.email.toLowerCase().trim(),
+      loginForm.value.password,
+      undefined,
+      'current-password'
+    )
 
     // Reset failed login attempts on success
     failedLoginAttempts.value = 0
@@ -1197,6 +1217,13 @@ const handleMFAVerify = async () => {
   
   if (result && result.success) {
     logger.debug('✅ MFA verification successful, logging in...')
+
+    void saveCredentials(
+      loginForm.value.email.toLowerCase().trim(),
+      loginForm.value.password,
+      undefined,
+      'current-password'
+    )
     
     // MFA erfolgreich - führe normales Login-Ende aus
     const authStore = useAuthStore()

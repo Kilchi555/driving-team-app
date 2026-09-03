@@ -86,7 +86,14 @@
       <!-- Login Form -->
       <div class="p-6">
         <!-- Login Form (session check runs silently in background) -->
-        <form @submit.prevent="handleLogin" class="space-y-4" novalidate>
+        <form
+          method="post"
+          action="/api/auth/credential-save-ack"
+          autocomplete="on"
+          @submit.prevent="handleLogin"
+          class="space-y-4"
+          novalidate
+        >
           <!-- Email Input -->
           <div>
             <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
@@ -525,6 +532,7 @@ import { useUIStore } from '~/stores/ui'
 import { useMFAFlow } from '~/composables/useMFAFlow'
 import { getSupabase } from '~/utils/supabase'
 import { hydrateClientSessionAfterLogin } from '~/utils/hydrate-client-session-after-login'
+import { saveCredentials } from '~/utils/save-credentials'
 import { adminHomePath, withWebsiteOnlyFlag } from '~/utils/website-only'
 
 logger.debug('📄 [slug].vue imports completed')
@@ -696,6 +704,8 @@ const handleLogin = async () => {
 
   isLoading.value = true
   loginError.value = null
+  // Password managers key off type="password" at submit time; undo show-toggle.
+  showPassword.value = false
 
   try {
     logger.debug('🔑 Starting login attempt for:', loginForm.value.email)
@@ -736,6 +746,13 @@ const handleLogin = async () => {
     }
 
     logger.debug('✅ Login successful')
+
+    // Browser password managers ignore AJAX logins (@submit.prevent + $fetch +
+    // SPA router.push). Explicitly offer to save — same helper as register/onboarding.
+    // Never block the post-login redirect on the save prompt.
+    const savedEmail = loginForm.value.email.toLowerCase().trim()
+    const savedPassword = loginForm.value.password
+    void saveCredentials(savedEmail, savedPassword, undefined, 'current-password')
 
     // Session tokens are in HTTP-Only cookies (server) AND returned in the body
     // so we can hydrate supabase-js without a refresh-token rotation race.
@@ -917,6 +934,15 @@ const handleMFAVerify = async () => {
   
   if (result && result.success) {
     logger.debug('✅ MFA verification successful, logging in...')
+
+    // Same as password-only login: SPA MFA completion never triggers the
+    // browser's native save prompt by itself.
+    void saveCredentials(
+      loginForm.value.email.toLowerCase().trim(),
+      loginForm.value.password,
+      undefined,
+      'current-password'
+    )
     
     // ✅ SAVE: Remember this tenant for next session
     try {
