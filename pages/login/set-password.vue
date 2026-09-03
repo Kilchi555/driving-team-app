@@ -176,6 +176,8 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from '#app'
 import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
+import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 const route = useRoute()
 
@@ -226,15 +228,10 @@ const setPassword = async () => {
   error.value = ''
 
   try {
-    // Update password using the token from URL
-    const { error: updateError } = await $fetch('/api/auth/manage', { 
-      method: 'POST', 
-      body: { 
-        action: 'update-user', 
-        attributes: {
-          password: password.value
-        }
-      }
+    // Update password with the invite/recovery session on the client — never service-role manage
+    const supabase = getSupabase()
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: password.value,
     })
 
     if (updateError) {
@@ -242,7 +239,7 @@ const setPassword = async () => {
     }
 
     // Create business user record via secure API
-    const user = authStore.user
+    const { data: { user } } = await supabase.auth.getUser()
     if (user && userInfo.value) {
       try {
         await $fetch('/api/auth/complete-registration', {
@@ -272,13 +269,13 @@ const setPassword = async () => {
   }
 }
 
-// Load user info from invitation token
+// Load user info from invitation session (client JWT)
 onMounted(async () => {
   try {
-    // Get user info from auth session
-    const { data: { user }, error } = authStore.user // ✅ MIGRATED
+    const supabase = getSupabase()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    if (error || !user) {
+    if (userError || !user) {
       error.value = 'Ungültiger Einladungslink'
       return
     }

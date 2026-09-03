@@ -150,6 +150,8 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { navigateTo } from '#app'
 import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
+import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 
 // State
@@ -188,21 +190,17 @@ const updatePassword = async () => {
   isSubmitting.value = true
   
   try {
-    const { data, error: updateError } = await $fetch('/api/auth/manage', { 
-      method: 'POST', 
-      body: { 
-        action: 'update-user', 
-        attributes: {
-          password: newPassword.value
-        }
-      }
+    // Password change must use the recovery/user JWT on the client — never service-role manage
+    const supabase = getSupabase()
+    const { data, error: updateError } = await supabase.auth.updateUser({
+      password: newPassword.value,
     })
     
     if (updateError) {
       throw updateError
     }
     
-    logger.debug('Password updated successfully:', data)
+    logger.debug('Password updated successfully:', data?.user?.email)
     success.value = true
     
     // Auto-redirect nach 3 Sekunden
@@ -238,14 +236,11 @@ onMounted(async () => {
     })
     
     if (accessToken && refreshToken) {
-      // Set the session from URL tokens
-      const { data, error: setSessionError } = await $fetch('/api/auth/manage', { 
-        method: 'POST', 
-        body: { 
-          action: 'set-session',
-          access_token: accessToken,
-          refresh_token: refreshToken
-        }
+      // Establish recovery session in the browser Supabase client (anon key + user tokens)
+      const supabase = getSupabase()
+      const { data, error: setSessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
       })
       
       if (setSessionError) {
