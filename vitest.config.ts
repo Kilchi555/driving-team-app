@@ -11,7 +11,10 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: ['server/utils/__tests__/**/*.test.ts'],
+    include: [
+      'server/utils/__tests__/**/*.test.ts',
+      'utils/__tests__/**/*.test.ts',
+    ],
     exclude: ['node_modules', 'dist', '.idea', '.git', '.cache']
   },
   define: {

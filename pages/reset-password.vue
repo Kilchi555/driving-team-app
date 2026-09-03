@@ -152,6 +152,7 @@ import { navigateTo } from '#app'
 import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { stripSensitiveAuthParams } from '~/utils/auth-url-session'
 
 
 // State
@@ -244,11 +245,26 @@ onMounted(async () => {
       })
       
       if (setSessionError) {
-        throw setSessionError
+        // Soft-ok if session already exists (e.g. client already consumed hash)
+        const { data: existing } = await supabase.auth.getSession()
+        if (!existing.session?.user) {
+          throw setSessionError
+        }
       }
+
+      // Do not leave access_token / refresh_token in the address bar
+      window.history.replaceState(
+        {},
+        document.title,
+        stripSensitiveAuthParams(window.location.href)
+      )
       
-      logger.debug('Session set successfully:', data.session?.user?.email)
-      resolvedEmail.value = data.session?.user?.email || ''
+      const email =
+        data.session?.user?.email ||
+        (await supabase.auth.getSession()).data.session?.user?.email ||
+        ''
+      logger.debug('Session set successfully:', email)
+      resolvedEmail.value = email
       isLoading.value = false
     } else {
       // Check if we already have a valid session using httpOnly cookies
