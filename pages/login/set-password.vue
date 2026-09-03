@@ -269,12 +269,41 @@ const setPassword = async () => {
   }
 }
 
-// Load user info from invitation session (client JWT)
+// Establish invite/recovery session from URL, then load user metadata
 onMounted(async () => {
   try {
     const supabase = getSupabase()
+
+    // 1) Implicit/hash flow (common for invite + recovery redirects)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    const accessToken = hashParams.get('access_token')
+    const refreshToken = hashParams.get('refresh_token')
+    if (accessToken && refreshToken) {
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      })
+      if (setSessionError) throw setSessionError
+    } else {
+      // 2) PKCE / token_hash query flow
+      const query = new URLSearchParams(window.location.search)
+      const tokenHash = query.get('token_hash')
+      const otpType = query.get('type')
+      const code = query.get('code')
+      if (tokenHash && otpType) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: otpType as 'invite' | 'recovery' | 'signup' | 'email',
+        })
+        if (otpError) throw otpError
+      } else if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+        if (exchangeError) throw exchangeError
+      }
+    }
+
     const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
+
     if (userError || !user) {
       error.value = 'Ungültiger Einladungslink'
       return
@@ -292,7 +321,7 @@ onMounted(async () => {
     // Get tenant slug for redirect via public branding API
     if (userInfo.value.tenant_id) {
       try {
-        const brandingData = await $fetch(`/api/tenants/branding?tenantId=${userInfo.value.tenant_id}`) as any
+        const brandingData = await $fetch(`/api/tenants/branding?tenantId=${userInfo.value.tenant_id}`) as { tenant?: { slug?: string } }
         tenantSlug.value = brandingData?.tenant?.slug || 'default'
       } catch {
         tenantSlug.value = 'default'
