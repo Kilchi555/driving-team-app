@@ -178,6 +178,10 @@ import { useRoute } from '#app'
 import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import {
+  shouldSoftSucceedAuthUrlStep,
+  stripSensitiveAuthParams,
+} from '~/utils/auth-url-session'
 
 const route = useRoute()
 
@@ -269,10 +273,48 @@ const setPassword = async () => {
   }
 }
 
+/** Strip invite/recovery secrets from the address bar after they are consumed. */
+function clearSensitiveAuthParamsFromUrl() {
+  if (typeof window === 'undefined') return
+  window.history.replaceState(
+    {},
+    document.title,
+    stripSensitiveAuthParams(window.location.href)
+  )
+}
+
+/** True when a usable session already exists (e.g. @nuxtjs/supabase already exchanged PKCE). */
+async function hasUsableAuthSession(supabase: ReturnType<typeof getSupabase>) {
+  const { data: sessionData } = await supabase.auth.getSession()
+  if (sessionData.session?.user) return true
+  const { data: userData, error } = await supabase.auth.getUser()
+  return !error && !!userData.user
+}
+
+/**
+ * Fail closed only when the auth call failed AND no session exists.
+ * Soft-succeed when the module (or a prior navigation) already established the session —
+ * a second exchangeCodeForSession / verifyOtp then fails even though the invite is valid.
+ */
+async function acceptAuthCallOrExistingSession(
+  supabase: ReturnType<typeof getSupabase>,
+  authError: { message?: string } | null
+) {
+  const hasSession = authError ? await hasUsableAuthSession(supabase) : false
+  if (shouldSoftSucceedAuthUrlStep(authError, hasSession)) {
+    if (authError) {
+      logger.debug('Auth URL step soft-ok: session already present after', authError.message)
+    }
+    return
+  }
+  throw authError
+}
+
 // Establish invite/recovery session from URL, then load user metadata
 onMounted(async () => {
   try {
     const supabase = getSupabase()
+    let consumedSensitiveUrl = false
 
     // 1) Implicit/hash flow (common for invite + recovery redirects)
     const hashParams = new URLSearchParams(window.location.hash.substring(1))
@@ -283,7 +325,8 @@ onMounted(async () => {
         access_token: accessToken,
         refresh_token: refreshToken,
       })
-      if (setSessionError) throw setSessionError
+      await acceptAuthCallOrExistingSession(supabase, setSessionError)
+      consumedSensitiveUrl = true
     } else {
       // 2) PKCE / token_hash query flow
       const query = new URLSearchParams(window.location.search)
@@ -295,11 +338,17 @@ onMounted(async () => {
           token_hash: tokenHash,
           type: otpType as 'invite' | 'recovery' | 'signup' | 'email',
         })
-        if (otpError) throw otpError
+        await acceptAuthCallOrExistingSession(supabase, otpError)
+        consumedSensitiveUrl = true
       } else if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-        if (exchangeError) throw exchangeError
+        await acceptAuthCallOrExistingSession(supabase, exchangeError)
+        consumedSensitiveUrl = true
       }
+    }
+
+    if (consumedSensitiveUrl) {
+      clearSensitiveAuthParamsFromUrl()
     }
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()
