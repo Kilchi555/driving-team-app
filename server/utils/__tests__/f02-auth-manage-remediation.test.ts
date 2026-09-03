@@ -67,8 +67,10 @@ describe('F-02 caller migration contract', () => {
     expect(src).not.toMatch(/\/api\/auth\/manage/)
   })
 
-  it('set-password.vue uses client updateUser, not manage', () => {
+  it('set-password.vue establishes session from URL then uses client updateUser', () => {
     const src = readFileSync(setPasswordPage, 'utf8')
+    expect(src).toContain('supabase.auth.setSession')
+    expect(src).toContain('supabase.auth.verifyOtp')
     expect(src).toContain('supabase.auth.updateUser')
     expect(src).toContain('supabase.auth.getUser')
     expect(src).not.toMatch(/\/api\/auth\/manage/)
