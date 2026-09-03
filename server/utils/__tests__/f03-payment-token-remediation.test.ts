@@ -4,6 +4,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
+import { isInternalSecretRequest } from '~/server/utils/require-staff-or-internal'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import {
+  authorizeGetUserPaymentToken,
+  authorizeSavePaymentToken,
+} from '../payment-token-auth'
 
 vi.mock('~/server/utils/auth', () => ({
   getAuthenticatedUserWithDbId: vi.fn(),
@@ -17,21 +24,13 @@ vi.mock('~/server/utils/supabase-admin', () => ({
   getSupabaseAdmin: vi.fn(),
 }))
 
-import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
-import { isInternalSecretRequest } from '~/server/utils/require-staff-or-internal'
-import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import {
-  authorizeGetUserPaymentToken,
-  authorizeSavePaymentToken,
-} from '../payment-token-auth'
-
 const savePath = resolve(process.cwd(), 'server/api/wallee/save-payment-token.post.ts')
 const getPath = resolve(process.cwd(), 'server/api/booking/get-user-payment-token.post.ts')
 const webhookPath = resolve(process.cwd(), 'server/api/wallee/webhook.post.ts')
 
-function mockPaymentLookup(
-  payments: Array<{ user_id: string; tenant_id: string; wallee_space_id?: string }> | null
-) {
+type PaymentRow = { user_id: string; tenant_id: string; wallee_space_id?: string }
+
+function mockPaymentLookup(payments: PaymentRow[] | null) {
   const limit = vi.fn().mockResolvedValue({
     data: payments
       ? payments.map((p, i) => ({
@@ -46,7 +45,7 @@ function mockPaymentLookup(
   })
 
   const eq = vi.fn()
-  const chain: any = {
+  const chain = {
     eq: (...args: unknown[]) => {
       eq(...args)
       return chain
@@ -58,9 +57,19 @@ function mockPaymentLookup(
     from: vi.fn(() => ({
       select: vi.fn(() => chain),
     })),
-  } as any)
+  } as unknown as ReturnType<typeof getSupabaseAdmin>)
 
   return { eq, limit }
+}
+
+const emptyEvent = {} as Parameters<typeof authorizeSavePaymentToken>[0]
+
+const sessionUser = {
+  id: 'u-me',
+  tenant_id: 't-me',
+  auth_user_id: 'auth-me',
+  email: 'me@example.com',
+  role: 'customer',
 }
 
 describe('F-03 contract — endpoints require auth helpers', () => {
@@ -86,8 +95,6 @@ describe('F-03 contract — endpoints require auth helpers', () => {
 })
 
 describe('authorizeSavePaymentToken', () => {
-  const event = {} as any
-
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -97,7 +104,7 @@ describe('authorizeSavePaymentToken', () => {
     vi.mocked(getAuthenticatedUserWithDbId).mockResolvedValue(null)
 
     await expect(
-      authorizeSavePaymentToken(event, {
+      authorizeSavePaymentToken(emptyEvent, {
         transactionId: 'txn-1',
         userId: 'u-attacker',
         tenantId: 't-attacker',
@@ -109,7 +116,7 @@ describe('authorizeSavePaymentToken', () => {
     vi.mocked(isInternalSecretRequest).mockReturnValue(true)
 
     await expect(
-      authorizeSavePaymentToken(event, { transactionId: 'txn-1' })
+      authorizeSavePaymentToken(emptyEvent, { transactionId: 'txn-1' })
     ).rejects.toMatchObject({ statusCode: 400 })
   })
 
@@ -117,7 +124,7 @@ describe('authorizeSavePaymentToken', () => {
     vi.mocked(isInternalSecretRequest).mockReturnValue(true)
     const { eq } = mockPaymentLookup([{ user_id: 'u-real', tenant_id: 't-real' }])
 
-    const actor = await authorizeSavePaymentToken(event, {
+    const actor = await authorizeSavePaymentToken(emptyEvent, {
       transactionId: 'txn-1',
       userId: 'u-attacker',
       tenantId: 't-real',
@@ -141,7 +148,7 @@ describe('authorizeSavePaymentToken', () => {
     mockPaymentLookup([])
 
     await expect(
-      authorizeSavePaymentToken(event, { transactionId: 'txn-missing', tenantId: 't-1' })
+      authorizeSavePaymentToken(emptyEvent, { transactionId: 'txn-missing', tenantId: 't-1' })
     ).rejects.toMatchObject({ statusCode: 404 })
   })
 
@@ -153,38 +160,26 @@ describe('authorizeSavePaymentToken', () => {
     ])
 
     await expect(
-      authorizeSavePaymentToken(event, { transactionId: 'txn-1', spaceId: 'space-1' })
+      authorizeSavePaymentToken(emptyEvent, { transactionId: 'txn-1', spaceId: 'space-1' })
     ).rejects.toMatchObject({ statusCode: 409 })
   })
 
   it('owner path scopes by session tenant and 403s foreign user', async () => {
     vi.mocked(isInternalSecretRequest).mockReturnValue(false)
-    vi.mocked(getAuthenticatedUserWithDbId).mockResolvedValue({
-      id: 'u-me',
-      tenant_id: 't-me',
-      auth_user_id: 'auth-me',
-      email: 'me@example.com',
-      role: 'customer',
-    } as any)
+    vi.mocked(getAuthenticatedUserWithDbId).mockResolvedValue(sessionUser)
     mockPaymentLookup([{ user_id: 'u-other', tenant_id: 't-me' }])
 
     await expect(
-      authorizeSavePaymentToken(event, { transactionId: 'txn-1' })
+      authorizeSavePaymentToken(emptyEvent, { transactionId: 'txn-1' })
     ).rejects.toMatchObject({ statusCode: 403 })
   })
 
   it('owner path succeeds when payment matches session', async () => {
     vi.mocked(isInternalSecretRequest).mockReturnValue(false)
-    vi.mocked(getAuthenticatedUserWithDbId).mockResolvedValue({
-      id: 'u-me',
-      tenant_id: 't-me',
-      auth_user_id: 'auth-me',
-      email: 'me@example.com',
-      role: 'customer',
-    } as any)
+    vi.mocked(getAuthenticatedUserWithDbId).mockResolvedValue(sessionUser)
     const { eq } = mockPaymentLookup([{ user_id: 'u-me', tenant_id: 't-me' }])
 
-    const actor = await authorizeSavePaymentToken(event, {
+    const actor = await authorizeSavePaymentToken(emptyEvent, {
       transactionId: 'txn-1',
       userId: 'ignored',
       tenantId: 'ignored',
@@ -201,29 +196,21 @@ describe('authorizeSavePaymentToken', () => {
 })
 
 describe('authorizeGetUserPaymentToken', () => {
-  const event = {} as any
-
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('rejects unauthenticated callers', async () => {
     vi.mocked(getAuthenticatedUserWithDbId).mockResolvedValue(null)
-    await expect(authorizeGetUserPaymentToken(event)).rejects.toMatchObject({
+    await expect(authorizeGetUserPaymentToken(emptyEvent)).rejects.toMatchObject({
       statusCode: 401,
     })
   })
 
   it('returns session db user + tenant (ignores body)', async () => {
-    vi.mocked(getAuthenticatedUserWithDbId).mockResolvedValue({
-      id: 'u-me',
-      tenant_id: 't-me',
-      auth_user_id: 'auth-me',
-      email: 'me@example.com',
-      role: 'customer',
-    } as any)
+    vi.mocked(getAuthenticatedUserWithDbId).mockResolvedValue(sessionUser)
 
-    await expect(authorizeGetUserPaymentToken(event)).resolves.toEqual({
+    await expect(authorizeGetUserPaymentToken(emptyEvent)).resolves.toEqual({
       mode: 'owner',
       userId: 'u-me',
       tenantId: 't-me',
