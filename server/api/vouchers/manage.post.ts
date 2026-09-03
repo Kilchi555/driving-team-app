@@ -138,7 +138,16 @@ export default defineEventHandler(async (event) => {
     }
 
     // ========== CREATE VOUCHER ==========
+    // F-04 invariant: customers must not mint unpaid discounts via this endpoint.
+    // Paid issuance stays on /api/vouchers/create-after-purchase (internal secret).
     if (action === 'create') {
+      if (!isStaff) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Forbidden — voucher create requires staff role',
+        })
+      }
+
       if (!body.voucherData || typeof body.voucherData !== 'object') {
         throw createError({ statusCode: 400, statusMessage: 'Voucher data required' })
       }
@@ -149,9 +158,6 @@ export default defineEventHandler(async (event) => {
 
       let ownerUserId = dbUserId
       if (requestedOwnerId !== dbUserId) {
-        if (!isStaff) {
-          throw createError({ statusCode: 403, statusMessage: 'Forbidden to create vouchers for others' })
-        }
         const { data: owner, error: ownerError } = await supabaseAdmin
           .from('users')
           .select('id, tenant_id')
@@ -164,6 +170,7 @@ export default defineEventHandler(async (event) => {
       }
 
       const allowed = pickAllowedCreateFields(raw)
+
       const code =
         typeof allowed.code === 'string' && allowed.code.trim()
           ? allowed.code.trim()

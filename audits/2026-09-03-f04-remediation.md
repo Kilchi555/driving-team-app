@@ -39,9 +39,11 @@
 | load self | ✅ | ✅ |
 | load other userId | 403 | ✅ if target in tenant |
 | find-by-code | tenant only | tenant only |
-| create for self | ✅ whitelisted | ✅ |
+| create | **403** (no unpaid mint) | ✅ whitelisted + forced tenant |
 | create for other | 403 | ✅ if owner in tenant |
 | redeem | own voucher in tenant | any voucher in tenant |
+
+**Paid issuance:** `/api/vouchers/create-after-purchase` (internal secret) — not customer `manage` create.
 
 ---
 
@@ -51,7 +53,13 @@ F-06…F-08, `/api/vouchers/redeem` guest path hardening, invoice IDOR.
 
 ---
 
+## Follow-up (Bugbot High)
+
+Customer `create` previously defaulted ownership to caller and accepted client amounts — unpaid mint.
+**Fix:** `create` is staff-only; paid vouchers remain on `create-after-purchase`.
+
 ## Verdict
 
-**F-04 code remediation: COMPLETE for scope**  
-**Production Blocker until merge + deploy:** YES
+**F-04 code remediation: COMPLETE for scope (incl. no unpaid customer mint)**  
+**Production Blocker until merge + deploy:** YES  
+**Do not merge until CI green + this invariant holds.**
