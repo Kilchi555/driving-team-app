@@ -343,7 +343,7 @@
           <!-- Zurück Button -->
           <button
             type="button"
-            @click="mfaFlow.resetMFAState()"
+            @click="pendingCredentialSave = null; mfaFlow.resetMFAState()"
             class="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
           >
             Zurück
@@ -941,7 +941,10 @@ const handleLogin = async () => {
 }
 
 const handleMFAVerify = async () => {
-  const result = await mfaFlow.verifyMFACode(loginForm.value.password, loginForm.value.rememberMe)
+  const result = await mfaFlow.verifyMFACode(
+    pendingCredentialSave.value?.password || loginForm.value.password,
+    loginForm.value.rememberMe
+  )
   
   if (result && result.success) {
     logger.debug('✅ MFA verification successful, logging in...')
