@@ -1,184 +1,47 @@
 // api/auth/manage.post.ts
-import { defineEventHandler, readBody } from 'h3'
-import { createClient } from '@supabase/supabase-js'
-import { mapSupabaseError } from '~/server/utils/supabase-error'
+// F-02: Permanently retired. This route previously exposed unauthenticated
+// service-role auth operations (signin-password, signup, set-session, …)
+// that bypassed hardened login controls.
+//
+// Legitimate replacements:
+//   Login:           POST /api/auth/login
+//   Customer signup: POST /api/auth/register | /api/auth/register-client
+//   Staff signup:    POST /api/staff/register (invitation-gated)
+//   Password reset:  POST /api/auth/password-reset-request + /api/auth/reset-password
+//   Session/password updates after invite/recovery: client Supabase Auth (user JWT)
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { defineEventHandler, createError, readBody } from 'h3'
+import { logger } from '~/utils/logger'
 
-interface AuthRequest {
-  action: string
-  [key: string]: any
-}
+/** Operations that previously existed on this endpoint — all blocked. */
+export const RETIRED_AUTH_MANAGE_ACTIONS = [
+  'signin-password',
+  'signup',
+  'reset-password-email',
+  'get-session',
+  'set-session',
+  'update-user',
+] as const
 
 export default defineEventHandler(async (event) => {
+  let action = 'unknown'
   try {
-    const body = await readBody<AuthRequest>(event)
-    const { action } = body
-
-    // Public actions (no auth required)
-    if (action === 'signin-password') {
-      return await signInWithPassword(body)
-    }
-    if (action === 'signup') {
-      return await signUp(body)
-    }
-    if (action === 'reset-password-email') {
-      return await resetPasswordForEmail(body)
-    }
-    if (action === 'get-session') {
-      return await getSession(body)
-    }
-    if (action === 'set-session') {
-      return await setSession(body)
-    }
-
-    // Protected actions (auth required)
-    const session = await getServerSession(event)
-    if (!session?.user?.id) {
-      throw new Error('Unauthorized')
-    }
-
-    if (action === 'update-user') {
-      return await updateUser(body, session.user.id)
-    }
-
-    throw new Error('Invalid action')
-  } catch (err: any) {
-    console.error('Auth manage error:', err)
-    return {
-      success: false,
-      error: err.message || 'Operation failed'
-    }
+    const body = await readBody<{ action?: string; operation?: string }>(event)
+    action = String(body?.action || body?.operation || 'unknown')
+  } catch {
+    // Ignore body parse failures — still reject
   }
+
+  logger.warn('[F-02] Blocked retired /api/auth/manage call', { action })
+
+  throw createError({
+    statusCode: 410,
+    statusMessage:
+      'This authentication endpoint has been permanently removed. Use /api/auth/login for sign-in.',
+    data: {
+      code: 'AUTH_MANAGE_RETIRED',
+      action,
+      retired: [...RETIRED_AUTH_MANAGE_ACTIONS],
+    },
+  })
 })
-
-async function signInWithPassword(body: AuthRequest) {
-  const { email, password } = body
-
-  if (!email || !password) {
-    throw new Error('Email and password required')
-  }
-
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  })
-
-  if (error) throw mapSupabaseError(error)
-
-  return {
-    success: true,
-    data: {
-      user: data.user,
-      session: data.session
-    }
-  }
-}
-
-async function signUp(body: AuthRequest) {
-  const { email, password, options } = body
-
-  if (!email || !password) {
-    throw new Error('Email and password required')
-  }
-
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options
-  })
-
-  if (error) throw mapSupabaseError(error)
-
-  return {
-    success: true,
-    data: {
-      user: data.user,
-      session: data.session
-    }
-  }
-}
-
-async function resetPasswordForEmail(body: AuthRequest) {
-  const { email, redirectTo } = body
-
-  if (!email) {
-    throw new Error('Email required')
-  }
-
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: redirectTo || `${process.env.NUXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/reset-password`
-  })
-
-  if (error) throw mapSupabaseError(error)
-
-  return {
-    success: true,
-    data
-  }
-}
-
-async function getSession(body: AuthRequest) {
-  // This requires access token from client
-  const { access_token } = body
-
-  if (!access_token) {
-    throw new Error('Access token required')
-  }
-
-  const { data, error } = await supabase.auth.getUser(access_token)
-
-  if (error) throw mapSupabaseError(error)
-
-  return {
-    success: true,
-    data: {
-      user: data.user
-    }
-  }
-}
-
-async function setSession(body: AuthRequest) {
-  const { access_token, refresh_token } = body
-
-  if (!access_token || !refresh_token) {
-    throw new Error('Access token and refresh token required')
-  }
-
-  const { data, error } = await supabase.auth.setSession({
-    access_token,
-    refresh_token
-  })
-
-  if (error) throw mapSupabaseError(error)
-
-  return {
-    success: true,
-    data: {
-      session: data.session,
-      user: data.user
-    }
-  }
-}
-
-async function updateUser(body: AuthRequest, userId: string) {
-  const { attributes } = body
-
-  if (!attributes) {
-    throw new Error('Attributes required')
-  }
-
-  const { data, error } = await supabase.auth.updateUser(attributes)
-
-  if (error) throw mapSupabaseError(error)
-
-  return {
-    success: true,
-    data: {
-      user: data.user
-    }
-  }
-}
