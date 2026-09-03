@@ -8,7 +8,16 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { createError } from 'h3'
+import { createError, type H3Event } from 'h3'
+
+/** Minimal event stub for mocked auth helpers (no real request I/O). */
+const emptyEvent = {} as H3Event
+
+type AdminProfile = {
+  id: string
+  tenant_id: string
+  role: string
+}
 
 const migrationPath = resolve(
   process.cwd(),
@@ -100,7 +109,7 @@ describe('SEC-C02 — marketing-overview authorization', () => {
     vi.mocked(requireSuperAdmin).mockRejectedValue(
       createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     )
-    await expect(requireSuperAdmin({} as any)).rejects.toMatchObject({
+    await expect(requireSuperAdmin(emptyEvent)).rejects.toMatchObject({
       statusCode: 401,
     })
   })
@@ -110,7 +119,7 @@ describe('SEC-C02 — marketing-overview authorization', () => {
     vi.mocked(requireSuperAdmin).mockRejectedValue(
       createError({ statusCode: 403, statusMessage: 'Super admin access required' })
     )
-    await expect(requireSuperAdmin({} as any)).rejects.toMatchObject({
+    await expect(requireSuperAdmin(emptyEvent)).rejects.toMatchObject({
       statusCode: 403,
     })
   })
@@ -159,7 +168,7 @@ describe('SEC-C03 — resend-confirmation auth + no token leak', () => {
     vi.mocked(requireAdminProfile).mockRejectedValue(
       createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     )
-    await expect(requireAdminProfile({} as any)).rejects.toMatchObject({
+    await expect(requireAdminProfile(emptyEvent)).rejects.toMatchObject({
       statusCode: 401,
     })
   })
@@ -182,13 +191,14 @@ describe('SEC-C03 — resend-confirmation auth + no token leak', () => {
 
   it('cross-tenant staff is forbidden (authorization invariant)', async () => {
     const { requireAdminProfile } = await import('~/server/utils/auth')
-    vi.mocked(requireAdminProfile).mockResolvedValue({
+    const staffProfile: AdminProfile = {
       id: 'staff-a',
       tenant_id: 'tenant-a',
       role: 'staff',
-    } as any)
+    }
+    vi.mocked(requireAdminProfile).mockResolvedValue(staffProfile)
 
-    const profile = await requireAdminProfile({} as any)
+    const profile = await requireAdminProfile(emptyEvent)
     const appointmentTenant = 'tenant-b'
     const forbidden =
       profile.role !== 'super_admin' && appointmentTenant !== profile.tenant_id
