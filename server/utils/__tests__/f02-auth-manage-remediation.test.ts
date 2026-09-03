@@ -110,18 +110,33 @@ describe('F-02 hardened login & staff/reset authorization still present', () => 
   })
 })
 
+type CreateErrorOpts = {
+  statusCode: number
+  statusMessage: string
+  data?: Record<string, unknown>
+}
+
+type H3ErrorLike = Error & {
+  statusCode: number
+  data?: Record<string, unknown>
+}
+
+type EventHandler = (event: object) => Promise<unknown> | unknown
+
+function mockCreateError(opts: CreateErrorOpts): H3ErrorLike {
+  const err = new Error(opts.statusMessage) as H3ErrorLike
+  err.statusCode = opts.statusCode
+  err.data = opts.data
+  return err
+}
+
 describe('F-02 manage handler rejects legacy actions (Test A/B)', () => {
   beforeEach(() => {
     vi.resetModules()
   })
 
   it('throws 410 for signin-password without creating a session', async () => {
-    const createError = vi.fn((opts: any) => {
-      const err = new Error(opts.statusMessage) as any
-      err.statusCode = opts.statusCode
-      err.data = opts.data
-      return err
-    })
+    const createError = vi.fn(mockCreateError)
     const readBody = vi.fn(async () => ({
       action: 'signin-password',
       email: 'attacker@example.com',
@@ -130,7 +145,7 @@ describe('F-02 manage handler rejects legacy actions (Test A/B)', () => {
     const loggerWarn = vi.fn()
 
     vi.doMock('h3', () => ({
-      defineEventHandler: (fn: any) => fn,
+      defineEventHandler: (fn: EventHandler) => fn,
       createError,
       readBody,
     }))
@@ -138,8 +153,8 @@ describe('F-02 manage handler rejects legacy actions (Test A/B)', () => {
       logger: { warn: loggerWarn, debug: vi.fn(), info: vi.fn(), error: vi.fn() },
     }))
 
-    const handler = (await import('../../api/auth/manage.post')).default
-    await expect(handler({} as any)).rejects.toMatchObject({
+    const handler = (await import('../../api/auth/manage.post')).default as EventHandler
+    await expect(handler({})).rejects.toMatchObject({
       statusCode: 410,
       data: expect.objectContaining({ code: 'AUTH_MANAGE_RETIRED', action: 'signin-password' }),
     })
@@ -149,12 +164,7 @@ describe('F-02 manage handler rejects legacy actions (Test A/B)', () => {
   })
 
   it('throws 410 for signup without creating auth users', async () => {
-    const createError = vi.fn((opts: any) => {
-      const err = new Error(opts.statusMessage) as any
-      err.statusCode = opts.statusCode
-      err.data = opts.data
-      return err
-    })
+    const createError = vi.fn(mockCreateError)
     const readBody = vi.fn(async () => ({
       action: 'signup',
       email: 'factory@example.com',
@@ -163,7 +173,7 @@ describe('F-02 manage handler rejects legacy actions (Test A/B)', () => {
     }))
 
     vi.doMock('h3', () => ({
-      defineEventHandler: (fn: any) => fn,
+      defineEventHandler: (fn: EventHandler) => fn,
       createError,
       readBody,
     }))
@@ -171,8 +181,8 @@ describe('F-02 manage handler rejects legacy actions (Test A/B)', () => {
       logger: { warn: vi.fn(), debug: vi.fn(), info: vi.fn(), error: vi.fn() },
     }))
 
-    const handler = (await import('../../api/auth/manage.post')).default
-    await expect(handler({} as any)).rejects.toMatchObject({
+    const handler = (await import('../../api/auth/manage.post')).default as EventHandler
+    await expect(handler({})).rejects.toMatchObject({
       statusCode: 410,
       data: expect.objectContaining({ code: 'AUTH_MANAGE_RETIRED', action: 'signup' }),
     })
