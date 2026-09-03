@@ -286,6 +286,14 @@ export default defineNuxtConfig({
     // v2: secret key replaces service_role for SSR server-side queries
     secretKey: process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
     redirect: false,  // DISABLE automatic redirects - we handle auth manually
+    // Invite/recovery pages consume URL tokens themselves. createBrowserClient
+    // honors auth.detectSessionInUrl via `??` (false is kept). Auto-detect would
+    // race exchangeCodeForSession and force unsafe soft-ok heuristics.
+    clientOptions: {
+      auth: {
+        detectSessionInUrl: false,
+      },
+    },
     cookieOptions: {
       maxAge: 60 * 60 * 8, // 8h session lifetime
       sameSite: 'lax',     // blocks cross-site request forgery (CSRF)

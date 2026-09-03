@@ -153,6 +153,7 @@ import { usePasswordStrength, generateStrongPassword } from '~/composables/usePa
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import {
+  clearLeftoverAuthBeforeUrlConsume,
   sessionFingerprint,
   shouldSoftSucceedAuthUrlStep,
   stripSensitiveAuthParams,
@@ -243,6 +244,9 @@ onMounted(async () => {
     if (accessToken && refreshToken) {
       // Establish recovery session in the browser Supabase client (anon key + user tokens)
       const supabase = getSupabase()
+      // Clear httpOnly cookies + refresh cache only (no signOut — keeps PKCE verifier).
+      await clearLeftoverAuthBeforeUrlConsume()
+
       const { data: beforeData } = await supabase.auth.getSession()
       const sessionBefore = sessionFingerprint(beforeData.session)
 

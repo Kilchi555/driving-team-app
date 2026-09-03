@@ -109,7 +109,7 @@ export const getSupabase = (): SupabaseClient => {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true,
+        detectSessionInUrl: false,
         storage: storage as any // Singleton storage adapter
       }
     })
