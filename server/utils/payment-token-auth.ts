@@ -5,6 +5,9 @@
  * Webhook/internal callers must present a verified internal secret and are
  * bound to the payment row for the Wallee transaction (not bare body IDs).
  * Session callers must own the payment / token scope via db user + tenant.
+ *
+ * Lookups are always scoped by tenant_id and/or wallee_space_id — transaction
+ * IDs alone collide across Wallee spaces.
  */
 import { createError, type H3Event } from 'h3'
 import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
@@ -23,15 +26,41 @@ function requireNonEmptyString(value: unknown, field: string): string {
   return s
 }
 
-async function loadPaymentForTransaction(transactionId: string) {
-  const supabase = getSupabaseAdmin()
-  const txn = String(transactionId)
+function optionalString(value: unknown): string | null {
+  if (value == null) return null
+  const s = String(value).trim()
+  return s || null
+}
 
-  const { data, error } = await supabase
+async function loadPaymentForTransaction(opts: {
+  transactionId: string
+  tenantId?: string | null
+  spaceId?: string | null
+}) {
+  const supabase = getSupabaseAdmin()
+  const txn = String(opts.transactionId)
+
+  // Require at least one disambiguator — bare transaction id is not unique across spaces.
+  if (!opts.tenantId && !opts.spaceId) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'tenantId or spaceId required to resolve payment transaction',
+    })
+  }
+
+  let query = supabase
     .from('payments')
-    .select('id, user_id, tenant_id, wallee_transaction_id')
+    .select('id, user_id, tenant_id, wallee_transaction_id, wallee_space_id')
     .eq('wallee_transaction_id', txn)
-    .maybeSingle()
+
+  if (opts.spaceId) {
+    query = query.eq('wallee_space_id', opts.spaceId) as typeof query
+  }
+  if (opts.tenantId) {
+    query = query.eq('tenant_id', opts.tenantId) as typeof query
+  }
+
+  const { data, error } = await query.limit(2)
 
   if (error) {
     throw createError({
@@ -40,22 +69,41 @@ async function loadPaymentForTransaction(transactionId: string) {
     })
   }
 
-  return data
+  if (!data?.length) return null
+  if (data.length > 1) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: 'Ambiguous payment for transaction — refine spaceId/tenantId',
+    })
+  }
+
+  return data[0]
 }
 
 /**
  * Authorize save-payment-token.
- * - Internal: x-internal-secret + payment row for transactionId (body user/tenant ignored for identity)
+ * - Internal: x-internal-secret + payment row scoped by transactionId + tenantId/spaceId
  * - Owner: authenticated session; payment must belong to session user+tenant
  */
 export async function authorizeSavePaymentToken(
   event: H3Event,
-  body: { transactionId?: unknown; userId?: unknown; tenantId?: unknown }
+  body: {
+    transactionId?: unknown
+    userId?: unknown
+    tenantId?: unknown
+    spaceId?: unknown
+  }
 ): Promise<PaymentTokenActor> {
   const transactionId = requireNonEmptyString(body?.transactionId, 'transactionId')
+  const spaceId = optionalString(body?.spaceId)
+  const tenantHint = optionalString(body?.tenantId)
 
   if (isInternalSecretRequest(event)) {
-    const payment = await loadPaymentForTransaction(transactionId)
+    const payment = await loadPaymentForTransaction({
+      transactionId,
+      tenantId: tenantHint,
+      spaceId,
+    })
     if (!payment?.user_id || !payment?.tenant_id) {
       throw createError({
         statusCode: 404,
@@ -78,7 +126,11 @@ export async function authorizeSavePaymentToken(
     })
   }
 
-  const payment = await loadPaymentForTransaction(transactionId)
+  const payment = await loadPaymentForTransaction({
+    transactionId,
+    tenantId: user.tenant_id,
+    spaceId,
+  })
   if (!payment?.user_id || !payment?.tenant_id) {
     throw createError({
       statusCode: 404,
