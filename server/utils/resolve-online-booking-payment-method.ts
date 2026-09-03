@@ -9,8 +9,9 @@ import {
  *   - invoice when invoice_payments_enabled
  *   - cash    when cash is enabled AND visible to customers
  *
- * Staff-only cash must never land on a public booking just because the
- * client sent payment_method=cash.
+ * Customer *choice* is still gated (staff-only cash cannot be selected).
+ * The implicit default always follows tenant_settings.default_payment_method,
+ * so a school like Sara (Wallee off, default cash) does not get wallee.
  */
 export type OnlineBookingCheckoutMethod = 'wallee' | 'invoice' | 'cash'
 
@@ -46,14 +47,13 @@ export function onlineBookingAllowedMethods(
     if (method === 'invoice') return policy.invoiceEnabled
     return policy.cashEnabledForCustomers
   })
-  return allowed.length > 0 ? allowed : ['wallee']
+  return allowed
 }
 
 export function onlineBookingFallbackMethod(
   policy: OnlineBookingPaymentPolicy
 ): OnlineBookingCheckoutMethod {
-  const allowed = onlineBookingAllowedMethods(policy)
-  return allowed.includes(policy.defaultMethod) ? policy.defaultMethod : allowed[0]
+  return policy.defaultMethod
 }
 
 export function resolveOnlineBookingPaymentMethod(opts: {
@@ -72,7 +72,7 @@ export function resolveOnlineBookingPaymentMethod(opts: {
     || requested === 'invoice'
     || requested === 'cash'
   ) {
-    if (allowed.includes(requested)) {
+    if (allowed.includes(requested) || requested === fallback) {
       return { method: requested, rejectedRequest: false, allowed }
     }
     return { method: fallback, rejectedRequest: true, allowed }

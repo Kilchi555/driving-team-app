@@ -2283,18 +2283,14 @@ function applyBookingInitPayload(payload: any) {
   }
   const allowedMethods = ['wallee', 'invoice', 'cash'] as const
   if (Array.isArray(payload.online_payment_methods)) {
-    const next = payload.online_payment_methods.filter((method: string): method is OnlinePayMethod =>
+    onlinePaymentMethods.value = payload.online_payment_methods.filter((method: string): method is OnlinePayMethod =>
       (allowedMethods as readonly string[]).includes(method)
     )
-    if (next.length > 0) onlinePaymentMethods.value = next
   }
   const defaultMethod = payload.default_online_payment_method
-  if (
-    (defaultMethod === 'wallee' || defaultMethod === 'invoice' || defaultMethod === 'cash')
-    && onlinePaymentMethods.value.includes(defaultMethod)
-  ) {
+  if (defaultMethod === 'wallee' || defaultMethod === 'invoice' || defaultMethod === 'cash') {
     selectedPaymentMethod.value = defaultMethod
-  } else if (!onlinePaymentMethods.value.includes(selectedPaymentMethod.value)) {
+  } else if (onlinePaymentMethods.value[0]) {
     selectedPaymentMethod.value = onlinePaymentMethods.value[0]
   }
 }
