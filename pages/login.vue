@@ -34,8 +34,6 @@
         <!-- Login Form / MFA Form -->
         <form
           v-if="!mfaFlow.state.value.requiresMFA"
-          method="post"
-          action="/api/auth/credential-save-ack"
           autocomplete="on"
           @submit.prevent="handleLogin"
           class="space-y-4"
@@ -953,6 +951,9 @@ const loginForm = ref({
   rememberMe: false
 })
 
+/** Credentials from the password step — used after MFA (form is unmounted). */
+const pendingCredentialSave = ref<{ email: string; password: string } | null>(null)
+
 // Inline validation errors
 const emailError = ref<string | null>(null)
 const passwordError = ref<string | null>(null)
@@ -1009,6 +1010,10 @@ const handleLogin = async () => {
     // ✨ MFA erforderlich?
     if (response?.requiresMFA) {
       logger.debug('🔐 MFA erforderlich für:', response.email)
+      pendingCredentialSave.value = {
+        email: (response.email || loginForm.value.email).toLowerCase().trim(),
+        password: loginForm.value.password,
+      }
       await mfaFlow.handleMFARequired(response.email)
       return // MFA-Screen wird jetzt angezeigt
     }
@@ -1032,13 +1037,8 @@ const handleLogin = async () => {
     // Normales Login erfolgreich
     logger.debug('✅ Login successful')
 
-    // AJAX/SPA login never triggers the browser save prompt by itself.
-    void saveCredentials(
-      loginForm.value.email.toLowerCase().trim(),
-      loginForm.value.password,
-      undefined,
-      'current-password'
-    )
+    const savedEmail = loginForm.value.email.toLowerCase().trim()
+    const savedPassword = loginForm.value.password
 
     // Reset failed login attempts on success
     failedLoginAttempts.value = 0
@@ -1062,6 +1062,12 @@ const handleLogin = async () => {
     } else {
       // Fallback: fetch profile via API
       await authStore.fetchUserProfile(response.user.id)
+    }
+
+    // AJAX/SPA login never triggers the browser save prompt by itself.
+    // Offer save only after session hydrate + profile load succeeded.
+    if (authStore.userProfile) {
+      void saveCredentials(savedEmail, savedPassword, undefined, 'current-password')
     }
     
     const user = authStore.userProfile
@@ -1213,17 +1219,19 @@ const handleLogin = async () => {
 }
 
 const handleMFAVerify = async () => {
-  const result = await mfaFlow.verifyMFACode(loginForm.value.password, loginForm.value.rememberMe)
+  const result = await mfaFlow.verifyMFACode(
+    pendingCredentialSave.value?.password || loginForm.value.password,
+    loginForm.value.rememberMe
+  )
   
   if (result && result.success) {
     logger.debug('✅ MFA verification successful, logging in...')
 
-    void saveCredentials(
-      loginForm.value.email.toLowerCase().trim(),
-      loginForm.value.password,
-      undefined,
-      'current-password'
-    )
+    const creds = pendingCredentialSave.value
+    if (creds?.email && creds?.password) {
+      void saveCredentials(creds.email, creds.password, undefined, 'current-password')
+      pendingCredentialSave.value = null
+    }
     
     // MFA erfolgreich - führe normales Login-Ende aus
     const authStore = useAuthStore()

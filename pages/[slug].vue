@@ -87,8 +87,7 @@
       <div class="p-6">
         <!-- Login Form (session check runs silently in background) -->
         <form
-          method="post"
-          action="/api/auth/credential-save-ack"
+          v-if="!mfaFlow.state.value.requiresMFA"
           autocomplete="on"
           @submit.prevent="handleLogin"
           class="space-y-4"
@@ -670,6 +669,9 @@ const loginForm = ref({
   rememberMe: false
 })
 
+/** Credentials from the password step — used after MFA (form is unmounted). */
+const pendingCredentialSave = ref<{ email: string; password: string } | null>(null)
+
 // Inline validation errors
 const emailError = ref<string | null>(null)
 const passwordError = ref<string | null>(null)
@@ -727,6 +729,12 @@ const handleLogin = async () => {
     // Check if MFA is required
     if (response?.requiresMFA) {
       logger.debug('🔐 MFA required for:', response.email)
+      // Freeze credentials used for this auth attempt — the login form unmounts
+      // during MFA, and we must not re-read a possibly edited email later.
+      pendingCredentialSave.value = {
+        email: (response.email || loginForm.value.email).toLowerCase().trim(),
+        password: loginForm.value.password,
+      }
       await mfaFlow.handleMFARequired(response.email)
       return // MFA-Screen wird jetzt angezeigt
     }
@@ -747,12 +755,9 @@ const handleLogin = async () => {
 
     logger.debug('✅ Login successful')
 
-    // Browser password managers ignore AJAX logins (@submit.prevent + $fetch +
-    // SPA router.push). Explicitly offer to save — same helper as register/onboarding.
-    // Never block the post-login redirect on the save prompt.
+    // Capture before any later form mutation / strength-upgrade flow.
     const savedEmail = loginForm.value.email.toLowerCase().trim()
     const savedPassword = loginForm.value.password
-    void saveCredentials(savedEmail, savedPassword, undefined, 'current-password')
 
     // Session tokens are in HTTP-Only cookies (server) AND returned in the body
     // so we can hydrate supabase-js without a refresh-token rotation race.
@@ -802,6 +807,7 @@ const handleLogin = async () => {
 
       if (strengthResponse?.requiresUpdate) {
         logger.debug('⚠️ Password strength update required')
+        // Do NOT offer to save yet — user may replace this password in the modal.
         showPasswordStrengthModal.value = true
         // Don't redirect yet - user needs to update password or skip
         return
@@ -810,6 +816,11 @@ const handleLogin = async () => {
       logger.warn('⚠️ Could not check password strength:', err)
       // Continue with redirect even if check fails
     }
+
+    // Browser password managers ignore AJAX logins (@submit.prevent + $fetch +
+    // SPA router.push). Explicitly offer to save — same helper as register/onboarding.
+    // Only after we know this password will remain in use (strength gate passed).
+    void saveCredentials(savedEmail, savedPassword, undefined, 'current-password')
     
     // Show success message and redirect
     showSuccess('Erfolgreich angemeldet', `Willkommen bei ${brandName.value}!`)
@@ -935,14 +946,11 @@ const handleMFAVerify = async () => {
   if (result && result.success) {
     logger.debug('✅ MFA verification successful, logging in...')
 
-    // Same as password-only login: SPA MFA completion never triggers the
-    // browser's native save prompt by itself.
-    void saveCredentials(
-      loginForm.value.email.toLowerCase().trim(),
-      loginForm.value.password,
-      undefined,
-      'current-password'
-    )
+    const creds = pendingCredentialSave.value
+    if (creds?.email && creds?.password) {
+      void saveCredentials(creds.email, creds.password, undefined, 'current-password')
+      pendingCredentialSave.value = null
+    }
     
     // ✅ SAVE: Remember this tenant for next session
     try {
