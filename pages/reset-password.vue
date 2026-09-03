@@ -244,9 +244,8 @@ onMounted(async () => {
     if (accessToken && refreshToken) {
       // Establish recovery session in the browser Supabase client (anon key + user tokens)
       const supabase = getSupabase()
-      // Drop leftover logins (cookies + client + refresh cache) so we never
-      // bind the form to another account. Requires detectSessionInUrl: false.
-      await clearLeftoverAuthBeforeUrlConsume(supabase)
+      // Clear httpOnly cookies + refresh cache only (no signOut — keeps PKCE verifier).
+      await clearLeftoverAuthBeforeUrlConsume()
 
       const { data: beforeData } = await supabase.auth.getSession()
       const sessionBefore = sessionFingerprint(beforeData.session)

@@ -319,13 +319,11 @@ async function acceptAuthCallOrExistingSession(
 }
 
 /**
- * Fully clear prior login (httpOnly cookies + client session + refresh cache)
- * before consuming invite/recovery URL credentials.
+ * Clear httpOnly cookies + refresh cache before URL consume.
+ * Does not call supabase.auth.signOut (preserves PKCE verifier; no global revoke).
  */
-async function clearLeftoverSessionBeforeUrlConsume(
-  supabase: ReturnType<typeof getSupabase>
-) {
-  await clearLeftoverAuthBeforeUrlConsume(supabase)
+async function clearLeftoverSessionBeforeUrlConsume() {
+  await clearLeftoverAuthBeforeUrlConsume()
 }
 
 // Establish invite/recovery session from URL, then load user metadata
@@ -339,7 +337,7 @@ onMounted(async () => {
     const accessToken = hashParams.get('access_token')
     const refreshToken = hashParams.get('refresh_token')
     if (accessToken && refreshToken) {
-      await clearLeftoverSessionBeforeUrlConsume(supabase)
+      await clearLeftoverSessionBeforeUrlConsume()
       const sessionBefore = await readSessionFingerprint(supabase)
       const { error: setSessionError } = await supabase.auth.setSession({
         access_token: accessToken,
@@ -359,7 +357,7 @@ onMounted(async () => {
       const otpType = query.get('type')
       const code = query.get('code')
       if (tokenHash && otpType) {
-        await clearLeftoverSessionBeforeUrlConsume(supabase)
+        await clearLeftoverSessionBeforeUrlConsume()
         const sessionBefore = await readSessionFingerprint(supabase)
         const { error: otpError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
@@ -368,7 +366,7 @@ onMounted(async () => {
         await acceptAuthCallOrExistingSession(supabase, otpError, sessionBefore)
         consumedSensitiveUrl = true
       } else if (code) {
-        await clearLeftoverSessionBeforeUrlConsume(supabase)
+        await clearLeftoverSessionBeforeUrlConsume()
         const sessionBefore = await readSessionFingerprint(supabase)
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
         await acceptAuthCallOrExistingSession(supabase, exchangeError, sessionBefore)

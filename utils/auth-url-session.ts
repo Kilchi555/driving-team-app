@@ -45,10 +45,12 @@ export function sessionFingerprint(
  * consumed the invite/recovery credentials.
  *
  * Rules (fail closed otherwise — never accept a leftover login):
- * - no error → success
+ * - no error → success (setSession / exchange / verifyOtp replaced the client session)
  * - hash/implicit (`expectedAccessToken` set) → success ONLY if session token matches
  * - PKCE/OTP → success ONLY if an existing session was replaced during the call
- *   (not merely "appeared" after a local sign-out — cookie hydrate can do that)
+ *
+ * Do not soft-ok a session that merely "appeared" — that can be a leftover revived
+ * from cookies/refresh. Callers must throw on failure so getUser never binds the form.
  */
 export function shouldSoftSucceedAuthUrlStep(options: {
   authError: unknown
@@ -71,8 +73,7 @@ export function shouldSoftSucceedAuthUrlStep(options: {
     return sessionAfter.accessToken === expectedAccessToken
   }
 
-  // PKCE/OTP: require a real replace. "Appeared from null" is unsafe after
-  // local-only signOut because httpOnly cookies / refresh cache can revive a leftover.
+  // PKCE/OTP: require a real replace of an existing client session.
   if (!sessionBefore) return false
 
   return (
@@ -81,29 +82,21 @@ export function shouldSoftSucceedAuthUrlStep(options: {
   )
 }
 
-type SupabaseLike = {
-  auth: {
-    signOut: (opts?: { scope?: 'global' | 'local' | 'others' }) => Promise<{ error: unknown }>
-  }
-}
-
 /**
- * Fully clear a prior login before consuming invite/recovery URL credentials:
- * httpOnly cookies, Supabase client session, and client refresh reuse cache.
+ * Clear server-side leftover auth before consuming invite/recovery URL credentials.
+ *
+ * Intentionally does NOT call supabase.auth.signOut:
+ * - `scope: 'global'` would revoke refresh tokens on other devices
+ * - any signOut clears the PKCE code-verifier and breaks exchangeCodeForSession
+ *
+ * A successful setSession / exchange / verifyOtp replaces the client session.
+ * A failed consume must throw so the form never binds via getUser to a leftover.
  */
-export async function clearLeftoverAuthBeforeUrlConsume(
-  supabase: SupabaseLike
-): Promise<void> {
+export async function clearServerAuthBeforeUrlConsume(): Promise<void> {
   try {
     await $fetch('/api/auth/logout', { method: 'POST' })
   } catch {
-    // Continue — still clear client state
-  }
-
-  try {
-    await supabase.auth.signOut({ scope: 'global' })
-  } catch {
-    // Continue cleanup
+    // Continue — URL consume still proceeds with client tokens
   }
 
   try {
@@ -112,4 +105,9 @@ export async function clearLeftoverAuthBeforeUrlConsume(
   } catch {
     // non-fatal
   }
+}
+
+/** @deprecated Use clearServerAuthBeforeUrlConsume — kept name for call-site clarity. */
+export async function clearLeftoverAuthBeforeUrlConsume(): Promise<void> {
+  await clearServerAuthBeforeUrlConsume()
 }
