@@ -611,6 +611,8 @@ export default defineEventHandler(async (event) => {
       }),
     }
   } catch (err: any) {
+    // Preserve auth denials from requireSuperAdmin (401/403); remap only unexpected failures.
+    if (err?.statusCode) throw err
     logger.error('marketing-overview error', err)
     throw createError({
       statusCode: 500,
