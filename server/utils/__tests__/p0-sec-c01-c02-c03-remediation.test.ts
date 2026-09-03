@@ -151,6 +151,7 @@ describe('SEC-C03 — resend-confirmation auth + no token leak', () => {
   it('requires requireAdminProfile and never returns confirmationToken/Link', () => {
     expect(src).toContain('requireAdminProfile')
     expect(src).toContain('dispatchAppointmentConfirmation')
+    expect(src).toContain('skipStaffNotification: true')
     expect(src).not.toMatch(/confirmationToken\s*:/)
     expect(src).not.toMatch(/confirmationLink\s*:/)
     expect(src).not.toContain('Confirmation link:')
