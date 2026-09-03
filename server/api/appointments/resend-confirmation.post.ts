@@ -81,6 +81,7 @@ export default defineEventHandler(async (event) => {
       appointmentId: appointment.id,
       userId: appointment.user_id,
       tenantId: appointment.tenant_id,
+      skipStaffNotification: true,
     })
 
     // Never log tokens or confirmation links
