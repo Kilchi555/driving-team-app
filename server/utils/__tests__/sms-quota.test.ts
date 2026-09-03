@@ -4,6 +4,7 @@ import {
   parseSmsQuotaAlertState,
   resolveCalendarSmsBillingPeriod,
   resolveSmsBillingPeriod,
+  shiftUtcMonth,
   smsQuotaAlertPeriodsMatch,
 } from '../sms-quota'
 
@@ -39,6 +40,27 @@ describe('resolveSmsBillingPeriod', () => {
     expect(period.isCalendarFallback).toBe(false)
     expect(period.resetAt.toISOString()).toBe('2026-09-24T09:18:58.000Z')
     expect(period.start.toISOString()).toBe('2026-08-24T09:18:58.000Z')
+  })
+
+  it('does not overflow when deriving start from a 31st period end', () => {
+    // Bugbot: setUTCMonth(-1) on Jan 31 can collapse the window / land in the future.
+    const period = resolveSmsBillingPeriod({
+      currentPeriodStart: null,
+      currentPeriodEnd: '2026-01-31T12:00:00.000Z',
+      now: new Date('2026-01-15T12:00:00.000Z'),
+    })
+    expect(period.isCalendarFallback).toBe(false)
+    expect(period.resetAt.toISOString()).toBe('2026-01-31T12:00:00.000Z')
+    expect(period.start.toISOString()).toBe('2025-12-31T12:00:00.000Z')
+    expect(period.start.getTime()).toBeLessThan(period.resetAt.getTime())
+    expect(period.start.getTime()).toBeLessThan(new Date('2026-01-15T12:00:00.000Z').getTime())
+  })
+
+  it('clamps March 31 − 1 month to Feb 28 (non-leap)', () => {
+    expect(shiftUtcMonth(new Date('2026-03-31T09:18:58.000Z'), -1).toISOString())
+      .toBe('2026-02-28T09:18:58.000Z')
+    expect(shiftUtcMonth(new Date('2026-01-31T09:18:58.000Z'), 1).toISOString())
+      .toBe('2026-02-28T09:18:58.000Z')
   })
 
   it('falls back when Stripe period end is already past (stale)', () => {
