@@ -40,6 +40,11 @@ import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
 import { findStaffBusyOverlap } from '~/server/utils/time-range-overlap'
 import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
+import { parsePaymentSettings } from '~/server/utils/tenant-default-payment-method'
+import {
+  onlineBookingPaymentProvider,
+  resolveOnlineBookingPaymentMethod,
+} from '~/server/utils/resolve-online-booking-payment-method'
 import { checkoutAppUrl, createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
 import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
@@ -648,7 +653,7 @@ export default defineEventHandler(async (event) => {
   const validatedDiscountAmount = resolvedDiscount.amountRappen
   const netAmountRappen = netAfterAppointmentDiscount(grossAmountRappen, validatedDiscountAmount)
 
-  let resolvedPaymentMethod: 'wallee' | 'invoice' | 'cash' = 'cash'
+  let invoicePaymentsEnabled = false
   if (body.payment_method === 'invoice') {
     const { data: paymentSettingRow } = await supabase
       .from('tenant_settings')
@@ -657,17 +662,20 @@ export default defineEventHandler(async (event) => {
       .eq('category', 'payment')
       .eq('setting_key', 'payment_settings')
       .maybeSingle()
-    const tenantPaymentSettings = paymentSettingRow?.setting_value
-      ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
-      : {}
-    if (tenantPaymentSettings.invoice_payments_enabled === true) {
-      resolvedPaymentMethod = 'invoice'
-    }
+    invoicePaymentsEnabled = parsePaymentSettings(paymentSettingRow?.setting_value).invoice_payments_enabled === true
   }
+  const paymentResolve = resolveOnlineBookingPaymentMethod({
+    requested: body.payment_method,
+    invoicePaymentsEnabled,
+  })
+  if (paymentResolve.rejectedInvoice) {
+    logger.warn('⚠️ Guest requested invoice payment but tenant has not enabled it — falling back to wallee', { tenantId })
+  }
+  let resolvedPaymentMethod = paymentResolve.method
 
   let holdUntilPaid = shouldHoldAppointmentUntilPaid({
     requirePaymentBeforeConfirm: policy.require_payment_before_confirm === true,
-    paymentMethod: resolvedPaymentMethod === 'invoice' ? 'invoice' : 'wallee',
+    paymentMethod: resolvedPaymentMethod,
     amountRappen: netAmountRappen,
   })
   if (holdUntilPaid) {
@@ -854,7 +862,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // ── Create payment record (pending cash/invoice/wallee) ───────────────────
+  // ── Create payment record (pending invoice/wallee — never cash) ───────────
   const { data: newPayment } = await supabase
     .from('payments')
     .insert({
@@ -868,8 +876,8 @@ export default defineEventHandler(async (event) => {
       discount_amount_rappen: validatedDiscountAmount,
       total_amount_rappen: netAmountRappen,
       payment_status: 'pending',
-      payment_method: holdUntilPaid ? 'wallee' : resolvedPaymentMethod,
-      payment_provider: holdUntilPaid ? 'wallee' : null,
+      payment_method: resolvedPaymentMethod,
+      payment_provider: onlineBookingPaymentProvider(resolvedPaymentMethod),
       description: appointmentTitle,
       currency: 'CHF',
       created_by: newUserId,
@@ -933,7 +941,7 @@ export default defineEventHandler(async (event) => {
 
   holdUntilPaid = shouldHoldAppointmentUntilPaid({
     requirePaymentBeforeConfirm: policy.require_payment_before_confirm === true,
-    paymentMethod: resolvedPaymentMethod === 'invoice' ? 'invoice' : 'wallee',
+    paymentMethod: resolvedPaymentMethod,
     amountRappen: remainingDue,
   })
   if (!holdUntilPaid && newAppointment.status === 'pending') {
