@@ -179,6 +179,7 @@ import { usePasswordStrength, generateStrongPassword } from '~/composables/usePa
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import {
+  sessionFingerprint,
   shouldSoftSucceedAuthUrlStep,
   stripSensitiveAuthParams,
 } from '~/utils/auth-url-session'
@@ -283,27 +284,33 @@ function clearSensitiveAuthParamsFromUrl() {
   )
 }
 
-/** True when a usable session already exists (e.g. @nuxtjs/supabase already exchanged PKCE). */
-async function hasUsableAuthSession(supabase: ReturnType<typeof getSupabase>) {
-  const { data: sessionData } = await supabase.auth.getSession()
-  if (sessionData.session?.user) return true
-  const { data: userData, error } = await supabase.auth.getUser()
-  return !error && !!userData.user
+async function readSessionFingerprint(supabase: ReturnType<typeof getSupabase>) {
+  const { data } = await supabase.auth.getSession()
+  return sessionFingerprint(data.session)
 }
 
 /**
- * Fail closed only when the auth call failed AND no session exists.
- * Soft-succeed when the module (or a prior navigation) already established the session —
- * a second exchangeCodeForSession / verifyOtp then fails even though the invite is valid.
+ * Fail closed on leftover sessions. Soft-succeed only when evidence shows this
+ * page load consumed the invite URL (token match, session replace, or fresh PKCE race).
+ * Does not clear the URL on failure — caller must only strip after success.
  */
 async function acceptAuthCallOrExistingSession(
   supabase: ReturnType<typeof getSupabase>,
-  authError: { message?: string } | null
+  authError: { message?: string } | null,
+  sessionBefore: ReturnType<typeof sessionFingerprint>,
+  expectedAccessToken?: string | null
 ) {
-  const hasSession = authError ? await hasUsableAuthSession(supabase) : false
-  if (shouldSoftSucceedAuthUrlStep(authError, hasSession)) {
+  const sessionAfter = authError ? await readSessionFingerprint(supabase) : sessionBefore
+  if (
+    shouldSoftSucceedAuthUrlStep({
+      authError,
+      sessionBefore,
+      sessionAfter,
+      expectedAccessToken,
+    })
+  ) {
     if (authError) {
-      logger.debug('Auth URL step soft-ok: session already present after', authError.message)
+      logger.debug('Auth URL step soft-ok after', authError.message)
     }
     return
   }
@@ -321,11 +328,17 @@ onMounted(async () => {
     const accessToken = hashParams.get('access_token')
     const refreshToken = hashParams.get('refresh_token')
     if (accessToken && refreshToken) {
+      const sessionBefore = await readSessionFingerprint(supabase)
       const { error: setSessionError } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
       })
-      await acceptAuthCallOrExistingSession(supabase, setSessionError)
+      await acceptAuthCallOrExistingSession(
+        supabase,
+        setSessionError,
+        sessionBefore,
+        accessToken
+      )
       consumedSensitiveUrl = true
     } else {
       // 2) PKCE / token_hash query flow
@@ -334,19 +347,22 @@ onMounted(async () => {
       const otpType = query.get('type')
       const code = query.get('code')
       if (tokenHash && otpType) {
+        const sessionBefore = await readSessionFingerprint(supabase)
         const { error: otpError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
           type: otpType as 'invite' | 'recovery' | 'signup' | 'email',
         })
-        await acceptAuthCallOrExistingSession(supabase, otpError)
+        await acceptAuthCallOrExistingSession(supabase, otpError, sessionBefore)
         consumedSensitiveUrl = true
       } else if (code) {
+        const sessionBefore = await readSessionFingerprint(supabase)
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-        await acceptAuthCallOrExistingSession(supabase, exchangeError)
+        await acceptAuthCallOrExistingSession(supabase, exchangeError, sessionBefore)
         consumedSensitiveUrl = true
       }
     }
 
+    // Only strip secrets after a successful (or proven soft-ok) consume
     if (consumedSensitiveUrl) {
       clearSensitiveAuthParamsFromUrl()
     }
