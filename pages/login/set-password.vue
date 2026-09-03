@@ -179,6 +179,7 @@ import { usePasswordStrength, generateStrongPassword } from '~/composables/usePa
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import {
+  clearLeftoverAuthBeforeUrlConsume,
   sessionFingerprint,
   shouldSoftSucceedAuthUrlStep,
   stripSensitiveAuthParams,
@@ -291,7 +292,7 @@ async function readSessionFingerprint(supabase: ReturnType<typeof getSupabase>) 
 
 /**
  * Fail closed on leftover sessions. Soft-succeed only when evidence shows this
- * page load consumed the invite URL (token match, session replace, or fresh PKCE race).
+ * page load consumed the invite URL (hash token match, or session replace during call).
  * Does not clear the URL on failure — caller must only strip after success.
  */
 async function acceptAuthCallOrExistingSession(
@@ -317,6 +318,14 @@ async function acceptAuthCallOrExistingSession(
   throw authError
 }
 
+/**
+ * Clear httpOnly cookies + refresh cache before URL consume.
+ * Does not call supabase.auth.signOut (preserves PKCE verifier; no global revoke).
+ */
+async function clearLeftoverSessionBeforeUrlConsume() {
+  await clearLeftoverAuthBeforeUrlConsume()
+}
+
 // Establish invite/recovery session from URL, then load user metadata
 onMounted(async () => {
   try {
@@ -328,6 +337,7 @@ onMounted(async () => {
     const accessToken = hashParams.get('access_token')
     const refreshToken = hashParams.get('refresh_token')
     if (accessToken && refreshToken) {
+      await clearLeftoverSessionBeforeUrlConsume()
       const sessionBefore = await readSessionFingerprint(supabase)
       const { error: setSessionError } = await supabase.auth.setSession({
         access_token: accessToken,
@@ -347,6 +357,7 @@ onMounted(async () => {
       const otpType = query.get('type')
       const code = query.get('code')
       if (tokenHash && otpType) {
+        await clearLeftoverSessionBeforeUrlConsume()
         const sessionBefore = await readSessionFingerprint(supabase)
         const { error: otpError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
@@ -355,6 +366,7 @@ onMounted(async () => {
         await acceptAuthCallOrExistingSession(supabase, otpError, sessionBefore)
         consumedSensitiveUrl = true
       } else if (code) {
+        await clearLeftoverSessionBeforeUrlConsume()
         const sessionBefore = await readSessionFingerprint(supabase)
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
         await acceptAuthCallOrExistingSession(supabase, exchangeError, sessionBefore)
