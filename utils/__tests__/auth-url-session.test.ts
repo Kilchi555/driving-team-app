@@ -42,14 +42,14 @@ describe('shouldSoftSucceedAuthUrlStep', () => {
     ).toBe(false)
   })
 
-  it('soft-succeeds when session appeared during the call (PKCE race)', () => {
+  it('fail-closes when a session merely appeared after sign-out (cookie revive)', () => {
     expect(
       shouldSoftSucceedAuthUrlStep({
         authError: new Error('invalid request'),
         sessionBefore: null,
-        sessionAfter: { userId: 'b', accessToken: 'token-b' },
+        sessionAfter: { userId: 'leftover', accessToken: 'revived' },
       })
-    ).toBe(true)
+    ).toBe(false)
   })
 
   it('soft-succeeds when session was replaced during the call', () => {
@@ -62,12 +62,12 @@ describe('shouldSoftSucceedAuthUrlStep', () => {
     ).toBe(true)
   })
 
-  it('fail-closes leftover same session even with fresh-looking invalid-request error', () => {
+  it('fail-closes leftover same session', () => {
     expect(
       shouldSoftSucceedAuthUrlStep({
-        authError: new Error('invalid request: both auth code and code verifier should be non-empty'),
-        sessionBefore: { userId: 'a', accessToken: 'fresh-looking-token' },
-        sessionAfter: { userId: 'a', accessToken: 'fresh-looking-token' },
+        authError: new Error('invalid request'),
+        sessionBefore: { userId: 'a', accessToken: 'token-a' },
+        sessionAfter: { userId: 'a', accessToken: 'token-a' },
       })
     ).toBe(false)
   })
@@ -87,20 +87,8 @@ describe('shouldSoftSucceedAuthUrlStep', () => {
     expect(
       shouldSoftSucceedAuthUrlStep({
         authError: new Error('session exists'),
-        sessionBefore: { userId: 'a', accessToken: 'leftover' },
-        sessionAfter: { userId: 'a', accessToken: 'leftover-refreshed' },
-        expectedAccessToken: 'hash-access-token',
-      })
-    ).toBe(false)
-  })
-
-  it('does not fall through to PKCE rules when expectedAccessToken is set but mismatches', () => {
-    // Session "appeared" during call, but hash token must still match
-    expect(
-      shouldSoftSucceedAuthUrlStep({
-        authError: new Error('bad hash'),
         sessionBefore: null,
-        sessionAfter: { userId: 'a', accessToken: 'leftover' },
+        sessionAfter: { userId: 'a', accessToken: 'leftover-refreshed' },
         expectedAccessToken: 'hash-access-token',
       })
     ).toBe(false)

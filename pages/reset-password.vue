@@ -153,6 +153,7 @@ import { usePasswordStrength, generateStrongPassword } from '~/composables/usePa
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import {
+  clearLeftoverAuthBeforeUrlConsume,
   sessionFingerprint,
   shouldSoftSucceedAuthUrlStep,
   stripSensitiveAuthParams,
@@ -243,13 +244,9 @@ onMounted(async () => {
     if (accessToken && refreshToken) {
       // Establish recovery session in the browser Supabase client (anon key + user tokens)
       const supabase = getSupabase()
-      // Drop leftover logins so we never bind the form to another account.
-      // Requires detectSessionInUrl: false (nuxt clientOptions) so the module
-      // does not race-exchange before this page runs.
-      const { data: leftover } = await supabase.auth.getSession()
-      if (leftover.session?.user) {
-        await supabase.auth.signOut({ scope: 'local' })
-      }
+      // Drop leftover logins (cookies + client + refresh cache) so we never
+      // bind the form to another account. Requires detectSessionInUrl: false.
+      await clearLeftoverAuthBeforeUrlConsume(supabase)
 
       const { data: beforeData } = await supabase.auth.getSession()
       const sessionBefore = sessionFingerprint(beforeData.session)
