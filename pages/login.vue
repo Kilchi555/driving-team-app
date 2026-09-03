@@ -419,7 +419,7 @@
           <!-- Zurück Button -->
           <button
             type="button"
-            @click="mfaFlow.resetMFAState()"
+            @click="pendingCredentialSave = null; mfaFlow.resetMFAState()"
             class="w-full px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
           >
             Zurück
