@@ -1,0 +1,207 @@
+---
+description: Perform impact analysis before implementing significant changes
+alwaysApply: false
+---
+
+# Impact Analysis Before Changes
+
+Before implementing any significant change, do NOT modify code immediately.
+
+First analyze the repository and determine the potential change blast radius.
+
+## 1. Understand the requested change
+
+Determine:
+
+* What exactly is being changed?
+* Why is it being changed?
+* What should the new behavior be?
+* What existing behavior must remain unchanged?
+
+Do not make assumptions without clearly labeling them.
+
+## 2. Analyze dependencies
+
+Search the repository and identify:
+
+* directly affected files
+* indirectly affected files
+* shared components
+* composables
+* stores
+* API routes
+* server logic
+* database queries
+* Supabase tables
+* RLS policies
+* authentication
+* authorization
+* middleware
+* types/interfaces
+* external integrations
+* payments
+* emails/notifications
+* cronjobs/background jobs
+* environment variables
+* tests
+* relevant user flows
+
+Trace dependencies at least 2–3 levels deep where relevant.
+
+## 3. Classify impact
+
+Classify every relevant finding as:
+
+**DIRECT**
+
+Code or configuration that must probably change.
+
+**INDIRECT**
+
+Code that may be affected because it depends on the changed behavior.
+
+**POTENTIAL**
+
+Areas that appear unaffected but should be verified because they share dependencies.
+
+## 4. Risk assessment
+
+Use:
+
+🔴 HIGH — realistic possibility of breaking existing functionality
+
+🟠 MEDIUM — possible side effects or regression risk
+
+🟢 LOW — unlikely to cause meaningful impact
+
+Pay particular attention to:
+
+* authentication
+* authorization
+* Supabase RLS
+* multi-tenant isolation
+* admin/superadmin permissions
+* database schema
+* API contracts
+* shared components
+* shared composables
+* payment functionality
+* existing user data
+* URLs/SEO
+* external integrations
+
+## 5. Breaking-change check
+
+Explicitly determine whether the change could:
+
+* change an API contract
+* change a database schema
+* change a database query
+* change RLS behavior
+* change authentication/authorization
+* change an existing TypeScript interface
+* change existing user behavior
+* affect another tenant
+* affect existing records
+* break an integration
+* change a URL or route
+
+If yes, clearly mark it as:
+
+**BREAKING CHANGE**
+
+or
+
+**HIGH RISK CHANGE**
+
+## 6. Test impact
+
+Determine exactly which tests are relevant after implementation:
+
+* unit tests
+* integration tests
+* API tests
+* database tests
+* RLS/security tests
+* E2E tests
+* regression tests
+* manual UI verification
+
+Do not recommend irrelevant tests just for the sake of having more tests.
+
+## 7. Manual verification
+
+If UI or user behavior is affected, specify exactly what should be checked manually.
+
+Include relevant:
+
+* pages
+* user roles
+* desktop/mobile
+* loading states
+* empty states
+* error states
+* permission states
+* edge cases
+
+## 8. Required output
+
+Before changing code, produce:
+
+```
+IMPACT SUMMARY
+
+Change:
+…
+
+Blast Radius: Small / Medium / Large
+
+Risk: 🔴 HIGH / 🟠 MEDIUM / 🟢 LOW
+
+Direct Impact:
+…
+
+Indirect Impact:
+…
+
+Potential Impact:
+…
+
+Security Impact:
+None / Low / Medium / High
+
+Database Impact:
+None / Low / Medium / High
+
+Multi-Tenant Impact:
+None / Low / Medium / High
+
+Regression Risk:
+Low / Medium / High
+
+Breaking Change:
+Yes / No
+
+Required Tests:
+…
+
+Manual Verification:
+…
+
+Recommendation:
+SAFE TO IMPLEMENT
+or
+IMPLEMENT WITH CAUTION
+or
+INVESTIGATE BEFORE IMPLEMENTING
+```
+
+## 9. Critical rule
+
+DO NOT modify application code until the Impact Analysis is complete.
+
+If something cannot be established from the repository, write:
+
+**NEEDS VERIFICATION**
+
+Never invent dependencies, behavior, database relationships, security properties or test coverage.
