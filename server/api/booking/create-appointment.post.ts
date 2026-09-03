@@ -49,6 +49,11 @@ import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-at
 import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
 import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
 import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
+import { parsePaymentSettings } from '~/server/utils/tenant-default-payment-method'
+import {
+  onlineBookingPaymentProvider,
+  resolveOnlineBookingPaymentMethod,
+} from '~/server/utils/resolve-online-booking-payment-method'
 import { createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
 import { guestSlotCategoryMismatchReason, invalidDrivingLessonBasePriceReason } from '~/server/utils/guest-booking-price-rule'
@@ -584,7 +589,7 @@ export default defineEventHandler(async (event: H3Event) => {
     })
     const travelFeeRappen = travelFee.fee_rappen || 0
 
-    let resolvedPaymentMethod: 'wallee' | 'invoice' = 'wallee'
+    let invoicePaymentsEnabled = false
     if (body.payment_method === 'invoice') {
       const { data: paymentSettingRow } = await supabase
         .from('tenant_settings')
@@ -593,15 +598,16 @@ export default defineEventHandler(async (event: H3Event) => {
         .eq('category', 'payment')
         .eq('setting_key', 'payment_settings')
         .maybeSingle()
-      const tenantPaymentSettings = paymentSettingRow?.setting_value
-        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
-        : {}
-      if (tenantPaymentSettings.invoice_payments_enabled === true) {
-        resolvedPaymentMethod = 'invoice'
-      } else {
-        logger.warn('⚠️ Customer requested invoice payment but tenant has not enabled it — falling back to wallee', { tenantId })
-      }
+      invoicePaymentsEnabled = parsePaymentSettings(paymentSettingRow?.setting_value).invoice_payments_enabled === true
     }
+    const paymentResolve = resolveOnlineBookingPaymentMethod({
+      requested: body.payment_method,
+      invoicePaymentsEnabled,
+    })
+    if (paymentResolve.rejectedInvoice) {
+      logger.warn('⚠️ Customer requested invoice payment but tenant has not enabled it — falling back to wallee', { tenantId })
+    }
+    const resolvedPaymentMethod = paymentResolve.method
 
     const { data: tenantPayPolicy } = await supabase
       .from('tenants')
@@ -892,7 +898,7 @@ export default defineEventHandler(async (event: H3Event) => {
       total_amount_rappen: netAmountRappen,
       payment_status: 'pending',
       payment_method: resolvedPaymentMethod,
-      payment_provider: resolvedPaymentMethod === 'wallee' ? 'wallee' : null,
+      payment_provider: onlineBookingPaymentProvider(resolvedPaymentMethod),
       payment_method_id: null,
       description: appointmentTitle,
       metadata: {
