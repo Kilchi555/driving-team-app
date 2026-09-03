@@ -1,9 +1,9 @@
 # F-02 Remediation — Public `/api/auth/manage` Auth Bypass
 
-**Date:** 2026-09-02  
+**Date:** 2026-09-02 (live close confirmed 2026-09-03)  
 **Scope:** F-02 only (`signin-password`, `signup`, and related manage ops + callers)  
-**Branch:** `cursor/f02-remediation-bb9a`  
-**Status:** REMEDIATED in code (awaiting merge/deploy for live close)
+**Branch:** `cursor/f02-remediation-bb9a` → merged as #135 (`fd8683f3`)  
+**Status:** **CLOSED in production** — see `audits/2026-09-03-f02-retest.md`
 
 ---
 
@@ -137,7 +137,7 @@ No alternate public password-signin API remains on `/api/auth/manage`.
 | **F** | Password reset valid vs bad/expired/replayed token | **PASS** (contract: token/expiry/`used_at` in `reset-password.post.ts`); live token exercise **NOT VERIFIED** |
 | **G** | Legitimate login still sets session cookies | **PASS** (contract: `setAuthCookies` in login); live E2E **NOT VERIFIED** (CI E2E login after merge) |
 
-Live production probes against `app.simy.ch` before merge still hit the **old** manage handler; post-deploy re-test is a separate Verification run.
+Live production probes against `app.simy.ch` after #135 deploy return **HTTP 410** `AUTH_MANAGE_RETIRED` for Tests A/B — see `audits/2026-09-03-f02-retest.md`.
 
 ---
 
@@ -152,4 +152,5 @@ Live production probes against `app.simy.ch` before merge still hit the **old** 
 ## Verdict
 
 **F-02 code remediation: COMPLETE for scope**  
-**Production Blocker until merge + deploy:** YES (live still ships old manage until this PR merges to `main`)
+**Production:** CLOSED (`fd8683f3` / #135)  
+**Production Blocker:** NO
