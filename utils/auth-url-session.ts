@@ -48,6 +48,9 @@ export function sessionFingerprint(
  * - no error → success
  * - hash/implicit (`expectedAccessToken` set) → success ONLY if session token matches
  * - PKCE/OTP → success ONLY if a session appeared or was replaced during the call
+ *
+ * Callers should `signOut({ scope: 'local' })` before consuming URL credentials
+ * when `detectSessionInUrl` is false, so leftover logins never reach soft-ok.
  */
 export function shouldSoftSucceedAuthUrlStep(options: {
   authError: unknown
