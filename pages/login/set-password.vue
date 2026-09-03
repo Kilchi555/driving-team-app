@@ -176,6 +176,8 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from '#app'
 import { usePasswordStrength, generateStrongPassword } from '~/composables/usePasswordStrength'
+import { getSupabase } from '~/utils/supabase'
+import { logger } from '~/utils/logger'
 
 const route = useRoute()
 
@@ -226,15 +228,10 @@ const setPassword = async () => {
   error.value = ''
 
   try {
-    // Update password using the token from URL
-    const { error: updateError } = await $fetch('/api/auth/manage', { 
-      method: 'POST', 
-      body: { 
-        action: 'update-user', 
-        attributes: {
-          password: password.value
-        }
-      }
+    // Update password with the invite/recovery session on the client — never service-role manage
+    const supabase = getSupabase()
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: password.value,
     })
 
     if (updateError) {
@@ -242,7 +239,7 @@ const setPassword = async () => {
     }
 
     // Create business user record via secure API
-    const user = authStore.user
+    const { data: { user } } = await supabase.auth.getUser()
     if (user && userInfo.value) {
       try {
         await $fetch('/api/auth/complete-registration', {
@@ -272,13 +269,42 @@ const setPassword = async () => {
   }
 }
 
-// Load user info from invitation token
+// Establish invite/recovery session from URL, then load user metadata
 onMounted(async () => {
   try {
-    // Get user info from auth session
-    const { data: { user }, error } = authStore.user // ✅ MIGRATED
-    
-    if (error || !user) {
+    const supabase = getSupabase()
+
+    // 1) Implicit/hash flow (common for invite + recovery redirects)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    const accessToken = hashParams.get('access_token')
+    const refreshToken = hashParams.get('refresh_token')
+    if (accessToken && refreshToken) {
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      })
+      if (setSessionError) throw setSessionError
+    } else {
+      // 2) PKCE / token_hash query flow
+      const query = new URLSearchParams(window.location.search)
+      const tokenHash = query.get('token_hash')
+      const otpType = query.get('type')
+      const code = query.get('code')
+      if (tokenHash && otpType) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: otpType as 'invite' | 'recovery' | 'signup' | 'email',
+        })
+        if (otpError) throw otpError
+      } else if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+        if (exchangeError) throw exchangeError
+      }
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !user) {
       error.value = 'Ungültiger Einladungslink'
       return
     }
@@ -295,7 +321,7 @@ onMounted(async () => {
     // Get tenant slug for redirect via public branding API
     if (userInfo.value.tenant_id) {
       try {
-        const brandingData = await $fetch(`/api/tenants/branding?tenantId=${userInfo.value.tenant_id}`) as any
+        const brandingData = await $fetch(`/api/tenants/branding?tenantId=${userInfo.value.tenant_id}`) as { tenant?: { slug?: string } }
         tenantSlug.value = brandingData?.tenant?.slug || 'default'
       } catch {
         tenantSlug.value = 'default'

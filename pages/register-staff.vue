@@ -666,21 +666,21 @@ const register = async () => {
     // Show success toast
     showSuccessToast.value = true
     
-    // Auto-login after successful registration
+    // Auto-login via hardened login (rate limit / captcha / IP / cookies)
     try {
       logger.debug('🔑 Auto-login after registration...')
-      const { error: loginError } = await $fetch('/api/auth/manage', { 
-        method: 'POST', 
-        body: { 
-          action: 'signin-password',
+      const loginResponse = await $fetch('/api/auth/login', {
+        method: 'POST',
+        body: {
           email: email.value,
-          password: password.value
-        }
-      })
-      
-      if (loginError) {
-        console.error('❌ Auto-login failed:', loginError)
-        // Fallback: redirect to login page
+          password: password.value,
+          tenantId: (invitation.value as any)?.tenant_id || null,
+          rememberMe: true,
+        },
+      }) as { success?: boolean; requiresMFA?: boolean }
+
+      if (!loginResponse?.success || loginResponse?.requiresMFA) {
+        console.error('❌ Auto-login failed or MFA required:', loginResponse)
         const slug = (invitation.value as any)?.tenant_slug
         setTimeout(() => {
           if (slug) {
@@ -691,7 +691,6 @@ const register = async () => {
         }, 2000)
       } else {
         logger.debug('✅ Auto-login successful, redirecting to dashboard...')
-        // Redirect to staff dashboard after short delay
         setTimeout(() => {
           router.push('/dashboard')
         }, 2000)
