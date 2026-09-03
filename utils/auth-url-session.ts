@@ -1,6 +1,6 @@
 /**
- * F-02 follow-up: invite/recovery URL hygiene helpers.
- * Pure functions extracted so PKCE soft-fail + URL strip behavior is unit-tested
+ * Invite/recovery URL hygiene helpers.
+ * Pure functions so PKCE soft-fail + URL strip behavior is unit-tested
  * without mounting the Vue password pages.
  */
 
@@ -40,89 +40,41 @@ export function sessionFingerprint(
   return { userId, accessToken }
 }
 
-/** True when access token JWT `iat` is within maxAgeSec (fresh invite/recovery exchange). */
-export function isRecentlyIssuedAccessToken(
-  accessToken: string | null | undefined,
-  maxAgeSec = 120,
-  nowSec = Math.floor(Date.now() / 1000)
-): boolean {
-  if (!accessToken) return false
-  try {
-    const payloadPart = accessToken.split('.')[1]
-    if (!payloadPart) return false
-    const json = atob(payloadPart.replace(/-/g, '+').replace(/_/g, '/'))
-    const payload = JSON.parse(json) as { iat?: number }
-    if (typeof payload.iat !== 'number') return false
-    return nowSec - payload.iat <= maxAgeSec && nowSec - payload.iat >= -30
-  } catch {
-    return false
-  }
-}
-
-/** Errors typical of a second PKCE/OTP consume after the module already succeeded. */
-export function isLikelyAlreadyExchangedAuthError(error: unknown): boolean {
-  const err = error as { message?: string; code?: string } | null
-  const msg = String(err?.message || error || '').toLowerCase()
-  const code = String(err?.code || '').toLowerCase()
-  return (
-    code === 'flow_state_not_found' ||
-    code === 'validation_failed' ||
-    msg.includes('code verifier') ||
-    msg.includes('flow state') ||
-    msg.includes('both auth code and code verifier') ||
-    msg.includes('auth code') ||
-    msg.includes('already been used') ||
-    msg.includes('invalid request')
-  )
-}
-
 /**
- * Soft-succeed an auth URL step only when evidence says THIS page load consumed
- * the invite/recovery credentials — never merely because some leftover session exists.
+ * Soft-succeed an auth URL step only with hard evidence that THIS page load
+ * consumed the invite/recovery credentials.
  *
- * Succeed when:
- * - no error
- * - hash/implicit: session access_token matches the URL token we tried to install
- * - session appeared or was replaced during the call (concurrent module race)
- * - PKCE/OTP: exchange error looks like "already used" AND after-session is freshly issued
+ * Rules (fail closed otherwise — never accept a leftover login):
+ * - no error → success
+ * - hash/implicit (`expectedAccessToken` set) → success ONLY if session token matches
+ * - PKCE/OTP → success ONLY if a session appeared or was replaced during the call
  */
 export function shouldSoftSucceedAuthUrlStep(options: {
   authError: unknown
   sessionBefore: SessionFingerprint
   sessionAfter: SessionFingerprint
   expectedAccessToken?: string | null
-  nowSec?: number
 }): boolean {
   const {
     authError,
     sessionBefore,
     sessionAfter,
     expectedAccessToken = null,
-    nowSec = Math.floor(Date.now() / 1000),
   } = options
 
   if (!authError) return true
   if (!sessionAfter) return false
 
-  if (expectedAccessToken && sessionAfter.accessToken === expectedAccessToken) {
-    return true
+  // Hash/implicit: the URL token is authoritative — no other soft-ok paths.
+  if (expectedAccessToken != null && expectedAccessToken !== '') {
+    return sessionAfter.accessToken === expectedAccessToken
   }
 
-  if (!sessionBefore) {
-    // Session appeared during the call — treat as successful race with the module.
-    return true
-  }
+  // PKCE/OTP: only a session that appeared or changed during this call counts.
+  if (!sessionBefore) return true
 
-  if (
+  return (
     sessionBefore.userId !== sessionAfter.userId ||
     sessionBefore.accessToken !== sessionAfter.accessToken
-  ) {
-    return true
-  }
-
-  // Same session as before: only allow soft-ok for a fresh PKCE/OTP race, never a leftover login.
-  return (
-    isLikelyAlreadyExchangedAuthError(authError) &&
-    isRecentlyIssuedAccessToken(sessionAfter.accessToken, 120, nowSec)
   )
 }
