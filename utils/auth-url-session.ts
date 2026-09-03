@@ -47,10 +47,8 @@ export function sessionFingerprint(
  * Rules (fail closed otherwise — never accept a leftover login):
  * - no error → success
  * - hash/implicit (`expectedAccessToken` set) → success ONLY if session token matches
- * - PKCE/OTP → success ONLY if a session appeared or was replaced during the call
- *
- * Callers should `signOut({ scope: 'local' })` before consuming URL credentials
- * when `detectSessionInUrl` is false, so leftover logins never reach soft-ok.
+ * - PKCE/OTP → success ONLY if an existing session was replaced during the call
+ *   (not merely "appeared" after a local sign-out — cookie hydrate can do that)
  */
 export function shouldSoftSucceedAuthUrlStep(options: {
   authError: unknown
@@ -73,11 +71,45 @@ export function shouldSoftSucceedAuthUrlStep(options: {
     return sessionAfter.accessToken === expectedAccessToken
   }
 
-  // PKCE/OTP: only a session that appeared or changed during this call counts.
-  if (!sessionBefore) return true
+  // PKCE/OTP: require a real replace. "Appeared from null" is unsafe after
+  // local-only signOut because httpOnly cookies / refresh cache can revive a leftover.
+  if (!sessionBefore) return false
 
   return (
     sessionBefore.userId !== sessionAfter.userId ||
     sessionBefore.accessToken !== sessionAfter.accessToken
   )
+}
+
+type SupabaseLike = {
+  auth: {
+    signOut: (opts?: { scope?: 'global' | 'local' | 'others' }) => Promise<{ error: unknown }>
+  }
+}
+
+/**
+ * Fully clear a prior login before consuming invite/recovery URL credentials:
+ * httpOnly cookies, Supabase client session, and client refresh reuse cache.
+ */
+export async function clearLeftoverAuthBeforeUrlConsume(
+  supabase: SupabaseLike
+): Promise<void> {
+  try {
+    await $fetch('/api/auth/logout', { method: 'POST' })
+  } catch {
+    // Continue — still clear client state
+  }
+
+  try {
+    await supabase.auth.signOut({ scope: 'global' })
+  } catch {
+    // Continue cleanup
+  }
+
+  try {
+    const { resetRefreshCache } = await import('~/utils/client-session-refresh')
+    resetRefreshCache()
+  } catch {
+    // non-fatal
+  }
 }

@@ -179,6 +179,7 @@ import { usePasswordStrength, generateStrongPassword } from '~/composables/usePa
 import { getSupabase } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import {
+  clearLeftoverAuthBeforeUrlConsume,
   sessionFingerprint,
   shouldSoftSucceedAuthUrlStep,
   stripSensitiveAuthParams,
@@ -318,15 +319,13 @@ async function acceptAuthCallOrExistingSession(
 }
 
 /**
- * Clear any prior browser session before consuming invite/recovery URL credentials.
- * Requires detectSessionInUrl: false so the module does not race-exchange first.
+ * Fully clear prior login (httpOnly cookies + client session + refresh cache)
+ * before consuming invite/recovery URL credentials.
  */
 async function clearLeftoverSessionBeforeUrlConsume(
   supabase: ReturnType<typeof getSupabase>
 ) {
-  const before = await readSessionFingerprint(supabase)
-  if (!before) return
-  await supabase.auth.signOut({ scope: 'local' })
+  await clearLeftoverAuthBeforeUrlConsume(supabase)
 }
 
 // Establish invite/recovery session from URL, then load user metadata
