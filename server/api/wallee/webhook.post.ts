@@ -240,6 +240,7 @@ export default defineEventHandler(async (event) => {
         total_amount_rappen,
         metadata,
         wallee_transaction_id,
+        wallee_space_id,
         credit_used_rappen
       `)
       .eq('wallee_transaction_id', transactionId)
@@ -280,6 +281,7 @@ export default defineEventHandler(async (event) => {
               total_amount_rappen,
               metadata,
               wallee_transaction_id,
+              wallee_space_id,
               credit_used_rappen
             `)
             .eq('id', historyRecord.payment_id)
@@ -2370,7 +2372,9 @@ async function savePaymentToken(payment: any, transactionId: string) {
       body: {
         transactionId,
         userId: payment.user_id,
-        tenantId: payment.tenant_id
+        tenantId: payment.tenant_id,
+        // Disambiguate Wallee txn IDs that collide across spaces/tenants
+        spaceId: payment.wallee_space_id || undefined,
       }
     })
     logger.debug('✅ Payment token save triggered')
