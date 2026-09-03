@@ -1702,6 +1702,8 @@
             <h2 class="text-lg font-semibold text-gray-900 mb-1">Standard-Zahlungsart</h2>
             <p class="text-sm text-gray-500 mb-4">
               Wird im Termin-Dialog vorausgewählt, wenn der Kunde keine eigene Präferenz hat.
+              Bei der Online-Buchung nur, wenn die Zahlart für Kunden erlaubt ist
+              (Bar: Sichtbarkeit «Mitarbeiter und Kunden», Rechnung: Option unten aktiv).
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <label
@@ -1770,7 +1772,7 @@
                     />
                     <div>
                       <div class="font-medium text-gray-900">Für Mitarbeiter und Kunden</div>
-                      <div class="text-sm text-gray-600">Kunden können Barzahlung als Zahlungsoption wählen</div>
+                      <div class="text-sm text-gray-600">Kunden können Barzahlung in der Online-Buchung wählen</div>
                     </div>
                   </label>
                 </div>
