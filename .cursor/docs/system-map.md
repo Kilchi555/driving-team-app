@@ -1,7 +1,18 @@
 # System Map
 
-> Architecture overview of **driving-team-app** for senior developers.  
+> Architecture overview of **driving-team-app** for senior developers.
 > Derived from the repository only. Uncertain items are tagged `NEEDS VERIFICATION` or `ASSUMPTION`.
+
+## Documentation authority (Impact / Architecture)
+
+For Impact Analysis and architecture orientation in this Cursor governance system:
+
+1. **Current code** is authoritative when evidence conflicts.
+2. **`.cursor/docs/*`** (this file and sibling maps/hotspots/guides) are the canonical written inputs for this system.
+
+If code and these docs disagree: **code wins** → mark the gap `NEEDS VERIFICATION`.
+
+Older root Markdown claiming `COMPLETE`, `ALL FIXED`, `FINAL`, or `SECURITY COMPLETE` must not be treated automatically as current system posture.
 
 ---
 
@@ -21,8 +32,8 @@ Primary stack:
 
 Sibling packages (separate apps, same monorepo):
 
-- `apps/simy` — marketing site + Stripe price/contact APIs  
-- `apps/website` — DrivingTeam-style marketing/content site  
+- `apps/simy` — marketing site + Stripe price/contact APIs
+- `apps/website` — DrivingTeam-style marketing/content site
 
 ---
 
@@ -112,10 +123,10 @@ UI action
 
 Additional paths:
 
-- **Passkeys** — `/api/auth/passkey/*` + WebAuthn tables  
-- **MFA** — email codes / methods tables  
-- **Account switch / impersonation** — `account-switch` utils + grant tables  
-- **Affiliate magic link** — uses Supabase storage session (cookie path skipped)  
+- **Passkeys** — `/api/auth/passkey/*` + WebAuthn tables
+- **MFA** — email codes / methods tables
+- **Account switch / impersonation** — `account-switch` utils + grant tables
+- **Affiliate magic link** — uses Supabase storage session (cookie path skipped)
 
 Documented client persistence notes: `docs/SESSION_PERSISTENCE.md` (profile cache ≠ tokens).
 
@@ -225,10 +236,10 @@ Domain event or cron
 
 ## 8. Frontend architecture notes
 
-- **Page-heavy** admin UI with large shared modals (`EventModal`) rather than many small route fragments.  
-- **Auto-imports** for `composables/` and `utils/` (`nuxt.config`).  
-- **i18n**: `@nuxtjs/i18n` locales `de/en/fr/it` in config; additional JSON files exist under `locales/` (`NEEDS VERIFICATION` if loaded dynamically).  
-- **Design system**: `@nuxt/ui` + tenant CSS variables (`assets/css/tenant-branding.css`).  
+- **Page-heavy** admin UI with large shared modals (`EventModal`) rather than many small route fragments.
+- **Auto-imports** for `composables/` and `utils/` (`nuxt.config`).
+- **i18n**: `@nuxtjs/i18n` locales `de/en/fr/it` in config; additional JSON files exist under `locales/` (`NEEDS VERIFICATION` if loaded dynamically).
+- **Design system**: `@nuxt/ui` + tenant CSS variables (`assets/css/tenant-branding.css`).
 - **Validation**: not centralized on client; server validators + selective Zod.
 
 ---
@@ -254,14 +265,14 @@ Domain event or cron
 
 ## 10. Security-sensitive surfaces · CRITICAL
 
-1. Service-role usage without tenant filters  
-2. RLS policy changes on `users`, `appointments`, `payments`, `availability_slots`  
-3. Auth cookie / JWT handling and account-switch cookies  
-4. Public anon policies for booking/payment insert paths  
-5. Wallee/Stripe webhooks (signature verification, idempotency)  
-6. Cron endpoints (`CRON_SECRET` / Vercel cron header)  
-7. Impersonation / accountant grants  
-8. Secrets in `tenant_secrets` / encryption keys  
+1. Service-role usage without tenant filters
+2. RLS policy changes on `users`, `appointments`, `payments`, `availability_slots`
+3. Auth cookie / JWT handling and account-switch cookies
+4. Public anon policies for booking/payment insert paths
+5. Wallee/Stripe webhooks (signature verification, idempotency)
+6. Cron endpoints (`CRON_SECRET` / Vercel cron header)
+7. Impersonation / accountant grants
+8. Secrets in `tenant_secrets` / encryption keys
 
 Existing audits/docs in repo: `docs/RLS_SECURITY_AUDIT.md`, `docs/SERVICE_ROLE_SECURITY_AUDIT.md`, `docs/ACCESS_AND_SECRETS_POLICY.md`, PCI docs.
 
@@ -269,8 +280,8 @@ Existing audits/docs in repo: `docs/RLS_SECURITY_AUDIT.md`, `docs/SERVICE_ROLE_S
 
 ## 11. Test & ship posture
 
-- **Required CI on `main`**: Test and lint (Vitest + lint) + E2E login (Playwright) — see `.cursor/rules/ship-to-main.mdc`.  
-- Unit tests concentrate on **server utils** (especially accounting/payments/validators), not full HTTP handler coverage.  
+- **Required CI on `main`**: Test and lint (Vitest + lint) + E2E login (Playwright) — see `.cursor/rules/ship-to-main.mdc`.
+- Unit tests concentrate on **server utils** (especially accounting/payments/validators), not full HTTP handler coverage.
 - E2E currently emphasizes **login** and **isolation**.
 
 ---
