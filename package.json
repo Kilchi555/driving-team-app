@@ -61,7 +61,7 @@
     "@nuxtjs/supabase": "^2.0.9",
     "@pinia/nuxt": "^0.5.5",
     "@simplewebauthn/browser": "^13.3.0",
-    "@simplewebauthn/server": "^13.3.1",
+    "@simplewebauthn/server": "^13.3.2",
     "@sparticuz/chromium": "^141.0.0",
     "@stripe/stripe-js": "^7.9.0",
     "@supabase/supabase-js": "^2.109.0",
