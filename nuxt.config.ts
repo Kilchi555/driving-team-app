@@ -81,6 +81,9 @@ export default defineNuxtConfig({
   
   // --- Nitro Configuration ---
   nitro: {
+    // Server source maps inflate the Vercel __fallback function (~10 MiB) and are
+    // not needed in production. Client/Vite sourcemaps stay controlled below.
+    sourceMap: false,
     experimental: {
       wasm: process.env.NODE_ENV === 'production'
     },

@@ -1,10 +1,79 @@
-import { google } from 'googleapis'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getTenantIdByGscSite } from '~/server/utils/marketing-tenant'
 import { assertCronRequest } from '~/server/utils/cron-auth'
 import { logger } from '~/utils/logger'
 
 export const maxDuration = 120
+
+type GscSearchAnalyticsRow = {
+  keys?: string[]
+  clicks?: number
+  impressions?: number
+  ctr?: number
+  position?: number
+}
+
+async function getGscAccessToken(clientId: string, clientSecret: string, refreshToken: string): Promise<string> {
+  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  })
+  const tokenData = await tokenRes.json() as { access_token?: string; error?: string; error_description?: string }
+  if (!tokenData.access_token) {
+    throw Object.assign(new Error('gsc_token_error'), { detail: tokenData })
+  }
+  return tokenData.access_token
+}
+
+async function queryGscSearchAnalytics(opts: {
+  accessToken: string
+  siteUrl: string
+  startDate: string
+  endDate: string
+  startRow: number
+  rowLimit: number
+}): Promise<GscSearchAnalyticsRow[]> {
+  // Search Console Search Analytics (Webmasters API v3) — same endpoint googleapis searchconsole used.
+  const url =
+    `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(opts.siteUrl)}/searchAnalytics/query`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${opts.accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      startDate: opts.startDate,
+      endDate: opts.endDate,
+      dimensions: ['date', 'query', 'page'],
+      rowLimit: opts.rowLimit,
+      startRow: opts.startRow,
+      type: 'web',
+    }),
+  })
+  const rawText = await res.text()
+  let data: { rows?: GscSearchAnalyticsRow[]; error?: unknown }
+  try {
+    data = JSON.parse(rawText) as { rows?: GscSearchAnalyticsRow[]; error?: unknown }
+  } catch {
+    throw Object.assign(new Error('gsc_api_non_json'), {
+      response: { data: { status: res.status, body: rawText.substring(0, 500) } },
+    })
+  }
+  if (!res.ok) {
+    throw Object.assign(new Error('gsc_api_error'), {
+      response: { data: data.error ?? data },
+      message: typeof data.error === 'object' ? JSON.stringify(data.error) : rawText.substring(0, 500),
+    })
+  }
+  return data.rows ?? []
+}
 
 // Fetches Search Console data and upserts into marketing_gsc_daily.
 // Runs daily at 04:00 via Vercel Cron (last 5 days).
@@ -66,13 +135,18 @@ export default defineEventHandler(async (event) => {
   logger.info(`sync-marketing-gsc: syncing ${fmt(rangeStart)} → ${fmt(rangeEnd)}`)
 
   // ============ LAYER 4: FETCH WITH PAGINATION ============
-  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret)
-  oauth2Client.setCredentials({ refresh_token: refreshToken })
-  const searchConsole = google.searchconsole({ version: 'v1', auth: oauth2Client })
+  let accessToken: string
+  try {
+    accessToken = await getGscAccessToken(clientId, clientSecret, refreshToken)
+  } catch (tokenErr: any) {
+    const detail = tokenErr?.detail ?? tokenErr?.message ?? String(tokenErr)
+    logger.error('sync-marketing-gsc: token error', detail)
+    return { success: false, reason: 'token_error', detail }
+  }
 
   const PAGE_SIZE = 25_000 // GSC Search Analytics max
   const CHUNK_DAYS = 7
-  const allRows: any[] = []
+  const allRows: GscSearchAnalyticsRow[] = []
   let chunkStart = new Date(rangeStart)
   let pagesFetched = 0
   let truncatedChunks = 0
@@ -89,18 +163,14 @@ export default defineEventHandler(async (event) => {
     try {
       // Paginate until a short page — never stop at the first 5k/25k page.
       for (;;) {
-        const res = await searchConsole.searchanalytics.query({
+        const rows = await queryGscSearchAnalytics({
+          accessToken,
           siteUrl,
-          requestBody: {
-            startDate: fmt(chunkStart),
-            endDate: fmt(chunkEnd),
-            dimensions: ['date', 'query', 'page'],
-            rowLimit: PAGE_SIZE,
-            startRow,
-            type: 'web',
-          },
+          startDate: fmt(chunkStart),
+          endDate: fmt(chunkEnd),
+          startRow,
+          rowLimit: PAGE_SIZE,
         })
-        const rows = res.data.rows ?? []
         allRows.push(...rows)
         chunkRows += rows.length
         pagesFetched += 1
