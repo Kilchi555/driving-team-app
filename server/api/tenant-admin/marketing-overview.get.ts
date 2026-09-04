@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { requireSuperAdmin } from '~/server/utils/require-super-admin'
 
 /**
  * Tenant-Admin Marketing Overview
@@ -8,13 +9,18 @@ import { logger } from '~/utils/logger'
  * Antwort: GSC (Search Console), GA4, Google Ads, Meta Ads, First-Party Booking
  * Events, Bookings (mit Attribution) und automatisch generierte Quick-Wins.
  *
+ * Auth: super_admin only (SEC-C02).
+ *
  * Query params:
  *   - days:      Zeitfenster in Tagen (7, 30, 90). Default 30.
- *   - tenant_id: Optional, Filter auf einen Tenant. Default: alle Tenants.
+ *   - tenant_id: Optional filter (super_admin only). Default: alle Tenants.
  */
 export default defineEventHandler(async (event) => {
   const start = Date.now()
   try {
+    // SEC-C02: platform marketing dump must never be public
+    await requireSuperAdmin(event)
+
     const q = getQuery(event)
     const days = Math.min(Math.max(parseInt(String(q.days ?? '30'), 10) || 30, 1), 365)
     const tenantId = q.tenant_id ? String(q.tenant_id) : null
@@ -605,6 +611,8 @@ export default defineEventHandler(async (event) => {
       }),
     }
   } catch (err: any) {
+    // Preserve auth denials from requireSuperAdmin (401/403); remap only unexpected failures.
+    if (err?.statusCode) throw err
     logger.error('marketing-overview error', err)
     throw createError({
       statusCode: 500,
