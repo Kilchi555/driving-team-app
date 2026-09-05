@@ -520,7 +520,7 @@ const emit = defineEmits<{
 
 const { showSuccess, showError } = useUIStore()
 const authStore = useAuthStore()
-const { uploadFile } = useUserDocuments()
+const { uploadFile, getPublicUrl } = useUserDocuments()
 const { primaryColor } = useTenantBranding()
 
 // Computed style for header background
@@ -832,40 +832,28 @@ const formatDate = (dateString: string) => {
 }
 
 const getDocumentUrl = (doc: any) => {
-  // Documents from Storage API already have publicUrl!
-  if (doc.publicUrl) {
+  const userId = props.userData?.id
+  // list-user-documents now puts a signed URL in publicUrl. Old public
+  // URLs still go through /api/documents/signed-url (authz + private bucket).
+  if (typeof doc.publicUrl === 'string' && doc.publicUrl) {
+    if (doc.publicUrl.includes('/object/public/')) {
+      return getPublicUrl(doc.publicUrl, userId)
+    }
     return doc.publicUrl
   }
-  
-  // Fallback: try different storage path field names
+
   const storagePath = doc.storagePath || doc.storage_path || doc.file_path || doc.path || doc.url
-  
+
   if (!storagePath) {
     console.warn('⚠️ No storage path found in doc:', doc.file_name, 'Available fields:', Object.keys(doc))
     return ''
   }
-  
-  // Check if it's already a full URL
-  if (storagePath.startsWith('http')) return storagePath
-  
-  // Build Supabase storage URL
-  const supabaseUrl = 'https://unyjaetebnaexaflpyoc.supabase.co'
-  let path = storagePath.trim()
-  
-  // Remove bucket prefix if it exists
-  if (path.startsWith('documents/')) {
-    path = path.substring('documents/'.length)
+
+  if (typeof storagePath === 'string' && storagePath.startsWith('http') && !storagePath.includes('/object/public/')) {
+    return storagePath
   }
-  
-  // Clean up any double slashes
-  path = path.replace(/\/+/g, '/')
-  
-  logger.debug('📷 Building URL for doc:', doc.file_name, 'path:', path)
-  
-  const finalUrl = `${supabaseUrl}/storage/v1/object/public/${path}`
-  logger.debug('📷 Final URL:', finalUrl)
-  
-  return finalUrl
+
+  return getPublicUrl(String(storagePath).trim(), userId)
 }
 
 const handleImageLoad = (doc: any) => {

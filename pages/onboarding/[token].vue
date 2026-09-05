@@ -1643,8 +1643,8 @@ const completeOnboarding = async () => {
             continue // Continue with next file instead of throwing
           }
 
-          if (uploadData.value?.url) {
-            documentUrls[type] = uploadData.value.url
+          if (uploadData.value?.path) {
+            documentUrls[type] = uploadData.value.path
             logger.debug(`✅ Document uploaded for ${type}`)
           }
         } catch (uploadErr: any) {

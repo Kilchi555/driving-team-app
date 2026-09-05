@@ -1,5 +1,5 @@
 /**
- * Upload a generated PDF to the public `receipts` bucket and return an HTTPS URL.
+ * Upload a generated PDF to the private `receipts` bucket and return a signed HTTPS URL.
  * Native Capacitor apps can only open PDFs via Browser.open() with http(s) URLs —
  * data:/blob: URLs do not work in SFSafariViewController / Chrome Custom Tabs.
  */
@@ -94,9 +94,11 @@ export async function uploadPdfAndGetPublicUrl(
     })
   }
 
-  const { data: publicData } = supabase.storage.from('receipts').getPublicUrl(filepath)
-  const pdfUrl = publicData?.publicUrl
-  if (!pdfUrl) {
+  const { data: signed, error: signError } = await supabase.storage
+    .from('receipts')
+    .createSignedUrl(filepath, 60 * 60 * 24 * 30)
+  const pdfUrl = signed?.signedUrl
+  if (signError || !pdfUrl) {
     throw createError({ statusCode: 500, statusMessage: 'PDF konnte nicht gespeichert werden' })
   }
 

@@ -2189,7 +2189,7 @@ const getDocumentUrl = (requirement: DocumentRequirement, side: 'front' | 'back'
     side
   )
   
-  return doc ? getPublicUrl(doc.storage_path) : null
+  return doc ? getPublicUrl(doc.storage_path, selectedStudent.value.id) : null
 }
 
 // Helper function to check if document exists
@@ -3748,10 +3748,7 @@ const getStudentDocumentUrl = (doc: any): string => {
   
   // Check if it's already a full URL
   if (doc.storage_path.startsWith('http')) return doc.storage_path
-  
-  // Build Supabase storage URL from path
-  const supabaseUrl = 'https://unyjaetebnaexaflpyoc.supabase.co'
-  
+
   let path = doc.storage_path.trim()
   
   // Remove bucket prefix if it exists (for old documents)
@@ -3762,8 +3759,9 @@ const getStudentDocumentUrl = (doc: any): string => {
   // Clean up any double slashes
   path = path.replace(/\/+/g, '/')
   
-  const url = `${supabaseUrl}/storage/v1/object/public/user-documents/${path}`
-  logger.debug('🔗 Built URL from storage_path:', url)
+  const userId = props.selectedStudent?.id || ''
+  const url = `/api/documents/signed-url?path=${encodeURIComponent(path)}${userId ? `&userId=${encodeURIComponent(userId)}` : ''}&redirect=1`
+  logger.debug('🔗 Built signed document URL from storage_path:', path)
   return url
 }
 
