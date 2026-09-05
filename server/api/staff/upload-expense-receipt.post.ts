@@ -27,9 +27,12 @@ export default defineEventHandler(async (event) => {
 
   if (uploadError) throw createError({ statusCode: 500, statusMessage: `Upload fehlgeschlagen (receipts/${storagePath}): ${uploadError.message}` })
 
-  const { data: publicUrl } = supabase.storage
+  const { data: signed, error: signError } = await supabase.storage
     .from('receipts')
-    .getPublicUrl(uploadData.path)
+    .createSignedUrl(uploadData.path, 60 * 60 * 24 * 30)
+  if (signError || !signed?.signedUrl) {
+    throw createError({ statusCode: 500, statusMessage: 'Signed URL fehlgeschlagen' })
+  }
 
-  return { success: true, url: publicUrl.publicUrl, filename: file.filename ?? fileName }
+  return { success: true, url: signed.signedUrl, filename: file.filename ?? fileName }
 })

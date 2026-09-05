@@ -90,11 +90,6 @@ async function uploadDocument(body: UploadRequest, userId: string) {
     throw new Error(`Upload failed: ${error.message}`)
   }
 
-  // Get public URL
-  const { data: urlData } = supabase.storage
-    .from('user-documents')
-    .getPublicUrl(path)
-
   // Optional: Create a document record in database
   const { error: dbError } = await supabase
     .from('user_documents')
@@ -118,7 +113,6 @@ async function uploadDocument(body: UploadRequest, userId: string) {
     success: true,
     data: {
       path,
-      url: urlData.publicUrl,
       file_name,
       size: buffer.length
     }

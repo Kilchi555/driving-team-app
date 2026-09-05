@@ -192,11 +192,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 11: Get public URL
-    const { data: urlData } = supabaseAdmin.storage
-      .from('user-documents')
-      .getPublicUrl(fileName)
-
     logger.debug('✅ Student document uploaded to Storage:', {
       fileName,
       userId,
@@ -206,7 +201,6 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      url: urlData.publicUrl,
       path: fileName,
       type: docType
     }

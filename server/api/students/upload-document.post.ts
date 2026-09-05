@@ -157,12 +157,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ✅ LAYER 10: Get public URL
-    const { data: urlData } = supabaseAdmin.storage
-      .from('user-documents')
-      .getPublicUrl(fileName)
-
-    // ✅ LAYER 11: Audit logging
+    // ✅ LAYER 10: Audit logging
     await logAudit({
       action: 'document_uploaded',
       userId: user.id,
@@ -181,7 +176,6 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      url: urlData.publicUrl,
       path: fileName,
       type: fileType
     }

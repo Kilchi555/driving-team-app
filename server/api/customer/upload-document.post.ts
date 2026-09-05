@@ -100,9 +100,9 @@ const uploadToStorage = async (
   storagePath: string,
   fileData: Buffer,
   mimeType: string
-): Promise<{ success: boolean; error?: string; url?: string }> => {
+): Promise<{ success: boolean; error?: string }> => {
   try {
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('user-documents')
       .upload(storagePath, fileData, {
         contentType: mimeType,
@@ -114,12 +114,7 @@ const uploadToStorage = async (
       return { success: false, error: error.message }
     }
 
-    // Get public URL (or signed URL for private buckets)
-    const { data: urlData } = supabase.storage
-      .from('user-documents')
-      .getPublicUrl(storagePath)
-
-    return { success: true, url: urlData?.publicUrl }
+    return { success: true }
   } catch (err: any) {
     logger.error('❌ Unexpected storage error:', err)
     return { success: false, error: 'Upload failed' }
@@ -253,7 +248,6 @@ export default defineEventHandler(async (event) => {
       success: true,
       document: {
         path: storagePath,
-        url: uploadResult.url,
         type: documentType,
         uploadedAt: new Date().toISOString()
       },

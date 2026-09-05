@@ -80,7 +80,7 @@
 
           <!-- Certificate preview link -->
           <div v-if="r.medical_certificate_url" class="px-5 pb-4">
-            <a :href="r.medical_certificate_url" target="_blank"
+            <a :href="documentHref(r.medical_certificate_url)" target="_blank"
               class="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -169,6 +169,10 @@ const tabs = computed(() => [
   { id: 'approved', label: 'Genehmigt', count: reviews.value.filter(r => r.medical_certificate_status === 'approved').length },
   { id: 'all',      label: 'Alle', count: reviews.value.length },
 ])
+
+function documentHref(pathOrUrl: string) {
+  return `/api/documents/signed-url?path=${encodeURIComponent(pathOrUrl)}&redirect=1`
+}
 
 const filteredReviews = computed(() =>
   statusFilter.value === 'all' ? reviews.value : reviews.value.filter(r => r.medical_certificate_status === statusFilter.value)

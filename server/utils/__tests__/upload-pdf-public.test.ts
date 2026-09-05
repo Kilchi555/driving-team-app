@@ -3,6 +3,7 @@ import {
   buildPdfStoragePath,
   isValidStorageKey,
   sanitizeStorageFilename,
+  uploadPdfAndGetPublicUrl,
 } from '../upload-pdf-public'
 
 describe('sanitizeStorageFilename', () => {
@@ -38,5 +39,40 @@ describe('buildPdfStoragePath', () => {
     expect(isValidStorageKey(filepath)).toBe(true)
     expect(filepath.includes('ü')).toBe(false)
     expect(filepath.includes('Zuerich')).toBe(false)
+  })
+})
+
+describe('uploadPdfAndGetPublicUrl', () => {
+  it('returns a receipts signed URL and never a public object URL', async () => {
+    const supabase = {
+      storage: {
+        from(bucket: string) {
+          return {
+            upload: async () => ({ error: null }),
+            createSignedUrl: async (path: string) => ({
+              data: {
+                signedUrl: `https://example.supabase.co/storage/v1/object/sign/${bucket}/${path}?token=t`,
+              },
+              error: null,
+            }),
+            getPublicUrl: (path: string) => ({
+              data: {
+                publicUrl: `https://example.supabase.co/storage/v1/object/public/${bucket}/${path}`,
+              },
+            }),
+          }
+        },
+      },
+    }
+
+    const { pdfUrl } = await uploadPdfAndGetPublicUrl(supabase, {
+      folder: 'invoices',
+      filename: 'Rechnung.pdf',
+      pdfBuffer: Buffer.from('%PDF'),
+    })
+
+    expect(pdfUrl).toContain('/object/sign/receipts/')
+    expect(pdfUrl).not.toContain('/object/public/receipts/')
+    expect(pdfUrl).not.toContain('/object/public/user-documents/')
   })
 })

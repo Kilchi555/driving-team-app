@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { STAFF_ADMIN_ROLES } from '~/server/utils/require-staff-or-internal'
+import { USER_DOCUMENTS_BUCKET, USER_DOCUMENT_SIGNED_TTL_SECONDS } from '~/server/utils/user-document-url'
 
 interface DocumentFile {
   id: string
@@ -119,12 +120,16 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Simple parsing - just return all files with basic metadata
-    // No category parsing needed
+    const storagePaths = files.map(file => `${userId}/${file.name}`)
+    const { data: signed } = await supabase.storage
+      .from(USER_DOCUMENTS_BUCKET)
+      .createSignedUrls(storagePaths, USER_DOCUMENT_SIGNED_TTL_SECONDS)
+    const signedByPath = new Map(
+      (signed || []).map((row) => [row.path, row.signedUrl || ''])
+    )
+
     const documents: DocumentFile[] = files.map(file => {
       const storagePath = `${userId}/${file.name}`
-      const publicUrl = `${supabaseUrl}/storage/v1/object/public/user-documents/${storagePath}`
-
       return {
         id: `${userId}-${file.name}`,
         name: file.name,
@@ -132,11 +137,11 @@ export default defineEventHandler(async (event) => {
         fileType: file.metadata?.mimetype || 'unknown',
         fileSize: file.metadata?.size || 0,
         createdAt: file.created_at || new Date().toISOString(),
-        documentType: 'document', // Generic type
+        documentType: 'document',
         category: undefined,
         side: undefined,
-        storagePath: storagePath,
-        publicUrl: publicUrl
+        storagePath,
+        publicUrl: signedByPath.get(storagePath) || '',
       }
     })
 
