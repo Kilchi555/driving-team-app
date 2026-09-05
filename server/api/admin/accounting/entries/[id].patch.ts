@@ -10,6 +10,7 @@ import {
   isAccountingDocumentKind,
 } from '~/server/utils/accounting'
 import { syncEntryLedger } from '~/server/utils/accounting-ledger-db'
+import { assertPersistableReceiptRef, isHttpReceiptUrl, tenantOwnsReceiptPath } from '~/server/utils/receipt-storage'
 
 const ALLOWED_FIELDS = [...ACCOUNTING_MATERIAL_FIELDS, ...ACCOUNTING_OPERATIONAL_FIELDS] as const
 
@@ -57,6 +58,17 @@ export default defineEventHandler(async (event) => {
   }
   if ('notes' in updates && typeof updates.notes === 'string') {
     updates.notes = updates.notes.trim() || null
+  }
+  if ('receipt_url' in updates) {
+    try {
+      updates.receipt_url = assertPersistableReceiptRef(updates.receipt_url)
+    } catch (err: any) {
+      throw createError({ statusCode: 400, statusMessage: err.message || 'Ungültiger Beleg-Pfad' })
+    }
+    const receiptRef = updates.receipt_url
+    if (typeof receiptRef === 'string' && !isHttpReceiptUrl(receiptRef) && !tenantOwnsReceiptPath(profile.tenant_id, receiptRef)) {
+      throw createError({ statusCode: 403, statusMessage: 'Beleg gehört nicht zu diesem Mandanten' })
+    }
   }
 
   if (Object.keys(updates).length === 0) {

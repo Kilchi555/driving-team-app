@@ -12,7 +12,7 @@
         </svg>
         <div class="flex-1 min-w-0">
           <p class="text-xs font-medium text-emerald-700 truncate">{{ form.receipt_filename || 'Beleg hochgeladen' }}</p>
-          <a :href="form.receipt_url" target="_blank" class="text-xs text-emerald-600 underline">Anzeigen</a>
+          <a :href="receiptDisplayHref(form.receipt_url)" target="_blank" class="text-xs text-emerald-600 underline">Anzeigen</a>
         </div>
         <button type="button" @click="resetReceipt" class="text-gray-400 hover:text-red-500 transition-colors p-1">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -150,7 +150,7 @@
 
           <div class="flex-shrink-0 text-right">
             <p class="text-sm font-bold text-gray-900">{{ chf(exp.amount_rappen) }}</p>
-            <a v-if="exp.receipt_url" :href="exp.receipt_url" target="_blank" class="text-xs text-blue-500 underline">Beleg</a>
+            <a v-if="exp.receipt_url" :href="receiptDisplayHref(exp.receipt_url)" target="_blank" class="text-xs text-blue-500 underline">Beleg</a>
           </div>
         </div>
       </div>
@@ -160,6 +160,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { receiptDisplayHref } from '~/server/utils/receipt-storage'
 
 interface ExpenseEntry {
   id: string
@@ -221,10 +222,10 @@ async function uploadReceipt(e: Event) {
   try {
     const fd = new FormData()
     fd.append('file', file)
-    const res = await $fetch<{ success: boolean; url: string; filename: string }>(
+    const res = await $fetch<{ success: boolean; path: string; filename: string }>(
       '/api/staff/upload-expense-receipt', { method: 'POST', body: fd }
     )
-    form.value.receipt_url = res.url ?? ''
+    form.value.receipt_url = res.path ?? ''
     form.value.receipt_filename = res.filename ?? file.name
 
     if (form.value.receipt_url) {
