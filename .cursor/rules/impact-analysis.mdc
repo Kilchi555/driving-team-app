@@ -1,0 +1,502 @@
+---
+description: Impact analysis, scope control, and Implementation Gate before elevated-risk changes
+alwaysApply: false
+---
+
+# Impact Analysis Before Changes
+
+When this rule is **required** (see Activation Policy), do **NOT** modify application code immediately.
+
+First analyze the repository, consult the architecture docs below, and produce an **IMPLEMENTATION GATE**.
+
+Impact Analysis authorizes **analysis and a gate recommendation**. It does **not** authorize expanding the task scope.
+
+## Activation Policy (when this rule is mandatory)
+
+Impact Analysis is **REQUIRED** when the change touches any of:
+
+* a **P0** hotspot (see `.cursor/docs/architecture-hotspots.md`)
+* a **P1** hotspot
+* Authentication / session infrastructure
+* Authorization / roles / privilege gates
+* Multi-tenant isolation (`tenant_id` filtering or tenant context)
+* RLS policies
+* Supabase privileged / service-role / admin clients
+* Payments (tenant checkout paths)
+* Wallee
+* Stripe
+* Trial / billing / subscription gating logic
+* Middleware that affects authorization or tenant routing
+* Any change classified as **CRITICAL** change risk
+
+Impact Analysis **MAY be skipped** only when **all** of the following hold:
+
+* Change risk is clearly **LOW** (see `.cursor/docs/change-risk-guide.md`)
+* No P0 / P1 hotspot is touched (including as a dependency)
+* No auth / authz / tenant / RLS / privileged Supabase client / payment / Wallee / Stripe / trial-billing / authz-or-tenant middleware path is involved
+* Scope is unambiguous and narrowly local
+
+If classification is ambiguous (cannot clearly place LOW vs elevated):
+
+**NEEDS VERIFICATION** — treat Impact Analysis as **REQUIRED** until evidence shows a clean LOW skip.
+
+Do **not** invent “significant change” as a vague trigger. Use this Activation Policy only.
+
+## Architecture docs (mandatory inputs)
+
+Always consider these files when assessing impact:
+
+| Doc | Use for |
+|-----|---------|
+| `.cursor/docs/architecture-hotspots.md` | P0/P1/P2 hotspots, blast radius, required regressions |
+| `.cursor/docs/change-risk-guide.md` | LOW / MEDIUM / HIGH / CRITICAL change-risk tiers |
+| `.cursor/docs/dependency-map.md` | Dependency chains and shared hubs |
+| `.cursor/docs/system-map.md` | Auth, tenant, payment, and data flows |
+| `.cursor/docs/impact-matrix.md` | Area × risk quick reference |
+
+### Documentation authority (for Impact / Architecture)
+
+Primary sources, in order:
+
+1. **Current code** (search / read evidence)
+2. **`.cursor/docs/*`** canonical impact/architecture documents for this system
+
+If a doc and the code disagree: **code wins**. Mark the doc gap as `NEEDS VERIFICATION`.
+
+Do not invent architecture.
+
+Older root Markdown that claims `COMPLETE`, `ALL FIXED`, `FINAL`, or `SECURITY COMPLETE` must **not** be treated automatically as current system posture for Impact Analysis.
+
+## Phases (Architect / Executor / Decision)
+
+Keep these phases separate. Do not collapse them.
+
+### ANALYSIS
+
+Responsibility:
+
+* Understand intent
+* Classify the change
+* Inspect architecture docs + code
+* Identify hotspots
+* Map dependencies (evidence)
+* Assess **change risk** (canonical scale below)
+* Define test level
+* Produce the **IMPLEMENTATION GATE** (recommendation only)
+
+### DECISION
+
+The Implementation Gate is **not** automatic implementation approval.
+
+For any of the following, require **Human/Architect approval before implementation**:
+
+* P0 hotspot involvement
+* Change risk **CRITICAL**
+* Authentication / Authorization
+* Tenant isolation
+* RLS
+* Payment / billing (including Wallee / Stripe / trial gates)
+
+Until that approval is explicit, do **not** modify application code — even if the gate recommendation is `SAFE TO IMPLEMENT` or `IMPLEMENT WITH CAUTION`.
+
+**No self-approval:** The implementing **Executor** may **not** approve their own implementation for P0 / CRITICAL or otherwise approval-required changes.
+
+Approval must come from:
+
+* the **User**, or
+* a **separately authorized Architect** who is **not** the implementing Executor
+
+The implementing Executor must **not** create, simulate, or replace that approval.
+
+Forbidden reasoning (explicitly disallowed):
+
+> “I am acting as Architect, therefore I approve my own implementation.”
+
+Role separation must be real: **ANALYSIS → DECISION / APPROVAL → IMPLEMENTATION → VERIFICATION**.
+
+For **LOW** or clearly scoped **MEDIUM** changes (no items above), the existing self-serve path may proceed after the gate is written, provided scope is explicit and not expanded.
+
+### IMPLEMENTATION
+
+Executor works **only** inside the approved / agreed change scope (Execution / Implementation Contract).
+
+The Executor must not derive a new strategic decision from a discovered defect.
+
+### VERIFICATION
+
+Executor runs the required tests and manual/security/database verification defined by the gate and `.cursor/docs/change-risk-guide.md`.
+
+## Critical rules
+
+DO NOT modify application code until Impact Analysis is complete and the Implementation Gate is written (when this rule is required).
+
+If a P0 area is involved and effects are not sufficiently understood:
+
+**BLOCK IMPLEMENTATION — NEEDS VERIFICATION**
+
+Never invent dependencies, behavior, database relationships, security properties, or test coverage.
+
+## Scope control (anti-creep)
+
+Agreed change scope is binding.
+
+The Executor may:
+
+* work only inside the agreed Change Scope
+* change only goals named in the Execution / Implementation Contract
+
+**Out-of-scope discovery is not authorization.**
+**A discovered defect does not automatically become part of the current implementation.**
+
+If analysis or implementation surfaces another problem **outside** scope:
+
+**If the finding is blocking / mandatory** for the current change to be correct or safe:
+
+1. **STOP IMPLEMENTATION**
+2. **REPORT / ESCALATE** (document finding, relevance, short Impact / Change Risk)
+3. Wait for the **User** or a **separately authorized Architect** (not the implementing Executor) to decide whether to expand scope
+4. The Executor must **not** fix the finding themselves
+5. The Executor must **not** expand scope themselves
+
+**A blocking out-of-scope finding does not authorize the Executor to fix it.**
+**STOP + ESCALATE takes precedence over implementation.**
+
+Only after an **explicit** scope expansion by the User or a separately authorized Architect may that finding become part of the implementation.
+
+**Otherwise** (non-blocking out-of-scope):
+
+1. Document the finding (**REPORT ONLY**)
+2. Explain why it is relevant
+3. State short Impact / Change Risk
+4. Continue the **original** scope — do not fix it “while here”, do not self-prioritize, do not expand scope
+
+Scope may be expanded **only** by:
+
+* the **User**, or
+* a **separately authorized Architect** who is **not** the implementing Executor
+
+Contract / scope violation → **STOP** and report.
+
+---
+
+## 1. Change classification
+
+Classify every relevant change at the start (multiple allowed):
+
+```
+CHANGE CLASS:
+* UI
+* Component
+* Shared Component
+* Composable
+* Store
+* API
+* Database
+* RLS
+* Authentication
+* Authorization
+* Middleware
+* Payment
+* External Integration
+* Configuration
+```
+
+## 2. Understand the requested change
+
+Determine:
+
+* What exactly is being changed?
+* Why is it being changed?
+* What should the new behavior be?
+* What existing behavior must remain unchanged?
+* What is explicitly **out of scope**?
+
+Label every assumption as `ASSUMPTION`. Do not present guesses as facts.
+
+## 3. Hotspot detection
+
+Check against `.cursor/docs/architecture-hotspots.md` (and code search):
+
+1. Does the change touch a **P0** hotspot?
+2. Does it touch a **P1** hotspot?
+3. Does it touch a **dependency** of a P0/P1 hotspot?
+4. Is a **shared** component / composable / store changed?
+5. Is an **API**, **database query**, **RLS policy**, or **middleware** changed?
+
+**P0 hotspots (this project):**
+
+* Server auth gate
+* Auth store / session plugins
+* Multi-tenant isolation
+* Supabase clients / admin client
+* RLS policies
+* Wallee payments
+* Stripe SaaS / trial middleware
+
+**P1 hotspots (this project):**
+
+* EventModal / composables
+* Availability / booking engine
+* Route / server middleware
+* (also treat admin layout, terminology/branding, pricing, cron platform, super-admin as elevated when touched — see hotspots doc)
+
+**Hotspot priority vs change risk (do not mix):**
+
+* **P0 / P1 / P2** = technical hotspot priority (where the code lives / blast radius hubs)
+* **LOW / MEDIUM / HIGH / CRITICAL** = change risk for *this* change
+
+If any hotspot question is yes, **raise** expected impact / change risk / test level. Never classify such a change as routine **LOW** work.
+
+## 4. Dependency analysis (evidence over assumption)
+
+Search the repository. Identify:
+
+* directly affected files
+* indirectly affected files / consumers
+* shared components, composables, stores
+* API routes, server utils
+* database queries, Supabase tables, RLS
+* authentication / authorization / middleware
+* payments, webhooks, emails/notifications, crons
+* types/interfaces, env/config, tests, user flows
+
+Trace dependencies **2–3 levels deep** where relevant.
+
+**Evidence rules:**
+
+* Forbidden phrasing: “That probably won’t affect other areas.”
+* Perform a real dependency search (imports, symbol usage, route/middleware wiring, table references).
+* If search finds nothing relevant: write **`NO DEPENDENCY FOUND`** (and still note residual risk if the file is a hotspot).
+* If analysis is inconclusive: write **`NEEDS VERIFICATION`**.
+
+Classify findings:
+
+* **DIRECT** — must probably change
+* **INDIRECT** — depends on changed behavior
+* **POTENTIAL** — shared dependency; verify even if it looks untouched
+
+**Dependency-driven tests:** choose tests from the real graph, not a generic checklist.
+
+Example: shared composable with 8 consumers → include those consumers (or their critical flows) in regression analysis.
+
+Out-of-graph defects discovered while searching → **REPORT ONLY** unless they are inside the agreed scope. If they make the current change unsafe / blocking → **STOP IMPLEMENTATION + ESCALATE** per Scope control (Executor must not self-fix).
+
+## 5. Risk assessment and escalation
+
+### Canonical change-risk scale (only)
+
+Use **exactly** these tiers for the Gate and all risk language in this rule:
+
+* **LOW** — unlikely meaningful impact; local, non-hotspot, non-security/money
+* **MEDIUM** — possible side effects / limited regression
+* **HIGH** — realistic chance of breaking existing functionality or wide fan-out
+* **CRITICAL** — security, money, tenant isolation, auth/authz, RLS, privileged clients, or equivalent blast
+
+**CRITICAL is a real tier**, not a synonym for HIGH.
+
+Map details via `.cursor/docs/change-risk-guide.md`.
+
+Do **not** use emoji risk labels (🔴/🟠/🟢) as the Gate risk value.
+
+### Hard escalation (must NOT be LOW)
+
+A change must **not** be rated **LOW** if it involves any of:
+
+* Authentication
+* Authorization
+* `tenant_id` / multi-tenant isolation
+* Supabase Admin Client / service-role client
+* RLS
+* Wallee
+* Stripe
+* Webhooks
+* Booking / availability
+* Central middleware (route or server) affecting authz or tenant routing
+
+When uncertain: choose the **higher** change risk, or mark **`NEEDS VERIFICATION`**.
+
+P0 hotspot involvement → change risk **HIGH** or **CRITICAL** only — never LOW or MEDIUM convenience ratings.
+
+## 6. Breaking-change check
+
+Explicitly determine whether the change could:
+
+* change an API contract, DB schema/query, or RLS behavior
+* change authentication / authorization
+* change a TypeScript interface or existing user behavior
+* affect another tenant or existing records
+* break an integration, URL, or route
+
+If yes, mark **BREAKING CHANGE** and set change risk to at least **HIGH** (or **CRITICAL** when security/money/tenant/auth).
+
+## 7. Security escalation
+
+If the change involves auth, roles, tenant isolation, RLS, or admin-client queries, verify at least:
+
+* Tenant A sees only Tenant A data
+* Tenant B sees only Tenant B data
+* Admin sees only allowed tenant data
+* Superadmin behavior (intentional cross-tenant only)
+* Unauthenticated access denied where required
+* Direct API calls (not only UI)
+* `tenant_id` manipulation resistance
+* Admin-client queries still filter by tenant
+* Relevant RLS policies still correct
+
+Record results under **Security Verification**. Incomplete understanding → `NEEDS VERIFICATION` / block if P0.
+
+## 8. Payment escalation
+
+If Wallee or Stripe is involved, verify at least:
+
+* Amount
+* Tenant
+* User
+* Payment status
+* Webhook handling
+* Duplicate webhook / idempotency
+* Error / recovery paths
+* Credits (if in path)
+* Trial / subscription status (Stripe / tenant gates)
+
+## 9. Test level (conceptual vs repository reality)
+
+Select tests from the dependency graph, then set a conceptual **TEST LEVEL**.
+Distinguish **conceptual level** from **actually available artifacts**. Do not invent suites.
+
+```
+TEST LEVEL:
+L0 — Lint / static checks
+L1 — Targeted Unit / Component
+L2 — Integration
+L3 — E2E / User Flow
+L4 — Security / Multi-Tenant Regression
+L5 — Full Regression
+```
+
+| Level | Meaning | Available artifact today | Gap |
+|-------|---------|--------------------------|-----|
+| **L0** | Lint / static checks before merge | `npm run lint` (currently ESLint on `server/utils/__tests__/**` only, via CI “Test and lint”) | **Typecheck is not currently enforced in CI** → Typecheck = `NEEDS VERIFICATION` / not currently enforced |
+| **L1** | Targeted unit / narrow component | Vitest: `server/utils/__tests__/**/*.test.ts`, `utils/__tests__/**/*.test.ts` (`npm test`) | Component/UI unit coverage is thin — do not assume Vue component suites exist |
+| **L2** | Integration across modules/APIs | Sparse / ad hoc only | **No large formalized integration suite** — prefer targeted Vitest + manual path; mark automation gap `NEEDS VERIFICATION` |
+| **L3** | E2E / user flow | Playwright: `e2e/login.spec.ts`, `e2e/isolation.spec.ts` (`npm run test:e2e`; CI “E2E login”) | Broader product E2E largely absent — specify manual verification |
+| **L4** | Security / multi-tenant regression | Isolation E2E + security/payment checklists in this rule; finding-specific Vitest where present | Automated RLS suite largely missing — do not claim CI proves policies |
+| **L5** | Full regression | **Not defined as an existing suite** | Full regression definition = **`NEEDS VERIFICATION`** — do not claim L5 was “run” unless an explicit matrix is listed |
+
+Minimums:
+
+| Situation | Minimum |
+|-----------|---------|
+| P0 hotspot | **L3**; Security / tenant / RLS / admin-client → **L4** |
+| P1 hotspot | **L2** (manual/integration evidence OK if no suite) + user-facing flows → **L3** |
+| Shared component / composable / store | **L2**-style consumer regression from the graph (often manual + L1 where tests exist) |
+| Auth / tenant / RLS | **L4** |
+| Payment (Wallee / Stripe / webhooks) | **L3** + payment-specific checks (section 8) |
+
+Do not recommend irrelevant tests. Prefer existing suites when they match the graph; otherwise specify manual verification and mark automation gaps `NEEDS VERIFICATION`.
+
+## 10. Manual verification
+
+If UI or user behavior is affected, specify exactly what to check:
+
+* pages, roles, desktop/mobile
+* loading / empty / error / permission states
+* edge cases from the dependency graph
+
+## 11. Implementation gate (required output)
+
+Before changing application code (when this rule is required), output:
+
+```
+IMPLEMENTATION GATE
+
+Change:
+…
+
+CHANGE CLASS:
+…
+
+In Scope:
+…
+
+Out of Scope:
+…
+
+Hotspots:
+(none | P0: … | P1: … | dependency of …)
+
+Blast Radius: Small / Medium / Large
+
+Change Risk: LOW | MEDIUM | HIGH | CRITICAL
+
+Decision Required:
+(none | User or separately authorized Architect approval required — list reason; implementing Executor may not self-approve)
+
+Direct Impact:
+…
+
+Indirect Impact:
+…
+
+Potential Impact:
+…
+
+Out-of-scope findings (REPORT ONLY):
+(none | …)
+
+Dependency Evidence:
+(search summary | NO DEPENDENCY FOUND | NEEDS VERIFICATION)
+
+Security Impact: None / Low / Medium / High / Critical
+Database Impact: None / Low / Medium / High / Critical
+Multi-Tenant Impact: None / Low / Medium / High / Critical
+Regression Risk: Low / Medium / High / Critical
+Breaking Change: Yes / No
+
+TEST LEVEL: L0–L5
+
+Required Tests:
+(conceptual level + concrete artifacts / manual steps; note gaps)
+
+Manual Verification:
+…
+
+Security Verification:
+(none | checklist results | NEEDS VERIFICATION)
+
+Database Verification:
+(none | migrations/RLS/queries reviewed | NEEDS VERIFICATION)
+
+Recommendation:
+SAFE TO IMPLEMENT
+or
+IMPLEMENT WITH CAUTION
+or
+INVESTIGATE BEFORE IMPLEMENTING
+or
+BLOCK IMPLEMENTATION — NEEDS VERIFICATION
+```
+
+Only after this gate — and after **DECISION** approval when required (User or separately authorized Architect; **not** the implementing Executor) — may application code be modified.
+
+If the gate is **BLOCK IMPLEMENTATION — NEEDS VERIFICATION**, stop and gather evidence first.
+
+## 12. Composition with Ship-to-main
+
+Order of governance:
+
+1. **Impact Analysis / Implementation Gate** (this rule) — pre-implementation impact, scope, change risk, test floor
+2. **Implementation** (approved scope only)
+3. **Tests / Verification** (gate + change-risk-guide)
+4. **Ship-to-main** (`.cursor/rules/ship-to-main.mdc`) — PR, CI, merge, production release
+
+Authority split:
+
+* **Impact Analysis** owns: pre-implementation impact, scope, change risk, test floor
+* **Ship-to-main** owns: PR / CI / merge / production release
+
+Hard rules:
+
+* A **SAFE** Impact Gate does **not** override Ship-to-main requirements.
+* Passing CI does **not** retroactively replace required Impact Analysis.
+* **CRITICAL** changes are not Ready-to-Ship until their required verification / test floor has been satisfied.
