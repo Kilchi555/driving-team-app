@@ -5,6 +5,7 @@ import { ACCOUNTING_PDF_DISCLAIMER } from '~/server/utils/accounting'
 import { buildAccountingYearPdf } from '~/server/utils/accounting-year-pdf'
 import { createStoreZip } from '~/server/utils/zip-store'
 import { invoiceOutstandingRappen, computeNetAssets } from '~/server/utils/accounting'
+import { resolveOwnedReceiptLocation } from '~/server/utils/receipt-storage'
 
 function csvEscape(value: unknown): string {
   const s = value == null ? '' : String(value)
@@ -120,19 +121,21 @@ export default defineEventHandler(async (event) => {
   let receiptCount = 0
   for (const e of entries) {
     if (receiptCount >= 40) break
-    const url = typeof e.receipt_url === 'string' ? e.receipt_url : ''
-    if (!url) continue
+    const ref = typeof e.receipt_url === 'string' ? e.receipt_url : ''
+    if (!ref) continue
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(4000), redirect: 'error' })
-      if (!res.ok) continue
-      const buf = Buffer.from(await res.arrayBuffer())
-      if (buf.length > 4 * 1024 * 1024) continue
+      const location = resolveOwnedReceiptLocation(profile.tenant_id, ref)
+      if (!location) continue
+      const { data, error } = await supabase.storage.from(location.bucket).download(location.path)
+      if (error || !data) continue
+      const buf = Buffer.from(await data.arrayBuffer())
+      if (!buf || buf.length > 4 * 1024 * 1024) continue
       const rawName = String(e.receipt_filename || `beleg-${e.id}`)
       const safe = rawName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80)
       files.push({ name: `belege/${String(e.entry_date)}_${safe}`, data: buf })
       receiptCount += 1
     } catch {
-      // skip expired or unreachable signed URLs
+      // skip expired URLs or missing storage objects
     }
   }
 

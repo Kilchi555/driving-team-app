@@ -368,11 +368,14 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: `PDF upload failed: ${uploadError.message}` })
     }
 
-    const { data: publicData } = supabase.storage
+    const { data: signed, error: signError } = await supabase.storage
       .from('receipts')
-      .getPublicUrl(filepath)
+      .createSignedUrl(filepath, 60 * 60 * 24 * 30)
+    if (signError || !signed?.signedUrl) {
+      throw createError({ statusCode: 500, statusMessage: 'Signed URL fehlgeschlagen' })
+    }
 
-    return { success: true, pdfUrl: publicData?.publicUrl, filename }
+    return { success: true, pdfUrl: signed.signedUrl, filename }
   } catch (err: any) {
     if (browser) {
       try { await browser.close() } catch { /* ignore */ }

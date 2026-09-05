@@ -1,6 +1,8 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import OpenAI from 'openai'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { resolveOwnedReceiptLocation } from '~/server/utils/receipt-storage'
 
 export interface ReceiptParseResult {
   amount_chf: number | null
@@ -27,24 +29,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'receipt_url is required' })
   }
 
-  // SSRF guard: only allow http(s) URLs to known storage hosts
-  let parsedUrl: URL
-  try {
-    parsedUrl = new URL(receipt_url)
-  } catch {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid receipt_url' })
+  const tenantId = user.tenant_id || user.profile?.tenant_id || ''
+  const location = resolveOwnedReceiptLocation(tenantId, receipt_url)
+  if (!location) {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid receipt path' })
   }
-  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-    throw createError({ statusCode: 400, statusMessage: 'receipt_url must be http(s)' })
+
+  const { data, error } = await getSupabaseAdmin().storage.from(location.bucket).download(location.path)
+  if (error || !data) {
+    throw createError({ statusCode: 404, statusMessage: 'Receipt not found' })
   }
-  const allowedHosts = [
-    'unyjaetebnaexaflpyoc.supabase.co',
-    new URL(process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co').host,
-  ].filter(Boolean)
-  const hostOk = allowedHosts.some((h) => parsedUrl.host === h || parsedUrl.host.endsWith('.supabase.co'))
-  if (!hostOk) {
-    throw createError({ statusCode: 400, statusMessage: 'receipt_url host not allowed' })
-  }
+  const contentType = data.type || 'image/jpeg'
+  const imageBytes = await data.arrayBuffer()
 
   const apiKey = process.env.NUXT_OPENAI_API_KEY || process.env.OPENAI_API_KEY
   if (!apiKey) {
@@ -53,36 +49,23 @@ export default defineEventHandler(async (event) => {
 
   const client = new OpenAI({ apiKey })
 
-  // Download the image server-side and send as base64 so OpenAI can always access it
-  // regardless of whether the Supabase bucket is publicly readable.
-  let imageContent: { type: 'image_url'; image_url: { url: string; detail: 'low' } }
-  try {
-    const imgRes = await fetch(parsedUrl.toString(), {
-      redirect: 'error',
-      signal: AbortSignal.timeout(10000),
-    })
-    if (!imgRes.ok) throw new Error(`HTTP ${imgRes.status}`)
-    const contentType = imgRes.headers.get('content-type') || 'image/jpeg'
-    const buffer = await imgRes.arrayBuffer()
-    if (buffer.byteLength > 8 * 1024 * 1024) {
-      throw createError({ statusCode: 400, statusMessage: 'Receipt image too large' })
+  if (imageBytes.byteLength > 8 * 1024 * 1024) {
+    throw createError({ statusCode: 400, statusMessage: 'Receipt image too large' })
+  }
+  const mimeType = contentType.split(';')[0].trim()
+  if (mimeType === 'application/pdf') {
+    return {
+      success: true,
+      data: {
+        amount_chf: null, date: null, merchant: null, iban: null, reference: null,
+        vat_rate: null, vat_amount_chf: null, category_hint: null, confidence: 'low',
+      },
     }
-    const base64 = Buffer.from(buffer).toString('base64')
-    const mimeType = contentType.split(';')[0].trim()
-    // For PDFs, OpenAI Vision doesn't support them — skip and return empty result
-    if (mimeType === 'application/pdf') {
-      return {
-        success: true,
-        data: {
-          amount_chf: null, date: null, merchant: null, iban: null, reference: null,
-          vat_rate: null, vat_amount_chf: null, category_hint: null, confidence: 'low',
-        },
-      }
-    }
-    imageContent = { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'low' } }
-  } catch (fetchErr: any) {
-    if (fetchErr?.statusCode) throw fetchErr
-    throw createError({ statusCode: 502, statusMessage: `Could not fetch receipt image: ${fetchErr.message}` })
+  }
+  const base64 = Buffer.from(imageBytes).toString('base64')
+  const imageContent: { type: 'image_url'; image_url: { url: string; detail: 'low' } } = {
+    type: 'image_url',
+    image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'low' },
   }
 
   const response = await client.chat.completions.create({

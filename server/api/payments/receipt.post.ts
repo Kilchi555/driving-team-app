@@ -1317,13 +1317,16 @@ export default defineEventHandler(async (event) => {
       
       logger.debug('✅ PDF uploaded successfully:', uploadData)
       
-      // Get public URL for the PDF
-      const { data: publicData } = supabase.storage
+      const { data: signed, error: signError } = await supabase.storage
         .from('receipts')
-        .getPublicUrl(filepath)
-      
-      const pdfUrl = publicData?.publicUrl
-      logger.debug('📄 PDF public URL:', pdfUrl)
+        .createSignedUrl(filepath, 60 * 60)
+
+      if (signError || !signed?.signedUrl) {
+        throw new Error(`PDF signed URL failed: ${signError?.message || 'missing url'}`)
+      }
+
+      const pdfUrl = signed.signedUrl
+      logger.debug('📄 PDF signed URL created')
       
       // Return success with URL for email sending
       return {

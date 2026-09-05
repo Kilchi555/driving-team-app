@@ -39,16 +39,12 @@ export default defineEventHandler(async (event) => {
 
     if (fallbackError) throw createError({ statusCode: 500, statusMessage: fallbackError.message })
 
-    const { data: signedUrl } = await supabase.storage
-      .from('user-documents')
-      .createSignedUrl(`accounting/${profile.tenant_id}/${fileName}`, 60 * 60 * 24 * 365)
-
-    return { success: true, url: signedUrl?.signedUrl, filename: file.filename ?? fileName }
+    return {
+      success: true,
+      path: fallback.path || `accounting/${profile.tenant_id}/${fileName}`,
+      filename: file.filename ?? fileName,
+    }
   }
 
-  const { data: publicUrl } = supabase.storage
-    .from('tenant-documents')
-    .getPublicUrl(uploadData.path)
-
-  return { success: true, url: publicUrl.publicUrl, filename: file.filename ?? fileName }
+  return { success: true, path: uploadData.path || storagePath, filename: file.filename ?? fileName }
 })

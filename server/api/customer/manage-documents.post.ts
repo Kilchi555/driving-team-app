@@ -71,12 +71,7 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // Get public URL
-      const { data: publicUrl } = serviceSupabase.storage
-        .from('user-documents')
-        .getPublicUrl(filename)
-
-      logger.debug('✅ Document uploaded:', publicUrl.publicUrl)
+      logger.debug('✅ Document uploaded:', filename)
 
       // Save document record in user_documents table
       try {
@@ -109,7 +104,6 @@ export default defineEventHandler(async (event) => {
       return {
         success: true,
         message: 'Dokument erfolgreich hochgeladen',
-        documentUrl: publicUrl.publicUrl,
         filename
       }
 
