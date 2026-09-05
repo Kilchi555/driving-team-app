@@ -258,25 +258,9 @@ export const useAvailabilitySystem = () => {
 
       workingHoursCache.value = response.data?.workingHours || []
 
-      // If no working hours found, create default ones
+      // No synthetic defaults: staff without working hours have no bookable slots
       if (workingHoursCache.value.length === 0) {
-        logger.debug('⚠️ No working hours found, creating default ones')
-        const defaultWorkingHours: StaffWorkingHours[] = []
-        
-        activeStaff.value.forEach(staff => {
-          // Monday to Friday (1-5) - Note: your table uses 1-7, not 0-6
-          for (let day = 1; day <= 5; day++) {
-            defaultWorkingHours.push({
-              id: `${staff.id}-${day}`,
-              staff_id: staff.id,
-              day_of_week: day,
-              start_time: '08:00',
-              end_time: '18:00',
-              is_active: true
-            })
-          }
-        })
-        workingHoursCache.value = defaultWorkingHours
+        logger.debug('ℹ️ No working hours found — no bookable slots')
       }
 
       logger.debug('✅ Working hours loaded via API:', workingHoursCache.value.length)

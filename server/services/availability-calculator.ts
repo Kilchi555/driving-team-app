@@ -546,46 +546,19 @@ export class AvailabilityCalculator {
       .from('staff_working_hours')
       .select('id, staff_id, day_of_week, start_time, end_time, timezone, is_active')
       .in('staff_id', staffIds)
+      .eq('is_active', true)
 
     if (error) throw error
 
-    // Filter for active hours only
-    const activeHours = (data || []).filter(h => h.is_active)
-    
-    // Check PER STAFF if they have working hours, add defaults for those who don't
-    const result: StaffWorkingHours[] = [...activeHours]
+    // No synthetic defaults: staff without active working hours get zero bookable slots.
+    const activeHours = data || []
     const staffWithHours = new Set(activeHours.map(h => h.staff_id))
-    
-    for (const staffId of staffIds) {
-      if (!staffWithHours.has(staffId)) {
-        // This staff has NO active working hours - add defaults (Mon-Fri 8-18)
-        logger.debug(`⚠️ Staff ${staffId.substring(0, 8)}... has no working hours, adding defaults`)
-        for (let day = 1; day <= 5; day++) {
-          result.push({
-            id: `${staffId}-${day}-default`,
-            staff_id: staffId,
-            day_of_week: day,
-            start_time: '08:00',
-            end_time: '18:00',
-            timezone: DEFAULT_TIMEZONE,
-            is_active: true
-          })
-        }
-      }
+    const missingHours = staffIds.filter(id => !staffWithHours.has(id))
+    if (missingHours.length > 0) {
+      logger.debug(`ℹ️ ${missingHours.length} staff with no active working hours — no slots for them`)
     }
-    
-    // Log summary
-    const hoursByStaff = new Map<string, number>()
-    result.forEach(h => {
-      hoursByStaff.set(h.staff_id, (hoursByStaff.get(h.staff_id) || 0) + 1)
-    })
-    logger.debug('📅 Working hours per staff:')
-    hoursByStaff.forEach((count, staffId) => {
-      const isDefault = !staffWithHours.has(staffId)
-      logger.debug(`   ${staffId.substring(0, 8)}...: ${count} days ${isDefault ? '(defaults)' : ''}`)
-    })
-    
-    return result
+
+    return activeHours
   }
 
   /**
@@ -1354,27 +1327,22 @@ export class AvailabilityCalculator {
     startDate?: Date,
     endDate?: Date
   ): Promise<number> {
-    if (slots.length === 0) {
-      logger.debug('ℹ️ No slots to write (staff may have no working hours configured)')
-      return 0
+    // Service-role deletes bypass RLS — never run stale cleanup without a scope.
+    if (!tenantId && !staffId) {
+      throw new Error('writeSlots requires tenantId or staffId to scope slot writes/cleanup')
     }
 
     try {
       const upsertBatchSize = 1000   // Upserts use a POST body → no URL length limit
       const deleteBatchSize = 100    // Deletes use `.in()` query params → URL limit ~8 kB; 100 UUIDs ≈ 3.7 kB ✓
-
-      // Step 1: Upsert new slots.
-      // onConflict on the natural key preserves the existing UUID for unchanged slots,
-      // so any slot_id a user loaded before recalculation remains valid after it.
-      //
-      // Deduplicate within the batch first — Postgres rejects upserts that target the
-      // same conflict key twice in one statement (21000: "cannot affect row a second time").
-      // Duplicates can appear when overlapping working-hour blocks or duplicate durations
-      // generate identical (staff, location, start, end, category) rows.
       const toEpoch = (t: string) => new Date(t).getTime()
       const dedupeKey = (s: AvailabilitySlot) =>
         `${s.staff_id}|${s.location_id}|${toEpoch(s.start_time)}|${toEpoch(s.end_time)}|${s.category_code}`
 
+      // Deduplicate within the batch first — Postgres rejects upserts that target the
+      // same conflict key twice in one statement (21000: "cannot affect row a second time").
+      // Duplicates can appear when overlapping working-hour blocks or duplicate durations
+      // generate identical (staff, location, start, end, category) rows.
       const uniqueSlotsMap = new Map<string, AvailabilitySlot>()
       for (const slot of slots) {
         uniqueSlotsMap.set(dedupeKey(slot), slot)
@@ -1384,28 +1352,37 @@ export class AvailabilityCalculator {
         logger.warn(`⚠️ Removed ${slots.length - uniqueSlots.length} duplicate slot(s) before upsert`)
       }
 
-      logger.debug(`⬆️ Upserting ${uniqueSlots.length} slots...`)
       let insertedCount = 0
 
-      for (let i = 0; i < uniqueSlots.length; i += upsertBatchSize) {
-        const batch = uniqueSlots.slice(i, i + upsertBatchSize)
+      // Step 1: Upsert new slots (skip when empty — e.g. staff has no working hours).
+      // Still run stale cleanup below so previously generated default slots are removed.
+      // onConflict on the natural key preserves the existing UUID for unchanged slots,
+      // so any slot_id a user loaded before recalculation remains valid after it.
+      if (uniqueSlots.length === 0) {
+        logger.debug('ℹ️ No slots to write (staff may have no working hours configured) — clearing stale slots')
+      } else {
+        logger.debug(`⬆️ Upserting ${uniqueSlots.length} slots...`)
 
-        const { error: insertError } = await this.supabase
-          .from('availability_slots')
-          .upsert(batch, {
-            onConflict: 'staff_id,location_id,start_time,end_time,category_code',
-            ignoreDuplicates: false
-          })
+        for (let i = 0; i < uniqueSlots.length; i += upsertBatchSize) {
+          const batch = uniqueSlots.slice(i, i + upsertBatchSize)
 
-        if (insertError) {
-          logger.error('❌ Error upserting batch:', insertError)
-          throw insertError
+          const { error: insertError } = await this.supabase
+            .from('availability_slots')
+            .upsert(batch, {
+              onConflict: 'staff_id,location_id,start_time,end_time,category_code',
+              ignoreDuplicates: false
+            })
+
+          if (insertError) {
+            logger.error('❌ Error upserting batch:', insertError)
+            throw insertError
+          }
+
+          insertedCount += batch.length
         }
 
-        insertedCount += batch.length
+        logger.debug(`✅ Upserted ${insertedCount} slots`)
       }
-
-      logger.debug(`✅ Upserted ${insertedCount} slots`)
 
       // Step 2: Delete stale slots whose natural key is no longer in the new set.
       // Actively reserved slots (reserved_by_session set + reserved_until in the future)
