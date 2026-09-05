@@ -201,7 +201,7 @@
                       <div v-if="cancellation.medical_certificate_url" class="flex items-center space-x-2">
                         <span class="text-green-600">✓</span>
                         <a 
-                          :href="cancellation.medical_certificate_url" 
+                          :href="documentHref(cancellation.medical_certificate_url)" 
                           target="_blank"
                           class="hover:opacity-70 underline text-xs"
                           :style="{ color: primaryColor }"
@@ -626,6 +626,10 @@ import { formatDateTime } from '~/utils/dateUtils'
 import CancellationPoliciesManager from '~/components/admin/CancellationPoliciesManager.vue'
 
 const { primaryColor } = useTenantBranding()
+
+function documentHref(pathOrUrl: string) {
+  return `/api/documents/signed-url?path=${encodeURIComponent(pathOrUrl)}&redirect=1`
+}
 const { t } = useTerminology()
 
 // Meta

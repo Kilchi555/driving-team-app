@@ -7,6 +7,7 @@ import {
   isAccountingDocumentKind,
 } from '~/server/utils/accounting'
 import { syncEntryLedger } from '~/server/utils/accounting-ledger-db'
+import { assertPersistableReceiptRef, isHttpReceiptUrl, tenantOwnsReceiptPath } from '~/server/utils/receipt-storage'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAccountingAccess(event, { write: true })
@@ -49,6 +50,16 @@ export default defineEventHandler(async (event) => {
   if (!entry_date) throw createError({ statusCode: 400, statusMessage: 'Datum ist erforderlich' })
   if (!description?.trim()) throw createError({ statusCode: 400, statusMessage: 'Beschreibung ist erforderlich' })
 
+  let receiptRef: string | null = null
+  try {
+    receiptRef = assertPersistableReceiptRef(receipt_url)
+  } catch (err: any) {
+    throw createError({ statusCode: 400, statusMessage: err.message || 'Ungültiger Beleg-Pfad' })
+  }
+  if (receiptRef && !isHttpReceiptUrl(receiptRef) && !tenantOwnsReceiptPath(profile.tenant_id, receiptRef)) {
+    throw createError({ statusCode: 403, statusMessage: 'Beleg gehört nicht zu diesem Mandanten' })
+  }
+
   const { data: creator } = await supabase
     .from('users')
     .select('id')
@@ -73,7 +84,7 @@ export default defineEventHandler(async (event) => {
       is_paid: is_paid ?? false,
       paid_date: paid_date ?? null,
       external_reference: external_reference ?? null,
-      receipt_url: receipt_url ?? null,
+      receipt_url: receiptRef,
       receipt_filename: receipt_filename ?? null,
       notes: typeof notes === 'string' && notes.trim() ? notes.trim() : null,
       document_kind,

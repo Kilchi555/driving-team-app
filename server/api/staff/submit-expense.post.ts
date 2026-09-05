@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { assertPersistableReceiptRef, isHttpReceiptUrl, tenantOwnsReceiptPath } from '~/server/utils/receipt-storage'
 
 /**
  * POST /api/staff/submit-expense
@@ -19,8 +20,17 @@ export default defineEventHandler(async (event) => {
   if (!description?.trim()) {
     throw createError({ statusCode: 400, statusMessage: 'Beschreibung erforderlich' })
   }
-  if (!receipt_url) {
+  let receiptRef: string
+  try {
+    receiptRef = assertPersistableReceiptRef(receipt_url) || ''
+  } catch (err: any) {
+    throw createError({ statusCode: 400, statusMessage: err.message || 'Ungültiger Beleg-Pfad' })
+  }
+  if (!receiptRef) {
     throw createError({ statusCode: 400, statusMessage: 'Bitte zuerst Beleg hochladen' })
+  }
+  if (!isHttpReceiptUrl(receiptRef) && !tenantOwnsReceiptPath(profile.tenant_id, receiptRef)) {
+    throw createError({ statusCode: 403, statusMessage: 'Beleg gehört nicht zu diesem Mandanten' })
   }
 
   const amount_rappen = Math.round(Number(amount_chf) * 100)
@@ -33,7 +43,7 @@ export default defineEventHandler(async (event) => {
       amount_rappen,
       description:          description.trim(),
       entry_date:           entry_date || new Date().toISOString().split('T')[0],
-      receipt_url,
+      receipt_url: receiptRef,
       receipt_filename:     receipt_filename ?? null,
       notes:                notes?.trim() ?? null,
       document_kind:        'spesen',

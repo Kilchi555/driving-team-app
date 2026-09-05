@@ -5,6 +5,7 @@ import { toLocalTimeString } from '~/utils/dateUtils'
 import { logger } from '~/utils/logger'
 import { sendTenantEmail, generateMedicalCertUploadedAdminEmail } from '~/server/utils/email'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { getAppUrl } from '~/server/utils/app-url'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -126,19 +127,14 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get public URL
-    const { data: urlData } = supabaseAdmin.storage
-      .from('user-documents')
-      .getPublicUrl(fileName)
-
-    logger.debug('✅ Medical certificate uploaded:', urlData.publicUrl)
+    logger.debug('✅ Medical certificate uploaded:', fileName)
 
     // Update appointment with certificate info
     const { error: updateError } = await supabaseAdmin
       .from('appointments')
       .update({
         medical_certificate_status: 'uploaded',
-        medical_certificate_url: urlData.publicUrl,
+        medical_certificate_url: fileName,
         medical_certificate_uploaded_at: toLocalTimeString(new Date())
       })
       .eq('id', appointmentId)
@@ -192,7 +188,7 @@ export default defineEventHandler(async (event) => {
           customerEmail: customerProfile?.email || undefined,
           appointmentDate: apptDate,
           appointmentTime: apptTime,
-          certificateUrl: urlData.publicUrl,
+          certificateUrl: `${getAppUrl()}/admin/medical-certificate-reviews`,
           tenantName: tenant?.name || 'Unternehmen',
         })
 
@@ -209,7 +205,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      url: urlData.publicUrl,
+      path: fileName,
       status: 'uploaded',
       message: 'Arztzeugnis erfolgreich hochgeladen. Es wird in Kürze geprüft.'
     }

@@ -239,12 +239,10 @@ export const useUserDocuments = () => {
   /**
    * Holt öffentliche URL für ein Dokument
    */
-  const getPublicUrl = (storagePath: string): string => {
-    const { data } = supabase.storage
-      .from('user-documents')
-      .getPublicUrl(storagePath)
-    
-    return data.publicUrl
+  const getPublicUrl = (storagePath: string, userId?: string): string => {
+    const params = new URLSearchParams({ path: storagePath, redirect: '1' })
+    if (userId) params.set('userId', userId)
+    return `/api/documents/signed-url?${params.toString()}`
   }
 
   // Computed Properties
