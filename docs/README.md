@@ -344,6 +344,20 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused ops / developer runbooks (prefer these over root historical markdown):
+
+| Doc | Topic |
+|-----|--------|
+| [VERCEL_SERVERLESS_BUNDLE.md](./VERCEL_SERVERLESS_BUNDLE.md) | `__fallback` ≤250 MiB, Nitro source maps, `uuid` NFT, no `googleapis` in `server/` |
+| [MARKETING_GSC_SYNC.md](./MARKETING_GSC_SYNC.md) | Search Console cron: OAuth+REST, pagination, upsert |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Pending payment recovery + webhook logs |
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin passkey lockout recovery |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Auth session persistence notes |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
