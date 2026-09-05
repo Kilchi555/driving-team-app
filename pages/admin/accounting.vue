@@ -14,9 +14,9 @@
       <div class="divide-y divide-gray-50">
         <div v-for="exp in pendingStaffExpenses" :key="exp.id" class="px-5 py-4 flex items-start gap-4">
           <!-- Receipt thumbnail -->
-          <a v-if="exp.receipt_url" :href="exp.receipt_url" target="_blank"
+          <a v-if="exp.receipt_url" :href="receiptDisplayHref(exp.receipt_url)" target="_blank"
             class="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center hover:opacity-80 transition-opacity">
-            <img v-if="!exp.receipt_filename?.endsWith('.pdf')" :src="exp.receipt_url" class="w-full h-full object-cover" alt="Beleg"/>
+            <img v-if="!exp.receipt_filename?.endsWith('.pdf')" :src="receiptDisplayHref(exp.receipt_url)" class="w-full h-full object-cover" alt="Beleg"/>
             <svg v-else class="w-7 h-7 text-red-400" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
             </svg>
@@ -71,9 +71,9 @@
       </div>
       <div class="divide-y divide-gray-50">
         <div v-for="exp in pendingInboxExpenses" :key="exp.id" class="px-5 py-4 flex items-start gap-4">
-          <a v-if="exp.receipt_url" :href="exp.receipt_url" target="_blank"
+          <a v-if="exp.receipt_url" :href="receiptDisplayHref(exp.receipt_url)" target="_blank"
             class="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center hover:opacity-80 transition-opacity">
-            <img v-if="!exp.receipt_filename?.toLowerCase().endsWith('.pdf')" :src="exp.receipt_url" class="w-full h-full object-cover" alt="Beleg"/>
+            <img v-if="!exp.receipt_filename?.toLowerCase().endsWith('.pdf')" :src="receiptDisplayHref(exp.receipt_url)" class="w-full h-full object-cover" alt="Beleg"/>
             <svg v-else class="w-7 h-7 text-red-400" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
             </svg>
@@ -687,7 +687,7 @@
 
                 <!-- Beleg -->
                 <td class="px-4 py-3 text-center hidden md:table-cell">
-                  <a v-if="entry.receipt_url" :href="entry.receipt_url" target="_blank"
+                  <a v-if="entry.receipt_url" :href="receiptDisplayHref(entry.receipt_url)" target="_blank"
                     class="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-700 transition-colors">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                     Beleg
@@ -1005,7 +1005,7 @@
               <label class="block text-xs font-semibold text-gray-500 mb-2">Beleg (Foto oder PDF)</label>
               <div v-if="entryForm.receipt_url" class="flex items-center gap-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl">
                 <div class="flex-1 min-w-0">
-                  <a :href="entryForm.receipt_url" target="_blank" class="text-xs font-medium text-emerald-700 underline truncate block">
+                  <a :href="receiptDisplayHref(entryForm.receipt_url)" target="_blank" class="text-xs font-medium text-emerald-700 underline truncate block">
                     {{ entryForm.receipt_filename || 'Beleg anzeigen' }}
                   </a>
                 </div>
@@ -1323,6 +1323,7 @@ import {
   requiresAccountingReceipt,
   type AccountingDocumentKind,
 } from '~/server/utils/accounting'
+import { receiptDisplayHref } from '~/server/utils/receipt-storage'
 import { WALLEE_FEE_PRICE_TIP, WALLEE_FEE_RATE_LABEL } from '~/utils/wallee-fee'
 
 definePageMeta({ layout: 'admin' })
@@ -2105,7 +2106,7 @@ async function uploadReceipt(e: Event) {
     fd.append('file', file)
     const res = await $fetch('/api/admin/accounting/upload-receipt', { method: 'POST', body: fd })
     if (!res.success) return
-    entryForm.receipt_url = res.url ?? ''
+    entryForm.receipt_url = res.path ?? ''
     entryForm.receipt_filename = res.filename ?? file.name
     if (!entryForm.receipt_url) return
 
@@ -2155,11 +2156,11 @@ async function attachReceiptToEntry(entry: AccountingEntry, e: Event) {
     const fd = new FormData()
     fd.append('file', file)
     const res = await $fetch('/api/admin/accounting/upload-receipt', { method: 'POST', body: fd })
-    if (!res.success || !res.url) throw new Error('Upload fehlgeschlagen')
+    if (!res.success || !res.path) throw new Error('Upload fehlgeschlagen')
     await $fetch(`/api/admin/accounting/entries/${entry.id}`, {
       method: 'PATCH',
       body: {
-        receipt_url: res.url,
+        receipt_url: res.path,
         receipt_filename: res.filename ?? file.name,
       },
     })
