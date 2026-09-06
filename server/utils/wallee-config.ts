@@ -19,10 +19,118 @@
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { logger } from '~/utils/logger'
 
-interface WalleeConfig {
+export interface WalleeConfig {
   spaceId: number
   userId: number
   apiSecret: string
+}
+
+export const PRODUCTION_WALLEE_SPACE_ID = 88489
+
+export function isNonProductionRuntime(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env.VERCEL_ENV) return env.VERCEL_ENV !== 'production'
+  return env.NODE_ENV !== 'production'
+}
+
+function assertIsolatedTestConfig(config: WalleeConfig, context: string): WalleeConfig {
+  if (config.spaceId === PRODUCTION_WALLEE_SPACE_ID) {
+    throw new Error(`[Wallee] ${context}: test credentials must not use production space ${PRODUCTION_WALLEE_SPACE_ID}`)
+  }
+  return config
+}
+
+/**
+ * Pure credential resolution. Preview/staging never receive production space 88489.
+ * Production keeps tenant_secrets → env fallback.
+ */
+export function resolveWalleeConfigForTenant(input: {
+  tenantId?: string
+  testMode: boolean
+  testConfig: WalleeConfig | null
+  prodConfig: WalleeConfig | null
+  envConfig: WalleeConfig | null
+  nonProduction: boolean
+}): WalleeConfig {
+  const { tenantId, testMode, testConfig, prodConfig, envConfig, nonProduction } = input
+  const isolatedTest = testConfig
+    ? assertIsolatedTestConfig(testConfig, tenantId ? `tenant ${tenantId}` : 'no tenantId')
+    : null
+
+  if (!tenantId) {
+    if (nonProduction) {
+      throw new Error('[Wallee] Non-production checkout requires tenant-scoped test credentials (no tenantId).')
+    }
+    if (!envConfig) {
+      throw new Error('Wallee credentials not configured. Missing environment variables.')
+    }
+    return envConfig
+  }
+
+  if (testMode) {
+    if (!isolatedTest) {
+      throw new Error(
+        `[Wallee] Test mode is active for tenant ${tenantId} but isolated test credentials are missing. ` +
+        `Refusing production fallback.`
+      )
+    }
+    return isolatedTest
+  }
+
+  if (nonProduction) {
+    if (!isolatedTest) {
+      throw new Error(
+        `[Wallee] Preview/staging checkout requires isolated test credentials for tenant ${tenantId}. ` +
+        `Refusing production space fallback.`
+      )
+    }
+    return isolatedTest
+  }
+
+  if (prodConfig) return prodConfig
+  if (envConfig) return envConfig
+  throw new Error(
+    `[Wallee] Keine Credentials für Tenant ${tenantId} konfiguriert. ` +
+    `Bitte Space ID, User ID und Secret Key im Super-Admin → Tenants hinterlegen.`
+  )
+}
+
+export function resolveWalleeConfigBySpace(input: {
+  tenantId: string
+  incomingSpaceId: number
+  testConfig: WalleeConfig | null
+  prodConfig: WalleeConfig | null
+  envConfig: WalleeConfig | null
+  nonProduction: boolean
+}): WalleeConfig {
+  const { tenantId, incomingSpaceId, testConfig, prodConfig, envConfig, nonProduction } = input
+  if (nonProduction && incomingSpaceId === PRODUCTION_WALLEE_SPACE_ID) {
+    throw new Error(
+      `[Wallee] Preview/staging refused incoming production space ${PRODUCTION_WALLEE_SPACE_ID} for tenant ${tenantId}.`
+    )
+  }
+
+  const isolatedTest = testConfig && testConfig.spaceId !== PRODUCTION_WALLEE_SPACE_ID
+    ? testConfig
+    : null
+
+  if (isolatedTest && isolatedTest.spaceId === incomingSpaceId) {
+    return isolatedTest
+  }
+  if (nonProduction) {
+    throw new Error(
+      `[Wallee] Preview/staging has no isolated test credentials matching space ${incomingSpaceId} for tenant ${tenantId}.`
+    )
+  }
+
+  const prod = prodConfig || envConfig
+  if (prod && prod.spaceId === incomingSpaceId) {
+    return prod
+  }
+  if (prod) return prod
+  if (isolatedTest) return isolatedTest
+  throw new Error(
+    `[Wallee] Keine Credentials für Tenant ${tenantId} konfiguriert (incoming space: ${incomingSpaceId}).`
+  )
 }
 
 // Production credentials cache (keyed by tenantId or '__env__')
@@ -160,68 +268,55 @@ async function isTestModeActive(tenantId: string): Promise<boolean> {
   }
 }
 
+function tryEnvConfig(): WalleeConfig | null {
+  try {
+    return getEnvConfig()
+  } catch {
+    return null
+  }
+}
+
 /**
  * Returns Wallee credentials for a tenant.
  *
- * When wallee_test_mode = true, returns test credentials (WALLEE_TEST_*).
- * Otherwise returns production credentials.
+ * Preview/staging (VERCEL_ENV !== production): isolated test credentials only.
+ * Missing or production-space test credentials fail closed — never 88489.
  *
- * Resolution order when tenantId is provided:
- *   1. tenant_secrets table (WALLEE_TEST_* if test mode, WALLEE_* if production)
- *   2. Vercel environment variables — MIGRATION FALLBACK ONLY (production path only).
- *
- * When called WITHOUT a tenantId (e.g. local dev / scripts) the function
- * falls back to Vercel environment variables.
+ * Production:
+ *   1. tenant_secrets WALLEE_TEST_* when wallee_test_mode is true
+ *   2. tenant_secrets WALLEE_* otherwise
+ *   3. env-var fallback only on the production runtime
  */
 export async function getWalleeConfigForTenant(tenantId?: string): Promise<WalleeConfig> {
-  if (!tenantId) {
-    const cacheKey = '__env__'
-    if (prodCache.has(cacheKey)) return prodCache.get(cacheKey)!
-    const config = getEnvConfig()
-    prodCache.set(cacheKey, config)
-    logger.info('✅ [wallee-config] Loaded credentials from environment variables (no tenantId)')
-    return config
-  }
+  const nonProduction = isNonProductionRuntime()
+  const testMode = tenantId ? await isTestModeActive(tenantId) : false
+  const testConfig = tenantId ? await loadTestCredentials(tenantId) : null
+  const prodConfig = tenantId && !nonProduction ? await loadProdCredentials(tenantId) : null
+  const envConfig = nonProduction ? null : tryEnvConfig()
 
-  // Check if test mode is enabled for this tenant
-  const testMode = await isTestModeActive(tenantId)
+  const config = resolveWalleeConfigForTenant({
+    tenantId,
+    testMode,
+    testConfig,
+    prodConfig,
+    envConfig,
+    nonProduction,
+  })
 
-  if (testMode) {
-    const testConfig = await loadTestCredentials(tenantId)
-    if (testConfig) {
-      logger.info(`🧪 [wallee-config] Using TEST credentials for tenant ${tenantId} (test mode active, space ${testConfig.spaceId})`)
-      return testConfig
-    }
-    logger.warn(
-      `⚠️ [wallee-config] Test mode is active for tenant ${tenantId} but no test credentials are configured. ` +
-      `Falling back to production credentials.`
-    )
-  }
-
-  // Production path: tenant_secrets first, then env fallback
-  const prodConfig = await loadProdCredentials(tenantId)
-  if (prodConfig) {
+  if (testMode || nonProduction) {
+    logger.info(`🧪 [wallee-config] Using isolated TEST credentials for tenant ${tenantId || 'none'} (space ${config.spaceId})`)
+  } else if (prodConfig && config === prodConfig) {
     logger.info(`✅ [wallee-config] Loaded production credentials from tenant_secrets for tenant ${tenantId}`)
-    return prodConfig
+  } else {
+    logger.warn(
+      `⚠️ [wallee-config] Using GLOBAL env-var credentials for tenant ${tenantId || 'none'}. ` +
+      `This is a temporary production migration fallback.`
+    )
+    if (tenantId) prodCache.set(tenantId, config)
+    else prodCache.set('__env__', config)
   }
 
-  // Migration fallback: env vars
-  try {
-    const config = getEnvConfig()
-    prodCache.set(tenantId, config)
-    logger.warn(
-      `⚠️ [wallee-config] Using GLOBAL env-var credentials for tenant ${tenantId}. ` +
-      `This is a temporary migration fallback — please save per-tenant credentials ` +
-      `in Super-Admin → Tenants as soon as possible.`
-    )
-    return config
-  } catch (envErr: any) {
-    throw new Error(
-      `[Wallee] Keine Credentials für Tenant ${tenantId} konfiguriert. ` +
-      `Bitte Space ID, User ID und Secret Key im Super-Admin → Tenants hinterlegen. ` +
-      `(tenant_secrets: nicht gefunden, env vars: ${envErr.message})`
-    )
-  }
+  return config
 }
 
 /**
@@ -237,47 +332,18 @@ export async function getWalleeConfigForTenant(tenantId?: string): Promise<Walle
  *   3. Any configured credentials (production or test) as last resort
  */
 export async function getWalleeConfigBySpace(tenantId: string, incomingSpaceId: number): Promise<WalleeConfig> {
-  // Try production credentials
-  let prodConfig: WalleeConfig | null = null
-  try {
-    prodConfig = await loadProdCredentials(tenantId)
-  } catch {}
-  if (!prodConfig) {
-    // Try env fallback for production
-    try {
-      prodConfig = getEnvConfig()
-    } catch {}
-  }
-
-  if (prodConfig && prodConfig.spaceId === incomingSpaceId) {
-    logger.debug(`✅ [wallee-config] Matched PRODUCTION credentials for tenant ${tenantId}, space ${incomingSpaceId}`)
-    return prodConfig
-  }
-
-  // Try test credentials
+  const nonProduction = isNonProductionRuntime()
   const testConfig = await loadTestCredentials(tenantId)
-  if (testConfig && testConfig.spaceId === incomingSpaceId) {
-    logger.debug(`🧪 [wallee-config] Matched TEST credentials for tenant ${tenantId}, space ${incomingSpaceId}`)
-    return testConfig
-  }
-
-  // No exact match — return whichever is configured (prod preferred)
-  if (prodConfig) {
-    logger.warn(
-      `⚠️ [wallee-config] No exact space match for tenant ${tenantId} (incoming: ${incomingSpaceId}, ` +
-      `prod: ${prodConfig.spaceId}, test: ${testConfig?.spaceId ?? 'none'}). Using production credentials.`
-    )
-    return prodConfig
-  }
-
-  if (testConfig) {
-    logger.warn(`⚠️ [wallee-config] No exact space match, using test credentials as fallback for tenant ${tenantId}`)
-    return testConfig
-  }
-
-  throw new Error(
-    `[Wallee] Keine Credentials für Tenant ${tenantId} konfiguriert (incoming space: ${incomingSpaceId}).`
-  )
+  const prodConfig = nonProduction ? null : await loadProdCredentials(tenantId)
+  const envConfig = nonProduction ? null : tryEnvConfig()
+  return resolveWalleeConfigBySpace({
+    tenantId,
+    incomingSpaceId,
+    testConfig,
+    prodConfig,
+    envConfig,
+    nonProduction,
+  })
 }
 
 /**
