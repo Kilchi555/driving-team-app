@@ -46,6 +46,111 @@ export interface WalleeSyncResult {
   paymentUrl?: string | null
 }
 
+export function expectedChargeRappen(payment?: {
+  total_amount_rappen?: number | null
+  credit_used_rappen?: number | null
+} | null): number {
+  const total = Math.round(Number(payment?.total_amount_rappen) || 0)
+  const credit = Math.round(Number(payment?.credit_used_rappen) || 0)
+  return Math.max(0, total - credit)
+}
+
+export function capturedAmountRappenFromTx(tx?: {
+  completedAmount?: number | null
+  authorizationAmount?: number | null
+  authorizationAmountIncludingTax?: number | null
+  lineItems?: Array<{ amountIncludingTax?: number | null }> | null
+} | null): number | null {
+  const capturedChf = Number(
+    tx?.completedAmount ??
+    tx?.authorizationAmount ??
+    tx?.authorizationAmountIncludingTax ??
+    NaN
+  )
+  if (Number.isFinite(capturedChf)) return Math.round(capturedChf * 100)
+  const items = Array.isArray(tx?.lineItems) ? tx.lineItems : []
+  if (!items.length) return null
+  const sum = items.reduce((acc, item) => acc + Number(item?.amountIncludingTax || 0), 0)
+  if (!Number.isFinite(sum) || sum <= 0) return null
+  return Math.round(sum * 100)
+}
+
+export function plannedChargeRappenFromTx(tx?: {
+  completedAmount?: number | null
+  authorizationAmount?: number | null
+  authorizationAmountIncludingTax?: number | null
+  lineItems?: Array<{ amountIncludingTax?: number | null }> | null
+} | null): number | null {
+  const candidates = [
+    tx?.authorizationAmount,
+    tx?.authorizationAmountIncludingTax,
+    tx?.completedAmount,
+  ]
+  for (const value of candidates) {
+    const chf = Number(value)
+    if (Number.isFinite(chf) && chf > 0) return Math.round(chf * 100)
+  }
+  const items = Array.isArray(tx?.lineItems) ? tx.lineItems : []
+  const sum = items.reduce((acc, item) => acc + Number(item?.amountIncludingTax || 0), 0)
+  if (Number.isFinite(sum) && sum > 0) return Math.round(sum * 100)
+  return null
+}
+
+export function openWalleeCreditDecision(opts: {
+  openWalleeChargeRappen: number | null
+  totalAmountRappen: number
+  creditAlreadyUsedRappen: number
+  availableCreditRappen: number
+  pendingCreditRefundRappen?: number
+}): {
+  needsChoice: boolean
+  existingChargeRappen: number
+  newChargeRappen: number
+  creditToApplyRappen: number
+} {
+  const total = Math.max(0, Math.round(Number(opts.totalAmountRappen) || 0))
+  const used = Math.max(0, Math.round(Number(opts.creditAlreadyUsedRappen) || 0))
+  const pending = Math.max(0, Math.round(Number(opts.pendingCreditRefundRappen) || 0))
+  const wallet = Math.max(0, Math.round(Number(opts.availableCreditRappen) || 0))
+  const creditIfReplace = used + wallet
+  const newCharge = Math.max(0, total - creditIfReplace)
+  const knownOpenCharge = opts.openWalleeChargeRappen != null && opts.openWalleeChargeRappen > 0
+    ? Math.round(opts.openWalleeChargeRappen)
+    : null
+  const existingCharge = knownOpenCharge ?? Math.max(0, total - Math.max(0, used - pending))
+  return {
+    needsChoice: Math.abs(existingCharge - newCharge) > 1,
+    existingChargeRappen: existingCharge,
+    newChargeRappen: newCharge,
+    creditToApplyRappen: Math.min(total, creditIfReplace),
+  }
+}
+
+export function canReplaceOpenWalleeState(state?: string | null): boolean {
+  return state === 'AUTHORIZED'
+}
+
+export function merchantReferenceMatchesPayment(
+  merchantReference: string | null | undefined,
+  paymentId: string
+): boolean {
+  if (!merchantReference || !paymentId) return false
+  const ref = merchantReference.toLowerCase()
+  const id = paymentId.toLowerCase()
+  return ref.includes(`payment-${id}`) || ref.includes(id)
+}
+
+export function walleeCapturedCoversExpected(
+  capturedRappen: number | null,
+  expectedRappen: number,
+  opts?: { requireKnownAmount?: boolean; toleranceRappen?: number }
+): boolean {
+  const tolerance = opts?.toleranceRappen ?? 1
+  if (expectedRappen <= 0) return true
+  if (capturedRappen == null) return opts?.requireKnownAmount ? false : true
+  return capturedRappen + tolerance >= expectedRappen
+}
+
 function mapState(state: string | null | undefined): string | null {
   if (!state) return null
   return WALLEE_STATUS_MAPPING[state] || 'pending'

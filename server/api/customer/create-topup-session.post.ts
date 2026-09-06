@@ -4,6 +4,7 @@
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { loadCheckoutVat } from '~/server/utils/wallee-line-item'
 
@@ -12,14 +13,14 @@ export default defineEventHandler(async (event) => {
 
   try {
     // ── Auth (cookie + Bearer + refresh fallback) ─────────
-    const { requireGuestOrAuth } = await import('~/server/utils/require-guest-or-auth')
-    const sessionUser = await requireGuestOrAuth(event)
+    const user = await getAuthenticatedUser(event)
+    if (!user) throw createError({ statusCode: 401, statusMessage: 'Authentication required' })
 
     // ── Get user profile ──────────────────────────────────
     const { data: userProfile } = await supabase
       .from('users')
       .select('id, tenant_id, first_name, last_name, email')
-      .eq('id', sessionUser.db_user_id)
+      .eq('auth_user_id', user.id)
       .single()
     if (!userProfile) throw createError({ statusCode: 404, statusMessage: 'Benutzerprofil nicht gefunden' })
 

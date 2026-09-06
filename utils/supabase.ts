@@ -163,6 +163,9 @@ export const getSupabaseAdmin = (): SupabaseClient => {
   return supabaseAdminInstance
 }
 
+/** Alias used by a few server routes; same trusted service-role client as getSupabaseAdmin. */
+export const getSupabaseServiceRole = getSupabaseAdmin
+
 // Server-side helper to create a Supabase client with user session from Authorization header
 export const getSupabaseServerWithSession = (event: any): SupabaseClient => {
   if (!process.server) {
