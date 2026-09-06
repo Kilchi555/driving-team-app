@@ -37,9 +37,9 @@ import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
-import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
-import { findStaffBusyOverlap } from '~/server/utils/time-range-overlap'
+import { countDiscountRedemptions, countUserDiscountRedemptions, netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
 import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockCheckoutBenefits } from '~/server/utils/checkout-benefits'
+import { evaluateCatalogDiscount } from '~/utils/discount-eligibility'
 import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
@@ -49,14 +49,11 @@ import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-at
 import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
 import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
 import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
-import {
-  loadOnlineBookingPaymentPolicy,
-  onlineBookingPaymentProvider,
-  resolveOnlineBookingPaymentMethod,
-} from '~/server/utils/resolve-online-booking-payment-method'
 import { createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
-import { guestSlotCategoryMismatchReason, invalidDrivingLessonBasePriceReason } from '~/server/utils/guest-booking-price-rule'
+import { resolveOnlineBookingEventTypeCode } from '~/server/utils/event-type-pricing'
+import { bookOnlineAppointment } from '~/server/utils/book-online-appointment'
+import { rateLimitedError, requireIdempotencyKey } from '~/server/utils/booking-errors'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -97,16 +94,18 @@ interface CreateAppointmentRequest {
   customer_pickup_plz?: string | null
   /** Full formatted pickup address (e.g. "Musterstrasse 12, 8048 Zürich") */
   customer_pickup_address?: string | null
-  /** Vehicle mode chosen by student: 'school' = rent school vehicle, 'own' = bring own vehicle */
-  vehicle_mode?: 'school' | 'own' | null
+  /** Vehicle option key from category/location vehicle_settings */
+  vehicle_mode?: string | null
   /** Booking service type (Fahrstunde/Theorie/Beratung) — resolves the admin-configured room
    *  rule for this category+location. The room itself is auto-assigned server-side, never
    *  chosen by the customer. */
   service_type?: RoomServiceType
-  /** Customer-selected payment method. Honored only when the tenant enabled that method for online booking. */
-  payment_method?: 'wallee' | 'invoice' | 'cash'
+  /** Customer-selected payment method. Only 'invoice' is honored, and only when the tenant has explicitly enabled it — otherwise falls back to 'wallee'. */
+  payment_method?: 'wallee' | 'invoice'
   /** Default true: apply available wallet credit before checkout / invoice. */
   apply_available_credit?: boolean
+  /** Client-generated UUID v4. Required. Same key retries the same attempt. */
+  idempotency_key?: string
 }
 
 export default defineEventHandler(async (event: H3Event) => {
@@ -153,11 +152,12 @@ export default defineEventHandler(async (event: H3Event) => {
         ip_address: ipAddress,
         details: auditDetails
       })
-      throw createError({ statusCode: 429, statusMessage: 'Too many appointment creation attempts' })
+      throw rateLimitedError('Too many appointment creation attempts')
     }
 
     // ============ LAYER 3: VALIDATE INPUT ============
     const body = await readBody(event) as CreateAppointmentRequest
+    const idempotencyKey = requireIdempotencyKey(body.idempotency_key)
 
     if (!body.slot_id || !body.session_id || !body.appointment_type || !body.category_code) {
       throw createError({
@@ -216,38 +216,6 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({
         statusCode: 409,
         statusMessage: 'Slot not found. Please select a different slot.'
-      })
-    }
-
-    const categoryMismatch = guestSlotCategoryMismatchReason({
-      slotCategoryCode: slot.category_code,
-      bodyCategoryCode: body.category_code,
-    })
-    if (categoryMismatch) {
-      logger.warn('❌ Category does not match reserved slot:', {
-        reason: categoryMismatch,
-        slot_category_code: slot.category_code,
-        body_category_code: body.category_code,
-        slot_id: body.slot_id,
-      })
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Die gewählte Kategorie passt nicht zum reservierten Zeitslot.',
-        data: { code: 'CATEGORY_SLOT_MISMATCH' },
-      })
-    }
-
-    const busyOverlap = await findStaffBusyOverlap(supabase, {
-      staffId: slot.staff_id,
-      startTime: slot.start_time,
-      endTime: slot.end_time,
-      tenantId: slot.tenant_id,
-    })
-    if (busyOverlap) {
-      logger.warn('❌ Slot overlaps external busy time:', body.slot_id)
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Dieser Termin liegt in einer gesperrten Zeit. Bitte wähle einen anderen Slot.',
       })
     }
 
@@ -548,27 +516,6 @@ export default defineEventHandler(async (event: H3Event) => {
       })
     }
 
-    // Fahrstunden may still net to CHF 0 via Rabatt/Gutschein/Guthaben.
-    // Reject only a missing/zero base_price rule (not intentional free events).
-    const basePriceProblem = invalidDrivingLessonBasePriceReason({
-      ruleType: pricingRuleRes.data ? 'base_price' : 'event_price',
-      allowFreePublicEvent: freePublicEvent,
-      hasPricingRule: !!pricingRuleRes.data,
-      pricePerMinuteRappen: pricingRuleRes.data?.price_per_minute_rappen,
-    })
-    if (basePriceProblem) {
-      logger.warn('⚠️ Zero/missing base_price rule for driving lesson, aborting booking', {
-        reason: basePriceProblem,
-        category_code: body.category_code,
-        tenant_id: tenantId,
-        price_per_minute_rappen: pricingRuleRes.data?.price_per_minute_rappen ?? null,
-      })
-      throw createError({
-        statusCode: 503,
-        statusMessage: 'Der Preis für diese Fahrstunde konnte nicht ermittelt werden. Bitte versuche es in Kürze erneut oder kontaktiere uns direkt.',
-      })
-    }
-
     // ============ LAYER 6c: ADMIN FEE CALCULATION ============
     // Must run BEFORE the appointment is inserted so the utility's count of
     // existing active appointments doesn't include the upcoming one.
@@ -589,28 +536,30 @@ export default defineEventHandler(async (event: H3Event) => {
     })
     const travelFeeRappen = travelFee.fee_rappen || 0
 
+    let resolvedPaymentMethod: 'wallee' | 'invoice' = 'wallee'
+    if (body.payment_method === 'invoice') {
+      const { data: paymentSettingRow } = await supabase
+        .from('tenant_settings')
+        .select('setting_value')
+        .eq('tenant_id', tenantId)
+        .eq('category', 'payment')
+        .eq('setting_key', 'payment_settings')
+        .maybeSingle()
+      const tenantPaymentSettings = paymentSettingRow?.setting_value
+        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
+        : {}
+      if (tenantPaymentSettings.invoice_payments_enabled === true) {
+        resolvedPaymentMethod = 'invoice'
+      } else {
+        logger.warn('⚠️ Customer requested invoice payment but tenant has not enabled it — falling back to wallee', { tenantId })
+      }
+    }
+
     const { data: tenantPayPolicy } = await supabase
       .from('tenants')
       .select('booking_policy, slug, wallee_enabled')
       .eq('id', tenantId)
       .maybeSingle()
-    const paymentPolicy = await loadOnlineBookingPaymentPolicy(
-      supabase,
-      tenantId!,
-      tenantPayPolicy?.wallee_enabled
-    )
-    const paymentResolve = resolveOnlineBookingPaymentMethod({
-      requested: body.payment_method,
-      policy: paymentPolicy,
-    })
-    if (paymentResolve.rejectedRequest) {
-      logger.warn('⚠️ Customer requested a payment method that is not enabled for online booking — using tenant default', {
-        tenantId,
-        requested: body.payment_method,
-        resolved: paymentResolve.method,
-      })
-    }
-    const resolvedPaymentMethod = paymentResolve.method
     const mayHoldUntilPaid =
       tenantPayPolicy?.booking_policy?.require_payment_before_confirm === true
       && resolvedPaymentMethod === 'wallee'
@@ -634,7 +583,7 @@ export default defineEventHandler(async (event: H3Event) => {
       end_time: slot.end_time,
       duration_minutes: slot.duration_minutes,
       type: body.category_code,  // Category or event type code
-      event_type_code: eventTypeRes.data?.code || body.appointment_type || 'lesson',
+      event_type_code: resolveOnlineBookingEventTypeCode({ eventTypeRow: eventTypeRes.data }),
       title: appointmentTitle, // "{Vorname} {Name} - {Ort}"
       description: sanitizedNotes || '', // Use notes as description, or empty string
       status: 'confirmed', // Status: confirmed (not booked)
@@ -667,134 +616,7 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     }
 
-    const { data: newAppointment, error: createAppointmentError } = await supabase
-      .from('appointments')
-      .insert({
-        user_id: userData.id,
-        tenant_id: tenantId,
-        staff_id: slot.staff_id,
-        location_id: slot.location_id,
-        start_time: slot.start_time,
-        end_time: slot.end_time,
-        duration_minutes: slot.duration_minutes,
-        type: body.category_code,  // Category or event type code
-        event_type_code: eventTypeRes.data?.code || body.appointment_type || 'lesson',
-        title: appointmentTitle, // "{Vorname} {Name} - {Ort}"
-        description: sanitizedNotes || '', // Use notes as description, or empty string
-        status: mayHoldUntilPaid ? 'pending' : 'confirmed',
-        original_price_rappen: totalAmountRappen, // Add default price
-        source: 'online',
-        created_by: userData.id,
-        // Marketing attribution (denormalized — used by server-side Google Ads + Meta CAPI upload)
-        marketing_session_id: body.marketing_session_id ?? null,
-        gclid: marketingAttr?.gclid ?? null,
-        gbraid: marketingAttr?.gbraid ?? null,
-        wbraid: marketingAttr?.wbraid ?? null,
-        fbclid: marketingAttr?.fbclid ?? null,
-        fbc: marketingAttr?.fbc ?? null,
-        fbp: marketingAttr?.fbp ?? null,
-        utm_source: marketingAttr?.utm_source ?? null,
-        utm_medium: marketingAttr?.utm_medium ?? null,
-        utm_campaign: marketingAttr?.utm_campaign ?? null,
-        utm_content: marketingAttr?.utm_content ?? null,
-        utm_term: marketingAttr?.utm_term ?? null,
-        customer_pickup_plz: body.customer_pickup_plz?.trim() || null,
-        customer_pickup_address: body.customer_pickup_address?.trim() || null,
-        vehicle_mode: body.vehicle_mode ?? null,
-        room_id: autoAssignedRoomId,
-      })
-      .select()
-      .single()
-
-    if (createAppointmentError || !newAppointment) {
-      logger.error('❌ Failed to create appointment:', {
-        error: createAppointmentError,
-        message: createAppointmentError?.message,
-        code: createAppointmentError?.code,
-        details: createAppointmentError?.details
-      })
-      throw createError({ statusCode: 500, statusMessage: 'Failed to create appointment' })
-    }
-
-    auditDetails.appointment_id = newAppointment.id
-    logger.debug('✅ Appointment created successfully:', newAppointment.id)
-
-    // Persist pickup as reusable client location (staff LocationSelector / Treffpunkte)
-    if (body.customer_pickup_address?.trim()) {
-      try {
-        await ensureClientPickupLocation(supabase, {
-          tenantId,
-          clientUserId: userData.id,
-          address: body.customer_pickup_address,
-          name: 'Pickup-Adresse',
-          postalCode: body.customer_pickup_plz || null
-        })
-      } catch (pickupErr: any) {
-        logger.warn('⚠️ Could not save booking pickup location (non-fatal):', pickupErr?.message)
-      }
-    }
-
-    // Create vehicle_bookings placeholder when the chosen option requires a school vehicle.
-    // vehicle_id is null (no specific vehicle assigned yet — staff does that later).
-    // This row acts as a capacity blocker for future availability checks.
-    const chosenOption = vehicleSettings.options?.find(o => o.key === body.vehicle_mode)
-    if (body.vehicle_mode && chosenOption?.requires_school_vehicle) {
-      const { error: vbErr } = await supabase
-        .from('vehicle_bookings')
-        .insert({
-          vehicle_id: null,
-          tenant_id: tenantId,
-          location_id: slot.location_id,
-          category_code: body.category_code,
-          start_time: slot.start_time,
-          end_time: slot.end_time,
-          purpose: 'lesson',
-          appointment_id: newAppointment.id,
-          booked_by: userData.id,
-          status: 'confirmed',
-        })
-      if (vbErr) {
-        logger.warn('⚠️ vehicle_bookings placeholder creation failed (non-fatal):', vbErr.message)
-      } else {
-        logger.debug('✅ vehicle_bookings placeholder created for school vehicle lesson')
-      }
-    }
-
-    // Create room_booking for the auto-assigned room (see LAYER 7 above).
-    // Re-check for conflicts right before inserting to close the race window
-    // between the pick and this insert (e.g. a near-simultaneous booking).
-    if (autoAssignedRoomId) {
-      const { data: roomConflicts } = await supabase
-        .from('room_bookings')
-        .select('id')
-        .eq('room_id', autoAssignedRoomId)
-        .neq('status', 'cancelled')
-        .lt('start_time', slot.end_time)
-        .gt('end_time', slot.start_time)
-        .limit(1)
-
-      if ((roomConflicts?.length ?? 0) > 0) {
-        logger.warn('⚠️ Room conflict detected on booking — skipping room_bookings insert:', autoAssignedRoomId)
-      } else {
-        const { error: rbErr } = await supabase
-          .from('room_bookings')
-          .insert({
-            room_id: autoAssignedRoomId,
-            tenant_id: tenantId,
-            start_time: slot.start_time,
-            end_time: slot.end_time,
-            purpose: 'lesson',
-            appointment_id: newAppointment.id,
-            booked_by: userData.id,
-            status: 'confirmed',
-          })
-        if (rbErr) {
-          logger.warn('⚠️ room_bookings creation failed (non-fatal):', rbErr.message)
-        } else {
-          logger.debug('✅ room_bookings entry created for room:', autoAssignedRoomId)
-        }
-      }
-    }
+    // Discount + payment amounts must be known before the atomic booking RPC.
 
     // ============ LAYER 7b: VALIDATE DISCOUNT (manual code or auto-apply) ============
     let validatedDiscountAmount = 0
@@ -811,23 +633,61 @@ export default defineEventHandler(async (event: H3Event) => {
             expires_at,
             discounts (
               id, discount_type, discount_value, max_discount_rappen,
-              valid_until, is_active, auto_apply, usage_limit, usage_count
+              valid_until, is_active, auto_apply, usage_limit, usage_count, max_per_user,
+              first_lesson_only, applies_to, category_filter, min_amount_rappen
             )
           `)
           .eq('user_id', userData.id)
           .eq('tenant_id', tenantId!)
           .eq('is_active', true)
 
-        const activeAutoCode = (userCodes || []).find((udc: any) => {
+        let activeAutoCode: any = null
+        for (const udc of userCodes || []) {
           const d = udc.discounts
-          if (!d?.is_active || !d?.auto_apply) return false
+          if (!d?.is_active || !d?.auto_apply) continue
           const expiresAt = udc.expires_at ? new Date(udc.expires_at) : null
-          if (expiresAt && expiresAt < new Date()) return false
+          if (expiresAt && expiresAt < new Date()) continue
           const discountValidUntil = d.valid_until ? new Date(d.valid_until) : null
-          if (!expiresAt && discountValidUntil && discountValidUntil < new Date()) return false
-          if (d.usage_limit && (d.usage_count ?? 0) >= d.usage_limit) return false
-          return true
-        })
+          if (!expiresAt && discountValidUntil && discountValidUntil < new Date()) continue
+          if (d.usage_limit && (d.usage_count ?? 0) >= d.usage_limit) continue
+          const userRedemptions = d.max_per_user
+            ? await countUserDiscountRedemptions({
+                supabase,
+                tenantId: tenantId!,
+                userId: userData.id,
+                code: udc.code,
+              })
+            : 0
+          let confirmedAppointmentCount: number | null = null
+          if (d.first_lesson_only) {
+            const { count } = await supabase
+              .from('appointments')
+              .select('id', { count: 'exact', head: true })
+              .eq('user_id', userData.id)
+              .eq('tenant_id', tenantId!)
+              .in('status', ['confirmed', 'completed'])
+            confirmedAppointmentCount = count ?? 0
+          }
+          const redeemedCount = d.usage_limit
+            ? await countDiscountRedemptions({
+                supabase,
+                tenantId: tenantId!,
+                code: udc.code,
+              })
+            : 0
+          const eligibility = evaluateCatalogDiscount({
+            discount: d,
+            amountRappen: totalAmountRappen,
+            channel: 'appointment',
+            categoryCode: body.category_code,
+            userRedemptions,
+            redeemedCount,
+            confirmedAppointmentCount,
+          })
+          if (!eligibility.allowed) continue
+          activeAutoCode = udc
+          break
+        }
 
         if (activeAutoCode) {
           const d = activeAutoCode.discounts
@@ -872,87 +732,105 @@ export default defineEventHandler(async (event: H3Event) => {
     const netAmountRappen = netAfterAppointmentDiscount(grossAmountRappen, validatedDiscountAmount)
     const applyAvailableCredit = body.apply_available_credit !== false
 
-    // ============ LAYER 8: CREATE PAYMENT ============ 
-    logger.debug('💳 Creating payment record for appointment...', {
-      appointment_id: newAppointment.id,
-      user_id: newAppointment.user_id,
-      tenant_id: tenantId,
-      lesson_price_rappen: totalAmountRappen,
-      admin_fee_rappen: adminFeeRappen,
-      total_amount_rappen: netAmountRappen,
-      discount_amount_rappen: validatedDiscountAmount
+    const chosenOption = vehicleSettings.options?.find((o: { key: string }) => o.key === body.vehicle_mode)
+    const booked = await bookOnlineAppointment({
+      tenantId: tenantId!,
+      idempotencyKey,
+      sessionId: body.session_id,
+      userId: userData.id,
+      slotId: body.slot_id,
+      staffId: slot.staff_id,
+      startTime: slot.start_time,
+      endTime: slot.end_time,
+      createVehicleBooking: !!(body.vehicle_mode && chosenOption?.requires_school_vehicle),
+      roomId: autoAssignedRoomId,
+      appointment: {
+        type: body.category_code,
+        event_type_code: resolveOnlineBookingEventTypeCode({ eventTypeRow: eventTypeRes.data }),
+        title: appointmentTitle,
+        description: sanitizedNotes || '',
+        status: mayHoldUntilPaid ? 'pending' : 'confirmed',
+        original_price_rappen: totalAmountRappen,
+        source: 'online',
+        created_by: userData.id,
+        marketing_session_id: body.marketing_session_id ?? null,
+        gclid: marketingAttr?.gclid ?? null,
+        gbraid: marketingAttr?.gbraid ?? null,
+        wbraid: marketingAttr?.wbraid ?? null,
+        fbclid: marketingAttr?.fbclid ?? null,
+        fbc: marketingAttr?.fbc ?? null,
+        fbp: marketingAttr?.fbp ?? null,
+        utm_source: marketingAttr?.utm_source ?? null,
+        utm_medium: marketingAttr?.utm_medium ?? null,
+        utm_campaign: marketingAttr?.utm_campaign ?? null,
+        utm_content: marketingAttr?.utm_content ?? null,
+        utm_term: marketingAttr?.utm_term ?? null,
+        customer_pickup_plz: body.customer_pickup_plz?.trim() || null,
+        customer_pickup_address: body.customer_pickup_address?.trim() || null,
+        vehicle_mode: body.vehicle_mode ?? null,
+      },
+      payment: {
+        lesson_price_rappen: totalAmountRappen,
+        admin_fee_rappen: adminFeeRappen,
+        products_price_rappen: 0,
+        discount_amount_rappen: validatedDiscountAmount,
+        total_amount_rappen: netAmountRappen,
+        payment_status: 'pending',
+        payment_method: resolvedPaymentMethod,
+        payment_provider: resolvedPaymentMethod === 'wallee' ? 'wallee' : null,
+        description: appointmentTitle,
+        currency: 'CHF',
+        created_by: userData.id,
+        metadata: {
+          category: body.category_code || null,
+          admin_fee_reason: adminFeeResult.reason,
+          ...(mayHoldUntilPaid ? { pay_before_confirm: true } : {}),
+          ...(effectiveDiscountCode ? { discount_code: effectiveDiscountCode, discount_auto_applied: !body.discount_code } : {}),
+          ...(body.vehicle_mode ? { vehicle_mode: body.vehicle_mode, vehicle_cost_rappen: calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes) } : {}),
+          ...(travelFeeRappen > 0 ? { travel_fee: { km: travelFee.km, billable_km: travelFee.billable_km, fee_rappen: travelFeeRappen, capped: travelFee.capped, label: travelFee.label } } : {}),
+        },
+      },
     })
 
-    const paymentToInsert = {
-      appointment_id: newAppointment.id,
-      user_id: newAppointment.user_id,
-      tenant_id: tenantId,
-      staff_id: slot.staff_id,
-      lesson_price_rappen: totalAmountRappen,
-      admin_fee_rappen: adminFeeRappen,
-      products_price_rappen: 0,
-      discount_amount_rappen: validatedDiscountAmount,
-      total_amount_rappen: netAmountRappen,
-      payment_status: 'pending',
-      payment_method: resolvedPaymentMethod,
-      payment_provider: onlineBookingPaymentProvider(resolvedPaymentMethod),
-      payment_method_id: null,
-      description: appointmentTitle,
-      metadata: {
-        category: body.category_code || null,
-        admin_fee_reason: adminFeeResult.reason,
-        ...(freePublicEvent ? { free_public_event: true, allow_zero_completion: true } : {}),
-        ...(validatedDiscountAmount > 0 && netAmountRappen <= 0
-          ? { allow_zero_completion: true }
-          : {}),
-        ...(mayHoldUntilPaid ? { pay_before_confirm: true } : {}),
-        ...(effectiveDiscountCode ? { discount_code: effectiveDiscountCode, discount_auto_applied: !body.discount_code } : {}),
-        ...(travelFeeRappen > 0 ? { travel_fee: { km: travelFee.km, billable_km: travelFee.billable_km, fee_rappen: travelFeeRappen, capped: travelFee.capped, label: travelFee.label } } : {}),
-      },
-      currency: 'CHF',
-      created_by: newAppointment.user_id
-    }
+    const newAppointment = booked.appointment
+    const newPayment = booked.payment
+    auditDetails.appointment_id = newAppointment.id
+    logger.debug('✅ Appointment created successfully:', newAppointment.id, booked.replayed ? '(replayed)' : '')
 
-    const { data: newPayment, error: paymentError } = await supabase
-      .from('payments')
-      .insert(paymentToInsert)
-      .select()
-      .single()
-
-    if (paymentError || !newPayment) {
-      logger.error('❌ Failed to create payment for appointment:', {
-        error: paymentError,
-        message: paymentError?.message,
-        code: paymentError?.code,
-        details: paymentError?.details,
-        insertData: paymentToInsert
-      })
-      // This is critical, but we don't want to fail the appointment if payment fails
-      // Instead, we log a warning and let the payment reconciliation handle it later
-      logger.warn('⚠️ Warning: Appointment created, but payment record failed.')
-    } else {
-      logger.debug('✅ Payment record created successfully:', newPayment.id)
-      if (discountCodeToTrack && tenantId) {
-        const locked = await lockCheckoutBenefits({
-          supabase,
+    if (body.customer_pickup_address?.trim()) {
+      try {
+        await ensureClientPickupLocation(supabase, {
           tenantId,
-          paymentId: newPayment.id,
-          code: discountCodeToTrack,
+          clientUserId: userData.id,
+          address: body.customer_pickup_address,
+          name: 'Pickup-Adresse',
+          postalCode: body.customer_pickup_plz || null
         })
-        if (!locked.ok) {
-          logger.warn('⚠️ Discount could not be locked, aborting booking', locked.reason)
-          await abortCheckoutAfterBenefitLockFail({
-            supabase,
-            paymentId: newPayment.id,
-            appointmentId: newAppointment.id,
-          })
-          throw createError(benefitLockUnavailablePayload(locked.reason))
-        }
+      } catch (pickupErr: any) {
+        logger.warn('⚠️ Could not save booking pickup location (non-fatal):', pickupErr?.message)
       }
     }
 
-    let remainingDue = netAmountRappen
-    if (newPayment && applyAvailableCredit && newAppointment.user_id) {
+    if (!booked.replayed && newPayment?.id && discountCodeToTrack && tenantId) {
+      const locked = await lockCheckoutBenefits({
+        supabase,
+        tenantId,
+        paymentId: newPayment.id,
+        code: discountCodeToTrack,
+      })
+      if (!locked.ok) {
+        logger.warn('⚠️ Discount could not be locked, aborting booking', locked.reason)
+        await abortCheckoutAfterBenefitLockFail({
+          supabase,
+          paymentId: newPayment.id,
+          appointmentId: newAppointment.id,
+        })
+        throw createError(benefitLockUnavailablePayload(locked.reason))
+      }
+    }
+
+    let remainingDue = Number(newPayment?.total_amount_rappen ?? netAmountRappen) - Number(newPayment?.credit_used_rappen ?? 0)
+    if (!booked.replayed && newPayment && applyAvailableCredit && newAppointment.user_id) {
       try {
         const creditResult = await applyRequestedStudentCredit({
           supabase,
@@ -1043,38 +921,17 @@ export default defineEventHandler(async (event: H3Event) => {
         paymentUrl = checkout.paymentUrl
       } catch (checkoutErr: any) {
         logger.error('❌ Pay-before-confirm checkout failed:', checkoutErr?.message)
-        await releaseUnpaidPendingAppointment({ appointmentId: newAppointment.id, tenantId })
+        const { isCheckoutRecoveryPendingError } = await import('~/server/utils/wallee-checkout-claim')
+        if (!isCheckoutRecoveryPendingError(checkoutErr)) {
+          await releaseUnpaidPendingAppointment({ appointmentId: newAppointment.id, tenantId })
+        }
         throw createError({
           statusCode: checkoutErr?.statusCode || 502,
           statusMessage: checkoutErr?.statusMessage || 'Zahlung konnte nicht gestartet werden',
+          data: checkoutErr?.data,
         })
       }
     }
-
-    // ============ LAYER 9: Mark all reserved slots as definitively booked ============
-    // Update all slots reserved by this session to is_available = false
-    // This finalizes the reservation after successful appointment creation
-    logger.debug('📌 Marking all reserved slots as definitively booked (is_available = false)...')
-    const { error: finalizeError } = await supabase
-      .from('availability_slots')
-      .update({
-        is_available: false,
-        appointment_id: newAppointment.id,
-        reserved_by_session: null,
-        reserved_until: null,
-        updated_at: now
-      })
-      .eq('reserved_by_session', body.session_id)
-      .eq('tenant_id', tenantId)
-
-    if (finalizeError) {
-      logger.warn('⚠️ Warning: Could not finalize all slots:', finalizeError)
-      // Non-critical: appointment is already created
-    } else {
-      logger.debug('✅ All reserved slots finalized: appointment_id linked, reservation cleared')
-    }
-
-    // ============ LAYER 8: AUDIT LOGGING ============
 
     // ============ LAYER 8: AUDIT LOGGING ============
     await logAudit({
@@ -1241,10 +1098,27 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     // ============ LAYER 10: RETURN RESPONSE ============
+    const vehicleLabel = body.vehicle_mode
+      ? (vehicleSettings.options?.find(o => o.key === body.vehicle_mode)?.label || null)
+      : null
+    let roomName: string | null = null
+    if (autoAssignedRoomId) {
+      const { data: roomRow } = await supabase
+        .from('rooms')
+        .select('name')
+        .eq('id', autoAssignedRoomId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+      roomName = roomRow?.name || null
+    }
+
     return {
       success: true,
       appointment_id: newAppointment.id,
       payment_id: newPayment?.id || null,
+      vehicle_label: vehicleLabel,
+      room_id: autoAssignedRoomId,
+      room_name: roomName,
       send_meta_purchase: sentMetaPurchase,
       requires_payment: !!holdUntilPaid,
       paymentUrl: paymentUrl || null,

@@ -8,6 +8,8 @@ import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wal
 import { logger } from '~/utils/logger'
 import { Wallee } from 'wallee'
 import { z } from 'zod'
+import { buildWalleeTaxedLineItem, loadCheckoutVat, mergeVatIntoMetadata } from '~/server/utils/wallee-line-item'
+import { remainingDueRappen } from '~/server/utils/apply-student-credit'
 
 const CreateTransactionSchema = z.object({
   orderId:       z.string().uuid(),
@@ -50,7 +52,7 @@ export default defineEventHandler(async (event) => {
     // Load payment server-side — never trust client amount for an existing payment.
     const { data: paymentRow, error: paymentLookupError } = await supabase
       .from('payments')
-      .select('id, tenant_id, total_amount_rappen, payment_status, currency, wallee_transaction_id, wallee_space_id')
+      .select('id, tenant_id, total_amount_rappen, credit_used_rappen, amount_paid_rappen, payment_status, currency, wallee_transaction_id, wallee_space_id, metadata')
       .eq('id', orderId)
       .maybeSingle()
 
@@ -62,7 +64,12 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 409, message: 'Zahlung kann in diesem Status nicht erneut gestartet werden' })
     }
 
-    const serverAmountChf = Number(paymentRow.total_amount_rappen || 0) / 100
+    const serverAmountChf = remainingDueRappen({
+      total_amount_rappen: paymentRow.total_amount_rappen,
+      credit_used_rappen: (paymentRow as any).credit_used_rappen,
+      amount_paid_rappen: (paymentRow as any).amount_paid_rappen,
+      payment_status: paymentRow.payment_status,
+    }) / 100
     if (!(serverAmountChf > 0)) {
       throw createError({ statusCode: 400, message: 'Ungültiger Zahlungsbetrag' })
     }
@@ -167,74 +174,67 @@ export default defineEventHandler(async (event) => {
     const resolvedSuccessUrl = successUrl || `${baseUrl}/payment/success?transaction_id=${orderId}`
     const resolvedFailedUrl  = failedUrl  || `${baseUrl}/payment/failed?transaction_id=${orderId}`
 
-    // ── Merchant reference ─────────────────────────────────
     const toAscii = (s: string) => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '').trim()
-    const merchantRef = `payment-${orderId} | ${toAscii(customerName)}`.substring(0, 100)
 
-    // ── Create Wallee transaction ──────────────────────────
-    const transactionCreate: Wallee.model.TransactionCreate = {
-      lineItems: [
-        {
-          name: toAscii(description).substring(0, 100) || 'Produktkauf',
-          quantity: 1,
-          amountIncludingTax: amount, // amount is already in CHF
-          type: Wallee.model.LineItemType.PRODUCT,
-          uniqueId: 'item-1',
-          taxRate: 0
-        }
-      ],
-      spaceViewId: null,
-      currency: currencyResolved,
-      autoConfirmationEnabled: true,
-      chargeRetryEnabled: false,
-      customersEmailAddress: customerEmail,
-      customerId: `dt-${resolvedTenantId}-${customerEmail.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`.substring(0, 100),
-      shippingAddress: null,
-      billingAddress: null,
-      deviceSessionIdentifier: null,
-      merchantReference: merchantRef,
-      successUrl: resolvedSuccessUrl,
-      failedUrl: resolvedFailedUrl
-    }
-
-    logger.debug('💳 Creating Wallee transaction for shop order:', { orderId, amount, customerEmail, tenantId: resolvedTenantId })
-
-    let createdTransaction: any
-    try {
-      createdTransaction = await transactionService.create(spaceId, transactionCreate)
-    } catch (walleeErr: any) {
-      logger.error('❌ Wallee API error:', { message: walleeErr?.message, body: walleeErr?.body })
-      // Clean up payment record on failure
-      await supabase.from('payments').delete().eq('id', orderId)
-      throw createError({ statusCode: 502, message: `Wallee-Fehler: ${walleeErr?.message || 'Unbekannter Fehler'}` })
-    }
-
-    const transactionId = createdTransaction?.body?.id ?? createdTransaction?.id
-    if (!transactionId) {
-      await supabase.from('payments').delete().eq('id', orderId)
-      throw createError({ statusCode: 500, message: 'Wallee-Transaktion konnte nicht erstellt werden' })
-    }
-
-    // ── Store transaction ID on payment record ────────────
+    const vat = await loadCheckoutVat(supabase, resolvedTenantId, Math.round(amount * 100))
     await supabase
       .from('payments')
-      .update({ wallee_transaction_id: String(transactionId) })
-      .eq('id', orderId)
+      .update({
+        metadata: mergeVatIntoMetadata((paymentRow as any).metadata, vat),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', paymentRow.id)
 
-    // ── Get payment page URL ──────────────────────────────
-    const urlResponse = await paymentPageService.paymentPageUrl(spaceId, transactionId)
-    let paymentUrl: string = (urlResponse as any)?.body || urlResponse
+    const { livePaymentCheckoutDeps, runPaymentCheckoutCreate } = await import('~/server/utils/wallee-checkout-claim')
+    const checkout = await runPaymentCheckoutCreate(
+      { paymentId: paymentRow.id, tenantId: resolvedTenantId },
+      livePaymentCheckoutDeps(async ({ merchantReference }) => {
+        const createdTransaction = await transactionService.create(spaceId, {
+          lineItems: [
+            {
+              ...buildWalleeTaxedLineItem({
+                name: toAscii(description).substring(0, 100) || 'Produktkauf',
+                amountIncludingTaxChf: amount,
+                vatRatePercent: vat.vatRate,
+              }),
+              type: Wallee.model.LineItemType.PRODUCT,
+            }
+          ],
+          spaceViewId: null,
+          currency: currencyResolved,
+          autoConfirmationEnabled: true,
+          chargeRetryEnabled: false,
+          customersEmailAddress: customerEmail,
+          customerId: `dt-${resolvedTenantId}-${customerEmail.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`.substring(0, 100),
+          merchantReference,
+          successUrl: resolvedSuccessUrl,
+          failedUrl: resolvedFailedUrl
+        })
+        const transactionId = createdTransaction?.body?.id ?? createdTransaction?.id
+        if (!transactionId) {
+          throw createError({ statusCode: 502, message: 'Wallee-Transaktion konnte nicht erstellt werden' })
+        }
+        return { id: String(transactionId), spaceId }
+      }, {
+        resolveUrl: async (transactionId) => {
+          try {
+            const urlResponse = await paymentPageService.paymentPageUrl(spaceId, Number(transactionId))
+            const paymentUrl = (urlResponse as any)?.body || urlResponse
+            return typeof paymentUrl === 'string' && paymentUrl ? paymentUrl : null
+          } catch {
+            return null
+          }
+        }
+      })
+    )
 
-    if (!paymentUrl || typeof paymentUrl !== 'string') {
-      paymentUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${transactionId}`
-    }
-
-    logger.info('✅ Wallee transaction created for shop order:', { orderId, transactionId, paymentUrl: paymentUrl.substring(0, 80) })
+    logger.info('✅ Wallee transaction created for shop order:', { orderId, transactionId: checkout.transactionId })
 
     return {
       success: true,
-      transactionId: String(transactionId),
-      paymentUrl
+      transactionId: checkout.transactionId,
+      paymentUrl: checkout.paymentUrl,
+      reused: checkout.reused
     }
 
   } catch (error: any) {

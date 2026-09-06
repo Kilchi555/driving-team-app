@@ -15,7 +15,6 @@
  * 5. Webhook updates status to 'confirmed' after payment
  */
 
-import { buildMerchantReference } from '~/utils/merchantReference'
 import { logger } from '~/utils/logger'
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
@@ -24,7 +23,8 @@ import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wal
 import { z } from 'zod'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
-import { escapeLikePattern } from '~/server/utils/sql-helpers'
+import { buildWalleeTaxedLineItem, loadCheckoutVat } from '~/server/utils/wallee-line-item'
+import { resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
 import { lockCheckoutBenefits, releaseCheckoutBenefits } from '~/server/utils/checkout-benefits'
 
 const ProcessPublicPaymentSchema = z.object({
@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
       customerName,
       courseId,
       tenantId,
-      userId: passedUserId,
+      userId: _passedUserId,
       metadata = {}
     } = parseResult.data
     // Amount is recomputed server-side below; keep a mutable binding
@@ -218,69 +218,19 @@ export default defineEventHandler(async (event) => {
         if (partialPrice > 0) effectiveBasePrice = partialPrice
       }
 
-      // Re-validate discount against the same sources as enroll-wallee
-      // (voucher_codes → gift-card vouchers → discounts). Never trust client amount.
       let discountAmount = 0
       const discountCode = typeof metadata?.discount_code === 'string' ? metadata.discount_code.trim() : ''
       if (discountCode) {
-        const escapedDiscountCode = escapeLikePattern(discountCode)
-        let discountRow: any = null
-
-        const { data: voucherCode } = await supabase
-          .from('voucher_codes')
-          .select('*')
-          .ilike('code', escapedDiscountCode)
-          .eq('tenant_id', tenantId)
-          .eq('is_active', true)
-          .maybeSingle()
-
-        if (voucherCode) {
-          discountRow = voucherCode
-        } else {
-          const { data: giftCard } = await supabase
-            .from('vouchers')
-            .select('*')
-            .ilike('code', escapedDiscountCode)
-            .eq('tenant_id', tenantId)
-            .eq('is_active', true)
-            .maybeSingle()
-          if (giftCard && !giftCard.redeemed_at) {
-            discountRow = {
-              ...giftCard,
-              discount_type: 'fixed',
-              discount_value: giftCard.amount_rappen,
-              is_gift_card: true
-            }
-          }
-        }
-
-        if (!discountRow) {
-          const { data: discountData } = await supabase
-            .from('discounts')
-            .select('*')
-            .ilike('code', escapedDiscountCode)
-            .eq('tenant_id', tenantId)
-            .eq('is_active', true)
-            .maybeSingle()
-          if (discountData) discountRow = discountData
-        }
-
-        if (discountRow) {
-          const now = new Date()
-          const validUntil = discountRow.valid_until ? new Date(discountRow.valid_until) : null
-          if (!validUntil || now <= validUntil) {
-            // Mirror enroll-wallee amount math so recompute stays consistent
-            if (discountRow.discount_type === 'percentage') {
-              discountAmount = Math.round((effectiveBasePrice * Number(discountRow.discount_value || 0)) / 100)
-              if (discountRow.max_discount_rappen) {
-                discountAmount = Math.min(discountAmount, Number(discountRow.max_discount_rappen))
-              }
-            } else if (discountRow.discount_type === 'fixed') {
-              discountAmount = Number(discountRow.discount_value || 0)
-            }
-            discountAmount = Math.max(0, Math.min(discountAmount, effectiveBasePrice))
-          }
-        }
+        const resolved = await resolveAppointmentDiscount({
+          supabase,
+          tenantId,
+          code: discountCode,
+          lessonAmountRappen: effectiveBasePrice,
+          capAtRappen: effectiveBasePrice,
+          channel: 'course',
+          userId: null,
+        })
+        discountAmount = resolved.amountRappen
       }
 
       const serverAmount = Math.max(0, effectiveBasePrice - discountAmount)
@@ -333,12 +283,9 @@ export default defineEventHandler(async (event) => {
     // ✅ STEP 0: Create Payment record FIRST - so we have the ID for merchantReference fallback
     logger.debug('💾 Creating payment record in database FIRST...')
     
-    // Resolve user_id priority:
-    // 1. passedUserId from caller (existing user, passed via schema)
-    // 2. user_id from existing enrollment (legacy flow)
-    // 3. null → will be set by webhook after payment confirmation (new users)
-    let actualUserId: string | null = passedUserId || null
-    if (!actualUserId && enrollmentId) {
+    // Never bind user_id from the client. Enrollment or webhook owns identity.
+    let actualUserId: string | null = null
+    if (enrollmentId) {
       const { data: enrollmentUser } = await supabase
         .from('course_registrations')
         .select('user_id')
@@ -353,6 +300,7 @@ export default defineEventHandler(async (event) => {
       (typeof metadata?.course_name === 'string' && metadata.course_name.trim()) ||
       (typeof course?.name === 'string' && course.name.trim()) ||
       null
+    const checkoutVat = await loadCheckoutVat(supabase, tenantId, amount)
     const paymentInsertData: any = {
       user_id: actualUserId,
       appointment_id: null, // No appointment for course registrations
@@ -360,6 +308,7 @@ export default defineEventHandler(async (event) => {
       payment_method: 'wallee',
       payment_status: 'pending',
       total_amount_rappen: amount,
+      discount_amount_rappen: Number(metadata?.discount_amount_rappen) || 0,
       currency: currency,
       description: resolvedCourseName || 'Kursanmeldung',
       // wallee_transaction_id will be set AFTER Wallee transaction is created
@@ -396,6 +345,8 @@ export default defineEventHandler(async (event) => {
         discount_code: metadata?.discount_code || null,
         discount_amount_rappen: metadata?.discount_amount_rappen || 0,
         original_price_rappen: metadata?.original_price_rappen || null,
+        vat_rate: checkoutVat.vatRate,
+        vat_amount_rappen: checkoutVat.vatAmountRappen,
         // Attribution
         referral_code: metadata?.referral_code || null,
         marketing_session_id: metadata?.marketing_session_id || null,
@@ -445,211 +396,46 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    // Helper: sanitize any string to printable ASCII only (Wallee requirement)
-    const toAscii = (value: string): string => value
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '') // remove diacritics
-      .replace(/[^\x20-\x7E]/g, '')    // remove all non-printable / non-ASCII
-      .replace(/\s+/g, ' ')
-      .trim()
-
-    // Build clean merchant reference: "payment-{paymentId} | CustomerName | CourseName | Location | Date"
-    // ✅ CRITICAL: Include payment ID as fallback for webhook search!
-    // ✅ USE STANDARDIZED FUNCTION: Use the same sanitization as process.post.ts
-    let merchantRef = `payment-${paymentRecord.id} | ${buildMerchantReference({
-      customerName: `${firstName} ${lastName}`,
-      staffName: undefined // Not used for courses
-    })}`
-    
-    if (course?.name) {
-      merchantRef += ` | ${toAscii(course.name).substring(0, 50)}`
-    }
-    
-    if (course?.description) {
-      // Extract location from description (e.g., "Herrengasse 17, 8853 Lachen SZ" → "Lachen")
-      const locationMatch = course.description.match(/(\b[A-Z][a-z]+\b)(?:\s|,|$)/)
-      if (locationMatch) {
-        merchantRef += ` | ${toAscii(locationMatch[1])}`
-      }
-    }
-    
-    // Add first session date if available
-    if (course?.course_sessions && course.course_sessions.length > 0) {
-      const firstSessionDate = course.course_sessions[0].start_time
-      if (firstSessionDate) {
-        const dateObj = new Date(firstSessionDate)
-        const dateStr = dateObj.toLocaleDateString('de-CH').replace(/\./g, '-') // "20-01-2026" format
-        merchantRef += ` | ${dateStr}`
-      }
-    }
-    
-    // Enforce max length (Wallee limit is 100 chars for merchant reference)
-    const maxMerchantRefLength = 100
-    if (merchantRef.length > maxMerchantRefLength) {
-      merchantRef = merchantRef.substring(0, maxMerchantRefLength)
-    }
-
-    // Final safety net: strip any remaining non-printable ASCII chars
-    merchantRef = merchantRef.replace(/[^\x20-\x7E]/g, '')
-    
-    logger.debug('📝 Merchant reference:', merchantRef)
-
-    // 8. Create Wallee transaction - use object literal like process.post.ts (proven to work)
     const successParam = enrollmentId ? `&enrollmentId=${enrollmentId}` : ''
-    const transactionCreate: Wallee.model.TransactionCreate = {
-      lineItems: [
-        {
-          name: course?.name || 'Course Enrollment',
-          sku: courseId,
-          quantity: 1,
-          amountIncludingTax: amount / 100, // Convert from rappen to CHF
-          type: Wallee.model.LineItemType.PRODUCT,
-          uniqueId: 'item-1',
-          taxRate: 0
-        }
-      ],
-      spaceViewId: null,
-      currency: currency,
-      autoConfirmationEnabled: true,
-      chargeRetryEnabled: false,
-      customersEmailAddress: customerEmail,
-      // ✅ customerId: For public enrollments, use email-based ID so Wallee can track returning customers
-      customerId: `dt-${tenantId}-${customerEmail.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`,
-      shippingAddress: null,
-      billingAddress: null,
-      deviceSessionIdentifier: null,
-      merchantReference: merchantRef,
-      // ✅ Don't set tokenizationMode - let Wallee decide per payment method
-      successUrl: `${baseUrl}/customer/courses/${tenantSlug}?success=true${successParam}`,
-      failedUrl: `${baseUrl}/customer/courses/${tenantSlug}?failed=true${successParam}`
-    }
-
-    logger.debug('📝 Final merchant reference for Wallee:', transactionCreate.merchantReference)
-
-    // ✅ STEP 3: Create Wallee transaction
-    logger.debug('🔄 Creating Wallee transaction:', {
-      spaceId: walleeConfig.spaceId,
-      amount: amount / 100,
-      currency,
-      merchant: transactionCreate.merchantReference,
-      lineItems: transactionCreate.lineItems
-    })
-
-    // Create transaction
-    let transaction
-    try {
-      transaction = await transactionService.create(
-        walleeConfig.spaceId,
-        transactionCreate
-      )
-    } catch (walleeError: any) {
-      logger.error('❌ Wallee API error creating transaction:', {
-        message: walleeError?.message,
-        body: walleeError?.body,
-        statusCode: walleeError?.statusCode
-        // ❌ REMOVED: fullError: JSON.stringify(...) - causes circular reference error
-      })
-      
-      // Clean up: Delete the payment record we just created
-      await supabase.from('payments').delete().eq('id', paymentRecord.id)
-      
-      throw walleeError
-    }
-
-    // Extract the actual transaction from the SDK response wrapper
-    // The SDK returns { response, body } where body is the Transaction object
-    const actualTransaction = transaction?.body || transaction
-    const transactionId = actualTransaction?.id
-
-    logger.debug('🔍 Wallee response - extracted transaction:', {
-      transactionId: transactionId,
-      state: actualTransaction?.state,
-      hasBody: !!transaction?.body,
-      allKeys: actualTransaction ? Object.keys(actualTransaction).slice(0, 20) : 'null'
-    })
-
-    if (!transactionId) {
-      logger.error('❌ Invalid transaction response from Wallee:', {
-        transaction: JSON.stringify(actualTransaction, null, 2).substring(0, 500),
-        hasBody: !!transaction?.body
-      })
-      
-      // Clean up: Delete the payment record we just created
-      await supabase.from('payments').delete().eq('id', paymentRecord.id)
-      
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to create Wallee transaction'
-      })
-    }
-
-    logger.info('✅ Wallee transaction created:', transactionId)
-
-    // ✅ STEP 4: Update Payment with wallee_transaction_id (CRITICAL - retry 3x)
-    let updateSuccess = false
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update({
-          wallee_transaction_id: transactionId.toString(),
-          updated_at: new Date().toISOString()
+    const { livePaymentCheckoutDeps, runPaymentCheckoutCreate } = await import('~/server/utils/wallee-checkout-claim')
+    const checkout = await runPaymentCheckoutCreate(
+      { paymentId: paymentRecord.id, tenantId },
+      livePaymentCheckoutDeps(async ({ merchantReference }) => {
+        const created = await transactionService.create(walleeConfig.spaceId, {
+          lineItems: [
+            {
+              ...buildWalleeTaxedLineItem({
+                name: course?.name || 'Course Enrollment',
+                amountIncludingTaxChf: amount / 100,
+                vatRatePercent: checkoutVat.vatRate,
+                sku: courseId,
+              }),
+              type: Wallee.model.LineItemType.PRODUCT,
+            }
+          ],
+          spaceViewId: null,
+          currency,
+          autoConfirmationEnabled: true,
+          chargeRetryEnabled: false,
+          customersEmailAddress: customerEmail,
+          customerId: `dt-${tenantId}-${customerEmail.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`,
+          merchantReference,
+          successUrl: `${baseUrl}/customer/courses/${tenantSlug}?success=true${successParam}`,
+          failedUrl: `${baseUrl}/customer/courses/${tenantSlug}?failed=true${successParam}`
         })
-        .eq('id', paymentRecord.id)
-
-      if (!updateError) {
-        updateSuccess = true
-        logger.debug(`✅ wallee_transaction_id saved on attempt ${attempt}`)
-        break
-      }
-      
-      logger.warn(`⚠️ Attempt ${attempt}/3 to save wallee_transaction_id failed:`, updateError.message)
-      if (attempt < 3) {
-        await new Promise(resolve => setTimeout(resolve, attempt * 100))
-      }
-    }
-
-    if (!updateSuccess) {
-      logger.error('🚨 CRITICAL: Failed to save wallee_transaction_id after 3 attempts!', {
-        paymentId: paymentRecord.id,
-        transactionId: transactionId.toString()
+        const actualTransaction = (created as any)?.body || created
+        if (!actualTransaction?.id) {
+          throw createError({ statusCode: 502, statusMessage: 'Failed to create Wallee transaction' })
+        }
+        return {
+          id: String(actualTransaction.id),
+          paymentPageUrl: actualTransaction.paymentPageUrl || actualTransaction.paymentPageEndpoint || null,
+          spaceId: walleeConfig.spaceId,
+        }
       })
-      // IMPORTANT: Don't throw - webhook will use merchantReference fallback (payment-{paymentId})
-      // The merchantReference now includes the payment ID, so the webhook can find it
-      logger.info('✅ Fallback: Webhook will use merchantReference pattern to find this payment')
-    }
-
-    // Save transaction ID to history table for webhook reliability
-    try {
-      const { error: historyError } = await supabase.from('payment_wallee_transactions').insert({
-        payment_id: paymentRecord.id,
-        wallee_transaction_id: transactionId.toString(),
-        wallee_space_id: walleeConfig.spaceId,
-        merchant_reference: merchantRef
-      })
-      if (historyError) {
-        logger.warn('⚠️ Could not save transaction to history:', historyError.message)
-      }
-    } catch (historyErr: any) {
-      logger.warn('⚠️ Transaction history save failed:', historyErr.message)
-    }
-
-    // ✅ STEP 5: Get payment page URL
-    const paymentPageService = new Wallee.api.TransactionPaymentPageService(config)
-    const pageUrlResponse = await paymentPageService.paymentPageUrl(
-      walleeConfig.spaceId,
-      transactionId
     )
-
-    // Extract the URL from the SDK response wrapper
-    // The SDK returns { response, body } where body is the URL string
-    const pageUrl = pageUrlResponse?.body || pageUrlResponse
-
-    if (!pageUrl) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Failed to generate payment page URL'
-      })
-    }
+    const transactionId = checkout.transactionId
+    const pageUrl = checkout.paymentUrl
 
     logger.info('✅ Payment page URL generated')
 

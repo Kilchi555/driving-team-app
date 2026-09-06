@@ -16,6 +16,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getWalleeTestConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { Wallee } from 'wallee'
 import { logger } from '~/utils/logger'
+import { buildWalleeTaxedLineItem, loadCheckoutVat } from '~/server/utils/wallee-line-item'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -78,59 +79,53 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: `Payment-Record konnte nicht erstellt werden: ${paymentError?.message}` })
   }
 
-  // Create Wallee transaction
   const transactionService = new Wallee.api.TransactionService(sdkConfig)
   const paymentPageService  = new Wallee.api.TransactionPaymentPageService(sdkConfig)
 
   const baseUrl = 'https://app.simy.ch'
-  const transactionCreate: Wallee.model.TransactionCreate = {
-    lineItems: [{
-      name: `Super-Admin Test (${tenant.name})`,
-      quantity: 1,
-      amountIncludingTax: amount,
-      type: Wallee.model.LineItemType.PRODUCT,
-      uniqueId: 'test-item-1',
-      taxRate: 0,
-    }],
-    currency: 'CHF',
-    autoConfirmationEnabled: true,
-    chargeRetryEnabled: false,
-    customersEmailAddress: authUser.email || 'superadmin@simy.ch',
-    customerId: `superadmin-test-${tenant_id}`,
-    merchantReference: `sa-test-${payment.id}`.substring(0, 100),
-    successUrl: `${baseUrl}/payment/success?transaction_id=${payment.id}`,
-    failedUrl:  `${baseUrl}/payment/failed?transaction_id=${payment.id}`,
-    spaceViewId: null,
-    shippingAddress: null,
-    billingAddress: null,
-    deviceSessionIdentifier: null,
-  }
-
-  let createdTransaction: any
-  try {
-    createdTransaction = await transactionService.create(spaceId, transactionCreate)
-  } catch (walleeErr: any) {
-    // Clean up the test payment record on failure
-    await supabase.from('payments').delete().eq('id', payment.id)
-    logger.error('❌ [wallee-test-payment] Wallee API error:', walleeErr?.message)
-    throw createError({ statusCode: 502, statusMessage: `Wallee-Fehler: ${walleeErr?.message || 'Unbekannter Fehler'}` })
-  }
-
-  const transactionId = createdTransaction?.body?.id ?? createdTransaction?.id
-  if (!transactionId) {
-    await supabase.from('payments').delete().eq('id', payment.id)
-    throw createError({ statusCode: 500, statusMessage: 'Wallee-Transaktion konnte nicht erstellt werden' })
-  }
-
-  // Store transaction ID on payment record
-  await supabase
-    .from('payments')
-    .update({ wallee_transaction_id: String(transactionId), wallee_space_id: spaceId })
-    .eq('id', payment.id)
-
-  // Get payment page URL
-  const urlResponse = await paymentPageService.paymentPageUrl(spaceId, transactionId)
-  const paymentUrl: string = (urlResponse as any)?.body || String(urlResponse)
+  const checkoutVat = await loadCheckoutVat(supabase, tenant_id, Math.round(Number(amount) * 100))
+  const { livePaymentCheckoutDeps, runPaymentCheckoutCreate } = await import('~/server/utils/wallee-checkout-claim')
+  const checkout = await runPaymentCheckoutCreate(
+    { paymentId: payment.id, tenantId: tenant_id },
+    livePaymentCheckoutDeps(async ({ merchantReference }) => {
+      const createdTransaction = await transactionService.create(spaceId, {
+        lineItems: [{
+          ...buildWalleeTaxedLineItem({
+            name: `Super-Admin Test (${tenant.name})`,
+            amountIncludingTaxChf: amount,
+            vatRatePercent: checkoutVat.vatRate,
+            uniqueId: 'test-item-1',
+          }),
+          type: Wallee.model.LineItemType.PRODUCT,
+        }],
+        currency: 'CHF',
+        autoConfirmationEnabled: true,
+        chargeRetryEnabled: false,
+        customersEmailAddress: authUser.email || 'superadmin@simy.ch',
+        customerId: `superadmin-test-${tenant_id}`,
+        merchantReference,
+        successUrl: `${baseUrl}/payment/success?transaction_id=${payment.id}`,
+        failedUrl: `${baseUrl}/payment/failed?transaction_id=${payment.id}`,
+      })
+      const transactionId = createdTransaction?.body?.id ?? createdTransaction?.id
+      if (!transactionId) {
+        throw createError({ statusCode: 502, statusMessage: 'Wallee-Transaktion konnte nicht erstellt werden' })
+      }
+      return { id: String(transactionId), spaceId }
+    }, {
+      resolveUrl: async (transactionId) => {
+        try {
+          const urlResponse = await paymentPageService.paymentPageUrl(spaceId, Number(transactionId))
+          const paymentUrl = (urlResponse as any)?.body || String(urlResponse)
+          return typeof paymentUrl === 'string' && paymentUrl ? paymentUrl : null
+        } catch {
+          return null
+        }
+      }
+    })
+  )
+  const transactionId = checkout.transactionId
+  const paymentUrl = checkout.paymentUrl
 
   logger.info(`✅ [wallee-test-payment] Created test transaction for tenant ${tenant.name} in space ${spaceId} (${isTestMode ? 'TEST MODE' : 'PRODUCTION'})`)
 

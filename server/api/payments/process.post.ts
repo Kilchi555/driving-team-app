@@ -20,8 +20,20 @@ import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { buildMerchantReference } from '~/utils/merchantReference'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { suspiciousZeroPaymentCompletionReason } from '~/server/utils/zero-payment-completion'
-import { logFallbackUsed } from '~/server/utils/log-fallback'
+import { buildWalleeTaxedLineItem, loadCheckoutVat, mergeVatIntoMetadata } from '~/server/utils/wallee-line-item'
+import { attachResourceLabelsToAppointments, flattenAppointment, formatResourceSubtitle } from '~/server/utils/appointment-resource-labels'
+import { availableWalletRappen } from '~/server/utils/apply-student-credit'
+import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
+import { deductStudentCredit, incrementStudentCredit, InsufficientAvailableCreditError } from '~/server/utils/wallet-atomic'
+import {
+  abandonOrResumePayment,
+  canReplaceOpenWalleeState,
+  capturedAmountRappenFromTx,
+  expectedChargeRappen,
+  openWalleeCreditDecision,
+  plannedChargeRappenFromTx,
+  walleeCapturedCoversExpected,
+} from '~/server/utils/wallee-payment-sync'
 
 interface PaymentProcessRequest {
   // CHANGED: Now takes existing paymentId instead of creating new payment
@@ -29,6 +41,8 @@ interface PaymentProcessRequest {
   orderId?: string   // Optional: Custom order ID for Wallee
   successUrl?: string
   failedUrl?: string
+  /** Customer choice when an open Wallee checkout amount no longer matches wallet credit */
+  openPaymentChoice?: 'continue' | 'replace'
 }
 
 interface PaymentProcessResponse {
@@ -39,6 +53,13 @@ interface PaymentProcessResponse {
   paymentStatus?: string
   error?: string
   message?: string
+  reused?: boolean
+  needsOpenPaymentChoice?: boolean
+  existingChargeRappen?: number
+  newChargeRappen?: number
+  creditToApplyRappen?: number
+  canReplace?: boolean
+  replaceBlockedReason?: string
 }
 
 export default defineEventHandler(async (event): Promise<PaymentProcessResponse> => {
@@ -122,19 +143,22 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     ] = await Promise.all([
       supabaseAdmin
         .from('student_credits')
-        .select('balance_rappen')
+        .select('balance_rappen, pending_withdrawal_rappen')
         .eq('user_id', userData.id)
+        .eq('tenant_id', tenantId)
         .maybeSingle(),
       supabaseAdmin
         .from('payments')
-        .select('id, user_id, tenant_id, total_amount_rappen, lesson_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen, payment_method, payment_status, description, metadata, wallee_transaction_id, appointments(id, start_time, duration_minutes, staff:users!staff_id(first_name, last_name))')
+        .select('id, user_id, tenant_id, total_amount_rappen, credit_used_rappen, payment_method, payment_status, description, metadata, wallee_transaction_id, appointments(id, start_time, duration_minutes, type, location_id, vehicle_mode, vehicle_id, room_id, staff:users!staff_id(first_name, last_name))')
         .eq('id', body.paymentId)
         .eq('tenant_id', tenantId)
         .single()
     ])
 
-    const availableCredit = creditData?.balance_rappen || 0
+    const rawCreditBalance = Math.round(Number(creditData?.balance_rappen) || 0)
+    const availableCredit = availableWalletRappen(creditData)
     auditDetails.available_credit_rappen = availableCredit
+    auditDetails.raw_credit_balance_rappen = rawCreditBalance
     logger.debug('💰 Available credit:', (availableCredit / 100).toFixed(2), 'CHF')
 
     if (paymentError || !payment) {
@@ -240,79 +264,247 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       final_amount_to_pay: (finalAmountToPay / 100).toFixed(2)
     })
 
-    // ============ LAYER 9: IF FULLY COVERED BY CREDIT → COMPLETE PAYMENT ============
-    if (finalAmountToPay <= 0) {
-      const zeroReason = suspiciousZeroPaymentCompletionReason({
-        totalAmountRappen: payment.total_amount_rappen,
-        lessonPriceRappen: (payment as any).lesson_price_rappen,
-        discountAmountRappen: (payment as any).discount_amount_rappen,
-        voucherDiscountRappen: (payment as any).voucher_discount_rappen,
-        creditToDeductRappen: creditToDeduct,
-        creditAlreadyUsedRappen: amountAlreadyUsed,
-        paymentMethod: payment.payment_method,
-        metadata: payment.metadata && typeof payment.metadata === 'object'
-          ? payment.metadata as Record<string, unknown>
-          : null,
-      })
-      if (zeroReason) {
-        logger.error('❌ Refusing to complete suspicious CHF-0 payment without credit/benefit', {
-          reason: zeroReason,
-          payment_id: payment.id,
-          tenant_id: tenantId,
-          total_amount_rappen: payment.total_amount_rappen,
-          lesson_price_rappen: (payment as any).lesson_price_rappen ?? null,
-          credit_to_deduct: creditToDeduct,
-        })
-        await logFallbackUsed({
-          source: 'suspicious-zero-payment-block',
-          level: 'error',
-          message: `Payment process blocked: ${zeroReason}`,
-          tenantId,
-          userId: userData.id,
-          details: {
-            payment_id: payment.id,
-            reason: zeroReason,
-            total_amount_rappen: payment.total_amount_rappen,
-            lesson_price_rappen: (payment as any).lesson_price_rappen ?? null,
-          },
-        })
-        // Release processing lock so staff can fix the amount and retry.
-        if (claimedLock) {
-          await supabaseAdmin
-            .from('payments')
-            .update({ payment_status: 'pending', updated_at: new Date().toISOString() })
-            .eq('id', payment.id)
-            .eq('payment_status', 'processing')
+    // ============ LAYER 9: EXISTING WALLEE TX — ask before applying new credit ============
+    if (payment.wallee_transaction_id) {
+      logger.info('🔍 Payment already has wallee_transaction_id:', payment.wallee_transaction_id, '- checking status at Wallee...')
+      const walleeConfigEarly = await getWalleeConfigForTenant(tenantId)
+      const spaceIdEarly = walleeConfigEarly.spaceId
+      const configEarly = getWalleeSDKConfig(spaceIdEarly, walleeConfigEarly.userId, walleeConfigEarly.apiSecret)
+      const transactionServiceEarly: Wallee.api.TransactionService = new Wallee.api.TransactionService(configEarly)
+
+      try {
+        const existingTxResponse = await transactionServiceEarly.read(spaceIdEarly, parseInt(payment.wallee_transaction_id))
+        const existingTx = existingTxResponse?.body || existingTxResponse
+
+        if (existingTx?.state) {
+          const COMPLETED_STATES = ['FULFILL', 'COMPLETED', 'SUCCESSFUL']
+          const AUTHORIZED_STATES = ['AUTHORIZED']
+          const OPEN_STATES = ['PENDING', 'CONFIRMED', 'PROCESSING']
+          const FAILURE_STATES = ['FAILED', 'CANCELED', 'DECLINE', 'VOIDED']
+
+          if (COMPLETED_STATES.includes(existingTx.state)) {
+            const expected = expectedChargeRappen({
+              total_amount_rappen: payment.total_amount_rappen,
+              credit_used_rappen: amountAlreadyUsed,
+            })
+            const captured = capturedAmountRappenFromTx(existingTx)
+            if (!walleeCapturedCoversExpected(captured, expected)) {
+              logger.warn('❌ Existing Wallee tx underpays this payment — refusing complete', {
+                paymentId: payment.id,
+                captured,
+                expected,
+              })
+              throw createError({
+                statusCode: 409,
+                statusMessage: 'Wallee-Betrag stimmt nicht mit der Zahlung überein',
+              })
+            }
+
+            logger.info('✅ Existing Wallee transaction is already', existingTx.state, '- marking payment as completed')
+            const now = new Date().toISOString()
+            await supabaseAdmin.from('payments').update({
+              payment_status: 'completed',
+              paid_at: now,
+              updated_at: now,
+              wallee_transaction_state: existingTx.state
+            }).eq('id', payment.id)
+
+            await consumeGiftCardForPayment({
+              supabase: supabaseAdmin,
+              tenantId,
+              paymentId: payment.id,
+              redeemedBy: userData.id,
+              discountCode: (payment as any).metadata?.discount_code ?? null,
+            })
+
+            if (payment.appointments?.id) {
+              await supabaseAdmin.from('appointments').update({
+                payment_status: 'paid',
+                updated_at: now
+              }).eq('id', payment.appointments.id)
+            }
+
+            return {
+              success: true,
+              paymentId: payment.id,
+              paymentStatus: 'completed',
+              message: 'Payment was already completed via existing Wallee transaction'
+            }
+          }
+
+          if (AUTHORIZED_STATES.includes(existingTx.state) || OPEN_STATES.includes(existingTx.state)) {
+            const creditChoice = openWalleeCreditDecision({
+              openWalleeChargeRappen: plannedChargeRappenFromTx(existingTx),
+              totalAmountRappen: payment.total_amount_rappen,
+              creditAlreadyUsedRappen: amountAlreadyUsed,
+              availableCreditRappen: availableCredit,
+              pendingCreditRefundRappen: Number((payment.metadata as any)?.pending_credit_refund) || 0,
+            })
+            const canReplace = canReplaceOpenWalleeState(existingTx.state)
+            const choice = body.openPaymentChoice
+
+            if (creditChoice.needsChoice && choice !== 'continue' && choice !== 'replace') {
+              let paymentPageUrl: string | undefined =
+                (existingTx?.paymentPageUrl as string | undefined) ||
+                (existingTx?.paymentPageEndpoint as string | undefined)
+              if (!paymentPageUrl && OPEN_STATES.includes(existingTx.state)) {
+                try {
+                  const paymentService: Wallee.api.TransactionPaymentPageService = new Wallee.api.TransactionPaymentPageService(configEarly)
+                  const urlResponse = await paymentService.paymentPageUrl(spaceIdEarly, parseInt(payment.wallee_transaction_id))
+                  paymentPageUrl = urlResponse?.body || urlResponse
+                } catch (urlError: any) {
+                  logger.warn('⚠️ Could not get payment page URL for choice prompt:', urlError.message)
+                }
+              }
+              return {
+                success: true,
+                paymentId: payment.id,
+                paymentStatus: payment.payment_status,
+                needsOpenPaymentChoice: true,
+                existingChargeRappen: creditChoice.existingChargeRappen,
+                newChargeRappen: creditChoice.newChargeRappen,
+                creditToApplyRappen: creditChoice.creditToApplyRappen,
+                canReplace,
+                replaceBlockedReason: canReplace
+                  ? undefined
+                  : 'Die offene Zahlung ist beim Anbieter bereits bestätigt und kann nicht storniert werden. Bitte die alte Zahlung fortsetzen oder warten, bis sie abläuft.',
+                paymentUrl: paymentPageUrl,
+                transactionId: String(payment.wallee_transaction_id),
+                message: 'Offene Zahlung und Guthaben weichen voneinander ab'
+              }
+            }
+
+            if (creditChoice.needsChoice && choice === 'replace') {
+              if (!canReplace) {
+                throw createError({
+                  statusCode: 409,
+                  statusMessage: 'Die offene Zahlung kann gerade nicht storniert werden. Bitte die alte Zahlung fortsetzen oder warten, bis sie abläuft.',
+                })
+              }
+              const abandoned = await abandonOrResumePayment({
+                id: payment.id,
+                tenant_id: tenantId,
+                payment_status: payment.payment_status,
+                wallee_transaction_id: payment.wallee_transaction_id,
+              })
+              if (abandoned.decision !== 'abandoned' && abandoned.decision !== 'release_pending') {
+                throw createError({
+                  statusCode: 409,
+                  statusMessage: abandoned.message || 'Die offene Zahlung konnte nicht storniert werden.',
+                })
+              }
+              payment.wallee_transaction_id = null
+              logger.info('♻️ Customer chose new checkout with credit — old Wallee tx abandoned')
+            } else {
+              // continue old checkout (or amounts already match): never deduct extra credit
+              if (creditChoice.needsChoice && choice === 'continue') {
+                await restoreCreditHeldForOpenCheckout({
+                  supabase: supabaseAdmin,
+                  payment,
+                  userId: userData.id,
+                  tenantId,
+                })
+              }
+
+              if (AUTHORIZED_STATES.includes(existingTx.state)) {
+                const now = new Date().toISOString()
+                await supabaseAdmin.from('payments').update({
+                  payment_status: 'authorized',
+                  updated_at: now,
+                  wallee_transaction_state: existingTx.state
+                }).eq('id', payment.id)
+                return {
+                  success: true,
+                  paymentId: payment.id,
+                  paymentStatus: 'authorized',
+                  message: 'Payment already authorized via existing Wallee transaction'
+                }
+              }
+
+              logger.info(`♻️ Reusing open Wallee transaction ${payment.wallee_transaction_id} (state=${existingTx.state})`)
+              let paymentPageUrl: string | undefined =
+                (existingTx?.paymentPageUrl as string | undefined) ||
+                (existingTx?.paymentPageEndpoint as string | undefined)
+              if (!paymentPageUrl) {
+                try {
+                  const paymentService: Wallee.api.TransactionPaymentPageService = new Wallee.api.TransactionPaymentPageService(configEarly)
+                  const urlResponse = await paymentService.paymentPageUrl(spaceIdEarly, parseInt(payment.wallee_transaction_id))
+                  paymentPageUrl = urlResponse?.body || urlResponse
+                } catch (urlError: any) {
+                  logger.warn('⚠️ Could not get payment page URL for reuse:', urlError.message)
+                  paymentPageUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceIdEarly}&transactionId=${payment.wallee_transaction_id}`
+                }
+              }
+              await supabaseAdmin.from('payments').update({
+                payment_status: 'processing',
+                updated_at: new Date().toISOString(),
+                wallee_transaction_state: existingTx.state
+              }).eq('id', payment.id)
+              return {
+                success: true,
+                paymentId: payment.id,
+                transactionId: String(payment.wallee_transaction_id),
+                paymentUrl: paymentPageUrl,
+                reused: true,
+                message: 'Existing open Wallee transaction reused'
+              }
+            }
+          }
+
+          if (!FAILURE_STATES.includes(existingTx.state) && existingTx.state) {
+            if (!['FAILED', 'CANCELED', 'DECLINE', 'VOIDED'].includes(existingTx.state)
+              && !OPEN_STATES.includes(existingTx.state)
+              && !AUTHORIZED_STATES.includes(existingTx.state)
+              && !COMPLETED_STATES.includes(existingTx.state)) {
+              logger.warn(`⚠️ Unexpected Wallee state ${existingTx.state} — refusing to create a second transaction`)
+              throw createError({
+                statusCode: 409,
+                statusMessage: 'Zahlung wird noch verarbeitet. Bitte warte einen Moment und versuche es erneut.'
+              })
+            }
+          }
+
+          if (FAILURE_STATES.includes(existingTx.state)) {
+            logger.info(`📋 Existing transaction failed (${existingTx.state}) - creating new transaction`)
+            try {
+              const { error: historyError } = await supabaseAdmin.from('payment_wallee_transactions').insert({
+                payment_id: payment.id,
+                wallee_transaction_id: payment.wallee_transaction_id,
+                wallee_space_id: spaceIdEarly
+              })
+              if (historyError) {
+                logger.warn('⚠️ Could not save transaction history:', historyError.message)
+              }
+            } catch (historyErr: any) {
+              logger.warn('⚠️ Transaction history save failed:', historyErr.message)
+            }
+          }
         }
-        await logAudit({
-          user_id: authenticatedUserId,
-          action: 'process_payment_suspicious_zero',
-          status: 'failed',
-          error_message: zeroReason,
-          ip_address: ipAddress,
-          details: { ...auditDetails, reason: zeroReason },
-        })
+      } catch (checkErr: any) {
+        if (checkErr?.statusCode) throw checkErr
+        logger.warn('⚠️ Could not check existing Wallee transaction:', checkErr.message)
         throw createError({
-          statusCode: 422,
-          statusMessage: 'Diese Zahlung hat Betrag CHF 0 ohne Guthaben, Rabatt oder Freischaltung und kann nicht als bezahlt markiert werden.',
-          data: { code: 'SUSPICIOUS_ZERO_PAYMENT', reason: zeroReason },
+          statusCode: 503,
+          statusMessage: 'Zahlungsstatus konnte nicht geprüft werden. Bitte versuche es in wenigen Sekunden erneut.'
         })
       }
+    }
 
+    // ============ LAYER 10: IF FULLY COVERED BY CREDIT → COMPLETE PAYMENT ============
+    if (finalAmountToPay <= 0) {
       logger.debug('✅ Payment fully covered by credit, completing payment...')
 
       // Deduct credit from student_credits
       if (creditToDeduct > 0) {
-        const newBalance = availableCredit - creditToDeduct
-        const { error: creditUpdateError } = await supabaseAdmin
-          .from('student_credits')
-          .update({
-            balance_rappen: newBalance,
-            updated_at: new Date().toISOString()
+        let newBalance = rawCreditBalance - creditToDeduct
+        try {
+          const deducted = await deductStudentCredit(supabaseAdmin, {
+            userId: userData.id,
+            tenantId,
+            amountRappen: creditToDeduct,
           })
-          .eq('user_id', userData.id)
-
-        if (creditUpdateError) {
+          newBalance = deducted.balance_rappen
+        } catch (creditUpdateError: any) {
           logger.error('❌ Error updating student credit balance:', creditUpdateError)
           await logAudit({
             user_id: authenticatedUserId,
@@ -322,6 +514,9 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
             ip_address: ipAddress,
             details: auditDetails
           })
+          if (creditUpdateError instanceof InsufficientAvailableCreditError) {
+            throw createError({ statusCode: 400, statusMessage: creditUpdateError.message })
+          }
           throw createError({ statusCode: 500, statusMessage: 'Failed to update student credit' })
         }
 
@@ -335,7 +530,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
             tenant_id: tenantId,
             transaction_type: 'payment',
             amount_rappen: -creditToDeduct, // Negative for deduction
-            balance_before_rappen: availableCredit,
+            balance_before_rappen: rawCreditBalance,
             balance_after_rappen: newBalance,
             payment_method: 'credit',
             reference_id: payment.id,
@@ -405,6 +600,14 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
 
       logger.debug('✅ Payment completed with credit')
 
+      await consumeGiftCardForPayment({
+        supabase: supabaseAdmin,
+        tenantId,
+        paymentId: payment.id,
+        redeemedBy: userData.id,
+        discountCode: (payment as any).metadata?.discount_code ?? null,
+      })
+
       return {
         success: true,
         paymentId: payment.id,
@@ -418,21 +621,43 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
 
     // Deduct credit from student_credits BEFORE Wallee
     if (creditToDeduct > 0) {
-      const newBalance = availableCredit - creditToDeduct
-      const { error: creditUpdateError } = await supabaseAdmin
-        .from('student_credits')
-        .update({
-          balance_rappen: newBalance,
-          updated_at: new Date().toISOString()
+      let newBalance = rawCreditBalance - creditToDeduct
+      try {
+        const deducted = await deductStudentCredit(supabaseAdmin, {
+          userId: userData.id,
+          tenantId,
+          amountRappen: creditToDeduct,
         })
-        .eq('user_id', userData.id)
-
-      if (creditUpdateError) {
+        newBalance = deducted.balance_rappen
+      } catch (creditUpdateError: any) {
         logger.error('❌ Error updating student credit balance:', creditUpdateError)
+        if (creditUpdateError instanceof InsufficientAvailableCreditError) {
+          throw createError({ statusCode: 400, statusMessage: creditUpdateError.message })
+        }
         throw createError({ statusCode: 500, statusMessage: 'Failed to update student credit' })
       }
 
       logger.debug('✅ Credit deducted - new balance:', (newBalance / 100).toFixed(2))
+
+      const { error: transactionError } = await supabaseAdmin
+        .from('credit_transactions')
+        .insert({
+          user_id: userData.id,
+          tenant_id: tenantId,
+          transaction_type: 'payment',
+          amount_rappen: -creditToDeduct,
+          balance_before_rappen: rawCreditBalance,
+          balance_after_rappen: newBalance,
+          payment_method: 'credit',
+          reference_id: payment.id,
+          reference_type: 'payment',
+          notes: `Guthaben für Zahlung verwendet (Payment ID: ${payment.id}, Restbetrag online)`,
+          status: 'completed',
+          created_at: new Date().toISOString()
+        })
+      if (transactionError) {
+        logger.warn('⚠️ Could not create credit transaction:', transactionError)
+      }
 
       // Update payment with credit_used_rappen
       const { error: paymentUpdateError } = await supabaseAdmin
@@ -461,136 +686,6 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
     const transactionService: Wallee.api.TransactionService = new Wallee.api.TransactionService(config)
 
-    // ✅ CHECK: Existing Wallee transaction — never create a second open charge
-    if (payment.wallee_transaction_id) {
-      logger.info('🔍 Payment already has wallee_transaction_id:', payment.wallee_transaction_id, '- checking status at Wallee...')
-
-      try {
-        const existingTxResponse = await transactionService.read(spaceId, parseInt(payment.wallee_transaction_id))
-        const existingTx = existingTxResponse?.body || existingTxResponse
-
-        if (existingTx?.state) {
-          const COMPLETED_STATES = ['FULFILL', 'COMPLETED', 'SUCCESSFUL']
-          const AUTHORIZED_STATES = ['AUTHORIZED']
-          const OPEN_STATES = ['PENDING', 'CONFIRMED', 'PROCESSING']
-          const FAILURE_STATES = ['FAILED', 'CANCELED', 'DECLINE', 'VOIDED']
-
-          if (COMPLETED_STATES.includes(existingTx.state)) {
-            logger.info('✅ Existing Wallee transaction is already', existingTx.state, '- marking payment as completed')
-
-            const now = new Date().toISOString()
-            await supabaseAdmin.from('payments').update({
-              payment_status: 'completed',
-              paid_at: now,
-              updated_at: now,
-              wallee_transaction_state: existingTx.state
-            }).eq('id', payment.id)
-
-            if (payment.appointments?.id) {
-              await supabaseAdmin.from('appointments').update({
-                payment_status: 'paid',
-                updated_at: now
-              }).eq('id', payment.appointments.id)
-            }
-
-            return {
-              success: true,
-              paymentId: payment.id,
-              paymentStatus: 'completed',
-              message: 'Payment was already completed via existing Wallee transaction'
-            }
-          }
-
-          if (AUTHORIZED_STATES.includes(existingTx.state)) {
-            const now = new Date().toISOString()
-            await supabaseAdmin.from('payments').update({
-              payment_status: 'authorized',
-              updated_at: now,
-              wallee_transaction_state: existingTx.state
-            }).eq('id', payment.id)
-
-            return {
-              success: true,
-              paymentId: payment.id,
-              paymentStatus: 'authorized',
-              message: 'Payment already authorized via existing Wallee transaction'
-            }
-          }
-
-          if (OPEN_STATES.includes(existingTx.state)) {
-            // Reuse the open transaction — creating another one caused double charges
-            // when the first later fulfilled while a second was also paid.
-            logger.info(`♻️ Reusing open Wallee transaction ${payment.wallee_transaction_id} (state=${existingTx.state})`)
-
-            let paymentPageUrl: string | undefined =
-              (existingTx?.paymentPageUrl as string | undefined) ||
-              (existingTx?.paymentPageEndpoint as string | undefined)
-
-            if (!paymentPageUrl) {
-              try {
-                const paymentService: Wallee.api.TransactionPaymentPageService = new Wallee.api.TransactionPaymentPageService(config)
-                const urlResponse = await paymentService.paymentPageUrl(spaceId, parseInt(payment.wallee_transaction_id))
-                paymentPageUrl = urlResponse?.body || urlResponse
-              } catch (urlError: any) {
-                logger.warn('⚠️ Could not get payment page URL for reuse:', urlError.message)
-                paymentPageUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${payment.wallee_transaction_id}`
-              }
-            }
-
-            // Keep/restore processing lock while the open tx is still live
-            await supabaseAdmin.from('payments').update({
-              payment_status: 'processing',
-              updated_at: new Date().toISOString(),
-              wallee_transaction_state: existingTx.state
-            }).eq('id', payment.id)
-
-            return {
-              success: true,
-              paymentId: payment.id,
-              transactionId: String(payment.wallee_transaction_id),
-              paymentUrl: paymentPageUrl,
-              reused: true,
-              message: 'Existing open Wallee transaction reused'
-            }
-          }
-
-          if (!FAILURE_STATES.includes(existingTx.state)) {
-            logger.warn(`⚠️ Unexpected Wallee state ${existingTx.state} — refusing to create a second transaction`)
-            throw createError({
-              statusCode: 409,
-              statusMessage: 'Zahlung wird noch verarbeitet. Bitte warte einen Moment und versuche es erneut.'
-            })
-          }
-
-          logger.info(`📋 Existing transaction failed (${existingTx.state}) - creating new transaction`)
-        }
-      } catch (checkErr: any) {
-        if (checkErr?.statusCode) throw checkErr
-        logger.warn('⚠️ Could not check existing Wallee transaction:', checkErr.message)
-        // Fail closed: do not create a parallel charge if we cannot verify the old one
-        throw createError({
-          statusCode: 503,
-          statusMessage: 'Zahlungsstatus konnte nicht geprüft werden. Bitte versuche es in wenigen Sekunden erneut.'
-        })
-      }
-
-      // Save old (failed) transaction ID to history before overwriting
-      try {
-        const { error: historyError } = await supabaseAdmin.from('payment_wallee_transactions').insert({
-          payment_id: payment.id,
-          wallee_transaction_id: payment.wallee_transaction_id,
-          wallee_space_id: spaceId
-        })
-        if (historyError) {
-          logger.warn('⚠️ Could not save transaction history:', historyError.message)
-        } else {
-          logger.debug('📋 Saved old transaction ID to history:', payment.wallee_transaction_id)
-        }
-      } catch (historyErr: any) {
-        logger.warn('⚠️ Transaction history save failed:', historyErr.message)
-      }
-    }
-
     // ✅ Use FINAL amount (after credit deduction) and ROUNDED for Wallee transaction
     const walleeAmount = roundToNearest5Rappen(finalAmountToPay)
 
@@ -608,173 +703,70 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
       spaceId: spaceId
     })
 
+    const vat = await loadCheckoutVat(supabaseAdmin, tenantId!, walleeAmount)
+    await supabaseAdmin
+      .from('payments')
+      .update({
+        metadata: mergeVatIntoMetadata(payment.metadata, vat),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', payment.id)
+
+    const appointment = flattenAppointment(payment.appointments)
+    try {
+      if (appointment && tenantId) {
+        await attachResourceLabelsToAppointments(supabaseAdmin, tenantId, [appointment])
+      }
+    } catch (labelErr: any) {
+      logger.warn('⚠️ Could not resolve vehicle/room labels for Wallee line:', labelErr?.message)
+    }
+    const resourceSubtitle = formatResourceSubtitle(appointment?.vehicle_label, appointment?.room_name)
+    const walleeLineName = [payment.description || 'Termin', resourceSubtitle].filter(Boolean).join(' · ')
+
     // Create line items for Wallee (remaining amount after credit)
     const lineItems: Wallee.model.LineItemCreate[] = [
       {
-        name: payment.description || 'Termin',
-        quantity: 1,
-        amountIncludingTax: walleeAmount / 100, // Convert to CHF (remaining amount)
+        ...buildWalleeTaxedLineItem({
+          name: walleeLineName,
+          amountIncludingTaxChf: walleeAmount / 100,
+          vatRatePercent: vat.vatRate,
+        }),
         type: Wallee.model.LineItemType.PRODUCT,
-        uniqueId: 'item-1',
-        taxRate: 0 // No VAT for driving school services (Switzerland)
       }
     ]
 
-    // Build merchant reference with payment ID prefix (CRITICAL for webhook fallback!)
-    let merchantReference: string
-    if (body.orderId) {
-      merchantReference = body.orderId
-    } else {
-      const baseMerchantRef = buildMerchantReference({
-        staffName: `${userData.first_name || ''}-${userData.last_name || ''}`.trim() || undefined,
-        startTime: payment.appointments?.start_time,
-        durationMinutes: payment.appointments?.duration_minutes,
-        appointmentId: payment.appointments?.id
-      })
-      merchantReference = `payment-${payment.id} | ${baseMerchantRef}`
-      if (merchantReference.length > 100) {
-        merchantReference = merchantReference.substring(0, 97) + '...'
-      }
-    }
-
-    logger.debug('📋 Generated merchant reference:', merchantReference)
-
-    // Create transaction (let Wallee show ALL available payment methods)
-    const transactionCreate: Wallee.model.TransactionCreate = {
-      lineItems: lineItems,
-      spaceViewId: null,
-      currency: 'CHF',
-      autoConfirmationEnabled: true,
-      chargeRetryEnabled: false,
-      customersEmailAddress: userData.email,
-      customerId: `dt-${tenantId}-${userData.id}`,
-      shippingAddress: null,
-      billingAddress: null,
-      deviceSessionIdentifier: null,
-      merchantReference: merchantReference,
-      // ✅ Don't set tokenizationMode - let Wallee decide per payment method
-      // Wallee honors payment method configuration (TWINT: no token, Cards: auto token)
-      successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
-      failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
-    }
-
-    logger.info('🔧 TokenizationMode value:', transactionCreate.tokenizationMode)
-    const createdTransaction = await transactionService.create(spaceId, transactionCreate)
-
-    // Extract the actual transaction from the SDK response wrapper
-    // The SDK returns { response, body } where body is the Transaction object
-    const transaction = createdTransaction?.body || createdTransaction
-    const transactionId = transaction?.id
-
-    logger.info('✅ WALLEE TRANSACTION CREATED:', {
-      paymentId: payment.id,
-      transactionId: transactionId,
-      state: transaction?.state,
-      merchantReference: transaction?.merchantReference
-    })
-
-    logger.debug('🔍 Wallee response - extracted transaction:', {
-      transactionId: transactionId,
-      state: transaction?.state,
-      paymentPageUrl: transaction?.paymentPageUrl,
-      paymentPageEndpoint: transaction?.paymentPageEndpoint,
-      allKeys: transaction ? Object.keys(transaction).slice(0, 20) : 'null'
-    })
-
-    if (!transactionId) {
-      logger.error('❌ Failed to create Wallee transaction - no transaction ID returned', {
-        transactionId,
-        hasBody: !!createdTransaction?.body
-      })
-      throw new Error(`Failed to create Wallee transaction. No ID in response.`)
-    }
-
-    logger.debug('✅ Wallee transaction created:', {
-      transactionId: transactionId,
-      state: transaction?.state
-    })
-
-    // ============ LAYER 10: GET PAYMENT URL & UPDATE PAYMENT ============
-    // Prefer the URL already embedded in the create-transaction response — avoids a
-    // second round-trip to the Wallee API (saves ~2-3 seconds).
-    let paymentPageUrl: string | undefined =
-      (transaction?.paymentPageUrl as string | undefined) ||
-      (transaction?.paymentPageEndpoint as string | undefined)
-
-    if (paymentPageUrl) {
-      logger.debug('✅ Payment page URL from transaction response (no extra API call):', paymentPageUrl.substring(0, 100) + '...')
-    } else {
-      // Fallback: ask the dedicated service — only if the create response had no URL
-      try {
-        const paymentService: Wallee.api.TransactionPaymentPageService = new Wallee.api.TransactionPaymentPageService(config)
-        const urlResponse = await paymentService.paymentPageUrl(spaceId, transactionId)
-        paymentPageUrl = urlResponse?.body || urlResponse
-        logger.debug('✅ Payment page URL from service (fallback):', paymentPageUrl?.substring(0, 100) + '...')
-      } catch (urlError: any) {
-        logger.warn('⚠️ Could not get payment page URL from service, constructing manually:', urlError.message)
-        paymentPageUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${transactionId}`
-      }
-    }
-
-    if (!paymentPageUrl || typeof paymentPageUrl !== 'string') {
-      throw new Error('Failed to generate Wallee payment URL')
-    }
-
-    // Update payment with Wallee transaction ID - CRITICAL: Must succeed for webhook to work!
-    const now = new Date().toISOString()
-    let updateSuccess = false
-    let lastUpdateError: any = null
-    
-    // ✅ RETRY LOGIC: Try 3 times to save wallee_transaction_id
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const { error: updateError } = await supabaseAdmin
-        .from('payments')
-        .update({
-          wallee_transaction_id: transactionId.toString(),
-          wallee_space_id: spaceId.toString(),
-          updated_at: now
+    const { livePaymentCheckoutDeps, runPaymentCheckoutCreate } = await import('~/server/utils/wallee-checkout-claim')
+    const checkout = await runPaymentCheckoutCreate(
+      { paymentId: payment.id, tenantId: tenantId! },
+      livePaymentCheckoutDeps(async ({ merchantReference }) => {
+        const createdTransaction = await transactionService.create(spaceId, {
+          lineItems,
+          spaceViewId: null,
+          currency: 'CHF',
+          autoConfirmationEnabled: true,
+          chargeRetryEnabled: false,
+          customersEmailAddress: userData.email,
+          customerId: `dt-${tenantId}-${userData.id}`,
+          shippingAddress: null,
+          billingAddress: null,
+          deviceSessionIdentifier: null,
+          merchantReference,
+          successUrl: body.successUrl || `${getServerUrl()}/customer-dashboard?payment_success=true`,
+          failedUrl: body.failedUrl || `${getServerUrl()}/customer-dashboard?payment_failed=true`
         })
-        .eq('id', payment.id)
-
-      if (!updateError) {
-        updateSuccess = true
-        logger.debug(`✅ wallee_transaction_id saved on attempt ${attempt}`)
-        break
-      }
-      
-      lastUpdateError = updateError
-      logger.warn(`⚠️ Attempt ${attempt}/3 to save wallee_transaction_id failed:`, updateError.message)
-      
-      if (attempt < 3) {
-        // Wait before retry (100ms, 200ms)
-        await new Promise(resolve => setTimeout(resolve, attempt * 100))
-      }
-    }
-
-    if (!updateSuccess) {
-      // CRITICAL: Log this prominently so we can investigate
-      logger.error('🚨 CRITICAL: Failed to save wallee_transaction_id after 3 attempts!', {
-        paymentId: payment.id,
-        transactionId: transactionId.toString(),
-        error: lastUpdateError?.message
+        const transaction = createdTransaction?.body || createdTransaction
+        if (!transaction?.id) {
+          throw new Error('Failed to create Wallee transaction. No ID in response.')
+        }
+        return {
+          id: String(transaction.id),
+          paymentPageUrl: transaction.paymentPageUrl || transaction.paymentPageEndpoint || null,
+          spaceId,
+        }
       })
-      // Continue anyway - customer should be able to pay, webhook will use fallback
-    }
-
-    // Save new transaction ID to history table for webhook reliability
-    try {
-      const { error: historyError } = await supabaseAdmin.from('payment_wallee_transactions').insert({
-        payment_id: payment.id,
-        wallee_transaction_id: transactionId.toString(),
-        wallee_space_id: spaceId,
-        merchant_reference: merchantReference
-      })
-      if (historyError) {
-        logger.warn('⚠️ Could not save transaction to history:', historyError.message)
-      }
-    } catch (historyErr: any) {
-      logger.warn('⚠️ Transaction history save failed:', historyErr.message)
-    }
+    )
+    const transactionId = checkout.transactionId
+    const paymentPageUrl = checkout.paymentUrl
 
     // ============ AUDIT LOGGING & RESPONSE ============
     auditDetails.transaction_id = transactionId
@@ -852,6 +844,52 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     throw createError({ statusCode, statusMessage: errorMessage })
   }
 })
+
+async function restoreCreditHeldForOpenCheckout(opts: {
+  supabase: any
+  payment: any
+  userId: string
+  tenantId: string
+}): Promise<void> {
+  const pending = Math.round(Number(opts.payment?.metadata?.pending_credit_refund) || 0)
+  if (pending <= 0) return
+
+  const incremented = await incrementStudentCredit(opts.supabase, {
+    userId: opts.userId,
+    tenantId: opts.tenantId,
+    amountRappen: pending,
+  })
+
+  await opts.supabase.from('credit_transactions').insert({
+    user_id: opts.userId,
+    tenant_id: opts.tenantId,
+    transaction_type: 'refund',
+    amount_rappen: pending,
+    balance_before_rappen: incremented.balance_rappen - pending,
+    balance_after_rappen: incremented.balance_rappen,
+    payment_method: 'credit',
+    reference_id: opts.payment.id,
+    reference_type: 'payment',
+    notes: 'Guthaben zurückgebucht — offene Zahlung ohne Guthaben-Abzug fortgesetzt',
+    status: 'completed',
+    created_at: new Date().toISOString(),
+  })
+
+  const metadata = {
+    ...(opts.payment.metadata && typeof opts.payment.metadata === 'object' ? opts.payment.metadata : {}),
+    pending_credit_refund: null,
+    credit_restored_for_open_checkout: true,
+  }
+  const newCreditUsed = Math.max(0, Math.round(Number(opts.payment.credit_used_rappen) || 0) - pending)
+  await opts.supabase.from('payments').update({
+    credit_used_rappen: newCreditUsed,
+    metadata,
+    updated_at: new Date().toISOString(),
+  }).eq('id', opts.payment.id)
+
+  opts.payment.credit_used_rappen = newCreditUsed
+  opts.payment.metadata = metadata
+}
 
 function getServerUrl(): string {
   const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'

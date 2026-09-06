@@ -22,7 +22,6 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
-import { findStaffBusyOverlap } from '~/server/utils/time-range-overlap'
 
 interface ReserveSlotRequest {
   slot_id: string
@@ -47,7 +46,8 @@ export default defineEventHandler(async (event: H3Event) => {
     if (!rateLimitResult.allowed) {
       throw createError({
         statusCode: 429,
-        statusMessage: 'Too many reservation attempts. Please try again later.'
+        statusMessage: 'Too many reservation attempts. Please try again later.',
+        data: { error: 'RATE_LIMITED' },
       })
     }
 
@@ -86,62 +86,30 @@ export default defineEventHandler(async (event: H3Event) => {
     const reservedUntil = new Date(now.getTime() + 5 * 60 * 1000).toISOString()
     const overlappingReservedUntil = reservedUntil
 
-    // First, READ the current slot to verify it exists (admin: sees any slot, even reserved)
-    const { data: currentSlot, error: readError } = await supabaseAdmin
-      .from('availability_slots')
-      .select('id, tenant_id, reserved_by_session, reserved_until, staff_id, location_id, start_time, end_time, duration_minutes')
-      .eq('id', body.slot_id)
-      .maybeSingle()
-
-    if (readError || !currentSlot) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Slot not found'
+    const { data: claimedSlots, error: reserveError } = await supabaseAdmin
+      .rpc('claim_availability_slot_hold', {
+        p_slot_id: body.slot_id,
+        p_session_id: body.session_id,
+        p_until: reservedUntil,
       })
-    }
-
-    // ============ STEP 1: Reserve the primary slot (atomic) ============
-    // Availability check from the data we already fetched – if the slot is taken,
-    // return 409 immediately without hitting the DB again.
-    const isExpired = currentSlot.reserved_until && new Date(currentSlot.reserved_until) < now
-    const isAvailable = !currentSlot.reserved_by_session || isExpired
-
-    if (!isAvailable) {
-      throw createError({ statusCode: 409, statusMessage: 'Slot is no longer available' })
-    }
-
-    const busyOverlap = await findStaffBusyOverlap(supabaseAdmin, {
-      staffId: currentSlot.staff_id,
-      startTime: currentSlot.start_time,
-      endTime: currentSlot.end_time,
-      tenantId: currentSlot.tenant_id,
-    })
-    if (busyOverlap) {
-      logger.warn('❌ Slot overlaps external busy time', {
-        slot_id: body.slot_id,
-        staff_id: currentSlot.staff_id,
-        busy_id: busyOverlap.id,
-      })
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Dieser Termin liegt in einer gesperrten Zeit. Bitte wähle einen anderen Slot.',
-      })
-    }
-
-    // Simple update – admin client bypasses RLS, PostgreSQL row-level locking
-    // ensures the update is atomic even under concurrent requests.
-    const { error: reserveError } = await supabaseAdmin
-      .from('availability_slots')
-      .update({
-        reserved_until: reservedUntil,
-        reserved_by_session: body.session_id,
-        is_primary_reservation: true
-      })
-      .eq('id', body.slot_id)
 
     if (reserveError) {
       logger.error('❌ Error reserving slot:', reserveError)
       throw createError({ statusCode: 500, statusMessage: 'Failed to reserve slot' })
+    }
+
+    const currentSlot = Array.isArray(claimedSlots) ? claimedSlots[0] : claimedSlots
+    if (!currentSlot) {
+      const { data: exists } = await supabaseAdmin
+        .from('availability_slots')
+        .select('id')
+        .eq('id', body.slot_id)
+        .maybeSingle()
+      throw createError({
+        statusCode: exists ? 409 : 404,
+        statusMessage: exists ? 'Slot is no longer available' : 'Slot not found',
+        data: exists ? { error: 'SLOT_UNAVAILABLE' } : undefined,
+      })
     }
 
     logger.debug('✅ Primary slot reserved')

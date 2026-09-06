@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   canReleaseUnpaidHold,
   shouldConfirmHeldAppointmentFromPayments,
+  shouldDeferConfirmationUntilPaid,
   shouldHoldAppointmentUntilPaid,
 } from '../pay-before-confirm'
 import { checkoutAppUrl, safeCheckoutReturnUrl } from '../wallee-appointment-checkout'
@@ -58,6 +59,19 @@ describe('canReleaseUnpaidHold', () => {
     }])).toBe(true)
   })
 
+  it('never releases a hold while checkout recovery is pending', () => {
+    expect(canReleaseUnpaidHold([{
+      payment_status: 'pending',
+      metadata: { pay_before_confirm: true },
+      checkout_status: 'recovery_pending',
+    }])).toBe(false)
+    expect(canReleaseUnpaidHold([{
+      payment_status: 'pending',
+      metadata: { pay_before_confirm: true },
+      wallee_transaction_id: '123',
+    }])).toBe(false)
+  })
+
   it('never releases a hold that already captured or locked money', () => {
     expect(canReleaseUnpaidHold([{
       payment_status: 'completed',
@@ -87,6 +101,37 @@ describe('shouldConfirmHeldAppointmentFromPayments', () => {
       payment_status: 'completed',
       metadata: {},
     }])).toBe(null)
+  })
+})
+
+describe('shouldDeferConfirmationUntilPaid', () => {
+  it('defers confirmation for unpaid pay-before-confirm holds', () => {
+    expect(shouldDeferConfirmationUntilPaid('pending', [{
+      payment_status: 'pending',
+      metadata: { pay_before_confirm: true },
+    }])).toBe(true)
+    expect(shouldDeferConfirmationUntilPaid('pending', [{
+      payment_status: 'processing',
+      metadata: { pay_before_confirm: true },
+    }])).toBe(true)
+  })
+
+  it('sends after the hold payment is captured', () => {
+    expect(shouldDeferConfirmationUntilPaid('pending', [{
+      payment_status: 'completed',
+      metadata: { pay_before_confirm: true },
+    }])).toBe(false)
+    expect(shouldDeferConfirmationUntilPaid('confirmed', [{
+      payment_status: 'pending',
+      metadata: { pay_before_confirm: true },
+    }])).toBe(false)
+  })
+
+  it('does not defer normal pending appointments', () => {
+    expect(shouldDeferConfirmationUntilPaid('pending', [{
+      payment_status: 'pending',
+      metadata: {},
+    }])).toBe(false)
   })
 })
 
