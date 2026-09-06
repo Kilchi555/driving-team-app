@@ -11,7 +11,6 @@ import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-product-purchase'
 import { buildWalleeTaxedLineItem, loadCheckoutVat } from '~/server/utils/wallee-line-item'
-import { PosCatalogPriceError, resolvePosCatalogItems } from '~/server/utils/pos-catalog-prices'
 
 interface POSItem {
   product_id: string
@@ -36,7 +35,7 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const body = await readBody<POSBody>(event)
 
-  const { user_id, customer_name, customer_email, items, payment_method, notes } = body
+  const { user_id, customer_name, customer_email, items, total_amount_rappen, payment_method, notes } = body
 
   if (!items || items.length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'Keine Produkte ausgewählt' })
@@ -45,29 +44,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Ungültige Zahlungsart' })
   }
 
-  const productIds = [...new Set(items.map((item) => item.product_id).filter(Boolean))]
-  const { data: dbProducts, error: productsError } = await supabase
-    .from('products')
-    .select('id, name, price_rappen, is_active, is_voucher, allow_custom_amount, min_amount_rappen, max_amount_rappen')
-    .in('id', productIds)
-    .eq('tenant_id', profile.tenant_id)
-
-  if (productsError) {
-    logger.error('❌ Error loading POS catalog:', productsError)
-    throw createError({ statusCode: 500, statusMessage: 'Produkte konnten nicht geladen werden' })
-  }
-
-  let catalog
-  try {
-    catalog = resolvePosCatalogItems(dbProducts || [], items)
-  } catch (err) {
-    if (err instanceof PosCatalogPriceError) {
-      throw createError({ statusCode: 400, statusMessage: err.message })
-    }
-    throw err
-  }
-  const pricedItems = catalog.items
-  const total_amount_rappen = catalog.total_amount_rappen
+  const pricedItems = items
 
   let resolvedUserId: string | null = null
   let resolvedCustomerName = customer_name || ''

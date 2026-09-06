@@ -222,3 +222,20 @@ export async function incrementAppointmentDiscountUsage(opts: {
     return false
   }
 }
+
+export async function incrementPaymentDiscountUsage(opts: {
+  supabase: any
+  payment: {
+    tenant_id?: string | null
+    metadata?: Record<string, any> | null
+  }
+}): Promise<void> {
+  const tenantId = opts.payment?.tenant_id
+  const code = opts.payment?.metadata?.discount_code
+  if (!tenantId || !code) return
+  await incrementAppointmentDiscountUsage({
+    supabase: opts.supabase,
+    tenantId,
+    code: String(code),
+  })
+}

@@ -37,9 +37,8 @@ import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
-import { countDiscountRedemptions, countUserDiscountRedemptions, netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
+import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
 import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockCheckoutBenefits } from '~/server/utils/checkout-benefits'
-import { evaluateCatalogDiscount } from '~/utils/discount-eligibility'
 import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
@@ -633,61 +632,23 @@ export default defineEventHandler(async (event: H3Event) => {
             expires_at,
             discounts (
               id, discount_type, discount_value, max_discount_rappen,
-              valid_until, is_active, auto_apply, usage_limit, usage_count, max_per_user,
-              first_lesson_only, applies_to, category_filter, min_amount_rappen
+              valid_until, is_active, auto_apply, usage_limit, usage_count
             )
           `)
           .eq('user_id', userData.id)
           .eq('tenant_id', tenantId!)
           .eq('is_active', true)
 
-        let activeAutoCode: any = null
-        for (const udc of userCodes || []) {
+        const activeAutoCode = (userCodes || []).find((udc: any) => {
           const d = udc.discounts
-          if (!d?.is_active || !d?.auto_apply) continue
+          if (!d?.is_active || !d?.auto_apply) return false
           const expiresAt = udc.expires_at ? new Date(udc.expires_at) : null
-          if (expiresAt && expiresAt < new Date()) continue
+          if (expiresAt && expiresAt < new Date()) return false
           const discountValidUntil = d.valid_until ? new Date(d.valid_until) : null
-          if (!expiresAt && discountValidUntil && discountValidUntil < new Date()) continue
-          if (d.usage_limit && (d.usage_count ?? 0) >= d.usage_limit) continue
-          const userRedemptions = d.max_per_user
-            ? await countUserDiscountRedemptions({
-                supabase,
-                tenantId: tenantId!,
-                userId: userData.id,
-                code: udc.code,
-              })
-            : 0
-          let confirmedAppointmentCount: number | null = null
-          if (d.first_lesson_only) {
-            const { count } = await supabase
-              .from('appointments')
-              .select('id', { count: 'exact', head: true })
-              .eq('user_id', userData.id)
-              .eq('tenant_id', tenantId!)
-              .in('status', ['confirmed', 'completed'])
-            confirmedAppointmentCount = count ?? 0
-          }
-          const redeemedCount = d.usage_limit
-            ? await countDiscountRedemptions({
-                supabase,
-                tenantId: tenantId!,
-                code: udc.code,
-              })
-            : 0
-          const eligibility = evaluateCatalogDiscount({
-            discount: d,
-            amountRappen: totalAmountRappen,
-            channel: 'appointment',
-            categoryCode: body.category_code,
-            userRedemptions,
-            redeemedCount,
-            confirmedAppointmentCount,
-          })
-          if (!eligibility.allowed) continue
-          activeAutoCode = udc
-          break
-        }
+          if (!expiresAt && discountValidUntil && discountValidUntil < new Date()) return false
+          if (d.usage_limit && (d.usage_count ?? 0) >= d.usage_limit) return false
+          return true
+        })
 
         if (activeAutoCode) {
           const d = activeAutoCode.discounts
