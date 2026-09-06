@@ -7,10 +7,16 @@ import {
   canReleaseUnpaidHold,
   shouldConfirmHeldAppointmentFromPayments,
 } from '~/server/utils/pay-before-confirm'
-import { buildMerchantReference } from '~/utils/merchantReference'
 import { logger } from '~/utils/logger'
 import { buildWalleeTaxedLineItem, loadCheckoutVat, mergeVatIntoMetadata } from '~/server/utils/wallee-line-item'
 import { refundStudentCreditFromPayment, remainingDueRappen } from '~/server/utils/apply-student-credit'
+import { BOOKING_ERROR, bookingError } from '~/server/utils/booking-errors'
+import { appointmentMayConfirmFromPayment } from '~/server/utils/occupancy'
+import {
+  livePaymentCheckoutDeps,
+  paymentMerchantReference,
+  runPaymentCheckoutCreate,
+} from '~/server/utils/wallee-checkout-claim'
 
 export function checkoutAppUrl(): string {
   return (process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch').replace(/\/$/, '')
@@ -52,8 +58,11 @@ export async function createWalleeCheckoutForPayment(opts: {
   if (error || !payment) {
     throw createError({ statusCode: 404, statusMessage: 'Zahlung nicht gefunden' })
   }
+  if (payment.payment_status === 'completed' || payment.payment_status === 'authorized') {
+    throw bookingError(409, BOOKING_ERROR.PAYMENT_ALREADY_COMPLETED, 'Zahlung ist bereits abgeschlossen')
+  }
   if (payment.payment_status !== 'pending' && payment.payment_status !== 'processing') {
-    throw createError({ statusCode: 409, statusMessage: 'Zahlung kann nicht mehr gestartet werden' })
+    throw bookingError(409, BOOKING_ERROR.PAYMENT_ALREADY_COMPLETED, 'Zahlung kann nicht mehr gestartet werden')
   }
 
   const amountRappen = remainingDueRappen({
@@ -81,20 +90,6 @@ export async function createWalleeCheckoutForPayment(opts: {
     `${checkoutAppUrl()}/customer-dashboard?payment_failed=true`
   )
 
-  if (payment.wallee_transaction_id) {
-    const existingUrl = await resolveExistingPaymentPageUrl(config, spaceId, payment.wallee_transaction_id)
-    if (existingUrl) {
-      return { paymentUrl: existingUrl, transactionId: String(payment.wallee_transaction_id) }
-    }
-  }
-
-  const merchantReference = `payment-${payment.id} | ${buildMerchantReference({
-    staffName: opts.customerName,
-    startTime: opts.startTime || undefined,
-    durationMinutes: opts.durationMinutes || undefined,
-    appointmentId: opts.appointmentId || payment.appointment_id || undefined,
-  })}`.slice(0, 100)
-
   const vat = await loadCheckoutVat(supabase, opts.tenantId, amountRappen)
   await supabase
     .from('payments')
@@ -104,44 +99,56 @@ export async function createWalleeCheckoutForPayment(opts: {
     })
     .eq('id', payment.id)
 
-  const created = await transactionService.create(spaceId, {
-    lineItems: [{
-      ...buildWalleeTaxedLineItem({
-        name: payment.description || 'Termin',
-        amountIncludingTaxChf: amountRappen / 100,
-        vatRatePercent: vat.vatRate,
-      }),
-      type: Wallee.model.LineItemType.PRODUCT,
-    }],
-    currency: 'CHF',
-    autoConfirmationEnabled: true,
-    chargeRetryEnabled: false,
-    customersEmailAddress: opts.customerEmail,
-    customerId: `dt-${opts.tenantId}-${opts.customerId}`,
-    merchantReference,
-    successUrl,
-    failedUrl,
-  })
-
-  const transaction = (created as any)?.body || created
-  const transactionId = transaction?.id
-  if (!transactionId) {
-    throw createError({ statusCode: 502, statusMessage: 'Wallee-Transaktion konnte nicht erstellt werden' })
-  }
-
-  let paymentUrl: string | undefined =
-    transaction?.paymentPageUrl || transaction?.paymentPageEndpoint
-  if (!paymentUrl) {
-    paymentUrl = await resolveExistingPaymentPageUrl(config, spaceId, transactionId) || undefined
-  }
-  if (!paymentUrl || typeof paymentUrl !== 'string') {
-    paymentUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${transactionId}`
-  }
+  const result = await runPaymentCheckoutCreate(
+    { paymentId: payment.id, tenantId: opts.tenantId },
+    livePaymentCheckoutDeps(
+      async ({ merchantReference }) => {
+        const created = await transactionService.create(spaceId, {
+          lineItems: [{
+            ...buildWalleeTaxedLineItem({
+              name: payment.description || 'Termin',
+              amountIncludingTaxChf: amountRappen / 100,
+              vatRatePercent: vat.vatRate,
+            }),
+            type: Wallee.model.LineItemType.PRODUCT,
+          }],
+          currency: 'CHF',
+          autoConfirmationEnabled: true,
+          chargeRetryEnabled: false,
+          customersEmailAddress: opts.customerEmail,
+          customerId: `dt-${opts.tenantId}-${opts.customerId}`,
+          merchantReference: merchantReference || paymentMerchantReference(payment.id),
+          successUrl,
+          failedUrl,
+        })
+        const transaction = (created as any)?.body || created
+        if (!transaction?.id) {
+          throw createError({ statusCode: 502, statusMessage: 'Wallee-Transaktion konnte nicht erstellt werden' })
+        }
+        return {
+          id: String(transaction.id),
+          paymentPageUrl: transaction.paymentPageUrl || transaction.paymentPageEndpoint || null,
+          spaceId,
+        }
+      },
+      {
+        resolveUrl: (transactionId) => resolveExistingPaymentPageUrl(config, spaceId, transactionId),
+        loadAppointmentStatus: async (appointmentId, tenantId) => {
+          const { data } = await supabase
+            .from('appointments')
+            .select('status')
+            .eq('id', appointmentId)
+            .eq('tenant_id', tenantId)
+            .maybeSingle()
+          return data?.status || null
+        },
+      }
+    )
+  )
 
   await supabase
     .from('payments')
     .update({
-      wallee_transaction_id: String(transactionId),
       wallee_space_id: String(spaceId),
       payment_method: 'wallee',
       payment_provider: 'wallee',
@@ -149,20 +156,8 @@ export async function createWalleeCheckoutForPayment(opts: {
     })
     .eq('id', payment.id)
     .eq('tenant_id', opts.tenantId)
-    .in('payment_status', ['pending', 'processing'])
 
-  try {
-    await supabase.from('payment_wallee_transactions').insert({
-      payment_id: payment.id,
-      wallee_transaction_id: String(transactionId),
-      wallee_space_id: spaceId,
-      merchant_reference: merchantReference,
-    })
-  } catch (historyErr: any) {
-    logger.warn('⚠️ Transaction history save failed:', historyErr?.message)
-  }
-
-  return { paymentUrl, transactionId: String(transactionId) }
+  return { paymentUrl: result.paymentUrl, transactionId: result.transactionId }
 }
 
 async function resolveExistingPaymentPageUrl(
@@ -189,22 +184,22 @@ export async function confirmHeldAppointmentAfterPayment(opts: {
   const supabase = getSupabaseAdmin()
   const query = supabase
     .from('appointments')
-    .select('id, status, user_id, tenant_id')
+    .select('id, status, user_id, tenant_id, deleted_at')
     .eq('id', opts.appointmentId)
   if (opts.tenantId) query.eq('tenant_id', opts.tenantId)
 
   const { data: appointment } = await query.maybeSingle()
   if (!appointment) return false
-  if (!['pending', 'scheduled', 'confirmed'].includes(appointment.status)) return false
-
-  const nextStatus = opts.paymentStatus === 'completed' ? 'confirmed' : 'scheduled'
-  if (opts.paymentStatus === 'authorized' && appointment.status === 'confirmed') return false
+  if (!appointmentMayConfirmFromPayment(appointment)) {
+    return false
+  }
 
   const { error } = await supabase
     .from('appointments')
-    .update({ status: nextStatus, updated_at: new Date().toISOString() })
+    .update({ status: 'confirmed', updated_at: new Date().toISOString() })
     .eq('id', appointment.id)
-    .in('status', ['pending', 'scheduled', 'confirmed'])
+    .in('status', ['pending', 'scheduled'])
+    .is('deleted_at', null)
 
   if (error) {
     logger.warn('⚠️ Could not confirm held appointment after payment:', error.message)
@@ -253,7 +248,7 @@ export async function releaseUnpaidPendingAppointment(opts: {
 
   const { data: payments } = await supabase
     .from('payments')
-    .select('id, user_id, payment_status, credit_used_rappen, appointment_id, metadata, wallee_transaction_id, wallee_space_id, tenant_id')
+    .select('id, user_id, payment_status, credit_used_rappen, appointment_id, metadata, wallee_transaction_id, wallee_space_id, tenant_id, checkout_status')
     .eq('appointment_id', appointment.id)
 
   const related = payments || []
@@ -321,13 +316,10 @@ export async function releaseUnpaidPendingAppointment(opts: {
   }
 
   try {
-    await supabase
-      .from('vehicle_bookings')
-      .update({ status: 'cancelled' })
-      .eq('appointment_id', appointment.id)
-      .neq('status', 'cancelled')
-  } catch (vehicleErr: any) {
-    logger.warn('⚠️ Could not release vehicle booking after unpaid hold:', vehicleErr?.message)
+    const { cancelResourceBookingsForAppointment } = await import('~/server/utils/resource-bookings')
+    await cancelResourceBookingsForAppointment(supabase, appointment.id, appointment.tenant_id)
+  } catch (resourceErr: any) {
+    logger.warn('⚠️ Could not release vehicle/room bookings after unpaid hold:', resourceErr?.message)
   }
 
   await supabase

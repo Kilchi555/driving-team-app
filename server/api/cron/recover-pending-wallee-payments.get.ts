@@ -44,6 +44,26 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
+    let checkoutRecovered = 0
+    try {
+      const { data: recovering } = await supabase
+        .from('payments')
+        .select('id, tenant_id, checkout_status')
+        .eq('checkout_status', 'recovery_pending')
+        .is('wallee_transaction_id', null)
+        .limit(50)
+      const { recoverPaymentCheckout } = await import('~/server/utils/wallee-checkout-claim')
+      for (const payment of recovering || []) {
+        const result = await recoverPaymentCheckout({
+          paymentId: payment.id,
+          tenantId: payment.tenant_id,
+        })
+        if (result) checkoutRecovered++
+      }
+    } catch (phase0Err: any) {
+      logger.warn('⚠️ Checkout recovery_pending search failed:', phase0Err.message)
+    }
+
     let recovered = 0
     let failed = 0
     let errors: any[] = []
@@ -569,6 +589,7 @@ export default defineEventHandler(async (event) => {
         .eq('payment_status', 'pending')
         .eq('payment_method', 'wallee')
         .is('user_id', null)
+        .neq('checkout_status', 'recovery_pending')
         .lt('created_at', threeHoursAgo)
 
       logger.info(`🗑️ Phase 4: found ${abandonedPayments?.length ?? 0} abandoned checkout(s) (no user_id after 3h)`)
@@ -636,6 +657,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       message: 'Wallee payment recovery completed',
       summary: {
+        checkout_recovery_attached: checkoutRecovered,
         phase1_checked: pendingPayments?.length ?? 0,
         phase1_recovered: recovered,
         phase1_failed: failed,
