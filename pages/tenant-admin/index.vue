@@ -213,7 +213,11 @@ const loadStats = async () => {
 }
 
 const loadRecentTenants = async () => {
-  const { data } = await supabase.from('tenants').select('*').order('created_at', { ascending: false }).limit(8)
+  const { data } = await supabase
+    .from('tenants')
+    .select('id, name, slug, is_active, is_trial, website_only, website_hosting_plan, website_notes, subscription_plan, wallee_onboarding_status, created_at')
+    .order('created_at', { ascending: false })
+    .limit(8)
   recentTenants.value = data ?? []
 }
 
