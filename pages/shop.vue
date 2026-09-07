@@ -2328,7 +2328,7 @@ onMounted(async () => {
             // Lade den Tenant über die ID
             const { data: tenantData } = await supabase
               .from('tenants')
-              .select('*')
+              .select('id, name, slug, business_type, logo_url, primary_color, secondary_color, is_active')
               .eq('id', userProfile.tenant_id)
               .eq('is_active', true)
               .single()
