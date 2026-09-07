@@ -139,7 +139,7 @@ jobs:
           fi
 
           if [ "${enable_auto_merge}" != "true" ]; then
-            gh pr merge "${PR_NUMBER}" --repo "${{ github.repository }}" --disable || true
+            gh pr merge "${PR_NUMBER}" --repo "${{ github.repository }}" --disable-auto || true
             echo "auto-merge disabled (fail-closed)"
             exit 0
           fi
