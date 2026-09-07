@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   canReleaseUnpaidHold,
+  guestCheckoutHoldDecision,
   shouldConfirmHeldAppointmentFromPayments,
   shouldDeferConfirmationUntilPaid,
   shouldHoldAppointmentUntilPaid,
@@ -43,6 +44,54 @@ describe('shouldHoldAppointmentUntilPaid', () => {
       paymentMethod: 'wallee',
       amountRappen: 0,
     })).toBe(false)
+  })
+})
+
+describe('guestCheckoutHoldDecision (never remap resolved method)', () => {
+  const requirePayment = { requirePaymentBeforeConfirm: true, amountRappen: 18000 }
+
+  it('keeps cash as cash and does not start a Wallee hold', () => {
+    expect(guestCheckoutHoldDecision({
+      ...requirePayment,
+      resolvedPaymentMethod: 'cash',
+    })).toEqual({ holdUntilPaid: false, paymentMethod: 'cash' })
+  })
+
+  it('does not silently convert cash to Wallee after credit (remaining due still > 0)', () => {
+    const afterCredit = guestCheckoutHoldDecision({
+      resolvedPaymentMethod: 'cash',
+      requirePaymentBeforeConfirm: true,
+      amountRappen: 5000,
+    })
+    expect(afterCredit.paymentMethod).toBe('cash')
+    expect(afterCredit.holdUntilPaid).toBe(false)
+    const oldRemap = afterCredit.paymentMethod === 'invoice' ? 'invoice' : 'wallee'
+    expect(oldRemap).toBe('wallee')
+    expect(afterCredit.paymentMethod).not.toBe(oldRemap)
+  })
+
+  it('keeps Wallee as Wallee and holds when the flag is on', () => {
+    expect(guestCheckoutHoldDecision({
+      ...requirePayment,
+      resolvedPaymentMethod: 'wallee',
+    })).toEqual({ holdUntilPaid: true, paymentMethod: 'wallee' })
+  })
+
+  it('keeps invoice as invoice and confirms immediately', () => {
+    expect(guestCheckoutHoldDecision({
+      ...requirePayment,
+      resolvedPaymentMethod: 'invoice',
+    })).toEqual({ holdUntilPaid: false, paymentMethod: 'invoice' })
+  })
+
+  it('treats cash + pay-before-confirm as confirm-now, not an implicit Wallee checkout', () => {
+    const decision = guestCheckoutHoldDecision({
+      resolvedPaymentMethod: 'cash',
+      requirePaymentBeforeConfirm: true,
+      amountRappen: 18000,
+    })
+    expect(decision.holdUntilPaid).toBe(false)
+    expect(decision.paymentMethod).toBe('cash')
   })
 })
 

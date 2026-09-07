@@ -38,7 +38,7 @@ import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
-import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confirm'
+import { guestCheckoutHoldDecision } from '~/server/utils/pay-before-confirm'
 import { checkoutAppUrl, createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
 import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
@@ -655,16 +655,13 @@ export default defineEventHandler(async (event) => {
       resolved: paymentResolve.method,
     })
   }
-  let resolvedPaymentMethod = paymentResolve.method
-
-  let holdUntilPaid = shouldHoldAppointmentUntilPaid({
-    requirePaymentBeforeConfirm: policy.require_payment_before_confirm === true,
-    paymentMethod: resolvedPaymentMethod,
+  const resolvedPaymentMethod = paymentResolve.method
+  const requirePaymentBeforeConfirm = policy.require_payment_before_confirm === true
+  let holdUntilPaid = guestCheckoutHoldDecision({
+    resolvedPaymentMethod,
+    requirePaymentBeforeConfirm,
     amountRappen: netAmountRappen,
-  })
-  if (holdUntilPaid) {
-    resolvedPaymentMethod = 'wallee'
-  }
+  }).holdUntilPaid
 
   // ── Build appointment title ───────────────────────────────────────────────
   const studentName = `${body.first_name?.trim() || ''} ${body.last_name?.trim() || ''}`.trim()
@@ -853,11 +850,11 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  holdUntilPaid = shouldHoldAppointmentUntilPaid({
-    requirePaymentBeforeConfirm: policy.require_payment_before_confirm === true,
-    paymentMethod: resolvedPaymentMethod === 'invoice' ? 'invoice' : 'wallee',
+  holdUntilPaid = guestCheckoutHoldDecision({
+    resolvedPaymentMethod,
+    requirePaymentBeforeConfirm,
     amountRappen: remainingDue,
-  })
+  }).holdUntilPaid
   if (!holdUntilPaid && newAppointment.status === 'pending') {
     await supabase
       .from('appointments')

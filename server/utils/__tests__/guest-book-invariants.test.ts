@@ -5,6 +5,7 @@ import {
   guestSlotCategoryMismatchReason,
   invalidDrivingLessonBasePriceReason,
 } from '../guest-booking-price-rule'
+import { guestCheckoutHoldDecision } from '../pay-before-confirm'
 import {
   onlineBookingPaymentProvider,
   paymentPolicyFromTenantSettings,
@@ -29,6 +30,80 @@ describe('guest + auth booking invariants (blockers 1–3)', () => {
     expect(authSrc).toContain('loadOnlineBookingPaymentPolicy')
     expect(authSrc).toContain('resolveOnlineBookingPaymentMethod')
     expect(authSrc).not.toMatch(/resolvedPaymentMethod[^\n]*= 'cash'/)
+    expect(guestSrc).toContain('guestCheckoutHoldDecision')
+    expect(guestSrc).toContain('payment_method: resolvedPaymentMethod')
+    expect(guestSrc).not.toContain("resolvedPaymentMethod === 'invoice' ? 'invoice' : 'wallee'")
+    expect(guestSrc).not.toContain("resolvedPaymentMethod = 'wallee'")
+    expect(guestSrc).toMatch(/let holdUntilPaid = guestCheckoutHoldDecision\(/)
+    expect(guestSrc).toMatch(/holdUntilPaid = guestCheckoutHoldDecision\(/)
+  })
+
+  it('guest payment state machine never remaps a resolved method after credit', () => {
+    const cashPolicy = paymentPolicyFromTenantSettings({
+      settings: {
+        cash_payments_enabled: true,
+        cash_payment_visibility: 'customers_and_staff',
+        invoice_payments_enabled: true,
+        default_payment_method: 'wallee',
+      },
+      walleeEnabled: true,
+    })
+
+    const runGuestHoldPath = (requested: 'cash' | 'wallee' | 'invoice') => {
+      const paymentResolve = resolveOnlineBookingPaymentMethod({
+        requested,
+        policy: cashPolicy,
+      })
+      const requirePaymentBeforeConfirm = true
+      const first = guestCheckoutHoldDecision({
+        resolvedPaymentMethod: paymentResolve.method,
+        requirePaymentBeforeConfirm,
+        amountRappen: 18000,
+      })
+      const persisted = {
+        payment_method: paymentResolve.method,
+        payment_provider: onlineBookingPaymentProvider(paymentResolve.method),
+        appointment_status: first.holdUntilPaid ? 'pending' : 'confirmed',
+      }
+      const afterCredit = guestCheckoutHoldDecision({
+        resolvedPaymentMethod: paymentResolve.method,
+        requirePaymentBeforeConfirm,
+        amountRappen: 5000,
+      })
+      return {
+        resolved: paymentResolve.method,
+        persisted,
+        afterCredit,
+        startsWalleeCheckout: afterCredit.holdUntilPaid,
+      }
+    }
+
+    const cash = runGuestHoldPath('cash')
+    expect(cash.resolved).toBe('cash')
+    expect(cash.persisted).toEqual({
+      payment_method: 'cash',
+      payment_provider: null,
+      appointment_status: 'confirmed',
+    })
+    expect(cash.afterCredit).toEqual({ holdUntilPaid: false, paymentMethod: 'cash' })
+    expect(cash.startsWalleeCheckout).toBe(false)
+
+    const wallee = runGuestHoldPath('wallee')
+    expect(wallee.resolved).toBe('wallee')
+    expect(wallee.persisted.payment_method).toBe('wallee')
+    expect(wallee.persisted.payment_provider).toBe('wallee')
+    expect(wallee.afterCredit).toEqual({ holdUntilPaid: true, paymentMethod: 'wallee' })
+    expect(wallee.startsWalleeCheckout).toBe(true)
+
+    const invoice = runGuestHoldPath('invoice')
+    expect(invoice.resolved).toBe('invoice')
+    expect(invoice.persisted).toEqual({
+      payment_method: 'invoice',
+      payment_provider: null,
+      appointment_status: 'confirmed',
+    })
+    expect(invoice.afterCredit).toEqual({ holdUntilPaid: false, paymentMethod: 'invoice' })
+    expect(invoice.startsWalleeCheckout).toBe(false)
   })
 
   it('typical driving-school policy (Wallee on, cash staff-only) never defaults to cash', () => {

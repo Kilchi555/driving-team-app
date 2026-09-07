@@ -10,6 +10,28 @@ export function shouldHoldAppointmentUntilPaid(opts: {
   return (Number(opts.amountRappen) || 0) > 0
 }
 
+/**
+ * Hold-until-paid is a Wallee checkout rule. Cash/invoice stay cash/invoice —
+ * they confirm immediately. Never remap a resolved customer method to Wallee.
+ */
+export function guestCheckoutHoldDecision(opts: {
+  resolvedPaymentMethod: OnlineBookingPaymentMethod
+  requirePaymentBeforeConfirm: boolean
+  amountRappen: number
+}): {
+  holdUntilPaid: boolean
+  paymentMethod: OnlineBookingPaymentMethod
+} {
+  return {
+    paymentMethod: opts.resolvedPaymentMethod,
+    holdUntilPaid: shouldHoldAppointmentUntilPaid({
+      requirePaymentBeforeConfirm: opts.requirePaymentBeforeConfirm,
+      paymentMethod: opts.resolvedPaymentMethod,
+      amountRappen: opts.amountRappen,
+    }),
+  }
+}
+
 export const PAY_BEFORE_CONFIRM_HOLD_MINUTES = 10
 
 export function isPaidOrInFlightStatus(status: string | null | undefined): boolean {
