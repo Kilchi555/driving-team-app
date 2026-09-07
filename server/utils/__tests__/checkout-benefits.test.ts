@@ -94,3 +94,87 @@ describe('lockCheckoutBenefits', () => {
     })).resolves.toMatchObject({ ok: false, kind: 'gift_card' })
   })
 })
+
+type UpdateOp = {
+  table: string
+  payload: Record<string, unknown>
+  filters: Array<[string, unknown]>
+}
+
+function chainableUpdate(ops: UpdateOp[], table: string) {
+  return {
+    update(payload: Record<string, unknown>) {
+      const op: UpdateOp = { table, payload, filters: [] }
+      ops.push(op)
+      const obj = {
+        eq(col: string, val: unknown) {
+          op.filters.push([col, val])
+          return obj
+        },
+        then(resolve: (value: { error: null }) => unknown, reject?: (reason: unknown) => unknown) {
+          return Promise.resolve({ error: null }).then(resolve, reject)
+        },
+      }
+      return obj
+    },
+  }
+}
+
+describe('abortCheckoutAfterBenefitLockFail', () => {
+  it('cancels booking rows, fails the idempotency key, and releases the slot', async () => {
+    const { abortCheckoutAfterBenefitLockFail } = await import('../checkout-benefits')
+    const ops: UpdateOp[] = []
+    const supabase = {
+      from(table: string) {
+        return chainableUpdate(ops, table)
+      },
+    }
+
+    await abortCheckoutAfterBenefitLockFail({
+      supabase,
+      paymentId: 'pay-1',
+      appointmentId: 'appt-1',
+    })
+
+    const payments = ops.find(o => o.table === 'payments')
+    const appointments = ops.find(o => o.table === 'appointments')
+    const idempotency = ops.filter(o => o.table === 'booking_idempotency_keys')
+    const slots = ops.find(o => o.table === 'availability_slots')
+
+    expect(payments?.payload.payment_status).toBe('cancelled')
+    expect(payments?.filters).toContainEqual(['id', 'pay-1'])
+    expect(appointments?.payload.status).toBe('cancelled')
+    expect(appointments?.filters).toContainEqual(['id', 'appt-1'])
+
+    expect(idempotency.length).toBeGreaterThan(0)
+    expect(idempotency.every(o => o.payload.status === 'failed')).toBe(true)
+    expect(idempotency.every(o => o.payload.response_snapshot === null)).toBe(true)
+    expect(idempotency.some(o => o.filters.some(([col, val]) => col === 'appointment_id' && val === 'appt-1'))).toBe(true)
+    expect(idempotency.every(o => o.filters.some(([col, val]) => col === 'status' && val === 'completed'))).toBe(true)
+
+    expect(slots?.payload.is_available).toBe(true)
+    expect(slots?.payload.appointment_id).toBeNull()
+    expect(slots?.filters).toContainEqual(['appointment_id', 'appt-1'])
+  })
+
+  it('does not create a second appointment or payment while aborting', async () => {
+    const { abortCheckoutAfterBenefitLockFail } = await import('../checkout-benefits')
+    const ops: UpdateOp[] = []
+    const supabase = {
+      from(table: string) {
+        return chainableUpdate(ops, table)
+      },
+      insert: vi.fn(),
+    }
+
+    await abortCheckoutAfterBenefitLockFail({
+      supabase,
+      paymentId: 'pay-1',
+      appointmentId: 'appt-1',
+    })
+
+    expect(ops.every(o => o.table !== 'appointments' || o.payload.status === 'cancelled')).toBe(true)
+    expect(ops.every(o => o.table !== 'payments' || o.payload.payment_status === 'cancelled')).toBe(true)
+    expect(supabase.insert).not.toHaveBeenCalled()
+  })
+})

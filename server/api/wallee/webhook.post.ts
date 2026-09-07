@@ -7,21 +7,20 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig, assertWalleeReadSpace } from '~/server/utils/wallee-config'
 import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { normalizePhoneNumber } from '~/server/utils/sms'
-import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conversion'
 import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { syncPaymentRefundTotals } from '~/server/utils/wallee-refund'
 import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-product-purchase'
-import { internalSecretHeaders, isInternalSecretRequest } from '~/server/utils/require-staff-or-internal'
-import { classifyWalleeWebhookTimestamp, shouldShortCircuitWalleeWebhook } from '~/server/utils/wallee-webhook-replay'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
+import { incrementPaymentDiscountUsage } from '~/server/utils/resolve-appointment-discount'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -82,43 +81,6 @@ export default defineEventHandler(async (event) => {
     // Security is provided by verifying the transaction exists in the Wallee API (Layer 4 fallback).
     const rawBody = await readRawBody(event) || ''
     const body = JSON.parse(rawBody) as WalleeWebhookPayload
-
-    const timeClass = classifyWalleeWebhookTimestamp(body.timestamp)
-    let alreadyProcessedSameState = false
-    if (body.entityId && body.state) {
-      let dupQuery = supabase
-        .from('webhook_logs')
-        .select('id')
-        .eq('transaction_id', String(body.entityId))
-        .eq('wallee_state', String(body.state))
-        .eq('success', true)
-        .limit(1)
-      if (body.spaceId != null) {
-        dupQuery = dupQuery.eq('space_id', body.spaceId) as any
-      }
-      const { data: priorRows } = await dupQuery
-      alreadyProcessedSameState = !!(priorRows && priorRows.length)
-    }
-    const replay = shouldShortCircuitWalleeWebhook({
-      timeClass,
-      alreadyProcessedSameState,
-      isInternal: isInternalSecretRequest(event)
-    })
-    if (replay.skip) {
-      logger.info(`↩️ Wallee webhook ignored: ${replay.reason}`, {
-        entityId: body.entityId,
-        state: body.state,
-        timeClass
-      })
-      return { success: true, ignored: replay.reason }
-    }
-    if (timeClass === 'stale') {
-      logger.warn('⚠️ Wallee webhook timestamp is older than 15 minutes — processing anyway (first delivery of this state)', {
-        entityId: body.entityId,
-        state: body.state,
-        timestamp: body.timestamp
-      })
-    }
     
     // 🔍 DEBUG: Log the entire payload to understand structure
     logger.info('🔔 WEBHOOK PAYLOAD RECEIVED:', JSON.stringify(body, null, 2))
@@ -408,6 +370,7 @@ export default defineEventHandler(async (event) => {
                 total_amount_rappen,
                 metadata,
                 wallee_transaction_id,
+                wallee_space_id,
                 credit_used_rappen
               `)
               .eq('id', paymentId)
@@ -418,14 +381,33 @@ export default defineEventHandler(async (event) => {
               
               // Update wallee_transaction_id if not set
               if (!foundPayment.wallee_transaction_id) {
-                await supabase
+                const { error: attachError } = await supabase
                   .from('payments')
-                  .update({ 
+                  .update({
                     wallee_transaction_id: transactionId,
+                    checkout_status: 'created',
+                    checkout_merchant_reference: `payment-${paymentId}`,
                     updated_at: new Date().toISOString()
                   })
                   .eq('id', paymentId)
-                logger.debug('✅ Updated payment with wallee_transaction_id')
+                  .is('wallee_transaction_id', null)
+                if (attachError) {
+                  logger.warn('⚠️ Webhook could not attach wallee_transaction_id:', attachError.message)
+                } else {
+                  logger.debug('✅ Updated payment with wallee_transaction_id')
+                }
+              } else if (String(foundPayment.wallee_transaction_id) !== String(transactionId)) {
+                logger.error('🚨 Webhook transaction id differs from payment id — not overwriting', {
+                  paymentId,
+                  existing: foundPayment.wallee_transaction_id,
+                  webhook: transactionId,
+                })
+                await supabase.from('payment_wallee_transactions').insert({
+                  payment_id: paymentId,
+                  wallee_transaction_id: String(transactionId),
+                  wallee_space_id: spaceId || null,
+                  merchant_reference: merchantRef || null,
+                }).then(() => {}).catch(() => {})
               }
             }
           }
@@ -697,6 +679,12 @@ export default defineEventHandler(async (event) => {
           })
         } catch (giftErr: any) {
           logger.warn('⚠️ Gift-card consume (non-fatal):', giftErr?.message || giftErr)
+        }
+
+        try {
+          await incrementPaymentDiscountUsage({ supabase, payment })
+        } catch (discErr: any) {
+          logger.warn('⚠️ Discount usage increment (non-fatal):', discErr?.message || discErr)
         }
       }
     }
@@ -1202,48 +1190,6 @@ export default defineEventHandler(async (event) => {
                 }
               }
 
-              // Increment discount usage_count for any discount codes used
-              ;(async () => {
-                try {
-                  for (const payment of paymentsToUpdate) {
-                    const discountCode = payment.metadata?.discount_code
-                    const tenantIdForDiscount = payment.tenant_id
-                    if (!discountCode || !tenantIdForDiscount) continue
-                    if (payment.metadata?.discount_usage_claimed) continue
-                    // Escape LIKE wildcards — discountCode originates from payment metadata,
-                    // which is attacker-influenced (set from the original enrollment request).
-                    const escapedDiscountCode = escapeLikePattern(discountCode)
-
-                    const { data: disc } = await supabase
-                      .from('discounts')
-                      .select('id, usage_count')
-                      .ilike('code', escapedDiscountCode)
-                      .eq('tenant_id', tenantIdForDiscount)
-                      .maybeSingle()
-
-                    if (disc) {
-                      await supabase.from('discounts').update({ usage_count: (disc.usage_count ?? 0) + 1 }).eq('id', disc.id)
-                      logger.debug('📊 Discount usage_count incremented (webhook):', discountCode)
-                      continue
-                    }
-
-                    const { data: vc } = await supabase
-                      .from('voucher_codes')
-                      .select('id, current_redemptions')
-                      .ilike('code', escapedDiscountCode)
-                      .eq('tenant_id', tenantIdForDiscount)
-                      .maybeSingle()
-
-                    if (vc) {
-                      await supabase.from('voucher_codes').update({ current_redemptions: (vc.current_redemptions ?? 0) + 1 }).eq('id', vc.id)
-                      logger.debug('📊 Voucher current_redemptions incremented (webhook):', discountCode)
-                    }
-                  }
-                } catch (e: any) {
-                  logger.warn('⚠️ Discount usage increment failed (non-critical):', e.message)
-                }
-              })()
-              
               // ✅ NEW: Update payments with user_id and course_registration_id
               for (let i = 0; i < registrationsToCreate.length && i < newRegs.length; i++) {
                 const registration = newRegs[i]
@@ -1519,31 +1465,48 @@ export default defineEventHandler(async (event) => {
       if (appointmentIds.length > 0) {
         const { data: priorAppointments } = await supabase
           .from('appointments')
-          .select('id, status, user_id, tenant_id')
+          .select('id, status, user_id, tenant_id, deleted_at')
           .in('id', appointmentIds)
 
-        const appointmentStatus = paymentStatus === 'completed' ? 'confirmed' : 'scheduled'
-        
-        const updateQuery = supabase
-          .from('appointments')
-          .update({
-            status: appointmentStatus,
-            updated_at: new Date().toISOString()
-          })
-          .in('id', appointmentIds)
-          .in('status', ['pending', 'scheduled', 'confirmed'])
-        
-        // Don't downgrade a 'confirmed' appointment back to 'scheduled' on AUTHORIZED state
-        if (paymentStatus === 'authorized') {
-          updateQuery.not('status', 'eq', 'confirmed')
+        const confirmableIds: string[] = []
+        for (const appt of priorAppointments || []) {
+          const cancelled = appt.status === 'cancelled' || appt.status === 'deleted' || appt.deleted_at
+          if (cancelled) {
+            await supabase.from('audit_logs').insert({
+              tenant_id: appt.tenant_id,
+              user_id: appt.user_id,
+              action: 'PAYMENT_ORPHANED',
+              resource_type: 'appointment',
+              resource_id: appt.id,
+              status: 'success',
+              metadata: { reason: 'appointment_cancelled_or_deleted', payment_status: paymentStatus },
+            }).then().catch(() => {})
+            logger.warn('PAYMENT_ORPHANED', {
+              tenant: appt.tenant_id,
+              appointment: appt.id,
+              domain: 'PAYMENT_ORPHANED',
+            })
+            continue
+          }
+          if (appt.status === 'pending' || appt.status === 'scheduled') confirmableIds.push(appt.id)
         }
-        
-        const { error: appointmentError } = await updateQuery
-        
-        if (appointmentError) {
-          logger.warn('⚠️ Error updating appointments:', appointmentError)
-        } else {
-          logger.info(`✅ Updated ${appointmentIds.length} appointment(s) to: ${appointmentStatus}`)
+
+        if (confirmableIds.length > 0) {
+          const { error: appointmentError } = await supabase
+            .from('appointments')
+            .update({
+              status: 'confirmed',
+              updated_at: new Date().toISOString()
+            })
+            .in('id', confirmableIds)
+            .in('status', ['pending', 'scheduled'])
+            .is('deleted_at', null)
+
+          if (appointmentError) {
+            logger.warn('⚠️ Error updating appointments:', appointmentError)
+          } else {
+            logger.info(`✅ Updated ${confirmableIds.length} appointment(s) to: confirmed`)
+          }
         }
 
         if (paymentStatus === 'completed') {
@@ -1906,10 +1869,11 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
       )
     }
 
-    const config = getWalleeSDKConfig(walleeCredentials.spaceId, walleeCredentials.userId, walleeCredentials.apiSecret)
-    
+    const readSpaceId = assertWalleeReadSpace(spaceId, walleeCredentials, `webhook txn ${transactionId}`)
+    const config = getWalleeSDKConfig(readSpaceId, walleeCredentials.userId, walleeCredentials.apiSecret)
+
     transactionService = new WalleeSDK.api.TransactionService(config)
-    const response = await transactionService.read(walleeCredentials.spaceId, parseInt(transactionId))
+    const response = await transactionService.read(readSpaceId, parseInt(transactionId))
     return response.body
   } catch (error: any) {
     logger.warn('⚠️ Could not fetch Wallee transaction:', error.message)

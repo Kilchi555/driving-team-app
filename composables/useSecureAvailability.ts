@@ -23,6 +23,7 @@
 
 import { ref } from 'vue'
 import { logger } from '~/utils/logger'
+import { getOrCreateBookingIdempotencyKey } from '~/utils/booking-idempotency'
 
 interface AvailableSlot {
   id: string
@@ -44,8 +45,12 @@ interface FetchSlotsOptions {
   end_date: string // YYYY-MM-DD
   duration_minutes?: number
   category_code?: string
-  /** Option key from vehicle settings — server resolves capacity policy from stored settings */
+  /** Option key from vehicle settings — passed for logging/filtering */
   vehicle_mode?: string | null
+  /** When true, this option uses a school vehicle */
+  requires_school_vehicle?: boolean
+  /** When true, an empty school-vehicle fleet hides slots */
+  enforce_capacity?: boolean
   /** Booking service type (fahrstunde/theorie/beratung) — resolves the admin-configured
    *  room rule; slots are filtered out when required and no room is free. */
   service_type?: 'fahrstunde' | 'theorie' | 'beratung' | null
@@ -79,6 +84,7 @@ interface CreateAppointmentOptions {
   payment_method?: 'wallee' | 'invoice'
   /** Default true. When false, wallet credit is left unused. */
   apply_available_credit?: boolean
+  idempotency_key?: string
   /** Decoded marketing attribution blob — used for server-side Google Ads conversion. */
   marketing_attribution?: {
     gclid?: string | null
@@ -117,6 +123,8 @@ export const useSecureAvailability = () => {
       if (options.duration_minutes) params.append('duration_minutes', options.duration_minutes.toString())
       if (options.category_code) params.append('category_code', options.category_code)
       if (options.vehicle_mode) params.append('vehicle_mode', options.vehicle_mode)
+      if (options.requires_school_vehicle) params.append('requires_school_vehicle', '1')
+      if (options.enforce_capacity) params.append('enforce_capacity', '1')
       if (options.service_type) params.append('service_type', options.service_type)
 
       const response = await $fetch<{ success: boolean; slots: AvailableSlot[]; count: number }>(
@@ -204,6 +212,7 @@ export const useSecureAvailability = () => {
           marketing_attribution: options.marketing_attribution,
           payment_method: options.payment_method,
           apply_available_credit: options.apply_available_credit !== false,
+          idempotency_key: options.idempotency_key || getOrCreateBookingIdempotencyKey(options.slot_id),
         }
       })
 

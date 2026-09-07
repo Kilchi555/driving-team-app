@@ -10,6 +10,28 @@ export function shouldHoldAppointmentUntilPaid(opts: {
   return (Number(opts.amountRappen) || 0) > 0
 }
 
+/**
+ * Hold-until-paid is a Wallee checkout rule. Cash/invoice stay cash/invoice —
+ * they confirm immediately. Never remap a resolved customer method to Wallee.
+ */
+export function guestCheckoutHoldDecision(opts: {
+  resolvedPaymentMethod: OnlineBookingPaymentMethod
+  requirePaymentBeforeConfirm: boolean
+  amountRappen: number
+}): {
+  holdUntilPaid: boolean
+  paymentMethod: OnlineBookingPaymentMethod
+} {
+  return {
+    paymentMethod: opts.resolvedPaymentMethod,
+    holdUntilPaid: shouldHoldAppointmentUntilPaid({
+      requirePaymentBeforeConfirm: opts.requirePaymentBeforeConfirm,
+      paymentMethod: opts.resolvedPaymentMethod,
+      amountRappen: opts.amountRappen,
+    }),
+  }
+}
+
 export const PAY_BEFORE_CONFIRM_HOLD_MINUTES = 10
 
 export function isPaidOrInFlightStatus(status: string | null | undefined): boolean {
@@ -22,11 +44,23 @@ export function isPayBeforeConfirmHold(payment: { metadata?: any } | null | unde
 
 /** Only our unpaid checkout holds may be auto-cancelled — never staff/pending leftovers. */
 export function canReleaseUnpaidHold(
-  payments: Array<{ payment_status?: string | null; metadata?: any }>
+  payments: Array<{
+    payment_status?: string | null
+    metadata?: any
+    checkout_status?: string | null
+    wallee_transaction_id?: string | null
+  }>
 ): boolean {
   if (!payments.length) return false
   if (!payments.some(isPayBeforeConfirmHold)) return false
   if (payments.some(p => isPaidOrInFlightStatus(p.payment_status))) return false
+  if (payments.some(p =>
+    p.wallee_transaction_id
+    || p.checkout_status === 'creating'
+    || p.checkout_status === 'recovery_pending'
+  )) {
+    return false
+  }
   return true
 }
 
@@ -37,4 +71,14 @@ export function shouldConfirmHeldAppointmentFromPayments(
   if (holdPayments.some(p => p.payment_status === 'completed')) return 'completed'
   if (holdPayments.some(p => p.payment_status === 'authorized')) return 'authorized'
   return null
+}
+
+/** Unpaid checkout holds must not get a confirmation email/SMS/push. */
+export function shouldDeferConfirmationUntilPaid(
+  appointmentStatus: string | null | undefined,
+  payments: Array<{ payment_status?: string | null; metadata?: any }>
+): boolean {
+  if (appointmentStatus !== 'pending') return false
+  if (!payments.some(isPayBeforeConfirmHold)) return false
+  return shouldConfirmHeldAppointmentFromPayments(payments) === null
 }

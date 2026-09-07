@@ -130,35 +130,57 @@ export default defineEventHandler(async (event) => {
 
     if (updateError) throw updateError
 
-    // 7. Create Wallee transaction via internal API call
-    const walleeResponse = await $fetch('/api/wallee/create-anonymous-transaction', {
-      method: 'POST',
-      body: {
-        amount: totalAmountRappen,
-        currency: 'CHF',
-        customer_name: sale.metadata?.customer_name || 'Anonymer Kunde',
-        customer_email: sale.metadata?.customer_email || null,
-        sale_id: sale_id,
-        items: validatedItems.map(i => ({
-          name: productMap.get(i.product_id)?.name || 'Produkt',
-          quantity: i.quantity,
-          price_rappen: i.price_rappen
-        }))
-      }
-    }) as any
+    const { data: existingPayment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('tenant_id', sale.tenant_id)
+      .contains('metadata', { product_sale_id: sale_id })
+      .in('payment_status', ['pending', 'processing'])
+      .maybeSingle()
 
-    if (!walleeResponse?.success || !walleeResponse?.payment_url) {
-      throw createError({
-        statusCode: 502,
-        statusMessage: walleeResponse?.error || 'Payment gateway error'
-      })
+    let paymentId = existingPayment?.id
+    if (!paymentId) {
+      const { data: payment, error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          user_id: null,
+          tenant_id: sale.tenant_id,
+          total_amount_rappen: totalAmountRappen,
+          payment_method: 'wallee',
+          payment_status: 'pending',
+          currency: 'CHF',
+          description: 'Anonymer Verkauf',
+          metadata: {
+            source: 'anonymous_sale',
+            product_sale_id: sale_id,
+          },
+        })
+        .select('id')
+        .single()
+      if (paymentError || !payment) {
+        throw createError({ statusCode: 500, statusMessage: 'Zahlung konnte nicht erstellt werden' })
+      }
+      paymentId = payment.id
     }
+
+    const { checkoutAppUrl, createWalleeCheckoutForPayment } = await import('~/server/utils/wallee-appointment-checkout')
+    const customerEmail = sale.metadata?.customer_email || `sale-${sale_id}@pay.simy.ch`
+    const customerName = sale.metadata?.customer_name || 'Kunde'
+    const checkout = await createWalleeCheckoutForPayment({
+      paymentId,
+      tenantId: sale.tenant_id,
+      customerEmail,
+      customerName,
+      customerId: sale_id,
+      successUrl: `${checkoutAppUrl()}/anonymous-sale/${sale_id}?paid=1`,
+      failedUrl: `${checkoutAppUrl()}/anonymous-sale/${sale_id}?failed=1`,
+    })
 
     logger.info(`✅ Anonymous sale checkout: sale=${sale_id}, total=${totalAmountRappen} Rappen, items=${validatedItems.length}`)
 
     return {
       success: true,
-      payment_url: walleeResponse.payment_url,
+      payment_url: checkout.paymentUrl,
       total_amount_rappen: totalAmountRappen
     }
 

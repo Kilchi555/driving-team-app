@@ -17,7 +17,7 @@ export default defineEventHandler((event) => {
       "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://app-wallee.com https://connect.facebook.net https://js.stripe.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: https: blob:",
-      "connect-src 'self' https://unyjaetebnaexaflpyoc.supabase.co https://maps.googleapis.com https://api.resend.com https://app-wallee.com wss://unyjaetebnaexaflpyoc.supabase.co https://www.facebook.com https://connect.facebook.net https://api.stripe.com",
+      "connect-src 'self' https://unyjaetebnaexaflpyoc.supabase.co https://kssqalisscxkhvorqwgy.supabase.co https://maps.googleapis.com https://api.resend.com https://app-wallee.com wss://unyjaetebnaexaflpyoc.supabase.co wss://kssqalisscxkhvorqwgy.supabase.co https://www.facebook.com https://connect.facebook.net https://api.stripe.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       "frame-src 'self' https://app-wallee.com https://*.google.com https://*.google.ch https://www.openstreetmap.org https://js.stripe.com https://hooks.stripe.com",
       "frame-ancestors 'self' https://drivingteam.ch https://www.drivingteam.ch",

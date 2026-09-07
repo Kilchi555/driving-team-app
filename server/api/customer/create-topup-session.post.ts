@@ -5,9 +5,8 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
-import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { logger } from '~/utils/logger'
-import { Wallee } from 'wallee'
+import { loadCheckoutVat } from '~/server/utils/wallee-line-item'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -37,6 +36,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const amountChf = amountRappen / 100
+    const checkoutVat = await loadCheckoutVat(supabase, userProfile.tenant_id, amountRappen)
 
     // ── Create payment record (for webhook tracking) ──────
     const { data: paymentRecord, error: paymentError } = await supabase
@@ -51,7 +51,12 @@ export default defineEventHandler(async (event) => {
         currency: 'CHF',
         description: `Guthaben aufladen – ${userProfile.first_name} ${userProfile.last_name}`.trim(),
         payment_provider: 'wallee',
-        metadata: JSON.stringify({ is_topup: true, topup_amount_rappen: amountRappen })
+        metadata: JSON.stringify({
+          is_topup: true,
+          topup_amount_rappen: amountRappen,
+          vat_rate: checkoutVat.vatRate,
+          vat_amount_rappen: checkoutVat.vatAmountRappen,
+        })
       })
       .select('id')
       .single()
@@ -61,14 +66,6 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'Fehler beim Erstellen der Zahlung' })
     }
 
-    // ── Create Wallee transaction ──────────────────────────
-    const walleeConfig = await getWalleeConfigForTenant(userProfile.tenant_id)
-    const spaceId = walleeConfig.spaceId
-    const config = getWalleeSDKConfig(spaceId, walleeConfig.userId, walleeConfig.apiSecret)
-    const transactionService = new Wallee.api.TransactionService(config)
-    const paymentService = new Wallee.api.TransactionPaymentPageService(config)
-
-    // Derive base URL from request headers (works on any deployment)
     const forwardedHost = getHeader(event, 'x-forwarded-host')
     const host = forwardedHost || getHeader(event, 'host') || 'simy.ch'
     const proto = getHeader(event, 'x-forwarded-proto') || 'https'
@@ -76,56 +73,22 @@ export default defineEventHandler(async (event) => {
       ? `https://${process.env.NUXT_PUBLIC_APP_URL}`
       : `${proto}://${host}`
 
-    const transactionCreate: Wallee.model.TransactionCreate = {
-      lineItems: [
-        {
-          name: 'Guthaben aufladen',
-          quantity: 1,
-          amountIncludingTax: amountChf,
-          type: Wallee.model.LineItemType.PRODUCT,
-          uniqueId: 'topup-1',
-          taxRate: 0
-        }
-      ],
-      spaceViewId: null,
-      currency: 'CHF',
-      autoConfirmationEnabled: true,
-      chargeRetryEnabled: false,
-      customersEmailAddress: userProfile.email,
-      customerId: `dt-${userProfile.tenant_id}-${userProfile.id}`,
-      shippingAddress: null,
-      billingAddress: null,
-      deviceSessionIdentifier: null,
-      merchantReference: `topup-${paymentRecord.id} | ${userProfile.first_name} ${userProfile.last_name}`,
+    const { createWalleeCheckoutForPayment } = await import('~/server/utils/wallee-appointment-checkout')
+    const checkout = await createWalleeCheckoutForPayment({
+      paymentId: paymentRecord.id,
+      tenantId: userProfile.tenant_id,
+      customerEmail: userProfile.email,
+      customerName: `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() || 'Kunde',
+      customerId: userProfile.id,
       successUrl: `${baseUrl}/customer/payments?topup_success=1`,
-      failedUrl: `${baseUrl}/customer/payments?topup_failed=1`
-    }
+      failedUrl: `${baseUrl}/customer/payments?topup_failed=1`,
+    })
 
-    const createdTransaction = await transactionService.create(spaceId, transactionCreate)
-    const transactionId = (createdTransaction as any)?.body?.id || (createdTransaction as any)?.id
-    if (!transactionId) {
-      await supabase.from('payments').delete().eq('id', paymentRecord.id)
-      throw createError({ statusCode: 500, statusMessage: 'Wallee-Transaktion konnte nicht erstellt werden' })
-    }
-
-    // ── Store wallee transaction ID on payment record ─────
-    await supabase
-      .from('payments')
-      .update({ wallee_transaction_id: String(transactionId) })
-      .eq('id', paymentRecord.id)
-
-    const urlResponse = await paymentService.paymentPageUrl(spaceId, transactionId)
-    let paymentUrl: string = (urlResponse as any)?.body || urlResponse
-
-    if (!paymentUrl || typeof paymentUrl !== 'string') {
-      paymentUrl = `https://app-wallee.com/payment/transaction/pay?spaceId=${spaceId}&transactionId=${transactionId}`
-    }
-
-    logger.debug('✅ Topup session created:', { userId: userProfile.id, amountChf, transactionId, paymentUrl: paymentUrl?.substring(0, 80) })
+    logger.debug('✅ Topup session created:', { userId: userProfile.id, amountChf, transactionId: checkout.transactionId })
 
     return {
       success: true,
-      paymentUrl,
+      paymentUrl: checkout.paymentUrl,
       paymentId: paymentRecord.id
     }
 

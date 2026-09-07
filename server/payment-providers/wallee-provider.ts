@@ -11,7 +11,6 @@ import type {
   RefundResponse,
   PaymentProviderConfig
 } from './types'
-import { buildMerchantReference } from '~/utils/merchantReference'
 import { getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { logger } from '~/utils/logger'
 
@@ -40,86 +39,57 @@ export class WalleeProvider implements IPaymentProvider {
     try {
       logger.debug('🔄 [Wallee] Creating transaction...', { orderId: request.orderId })
 
-      // SDK Konfiguration
+      const paymentId = request.orderId
+      const tenantId = request.tenantId
+      if (!paymentId || !tenantId) {
+        throw new Error('WalleeProvider.createTransaction requires orderId and tenantId as payment/tenant ids')
+      }
+
       const sdkConfig = getWalleeSDKConfig(this.spaceId, this.userId, this.apiSecret)
       const transactionService = new Wallee.api.TransactionService(sdkConfig)
-
-      // Merchant Reference erstellen
-      const merchantReference = buildMerchantReference({
-        appointmentId: request.appointmentId,
-        orderId: request.orderId,
-        type: request.appointmentId ? 'LESSON' : 'PRODUCT',
-        category: 'B', // Default, kann erweitert werden
-        customerName: request.customerName,
-        date: new Date().toISOString().split('T')[0].replace(/-/g, ''),
-        timeSlot: new Date().toTimeString().substring(0, 5).replace(':', ''),
-        duration: '45MIN' // Default
-      })
-
-      // Transaction erstellen
-      const transaction: Wallee.model.TransactionCreate = {
-        currency: request.currency,
-        lineItems: request.lineItems || [
-          {
-            uniqueId: request.appointmentId ? `appointment-${request.appointmentId}` : `order-${request.orderId}`,
-            name: request.description || 'Zahlung',
-            quantity: 1,
-            amountIncludingTax: request.amount,
-            type: Wallee.model.LineItemType.PRODUCT
-          }
-        ],
-        autoConfirmationEnabled: true,
-        chargeRetryEnabled: false,
-        customerId: request.userId,
-        // ✅ Don't set tokenizationMode - let Wallee decide per payment method
-        merchantReference: merchantReference,
-        metaData: {
-          ...request.metadata,
-          tenant_id: request.tenantId,
-          user_id: request.userId,
-          order_id: request.orderId,
-          appointment_id: request.appointmentId
-        },
-        successUrl: request.successUrl,
-        failedUrl: request.failedUrl
-      }
-
-      // Transaktion erstellen
-      const response = await transactionService.create(this.spaceId, transaction)
-      const transactionCreate = response.body
-
-      // Payment Page URL generieren
-      const paymentPageService = new Wallee.api.TransactionPaymentPageService(sdkConfig)
-      const paymentPageResponse = await paymentPageService.paymentPageUrl(
-        this.spaceId,
-        transactionCreate.id as number
+      const { livePaymentCheckoutDeps, runPaymentCheckoutCreate } = await import('~/server/utils/wallee-checkout-claim')
+      const checkout = await runPaymentCheckoutCreate(
+        { paymentId, tenantId },
+        livePaymentCheckoutDeps(async ({ merchantReference }) => {
+          const response = await transactionService.create(this.spaceId, {
+            currency: request.currency,
+            lineItems: request.lineItems || [
+              {
+                uniqueId: request.appointmentId ? `appointment-${request.appointmentId}` : `order-${request.orderId}`,
+                name: request.description || 'Zahlung',
+                quantity: 1,
+                amountIncludingTax: request.amount,
+                type: Wallee.model.LineItemType.PRODUCT
+              }
+            ],
+            autoConfirmationEnabled: true,
+            chargeRetryEnabled: false,
+            customerId: request.userId,
+            merchantReference,
+            metaData: {
+              ...request.metadata,
+              tenant_id: request.tenantId,
+              user_id: request.userId,
+              order_id: request.orderId,
+              appointment_id: request.appointmentId
+            },
+            successUrl: request.successUrl,
+            failedUrl: request.failedUrl
+          })
+          const created = response.body
+          if (!created?.id) throw new Error('Wallee transaction create returned no id')
+          return { id: String(created.id), spaceId: this.spaceId }
+        })
       )
-      const paymentPageUrl = paymentPageResponse.body
-
-      logger.debug('✅ [Wallee] Transaction created:', {
-        id: transactionCreate.id,
-        state: transactionCreate.state
-      })
-
       return {
         success: true,
-        transactionId: String(transactionCreate.id),
-        paymentUrl: paymentPageUrl,
+        transactionId: checkout.transactionId,
+        paymentUrl: checkout.paymentUrl,
         provider: 'wallee',
-        metadata: {
-          state: transactionCreate.state,
-          merchantReference: merchantReference
-        }
       }
     } catch (error: any) {
-      console.error('❌ [Wallee] Transaction creation failed:', error)
-      return {
-        success: false,
-        transactionId: '',
-        paymentUrl: '',
-        provider: 'wallee',
-        error: error.message || 'Unknown Wallee error'
-      }
+      logger.error('❌ [Wallee] createTransaction failed:', error?.message)
+      throw error
     }
   }
 

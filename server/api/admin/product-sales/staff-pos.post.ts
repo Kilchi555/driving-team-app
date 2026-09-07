@@ -9,6 +9,8 @@ import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wal
 import { Wallee } from 'wallee'
 import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-product-purchase'
+import { buildWalleeTaxedLineItem, loadCheckoutVat } from '~/server/utils/wallee-line-item'
 
 interface POSItem {
   product_id: string
@@ -38,23 +40,45 @@ export default defineEventHandler(async (event) => {
   if (!items || items.length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'Keine Produkte ausgewählt' })
   }
+  if (!['cash', 'invoice', 'online'].includes(payment_method)) {
+    throw createError({ statusCode: 400, statusMessage: 'Ungültige Zahlungsart' })
+  }
 
-  if (payment_method === 'online' && !customer_email) {
-    throw createError({ statusCode: 400, statusMessage: 'E-Mail-Adresse erforderlich für Online-Zahlung' })
+  const pricedItems = items
+
+  let resolvedUserId: string | null = null
+  let resolvedCustomerName = customer_name || ''
+  let resolvedCustomerEmail = customer_email || ''
+
+  if (user_id) {
+    const { data: customer, error: customerError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, tenant_id')
+      .eq('id', user_id)
+      .eq('tenant_id', profile.tenant_id)
+      .maybeSingle()
+
+    if (customerError || !customer) {
+      throw createError({ statusCode: 400, statusMessage: 'Kunde wurde nicht gefunden' })
+    }
+
+    resolvedUserId = customer.id
+    resolvedCustomerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || customer_name || ''
+    resolvedCustomerEmail = customer.email || customer_email || ''
   }
 
   const initialStatus = payment_method === 'cash' ? 'completed' : 'pending'
 
   // 1. Create product_sale record
   const notesText = [
-    customer_name ? `Kunde: ${customer_name}` : null,
+    resolvedUserId ? null : (resolvedCustomerName ? `Passant: ${resolvedCustomerName}` : 'Passant'),
     notes || null
   ].filter(Boolean).join(' | ') || null
 
   const { data: sale, error: saleError } = await supabase
     .from('product_sales')
     .insert({
-      user_id: user_id || null,
+      user_id: resolvedUserId,
       staff_id: profile.id,
       tenant_id: profile.tenant_id,
       total_amount_rappen,
@@ -71,7 +95,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 2. Insert product_sale_items
-  const saleItems = items.map(item => ({
+  const saleItems = pricedItems.map(item => ({
     product_sale_id: sale.id,
     product_id: item.product_id,
     quantity: item.quantity,
@@ -90,14 +114,56 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Produkte konnten nicht gespeichert werden' })
   }
 
-  // 3. For cash/invoice: we're done
+  // 3. For cash: apply Abo/Guthaben immediately when linked to a customer
   if (payment_method !== 'online') {
-    logger.info(`✅ Staff POS sale created (${payment_method}): sale=${sale.id}, total=${total_amount_rappen} Rappen`)
-    return { success: true, sale_id: sale.id, status: initialStatus }
+    let creditWarning: string | undefined
+    let creditAppliedRappen = 0
+
+    if (payment_method === 'cash' && resolvedUserId) {
+      const creditResult = await applyCreditProductsForCompletedSale({
+        supabase,
+        userId: resolvedUserId,
+        tenantId: profile.tenant_id,
+        saleId: sale.id,
+        items: pricedItems.map(item => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          product_name: item.product_name
+        }))
+      })
+      creditAppliedRappen = creditResult.applied_rappen
+      if (creditResult.warnings.length > 0) {
+        creditWarning = creditResult.warnings.join(' ')
+      }
+    }
+
+    logger.info(`✅ Staff POS sale created (${payment_method}): sale=${sale.id}, user=${resolvedUserId || 'walk-in'}, total=${total_amount_rappen} Rappen`)
+    return {
+      success: true,
+      sale_id: sale.id,
+      status: initialStatus,
+      credit_applied_rappen: creditAppliedRappen,
+      warning: creditWarning
+    }
   }
 
-  // 4. Online: Create Wallee transaction
+  // 4. Online: Create Wallee transaction on product_sales (not payments).
+  // Out of the payment-row exactly-once invariant. Reuse an existing sale TX;
+  // do not silently create a second one for the same sale.
   let paymentUrl: string | null = null
+
+  if ((sale as any).wallee_transaction_id) {
+    logger.info('♻️ Staff POS sale already has a Wallee transaction — not creating another', {
+      saleId: sale.id,
+      transactionId: (sale as any).wallee_transaction_id,
+    })
+    return {
+      success: true,
+      sale_id: sale.id,
+      payment_url: `https://app-wallee.com/payment/transaction/pay?transactionId=${(sale as any).wallee_transaction_id}`,
+      reused: true,
+    }
+  }
 
   try {
     const walleeConfig = await getWalleeConfigForTenant(profile.tenant_id)
@@ -106,17 +172,19 @@ export default defineEventHandler(async (event) => {
     const transactionService = new Wallee.api.TransactionService(sdkConfig)
     const paymentPageService = new Wallee.api.TransactionPaymentPageService(sdkConfig)
 
-    const amountCHF = total_amount_rappen / 100
-    const resolvedCustomerName = customer_name || 'Kunde'
+    const displayCustomerName = resolvedCustomerName || 'Kunde'
     const toAscii = (s: string) => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '').trim()
 
-    const lineItems = items.map((item, idx) => ({
-      name: toAscii(item.product_name).substring(0, 100),
-      quantity: item.quantity,
-      amountIncludingTax: item.total_price_rappen / 100,
+    const checkoutVat = await loadCheckoutVat(supabase, profile.tenant_id, total_amount_rappen)
+    const lineItems = pricedItems.map((item, idx) => ({
+      ...buildWalleeTaxedLineItem({
+        name: toAscii(item.product_name).substring(0, 100),
+        amountIncludingTaxChf: item.total_price_rappen / 100,
+        vatRatePercent: checkoutVat.vatRate,
+        uniqueId: `item-${idx + 1}`,
+        quantity: item.quantity,
+      }),
       type: Wallee.model.LineItemType.PRODUCT,
-      uniqueId: `item-${idx + 1}`,
-      taxRate: 0
     }))
 
     const baseUrl = (process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch').replace(/\/$/, '')
@@ -126,11 +194,16 @@ export default defineEventHandler(async (event) => {
       currency: 'CHF',
       autoConfirmationEnabled: true,
       chargeRetryEnabled: false,
-      customersEmailAddress: customer_email!,
-      customerId: `pos-${profile.tenant_id}-${customer_email!.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}`.substring(0, 100),
-      merchantReference: `pos-${sale.id} | ${toAscii(resolvedCustomerName)}`.substring(0, 100),
+      customerId: (resolvedUserId
+        ? `pos-${profile.tenant_id}-${resolvedUserId}`
+        : `pos-${profile.tenant_id}-${sale.id}`
+      ).substring(0, 100),
+      merchantReference: `pos-${sale.id} | ${toAscii(displayCustomerName)}`.substring(0, 100),
       successUrl: `${baseUrl}/payment/success?payment_id=${sale.id}`,
       failedUrl: `${baseUrl}/payment/failed?payment_id=${sale.id}`
+    }
+    if (resolvedCustomerEmail) {
+      transactionCreate.customersEmailAddress = resolvedCustomerEmail
     }
 
     let createdTransaction: any
@@ -169,7 +242,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 5. Send payment email
-  if (paymentUrl && customer_email) {
+  if (paymentUrl && resolvedCustomerEmail) {
     try {
       // Load tenant branding for the email
       const { data: tenant } = await supabase
@@ -182,7 +255,7 @@ export default defineEventHandler(async (event) => {
       const tenantName = tenant?.name || terms.businessNoun || 'Ihr Unternehmen'
       const brandColor = tenant?.primary_color || '#16a34a'
       const logoUrl = tenant?.logo_url
-      const productList = items.map(i =>
+      const productList = pricedItems.map(i =>
         `<tr>
           <td style="padding: 8px 16px; color: #374151; font-size: 15px;">${i.quantity}× ${i.product_name}</td>
           <td style="padding: 8px 16px; color: #374151; font-size: 15px; text-align: right;">CHF ${(i.total_price_rappen / 100).toFixed(2)}</td>
@@ -210,7 +283,7 @@ export default defineEventHandler(async (event) => {
         <!-- Body -->
         <tr>
           <td style="padding: 36px 40px;">
-            <p style="margin:0 0 8px; font-size:16px; color:#111827; font-weight:600;">Guten Tag${customer_name ? ` ${customer_name}` : ''},</p>
+            <p style="margin:0 0 8px; font-size:16px; color:#111827; font-weight:600;">Guten Tag${resolvedCustomerName ? ` ${resolvedCustomerName}` : ''},</p>
             <p style="margin:0 0 28px; font-size:15px; color:#6b7280; line-height:1.6;">${tenantName} hat für Sie eine Zahlung vorbereitet. Bitte klicken Sie auf den Button unten, um sicher zu bezahlen.</p>
 
             <!-- Product table -->
@@ -265,7 +338,7 @@ export default defineEventHandler(async (event) => {
 </html>`
 
       await sendTenantEmail(profile.tenant_id, {
-        to: customer_email,
+        to: resolvedCustomerEmail,
         subject: `Zahlungseinladung von ${tenantName} – CHF ${totalCHF}`,
         html,
         fromName: tenantName,
@@ -273,7 +346,7 @@ export default defineEventHandler(async (event) => {
         domainVerified: tenant?.resend_domain_verified
       })
 
-      logger.info(`✅ Staff POS payment email sent: sale=${sale.id}, email=${customer_email}`)
+      logger.info(`✅ Staff POS payment email sent: sale=${sale.id}, email=${resolvedCustomerEmail}`)
     } catch (emailErr: any) {
       logger.warn('⚠️ Payment email failed (sale still created):', emailErr?.message)
       return {
@@ -285,6 +358,11 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  logger.info(`✅ Staff POS online sale complete: sale=${sale.id}, email sent to ${customer_email}`)
-  return { success: true, sale_id: sale.id, payment_url: paymentUrl }
+  logger.info(`✅ Staff POS online sale complete: sale=${sale.id}, email=${resolvedCustomerEmail || 'none'}, url=${paymentUrl ? 'yes' : 'no'}`)
+  return {
+    success: true,
+    sale_id: sale.id,
+    payment_url: paymentUrl,
+    email_sent: Boolean(paymentUrl && resolvedCustomerEmail)
+  }
 })
