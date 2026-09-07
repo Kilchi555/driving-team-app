@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readdirSync, readFileSync } from 'node:fs'
+import { relative, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const migration = readFileSync(
@@ -14,6 +14,15 @@ const getAvailability = readFileSync(
   resolve(process.cwd(), 'server/api/booking/get-availability.post.ts'),
   'utf8'
 )
+
+function collectFiles(dir: string, out: string[] = []) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = resolve(dir, entry.name)
+    if (entry.isDirectory()) collectFiles(full, out)
+    else if (entry.name.endsWith('.ts')) out.push(full)
+  }
+  return out
+}
 
 function executable(sql: string) {
   return sql
@@ -371,6 +380,32 @@ describe('P0 incident containment contract', () => {
       expect(getAvailability).toContain(
         ".select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, logo_square_url, logo_wide_url')"
       )
+    })
+
+    // Revoking the table-level SELECT means an anon-key route that asks for a
+    // column outside the allowlist gets 42501 for the whole query, not a null
+    // field. get-booking-init serves the public booking page, so a missing
+    // column here is an outage, not a degraded response.
+    it('grants anon every tenants column the anon-key server routes select', () => {
+      const routes = collectFiles(resolve(process.cwd(), 'server'))
+        .filter(file => !file.includes('__tests__'))
+        .map(file => [file, readFileSync(file, 'utf8')] as const)
+        .filter(([, src]) => src.includes('SUPABASE_ANON_KEY') && src.includes("from('tenants')"))
+
+      expect(routes.length).toBeGreaterThan(0)
+
+      const ungranted: string[] = []
+      for (const [file, src] of routes) {
+        for (const match of src.matchAll(/from\('tenants'\)\s*\.select\(\s*'([^']+)'/g)) {
+          for (const column of match[1].split(',').map(c => c.trim()).filter(Boolean)) {
+            if (!tenantsPrivileges.hasColumnPrivilege('anon', column)) {
+              ungranted.push(`${relative(process.cwd(), file)} -> ${column}`)
+            }
+          }
+        }
+      }
+
+      expect(ungranted).toEqual([])
     })
   })
 

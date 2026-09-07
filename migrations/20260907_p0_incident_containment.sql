@@ -202,6 +202,14 @@ REVOKE SELECT ON TABLE public.tenants FROM PUBLIC;
 -- Read by pages/payment/success.vue (primary_color, logo_url),
 -- pages/register/index.vue (tenant picker), components/CategorySelector.vue
 -- (business_type), utils/reglementPlaceholders.ts (address/contact/website).
+--
+-- booking_policy and wallee_enabled are here because the public booking page
+-- reads them on the anon key: get-booking-init.get.ts (both) and
+-- submit-general-inquiry.post.ts (booking_policy). Without them those two
+-- endpoints return 42501 and public booking goes down. Neither carries a
+-- secret — booking_policy is the jsonb of required booking fields, reminder
+-- and notification flags and staff permissions; wallee_enabled is a boolean
+-- feature flag. The Wallee credentials (space_id, user_id, iban) stay revoked.
 GRANT SELECT (
   id,
   name,
@@ -228,7 +236,9 @@ GRANT SELECT (
   website_only,
   timezone,
   currency,
-  language
+  language,
+  booking_policy,
+  wallee_enabled
 ) ON public.tenants TO anon;
 
 -- authenticated: the anon allowlist plus the non-secret operational columns
@@ -279,7 +289,9 @@ GRANT SELECT (
   website_approved_at,
   website_notes,
   website_hosting_plan,
-  wallee_onboarding_status
+  wallee_onboarding_status,
+  booking_policy,
+  wallee_enabled
 ) ON public.tenants TO authenticated;
 
 -- ============================================================================
