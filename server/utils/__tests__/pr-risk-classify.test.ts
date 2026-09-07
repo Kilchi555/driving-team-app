@@ -15,6 +15,21 @@ import {
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 
+function ghPrMergeCommands(yaml: string) {
+  const lines = yaml.split('\n')
+  const commands: string[] = []
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!/^\s*gh pr merge\b/.test(lines[i])) continue
+    let command = lines[i].trim()
+    while (command.endsWith('\\')) {
+      i += 1
+      command = `${command.slice(0, -1).trimEnd()} ${lines[i].trim()}`
+    }
+    commands.push(command)
+  }
+  return commands
+}
+
 function files(...paths: string[]) {
   return paths.map((filename) => ({ filename }))
 }
@@ -324,9 +339,20 @@ describe('workflow validation', () => {
   it('enables auto-merge only when classify succeeded and risk is green', () => {
     expect(autoMerge).toContain('${RISK}" = "green"')
     expect(autoMerge).toContain('${CLASSIFY_RESULT}" = "success"')
-    expect(autoMerge).toContain('--disable')
     expect(autoMerge).toContain('auto-merge disabled (fail-closed)')
     expect(autoMerge).not.toMatch(/unknown → green|unknown -> green/)
+  })
+
+  it('fail-closed path uses --disable-auto, not the invalid --disable flag', () => {
+    const commands = ghPrMergeCommands(autoMerge)
+    const failClosed = commands.filter(command => !/(?:^|\s)--auto(?:\s|$)/.test(command))
+    const enable = commands.filter(command => /(?:^|\s)--auto(?:\s|$)/.test(command))
+
+    expect(failClosed).toHaveLength(1)
+    expect(enable).toHaveLength(1)
+    expect(failClosed[0]).toMatch(/--disable-auto(?:\s|$)/)
+    expect(failClosed[0]).not.toMatch(/--disable(?!-auto)/)
+    expect(enable[0]).not.toMatch(/--disable(?!-auto)/)
   })
 
   it('does not grant administration write', () => {
