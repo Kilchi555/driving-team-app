@@ -6,6 +6,10 @@ import {
   incrementVoucherCodeRedemptionAtomic,
 } from '~/server/utils/wallet-atomic'
 import { logger } from '~/utils/logger'
+import {
+  abortedIdempotencyPatch,
+  releasedSlotPatch,
+} from '~/server/utils/booking-idempotency-lifecycle'
 
 export type GiftCardReserveStatus =
   | 'reserved'
@@ -181,6 +185,43 @@ export async function releaseCheckoutBenefits(opts: {
 }
 
 /** Cancel a just-created checkout so a failed code lock never charges a different amount. */
+export async function failBookingIdempotencyAfterAbort(opts: {
+  supabase: any
+  paymentId?: string | null
+  appointmentId?: string | null
+}): Promise<void> {
+  const patch = abortedIdempotencyPatch()
+  if (opts.appointmentId) {
+    const { error } = await opts.supabase
+      .from('booking_idempotency_keys')
+      .update(patch)
+      .eq('appointment_id', opts.appointmentId)
+      .eq('status', 'completed')
+    if (error) logger.warn('failBookingIdempotencyAfterAbort appointment_id failed', { message: error.message, appointmentId: opts.appointmentId })
+  }
+  if (opts.paymentId) {
+    const { error } = await opts.supabase
+      .from('booking_idempotency_keys')
+      .update(patch)
+      .eq('payment_id', opts.paymentId)
+      .eq('status', 'completed')
+    if (error) logger.warn('failBookingIdempotencyAfterAbort payment_id failed', { message: error.message, paymentId: opts.paymentId })
+  }
+}
+
+export async function releaseSlotsAfterCheckoutAbort(opts: {
+  supabase: any
+  appointmentId: string
+}): Promise<void> {
+  const { error } = await opts.supabase
+    .from('availability_slots')
+    .update(releasedSlotPatch())
+    .eq('appointment_id', opts.appointmentId)
+  if (error) {
+    logger.warn('releaseSlotsAfterCheckoutAbort failed', { message: error.message, appointmentId: opts.appointmentId })
+  }
+}
+
 export async function abortCheckoutAfterBenefitLockFail(opts: {
   supabase: any
   paymentId: string
@@ -195,6 +236,15 @@ export async function abortCheckoutAfterBenefitLockFail(opts: {
     .from('appointments')
     .update({ status: 'cancelled', updated_at: now })
     .eq('id', opts.appointmentId)
+  await failBookingIdempotencyAfterAbort({
+    supabase: opts.supabase,
+    paymentId: opts.paymentId,
+    appointmentId: opts.appointmentId,
+  })
+  await releaseSlotsAfterCheckoutAbort({
+    supabase: opts.supabase,
+    appointmentId: opts.appointmentId,
+  })
 }
 
 export function benefitLockUnavailablePayload(reason?: string) {

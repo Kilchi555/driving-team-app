@@ -49,6 +49,18 @@ import { pickAvailableRoomId, resolveRoomSettings, type RoomServiceType } from '
 import { resolveOnlineBookingEventTypeCode } from '~/server/utils/event-type-pricing'
 import { bookOnlineAppointment } from '~/server/utils/book-online-appointment'
 import { rateLimitedError, requireIdempotencyKey } from '~/server/utils/booking-errors'
+import {
+  loadOnlineBookingPaymentPolicy,
+  onlineBookingPaymentProvider,
+  resolveOnlineBookingPaymentMethod,
+} from '~/server/utils/resolve-online-booking-payment-method'
+import {
+  guestBookingPriceRuleType,
+  guestSlotCategoryMismatchReason,
+  invalidDrivingLessonBasePriceReason,
+  invalidPersistedLessonPricingReason,
+  normalizeGuestSlotServiceType,
+} from '~/server/utils/guest-booking-price-rule'
 
 interface GuestBookRequest {
   // Booking identifiers
@@ -77,7 +89,7 @@ interface GuestBookRequest {
   service_type?: RoomServiceType
   customer_pickup_plz?: string | null
   customer_pickup_address?: string | null
-  payment_method?: 'wallee' | 'invoice'
+  payment_method?: 'wallee' | 'invoice' | 'cash'
   apply_available_credit?: boolean
   discount_code?: string
   discount_amount_rappen?: number
@@ -199,6 +211,27 @@ export default defineEventHandler(async (event) => {
       statusCode: 409,
       statusMessage: 'Die Reservierung ist abgelaufen. Bitte wähle erneut einen Zeitslot.',
       data: { error: 'SLOT_UNAVAILABLE', code: 'RESERVATION_EXPIRED' },
+    })
+  }
+
+  // Bind price/category to the reserved slot — clients must not swap to a
+  // cheaper category_code while holding a different availability slot.
+  const categoryMismatch = guestSlotCategoryMismatchReason({
+    slotCategoryCode: slot.category_code,
+    bodyCategoryCode: body.category_code,
+  })
+  if (categoryMismatch) {
+    logger.warn('❌ Guest booking rejected: category does not match reserved slot', {
+      reason: categoryMismatch,
+      slot_category_code: slot.category_code,
+      body_category_code: body.category_code,
+      slot_id: body.slot_id,
+      tenant_id: tenantId,
+    })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Die gewählte Kategorie passt nicht zum reservierten Zeitslot.',
+      data: { code: 'CATEGORY_SLOT_MISMATCH' },
     })
   }
 
@@ -372,13 +405,36 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Guest user created:', newUserId)
   }
 
-  // ── Parallel: pricing + marketing attribution + location/vehicle settings ─
-  const [pricingResult, eventPricingResult, eventTypeResult, marketingAttr, locationResult, categorySettingsRes] = await Promise.all([
+  // Slot-based guest checkout only books Fahrstunden. Theorie/Beratung use the
+  // proposal flow in the UI — accepting them here lets attackers load CHF-0
+  // consultation/theory rules while still creating a lesson on a reserved slot.
+  const serviceTypeNorm = normalizeGuestSlotServiceType(body.service_type)
+  if (!serviceTypeNorm.ok) {
+    logger.warn('❌ Guest booking rejected: spoofed non-lesson service_type on slot booking', {
+      reason: serviceTypeNorm.reason,
+      service_type: body.service_type,
+      slot_id: body.slot_id,
+      category_code: body.category_code,
+      tenant_id: tenantId,
+    })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Theorie- und Beratungsanfragen können nicht über den Zeitslot-Checkout gebucht werden.',
+      data: { code: 'INVALID_SERVICE_TYPE' },
+    })
+  }
+  const roomServiceType: RoomServiceType = serviceTypeNorm.serviceType
+  // Always base_price for slot guest bookings (matches get-pricing for fahrstunde).
+  const lessonRuleType = guestBookingPriceRuleType(roomServiceType)
+
+  // ── Parallel: pricing + event type + marketing + location/vehicle settings ─
+  const [pricingResult, eventPricingResult, adminFeeRuleResult, eventTypeResult, marketingAttr, locationResult, categorySettingsRes] = await Promise.all([
     supabase
       .from('pricing_rules')
-      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier, admin_fee_rappen, admin_fee_applies_from')
+      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier')
       .eq('tenant_id', tenantId)
       .eq('category_code', body.category_code)
+      .eq('rule_type', lessonRuleType)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -386,7 +442,7 @@ export default defineEventHandler(async (event) => {
 
     supabase
       .from('pricing_rules')
-      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier, admin_fee_rappen, admin_fee_applies_from')
+      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier')
       .eq('tenant_id', tenantId)
       .eq('event_type_code', body.category_code)
       .eq('rule_type', 'event_price')
@@ -395,6 +451,20 @@ export default defineEventHandler(async (event) => {
       .limit(1)
       .maybeSingle(),
 
+    // Admin fee lives on rule_type=admin_fee — not on base_price/consultation rows
+    // (those often carry applies_from=999 which would falsely mark the fee exempt).
+    supabase
+      .from('pricing_rules')
+      .select('admin_fee_rappen, admin_fee_applies_from')
+      .eq('tenant_id', tenantId)
+      .eq('category_code', body.category_code)
+      .eq('rule_type', 'admin_fee')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle(),
+
+    // per_event_type tenants (and free Erstgespräch): body.category_code is an
+    // event_types.code — needed for require_payment=false free public events.
     supabase
       .from('event_types')
       .select('code, require_payment, public_bookable')
@@ -421,6 +491,10 @@ export default defineEventHandler(async (event) => {
 
   const pricingRule = pricingResult.data || eventPricingResult.data
   const location = locationResult.data
+  const freePublicEvent =
+    !!eventTypeResult.data &&
+    eventTypeResult.data.require_payment === false &&
+    eventTypeResult.data.public_bookable !== false
   const vehicleSettings = resolveVehicleSettings(
     locationResult.data?.category_vehicle_settings,
     categorySettingsRes.data?.vehicle_settings,
@@ -489,16 +563,66 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Prefer category base_price; fall back to per-event-type event_price
+  // (same as authenticated create-appointment). Never silently book at CHF 0
+  // because no rule existed — except intentional free public events.
+  const usingBasePriceRule = !!pricingResult.data
+  const usingEventPriceRule = !usingBasePriceRule && !!eventPricingResult.data
+  if (!usingBasePriceRule && !usingEventPriceRule && !freePublicEvent) {
+    logger.error('❌ Guest booking aborted: no pricing rule for category/event', {
+      category_code: body.category_code,
+      lessonRuleType,
+      tenant_id: tenantId,
+    })
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Der Preis für diese Buchung konnte nicht ermittelt werden. Bitte versuche es erneut oder kontaktiere uns direkt.',
+    })
+  }
+
+  // Fahrstunden may still net to CHF 0 via Rabatt/Gutschein/Guthaben later.
+  // Abort only when the base_price rule itself is missing or CHF 0 — not when
+  // a valid event_price row is what priced this booking (per_event_type tenants),
+  // and not for intentional free public events.
+  const basePriceProblem = invalidDrivingLessonBasePriceReason({
+    ruleType: usingBasePriceRule ? 'base_price' : 'event_price',
+    allowFreePublicEvent: freePublicEvent,
+    hasPricingRule: usingBasePriceRule,
+    pricePerMinuteRappen: pricingResult.data?.price_per_minute_rappen,
+  })
+  if (basePriceProblem) {
+    logger.error('❌ Guest booking aborted: invalid driving-lesson base price', {
+      reason: basePriceProblem,
+      category_code: body.category_code,
+      lessonRuleType,
+      tenant_id: tenantId,
+      hasPricingRule: usingBasePriceRule,
+      usingEventPriceRule,
+      freePublicEvent,
+      price_per_minute_rappen: pricingResult.data?.price_per_minute_rappen ?? null,
+    })
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Der Preis für diese Fahrstunde konnte nicht ermittelt werden. Bitte versuche es erneut oder kontaktiere uns direkt.',
+    })
+  }
+
   // ── Calculate admin fee ───────────────────────────────────────────────────
+  // Admin fee is a driving-school category concept — skip for event_price /
+  // free public event bookings (no category admin_fee rows exist there).
+  const adminFeeRuleRappen = Number(adminFeeRuleResult.data?.admin_fee_rappen || 0)
+  const adminFeeAppliesFromRule = adminFeeRuleResult.data?.admin_fee_applies_from != null
+    ? Number(adminFeeRuleResult.data.admin_fee_applies_from)
+    : null
   const adminFeeResult = await calculateAdminFee({
     supabase,
     userId: newUserId,
     tenantId,
     categoryCode: body.category_code,
-    adminFeeRappenFromRule: pricingRule?.admin_fee_rappen ?? undefined,
-    adminFeeAppliesFromRule: pricingRule?.admin_fee_applies_from ?? undefined,
+    adminFeeRappenFromRule: usingBasePriceRule ? adminFeeRuleRappen : 0,
+    adminFeeAppliesFromRule: usingBasePriceRule ? adminFeeAppliesFromRule : null,
   })
-  const adminFeeRappen = adminFeeResult.adminFeeRappen
+  const adminFeeRappen = usingBasePriceRule ? adminFeeResult.adminFeeRappen : 0
   const travelFee = await quoteTravelFee(tenantId, {
     locationId: slot.location_id,
     locationType: body.customer_pickup_plz || body.customer_pickup_address ? 'pickup' : null,
@@ -519,26 +643,23 @@ export default defineEventHandler(async (event) => {
   const validatedDiscountAmount = resolvedDiscount.amountRappen
   const netAmountRappen = netAfterAppointmentDiscount(grossAmountRappen, validatedDiscountAmount)
 
-  let resolvedPaymentMethod: 'wallee' | 'invoice' | 'cash' = 'cash'
-  if (body.payment_method === 'invoice') {
-    const { data: paymentSettingRow } = await supabase
-      .from('tenant_settings')
-      .select('setting_value')
-      .eq('tenant_id', tenantId)
-      .eq('category', 'payment')
-      .eq('setting_key', 'payment_settings')
-      .maybeSingle()
-    const tenantPaymentSettings = paymentSettingRow?.setting_value
-      ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
-      : {}
-    if (tenantPaymentSettings.invoice_payments_enabled === true) {
-      resolvedPaymentMethod = 'invoice'
-    }
+  const paymentPolicy = await loadOnlineBookingPaymentPolicy(supabase, tenantId, tenant.wallee_enabled)
+  const paymentResolve = resolveOnlineBookingPaymentMethod({
+    requested: body.payment_method,
+    policy: paymentPolicy,
+  })
+  if (paymentResolve.rejectedRequest) {
+    logger.warn('⚠️ Guest requested a payment method that is not enabled for online booking — using tenant default', {
+      tenantId,
+      requested: body.payment_method,
+      resolved: paymentResolve.method,
+    })
   }
+  let resolvedPaymentMethod = paymentResolve.method
 
   let holdUntilPaid = shouldHoldAppointmentUntilPaid({
     requirePaymentBeforeConfirm: policy.require_payment_before_confirm === true,
-    paymentMethod: resolvedPaymentMethod === 'invoice' ? 'invoice' : 'wallee',
+    paymentMethod: resolvedPaymentMethod,
     amountRappen: netAmountRappen,
   })
   if (holdUntilPaid) {
@@ -553,7 +674,6 @@ export default defineEventHandler(async (event) => {
 
   const sanitizedNotes = body.notes ? sanitizeString(body.notes) : ''
 
-  const roomServiceType: RoomServiceType = body.service_type ?? 'fahrstunde'
   const roomRule = resolveRoomSettings(
     locationResult.data?.category_room_settings,
     categorySettingsRes.data?.room_settings,
@@ -573,6 +693,31 @@ export default defineEventHandler(async (event) => {
   const resolvedEventTypeCode = resolveOnlineBookingEventTypeCode({
     eventTypeRow: eventTypeResult.data,
   })
+
+  const ruleTypeUsedForGuard = usingBasePriceRule
+    ? 'base_price'
+    : usingEventPriceRule
+      ? 'event_price'
+      : (freePublicEvent ? 'event_price' : lessonRuleType)
+
+  const lessonPriceMismatch = invalidPersistedLessonPricingReason({
+    persistedEventTypeCode: resolvedEventTypeCode,
+    ruleTypeUsed: ruleTypeUsedForGuard,
+  })
+  if (lessonPriceMismatch) {
+    logger.error('❌ Guest booking aborted: pricing rule does not match persisted lesson type', {
+      reason: lessonPriceMismatch,
+      resolvedEventTypeCode,
+      ruleTypeUsedForGuard,
+      category_code: body.category_code,
+      tenant_id: tenantId,
+    })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Der Preis für diese Fahrstunde konnte nicht ermittelt werden.',
+      data: { code: 'SERVICE_TYPE_PRICE_MISMATCH' },
+    })
+  }
 
   const chosenVehicleOption = vehicleSettings.options?.find(o => o.key === body.vehicle_mode)
   let booked
@@ -620,8 +765,8 @@ export default defineEventHandler(async (event) => {
         discount_amount_rappen: validatedDiscountAmount,
         total_amount_rappen: netAmountRappen,
         payment_status: 'pending',
-        payment_method: holdUntilPaid ? 'wallee' : resolvedPaymentMethod,
-        payment_provider: holdUntilPaid ? 'wallee' : null,
+        payment_method: resolvedPaymentMethod,
+        payment_provider: onlineBookingPaymentProvider(resolvedPaymentMethod),
         description: appointmentTitle,
         currency: 'CHF',
         created_by: newUserId,
@@ -629,6 +774,7 @@ export default defineEventHandler(async (event) => {
           source: 'guest_booking',
           admin_fee_reason: adminFeeResult.reason,
           ...(holdUntilPaid ? { pay_before_confirm: true } : {}),
+          ...(freePublicEvent ? { free_public_event: true, allow_zero_completion: true } : {}),
           ...(resolvedDiscount.code ? { discount_code: resolvedDiscount.code } : {}),
           ...(body.vehicle_mode ? { vehicle_mode: body.vehicle_mode, vehicle_cost_rappen: calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes) } : {}),
           ...(travelFeeRappen > 0 ? { travel_fee: { km: travelFee.km, billable_km: travelFee.billable_km, fee_rappen: travelFeeRappen, capped: travelFee.capped, label: travelFee.label } } : {}),

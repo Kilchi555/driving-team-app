@@ -54,4 +54,16 @@ describe('occupancy migration contract', () => {
     expect(sql).not.toContain('a026b33e')
     expect(sql).not.toContain('aaf9a6f7')
   })
+
+  it('replays only completed idempotency keys — failed/claiming never return a success snapshot', () => {
+    expect(sql).toContain("CHECK (status IN ('claiming', 'completed', 'failed'))")
+    expect(sql).toContain("IF v_idemp.status = 'completed' THEN")
+    expect(sql).toContain('response_snapshot')
+    const replayStart = sql.indexOf("IF v_idemp.status = 'completed' THEN")
+    const replayEnd = sql.indexOf('EXIT;', replayStart)
+    const replayBlock = sql.slice(replayStart, replayEnd)
+    expect(replayBlock).toContain('replayed')
+    expect(replayBlock).not.toContain("'failed'")
+    expect(sql).toContain("status = 'completed'")
+  })
 })
