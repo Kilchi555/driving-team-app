@@ -218,7 +218,7 @@ describe('runPaymentCheckoutCreate', () => {
       }),
       create,
     }))))
-    const fulfilled = results.filter((r) => r.status === 'fulfilled') as PromiseFulfilledResult<any>[]
+    const fulfilled = results.filter((r): r is PromiseFulfilledResult<{ transactionId: string }> => r.status === 'fulfilled')
     const rejected = results.filter((r) => r.status === 'rejected')
     expect(fulfilled).toHaveLength(1)
     expect(fulfilled[0].value.transactionId).toBe('only-one')
