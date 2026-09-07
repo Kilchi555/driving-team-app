@@ -21,9 +21,11 @@ describe('idempotency key', () => {
     try {
       requireIdempotencyKey(undefined)
       expect.fail('expected throw')
-    } catch (err: any) {
-      expect(err.statusCode).toBe(400)
-      expect(err.data.error).toBe(BOOKING_ERROR.IDEMPOTENCY_KEY_REQUIRED)
+    } catch (err: unknown) {
+      expect(err).toMatchObject({
+        statusCode: 400,
+        data: { error: BOOKING_ERROR.IDEMPOTENCY_KEY_REQUIRED },
+      })
     }
   })
 
