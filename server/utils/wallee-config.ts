@@ -122,15 +122,35 @@ export function resolveWalleeConfigBySpace(input: {
     )
   }
 
-  const prod = prodConfig || envConfig
-  if (prod && prod.spaceId === incomingSpaceId) {
-    return prod
+  if (prodConfig && prodConfig.spaceId === incomingSpaceId) {
+    return prodConfig
   }
-  if (prod) return prod
-  if (isolatedTest) return isolatedTest
+  if (envConfig && envConfig.spaceId === incomingSpaceId) {
+    return envConfig
+  }
   throw new Error(
     `[Wallee] Keine Credentials für Tenant ${tenantId} konfiguriert (incoming space: ${incomingSpaceId}).`
   )
+}
+
+/**
+ * Fail closed before any Wallee transaction read: expected space must equal
+ * the resolved credential space. Prevents Space A webhooks from being verified
+ * with Space B credentials.
+ */
+export function assertWalleeReadSpace(
+  expectedSpaceId: number | string | null | undefined,
+  credentials: WalleeConfig,
+  context: string,
+): number {
+  const readSpaceId = Number(expectedSpaceId)
+  if (!Number.isFinite(readSpaceId) || credentials.spaceId !== readSpaceId) {
+    throw new Error(
+      `[Wallee] ${context}: credential space ${credentials.spaceId} ` +
+      `does not match expected space ${expectedSpaceId}.`
+    )
+  }
+  return readSpaceId
 }
 
 // Production credentials cache (keyed by tenantId or '__env__')
@@ -326,10 +346,11 @@ export async function getWalleeConfigForTenant(tenantId?: string): Promise<Walle
  * the production or test space are verified with the correct credentials —
  * even when the tenant switches test mode or has pending transactions in both spaces.
  *
- * Resolution order:
- *   1. Production credentials — if spaceId matches
- *   2. Test credentials       — if spaceId matches
- *   3. Any configured credentials (production or test) as last resort
+ * Resolution order (incoming space must match the returned config):
+ *   1. Isolated test credentials — if spaceId matches
+ *   2. Production tenant_secrets — if spaceId matches
+ *   3. Production env credentials — if spaceId matches
+ * Unmatched spaces fail closed. Never return credentials for a different space.
  */
 export async function getWalleeConfigBySpace(tenantId: string, incomingSpaceId: number): Promise<WalleeConfig> {
   const nonProduction = isNonProductionRuntime()

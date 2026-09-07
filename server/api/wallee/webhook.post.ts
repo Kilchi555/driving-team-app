@@ -7,7 +7,7 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } from '~/server/utils/wallee-config'
+import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig, assertWalleeReadSpace } from '~/server/utils/wallee-config'
 import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import { findExistingUserByContact } from '~/server/utils/user-matching'
@@ -1869,10 +1869,11 @@ async function fetchWalleeTransaction(transactionId: string, webhookSpaceId?: nu
       )
     }
 
-    const config = getWalleeSDKConfig(walleeCredentials.spaceId, walleeCredentials.userId, walleeCredentials.apiSecret)
-    
+    const readSpaceId = assertWalleeReadSpace(spaceId, walleeCredentials, `webhook txn ${transactionId}`)
+    const config = getWalleeSDKConfig(readSpaceId, walleeCredentials.userId, walleeCredentials.apiSecret)
+
     transactionService = new WalleeSDK.api.TransactionService(config)
-    const response = await transactionService.read(walleeCredentials.spaceId, parseInt(transactionId))
+    const response = await transactionService.read(readSpaceId, parseInt(transactionId))
     return response.body
   } catch (error: any) {
     logger.warn('⚠️ Could not fetch Wallee transaction:', error.message)
