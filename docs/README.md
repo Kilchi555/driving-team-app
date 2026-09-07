@@ -344,6 +344,19 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused ops notes verified against source. Prefer these over stale root `*.md` reports when debugging.
+
+| Doc | Topic |
+|-----|--------|
+| [GUEST_BOOKING_PRICE_RULES.md](./GUEST_BOOKING_PRICE_RULES.md) | Correct `pricing_rules` selection; free public events; spoofing guards (#119/#120) |
+| [DEPENDENCY_REVIEW.md](./DEPENDENCY_REVIEW.md) | PR gate: fail on new High/Critical dependency advisories (#100) |
+
+Also see existing runbooks in this folder (e.g. [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md), [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md), [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md)).
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
