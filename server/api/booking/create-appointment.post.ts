@@ -53,6 +53,12 @@ import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit
 import { resolveOnlineBookingEventTypeCode } from '~/server/utils/event-type-pricing'
 import { bookOnlineAppointment } from '~/server/utils/book-online-appointment'
 import { rateLimitedError, requireIdempotencyKey } from '~/server/utils/booking-errors'
+import {
+  loadOnlineBookingPaymentPolicy,
+  onlineBookingPaymentProvider,
+  resolveOnlineBookingPaymentMethod,
+} from '~/server/utils/resolve-online-booking-payment-method'
+import { guestSlotCategoryMismatchReason, invalidDrivingLessonBasePriceReason } from '~/server/utils/guest-booking-price-rule'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -99,8 +105,8 @@ interface CreateAppointmentRequest {
    *  rule for this category+location. The room itself is auto-assigned server-side, never
    *  chosen by the customer. */
   service_type?: RoomServiceType
-  /** Customer-selected payment method. Only 'invoice' is honored, and only when the tenant has explicitly enabled it — otherwise falls back to 'wallee'. */
-  payment_method?: 'wallee' | 'invoice'
+  /** Customer-selected payment method. Resolved via tenant online-booking policy — never silent cash. */
+  payment_method?: 'wallee' | 'invoice' | 'cash'
   /** Default true: apply available wallet credit before checkout / invoice. */
   apply_available_credit?: boolean
   /** Client-generated UUID v4. Required. Same key retries the same attempt. */
@@ -215,6 +221,24 @@ export default defineEventHandler(async (event: H3Event) => {
       throw createError({
         statusCode: 409,
         statusMessage: 'Slot not found. Please select a different slot.'
+      })
+    }
+
+    const categoryMismatch = guestSlotCategoryMismatchReason({
+      slotCategoryCode: slot.category_code,
+      bodyCategoryCode: body.category_code,
+    })
+    if (categoryMismatch) {
+      logger.warn('❌ Category does not match reserved slot:', {
+        reason: categoryMismatch,
+        slot_category_code: slot.category_code,
+        body_category_code: body.category_code,
+        slot_id: body.slot_id,
+      })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Die gewählte Kategorie passt nicht zum reservierten Zeitslot.',
+        data: { code: 'CATEGORY_SLOT_MISMATCH' },
       })
     }
 
@@ -515,6 +539,27 @@ export default defineEventHandler(async (event: H3Event) => {
       })
     }
 
+    // Fahrstunden may still net to CHF 0 via Rabatt/Gutschein/Guthaben.
+    // Reject only a missing/zero base_price rule (not intentional free events).
+    const basePriceProblem = invalidDrivingLessonBasePriceReason({
+      ruleType: pricingRuleRes.data ? 'base_price' : 'event_price',
+      allowFreePublicEvent: freePublicEvent,
+      hasPricingRule: !!pricingRuleRes.data,
+      pricePerMinuteRappen: pricingRuleRes.data?.price_per_minute_rappen,
+    })
+    if (basePriceProblem) {
+      logger.warn('⚠️ Zero/missing base_price rule for driving lesson, aborting booking', {
+        reason: basePriceProblem,
+        category_code: body.category_code,
+        tenant_id: tenantId,
+        price_per_minute_rappen: pricingRuleRes.data?.price_per_minute_rappen ?? null,
+      })
+      throw createError({
+        statusCode: 503,
+        statusMessage: 'Der Preis für diese Fahrstunde konnte nicht ermittelt werden. Bitte versuche es in Kürze erneut oder kontaktiere uns direkt.',
+      })
+    }
+
     // ============ LAYER 6c: ADMIN FEE CALCULATION ============
     // Must run BEFORE the appointment is inserted so the utility's count of
     // existing active appointments doesn't include the upcoming one.
@@ -535,30 +580,28 @@ export default defineEventHandler(async (event: H3Event) => {
     })
     const travelFeeRappen = travelFee.fee_rappen || 0
 
-    let resolvedPaymentMethod: 'wallee' | 'invoice' = 'wallee'
-    if (body.payment_method === 'invoice') {
-      const { data: paymentSettingRow } = await supabase
-        .from('tenant_settings')
-        .select('setting_value')
-        .eq('tenant_id', tenantId)
-        .eq('category', 'payment')
-        .eq('setting_key', 'payment_settings')
-        .maybeSingle()
-      const tenantPaymentSettings = paymentSettingRow?.setting_value
-        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
-        : {}
-      if (tenantPaymentSettings.invoice_payments_enabled === true) {
-        resolvedPaymentMethod = 'invoice'
-      } else {
-        logger.warn('⚠️ Customer requested invoice payment but tenant has not enabled it — falling back to wallee', { tenantId })
-      }
-    }
-
     const { data: tenantPayPolicy } = await supabase
       .from('tenants')
       .select('booking_policy, slug, wallee_enabled')
       .eq('id', tenantId)
       .maybeSingle()
+    const paymentPolicy = await loadOnlineBookingPaymentPolicy(
+      supabase,
+      tenantId!,
+      tenantPayPolicy?.wallee_enabled
+    )
+    const paymentResolve = resolveOnlineBookingPaymentMethod({
+      requested: body.payment_method,
+      policy: paymentPolicy,
+    })
+    if (paymentResolve.rejectedRequest) {
+      logger.warn('⚠️ Customer requested a payment method that is not enabled for online booking — using tenant default', {
+        tenantId,
+        requested: body.payment_method,
+        resolved: paymentResolve.method,
+      })
+    }
+    const resolvedPaymentMethod = paymentResolve.method
     const mayHoldUntilPaid =
       tenantPayPolicy?.booking_policy?.require_payment_before_confirm === true
       && resolvedPaymentMethod === 'wallee'
@@ -738,7 +781,7 @@ export default defineEventHandler(async (event: H3Event) => {
         total_amount_rappen: netAmountRappen,
         payment_status: 'pending',
         payment_method: resolvedPaymentMethod,
-        payment_provider: resolvedPaymentMethod === 'wallee' ? 'wallee' : null,
+        payment_provider: onlineBookingPaymentProvider(resolvedPaymentMethod),
         description: appointmentTitle,
         currency: 'CHF',
         created_by: userData.id,
