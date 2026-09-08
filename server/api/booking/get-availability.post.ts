@@ -96,6 +96,7 @@ export default defineEventHandler(async (event) => {
           .select('id, start_time, end_time, title, status')
           .eq('staff_id', staff_id)
           .not('status', 'eq', 'deleted')
+          .not('status', 'in', '("cancelled","canceled")') // Cancelled must not block availability
           .is('deleted_at', null)
           .lte('start_time', end_date)
           .gte('end_time', start_date),
@@ -398,6 +399,7 @@ export default defineEventHandler(async (event) => {
           .select('id, start_time, end_time, title, status')
           .eq('staff_id', queryStaffId)
           .not('status', 'eq', 'deleted')
+          .not('status', 'in', '("cancelled","canceled")') // Cancelled must not block availability
           .is('deleted_at', null)
           .gte('end_time', new Date().toISOString()),
         supabase
