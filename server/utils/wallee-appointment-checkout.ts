@@ -273,9 +273,16 @@ export async function releaseUnpaidPendingAppointment(opts: {
   if (!canReleaseUnpaidHold(related)) return false
 
   const now = new Date().toISOString()
+  // Soft-delete as well so customer upcoming APIs (deleted_at IS NULL) hide the hold,
+  // matching customer-initiated cancel and preventing "ghost" lessons in Kommende Fahrstunden.
   const { data: cancelled } = await supabase
     .from('appointments')
-    .update({ status: 'cancelled', updated_at: now })
+    .update({
+      status: 'cancelled',
+      deleted_at: now,
+      deletion_reason: 'Automatisch storniert: unbezahlte Online-Reservierung',
+      updated_at: now,
+    })
     .eq('id', appointment.id)
     .eq('status', 'pending')
     .select('id')

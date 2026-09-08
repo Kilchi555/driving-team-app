@@ -1508,7 +1508,8 @@ function formatNextAppointmentDuration(startIso: string, endIso: string | undefi
 const upcomingLessonsCount = computed(() => {
   const now = new Date()
   const upcomingLessons = lessons.value.filter(lesson => 
-    new Date(lesson.start_time) > now
+    new Date(lesson.start_time) > now &&
+    lesson.status !== 'cancelled'
   )
   
   // Group course sessions by date + course_id (same day = 1 appointment)
