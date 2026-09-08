@@ -1,42 +1,37 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { hasMetaClickId, recordAndSendCapiEvent } from '~/server/utils/meta-capi'
-import { logger } from '~/utils/logger'
-
-const EXCLUDED_STATUSES = ['cancelled', 'aborted', 'rejected'] as const
+import { hasMetaClickId } from '~/server/utils/meta-capi'
+import { isEligibleForMetaPurchaseConversion } from '~/server/utils/binding-booking'
+import {
+  reportBindingAppointmentConversionSafely,
+  resolveNewCustomerState,
+} from '~/server/utils/binding-booking-conversion'
 
 export function shouldSendMetaBookingConversion(input: {
   isFirstCustomerBooking: boolean
   fbclid?: string | null
   fbc?: string | null
 }): boolean {
-  return input.isFirstCustomerBooking === true && hasMetaClickId(input)
+  return isEligibleForMetaPurchaseConversion({
+    newCustomerState: input.isFirstCustomerBooking ? 'new' : 'existing',
+    hasMetaClickId: hasMetaClickId(input),
+  })
 }
 
 /**
- * True when this appointment is the customer's first non-cancelled lesson
- * (count includes the row just inserted).
+ * True when this customer has no prior confirmed productive booking/registration
+ * in this tenant (excluding the current appointment).
+ * Lookup failure fails closed (returns false — do not claim new customer).
  */
 export async function isFirstCustomerBooking(
   supabase: SupabaseClient,
-  params: { userId: string; tenantId: string },
+  params: { userId: string; tenantId: string; excludeAppointmentId?: string | null },
 ): Promise<boolean> {
-  let query = supabase
-    .from('appointments')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', params.userId)
-    .eq('tenant_id', params.tenantId)
-    .eq('event_type_code', 'lesson')
-
-  for (const status of EXCLUDED_STATUSES) {
-    query = query.neq('status', status)
-  }
-
-  const { count, error } = await query
-  if (error) {
-    logger.warn('meta-booking: first-booking count failed', error.message)
-    return false
-  }
-  return (count ?? 0) <= 1
+  const state = await resolveNewCustomerState(supabase, {
+    userId: params.userId,
+    tenantId: params.tenantId,
+    excludeAppointmentId: params.excludeAppointmentId,
+  })
+  return state === 'new'
 }
 
 export async function maybeSendMetaBookingPurchase(params: {
@@ -53,37 +48,39 @@ export async function maybeSendMetaBookingPurchase(params: {
   clientIp?: string | null
   userAgent?: string | null
   eventSourceUrl?: string | null
-  /** Pay-before-confirm hold — wait for Wallee, do not send yet. */
+  eventTypeCode?: string | null
+  categoryCode?: string | null
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
+  status?: string | null
+  previousStatus?: string | null
+  /** Pay-before-confirm hold — wait until the appointment becomes confirmed. */
   deferUntilPaid?: boolean
 }): Promise<boolean> {
   if (params.deferUntilPaid) return false
 
-  const firstBooking = await isFirstCustomerBooking(params.supabase, {
+  const report = await reportBindingAppointmentConversionSafely({
+    supabase: params.supabase,
+    appointmentId: params.appointmentId,
     userId: params.userId,
     tenantId: params.tenantId,
-  })
-  if (!shouldSendMetaBookingConversion({
-    isFirstCustomerBooking: firstBooking,
+    status: params.status ?? 'confirmed',
+    previousStatus: params.previousStatus ?? null,
+    eventTypeCode: params.eventTypeCode,
+    categoryCode: params.categoryCode,
+    gclid: params.gclid,
+    gbraid: params.gbraid,
+    wbraid: params.wbraid,
     fbclid: params.fbclid,
     fbc: params.fbc,
-  })) {
-    return false
-  }
-
-  await recordAndSendCapiEvent({
-    appointment_id: params.appointmentId,
-    tenant_id: params.tenantId,
-    event_name: 'Purchase',
-    conversion_value_chf: params.conversionValueChf,
-    conversion_date_time: new Date(),
-    fbclid: params.fbclid ?? null,
-    fbc: params.fbc ?? null,
-    fbp: params.fbp ?? null,
-    hashed_email: params.hashedEmail ?? null,
-    hashed_phone: params.hashedPhone ?? null,
-    client_ip: params.clientIp ?? null,
-    user_agent: params.userAgent ?? null,
-    event_source_url: params.eventSourceUrl ?? null,
+    fbp: params.fbp,
+    conversionValueChf: params.conversionValueChf,
+    hashedEmail: params.hashedEmail,
+    hashedPhone: params.hashedPhone,
+    clientIp: params.clientIp,
+    userAgent: params.userAgent,
+    eventSourceUrl: params.eventSourceUrl,
   })
-  return true
+  return report.meta === 'sent'
 }
