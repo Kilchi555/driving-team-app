@@ -2004,12 +2004,13 @@ const loadAppointments = async () => {
     const appointmentIds = appointmentsData?.map((a: any) => a.id) || []
     logger.debug('🔍 Extracting evaluations from API response for appointments:', appointmentIds.length)
 
-    // Skip if no appointments — also clear lessons so upcoming count/modal
-    // cannot keep stale rows after the last booking was cancelled.
+    // No appointments: clear appointment state but keep course sessions.
+    // loadAppointments is also called alone (modal cancel / upcoming open),
+    // so wiping lessons entirely would drop upcoming course rows until a full reload.
     if (appointmentIds.length === 0) {
       logger.debug('⚠️ No appointments found')
       appointments.value = []
-      lessons.value = []
+      lessons.value = (lessons.value || []).filter((lesson: any) => lesson.event_type_code === 'course')
       return
     }
 
