@@ -95,6 +95,7 @@ export default defineEventHandler(async (event) => {
       `)
       .eq('user_id', userProfile.id)
       .is('deleted_at', null)
+      .not('status', 'eq', 'cancelled') // Align with staff calendar: unpaid holds / cancelled must not appear as upcoming
       .order('start_time', { ascending: false })
 
     if (appointmentsError) {

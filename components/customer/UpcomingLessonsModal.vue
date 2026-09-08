@@ -539,7 +539,10 @@ const getEmptyStateMessage = () => {
 // Computed
 const upcomingLessons = computed(() => {
   const now = new Date()
-  return props.lessons.filter(lesson => new Date(lesson.start_time) > now)
+  return props.lessons.filter(lesson =>
+    new Date(lesson.start_time) > now &&
+    lesson.status !== 'cancelled'
+  )
 })
 
 const availableCategories = computed(() => {
