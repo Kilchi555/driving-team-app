@@ -33,13 +33,15 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
+  const stalePendingBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+
   const { data: failedRows, error: queryError } = await supabase
     .from('meta_capi_uploads')
-    .select('id, appointment_id, tenant_id, event_name, fbclid, fbc, fbp, conversion_value_chf, conversion_date_time, upload_attempts')
-    .eq('upload_status', 'failed')
+    .select('id, appointment_id, tenant_id, event_name, event_id, fbclid, fbc, fbp, conversion_value_chf, conversion_date_time, upload_attempts, upload_status, created_at')
+    .in('upload_status', ['failed', 'pending'])
     .lt('upload_attempts', MAX_ATTEMPTS)
     .order('created_at', { ascending: true })
-    .limit(50)
+    .limit(80)
 
   if (queryError) {
     logger.error('retry-meta-capi: query failed', queryError.message)
@@ -51,12 +53,22 @@ export default defineEventHandler(async (event) => {
     return { success: true, retried: 0 }
   }
 
-  logger.info(`retry-meta-capi: retrying ${failedRows.length} failed uploads`)
+  const retryable = failedRows.filter((row) => {
+    if (row.upload_status === 'failed') return true
+    return row.upload_status === 'pending' && String(row.created_at || '') < stalePendingBefore
+  })
+
+  if (retryable.length === 0) {
+    logger.info('retry-meta-capi: no failed uploads to retry')
+    return { success: true, retried: 0 }
+  }
+
+  logger.info(`retry-meta-capi: retrying ${retryable.length} failed uploads`)
 
   let retried = 0
   let succeeded = 0
 
-  for (const row of failedRows) {
+  for (const row of retryable) {
     let hashedEmail: string | null = null
     let hashedPhone: string | null = null
 
@@ -89,7 +101,8 @@ export default defineEventHandler(async (event) => {
     }
 
     const result = await sendCapiEvent({
-      appointment_id: row.appointment_id,
+      appointment_id: row.appointment_id || row.event_id || 'unknown',
+      event_id: row.event_id || undefined,
       tenant_id: row.tenant_id,
       event_name: row.event_name as 'Purchase' | 'Lead' | 'RefundOrder',
       conversion_value_chf: Number(row.conversion_value_chf),

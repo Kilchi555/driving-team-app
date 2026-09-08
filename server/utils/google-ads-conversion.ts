@@ -21,6 +21,7 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { isUniqueViolation } from '~/server/utils/binding-booking'
 
 const GOOGLE_ADS_API_VERSION = 'v23'
 
@@ -226,86 +227,165 @@ export async function uploadClickConversion(input: ConversionUploadInput): Promi
   }
 }
 
-/**
- * Wrapper that uploads a conversion AND records the attempt in
- * google_ads_conversion_uploads for audit + retry. Fire-and-forget safe.
- */
-export async function recordAndUploadConversion(input: ConversionUploadInput): Promise<void> {
-  const supabase = getSupabaseAdmin()
-  // Trim: env vars pasted into Vercel occasionally carry a trailing newline. The
-  // actual API call already trims via readCreds(); trim here too so the audit
-  // row in google_ads_conversion_uploads doesn't store a polluted id like "123\n".
-  const conversionActionId = (input.conversion_action_id ?? process.env.GOOGLE_ADS_CONVERSION_ACTION_ID ?? 'unknown').trim()
-  const normalizedValue = normalizeConversionValueChf(input.conversion_value_chf)
-  const uploadInput: ConversionUploadInput = { ...input, conversion_value_chf: normalizedValue }
+export { isUniqueViolation }
 
-  // 1. Record the pending upload (insert immediately so we have an audit trail
-  //    even if the API call hangs / never returns).
-  const { data: row, error: insertError } = await supabase
+export type GoogleAdsConversionClaim =
+  | { kind: 'won'; rowId: string | number }
+  | { kind: 'retry'; rowId: string | number }
+  | { kind: 'skip'; reason: string }
+
+const MAX_GOOGLE_ADS_UPLOAD_ATTEMPTS = 5
+
+type GoogleAdsClaimRow = {
+  appointment_id?: string | null
+  order_id: string
+  tenant_id?: string | null
+  conversion_action_id: string
+  gclid?: string | null
+  gbraid?: string | null
+  wbraid?: string | null
+  conversion_value_chf: number
+  conversion_date_time: string
+}
+
+/**
+ * Claim a conversion upload row BEFORE calling Google.
+ * Concurrent requests: unique constraint lets only one insert win;
+ * losers must not call the provider.
+ */
+export async function claimGoogleAdsConversionUpload(
+  supabase: { from: (table: string) => any },
+  row: GoogleAdsClaimRow,
+): Promise<GoogleAdsConversionClaim> {
+  const { data, error } = await supabase
     .from('google_ads_conversion_uploads')
     .insert({
-      appointment_id: input.appointment_id,
-      order_id: input.order_id || input.appointment_id || null,
-      tenant_id: input.tenant_id ?? null,
-      conversion_action_id: conversionActionId,
-      gclid: input.gclid ?? null,
-      gbraid: input.gbraid ?? null,
-      wbraid: input.wbraid ?? null,
-      conversion_value_chf: normalizedValue,
-      conversion_date_time: typeof input.conversion_date_time === 'string'
-        ? input.conversion_date_time
-        : input.conversion_date_time.toISOString(),
+      ...row,
       upload_status: 'pending',
       upload_attempts: 0,
     })
     .select('id')
     .single()
 
-  if (insertError || !row) {
-    logger.warn('google-ads-conversion: could not record upload row', insertError?.message)
-    // Continue with upload anyway — better to attempt than to skip.
+  if (data?.id && !error) return { kind: 'won', rowId: data.id }
+
+  if (!isUniqueViolation(error)) {
+    logger.warn('google-ads-conversion: could not claim upload row', error?.message)
+    return { kind: 'skip', reason: 'claim_failed' }
   }
 
-  // 2. Perform the upload.
-  const result = await uploadClickConversion(uploadInput)
+  const existing = await findExistingGoogleAdsClaim(supabase, row)
+  if (!existing) return { kind: 'skip', reason: 'claim_conflict_unreadable' }
 
-  // 3. Update audit row with outcome.
-  if (row?.id) {
-    const upload_status =
-      result.uploaded ? 'success'
-        : result.reason === 'no_click_id' ? 'skipped_no_click_id'
-          : 'failed'
+  if (existing.upload_status === 'failed' && (existing.upload_attempts ?? 0) < MAX_GOOGLE_ADS_UPLOAD_ATTEMPTS) {
+    return { kind: 'retry', rowId: existing.id }
+  }
 
-    await supabase
+  return { kind: 'skip', reason: existing.upload_status || 'already_claimed' }
+}
+
+async function findExistingGoogleAdsClaim(
+  supabase: { from: (table: string) => any },
+  row: GoogleAdsClaimRow,
+): Promise<{ id: string | number; upload_status: string | null; upload_attempts?: number | null } | null> {
+  if (row.order_id) {
+    const { data } = await supabase
       .from('google_ads_conversion_uploads')
-      .update({
-        upload_status,
-        upload_attempts: 1,
-        last_attempt_at: new Date().toISOString(),
-        error_message: result.error || result.reason || null,
-        google_response: result.google_response ?? null,
-      })
-      .eq('id', row.id)
+      .select('id, upload_status, upload_attempts')
+      .eq('order_id', row.order_id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    if (data) return data
   }
+  if (row.appointment_id) {
+    const { data } = await supabase
+      .from('google_ads_conversion_uploads')
+      .select('id, upload_status, upload_attempts')
+      .eq('appointment_id', row.appointment_id)
+      .eq('conversion_action_id', row.conversion_action_id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    if (data) return data
+  }
+  return null
+}
+
+async function markGoogleAdsClaimResult(
+  supabase: { from: (table: string) => any },
+  rowId: string | number,
+  result: ConversionUploadResult,
+  attempts: number,
+): Promise<void> {
+  const upload_status =
+    result.uploaded ? 'success'
+      : result.reason === 'no_click_id' ? 'skipped_no_click_id'
+        : 'failed'
+
+  await supabase
+    .from('google_ads_conversion_uploads')
+    .update({
+      upload_status,
+      upload_attempts: attempts,
+      last_attempt_at: new Date().toISOString(),
+      error_message: result.error || result.reason || null,
+      google_response: result.google_response ?? null,
+    })
+    .eq('id', rowId)
+}
+
+/**
+ * Claim a conversion row, then upload. Never calls Google without a winning claim.
+ */
+export async function recordAndUploadConversion(input: ConversionUploadInput): Promise<void> {
+  const supabase = getSupabaseAdmin()
+  const conversionActionId = (input.conversion_action_id ?? process.env.GOOGLE_ADS_CONVERSION_ACTION_ID ?? 'unknown').trim()
+  const normalizedValue = normalizeConversionValueChf(input.conversion_value_chf)
+  const orderId = input.order_id || input.appointment_id
+  if (!orderId) {
+    logger.warn('google-ads-conversion: missing order_id/appointment_id, skip')
+    return
+  }
+  const uploadInput: ConversionUploadInput = { ...input, conversion_value_chf: normalizedValue, order_id: orderId }
+
+  const claim = await claimGoogleAdsConversionUpload(supabase, {
+    appointment_id: input.appointment_id ?? null,
+    order_id: orderId,
+    tenant_id: input.tenant_id ?? null,
+    conversion_action_id: conversionActionId,
+    gclid: input.gclid ?? null,
+    gbraid: input.gbraid ?? null,
+    wbraid: input.wbraid ?? null,
+    conversion_value_chf: normalizedValue,
+    conversion_date_time: typeof input.conversion_date_time === 'string'
+      ? input.conversion_date_time
+      : input.conversion_date_time.toISOString(),
+  })
+
+  if (claim.kind === 'skip') {
+    logger.debug(`google-ads-conversion: skip for ${orderId} — ${claim.reason}`)
+    return
+  }
+
+  const result = await uploadClickConversion(uploadInput)
+  await markGoogleAdsClaimResult(supabase, claim.rowId, result, claim.kind === 'retry' ? 2 : 1)
 
   if (result.uploaded) {
-    logger.info(`google-ads-conversion: uploaded for appointment ${input.appointment_id} (CHF ${normalizedValue})`)
+    logger.info(`google-ads-conversion: uploaded for ${orderId} (CHF ${normalizedValue})`)
   } else if (result.reason === 'no_click_id') {
-    // Expected/benign: this booking has no gclid/gbraid/wbraid (e.g. direct visit,
-    // organic traffic, or another channel) — there is nothing to upload. Not a failure.
-    logger.debug(`google-ads-conversion: skipped for appointment ${input.appointment_id} — no click id on this booking (not from a Google Ads click)`)
+    logger.debug(`google-ads-conversion: skipped for ${orderId} — no click id on this booking (not from a Google Ads click)`)
   } else {
-    logger.warn(`google-ads-conversion: upload skipped/failed for appointment ${input.appointment_id} — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
+    logger.warn(`google-ads-conversion: upload skipped/failed for ${orderId} — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
   }
 }
 
 /**
- * Upload a paid course-registration conversion to Google Ads.
+ * Upload a binding course-registration conversion to Google Ads.
  *
- * course_registrations are not appointments, so we cannot write the UUID FK
- * audit row in google_ads_conversion_uploads. Upload directly with a stable
- * order_id (`course_<registration_id>`) for Google-side dedupe — same pattern
- * as Meta CAPI for courses.
+ * course_registrations are not appointments. Audit via order_id
+ * `course_<registration_id>` (appointment_id stays null). Claim-first
+ * so duplicate webhooks cannot double-call Google.
  */
 export async function recordAndUploadCourseConversion(input: {
   registration_id: string
@@ -318,31 +398,18 @@ export async function recordAndUploadCourseConversion(input: {
   hashed_email?: string | null
   hashed_phone?: string | null
 }): Promise<void> {
-  if (!input.gclid && !input.gbraid && !input.wbraid) {
-    logger.info(`google-ads-conversion: course ${input.registration_id} — no click id, skip (organic/direct)`)
-    return
-  }
-
-  const conversionDateTime = input.conversion_date_time ?? new Date()
-  const normalizedValue = normalizeConversionValueChf(input.conversion_value_chf)
-  const result = await uploadClickConversion({
-    appointment_id: input.registration_id,
+  await recordAndUploadConversion({
+    appointment_id: undefined,
     order_id: `course_${input.registration_id}`,
     tenant_id: input.tenant_id,
     gclid: input.gclid,
     gbraid: input.gbraid,
     wbraid: input.wbraid,
-    conversion_value_chf: normalizedValue,
-    conversion_date_time: conversionDateTime,
+    conversion_value_chf: input.conversion_value_chf,
+    conversion_date_time: input.conversion_date_time ?? new Date(),
     hashed_email: input.hashed_email,
     hashed_phone: input.hashed_phone,
   })
-
-  if (result.uploaded) {
-    logger.info(`google-ads-conversion: course ${input.registration_id} uploaded (CHF ${normalizedValue})`)
-  } else if (result.reason !== 'no_click_id') {
-    logger.warn(`google-ads-conversion: course ${input.registration_id} failed — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
-  }
 }
 
 /**

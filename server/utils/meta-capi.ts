@@ -19,6 +19,7 @@
  */
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { isUniqueViolation } from '~/server/utils/binding-booking'
 import { logger } from '~/utils/logger'
 
 const META_GRAPH_API_VERSION = 'v19.0'
@@ -27,6 +28,8 @@ export interface MetaCapiInput {
   appointment_id: string
   tenant_id?: string | null
   event_name: 'Purchase' | 'Lead' | 'RefundOrder'
+  /** Stable CAPI event_id. Defaults to capi_{appointment_id}. Must be reused on retry. */
+  event_id?: string | null
   conversion_value_chf: number
   conversion_date_time: Date | string
   /** Raw fbclid from URL (?fbclid=...) — used as deduplication signal. */
@@ -131,7 +134,7 @@ export async function sendCapiEvent(input: MetaCapiInput): Promise<MetaCapiResul
 
   const eventTime = toUnixSeconds(input.conversion_date_time)
   // event_id must match the browser pixel's eventID for deduplication.
-  const eventId = `capi_${input.appointment_id}`
+  const eventId = input.event_id || `capi_${input.appointment_id}`
 
   const userData: Record<string, any> = {}
   if (input.hashed_email) userData.em = [input.hashed_email]
@@ -200,63 +203,187 @@ export async function sendCapiEvent(input: MetaCapiInput): Promise<MetaCapiResul
   }
 }
 
+export type MetaCapiClaim =
+  | { kind: 'won'; rowId: string }
+  | { kind: 'retry'; rowId: string }
+  | { kind: 'skip'; reason: string }
+
+const MAX_META_CAPI_UPLOAD_ATTEMPTS = 3
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isUuid(value: string | null | undefined): value is string {
+  return !!value && UUID_RE.test(value)
+}
+
+export function resolveMetaEventId(input: Pick<MetaCapiInput, 'appointment_id' | 'event_id'>): string {
+  return (input.event_id || `capi_${input.appointment_id}`).trim()
+}
+
+function isMissingEventIdColumn(error: { code?: string; message?: string } | null | undefined): boolean {
+  const msg = String(error?.message || '')
+  return /event_id/i.test(msg) && (/column/i.test(msg) || error?.code === '42703' || error?.code === 'PGRST204')
+}
+
+export async function claimMetaCapiUpload(
+  supabase: { from: (table: string) => any },
+  row: {
+    appointment_id: string | null
+    tenant_id?: string | null
+    pixel_id: string
+    event_name: string
+    event_id: string
+    fbclid?: string | null
+    fbc?: string | null
+    fbp?: string | null
+    conversion_value_chf: number
+    conversion_date_time: string
+  },
+): Promise<MetaCapiClaim> {
+  const insertRow = {
+    ...row,
+    upload_status: 'pending',
+    upload_attempts: 0,
+  }
+
+  let { data, error } = await supabase
+    .from('meta_capi_uploads')
+    .insert(insertRow)
+    .select('id')
+    .single()
+
+  if (isMissingEventIdColumn(error)) {
+    const { event_id: _ignored, ...withoutEventId } = insertRow
+    const fallback = await supabase
+      .from('meta_capi_uploads')
+      .insert(withoutEventId)
+      .select('id')
+      .single()
+    data = fallback.data
+    error = fallback.error
+  }
+
+  if (data?.id && !error) return { kind: 'won', rowId: String(data.id) }
+
+  if (error && (error.code === '23503' || /foreign key/i.test(String(error.message || '')))) {
+    const { event_id: eventIdCol, ...withoutAppt } = insertRow
+    const fkPayload = { ...withoutAppt, appointment_id: null, event_id: eventIdCol }
+    let { data: fallback, error: fallbackError } = await supabase
+      .from('meta_capi_uploads')
+      .insert(fkPayload)
+      .select('id')
+      .single()
+    if (isMissingEventIdColumn(fallbackError)) {
+      const { event_id: _ignored, ...noEventId } = fkPayload
+      const retry = await supabase
+        .from('meta_capi_uploads')
+        .insert(noEventId)
+        .select('id')
+        .single()
+      fallback = retry.data
+      fallbackError = retry.error
+    }
+    if (fallback?.id && !fallbackError) return { kind: 'won', rowId: String(fallback.id) }
+    if (isUniqueViolation(fallbackError)) {
+      return findExistingMetaClaim(supabase, row)
+    }
+    logger.warn('meta-capi: could not claim upload row (fk fallback)', fallbackError?.message || error?.message)
+    return { kind: 'skip', reason: 'claim_failed' }
+  }
+
+  if (!isUniqueViolation(error)) {
+    logger.warn('meta-capi: could not claim upload row', error?.message)
+    return { kind: 'skip', reason: 'claim_failed' }
+  }
+
+  return findExistingMetaClaim(supabase, row)
+}
+
+async function findExistingMetaClaim(
+  supabase: { from: (table: string) => any },
+  row: { event_id: string; event_name: string; appointment_id?: string | null },
+): Promise<MetaCapiClaim> {
+  const { data: byEventId, error: eventIdError } = await supabase
+    .from('meta_capi_uploads')
+    .select('id, upload_status, upload_attempts')
+    .eq('event_name', row.event_name)
+    .eq('event_id', row.event_id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  let existing = eventIdError ? null : byEventId
+  if (!existing && row.appointment_id) {
+    const { data: byAppointment } = await supabase
+      .from('meta_capi_uploads')
+      .select('id, upload_status, upload_attempts')
+      .eq('event_name', row.event_name)
+      .eq('appointment_id', row.appointment_id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    existing = byAppointment
+  }
+
+  if (!existing) return { kind: 'skip', reason: 'claim_conflict_unreadable' }
+  if (existing.upload_status === 'failed' && (existing.upload_attempts ?? 0) < MAX_META_CAPI_UPLOAD_ATTEMPTS) {
+    return { kind: 'retry', rowId: String(existing.id) }
+  }
+  return { kind: 'skip', reason: existing.upload_status || 'already_claimed' }
+}
+
 /**
  * Upload a CAPI event AND record the attempt in `meta_capi_uploads` for audit + retry.
- * Fire-and-forget safe.
+ * Claim-first: unique (event_name, event_id) decides the winner before the API call.
  */
 export async function recordAndSendCapiEvent(input: MetaCapiInput): Promise<void> {
   const supabase = getSupabaseAdmin()
   const pixelId = cleanMetaEnv(process.env.META_PIXEL_ID) || 'unknown'
+  const eventId = resolveMetaEventId(input)
+  const appointmentFk = isUuid(input.appointment_id) ? input.appointment_id : null
 
-  const { data: row, error: insertError } = await supabase
-    .from('meta_capi_uploads')
-    .insert({
-      appointment_id: input.appointment_id,
-      tenant_id: input.tenant_id ?? null,
-      pixel_id: pixelId,
-      event_name: input.event_name,
-      fbclid: input.fbclid ?? null,
-      fbc: input.fbc ?? null,
-      fbp: input.fbp ?? null,
-      conversion_value_chf: input.conversion_value_chf,
-      conversion_date_time: typeof input.conversion_date_time === 'string'
-        ? input.conversion_date_time
-        : input.conversion_date_time.toISOString(),
-      upload_status: 'pending',
-      upload_attempts: 0,
-    })
-    .select('id')
-    .single()
+  const claim = await claimMetaCapiUpload(supabase, {
+    appointment_id: appointmentFk,
+    tenant_id: input.tenant_id ?? null,
+    pixel_id: pixelId,
+    event_name: input.event_name,
+    event_id: eventId,
+    fbclid: input.fbclid ?? null,
+    fbc: input.fbc ?? null,
+    fbp: input.fbp ?? null,
+    conversion_value_chf: input.conversion_value_chf,
+    conversion_date_time: typeof input.conversion_date_time === 'string'
+      ? input.conversion_date_time
+      : input.conversion_date_time.toISOString(),
+  })
 
-  if (insertError || !row) {
-    logger.warn('meta-capi: could not record upload row', insertError?.message)
+  if (claim.kind === 'skip') {
+    logger.debug(`meta-capi: skip ${input.event_name} ${eventId} — ${claim.reason}`)
+    return
   }
 
-  const result = await sendCapiEvent(input)
+  const result = await sendCapiEvent({ ...input, event_id: eventId })
 
-  if (row?.id) {
-    const uploadStatus =
-      result.sent ? 'success'
-        : result.reason === 'no_click_id' ? 'skipped_no_click_id'
+  const uploadStatus =
+    result.sent ? 'success'
+      : result.reason === 'no_click_id' ? 'skipped_no_click_id'
         : result.reason === 'no_user_signal' ? 'skipped_no_signal'
           : 'failed'
 
-    await supabase
-      .from('meta_capi_uploads')
-      .update({
-        upload_status: uploadStatus,
-        upload_attempts: 1,
-        last_attempt_at: new Date().toISOString(),
-        error_message: result.error || result.reason || null,
-        meta_response: result.meta_response ?? null,
-      })
-      .eq('id', row.id)
-  }
+  await supabase
+    .from('meta_capi_uploads')
+    .update({
+      upload_status: uploadStatus,
+      upload_attempts: claim.kind === 'retry' ? 2 : 1,
+      last_attempt_at: new Date().toISOString(),
+      error_message: result.error || result.reason || null,
+      meta_response: result.meta_response ?? null,
+    })
+    .eq('id', claim.rowId)
 
   if (result.sent) {
-    logger.info(`meta-capi: ${input.event_name} sent for appointment ${input.appointment_id} (CHF ${input.conversion_value_chf})`)
+    logger.info(`meta-capi: ${input.event_name} sent for ${eventId} (CHF ${input.conversion_value_chf})`)
   } else {
-    logger.warn(`meta-capi: ${input.event_name} skipped/failed for appointment ${input.appointment_id} — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
+    logger.warn(`meta-capi: ${input.event_name} skipped/failed for ${eventId} — ${result.reason}${result.error ? `: ${result.error.slice(0, 200)}` : ''}`)
   }
 }
 

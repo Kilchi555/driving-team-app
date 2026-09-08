@@ -2,7 +2,6 @@ import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import { uploadProposalDerivedBookingConversion } from '~/server/utils/proposal-booking-conversion'
 
 type AllowedProposalStatus = 'pending' | 'contacted' | 'accepted' | 'rejected' | 'expired'
 type OutcomeType = 'booking_confirmed' | 'consultation_only' | 'potential_customer' | 'not_interested' | 'no_show'
@@ -103,39 +102,11 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'Failed to update proposal status' })
     }
 
-    // Offline close: Ads inquiry → staff confirms booking without online checkout.
-    // Upload Booking Completed once (deduped via proposal-booking-<id>).
-    let adsUpload: string | null = null
-    if (
-      outcomeType === 'booking_confirmed'
-      && existingProposal.outcome_type !== 'booking_confirmed'
-      && (existingProposal.gclid || existingProposal.gbraid || existingProposal.wbraid || existingProposal.fbclid)
-    ) {
-      try {
-        adsUpload = await uploadProposalDerivedBookingConversion({
-          proposal: {
-            id: existingProposal.id,
-            tenant_id: existingProposal.tenant_id,
-            gclid: existingProposal.gclid,
-            gbraid: existingProposal.gbraid,
-            wbraid: existingProposal.wbraid,
-            fbclid: existingProposal.fbclid,
-            fbc: existingProposal.fbc,
-            fbp: existingProposal.fbp,
-            email: existingProposal.email,
-            phone: existingProposal.phone,
-          },
-        })
-      } catch (err: any) {
-        logger.warn('⚠️ Proposal booking_confirmed Ads upload failed (non-critical):', err?.message ?? err)
-        adsUpload = 'failed'
-      }
-    }
-
+    // Offline CRM outcome is a staff label only — never a Google Primary / Meta Purchase.
+    // Binding booking conversion fires when a real appointment becomes confirmed.
     return {
       success: true,
       data: updatedProposal,
-      ...(adsUpload ? { google_ads_upload: adsUpload } : {}),
     }
   } catch (error: any) {
     logger.error('❌ Error in update-booking-proposal-status API:', error)

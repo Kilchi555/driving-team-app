@@ -91,6 +91,42 @@ export default defineEventHandler(async (event) => {
     }
     
     console.log('✅ Appointment confirmed:', data.id)
+
+    try {
+      const { reportBindingAppointmentConversionSafely, hashCustomerIdentifiers } = await import(
+        '~/server/utils/binding-booking-conversion'
+      )
+      const hashed = await hashCustomerIdentifiers({ email: (appointment as any).email, phone: (appointment as any).phone })
+      const { data: student } = await supabase
+        .from('users')
+        .select('email, phone')
+        .eq('id', appointment.user_id)
+        .maybeSingle()
+      const studentHash = student
+        ? await hashCustomerIdentifiers({ email: student.email, phone: student.phone })
+        : hashed
+      await reportBindingAppointmentConversionSafely({
+        supabase,
+        appointmentId: data.id,
+        userId: appointment.user_id,
+        tenantId: appointment.tenant_id,
+        status: 'confirmed',
+        previousStatus: appointment.status,
+        eventTypeCode: appointment.event_type_code,
+        categoryCode: appointment.type,
+        gclid: appointment.gclid,
+        gbraid: appointment.gbraid,
+        wbraid: appointment.wbraid,
+        fbclid: appointment.fbclid,
+        fbc: appointment.fbc,
+        fbp: appointment.fbp,
+        conversionValueChf: (appointment.original_price_rappen || 0) / 100,
+        hashedEmail: studentHash.hashedEmail,
+        hashedPhone: studentHash.hashedPhone,
+      })
+    } catch (convErr: any) {
+      console.warn('⚠️ Binding booking conversion failed (non-critical):', convErr?.message ?? convErr)
+    }
     
     return {
       success: true,
