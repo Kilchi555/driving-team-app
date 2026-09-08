@@ -145,26 +145,71 @@ export default defineEventHandler(async (event) => {
     targetCourseName?: string | null
     oldSariIds: string[]
     originalSariIds: string[]
+    /** Public refs kept so the persisted entry stays consistent with the SARI ids. */
+    publicTargetIds: string[]
+    publicOriginalIds: string[]
     fromLabel: string
     toLabel: string
   }
 
   const prepared: PreparedChange[] = []
 
-  // Public course_sessions.id references sent by the admin UI are resolved to
-  // internal SARI ids here, scoped to the tenant. Legacy payloads that still
-  // carry targetSariSessionIds keep working during rollout.
-  const targetSessionIdRefs = changes.flatMap((raw: any) =>
-    (raw?.targetSessionIds || []).map(String).filter(Boolean)
-  )
-  const targetSariMap = await loadSariSessionMap(supabase, targetSessionIdRefs, profile.tenant_id)
+  /**
+   * Normalises a custom_sessions field (scalar or array) into unique id strings.
+   * The browser writes sessionIds and sessionId with overlapping values, so
+   * de-duplication keeps the SARI calls from firing twice for one session.
+   */
+  const toIdList = (...values: unknown[]): string[] => {
+    const out = new Set<string>()
+    for (const value of values) {
+      if (value == null) continue
+      for (const item of Array.isArray(value) ? value : [value]) {
+        if (item == null) continue
+        const str = String(item).trim()
+        if (str) out.add(str)
+      }
+    }
+    return [...out]
+  }
+
+  // Public course_sessions.id references are resolved to internal SARI ids here,
+  // scoped to the tenant. This covers both the targets sent by the admin UI and
+  // the source sessions a customer-side swap stored in custom_sessions. Legacy
+  // payloads and rows that still carry SARI ids keep working during rollout.
+  const publicSessionIdRefs = changes.flatMap((raw: any) => {
+    const entry = currentCustom[String(Number(raw?.sessionPosition))]
+    return [
+      ...toIdList(raw?.targetSessionIds),
+      ...toIdList(entry?.sessionIds, entry?.sessionId),
+      ...toIdList(entry?.originalSessionIds),
+    ]
+  })
+  const sariSessionMap = await loadSariSessionMap(supabase, publicSessionIdRefs, profile.tenant_id)
+
+  /**
+   * Public ids must resolve completely. Falling back to the course's original
+   * sessions would unenroll a session the student is not in, which is exactly
+   * how a swapped student ends up enrolled in the old and the new session.
+   */
+  const resolvePublicIds = (publicIds: string[], position: number, label: string): string[] => {
+    const resolved = publicIds
+      .map(id => sariSessionMap.get(id))
+      .filter(Boolean) as string[]
+    if (resolved.length !== publicIds.length) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Teil ${position}: ${label} nicht gefunden oder nicht SARI-verknüpft`,
+      })
+    }
+    return resolved
+  }
 
   for (const raw of changes) {
     const sessionPosition = Number(raw.sessionPosition)
     const targetCourseId = raw.targetCourseId as string
     const publicTargetIds = (raw.targetSessionIds || []).map(String).filter(Boolean)
     const targetSariSessionIds = publicTargetIds.length > 0
-      ? publicTargetIds.map((id: string) => targetSariMap.get(id)).filter(Boolean) as string[]
+      ? publicTargetIds.map((id: string) => sariSessionMap.get(id)).filter(Boolean) as string[]
       : (raw.targetSariSessionIds || []).map(String).filter(Boolean)
     const targetDate = raw.targetDate as string
 
@@ -202,15 +247,26 @@ export default defineEventHandler(async (event) => {
 
     const originalAtPos = positionMap.get(sessionPosition) || []
     const existingCustom = currentCustom[String(sessionPosition)]
-    const oldSariIds: string[] = existingCustom?.sariSessionIds?.length
-      ? existingCustom.sariSessionIds.map(String)
-      : existingCustom?.sariSessionId
-        ? [String(existingCustom.sariSessionId)]
-        : originalAtPos.map((s: any) => String(s.sari_session_id)).filter(Boolean)
 
-    const originalSariIds: string[] = existingCustom?.originalSariIds?.length
-      ? existingCustom.originalSariIds.map(String)
-      : originalAtPos.map((s: any) => String(s.sari_session_id)).filter(Boolean)
+    // The sessions the student is enrolled in RIGHT NOW at this position. After a
+    // customer-side swap that is the swapped-into session, not the course's own
+    // one — unenrolling the latter would leave the student in both.
+    const publicCurrentIds = toIdList(existingCustom?.sessionIds, existingCustom?.sessionId)
+    const oldSariIds: string[] = publicCurrentIds.length > 0
+      ? resolvePublicIds(publicCurrentIds, sessionPosition, 'Aktueller Termin')
+      : existingCustom?.sariSessionIds?.length
+        ? existingCustom.sariSessionIds.map(String)
+        : existingCustom?.sariSessionId
+          ? [String(existingCustom.sariSessionId)]
+          : originalAtPos.map((s: any) => String(s.sari_session_id)).filter(Boolean)
+
+    // The pristine sessions the swap replaced, carried along as history.
+    const publicOriginalIds = toIdList(existingCustom?.originalSessionIds)
+    const originalSariIds: string[] = publicOriginalIds.length > 0
+      ? resolvePublicIds(publicOriginalIds, sessionPosition, 'Ursprungs-Termin')
+      : existingCustom?.originalSariIds?.length
+        ? existingCustom.originalSariIds.map(String)
+        : originalAtPos.map((s: any) => String(s.sari_session_id)).filter(Boolean)
 
     const fromDate = existingCustom?.date || (originalAtPos[0]?.start_time ? String(originalAtPos[0].start_time).slice(0, 10) : '')
     const fromCourseName = existingCustom?.courseName || course.name
@@ -225,6 +281,8 @@ export default defineEventHandler(async (event) => {
       targetCourseName: raw.targetCourseName || targetCourse.name,
       oldSariIds,
       originalSariIds,
+      publicTargetIds,
+      publicOriginalIds,
       fromLabel: `Teil ${sessionPosition}: ${formatChDate(fromDate)} (${fromCourseName})`,
       toLabel: `Teil ${sessionPosition}: ${formatChDate(targetDate)} (${raw.targetCourseName || targetCourse.name})`,
     })
@@ -353,8 +411,18 @@ export default defineEventHandler(async (event) => {
 
   const now = new Date().toISOString()
   for (const ch of prepared) {
+    // This transfer supersedes any customer-side swap stored for the position.
+    // Stale public refs must not survive next to the fresh SARI ids, or the next
+    // resolution would read the pre-transfer sessions again.
+    const previous = { ...(currentCustom[String(ch.sessionPosition)] || {}) }
+    delete previous.sessionId
+    delete previous.sessionIds
+    delete previous.originalSessionIds
+
     currentCustom[String(ch.sessionPosition)] = {
-      ...(currentCustom[String(ch.sessionPosition)] || {}),
+      ...previous,
+      ...(ch.publicTargetIds.length > 0 ? { sessionIds: ch.publicTargetIds } : {}),
+      ...(ch.publicOriginalIds.length > 0 ? { originalSessionIds: ch.publicOriginalIds } : {}),
       date: ch.targetDate,
       startTime: ch.targetStartTime || `${ch.targetDate}T08:00:00`,
       endTime: ch.targetEndTime || null,
