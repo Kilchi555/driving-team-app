@@ -13,8 +13,8 @@ import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure
 import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
-import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
-import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conversion'
+import { sha256Hex } from '~/server/utils/meta-capi'
+import { becameBindingConfirmed } from '~/server/utils/binding-booking'
 import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { syncPaymentRefundTotals } from '~/server/utils/wallee-refund'
@@ -1130,15 +1130,14 @@ export default defineEventHandler(async (event) => {
                 }
               })()
 
-              // ── Meta CAPI + Google Ads: report course purchases (webhook-confirmed only,
-              // so webhook retries for an already-processed payment never re-fire —
-              // `newRegs` only contains registrations created in THIS delivery).
-              // MUST be awaited — Vercel freezes the isolate after the response, so
-              // fire-and-forget conversions were silently dropped (root cause of
-              // Motorrad course purchases never reaching Google Ads).
+              // Binding course conversion: confirmed registration is the conversion
+              // (including pending cash/invoice settlement). Claim-first is inside the reporter.
               if (paymentStatus === 'completed') {
                 try {
                   const { resolveMarketingAttribution } = await import('~/server/utils/resolve-marketing-attribution')
+                  const { reportBindingCourseConversionSafely } = await import(
+                    '~/server/utils/binding-booking-conversion'
+                  )
                   const paymentsById = new Map(paymentsToUpdate.map((p: any) => [p.id, p]))
                   for (let i = 0; i < registrationsToCreate.length && i < newRegs.length; i++) {
                     const regData = registrationsToCreate[i] as any
@@ -1163,42 +1162,26 @@ export default defineEventHandler(async (event) => {
                     const normalizedRegPhone = String(regData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
                     const hashedPhone = normalizedRegPhone.startsWith('+') ? await sha256Hex(normalizedRegPhone) : null
                     const valueChf = (regData.amount_paid_rappen || payment?.total_amount_rappen || 0) / 100
-                    const conversionDateTime = new Date()
 
-                    const { shouldSendMetaBookingConversion } = await import('~/server/utils/meta-booking-conversion')
-                    if (shouldSendMetaBookingConversion({
-                      isFirstCustomerBooking: true,
-                      fbclid: attrRow?.fbclid,
-                      fbc: attrRow?.fbc,
-                    })) {
-                      await sendCapiEvent({
-                        appointment_id: `course_${newReg.id}`,
-                        tenant_id: regData.tenant_id,
-                        event_name: 'Purchase',
-                        conversion_value_chf: valueChf,
-                        conversion_date_time: conversionDateTime,
-                        fbclid: attrRow?.fbclid ?? null,
-                        fbc: attrRow?.fbc ?? null,
-                        fbp: attrRow?.fbp ?? null,
-                        hashed_email: hashedEmail,
-                        hashed_phone: hashedPhone,
-                      })
-                    }
-
-                    await recordAndUploadCourseConversion({
-                      registration_id: String(newReg.id),
-                      tenant_id: regData.tenant_id ?? null,
+                    await reportBindingCourseConversionSafely({
+                      supabase,
+                      registrationId: String(newReg.id),
+                      userId: newReg.user_id || regData.user_id || null,
+                      tenantId: regData.tenant_id ?? null,
+                      status: 'confirmed',
                       gclid: attrRow?.gclid ?? null,
                       gbraid: attrRow?.gbraid ?? null,
                       wbraid: attrRow?.wbraid ?? null,
-                      conversion_value_chf: valueChf,
-                      conversion_date_time: conversionDateTime,
-                      hashed_email: hashedEmail,
-                      hashed_phone: hashedPhone,
+                      fbclid: attrRow?.fbclid ?? null,
+                      fbc: attrRow?.fbc ?? null,
+                      fbp: attrRow?.fbp ?? null,
+                      conversionValueChf: valueChf,
+                      hashedEmail,
+                      hashedPhone,
                     })
                   }
                 } catch (capiErr: any) {
-                  logger.warn('⚠️ Meta/Google Ads conversion upload failed for course registration (webhook, non-critical):', capiErr?.message ?? capiErr)
+                  logger.warn('⚠️ Binding course conversion failed (webhook, non-critical):', capiErr?.message ?? capiErr)
                 }
               }
 
@@ -1519,7 +1502,7 @@ export default defineEventHandler(async (event) => {
       if (appointmentIds.length > 0) {
         const { data: priorAppointments } = await supabase
           .from('appointments')
-          .select('id, status, user_id, tenant_id')
+          .select('id, status, user_id, tenant_id, event_type_code, type, gclid, gbraid, wbraid, fbclid, fbc, fbp')
           .in('id', appointmentIds)
 
         const appointmentStatus = paymentStatus === 'completed' ? 'confirmed' : 'scheduled'
@@ -1548,7 +1531,7 @@ export default defineEventHandler(async (event) => {
 
         if (paymentStatus === 'completed') {
           for (const appt of priorAppointments || []) {
-            if (appt.status !== 'pending' || !appt.user_id || !appt.tenant_id) continue
+            if (!becameBindingConfirmed(appt.status, 'confirmed') || !appt.user_id || !appt.tenant_id) continue
             try {
               const { dispatchAppointmentConfirmation } = await import(
                 '~/server/utils/dispatch-appointment-confirmation'
@@ -1562,36 +1545,37 @@ export default defineEventHandler(async (event) => {
               logger.warn('⚠️ Pay-before-confirm confirmation email failed:', confirmErr?.message)
             }
             try {
-              const { data: stamped } = await supabase
-                .from('appointments')
-                .select('fbclid, fbc, fbp')
-                .eq('id', appt.id)
-                .maybeSingle()
+              const payment = paymentsToUpdate.find(p => p.appointment_id === appt.id)
               const { data: student } = await supabase
                 .from('users')
                 .select('email, phone')
                 .eq('id', appt.user_id)
                 .maybeSingle()
-              const payment = paymentsToUpdate.find(p => p.appointment_id === appt.id)
-              const { maybeSendMetaBookingPurchase } = await import('~/server/utils/meta-booking-conversion')
-              const { sha256Hex } = await import('~/server/utils/meta-capi')
-              const hashedEmail = student?.email ? await sha256Hex(student.email.trim().toLowerCase()) : null
-              const normalizedPhone = (student?.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
-              const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
-              await maybeSendMetaBookingPurchase({
+              const { hashCustomerIdentifiers, reportBindingAppointmentConversionSafely } = await import(
+                '~/server/utils/binding-booking-conversion'
+              )
+              const hashed = await hashCustomerIdentifiers({ email: student?.email, phone: student?.phone })
+              await reportBindingAppointmentConversionSafely({
                 supabase,
                 appointmentId: appt.id,
                 userId: appt.user_id,
                 tenantId: appt.tenant_id,
-                fbclid: stamped?.fbclid,
-                fbc: stamped?.fbc,
-                fbp: stamped?.fbp,
+                status: 'confirmed',
+                previousStatus: appt.status,
+                eventTypeCode: appt.event_type_code,
+                categoryCode: appt.type,
+                gclid: appt.gclid,
+                gbraid: appt.gbraid,
+                wbraid: appt.wbraid,
+                fbclid: appt.fbclid,
+                fbc: appt.fbc,
+                fbp: appt.fbp,
                 conversionValueChf: (payment?.total_amount_rappen || 0) / 100,
-                hashedEmail,
-                hashedPhone,
+                hashedEmail: hashed.hashedEmail,
+                hashedPhone: hashed.hashedPhone,
               })
             } catch (capiErr: any) {
-              logger.warn('⚠️ Meta CAPI after pay-before-confirm failed:', capiErr?.message)
+              logger.warn('⚠️ Binding booking conversion after pay-before-confirm failed:', capiErr?.message)
             }
           }
         }

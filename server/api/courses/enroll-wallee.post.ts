@@ -22,8 +22,8 @@ import { availableWalletRappen } from '~/server/utils/apply-student-credit'
 import { consumeGiftCardByCode } from '~/server/utils/consume-gift-card'
 import { incrementAppointmentDiscountUsage } from '~/server/utils/resolve-appointment-discount'
 import { deductStudentCredit, InsufficientAvailableCreditError } from '~/server/utils/wallet-atomic'
-import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
-import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conversion'
+import { sha256Hex } from '~/server/utils/meta-capi'
+import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 
 // Rate limiting: 5 attempts per IP per minute
@@ -757,36 +757,27 @@ const handler = defineEventHandler(async (event) => {
           const normalizedPhone = (finalPhone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
           const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
           const valueChf = finalAmount / 100
-          const conversionDateTime = new Date()
-
-          await sendCapiEvent({
-            appointment_id: `course_${creditRegistration?.id ?? courseId}`,
-            tenant_id: tenantId,
-            event_name: 'Purchase',
-            conversion_value_chf: valueChf,
-            conversion_date_time: conversionDateTime,
-            fbclid: attrRow?.fbclid ?? null,
-            fbc: attrRow?.fbc ?? null,
-            fbp: attrRow?.fbp ?? null,
-            hashed_email: hashedEmail,
-            hashed_phone: hashedPhone,
-          })
 
           if (creditRegistration?.id) {
-            await recordAndUploadCourseConversion({
-              registration_id: creditRegistration.id,
-              tenant_id: tenantId,
+            await reportBindingCourseConversionSafely({
+              supabase,
+              registrationId: creditRegistration.id,
+              userId: guestUserId,
+              tenantId,
+              status: 'confirmed',
               gclid: attrRow?.gclid ?? null,
               gbraid: attrRow?.gbraid ?? null,
               wbraid: attrRow?.wbraid ?? null,
-              conversion_value_chf: valueChf,
-              conversion_date_time: conversionDateTime,
-              hashed_email: hashedEmail,
-              hashed_phone: hashedPhone,
+              fbclid: attrRow?.fbclid ?? null,
+              fbc: attrRow?.fbc ?? null,
+              fbp: attrRow?.fbp ?? null,
+              conversionValueChf: valueChf,
+              hashedEmail,
+              hashedPhone,
             })
           }
         } catch (err: any) {
-          logger.warn('⚠️ Meta/Google Ads conversion upload failed for course credit enrollment (non-critical):', err?.message ?? err)
+          logger.warn('⚠️ Binding course conversion failed for credit enrollment (non-critical):', err?.message ?? err)
         }
 
         return { success: true, paidWithCredit: true }
