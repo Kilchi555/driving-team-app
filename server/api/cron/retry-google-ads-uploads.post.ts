@@ -25,20 +25,26 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
+  const stalePendingBefore = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+
   const { data: failedRows, error: queryError } = await supabase
     .from('google_ads_conversion_uploads')
-    .select('id, appointment_id, order_id, conversion_action_id, gclid, gbraid, wbraid, conversion_value_chf, conversion_date_time, upload_attempts')
-    .eq('upload_status', 'failed')
+    .select('id, appointment_id, order_id, conversion_action_id, gclid, gbraid, wbraid, conversion_value_chf, conversion_date_time, upload_attempts, upload_status, created_at')
+    .in('upload_status', ['failed', 'pending'])
     .lt('upload_attempts', MAX_ATTEMPTS)
     .order('created_at', { ascending: true })
-    .limit(50)
+    .limit(80)
 
   if (queryError) {
     logger.error('retry-google-ads: query failed', queryError.message)
     return { success: false, error: queryError.message }
   }
 
-  const retryable = (failedRows ?? []).filter((r) => r.gclid || r.gbraid || r.wbraid)
+  const retryable = (failedRows ?? []).filter((r) => {
+    if (!(r.gclid || r.gbraid || r.wbraid)) return false
+    if (r.upload_status === 'failed') return true
+    return r.upload_status === 'pending' && String(r.created_at || '') < stalePendingBefore
+  })
 
   if (retryable.length === 0) {
     logger.info('retry-google-ads: no failed uploads to retry')

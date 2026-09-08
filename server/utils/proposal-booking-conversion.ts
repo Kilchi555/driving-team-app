@@ -11,15 +11,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import {
-  readFallbackBookingValueChf,
-  normalizeConversionValueChf,
-  sha256Hex,
-  uploadClickConversion,
-} from '~/server/utils/google-ads-conversion'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { logger } from '~/utils/logger'
-import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
 
 const PROPOSAL_LOOKBACK_DAYS = 90
 export const proposalBookingOrderId = (proposalId: string) => `proposal-booking-${proposalId}`
@@ -116,154 +109,24 @@ export async function findAttributedProposalForCustomer(
   return matched && (hasGoogleClickId(matched) || hasMetaClickId(matched)) ? matched : null
 }
 
-async function alreadyUploadedProposalBooking(proposalId: string): Promise<boolean> {
-  const supabase = getSupabaseAdmin()
-  const orderId = proposalBookingOrderId(proposalId)
-  const { data } = await supabase
-    .from('google_ads_conversion_uploads')
-    .select('id, upload_status')
-    .eq('order_id', orderId)
-    .in('upload_status', ['success', 'pending'])
-    .limit(1)
-  return (data?.length ?? 0) > 0
-}
-
 /**
- * Upload a Booking Completed conversion derived from an attributed proposal.
- * Deduped via order_id `proposal-booking-<proposalId>` so booking_confirmed
- * and later staff appointment create do not double-count.
+ * CRM proposal outcome `booking_confirmed` is a staff label, not a binding booking.
+ * It must never upload Google Primary or Meta Purchase.
+ *
+ * Kept as an explicit no-op so leftover call sites cannot reintroduce the bug.
  */
-export async function uploadProposalDerivedBookingConversion(input: {
+export async function uploadProposalDerivedBookingConversion(_input: {
   proposal: Pick<
     ProposalAttributionRow,
     'id' | 'tenant_id' | 'gclid' | 'gbraid' | 'wbraid' | 'fbclid' | 'fbc' | 'fbp' | 'email' | 'phone'
   >
   appointmentId?: string | null
   conversionValueChf?: number | null
-}): Promise<'uploaded' | 'skipped_already' | 'skipped_no_click_id' | 'failed'> {
-  const google = hasGoogleClickId(input.proposal)
-  const meta = hasMetaClickId(input.proposal)
-  if (!google && !meta) return 'skipped_no_click_id'
-
-  const alreadyGoogle = await alreadyUploadedProposalBooking(input.proposal.id)
-  if (alreadyGoogle && !meta) return 'skipped_already'
-
-  const value = normalizeConversionValueChf(
-    input.conversionValueChf && input.conversionValueChf > 0
-      ? input.conversionValueChf
-      : readFallbackBookingValueChf(),
+}): Promise<'skipped_crm_outcome_only'> {
+  logger.info(
+    `proposal-booking-conversion: skipping booking conversion for CRM outcome (proposal ${_input.proposal.id})`,
   )
-
-  const email = (input.proposal.email || '').trim().toLowerCase()
-  const phoneRaw = (input.proposal.phone || '').replace(/\s+/g, '').replace(/^00/, '+')
-  const hashedEmail = email ? await sha256Hex(email) : null
-  const hashedPhone = phoneRaw.startsWith('+') ? await sha256Hex(phoneRaw) : null
-
-  let googleResult: 'uploaded' | 'skipped_already' | 'failed' | null = alreadyGoogle ? 'skipped_already' : null
-
-  if (google && !alreadyGoogle) {
-    const supabase = getSupabaseAdmin()
-    const orderId = proposalBookingOrderId(input.proposal.id)
-    const conversionActionId = (process.env.GOOGLE_ADS_CONVERSION_ACTION_ID || '').trim() || 'unknown'
-
-    const { data: row, error: insertError } = await supabase
-      .from('google_ads_conversion_uploads')
-      .insert({
-        appointment_id: input.appointmentId || null,
-        proposal_id: input.proposal.id,
-        order_id: orderId,
-        tenant_id: input.proposal.tenant_id,
-        conversion_action_id: conversionActionId,
-        gclid: input.proposal.gclid,
-        gbraid: input.proposal.gbraid,
-        wbraid: input.proposal.wbraid,
-        conversion_value_chf: value,
-        conversion_date_time: new Date().toISOString(),
-        upload_status: 'pending',
-        upload_attempts: 0,
-      })
-      .select('id')
-      .single()
-
-    if (insertError) {
-      if (await alreadyUploadedProposalBooking(input.proposal.id)) {
-        googleResult = 'skipped_already'
-      } else {
-        logger.warn('proposal-booking-conversion: audit insert failed', insertError.message)
-      }
-    }
-
-    if (googleResult !== 'skipped_already') {
-      try {
-        const result = await uploadClickConversion({
-          appointment_id: input.appointmentId || undefined,
-          order_id: orderId,
-          conversion_action_id: conversionActionId === 'unknown' ? undefined : conversionActionId,
-          gclid: input.proposal.gclid,
-          gbraid: input.proposal.gbraid,
-          wbraid: input.proposal.wbraid,
-          conversion_value_chf: value,
-          conversion_date_time: new Date(),
-          hashed_email: hashedEmail,
-          hashed_phone: hashedPhone,
-        })
-
-        if (row?.id) {
-          await supabase
-            .from('google_ads_conversion_uploads')
-            .update({
-              upload_status: result.uploaded
-                ? 'success'
-                : result.reason === 'no_click_id'
-                  ? 'skipped_no_click_id'
-                  : 'failed',
-              upload_attempts: 1,
-              last_attempt_at: new Date().toISOString(),
-              error_message: result.error || result.reason || null,
-              google_response: result.google_response ?? null,
-            })
-            .eq('id', row.id)
-        }
-
-        if (result.uploaded) {
-          logger.info(`proposal-booking-conversion: uploaded booking for proposal ${input.proposal.id} (CHF ${value})`)
-          googleResult = 'uploaded'
-        } else {
-          logger.warn(
-            `proposal-booking-conversion: upload failed for proposal ${input.proposal.id} — ${result.reason}${result.error ? `: ${result.error.slice(0, 160)}` : ''}`,
-          )
-          googleResult = 'failed'
-        }
-      } catch (err: any) {
-        logger.warn('proposal-booking-conversion: exception', err?.message ?? err)
-        googleResult = 'failed'
-      }
-    }
-  }
-
-  if (meta) {
-    try {
-      await recordAndSendCapiEvent({
-        appointment_id: input.appointmentId || `proposal_${input.proposal.id}`,
-        tenant_id: input.proposal.tenant_id,
-        event_name: 'Purchase',
-        conversion_value_chf: value,
-        conversion_date_time: new Date(),
-        fbclid: input.proposal.fbclid ?? null,
-        fbc: input.proposal.fbc ?? null,
-        fbp: input.proposal.fbp ?? null,
-        hashed_email: hashedEmail,
-        hashed_phone: hashedPhone,
-      })
-    } catch (err: any) {
-      logger.warn('proposal-booking-conversion: Meta CAPI failed', err?.message ?? err)
-    }
-  }
-
-  if (googleResult === 'uploaded' || meta) return 'uploaded'
-  if (googleResult === 'skipped_already') return 'skipped_already'
-  if (googleResult === 'failed') return 'failed'
-  return 'uploaded'
+  return 'skipped_crm_outcome_only'
 }
 
 /**
@@ -357,13 +220,7 @@ export async function attachProposalAttributionToStaffAppointment(input: {
 
   await stampAppointmentFromProposal(supabase, input.appointmentId, proposal)
 
-  const result = await uploadProposalDerivedBookingConversion({
-    proposal,
-    appointmentId: input.appointmentId,
-    conversionValueChf: input.conversionValueChf,
-  })
-
   logger.info(
-    `proposal-booking-conversion: staff appointment ${input.appointmentId} ← proposal ${proposal.id} → ${result}`,
+    `proposal-booking-conversion: stamped appointment ${input.appointmentId} ← proposal ${proposal.id}`,
   )
 }

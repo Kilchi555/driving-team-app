@@ -20,8 +20,8 @@ import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact } from '~/server/utils/user-matching'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
-import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
-import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conversion'
+import { sha256Hex } from '~/server/utils/meta-capi'
+import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 
 // Rate limiting: 5 attempts per IP per minute
@@ -658,31 +658,22 @@ const handler = defineEventHandler(async (event) => {
       const normalizedPhone = (finalPhone || phone || '').replace(/\s+/g, '').replace(/^00/, '+')
       const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
       const valueChf = effectivePrice / 100
-      const conversionDateTime = new Date()
 
-      await sendCapiEvent({
-        appointment_id: `course_${enrollment.id}`,
-        tenant_id: tenantId,
-        event_name: 'Purchase',
-        conversion_value_chf: valueChf,
-        conversion_date_time: conversionDateTime,
-        fbclid: attrRow?.fbclid ?? null,
-        fbc: attrRow?.fbc ?? null,
-        fbp: attrRow?.fbp ?? null,
-        hashed_email: hashedEmail,
-        hashed_phone: hashedPhone,
-      })
-
-      await recordAndUploadCourseConversion({
-        registration_id: enrollment.id,
-        tenant_id: tenantId,
+      await reportBindingCourseConversionSafely({
+        supabase,
+        registrationId: enrollment.id,
+        userId: guestUserId,
+        tenantId,
+        status: 'confirmed',
         gclid: attrRow?.gclid ?? null,
         gbraid: attrRow?.gbraid ?? null,
         wbraid: attrRow?.wbraid ?? null,
-        conversion_value_chf: valueChf,
-        conversion_date_time: conversionDateTime,
-        hashed_email: hashedEmail,
-        hashed_phone: hashedPhone,
+        fbclid: attrRow?.fbclid ?? null,
+        fbc: attrRow?.fbc ?? null,
+        fbp: attrRow?.fbp ?? null,
+        conversionValueChf: valueChf,
+        hashedEmail,
+        hashedPhone,
       })
     } catch (err: any) {
       logger.warn('⚠️ Meta/Google Ads conversion upload failed for cash enrollment (non-critical):', err?.message ?? err)

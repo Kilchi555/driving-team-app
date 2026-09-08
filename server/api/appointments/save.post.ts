@@ -13,11 +13,12 @@ import {
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { getFallbackRule } from '~/utils/fallbackPricingRules'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
-import { recordAndSendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { isChargeableEventType } from '~/server/utils/event-type-charge'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { assertStaffCanApplyManualDiscount } from '~/server/utils/staff-manual-discount'
 import { attachProposalAttributionToStaffAppointment } from '~/server/utils/proposal-booking-conversion'
+import { becameBindingConfirmed } from '~/server/utils/binding-booking'
+import { hashCustomerIdentifiers, reportBindingAppointmentConversionSafely } from '~/server/utils/binding-booking-conversion'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -203,13 +204,13 @@ export default defineEventHandler(async (event) => {
     let result
     // Declared here so it's accessible both inside the create branch and after the if/else block
     let paymentPromise: Promise<void> | null = null
-    let capiPromise: Promise<void> | null = null
+    let conversionPromise: Promise<void> | null = null
 
     if (mode === 'edit' && eventId) {
       // Update existing appointment
       const { data: oldAppointment, error: fetchError } = await supabase
         .from('appointments')
-        .select('start_time, end_time, staff_id, tenant_id, duration_minutes')
+        .select('start_time, end_time, staff_id, tenant_id, duration_minutes, status, user_id, event_type_code, type, gclid, gbraid, wbraid, fbclid, fbc, fbp')
         .eq('id', eventId)
         .single()
 
@@ -250,6 +251,44 @@ export default defineEventHandler(async (event) => {
       }
       result = data
       logger.debug('✅ Appointment updated:', result.id)
+
+      if (becameBindingConfirmed(oldAppointment.status, result.status) && result.user_id && result.tenant_id) {
+        conversionPromise = (async () => {
+          try {
+            const { data: student } = await supabase
+              .from('users')
+              .select('email, phone')
+              .eq('id', result.user_id)
+              .maybeSingle()
+            const hashed = await hashCustomerIdentifiers({ email: student?.email, phone: student?.phone })
+            const conversionValueChf =
+              typeof totalAmountRappenForPayment === 'number' && totalAmountRappenForPayment > 0
+                ? totalAmountRappenForPayment / 100
+                : 0
+            await reportBindingAppointmentConversionSafely({
+              supabase,
+              appointmentId: result.id,
+              userId: result.user_id,
+              tenantId: result.tenant_id,
+              status: result.status,
+              previousStatus: oldAppointment.status,
+              eventTypeCode: result.event_type_code || appointmentData.event_type_code,
+              categoryCode: result.type || appointmentData.type,
+              gclid: result.gclid ?? oldAppointment.gclid,
+              gbraid: result.gbraid ?? oldAppointment.gbraid,
+              wbraid: result.wbraid ?? oldAppointment.wbraid,
+              fbclid: result.fbclid ?? oldAppointment.fbclid,
+              fbc: result.fbc ?? oldAppointment.fbc,
+              fbp: result.fbp ?? oldAppointment.fbp,
+              conversionValueChf,
+              hashedEmail: hashed.hashedEmail,
+              hashedPhone: hashed.hashedPhone,
+            })
+          } catch (err: any) {
+            logger.warn('⚠️ Binding booking conversion failed on appointment confirm (non-critical):', err?.message ?? err)
+          }
+        })()
+      }
 
       // ✅ NEW: Manage availability slots for edited appointment
       try {
@@ -469,6 +508,10 @@ export default defineEventHandler(async (event) => {
           logger.warn('⚠️ Payment update exception (non-critical):', paymentErr.message)
         }
       }
+
+      if (conversionPromise) {
+        await conversionPromise
+      }
     } else {
       // Create new appointment — always force confirmed status
       if (!appointmentData.status || ['scheduled', 'pending_confirmation', 'booked'].includes(appointmentData.status)) {
@@ -531,41 +574,6 @@ export default defineEventHandler(async (event) => {
         
         finalTotalAmount = Math.max(0, Math.round(finalTotalAmount))
         const remainingAmountRappen = Math.max(0, finalTotalAmount - (creditUsedRappen || 0))
-
-        // ── Meta CAPI: report the booking as a Purchase, mirroring the online
-        // self-service flows (create-appointment / guest-book) which fire at the
-        // moment of booking commitment regardless of payment method/timing. No
-        // fbclid/fbc/fbp here — staff-entered clients have no ad-click history —
-        // and deliberately no client_ip/user_agent, since those would be the
-        // staff member's browser, not the customer's (would pollute Meta's
-        // device-matching graph). Only hashed email/phone are sent.
-        capiPromise = (async () => {
-          try {
-            if (!result.user_id) return
-            const { data: capiUser } = await supabase
-              .from('users')
-              .select('email, phone')
-              .eq('id', result.user_id)
-              .maybeSingle()
-
-            const hashedEmail = capiUser?.email ? await sha256Hex(capiUser.email.trim().toLowerCase()) : null
-            const normalizedPhone = (capiUser?.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
-            const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
-            if (!hashedEmail && !hashedPhone) return
-
-            await recordAndSendCapiEvent({
-              appointment_id: result.id,
-              tenant_id: appointmentData.tenant_id,
-              event_name: 'Purchase',
-              conversion_value_chf: finalTotalAmount / 100,
-              conversion_date_time: new Date(),
-              hashed_email: hashedEmail,
-              hashed_phone: hashedPhone,
-            })
-          } catch (capiErr: any) {
-            logger.warn('⚠️ Meta CAPI upload failed for admin-created appointment (non-critical):', capiErr?.message ?? capiErr)
-          }
-        })()
 
         const terms = await getTenantTerminology(supabase, appointmentData.tenant_id)
         const appointmentLabel = terms.appointment || 'Termin'
@@ -630,24 +638,52 @@ export default defineEventHandler(async (event) => {
       await Promise.all([
         // 1. Create payment (critical - but non-blocking for response)
         paymentPromise,
-        // 1b. Meta CAPI Purchase report (fire-and-forget, non-critical)
-        capiPromise,
-        // 1c. Google Ads: attach inquiry attribution + booking conversion (LKW etc.)
+        conversionPromise,
         (async () => {
           try {
             if (!result.user_id || !result.tenant_id) return
             const conversionValueChf =
               typeof totalAmountRappenForPayment === 'number' && totalAmountRappenForPayment > 0
                 ? totalAmountRappenForPayment / 100
-                : null
+                : 0
             await attachProposalAttributionToStaffAppointment({
               tenantId: result.tenant_id,
               appointmentId: result.id,
               userId: result.user_id,
               conversionValueChf,
             })
+            const { data: stamped } = await supabase
+              .from('appointments')
+              .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, event_type_code, type, status')
+              .eq('id', result.id)
+              .maybeSingle()
+            const { data: student } = await supabase
+              .from('users')
+              .select('email, phone')
+              .eq('id', result.user_id)
+              .maybeSingle()
+            const hashed = await hashCustomerIdentifiers({ email: student?.email, phone: student?.phone })
+            await reportBindingAppointmentConversionSafely({
+              supabase,
+              appointmentId: result.id,
+              userId: result.user_id,
+              tenantId: result.tenant_id,
+              status: stamped?.status || result.status || 'confirmed',
+              previousStatus: null,
+              eventTypeCode: stamped?.event_type_code || appointmentData.event_type_code,
+              categoryCode: stamped?.type || appointmentData.type,
+              gclid: stamped?.gclid,
+              gbraid: stamped?.gbraid,
+              wbraid: stamped?.wbraid,
+              fbclid: stamped?.fbclid,
+              fbc: stamped?.fbc,
+              fbp: stamped?.fbp,
+              conversionValueChf,
+              hashedEmail: hashed.hashedEmail,
+              hashedPhone: hashed.hashedPhone,
+            })
           } catch (adsErr: any) {
-            logger.warn('⚠️ Proposal→appointment Ads attribution failed (non-critical):', adsErr?.message ?? adsErr)
+            logger.warn('⚠️ Binding booking conversion failed for staff appointment (non-critical):', adsErr?.message ?? adsErr)
           }
         })(),
         // 2. Mark overlapping availability slots

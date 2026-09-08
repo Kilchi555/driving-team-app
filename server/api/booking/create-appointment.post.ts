@@ -36,7 +36,7 @@ import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString } from '~/server/utils/validators'
 import { toLocalTimeString } from '~/utils/dateUtils'
-import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
+import { sha256Hex } from '~/server/utils/google-ads-conversion'
 import { netAfterAppointmentDiscount, resolveAppointmentDiscount } from '~/server/utils/resolve-appointment-discount'
 import { findStaffBusyOverlap } from '~/server/utils/time-range-overlap'
 import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockCheckoutBenefits } from '~/server/utils/checkout-benefits'
@@ -1129,79 +1129,46 @@ export default defineEventHandler(async (event: H3Event) => {
       }
     }
 
-    // ============ LAYER 11: SERVER-SIDE GOOGLE ADS CONVERSION UPLOAD ============
-    // Awaited (not fire-and-forget): Vercel freezes the isolate after the response
-    // returns, which previously dropped some conversion uploads under load.
-    if (marketingAttr?.gclid || marketingAttr?.gbraid || marketingAttr?.wbraid) {
+    // ============ LAYER 11: BINDING BOOKING CONVERSION (Google Primary + Meta Purchase) ============
+    // Fires only when the appointment is binding-confirmed (not a pay-before-confirm hold).
+    // Tracking failures must never fail the booking.
+    let sentMetaPurchase = false
+    if (!holdUntilPaid) {
       try {
-        // Hash email/phone for Enhanced Conversions (improves match rate).
         const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
         const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
         const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
         const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
-
-        // Conversion value: net amount after discount, fallback to gross.
-        // normalizeConversionValueChf inside the uploader floors CHF 0 free bookings.
         const lessonPriceChf = (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100
-        const { resolveBookingConversionValue } = await import('~/server/utils/conversion-value')
-        const conversionValue = await resolveBookingConversionValue({
+        const { reportBindingAppointmentConversionSafely } = await import(
+          '~/server/utils/binding-booking-conversion'
+        )
+        const conversionReport = await reportBindingAppointmentConversionSafely({
+          supabase,
+          appointmentId: newAppointment.id,
+          userId: userData.id,
           tenantId,
+          status: 'confirmed',
+          previousStatus: null,
+          eventTypeCode: eventTypeRes.data?.code || body.appointment_type || 'lesson',
           categoryCode: body.category_code,
-          eventTypeCode: body.appointment_type,
-          isNewCustomer,
-          lessonPriceChf,
+          gclid: marketingAttr?.gclid ?? null,
+          gbraid: marketingAttr?.gbraid ?? null,
+          wbraid: marketingAttr?.wbraid ?? null,
+          fbclid: marketingAttr?.fbclid ?? null,
+          fbc: marketingAttr?.fbc ?? null,
+          fbp: marketingAttr?.fbp ?? null,
+          conversionValueChf: lessonPriceChf,
+          hashedEmail,
+          hashedPhone,
+          clientIp: ipAddress ?? null,
+          userAgent: getHeader(event, 'user-agent') ?? null,
+          eventSourceUrl: getHeader(event, 'referer') ?? null,
         })
-
-        await recordAndUploadConversion({
-          appointment_id: newAppointment.id,
-          tenant_id: tenantId ?? null,
-          gclid: marketingAttr.gclid ?? null,
-          gbraid: marketingAttr.gbraid ?? null,
-          wbraid: marketingAttr.wbraid ?? null,
-          conversion_value_chf: conversionValue.value_chf,
-          conversion_date_time: new Date(),
-          hashed_email: hashedEmail,
-          hashed_phone: hashedPhone,
-          is_new_customer: isNewCustomer,
-        })
+        sentMetaPurchase = conversionReport.meta === 'sent'
       } catch (err: any) {
-        logger.warn('⚠️ Server-side Google Ads conversion upload failed (non-critical):', err?.message ?? err)
+        logger.warn('⚠️ Binding booking conversion failed (non-critical):', err?.message ?? err)
       }
-    } else {
-      logger.debug('ℹ️ Skipping Google Ads conversion upload — no click ID for this booking')
-    }
-
-    // ============ LAYER 11b: META CONVERSIONS API (CAPI) UPLOAD ============
-    // Awaited: Vercel freezes the isolate after the response. Pixel still fires
-    // in the browser — Meta deduplicates via event_id.
-    let sentMetaPurchase = false
-    try {
-      const normalizedEmail = (userData.email ?? '').trim().toLowerCase()
-      const normalizedPhone = (userData.phone ?? '').replace(/\s+/g, '').replace(/^00/, '+')
-      const hashedEmail = normalizedEmail ? await sha256Hex(normalizedEmail) : null
-      const hashedPhone = normalizedPhone.startsWith('+') ? await sha256Hex(normalizedPhone) : null
-
-      const { maybeSendMetaBookingPurchase } = await import('~/server/utils/meta-booking-conversion')
-      sentMetaPurchase = tenantId
-        ? await maybeSendMetaBookingPurchase({
-            supabase,
-            appointmentId: newAppointment.id,
-            userId: userData.id,
-            tenantId,
-            fbclid: marketingAttr?.fbclid,
-            fbc: marketingAttr?.fbc,
-            fbp: marketingAttr?.fbp,
-            conversionValueChf: (netAmountRappen > 0 ? netAmountRappen : totalAmountRappen) / 100,
-            hashedEmail,
-            hashedPhone,
-            clientIp: ipAddress ?? null,
-            userAgent: getHeader(event, 'user-agent') ?? null,
-            eventSourceUrl: getHeader(event, 'referer') ?? null,
-            deferUntilPaid: !!holdUntilPaid,
-          })
-        : false
-    } catch (err: any) {
-      logger.warn('⚠️ Meta CAPI upload failed (non-critical):', err?.message ?? err)
     }
 
     // ============ LAYER 12: LINK booking_events.completed TO APPOINTMENT ============
