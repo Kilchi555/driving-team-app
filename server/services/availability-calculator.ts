@@ -574,6 +574,7 @@ export class AvailabilityCalculator {
         .select('id, staff_id, location_id, start_time, end_time, duration_minutes, status, type')
         .in('staff_id', staffIds)
         .not('status', 'eq', 'deleted')
+        .not('status', 'in', '("cancelled","canceled")') // Cancelled holds must not occupy bookable slots
         .is('deleted_at', null),
       startDate,
       endDate,

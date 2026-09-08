@@ -212,6 +212,7 @@ import { computed, ref, watch } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useTerminology } from '~/composables/useTerminology'
 import { logger } from '~/utils/logger'
+import { filterUpcomingCustomerAppointments } from '~/utils/customer-appointment-visibility'
 import { useCalendarSync } from '~/composables/useCalendarSync'
 import CustomerCancellationModal from './CustomerCancellationModal.vue'
 
@@ -538,11 +539,7 @@ const getEmptyStateMessage = () => {
 
 // Computed
 const upcomingLessons = computed(() => {
-  const now = new Date()
-  return props.lessons.filter(lesson =>
-    new Date(lesson.start_time) > now &&
-    lesson.status !== 'cancelled'
-  )
+  return filterUpcomingCustomerAppointments(props.lessons || [])
 })
 
 const availableCategories = computed(() => {

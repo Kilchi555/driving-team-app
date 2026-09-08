@@ -1101,6 +1101,9 @@ import { useTerminology } from '~/composables/useTerminology'
 import { useTenant } from '~/composables/useTenant'
 import { replacePlaceholders } from '~/utils/reglementPlaceholders'
 import { bookingPrefillToQuery, deriveBookingPrefill, type BookingPrefill } from '~/utils/booking-prefill'
+import {
+  filterUpcomingCustomerAppointments,
+} from '~/utils/customer-appointment-visibility'
 import { checkFeatureFlag } from '~/utils/featureFlags'
 import { useFeatures } from '~/composables/useFeatures'
 import ProfileModal from './ProfileModal.vue'
@@ -1456,10 +1459,8 @@ const totalEvaluationsCount = computed(() => {
 })
 
 const upcomingAppointments = computed(() => {
-  const now = new Date()
-  return appointments.value.filter(apt => 
-    new Date(apt.start_time) > now
-  ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+  return filterUpcomingCustomerAppointments(appointments.value || [])
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 })
 
 const nextAppointment = computed(() => upcomingAppointments.value[0] || null)
@@ -1506,11 +1507,7 @@ function formatNextAppointmentDuration(startIso: string, endIso: string | undefi
 // Count of all upcoming lessons (appointments + course sessions)
 // Groups course sessions on the same day as ONE appointment
 const upcomingLessonsCount = computed(() => {
-  const now = new Date()
-  const upcomingLessons = lessons.value.filter(lesson => 
-    new Date(lesson.start_time) > now &&
-    lesson.status !== 'cancelled'
-  )
+  const upcomingLessons = filterUpcomingCustomerAppointments(lessons.value || [])
   
   // Group course sessions by date + course_id (same day = 1 appointment)
   const courseSessionKeys = new Set<string>()
