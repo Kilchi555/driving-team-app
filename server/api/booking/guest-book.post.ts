@@ -32,7 +32,7 @@ import { logger } from '~/utils/logger'
 import { v4 as uuidv4 } from 'uuid'
 import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
 import { getClientIP } from '~/server/utils/ip-utils'
-import { recordAndUploadConversion, sha256Hex } from '~/server/utils/google-ads-conversion'
+import { sha256Hex } from '~/server/utils/google-ads-conversion'
 import { sanitizeString } from '~/server/utils/validators'
 import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-location'
@@ -1186,58 +1186,39 @@ export default defineEventHandler(async (event) => {
     })()
   }
 
-  // ── Google Ads + Meta CAPI conversion (awaited — Vercel freezes after response)
-  if (marketingAttr?.gclid || marketingAttr?.gbraid || marketingAttr?.wbraid) {
+  // Binding booking conversion — only when confirmed (not a pay-before-confirm hold).
+  let sentMetaPurchase = false
+  if (!holdUntilPaid) {
     try {
       const hashedEmail = email ? await sha256Hex(email.toLowerCase().trim()) : null
       const hashedPhone = phone ? await sha256Hex(formatSwissPhoneNumber(phone)) : null
-
-      const { resolveBookingConversionValue } = await import('~/server/utils/conversion-value')
-      const conversionValue = await resolveBookingConversionValue({
+      const { reportBindingAppointmentConversionSafely } = await import(
+        '~/server/utils/binding-booking-conversion'
+      )
+      const conversionReport = await reportBindingAppointmentConversionSafely({
+        supabase,
+        appointmentId: newAppointment.id,
+        userId: newUserId,
         tenantId,
+        status: 'confirmed',
+        previousStatus: null,
+        eventTypeCode: resolvedEventTypeCode,
         categoryCode: body.category_code,
-        isNewCustomer: true,
-        lessonPriceChf: grossAmountRappen / 100,
-      })
-      await recordAndUploadConversion({
-        appointment_id: newAppointment.id,
-        tenant_id: tenantId,
         gclid: marketingAttr?.gclid ?? null,
         gbraid: marketingAttr?.gbraid ?? null,
         wbraid: marketingAttr?.wbraid ?? null,
-        conversion_date_time: new Date(),
-        conversion_value_chf: conversionValue.value_chf,
-        hashed_email: hashedEmail,
-        hashed_phone: hashedPhone,
-        is_new_customer: true,
+        fbclid: marketingAttr?.fbclid ?? null,
+        fbc: marketingAttr?.fbc ?? null,
+        fbp: marketingAttr?.fbp ?? null,
+        conversionValueChf: grossAmountRappen / 100,
+        hashedEmail,
+        hashedPhone,
+        clientIp: ip,
       })
+      sentMetaPurchase = conversionReport.meta === 'sent'
     } catch (e: any) {
-      logger.warn('⚠️ Google Ads conversion upload failed (guest):', e.message)
+      logger.warn('⚠️ Binding booking conversion failed (guest, non-critical):', e.message)
     }
-  }
-
-  let sentMetaPurchase = false
-  try {
-    const hashedEmail = email ? await sha256Hex(email.toLowerCase().trim()) : null
-    const hashedPhone = phone ? await sha256Hex(formatSwissPhoneNumber(phone)) : null
-
-    const { maybeSendMetaBookingPurchase } = await import('~/server/utils/meta-booking-conversion')
-    sentMetaPurchase = await maybeSendMetaBookingPurchase({
-      supabase,
-      appointmentId: newAppointment.id,
-      userId: newUserId,
-      tenantId,
-      fbclid: marketingAttr?.fbclid,
-      fbc: marketingAttr?.fbc,
-      fbp: marketingAttr?.fbp,
-      conversionValueChf: grossAmountRappen / 100,
-      hashedEmail,
-      hashedPhone,
-      clientIp: ip,
-      deferUntilPaid: !!holdUntilPaid,
-    })
-  } catch (e: any) {
-    logger.warn('⚠️ Meta CAPI event failed (guest):', e.message)
   }
   // Direct dispatch (no nested HTTP). Awaits Resend; on failure queues for cron.
   try {
