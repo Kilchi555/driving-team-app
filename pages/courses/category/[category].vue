@@ -163,12 +163,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { formatDateTime } from '~/utils/dateUtils'
+import { useTenantBranding } from '~/composables/useTenantBranding'
 
 const route = useRoute()
 const router = useRouter()
+const { currentTenantBranding, isLoading: brandingLoading } = useTenantBranding()
 
 // State
 const courses = ref<any[]>([])
@@ -178,6 +180,11 @@ const error = ref<string | null>(null)
 
 // Computed
 const categoryCode = computed(() => route.params.category as string)
+const tenantSlug = computed(() => {
+  const fromQuery = typeof route.query.slug === 'string' ? route.query.slug : ''
+  if (fromQuery && /^[a-z0-9-]+$/.test(fromQuery)) return fromQuery
+  return currentTenantBranding.value?.slug || ''
+})
 
 // Methods
 const loadCategoryAndCourses = async () => {
@@ -185,45 +192,36 @@ const loadCategoryAndCourses = async () => {
     isLoading.value = true
     error.value = null
 
-    // Load category info
-    const { data: category, error: categoryError } = await supabase
-      .from('course_categories')
-      .select('*')
-      .eq('code', categoryCode.value)
-      .single()
-
-    if (categoryError) throw categoryError
-    categoryInfo.value = category
-
-    // Load courses for this category
-    const { data: coursesData, error: coursesError } = await supabase
-      .from('courses')
-      .select(`
-        *,
-        course_category:course_categories(name, icon, color),
-        instructor:users!courses_instructor_id_fkey(first_name, last_name),
-        next_session:course_sessions(start_time),
-        registrations:course_registrations(status)
-      `)
-      .eq('course_category_id', category.id)
-      .eq('is_active', true)
-      .eq('is_public', true)
-      .order('created_at', { ascending: false })
-
-    if (coursesError) throw coursesError
-
-    // Calculate current participants for each course
-    courses.value = coursesData.map(course => {
-      const confirmedRegistrations = course.registrations?.filter((r: any) => r.status === 'confirmed') || []
-      return {
-        ...course,
-        current_participants: confirmedRegistrations.length
+    if (!tenantSlug.value) {
+      if (brandingLoading.value) {
+        return
       }
+      error.value = 'Mandant nicht erkannt. Öffnen Sie die Übersicht über die Kursverwaltung.'
+      courses.value = []
+      categoryInfo.value = null
+      return
+    }
+
+    const response = await $fetch<any>('/api/courses/public', {
+      query: { slug: tenantSlug.value, category: categoryCode.value },
     })
 
+    const nestedCategory = response.courses?.[0]?.course_category
+    categoryInfo.value = response.category || (Array.isArray(nestedCategory) ? nestedCategory[0] : nestedCategory) || null
+
+    courses.value = (response.courses || []).map((course: any) => {
+      const sessions = [...(course.course_sessions || [])].sort((a: any, b: any) =>
+        String(a.start_time || '').localeCompare(String(b.start_time || '')),
+      )
+      return {
+        ...course,
+        course_sessions: sessions,
+        next_session: sessions[0] || null,
+      }
+    })
   } catch (err: any) {
     console.error('Error loading category and courses:', err)
-    error.value = 'Fehler beim Laden der Kurse'
+    error.value = err?.data?.statusMessage || err?.statusMessage || 'Fehler beim Laden der Kurse'
   } finally {
     isLoading.value = false
   }
@@ -263,9 +261,9 @@ const goBack = () => {
   router.push('/')
 }
 
-onMounted(() => {
+watch([tenantSlug, categoryCode, brandingLoading], () => {
   loadCategoryAndCourses()
-})
+}, { immediate: true })
 </script>
 
 <style scoped>

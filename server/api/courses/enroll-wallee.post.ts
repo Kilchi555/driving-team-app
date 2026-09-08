@@ -25,6 +25,12 @@ import { deductStudentCredit, InsufficientAvailableCreditError } from '~/server/
 import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conversion'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
+import {
+  applySariSessionSwaps,
+  buildSariSessionMap,
+  collectPublicSessionIds,
+  loadSariSessionMap,
+} from '~/server/utils/sari-custom-sessions'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -372,27 +378,33 @@ const handler = defineEventHandler(async (event) => {
           }
         }
         
-        // Apply custom session swaps if any
+        // Apply custom session swaps if any. Public payloads reference
+        // course_sessions.id; the SARI id is resolved server-side by value.
         if (customSessions && typeof customSessions === 'object') {
           logger.info('🔄 Applying custom sessions for validation:', Object.keys(customSessions))
-          
-          for (const [position, customData] of Object.entries(customSessions)) {
-            const custom = customData as any
-            const originalIds = custom?.originalSariIds || []
-            const newIds = custom?.sariSessionIds || (custom?.sariSessionId ? [custom.sariSessionId] : [])
-            
-            if (originalIds.length > 0 && newIds.length > 0) {
-              for (let i = 0; i < originalIds.length && i < newIds.length; i++) {
-                const idx = allSessionIds.findIndex((id: string) => id === originalIds[i] || id === originalIds[i].toString())
-                if (idx >= 0) allSessionIds[idx] = newIds[i]
-              }
-            } else if (newIds.length > 0) {
-              const posNum = parseInt(position)
-              if (posNum > 0 && posNum <= allSessionIds.length) {
-                allSessionIds[posNum - 1] = newIds[0]
-              }
-            }
+
+          const sessionSariMap = new Map([
+            ...buildSariSessionMap(course.course_sessions),
+            ...(await loadSariSessionMap(supabase, collectPublicSessionIds(customSessions), tenantId)),
+          ])
+          const swap = applySariSessionSwaps(
+            allSessionIds,
+            customSessions,
+            id => sessionSariMap.get(id),
+            course.course_sessions,
+          )
+
+          if (swap.unresolvedSessionIds.length > 0) {
+            logger.error('❌ Unknown session reference in custom_sessions:', swap.unresolvedSessionIds)
+            throw createError({
+              statusCode: 400,
+              statusMessage: 'Die gewählte Kurssession ist nicht verfügbar. Bitte wähle erneut.',
+            })
           }
+          if (swap.legacyPositionalPositions.length > 0) {
+            logger.warn(`⚠️ Legacy positional replacement for position(s) ${swap.legacyPositionalPositions.join(',')}`)
+          }
+          allSessionIds = swap.sariSessionIds
         }
         
         logger.info(`🎯 Validating ${allSessionIds.length} sessions: ${allSessionIds.join(', ')}`)

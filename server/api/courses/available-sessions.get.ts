@@ -5,6 +5,7 @@
 
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireAdminProfile } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -27,7 +28,17 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // admin=true unlocks non-public courses, so it must never be granted by the
+  // query string alone. It requires the same authorization as the rest of the
+  // admin course surface, scoped to the caller's own tenant.
   const isAdmin = admin === 'true' || admin === '1'
+  if (isAdmin) {
+    const profile = await requireAdminProfile(event)
+    if (profile.tenant_id !== tenantId) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden – tenant mismatch' })
+    }
+  }
+
   const supabase = getSupabaseAdmin()
   const positionNum = parseInt(sessionPosition as string)
 
@@ -176,14 +187,15 @@ export default defineEventHandler(async (event) => {
 
       const violatesAfterDate = !!(afterDate && isAdmin && firstSessionDate <= new Date(afterDate as string))
 
-      // Add all sessions at this position
+      // Add all sessions at this position.
+      // sari_session_id stays server-only — the client references a session by
+      // its public course_sessions.id and the server resolves the SARI id.
       for (const session of sessionsForPosition) {
         availableSessions.push({
           courseId: course.id,
           courseName: course.name,
           courseLocation: course.description,
           sessionId: session.id,
-          sariSessionId: session.sari_session_id,
           startTime: session.start_time,
           endTime: session.end_time,
           freeSlots,

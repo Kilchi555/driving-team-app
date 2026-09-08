@@ -6,6 +6,7 @@
  * 
  * Query Params:
  * - slug: Tenant slug (required, e.g., "driving-team")
+ * - category: Optional course_categories.code filter (legacy category page)
  * 
  * Security:
  * - ✅ Rate limiting (prevent scraping)
@@ -17,6 +18,7 @@ import { defineEventHandler, createError, getQuery } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { sanitizePublicCourseSessions } from '~/server/utils/public-course-sessions'
 
 // Simple in-memory rate limiting
 const requestCounts = new Map<string, { count: number; resetTime: number }>()
@@ -51,6 +53,7 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 2: INPUT VALIDATION ============
     const query = getQuery(event)
     const slug = query.slug as string
+    const categoryCode = typeof query.category === 'string' ? query.category : ''
 
     if (!slug) {
       throw createError({
@@ -64,6 +67,13 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         statusMessage: 'Invalid slug format'
+      })
+    }
+
+    if (categoryCode && !/^[a-zA-Z0-9_-]+$/.test(categoryCode)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid category format'
       })
     }
 
@@ -134,19 +144,27 @@ export default defineEventHandler(async (event) => {
         is_partial_only,
         sari_managed,
         requires_vehicle,
+        external_instructor_name,
         course_category:course_categories (
           id,
           name,
+          code,
+          icon,
+          color,
+          description,
           allow_partial_enrollment,
           partial_start_position,
           partial_price_rappen
+        ),
+        instructor:users!courses_instructor_id_fkey (
+          first_name,
+          last_name
         ),
         course_sessions (
           id,
           start_time,
           end_time,
           session_number,
-          sari_session_id,
           allow_individual_booking,
           individual_price_rappen,
           individual_booking_requires_confirmation,
@@ -188,8 +206,38 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    for (const course of courseList) {
+      const rawSessions = Array.isArray(course.course_sessions) ? course.course_sessions : []
+      course.course_sessions = sanitizePublicCourseSessions(rawSessions).sort((a, b) =>
+        String(a.start_time || '').localeCompare(String(b.start_time || '')),
+      )
+    }
+
+    let publicCategory: Record<string, any> | null = null
+    let visibleCourses = courseList
+    if (categoryCode) {
+      const { data: categoryRow } = await supabase
+        .from('course_categories')
+        .select('id, name, code, icon, color, description')
+        .eq('tenant_id', tenant.id)
+        .eq('code', categoryCode)
+        .maybeSingle()
+      publicCategory = categoryRow || null
+
+      visibleCourses = courseList.filter((course: any) => {
+        const nested = Array.isArray(course.course_category)
+          ? course.course_category[0]
+          : course.course_category
+        return nested?.code === categoryCode || course.category === categoryCode
+      })
+    } else {
+      for (const course of visibleCourses) {
+        delete course.instructor
+      }
+    }
+
     const duration = Date.now() - startTime
-    logger.debug(`✅ Public courses fetched in ${duration}ms:`, courseList.length)
+    logger.debug(`✅ Public courses fetched in ${duration}ms:`, visibleCourses.length)
 
     return {
       success: true,
@@ -202,8 +250,9 @@ export default defineEventHandler(async (event) => {
         accent_color: tenant.accent_color,
         wallee_enabled: tenant.wallee_enabled ?? false
       },
-      courses: courseList,
-      count: courseList.length,
+      category: publicCategory,
+      courses: visibleCourses,
+      count: visibleCourses.length,
       duration
     }
 

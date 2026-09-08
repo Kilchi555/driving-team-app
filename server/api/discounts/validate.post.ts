@@ -3,6 +3,19 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { matchesDiscountCategoryFilter } from '~/server/utils/discount-category-filter'
+import { toPublicDiscountPayload } from '~/server/utils/public-discount-payload'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
+
+/**
+ * Code-guessing budget. This endpoint is the only public surface that can test a
+ * promo or gift-card code since F-3 removed anon SELECT on vouchers /
+ * voucher_codes, so it needs its own brute-force budget.
+ * 30/min is well above a real checkout (a customer types one or two codes) and
+ * matches the /api/vouchers/lookup pattern.
+ */
+const VALIDATE_MAX_REQUESTS = 30
+const VALIDATE_WINDOW_MS = 60_000
 
 /**
  * POST /api/discounts/validate
@@ -35,6 +48,24 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, statusMessage: 'User has no tenant assigned' })
     }
 
+    // Brute-force budget per IP+tenant. Checked before any code lookup so the
+    // response cannot be used as an unlimited code oracle. The message is
+    // deliberately generic and identical for valid and invalid codes.
+    const rateLimit = await checkRateLimit(
+      getClientIP(event),
+      'discount_validate',
+      VALIDATE_MAX_REQUESTS,
+      VALIDATE_WINDOW_MS,
+      undefined,
+      tenantId,
+    )
+    if (!rateLimit.allowed) {
+      throw createError({
+        statusCode: 429,
+        statusMessage: 'Zu viele Anfragen. Bitte versuchen Sie es in einer Minute erneut.',
+      })
+    }
+
     logger.debug('🔍 Validating discount code:', code, 'for tenant:', tenantId)
 
     const supabaseAdmin = getSupabaseAdmin()
@@ -42,7 +73,7 @@ export default defineEventHandler(async (event) => {
     // ✅ FIRST: Try voucher_codes table
     const { data: voucherData, error: voucherError } = await supabaseAdmin
       .from('voucher_codes')
-      .select('*')
+      .select('id, code, description, type, discount_type, discount_value, min_amount_rappen, max_discount_rappen, applies_to, valid_from, valid_until, max_redemptions, current_redemptions')
       .ilike('code', code)
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
@@ -110,21 +141,17 @@ export default defineEventHandler(async (event) => {
       return {
         isValid: true,
         discount_amount_rappen: discountAmount,
-        discount: {
-          ...voucherData,
-          // Normalize to discounts-compatible shape for frontend
-          discount_value: voucherData.discount_value,
-          min_amount_rappen: voucherData.min_amount_rappen || 0,
-          max_discount_rappen: voucherData.max_discount_rappen || null,
-          is_voucher_code: true
-        }
+        discount: toPublicDiscountPayload(
+          { ...voucherData, name: voucherData.description },
+          'voucher_code',
+        )
       }
     }
 
     // ✅ SECOND: Try vouchers table (purchased gift cards from shop)
     const { data: giftCardData, error: giftCardError } = await supabaseAdmin
       .from('vouchers')
-      .select('*')
+      .select('id, code, name, description, amount_rappen, redeemed_at, valid_until')
       .ilike('code', code)
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
@@ -157,22 +184,14 @@ export default defineEventHandler(async (event) => {
       return {
         isValid: true,
         discount_amount_rappen: discountAmount,
-        discount: {
-          ...giftCardData,
-          // Normalize to discounts-compatible shape for frontend
-          discount_type: 'fixed',
-          discount_value: giftCardData.amount_rappen,
-          min_amount_rappen: 0,
-          max_discount_rappen: giftCardData.amount_rappen,
-          is_gift_card: true
-        }
+        discount: toPublicDiscountPayload(giftCardData, 'gift_card')
       }
     }
 
     // ✅ THIRD: Try discounts table
     const { data: discountData, error: discountError } = await supabaseAdmin
       .from('discounts')
-      .select('*')
+      .select('id, code, name, discount_type, discount_value, min_amount_rappen, max_discount_rappen, applies_to, first_lesson_only, category_filter, valid_from, valid_until, usage_limit, usage_count')
       .ilike('code', code)
       .eq('tenant_id', tenantId)
       .eq('is_active', true)
@@ -282,7 +301,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Discount valid:', discount.id, 'amount:', discountAmount)
     return {
       isValid: true,
-      discount,
+      discount: toPublicDiscountPayload(discount, 'discount'),
       discount_amount_rappen: discountAmount
     }
   } catch (err: any) {

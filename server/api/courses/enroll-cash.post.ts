@@ -23,6 +23,12 @@ import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/up
 import { sendCapiEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { recordAndUploadCourseConversion } from '~/server/utils/google-ads-conversion'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
+import {
+  applySariSessionSwaps,
+  buildSariSessionMap,
+  collectPublicSessionIds,
+  loadSariSessionMap,
+} from '~/server/utils/sari-custom-sessions'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -300,6 +306,9 @@ const handler = defineEventHandler(async (event) => {
 
     // 9. SARI sync FIRST (before DB save) - if managed
     // Enroll in ALL sessions (GROUP_2159157_2159158_2159159 → [2159157, 2159158, 2159159])
+    const isPartial = isPartialEnrollment || course.is_partial_only
+    const isIndividualSess = isPartial && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
+
     if (course.sari_managed && course.sari_course_id && faberidClean) {
       // Extract ALL session IDs from the group
       const sariCourseIdParts = String(course.sari_course_id).split('_')
@@ -307,8 +316,6 @@ const handler = defineEventHandler(async (event) => {
 
       // For partial enrollment, only keep session IDs from partial_start_position onwards.
       // Session IDs are ordered, so we resolve position from course_sessions by date grouping.
-      const isPartial = isPartialEnrollment || course.is_partial_only
-      const isIndividualSess = isPartial && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
 
       // Validate: partial enrollment is blocked only when a category IS linked and explicitly
       // disallows it. Courses without a category have no restriction.
@@ -360,68 +367,40 @@ const handler = defineEventHandler(async (event) => {
         })
       }
       
-      // Apply custom sessions if any were selected (same logic as Wallee webhook)
+      // Apply custom sessions if any were selected (same logic as Wallee webhook).
+      // Public payloads reference course_sessions.id; the internal SARI id is
+      // resolved server-side and replaced by value, never by position.
       if (customSessions && typeof customSessions === 'object') {
         logger.info('🔄 Applying custom sessions for SARI enrollment:', customSessions)
-        
-        for (const [position, customData] of Object.entries(customSessions)) {
-          const custom = customData as any
-          
-          // Get original IDs to replace and new IDs
-          const originalIds = custom?.originalSariIds || []
-          const newIds = custom?.sariSessionIds || (custom?.sariSessionId ? [custom.sariSessionId] : [])
-          
-          logger.debug(`📍 Position ${position}: originalIds=${originalIds.join(',')}, newIds=${newIds.join(',')}`)
-          
-          if (originalIds.length > 0 && newIds.length > 0) {
-            // Replace each original ID with corresponding new ID
-            for (let i = 0; i < originalIds.length && i < newIds.length; i++) {
-              const origId = originalIds[i]
-              const newId = newIds[i]
-              
-              const idx = sariSessionIds.findIndex((id: string) => id === origId || id === origId.toString())
-              if (idx >= 0) {
-                logger.debug(`📝 Replacing session ID ${sariSessionIds[idx]} → ${newId} at index ${idx}`)
-                sariSessionIds[idx] = newId
-              } else {
-                logger.warn(`⚠️ Original session ID ${origId} not found in course sessions`)
-              }
-            }
-          } else if (newIds.length > 0 && originalIds.length === 0) {
-            // Legacy fallback: Position-based replacement
-            logger.warn('⚠️ Using legacy position-based replacement (no originalSariIds)')
-            
-            // Group sessions by date to understand position mapping
-            const courseSessions = course.course_sessions || []
-            const sessionsPerPosition: number[] = []
-            
-            if (courseSessions.length > 0) {
-              const byDate: Map<string, number> = new Map()
-              for (const session of courseSessions) {
-                const date = session.start_time.split('T')[0]
-                byDate.set(date, (byDate.get(date) || 0) + 1)
-              }
-              for (const count of byDate.values()) {
-                sessionsPerPosition.push(count)
-              }
-            } else if (sariSessionIds.length === 4) {
-              sessionsPerPosition.push(2, 2) // Assume VKU pattern
-            } else {
-              sessionsPerPosition.push(...Array(sariSessionIds.length).fill(1))
-            }
-            
-            const posNum = parseInt(position)
-            let startIdx = 0
-            for (let p = 0; p < posNum - 1 && p < sessionsPerPosition.length; p++) {
-              startIdx += sessionsPerPosition[p]
-            }
-            
-            for (let i = 0; i < newIds.length && (startIdx + i) < sariSessionIds.length; i++) {
-              logger.debug(`📝 Legacy replacing session at index ${startIdx + i}: ${sariSessionIds[startIdx + i]} → ${newIds[i]}`)
-              sariSessionIds[startIdx + i] = newIds[i]
-            }
-          }
+
+        const sessionSariMap = new Map([
+          ...buildSariSessionMap(course.course_sessions),
+          ...(await loadSariSessionMap(supabase, collectPublicSessionIds(customSessions), tenantId)),
+        ])
+        const swap = applySariSessionSwaps(
+          sariSessionIds,
+          customSessions,
+          id => sessionSariMap.get(id),
+          course.course_sessions,
+        )
+
+        if (swap.unresolvedSessionIds.length > 0) {
+          logger.error('❌ Unknown session reference in custom_sessions:', swap.unresolvedSessionIds)
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'Die gewählte Kurssession ist nicht verfügbar. Bitte wähle erneut.',
+          })
         }
+        for (const missing of swap.notFoundSariIds) {
+          logger.warn(`⚠️ Original session ID ${missing} not found in course sessions`)
+        }
+        if (swap.legacyPositionalPositions.length > 0) {
+          logger.warn(`⚠️ Legacy positional replacement for position(s) ${swap.legacyPositionalPositions.join(',')}`)
+        }
+        for (const replacement of swap.replacements) {
+          logger.debug(`📝 Replacing session ID ${replacement.from} → ${replacement.to}`)
+        }
+        sariSessionIds = swap.sariSessionIds
       }
       
       logger.info(`🎯 Enrolling in SARI for ${sariSessionIds.length} sessions: ${sariSessionIds.join(', ')}`)

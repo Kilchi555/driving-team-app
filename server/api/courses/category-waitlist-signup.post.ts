@@ -14,8 +14,19 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { generateWaitlistConfirmationEmail, generateAdminWaitlistNotificationEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { checkRateLimit } from '~/server/utils/rate-limiter'
+import { getClientIP } from '~/server/utils/ip-utils'
 
 export default defineEventHandler(async (event) => {
+  const ipAddress = getClientIP(event)
+  const rateLimitResult = await checkRateLimit(ipAddress, 'category_waitlist_signup', 10, 15 * 60 * 1000)
+  if (!rateLimitResult.allowed) {
+    throw createError({
+      statusCode: 429,
+      statusMessage: 'Zu viele Einträge. Bitte versuchen Sie es später erneut.',
+    })
+  }
+
   const body = await readBody(event)
   const { category_code, first_name, email, tenant_id } = body
 

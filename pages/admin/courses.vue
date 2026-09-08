@@ -648,7 +648,7 @@
                   {{ category.session_count || 1 }} × {{ category.hours_per_session || 8 }}h
                 </span>
                 <a
-                  :href="`/courses/category/${category.code}`"
+                  :href="currentTenantBranding?.slug ? `/courses/category/${category.code}?slug=${currentTenantBranding.slug}` : `/courses/category/${category.code}`"
                   target="_blank"
                   @click.stop
                   class="inline-flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-70"
@@ -3876,7 +3876,7 @@
                       <div v-else class="max-h-40 overflow-y-auto space-y-1">
                         <label
                           v-for="opt in sessionTransferOptions"
-                          :key="opt.courseId + '-' + opt.date + '-' + (opt.sariSessionIds?.[0] || opt.sariSessionId)"
+                          :key="opt.courseId + '-' + opt.date + '-' + (opt.sessionIds?.[0] || opt.sessionId)"
                           class="flex items-start gap-2 p-2 rounded-lg border cursor-pointer text-xs"
                           :class="sessionTransferTargetKey === optKey(opt) ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'"
                         >
@@ -4207,7 +4207,7 @@ import { useCurrentUser } from '~/composables/useCurrentUser'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { useTerminology } from '~/composables/useTerminology'
 
-const { primaryColor, brandName, getLogo } = useTenantBranding()
+const { primaryColor, brandName, getLogo, currentTenantBranding } = useTenantBranding()
 const { t } = useTerminology()
 import { useCourseCategories } from '~/composables/useCourseCategories'
 import { useInstructorInvitations } from '~/composables/useInstructorInvitations'
@@ -4621,7 +4621,7 @@ const recomputePendingOrderWarnings = () => {
   if (result.ok) sessionTransferAcknowledge.value = false
 }
 
-const optKey = (opt: any) => `${opt.courseId}|${opt.date}|${(opt.sariSessionIds || [opt.sariSessionId]).join(',')}`
+const optKey = (opt: any) => `${opt.courseId}|${opt.date}|${(opt.sessionIds || [opt.sessionId]).join(',')}`
 
 const formatSessionOptionLabel = (opt: any) => {
   try {
@@ -4672,7 +4672,8 @@ const startSessionTransfer = async (part: any) => {
         ...first,
         startTime: first.startTime,
         endTime: last.endTime,
-        sariSessionIds: sorted.map((s) => s.sariSessionId).filter(Boolean),
+        // Public course_sessions.id references — the server resolves the SARI ids.
+        sessionIds: sorted.map((s) => s.sessionId).filter(Boolean),
         orderWarning: sorted.some((s) => s.orderWarning),
       }
     })
@@ -4711,7 +4712,7 @@ const stageSessionTransfer = () => {
     [sessionTransferPosition.value]: {
       sessionPosition: sessionTransferPosition.value,
       targetCourseId: opt.courseId,
-      targetSariSessionIds: opt.sariSessionIds || [opt.sariSessionId],
+      targetSessionIds: opt.sessionIds || [opt.sessionId],
       targetDate: opt.date,
       targetStartTime: opt.startTime,
       targetEndTime: opt.endTime,
