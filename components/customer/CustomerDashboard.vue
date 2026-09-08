@@ -2160,8 +2160,10 @@ const loadAppointments = async () => {
 
     appointments.value = lessonsWithEvaluations
     
-    // ✅ Initialize lessons with appointments (will be merged with course sessions later)
-    lessons.value = lessonsWithEvaluations
+    // Keep any already-loaded course sessions when refreshing appointments alone
+    // (e.g. after cancel). loadCourseRegistrations rebuilds this on full load.
+    const courseLessons = (lessons.value || []).filter((lesson: any) => lesson.event_type_code === 'course')
+    lessons.value = [...lessonsWithEvaluations, ...courseLessons]
 
   } catch (err: any) {
     logger.error('❌ Error loading appointments:', {
