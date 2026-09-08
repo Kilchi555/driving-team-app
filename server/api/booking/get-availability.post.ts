@@ -141,10 +141,13 @@ export default defineEventHandler(async (event) => {
 
       // ✅ PARALLEL: Load all queries at once
       const promises = [
-        // 1. Get tenant data
+        // 1. Get tenant data — public branding columns only. This response is
+        // returned to unauthenticated booking visitors, so select('*') here
+        // handed out iban / accounting_inbox_token / wallee_* / stripe_*.
+        // Same column list as server/api/booking/get-tenant-by-slug.post.ts.
         supabase
           .from('tenants')
-          .select('*')
+          .select('id, name, slug, business_type, primary_color, secondary_color, accent_color, logo_url, logo_square_url, logo_wide_url')
           .eq('id', tenant_id)
           .single(),
         

@@ -1,13 +1,13 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { isFirstStaffOnboarding, isPlaceholderStaffInviteEmail } from '~/server/utils/staff-invite-email'
 
 /**
  * Get staff invitation details
- * Public endpoint for staff registration flow
- * Uses RLS policies to ensure only pending invitations are returned
+ * Public endpoint for staff registration flow.
+ * Looks up the caller-supplied token with service_role (equality match only).
+ * Do not restore anon SELECT on staff_invitations — that enumerates tokens.
  */
 
 interface GetInvitationRequest {
@@ -25,37 +25,26 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Get Supabase client
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    // Use anon key - RLS policies will handle access control
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const supabase = getSupabaseAdmin()
 
     logger.debug('🔍 Fetching staff invitation:', body.token.substring(0, 10) + '...')
 
-    // Fetch invitation
-    const { data: invitation, error: invError } = await supabase
+    const { data: invitationRow, error: invError } = await supabase
       .from('staff_invitations')
-      .select('*')
+      .select('id, tenant_id, first_name, last_name, email, phone, status, expires_at, created_at')
       .eq('invitation_token', body.token)
       .eq('status', 'pending')
       .single()
 
-    if (invError || !invitation) {
+    if (invError || !invitationRow) {
       logger.debug('❌ Invitation not found or invalid')
       throw createError({
         statusCode: 404,
         statusMessage: 'Invitation not found or invalid'
       })
     }
+
+    const invitation = invitationRow
 
     // Check if expired
     if (new Date(invitation.expires_at) < new Date()) {

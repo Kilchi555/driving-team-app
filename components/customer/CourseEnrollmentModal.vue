@@ -1343,8 +1343,8 @@ const sessionGroups = computed(() => {
       isChangeable: position > 1, // Can change any session/group except the first one
       isCustom: !!customSession,
       customCourseName: customSession?.courseName?.split(' - ')[0],
-      originalSariIds: sessions.map((s: any) => s.sari_session_id).filter(Boolean),
-      sariIds: customSession?.sariSessionId ? [customSession.sariSessionId] : sessions.map((s: any) => s.sari_session_id).filter(Boolean),
+      // Public session references only — the server resolves the SARI id.
+      originalSessionIds: sessions.map((s: any) => s.id).filter(Boolean),
       freeSlots
     })
   }
@@ -1453,9 +1453,9 @@ const openSessionSwapModal = async (session: any) => {
           startTime: firstSession.startTime,
           endTime: lastSession.endTime,
           displayTimeRange: `${formatTime(firstSession.startTime)} - ${formatTime(lastSession.endTime)}`,
-          // Store ALL session IDs for this group (for grouped sessions)
-          sariSessionIds: sorted.map((s: any) => s.sariSessionId),
-          isSelected: customSessions.value[session.position.toString()]?.sariSessionIds?.[0] === firstSession.sariSessionId,
+          // Store ALL public session IDs for this group (for grouped sessions)
+          sessionIds: sorted.map((s: any) => s.sessionId),
+          isSelected: customSessions.value[session.position.toString()]?.sessionIds?.[0] === firstSession.sessionId,
           groupSize: sessionGroup.length
         }
       })
@@ -1479,11 +1479,11 @@ const selectSwapSession = async (option: any) => {
   const currentPosition = swappingSession.value.position
   const newDate = option.date
   
-  // Store all session IDs for this group (for grouped sessions at same time)
-  // IMPORTANT: Also store originalSariIds so webhook knows which IDs to replace
+  // Store all public session IDs for this group (for grouped sessions at same time).
+  // The server resolves these course_sessions.id values to SARI ids.
   customSessions.value[currentPosition.toString()] = {
-    sariSessionIds: option.sariSessionIds || [option.sariSessionId], // Array of all NEW session IDs
-    originalSariIds: swappingSession.value.originalSariIds || [], // Array of ORIGINAL session IDs to replace
+    sessionIds: option.sessionIds || [option.sessionId], // Array of all NEW public session IDs
+    originalSessionIds: swappingSession.value.originalSessionIds || [], // Public IDs to replace
     sessionId: option.sessionId,
     courseId: option.courseId,
     courseName: option.courseName,
@@ -1518,8 +1518,8 @@ const checkAndFixSessionOrder = async (changedPosition: number, newDate: string)
       if (nextSession) {
         // Auto-set the next available session
         customSessions.value[group.position.toString()] = {
-          sariSessionIds: nextSession.sariSessionIds || [nextSession.sariSessionId],
-          originalSariIds: group.originalSariIds || [],
+          sessionIds: nextSession.sessionIds || [nextSession.sessionId],
+          originalSessionIds: group.originalSessionIds || [],
           sessionId: nextSession.sessionId,
           courseId: nextSession.courseId,
           courseName: nextSession.courseName,
@@ -1580,7 +1580,7 @@ const findNextAvailableSession = async (position: number, afterDate: string): Pr
         return {
           ...first,
           endTime: last.endTime,
-          sariSessionIds: firstGroup.map((s: any) => s.sariSessionId)
+          sessionIds: firstGroup.map((s: any) => s.sessionId)
         }
       }
     }
