@@ -32,6 +32,7 @@
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { describe, expect, it } from 'vitest'
+import { claimAvailabilitySlot } from '~/server/utils/claim-availability-slot'
 
 const enabled = process.env.RLS_SECURITY_TEST === '1'
 const describeRls = enabled ? describe : describe.skip
@@ -433,6 +434,184 @@ describeRls('P0 containment live probes (2026-09-07)', () => {
       .neq('id', '00000000-0000-0000-0000-000000000000')
       .select('id')
     expect(error || !data?.length).toBeTruthy()
+  })
+})
+
+describeRls('F-3 P0 containment live probes (2026-09-08)', () => {
+  const tenantA = process.env.RLS_TEST_TENANT_A || '00000000-0000-0000-0000-000000000000'
+
+  it('anon cannot enumerate gift cards or promo codes', async () => {
+    const admin = serviceClient()
+    const code = `F3PROBE-${crypto.randomUUID().slice(0, 8)}`
+    const { data: voucher, error: voucherInsertError } = await admin
+      .from('vouchers')
+      .insert({
+        code,
+        name: 'F3 probe',
+        amount_rappen: 100,
+        tenant_id: tenantA,
+        recipient_email: 'hidden@example.invalid',
+        buyer_email: 'buyer@example.invalid',
+        is_active: true,
+      })
+      .select('id')
+      .single()
+    expect(voucherInsertError).toBeNull()
+
+    const { data: promo, error: promoInsertError } = await admin
+      .from('voucher_codes')
+      .insert({
+        code: `${code}-PROMO`,
+        credit_amount_rappen: 100,
+        tenant_id: tenantA,
+        is_active: true,
+      })
+      .select('id')
+      .single()
+    expect(promoInsertError).toBeNull()
+
+    try {
+      const seenByAdmin = await admin.from('vouchers').select('id, recipient_email').eq('id', voucher!.id)
+      expect(seenByAdmin.error).toBeNull()
+      expect(seenByAdmin.data?.[0]?.recipient_email).toBe('hidden@example.invalid')
+
+      const vouchers = await anonClient().from('vouchers').select('id, code, amount_rappen, recipient_email').eq('id', voucher!.id)
+      expect(vouchers.error || !vouchers.data?.length).toBeTruthy()
+      expect((vouchers.data || []).length).toBe(0)
+
+      const codes = await anonClient().from('voucher_codes').select('id, code').eq('id', promo!.id)
+      expect(codes.error || !codes.data?.length).toBeTruthy()
+      expect((codes.data || []).length).toBe(0)
+    } finally {
+      await admin.from('vouchers').delete().eq('id', voucher!.id)
+      await admin.from('voucher_codes').delete().eq('id', promo!.id)
+    }
+  })
+
+  it('anon cannot enumerate course_sessions', async () => {
+    const { data, error } = await anonClient()
+      .from('course_sessions')
+      .select('id, sari_session_id, tenant_id')
+      .limit(5)
+    await expectDenied({ data, error })
+  })
+
+  it('anon cannot INSERT a waitlist row for an arbitrary tenant', async () => {
+    const { data, error } = await anonClient()
+      .from('course_waitlist')
+      .insert({
+        tenant_id: tenantA,
+        first_name: 'Probe',
+        last_name: 'Anon',
+        email: 'f3-probe@example.invalid',
+        position: 1,
+        status: 'waiting',
+      })
+      .select('id')
+    expect(error || !data?.length).toBeTruthy()
+  })
+
+  it('anon cannot UPDATE or DELETE availability_slots', async () => {
+    const { data: updated, error: updateError } = await anonClient()
+      .from('availability_slots')
+      .update({ reserved_by_session: 'f3-probe', reserved_until: new Date(Date.now() + 60_000).toISOString() })
+      .neq('id', '00000000-0000-0000-0000-000000000000')
+      .select('id')
+    expect(updateError || !updated?.length).toBeTruthy()
+
+    const { data: inserted, error: insertError } = await anonClient()
+      .from('availability_slots')
+      .insert({
+        tenant_id: tenantA,
+        staff_id: process.env.RLS_TEST_STAFF_A_USER_ID || '00000000-0000-0000-0000-000000000000',
+        start_time: new Date().toISOString(),
+        end_time: new Date(Date.now() + 3_600_000).toISOString(),
+        duration_minutes: 60,
+      })
+      .select('id')
+    expect(insertError || !inserted?.length).toBeTruthy()
+  })
+
+  it('service_role can still read availability_slots for the booking API path', async () => {
+    const { error } = await serviceClient()
+      .from('availability_slots')
+      .select('id')
+      .limit(1)
+    expect(error).toBeNull()
+  })
+
+  it('atomic claim: free slot succeeds, second session fails, release restores, concurrent is exclusive', async () => {
+    const staffId = process.env.RLS_TEST_STAFF_A_USER_ID
+    if (!staffId) throw new Error('RLS_TEST_STAFF_A_USER_ID is required for the claim probe')
+
+    const supabase = serviceClient()
+    const start = new Date(Date.now() + 30 * 24 * 3600 * 1000)
+    const end = new Date(start.getTime() + 45 * 60 * 1000)
+    const { data: created, error: createError } = await supabase
+      .from('availability_slots')
+      .insert({
+        tenant_id: tenantA,
+        staff_id: staffId,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        duration_minutes: 45,
+        is_available: true,
+        booking_type: 'regular',
+      })
+      .select('id')
+      .single()
+    expect(createError).toBeNull()
+    const slotId = created!.id
+    const until = new Date(Date.now() + 5 * 60 * 1000).toISOString()
+
+    try {
+      const first = await claimAvailabilitySlot(supabase, {
+        slotId,
+        sessionId: 'f3-session-a',
+        reservedUntil: until,
+        isPrimaryReservation: true,
+      })
+      expect(first.error).toBeNull()
+      expect(first.data?.reserved_by_session).toBe('f3-session-a')
+
+      const taken = await claimAvailabilitySlot(supabase, {
+        slotId,
+        sessionId: 'f3-session-b',
+        reservedUntil: until,
+        isPrimaryReservation: true,
+      })
+      expect(taken.error).toBeNull()
+      expect(taken.data).toBeNull()
+
+      const { error: releaseError } = await supabase
+        .from('availability_slots')
+        .update({ reserved_until: null, reserved_by_session: null, is_primary_reservation: false })
+        .eq('id', slotId)
+        .eq('reserved_by_session', 'f3-session-a')
+      expect(releaseError).toBeNull()
+
+      const [left, right] = await Promise.all([
+        claimAvailabilitySlot(supabase, {
+          slotId,
+          sessionId: 'f3-session-c',
+          reservedUntil: until,
+          isPrimaryReservation: true,
+        }),
+        claimAvailabilitySlot(supabase, {
+          slotId,
+          sessionId: 'f3-session-d',
+          reservedUntil: until,
+          isPrimaryReservation: true,
+        }),
+      ])
+      const winners = [left.data, right.data].filter(Boolean)
+      const losers = [left.data, right.data].filter(row => !row)
+      expect(left.error || right.error).toBeFalsy()
+      expect(winners).toHaveLength(1)
+      expect(losers).toHaveLength(1)
+    } finally {
+      await supabase.from('availability_slots').delete().eq('id', slotId)
+    }
   })
 })
 

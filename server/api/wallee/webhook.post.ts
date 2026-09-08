@@ -22,6 +22,12 @@ import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-produ
 import { internalSecretHeaders, isInternalSecretRequest } from '~/server/utils/require-staff-or-internal'
 import { classifyWalleeWebhookTimestamp, shouldShortCircuitWalleeWebhook } from '~/server/utils/wallee-webhook-replay'
 import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
+import {
+  applySariSessionSwaps,
+  buildSariSessionMap,
+  collectPublicSessionIds,
+  loadSariSessionMap,
+} from '~/server/utils/sari-custom-sessions'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -2632,79 +2638,49 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
       }
     }
     
-    // Apply custom sessions if any were selected
+    // Apply custom sessions if any were selected.
+    // Public payloads reference course_sessions.id ({"2": {originalSessionIds,
+    // sessionIds}}); the internal SARI id is resolved server-side and replaced by
+    // value. Rows persisted before this change carry internal SARI ids directly
+    // and are still handled, so in-flight payments keep working.
     if (registration.custom_sessions && typeof registration.custom_sessions === 'object') {
       logger.info('🔄 Applying custom sessions:', registration.custom_sessions)
-      
-      // custom_sessions format: {"2": {originalSariIds: ["2110055", "2110056"], sariSessionIds: ["2110059", "2110060"], ...}}
-      for (const [position, customData] of Object.entries(registration.custom_sessions)) {
-        const custom = customData as any
-        
-        // Get original IDs to replace and new IDs
-        const originalIds = custom?.originalSariIds || []
-        const newIds = custom?.sariSessionIds || (custom?.sariSessionId ? [custom.sariSessionId] : [])
-        
-        logger.debug(`📍 Position ${position}: originalIds=${originalIds.join(',')}, newIds=${newIds.join(',')}`)
-        
-        if (originalIds.length > 0 && newIds.length > 0) {
-          // Replace each original ID with corresponding new ID
-          for (let i = 0; i < originalIds.length && i < newIds.length; i++) {
-            const origId = originalIds[i]
-            const newId = newIds[i]
-            
-            // Find and replace in the array
-            const idx = sariCourseIds.findIndex((id: string) => id === origId || id === origId.toString())
-            if (idx >= 0) {
-              logger.debug(`📝 Replacing session ID ${sariCourseIds[idx]} → ${newId} at index ${idx}`)
-              sariCourseIds[idx] = newId
-            } else {
-              logger.warn(`⚠️ Original session ID ${origId} not found in course sessions`)
-            }
-          }
-        } else if (newIds.length > 0 && originalIds.length === 0) {
-          // Legacy fallback: Position-based replacement (for old data without originalSariIds)
-          logger.warn('⚠️ Using legacy position-based replacement (no originalSariIds)')
-          
-          // Fetch course sessions to understand the day-grouping
-          const sessionsPerPosition: number[] = []
-          const { data: courseSessions } = await supabase
-            .from('course_sessions')
-            .select('id, start_time')
-            .eq('course_id', course.id)
-            .order('start_time', { ascending: true })
-          
-          if (courseSessions && courseSessions.length > 0) {
-            const byDate: Map<string, number> = new Map()
-            for (const session of courseSessions) {
-              const date = session.start_time.split('T')[0]
-              byDate.set(date, (byDate.get(date) || 0) + 1)
-            }
-            for (const count of byDate.values()) {
-              sessionsPerPosition.push(count)
-            }
-          } else {
-            // Last resort: try to detect from sariCourseIds length
-            // VKU typically has 4 sessions over 2 days = [2, 2]
-            // PGS typically has more sessions
-            if (sariCourseIds.length === 4) {
-              sessionsPerPosition.push(2, 2) // Assume VKU pattern
-            } else {
-              sessionsPerPosition.push(...Array(sariCourseIds.length).fill(1))
-            }
-          }
-          
-          const posNum = parseInt(position)
-          let startIdx = 0
-          for (let p = 0; p < posNum - 1 && p < sessionsPerPosition.length; p++) {
-            startIdx += sessionsPerPosition[p]
-          }
-          
-          for (let i = 0; i < newIds.length && (startIdx + i) < sariCourseIds.length; i++) {
-            logger.debug(`📝 Legacy replacing session at index ${startIdx + i}: ${sariCourseIds[startIdx + i]} → ${newIds[i]}`)
-            sariCourseIds[startIdx + i] = newIds[i]
-          }
-        }
+
+      const sessionSariMap = new Map([
+        ...buildSariSessionMap(course.course_sessions),
+        ...(await loadSariSessionMap(
+          supabase,
+          collectPublicSessionIds(registration.custom_sessions),
+          course.tenant_id,
+        )),
+      ])
+      const swap = applySariSessionSwaps(
+        sariCourseIds,
+        registration.custom_sessions,
+        id => sessionSariMap.get(id),
+        course.course_sessions,
+      )
+
+      // enroll-wallee validates custom_sessions before the payment is taken, so
+      // this should never fire. If it does, the payment is already captured —
+      // keep the resolved swaps, enroll, and surface it loudly for manual repair
+      // instead of silently leaving a paying customer unenrolled.
+      if (swap.unresolvedSessionIds.length > 0) {
+        logger.error('❌ Unresolvable session reference in custom_sessions — manual review required', {
+          registration_id: registrationId,
+          unresolved: swap.unresolvedSessionIds,
+        })
       }
+      for (const missing of swap.notFoundSariIds) {
+        logger.warn(`⚠️ Original session ID ${missing} not found in course sessions`)
+      }
+      if (swap.legacyPositionalPositions.length > 0) {
+        logger.warn(`⚠️ Legacy positional replacement for position(s) ${swap.legacyPositionalPositions.join(',')}`)
+      }
+      for (const replacement of swap.replacements) {
+        logger.debug(`📝 Replacing session ID ${replacement.from} → ${replacement.to}`)
+      }
+      sariCourseIds = swap.sariSessionIds
     }
     
     // Format birthdate as YYYY-MM-DD (already should be in this format)

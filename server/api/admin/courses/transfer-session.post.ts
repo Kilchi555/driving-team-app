@@ -32,6 +32,7 @@ import {
   buildEffectiveSessionDates,
   evaluateSessionOrder,
 } from '~/server/utils/session-order-rules'
+import { loadSariSessionMap } from '~/server/utils/sari-custom-sessions'
 
 function groupSessionsByPosition(sessions: any[]): Map<number, any[]> {
   const sorted = [...sessions].sort((a, b) =>
@@ -150,16 +151,34 @@ export default defineEventHandler(async (event) => {
 
   const prepared: PreparedChange[] = []
 
+  // Public course_sessions.id references sent by the admin UI are resolved to
+  // internal SARI ids here, scoped to the tenant. Legacy payloads that still
+  // carry targetSariSessionIds keep working during rollout.
+  const targetSessionIdRefs = changes.flatMap((raw: any) =>
+    (raw?.targetSessionIds || []).map(String).filter(Boolean)
+  )
+  const targetSariMap = await loadSariSessionMap(supabase, targetSessionIdRefs, profile.tenant_id)
+
   for (const raw of changes) {
     const sessionPosition = Number(raw.sessionPosition)
     const targetCourseId = raw.targetCourseId as string
-    const targetSariSessionIds = (raw.targetSariSessionIds || []).map(String).filter(Boolean)
+    const publicTargetIds = (raw.targetSessionIds || []).map(String).filter(Boolean)
+    const targetSariSessionIds = publicTargetIds.length > 0
+      ? publicTargetIds.map((id: string) => targetSariMap.get(id)).filter(Boolean) as string[]
+      : (raw.targetSariSessionIds || []).map(String).filter(Boolean)
     const targetDate = raw.targetDate as string
+
+    if (publicTargetIds.length > 0 && targetSariSessionIds.length !== publicTargetIds.length) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Teil ${sessionPosition}: Ziel-Termin nicht gefunden oder nicht SARI-verknüpft`,
+      })
+    }
 
     if (!sessionPosition || !targetCourseId || !targetDate || targetSariSessionIds.length === 0) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Jede Änderung braucht sessionPosition, targetCourseId, targetDate, targetSariSessionIds',
+        statusMessage: 'Jede Änderung braucht sessionPosition, targetCourseId, targetDate, targetSessionIds',
       })
     }
 

@@ -4,14 +4,38 @@
  * Adds a user to the category-based waitlist (e.g. CZV-G, Fahrlehrer, CZV).
  */
 
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import { uploadInquiryConversionViaSimy, type WebsiteMarketingAttributionPayload } from '~/server/utils/google-ads-inquiry-upload'
 
 /** Waitlist signups are a soft, early-funnel signal — valued lower than a full inquiry/registration. */
 const WAITLIST_CONVERSION_VALUE_CHF = 15
 
+const waitlistHits = new Map<string, { count: number; reset: number }>()
+function allowWaitlistSignup(ip: string): boolean {
+  const now = Date.now()
+  const windowMs = 15 * 60 * 1000
+  const entry = waitlistHits.get(ip)
+  if (!entry || now > entry.reset) {
+    waitlistHits.set(ip, { count: 1, reset: now + windowMs })
+    return true
+  }
+  entry.count++
+  return entry.count <= 10
+}
+
 export default defineEventHandler(async (event) => {
+  const ip = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim()
+    || getHeader(event, 'x-real-ip')
+    || event.node.req.socket.remoteAddress
+    || 'unknown'
+  if (!allowWaitlistSignup(ip)) {
+    throw createError({
+      statusCode: 429,
+      statusMessage: 'Zu viele Einträge. Bitte versuchen Sie es später erneut.',
+    })
+  }
+
   const body = await readBody(event)
   const { category_code, first_name, email, tenant_id, marketing_attribution } = body
 
