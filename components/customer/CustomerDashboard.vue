@@ -2004,10 +2004,12 @@ const loadAppointments = async () => {
     const appointmentIds = appointmentsData?.map((a: any) => a.id) || []
     logger.debug('🔍 Extracting evaluations from API response for appointments:', appointmentIds.length)
 
-    // Skip if no appointments
+    // Skip if no appointments — also clear lessons so upcoming count/modal
+    // cannot keep stale rows after the last booking was cancelled.
     if (appointmentIds.length === 0) {
       logger.debug('⚠️ No appointments found')
       appointments.value = []
+      lessons.value = []
       return
     }
 
