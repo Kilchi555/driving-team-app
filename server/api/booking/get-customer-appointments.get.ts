@@ -106,6 +106,7 @@ export default defineEventHandler(async (event) => {
       .eq('user_id', customerId)
       .eq('tenant_id', tenantId)
       .not('status', 'eq', 'deleted')
+      .not('status', 'in', '("cancelled","canceled")') // Cancelled holds must not block rebooking / conflict checks
       .is('deleted_at', null)
       .gte('start_time', `${startDate}T00:00:00Z`)
       .lte('start_time', `${endDate}T23:59:59Z`)
