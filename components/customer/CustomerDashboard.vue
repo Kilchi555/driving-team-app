@@ -1101,6 +1101,9 @@ import { useTerminology } from '~/composables/useTerminology'
 import { useTenant } from '~/composables/useTenant'
 import { replacePlaceholders } from '~/utils/reglementPlaceholders'
 import { bookingPrefillToQuery, deriveBookingPrefill, type BookingPrefill } from '~/utils/booking-prefill'
+import {
+  filterUpcomingCustomerAppointments,
+} from '~/utils/customer-appointment-visibility'
 import { checkFeatureFlag } from '~/utils/featureFlags'
 import { useFeatures } from '~/composables/useFeatures'
 import ProfileModal from './ProfileModal.vue'
@@ -1456,10 +1459,8 @@ const totalEvaluationsCount = computed(() => {
 })
 
 const upcomingAppointments = computed(() => {
-  const now = new Date()
-  return appointments.value.filter(apt => 
-    new Date(apt.start_time) > now
-  ).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+  return filterUpcomingCustomerAppointments(appointments.value || [])
+    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 })
 
 const nextAppointment = computed(() => upcomingAppointments.value[0] || null)
@@ -1506,10 +1507,7 @@ function formatNextAppointmentDuration(startIso: string, endIso: string | undefi
 // Count of all upcoming lessons (appointments + course sessions)
 // Groups course sessions on the same day as ONE appointment
 const upcomingLessonsCount = computed(() => {
-  const now = new Date()
-  const upcomingLessons = lessons.value.filter(lesson => 
-    new Date(lesson.start_time) > now
-  )
+  const upcomingLessons = filterUpcomingCustomerAppointments(lessons.value || [])
   
   // Group course sessions by date + course_id (same day = 1 appointment)
   const courseSessionKeys = new Set<string>()
@@ -2006,10 +2004,13 @@ const loadAppointments = async () => {
     const appointmentIds = appointmentsData?.map((a: any) => a.id) || []
     logger.debug('🔍 Extracting evaluations from API response for appointments:', appointmentIds.length)
 
-    // Skip if no appointments
+    // No appointments: clear appointment state but keep course sessions.
+    // loadAppointments is also called alone (modal cancel / upcoming open),
+    // so wiping lessons entirely would drop upcoming course rows until a full reload.
     if (appointmentIds.length === 0) {
       logger.debug('⚠️ No appointments found')
       appointments.value = []
+      lessons.value = (lessons.value || []).filter((lesson: any) => lesson.event_type_code === 'course')
       return
     }
 
@@ -2159,8 +2160,10 @@ const loadAppointments = async () => {
 
     appointments.value = lessonsWithEvaluations
     
-    // ✅ Initialize lessons with appointments (will be merged with course sessions later)
-    lessons.value = lessonsWithEvaluations
+    // Keep any already-loaded course sessions when refreshing appointments alone
+    // (e.g. after cancel). loadCourseRegistrations rebuilds this on full load.
+    const courseLessons = (lessons.value || []).filter((lesson: any) => lesson.event_type_code === 'course')
+    lessons.value = [...lessonsWithEvaluations, ...courseLessons]
 
   } catch (err: any) {
     logger.error('❌ Error loading appointments:', {

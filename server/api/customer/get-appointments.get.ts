@@ -95,6 +95,9 @@ export default defineEventHandler(async (event) => {
       `)
       .eq('user_id', userProfile.id)
       .is('deleted_at', null)
+      // Cancelled (incl. unpaid online holds with deleted_at NULL) must not appear as active bookings.
+      // Soft-delete remains a separate concept — do not conflate with status=cancelled.
+      .not('status', 'in', '("cancelled","canceled")')
       .order('start_time', { ascending: false })
 
     if (appointmentsError) {
