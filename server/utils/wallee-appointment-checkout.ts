@@ -199,6 +199,7 @@ export async function confirmHeldAppointmentAfterPayment(opts: {
 
   const nextStatus = opts.paymentStatus === 'completed' ? 'confirmed' : 'scheduled'
   if (opts.paymentStatus === 'authorized' && appointment.status === 'confirmed') return false
+  const previousStatus = appointment.status
 
   const { error } = await supabase
     .from('appointments')
@@ -229,6 +230,56 @@ export async function confirmHeldAppointmentAfterPayment(opts: {
       })
     } catch (confirmErr: any) {
       logger.warn('⚠️ Pay-before-confirm confirmation email failed:', confirmErr?.message)
+    }
+  }
+
+  if (opts.paymentStatus === 'completed' && appointment.user_id && appointment.tenant_id) {
+    try {
+      const { becameBindingConfirmed } = await import('~/server/utils/binding-booking')
+      if (becameBindingConfirmed(previousStatus, nextStatus)) {
+        const { data: full } = await supabase
+          .from('appointments')
+          .select('event_type_code, type, gclid, gbraid, wbraid, fbclid, fbc, fbp')
+          .eq('id', appointment.id)
+          .maybeSingle()
+        const { data: payment } = await supabase
+          .from('payments')
+          .select('total_amount_rappen')
+          .eq('appointment_id', appointment.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        const { data: student } = await supabase
+          .from('users')
+          .select('email, phone')
+          .eq('id', appointment.user_id)
+          .maybeSingle()
+        const { hashCustomerIdentifiers, reportBindingAppointmentConversionSafely } = await import(
+          '~/server/utils/binding-booking-conversion'
+        )
+        const hashed = await hashCustomerIdentifiers({ email: student?.email, phone: student?.phone })
+        await reportBindingAppointmentConversionSafely({
+          supabase,
+          appointmentId: appointment.id,
+          userId: appointment.user_id,
+          tenantId: appointment.tenant_id,
+          status: nextStatus,
+          previousStatus,
+          eventTypeCode: full?.event_type_code,
+          categoryCode: full?.type,
+          gclid: full?.gclid,
+          gbraid: full?.gbraid,
+          wbraid: full?.wbraid,
+          fbclid: full?.fbclid,
+          fbc: full?.fbc,
+          fbp: full?.fbp,
+          conversionValueChf: (payment?.total_amount_rappen || 0) / 100,
+          hashedEmail: hashed.hashedEmail,
+          hashedPhone: hashed.hashedPhone,
+        })
+      }
+    } catch (convErr: any) {
+      logger.warn('⚠️ Binding booking conversion after hold confirm failed (non-critical):', convErr?.message)
     }
   }
 
