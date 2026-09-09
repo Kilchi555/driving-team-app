@@ -108,11 +108,7 @@ const startOnboarding = async () => {
   try {
     const response = await $fetch('/api/stripe/connect/create-account', {
       method: 'POST',
-      body: {
-        tenantId: props.tenantId,
-        email: props.tenantEmail,
-        businessName: props.businessName
-      }
+      body: {}
     })
 
     // Redirect to Stripe onboarding
@@ -131,11 +127,7 @@ const continueOnboarding = async () => {
   try {
     const response = await $fetch('/api/stripe/connect/create-account', {
       method: 'POST',
-      body: {
-        tenantId: props.tenantId,
-        email: props.tenantEmail,
-        businessName: props.businessName
-      }
+      body: {}
     })
 
     window.location.href = response.onboardingUrl
@@ -148,13 +140,9 @@ const continueOnboarding = async () => {
 }
 
 const checkAccountStatus = async () => {
-  if (!props.tenantId) return
-  
   try {
-    // TODO: Get account ID from tenant data
-    // For now, we'll need to store the account ID in the tenant record
-    const response = await $fetch(`/api/stripe/connect/account-status?accountId=${props.tenantId}`)
-    accountStatus.value = response
+    const response = await $fetch('/api/stripe/connect/account-status') as StripeAccountStatus & { connected?: boolean }
+    accountStatus.value = response?.connected ? response : null
   } catch (error) {
     console.error('Account status check failed:', error)
   }
