@@ -266,6 +266,18 @@ const handler = defineEventHandler(async (event) => {
     // under a slightly different email casing (e.g. SARI-returned email) or phone format.
     logger.debug('🔍 Looking for existing user with email/phone:', { finalEmail, finalPhone })
 
+    // Staff/admin autofill must fail before we match any customer by phone.
+    if (finalEmail) {
+      const staffHit = await findStaffOrAdminByEmail(supabase, { email: finalEmail, tenantId })
+      if (staffHit) {
+        throw createError({
+          statusCode: 400,
+          statusMessage:
+            'Diese E-Mail gehört einem Mitarbeiterkonto. Bitte die E-Mail der Kursteilnehmerin / des Kursteilnehmers verwenden.',
+        })
+      }
+    }
+
     let guestUserId: string
     const existingUser = await findExistingUserByContact(supabase, {
       email: finalEmail,
@@ -278,19 +290,6 @@ const handler = defineEventHandler(async (event) => {
       guestUserId = existingUser.id
       logger.debug('✅ Found existing user:', guestUserId)
     } else {
-      // Staff/admin autofill (common on shared devices) must not create a guest
-      // under a unique employee email — surface a clear validation error instead.
-      if (finalEmail) {
-        const staffHit = await findStaffOrAdminByEmail(supabase, { email: finalEmail, tenantId })
-        if (staffHit) {
-          throw createError({
-            statusCode: 400,
-            statusMessage:
-              'Diese E-Mail gehört einem Mitarbeiterkonto. Bitte die E-Mail der Kursteilnehmerin / des Kursteilnehmers verwenden.',
-          })
-        }
-      }
-
       // Create new guest user (no auth_user_id)
       logger.debug('👤 Creating guest user...')
       
