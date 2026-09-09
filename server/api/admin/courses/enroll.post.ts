@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
     participant: {
       first_name: participant.first_name || '',
       last_name: participant.last_name || '',
-      email: participant.email || '',
+      email: participant.email || null,
       phone: participant.phone || null,
       birthdate: participant.birthdate || null,
       street: participant.street || null,
