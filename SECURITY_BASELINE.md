@@ -61,7 +61,7 @@ Live role values: `client`, `staff`, `admin`, `affiliate`, `student`, `super_adm
 
 - Rate limit: `server/utils/rate-limiter.ts` + `getClientIP` (`server/utils/ip-utils.ts`).
 - SARI authenticated ops: `server/utils/sari-rate-limit.ts` (currently fail-open on limiter errors). Public lookup had **no** limit.
-- Cron: `server/utils/cron-auth.ts` currently OR of `x-vercel-cron: 1` and Bearer; several jobs fail-open if `CRON_SECRET` unset.
+- Cron: `assertCronRequest` is fail-closed (Bearer `CRON_SECRET` required). Some older cron handlers still have inline checks.
 - Stripe Connect: unauthenticated create/status handlers; **no** `stripe_connect_account_id` column on `tenants` (only billing customer/subscription ids).
 
 ## Public flows that must keep working
