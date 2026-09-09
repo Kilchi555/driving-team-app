@@ -8,6 +8,7 @@ import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { SARIClient } from '~/utils/sariClient'
 import { logger } from '~/utils/logger'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 
 export type AdminPaymentOption = 'cash' | 'invoice' | 'paid' | 'reserve' | 'online_link'
 export type AdminEnrollmentType = 'full' | 'partial' | 'individual'
@@ -664,6 +665,7 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
     try {
       await $fetch('/api/emails/send-course-enrollment-confirmation', {
         method: 'POST',
+        headers: internalSecretHeaders(),
         body: {
           courseRegistrationId: enrollment.id,
           paymentMethod: mapEmailPaymentMethod(paymentOption),

@@ -2441,6 +2441,7 @@ async function sendCourseEnrollmentEmails(payments: any[]) {
       try {
         await $fetch('/api/emails/send-course-enrollment-confirmation', {
           method: 'POST',
+          headers: internalSecretHeaders(),
           body: {
             courseRegistrationId,
             paymentMethod: 'wallee',
