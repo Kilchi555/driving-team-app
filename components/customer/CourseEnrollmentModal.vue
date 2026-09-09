@@ -1945,7 +1945,7 @@ const getGermanErrorMessage = (error: any): string => {
     case 400:
       logger.warn('❌ 400 Error, returning message. Original message was:', message?.substring(0, 100))
       if (typeof message === 'string' && message.length >= 8 && message.length < 220
-        && /[äöüÄÖÜß]|Angaben|E-Mail|Mitarbeiter|ungültig|erforderlich|Bitte/i.test(message)) {
+        && /[äöüÄÖÜß]|Angaben|E-Mail|Telefon|Mitarbeiter|ungültig|erforderlich|Bitte/i.test(message)) {
         return message
       }
       return 'Überprüfen Sie Ihre Angaben. Diese scheinen ungültig zu sein.'
@@ -1964,6 +1964,8 @@ const getGermanErrorMessage = (error: any): string => {
         return message
       }
       return 'Konflikt: Die Aktion konnte nicht ausgeführt werden (z.B. bereits angemeldet).'
+    case 429:
+      return 'Zu viele Versuche. Bitte warte kurz und versuche es erneut.'
     case 500:
       logger.warn('❌ 500 Error. Message:', message?.substring(0, 100))
       return 'Ein interner Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.'
