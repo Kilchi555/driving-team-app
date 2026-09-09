@@ -256,9 +256,9 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     const affectedStaffIds = [...new Set(uniqueBusyTimes.map(bt => bt.staff_id))]
     logger.debug(`📋 Queueing ${affectedStaffIds.length} staff for recalculation after external events sync`)
     
-    for (const staffId of affectedStaffIds) {
+    await Promise.all(affectedStaffIds.map(async (staffId) => {
       try {
-        void enqueueStaffAvailabilityRecalc({
+        await enqueueStaffAvailabilityRecalc({
           staff_id: staffId,
           tenant_id: calendar.tenant_id,
           trigger: 'external_event',
@@ -266,7 +266,7 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
       } catch (queueError: any) {
         logger.warn(`⚠️ Failed to queue staff ${staffId} for recalc:`, queueError.message)
       }
-    }
+    }))
     
     // Asynchronously resolve and update postal codes for events with locations
     if (uniqueBusyTimes.some(bt => bt.event_location)) {

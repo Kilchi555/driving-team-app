@@ -166,7 +166,7 @@ export default defineEventHandler(async (event) => {
             staffId: apt.staff_id,
             tenantId: apt.tenant_id
           })
-          void enqueueStaffAvailabilityRecalc({
+          await enqueueStaffAvailabilityRecalc({
             staff_id: apt.staff_id,
             tenant_id: apt.tenant_id,
             trigger: 'appointment_edit',

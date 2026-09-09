@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Queue slot recalculation so the new buffer takes effect immediately
-  void enqueueStaffAvailabilityRecalc({
+  await enqueueStaffAvailabilityRecalc({
     staff_id: userProfile.id,
     tenant_id: userProfile.tenant_id,
     trigger: 'settings_change',

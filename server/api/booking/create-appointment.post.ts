@@ -1102,7 +1102,7 @@ export default defineEventHandler(async (event: H3Event) => {
     // ============ LAYER 9: TRIGGER AVAILABILITY RECALCULATION ============
     // Fire-and-forget: recalculate slots for this staff so other customers
     // immediately see updated availability (don't await - non-blocking)
-    void enqueueStaffAvailabilityRecalc({
+    await enqueueStaffAvailabilityRecalc({
       staff_id: slot.staff_id,
       tenant_id: tenantId,
       trigger: 'appointment',

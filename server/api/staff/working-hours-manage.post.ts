@@ -83,7 +83,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // ✅ NEW: Queue staff for availability recalculation
-      void enqueueStaffAvailabilityRecalc({
+      await enqueueStaffAvailabilityRecalc({
         staff_id: target.id,
         tenant_id: tenantId,
         trigger: 'working_hours',
@@ -152,7 +152,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // ✅ NEW: Queue staff for availability recalculation
-      void enqueueStaffAvailabilityRecalc({
+      await enqueueStaffAvailabilityRecalc({
         staff_id: target.id,
         tenant_id: tenantId,
         trigger: 'working_hours',

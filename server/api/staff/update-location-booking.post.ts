@@ -194,7 +194,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // Queue availability recalculation so slots reflect the new bookable state immediately
-    void enqueueStaffAvailabilityRecalc({
+    await enqueueStaffAvailabilityRecalc({
       staff_id: userProfile.id,
       tenant_id: userProfile.tenant_id,
       trigger: 'working_hours',
