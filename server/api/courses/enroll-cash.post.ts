@@ -529,13 +529,19 @@ const handler = defineEventHandler(async (event) => {
       
       // Provide clearer error messages
       if (enrollmentError?.message?.includes('duplicate key')) {
-        if (enrollmentError.message.includes('course_id_email_key')) {
+        if (
+          enrollmentError.message.includes('course_id_email_key') ||
+          enrollmentError.message.includes('unique_email')
+        ) {
           throw createError({
             statusCode: 409,
             statusMessage: 'Diese E-Mail-Adresse ist bereits für diesen Kurs angemeldet.'
           })
         }
-        if (enrollmentError.message.includes('course_id_sari_faberid')) {
+        if (
+          enrollmentError.message.includes('course_id_sari_faberid') ||
+          enrollmentError.message.includes('unique_faberid')
+        ) {
           throw createError({
             statusCode: 409,
             statusMessage: 'Sie sind bereits für diesen Kurs angemeldet.'

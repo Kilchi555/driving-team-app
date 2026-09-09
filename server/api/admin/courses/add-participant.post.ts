@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { logger } from '~/utils/logger'
 
 /**
