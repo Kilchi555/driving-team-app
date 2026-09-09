@@ -9,6 +9,11 @@
 
 import { defineNuxtPlugin, useRuntimeConfig } from '#app'
 import { decodeAttribution, type DecodedAttribution } from '~/utils/attribution-decode'
+import {
+  constructFbcFromFbclid,
+  readOrCreateAnalyticsSessionId,
+  resolveFbcForIncomingFbclid,
+} from '~/server/utils/booking-attribution-hop'
 
 declare global {
   interface Window {
@@ -71,8 +76,7 @@ export default defineNuxtPlugin(() => {
     let sessionId = localStorage.getItem(key)
     
     if (!sessionId) {
-      sessionId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
-      localStorage.setItem(key, sessionId)
+      sessionId = readOrCreateAnalyticsSessionId(localStorage)
     }
     
     return sessionId
@@ -152,6 +156,7 @@ export default defineNuxtPlugin(() => {
     }
   }
 
+  const storedBeforeUrl = attribution
   const urlHasClickId = !!(gclidFromUrl || gbraidFromUrl || wbraidFromUrl || fbclidFromUrl)
   if (urlHasClickId || urlParams.get('utm_source')) {
     const fromUrl: DecodedAttribution = {
@@ -159,7 +164,8 @@ export default defineNuxtPlugin(() => {
       gbraid: gbraidFromUrl,
       wbraid: wbraidFromUrl,
       fbclid: fbclidFromUrl,
-      // Do not remint fbc over a stored/dt_attr value; fill later if still missing.
+      // Do not remint fbc over a stored/dt_attr value on UTM-only hops.
+      // A new fbclid is resolved after cookies are read.
       fbc: null,
       fbp: null,
       utm_source: urlParams.get('utm_source') ?? (urlHasClickId ? (fbclidFromUrl ? 'facebook' : 'google') : null),
@@ -178,7 +184,19 @@ export default defineNuxtPlugin(() => {
 
   const fbcCookie = readCookie('_fbc')
   const fbpCookie = readCookie('_fbp')
-  if (attribution && (fbcCookie || fbpCookie)) {
+  if (attribution && fbclidFromUrl) {
+    attribution = {
+      ...attribution,
+      fbc: resolveFbcForIncomingFbclid({
+        incomingFbclid: fbclidFromUrl,
+        storedFbclid: storedBeforeUrl?.fbclid,
+        storedFbc: storedBeforeUrl?.fbc,
+        cookieFbc: fbcCookie,
+        explicitFbc: storedBeforeUrl?.fbc,
+      }),
+      fbp: attribution.fbp || fbpCookie,
+    }
+  } else if (attribution && (fbcCookie || fbpCookie)) {
     attribution = {
       ...attribution,
       fbc: attribution.fbc || fbcCookie,
@@ -189,7 +207,7 @@ export default defineNuxtPlugin(() => {
   if (attribution?.fbclid && !attribution.fbc) {
     attribution = {
       ...attribution,
-      fbc: `fb.1.${Date.now()}.${attribution.fbclid}`,
+      fbc: constructFbcFromFbclid(attribution.fbclid),
     }
   }
 

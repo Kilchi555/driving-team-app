@@ -24,6 +24,81 @@ export function constructFbcFromFbclid(fbclid: string, nowMs = Date.now()): stri
   return `fb.1.${nowMs}.${id}`
 }
 
+/** Meta `_fbc` is `fb.{subdomainIndex}.{creationTime}.{fbclid}`. */
+export function fbcBelongsToFbclid(
+  fbc: string | null | undefined,
+  fbclid: string | null | undefined,
+): boolean {
+  const id = String(fbclid || '').trim()
+  const token = String(fbc || '').trim()
+  if (!id || !token) return false
+  return token === id || token.endsWith(`.${id}`)
+}
+
+/**
+ * A new fbclid must not keep a previous click's fbc (Meta prefers fbc).
+ * UTM-only callers must not invoke this — pass no incoming fbclid and skip.
+ * Cookie / stored / dt_attr fbc win only when they already encode this fbclid.
+ */
+export function resolveFbcForIncomingFbclid(input: {
+  incomingFbclid?: string | null
+  storedFbclid?: string | null
+  storedFbc?: string | null
+  cookieFbc?: string | null
+  explicitFbc?: string | null
+  nowMs?: number
+}): string | null {
+  const incoming = String(input.incomingFbclid || '').trim()
+  if (!incoming) return null
+
+  const explicit = String(input.explicitFbc || '').trim()
+  if (fbcBelongsToFbclid(explicit, incoming)) return explicit
+
+  const cookie = String(input.cookieFbc || '').trim()
+  if (fbcBelongsToFbclid(cookie, incoming)) return cookie
+
+  const storedId = String(input.storedFbclid || '').trim()
+  const storedFbc = String(input.storedFbc || '').trim()
+  if (storedId === incoming && fbcBelongsToFbclid(storedFbc, incoming)) return storedFbc
+
+  return constructFbcFromFbclid(incoming, input.nowMs)
+}
+
+export function incomingClickRefreshesLandingPage(
+  incoming: Pick<AttributionFields, 'utm_source' | 'fbclid' | 'gclid' | 'gbraid' | 'wbraid'>,
+): boolean {
+  return !!(incoming.utm_source || incoming.fbclid || incoming.gclid || incoming.gbraid || incoming.wbraid)
+}
+
+export const ANALYTICS_SESSION_STORAGE_KEY = 'analytics_session_id'
+export const ANALYTICS_SESSION_ID_PATTERN = /^\d+_[0-9a-z]{9}$/
+
+/** Same `{timestamp}_{9 base36 chars}` contract as before, without Math.random. */
+export function createAnalyticsSessionId(nowMs = Date.now()): string {
+  const cryptoObj = globalThis.crypto
+  if (!cryptoObj?.getRandomValues) {
+    throw new Error('crypto.getRandomValues is required to mint analytics_session_id')
+  }
+  const bytes = new Uint8Array(9)
+  cryptoObj.getRandomValues(bytes)
+  let suffix = ''
+  for (let i = 0; i < bytes.length; i++) {
+    suffix += (bytes[i]! % 36).toString(36)
+  }
+  return `${nowMs}_${suffix}`
+}
+
+export function readOrCreateAnalyticsSessionId(
+  storage: { getItem(key: string): string | null; setItem(key: string, value: string): void },
+  nowMs?: number,
+): string {
+  const existing = storage.getItem(ANALYTICS_SESSION_STORAGE_KEY)
+  if (existing) return existing
+  const created = createAnalyticsSessionId(nowMs)
+  storage.setItem(ANALYTICS_SESSION_STORAGE_KEY, created)
+  return created
+}
+
 export function firstQueryValue(value: unknown): string | null {
   if (Array.isArray(value)) value = value[0]
   if (typeof value !== 'string') return null

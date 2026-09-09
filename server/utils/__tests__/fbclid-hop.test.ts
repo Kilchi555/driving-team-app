@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   becameBindingConfirmed,
@@ -10,9 +12,15 @@ import {
   buchenQueryHasAttribution,
   buildBuchenRedirectUrl,
   constructFbcFromFbclid,
+  createAnalyticsSessionId,
+  incomingClickRefreshesLandingPage,
   mergeAttributionFields,
+  readOrCreateAnalyticsSessionId,
   recoverClickIds,
   resolveBookingRedirectClickIds,
+  resolveFbcForIncomingFbclid,
+  ANALYTICS_SESSION_ID_PATTERN,
+  ANALYTICS_SESSION_STORAGE_KEY,
 } from '../booking-attribution-hop'
 
 describe('attribution merge (click IDs)', () => {
@@ -178,5 +186,129 @@ describe('Meta click-ID gate', () => {
     expect(hasMetaClickId({ fbclid: 'ABC', fbc: null })).toBe(true)
     expect(hasMetaClickId({ fbclid: null, fbc: 'fb.1.1.ABC' })).toBe(true)
     expect(hasMetaClickId({ fbclid: null, fbc: null })).toBe(false)
+  })
+})
+
+describe('stale fbc after a new fbclid', () => {
+  it('A — new fbclid replaces stored fbc from a previous click', () => {
+    const fbc = resolveFbcForIncomingFbclid({
+      incomingFbclid: 'NEW',
+      storedFbclid: 'OLD',
+      storedFbc: 'fb.1.1.OLD',
+      nowMs: 9,
+    })
+    expect(fbc).toBe('fb.1.9.NEW')
+  })
+
+  it('B — new fbclid with no stored fbc still derives fbc', () => {
+    const fbc = resolveFbcForIncomingFbclid({
+      incomingFbclid: 'NEW',
+      storedFbclid: null,
+      storedFbc: null,
+      nowMs: 9,
+    })
+    expect(fbc).toBe('fb.1.9.NEW')
+  })
+
+  it('C — UTM-only merge keeps stored fbclid and fbc', () => {
+    const merged = mergeAttributionFields(
+      { fbclid: 'OLD', fbc: 'fb.1.1.OLD', utm_source: 'facebook' },
+      { fbclid: null, fbc: null, utm_source: 'google', utm_medium: 'cpc' },
+    )
+    expect(merged.fbclid).toBe('OLD')
+    expect(merged.fbc).toBe('fb.1.1.OLD')
+    expect(resolveFbcForIncomingFbclid({ incomingFbclid: null, storedFbc: 'fb.1.1.OLD' })).toBeNull()
+  })
+
+  it('D — empty/null incoming fbclid does not derive a replacement fbc', () => {
+    expect(resolveFbcForIncomingFbclid({
+      incomingFbclid: '',
+      storedFbclid: 'OLD',
+      storedFbc: 'fb.1.1.OLD',
+    })).toBeNull()
+    expect(resolveFbcForIncomingFbclid({
+      incomingFbclid: null,
+      storedFbclid: 'OLD',
+      storedFbc: 'fb.1.1.OLD',
+    })).toBeNull()
+  })
+
+  it('E — cookie/dt_attr fbc that already encodes the new fbclid is kept', () => {
+    expect(resolveFbcForIncomingFbclid({
+      incomingFbclid: 'NEW',
+      storedFbclid: 'OLD',
+      storedFbc: 'fb.1.1.OLD',
+      cookieFbc: 'fb.1.99.NEW',
+      nowMs: 1,
+    })).toBe('fb.1.99.NEW')
+    expect(resolveFbcForIncomingFbclid({
+      incomingFbclid: 'NEW',
+      explicitFbc: 'fb.1.50.NEW',
+      storedFbc: 'fb.1.1.OLD',
+      nowMs: 1,
+    })).toBe('fb.1.50.NEW')
+  })
+})
+
+describe('analytics session id (CodeQL js/insecure-randomness)', () => {
+  it('creates a session id when storage is empty and reuses it afterwards', () => {
+    const store = new Map<string, string>()
+    const storage = {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value) },
+    }
+    const first = readOrCreateAnalyticsSessionId(storage, 1_700_000_000_000)
+    const second = readOrCreateAnalyticsSessionId(storage, 1_800_000_000_000)
+    expect(first).toMatch(ANALYTICS_SESSION_ID_PATTERN)
+    expect(first.startsWith('1700000000000_')).toBe(true)
+    expect(second).toBe(first)
+    expect(store.get(ANALYTICS_SESSION_STORAGE_KEY)).toBe(first)
+  })
+
+  it('mints the existing timestamp_base36 contract without Math.random', () => {
+    const id = createAnalyticsSessionId(42)
+    expect(id).toMatch(ANALYTICS_SESSION_ID_PATTERN)
+    const hop = readFileSync(resolve(process.cwd(), 'server/utils/booking-attribution-hop.ts'), 'utf8')
+    const websiteHop = readFileSync(resolve(process.cwd(), 'apps/website/utils/booking-attribution-hop.ts'), 'utf8')
+    const websitePlugin = readFileSync(resolve(process.cwd(), 'apps/website/plugins/marketing-attribution.client.ts'), 'utf8')
+    const appPlugin = readFileSync(resolve(process.cwd(), 'plugins/booking-session-tracking.client.ts'), 'utf8')
+    const goBuchen = readFileSync(resolve(process.cwd(), 'apps/website/server/routes/go/buchen.get.ts'), 'utf8')
+    for (const src of [hop, websiteHop, websitePlugin, appPlugin, goBuchen]) {
+      expect(src).not.toMatch(/Math\.random\s*\(/)
+    }
+  })
+})
+
+describe('gbraid/wbraid landing_page', () => {
+  it('A/B — gbraid-only and wbraid-only refresh landing_page', () => {
+    expect(incomingClickRefreshesLandingPage({ gbraid: 'XYZ' })).toBe(true)
+    expect(incomingClickRefreshesLandingPage({ wbraid: 'XYZ' })).toBe(true)
+    const gbraidMerged = mergeAttributionFields(
+      { landing_page: '/old', gclid: 'keep' },
+      { gbraid: 'XYZ', landing_page: incomingClickRefreshesLandingPage({ gbraid: 'XYZ' }) ? '/auto-fahrschule/' : '/old' },
+    )
+    expect(gbraidMerged.landing_page).toBe('/auto-fahrschule/')
+    expect(gbraidMerged.gclid).toBe('keep')
+    const wbraidMerged = mergeAttributionFields(
+      { landing_page: '/old' },
+      { wbraid: 'XYZ', landing_page: incomingClickRefreshesLandingPage({ wbraid: 'XYZ' }) ? '/motorrad/' : '/old' },
+    )
+    expect(wbraidMerged.landing_page).toBe('/motorrad/')
+  })
+
+  it('C/D — fbclid and gclid still refresh landing_page', () => {
+    expect(incomingClickRefreshesLandingPage({ fbclid: 'ABC' })).toBe(true)
+    expect(incomingClickRefreshesLandingPage({ gclid: 'G' })).toBe(true)
+  })
+
+  it('E — UTM-only still refreshes landing_page; empty incoming does not', () => {
+    expect(incomingClickRefreshesLandingPage({ utm_source: 'google' })).toBe(true)
+    expect(incomingClickRefreshesLandingPage({})).toBe(false)
+    const kept = mergeAttributionFields(
+      { landing_page: '/old', fbclid: 'ABC' },
+      { landing_page: incomingClickRefreshesLandingPage({}) ? '/new' : undefined },
+    )
+    expect(kept.landing_page).toBe('/old')
+    expect(kept.fbclid).toBe('ABC')
   })
 })

@@ -15,7 +15,13 @@
  *   4. Upload conversion to Google Ads API + Meta CAPI on booking completion
  */
 
-import { mergeAttributionFields, constructFbcFromFbclid } from '~/utils/booking-attribution-hop'
+import {
+  incomingClickRefreshesLandingPage,
+  mergeAttributionFields,
+  createAnalyticsSessionId,
+  readOrCreateAnalyticsSessionId,
+  resolveFbcForIncomingFbclid,
+} from '~/utils/booking-attribution-hop'
 
 const STORAGE_KEY = 'dt_marketing_attribution'
 const ATTRIBUTION_TTL_MS = 90 * 24 * 60 * 60 * 1000 // 90 days
@@ -101,17 +107,16 @@ function persist(attribution: MarketingAttribution): void {
  * same format/key `analytics.client.ts` uses) closes that gap.
  */
 function getOrCreateSessionId(): string {
-  const key = 'analytics_session_id'
   try {
-    let sessionId = localStorage.getItem(key)
-    if (!sessionId) {
-      sessionId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
-      localStorage.setItem(key, sessionId)
-    }
+    const sessionId = readOrCreateAnalyticsSessionId(localStorage)
     ;(window as any).__analyticsSessionId = sessionId
     return sessionId
   } catch {
-    return (window as any).__analyticsSessionId ?? `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+    const fromWindow = (window as any).__analyticsSessionId
+    if (fromWindow) return String(fromWindow)
+    const sessionId = createAnalyticsSessionId()
+    ;(window as any).__analyticsSessionId = sessionId
+    return sessionId
   }
 }
 
@@ -144,19 +149,25 @@ export default defineNuxtPlugin({
     const fbcFromCookie = readCookie('_fbc')
     const fbpFromCookie = readCookie('_fbp')
     const fbclid = incoming.fbclid
+    const stored = readStored()
 
-    incoming.fbc = fbcFromCookie
-      ?? (fbclid ? constructFbcFromFbclid(fbclid) : null)
+    incoming.fbc = fbclid
+      ? resolveFbcForIncomingFbclid({
+          incomingFbclid: fbclid,
+          storedFbclid: stored?.fbclid,
+          storedFbc: stored?.fbc,
+          cookieFbc: fbcFromCookie,
+        })
+      : (fbcFromCookie ?? null)
     incoming.fbp = fbpFromCookie ?? null
 
     const hasIncomingClickOrUtm = Object.values(incoming).some(v => v !== null && v !== '')
-    const stored = readStored()
 
     // Merge, never last-touch-replace: a later UTM-only pageview must not wipe fbclid/gclid.
     if (hasIncomingClickOrUtm || stored) {
       const mergedFields = mergeAttributionFields(stored, {
         ...incoming,
-        landing_page: (incoming.utm_source || incoming.fbclid || incoming.gclid)
+        landing_page: incomingClickRefreshesLandingPage(incoming)
           ? url.pathname
           : stored?.landing_page,
       })
