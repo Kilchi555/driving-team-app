@@ -32,9 +32,10 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     userId = body.userId
     tenantId = body.tenantId
-    const { fileData, fileName, bucket, path } = body
+    const { fileData, fileName, path } = body
+    const bucket = 'user-documents'
 
-    if (!userId || !fileData || !fileName || !bucket || !path) {
+    if (!userId || !fileData || !fileName || !path) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Erforderliche Parameter fehlen'
