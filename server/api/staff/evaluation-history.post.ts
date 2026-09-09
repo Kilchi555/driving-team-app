@@ -1,17 +1,52 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { resolveCategoryGroup } from '~/server/utils/category-groups'
+import {
+  requireTenantStaff,
+  loadUserInTenant,
+  assertSelfOrTenantAdmin,
+  type TenantActor,
+} from '~/server/utils/require-tenant-auth'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+async function authorizeEvaluationAccess(
+  admin: SupabaseClient,
+  actor: TenantActor,
+  appointmentId: string,
+  userId: string,
+) {
+  const { data: appointment, error } = await admin
+    .from('appointments')
+    .select('id, user_id, staff_id, tenant_id, type')
+    .eq('id', appointmentId)
+    .eq('tenant_id', actor.tenant_id)
+    .maybeSingle()
+
+  if (error || !appointment) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+  if (appointment.user_id !== userId) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
+  await loadUserInTenant(admin, userId, actor.tenant_id, { allowInactive: true })
+
+  if (actor.role === 'staff') {
+    if (appointment.staff_id !== actor.id) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+  } else {
+    assertSelfOrTenantAdmin(actor, appointment.staff_id || actor.id)
+  }
+
+  return appointment
+}
 
 export default defineEventHandler(async (event) => {
-  try {
-    // Get Supabase admin client
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+  const actor = await requireTenantStaff(event)
 
-    // Parse request body
+  try {
     const body = await readBody<{
       action: 'get-history' | 'get-current' | 'get-previous'
       appointment_id: string
@@ -19,43 +54,48 @@ export default defineEventHandler(async (event) => {
       student_category: string
     }>(event)
 
-    const { action, appointment_id, user_id, student_category } = body
+    const { action, appointment_id, user_id, student_category } = body || {}
 
     if (!action || !appointment_id || !user_id) {
-      throw new Error('Missing required fields: action, appointment_id, user_id')
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Missing required fields: action, appointment_id, user_id',
+      })
     }
+
+    const supabase = getSupabaseAdmin()
+    const appointment = await authorizeEvaluationAccess(supabase, actor, appointment_id, user_id)
 
     logger.debug(`📚 Processing evaluation ${action} action`, {
       appointment_id,
       user_id,
-      student_category
+      student_category,
     })
 
     let result
 
     if (action === 'get-history') {
-      // Fetch all appointments for the student, sorted by date
       const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
         .select('id, start_time, type, tenant_id')
         .eq('user_id', user_id)
+        .eq('tenant_id', actor.tenant_id)
         .order('start_time', { ascending: false })
 
       if (appointmentsError) throw appointmentsError
 
-      const appointmentIds = appointments?.map((app: any) => app.id) || []
+      const appointmentIds = appointments?.map((app: { id: string }) => app.id) || []
       if (appointmentIds.length === 0) {
         return {
           success: true,
           data: {
             evaluations: [],
             appointmentDateMap: {},
-            appointmentTypeMap: {}
-          }
+            appointmentTypeMap: {},
+          },
         }
       }
 
-      // Create mappings for date and type
       const appointmentDateMap = new Map()
       const appointmentTypeMap = new Map()
       appointments?.forEach((apt: any) => {
@@ -63,7 +103,6 @@ export default defineEventHandler(async (event) => {
         appointmentTypeMap.set(apt.id, apt.type)
       })
 
-      // Fetch notes for these appointments
       const { data: notes, error: notesError } = await supabase
         .from('notes')
         .select(`
@@ -77,12 +116,9 @@ export default defineEventHandler(async (event) => {
 
       if (notesError) throw notesError
 
-      // Filter notes by category if specified. Categories sharing the same
-      // parent (e.g. "B", "B Automatik", "B Schaltung") are treated as one group,
-      // resolved centrally from categories.parent_category_id.
       let filteredNotes = notes || []
       if (student_category) {
-        const tenantIdForGroup = appointments?.[0]?.tenant_id ?? null
+        const tenantIdForGroup = appointments?.[0]?.tenant_id ?? actor.tenant_id
         const targetGroup = new Set(await resolveCategoryGroup(supabase, tenantIdForGroup, student_category))
         targetGroup.add(student_category)
         filteredNotes = filteredNotes.filter((note: any) => {
@@ -91,7 +127,6 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // Group by criteria and keep the 3 most recent ratings
       const criteriaBucket = new Map<string, any[]>()
       filteredNotes.forEach((note: any) => {
         const criteriaId = note.evaluation_criteria_id
@@ -101,8 +136,8 @@ export default defineEventHandler(async (event) => {
       })
 
       const latestThreeByCriteria: any[] = []
-      criteriaBucket.forEach((notes, criteriaId) => {
-        const sorted = notes
+      criteriaBucket.forEach((notesForCriteria, criteriaId) => {
+        const sorted = notesForCriteria
           .filter((n: any) => n.lesson_date)
           .sort((a: any, b: any) => new Date(b.lesson_date).getTime() - new Date(a.lesson_date).getTime())
           .slice(0, 3)
@@ -117,11 +152,10 @@ export default defineEventHandler(async (event) => {
         data: {
           evaluations: latestThreeByCriteria,
           appointmentDateMap: Object.fromEntries(appointmentDateMap),
-          appointmentTypeMap: Object.fromEntries(appointmentTypeMap)
-        }
+          appointmentTypeMap: Object.fromEntries(appointmentTypeMap),
+        },
       }
     } else if (action === 'get-current') {
-      // Fetch current appointment evaluations
       const { data: currentNotes, error: notesError } = await supabase
         .from('notes')
         .select(`
@@ -129,16 +163,15 @@ export default defineEventHandler(async (event) => {
           criteria_rating,
           criteria_note
         `)
-        .eq('appointment_id', appointment_id)
+        .eq('appointment_id', appointment.id)
         .not('evaluation_criteria_id', 'is', null)
 
       if (notesError) throw notesError
 
-      // Also fetch the lesson-level staff note (no criteria)
       const { data: lessonNoteRow } = await supabase
         .from('notes')
         .select('staff_note')
-        .eq('appointment_id', appointment_id)
+        .eq('appointment_id', appointment.id)
         .is('evaluation_criteria_id', null)
         .maybeSingle()
 
@@ -147,21 +180,21 @@ export default defineEventHandler(async (event) => {
         data: {
           evaluations: currentNotes || [],
           hasEvaluations: (currentNotes?.length || 0) > 0,
-          lesson_note: lessonNoteRow?.staff_note || ''
-        }
+          lesson_note: lessonNoteRow?.staff_note || '',
+        },
       }
     } else if (action === 'get-previous') {
-      // Get previous appointment for comparison
       const { data: allAppointments, error: appointmentsError } = await supabase
         .from('appointments')
         .select('id, start_time')
         .eq('user_id', user_id)
+        .eq('tenant_id', actor.tenant_id)
         .eq('type', student_category)
         .order('start_time', { ascending: true })
 
       if (appointmentsError) throw appointmentsError
 
-      const currentIndex = allAppointments?.findIndex((a: any) => a.id === appointment_id) ?? -1
+      const currentIndex = allAppointments?.findIndex((a: { id: string }) => a.id === appointment_id) ?? -1
       const previousAppointmentId = currentIndex > 0 ? allAppointments?.[currentIndex - 1]?.id : null
 
       if (!previousAppointmentId) {
@@ -169,8 +202,8 @@ export default defineEventHandler(async (event) => {
           success: true,
           data: {
             evaluations: [],
-            previousAppointmentId: null
-          }
+            previousAppointmentId: null,
+          },
         }
       } else {
         const { data: previousNotes, error: notesError } = await supabase
@@ -185,21 +218,25 @@ export default defineEventHandler(async (event) => {
           success: true,
           data: {
             evaluations: previousNotes || [],
-            previousAppointmentId
-          }
+            previousAppointmentId,
+          },
         }
       }
     } else {
-      throw new Error(`Invalid action: ${action}`)
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Invalid action: ${action}`,
+      })
     }
 
     logger.debug(`✅ Evaluation ${action} successful`)
     return result
   } catch (err: any) {
+    if (err?.statusCode) throw err
     logger.error('❌ Error in evaluation history endpoint:', err)
     throw createError({
-      statusCode: err.statusCode || 400,
-      statusMessage: err.message || `Failed to fetch evaluation data`
+      statusCode: 400,
+      statusMessage: err.message || 'Failed to fetch evaluation data',
     })
   }
 })
