@@ -17,6 +17,7 @@ import { SARISyncEngine } from '~/server/utils/sari-sync-engine'
 import { logger } from '~/utils/logger'
 import { verifyCronToken, checkCronRateLimit, logCronExecution } from '~/server/utils/cron'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 interface CronResult {
   success: boolean
@@ -30,6 +31,7 @@ interface CronResult {
 }
 
 export default defineEventHandler(async (event): Promise<CronResult> => {
+  assertCronRequest(event)
   const startTime = new Date()
 
   try {

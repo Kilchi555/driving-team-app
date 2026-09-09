@@ -1,69 +1,108 @@
+import { defineEventHandler, readBody, createError } from 'h3'
 import Stripe from 'stripe'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireTenantAdmin } from '~/server/utils/require-tenant-auth'
 
-export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
-  const { tenantId, email, businessName } = body
-
-  if (!tenantId || !email) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Tenant ID and email are required.'
-    })
-  }
-
+function stripeConnectClient() {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY
   if (!stripeSecretKey) {
     throw createError({
       statusCode: 500,
-      statusMessage: 'Stripe secret key not configured.'
+      statusMessage: 'Payment provider is not configured',
+    })
+  }
+  return new Stripe(stripeSecretKey, {
+    apiVersion: '2024-04-10',
+  })
+}
+
+export default defineEventHandler(async (event) => {
+  const actor = await requireTenantAdmin(event)
+  await readBody(event).catch(() => null)
+
+  const appUrl = process.env.NUXT_PUBLIC_APP_URL
+  if (!appUrl) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Payment provider is not configured',
     })
   }
 
-  const stripe = new Stripe(stripeSecretKey, {
-    apiVersion: '2024-04-10',
-  })
+  const supabase = getSupabaseAdmin()
+  const { data: tenant, error: tenantError } = await supabase
+    .from('tenants')
+    .select('id, name, contact_email, stripe_connect_account_id')
+    .eq('id', actor.tenant_id)
+    .maybeSingle()
+
+  if (tenantError || !tenant) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
+  const email = tenant.contact_email || actor.email
+  if (!email) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Tenant email is required',
+    })
+  }
 
   try {
-    // Create Express account for the tenant
-    const account = await stripe.accounts.create({
-      type: 'express',
-      country: 'CH',
-      email: email,
-      business_type: 'company',
-      company: {
-        name: businessName || 'Business Name'
-      },
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true }
-      },
-      settings: {
-        payouts: {
-          schedule: {
-            interval: 'daily'
-          }
-        }
-      }
-    })
+    const stripe = stripeConnectClient()
+    let accountId = tenant.stripe_connect_account_id as string | null
 
-    // Create onboarding link
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: 'CH',
+        email,
+        business_type: 'company',
+        company: {
+          name: tenant.name || 'Business Name',
+        },
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        settings: {
+          payouts: {
+            schedule: {
+              interval: 'daily',
+            },
+          },
+        },
+      })
+      accountId = account.id
+
+      const { error: persistError } = await supabase
+        .from('tenants')
+        .update({ stripe_connect_account_id: accountId })
+        .eq('id', actor.tenant_id)
+
+      if (persistError || !accountId) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: 'Failed to create Stripe Connect account',
+        })
+      }
+    }
+
     const accountLink = await stripe.accountLinks.create({
-      account: account.id,
-      refresh_url: `${process.env.NUXT_PUBLIC_APP_URL}/admin/stripe-connect/reauth?tenant=${tenantId}`,
-      return_url: `${process.env.NUXT_PUBLIC_APP_URL}/admin/stripe-connect/success?tenant=${tenantId}`,
-      type: 'account_onboarding'
+      account: accountId,
+      refresh_url: `${appUrl}/admin/stripe-connect/reauth`,
+      return_url: `${appUrl}/admin/stripe-connect/success`,
+      type: 'account_onboarding',
     })
 
     return {
-      accountId: account.id,
-      onboardingUrl: accountLink.url
+      accountId,
+      onboardingUrl: accountLink.url,
     }
-
   } catch (error: any) {
-    console.error('Stripe Connect account creation failed:', error)
+    if (error?.statusCode) throw error
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to create Stripe Connect account.'
+      statusMessage: 'Failed to create Stripe Connect account',
     })
   }
 })

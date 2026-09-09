@@ -16,6 +16,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 interface TimeWindow {
   start: string
@@ -193,15 +194,10 @@ export default defineEventHandler(async (event) => {
     })
 
     // Queue availability recalculation so slots reflect the new bookable state immediately
-    await $fetch('/api/availability/queue-recalc', {
-      method: 'POST',
-      body: {
-        staff_id: userProfile.id,
-        tenant_id: userProfile.tenant_id,
-        trigger: 'working_hours'
-      }
-    }).catch((e: any) => {
-      logger.warn('⚠️ Failed to queue recalc after location bookable toggle (non-critical):', e.message)
+    await enqueueStaffAvailabilityRecalc({
+      staff_id: userProfile.id,
+      tenant_id: userProfile.tenant_id,
+      trigger: 'working_hours',
     })
 
     return {

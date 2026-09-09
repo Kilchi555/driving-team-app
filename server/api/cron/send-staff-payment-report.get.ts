@@ -19,10 +19,11 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { getHeader, getQuery } from 'h3'
+import { getQuery } from 'h3'
 import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { getTenantsWithMultipleStaff } from '~/server/utils/tenant-staff-notify'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 const RESEND_DAYS = 7
 
@@ -31,14 +32,9 @@ function chf(rappen: number): string {
 }
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = Date.now()
 
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    logger.warn('⚠️ Unauthorized cron attempt on send-staff-payment-report')
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
 
   const supabase = getSupabaseAdmin()
   const now      = new Date()

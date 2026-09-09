@@ -14,6 +14,7 @@ import { calculateCancellationCharges } from '~/utils/policyCalculations'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -762,13 +763,10 @@ export default defineEventHandler(async (event) => {
     // Release the appointment slots and regenerate availability for the freed time
     try {
       logger.debug('📋 Queueing availability recalculation after customer cancellation...')
-      await $fetch('/api/availability/queue-recalc', {
-        method: 'POST',
-        body: {
-          staff_id: appointment.staff_id,
-          tenant_id: tenantId,
-          trigger: 'appointment'
-        }
+      await enqueueStaffAvailabilityRecalc({
+        staff_id: appointment.staff_id,
+        tenant_id: tenantId,
+        trigger: 'appointment',
       })
       logger.debug('✅ Queued recalculation after customer cancellation')
     } catch (queueError: any) {

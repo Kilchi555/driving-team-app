@@ -146,7 +146,7 @@
           </div>
         </div>
         <div class="p-6 overflow-y-auto flex-1 prose prose-lg max-w-none">
-          <div v-html="viewingReglementData.content"></div>
+          <div v-html="sanitizedReglementHtml(viewingReglementData.content)"></div>
         </div>
       </div>
     </div>
@@ -248,7 +248,7 @@
               <div class="flex items-start justify-between">
                 <div class="flex-1">
                   <h3 class="font-semibold text-gray-900 mb-2">{{ section.section_title }}</h3>
-                  <div class="text-sm text-gray-600" v-html="section.section_content"></div>
+                  <div class="text-sm text-gray-600" v-html="sanitizedReglementHtml(section.section_content)"></div>
                 </div>
                 <div class="flex space-x-2 ml-4">
                   <button @click="editSection(section)" class="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
@@ -365,6 +365,7 @@ import { ref, computed, onMounted, nextTick, h, markRaw } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { getSupabase } from '~/utils/supabase'
 import { loadTenantData, replacePlaceholders, getAvailablePlaceholders } from '~/utils/reglementPlaceholders'
+import { sanitizeTenantHtml } from '~/utils/sanitize-tenant-html'
 
 // Icons (same as before)
 const LockIcon = markRaw({
@@ -435,6 +436,7 @@ const showAddSectionForm = ref(false)
 
 // Forms
 const viewingReglementData = ref<any>(null)
+const sanitizedReglementHtml = (html: string | null | undefined) => sanitizeTenantHtml(html)
 const editingReglementType = ref<any>(null)
 const currentSections = ref<any[]>([])
 const editingSection = ref<any>(null)

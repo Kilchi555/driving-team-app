@@ -41,7 +41,12 @@
           <ul class="space-y-4">
             <li v-for="(detail, i) in details" :key="i" class="flex items-start gap-3 group/item">
               <span class="text-primary-600 font-bold text-lg mt-0.5 group-hover/item:scale-125 transition-transform">→</span>
-              <span class="text-gray-700 text-sm leading-relaxed" v-html="detail"></span>
+              <span class="text-gray-700 text-sm leading-relaxed">
+                <template v-for="(segment, segmentIndex) in toEmphasisSegments(detail)" :key="segmentIndex">
+                  <strong v-if="segment.bold">{{ segment.text }}</strong>
+                  <template v-else>{{ segment.text }}</template>
+                </template>
+              </span>
             </li>
           </ul>
         </div>
@@ -63,6 +68,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { toEmphasisSegments } from '~/utils/inline-emphasis'
 
 interface CourseOverviewProps {
   title: string

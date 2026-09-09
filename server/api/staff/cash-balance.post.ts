@@ -1,64 +1,66 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import {
+  requireTenantStaff,
+  loadStaffInTenant,
+  assertSelfOrTenantAdmin,
+} from '~/server/utils/require-tenant-auth'
 
 export default defineEventHandler(async (event) => {
+  const actor = await requireTenantStaff(event)
   const body = await readBody(event)
-  const { action, data } = body
+  const action = body?.action
+  const data = body?.data || {}
 
   if (!action) {
     throw createError({
       statusCode: 400,
-      message: 'action is required (loadMovements, loadTransactions)'
+      message: 'action is required (loadMovements, loadTransactions)',
     })
   }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  )
+  const instructorId = data.instructorId
+  if (!instructorId || typeof instructorId !== 'string') {
+    throw createError({
+      statusCode: 400,
+      message: 'instructorId is required',
+    })
+  }
+
+  const supabase = getSupabaseAdmin()
+  const instructor = await loadStaffInTenant(supabase, instructorId, actor.tenant_id, {
+    allowInactive: true,
+  })
+  assertSelfOrTenantAdmin(actor, instructor.id)
 
   try {
     if (action === 'loadMovements') {
-      const { instructorId } = data
-
-      if (!instructorId) {
-        throw createError({
-          statusCode: 400,
-          message: 'instructorId is required'
-        })
-      }
-
       const { data: movements, error } = await supabase
         .from('cash_movements')
         .select('*')
-        .eq('instructor_id', instructorId)
+        .eq('instructor_id', instructor.id)
+        .eq('tenant_id', actor.tenant_id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
       return {
         success: true,
-        data: movements || []
+        data: movements || [],
       }
-    } else if (action === 'loadTransactions') {
-      const { instructorId } = data
+    }
 
-      if (!instructorId) {
-        throw createError({
-          statusCode: 400,
-          message: 'instructorId is required'
-        })
-      }
-
+    if (action === 'loadTransactions') {
       const { data: transactions, error } = await supabase
         .from('cash_transactions')
         .select(
           `
           *,
           student:student_id(id, first_name, last_name)
-        `
+        `,
         )
-        .eq('instructor_id', instructorId)
+        .eq('instructor_id', instructor.id)
+        .eq('tenant_id', actor.tenant_id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -67,24 +69,25 @@ export default defineEventHandler(async (event) => {
         ...transaction,
         student_name: transaction.student
           ? `${transaction.student.first_name} ${transaction.student.last_name}`
-          : 'Unbekannt'
+          : 'Unbekannt',
       }))
 
       return {
         success: true,
-        data: mappedTransactions || []
+        data: mappedTransactions || [],
       }
-    } else {
-      throw createError({
-        statusCode: 400,
-        message: 'Invalid action. Use: loadMovements or loadTransactions'
-      })
     }
+
+    throw createError({
+      statusCode: 400,
+      message: 'Invalid action. Use: loadMovements or loadTransactions',
+    })
   } catch (err: any) {
+    if (err?.statusCode) throw err
     console.error('❌ Staff cash balance API error:', err)
     throw createError({
-      statusCode: err.statusCode || 500,
-      message: err.message || 'Failed to load cash data'
+      statusCode: 500,
+      message: err.message || 'Failed to load cash data',
     })
   }
 })

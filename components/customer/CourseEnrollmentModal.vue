@@ -1695,7 +1695,7 @@ const lookupSARI = async () => {
       body: {
         faberid: faberidClean,
         birthdate: birthdate,
-        tenantId: props.tenantId
+        tenantSlug: props.tenantSlug
       }
     }) as any
     

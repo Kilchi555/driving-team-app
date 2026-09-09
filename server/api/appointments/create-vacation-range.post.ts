@@ -10,6 +10,7 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { zurichWallTimeToUtc } from '~/server/utils/zurich-wall-time'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 /** 07:00–19:00 Europe/Zurich as UTC ISO, DST-safe. */
 function vacationBoundsUtc(day: string): { startISO: string; endISO: string; durationMinutes: number } {
@@ -123,11 +124,10 @@ export default defineEventHandler(async (event) => {
 
     logger.debug(`✅ Created ${inserted?.length ?? 0} vacation appointments for staff ${staffId}`)
 
-    $fetch('/api/availability/queue-recalc', {
-      method: 'POST',
-      body: { staff_id: staffId, tenant_id: tenantId, trigger: 'appointment' },
-    }).catch((err: any) => {
-      logger.warn('⚠️ Could not queue availability recalc after vacation insert:', err?.message)
+    await enqueueStaffAvailabilityRecalc({
+      staff_id: staffId,
+      tenant_id: tenantId,
+      trigger: 'appointment',
     })
 
     // Trigger recalculation for all affected months (past months only – current month excluded by calculator)

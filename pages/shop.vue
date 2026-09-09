@@ -1352,7 +1352,9 @@ const onEmailBlur = async () => {
   if (isLoggedIn.value || !tenantId.value || !formData.value.email) return
   
   try {
-    await resolveCustomer(tenantId.value, formData.value.email)
+    await resolveCustomer(tenantId.value, formData.value.email, {
+      tenantSlug: tenantSlug.value || tenantParam.value,
+    })
     
     // Optional: Show warning if login account exists
     if (isLoginAccount.value) {
@@ -1419,7 +1421,9 @@ const nextStep = async () => {
       // Ensure customer is resolved before payment
       if (!hasResolvedCustomer.value && formData.value.email && tenantId.value) {
         try {
-          await resolveCustomer(tenantId.value, formData.value.email)
+          await resolveCustomer(tenantId.value, formData.value.email, {
+      tenantSlug: tenantSlug.value || tenantParam.value,
+    })
         } catch (err) {
           logger.error('❌ Failed to resolve customer before payment:', err)
           alert('⚠️ Fehler beim Laden der Kundendaten. Bitte versuchen Sie es erneut.')

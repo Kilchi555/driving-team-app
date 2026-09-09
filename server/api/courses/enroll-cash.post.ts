@@ -25,6 +25,7 @@ import { reportBindingCourseConversionSafely } from '~/server/utils/binding-book
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 import { resolveNonWalleeEnrollmentMethod } from '~/server/utils/course-enrollment-payment-method'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -699,6 +700,7 @@ const handler = defineEventHandler(async (event) => {
     try {
       await $fetch('/api/emails/send-course-enrollment-confirmation', {
         method: 'POST',
+        headers: internalSecretHeaders(),
         body: {
           courseRegistrationId: enrollment.id,
           paymentMethod: finalPaymentMethod === 'invoice' ? 'invoice' : 'cash',

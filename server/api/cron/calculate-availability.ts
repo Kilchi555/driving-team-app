@@ -20,11 +20,12 @@
  * Headers: Authorization: Bearer <CRON_SECRET>
  */
 
-import { defineEventHandler, createError, getHeader, readBody } from 'h3'
+import { defineEventHandler, createError, readBody } from 'h3'
 import { availabilityCalculator } from '~/server/services/availability-calculator'
 import { logger } from '~/utils/logger'
 import { logAudit } from '~/server/utils/audit'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 interface CalculateAvailabilityRequest {
   tenant_id?: string
@@ -34,37 +35,11 @@ interface CalculateAvailabilityRequest {
 }
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = Date.now()
 
   try {
     logger.debug('🔄 Calculate Availability Cron Job started')
-
-    // ============ SECURITY: VERIFY CRON SECRET ============
-    const cronSecret = process.env.CRON_SECRET
-    
-    // CRITICAL: Secret must always be configured!
-    if (!cronSecret || cronSecret.trim() === '') {
-      logger.error('❌ CRON_SECRET not configured - cron job is disabled for security!')
-      throw createError({
-        statusCode: 503,
-        statusMessage: 'Cron job disabled - missing CRON_SECRET configuration'
-      })
-    }
-
-    const authHeader = getHeader(event, 'authorization')
-    const vercelCronHeader = getHeader(event, 'x-vercel-cron')
-    
-    // Accept either: our own CRON_SECRET OR a Vercel-internal cron call (x-vercel-cron: 1)
-    const isValidSecret = authHeader === `Bearer ${cronSecret}`
-    const isVercelCron = vercelCronHeader === '1'
-    
-    if (!isValidSecret && !isVercelCron) {
-      logger.warn('❌ Unauthorized cron job access attempt - invalid or missing credentials')
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized'
-      })
-    }
 
     // ============ READ OPTIONS ============
     let body: any = {}

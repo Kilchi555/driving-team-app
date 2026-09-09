@@ -32,17 +32,11 @@ import { getTenantsWithMultipleStaff } from '~/server/utils/tenant-staff-notify'
 import { emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 import { getQuery } from 'h3'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = Date.now()
-
-  // ── Auth ────────────────────────────────────────────────────
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    logger.warn('⚠️ Unauthorized cron attempt on send-course-reminders')
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
 
   const supabase = getSupabaseAdmin()
   const now = new Date()

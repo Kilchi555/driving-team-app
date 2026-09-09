@@ -10,6 +10,7 @@ import { probeIcsUrl } from '~/server/utils/probe-ics-url'
 import { humanizeIcsFetchError } from '~/utils/ics-url'
 import { SYNC_LOOKBACK_DAYS } from '~/server/utils/sync-external-calendars-job'
 import { logger } from '~/utils/logger'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 interface ICSImportRequest {
   calendar_id: string
@@ -255,20 +256,17 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     const affectedStaffIds = [...new Set(uniqueBusyTimes.map(bt => bt.staff_id))]
     logger.debug(`📋 Queueing ${affectedStaffIds.length} staff for recalculation after external events sync`)
     
-    for (const staffId of affectedStaffIds) {
+    await Promise.all(affectedStaffIds.map(async (staffId) => {
       try {
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: {
-            staff_id: staffId,
-            tenant_id: calendar.tenant_id,
-            trigger: 'external_event'
-          }
+        await enqueueStaffAvailabilityRecalc({
+          staff_id: staffId,
+          tenant_id: calendar.tenant_id,
+          trigger: 'external_event',
         })
       } catch (queueError: any) {
         logger.warn(`⚠️ Failed to queue staff ${staffId} for recalc:`, queueError.message)
       }
-    }
+    }))
     
     // Asynchronously resolve and update postal codes for events with locations
     if (uniqueBusyTimes.some(bt => bt.event_location)) {

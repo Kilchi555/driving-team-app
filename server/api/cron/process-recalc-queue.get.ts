@@ -19,30 +19,15 @@
  * - Scalable: can batch multiple staff
  */
 
-import { defineEventHandler, createError, getHeader } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { availabilityCalculator } from '~/server/services/availability-calculator'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   try {
-    // ============ SECURITY: Verify CRON_SECRET (if configured) ============
-    const cronSecret = process.env.CRON_SECRET
-    if (cronSecret && cronSecret.trim() !== '') {
-      const authHeader = getHeader(event, 'authorization')
-      const vercelCronHeader = getHeader(event, 'x-vercel-cron')
-      const isValidSecret = authHeader === `Bearer ${cronSecret}`
-      const isVercelCron = vercelCronHeader === '1'
-      
-      if (!isValidSecret && !isVercelCron) {
-        logger.warn('⚠️ Unauthorized cron access attempt - missing or invalid CRON_SECRET')
-        throw createError({
-          statusCode: 401,
-          statusMessage: 'Unauthorized - invalid CRON_SECRET'
-        })
-      }
-    }
-
     logger.debug('⏰ Starting availability recalculation queue processor...')
 
     const supabase = getSupabaseAdmin()

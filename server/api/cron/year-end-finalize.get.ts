@@ -12,12 +12,10 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { recalculateStaffHoursForTenant } from '~/server/services/staff-hours-calculator'
 import { logger } from '~/utils/logger'
 import { ferienDayCredit } from '~/server/utils/staff-hours-counting'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
-  const secret = event.node.req.headers.authorization?.replace('Bearer ', '')
-  if (secret !== process.env.CRON_SECRET) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized - invalid CRON_SECRET' })
-  }
+  assertCronRequest(event)
 
   const now = new Date()
   const prevYear = now.getFullYear() - 1

@@ -1,4 +1,5 @@
-import { createError } from 'h3'
+import { createError, type H3Event } from 'h3'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 /** Shared GBP helpers for P1 automation */
 
@@ -19,11 +20,8 @@ export function gbpStarToNumber(rating?: string | number | null): number {
   return map[String(rating || '').toUpperCase()] ?? 0
 }
 
-export function assertCronAuth(authHeader: string | undefined) {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+export function assertCronAuth(event: H3Event) {
+  assertCronRequest(event)
 }
 
 /** Review replies should look like office hours, not 03:00. */

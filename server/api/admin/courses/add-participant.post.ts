@@ -3,6 +3,7 @@ import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { logger } from '~/utils/logger'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 
 /**
  * POST /api/admin/courses/add-participant
@@ -121,6 +122,7 @@ export default defineEventHandler(async (event) => {
   try {
     await $fetch('/api/emails/send-course-enrollment-confirmation', {
       method: 'POST',
+      headers: internalSecretHeaders(),
       body: {
         courseRegistrationId: enrollment.id,
         paymentMethod: 'admin'

@@ -9,20 +9,19 @@
 //   - Builds iOS + Android with the school's branding
 //   - Uploads to TestFlight + Play Store internal track
 
+import { createError, defineEventHandler, readBody } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseServiceCredentials } from '~/server/utils/supabase-service-env'
-import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
+import { requireSuperAdmin } from '~/server/utils/require-super-admin'
 
 interface CreateAppBody {
   tenantId: string
 }
 
 export default defineEventHandler(async (event) => {
-  // ─── Auth: only platform admins can trigger builds ────────────────────────
-  const authUser = await getAuthenticatedUserWithDbId(event)
-  if (!authUser || authUser.role !== 'admin') {
-    throw createError({ statusCode: 403, statusMessage: 'Platform admin required' })
-  }
+  // Platform-level provisioning: super_admin only. Auth before body so
+  // anonymous POST {} is 401, and tenant admins cannot pick arbitrary tenantId.
+  await requireSuperAdmin(event)
 
   const body = await readBody<CreateAppBody>(event)
   if (!body?.tenantId) {
@@ -108,8 +107,8 @@ export default defineEventHandler(async (event) => {
   const githubToken = process.env.SIMY_GITHUB_PAT
   const githubRepo = process.env.GITHUB_REPO || 'Kilchi555/driving-team-app'
 
-    if (!githubToken) {
-      console.warn('⚠️  SIMY_GITHUB_PAT not set — skipping GitHub Actions trigger')
+  if (!githubToken) {
+    console.warn('⚠️  SIMY_GITHUB_PAT not set — skipping GitHub Actions trigger')
     return { success: true, clientId, status: 'config_saved_no_build' }
   }
 
@@ -131,8 +130,7 @@ export default defineEventHandler(async (event) => {
   )
 
   if (!triggerResponse.ok) {
-    const errText = await triggerResponse.text()
-    console.error('❌ GitHub Actions trigger failed:', errText)
+    console.error('❌ GitHub Actions trigger failed:', triggerResponse.status)
     throw createError({ statusCode: 502, statusMessage: 'Failed to trigger build pipeline' })
   }
 

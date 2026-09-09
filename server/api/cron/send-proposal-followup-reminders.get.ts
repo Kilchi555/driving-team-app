@@ -11,17 +11,12 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { sendTenantEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
-import { getHeader } from 'h3'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = Date.now()
 
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    logger.warn('⚠️ Unauthorized cron attempt on send-proposal-followup-reminders')
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
 
   const supabase = getSupabaseAdmin()
 

@@ -5,7 +5,7 @@
       v-if="logoType === 'svg'" 
       class="logo-svg"
       :style="logoStyles"
-      v-html="svgContent"
+      v-html="safeSvgContent"
     ></div>
 
     <!-- Maskiertes Logo (PNG/JPG mit Farbüberlagerung) -->
@@ -45,6 +45,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { sanitizeSvgMarkup } from '~/utils/sanitize-tenant-html'
+
 interface Props {
   // Logo-Eigenschaften
   logoUrl?: string
@@ -77,6 +80,8 @@ const props = withDefaults(defineProps<Props>(), {
   fallbackText: 'DT',
   containerClass: ''
 })
+
+const safeSvgContent = computed(() => sanitizeSvgMarkup(props.svgContent))
 
 // Composables
 const { primaryColor: tenantPrimary, secondaryColor: tenantSecondary } = useTenantBranding()

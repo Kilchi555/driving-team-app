@@ -186,6 +186,8 @@ export async function getAuthenticatedUser(event: H3Event) {
                     tenant_id: dbUser.tenant_id,
                     db_user_id: dbUser.id,
                     role: dbUser.role,
+                    is_active: dbUser.is_active !== false,
+                    deleted_at: dbUser.deleted_at ?? null,
                     profile
                   }
                 }
@@ -243,6 +245,8 @@ export async function getAuthenticatedUser(event: H3Event) {
           tenant_id: dbUser.tenant_id,
           db_user_id: dbUser.id,
           role: dbUser.role,
+          is_active: dbUser.is_active !== false,
+          deleted_at: dbUser.deleted_at ?? null,
           profile
         }
       } else if (userError) {
@@ -281,13 +285,17 @@ export async function requireAdminProfile(
   const tenantId: string = authUser.tenant_id || authUser.profile?.tenant_id || ''
   const dbUserId: string = authUser.db_user_id || authUser.profile?.id || ''
 
+  if (authUser.deleted_at || authUser.is_active === false) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden – inactive account' })
+  }
+
   if (!allowedRoles.includes(role)) {
     const url = event.node.req.url
     console.warn(`🚫 403 insufficient role: ${role} not in [${allowedRoles.join(',')}] on ${url}`)
     throw createError({ statusCode: 403, statusMessage: 'Forbidden – insufficient role' })
   }
 
-  if (!tenantId) {
+  if (!tenantId || !dbUserId) {
     const url = event.node.req.url
     console.warn(`🚫 403 no tenant assigned for role=${role} on ${url}`)
     throw createError({ statusCode: 403, statusMessage: 'Forbidden – no tenant assigned' })

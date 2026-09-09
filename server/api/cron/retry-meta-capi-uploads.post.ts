@@ -10,20 +10,17 @@
  * Updates the row with the new status and increments upload_attempts.
  */
 
-import { defineEventHandler, getHeader, createError } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { sendCapiEvent } from '~/server/utils/meta-capi'
 import { sha256Hex } from '~/server/utils/google-ads-conversion'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 const MAX_ATTEMPTS = 3
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const pixelId = (process.env.META_PIXEL_ID ?? '').trim().replace(/\\n$/i, '').replace(/\r?\n$/g, '').trim()
   if (!pixelId) {

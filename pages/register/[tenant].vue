@@ -1071,7 +1071,7 @@
 
           <!-- Modal Content -->
           <div class="px-6 py-6">
-            <div v-if="currentRegulation" v-html="currentRegulation.content" class="prose prose-sm max-w-none text-gray-700"></div>
+            <div v-if="currentRegulation" v-html="sanitizedRegulationContent" class="prose prose-sm max-w-none text-gray-700"></div>
           </div>
 
           <!-- Modal Footer -->
@@ -1234,6 +1234,7 @@ import { useAffiliateRef } from '~/composables/useAffiliateRef'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { generateStrongPassword } from '~/composables/usePasswordStrength'
 import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
+import { sanitizeTenantHtml } from '~/utils/sanitize-tenant-html'
 
 const { primaryColor, accentColor } = useTenantBranding()
 
@@ -1469,6 +1470,7 @@ const checkHibp = async (password: string) => {
 
 const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
+const sanitizedRegulationContent = computed(() => sanitizeTenantHtml(currentRegulation.value?.content))
 const registrationComplete = ref(false)
 const registeredEmail = ref<string>('')
 const registeredTenantSlug = ref<string>('')

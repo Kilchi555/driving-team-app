@@ -19,6 +19,7 @@ import { assertStaffCanApplyManualDiscount } from '~/server/utils/staff-manual-d
 import { attachProposalAttributionToStaffAppointment } from '~/server/utils/proposal-booking-conversion'
 import { becameBindingConfirmed } from '~/server/utils/binding-booking'
 import { hashCustomerIdentifiers, reportBindingAppointmentConversionSafely } from '~/server/utils/binding-booking-conversion'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -340,13 +341,10 @@ export default defineEventHandler(async (event) => {
       // 3. Any previously missing slots in freed time ranges are generated
       try {
         logger.debug('📋 Queuing availability recalculation after appointment edit...')
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: {
-            staff_id: oldAppointment.staff_id,
-            tenant_id: oldAppointment.tenant_id,
-            trigger: 'appointment_edit'
-          }
+        await enqueueStaffAvailabilityRecalc({
+          staff_id: oldAppointment.staff_id,
+          tenant_id: oldAppointment.tenant_id,
+          trigger: 'appointment_edit',
         })
         logger.debug('✅ Queued recalculation after appointment edit')
       } catch (queueError: any) {
@@ -713,13 +711,10 @@ export default defineEventHandler(async (event) => {
         // 3. Queue availability recalculation (single call, not duplicated)
         (async () => {
           try {
-            await $fetch('/api/availability/queue-recalc', {
-              method: 'POST',
-              body: {
-                staff_id: result.staff_id,
-                tenant_id: result.tenant_id,
-                trigger: 'appointment'
-              }
+            await enqueueStaffAvailabilityRecalc({
+              staff_id: result.staff_id,
+              tenant_id: result.tenant_id,
+              trigger: 'appointment',
             })
             logger.debug('✅ Queued recalculation')
           } catch (queueError: any) {

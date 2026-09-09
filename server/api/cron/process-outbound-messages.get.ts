@@ -1,24 +1,19 @@
 // server/api/cron/process-outbound-messages.post.ts
-import { defineEventHandler, createError, getHeader } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { sendEmail, sendTenantEmail } from '~/server/utils/email'
 import { sendSMS, sendTenantSMS } from '~/server/utils/sms'
 import { sendPushToUser } from '~/server/utils/push'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 // Simple delay utility
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   try {
     console.log('[OutboundMessageProcessor] 🔄 Starting outbound message processor cron job...')
 
-    // ── Security: verify CRON_SECRET (fail closed) ──────────────
-    const authHeader = getHeader(event, 'authorization')
-    const cronSecret = process.env.CRON_SECRET
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-      console.warn('[OutboundMessageProcessor] ⚠️ Unauthorized attempt')
-      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-    }
 
     // Create service role client
     const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'

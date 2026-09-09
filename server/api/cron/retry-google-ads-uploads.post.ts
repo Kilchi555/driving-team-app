@@ -9,19 +9,16 @@
  * Also cleans conversion_action_id trailing newlines on retry.
  */
 
-import { defineEventHandler, getHeader, createError } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { retryFailedConversionUpload } from '~/server/utils/google-ads-conversion'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 const MAX_ATTEMPTS = 5
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
 

@@ -1,8 +1,12 @@
 // server/api/staff/working-hours-manage.post.ts
 import { getSupabaseAdmin } from '~/utils/supabase'
-import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
+import {
+  requireTenantStaff,
+  authorizeWorkingHoursMutation,
+} from '~/server/utils/require-tenant-auth'
 
 interface ManageWorkingHoursBody {
   action: 'delete' | 'toggle'
@@ -13,16 +17,15 @@ interface ManageWorkingHoursBody {
 
 export default defineEventHandler(async (event) => {
   try {
+    const actor = await requireTenantStaff(event)
     const body = await readBody<ManageWorkingHoursBody>(event)
     const { action, staffId, dayOfWeek, isActive } = body
 
     logger.debug('⏰ Staff working hours action:', action)
 
     const supabaseAdmin = getSupabaseAdmin()
-    const user = await getAuthenticatedUser(event)
-    if (!user) {
-      throw new Error('Unauthorized')
-    }
+    const target = await authorizeWorkingHoursMutation(supabaseAdmin, actor, staffId)
+    const tenantId = actor.tenant_id
 
     // ========== DELETE WORKING HOUR ==========
     if (action === 'delete') {
@@ -30,37 +33,13 @@ export default defineEventHandler(async (event) => {
         throw new Error('Day of week required')
       }
 
-      logger.debug('🗑️ Deleting working hour:', { staffId, dayOfWeek })
-
-      // Verify staff can manage this (owner or admin)
-      const { data: staff, error: staffError } = await supabaseAdmin
-        .from('staff')
-        .select('id, user_id')
-        .eq('id', staffId)
-        .single()
-
-      if (staffError || !staff) {
-        throw new Error('Staff not found')
-      }
-
-      // Check authorization
-      if (staff.user_id !== user.id) {
-        throw new Error('Unauthorized to manage this staff')
-      }
-
-      // Get tenant_id for slot manager
-      const { data: staffUser, error: userLookupError } = await supabaseAdmin
-        .from('users')
-        .select('tenant_id')
-        .eq('id', staffId)
-        .single()
-
-      const tenantId = staffUser?.tenant_id
+      logger.debug('🗑️ Deleting working hour:', { staffId: target.id, dayOfWeek })
 
       const { error: deleteError } = await supabaseAdmin
         .from('staff_working_hours')
         .delete()
-        .eq('staff_id', staffId)
+        .eq('staff_id', target.id)
+        .eq('tenant_id', tenantId)
         .eq('day_of_week', dayOfWeek)
 
       if (deleteError) {
@@ -91,7 +70,7 @@ export default defineEventHandler(async (event) => {
         })
 
         const releaseResult = await slotManager.releaseSlots(
-          staffId,
+          target.id,
           targetDate.toISOString(),
           dayEnd.toISOString(),
           tenantId
@@ -104,22 +83,12 @@ export default defineEventHandler(async (event) => {
       }
 
       // ✅ NEW: Queue staff for availability recalculation
-      if (!userLookupError && staffUser) {
-        try {
-          await $fetch('/api/availability/queue-recalc', {
-            method: 'POST',
-            body: {
-              staff_id: staffId,
-              tenant_id: staffUser.tenant_id,
-              trigger: 'working_hours'
-            }
-          })
-          logger.debug('✅ Queued staff for recalculation after working hours deletion')
-        } catch (queueError: any) {
-          logger.warn('⚠️ Failed to queue recalculation:', queueError.message)
-          // Non-critical: availability will be recalculated at next cron
-        }
-      }
+      await enqueueStaffAvailabilityRecalc({
+        staff_id: target.id,
+        tenant_id: tenantId,
+        trigger: 'working_hours',
+      })
+      logger.debug('✅ Queued staff for recalculation after working hours deletion')
 
       return {
         success: true,
@@ -133,37 +102,13 @@ export default defineEventHandler(async (event) => {
         throw new Error('Day of week and isActive required')
       }
 
-      logger.debug('🔄 Toggling working hour:', { staffId, dayOfWeek, isActive })
-
-      // Verify staff can manage this (owner or admin)
-      const { data: staff, error: staffError } = await supabaseAdmin
-        .from('staff')
-        .select('id, user_id')
-        .eq('id', staffId)
-        .single()
-
-      if (staffError || !staff) {
-        throw new Error('Staff not found')
-      }
-
-      // Check authorization
-      if (staff.user_id !== user.id) {
-        throw new Error('Unauthorized to manage this staff')
-      }
-
-      // Get tenant_id for slot manager
-      const { data: staffUser, error: userLookupError } = await supabaseAdmin
-        .from('users')
-        .select('tenant_id')
-        .eq('id', staffId)
-        .single()
-
-      const tenantId = staffUser?.tenant_id
+      logger.debug('🔄 Toggling working hour:', { staffId: target.id, dayOfWeek, isActive })
 
       const { error: updateError } = await supabaseAdmin
         .from('staff_working_hours')
         .update({ is_active: isActive })
-        .eq('staff_id', staffId)
+        .eq('staff_id', target.id)
+        .eq('tenant_id', tenantId)
         .eq('day_of_week', dayOfWeek)
 
       if (updateError) {
@@ -194,7 +139,7 @@ export default defineEventHandler(async (event) => {
           })
 
           const releaseResult = await slotManager.releaseSlots(
-            staffId,
+            target.id,
             targetDate.toISOString(),
             dayEnd.toISOString(),
             tenantId
@@ -207,22 +152,12 @@ export default defineEventHandler(async (event) => {
       }
 
       // ✅ NEW: Queue staff for availability recalculation
-      if (!userLookupError && staffUser) {
-        try {
-          await $fetch('/api/availability/queue-recalc', {
-            method: 'POST',
-            body: {
-              staff_id: staffId,
-              tenant_id: staffUser.tenant_id,
-              trigger: 'working_hours'
-            }
-          })
-          logger.debug('✅ Queued staff for recalculation after working hours change')
-        } catch (queueError: any) {
-          logger.warn('⚠️ Failed to queue recalculation:', queueError.message)
-          // Non-critical: availability will be recalculated at next cron
-        }
-      }
+      await enqueueStaffAvailabilityRecalc({
+        staff_id: target.id,
+        tenant_id: tenantId,
+        trigger: 'working_hours',
+      })
+      logger.debug('✅ Queued staff for recalculation after working hours change')
 
       return {
         success: true,
@@ -234,6 +169,9 @@ export default defineEventHandler(async (event) => {
 
   } catch (error: any) {
     logger.error('❌ Error managing working hours:', error)
+    if (error.statusCode) {
+      throw error
+    }
     throw createError({
       statusCode: 400,
       statusMessage: error.message || 'Failed to manage working hours'

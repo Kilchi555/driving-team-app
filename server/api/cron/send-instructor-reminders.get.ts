@@ -12,23 +12,19 @@
 // Dedup: stage = 'course_instructor_2day_reminder', key: session_id
 // ============================================================
 
-import { defineEventHandler, getHeader, createError } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { sendEmail } from '~/server/utils/email'
 import { buildIcs } from '~/server/utils/course-staff-notifications'
 import { emailAppointmentAppStoreBlock } from '~/server/utils/branded-email'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = Date.now()
 
   // ── Auth ─────────────────────────────────────────────────────
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    logger.warn('⚠️ Unauthorized cron attempt on send-instructor-reminders')
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
 
   const supabase = getSupabaseAdmin()
   const now = new Date()

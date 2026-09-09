@@ -10,6 +10,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -70,11 +71,10 @@ export default defineEventHandler(async (event) => {
   }
 
   // Queue slot recalculation so the new buffer takes effect immediately
-  await $fetch('/api/availability/queue-recalc', {
-    method: 'POST',
-    body: { staff_id: userProfile.id, tenant_id: userProfile.tenant_id, trigger: 'settings_change' }
-  }).catch((e: any) => {
-    logger.warn('⚠️ Could not queue recalc after settings update (non-critical):', e.message)
+  await enqueueStaffAvailabilityRecalc({
+    staff_id: userProfile.id,
+    tenant_id: userProfile.tenant_id,
+    trigger: 'settings_change',
   })
 
   logger.debug('✅ Availability settings updated for staff', userProfile.id)

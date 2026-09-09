@@ -12,6 +12,7 @@ import { sendCapiRefundEvent, sha256Hex } from '~/server/utils/meta-capi'
 import { processWalleeRefund } from '~/server/utils/wallee-refund'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { cancelResourceBookingsForAppointment } from '~/server/utils/resource-bookings'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 export default defineEventHandler(async (event) => {
   // ── INTERNAL-ONLY GUARD ────────────────────────────────────────────────
@@ -214,13 +215,10 @@ export default defineEventHandler(async (event) => {
     // ✅ NEW: Queue availability recalculation to regenerate slots for freed time
     try {
       logger.debug('📋 Queuing availability recalculation after appointment cancellation...')
-      await $fetch('/api/availability/queue-recalc', {
-        method: 'POST',
-        body: {
-          staff_id: appointment.staff_id,
-          tenant_id: appointment.tenant_id,
-          trigger: 'appointment'
-        }
+      await enqueueStaffAvailabilityRecalc({
+        staff_id: appointment.staff_id,
+        tenant_id: appointment.tenant_id,
+        trigger: 'appointment',
       })
       logger.debug('✅ Queued recalculation after appointment cancellation')
     } catch (queueError: any) {
