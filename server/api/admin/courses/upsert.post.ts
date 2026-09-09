@@ -6,6 +6,7 @@ import { generateCategoryWaitlistNotificationEmail } from '~/server/utils/email-
 import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { zurichLocalToUtcIso } from '~/server/utils/zurich-time'
+import { httpErrorForCourseWrite } from '~/server/utils/course-write-error'
 
 // ── ICS calendar invite generator ────────────────────────────────────────────
 function toIcsDate(dateStr: string, timeStr: string): string {
@@ -191,7 +192,7 @@ export default defineEventHandler(async (event) => {
 
     if (error) {
       logger.error('❌ Error updating course:', error)
-      throw createError({ statusCode: 500, statusMessage: error.message })
+      throw createError(httpErrorForCourseWrite(error))
     }
     savedCourseId = data.id
     logger.debug('✅ Course updated:', savedCourseId)
@@ -205,7 +206,7 @@ export default defineEventHandler(async (event) => {
 
     if (error) {
       logger.error('❌ Error creating course:', error)
-      throw createError({ statusCode: 500, statusMessage: error.message })
+      throw createError(httpErrorForCourseWrite(error))
     }
     savedCourseId = data.id
     logger.debug('✅ Course created:', savedCourseId)

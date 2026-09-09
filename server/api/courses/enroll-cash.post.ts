@@ -23,6 +23,7 @@ import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/up
 import { sha256Hex } from '~/server/utils/meta-capi'
 import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
+import { resolveNonWalleeEnrollmentMethod } from '~/server/utils/course-enrollment-payment-method'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -66,7 +67,7 @@ const handler = defineEventHandler(async (event) => {
       marketingSessionId,   // Optional: analytics session ID from drivingteam.ch for attribution
       marketingAttribution, // Optional: client-side gclid/UTM blob
       vehicleId,            // Optional: selected rental vehicle
-      paymentMethod: requestedPaymentMethod, // Optional: 'cash_on_site' (default) or 'invoice'
+      paymentMethod: _requestedPaymentMethod, // accepted for back-compat; course.payment_method wins
     } = body
 
     logger.debug('💵 Cash enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions, isPartialEnrollment })
@@ -162,11 +163,12 @@ const handler = defineEventHandler(async (event) => {
       })
     }
 
-    // Resolve the final payment_method to store: honor the client's request
-    // only if it's actually allowed for this course/tenant; otherwise fall
-    // back to whatever IS allowed (never trust the client blindly).
-    const finalPaymentMethod: 'invoice' | 'cash_on_site' =
-      (requestedPaymentMethod === 'invoice' && adminAllowedInvoice) ? 'invoice' : 'cash_on_site'
+    // Course column is source of truth. Do not default invoice courses to cash
+    // (that sent "bitte bar mitbringen" confirmation emails).
+    const finalPaymentMethod = resolveNonWalleeEnrollmentMethod({
+      coursePaymentMethod: explicitMethod,
+      invoiceEnabled: adminAllowedInvoice,
+    })
 
     // 3 & 4. SARI credential loading + validation (only for SARI-managed courses)
     let sari: any = null
