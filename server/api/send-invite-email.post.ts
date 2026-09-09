@@ -1,10 +1,15 @@
 // server/api/send-invite-email.post.ts
 // Sends appointment invitation emails to external (non-registered) customers
 
+import { defineEventHandler, readBody, createError } from 'h3'
 import { sendEmail } from '~/server/utils/email'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { logger } from '~/utils/logger'
+import {
+  requireTenantStaff,
+  assertSelfOrTenantAdmin,
+} from '~/server/utils/require-tenant-auth'
 
 interface InviteEmailBody {
   to: string
@@ -16,9 +21,11 @@ interface InviteEmailBody {
 }
 
 export default defineEventHandler(async (event) => {
+  const actor = await requireTenantStaff(event)
+
   try {
     const body = await readBody(event) as InviteEmailBody
-    const { to, name, appointment_id, meeting_type, meeting_link, tenant_id } = body
+    const { to, name, appointment_id, meeting_type, meeting_link } = body
 
     if (!to || !appointment_id) {
       throw createError({ statusCode: 400, statusMessage: 'Missing required fields: to, appointment_id' })
@@ -35,13 +42,20 @@ export default defineEventHandler(async (event) => {
         locations ( name, address )
       `)
       .eq('id', appointment_id)
-      .single()
+      .eq('tenant_id', actor.tenant_id)
+      .maybeSingle()
 
     if (apptError || !appointment) {
-      throw createError({ statusCode: 404, statusMessage: 'Appointment not found' })
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
     }
 
-    const resolvedTenantId = tenant_id || appointment.tenant_id
+    if (appointment.staff_id) {
+      assertSelfOrTenantAdmin(actor, appointment.staff_id)
+    } else if (actor.role === 'staff') {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+
+    const resolvedTenantId = actor.tenant_id
 
     // Load tenant branding
     let primaryColor = '#2563eb'
@@ -171,7 +185,8 @@ export default defineEventHandler(async (event) => {
     return { success: true }
 
   } catch (err: any) {
+    if (err?.statusCode) throw err
     logger.error('❌ Failed to send invite email:', err.message)
-    throw createError({ statusCode: 500, statusMessage: err.message || 'Failed to send invite email' })
+    throw createError({ statusCode: 500, statusMessage: 'Failed to send invite email' })
   }
 })

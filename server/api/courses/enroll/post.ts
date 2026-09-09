@@ -1,6 +1,7 @@
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
+import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -132,6 +133,7 @@ export default defineEventHandler(async (event) => {
     try {
       await $fetch('/api/emails/send-course-enrollment-confirmation', {
         method: 'POST',
+        headers: internalSecretHeaders(),
         body: {
           courseRegistrationId: enrollment.id,
           paymentMethod: 'cash', // Manual admin enrollments have no online payment
