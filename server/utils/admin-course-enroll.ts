@@ -487,17 +487,19 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
 
   if (enrollError || !enrollment) {
     const msg = enrollError?.message || ''
-    if (msg.includes('idx_course_registrations_unique_user') || msg.includes('duplicate key')) {
+    if (msg.includes('duplicate key') || msg.includes('unique')) {
       if (msg.includes('unique_email') || msg.includes('course_id_email')) {
         throw createError({
           statusCode: 409,
           statusMessage: 'Diese E-Mail ist bereits für diesen Kurs angemeldet',
         })
       }
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Dieser Kunde ist bereits für diesen Kurs angemeldet',
-      })
+      if (msg.includes('unique_faberid') || msg.includes('sari_faberid')) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Dieser Kunde ist bereits für diesen Kurs angemeldet',
+        })
+      }
     }
     throw createError({
       statusCode: 500,

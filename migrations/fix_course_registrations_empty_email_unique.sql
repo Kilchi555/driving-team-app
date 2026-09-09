@@ -41,12 +41,9 @@ WHERE status IN ('confirmed', 'enrolled')
   AND sari_faberid IS NOT NULL
   AND btrim(sari_faberid) <> '';
 
--- Prevent double-enrolling the same user on the same course
-CREATE UNIQUE INDEX IF NOT EXISTS idx_course_registrations_unique_user
-ON course_registrations (course_id, user_id)
-WHERE status IN ('confirmed', 'enrolled', 'pending')
-  AND deleted_at IS NULL
-  AND user_id IS NOT NULL;
+-- NOTE: Do NOT add a unique (course_id, user_id) index here.
+-- Wallee webhook / credit / individual-session paths can create multiple
+-- rows or race on the same user; app-level checks cover the admin UI case.
 
 COMMENT ON INDEX idx_course_registrations_unique_email IS
   'One active enrollment per real email per course; blank/NULL emails allowed multiple times';

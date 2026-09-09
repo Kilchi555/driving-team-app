@@ -88,6 +88,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Create enrollment
+  const enrollmentEmail = normalizeEnrollmentEmail(participant.email)
   const { data: enrollment, error: enrollError } = await supabase
     .from('course_registrations')
     .insert({
@@ -95,7 +96,7 @@ export default defineEventHandler(async (event) => {
       user_id: userId,
       first_name: participant.first_name,
       last_name: participant.last_name,
-      email: participant.email,
+      email: enrollmentEmail,
       phone: participant.phone || null,
       birthdate: participant.birthdate || null,
       street: participant.street || null,
