@@ -150,4 +150,3 @@ describe('process-recalc-queue fail-closed', () => {
     expect(result).toMatchObject({ success: true, processed: 0 })
   })
 })
-
