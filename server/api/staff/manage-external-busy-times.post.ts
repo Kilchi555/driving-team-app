@@ -1,91 +1,139 @@
 /**
  * API: Manage external busy times (from external calendars)
- * 
- * PURPOSE:
- * Create, update, or delete external busy times
- * Immediately invalidates/releases overlapping availability slots
- * 
- * USAGE:
- * POST /api/staff/manage-external-busy-times
- * Body: {
- *   action: 'create' | 'update' | 'delete',
- *   staffId: string,
- *   ...details based on action
- * }
+ *
+ * Create, update, or delete external busy times after a tenant staff session
+ * is established. Resource tenant and staff ownership are taken from the
+ * session and the stored row — not from client-supplied tenant_id / id alone.
  */
 
 import { defineEventHandler, createError, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { createAvailabilitySlotManager } from '~/server/utils/availability-slot-manager'
+import {
+  requireTenantStaff,
+  loadStaffInTenant,
+  assertSelfOrTenantAdmin,
+  type TenantActor,
+} from '~/server/utils/require-tenant-auth'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 interface CreateExternalBusyTimeRequest {
   action: 'create'
   staff_id: string
   start_time: string
   end_time: string
-  tenant_id: string
+  tenant_id?: string
   title?: string
-  source?: string // e.g., "google_calendar", "manual"
+  source?: string
 }
 
 interface UpdateExternalBusyTimeRequest {
   action: 'update'
   id: string
-  staff_id: string
-  old_start_time: string
-  old_end_time: string
+  staff_id?: string
+  old_start_time?: string
+  old_end_time?: string
   start_time: string
   end_time: string
-  tenant_id: string
+  tenant_id?: string
 }
 
 interface DeleteExternalBusyTimeRequest {
   action: 'delete'
   id: string
-  staff_id: string
-  start_time: string
-  end_time: string
-  tenant_id: string
+  staff_id?: string
+  start_time?: string
+  end_time?: string
+  tenant_id?: string
 }
 
-type ManageBusyTimeRequest = 
-  | CreateExternalBusyTimeRequest 
-  | UpdateExternalBusyTimeRequest 
+type ManageBusyTimeRequest =
+  | CreateExternalBusyTimeRequest
+  | UpdateExternalBusyTimeRequest
   | DeleteExternalBusyTimeRequest
 
+async function loadBusyTimeInTenant(
+  supabase: SupabaseClient,
+  id: string,
+  tenantId: string,
+) {
+  if (!id || typeof id !== 'string') {
+    throw createError({ statusCode: 400, statusMessage: 'id is required' })
+  }
+  const { data, error } = await supabase
+    .from('external_busy_times')
+    .select('id, staff_id, tenant_id, start_time, end_time')
+    .eq('id', id)
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
+  if (error || !data) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+  return data
+}
+
+async function authorizeStaffResource(
+  supabase: SupabaseClient,
+  actor: TenantActor,
+  staffId: string,
+) {
+  const staff = await loadStaffInTenant(supabase, staffId, actor.tenant_id, {
+    allowInactive: true,
+  })
+  assertSelfOrTenantAdmin(actor, staff.id)
+  return staff
+}
+
+async function queueRecalc(staffId: string, tenantId: string) {
+  try {
+    await $fetch('/api/availability/queue-recalc', {
+      method: 'POST',
+      body: {
+        staff_id: staffId,
+        tenant_id: tenantId,
+        trigger: 'external_event',
+      },
+    })
+    logger.debug('✅ Queued recalculation after external busy time change')
+  } catch (queueError: any) {
+    logger.warn('⚠️ Failed to queue recalculation:', queueError.message)
+  }
+}
+
 export default defineEventHandler(async (event) => {
+  const actor = await requireTenantStaff(event)
+
   try {
     const supabase = getSupabaseAdmin()
     const slotManager = createAvailabilitySlotManager(supabase)
-    
+
     const body = await readBody<ManageBusyTimeRequest>(event)
-    const { action } = body
+    const action = body?.action
 
     logger.debug('🔄 External busy time action:', action)
 
-    // ========== CREATE EXTERNAL BUSY TIME ==========
     if (action === 'create') {
-      const { staff_id, start_time, end_time, tenant_id, title, source } = 
-        body as CreateExternalBusyTimeRequest
+      const { staff_id, start_time, end_time, title, source } = body as CreateExternalBusyTimeRequest
+      if (!staff_id || !start_time || !end_time) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'staff_id, start_time, and end_time are required',
+        })
+      }
 
-      logger.debug('➕ Creating external busy time:', {
-        staff_id: staff_id.substring(0, 8),
-        start_time,
-        end_time,
-        source
-      })
+      const staff = await authorizeStaffResource(supabase, actor, staff_id)
 
-      // 1. Insert into external_busy_times
       const { data: busyTime, error: insertError } = await supabase
         .from('external_busy_times')
         .insert({
-          staff_id,
+          staff_id: staff.id,
           start_time,
           end_time,
-          tenant_id,
+          tenant_id: actor.tenant_id,
           title: title || 'Busy Time',
-          source: source || 'manual'
+          source: source || 'manual',
         })
         .select()
         .single()
@@ -94,75 +142,52 @@ export default defineEventHandler(async (event) => {
         logger.error('❌ Error creating external busy time:', insertError)
         throw createError({
           statusCode: 500,
-          statusMessage: 'Failed to create external busy time'
+          statusMessage: 'Failed to create external busy time',
         })
       }
 
-      logger.debug('✅ External busy time created:', busyTime.id)
-
-      // 2. Immediately invalidate overlapping availability slots
       try {
         const invalidateResult = await slotManager.invalidateSlots(
-          staff_id,
+          staff.id,
           start_time,
           end_time,
-          tenant_id
+          actor.tenant_id,
         )
         logger.debug(`✅ Invalidated ${invalidateResult.invalidatedCount} overlapping slots`)
       } catch (slotError: any) {
         logger.warn('⚠️ Failed to invalidate slots (non-critical):', slotError.message)
-        // Non-critical: slots will be regenerated at next cron
       }
 
-      // 3. Queue recalculation to ensure slots are properly updated
-      try {
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: {
-            staff_id,
-            tenant_id,
-            trigger: 'external_event'
-          }
-        })
-        logger.debug('✅ Queued recalculation after external busy time creation')
-      } catch (queueError: any) {
-        logger.warn('⚠️ Failed to queue recalculation:', queueError.message)
-      }
+      await queueRecalc(staff.id, actor.tenant_id)
 
       return {
         success: true,
         message: 'External busy time created',
-        data: busyTime
+        data: busyTime,
       }
     }
 
-    // ========== UPDATE EXTERNAL BUSY TIME ==========
     if (action === 'update') {
-      const {
-        id,
-        staff_id,
-        old_start_time,
-        old_end_time,
-        start_time,
-        end_time,
-        tenant_id
-      } = body as UpdateExternalBusyTimeRequest
+      const { id, start_time, end_time } = body as UpdateExternalBusyTimeRequest
+      if (!start_time || !end_time) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'start_time and end_time are required',
+        })
+      }
 
-      logger.debug('✏️ Updating external busy time:', {
-        id: id.substring(0, 8),
-        oldTime: `${old_start_time} - ${old_end_time}`,
-        newTime: `${start_time} - ${end_time}`
-      })
+      const existing = await loadBusyTimeInTenant(supabase, id, actor.tenant_id)
+      await authorizeStaffResource(supabase, actor, existing.staff_id)
 
-      // 1. Update in external_busy_times
       const { data: busyTime, error: updateError } = await supabase
         .from('external_busy_times')
         .update({
           start_time,
           end_time,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', id)
+        .eq('id', existing.id)
+        .eq('tenant_id', actor.tenant_id)
         .select()
         .single()
 
@@ -170,137 +195,94 @@ export default defineEventHandler(async (event) => {
         logger.error('❌ Error updating external busy time:', updateError)
         throw createError({
           statusCode: 500,
-          statusMessage: 'Failed to update external busy time'
+          statusMessage: 'Failed to update external busy time',
         })
       }
 
-      logger.debug('✅ External busy time updated:', busyTime.id)
-
-      // 2. Release slots from OLD time
       try {
         const releaseResult = await slotManager.releaseSlots(
-          staff_id,
-          old_start_time,
-          old_end_time,
-          tenant_id
+          existing.staff_id,
+          existing.start_time,
+          existing.end_time,
+          actor.tenant_id,
         )
         logger.debug(`✅ Released ${releaseResult.releasedCount} slots from old time`)
       } catch (slotError: any) {
         logger.warn('⚠️ Failed to release old slots (non-critical):', slotError.message)
       }
 
-      // 3. Invalidate slots for NEW time
       try {
         const invalidateResult = await slotManager.invalidateSlots(
-          staff_id,
+          existing.staff_id,
           start_time,
           end_time,
-          tenant_id
+          actor.tenant_id,
         )
         logger.debug(`✅ Invalidated ${invalidateResult.invalidatedCount} slots for new time`)
       } catch (slotError: any) {
         logger.warn('⚠️ Failed to invalidate new slots (non-critical):', slotError.message)
       }
 
-      // 4. Queue recalculation
-      try {
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: {
-            staff_id,
-            tenant_id,
-            trigger: 'external_event'
-          }
-        })
-        logger.debug('✅ Queued recalculation after external busy time update')
-      } catch (queueError: any) {
-        logger.warn('⚠️ Failed to queue recalculation:', queueError.message)
-      }
+      await queueRecalc(existing.staff_id, actor.tenant_id)
 
       return {
         success: true,
         message: 'External busy time updated',
-        data: busyTime
+        data: busyTime,
       }
     }
 
-    // ========== DELETE EXTERNAL BUSY TIME ==========
     if (action === 'delete') {
-      const { id, staff_id, start_time, end_time, tenant_id } = 
-        body as DeleteExternalBusyTimeRequest
+      const { id } = body as DeleteExternalBusyTimeRequest
+      const existing = await loadBusyTimeInTenant(supabase, id, actor.tenant_id)
+      await authorizeStaffResource(supabase, actor, existing.staff_id)
 
-      logger.debug('🗑️ Deleting external busy time:', {
-        id: id.substring(0, 8),
-        start_time,
-        end_time
-      })
-
-      // 1. Delete from external_busy_times
       const { error: deleteError } = await supabase
         .from('external_busy_times')
         .delete()
-        .eq('id', id)
+        .eq('id', existing.id)
+        .eq('tenant_id', actor.tenant_id)
 
       if (deleteError) {
         logger.error('❌ Error deleting external busy time:', deleteError)
         throw createError({
           statusCode: 500,
-          statusMessage: 'Failed to delete external busy time'
+          statusMessage: 'Failed to delete external busy time',
         })
       }
 
-      logger.debug('✅ External busy time deleted:', id)
-
-      // 2. Release overlapping availability slots
       try {
         const releaseResult = await slotManager.releaseSlots(
-          staff_id,
-          start_time,
-          end_time,
-          tenant_id
+          existing.staff_id,
+          existing.start_time,
+          existing.end_time,
+          actor.tenant_id,
         )
         logger.debug(`✅ Released ${releaseResult.releasedCount} overlapping slots`)
       } catch (slotError: any) {
         logger.warn('⚠️ Failed to release slots (non-critical):', slotError.message)
-        // Non-critical: slots will be regenerated at next cron
       }
 
-      // 3. Queue recalculation
-      try {
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: {
-            staff_id,
-            tenant_id,
-            trigger: 'external_event'
-          }
-        })
-        logger.debug('✅ Queued recalculation after external busy time deletion')
-      } catch (queueError: any) {
-        logger.warn('⚠️ Failed to queue recalculation:', queueError.message)
-      }
+      await queueRecalc(existing.staff_id, actor.tenant_id)
 
       return {
         success: true,
-        message: 'External busy time deleted'
+        message: 'External busy time deleted',
       }
     }
 
     throw createError({
       statusCode: 400,
-      statusMessage: `Unknown action: ${action}`
+      statusMessage: `Unknown action: ${action}`,
     })
   } catch (error: any) {
-    logger.error('❌ Error managing external busy time:', error)
-    
-    // If it's already a createError, throw it
     if (error.statusCode) {
       throw error
     }
-    
+    logger.error('❌ Error managing external busy time:', error)
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to manage external busy time'
+      statusMessage: error.message || 'Failed to manage external busy time',
     })
   }
 })
