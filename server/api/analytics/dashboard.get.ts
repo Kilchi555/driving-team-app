@@ -1,9 +1,11 @@
+import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { requireSuperAdmin } from '~/server/utils/require-super-admin'
 
 export default defineEventHandler(async (event) => {
-  const startTime = Date.now()
-  
+  await requireSuperAdmin(event)
+
   try {
     const supabase = getSupabaseAdmin()
     const query = getQuery(event)
@@ -320,21 +322,6 @@ export default defineEventHandler(async (event) => {
     logger.debug('  - DB Connections:', dbConnections)
     logger.debug('  - Cache Hit Rate:', cacheHitRate + '%')
 
-    // Track API performance
-    const responseTime = Date.now() - startTime
-    await supabase
-      .from('analytics_events')
-      .insert({
-        event_type: 'api_call',
-        event_category: 'system',
-        event_data: {
-          endpoint: '/api/analytics/dashboard',
-          method: 'GET',
-          response_time_ms: responseTime,
-          success: true
-        }
-      })
-
     return {
       metrics: {
         activeTenants,
@@ -360,10 +347,11 @@ export default defineEventHandler(async (event) => {
       },
       topTenants: topTenantsWithActivity
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.statusCode) throw error
     throw createError({
       statusCode: 500,
-      statusMessage: `Failed to load analytics data: ${error.message}`
+      statusMessage: 'Failed to load analytics data'
     })
   }
 })
