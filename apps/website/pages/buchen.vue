@@ -14,24 +14,34 @@
  * Same-domain booking URL for ads/CTAs. Simy currently sends X-Frame-Options:
  * SAMEORIGIN, so an iframe on drivingteam.ch is refused. We 302 to the booking
  * app instead — one click, no extra step, booking actually loads.
+ *
+ * SSR 302 only when the inbound /buchen URL already carries click IDs or a
+ * session blob. Otherwise wait for the client so enrichSimyUrl can attach
+ * first-party stored fbclid/gclid (landing page → /buchen without query).
  */
 import { enrichSimyUrl } from '~/utils/enrich-simy-url'
+import {
+  BOOKING_APP_BASE_URL,
+  buchenQueryHasAttribution,
+  buildBuchenRedirectUrl,
+} from '~/utils/booking-attribution-hop'
 
 definePageMeta({ layout: 'default' })
 
-const BOOKING = 'https://app.simy.ch/booking/availability/driving-team'
 const route = useRoute()
+const queryRecord = computed(() => route.query as Record<string, unknown>)
 
 const dest = computed(() => {
-  const url = new URL(BOOKING)
-  for (const [key, value] of Object.entries(route.query)) {
-    const raw = Array.isArray(value) ? value[0] : value
-    if (raw) url.searchParams.set(key, String(raw))
-  }
-  url.searchParams.delete('embed')
-  if (import.meta.client) return enrichSimyUrl(url.toString())
-  return url.toString()
+  const fromQuery = buildBuchenRedirectUrl(queryRecord.value, BOOKING_APP_BASE_URL)
+  if (import.meta.client) return enrichSimyUrl(fromQuery)
+  return fromQuery
 })
 
-await navigateTo(dest.value, { external: true, redirectCode: 302 })
+if (import.meta.server) {
+  if (buchenQueryHasAttribution(queryRecord.value)) {
+    await navigateTo(dest.value, { external: true, redirectCode: 302 })
+  }
+} else {
+  await navigateTo(dest.value, { external: true, redirectCode: 302 })
+}
 </script>

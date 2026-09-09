@@ -8,6 +8,7 @@
  */
 
 import { encodeAttribution } from '~/utils/attribution-encode'
+import { getWebsiteAttribution, getWebsiteSessionId } from '~/utils/enrich-simy-url'
 
 interface BookingParams {
   location?: string // z.B. 'zuerich', 'lachen'
@@ -90,21 +91,26 @@ export const useBookingUrl = () => {
     }
 
     // Session ID for tracking (always add if available in browser)
-    if (typeof window !== 'undefined' && (window as any).__analyticsSessionId) {
-      queryParams.append('session_id', (window as any).__analyticsSessionId)
+    if (typeof window !== 'undefined') {
+      const sessionId = getWebsiteSessionId() || p.sessionId
+      if (sessionId && !queryParams.has('session_id')) {
+        queryParams.append('session_id', sessionId)
+      }
     } else if (p.sessionId) {
       queryParams.append('session_id', p.sessionId)
     }
 
     // Marketing attribution (gclid + UTMs) — encoded blob for cross-domain forwarding
     // Always attempt — even when no BookingParams were passed (bare generateBookingUrl()).
-    if (typeof window !== 'undefined' && (window as any).__dtMarketingAttribution) {
-      const attr = (window as any).__dtMarketingAttribution
-      const encoded = encodeAttribution(attr)
-      if (encoded) queryParams.append('dt_attr', encoded)
-      // Raw click IDs as a fallback if dt_attr is dropped by a redirect/proxy.
-      for (const key of ['gclid', 'gbraid', 'wbraid', 'fbclid'] as const) {
-        if (attr[key] && !queryParams.has(key)) queryParams.append(key, attr[key])
+    if (typeof window !== 'undefined') {
+      const attr = getWebsiteAttribution()
+      if (attr) {
+        const encoded = encodeAttribution(attr)
+        if (encoded) queryParams.append('dt_attr', encoded)
+        // Raw click IDs as a fallback if dt_attr is dropped by a redirect/proxy.
+        for (const key of ['gclid', 'gbraid', 'wbraid', 'fbclid'] as const) {
+          if (attr[key] && !queryParams.has(key)) queryParams.append(key, attr[key])
+        }
       }
     }
 
