@@ -4,14 +4,16 @@
  */
 
 import { encodeAttribution } from '~/utils/attribution-encode'
+import { applyFirstClassClickIds } from '~/utils/booking-attribution-hop'
+import { getWebsiteAttribution, getWebsiteSessionId } from '~/utils/enrich-simy-url'
 
 export const useBookingTracking = () => {
   /**
    * Generiert Booking-URL mit Session ID und trackt den Klick
    */
   const generateBookingUrlWithTracking = (url: string, category?: string): string => {
-    const sessionId = (window as any).__analyticsSessionId || 'unknown'
-    const attr = (window as any).__dtMarketingAttribution ?? null
+    const sessionId = getWebsiteSessionId() || (window as any).__analyticsSessionId || 'unknown'
+    const attr = getWebsiteAttribution()
 
     const params = new URLSearchParams()
     if (!url.includes('session_id=')) {
@@ -25,10 +27,11 @@ export const useBookingTracking = () => {
     const separator = url.includes('?') ? '&' : '?'
     const query = params.toString()
     const trackedUrl = query ? `${url}${separator}${query}` : url
+    const withClickIds = applyFirstClassClickIds(trackedUrl, attr, window.location.href)
 
-    trackBookingRedirect(category || 'unknown', sessionId, attr)
+    trackBookingRedirect(category || 'unknown', sessionId, attr ?? {})
 
-    return trackedUrl
+    return withClickIds
   }
 
   /**
@@ -50,6 +53,9 @@ export const useBookingTracking = () => {
           gclid: attr.gclid ?? null,
           gbraid: attr.gbraid ?? null,
           wbraid: attr.wbraid ?? null,
+          fbclid: attr.fbclid ?? null,
+          fbc: attr.fbc ?? null,
+          fbp: attr.fbp ?? null,
           utm_source: attr.utm_source ?? null,
           utm_medium: attr.utm_medium ?? null,
           utm_campaign: attr.utm_campaign ?? null,

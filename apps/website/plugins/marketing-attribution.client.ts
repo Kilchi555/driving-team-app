@@ -15,6 +15,8 @@
  *   4. Upload conversion to Google Ads API + Meta CAPI on booking completion
  */
 
+import { mergeAttributionFields, constructFbcFromFbclid } from '~/utils/booking-attribution-hop'
+
 const STORAGE_KEY = 'dt_marketing_attribution'
 const ATTRIBUTION_TTL_MS = 90 * 24 * 60 * 60 * 1000 // 90 days
 
@@ -144,66 +146,39 @@ export default defineNuxtPlugin({
     const fbclid = incoming.fbclid
 
     incoming.fbc = fbcFromCookie
-      ?? (fbclid ? `fb.1.${Date.now()}.${fbclid}` : null)
+      ?? (fbclid ? constructFbcFromFbclid(fbclid) : null)
     incoming.fbp = fbpFromCookie ?? null
 
-    const hasNewAttribution = Object.values(incoming).some(v => v !== null && v !== '')
+    const hasIncomingClickOrUtm = Object.values(incoming).some(v => v !== null && v !== '')
+    const stored = readStored()
 
-    // Last-touch attribution: if a user arrives with new ad/utm params, overwrite stored values.
-    // Otherwise hydrate from storage so subsequent navigation can still forward attribution.
-    // Always update fbc/fbp from cookies even on returning visits (Pixel may have run since).
-    if (hasNewAttribution) {
-      const attribution: MarketingAttribution = {
+    // Merge, never last-touch-replace: a later UTM-only pageview must not wipe fbclid/gclid.
+    if (hasIncomingClickOrUtm || stored) {
+      const mergedFields = mergeAttributionFields(stored, {
         ...incoming,
-        landing_page: url.pathname,
-        captured_at: Date.now(),
+        landing_page: (incoming.utm_source || incoming.fbclid || incoming.gclid)
+          ? url.pathname
+          : stored?.landing_page,
+      })
+      const hasNewClickId = !!(incoming.gclid || incoming.gbraid || incoming.wbraid || incoming.fbclid)
+      const attribution: MarketingAttribution = {
+        ...mergedFields,
+        landing_page: mergedFields.landing_page || url.pathname,
+        captured_at: hasNewClickId || !stored?.captured_at ? Date.now() : stored.captured_at,
       }
       persist(attribution)
       window.__dtMarketingAttribution = attribution
 
-      // Persist to DB immediately so we capture the visit even if the user
-      // never clicks a booking link (fire-and-forget, never blocks rendering).
-      const sessionId = getOrCreateSessionId()
-      fetch('/api/save-attribution', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, attribution }),
-      }).catch(() => {})
-    } else {
-      const stored = readStored()
-      if (stored) {
-        // Enrich stored attribution with fbc/fbp if cookies appeared since last capture
-        // (user accepted cookies on a subsequent visit).
-        const fbcFromCookie = readCookie('_fbc')
-        const fbpFromCookie = readCookie('_fbp')
-        if ((fbcFromCookie && !stored.fbc) || (fbpFromCookie && !stored.fbp)) {
-          const enriched = {
-            ...stored,
-            fbc: fbcFromCookie ?? stored.fbc ?? null,
-            fbp: fbpFromCookie ?? stored.fbp ?? null,
-          }
-          persist(enriched)
-          window.__dtMarketingAttribution = enriched
-        } else {
-          window.__dtMarketingAttribution = stored
-        }
-
-        // Re-bind stored click IDs to the current session so a later booking that
-        // only forwards session_id (no dt_attr) can still resolve gclid server-side.
-        if (stored.gclid || stored.gbraid || stored.wbraid || stored.fbclid) {
-          const sessionId = getOrCreateSessionId()
-          fetch('/api/save-attribution', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              session_id: sessionId,
-              attribution: window.__dtMarketingAttribution,
-            }),
-          }).catch(() => {})
-        }
-      } else {
-        window.__dtMarketingAttribution = null
+      if (hasIncomingClickOrUtm || attribution.gclid || attribution.gbraid || attribution.wbraid || attribution.fbclid) {
+        const sessionId = getOrCreateSessionId()
+        fetch('/api/save-attribution', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId, attribution }),
+        }).catch(() => {})
       }
+    } else {
+      window.__dtMarketingAttribution = null
     }
   },
 })

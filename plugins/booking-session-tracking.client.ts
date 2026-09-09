@@ -88,7 +88,7 @@ export default defineNuxtPlugin(() => {
     initMetaPixelIfConsented(pixelId, metaConsentParam)
   }
 
-  // ─── Marketing attribution: read from URL blob OR localStorage ──────────────
+  // ─── Marketing attribution: merge URL blob + first-class IDs + localStorage ─
   const ATTR_KEY = 'sm_marketing_attribution'
   let attribution: DecodedAttribution | null = null
   let isNewSession = false
@@ -129,8 +129,18 @@ export default defineNuxtPlugin(() => {
     landing_page: incoming.landing_page || base?.landing_page || null,
   })
 
+  try {
+    const stored = localStorage.getItem(ATTR_KEY)
+    if (stored) {
+      attribution = JSON.parse(stored) as DecodedAttribution
+    }
+  } catch {
+    attribution = null
+  }
+
   if (dtAttr) {
-    attribution = decodeAttribution(dtAttr)
+    const decoded = decodeAttribution(dtAttr)
+    if (decoded) attribution = mergeClickIds(attribution, decoded)
   }
 
   const readCookie = (name: string): string | null => {
@@ -149,7 +159,8 @@ export default defineNuxtPlugin(() => {
       gbraid: gbraidFromUrl,
       wbraid: wbraidFromUrl,
       fbclid: fbclidFromUrl,
-      fbc: fbclidFromUrl ? `fb.1.${Date.now()}.${fbclidFromUrl}` : null,
+      // Do not remint fbc over a stored/dt_attr value; fill later if still missing.
+      fbc: null,
       fbp: null,
       utm_source: urlParams.get('utm_source') ?? (urlHasClickId ? (fbclidFromUrl ? 'facebook' : 'google') : null),
       utm_medium: urlParams.get('utm_medium') ?? (urlHasClickId ? 'cpc' : null),
@@ -162,16 +173,7 @@ export default defineNuxtPlugin(() => {
   }
 
   if (!attribution) {
-    try {
-      const stored = localStorage.getItem(ATTR_KEY)
-      if (stored) {
-        attribution = JSON.parse(stored) as DecodedAttribution
-      } else {
-        isNewSession = true
-      }
-    } catch {
-      isNewSession = true
-    }
+    isNewSession = true
   }
 
   const fbcCookie = readCookie('_fbc')
@@ -181,6 +183,13 @@ export default defineNuxtPlugin(() => {
       ...attribution,
       fbc: attribution.fbc || fbcCookie,
       fbp: attribution.fbp || fbpCookie,
+    }
+  }
+
+  if (attribution?.fbclid && !attribution.fbc) {
+    attribution = {
+      ...attribution,
+      fbc: `fb.1.${Date.now()}.${attribution.fbclid}`,
     }
   }
 

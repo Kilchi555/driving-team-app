@@ -14,7 +14,7 @@
 // session_id + dt_attr BEFORE navigation. Logging booking_redirects alone is not
 // enough — without those params the booking app mints a new session and loses gclid.
 
-import { enrichSimyAnchor, getWebsiteSessionId } from '~/utils/enrich-simy-url'
+import { enrichSimyAnchor, getWebsiteSessionId, getWebsiteAttribution } from '~/utils/enrich-simy-url'
 
 // Maps page paths to driving category codes when the booking URL has no category param.
 // This fixes the "unknown" category problem for VKU, Taxi, Bus, Motorboot, etc.
@@ -52,8 +52,7 @@ export default defineNuxtPlugin(() => {
   }
 
   function getUtmParams() {
-    // Prefer stored attribution (persisted across pages) over current URL params
-    const attr = (window as any).__dtMarketingAttribution ?? {}
+    const attr = getWebsiteAttribution() ?? {}
     const p = new URLSearchParams(window.location.search)
     return {
       utm_source: attr.utm_source || p.get('utm_source') || null,
@@ -64,19 +63,18 @@ export default defineNuxtPlugin(() => {
     }
   }
 
-  // BUG FIX (July 2026): booking-redirect only forwarded UTM params, never the
-  // actual click IDs (gclid/gbraid/wbraid) — so booking_redirects and the eventual
-  // Google Ads conversion upload had no click ID to work with for the vast majority
-  // of real bookings, which all go through this global link click-handler (not the
-  // less-used useBookingTracking.ts composable, which already had this fix).
+  // Window, localStorage, then current URL. Never send empty click IDs when
+  // the session still has them — booking-redirect also hydrates server-side.
   function getClickIds() {
-    const attr = (window as any).__dtMarketingAttribution ?? {}
+    const attr = getWebsiteAttribution() ?? {}
     const p = new URLSearchParams(window.location.search)
     return {
       gclid: attr.gclid || p.get('gclid') || null,
       gbraid: attr.gbraid || p.get('gbraid') || null,
       wbraid: attr.wbraid || p.get('wbraid') || null,
       fbclid: attr.fbclid || p.get('fbclid') || null,
+      fbc: attr.fbc || null,
+      fbp: attr.fbp || null,
     }
   }
 
