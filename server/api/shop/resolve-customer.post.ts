@@ -1,16 +1,38 @@
-// server/api/shop/resolve-customer.post.ts
-// Resolves or creates a guest customer based on tenant + email
-// Core logic: find existing user (login or guest) or create new guest
-// No authentication required — supports guest checkout
+// Resolves or creates a guest customer for shop checkout.
+// Public, but email is not proof of identity — never return PII or onboarding tokens.
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sanitizeString, validateEmail } from '~/server/utils/validators'
 import { logger } from '~/utils/logger'
+import { getClientIP } from '~/server/utils/ip-utils'
 import crypto from 'crypto'
+
+const lookupWindows = new Map<string, number[]>()
+const LOOKUP_MAX = 10
+const LOOKUP_WINDOW_MS = 60 * 1000
+
+function assertResolveRateLimit(event: Parameters<typeof getClientIP>[0]) {
+  const ip = getClientIP(event)
+  const now = Date.now()
+  const key = `shop-resolve-customer:${ip}`
+  const stamps = (lookupWindows.get(key) || []).filter((ts) => ts > now - LOOKUP_WINDOW_MS)
+  if (stamps.length >= LOOKUP_MAX) {
+    throw createError({ statusCode: 429, statusMessage: 'Too many requests' })
+  }
+  stamps.push(now)
+  lookupWindows.set(key, stamps)
+}
+
+function publicCustomer(id: string) {
+  return {
+    customer: { id },
+  }
+}
 
 export default defineEventHandler(async (event) => {
   try {
+    assertResolveRateLimit(event)
     const body = await readBody(event)
     if (!body || typeof body !== 'object') {
       throw createError({ statusCode: 400, message: 'Invalid request body' })
@@ -18,7 +40,6 @@ export default defineEventHandler(async (event) => {
 
     const { tenant_id: tenantId, email } = body
 
-    // Validate inputs
     if (!tenantId || !email) {
       throw createError({ statusCode: 400, message: 'Missing tenant_id or email' })
     }
@@ -32,7 +53,6 @@ export default defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // Check if tenant exists and is active
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
       .select('id, is_active')
@@ -43,10 +63,9 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: 'Invalid or inactive tenant' })
     }
 
-    // Look up existing user by tenant + email
     const { data: existingUser, error: lookupError } = await supabase
       .from('users')
-      .select('id, auth_user_id, first_name, last_name, phone, street, street_nr, zip, city')
+      .select('id')
       .eq('tenant_id', sanitizedTenantId)
       .eq('email', normalizedEmail)
       .maybeSingle()
@@ -56,34 +75,12 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, message: 'Database error during lookup' })
     }
 
-    // User exists
-    if (existingUser) {
-      const userType = existingUser.auth_user_id ? 'login' : 'guest'
-      logger.debug(`✅ Existing user found: ${userType} (${existingUser.id})`)
-
-      return {
-        customer: {
-          id: existingUser.id,
-          type: userType,
-          isNew: false,
-          email: normalizedEmail,
-          firstName: existingUser.first_name || '',
-          lastName: existingUser.last_name || '',
-          phone: existingUser.phone || '',
-          street: existingUser.street || '',
-          streetNumber: existingUser.street_nr || '',
-          zip: existingUser.zip || '',
-          city: existingUser.city || ''
-        },
-        metadata: {
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-        }
-      }
+    if (existingUser?.id) {
+      return publicCustomer(existingUser.id)
     }
 
-    // Create new guest user
     const userId = crypto.randomUUID()
-    const magicLinkToken = crypto.randomUUID()
+    const onboardingToken = crypto.randomUUID()
 
     const { error: insertError } = await supabase
       .from('users')
@@ -102,65 +99,31 @@ export default defineEventHandler(async (event) => {
         role: 'client',
         is_active: false,
         onboarding_status: 'pending',
-        onboarding_token: magicLinkToken,
-        onboarding_token_expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        onboarding_token: onboardingToken,
+        onboarding_token_expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       })
 
     if (insertError) {
-      // Handle race condition: another request created the same user
       if (insertError.code === '23505') {
-        logger.debug('ℹ️ User already created by concurrent request, retrying lookup...')
         const { data: retryUser, error: retryError } = await supabase
           .from('users')
-          .select('id, auth_user_id, first_name, last_name')
+          .select('id')
           .eq('tenant_id', sanitizedTenantId)
           .eq('email', normalizedEmail)
           .maybeSingle()
 
-        if (retryError || !retryUser) {
+        if (retryError || !retryUser?.id) {
           throw createError({ statusCode: 500, message: 'Failed to resolve concurrent user creation' })
         }
 
-        return {
-          customer: {
-            id: retryUser.id,
-            type: 'guest',
-            isNew: false,
-            email: normalizedEmail,
-            firstName: retryUser.first_name || '',
-            lastName: retryUser.last_name || ''
-          },
-          metadata: {
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-          }
-        }
+        return publicCustomer(retryUser.id)
       }
 
       logger.error('❌ Failed to create guest user:', insertError)
       throw createError({ statusCode: 500, message: 'Failed to create guest user' })
     }
 
-    logger.debug(`✅ New guest user created: ${userId}`)
-
-    return {
-      customer: {
-        id: userId,
-        type: 'guest',
-        isNew: true,
-        email: normalizedEmail,
-        firstName: '',
-        lastName: '',
-        phone: '',
-        street: '',
-        streetNumber: '',
-        zip: '',
-        city: ''
-      },
-      metadata: {
-        magicLinkToken,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      }
-    }
+    return publicCustomer(userId)
   } catch (error: any) {
     if (error.statusCode) throw error
     logger.error('❌ resolve-customer error:', error)
