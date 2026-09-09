@@ -7,16 +7,16 @@ import { logger } from '~/utils/logger'
 
 export interface ShopCustomer {
   id: string
-  type: 'guest' | 'login'
-  isNew: boolean
-  email: string
-  firstName: string
-  lastName: string
-  phone: string
-  street: string
-  streetNumber: string
-  zip: string
-  city: string
+  type?: 'guest' | 'login'
+  isNew?: boolean
+  email?: string
+  firstName?: string
+  lastName?: string
+  phone?: string
+  street?: string
+  streetNumber?: string
+  zip?: string
+  city?: string
 }
 
 interface ResolutionState {
