@@ -17,7 +17,7 @@ import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
-import { findExistingUserByContact } from '~/server/utils/user-matching'
+import { findExistingUserByContact, findStaffOrAdminByEmail } from '~/server/utils/user-matching'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { sha256Hex } from '~/server/utils/meta-capi'
@@ -267,12 +267,30 @@ const handler = defineEventHandler(async (event) => {
     logger.debug('🔍 Looking for existing user with email/phone:', { finalEmail, finalPhone })
 
     let guestUserId: string
-    const existingUser = await findExistingUserByContact(supabase, { email: finalEmail, phone: finalPhone, tenantId })
+    const existingUser = await findExistingUserByContact(supabase, {
+      email: finalEmail,
+      phone: finalPhone,
+      tenantId,
+      roles: ['client', 'student'],
+    })
 
     if (existingUser) {
       guestUserId = existingUser.id
       logger.debug('✅ Found existing user:', guestUserId)
     } else {
+      // Staff/admin autofill (common on shared devices) must not create a guest
+      // under a unique employee email — surface a clear validation error instead.
+      if (finalEmail) {
+        const staffHit = await findStaffOrAdminByEmail(supabase, { email: finalEmail, tenantId })
+        if (staffHit) {
+          throw createError({
+            statusCode: 400,
+            statusMessage:
+              'Diese E-Mail gehört einem Mitarbeiterkonto. Bitte die E-Mail der Kursteilnehmerin / des Kursteilnehmers verwenden.',
+          })
+        }
+      }
+
       // Create new guest user (no auth_user_id)
       logger.debug('👤 Creating guest user...')
       
@@ -303,6 +321,13 @@ const handler = defineEventHandler(async (event) => {
       logger.info('✅ Guest user created:', guestUserId)
     }
 
+    // Partial / individual flags are needed for the registration insert even when
+    // the course is NOT SARI-managed. Previously these lived only inside the SARI
+    // block → ReferenceError on every non-SARI cash enroll (Gemperli VKU etc.).
+    const isPartial = !!(isPartialEnrollment || course.is_partial_only)
+    const isIndividualSess =
+      isPartial && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
+
     // 9. SARI sync FIRST (before DB save) - if managed
     // Enroll in ALL sessions (GROUP_2159157_2159158_2159159 → [2159157, 2159158, 2159159])
     if (course.sari_managed && course.sari_course_id && faberidClean) {
@@ -312,8 +337,6 @@ const handler = defineEventHandler(async (event) => {
 
       // For partial enrollment, only keep session IDs from partial_start_position onwards.
       // Session IDs are ordered, so we resolve position from course_sessions by date grouping.
-      const isPartial = isPartialEnrollment || course.is_partial_only
-      const isIndividualSess = isPartial && typeof individualSessionNumber === 'number' && individualSessionNumber > 0
 
       // Validate: partial enrollment is blocked only when a category IS linked and explicitly
       // disallows it. Courses without a category have no restriction.

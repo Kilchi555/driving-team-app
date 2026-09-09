@@ -14,7 +14,15 @@ interface FindUserParams {
   email?: string | null
   phone?: string | null
   tenantId: string
+  /**
+   * When set, only return users whose role is in this list.
+   * Public course enroll should pass customer roles so staff/admin autofill
+   * emails are not reused as the participant account.
+   */
+  roles?: string[]
 }
+
+export type MatchedUser = { id: string; role: string | null }
 
 /**
  * Finds an existing user within a tenant by normalized email (case-insensitive,
@@ -23,18 +31,18 @@ interface FindUserParams {
  */
 export async function findExistingUserByContact(
   supabase: any,
-  { email, phone, tenantId }: FindUserParams
-): Promise<{ id: string } | null> {
+  { email, phone, tenantId, roles }: FindUserParams
+): Promise<MatchedUser | null> {
   const normalizedEmail = email ? email.trim().toLowerCase() : null
 
   if (normalizedEmail) {
-    const { data } = await supabase
+    let q = supabase
       .from('users')
-      .select('id')
+      .select('id, role')
       .ilike('email', escapeLikePattern(normalizedEmail))
       .eq('tenant_id', tenantId)
-      .limit(1)
-      .maybeSingle()
+    if (roles?.length) q = q.in('role', roles)
+    const { data } = await q.limit(1).maybeSingle()
     if (data) return data
   }
 
@@ -45,15 +53,33 @@ export async function findExistingUserByContact(
     const localFormat = normalizedPhone.replace(/^\+41/, '0')
     const candidates = [...new Set([normalizedPhone, localFormat])]
 
-    const { data } = await supabase
+    let q = supabase
       .from('users')
-      .select('id')
+      .select('id, role')
       .in('phone', candidates)
       .eq('tenant_id', tenantId)
-      .limit(1)
-      .maybeSingle()
+    if (roles?.length) q = q.in('role', roles)
+    const { data } = await q.limit(1).maybeSingle()
     if (data) return data
   }
 
   return null
+}
+
+/** True when an email is already used by a non-customer account in this tenant. */
+export async function findStaffOrAdminByEmail(
+  supabase: any,
+  { email, tenantId }: { email: string; tenantId: string }
+): Promise<MatchedUser | null> {
+  const normalizedEmail = email.trim().toLowerCase()
+  if (!normalizedEmail) return null
+  const { data } = await supabase
+    .from('users')
+    .select('id, role')
+    .ilike('email', escapeLikePattern(normalizedEmail))
+    .eq('tenant_id', tenantId)
+    .in('role', ['admin', 'staff', 'tenant_admin'])
+    .limit(1)
+    .maybeSingle()
+  return data || null
 }
