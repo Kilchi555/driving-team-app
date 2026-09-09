@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { logger } from '~/utils/logger'
 
 /**
@@ -40,7 +41,7 @@ export default defineEventHandler(async (event) => {
 
   if (userError || !user) throw createError({ statusCode: 404, statusMessage: 'User not found' })
 
-  // Create enrollment
+  // Create enrollment (blank emails → NULL so they never collide on unique email indexes)
   const { data: enrollment, error: enrollError } = await supabase
     .from('course_registrations')
     .insert({
@@ -48,7 +49,7 @@ export default defineEventHandler(async (event) => {
       user_id: userId,
       first_name: user.first_name,
       last_name: user.last_name,
-      email: user.email,
+      email: normalizeEnrollmentEmail(user.email),
       phone: user.phone,
       status: 'confirmed',
       registered_at: new Date().toISOString(),
@@ -60,7 +61,11 @@ export default defineEventHandler(async (event) => {
 
   if (enrollError || !enrollment) {
     logger.error('❌ Error creating enrollment:', enrollError)
-    throw createError({ statusCode: 500, statusMessage: `Anmeldung konnte nicht erstellt werden: ${enrollError?.message}` })
+    const msg = enrollError?.message || ''
+    if (msg.includes('unique_email') || msg.includes('course_id_email')) {
+      throw createError({ statusCode: 409, statusMessage: 'Diese E-Mail ist bereits für diesen Kurs angemeldet' })
+    }
+    throw createError({ statusCode: 500, statusMessage: `Anmeldung konnte nicht erstellt werden: ${msg}` })
   }
 
   // Send confirmation email to the customer (non-fatal)
