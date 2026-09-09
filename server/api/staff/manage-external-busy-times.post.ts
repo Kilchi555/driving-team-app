@@ -89,7 +89,7 @@ async function authorizeStaffResource(
 
 async function queueRecalc(staffId: string, tenantId: string) {
   try {
-    void enqueueStaffAvailabilityRecalc({
+    await enqueueStaffAvailabilityRecalc({
       staff_id: staffId,
       tenant_id: tenantId,
       trigger: 'external_event',

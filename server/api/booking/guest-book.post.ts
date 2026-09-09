@@ -1031,7 +1031,7 @@ export default defineEventHandler(async (event) => {
     .catch(() => {})
 
   // ── Trigger availability recalculation (fire-and-forget) ─────────────────
-  void enqueueStaffAvailabilityRecalc({
+  await enqueueStaffAvailabilityRecalc({
     staff_id: slot.staff_id,
     tenant_id: tenantId,
     trigger: 'appointment',

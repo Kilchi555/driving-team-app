@@ -91,7 +91,7 @@ export default defineEventHandler(async (event) => {
       try {
         logger.debug(`📋 Queueing staff ${appointment.staff_id} for recalc after appointment deletion`)
         
-        void enqueueStaffAvailabilityRecalc({
+        await enqueueStaffAvailabilityRecalc({
           staff_id: appointment.staff_id,
           tenant_id: appointment.tenant_id,
           trigger: 'appointment',

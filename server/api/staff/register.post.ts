@@ -580,7 +580,7 @@ export default defineEventHandler(async (event) => {
 
     // 11. Queue availability recalc so online-bookable slots appear without waiting for nightly cron
     try {
-      void enqueueStaffAvailabilityRecalc({
+      await enqueueStaffAvailabilityRecalc({
         staff_id: newUser.id,
         tenant_id: invitation.tenant_id,
         trigger: 'settings_change',

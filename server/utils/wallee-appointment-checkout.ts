@@ -393,7 +393,7 @@ export async function releaseUnpaidPendingAppointment(opts: {
     })
     .eq('appointment_id', appointment.id)
 
-  void enqueueStaffAvailabilityRecalc({
+  await enqueueStaffAvailabilityRecalc({
     staff_id: appointment.staff_id,
     tenant_id: appointment.tenant_id,
     trigger: 'appointment',

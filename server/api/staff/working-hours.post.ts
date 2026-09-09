@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
 
         logger.debug('✅ Working hours saved')
 
-        void enqueueStaffAvailabilityRecalc({
+        await enqueueStaffAvailabilityRecalc({
           staff_id: target.id,
           tenant_id: tenantId,
           trigger: 'working_hours',
@@ -116,7 +116,7 @@ export default defineEventHandler(async (event) => {
       } else {
         logger.debug('✅ Working hours cleared for day')
 
-        void enqueueStaffAvailabilityRecalc({
+        await enqueueStaffAvailabilityRecalc({
           staff_id: target.id,
           tenant_id: tenantId,
           trigger: 'working_hours',
@@ -141,7 +141,7 @@ export default defineEventHandler(async (event) => {
 
       logger.debug('✅ All working hours cleared')
 
-      void enqueueStaffAvailabilityRecalc({
+      await enqueueStaffAvailabilityRecalc({
         staff_id: target.id,
         tenant_id: tenantId,
         trigger: 'working_hours',
@@ -198,7 +198,7 @@ export default defineEventHandler(async (event) => {
 
         logger.debug('✅ Working day blocks saved:', blocksToInsert.length)
 
-        void enqueueStaffAvailabilityRecalc({
+        await enqueueStaffAvailabilityRecalc({
           staff_id: target.id,
           tenant_id: tenantId,
           trigger: 'working_hours',
@@ -211,7 +211,7 @@ export default defineEventHandler(async (event) => {
       } else {
         logger.debug('✅ Working day cleared for all blocks')
 
-        void enqueueStaffAvailabilityRecalc({
+        await enqueueStaffAvailabilityRecalc({
           staff_id: target.id,
           tenant_id: tenantId,
           trigger: 'working_hours',

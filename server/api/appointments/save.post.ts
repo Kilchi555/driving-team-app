@@ -341,7 +341,7 @@ export default defineEventHandler(async (event) => {
       // 3. Any previously missing slots in freed time ranges are generated
       try {
         logger.debug('📋 Queuing availability recalculation after appointment edit...')
-        void enqueueStaffAvailabilityRecalc({
+        await enqueueStaffAvailabilityRecalc({
           staff_id: oldAppointment.staff_id,
           tenant_id: oldAppointment.tenant_id,
           trigger: 'appointment_edit',
@@ -711,7 +711,7 @@ export default defineEventHandler(async (event) => {
         // 3. Queue availability recalculation (single call, not duplicated)
         (async () => {
           try {
-            void enqueueStaffAvailabilityRecalc({
+            await enqueueStaffAvailabilityRecalc({
               staff_id: result.staff_id,
               tenant_id: result.tenant_id,
               trigger: 'appointment',

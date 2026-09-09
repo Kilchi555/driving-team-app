@@ -124,7 +124,7 @@ export default defineEventHandler(async (event) => {
 
     logger.debug(`✅ Created ${inserted?.length ?? 0} vacation appointments for staff ${staffId}`)
 
-    void enqueueStaffAvailabilityRecalc({
+    await enqueueStaffAvailabilityRecalc({
       staff_id: staffId,
       tenant_id: tenantId,
       trigger: 'appointment',

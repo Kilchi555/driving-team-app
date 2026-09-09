@@ -215,7 +215,7 @@ export default defineEventHandler(async (event) => {
     // ✅ NEW: Queue availability recalculation to regenerate slots for freed time
     try {
       logger.debug('📋 Queuing availability recalculation after appointment cancellation...')
-      void enqueueStaffAvailabilityRecalc({
+      await enqueueStaffAvailabilityRecalc({
         staff_id: appointment.staff_id,
         tenant_id: appointment.tenant_id,
         trigger: 'appointment',
