@@ -1943,7 +1943,11 @@ const getGermanErrorMessage = (error: any): string => {
   
   switch (statusCode) {
     case 400:
-      logger.warn('❌ 400 Error, returning generic message. Original message was:', message?.substring(0, 100))
+      logger.warn('❌ 400 Error, returning message. Original message was:', message?.substring(0, 100))
+      if (typeof message === 'string' && message.length >= 8 && message.length < 220
+        && /[äöüÄÖÜß]|Angaben|E-Mail|Mitarbeiter|ungültig|erforderlich|Bitte/i.test(message)) {
+        return message
+      }
       return 'Überprüfen Sie Ihre Angaben. Diese scheinen ungültig zu sein.'
     case 401:
       return 'Sie sind nicht autorisiert. Bitte melden Sie sich an.'
