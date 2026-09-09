@@ -25,6 +25,7 @@
 import { defineEventHandler, getQuery, getHeader, sendRedirect } from 'h3'
 import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import { hasAnyAttribution, type AttributionFields } from '~/server/utils/marketing-attribution-merge'
+import { constructFbcFromFbclid, createAnalyticsSessionId } from '~/utils/booking-attribution-hop'
 
 const BOT_PATTERNS = /bot|crawl|spider|slurp|prerender|headless|lighthouse|pagespeed|python-requests|curl\/|wget|axios|node-fetch/i
 const ALLOWED_CATEGORIES = new Set(['B', 'B Automatik', 'BE', 'A', 'A1', 'BPT', 'C', 'boot'])
@@ -55,7 +56,7 @@ export default defineEventHandler(async (event) => {
   const ua = getHeader(event, 'user-agent') || ''
   const isBot = !ua || BOT_PATTERNS.test(ua)
 
-  const sessionId = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+  const sessionId = createAnalyticsSessionId()
 
   const fbclid = str(query.fbclid)
   const attribution: AttributionFields & { landing_page?: string | null } = {
@@ -63,7 +64,7 @@ export default defineEventHandler(async (event) => {
     gbraid: str(query.gbraid),
     wbraid: str(query.wbraid),
     fbclid,
-    fbc: fbclid ? `fb.1.${Date.now()}.${fbclid}` : null,
+    fbc: fbclid ? constructFbcFromFbclid(fbclid) : null,
     utm_source: str(query.utm_source) ?? (fbclid ? 'facebook' : 'google'),
     utm_medium: str(query.utm_medium) ?? 'cpc',
     utm_campaign: str(query.utm_campaign),

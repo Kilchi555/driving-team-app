@@ -8,7 +8,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   mergeAttributionFields,
-  hasClickId,
   type AttributionFields,
 } from '~/server/utils/marketing-attribution-merge'
 
@@ -38,18 +37,18 @@ export async function resolveMarketingAttribution(
     merged = mergeAttributionFields(attrRow, merged)
   }
 
-  if (!hasClickId(merged)) {
-    const { data: redirectRow } = await supabase
-      .from('booking_redirects')
-      .select('gclid, gbraid, wbraid, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
-      .eq('session_id', sessionId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+  const { data: redirectRow } = await supabase
+    .from('booking_redirects')
+    .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
-    if (redirectRow) {
-      merged = mergeAttributionFields(merged, redirectRow)
-    }
+  if (redirectRow) {
+    // Redirect is a fallback: fill blanks only. Do not overwrite a newer
+    // client/session click ID with an older booking_redirects row.
+    merged = mergeAttributionFields(redirectRow, merged)
   }
 
   return merged
