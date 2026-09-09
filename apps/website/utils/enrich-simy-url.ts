@@ -6,6 +6,7 @@
 
 import { encodeAttribution } from '~/utils/attribution-encode'
 import type { MarketingAttribution } from '~/plugins/marketing-attribution.client'
+import { mergeAttributionFields } from '~/utils/booking-attribution-hop'
 
 export function getWebsiteSessionId(): string {
   try {
@@ -23,7 +24,15 @@ export function getWebsiteSessionId(): string {
 }
 
 export function getWebsiteAttribution(): MarketingAttribution | null {
-  return ((window as any).__dtMarketingAttribution as MarketingAttribution | null | undefined) ?? null
+  const fromWindow = ((window as any).__dtMarketingAttribution as MarketingAttribution | null | undefined) ?? null
+  try {
+    const raw = localStorage.getItem('dt_marketing_attribution')
+    if (!raw) return fromWindow
+    const stored = JSON.parse(raw) as MarketingAttribution
+    return mergeAttributionFields(stored, fromWindow) as MarketingAttribution
+  } catch {
+    return fromWindow
+  }
 }
 
 function isSiteBuchenPath(pathname: string): boolean {
