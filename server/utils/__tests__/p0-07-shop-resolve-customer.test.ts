@@ -52,6 +52,8 @@ describe('P0-07 shop resolve-customer source contract', () => {
     expect(src).not.toContain('first_name, last_name, phone')
     expect(src).toContain('select(\'id\')')
     expect(src).toContain('customer: { id }')
+    expect(src).toContain('tenant_slug')
+    expect(src).toContain("eq('slug'")
   })
 })
 
@@ -71,7 +73,7 @@ describe('P0-07 resolve-customer', () => {
   }
 
   it('returns only an id for an existing customer, with no profile fields or tokens', async () => {
-    mocks.readBody.mockResolvedValue({ tenant_id: 'tenant-a', email: 'ada@example.com' })
+    mocks.readBody.mockResolvedValue({ tenant_slug: 'demo-school', email: 'ada@example.com' })
     const from = vi.fn((table: string) => {
       if (table === 'tenants') {
         return thenable({ data: { id: 'tenant-a', is_active: true }, error: null })
@@ -88,7 +90,7 @@ describe('P0-07 resolve-customer', () => {
   })
 
   it('does not return the onboarding token when creating a guest', async () => {
-    mocks.readBody.mockResolvedValue({ tenant_id: 'tenant-a', email: 'new@example.com' })
+    mocks.readBody.mockResolvedValue({ tenant_slug: 'demo-school', email: 'new@example.com' })
     const insert = vi.fn(async () => ({ data: null, error: null }))
     const from = vi.fn((table: string) => {
       if (table === 'tenants') {

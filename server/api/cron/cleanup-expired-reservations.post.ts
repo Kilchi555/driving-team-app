@@ -13,8 +13,10 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { verifyCronToken, checkCronRateLimit, logCronExecution } from '~/server/utils/cron'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = new Date()
   let deletedCount = 0
   

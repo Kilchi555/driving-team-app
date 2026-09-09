@@ -18,8 +18,9 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
-import { getHeader, getQuery } from 'h3'
+import { getQuery } from 'h3'
 import { resolveCategoryGroup, BOOT_ALIASES } from '~/server/utils/category-groups'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -92,11 +93,7 @@ function getChannel(apt: any): 'google_ads' | 'meta_ads' | 'other_paid' | 'organ
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
   const query = getQuery(event)

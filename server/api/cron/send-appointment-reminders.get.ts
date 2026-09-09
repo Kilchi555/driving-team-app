@@ -29,6 +29,7 @@ import { getAccountAccessLink } from '~/server/utils/account-access-link'
 import { getTerminologyDefaults, type Terminology } from '~/composables/useTerminology'
 import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { meetingLinkAnchor, resolveAppointmentMeeting } from '~/server/utils/meeting-link'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 const FALLBACK_EVENT_TYPE_LABELS: Record<string, string> = {
   lesson:     'Termin',
@@ -50,15 +51,8 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 }
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = Date.now()
-
-  // ── Auth ────────────────────────────────────────────────────
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    logger.warn('⚠️ Unauthorized cron attempt on send-appointment-reminders')
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
 
   const supabase = getSupabaseAdmin()
   const now = new Date()

@@ -32,11 +32,23 @@ describe('P1 tenant HTML sanitization', () => {
       'pages/booking/availability/[slug].vue',
       'components/TenantLogo.vue',
       'server/api/public/website/[subdomain]/legal.get.ts',
+      'components/ConfirmationDialog.vue',
     ]
     for (const rel of files) {
       const src = readFileSync(resolve(process.cwd(), rel), 'utf8')
       expect(src).toMatch(/sanitizeTenantHtml|sanitizeSvgMarkup/)
     }
+  })
+})
+
+describe('calendar ICS token entropy', () => {
+  it('generates calendar tokens with crypto.randomBytes instead of Math.random', () => {
+    const src = readFileSync(
+      resolve(process.cwd(), 'server/api/calendar/generate-token.post.ts'),
+      'utf8',
+    )
+    expect(src).toContain("randomBytes(32).toString('base64url')")
+    expect(src).not.toContain('Math.random()')
   })
 })
 
@@ -46,10 +58,20 @@ describe('P1 staff_working_hours RLS', () => {
     'utf8',
   )
 
-  it('drops the unscoped own-hours FOR ALL policy and requires a role + tenant WITH CHECK', () => {
+  it('drops the live FOR ALL isolation policy and anonymous SELECT by exact name', () => {
+    expect(sql).toContain('DROP POLICY IF EXISTS staff_working_hours_tenant_isolation')
+    expect(sql).toContain('DROP POLICY IF EXISTS "anon_read_staff_working_hours"')
     expect(sql).toContain('DROP POLICY IF EXISTS "Staff can manage their own working hours"')
-    expect(sql).toContain('staff_working_hours_mutate_own')
-    expect(sql).toContain('WITH CHECK')
-    expect(sql).toContain("role IN ('admin', 'staff', 'tenant_admin', 'super_admin')")
+    expect(sql).toContain('REVOKE ALL ON TABLE public.staff_working_hours FROM anon')
+  })
+
+  it('splits INSERT/UPDATE/DELETE with WITH CHECK that the target staff is in the session tenant', () => {
+    expect(sql).toContain('staff_working_hours_insert')
+    expect(sql).toContain('staff_working_hours_update')
+    expect(sql).toContain('staff_working_hours_delete')
+    expect(sql).toContain('target.tenant_id = staff_working_hours.tenant_id')
+    expect(sql).not.toMatch(/CREATE POLICY[\s\S]{0,80}staff_working_hours_mutate_own[\s\S]{0,40}FOR ALL/i)
+    expect(sql).not.toMatch(/CREATE POLICY[\s\S]{0,80}staff_working_hours_admin_mutate[\s\S]{0,40}FOR ALL/i)
+    expect(sql).not.toMatch(/CREATE POLICY[\s\S]{0,80}staff_working_hours_tenant_isolation[\s\S]{0,40}FOR ALL/i)
   })
 })

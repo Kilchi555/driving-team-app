@@ -1,7 +1,7 @@
-import { defineEventHandler, getHeader } from 'h3'
+import { defineEventHandler } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { uploadGbpPhoto, getGbpAutomationSettings, listTenantGbpLocations } from '~/server/utils/gbp'
-import { assertCronAuth } from '~/server/utils/gbp-automation'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 import {
   eligiblePhotoCandidates,
   normalizePhotosPerWeek,
@@ -19,7 +19,7 @@ import {
  * Schedule: daily 08:15 UTC
  */
 export default defineEventHandler(async (event) => {
-  assertCronAuth(getHeader(event, 'authorization') || undefined)
+  assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
   const { data: connections } = await supabase.from('tenant_google_connections').select('tenant_id')

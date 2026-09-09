@@ -64,6 +64,18 @@ describe('P1-01 assertCronRequest fail-closed', () => {
     }
   })
 
+  it('rejects a missing Authorization header when the secret is configured', async () => {
+    process.env.CRON_SECRET = 'test-cron-secret'
+    mocks.getHeader.mockReturnValue(undefined)
+    const fn = await load()
+    try {
+      fn({} as never)
+      throw new Error('expected 401')
+    } catch (error) {
+      expect(error).toMatchObject({ statusCode: 401 })
+    }
+  })
+
   it('accepts a valid bearer secret', async () => {
     process.env.CRON_SECRET = 'test-cron-secret'
     mocks.getHeader.mockImplementation((_event: unknown, name: string) => {
@@ -72,5 +84,37 @@ describe('P1-01 assertCronRequest fail-closed', () => {
     })
     const fn = await load()
     expect(() => fn({} as never)).not.toThrow()
+  })
+})
+
+describe('isInternalSecretRequest', () => {
+  afterEach(() => {
+    mocks.getHeader.mockReset()
+    delete process.env.CRON_SECRET
+    delete process.env.INTERNAL_API_SECRET
+  })
+
+  async function loadInternal() {
+    return (await import('../require-staff-or-internal')).isInternalSecretRequest
+  }
+
+  it('rejects x-vercel-cron without an internal secret header', async () => {
+    process.env.CRON_SECRET = 'test-cron-secret'
+    mocks.getHeader.mockImplementation((_event: unknown, name: string) => {
+      if (name === 'x-vercel-cron') return '1'
+      return undefined
+    })
+    const fn = await loadInternal()
+    expect(fn({} as never)).toBe(false)
+  })
+
+  it('accepts a matching x-internal-secret', async () => {
+    process.env.CRON_SECRET = 'test-cron-secret'
+    mocks.getHeader.mockImplementation((_event: unknown, name: string) => {
+      if (name === 'x-internal-secret') return 'test-cron-secret'
+      return undefined
+    })
+    const fn = await loadInternal()
+    expect(fn({} as never)).toBe(true)
   })
 })

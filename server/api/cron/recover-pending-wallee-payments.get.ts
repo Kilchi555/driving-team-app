@@ -8,6 +8,7 @@ import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
 import { sendOnlinePaymentReceiptsSafe } from '~/server/utils/online-payment-receipt'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 const STATUS_MAPPING: Record<string, string> = {
   'PENDING': 'pending',
@@ -24,22 +25,10 @@ const STATUS_MAPPING: Record<string, string> = {
 }
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = Date.now()
   
   try {
-    // ✅ SECURITY: Verify cron secret (Vercel sends Authorization: Bearer <secret>)
-    const secret = process.env.CRON_SECRET
-    if (secret && secret.trim() !== '') {
-      const authHeader = getHeader(event, 'authorization')
-      const vercelCronHeader = getHeader(event, 'x-vercel-cron')
-      const isValidSecret = authHeader === `Bearer ${secret}`
-      const isVercelCron = vercelCronHeader === '1'
-      if (!isValidSecret && !isVercelCron) {
-        logger.warn('❌ Invalid cron secret')
-        throw createError({ statusCode: 401, statusMessage: 'Invalid cron secret' })
-      }
-    }
-
     logger.info('🔄 Starting Wallee payment recovery cron...')
 
     const supabase = getSupabaseAdmin()

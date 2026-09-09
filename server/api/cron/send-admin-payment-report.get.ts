@@ -18,9 +18,10 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
-import { getHeader, getQuery } from 'h3'
+import { getQuery } from 'h3'
 import { loadPaymentReminderSettingsByTenant } from '~/server/utils/payment-reminder-settings'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 // Swiss rounding: nearest 0.05 CHF
 function chf(rappen: number): string {
@@ -36,14 +37,9 @@ const METHOD_LABELS: Record<string, string> = {
 }
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = Date.now()
 
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    logger.warn('⚠️ Unauthorized cron attempt on send-admin-payment-report')
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
 
   const supabase = getSupabaseAdmin()
   const now      = new Date()

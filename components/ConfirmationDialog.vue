@@ -24,7 +24,7 @@
         
         <!-- Details falls vorhanden -->
         <div v-if="details" class="mt-4 p-3 bg-gray-50 rounded-lg">
-          <div class="text-sm text-gray-600" v-html="details"></div>
+          <div class="text-sm text-gray-600" v-html="safeDetails"></div>
         </div>
       </div>
 
@@ -53,6 +53,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { sanitizeTenantHtml } from '~/utils/sanitize-tenant-html'
+
 interface Props {
   isVisible: boolean
   title: string
@@ -76,6 +79,8 @@ const emit = defineEmits<{
   cancel: []
   close: []
 }>()
+
+const safeDetails = computed(() => sanitizeTenantHtml(props.details))
 
 const handleConfirm = () => {
   emit('confirm')

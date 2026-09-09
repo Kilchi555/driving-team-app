@@ -32,13 +32,38 @@ These were the confirmed P0s. Service role remains because RLS is not a substitu
 | `server/api/send-invite-email.post.ts` | Send email | `requireTenantStaff` + appointment ownership | Session tenant |
 | `server/api/emails/send-course-enrollment-confirmation.post.ts` | Send email | `requireStaffOrInternal` + registration tenant | Registration tenant |
 | `server/api/sari/lookup-customer.post.ts` | SARI + public enrollment | Public: slug → tenant, rate limit | Slug-derived tenant |
-| `server/api/shop/resolve-customer.post.ts` | Find/create guest | Public: rate limit; no PII/token in response | Requested tenant id is a shop context, not auth |
+| `server/api/shop/resolve-customer.post.ts` | Find/create guest | Public: rate limit; no PII/token in response | Slug preferred; UUID still accepted as shop context, not auth |
 | `server/api/whitelabel/create-app.post.ts` | `app_configs` + GitHub | `requireSuperAdmin` | `tenantId` is a platform resource id |
-| `server/api/appointments/notify-change.post.ts` | Notify customer | `requireTenantStaff` + appointment in tenant | Appointment `user_id` only |
+| `server/api/appointments/notify-change.post.ts` | Notify customer | `requireTenantStaff` + appointment in tenant + self-or-admin `staff_id` | Appointment `user_id` only |
+| `server/api/availability/queue-recalc.post.ts` | Queue availability | `requireStaffOrInternal`; staff uses session tenant + `assertSelfOrTenantAdmin`; internal verifies staff in body tenant | Body `tenant_id` is not authorization |
+| `server/api/staff/working-hours.post.ts` | Hours mutation | `requireTenantStaff` + `authorizeWorkingHoursMutation` | Session tenant; self or tenant-admin |
+| `server/api/staff/working-hours-manage.post.ts` | Hours mutation + slot release | same | Session tenant; self or tenant-admin |
+| `server/api/staff/get-working-hours.get.ts` | Hours read | same | Session tenant; self or tenant-admin |
+| `server/api/database/query.post.ts` (`staff_working_hours` writes) | **Must not** use service role | `getAuthenticatedUserWithDbId` + `authorizeWorkingHoursMutation` then **user JWT client** | Session tenant; self or tenant-admin. Other whitelisted tables still use service role after tenant filter (residual). |
 | `server/api/booking/cancel-reservation.post.ts` | Delete reservation | guest email proof **or** staff same tenant | Row tenant |
 | `server/api/auth/upload-document.post.ts` | Storage upload | owner / staff / registration window | DB user tenant; bucket pinned |
 
-Cash and course registration **writes from the browser** are intended to fail after the unapplied RLS migrations. Server APIs above keep working via service role.
+Cash JWT **writes** are denied after the unapplied P0-08 migration (SELECT remains for office UI). Course registration roster JWT writes remain for staff; payment/SARI columns are frozen by trigger (`payment_status`, `payment_id`, `amount_paid_rappen`, `payment_method`, `discount_applied_rappen`, `sari_data`, `sari_synced`, `sari_synced_at`, `sari_faberid`, `sari_license_id`, `sari_licenses`). `sari_synced_by` is not a production column. Server APIs above keep working via service role.
+
+## Working-hours write paths (P1-04)
+
+| Endpoint | Auth | Actor | Tenant | Ownership | Why service role |
+| --- | --- | --- | --- | --- | --- |
+| `/api/staff/working-hours` | `requireTenantStaff` | session user | session `tenant_id` | `authorizeWorkingHoursMutation` | Cross-table users lookup + hours write after authz. RLS is not the enforcement boundary here. |
+| `/api/staff/working-hours-manage` | same | same | same | same | Slot release + hours delete/toggle after authz. |
+| `/api/staff/get-working-hours` | same | same | same | same | Read of another instructor is admin-only. |
+| `/api/database/query` hours write | session JWT | session user | session `tenant_id` | `authorizeWorkingHoursMutation` **before** mutation | **Not used.** Mutation goes through the user JWT client so RLS applies. |
+| `staff/register`, `tenants/create-admin` | invitation / registration token | new user | derived from token | inserts the new user's own hours | Creating the first row for a user who may not yet have a staff JWT. |
+
+A service-role hours write without `authorizeWorkingHoursMutation` (or equivalent self-or-tenant-admin check) is a blocker.
+
+## Course registration payment writes
+
+| Endpoint | Auth | Why service role |
+| --- | --- | --- |
+| `courses/enroll-cash`, `courses/enroll`, admin enroll | staff/admin session | Must set payment fields the JWT trigger forbids |
+| Wallee webhook | provider signature | Payment capture |
+| SARI sync crons/APIs | cron secret / staff | `sari_*` columns |
 
 ## Public / webhook / cron (must stay privileged)
 

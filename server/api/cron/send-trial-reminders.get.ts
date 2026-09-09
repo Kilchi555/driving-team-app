@@ -6,7 +6,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
-import { getHeader } from 'h3'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 const BASE_URL = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 
@@ -54,12 +54,7 @@ function emailWrapper(content: string) {
 }
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    logger.warn('⚠️ Unauthorized cron attempt on send-trial-reminders')
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
   const now = new Date()

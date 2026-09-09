@@ -109,6 +109,8 @@ describe('P0-04 Stripe Connect source contract', () => {
     expect(uiSrc).not.toContain('tenantId: props.tenantId')
     expect(migrationSrc).toContain('stripe_connect_account_id')
     expect(migrationSrc).toContain('REVOKE UPDATE (stripe_connect_account_id)')
+    expect(migrationSrc).toContain('ADD COLUMN IF NOT EXISTS stripe_connect_account_id')
+    expect(migrationSrc).toContain('tenants_stripe_connect_account_id_uidx')
   })
 })
 

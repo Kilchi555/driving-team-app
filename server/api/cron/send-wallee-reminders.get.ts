@@ -12,18 +12,15 @@
 // Schedule: daily at 09:00 UTC (vercel.json)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { defineEventHandler, createError, getHeader } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 const REMINDER_DAYS = [10, 20, 27]
 
 export default defineEventHandler(async (event) => {
-  const cronSecret = process.env.CRON_SECRET
-  const authHeader = getHeader(event, 'authorization')
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
   const now = new Date()

@@ -78,7 +78,12 @@ describe('P1-10 notify-change IDOR', () => {
           eq: vi.fn(() => ({
             eq: vi.fn(() => ({
               maybeSingle: vi.fn(async () => ({
-                data: { user_id: 'user-a', start_time: '2026-09-09T10:00:00Z', tenant_id: 'tenant-a' },
+                data: {
+                  user_id: 'user-a',
+                  start_time: '2026-09-09T10:00:00Z',
+                  tenant_id: 'tenant-a',
+                  staff_id: 'staff-a',
+                },
                 error: null,
               })),
             })),
@@ -104,7 +109,12 @@ describe('P1-10 notify-change IDOR', () => {
           eq: vi.fn(() => ({
             eq: vi.fn(() => ({
               maybeSingle: vi.fn(async () => ({
-                data: { user_id: 'user-a', start_time: '2026-09-09T10:00:00Z', tenant_id: 'tenant-a' },
+                data: {
+                  user_id: 'user-a',
+                  start_time: '2026-09-09T10:00:00Z',
+                  tenant_id: 'tenant-a',
+                  staff_id: 'staff-a',
+                },
                 error: null,
               })),
             })),
@@ -121,5 +131,35 @@ describe('P1-10 notify-change IDOR', () => {
         appointmentId: 'apt-1',
       }),
     )
+  })
+
+  it('rejects a staff member notifying another instructor\'s appointment', async () => {
+    mocks.requireTenantStaff.mockResolvedValue(staffActor)
+    mocks.readBody.mockResolvedValue({
+      appointmentId: 'apt-1',
+      type: 'cancelled',
+    })
+    mocks.getSupabaseAdmin.mockReturnValue({
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn(async () => ({
+                data: {
+                  user_id: 'user-a',
+                  start_time: '2026-09-09T10:00:00Z',
+                  tenant_id: 'tenant-a',
+                  staff_id: 'staff-b',
+                },
+                error: null,
+              })),
+            })),
+          })),
+        })),
+      })),
+    })
+
+    await expect(handler().then((fn) => fn({}))).rejects.toMatchObject({ statusCode: 403 })
+    expect(mocks.notifyCustomerAppointmentChange).not.toHaveBeenCalled()
   })
 })

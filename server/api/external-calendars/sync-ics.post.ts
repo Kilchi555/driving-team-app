@@ -10,6 +10,7 @@ import { probeIcsUrl } from '~/server/utils/probe-ics-url'
 import { humanizeIcsFetchError } from '~/utils/ics-url'
 import { SYNC_LOOKBACK_DAYS } from '~/server/utils/sync-external-calendars-job'
 import { logger } from '~/utils/logger'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 interface ICSImportRequest {
   calendar_id: string
@@ -257,13 +258,10 @@ export default defineEventHandler(async (event): Promise<ICSImportResponse> => {
     
     for (const staffId of affectedStaffIds) {
       try {
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: {
-            staff_id: staffId,
-            tenant_id: calendar.tenant_id,
-            trigger: 'external_event'
-          }
+        void enqueueStaffAvailabilityRecalc({
+          staff_id: staffId,
+          tenant_id: calendar.tenant_id,
+          trigger: 'external_event',
         })
       } catch (queueError: any) {
         logger.warn(`⚠️ Failed to queue staff ${staffId} for recalc:`, queueError.message)

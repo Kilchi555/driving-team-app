@@ -52,6 +52,7 @@ import { abortCheckoutAfterBenefitLockFail, benefitLockUnavailablePayload, lockC
 import { evaluateClientEmailClaim, pendingContactMismatch } from '~/server/utils/auth-email-claim'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 import { pickAvailableRoomId, resolveRoomSettings, type RoomServiceType } from '~/server/utils/room-availability'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 import {
   guestBookingPriceRuleType,
   guestSlotCategoryMismatchReason,
@@ -1030,10 +1031,11 @@ export default defineEventHandler(async (event) => {
     .catch(() => {})
 
   // ── Trigger availability recalculation (fire-and-forget) ─────────────────
-  $fetch('/api/availability/queue-recalc', {
-    method: 'POST',
-    body: { staff_id: slot.staff_id, tenant_id: tenantId, trigger: 'appointment' },
-  }).catch(() => {})
+  void enqueueStaffAvailabilityRecalc({
+    staff_id: slot.staff_id,
+    tenant_id: tenantId,
+    trigger: 'appointment',
+  })
 
   // ── Send onboarding SMS + Email (fire-and-forget) ────────────────────────
   // Priority: Email > SMS (only send SMS if no email)

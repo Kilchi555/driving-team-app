@@ -5,13 +5,10 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { isScheduleDueNow } from '~/server/utils/campaign-schedule'
 import { queueCampaignSend } from '~/server/utils/marketing-campaign-send'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
   const now = new Date()

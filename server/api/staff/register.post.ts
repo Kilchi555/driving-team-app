@@ -7,6 +7,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateBasicPassword, validateEmail } from '~/server/utils/validators'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -579,13 +580,10 @@ export default defineEventHandler(async (event) => {
 
     // 11. Queue availability recalc so online-bookable slots appear without waiting for nightly cron
     try {
-      await $fetch('/api/availability/queue-recalc', {
-        method: 'POST',
-        body: {
-          staff_id: newUser.id,
-          tenant_id: invitation.tenant_id,
-          trigger: 'settings_change',
-        },
+      void enqueueStaffAvailabilityRecalc({
+        staff_id: newUser.id,
+        tenant_id: invitation.tenant_id,
+        trigger: 'settings_change',
       })
       logger.debug('✅ Availability recalc queued for new staff')
     } catch (recalcErr: any) {

@@ -60,9 +60,9 @@ Live role values: `client`, `staff`, `admin`, `affiliate`, `student`, `super_adm
 ## Rate limiting / cron / SARI / Stripe
 
 - Rate limit: `server/utils/rate-limiter.ts` + `getClientIP` (`server/utils/ip-utils.ts`).
-- SARI authenticated ops: `server/utils/sari-rate-limit.ts` (currently fail-open on limiter errors). Public lookup had **no** limit.
-- Cron: `assertCronRequest` is fail-closed (Bearer `CRON_SECRET` required). Some older cron handlers still have inline checks.
-- Stripe Connect: unauthenticated create/status handlers; **no** `stripe_connect_account_id` column on `tenants` (only billing customer/subscription ids).
+- SARI authenticated ops: `server/utils/sari-rate-limit.ts` (currently fail-open on limiter errors). Public lookup is slug-bound + in-memory 5/min. Enrollment still needs name/email/phone/address from SARI (data minimization would break autofill).
+- Cron: every `server/api/cron/*` handler (except re-exports) calls `assertCronRequest` first. Bearer `CRON_SECRET` required; missing secret and `x-vercel-cron` alone are 401. `verifyCronToken` wraps the same helper. `CRON_SECRET` must exist in production or the cron fleet is disabled.
+- Stripe Connect: handlers bind the session tenant. Column `tenants.stripe_connect_account_id` exists only as a **repo migration** (`migrations/20260909_stripe_connect_account_id.sql`) — not applied to production by this agent.
 
 ## Public flows that must keep working
 
@@ -70,8 +70,27 @@ Live role values: `client`, `staff`, `admin`, `affiliate`, `student`, `super_adm
 - Public booking locations/staff
 - Guest course enrollment + SARI identity lookup
 - Waitlist signup
-- Shop guest checkout (email is **not** proof of ownership)
+- Shop guest checkout (email is **not** proof of ownership; prefer `tenant_slug`)
 
 ## Confirmed P0 targets (from independent validation)
 
 Staff APIs, calendar busy-times, platform analytics, Stripe Connect, invite/enrollment email, SARI lookup, shop resolve-customer, `cash_balances` / `course_registrations` RLS, whitelabel `body.tenantId` IDOR.
+
+## Validation follow-up (this pass)
+
+| Finding | Code | Production |
+| --- | --- | --- |
+| P0-08 cash JWT writes | SELECT-only + REVOKE writes | migration required |
+| P0-09 payment fields | staff roster JWT kept; trigger freezes payment/SARI fields | migration required |
+| Stripe column | idempotent ADD COLUMN + unique index + REVOKE UPDATE | migration required |
+| P1-04 working hours | DROP `staff_working_hours_tenant_isolation` + `anon_read_staff_working_hours`; split INSERT/UPDATE/DELETE; no FOR ALL | migration required |
+| `/api/database/query` hours | JWT client + `authorizeWorkingHoursMutation`; staff cannot write another instructor | none (code) |
+| Cron fleet | `assertCronRequest` first | `CRON_SECRET` required |
+| queue-recalc | internal secret or staff session; ignore spoofed tenant | `CRON_SECRET` for internal header |
+| process-recalc-queue | fail-closed | `CRON_SECRET` required |
+| Shop | prefer `tenant_slug`; UUID still accepted | none |
+| notify-change | self or tenant admin on `staff_id` | none |
+| Calendar token | `crypto.randomBytes` | none |
+| P1-06 payments | not refactored; course JWT payment_status frozen by P0-09 trigger | see payment-operations (staff API) |
+
+**LIMITATION:** RLS tests parse SQL. There is no live JWT probe database in CI.
