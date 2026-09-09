@@ -802,7 +802,7 @@
 
         <!-- Modal Content -->
         <div class="px-6 py-6">
-          <div v-if="currentRegulation" v-html="currentRegulation.content" class="prose prose-sm max-w-none text-gray-700"></div>
+          <div v-if="currentRegulation" v-html="sanitizedRegulationContent" class="prose prose-sm max-w-none text-gray-700"></div>
         </div>
 
         <!-- Modal Footer -->
@@ -832,6 +832,7 @@ import { useTenantBranding } from '~/composables/useTenantBranding'
 import { saveCredentials } from '~/utils/save-credentials'
 import { useFallbackLogger } from '~/composables/useFallbackLogger'
 import { mergeTerminology, isDrivingSchoolBusinessType, type Terminology } from '~/composables/useTerminology'
+import { sanitizeTenantHtml } from '~/utils/sanitize-tenant-html'
 
 const { primaryColor, loadTenantBrandingById } = useTenantBranding()
 const { logFallbackUsed } = useFallbackLogger()
@@ -880,6 +881,7 @@ const showErrorModal = ref(false)
 const showSuccessModal = ref(false)
 const showRegulationModal = ref(false)
 const currentRegulation = ref<any>(null)
+const sanitizedRegulationContent = computed(() => sanitizeTenantHtml(currentRegulation.value?.content))
 const tenantContactEmail = ref('')
 const passwordTooShort = computed(() => form.password.length > 0 && form.password.length < 12)
 const passwordMismatch = computed(() => form.confirmPassword.length > 0 && form.password !== form.confirmPassword)

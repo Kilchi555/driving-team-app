@@ -5,6 +5,7 @@ import {
   buildImpressumHtml,
 } from '~/server/utils/website-premium'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
+import { sanitizeTenantHtml } from '~/utils/sanitize-tenant-html'
 
 export default defineEventHandler(async (event) => {
   const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
@@ -67,7 +68,7 @@ export default defineEventHandler(async (event) => {
         return {
           type,
           title: reg.title || 'Datenschutz',
-          html: reg.content,
+          html: sanitizeTenantHtml(reg.content),
           tenant: { name: tenant.name },
         }
       }
@@ -89,7 +90,7 @@ export default defineEventHandler(async (event) => {
   return {
     type,
     title: type === 'impressum' ? 'Impressum' : 'Datenschutz',
-    html,
+    html: sanitizeTenantHtml(html),
     tenant: { name: tenant.name },
   }
 })
