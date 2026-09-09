@@ -4,12 +4,12 @@
  *
  * Schedule: daily 08:10 UTC
  */
-import { getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { logAudit } from '~/server/utils/audit'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 import {
   buildStaffInviteEmailHtml,
   isDueForStaffInviteReminder,
@@ -19,13 +19,8 @@ const BASE_URL = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
 const MAX_PER_RUN = 80
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = Date.now()
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    logger.warn('⚠️ Unauthorized cron attempt on send-staff-invite-reminders')
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
 
   const supabase = getSupabaseAdmin()
   const now = new Date()

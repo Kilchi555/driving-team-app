@@ -1,31 +1,16 @@
-import { getHeader } from 'h3'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 /**
- * Verify that request is from Vercel Cron
- * Vercel sends an Authorization header with Bearer token
+ * Verify that request is from Vercel Cron.
+ * Fail-closed via assertCronRequest (Bearer CRON_SECRET required).
  */
 export function verifyCronToken(event: any): boolean {
-  const cronSecret = process.env.CRON_SECRET
-  
-  if (!cronSecret) {
-    console.error('❌ CRON_SECRET not configured in environment')
+  try {
+    assertCronRequest(event)
+    return true
+  } catch {
     return false
   }
-  
-  const authHeader = getHeader(event, 'authorization')
-  if (!authHeader) {
-    console.error('❌ No authorization header')
-    return false
-  }
-  
-  const token = authHeader.replace('Bearer ', '')
-  
-  if (token !== cronSecret) {
-    console.error('❌ Invalid cron token')
-    return false
-  }
-  
-  return true
 }
 
 /**

@@ -11,20 +11,16 @@
 // Test mode: ?test_tenant_id=<UUID>
 // ============================================================
 
-import { getHeader, getQuery } from 'h3'
+import { getQuery } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { runScheduledAutoInvoices } from '~/server/utils/auto-invoice-on-complete'
 import logger from '~/utils/logger'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = Date.now()
 
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    logger.warn('⚠️ Unauthorized cron attempt on auto-invoice-scheduled')
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
 
   const query = getQuery(event)
   const testTenantId = typeof query.test_tenant_id === 'string' ? query.test_tenant_id : null

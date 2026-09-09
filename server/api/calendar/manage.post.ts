@@ -10,6 +10,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 export default defineEventHandler(async (event) => {
   let action: string | undefined
@@ -165,13 +166,10 @@ export default defineEventHandler(async (event) => {
             staffId: apt.staff_id,
             tenantId: apt.tenant_id
           })
-          await $fetch('/api/availability/queue-recalc', {
-            method: 'POST',
-            body: {
-              staff_id: apt.staff_id,
-              tenant_id: apt.tenant_id,
-              trigger: 'appointment_edit'
-            }
+          await enqueueStaffAvailabilityRecalc({
+            staff_id: apt.staff_id,
+            tenant_id: apt.tenant_id,
+            trigger: 'appointment_edit',
           })
           logger.debug('✅ Queued recalculation after appointment update')
         } catch (queueError: any) {

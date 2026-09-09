@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { defineEventHandler, createError } from 'h3'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
@@ -57,13 +58,7 @@ export default defineEventHandler(async (event) => {
       console.warn('⚠️ Failed to invalidate old token (continuing):', invalidateErr)
     }
 
-    // Generate random token (26 chars, alphanumeric)
-    const calendarToken = Math.random()
-      .toString(36)
-      .substring(2, 15) +
-      Math.random()
-      .toString(36)
-      .substring(2, 15)
+    const calendarToken = randomBytes(32).toString('base64url')
 
     // Store new token in database
     const { error: insertError } = await serviceSupabase

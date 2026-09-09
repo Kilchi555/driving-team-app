@@ -1,45 +1,63 @@
+import { defineEventHandler, getQuery, createError } from 'h3'
 import Stripe from 'stripe'
+import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { requireTenantAdmin } from '~/server/utils/require-tenant-auth'
 
-export default defineEventHandler(async (event) => {
-  const query = getQuery(event)
-  const { accountId } = query
-
-  if (!accountId) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Account ID is required.'
-    })
-  }
-
+function stripeConnectClient() {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY
   if (!stripeSecretKey) {
     throw createError({
       statusCode: 500,
-      statusMessage: 'Stripe secret key not configured.'
+      statusMessage: 'Payment provider is not configured',
     })
   }
-
-  const stripe = new Stripe(stripeSecretKey, {
+  return new Stripe(stripeSecretKey, {
     apiVersion: '2024-04-10',
   })
+}
+
+export default defineEventHandler(async (event) => {
+  const actor = await requireTenantAdmin(event)
+  getQuery(event)
+
+  const supabase = getSupabaseAdmin()
+  const { data: tenant, error: tenantError } = await supabase
+    .from('tenants')
+    .select('id, stripe_connect_account_id')
+    .eq('id', actor.tenant_id)
+    .maybeSingle()
+
+  if (tenantError || !tenant) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
+  const accountId = tenant.stripe_connect_account_id as string | null
+  if (!accountId) {
+    return {
+      connected: false,
+      id: null,
+      charges_enabled: false,
+      payouts_enabled: false,
+      details_submitted: false,
+    }
+  }
 
   try {
-    const account = await stripe.accounts.retrieve(accountId as string)
+    const stripe = stripeConnectClient()
+    const account = await stripe.accounts.retrieve(accountId)
 
     return {
+      connected: true,
       id: account.id,
-      charges_enabled: account.charges_enabled,
-      payouts_enabled: account.payouts_enabled,
-      details_submitted: account.details_submitted,
-      requirements: account.requirements,
-      business_profile: account.business_profile
+      charges_enabled: !!account.charges_enabled,
+      payouts_enabled: !!account.payouts_enabled,
+      details_submitted: !!account.details_submitted,
     }
-
   } catch (error: any) {
-    console.error('Stripe Connect account status check failed:', error)
+    if (error?.statusCode) throw error
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to check account status.'
+      statusMessage: 'Failed to check account status',
     })
   }
 })

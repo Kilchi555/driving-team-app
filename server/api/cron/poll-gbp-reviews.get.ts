@@ -1,7 +1,8 @@
-import { defineEventHandler, getHeader } from 'h3'
+import { defineEventHandler } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getGbpReviews, getGbpAutomationSettings, listTenantGbpLocations, replyToGbpReview } from '~/server/utils/gbp'
-import { assertCronAuth, gbpStarToNumber, generateGbpReviewSuggestion, isGbpReviewHours, shouldAutoPublishReview } from '~/server/utils/gbp-automation'
+import { gbpStarToNumber, generateGbpReviewSuggestion, isGbpReviewHours, shouldAutoPublishReview } from '~/server/utils/gbp-automation'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 /**
  * GET /api/cron/poll-gbp-reviews
@@ -10,7 +11,7 @@ import { assertCronAuth, gbpStarToNumber, generateGbpReviewSuggestion, isGbpRevi
  * Schedule: :07/:37 from 05–17 UTC; skipped outside 07:00–19:00 Europe/Zurich.
  */
 export default defineEventHandler(async (event) => {
-  assertCronAuth(getHeader(event, 'authorization') || undefined)
+  assertCronRequest(event)
 
   if (!isGbpReviewHours()) {
     return { ok: true, skipped: 'outside_review_hours', timezone: 'Europe/Zurich', window: '07:00-19:00' }

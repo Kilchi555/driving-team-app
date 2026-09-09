@@ -1,6 +1,7 @@
 import { defineEventHandler, createError, getHeader } from 'h3'
 import { sendEmail } from '~/server/utils/email'
 import { loadRotationLog, loadCredentialConfig, DEFAULT_INTERVALS } from '~/server/api/super-admin/credential-status.get'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 // All credentials with rotation instructions for the email
 const CREDENTIAL_META: Record<string, { service: string; description: string; steps: string[] }> = {
@@ -302,13 +303,8 @@ function buildEmailHtml(
 }
 
 export default defineEventHandler(async (event) => {
-  // Verify cron secret
-  const secret = getHeader(event, 'authorization')?.replace('Bearer ', '')
+  assertCronRequest(event)
   const sendTest = getHeader(event, 'x-test-email') === '1'
-
-  if (!sendTest && secret !== process.env.CRON_SECRET) {
-    throw createError({ statusCode: 401, message: 'Unauthorized' })
-  }
 
   const [rotationLog, config] = await Promise.all([
     loadRotationLog(),

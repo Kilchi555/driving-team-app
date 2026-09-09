@@ -26,7 +26,12 @@
         class="feature-card rounded-lg p-4 flex items-center gap-3"
       >
         <span class="text-xl">🌍</span>
-        <p class="text-gray-700 text-sm" v-html="extra" />
+        <p class="text-gray-700 text-sm">
+          <template v-for="(segment, segmentIndex) in toEmphasisSegments(extra)" :key="segmentIndex">
+            <strong v-if="segment.bold">{{ segment.text }}</strong>
+            <template v-else>{{ segment.text }}</template>
+          </template>
+        </p>
       </div>
     </div>
   </section>
@@ -45,6 +50,7 @@ const defaultFeatures = [
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { toEmphasisSegments } from '~/utils/inline-emphasis'
 
 const props = withDefaults(defineProps<{
   title: string

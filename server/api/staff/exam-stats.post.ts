@@ -1,21 +1,35 @@
-// server/api/staff/exam-stats.post.ts
-// Staff exam statistics endpoint
-
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import {
+  requireTenantStaff,
+  loadStaffInTenant,
+  assertSelfOrTenantAdmin,
+} from '~/server/utils/require-tenant-auth'
 
 export default defineEventHandler(async (event) => {
-  const body = readBody(event)
-  const { staff_id, tenant_id } = await body
+  const actor = await requireTenantStaff(event)
+  const body = await readBody(event)
+  const staffId = body?.staff_id
+
+  if (!staffId || typeof staffId !== 'string') {
+    throw createError({
+      statusCode: 400,
+      message: 'staff_id is required',
+    })
+  }
 
   const supabase = getSupabaseAdmin()
+  const staff = await loadStaffInTenant(supabase, staffId, actor.tenant_id, {
+    allowInactive: true,
+  })
+  assertSelfOrTenantAdmin(actor, staff.id)
 
   try {
-    // Get all appointments for this staff
     const { data: appointments, error: appointmentsError } = await supabase
       .from('appointments')
       .select('id, title, type, start_time, user_id')
-      .eq('staff_id', staff_id)
+      .eq('staff_id', staff.id)
+      .eq('tenant_id', actor.tenant_id)
       .not('status', 'is', null)
 
     if (appointmentsError) throw appointmentsError
@@ -24,8 +38,7 @@ export default defineEventHandler(async (event) => {
       return { success: true, data: { appointments: [], exam_results: [], students: [] } }
     }
 
-    // Get exam results — chunk to avoid URL length limits (PostgREST .in() limit)
-    const appointmentIds = appointments.map((apt: any) => apt.id)
+    const appointmentIds = appointments.map((apt: { id: string }) => apt.id)
     const CHUNK_SIZE = 100
     let exam_results: any[] = []
     for (let i = 0; i < appointmentIds.length; i += CHUNK_SIZE) {
@@ -39,7 +52,6 @@ export default defineEventHandler(async (event) => {
       if (data) exam_results = exam_results.concat(data)
     }
 
-    // Get student names
     const studentIds = [...new Set(appointments.map((apt: any) => apt.user_id).filter(Boolean))]
     let students: any[] = []
 
@@ -50,12 +62,12 @@ export default defineEventHandler(async (event) => {
           .from('users')
           .select('id, first_name, last_name')
           .in('id', chunk)
+          .eq('tenant_id', actor.tenant_id)
         if (studentsError) throw studentsError
         if (studentsData) students = students.concat(studentsData)
       }
     }
 
-    // Get examiner names
     const examinerIds = [...new Set(exam_results.map((exam: any) => exam.examiner_id).filter(Boolean))]
     let examiners: any[] = []
 
@@ -77,14 +89,15 @@ export default defineEventHandler(async (event) => {
         appointments,
         exam_results,
         students,
-        examiners
-      }
+        examiners,
+      },
     }
   } catch (err: any) {
+    if (err?.statusCode) throw err
     console.error('❌ Exam stats API error:', err)
     throw createError({
-      statusCode: err.statusCode || 500,
-      message: err.message || 'Failed to load exam statistics'
+      statusCode: 500,
+      message: err.message || 'Failed to load exam statistics',
     })
   }
 })

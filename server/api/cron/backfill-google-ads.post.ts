@@ -1,17 +1,14 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getTenantIdByGoogleAdsCustomer } from '~/server/utils/marketing-tenant'
 import { logger } from '~/utils/logger'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 // One-time backfill endpoint for Google Ads historical data.
 // Secured via CRON_SECRET (same as all other cron jobs).
 // Usage: POST /api/cron/backfill-google-ads
 // Body: { "start_date": "2025-01-01", "end_date": "2026-06-23" }
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const body = await readBody(event)
   const startDate: string = body?.start_date ?? '2025-01-01'

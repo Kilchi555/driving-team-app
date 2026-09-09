@@ -23,6 +23,8 @@ import {
   escapeHtml,
 } from '~/server/utils/branded-email'
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
+import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
+import { assertSameTenant } from '~/server/utils/require-tenant-auth'
 
 type ConfirmationPaymentMethod = 'wallee' | 'cash' | 'admin' | 'invoice' | 'paid' | 'reserve'
 
@@ -30,7 +32,6 @@ interface ConfirmationEmailRequest {
   courseRegistrationId: string
   paymentMethod: ConfirmationPaymentMethod
   totalAmount?: number // In CHF (optional, for cash display)
-  testEmail?: string  // Override recipient for testing
 }
 
 function adminPaymentMethodLabel(method: ConfirmationPaymentMethod, businessNoun = 'Unternehmen'): string {
@@ -46,9 +47,11 @@ function adminPaymentMethodLabel(method: ConfirmationPaymentMethod, businessNoun
 }
 
 export default defineEventHandler(async (event) => {
+  const access = await requireStaffOrInternal(event)
+
   try {
     const body = await readBody(event) as ConfirmationEmailRequest
-    const { courseRegistrationId, paymentMethod, totalAmount, testEmail } = body
+    const { courseRegistrationId, paymentMethod, totalAmount } = body
 
     logger.debug('📧 Sending course enrollment confirmation:', {
       courseRegistrationId,
@@ -81,6 +84,7 @@ export default defineEventHandler(async (event) => {
         first_name,
         last_name,
         user_id,
+        tenant_id,
         course_id,
         amount_paid_rappen,
         discount_applied_rappen,
@@ -116,9 +120,13 @@ export default defineEventHandler(async (event) => {
     if (enrollmentError || !enrollment) {
       logger.warn('❌ Course enrollment not found:', courseRegistrationId)
       throw createError({
-        statusCode: 404,
-        statusMessage: 'Course enrollment not found'
+        statusCode: access.mode === 'staff' ? 403 : 404,
+        statusMessage: access.mode === 'staff' ? 'Forbidden' : 'Course enrollment not found'
       })
+    }
+
+    if (access.mode === 'staff' && access.profile) {
+      assertSameTenant(enrollment.tenant_id, access.profile.tenant_id)
     }
 
     // Fallback: fetch email/name from users table if not stored on registration
@@ -363,7 +371,7 @@ export default defineEventHandler(async (event) => {
 
     // 5. Build HTML email with branded shell
     const enrollmentEmail = {
-      to: testEmail || enrollment.email,
+      to: enrollment.email,
       subject: emailSubject,
       html: buildBrandedEmailShell({
         title: 'Anmeldebestätigung',
@@ -426,7 +434,6 @@ export default defineEventHandler(async (event) => {
       return {
         success: true,
         message: 'Confirmation email sent',
-        email: enrollment.email
       }
     } catch (resendErr: any) {
       logger.warn('⚠️ Resend email service failed:', resendErr.message)
@@ -441,7 +448,6 @@ export default defineEventHandler(async (event) => {
       return {
         success: false,
         message: 'Email service unavailable - logged for manual sending',
-        email: enrollment.email
       }
     }
   } catch (error: any) {

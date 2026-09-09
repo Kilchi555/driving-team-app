@@ -311,7 +311,7 @@
                     v-if="mainCategory.icon_svg"
                     class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-3 sm:mb-4"
                   >
-                    <div class="w-14 h-14 sm:w-20 sm:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="mainCategory.icon_svg"></div>
+                    <div class="w-14 h-14 sm:w-20 sm:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="sanitizedCategoryIcon(mainCategory.icon_svg)"></div>
                   </div>
                   <div
                     v-else-if="usesOfferCardLayout(mainCategory)"
@@ -393,7 +393,7 @@
                   v-if="subCategory.icon_svg"
                   class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-3 sm:mb-4"
                 >
-                  <div class="w-14 h-14 sm:w-20 sm:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="subCategory.icon_svg"></div>
+                    <div class="w-14 h-14 sm:w-20 sm:h-20 [&>svg]:w-full [&>svg]:h-full" v-html="sanitizedCategoryIcon(subCategory.icon_svg)"></div>
                 </div>
                 <div
                   v-else
@@ -1905,6 +1905,7 @@ import { getSupabase } from '~/utils/supabase'
 import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import { snapDuration, type BookingPrefill } from '~/utils/booking-prefill'
 import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
+import { sanitizeSvgMarkup } from '~/utils/sanitize-tenant-html'
 
 type OnlinePayMethod = 'wallee' | 'invoice' | 'cash'
 const onlinePaymentMethods = ref<OnlinePayMethod[]>(['wallee'])
@@ -3050,6 +3051,7 @@ const categorySecondaryText = (category: any) => {
 }
 
 const usesIllustratedCategoryIcon = (category: any) => Boolean(category?.icon_svg)
+const sanitizedCategoryIcon = (svg: string | null | undefined) => sanitizeSvgMarkup(svg)
 
 const usesOfferCardLayout = (category: any) =>
   !isDrivingSchoolTenant.value || category?._source === 'event_type'

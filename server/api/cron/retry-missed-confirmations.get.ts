@@ -4,17 +4,14 @@
  *
  * Auth: Authorization: Bearer $CRON_SECRET
  */
-import { createError, defineEventHandler, getHeader } from 'h3'
+import { createError, defineEventHandler } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { dispatchAppointmentConfirmation } from '~/server/utils/dispatch-appointment-confirmation'
 import { logger } from '~/utils/logger'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
   const now = Date.now()

@@ -3,6 +3,10 @@ import { logger } from '~/utils/logger'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
+import {
+  authorizeWorkingHoursMutation,
+  type TenantActor,
+} from '~/server/utils/require-tenant-auth'
 
 /**
  * Generic secure database query endpoint
@@ -136,10 +140,10 @@ export default defineEventHandler(async (event) => {
     // Restrict select to whitelisted columns only — never allow '*' or arbitrary expressions
     const safeSelect = allowedColumns.join(', ')
 
-    // Write operations require staff or admin role — service_role bypasses RLS, so we enforce this here.
-    // SELECT is intentionally open to all authenticated users (user JWT + RLS still applies for reads).
+    // Writes require staff/admin. Non-hours tables still use service role after a tenant
+    // filter; staff_working_hours uses the JWT client after assertSelfOrTenantAdmin.
     if (['insert', 'update', 'delete'].includes(body.action)) {
-      if (!['admin', 'tenant_admin', 'staff'].includes(authUser.role)) {
+      if (!['admin', 'tenant_admin', 'staff', 'super_admin'].includes(authUser.role)) {
         logger.warn(`🚫 Write operation blocked for role '${authUser.role}' on table '${body.table}'`)
         throw createError({ statusCode: 403, statusMessage: 'Insufficient permissions for write operations' })
       }
@@ -175,8 +179,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, statusMessage: 'No auth token provided' })
     }
 
-    // For SELECT: use user JWT + ANON key → RLS applies
-    // For INSERT/UPDATE/DELETE: use service_role key → bypasses RLS (we enforce tenant isolation below)
+    // User JWT + anon key: SELECT always, and staff_working_hours writes (RLS applies).
     const supabase = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_ANON_KEY!,
@@ -191,13 +194,26 @@ export default defineEventHandler(async (event) => {
       }
     )
 
-    // Service-role client for writes (INSERT/UPDATE/DELETE) — bypasses RLS
-    // Safe because: auth is validated above, tenant isolation enforced below
+    // Service-role client for non-hours writes after tenant filter. Hours writes
+    // must not use this client — RLS plus assertSelfOrTenantAdmin both apply.
     const supabaseAdmin = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
+
+    const hoursActor: TenantActor = {
+      id: authUser.id,
+      tenant_id: authUser.tenant_id,
+      role: authUser.role,
+      email: (authUser.email || '') as string,
+      auth_user_id: authUser.auth_user_id,
+    }
+
+    const staffIdFromFilters = (filters?: QueryFilter[]) =>
+      filters?.find((filter) => filter.column === 'staff_id' && filter.operator === 'eq')?.value as
+        | string
+        | undefined
 
     logger.debug('📊 Executing database query:', {
       action: body.action,
@@ -287,23 +303,28 @@ export default defineEventHandler(async (event) => {
       if (!body.data) {
         throw createError({ statusCode: 400, statusMessage: 'Data required for insert' })
       }
-      // Strip any fields not in the whitelist
       const safeData = Object.fromEntries(
         Object.entries(body.data).filter(([k]) => allowedColumns.includes(k))
       )
       if (Object.keys(safeData).length === 0) {
         throw createError({ statusCode: 400, statusMessage: 'No valid columns provided for insert' })
       }
-      // Enforce tenant isolation: if the table has a tenant_id column, it must match the auth user's tenant
       if (allowedColumns.includes('tenant_id') && safeData.tenant_id && safeData.tenant_id !== authUser.tenant_id) {
         throw createError({ statusCode: 403, statusMessage: 'Tenant mismatch: cannot insert data for another tenant' })
       }
-      const result = await supabaseAdmin.from(body.table).insert(safeData).select(safeSelect)
-      data = result.data
-      error = result.error
+      if (body.table === 'staff_working_hours') {
+        await authorizeWorkingHoursMutation(supabaseAdmin, hoursActor, safeData.staff_id as string)
+        safeData.tenant_id = authUser.tenant_id
+        const result = await supabase.from(body.table).insert(safeData).select(safeSelect)
+        data = result.data
+        error = result.error
+      } else {
+        const result = await supabaseAdmin.from(body.table).insert(safeData).select(safeSelect)
+        data = result.data
+        error = result.error
+      }
     }
 
-    // HANDLE UPDATE — uses service_role to bypass RLS (auth already validated above)
     else if (body.action === 'update') {
       if (!body.data) {
         throw createError({ statusCode: 400, statusMessage: 'Data required for update' })
@@ -311,21 +332,26 @@ export default defineEventHandler(async (event) => {
       if (!body.filters || body.filters.length === 0) {
         throw createError({ statusCode: 400, statusMessage: 'Filters required for update' })
       }
-      // Strip any fields not in the whitelist
       const safeData = Object.fromEntries(
         Object.entries(body.data).filter(([k]) => allowedColumns.includes(k))
       )
       if (Object.keys(safeData).length === 0) {
         throw createError({ statusCode: 400, statusMessage: 'No valid columns provided for update' })
       }
-      query = supabaseAdmin.from(body.table).update(safeData)
+      const hoursWrite = body.table === 'staff_working_hours'
+      if (hoursWrite) {
+        const targetStaffId = staffIdFromFilters(body.filters)
+        await authorizeWorkingHoursMutation(supabaseAdmin, hoursActor, targetStaffId)
+        delete safeData.staff_id
+        delete safeData.tenant_id
+      }
+      query = (hoursWrite ? supabase : supabaseAdmin).from(body.table).update(safeData)
       for (const filter of body.filters) {
         switch (filter.operator) {
           case 'eq': query = query.eq(filter.column, filter.value); break
           case 'neq': query = query.neq(filter.column, filter.value); break
         }
       }
-      // Enforce tenant isolation: always filter by auth user's tenant_id for tables that have it
       if (allowedColumns.includes('tenant_id')) {
         query = query.eq('tenant_id', authUser.tenant_id)
       }
@@ -334,7 +360,6 @@ export default defineEventHandler(async (event) => {
       error = result.error
     }
 
-    // HANDLE DELETE — uses service_role to bypass RLS (auth already validated above)
     else if (body.action === 'delete') {
       if (!body.filters || body.filters.length === 0) {
         throw createError({
@@ -343,9 +368,14 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      query = supabaseAdmin.from(body.table).delete()
+      const hoursWrite = body.table === 'staff_working_hours'
+      if (hoursWrite) {
+        const targetStaffId = staffIdFromFilters(body.filters)
+        await authorizeWorkingHoursMutation(supabaseAdmin, hoursActor, targetStaffId)
+      }
 
-      // Apply filters
+      query = (hoursWrite ? supabase : supabaseAdmin).from(body.table).delete()
+
       for (const filter of body.filters) {
         switch (filter.operator) {
           case 'eq':
@@ -354,11 +384,9 @@ export default defineEventHandler(async (event) => {
           case 'neq':
             query = query.neq(filter.column, filter.value)
             break
-          // ... other operators
         }
       }
 
-      // Enforce tenant isolation: always filter by auth user's tenant_id for tables that have it
       if (allowedColumns.includes('tenant_id')) {
         query = query.eq('tenant_id', authUser.tenant_id)
       }

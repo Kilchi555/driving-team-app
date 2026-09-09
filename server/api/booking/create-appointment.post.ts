@@ -57,6 +57,7 @@ import {
 import { createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
 import { guestSlotCategoryMismatchReason, invalidDrivingLessonBasePriceReason } from '~/server/utils/guest-booking-price-rule'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -1101,17 +1102,10 @@ export default defineEventHandler(async (event: H3Event) => {
     // ============ LAYER 9: TRIGGER AVAILABILITY RECALCULATION ============
     // Fire-and-forget: recalculate slots for this staff so other customers
     // immediately see updated availability (don't await - non-blocking)
-    const cronSecret = process.env.CRON_SECRET
-    $fetch('/api/availability/queue-recalc', {
-      method: 'POST',
-      body: {
-        staff_id: slot.staff_id,
-        tenant_id: tenantId,
-        trigger: 'appointment'
-      },
-      headers: cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}
-    }).catch((err: any) => {
-      logger.warn('⚠️ Could not queue availability recalc after booking (non-critical):', err.message)
+    await enqueueStaffAvailabilityRecalc({
+      staff_id: slot.staff_id,
+      tenant_id: tenantId,
+      trigger: 'appointment',
     })
 
     if (!holdUntilPaid) {

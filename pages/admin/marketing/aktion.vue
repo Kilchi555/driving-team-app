@@ -267,7 +267,7 @@
           <div class="border rounded-xl p-4 bg-gray-50">
             <p class="text-xs text-gray-400 mb-2">Vorschau (mit Platzhaltern ersetzt) — nur Lesen</p>
             <p class="text-sm font-semibold text-gray-900 mb-2">{{ previewSubject(form.subject) }}</p>
-            <div class="text-sm text-gray-700 prose prose-sm max-w-none" v-html="previewHtml" />
+            <div class="text-sm text-gray-700 prose prose-sm max-w-none" v-html="sanitizedPreviewHtml" />
           </div>
         </div>
 
@@ -454,6 +454,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { sanitizeTenantHtml } from '~/utils/sanitize-tenant-html'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Aktion starten - Marketing' })
@@ -611,6 +612,7 @@ function previewSubject(s: string) {
 const previewHtml = computed(() => {
   try { return previewReplace(form.htmlBody || '', previewVars.value) } catch { return form.htmlBody }
 })
+const sanitizedPreviewHtml = computed(() => sanitizeTenantHtml(previewHtml.value))
 
 function courseDateLabel(c: any) {
   if (!c?.course_sessions?.length) return ''

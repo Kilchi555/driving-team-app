@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { sendEmail } from '~/server/utils/email'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 // Endpoint for a cron job to send trial expiry warnings.
 // Call daily via external cron (e.g. Vercel Cron, GitHub Actions, Supabase cron):
@@ -9,13 +10,7 @@ import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 //
 // Sends a warning email to tenants whose trial ends in exactly 7 days or 1 day.
 export default defineEventHandler(async (event) => {
-  // Simple secret check to prevent unauthorized calls
-  const cronSecret = process.env.CRON_SECRET
-  const authHeader = getHeader(event, 'authorization')
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
   const now = new Date()

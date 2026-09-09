@@ -7,16 +7,16 @@ import { logger } from '~/utils/logger'
 
 export interface ShopCustomer {
   id: string
-  type: 'guest' | 'login'
-  isNew: boolean
-  email: string
-  firstName: string
-  lastName: string
-  phone: string
-  street: string
-  streetNumber: string
-  zip: string
-  city: string
+  type?: 'guest' | 'login'
+  isNew?: boolean
+  email?: string
+  firstName?: string
+  lastName?: string
+  phone?: string
+  street?: string
+  streetNumber?: string
+  zip?: string
+  city?: string
 }
 
 interface ResolutionState {
@@ -42,7 +42,11 @@ export const useShopCheckout = () => {
   const isNewGuest = computed(() => resolutionState.value.customer?.isNew === true)
   const isLoginAccount = computed(() => resolutionState.value.customer?.type === 'login')
 
-  async function resolveCustomer(tenantId: string, email: string): Promise<ShopCustomer | null> {
+  async function resolveCustomer(
+    tenantKey: string,
+    email: string,
+    opts?: { tenantSlug?: string | null },
+  ): Promise<ShopCustomer | null> {
     // Debounce: don't resolve twice in short time
     if (resolutionState.value.resolvedAt) {
       const timeSinceLastResolve = Date.now() - new Date(resolutionState.value.resolvedAt).getTime()
@@ -56,12 +60,12 @@ export const useShopCheckout = () => {
     resolutionState.value.error = null
 
     try {
+      const tenantSlug = opts?.tenantSlug?.trim()
       const response = await $fetch('/api/shop/resolve-customer', {
         method: 'POST',
-        body: {
-          tenant_id: tenantId,
-          email
-        }
+        body: tenantSlug
+          ? { tenant_slug: tenantSlug, email }
+          : { tenant_id: tenantKey, email }
       }) as any
 
       if (!response?.customer) {

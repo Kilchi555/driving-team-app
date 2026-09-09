@@ -15,12 +15,10 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { getTenantsWithMultipleStaff } from '~/server/utils/tenant-staff-notify'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
-  const secret = event.node.req.headers.authorization?.replace('Bearer ', '')
-  if (secret !== process.env.CRON_SECRET) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized - invalid CRON_SECRET' })
-  }
+  assertCronRequest(event)
 
   const now = new Date()
   const day = now.getDate()   // 1-31

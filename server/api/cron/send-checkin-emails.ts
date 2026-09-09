@@ -9,6 +9,7 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { verifyCronToken } from '~/server/utils/cron'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 const WINDOWS = [
   { days: 7,  subject: 'Wie läuft Simy bisher für dich? 👋', label: '7-Tage' },
@@ -16,6 +17,7 @@ const WINDOWS = [
 ]
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   if (!verifyCronToken(event)) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }

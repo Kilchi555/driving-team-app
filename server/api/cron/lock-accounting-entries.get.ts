@@ -10,8 +10,10 @@
 import { logger } from '~/utils/logger'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { verifyCronToken, checkCronRateLimit, logCronExecution } from '~/server/utils/cron'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = new Date()
 
   try {
