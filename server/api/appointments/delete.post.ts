@@ -2,6 +2,7 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -90,13 +91,10 @@ export default defineEventHandler(async (event) => {
       try {
         logger.debug(`📋 Queueing staff ${appointment.staff_id} for recalc after appointment deletion`)
         
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: {
-            staff_id: appointment.staff_id,
-            tenant_id: appointment.tenant_id,
-            trigger: 'appointment'
-          }
+        void enqueueStaffAvailabilityRecalc({
+          staff_id: appointment.staff_id,
+          tenant_id: appointment.tenant_id,
+          trigger: 'appointment',
         })
         
         logger.debug(`✅ Staff queued for recalculation after appointment deletion`)

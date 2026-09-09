@@ -2,8 +2,10 @@ import { logger } from '~/utils/logger'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { verifyCronToken, checkCronRateLimit, logCronExecution } from '~/server/utils/cron'
 import { runDueRecurring } from '~/server/utils/accounting-recurring-db'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   const startTime = new Date()
   if (!verifyCronToken(event)) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized - Invalid cron token' })

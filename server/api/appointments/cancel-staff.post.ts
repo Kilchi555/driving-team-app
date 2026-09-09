@@ -9,6 +9,7 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { validateUUID } from '~/server/utils/validators'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { canInitiateWalleeRefund, actorEmailFromAuth } from '~/utils/wallee-refund-access'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
@@ -306,13 +307,10 @@ export default defineEventHandler(async (event) => {
       try {
         logger.debug(`📋 Queueing staff ${appointment.staff_id} for recalc after appointment cancellation`)
         
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: {
-            staff_id: appointment.staff_id,
-            tenant_id: tenantId,
-            trigger: 'appointment'
-          }
+        void enqueueStaffAvailabilityRecalc({
+          staff_id: appointment.staff_id,
+          tenant_id: tenantId,
+          trigger: 'appointment',
         })
         
         logger.debug(`✅ Staff queued for recalculation after appointment cancellation`)

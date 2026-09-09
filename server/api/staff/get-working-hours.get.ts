@@ -1,34 +1,28 @@
 // server/api/staff/get-working-hours.get.ts
 import { defineEventHandler, createError, getQuery } from 'h3'
-import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import {
+  requireTenantStaff,
+  authorizeWorkingHoursMutation,
+} from '~/server/utils/require-tenant-auth'
 
 export default defineEventHandler(async (event) => {
-  // Working hours must never be browser-cached — Settings changes need to show immediately
   setHeader(event, 'Cache-Control', 'private, no-cache, no-store, must-revalidate')
 
   try {
-    // Get authenticated user with database ID
-    const user = await getAuthenticatedUserWithDbId(event)
-    
-    if (!user || !user.id) {
-      console.log(`[${new Date().toLocaleTimeString()}] ⚠️ get-working-hours: No authenticated user found - returning 401`)
-      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-    }
-    
+    const actor = await requireTenantStaff(event)
     const supabase = getSupabaseAdmin()
     const query = getQuery(event)
-    
-    // Use staffId from query or current user's id
-    const staffId = query.staffId as string || user.id
-    
-    console.log(`[${new Date().toLocaleTimeString()}] 🔒 Loading working hours for staff:`, staffId)
-    
-    // Load working hours
+    const requestedStaffId = typeof query.staffId === 'string' && query.staffId
+      ? query.staffId
+      : actor.id
+    const target = await authorizeWorkingHoursMutation(supabase, actor, requestedStaffId)
+
     const { data: workingHours, error } = await supabase
       .from('staff_working_hours')
       .select('*')
-      .eq('staff_id', staffId)
+      .eq('staff_id', target.id)
+      .eq('tenant_id', actor.tenant_id)
       .order('day_of_week')
     
     if (error) {
@@ -59,7 +53,7 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       workingHours: convertedHours,
-      staffId
+      staffId: target.id
     }
     
   } catch (error: any) {

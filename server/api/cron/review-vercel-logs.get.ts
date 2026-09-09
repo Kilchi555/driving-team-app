@@ -10,10 +10,11 @@
  * Schedule: daily at 05:00 UTC (see vercel.json).
  * If there is nothing to report, no review/email is created (no noise).
  */
-import { defineEventHandler, getHeader, createError } from 'h3'
+import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 const REVIEW_URL = 'https://app.simy.ch/tenant-admin/vercel-log-reviews'
 const TOP_ISSUES_LIMIT = 20
@@ -32,11 +33,7 @@ function groupKey(row: { message: string | null; path: string | null; status_cod
 }
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
   const periodEnd = new Date()

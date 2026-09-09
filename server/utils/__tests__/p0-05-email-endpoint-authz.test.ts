@@ -68,6 +68,10 @@ vi.mock('~/utils/logger', () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
+vi.mock('~/server/utils/ip-utils', () => ({
+  getClientIP: () => '203.0.113.8',
+}))
+
 type EventHandler = (event: object) => Promise<unknown>
 
 const staffActor = {

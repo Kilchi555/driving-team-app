@@ -38,30 +38,45 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: 'Invalid request body' })
     }
 
-    const { tenant_id: tenantId, email } = body
+    const tenantSlug = typeof body.tenant_slug === 'string' ? body.tenant_slug.trim() : ''
+    const tenantIdRaw = typeof body.tenant_id === 'string' ? body.tenant_id.trim() : ''
+    const email = body.email
 
-    if (!tenantId || !email) {
-      throw createError({ statusCode: 400, message: 'Missing tenant_id or email' })
+    if ((!tenantSlug && !tenantIdRaw) || !email) {
+      throw createError({ statusCode: 400, message: 'Missing tenant_slug or email' })
     }
 
     if (!validateEmail(email).valid) {
       throw createError({ statusCode: 400, message: 'Invalid email format' })
     }
 
-    const normalizedEmail = sanitizeString(email, 255).toLowerCase().trim()
-    const sanitizedTenantId = sanitizeString(tenantId, 64)
+    const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,62}$/i
+    const UUID_PATTERN =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+    const normalizedEmail = sanitizeString(email, 255).toLowerCase().trim()
     const supabase = getSupabaseAdmin()
 
-    const { data: tenant, error: tenantError } = await supabase
-      .from('tenants')
-      .select('id, is_active')
-      .eq('id', sanitizedTenantId)
-      .maybeSingle()
+    let tenantQuery = supabase.from('tenants').select('id, is_active')
+    if (tenantSlug) {
+      if (!SLUG_PATTERN.test(tenantSlug)) {
+        throw createError({ statusCode: 400, message: 'Invalid or inactive tenant' })
+      }
+      tenantQuery = tenantQuery.eq('slug', sanitizeString(tenantSlug, 64).toLowerCase())
+    } else {
+      if (!UUID_PATTERN.test(tenantIdRaw)) {
+        throw createError({ statusCode: 400, message: 'Invalid or inactive tenant' })
+      }
+      tenantQuery = tenantQuery.eq('id', tenantIdRaw)
+    }
+
+    const { data: tenant, error: tenantError } = await tenantQuery.maybeSingle()
 
     if (tenantError || !tenant || tenant.is_active === false) {
       throw createError({ statusCode: 400, message: 'Invalid or inactive tenant' })
     }
+
+    const sanitizedTenantId = tenant.id
 
     const { data: existingUser, error: lookupError } = await supabase
       .from('users')

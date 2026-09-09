@@ -11,6 +11,7 @@ import { buildMerchantReference } from '~/utils/merchantReference'
 import { logger } from '~/utils/logger'
 import { buildWalleeTaxedLineItem, loadCheckoutVat, mergeVatIntoMetadata } from '~/server/utils/wallee-line-item'
 import { refundStudentCreditFromPayment, remainingDueRappen } from '~/server/utils/apply-student-credit'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 export function checkoutAppUrl(): string {
   return (process.env.NUXT_PUBLIC_APP_URL || 'https://app.simy.ch').replace(/\/$/, '')
@@ -392,13 +393,10 @@ export async function releaseUnpaidPendingAppointment(opts: {
     })
     .eq('appointment_id', appointment.id)
 
-  const cronSecret = process.env.CRON_SECRET
-  $fetch('/api/availability/queue-recalc', {
-    method: 'POST',
-    body: { staff_id: appointment.staff_id, tenant_id: appointment.tenant_id, trigger: 'appointment' },
-    headers: cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {},
-  }).catch((err: any) => {
-    logger.warn('⚠️ Could not queue availability recalc after unpaid release:', err?.message)
+  void enqueueStaffAvailabilityRecalc({
+    staff_id: appointment.staff_id,
+    tenant_id: appointment.tenant_id,
+    trigger: 'appointment',
   })
 
   logger.info('↩️ Released unpaid pending online appointment', { appointmentId: appointment.id })

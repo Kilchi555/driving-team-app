@@ -4,7 +4,10 @@
  */
 import { createError, defineEventHandler, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { requireTenantStaff } from '~/server/utils/require-tenant-auth'
+import {
+  requireTenantStaff,
+  assertSelfOrTenantAdmin,
+} from '~/server/utils/require-tenant-auth'
 import { notifyCustomerAppointmentChange } from '~/server/utils/notify-customer-appointment-change'
 import { parseRescheduleChangedFields } from '~/utils/reschedule-email-triggers'
 
@@ -35,12 +38,18 @@ export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
   const { data: apt } = await supabase
     .from('appointments')
-    .select('user_id, start_time, tenant_id')
+    .select('user_id, start_time, tenant_id, staff_id')
     .eq('id', appointmentId)
     .eq('tenant_id', actor.tenant_id)
     .maybeSingle()
 
   if (!apt?.user_id) {
+    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+  }
+
+  if (apt.staff_id) {
+    assertSelfOrTenantAdmin(actor, apt.staff_id)
+  } else if (actor.role === 'staff') {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 

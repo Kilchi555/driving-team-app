@@ -3,20 +3,11 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { runExternalCalendarsSyncJob } from '~/server/utils/sync-external-calendars-job'
 import { logger } from '~/utils/logger'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   try {
-    const apiKey = getHeader(event, 'x-api-key')
-    const expectedKey = process.env.CRON_API_KEY
-
-    if (!apiKey || !expectedKey || apiKey !== expectedKey) {
-      logger.warn('⚠️ Cron job called without valid API key')
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Invalid or missing API key'
-      })
-    }
-
     logger.info('🔄 Starting scheduled external calendar sync for all staff...')
 
     // Same hardened job as GET — no per-event slot invalidation in-request

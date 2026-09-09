@@ -1,7 +1,11 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { getAuthenticatedUser } from '~/server/utils/auth'
+import {
+  requireTenantStaff,
+  authorizeWorkingHoursMutation,
+} from '~/server/utils/require-tenant-auth'
 import { logger } from '~/utils/logger'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 /**
  * Manage staff working hours
@@ -20,18 +24,7 @@ interface WorkingHourRequest {
 
 export default defineEventHandler(async (event) => {
   try {
-    // ✅ SECURITY: this previously had NO auth check at all — any caller could
-    // read/write any staff member's working hours by supplying an arbitrary
-    // staffId. Require auth, and only allow acting on your own record unless
-    // you're an admin/super_admin (and then only within your own tenant).
-    const authUser = await getAuthenticatedUser(event)
-    if (!authUser) {
-      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-    }
-    const callerRole: string = authUser.role || authUser.profile?.role || ''
-    const callerTenantId: string = authUser.tenant_id || authUser.profile?.tenant_id || ''
-    const callerDbUserId: string = authUser.db_user_id || authUser.profile?.id || ''
-
+    const actor = await requireTenantStaff(event)
     const body = await readBody<WorkingHourRequest>(event)
 
     if (!body.staffId) {
@@ -49,25 +42,8 @@ export default defineEventHandler(async (event) => {
     }
 
     const supabase = getSupabaseAdmin()
-
-    const isSelf = !!callerDbUserId && callerDbUserId === body.staffId
-    const isSuperAdmin = callerRole === 'super_admin'
-    const isTenantAdmin = callerRole === 'admin' || callerRole === 'tenant_admin'
-
-    if (!isSelf && !isSuperAdmin) {
-      if (!isTenantAdmin) {
-        throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-      }
-      // Tenant admin acting on someone else's record — verify same tenant.
-      const { data: targetUser, error: targetError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', body.staffId)
-        .single()
-      if (targetError || !targetUser || targetUser.tenant_id !== callerTenantId) {
-        throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-      }
-    }
+    const target = await authorizeWorkingHoursMutation(supabase, actor, body.staffId)
+    const tenantId = actor.tenant_id
 
     logger.debug('📊 Working hours API:', { action: body.action, staffId: body.staffId })
 
@@ -76,7 +52,8 @@ export default defineEventHandler(async (event) => {
       const { data, error } = await supabase
         .from('staff_working_hours')
         .select('*')
-        .eq('staff_id', body.staffId)
+        .eq('staff_id', target.id)
+        .eq('tenant_id', tenantId)
         .order('day_of_week')
 
       if (error) throw error
@@ -97,25 +74,12 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-      // Get tenant_id for this staff
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', body.staffId)
-        .single()
-
-      if (userError || !userData?.tenant_id) {
-        throw createError({
-          statusCode: 404,
-          statusMessage: 'Staff member not found'
-        })
-      }
-
       // Delete existing entries for this day
       const { error: deleteError } = await supabase
         .from('staff_working_hours')
         .delete()
-        .eq('staff_id', body.staffId)
+        .eq('staff_id', target.id)
+        .eq('tenant_id', tenantId)
         .eq('day_of_week', body.dayOfWeek)
 
       if (deleteError) throw deleteError
@@ -125,12 +89,12 @@ export default defineEventHandler(async (event) => {
         const { data: insertedData, error: insertError } = await supabase
           .from('staff_working_hours')
           .insert([{
-            staff_id: body.staffId,
+            staff_id: target.id,
             day_of_week: body.dayOfWeek,
             start_time: body.startTime,
             end_time: body.endTime,
             is_active: true,
-            tenant_id: userData.tenant_id,
+            tenant_id: tenantId,
             timezone: 'Europe/Zurich'
           }])
           .select()
@@ -139,10 +103,11 @@ export default defineEventHandler(async (event) => {
 
         logger.debug('✅ Working hours saved')
 
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: { staff_id: body.staffId, tenant_id: userData.tenant_id, trigger: 'working_hours' }
-        }).catch((e: any) => logger.warn('⚠️ Failed to queue recalc after working hours save:', e.message))
+        void enqueueStaffAvailabilityRecalc({
+          staff_id: target.id,
+          tenant_id: tenantId,
+          trigger: 'working_hours',
+        })
 
         return {
           success: true,
@@ -151,10 +116,11 @@ export default defineEventHandler(async (event) => {
       } else {
         logger.debug('✅ Working hours cleared for day')
 
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: { staff_id: body.staffId, tenant_id: userData.tenant_id, trigger: 'working_hours' }
-        }).catch((e: any) => logger.warn('⚠️ Failed to queue recalc after working hours clear:', e.message))
+        void enqueueStaffAvailabilityRecalc({
+          staff_id: target.id,
+          tenant_id: tenantId,
+          trigger: 'working_hours',
+        })
 
         return {
           success: true,
@@ -165,32 +131,21 @@ export default defineEventHandler(async (event) => {
 
     // DELETE - Clear all working hours
     if (body.action === 'delete') {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', body.staffId)
-        .single()
-
-      if (userError || !userData?.tenant_id) {
-        throw createError({
-          statusCode: 404,
-          statusMessage: 'Staff member not found'
-        })
-      }
-
       const { error } = await supabase
         .from('staff_working_hours')
         .delete()
-        .eq('staff_id', body.staffId)
+        .eq('staff_id', target.id)
+        .eq('tenant_id', tenantId)
 
       if (error) throw error
 
       logger.debug('✅ All working hours cleared')
 
-      await $fetch('/api/availability/queue-recalc', {
-        method: 'POST',
-        body: { staff_id: body.staffId, tenant_id: userData.tenant_id, trigger: 'working_hours' }
-      }).catch((e: any) => logger.warn('⚠️ Failed to queue recalc after working hours delete:', e.message))
+      void enqueueStaffAvailabilityRecalc({
+        staff_id: target.id,
+        tenant_id: tenantId,
+        trigger: 'working_hours',
+      })
 
       return {
         success: true
@@ -210,25 +165,12 @@ export default defineEventHandler(async (event) => {
       // (alle bestehenden Einträge werden weiter unten gelöscht und keine neuen angelegt).
       const requestedBlocks = body.blocks || []
 
-      // Get tenant_id for this staff
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', body.staffId)
-        .single()
-
-      if (userError || !userData?.tenant_id) {
-        throw createError({
-          statusCode: 404,
-          statusMessage: 'Staff member not found'
-        })
-      }
-
       // Delete existing entries for this day
       const { error: deleteError } = await supabase
         .from('staff_working_hours')
         .delete()
-        .eq('staff_id', body.staffId)
+        .eq('staff_id', target.id)
+        .eq('tenant_id', tenantId)
         .eq('day_of_week', body.dayOfWeek)
 
       if (deleteError) throw deleteError
@@ -237,12 +179,12 @@ export default defineEventHandler(async (event) => {
       const blocksToInsert = requestedBlocks
         .filter(block => block.is_active)
         .map(block => ({
-          staff_id: body.staffId,
+          staff_id: target.id,
           day_of_week: body.dayOfWeek,
           start_time: block.start_time,
           end_time: block.end_time,
           is_active: true,
-          tenant_id: userData.tenant_id,
+          tenant_id: tenantId,
           timezone: 'Europe/Zurich'
         }))
 
@@ -256,10 +198,11 @@ export default defineEventHandler(async (event) => {
 
         logger.debug('✅ Working day blocks saved:', blocksToInsert.length)
 
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: { staff_id: body.staffId, tenant_id: userData.tenant_id, trigger: 'working_hours' }
-        }).catch((e: any) => logger.warn('⚠️ Failed to queue recalc after save_day:', e.message))
+        void enqueueStaffAvailabilityRecalc({
+          staff_id: target.id,
+          tenant_id: tenantId,
+          trigger: 'working_hours',
+        })
 
         return {
           success: true,
@@ -268,10 +211,11 @@ export default defineEventHandler(async (event) => {
       } else {
         logger.debug('✅ Working day cleared for all blocks')
 
-        await $fetch('/api/availability/queue-recalc', {
-          method: 'POST',
-          body: { staff_id: body.staffId, tenant_id: userData.tenant_id, trigger: 'working_hours' }
-        }).catch((e: any) => logger.warn('⚠️ Failed to queue recalc after save_day clear:', e.message))
+        void enqueueStaffAvailabilityRecalc({
+          staff_id: target.id,
+          tenant_id: tenantId,
+          trigger: 'working_hours',
+        })
 
         return {
           success: true,

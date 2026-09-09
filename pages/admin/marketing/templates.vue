@@ -88,7 +88,7 @@
           <div class="text-xs text-gray-400">
             Erstellt {{ formatDate(t.created_at) }}
           </div>
-          <div class="mt-3 text-xs text-gray-500 line-clamp-2 bg-gray-50 rounded p-2 font-mono" v-html="t.html_body.replace(/<[^>]+>/g, ' ').slice(0, 120) + '...'" />
+          <div class="mt-3 text-xs text-gray-500 line-clamp-2 bg-gray-50 rounded p-2 font-mono">{{ (t.html_body || '').replace(/<[^>]+>/g, ' ').slice(0, 120) + '...' }}</div>
         </div>
       </div>
     </div>

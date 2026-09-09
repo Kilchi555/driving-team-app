@@ -11,10 +11,11 @@
  * - Cancelled + payment still pending/completed/paid → counts (no-show fee charged)
  * - Cancelled + payment cancelled/refunded/failed OR no payment → does NOT count
  */
-import { defineEventHandler, createError, getHeader, getQuery } from 'h3'
+import { defineEventHandler, createError, getQuery } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { recalculateStaffHoursForTenant } from '~/server/services/staff-hours-calculator'
 import { logger } from '~/utils/logger'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 /** Returns the last 3 calendar months (including current) grouped by year. */
 function getLast3MonthsByYear(): Record<number, number[]> {
@@ -31,20 +32,8 @@ function getLast3MonthsByYear(): Record<number, number[]> {
 }
 
 export default defineEventHandler(async (event) => {
+  assertCronRequest(event)
   try {
-    // ── Security: verify CRON_SECRET ────────────────────────────────────────
-    const cronSecret = process.env.CRON_SECRET
-    if (cronSecret && cronSecret.trim() !== '') {
-      const authHeader = getHeader(event, 'authorization')
-      const vercelCronHeader = getHeader(event, 'x-vercel-cron')
-      const isValidSecret = authHeader === `Bearer ${cronSecret}`
-      const isVercelCron = vercelCronHeader === '1'
-      if (!isValidSecret && !isVercelCron) {
-        logger.warn('⚠️ Unauthorized cron access attempt on recalculate-staff-hours')
-        throw createError({ statusCode: 401, statusMessage: 'Unauthorized - invalid CRON_SECRET' })
-      }
-    }
-
     logger.debug('⏰ Starting staff monthly hours recalculation cron...')
     const startTime = Date.now()
 

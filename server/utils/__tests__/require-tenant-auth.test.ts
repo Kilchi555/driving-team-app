@@ -199,6 +199,53 @@ describe('require-tenant-auth', () => {
       ).resolves.toMatchObject({ id: 'staff-1', role: 'staff' })
     })
   })
+
+  describe('authorizeWorkingHoursMutation', () => {
+    const staffActor = { id: 'staff-1', tenant_id: 'tenant-a', role: 'staff', email: '', auth_user_id: 'a1' }
+    const adminActor = { id: 'admin-1', tenant_id: 'tenant-a', role: 'admin', email: '', auth_user_id: 'a2' }
+
+    it('allows staff to mutate their own hours', async () => {
+      const { authorizeWorkingHoursMutation } = await import('../require-tenant-auth')
+      await expect(
+        authorizeWorkingHoursMutation(mockUserLookup(userRow()), staffActor, 'staff-1'),
+      ).resolves.toMatchObject({ id: 'staff-1' })
+    })
+
+    it('denies staff mutating another instructor in the same tenant', async () => {
+      const { authorizeWorkingHoursMutation } = await import('../require-tenant-auth')
+      const other = userRow({ id: 'staff-2' })
+      await expect(
+        authorizeWorkingHoursMutation(mockUserLookup(other), staffActor, 'staff-2'),
+      ).rejects.toMatchObject({ statusCode: 403 })
+    })
+
+    it('denies cross-tenant staff_id even for admins', async () => {
+      const { authorizeWorkingHoursMutation } = await import('../require-tenant-auth')
+      await expect(
+        authorizeWorkingHoursMutation(mockUserLookup(null), adminActor, 'staff-other-tenant'),
+      ).rejects.toMatchObject({ statusCode: 403 })
+    })
+
+    it('allows tenant admin to mutate another staff member in the same tenant', async () => {
+      const { authorizeWorkingHoursMutation } = await import('../require-tenant-auth')
+      const other = userRow({ id: 'staff-2' })
+      await expect(
+        authorizeWorkingHoursMutation(mockUserLookup(other), adminActor, 'staff-2'),
+      ).resolves.toMatchObject({ id: 'staff-2' })
+    })
+
+    it('denies clients', async () => {
+      const { authorizeWorkingHoursMutation } = await import('../require-tenant-auth')
+      const clientActor = { ...staffActor, role: 'client', id: 'client-1' }
+      await expect(
+        authorizeWorkingHoursMutation(
+          mockUserLookup(userRow({ id: 'client-1', role: 'client' })),
+          clientActor,
+          'client-1',
+        ),
+      ).rejects.toMatchObject({ statusCode: 403 })
+    })
+  })
 })
 
 function createThrown(fn: () => void): unknown {

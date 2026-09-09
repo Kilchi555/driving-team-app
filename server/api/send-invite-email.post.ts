@@ -6,10 +6,27 @@ import { sendEmail } from '~/server/utils/email'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { logger } from '~/utils/logger'
+import { getClientIP } from '~/server/utils/ip-utils'
 import {
   requireTenantStaff,
   assertSelfOrTenantAdmin,
 } from '~/server/utils/require-tenant-auth'
+
+const inviteWindows = new Map<string, number[]>()
+const INVITE_MAX = 10
+const INVITE_WINDOW_MS = 60 * 1000
+
+function assertInviteRateLimit(event: Parameters<typeof getClientIP>[0], actorId: string) {
+  const ip = getClientIP(event)
+  const now = Date.now()
+  const key = `invite-email:${actorId}:${ip}`
+  const stamps = (inviteWindows.get(key) || []).filter((ts) => ts > now - INVITE_WINDOW_MS)
+  if (stamps.length >= INVITE_MAX) {
+    throw createError({ statusCode: 429, statusMessage: 'Too many requests' })
+  }
+  stamps.push(now)
+  inviteWindows.set(key, stamps)
+}
 
 interface InviteEmailBody {
   to: string
@@ -22,6 +39,7 @@ interface InviteEmailBody {
 
 export default defineEventHandler(async (event) => {
   const actor = await requireTenantStaff(event)
+  assertInviteRateLimit(event, actor.id)
 
   try {
     const body = await readBody(event) as InviteEmailBody

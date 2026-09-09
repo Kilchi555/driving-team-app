@@ -26,7 +26,7 @@
         class="feature-card rounded-lg p-4 flex items-center gap-3"
       >
         <span class="text-xl">🌍</span>
-        <p class="text-gray-700 text-sm" v-html="extra" />
+        <p class="text-gray-700 text-sm" v-html="sanitizeExtra(extra)" />
       </div>
     </div>
   </section>
@@ -54,6 +54,12 @@ const props = withDefaults(defineProps<{
 }>(), {
   features: () => defaultFeatures,
 })
+
+function sanitizeExtra(html: string): string {
+  return String(html || '')
+    .replace(/<(?!\/?(?:strong|b|em|br)\b)[^>]*>/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+}
 
 const cardRefs = ref<HTMLElement[]>([])
 const activeIndex = ref<number | null>(null)

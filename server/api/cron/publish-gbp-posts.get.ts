@@ -1,8 +1,8 @@
-import { defineEventHandler, getHeader } from 'h3'
+import { defineEventHandler } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { createGbpPost, getGbpAutomationSettings } from '~/server/utils/gbp'
-import { assertCronAuth } from '~/server/utils/gbp-automation'
 import { fillUpcomingCalendarCopy, generateCalendarPostCopy } from '~/server/utils/gbp-post-calendar'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 /**
  * GET /api/cron/publish-gbp-posts
@@ -12,7 +12,7 @@ import { fillUpcomingCalendarCopy, generateCalendarPostCopy } from '~/server/uti
  * Schedule: every 15 minutes
  */
 export default defineEventHandler(async (event) => {
-  assertCronAuth(getHeader(event, 'authorization') || undefined)
+  assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
   const nowIso = new Date().toISOString()

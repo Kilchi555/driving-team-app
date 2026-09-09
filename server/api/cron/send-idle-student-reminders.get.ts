@@ -78,8 +78,8 @@ function alreadySentRecently(
 }
 
 export default defineEventHandler(async (event) => {
-  const startTime = Date.now()
   assertCronRequest(event)
+  const startTime = Date.now()
 
   const supabase = getSupabaseAdmin()
   const now = new Date()

@@ -14,11 +14,12 @@
  *
  * Schedule: daily 06:30 UTC (vercel.json).
  */
-import { defineEventHandler, getHeader, createError } from 'h3'
+import { defineEventHandler } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
+import { assertCronRequest } from '~/server/utils/cron-auth'
 
 const LOOKBACK_HOURS = 48
 const LOG_COMPONENT = 'fallback:suspicious-zero-payment'
@@ -40,12 +41,7 @@ function isDocumentedFree(payment: {
 }
 
 export default defineEventHandler(async (event) => {
-  const authHeader = getHeader(event, 'authorization')
-  const cronSecret = process.env.CRON_SECRET
-  const isVercelCron = getHeader(event, 'x-vercel-cron') === '1'
-  if (!isVercelCron && (!cronSecret || authHeader !== `Bearer ${cronSecret}`)) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
-  }
+  assertCronRequest(event)
 
   const supabase = getSupabaseAdmin()
   const since = new Date(Date.now() - LOOKBACK_HOURS * 60 * 60 * 1000).toISOString()

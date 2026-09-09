@@ -17,6 +17,7 @@ import {
   type TenantActor,
 } from '~/server/utils/require-tenant-auth'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 
 interface CreateExternalBusyTimeRequest {
   action: 'create'
@@ -88,13 +89,10 @@ async function authorizeStaffResource(
 
 async function queueRecalc(staffId: string, tenantId: string) {
   try {
-    await $fetch('/api/availability/queue-recalc', {
-      method: 'POST',
-      body: {
-        staff_id: staffId,
-        tenant_id: tenantId,
-        trigger: 'external_event',
-      },
+    void enqueueStaffAvailabilityRecalc({
+      staff_id: staffId,
+      tenant_id: tenantId,
+      trigger: 'external_event',
     })
     logger.debug('✅ Queued recalculation after external busy time change')
   } catch (queueError: any) {

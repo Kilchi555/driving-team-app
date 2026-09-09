@@ -107,3 +107,20 @@ export async function loadStaffInTenant(
   }
   return data
 }
+
+/**
+ * Working-hours mutations: target staff must exist in the actor tenant,
+ * and a normal staff member may only change their own hours.
+ */
+export async function authorizeWorkingHoursMutation(
+  admin: SupabaseClient,
+  actor: TenantActor,
+  staffId: string | null | undefined,
+) {
+  if (!staffId || typeof staffId !== 'string') {
+    throw createError({ statusCode: 400, statusMessage: 'staff_id is required' })
+  }
+  const staff = await loadStaffInTenant(admin, staffId, actor.tenant_id)
+  assertSelfOrTenantAdmin(actor, staff.id)
+  return staff
+}
