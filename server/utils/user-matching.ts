@@ -83,3 +83,27 @@ export async function findStaffOrAdminByEmail(
     .maybeSingle()
   return data || null
 }
+
+/**
+ * True when a phone is already used by a non-customer account in this tenant.
+ * School-device autofill often keeps the owner's phone after swapping the email —
+ * that used to crash guest-user insert on users_phone_tenant_unique (opaque 500).
+ */
+export async function findStaffOrAdminByPhone(
+  supabase: any,
+  { phone, tenantId }: { phone: string; tenantId: string }
+): Promise<MatchedUser | null> {
+  const normalizedPhone = normalizePhoneNumber(phone || '')
+  if (!normalizedPhone) return null
+  const localFormat = normalizedPhone.replace(/^\+41/, '0')
+  const candidates = [...new Set([normalizedPhone, localFormat])]
+  const { data } = await supabase
+    .from('users')
+    .select('id, role')
+    .in('phone', candidates)
+    .eq('tenant_id', tenantId)
+    .in('role', ['admin', 'staff', 'tenant_admin'])
+    .limit(1)
+    .maybeSingle()
+  return data || null
+}

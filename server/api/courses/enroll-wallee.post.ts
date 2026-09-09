@@ -16,7 +16,7 @@ import { SARIClient } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
-import { findExistingUserByContact, findStaffOrAdminByEmail } from '~/server/utils/user-matching'
+import { findExistingUserByContact, findStaffOrAdminByEmail, findStaffOrAdminByPhone } from '~/server/utils/user-matching'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { availableWalletRappen } from '~/server/utils/apply-student-credit'
 import { consumeGiftCardByCode } from '~/server/utils/consume-gift-card'
@@ -471,6 +471,16 @@ const handler = defineEventHandler(async (event) => {
           statusCode: 400,
           statusMessage:
             'Diese E-Mail gehört einem Mitarbeiterkonto. Bitte die E-Mail der Kursteilnehmerin / des Kursteilnehmers verwenden.',
+        })
+      }
+    }
+    if (finalPhone) {
+      const staffPhoneHit = await findStaffOrAdminByPhone(supabase, { phone: finalPhone, tenantId })
+      if (staffPhoneHit) {
+        throw createError({
+          statusCode: 400,
+          statusMessage:
+            'Diese Telefonnummer gehört einem Mitarbeiterkonto. Bitte die Telefonnummer der Kursteilnehmerin / des Kursteilnehmers verwenden.',
         })
       }
     }

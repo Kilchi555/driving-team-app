@@ -17,7 +17,7 @@ import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
-import { findExistingUserByContact, findStaffOrAdminByEmail } from '~/server/utils/user-matching'
+import { findExistingUserByContact, findStaffOrAdminByEmail, findStaffOrAdminByPhone } from '~/server/utils/user-matching'
 import { normalizePhoneNumber } from '~/server/utils/sms'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { sha256Hex } from '~/server/utils/meta-capi'
@@ -277,6 +277,16 @@ const handler = defineEventHandler(async (event) => {
         })
       }
     }
+    if (finalPhone) {
+      const staffPhoneHit = await findStaffOrAdminByPhone(supabase, { phone: finalPhone, tenantId })
+      if (staffPhoneHit) {
+        throw createError({
+          statusCode: 400,
+          statusMessage:
+            'Diese Telefonnummer gehört einem Mitarbeiterkonto. Bitte die Telefonnummer der Kursteilnehmerin / des Kursteilnehmers verwenden.',
+        })
+      }
+    }
 
     let guestUserId: string
     const existingUser = await findExistingUserByContact(supabase, {
@@ -310,6 +320,21 @@ const handler = defineEventHandler(async (event) => {
 
       if (userError || !newUser) {
         logger.error('❌ Failed to create guest user:', userError)
+        const msg = userError?.message || ''
+        if (msg.includes('users_phone_tenant_unique') || msg.includes('phone')) {
+          throw createError({
+            statusCode: 400,
+            statusMessage:
+              'Diese Telefonnummer ist bereits registriert. Bitte die Telefonnummer der Kursteilnehmerin / des Kursteilnehmers verwenden.',
+          })
+        }
+        if (msg.includes('users_email_tenant_unique') || msg.includes('email')) {
+          throw createError({
+            statusCode: 400,
+            statusMessage:
+              'Diese E-Mail ist bereits registriert. Bitte eine andere E-Mail verwenden oder den bestehenden Kunden anmelden.',
+          })
+        }
         throw createError({
           statusCode: 500,
           statusMessage: 'Guest user could not be created'
