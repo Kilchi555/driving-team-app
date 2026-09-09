@@ -5,6 +5,7 @@
 import { createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
+import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { SARIClient } from '~/utils/sariClient'
 import { logger } from '~/utils/logger'
 
@@ -15,7 +16,8 @@ export type AdminInvoiceAction = 'later' | 'pdf' | 'email'
 export interface AdminEnrollParticipant {
   first_name: string
   last_name: string
-  email: string
+  /** Real address or empty; blank values are stored as NULL */
+  email?: string | null
   phone?: string | null
   birthdate?: string | null
   street?: string | null
@@ -117,7 +119,10 @@ async function resolveOrCreateUser(
     return { userId: user.id, user: { ...user, ...updates } }
   }
 
-  const email = participant.email.trim().toLowerCase()
+  const email = normalizeEnrollmentEmail(participant.email)
+  if (!email) {
+    throw createError({ statusCode: 400, statusMessage: 'E-Mail erforderlich für neue Kunden' })
+  }
 
   // Same email may exist at another tenant — only reuse within this tenant
   const { data: existingSameTenant } = await supabase
@@ -358,12 +363,27 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
 
   const firstName = opts.participant.first_name || user.first_name
   const lastName = opts.participant.last_name || user.last_name
-  const email = (opts.participant.email || user.email || '').trim().toLowerCase()
+  // Never store '' — unique (course_id, email) treated blank as a real value and blocked
+  // every subsequent no-email enroll on the same course (Gemperli / phone-only clients).
+  const email = normalizeEnrollmentEmail(opts.participant.email || user.email)
   const phone = opts.participant.phone || user.phone || null
   const birthdate = opts.participant.birthdate || user.birthdate || null
   const faberid = (opts.participant.faberid || user.faberid || null)?.replace(/\./g, '') || null
 
   // Duplicate checks
+  {
+    const { data: dupUser } = await supabase
+      .from('course_registrations')
+      .select('id')
+      .eq('course_id', opts.courseId)
+      .eq('user_id', userId)
+      .in('status', ['confirmed', 'pending', 'enrolled'])
+      .is('deleted_at', null)
+      .maybeSingle()
+    if (dupUser) {
+      throw createError({ statusCode: 409, statusMessage: 'Dieser Kunde ist bereits für diesen Kurs angemeldet' })
+    }
+  }
   if (faberid) {
     const { data: dupF } = await supabase
       .from('course_registrations')
@@ -466,9 +486,22 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
     .single()
 
   if (enrollError || !enrollment) {
+    const msg = enrollError?.message || ''
+    if (msg.includes('idx_course_registrations_unique_user') || msg.includes('duplicate key')) {
+      if (msg.includes('unique_email') || msg.includes('course_id_email')) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Diese E-Mail ist bereits für diesen Kurs angemeldet',
+        })
+      }
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Dieser Kunde ist bereits für diesen Kurs angemeldet',
+      })
+    }
     throw createError({
       statusCode: 500,
-      statusMessage: `Anmeldung konnte nicht erstellt werden: ${enrollError?.message}`,
+      statusMessage: `Anmeldung konnte nicht erstellt werden: ${msg}`,
     })
   }
 

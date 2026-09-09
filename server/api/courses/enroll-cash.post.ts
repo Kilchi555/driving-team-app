@@ -24,6 +24,7 @@ import { sha256Hex } from '~/server/utils/meta-capi'
 import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 import { resolveNonWalleeEnrollmentMethod } from '~/server/utils/course-enrollment-payment-method'
+import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -238,23 +239,25 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    // 7b. Also check by email
-    const finalEmail = email || customerData.email
+    // 7b. Also check by email (skip blank — '' would collide with other no-email enrollments)
+    const finalEmail = normalizeEnrollmentEmail(email || customerData.email)
     const finalPhone = phone || customerData.phone || ''
 
-    const { data: existingByEmail } = await supabase
-      .from('course_registrations')
-      .select('id')
-      .eq('course_id', courseId)
-      .eq('email', finalEmail)
-      .in('status', ['confirmed', 'pending'])
-      .maybeSingle()
+    if (finalEmail) {
+      const { data: existingByEmail } = await supabase
+        .from('course_registrations')
+        .select('id')
+        .eq('course_id', courseId)
+        .eq('email', finalEmail)
+        .in('status', ['confirmed', 'pending'])
+        .maybeSingle()
 
-    if (existingByEmail) {
-      throw createError({
-        statusCode: 409,
-        statusMessage: 'Diese E-Mail-Adresse ist bereits für diesen Kurs angemeldet.'
-      })
+      if (existingByEmail) {
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Diese E-Mail-Adresse ist bereits für diesen Kurs angemeldet.'
+        })
+      }
     }
 
     // 8. Create or find Guest User (same as Wallee flow)
@@ -278,7 +281,7 @@ const handler = defineEventHandler(async (event) => {
         .insert({
           first_name: customerData.firstname,
           last_name: customerData.lastname,
-          email: finalEmail ? finalEmail.trim().toLowerCase() : finalEmail,
+          email: finalEmail,
           phone: normalizePhoneNumber(finalPhone) || finalPhone,
           tenant_id: tenantId,
           role: 'student',
