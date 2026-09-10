@@ -8,6 +8,8 @@
  * logger.error('ComponentName', 'Error message', error)               // Always + sent to server
  */
 
+import { redactSensitiveUrl } from '~/utils/redact-sensitive-url'
+
 export interface LogEntry {
   level: 'debug' | 'info' | 'warn' | 'error'
   component: string
@@ -45,7 +47,7 @@ function getTimestamp(): string {
  */
 function getPageUrl(): string {
   if (typeof window !== 'undefined') {
-    return window.location.href
+    return redactSensitiveUrl(window.location.href)
   }
   return ''
 }
