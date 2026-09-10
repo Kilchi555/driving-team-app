@@ -196,9 +196,9 @@ keytool -genkey -v -keystore alpenblick.keystore -alias alpenblick ...
 # Actions → "Build White-Label iOS App" → Run workflow → client: alpenblick
 
 # ODER via Simy Admin Panel → "App erstellen" Button
-# ODER via API:
+# ODER via API (super_admin session required — #191):
 curl -X POST https://simy.ch/api/whitelabel/create-app \
-  -H "Authorization: Bearer TOKEN" \
+  -H "Authorization: Bearer SUPER_ADMIN_TOKEN" \
   -d '{"tenantId": "TENANT_UUID"}'
 ```
 
@@ -230,12 +230,16 @@ npx cap open android
 
 ## Automatischer Zero-Touch Flow (via Simy Admin)
 
+> **Auth (#191):** `POST /api/whitelabel/create-app` requires a **`super_admin`**
+> session (`requireSuperAdmin` before `readBody`). A tenant admin JWT cannot
+> provision builds for an arbitrary `tenantId`. See [TENANT_API_AUTHZ.md](./TENANT_API_AUTHZ.md).
+
 ```
-1. Admin-Seite: Fahrschule klickt "White-Label App aktivieren"
+1. Platform super_admin opens white-label provisioning (not a tenant-admin self-serve button)
 2. Formular: Schulname, Logo-Upload, Primärfarbe, Beschreibung
-3. POST /api/whitelabel/create-app
+3. POST /api/whitelabel/create-app (Authorization: Bearer <super_admin session>)
    → Speichert Config in Supabase (app_configs)
-   → Triggert GitHub Actions via workflow_dispatch API
+   → Triggert GitHub Actions via workflow_dispatch API (only after authz)
 4. GitHub Actions:
    → Liest Config aus Supabase
    → Baut App mit Schulen-Branding
