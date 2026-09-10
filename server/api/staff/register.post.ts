@@ -8,9 +8,28 @@ import { logAudit } from '~/server/utils/audit'
 import { sanitizeString, validateBasicPassword, validateEmail } from '~/server/utils/validators'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
+import {
+  consumePendingStaffInvitation,
+  releaseStaffInvitationClaim,
+} from '~/server/utils/consume-staff-invitation'
+import { verifyStaffRegistrationLocations } from '~/server/utils/verify-staff-locations'
+
+const INVITATION_TOKEN_MAX_LENGTH = 128
+
+function normalizeInvitationToken(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const token = raw.trim()
+  if (!token || token.length > INVITATION_TOKEN_MAX_LENGTH) return null
+  return token
+}
 
 export default defineEventHandler(async (event) => {
   const startTime = Date.now()
+  let claimedInvitationId: string | null = null
+  let claimedAt: string | null = null
+  let createdAuthUserId: string | null = null
+  let staffProfileCreated = false
+  let serviceSupabase: ReturnType<typeof createClient> | null = null
   try {
     // ✅ LAYER 1: Get client IP for rate limiting (spoofing-resistant)
     const { getClientIP } = await import('~/server/utils/ip-utils')
@@ -57,7 +76,8 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Rate limit check passed. Remaining:', rateLimit.remaining)
 
     // ✅ LAYER 3: Validate required fields
-    if (!invitationToken || !email || !firstName || !lastName || !password) {
+    const token = normalizeInvitationToken(invitationToken)
+    if (!token || !email || !firstName || !lastName || !password) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Pflichtfelder fehlen'
@@ -105,33 +125,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Create service role client
-    const serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
-
-    // 1. Verify invitation token
-    const { data: invitation, error: inviteError } = await serviceSupabase
-      .from('staff_invitations')
-      .select('*')
-      .eq('invitation_token', invitationToken)
-      .eq('status', 'pending')
-      .single()
-
-    if (inviteError || !invitation) {
-      console.error('❌ Invalid invitation:', inviteError)
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Ungültige oder abgelaufene Einladung'
-      })
-    }
-
-    // Check if expired
-    if (new Date(invitation.expires_at) < new Date()) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Diese Einladung ist abgelaufen'
-      })
-    }
-
-    logger.debug('✅ Invitation verified:', invitation.id)
+    serviceSupabase = createClient(supabaseUrl, serviceRoleKey)
 
     // ✅ LAYER 6: XSS Protection - Sanitize all string inputs
     const sanitizedFirstName = sanitizeString(firstName, 100)
@@ -151,8 +145,72 @@ export default defineEventHandler(async (event) => {
     }
     const sanitizedPhone = rawPhone ? normalizePhoneNumber(rawPhone) : null
 
-    // ✅ LAYER 7: Email must not already exist in users or Auth
     const normalizedEmail = email.toLowerCase().trim()
+
+    // Email-bound invitations must match before we claim the row, so a wrong
+    // email cannot briefly consume the invitation ahead of the invited staff.
+    const { isPlaceholderStaffInviteEmail } = await import('~/server/utils/staff-invite-email')
+    const { data: invitationPreview } = await serviceSupabase
+      .from('staff_invitations')
+      .select('email, expires_at, tenant_id')
+      .eq('invitation_token', token)
+      .eq('status', 'pending')
+      .maybeSingle()
+
+    if (!invitationPreview || new Date(invitationPreview.expires_at).getTime() <= Date.now()) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Ungültige oder abgelaufene Einladung'
+      })
+    }
+
+    if (
+      invitationPreview.email &&
+      !isPlaceholderStaffInviteEmail(invitationPreview.email) &&
+      invitationPreview.email.toLowerCase().trim() !== normalizedEmail
+    ) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Bitte die eingeladene E-Mail verwenden: ${invitationPreview.email}`,
+      })
+    }
+
+    // Locations are client-supplied and later written with service_role, so
+    // tenant ownership is proven here — before the invitation is consumed —
+    // to avoid a half-registered staff member on rejection.
+    const locationCheck = await verifyStaffRegistrationLocations(
+      serviceSupabase,
+      invitationPreview.tenant_id as string,
+      selectedLocationIds,
+      selectedExamLocationIds,
+    )
+    if (!locationCheck.ok) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: locationCheck.scope === 'exam'
+          ? 'Ungültige Prüfungsort-Auswahl. Bitte Seite neu laden und erneut versuchen.'
+          : 'Ungültige Standort-Auswahl. Bitte Seite neu laden und erneut versuchen.',
+      })
+    }
+    const verifiedLocationIds = locationCheck.standardLocationIds
+    const verifiedExamLocationIds = locationCheck.examLocationIds
+
+    // Atomically consume the invitation (pending → accepted).
+    // Auth is not in the same Postgres transaction; the loser of this CAS
+    // never creates an Auth user or staff membership.
+    claimedAt = new Date().toISOString()
+    const invitation = await consumePendingStaffInvitation(serviceSupabase, token, claimedAt)
+    if (!invitation) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Ungültige oder abgelaufene Einladung'
+      })
+    }
+    claimedInvitationId = invitation.id
+
+    logger.debug('✅ Invitation claimed:', invitation.id)
+
+    // ✅ LAYER 7: Email must not already exist in users or Auth
     const { checkEmailAvailableForStaff, emailConflictMessage } = await import('~/server/utils/email-availability')
 
     const { data: adminRow } = await serviceSupabase
@@ -192,19 +250,6 @@ export default defineEventHandler(async (event) => {
           statusMessage: 'Diese Telefonnummer ist bereits registriert. Bitte eine andere Nummer verwenden.',
         })
       }
-    }
-
-    // If invitation stored a real (non-placeholder) email, require matching it
-    const { isPlaceholderStaffInviteEmail } = await import('~/server/utils/staff-invite-email')
-    if (
-      invitation.email &&
-      !isPlaceholderStaffInviteEmail(invitation.email) &&
-      invitation.email.toLowerCase().trim() !== normalizedEmail
-    ) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: `Bitte die eingeladene E-Mail verwenden: ${invitation.email}`,
-      })
     }
 
     // 2. Create Supabase Auth user
@@ -247,6 +292,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    createdAuthUserId = authData.user.id
     logger.debug('✅ Auth user created:', authData.user.id)
 
     let linkedAdminId: string | null = null
@@ -327,6 +373,7 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    staffProfileCreated = true
     logger.debug('✅ User profile created:', newUser.id)
 
     logger.debug('✅ Categories stored in users.category:', selectedCategories?.length ?? 0)
@@ -382,7 +429,7 @@ export default defineEventHandler(async (event) => {
 
     // 6. Assign standard locations (Treffpunkte)
     // Dual-write: locations.staff_ids + staff_locations must stay in sync for online booking
-    if (Array.isArray(selectedLocationIds) && selectedLocationIds.length > 0) {
+    if (verifiedLocationIds.length > 0) {
       const staffCategories: string[] = Array.isArray(selectedCategories) ? selectedCategories : []
       const bookableOverrides =
         locationBookableMap && typeof locationBookableMap === 'object'
@@ -390,10 +437,13 @@ export default defineEventHandler(async (event) => {
           : {}
       const assignedLocationIds: string[] = []
       const bookableByLocationId = new Map<string, boolean>()
-      for (const locId of selectedLocationIds) {
+      for (const locId of verifiedLocationIds) {
         try {
           const { data: loc } = await serviceSupabase
-            .from('locations').select('staff_ids, public_bookable').eq('id', locId).single()
+            .from('locations').select('staff_ids, public_bookable')
+            .eq('id', locId)
+            .eq('tenant_id', invitation.tenant_id)
+            .single()
           if (loc) {
             const current: string[] = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
             if (!current.includes(newUser.id)) {
@@ -401,6 +451,7 @@ export default defineEventHandler(async (event) => {
                 .from('locations')
                 .update({ staff_ids: [...current, newUser.id] })
                 .eq('id', locId)
+                .eq('tenant_id', invitation.tenant_id)
             }
             assignedLocationIds.push(locId)
             const fromClient = bookableOverrides[locId]
@@ -430,13 +481,17 @@ export default defineEventHandler(async (event) => {
           console.error('❌ staff_locations upsert failed — rolling back staff_ids:', slErr.message, slErr.details)
           for (const locId of assignedLocationIds) {
             const { data: loc } = await serviceSupabase
-              .from('locations').select('staff_ids').eq('id', locId).single()
+              .from('locations').select('staff_ids')
+              .eq('id', locId)
+              .eq('tenant_id', invitation.tenant_id)
+              .single()
             if (loc) {
               const current: string[] = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
               await serviceSupabase
                 .from('locations')
                 .update({ staff_ids: current.filter((id: string) => id !== newUser.id) })
                 .eq('id', locId)
+                .eq('tenant_id', invitation.tenant_id)
             }
           }
           throw createError({
@@ -503,36 +558,35 @@ export default defineEventHandler(async (event) => {
     }
 
     // 7. Assign exam locations (Prüfungsorte)
-    if (Array.isArray(selectedExamLocationIds) && selectedExamLocationIds.length > 0) {
-      for (const locId of selectedExamLocationIds) {
+    if (verifiedExamLocationIds.length > 0) {
+      for (const locId of verifiedExamLocationIds) {
         try {
+          // Exam locations are the shared catalogue: never tenant-owned, so a
+          // tenant location cannot be smuggled in through this path.
           const { data: loc } = await serviceSupabase
-            .from('locations').select('staff_ids').eq('id', locId).single()
+            .from('locations').select('staff_ids')
+            .eq('id', locId)
+            .is('tenant_id', null)
+            .eq('location_type', 'exam')
+            .single()
           if (loc) {
             const current: string[] = Array.isArray(loc.staff_ids) ? loc.staff_ids : []
             if (!current.includes(newUser.id)) {
               await serviceSupabase.from('locations')
                 .update({ staff_ids: [...current, newUser.id] })
                 .eq('id', locId)
+                .is('tenant_id', null)
+                .eq('location_type', 'exam')
             }
           }
         } catch (locErr) {
           console.warn('⚠️ Exam location assignment failed (non-fatal):', locErr)
         }
       }
-      logger.debug('✅ Exam locations assigned:', selectedExamLocationIds.length)
+      logger.debug('✅ Exam locations assigned:', verifiedExamLocationIds.length)
     }
 
-    // 8. Mark invitation as accepted
-    await serviceSupabase
-      .from('staff_invitations')
-      .update({
-        status: 'accepted',
-        accepted_at: new Date().toISOString()
-      })
-      .eq('id', invitation.id)
-
-    logger.debug('✅ Invitation marked as accepted')
+    // Invitation was already consumed atomically before Auth/profile creation.
 
     // 9. Auto-generate calendar token so it's immediately available in StaffSettings
     try {
@@ -604,6 +658,21 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     console.error('❌ Staff registration error:', error)
 
+    if (!staffProfileCreated && serviceSupabase) {
+      if (createdAuthUserId) {
+        await serviceSupabase.auth.admin.deleteUser(createdAuthUserId).catch((cleanupErr: any) => {
+          logger.warn('⚠️ Failed to roll back Auth user after staff registration failure')
+          void cleanupErr
+        })
+      }
+      if (claimedInvitationId && claimedAt) {
+        await releaseStaffInvitationClaim(serviceSupabase, claimedInvitationId, claimedAt).catch((releaseErr: any) => {
+          logger.warn('⚠️ Failed to release staff invitation claim after registration failure')
+          void releaseErr
+        })
+      }
+    }
+
     // ✅ LAYER 8: Audit logging - Failure
     const ipAddress = getHeader(event, 'x-forwarded-for')?.split(',')[0].trim() || 'unknown'
     await logAudit({
@@ -615,7 +684,6 @@ export default defineEventHandler(async (event) => {
       error_message: error.statusMessage || error.message,
       details: {
         email: (error as any).email,
-        invitation_token: (error as any).invitationToken?.substring(0, 10) + '...',
         duration_ms: Date.now() - startTime
       }
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
