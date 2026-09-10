@@ -26,6 +26,7 @@ import {
 import { randomUUID } from 'crypto'
 import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
 import { saveAcquisitionSelfReport } from '~/server/utils/save-acquisition-self-report'
+import { resolvePublicRegistrationRole } from '~/server/utils/public-registration-role'
 
 const CONTACT_FIELD_LABELS: Record<string, string> = {
   first_name: 'Vorname',
@@ -68,7 +69,6 @@ export default defineEventHandler(async (event) => {
       categories,
       lernfahrausweisNr,
       tenantId,
-      isAdmin = false,
       captchaToken,
       referredByCode = null,
       pendingOnly = false,
@@ -77,6 +77,15 @@ export default defineEventHandler(async (event) => {
       acquisition_self_reported = null,
       acquisition_self_reported_note = null,
     } = body
+    // AUTH-P0-01: client-supplied isAdmin / role is not an authorization gate.
+    const ignoredClientIsAdmin = Boolean(body?.isAdmin)
+    const ignoredClientRole = typeof body?.role === 'string' ? body.role : null
+    if (ignoredClientIsAdmin || ignoredClientRole) {
+      logger.warn('register-client: ignoring client-supplied privilege flag', {
+        ignoredClientIsAdmin,
+        ignoredClientRole,
+      })
+    }
 
     // Check rate limit (after body is read so we have email and tenantId)
     const rateLimit = await checkRateLimit(ipAddress, 'register', undefined, undefined, email, tenantId)
@@ -94,7 +103,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // ── Pending-only (no login): tenant disabled Account step on /register ──
-    if (pendingOnly && !isAdmin) {
+    if (pendingOnly) {
       const { createClient } = await import('@supabase/supabase-js')
       const supabaseUrl = process.env.SUPABASE_URL || 'https://unyjaetebnaexaflpyoc.supabase.co'
       const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -231,7 +240,7 @@ export default defineEventHandler(async (event) => {
         city: city ? sanitizeString(city, 100) : null,
         profession: profession ? sanitizeString(profession, 100) : null,
         category: categoryArray,
-        role: 'client',
+        role: resolvePublicRegistrationRole(body?.role),
         tenant_id: tenantId,
         is_active: true,
         onboarding_status: 'pending',
@@ -438,7 +447,7 @@ export default defineEventHandler(async (event) => {
       .maybeSingle()
 
     const rawPolicy = (tenantRow?.booking_policy as Record<string, any>) || {}
-    if (!isAdmin && normalizeRegistrationAccountMode(rawPolicy.registration_account_mode, 'required') === 'hidden') {
+    if (normalizeRegistrationAccountMode(rawPolicy.registration_account_mode, 'required') === 'hidden') {
       throw createError({
         statusCode: 400,
         statusMessage: 'Kunden-Login ist für diesen Betrieb nicht aktiviert.',
@@ -466,24 +475,15 @@ export default defineEventHandler(async (event) => {
     }
 
     const policyErrors: Record<string, string> = {}
-    if (isAdmin) {
-      // Admin registration keeps a fixed required contact set
-      for (const key of ['first_name', 'last_name', 'phone', 'street', 'street_nr', 'zip', 'city'] as const) {
-        if (!contactValues[key]) {
-          policyErrors[key] = `${CONTACT_FIELD_LABELS[key]} ist erforderlich`
-        }
+    for (const key of bookingRequiredFields) {
+      // Email is always collected on the account step — skip if listed here
+      if (key === 'email') continue
+      if (!contactValues[key]) {
+        policyErrors[key] = `${CONTACT_FIELD_LABELS[key] || key} ist erforderlich`
       }
-    } else {
-      for (const key of bookingRequiredFields) {
-        // Email is always collected on the account step — skip if listed here
-        if (key === 'email') continue
-        if (!contactValues[key]) {
-          policyErrors[key] = `${CONTACT_FIELD_LABELS[key] || key} ist erforderlich`
-        }
-      }
-      if (categoriesMode === 'required' && (!Array.isArray(categories) || categories.length === 0)) {
-        policyErrors.categories = 'Bitte mindestens eine Kategorie wählen'
-      }
+    }
+    if (categoriesMode === 'required' && (!Array.isArray(categories) || categories.length === 0)) {
+      policyErrors.categories = 'Bitte mindestens eine Kategorie wählen'
     }
 
     if (Object.keys(policyErrors).length > 0) {
@@ -595,7 +595,7 @@ export default defineEventHandler(async (event) => {
     // 2. Update claimable user OR create new profile
     logger.debug('Register', '👤 Resolving user profile for:', email)
     let userProfile
-    const userRole = isAdmin ? 'tenant_admin' : 'client'
+    const userRole = resolvePublicRegistrationRole(body?.role)
     const categoryArray = Array.isArray(categories) ? categories : (categories ? [categories] : [])
     logger.debug('Register', '📋 Category array for DB:', categoryArray)
     // Tracks whether the users row was newly INSERTed (fires the
@@ -839,7 +839,8 @@ export default defineEventHandler(async (event) => {
       details: {
         email: email.toLowerCase().trim(),
         categories: categoryArray,
-        is_admin: isAdmin,
+        is_admin: false,
+        ignored_client_is_admin: ignoredClientIsAdmin,
         duration_ms: Date.now() - startTime
       }
     }).catch(err => logger.warn('⚠️ Could not log audit:', err))
