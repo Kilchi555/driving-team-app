@@ -2273,7 +2273,6 @@ const submitRegistration = async () => {
         categories: formData.value.categories || null,
         lernfahrausweisNr: formData.value.lernfahrausweisNr?.trim() || null,
         tenantId: activeTenantId,
-        isAdmin: isAdminRegistration.value,
         referredByCode: refCode || null,
         pendingOnly,
         marketing_session_id: typeof window !== 'undefined'
