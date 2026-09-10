@@ -7,6 +7,7 @@
 import type { NuxtApp } from '#app'
 import { defineNuxtPlugin } from '#app'
 import { getSupabase } from '~/utils/supabase'
+import { redactSensitiveUrl } from '~/utils/redact-sensitive-url'
 
 export default defineNuxtPlugin((nuxtApp: NuxtApp) => {
   const supabase = getSupabase()
@@ -50,7 +51,7 @@ export default defineNuxtPlugin((nuxtApp: NuxtApp) => {
         .insert({
           level: levelMap[errorData.severity] || 'error',
           component: errorData.type || 'Error',
-          message: errorData.message || 'Unknown error',
+          message: redactSensitiveUrl(errorData.message || 'Unknown error'),
           data: {
             stack: errorData.stack,
             breadcrumbs: errorData.breadcrumbs || [],
@@ -60,7 +61,7 @@ export default defineNuxtPlugin((nuxtApp: NuxtApp) => {
             apiResponseTime: errorData.apiResponseTime,
             customContext: errorData.context,
           },
-          url: window.location.href,
+          url: redactSensitiveUrl(window.location.href),
           user_agent: navigator.userAgent,
           user_id: dbUserId || null, // Use database user ID
           tenant_id: tenantId,

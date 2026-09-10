@@ -1,107 +1,136 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { createClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { isFirstStaffOnboarding, isPlaceholderStaffInviteEmail } from '~/server/utils/staff-invite-email'
 
 /**
- * Get staff invitation details
- * Public endpoint for staff registration flow
- * Uses RLS policies to ensure only pending invitations are returned
+ * Public staff-registration lookup.
+ *
+ * Architecture (do not revert):
+ *   public POST /api/staff/get-invitation
+ *     → server-side token validation
+ *     → service_role equality lookup on invitation_token
+ *     → minimal response
+ *
+ * Do not restore anon SELECT on staff_invitations (token enumeration).
+ * Do not look up by tenant_id, invitation id, or email from the caller.
  */
 
+const INVITATION_TOKEN_MAX_LENGTH = 128
+
 interface GetInvitationRequest {
-  token: string
+  token?: unknown
+  tenant_id?: unknown
+  invitation_id?: string
+  email?: string
+}
+
+function normalizeInvitationToken(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null
+  const token = raw.trim()
+  if (!token || token.length > INVITATION_TOKEN_MAX_LENGTH) return null
+  return token
+}
+
+function isInvitationExpired(expiresAt: string | null | undefined): boolean {
+  if (!expiresAt) return true
+  return new Date(expiresAt).getTime() <= Date.now()
+}
+
+function notFound() {
+  return createError({
+    statusCode: 404,
+    statusMessage: 'Invitation not found or invalid',
+  })
 }
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody<GetInvitationRequest>(event)
+    const token = normalizeInvitationToken(body?.token)
 
-    if (!body.token) {
+    if (!token) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Invitation token required'
+        statusMessage: 'Invitation token required',
       })
     }
 
-    // Get Supabase client
-    const supabaseUrl = process.env.SUPABASE_URL
-    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY
+    const supabase = getSupabaseAdmin()
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Server configuration error'
-      })
-    }
-
-    // Use anon key - RLS policies will handle access control
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
-    logger.debug('🔍 Fetching staff invitation:', body.token.substring(0, 10) + '...')
-
-    // Fetch invitation
-    const { data: invitation, error: invError } = await supabase
+    const { data: invitationRow, error: invError } = await supabase
       .from('staff_invitations')
-      .select('*')
-      .eq('invitation_token', body.token)
+      .select('id, tenant_id, first_name, last_name, email, phone, status, expires_at')
+      .eq('invitation_token', token)
       .eq('status', 'pending')
-      .single()
+      .maybeSingle()
 
-    if (invError || !invitation) {
-      logger.debug('❌ Invitation not found or invalid')
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Invitation not found or invalid'
-      })
+    if (invError || !invitationRow) {
+      throw notFound()
     }
 
-    // Check if expired
-    if (new Date(invitation.expires_at) < new Date()) {
-      logger.debug('⏰ Invitation expired')
-      throw createError({
-        statusCode: 410,
-        statusMessage: 'Invitation has expired'
-      })
+    if (invitationRow.status !== 'pending' || isInvitationExpired(invitationRow.expires_at)) {
+      throw notFound()
     }
 
-    logger.debug('✅ Invitation found:', invitation.email)
+    const tenantId = invitationRow.tenant_id as string
 
-    // Get tenant info (including slug for redirect)
-    const { data: tenant } = await supabase
+    const { data: tenantRow } = await supabase
       .from('tenants')
-      .select('business_type, id, name, slug, primary_color, secondary_color, logo_url, selected_categories, working_days_template')
-      .eq('id', invitation.tenant_id)
-      .single()
+      .select('id, name, slug, primary_color, business_type, working_days_template')
+      .eq('id', tenantId)
+      .maybeSingle()
 
-      // Get categories if driving school (with hierarchy)
-    let categories = []
+    const tenant = tenantRow
+      ? {
+          id: tenantRow.id,
+          name: tenantRow.name,
+          slug: tenantRow.slug,
+          primary_color: tenantRow.primary_color,
+          business_type: tenantRow.business_type,
+          working_days_template: tenantRow.working_days_template,
+        }
+      : null
+
+    let categories: Array<{
+      code: string
+      name: string
+      parent_category_id: string | null
+      id: string
+      color: string | null
+    }> = []
+
     if (tenant?.business_type === 'driving_school') {
       const { data: cats } = await supabase
         .from('categories')
         .select('code, name, parent_category_id, id, color')
-        .eq('tenant_id', invitation.tenant_id)
+        .eq('tenant_id', tenantId)
         .eq('is_active', true)
         .order('code')
 
-      // Filter: show only leaf categories (subcategories, or mains without children)
       const allCats = cats || []
       const parentIds = new Set(allCats.map(c => c.parent_category_id).filter(Boolean))
       categories = allCats.filter(c => !parentIds.has(c.id))
     }
 
-    // Get tenant standard locations (Treffpunkte)
     const { data: locations } = await supabase
       .from('locations')
       .select('id, name, address, location_type, public_bookable')
-      .eq('tenant_id', invitation.tenant_id)
+      .eq('tenant_id', tenantId)
       .eq('location_type', 'standard')
       .eq('is_active', true)
       .order('name')
 
-    // Exam locations are a driving_school concept (Führerscheinprüfungen)
-    let examLocations: any[] = []
+    let examLocations: Array<{
+      id: string
+      name: string
+      address: string | null
+      city: string | null
+      canton: string | null
+      postal_code: string | null
+      location_type: string
+    }> = []
+
     if (tenant?.business_type === 'driving_school') {
       const { data: exams } = await supabase
         .from('locations')
@@ -113,10 +142,8 @@ export default defineEventHandler(async (event) => {
       examLocations = exams || []
     }
 
-    // Branch-aware UI labels + working-hours defaults from business_type_presets
-    // (tenant has no auth session yet during staff invite registration).
     let ui_labels: Record<string, string> = {}
-    let working_days_defaults: any = null
+    let working_days_defaults: unknown = null
     if (tenant?.business_type) {
       const { data: preset } = await supabase
         .from('business_type_presets')
@@ -126,52 +153,68 @@ export default defineEventHandler(async (event) => {
       if (preset?.ui_labels && typeof preset.ui_labels === 'object') {
         ui_labels = preset.ui_labels as Record<string, string>
       }
-      working_days_defaults = (preset?.defaults as any)?.working_days_template || null
+      working_days_defaults = (preset?.defaults as { working_days_template?: unknown } | null)?.working_days_template || null
     }
 
-    // Check if affiliate is enabled for this tenant
     const { data: affiliateSetting } = await supabase
       .from('tenant_settings')
       .select('setting_value')
-      .eq('tenant_id', invitation.tenant_id)
+      .eq('tenant_id', tenantId)
       .eq('category', 'affiliate')
       .eq('setting_key', 'enabled')
       .maybeSingle()
 
     const affiliateEnabled = affiliateSetting?.setting_value === 'true'
 
-    // Admin email for dual-login guidance (service role — no auth on invite page)
     let admin_email: string | null = null
     try {
-      const { data: adminUser } = await getSupabaseAdmin()
+      const { data: adminUser } = await supabase
         .from('users')
         .select('email')
-        .eq('tenant_id', invitation.tenant_id)
+        .eq('tenant_id', tenantId)
         .eq('role', 'admin')
         .eq('is_active', true)
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle()
       admin_email = adminUser?.email?.toLowerCase()?.trim() || null
-    } catch (err: any) {
-      logger.warn('⚠️ Could not load admin email for invitation:', err?.message)
+    } catch {
+      logger.warn('Could not load admin email for invitation')
     }
 
-    const inviteEmail = invitation.email as string | null
+    const inviteEmail = invitationRow.email as string | null
     const email_is_placeholder = isPlaceholderStaffInviteEmail(inviteEmail)
     const email_locked = !email_is_placeholder && !!inviteEmail
     const show_dual_login_hint = await isFirstStaffOnboarding(
-      getSupabaseAdmin(),
-      invitation.tenant_id,
-      invitation.id,
+      supabase,
+      tenantId,
+      invitationRow.id,
     )
 
     return {
       success: true,
-      invitation,
+      invitation: {
+        first_name: invitationRow.first_name,
+        last_name: invitationRow.last_name,
+        email: invitationRow.email,
+        phone: invitationRow.phone,
+        tenant_id: tenantId,
+      },
       tenant,
       categories,
-      locations: locations || [],
+      locations: (locations || []).map((loc: {
+        id: string
+        name: string
+        address: string | null
+        location_type: string
+        public_bookable: boolean | null
+      }) => ({
+        id: loc.id,
+        name: loc.name,
+        address: loc.address,
+        location_type: loc.location_type,
+        public_bookable: loc.public_bookable,
+      })),
       examLocations,
       affiliateEnabled,
       ui_labels,
@@ -181,17 +224,15 @@ export default defineEventHandler(async (event) => {
       email_is_placeholder,
       show_dual_login_hint,
     }
-
   } catch (error: any) {
-    logger.error('❌ Get invitation error:', error.message)
-
     if (error.statusCode) {
       throw error
     }
 
+    logger.error('Get invitation error')
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to fetch invitation'
+      statusMessage: 'Failed to fetch invitation',
     })
   }
 })
