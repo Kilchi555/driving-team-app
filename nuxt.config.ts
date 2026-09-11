@@ -110,7 +110,9 @@ export default defineNuxtConfig({
       'X-Frame-Options': 'SAMEORIGIN',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self), payment=()',
-      'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+      ...(process.env.NODE_ENV === 'production'
+        ? { 'Strict-Transport-Security': 'max-age=63072000; includeSubDomains' }
+        : {}),
       'X-XSS-Protection': '1; mode=block',
       'Content-Security-Policy': [
         "default-src 'self'",
@@ -184,10 +186,8 @@ export default defineNuxtConfig({
           'database/**',
         ]
       },
-      allowedHosts: [
-        '.ngrok-free.dev',
-        '.ngrok.io'
-      ]
+      // Cloud Agent / tunnels send Host headers Vite would otherwise block.
+      allowedHosts: true
     }
   },
   watchers: {
@@ -300,7 +300,8 @@ export default defineNuxtConfig({
     cookieOptions: {
       maxAge: 60 * 60 * 8, // 8h session lifetime
       sameSite: 'lax',     // blocks cross-site request forgery (CSRF)
-      secure: true         // only sent over HTTPS, never plain HTTP
+      // HTTP Cloud Agent / localhost cannot store Secure cookies
+      secure: process.env.NODE_ENV === 'production',
     }
   },
 

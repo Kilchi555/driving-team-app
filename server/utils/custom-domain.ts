@@ -10,6 +10,20 @@ export const APP_HOSTS = new Set([
   '127.0.0.1',
 ])
 
+/** Cloud Agent / tunnel hosts that must serve the app, not custom-domain 404. */
+const DEV_PREVIEW_SUFFIXES = [
+  '.cursor.com',
+  '.cursor.sh',
+  '.cursor.run',
+  '.cursor.app',
+  '.ngrok-free.dev',
+  '.ngrok.io',
+  '.trycloudflare.com',
+  '.loca.lt',
+]
+
+const IPV4_RE = /^(?:\d{1,3}\.){3}\d{1,3}$/
+
 /** Vercel CNAME target shown to customers */
 export const VERCEL_CNAME_TARGET = 'cname.vercel-dns.com'
 
@@ -53,6 +67,12 @@ export function isAppHost(host: string): boolean {
   if (APP_HOSTS.has(h)) return true
   if (h.endsWith('.vercel.app')) return true
   if (h === 'simy.ch' || h === 'www.simy.ch') return true
+  // IPs and single-label names (Cloud Agent VNC: "cursor", pod IPs)
+  if (IPV4_RE.test(h) || h === '::1') return true
+  if (!h.includes('.')) return true
+  if (DEV_PREVIEW_SUFFIXES.some((suffix) => h === suffix.slice(1) || h.endsWith(suffix))) {
+    return true
+  }
   return false
 }
 

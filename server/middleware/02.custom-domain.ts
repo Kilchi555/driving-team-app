@@ -55,6 +55,8 @@ export default defineEventHandler(async (event) => {
 
   const site = await lookupDomain(host)
   if (!site?.subdomain) {
+    // Local / Cloud Agent previews use unknown Host headers. Never 404 the app there.
+    if (import.meta.dev) return
     // Unknown custom host on this deployment
     if (path === '/' || path === '') {
       throw createError({
