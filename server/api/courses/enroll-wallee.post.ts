@@ -26,6 +26,10 @@ import { sha256Hex } from '~/server/utils/meta-capi'
 import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
+import {
+  assertCustomSessionsForTenant,
+  loadPublicCourseForEnrollment,
+} from '~/server/utils/course-custom-sessions'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -59,10 +63,10 @@ const handler = defineEventHandler(async (event) => {
       zip,                  // Non-SARI courses: postal code
       city,                 // Non-SARI courses: city
       licenseNumber,        // Non-SARI courses: driver's license number
-      tenantId,
+      tenantId: requestedTenantId,
       email,
       phone,
-      customSessions,       // Optional: for flexible session selection
+      customSessions: requestedCustomSessions,       // Optional: for flexible session selection
       referralCode,         // Optional: affiliate referral code
       discountCode,         // Optional: discount/voucher code
       discountAmountRappen, // Optional: client-computed discount (re-validated server-side)
@@ -74,10 +78,10 @@ const handler = defineEventHandler(async (event) => {
       vehicleId,            // Optional: selected rental vehicle
     } = body
 
-    logger.debug('📝 Wallee enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions, isPartialEnrollment })
+    logger.debug('📝 Wallee enrollment request:', { courseId, requestedTenantId, hasCustomSessions: !!requestedCustomSessions, isPartialEnrollment })
 
-    // 1. Validate inputs — faberid/birthdate only required for SARI-managed courses (checked after course load)
-    if (!courseId || !tenantId) {
+    // 1. Validate inputs — tenant is derived from the public course, not trusted from the client.
+    if (!courseId) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Missing required fields'
@@ -86,17 +90,18 @@ const handler = defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // 2. Get course details + tenant feature flags in parallel.
-    //    Tenant flags gate this entire flow: course-booking feature must be
-    //    enabled AND Wallee onboarding must be active before an online payment
-    //    can be initiated. This guard mirrors the UI but cannot be bypassed.
-    const [courseResult, tenantResult, courseSettingResult] = await Promise.all([
-      supabase
-        .from('courses')
-        .select('*, course_sessions(*), course_category:course_categories(code, name, allow_partial_enrollment, partial_start_position, partial_price_rappen)')
-        .eq('id', courseId)
-        .eq('tenant_id', tenantId)
-        .single(),
+    const course = await loadPublicCourseForEnrollment(supabase, courseId, requestedTenantId)
+    const tenantId = course.tenant_id
+
+    const { sanitized: customSessions } = await assertCustomSessionsForTenant({
+      supabase,
+      tenantId,
+      customSessions: requestedCustomSessions,
+      requirePublic: true,
+      enrollmentCourseId: course.id,
+    })
+
+    const [tenantResult, courseSettingResult] = await Promise.all([
       supabase
         .from('tenants')
         .select('wallee_enabled, wallee_onboarding_status, is_active')
@@ -109,15 +114,6 @@ const handler = defineEventHandler(async (event) => {
         .eq('setting_key', 'courses_enabled')
         .maybeSingle()
     ])
-
-    const { data: course, error: courseError } = courseResult
-
-    if (courseError || !course) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Course not found'
-      })
-    }
 
     const tenant = tenantResult.data
     if (!tenant || tenant.is_active === false) {

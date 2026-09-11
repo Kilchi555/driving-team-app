@@ -26,6 +26,8 @@ import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { lockCheckoutBenefits, releaseCheckoutBenefits } from '~/server/utils/checkout-benefits'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
+import { assertCustomSessionsForTenant } from '~/server/utils/course-custom-sessions'
 
 const ProcessPublicPaymentSchema = z.object({
   enrollmentId:  z.string().uuid().optional(),
@@ -127,13 +129,17 @@ export default defineEventHandler(async (event) => {
       }
       
       enrollment = existingEnrollment
+      if (enrollment.courses?.is_public !== true) {
+        throw createError({ statusCode: 404, statusMessage: 'Course not found' })
+      }
     } else {
       // ✅ NEW: For new flow, just get course + tenant info
       const { data: course, error: courseError } = await supabase
         .from('courses')
-        .select('id, name, tenant_id, tenants(slug)')
+        .select('id, name, tenant_id, is_public, status, tenants(slug)')
         .eq('id', courseId)
         .eq('tenant_id', tenantId)
+        .eq('is_public', true)
         .single()
       
       if (courseError || !course) {
@@ -147,7 +153,7 @@ export default defineEventHandler(async (event) => {
       enrollment = {
         id: undefined, // Will be created in webhook
         course_id: courseId,
-        tenant_id: tenantId,
+        tenant_id: course.tenant_id,
         courses: { ...course, id: courseId },
         tenants: { slug: course.tenants?.slug },
         first_name: customerName.split(' ')[0],
@@ -176,6 +182,17 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const { sanitized: sanitizedCustomSessions } = await assertCustomSessionsForTenant({
+      supabase,
+      tenantId: enrollment.tenant_id,
+      customSessions: metadata?.custom_sessions,
+      requirePublic: true,
+      enrollmentCourseId: courseId,
+    })
+    if (metadata && 'custom_sessions' in (metadata as object)) {
+      (metadata as Record<string, unknown>).custom_sessions = sanitizedCustomSessions
+    }
+
     // 2.6 Recompute payable amount from DB — never trust client amount for Wallee charge
     {
       const { data: pricedCourse, error: priceErr } = await supabase
@@ -187,14 +204,15 @@ export default defineEventHandler(async (event) => {
           course_category:course_categories (
             partial_price_rappen
           ),
-          course_sessions (
+          ${courseSessionsEmbed(`
             session_number,
             allow_individual_booking,
             individual_price_rappen
-          )
+          `)}
         `)
         .eq('id', courseId)
         .eq('tenant_id', tenantId)
+        .eq('is_public', true)
         .single()
 
       if (priceErr || !pricedCourse) {

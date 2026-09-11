@@ -25,6 +25,7 @@ import {
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
 import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
 import { assertSameTenant } from '~/server/utils/require-tenant-auth'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 
 type ConfirmationPaymentMethod = 'wallee' | 'cash' | 'admin' | 'invoice' | 'paid' | 'reserve'
 
@@ -96,7 +97,7 @@ export default defineEventHandler(async (event) => {
           description,
           category,
           price_per_participant_rappen,
-          course_sessions(id, sari_session_id, start_time, end_time)
+          ${courseSessionsEmbed('id, sari_session_id, start_time, end_time')}
         ),
         tenants!inner(
           id,

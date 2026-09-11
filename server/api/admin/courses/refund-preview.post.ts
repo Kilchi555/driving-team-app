@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
       courses!inner(
         id,
         tenant_id,
-        course_sessions(start_time, session_number)
+        course_sessions!course_sessions_course_id_fkey(start_time, session_number)
       )
     `)
     .eq('id', enrollmentId)

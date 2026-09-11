@@ -17,6 +17,7 @@ import { defineEventHandler, createError, getQuery } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
+import { courseSessionsEmbed, PUBLIC_COURSE_SESSION_COLUMNS } from '~/server/utils/course-session-embed'
 
 // Simple in-memory rate limiting
 const requestCounts = new Map<string, { count: number; resetTime: number }>()
@@ -141,19 +142,7 @@ export default defineEventHandler(async (event) => {
           partial_start_position,
           partial_price_rappen
         ),
-        course_sessions (
-          id,
-          start_time,
-          end_time,
-          session_number,
-          sari_session_id,
-          allow_individual_booking,
-          individual_price_rappen,
-          individual_booking_requires_confirmation,
-          individual_booking_confirmation_text,
-          current_participants,
-          max_participants
-        )
+        ${courseSessionsEmbed(PUBLIC_COURSE_SESSION_COLUMNS)}
       `)
       .eq('tenant_id', tenant.id)
       .eq('is_public', true)

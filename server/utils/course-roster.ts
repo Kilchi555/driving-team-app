@@ -6,6 +6,7 @@ import {
   sessionsMatchingAppointmentDay,
   partialEnrollmentBadgeLabel,
 } from '~/utils/course-session-attendance'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 
 export type CourseRosterProfile = {
   id: string
@@ -72,7 +73,7 @@ export async function loadCourseRoster(
       status,
       city,
       description,
-      course_sessions (
+      ${courseSessionsEmbed(`
         id,
         session_number,
         start_time,
@@ -81,7 +82,7 @@ export async function loadCourseRoster(
         instructor_type,
         external_instructor_name,
         staff:users!staff_id(id, first_name, last_name)
-      )
+      `)}
     `)
     .eq('id', courseId)
     .eq('tenant_id', profile.tenant_id)

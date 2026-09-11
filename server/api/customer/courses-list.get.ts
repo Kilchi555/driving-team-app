@@ -11,6 +11,7 @@ import { defineEventHandler, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { verifyAuth } from '~/server/utils/auth-helper'
 import { logger } from '~/utils/logger'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 
 interface TransformedCourse {
   id: string
@@ -69,15 +70,16 @@ const fetchCoursesFromDb = async (tenantId: string): Promise<any> => {
           id,
           name
         ),
-        course_sessions (
+        ${courseSessionsEmbed(`
           id,
           session_number,
           start_time,
           end_time
-        )
+        `)}
       `)
       .eq('tenant_id', tenantId)
       .eq('status', 'active')
+      .eq('is_public', true)
       .order('name')
 
     if (coursesError) {
