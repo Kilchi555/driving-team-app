@@ -2,6 +2,7 @@ import { getSupabaseServerWithSession } from '~/utils/supabase'
 import { SARIClient, type SARICourseMember } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { logger } from '~/utils/logger'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseServerWithSession(event)
@@ -87,10 +88,10 @@ export default defineEventHandler(async (event) => {
       name,
       sari_course_id,
       tenant_id,
-      course_sessions (
+      ${courseSessionsEmbed(`
         id,
         sari_session_id
-      )
+      `)}
     `)
     .eq('id', courseId)
     .eq('tenant_id', userData.tenant_id)

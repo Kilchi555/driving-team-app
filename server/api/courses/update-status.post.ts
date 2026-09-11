@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { generateWaitlistAvailableEmail } from '~/server/utils/email-templates'
 import { logger } from '~/utils/logger'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 
 const VALID_STATUSES = ['draft', 'active', 'scheduled', 'completed', 'cancelled', 'waitlist', 'full', 'running'] as const
 type CourseStatus = typeof VALID_STATUSES[number]
@@ -30,7 +31,7 @@ export default defineEventHandler(async (event) => {
   // Verify course belongs to the caller's tenant
   const { data: course } = await supabase
     .from('courses')
-    .select('id, tenant_id, status, name, description, instructor_id, external_instructor_name, price_per_participant_rappen, sari_managed, course_category_id, course_sessions (start_time, end_time, staff_id, external_instructor_name)')
+    .select(`id, tenant_id, status, name, description, instructor_id, external_instructor_name, price_per_participant_rappen, sari_managed, course_category_id, ${courseSessionsEmbed('start_time, end_time, staff_id, external_instructor_name')}`)
     .eq('id', body.courseId)
     .eq('tenant_id', profile.tenant_id)
     .single()

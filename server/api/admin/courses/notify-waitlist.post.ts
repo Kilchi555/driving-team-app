@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     .from('courses')
     .select(`
       id, name, description, status, tenant_id,
-      course_sessions (start_time, end_time)
+      course_sessions!course_sessions_course_id_fkey (start_time, end_time)
     `)
     .eq('id', body.courseId)
     .eq('tenant_id', profile.tenant_id)

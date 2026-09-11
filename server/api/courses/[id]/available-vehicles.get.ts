@@ -14,6 +14,7 @@
  */
 import { defineEventHandler, getRouterParam, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 
 export default defineEventHandler(async (event) => {
   const courseId = getRouterParam(event, 'id')
@@ -24,7 +25,7 @@ export default defineEventHandler(async (event) => {
   // Load course + sessions
   const { data: course } = await supabase
     .from('courses')
-    .select('id, tenant_id, category, requires_vehicle, course_sessions(id, start_time, end_time)')
+    .select(`id, tenant_id, category, requires_vehicle, ${courseSessionsEmbed('id, start_time, end_time')}`)
     .eq('id', courseId)
     .eq('is_public', true)
     .in('status', ['active', 'waitlist', 'scheduled'])
