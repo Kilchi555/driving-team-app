@@ -1,19 +1,24 @@
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import {
+  quoteStaffAppointmentLessonPrice,
+  composeStaffPaymentTotals,
+  staffQuoteMetadata,
+  throwIfStaffPricingError,
+} from '~/server/utils/staff-appointment-price'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { appointmentId, productsPriceRappen } = body
+    const { appointmentId } = body
     
     if (!appointmentId) {
       throw new Error('Appointment ID is required')
     }
     
-    logger.debug('📝 Updating payment with products price:', {
+    logger.debug('📝 Updating payment with products price from server catalog:', {
       appointmentId,
-      productsPriceRappen
     })
     
     const supabaseAdmin = getSupabaseAdmin()
@@ -37,7 +42,7 @@ export default defineEventHandler(async (event) => {
     // 2. Get existing payment
     const { data: existingPayment, error: fetchError } = await supabaseAdmin
       .from('payments')
-      .select('id, lesson_price_rappen, admin_fee_rappen, discount_amount_rappen, payment_status, appointment_id')
+      .select('id, lesson_price_rappen, admin_fee_rappen, discount_amount_rappen, credit_used_rappen, payment_status, appointment_id, metadata')
       .eq('appointment_id', appointmentId)
       .single()
     
@@ -54,7 +59,7 @@ export default defineEventHandler(async (event) => {
     // 3. Verify staff has access to this appointment
     const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
-      .select('staff_id, tenant_id')
+      .select('id, staff_id, tenant_id, type, event_type_code, duration_minutes, user_id, vehicle_id, room_id')
       .eq('id', appointmentId)
       .single()
     
@@ -62,8 +67,11 @@ export default defineEventHandler(async (event) => {
       throw new Error('Appointment not found')
     }
     
-    // Verify staff owns this appointment
-    if (appointment.staff_id !== userProfile.id) {
+    const isStaff = userProfile.role === 'staff'
+    const isAdmin = ['admin', 'tenant_admin', 'super_admin'].includes(userProfile.role)
+    const isOwnAppointment = appointment.staff_id === userProfile.id
+    const isSameTenant = appointment.tenant_id === userProfile.tenant_id
+    if (!((isStaff && isOwnAppointment && isSameTenant) || (isAdmin && isSameTenant))) {
       logger.error('❌ User not authorized for this appointment:', {
         staffId: appointment.staff_id,
         userProfileId: userProfile.id,
@@ -71,17 +79,55 @@ export default defineEventHandler(async (event) => {
       })
       throw new Error('Unauthorized to update this appointment')
     }
-    
-    // 4. Recalculate total: lesson + admin_fee + products - discount
-    const newTotal = (existingPayment.lesson_price_rappen || 0)
-      + (existingPayment.admin_fee_rappen || 0)
-      + (productsPriceRappen || 0)
-      - (existingPayment.discount_amount_rappen || 0)
+
+    let quote
+    try {
+      quote = await quoteStaffAppointmentLessonPrice(supabaseAdmin, {
+        tenantId: appointment.tenant_id,
+        categoryCode: appointment.type,
+        eventTypeCode: appointment.event_type_code,
+        durationMinutes: appointment.duration_minutes,
+        studentUserId: appointment.user_id,
+        vehicleId: appointment.vehicle_id,
+        roomId: appointment.room_id,
+        mode: 'edit',
+        excludeAppointmentId: appointment.id,
+      })
+    } catch (err) {
+      throwIfStaffPricingError(err)
+      throw err
+    }
+
+    const { data: sales } = await supabaseAdmin
+      .from('product_sales')
+      .select('total_price_rappen')
+      .eq('appointment_id', appointmentId)
+    const productsPriceRappen = (sales || []).reduce(
+      (sum: number, row: any) => sum + (Math.round(Number(row.total_price_rappen) || 0)),
+      0,
+    )
+
+    const totals = composeStaffPaymentTotals({
+      lessonPriceRappen: quote.lessonPriceRappen,
+      adminFeeRappen: quote.adminFeeRappen,
+      productsPriceRappen,
+      resourceCostRappen: quote.resourceCostRappen,
+      discountAmountRappen: existingPayment.discount_amount_rappen || 0,
+      creditUsedRappen: existingPayment.credit_used_rappen || 0,
+    })
     
     // 5. Prepare update data
     const updateData: any = {
-      products_price_rappen: productsPriceRappen,
-      total_amount_rappen: Math.max(0, newTotal),
+      lesson_price_rappen: totals.lesson_price_rappen,
+      admin_fee_rappen: totals.admin_fee_rappen,
+      products_price_rappen: totals.products_price_rappen,
+      discount_amount_rappen: totals.discount_amount_rappen,
+      credit_used_rappen: totals.credit_used_rappen,
+      total_amount_rappen: totals.total_amount_rappen,
+      metadata: {
+        ...(existingPayment.metadata || {}),
+        ...staffQuoteMetadata(quote, totals),
+      },
       updated_at: new Date().toISOString()
     }
     
