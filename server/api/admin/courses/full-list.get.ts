@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
       room:rooms(name, location, capacity),
       vehicle:vehicles(name, location),
       course_category:course_categories(name, icon, color, allow_partial_enrollment, partial_start_position, partial_price_rappen),
-      sessions:course_sessions(
+      sessions:course_sessions!course_sessions_course_id_fkey(
         id,
         session_number,
         start_time,

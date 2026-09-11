@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
     .from('courses')
     .select(`
       id, name, description, sari_managed, sari_course_id,
-      course_sessions(id, start_time, end_time, sari_session_id),
+      course_sessions!course_sessions_course_id_fkey(id, start_time, end_time, sari_session_id),
       tenants!inner(id, name, slug, contact_email, from_email, resend_domain_verified, primary_color, sari_enabled, sari_environment)
     `)
     .eq('id', courseId)

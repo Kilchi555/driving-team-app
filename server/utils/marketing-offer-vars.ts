@@ -10,6 +10,7 @@ import {
   type OfferCtaType,
   type TemplateVariables,
 } from '~/server/utils/email-template'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 
 export interface OfferRenderContext {
   discount_code?: string
@@ -77,8 +78,9 @@ export async function resolveOfferTemplateVars(
   if (courseId && (!courseName || !courseDate || !coursePrice)) {
     const { data: course } = await supabase
       .from('courses')
-      .select('name, price_per_participant_rappen, course_sessions(start_time)')
+      .select(`name, price_per_participant_rappen, ${courseSessionsEmbed('start_time')}`)
       .eq('id', courseId)
+      .eq('tenant_id', opts.tenantId)
       .maybeSingle()
 
     if (course) {
