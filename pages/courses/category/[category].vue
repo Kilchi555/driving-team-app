@@ -202,7 +202,7 @@ const loadCategoryAndCourses = async () => {
         *,
         course_category:course_categories(name, icon, color),
         instructor:users!courses_instructor_id_fkey(first_name, last_name),
-        next_session:course_sessions(start_time),
+        next_session:course_sessions!course_sessions_course_id_fkey(start_time),
         registrations:course_registrations(status)
       `)
       .eq('course_category_id', category.id)

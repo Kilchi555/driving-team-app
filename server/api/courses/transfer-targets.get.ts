@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
     return { courses: [] }
   }
 
-  // Return eligible target courses
+  // Return eligible target courses — public only (customer transfer picker).
   const { data: targets } = await supabaseAdmin
     .from('courses')
     .select('id, name, category, max_participants, current_participants, course_start_date, sari_managed, sari_course_id')
@@ -54,6 +54,7 @@ export default defineEventHandler(async (event) => {
     .eq('category', sourceCourse.category)
     .eq('sari_managed', true)
     .eq('is_active', true)
+    .eq('is_public', true)
     .neq('id', courseId)
     .order('course_start_date', { ascending: true })
 

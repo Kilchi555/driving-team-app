@@ -120,7 +120,7 @@ export default defineEventHandler(async (event) => {
       status,
       is_public,
       rooms ( name, location ),
-      course_sessions ( start_time )
+      course_sessions!course_sessions_course_id_fkey ( start_time )
     `)
     .eq('tenant_id', tenant_id)
     .eq('course_category_id', categoryRow.id)

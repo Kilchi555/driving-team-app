@@ -1,16 +1,23 @@
 /**
  * API to fetch available sessions for swapping
  * Used when user wants to change session 3 or 4 to a different course's session
+ *
+ * Public: tenantId is a catalog key — only public courses of that tenant.
+ * Admin: admin=true requires an authenticated admin; tenant is taken from
+ * the admin profile. A foreign tenantId is 403, not a data source.
  */
 
 import { defineEventHandler, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { requireAdminProfile } from '~/server/utils/auth'
+import { validateUUID } from '~/server/utils/validators'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const { 
-    tenantId, 
+    tenantId: requestedTenantId, 
     category, 
     sessionPosition, // Which session to swap (e.g., "3" or "4")
     afterDate,       // Must be after this date (to ensure chronological order)
@@ -20,14 +27,42 @@ export default defineEventHandler(async (event) => {
     admin,           // Admin mode: include non-public courses, relax hard date filter
   } = query
 
-  if (!tenantId || !category || !sessionPosition) {
+  const wantsAdmin = admin === 'true' || admin === '1'
+  let tenantId: string
+  let isAdmin = false
+
+  if (wantsAdmin) {
+    const profile = await requireAdminProfile(event)
+    isAdmin = true
+    tenantId = profile.tenant_id
+    if (
+      requestedTenantId &&
+      typeof requestedTenantId === 'string' &&
+      requestedTenantId.length > 0 &&
+      requestedTenantId !== profile.tenant_id
+    ) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden',
+      })
+    }
+  } else {
+    if (!requestedTenantId || !validateUUID(String(requestedTenantId)).valid) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Missing required parameters: tenantId, category, sessionPosition'
+      })
+    }
+    tenantId = String(requestedTenantId)
+  }
+
+  if (!category || !sessionPosition) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Missing required parameters: tenantId, category, sessionPosition'
     })
   }
 
-  const isAdmin = admin === 'true' || admin === '1'
   const supabase = getSupabaseAdmin()
   const positionNum = parseInt(sessionPosition as string)
 
@@ -58,14 +93,14 @@ export default defineEventHandler(async (event) => {
         max_participants,
         current_participants,
         is_public,
-        course_sessions(
+        ${courseSessionsEmbed(`
           id,
           sari_session_id,
           start_time,
           end_time,
           current_participants,
           max_participants
-        )
+        `)}
       `)
       .eq('tenant_id', tenantId)
       .eq('category', category)
