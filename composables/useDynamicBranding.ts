@@ -22,7 +22,7 @@ export const useDynamicBranding = () => {
   const DEFAULT_LOGO = null
   const DEFAULT_PRIMARY_COLOR = '#3B82F6'
   const DEFAULT_SECONDARY_COLOR = '#10B981'
-  const DEFAULT_NAME = 'Driving Team'
+  const DEFAULT_NAME = 'Simy'
 
   /**
    * Holt das beste Logo für einen bestimmten Kontext
