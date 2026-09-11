@@ -1106,6 +1106,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
             companyBillingAddressId: refs?.savedCompanyBillingAddressId?.value || null,
             // ✅ Send cash already paid flag
             cashAlreadyPaid: refs?.cashAlreadyPaid?.value === true,
+            // Identifiers only — server looks up catalog prices. Monetary
+            // fields on this request are not authoritative.
+            productLines: (refs?.selectedProducts?.value || [])
+              .map((item: any) => ({
+                productId: item.product?.id || item.product_id || item.id,
+                quantity: item.quantity || 1,
+              }))
+              .filter((line: any) => line.productId),
             // ✅ Resource surcharge breakdown for booking cost storage
             resourceSurcharges: (refs?.resourceSurcharges?.value || [])
           }
@@ -1528,248 +1536,13 @@ const useEventModalForm = (currentUser?: any, refs?: {
   }
 
   // ✅ Update payment entry for existing appointment
-  const updatePaymentEntry = async (appointmentId: string, discountSaleId?: string) => {
-    try {
-      const supabase = getSupabase()
-      // ✅ Get tenant_id from authStore (not from direct DB query!)
-      const authStore = useAuthStore()
-      
-      // Check if payment already exists
-      const { data: existingPayment, error: fetchError } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('appointment_id', appointmentId)
-        .single()
-
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
-        console.error('❌ Error checking existing payment:', fetchError)
-        return null
-      }
-
-      if (!existingPayment) {
-        logger.debug('ℹ️ No existing payment found, creating new one')
-        return await createPaymentEntry(appointmentId, discountSaleId)
-      }
-
-      // ✅ CHECK: Verhindere Änderungen an bezahlten Terminen, wenn Dauer erhöht wird
-      const isPaid = existingPayment.payment_status === 'completed' || existingPayment.payment_status === 'authorized'
-      
-      if (isPaid) {
-        // ✅ Nutze die bereits geladenen Appointment-Daten aus formData
-        // Keine zusätzliche Query nötig - das verhindert RLS-Fehler
-        const newDuration = formData.value.duration_minutes || 45
-        
-        // Bei Edit-Mode sollten die Original-Daten bekannt sein
-        // Falls nicht, erlaube die Änderung trotzdem (non-blocking)
-        logger.debug('✅ Duration check for paid appointment - allowing update')
-      }
-
-      logger.debug('🔄 Updating existing payment:', existingPayment.id)
-      
-      // ✅ WICHTIG: Nutze die aktuell in PriceDisplay gespeicherte Price aus der DB
-      // nicht die alten Refs, da PriceDisplay den Preis bereits aktualisiert hat
-      let lessonPriceRappen: number
-      const appointmentType = formData.value.appointment_type || 'lesson'
-      
-      const staffTenantId = authStore.userProfile?.tenant_id
-      if (!staffTenantId) {
-        throw new Error('Staff user has no tenant assigned')
-      }
-      
-      // Check if PriceDisplay already updated the payment with new price.
-      // Free (0) falls through so duration × pricePerMinute can still apply.
-      if (existingPayment.lesson_price_rappen && existingPayment.lesson_price_rappen > 0) {
-        // Use the current payment price (already updated by PriceDisplay watcher)
-        lessonPriceRappen = existingPayment.lesson_price_rappen
-        logger.debug('💾 Using existing payment price from DB (updated by PriceDisplay):', lessonPriceRappen)
-      } else {
-        // Fallback: calculate based on current data
-        const durationMinutes = formData.value.duration_minutes || 45
-
-        if (appointmentType === 'theory') {
-          lessonPriceRappen = 8500
-          logger.debug('📚 Theorielektion: Verwende Standardpreis 85.- CHF')
-        } else {
-          const dynamicPrice = refs?.dynamicPricing?.value
-
-          // DEBUG: Zeige den aktuellen Status von dynamicPrice
-          logger.debug('🔍 Dynamic pricing state at save time:', {
-            available: !!dynamicPrice,
-            totalPriceChf: dynamicPrice?.totalPriceChf,
-            pricePerMinute: dynamicPrice?.pricePerMinute,
-            adminFeeChf: dynamicPrice?.adminFeeChf,
-            adminFeeRappen: dynamicPrice?.adminFeeRappen
-          })
-
-          if (dynamicPrice && (dynamicPrice.totalPriceChf != null && dynamicPrice.totalPriceChf !== '')) {
-            const totalChf = parseFloat(dynamicPrice.totalPriceChf) || 0
-            const adminFeeChf = dynamicPrice.adminFeeChf || 0
-            const basePriceChf = totalChf - adminFeeChf
-            lessonPriceRappen = Math.round(basePriceChf * 100)
-          } else if (
-            typeof dynamicPrice?.pricePerMinute === 'number' &&
-            Number.isFinite(dynamicPrice.pricePerMinute) &&
-            dynamicPrice.pricePerMinute >= 0
-          ) {
-            lessonPriceRappen = Math.round(durationMinutes * dynamicPrice.pricePerMinute * 100)
-          } else {
-            logger.warn('⚠️ No dynamic pricing available, using fallback pricing calculation')
-
-            // Fallback: Lade die Preisregel aus der DB (category-scoped, driving_school)
-            let pricingRule: any = null
-            if (formData.value.type) {
-              const { data } = await supabase
-                .from('pricing_rules')
-                .select('*')
-                .eq('category_code', formData.value.type)
-                .eq('tenant_id', staffTenantId)  // ✅ Use staffTenantId from authStore
-                .eq('is_default', false)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle()
-              pricingRule = data
-            }
-
-            if (pricingRule?.base_price_rappen != null || pricingRule?.price_per_minute_rappen != null) {
-              if (pricingRule.base_price_rappen != null) {
-                lessonPriceRappen = Math.round(Number(pricingRule.base_price_rappen))
-              } else {
-                lessonPriceRappen = Math.round(Number(pricingRule.price_per_minute_rappen) * durationMinutes)
-              }
-              logger.debug('💾 Fallback: Using pricing rule from DB:', { category: formData.value.type, price: lessonPriceRappen })
-            } else if (requiresCategory.value) {
-              // Last resort: Use generic calculation (driving_school only)
-              const fallbackRule = getFallbackRule(formData.value.type || 'B')
-              const pricePerMinute = fallbackRule?.price_per_minute_chf || (95 / 45)
-              const baseLessonPriceRappen = Math.round(durationMinutes * pricePerMinute * 100)
-              lessonPriceRappen = Math.round(baseLessonPriceRappen / 100) * 100
-              logger.warn('💾 Fallback: Using generic price per minute calculation:', { pricePerMinute, duration: durationMinutes, price: lessonPriceRappen })
-              logFallbackUsed(
-                'pricing',
-                `Keine Preisregel in DB gefunden – generischer Fallback-Preis für Kategorie "${formData.value.type}" verwendet.`,
-                { categoryCode: formData.value.type, durationMinutes },
-                'error'
-              )
-            } else {
-              lessonPriceRappen = 0
-            }
-          }
-        }
-      }
-
-      const selectedProducts = refs?.selectedProducts?.value || []
-      const productsPriceRappen = selectedProducts.reduce((total: number, item: any) => {
-        const price = item.product?.price || item.price || 0
-        const quantity = item.quantity || 1
-        return total + Math.round(price * quantity * 100)
-      }, 0)
-      
-      const discountAmountRappen = Math.round((formData.value.discount || 0) * 100)
-      
-      // ✅ WICHTIG: Nutze admin fee aus DB wenn bereits dort, sonst berechne neu
-      let adminFeeRappen: number
-      if (appointmentType === 'theory') {
-        adminFeeRappen = 0
-      } else {
-        // Use existing admin fee from DB (already updated by PriceDisplay if needed)
-        adminFeeRappen = existingPayment.admin_fee_rappen || 0
-        
-        // If still 0 and not theory, check dynamic pricing
-        if (adminFeeRappen === 0) {
-        adminFeeRappen = Math.round((refs?.dynamicPricing?.value?.adminFeeRappen || 0))
-        }
-      }
-      
-      const rawPaymentMethod = refs?.selectedPaymentMethod?.value || 'wallee'
-      const paymentMethodMapping: Record<string, string> = {
-        'wallee': 'wallee',
-        'online': 'wallee',
-        'twint': 'wallee',
-        'card': 'wallee',
-        'credit-card': 'wallee',
-        'cash': 'cash',
-        'bar': 'cash',
-        'invoice': 'invoice',
-        'rechnung': 'invoice'
-      }
-      
-      const paymentMethod = paymentMethodMapping[rawPaymentMethod] || 'wallee'
-      const totalAmountRappen = lessonPriceRappen + productsPriceRappen + adminFeeRappen - discountAmountRappen
-      
-      // Get invoice address
-      let companyBillingAddressId: string | null = null
-      let invoiceAddress: any = null
-      
-      if (paymentMethod === 'invoice') {
-        // ✅ First try to get the ID from the ref passed from EventModal
-        if (refs?.savedCompanyBillingAddressId?.value) {
-          companyBillingAddressId = refs.savedCompanyBillingAddressId.value
-          logger.debug('🏢 Update: Using company billing address ID from ref:', companyBillingAddressId)
-        }
-        
-        // ✅ Also get invoice data for JSONB
-        if (refs?.priceDisplayRef?.value) {
-          const priceDisplay = refs.priceDisplayRef.value
-          if (priceDisplay && priceDisplay.invoiceData) {
-            invoiceAddress = {
-              company_name: priceDisplay.invoiceData.company_name || '',
-              contact_person: priceDisplay.invoiceData.contact_person || '',
-              email: priceDisplay.invoiceData.email || '',
-              phone: priceDisplay.invoiceData.phone || '',
-              street: priceDisplay.invoiceData.street || '',
-              street_number: priceDisplay.invoiceData.street_number || '',
-              zip: priceDisplay.invoiceData.zip || '',
-              city: priceDisplay.invoiceData.city || '',
-              country: priceDisplay.invoiceData.country || 'Schweiz'
-            }
-          }
-        }
-      }
-      
-      // userData already fetched at the start of this function
-      
-      const updateData: any = {
-        lesson_price_rappen: lessonPriceRappen,
-        products_price_rappen: productsPriceRappen,
-        discount_amount_rappen: discountAmountRappen,
-        total_amount_rappen: Math.max(0, totalAmountRappen),
-        payment_method: paymentMethod,
-        description: `Payment for appointment: ${formData.value.title}`,
-        notes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
-        company_billing_address_id: companyBillingAddressId || null,
-        invoice_address: invoiceAddress,
-        updated_at: new Date().toISOString()
-      }
-      
-      // ✅ WICHTIG: IMMER den aktuellen payment_status aus der DB beibehalten!
-      // Der Status sollte nur von der Payment-Logik geändert werden, nicht vom Appointment-Edit!
-      logger.debug('📋 Existing payment status from DB:', existingPayment.payment_status)
-      if (existingPayment.payment_status) {
-        updateData.payment_status = existingPayment.payment_status
-        logger.debug('✅ Preserving payment status:', existingPayment.payment_status)
-      }
-      
-      logger.debug('💳 Updating payment entry:', updateData)
-      
-      const { data: payment, error } = await supabase
-        .from('payments')
-        .update(updateData)
-        .eq('id', existingPayment.id)
-        .select()
-        .single()
-      
-      if (error) {
-        console.error('❌ Error updating payment:', error)
-        return null
-      }
-      
-      logger.debug('✅ Payment entry updated:', payment.id)
-      return payment
-      
-    } catch (err: any) {
-      console.error('❌ Error in updatePaymentEntry:', err)
-      return null
-    }
+  const updatePaymentEntry = async (appointmentId: string, _discountSaleId?: string) => {
+    // Payment amounts are owned by POST /api/appointments/save (server quote).
+    // Direct PostgREST monetary UPDATE is not allowed.
+    logger.debug('ℹ️ Payment amounts are updated by appointments/save, not the browser', {
+      appointmentId,
+    })
+    return null
   }
 
   // ✅ NEUE FUNKTION: Lade letzten Standort aus Cloud Supabase

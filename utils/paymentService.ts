@@ -93,53 +93,10 @@ export class PaymentService {
   /**
    * Erstellt einen Payment Record in der Datenbank
    */
-  private async createPaymentRecord(request: PaymentRequest): Promise<PaymentRecord> {
-    const now = new Date().toISOString()
-    
-    // Berechne Preise
-    const lessonPriceRappen = request.amount * 100 // CHF zu Rappen
-    const productsPriceRappen = (request.products || []).reduce((sum, p) => sum + (p.price_rappen * p.quantity), 0)
-    const discountAmountRappen = (request.discounts || []).reduce((sum, d) => sum + d.discount_amount_rappen, 0)
-    const subtotalRappen = lessonPriceRappen + productsPriceRappen
-    const totalAmountRappen = subtotalRappen - discountAmountRappen
-    
-    const paymentData = {
-      appointment_id: request.appointmentId,
-      user_id: request.userId,
-      staff_id: request.staffId,
-      // ✅ Neue Spalten (Hauptstruktur)
-      lesson_price_rappen: lessonPriceRappen,
-      products_price_rappen: productsPriceRappen,
-      discount_amount_rappen: discountAmountRappen,
-      subtotal_rappen: subtotalRappen,
-      total_amount_rappen: totalAmountRappen,
-      // ✅ Alte Spalten (für Kompatibilität)
-      amount_rappen: lessonPriceRappen,
-      admin_fee_rappen: 0, // Wird aus lesson_price_rappen berechnet
-      payment_method: request.paymentMethod,
-      payment_status: 'pending',
-      currency: 'CHF',
-      description: request.description || 'Fahrlektion',
-      metadata: {
-        products: request.products,
-        discounts: request.discounts,
-        customer_name: request.customerName,
-        customer_email: request.customerEmail
-      },
-      created_at: now,
-      updated_at: now
-    }
-
-    const { data, error } = await this.supabase
-      .from('payments')
-      .insert(paymentData)
-      .select()
-      .single()
-
-    if (error) throw error
-
-    logger.debug('✅ Payment record created:', data.id)
-    return data
+  private async createPaymentRecord(_request: PaymentRequest): Promise<PaymentRecord> {
+    throw new Error(
+      'Direct PostgREST payment inserts are not allowed. Use /api/staff/create-payment or /api/appointments/save.',
+    )
   }
 
   /**

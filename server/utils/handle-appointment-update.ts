@@ -3,6 +3,7 @@
 
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
+import { proportionalLessonPriceRappen } from '~/server/utils/staff-appointment-price'
 
 export interface AppointmentUpdateData {
   appointmentId: string
@@ -50,7 +51,7 @@ export async function handleAppointmentDurationUpdate(data: AppointmentUpdateDat
     // 2. Get payment if exists
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .select('id, payment_status, lesson_price_rappen, total_amount_rappen, admin_fee_rappen')
+      .select('id, payment_status, lesson_price_rappen, total_amount_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen')
       .eq('appointment_id', appointmentId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -97,9 +98,11 @@ export async function handleAppointmentDurationUpdate(data: AppointmentUpdateDat
 
       // Calculate new price
       const oldPrice = payment.lesson_price_rappen || 0
-      const pricePerMinute = oldPrice > 0 ? oldPrice / oldDuration : 0
-      const newPrice = Math.round(pricePerMinute * newDuration)
-      const newTotal = newPrice + (payment.admin_fee_rappen || 0)
+      const newPrice = proportionalLessonPriceRappen(oldPrice, oldDuration, newDuration)
+      const newTotal = newPrice
+        + (payment.admin_fee_rappen || 0)
+        + (payment.products_price_rappen || 0)
+        - (payment.discount_amount_rappen || 0)
 
       const { error: updateError } = await supabase
         .from('payments')

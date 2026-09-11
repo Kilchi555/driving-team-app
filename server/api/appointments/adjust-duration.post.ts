@@ -1,26 +1,29 @@
 // server/api/appointments/adjust-duration.post.ts
 // Handles appointment duration adjustments with automatic payment reconciliation
 
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { requireStaffOrInternal } from '~/server/utils/require-staff-or-internal'
+import {
+  normalizeStaffDurationMinutes,
+  proportionalLessonPriceRappen,
+  throwIfStaffPricingError,
+} from '~/server/utils/staff-appointment-price'
 
 export default defineEventHandler(async (event) => {
   try {
     const auth = await requireStaffOrInternal(event)
     const supabase = getSupabaseAdmin()
-    const { appointmentId, newDurationMinutes, oldDurationMinutes, pricePerMinute } = await readBody(event)
+    const { appointmentId, newDurationMinutes } = await readBody(event)
 
     logger.debug('⏱️ Adjusting appointment duration:', {
       appointmentId,
-      oldDurationMinutes,
       newDurationMinutes,
-      pricePerMinute
     })
 
-    // Validate input
-    if (!appointmentId || newDurationMinutes === undefined || oldDurationMinutes === undefined || pricePerMinute === undefined) {
+    if (!appointmentId || newDurationMinutes === undefined) {
       throw new Error('Missing required fields')
     }
 
@@ -46,6 +49,15 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    const oldDurationMinutes = appointment.duration_minutes
+    let newDuration: number
+    try {
+      newDuration = normalizeStaffDurationMinutes(newDurationMinutes)
+    } catch (err) {
+      throwIfStaffPricingError(err)
+      throw err
+    }
+
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .select('*')
@@ -68,44 +80,49 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 2. Calculate price difference
-    const oldPrice = oldDurationMinutes * pricePerMinute
-    const newPrice = newDurationMinutes * pricePerMinute
-    const priceDifference = newPrice - oldPrice
-    const priceDifferenceRappen = Math.round(priceDifference * 100)
+    // Proportional to stored lesson price — never trust client ppm.
+    let newLessonRappen: number
+    try {
+      newLessonRappen = proportionalLessonPriceRappen(
+        payment.lesson_price_rappen || 0,
+        oldDurationMinutes,
+        newDuration,
+      )
+    } catch (err) {
+      throwIfStaffPricingError(err)
+      throw err
+    }
+    const oldLessonRappen = Math.round(Number(payment.lesson_price_rappen) || 0)
+    const priceDifferenceRappen = newLessonRappen - oldLessonRappen
 
     logger.debug('💰 Price calculation:', {
-      oldPrice,
-      newPrice,
-      priceDifference,
+      oldLessonRappen,
+      newLessonRappen,
       priceDifferenceRappen,
       paymentStatus: payment.payment_status
     })
 
-    // 3. Handle based on payment status
     if (payment.payment_status === 'completed' || payment.payment_status === 'authorized') {
       logger.debug('✅ Payment already processed:', payment.payment_status)
 
-      if (priceDifference > 0) {
-        // Price increased - create second payment for difference
+      if (priceDifferenceRappen > 0) {
         logger.debug('📈 Price increased - creating additional payment for difference')
         return await handlePriceIncrease(
           supabase,
           appointmentId,
           payment,
           priceDifferenceRappen,
-          newDurationMinutes,
+          newDuration,
           oldDurationMinutes
         )
-      } else if (priceDifference < 0) {
-        // Price decreased - credit to student balance
+      } else if (priceDifferenceRappen < 0) {
         logger.debug('📉 Price decreased - crediting student balance')
         return await handlePriceDecrease(
           supabase,
           appointmentId,
           payment,
           Math.abs(priceDifferenceRappen),
-          newDurationMinutes,
+          newDuration,
           oldDurationMinutes
         )
       } else {
@@ -113,14 +130,13 @@ export default defineEventHandler(async (event) => {
         return { success: true, message: 'No price difference', priceDifference: 0 }
       }
     } else {
-      // Payment not yet completed - just update existing payment
       logger.debug('🔄 Payment not yet completed - updating existing payment')
       return await updatePendingPayment(
         supabase,
         appointmentId,
         payment,
-        newPrice,
-        newDurationMinutes,
+        newLessonRappen,
+        newDuration,
         oldDurationMinutes
       )
     }
@@ -257,7 +273,7 @@ async function handlePriceDecrease(
         .from('credit_transactions')
         .insert([{
           user_id: payment.user_id,
-          tenant_id: payment.tenant_id || appointment.tenant_id || null,
+          tenant_id: payment.tenant_id || null,
           transaction_type: 'refund',
           amount_rappen: refundRappen,
           balance_before_rappen: oldBalance,
@@ -313,7 +329,7 @@ async function handlePriceDecrease(
       .from('credit_transactions')
       .insert([{
         user_id: payment.user_id,
-        tenant_id: payment.tenant_id || appointment.tenant_id || null,
+        tenant_id: payment.tenant_id || null,
         transaction_type: 'refund',
         amount_rappen: refundRappen,
         balance_before_rappen: oldBalance,
@@ -355,15 +371,14 @@ async function updatePendingPayment(
   supabase: any,
   appointmentId: string,
   payment: any,
-  newPrice: number,
+  newLessonRappen: number,
   newDuration: number,
   oldDuration: number
 ) {
   try {
-    const newPriceRappen = Math.round(newPrice * 100)
+    const newPriceRappen = Math.max(0, Math.round(newLessonRappen))
     const oldPriceRappen = payment.lesson_price_rappen || 0
 
-    // Calculate new total (products and admin fee stay the same)
     const newTotalRappen = newPriceRappen + (payment.admin_fee_rappen || 0) + (payment.products_price_rappen || 0) - (payment.discount_amount_rappen || 0)
 
     const { data: updatedPayment, error: updateError } = await supabase

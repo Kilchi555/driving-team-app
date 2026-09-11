@@ -1,7 +1,10 @@
 import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
-import logger from '~/utils/logger'
+import {
+  proportionalLessonPriceRappen,
+  throwIfStaffPricingError,
+} from '~/server/utils/staff-appointment-price'
 
 /**
  * ✅ POST /api/staff/update-appointment
@@ -134,8 +137,19 @@ export default defineEventHandler(async (event) => {
         .maybeSingle()
 
       if (payment && payment.lesson_price_rappen > 0) {
-        const pricePerMinute = payment.lesson_price_rappen / originalAppointment.duration_minutes
-        const creditAmount = Math.round(pricePerMinute * durationReduction)
+        let newLessonPrice: number
+        let creditAmount: number
+        try {
+          newLessonPrice = proportionalLessonPriceRappen(
+            payment.lesson_price_rappen,
+            originalAppointment.duration_minutes,
+            updateData.duration_minutes,
+          )
+          creditAmount = Math.max(0, Math.round(payment.lesson_price_rappen) - newLessonPrice)
+        } catch (err) {
+          throwIfStaffPricingError(err)
+          throw err
+        }
 
         // Load or create student credit
         const { data: existingCredit } = await supabaseAdmin
@@ -181,12 +195,12 @@ export default defineEventHandler(async (event) => {
         }
 
         // Update payment amount
-        const newLessonPrice = Math.round(pricePerMinute * updateData.duration_minutes)
+        const newLessonPriceForUpdate = newLessonPrice
         await supabaseAdmin
           .from('payments')
           .update({
-            lesson_price_rappen: newLessonPrice,
-            total_amount_rappen: newLessonPrice + (payment.admin_fee_rappen || 0) + (payment.products_price_rappen || 0) - (payment.discount_amount_rappen || 0)
+            lesson_price_rappen: newLessonPriceForUpdate,
+            total_amount_rappen: newLessonPriceForUpdate + (payment.admin_fee_rappen || 0) + (payment.products_price_rappen || 0) - (payment.discount_amount_rappen || 0)
           })
           .eq('id', payment.id)
       }
