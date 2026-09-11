@@ -553,7 +553,7 @@ export const useTenantBranding = () => {
     brandName: computed(() => 
       currentTenantBranding.value?.meta?.brandName || 
       currentTenantBranding.value?.name || 
-      'Driving Team'
+      'Simy'
     ),
     primaryColor: computed(() => {
       const color = currentTenantBranding.value?.colors?.primary || '#1E40AF'

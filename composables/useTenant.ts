@@ -186,7 +186,7 @@ export const useTenant = () => {
   const { logFallbackUsed } = useFallbackLogger()
 
   // Computed Properties
-  const tenantName = computed(() => currentTenant.value?.name || 'Driving Team')
+  const tenantName = computed(() => currentTenant.value?.name || 'Simy')
   const tenantSlug = computed(() => {
     const slug = currentTenant.value?.slug
     if (!slug) {
