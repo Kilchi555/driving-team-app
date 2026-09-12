@@ -5,6 +5,10 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
 import { logger } from '~/utils/logger'
+import {
+  quoteStaffAppointmentFromRow,
+  throwIfStaffPricingError,
+} from '~/server/utils/staff-appointment-price'
 
 type PaymentAction =
   | 'mark_paid'
@@ -95,7 +99,7 @@ export default defineEventHandler(async (event) => {
       return data
     }
 
-    const getOrCreatePayment = async (appointmentId: string, userId: string, amountRappen: number) => {
+    const getOrCreatePayment = async (appointmentId: string, userId: string) => {
       const { data: existing } = await supabase
         .from('payments')
         .select('id, payment_status, payment_method')
@@ -104,6 +108,21 @@ export default defineEventHandler(async (event) => {
 
       if (existing) return existing
 
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .select('id, tenant_id, type, event_type_code, duration_minutes, user_id, vehicle_id, room_id, staff_id')
+        .eq('id', appointmentId)
+        .maybeSingle()
+      if (appointmentError || !appointment) throw appointmentError || new Error('Appointment not found')
+
+      let quoted
+      try {
+        quoted = await quoteStaffAppointmentFromRow(supabase, appointment, { mode: 'create' })
+      } catch (err) {
+        throwIfStaffPricingError(err)
+        throw err
+      }
+
       const { data: newPayment, error } = await supabase
         .from('payments')
         .insert({
@@ -111,8 +130,13 @@ export default defineEventHandler(async (event) => {
           user_id: userId,
           payment_status: 'pending',
           payment_method: 'cash',
-          total_amount_rappen: amountRappen || 0,
-          tenant_id: callerUser.tenant_id
+          tenant_id: callerUser.tenant_id,
+          lesson_price_rappen: quoted.totals.lesson_price_rappen,
+          admin_fee_rappen: quoted.totals.admin_fee_rappen,
+          products_price_rappen: quoted.totals.products_price_rappen,
+          discount_amount_rappen: quoted.totals.discount_amount_rappen,
+          total_amount_rappen: quoted.totals.total_amount_rappen,
+          credit_used_rappen: quoted.totals.credit_used_rappen,
         })
         .select('id, payment_status, payment_method')
         .single()
@@ -127,7 +151,7 @@ export default defineEventHandler(async (event) => {
       if (!appointment_id) throw createError({ statusCode: 400, statusMessage: 'Missing appointment_id' })
 
       const appt = await verifyAppointment(appointment_id)
-      const payment = await getOrCreatePayment(appointment_id, user_id || appt.user_id, amount_rappen || 0)
+      const payment = await getOrCreatePayment(appointment_id, user_id || appt.user_id)
 
       const { error } = await supabase
         .from('payments')
@@ -164,7 +188,7 @@ export default defineEventHandler(async (event) => {
       if (!VALID_PAYMENT_METHODS.includes(payment_method)) throw createError({ statusCode: 400, statusMessage: 'Invalid payment method' })
 
       const appt = await verifyAppointment(appointment_id)
-      const payment = await getOrCreatePayment(appointment_id, user_id || appt.user_id, amount_rappen || 0)
+      const payment = await getOrCreatePayment(appointment_id, user_id || appt.user_id)
 
       const { error } = await supabase.from('payments').update({ payment_method }).eq('id', payment.id)
       if (error) throw error
@@ -289,7 +313,7 @@ export default defineEventHandler(async (event) => {
       const now = new Date().toISOString()
       for (const aptId of appointment_ids) {
         const appt = await verifyAppointment(aptId)
-        const payment = await getOrCreatePayment(aptId, appt.user_id, 0)
+      const payment = await getOrCreatePayment(aptId, appt.user_id)
         await supabase.from('payments').update({ payment_status: 'completed', paid_at: now }).eq('id', payment.id)
       }
 
