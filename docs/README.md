@@ -344,6 +344,20 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused operational docs (intent, surfaces, pitfalls, codepaths). Prefer updating these over adding root-level markdown reports.
+
+| Runbook | Covers |
+|---------|--------|
+| [BOOKING_VEHICLE_CAPACITY.md](./BOOKING_VEHICLE_CAPACITY.md) | School-fleet slot filter; empty fleet vs `enforce_capacity` |
+| [MEETING_LINKS.md](./MEETING_LINKS.md) | Invite/location meeting type + HTTPS links in mail/cron |
+| [ADMIN_XLSX_IMPORT.md](./ADMIN_XLSX_IMPORT.md) | Client-side exceljs admin import; course 409 messages |
+
+Also see existing ops docs in this folder: [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md), [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md), [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md), [ACCESS_AND_SECRETS_POLICY.md](./ACCESS_AND_SECRETS_POLICY.md), [SERVER_SIDE_CONVERSION_SETUP.md](./SERVER_SIDE_CONVERSION_SETUP.md).
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
