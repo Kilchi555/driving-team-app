@@ -4,7 +4,7 @@
  */
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
-import { resolveCustomerChannels } from '~/server/utils/customer-notification-channel'
+import { resolvePolicyCustomerChannels } from '~/server/utils/customer-notification-channel'
 import { sendTenantSMS } from '~/server/utils/sms'
 import {
   buildAppointmentCancelledSms,
@@ -66,18 +66,11 @@ export async function notifyCustomerAppointmentChange(opts: {
 
   const hasEmail = !!(user.email && String(user.email).trim())
   const hasPhone = !!(user.phone && String(user.phone).trim())
-  const smsToggle =
-    opts.type === 'cancelled'
-      ? policy.cancellation_sms_enabled !== false
-      : policy.reschedule_sms_enabled !== false && changedFields.includes('datetime')
-
-  const channels = resolveCustomerChannels({
-    channel: policy.customer_notification_channel,
-    hasEmail,
-    hasPhone,
-    emailEnabled: true,
-    smsEnabled: smsToggle,
-  })
+  const kind = opts.type === 'cancelled' ? 'cancellation' : 'reschedule'
+  const channels = resolvePolicyCustomerChannels(policy, kind, { hasEmail, hasPhone })
+  if (opts.type === 'rescheduled' && !changedFields.includes('datetime')) {
+    channels.sendSms = false
+  }
 
   const start = new Date(opts.appointmentTimeIso)
   const appointmentTimeLabel =

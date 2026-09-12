@@ -14,6 +14,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { dispatchAppointmentConfirmation } from '~/server/utils/dispatch-appointment-confirmation'
+import { policyAllowsCustomerNotification } from '~/server/utils/customer-notification-channel'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -97,7 +98,10 @@ export default defineEventHandler(async (event) => {
     if (!user?.email?.trim() || !row.user_id || !row.tenant_id) continue
 
     const policy = ((tenant as any)?.booking_policy || {}) as Record<string, any>
-    if (policy.confirmation_email_enabled === false) {
+    if (
+      !policyAllowsCustomerNotification(policy, 'confirmation', 'email')
+      && !policyAllowsCustomerNotification(policy, 'confirmation', 'sms')
+    ) {
       candidates.push({
         appointmentId: row.id,
         userId: row.user_id,
@@ -106,7 +110,7 @@ export default defineEventHandler(async (event) => {
         email: user.email,
         name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
         createdAt: row.created_at,
-        skipReason: 'policy_email_disabled',
+        skipReason: 'policy_disabled',
       })
       continue
     }

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   normalizeCustomerNotificationChannel,
+  policyAllowsCustomerNotification,
   resolveCustomerChannels,
+  resolvePolicyCustomerChannels,
 } from '../customer-notification-channel'
 
 describe('resolveCustomerChannels', () => {
@@ -62,5 +64,51 @@ describe('resolveCustomerChannels', () => {
       emailEnabled: true,
       smsEnabled: false,
     })).toEqual({ sendEmail: true, sendSms: false })
+  })
+})
+
+describe('policyAllowsCustomerNotification', () => {
+  it('defaults missing keys to on', () => {
+    expect(policyAllowsCustomerNotification({}, 'reminder', 'email')).toBe(true)
+    expect(policyAllowsCustomerNotification({}, 'course_enrollment', 'sms')).toBe(false)
+  })
+
+  it('respects the master switch', () => {
+    expect(policyAllowsCustomerNotification(
+      { customer_notifications_enabled: false, confirmation_email_enabled: true },
+      'confirmation',
+      'email',
+    )).toBe(false)
+  })
+
+  it('respects per-type email off', () => {
+    expect(policyAllowsCustomerNotification(
+      { reminder_email_enabled: false },
+      'reminder',
+      'email',
+    )).toBe(false)
+    expect(policyAllowsCustomerNotification(
+      { reminder_email_enabled: false, reminder_sms_enabled: true },
+      'reminder',
+      'sms',
+    )).toBe(true)
+  })
+})
+
+describe('resolvePolicyCustomerChannels', () => {
+  it('skips reminder email when that toggle is off', () => {
+    expect(resolvePolicyCustomerChannels(
+      { reminder_email_enabled: false, reminder_sms_enabled: true, customer_notification_channel: 'email_first' },
+      'reminder',
+      { hasEmail: true, hasPhone: true },
+    )).toEqual({ sendEmail: false, sendSms: true })
+  })
+
+  it('sends nothing when master is off', () => {
+    expect(resolvePolicyCustomerChannels(
+      { customer_notifications_enabled: false, customer_notification_channel: 'both' },
+      'confirmation',
+      { hasEmail: true, hasPhone: true },
+    )).toEqual({ sendEmail: false, sendSms: false })
   })
 })

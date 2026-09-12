@@ -201,7 +201,7 @@ async function sendConfirmationEmail(
 
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('name, slug, contact_email, primary_color, logo_wide_url, logo_url, logo_square_url')
+      .select('name, slug, contact_email, primary_color, logo_wide_url, logo_url, logo_square_url, booking_policy')
       .eq('id', tenantId)
       .single()
 
@@ -210,6 +210,15 @@ async function sendConfirmationEmail(
       console.warn('No email address for enrollment confirmation')
       return
     }
+
+    const { policyAllowsCustomerNotification } = await import(
+      '~/server/utils/customer-notification-channel'
+    )
+    const sendCustomerEmail = policyAllowsCustomerNotification(
+      (tenant as any)?.booking_policy,
+      'course_enrollment',
+      'email',
+    )
 
     const tenantName = tenant?.name || 'Simy'
     const primaryColor = tenant?.primary_color || '#667eea'
@@ -230,31 +239,31 @@ async function sendConfirmationEmail(
         })
       : undefined
 
-    const emailData = enrollmentDetails.isSARI
-      ? generateSARIEnrollmentConfirmationEmail({
-          participantName,
-          courseName: course.name,
-          courseDate,
-          location: course.external_instructor_name,
-          paymentAmount: enrollmentDetails.paymentAmount,
-          tenantName,
-          primaryColor,
-          logoUrl,
-        })
-      : generateNonSARIEnrollmentConfirmationEmail({
-          participantName,
-          courseName: course.name,
-          courseDate,
-          location: course.external_instructor_name,
-          instructorName: course.external_instructor_name,
-          tenantName,
-          primaryColor,
-          logoUrl,
-        })
-
     const now = new Date().toISOString()
-    const toQueue: any[] = [
-      {
+    const toQueue: any[] = []
+    if (sendCustomerEmail) {
+      const emailData = enrollmentDetails.isSARI
+        ? generateSARIEnrollmentConfirmationEmail({
+            participantName,
+            courseName: course.name,
+            courseDate,
+            location: course.external_instructor_name,
+            paymentAmount: enrollmentDetails.paymentAmount,
+            tenantName,
+            primaryColor,
+            logoUrl,
+        })
+        : generateNonSARIEnrollmentConfirmationEmail({
+            participantName,
+            courseName: course.name,
+            courseDate,
+            location: course.external_instructor_name,
+            instructorName: course.external_instructor_name,
+            tenantName,
+            primaryColor,
+            logoUrl,
+        })
+      toQueue.push({
         tenant_id: tenantId,
         channel: 'email',
         recipient_email: emailTo,
@@ -268,8 +277,8 @@ async function sendConfirmationEmail(
           course_name: course.name,
           tenant_name: tenantName,
         },
-      },
-    ]
+      })
+    }
 
     if (tenant?.contact_email) {
       const { subject: adminSubject, html: adminHtml } = generateAdminEnrollmentNotificationEmail({
@@ -304,6 +313,11 @@ async function sendConfirmationEmail(
           tenant_name: tenantName,
         },
       })
+    }
+
+    if (toQueue.length === 0) {
+      console.log('⏭️ Enrollment emails skipped (policy or no recipients)')
+      return
     }
 
     const { error: queueError } = await supabase.from('outbound_messages_queue').insert(toQueue)

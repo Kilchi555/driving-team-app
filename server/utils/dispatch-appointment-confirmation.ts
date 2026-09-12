@@ -160,12 +160,15 @@ export async function dispatchAppointmentConfirmation(
     .maybeSingle()
 
   const policy = (tenantForPolicy?.booking_policy as any) || {}
-  const confirmationEmailEnabled = policy.confirmation_email_enabled !== false
+  const { policyAllowsCustomerNotification } = await import(
+    '~/server/utils/customer-notification-channel'
+  )
+  const confirmationEmailEnabled = policyAllowsCustomerNotification(policy, 'confirmation', 'email')
   const confirmationEmailMode: 'always' | 'after_registration' | 'never' =
     policy.confirmation_email_mode === 'after_registration' || policy.confirmation_email_mode === 'never'
       ? policy.confirmation_email_mode
       : 'always'
-  const confirmationSmsEnabled = policy.confirmation_sms_enabled !== false
+  const confirmationSmsEnabled = policyAllowsCustomerNotification(policy, 'confirmation', 'sms')
 
   const { data: appointment, error: appointmentError } = await supabase
     .from('appointments')

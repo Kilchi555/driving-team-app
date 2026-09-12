@@ -654,33 +654,19 @@
         </div>
       </div>
 
-      <!-- Terminbestätigungen -->
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-semibold text-gray-800">Terminbestätigungen versenden</h2>
-            <p class="text-xs text-gray-400 mt-0.5">{{ t.clientsPlural }} erhalten nach jeder Buchung eine Bestätigungs-E-Mail — sofern eine E-Mail-Adresse bekannt ist.</p>
-          </div>
-          <button
-            type="button"
-            @click="policy.confirmation_email_enabled = !policy.confirmation_email_enabled"
-            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none flex-shrink-0 ml-4"
-            :style="policy.confirmation_email_enabled ? primaryBg : { background: '#e5e7eb' }"
-          >
-            <span
-              class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
-              :class="policy.confirmation_email_enabled ? 'translate-x-6' : 'translate-x-1'"
-            />
-          </button>
-        </div>
-      </div>
+      <CustomerNotificationSettings
+        v-model:policy="policy"
+        :sms-usage="smsUsage"
+        :sms-overage-rate="smsOverageRate"
+        :sms-previews="smsPreviews"
+      />
 
       <!-- Kunde bei Terminänderung -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-50">
           <h2 class="text-sm font-semibold text-gray-800">Kunde bei Terminänderung informieren</h2>
           <p class="text-xs text-gray-400 mt-0.5">
-            E-Mail (und SMS, falls aktiv) nur bei den gewählten Änderungen. Standard: nur Datum oder Startzeit.
+            Nur wirksam, wenn Verschiebung oben aktiv ist. Standard: nur Datum oder Startzeit.
           </p>
         </div>
         <div class="px-5 py-4 space-y-3">
@@ -862,6 +848,28 @@ const isLoading = ref(true)
 const isSaving = ref(false)
 const saveSuccess = ref(false)
 
+const smsUsage = ref<{ used: number; included: number; overage: number; overageCostChf: number; resetLabel?: string } | null>(null)
+const smsOverageRate = ref(0.15)
+const smsPreviews = ref({
+  short: { message: 'Hallo Max, Termin Di 15.3. 14:00 bestätigt.', segments: 1, costChf: 0.15 },
+  long: { message: 'Hallo Max, Termin Di 15.3. 14:00 bestätigt. Absage/Details: https://app.simy.ch/login', segments: 2, costChf: 0.30 },
+})
+
+async function loadSmsUsage() {
+  try {
+    const res = await $fetch<{
+      usage: any
+      overageRateChf: number
+      previews: { short: any; long: any }
+    }>('/api/admin/sms-usage')
+    smsUsage.value = res.usage
+    smsOverageRate.value = res.overageRateChf
+    smsPreviews.value = res.previews
+  } catch (e) {
+    console.warn('Could not load SMS usage:', e)
+  }
+}
+
 const policy = ref({
   student_required_fields: ['first_name', 'last_name', 'phone'] as string[],
   student_optional_fields: [] as string[],
@@ -873,7 +881,23 @@ const policy = ref({
   registration_lernfahrausweis_mode: 'optional' as 'hidden' | 'optional' | 'required',
   registration_proposal_mode: 'optional' as 'hidden' | 'optional' | 'required',
   registration_account_mode: 'required' as 'hidden' | 'required',
+  customer_notifications_enabled: true,
   confirmation_email_enabled: true,
+  confirmation_sms_enabled: true,
+  reminder_email_enabled: true,
+  reminder_sms_enabled: true,
+  cancellation_email_enabled: true,
+  cancellation_sms_enabled: true,
+  reschedule_email_enabled: true,
+  reschedule_sms_enabled: true,
+  payment_reminder_email_enabled: true,
+  payment_reminder_sms_enabled: true,
+  course_reminder_email_enabled: true,
+  course_reminder_sms_enabled: true,
+  course_enrollment_email_enabled: true,
+  customer_notification_channel: 'email_first' as 'email_first' | 'sms_first' | 'both',
+  sms_message_length: 'short' as 'short' | 'long',
+  sms_hard_stop_on_quota: false,
   staff_booking_notification_enabled: true,
   registration_reminder_enabled: false,
   registration_reminder_days: 7,
@@ -1112,5 +1136,8 @@ const savePolicy = async () => {
   }
 }
 
-onMounted(() => loadPolicy())
+onMounted(() => {
+  loadPolicy()
+  loadSmsUsage()
+})
 </script>
