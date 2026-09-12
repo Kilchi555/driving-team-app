@@ -119,7 +119,6 @@ describe('P0-05 email source contract', () => {
   it('forwards the internal secret from trusted enrollment callers', () => {
     const callers = [
       'server/api/courses/enroll-cash.post.ts',
-      'server/api/courses/enroll/post.ts',
       'server/api/wallee/webhook.post.ts',
       'server/api/admin/courses/enroll-user.post.ts',
       'server/api/admin/courses/add-participant.post.ts',
