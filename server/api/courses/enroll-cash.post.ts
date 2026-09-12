@@ -26,6 +26,10 @@ import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-at
 import { resolveNonWalleeEnrollmentMethod } from '~/server/utils/course-enrollment-payment-method'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
+import {
+  assertCustomSessionsForTenant,
+  loadPublicCourseForEnrollment,
+} from '~/server/utils/course-custom-sessions'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -59,10 +63,10 @@ const handler = defineEventHandler(async (event) => {
       zip,                  // Non-SARI courses: postal code
       city,                 // Non-SARI courses: city
       licenseNumber,        // Non-SARI courses: driver's license number
-      tenantId,
+      tenantId: requestedTenantId,
       email,
       phone,
-      customSessions,
+      customSessions: requestedCustomSessions,
       isPartialEnrollment,
       partialStartPosition,
       individualSessionNumber,  // Set when booking a single allow_individual_booking session
@@ -72,10 +76,10 @@ const handler = defineEventHandler(async (event) => {
       paymentMethod: _requestedPaymentMethod, // accepted for back-compat; course.payment_method wins
     } = body
 
-    logger.debug('💵 Cash enrollment request:', { courseId, tenantId, hasCustomSessions: !!customSessions, isPartialEnrollment })
+    logger.debug('💵 Cash enrollment request:', { courseId, requestedTenantId, hasCustomSessions: !!requestedCustomSessions, isPartialEnrollment })
 
-    // 1. Validate inputs
-    if (!courseId || !tenantId) {
+    // 1. Validate inputs — tenant is derived from the public course, not trusted from the client.
+    if (!courseId) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Missing required fields'
@@ -84,31 +88,22 @@ const handler = defineEventHandler(async (event) => {
 
     const supabase = getSupabaseAdmin()
 
-    // 2. Get course details + tenant flags in parallel.
-    const [courseResult, tenantResult] = await Promise.all([
-      supabase
-        .from('courses')
-        .select('*, course_sessions(*), course_category:course_categories(code, name, allow_partial_enrollment, partial_start_position, partial_price_rappen)')
-        .eq('id', courseId)
-        .eq('tenant_id', tenantId)
-        .single(),
-      supabase
-        .from('tenants')
-        .select('wallee_enabled, is_active')
-        .eq('id', tenantId)
-        .single()
-    ])
+    const course = await loadPublicCourseForEnrollment(supabase, courseId, requestedTenantId)
+    const tenantId = course.tenant_id
 
-    const { data: course, error: courseError } = courseResult
+    const { sanitized: customSessions } = await assertCustomSessionsForTenant({
+      supabase,
+      tenantId,
+      customSessions: requestedCustomSessions,
+      requirePublic: true,
+      enrollmentCourseId: course.id,
+    })
 
-    if (courseError || !course) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Course not found'
-      })
-    }
-
-    const tenant = tenantResult.data
+    const { data: tenant } = await supabase
+      .from('tenants')
+      .select('wallee_enabled, is_active')
+      .eq('id', tenantId)
+      .single()
     if (!tenant || tenant.is_active === false) {
       throw createError({ statusCode: 404, statusMessage: 'Tenant nicht verfügbar' })
     }

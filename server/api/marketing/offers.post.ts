@@ -16,6 +16,7 @@ import {
 } from '~/server/utils/email-template'
 import { computeNextRunAt, type ScheduleFrequency } from '~/server/utils/campaign-schedule'
 import { defaultRepeatSettings, inferCampaignOfferKind } from '~/utils/campaign-repeat-defaults'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 
 type ValidityPreset = 'end_of_month' | '7_days' | '14_days' | 'custom'
 
@@ -171,8 +172,9 @@ export default defineEventHandler(async (event) => {
   if (courseId) {
     const { data: course } = await supabase
       .from('courses')
-      .select('name, price_per_participant_rappen, course_sessions(start_time)')
+      .select(`name, price_per_participant_rappen, ${courseSessionsEmbed('start_time')}`)
       .eq('id', courseId)
+      .eq('tenant_id', tenantId)
       .maybeSingle()
 
     if (course) {

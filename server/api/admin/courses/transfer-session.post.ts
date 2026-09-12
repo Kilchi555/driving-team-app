@@ -111,7 +111,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: course } = await supabase
     .from('courses')
-    .select('id, name, category, sari_managed, sari_course_id, tenant_id, course_sessions(id, sari_session_id, start_time, end_time, session_number)')
+    .select('id, name, category, sari_managed, sari_course_id, tenant_id, course_sessions!course_sessions_course_id_fkey(id, sari_session_id, start_time, end_time, session_number)')
     .eq('id', reg.course_id)
     .eq('tenant_id', profile.tenant_id)
     .single()
