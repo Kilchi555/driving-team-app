@@ -344,6 +344,25 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused ops/dev guides (prefer these over root historical reports):
+
+| Doc | Covers |
+|-----|--------|
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin lockout recovery when Passkeys/backup codes are gone |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Session/cookie persistence behaviour |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Stuck pending Wallee payments, webhook logs, recovery cron |
+| [SERVER_SIDE_CONVERSION_SETUP.md](./SERVER_SIDE_CONVERSION_SETUP.md) | Google Ads server-side booking/inquiry conversions |
+| [GADS_AUTO_ZH_OPTIMIZER.md](./GADS_AUTO_ZH_OPTIMIZER.md) | Auto Zürich campaign variants, optimize mutations, scorecard |
+| [PARTIAL_PAYMENT_INVOICING.md](./PARTIAL_PAYMENT_INVOICING.md) | Invoice remaining balance after Teilzahlung |
+| [STAFF_HOURS_SOLL.md](./STAFF_HOURS_SOLL.md) | 6.5h monthly Soll, Ist rules, sick hours, charged cancellations |
+| [E2E_PREVIEW_CI.md](./E2E_PREVIEW_CI.md) | Playwright against Vercel simy-app preview + bypass |
+| [ANDROID_PLAY_SUBMISSION.md](./ANDROID_PLAY_SUBMISSION.md) | Play Store submission checklist |
+| [PAYMENT_PROVIDERS.md](./PAYMENT_PROVIDERS.md) | Payment provider overview |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
