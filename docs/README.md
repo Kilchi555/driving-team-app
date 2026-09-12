@@ -344,6 +344,19 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused ops / developer runbooks (prefer these over root historical markdown):
+
+| Doc | Topic |
+|-----|--------|
+| [ADMIN_F01_ACCESS.md](./ADMIN_F01_ACCESS.md) | Authz for service-role `/api/admin/*` (F-01) |
+| [PAYMENTS_REMINDER_LOGS_RLS.md](./PAYMENTS_REMINDER_LOGS_RLS.md) | Payments UPDATE + reminder_logs RLS (F-05) |
+| [SUSPICIOUS_ZERO_PAYMENTS.md](./SUSPICIOUS_ZERO_PAYMENTS.md) | Guest pricing, free events, CHF-0 process/cron guards |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Pending payment recovery + webhook logs |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
