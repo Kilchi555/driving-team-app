@@ -344,6 +344,25 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused, source-verified ops/dev notes (prefer these over root historical markdown reports):
+
+| Runbook | Covers |
+|---------|--------|
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin lockout recovery when passkeys/backup codes are gone |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Client session cache / HMR restore |
+| [IDLE_STUDENT_REMINDERS.md](./IDLE_STUDENT_REMINDERS.md) | Idle client cron, customers filter, pause / no-further-lessons |
+| [INVOICE_QUOTES.md](./INVOICE_QUOTES.md) | Offerten (`document_kind=quote`), accept → RE, AR/dunning exclusions |
+| [ACCOUNTING_LEDGER.md](./ACCOUNTING_LEDGER.md) | Double-entry sync, Treuhänder grants, P&amp;L constraints |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Wallee payment recovery & debug |
+| [PAYMENT_PROVIDERS.md](./PAYMENT_PROVIDERS.md) | Wallee / Stripe provider setup |
+| [SERVER_SIDE_CONVERSION_SETUP.md](./SERVER_SIDE_CONVERSION_SETUP.md) | Google Ads server-side conversions |
+| [ANDROID_PLAY_SUBMISSION.md](./ANDROID_PLAY_SUBMISSION.md) | Play Store submission |
+| [APP_STORE_SUBMISSION.md](./APP_STORE_SUBMISSION.md) | iOS App Store submission |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
