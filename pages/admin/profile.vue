@@ -1701,9 +1701,9 @@
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-1">Standard-Zahlungsart</h2>
             <p class="text-sm text-gray-500 mb-4">
-              Wird im Termin-Dialog vorausgewählt, wenn der Kunde keine eigene Präferenz hat.
-              Bei der Online-Buchung nur, wenn die Zahlart für Kunden erlaubt ist
-              (Bar: Sichtbarkeit «Mitarbeiter und Kunden», Rechnung: Option unten aktiv).
+              Wird im Termin-Dialog und bei der Online-Buchung vorausgewählt, wenn der Kunde nichts wählt.
+              Welche Zahlarten der Kunde selbst ankreuzen kann, steuern die Optionen darunter
+              (Bar-Sichtbarkeit, Rechnung für Kunden, Wallee).
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <label
