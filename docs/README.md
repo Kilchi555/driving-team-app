@@ -344,6 +344,20 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused, source-verified runbooks for ops and engineers. Prefer these over root historical reports for current behavior.
+
+| Runbook | Covers |
+|---------|--------|
+| [AUTH_EMAIL_CLAIM.md](./AUTH_EMAIL_CLAIM.md) | Global Auth email claim, onboarding hijack guard, public email-check privacy |
+| [SARI_STAFF_CALENDAR_SYNC.md](./SARI_STAFF_CALENDAR_SYNC.md) | Staff calendar rebuild on SARI date moves, Zurich→UTC, course titles |
+| [RESCHEDULE_EMAIL_TRIGGERS.md](./RESCHEDULE_EMAIL_TRIGGERS.md) | Booking-policy reschedule fields, SMS datetime gate, tenant-branded change mail |
+
+Also on `main`: [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md), [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md), [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md), [SARI_SOAP_COURSES_V3_API.md](./SARI_SOAP_COURSES_V3_API.md), [SERVER_SIDE_CONVERSION_SETUP.md](./SERVER_SIDE_CONVERSION_SETUP.md).
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
