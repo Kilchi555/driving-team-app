@@ -27,7 +27,10 @@ import { logFallbackUsed } from '~/server/utils/log-fallback'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { lockCheckoutBenefits, releaseCheckoutBenefits } from '~/server/utils/checkout-benefits'
 import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
-import { assertCustomSessionsForTenant } from '~/server/utils/course-custom-sessions'
+import {
+  assertCustomSessionsForTenant,
+  loadPublicCourseForEnrollment,
+} from '~/server/utils/course-custom-sessions'
 
 const ProcessPublicPaymentSchema = z.object({
   enrollmentId:  z.string().uuid().optional(),
@@ -57,10 +60,12 @@ export default defineEventHandler(async (event) => {
       customerEmail, 
       customerName,
       courseId,
-      tenantId,
       userId: passedUserId,
       metadata = {}
     } = parseResult.data
+    // Client tenantId is a hint; the public (no enrollmentId) path rebinds
+    // it from the course row after loadPublicCourseForEnrollment.
+    let tenantId = parseResult.data.tenantId
     // Amount is recomputed server-side below; keep a mutable binding
     let amount = parseResult.data.amount
 
@@ -133,29 +138,24 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 404, statusMessage: 'Course not found' })
       }
     } else {
-      // ✅ NEW: For new flow, just get course + tenant info
-      const { data: course, error: courseError } = await supabase
-        .from('courses')
-        .select('id, name, tenant_id, is_public, status, tenants(slug)')
-        .eq('id', courseId)
-        .eq('tenant_id', tenantId)
-        .eq('is_public', true)
-        .single()
-      
-      if (courseError || !course) {
-        logger.warn('❌ Course not found:', { courseId, tenantId })
-        throw createError({
-          statusCode: 404,
-          statusMessage: 'Course not found'
-        })
-      }
-      
+      // Public checkout: same enrollability authority as enroll-wallee / enroll-cash.
+      // Must run before payment insert / Wallee. Do not apply this helper to the
+      // enrollmentId (admin payment-link) branch above.
+      const course = await loadPublicCourseForEnrollment(supabase, courseId, tenantId)
+      tenantId = course.tenant_id
+
+      const { data: tenantRow } = await supabase
+        .from('tenants')
+        .select('slug')
+        .eq('id', course.tenant_id)
+        .maybeSingle()
+
       enrollment = {
         id: undefined, // Will be created in webhook
-        course_id: courseId,
+        course_id: course.id,
         tenant_id: course.tenant_id,
-        courses: { ...course, id: courseId },
-        tenants: { slug: course.tenants?.slug },
+        courses: { ...course, id: course.id },
+        tenants: { slug: tenantRow?.slug },
         first_name: customerName.split(' ')[0],
         last_name: customerName.split(' ').slice(1).join(' ') || '',
         email: customerEmail,
