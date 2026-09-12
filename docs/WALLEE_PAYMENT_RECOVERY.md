@@ -199,3 +199,64 @@ CRON_SECRET=your-secret-key  # Required for cron endpoint auth
 - **Storage**: ~1KB per webhook log entry
 
 Run cron job every 10 minutes to stay current.
+
+---
+
+## Processing lock & sync-then-release (double-charge guard)
+
+**When to use:** Customer stuck on "Zahlung läuft" / `processing`, "Jetzt bezahlen" reappears while Wallee still has an open Confirmed checkout, or suspected double charge after abort.
+
+### Intent
+
+Checkout sets `payments.payment_status = 'processing'` as an **optimistic lock** before/while redirecting to Wallee. Historically, abort handlers **blindly** set `processing → pending`, which re-enabled a new charge while the first Wallee transaction (often `CONFIRMED`) could still `FULFILL`.
+
+**Rule:** never release to `pending` without reading Wallee first. Shared helpers live in `server/utils/wallee-payment-sync.ts`.
+
+### Wallee state → decision
+
+| Wallee state | Decision | DB effect |
+|--------------|----------|-----------|
+| `FULFILL` / `COMPLETED` / `SUCCESSFUL` | `mark_completed` | → `completed` (+ `paid_at`) |
+| `AUTHORIZED` | `mark_authorized` | → `authorized` |
+| `FAILED` / `CANCELED` / `DECLINE` / `VOIDED` | `release_pending` | `processing`/`failed` → `pending` |
+| `PENDING` / `CONFIRMED` / `PROCESSING` | `keep_open` | **no status change**; resume URL may be returned |
+| API error / unknown | `unknown` | **keep lock** (safe default) |
+| No `wallee_transaction_id` | `no_transaction` | allow release `processing` → `pending` |
+
+`CONFIRMED` maps to our `processing` in `WALLEE_STATUS_MAPPING` — treat as still open, not failed.
+
+### Client / UI surfaces
+
+| Surface | Behavior |
+|---------|----------|
+| `POST /api/payments/release-processing-lock` | Own-tenant `processing` rows; `action: 'sync'` (default) or `'abandon'` |
+| `POST /api/payments/status` (non-privileged) | Client cannot force `completed`/`authorized`; abort statuses run `syncAndResolvePayment` only |
+| `/payment/failed`, customer payments, dashboard | Call release-lock / status after abort |
+| Webhook `wallee/webhook.post.ts` | Terminal failure on `processing` → release to `pending` |
+| Cron recover Phase 2 | Stuck `processing` older than **10 minutes** (created_at + updated_at); same keep-open for in-flight states |
+
+### `abandon` vs resume
+
+`abandonOrResumePayment`:
+
+1. Sync first (may already be paid / releasable).
+2. Only **`AUTHORIZED`** is voided (`TransactionVoidService.voidOnline`), then released.
+3. Still-open **`CONFIRMED`/`PENDING`/`PROCESSING`** → return **resume payment URL**; do **not** create a parallel transaction.
+
+Audit action when something changes: `payment_processing_lock_synced`.
+
+### Ops pitfalls
+
+1. **Do not SQL-force `processing → pending`** while Wallee shows `CONFIRMED` — that recreates the double-charge window. Prefer resume URL or wait for terminal state / cron.
+2. Cron Phase 2 **keeps** the lock when Wallee is still open; only terminal failure or success updates the row.
+3. If sync API errors (`unknown`), the lock stays — customer may need ops to inspect Wallee + `webhook_logs`, then act.
+4. Creating a second Wallee transaction while one is open is the failure mode this path prevents; process flows should reuse/resume open txs.
+
+### Codepaths (lock)
+
+- `server/utils/wallee-payment-sync.ts` — `syncAndResolvePayment`, `abandonOrResumePayment`, `readWalleeTransactionState`
+- `server/api/payments/release-processing-lock.post.ts`
+- `server/api/payments/status.post.ts` (client abort branch)
+- `server/api/cron/recover-pending-wallee-payments.get.ts` (Phase 2)
+- `server/api/wallee/webhook.post.ts` (processing lock release on terminal failure)
+- `pages/payment/failed.vue`, `pages/customer/payments.vue`, `components/customer/CustomerDashboard.vue`
