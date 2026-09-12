@@ -11,12 +11,12 @@ Production (`app.simy.ch`) deploys only from `main`. `main` is protected.
 
 1. Branch from `origin/main` (not a dirty feature branch). Keep the hotfix small.
 2. Open a PR into `main`. Do not `git push` to `main`.
-3. Non-draft PRs to `main` enable squash auto-merge (`.github/workflows/auto-merge.yml`). GitHub merges only when **Test and lint** and **E2E login** are green. Those come from `.github/workflows/ci.yml`.
+3. Non-draft PRs to `main` enable squash auto-merge **only when risk is GREEN** (`.github/workflows/auto-merge.yml`). YELLOW, RED, CRITICAL, and unknown never auto-merge. GitHub still merges only when **Test and lint**, **E2E login**, and **Dependency review** are green.
 4. Vercel deploys production from `main` after that merge.
 
 ## Never
 
-- Treat Cursor / Vercel „6/6“ as enough. That is Bugbot + Vercel previews, not the required Actions jobs. Auto-merge waits only for the two Actions checks.
+- Treat Cursor / Vercel „6/6“ as enough. That is Bugbot + Vercel previews, not the required Actions jobs. Auto-merge waits only for the required Actions checks, and only for GREEN PRs.
 - Use git branch `preview` as a staging path. It is stale and is not production.
 - Temporarily drop branch protection to merge, unless the user explicitly asks after Actions failed to start.
 - Open a ready PR into `main` unless it should ship. Keep work-in-progress as a **draft**.

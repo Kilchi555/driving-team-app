@@ -3,17 +3,36 @@ name: Weekly Review Import
 on:
   schedule:
     - cron: '0 5 * * 1'  # Jeden Montag um 05:00 UTC (07:00 Schweizer Zeit)
-  workflow_dispatch:       # Auch manuell auslösbar via GitHub UI
+  workflow_dispatch:
+
+# Write permissions:
+# - contents: write — push branch bot/weekly-review-import only (never main)
+# - pull-requests: write — open or reuse a PR into main so CI/governance apply
+# Does not use production DB credentials. Maps key is read-only for the import.
+permissions: {}
 
 jobs:
   import:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
 
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Move off main onto the bot branch
+        run: |
+          set -euo pipefail
+          git checkout -B bot/weekly-review-import
+          current="$(git rev-parse --abbrev-ref HEAD)"
+          if [ "${current}" = "main" ] || [ "${current}" = "master" ]; then
+            echo "refusing to stay on ${current}"
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -29,10 +48,57 @@ jobs:
         env:
           VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
 
-      - name: Commit updated reviews
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: 'chore: weekly review import [skip ci]'
-          file_pattern: 'apps/website/data/curated-reviews.json'
-          commit_user_name: 'Simy Bot'
-          commit_user_email: 'bot@simy.ch'
+      - name: Commit on bot branch and open PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: bot/weekly-review-import
+        run: |
+          set -euo pipefail
+          if [ "${BRANCH}" = "main" ] || [ "${BRANCH}" = "master" ]; then
+            echo "refusing to push default branch"
+            exit 1
+          fi
+          if [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ]; then
+            echo "refusing to commit on main"
+            exit 1
+          fi
+
+          git config user.name "Simy Bot"
+          git config user.email "bot@simy.ch"
+          git add apps/website/data/curated-reviews.json
+          if git diff --staged --quiet; then
+            echo "No review changes"
+            exit 0
+          fi
+
+          git commit -m "chore: weekly review import"
+          git push origin "HEAD:refs/heads/${BRANCH}" --force-with-lease
+
+          existing="$(
+            gh pr list \
+              --repo "${{ github.repository }}" \
+              --base main \
+              --head "${{ github.repository_owner }}:${BRANCH}" \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+          if [ -n "${existing}" ]; then
+            echo "Updated existing PR #${existing}"
+            exit 0
+          fi
+
+          printf '%s\n' \
+            'Automated Google review import for apps/website/data/curated-reviews.json.' \
+            '' \
+            'This workflow no longer commits to main. Required checks must pass before merge.' \
+            '' \
+            'GitHub does not start Actions on PRs opened with GITHUB_TOKEN. Close and reopen this PR (or push an empty commit from a human) so CI runs.' \
+            > "${RUNNER_TEMP}/review-import-pr-body.md"
+
+          gh pr create \
+            --repo "${{ github.repository }}" \
+            --base main \
+            --head "${BRANCH}" \
+            --title "chore: weekly review import" \
+            --body-file "${RUNNER_TEMP}/review-import-pr-body.md"
