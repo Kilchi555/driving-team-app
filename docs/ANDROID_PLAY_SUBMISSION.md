@@ -37,6 +37,7 @@ Technisch: Capacitor 8 WebView-Shell um die Nuxt-SPA (`serverUrl` → `https://a
 ### 1.2 Account Deletion (Play Policy)
 ✅ Endpoint `POST /api/customer/delete-account`
 ✅ "Konto löschen" im Customer-Profil
+✅ Blockiert Löschung bei offenen Forderungen (HTTP 409) — Details: `docs/CUSTOMER_ACCOUNT_DELETION.md`
 
 Google verlangt dasselbe wie Apple, wenn Accounts erstellt werden können.
 
