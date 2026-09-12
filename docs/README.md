@@ -344,6 +344,25 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused, source-verified ops/dev notes (prefer these over root historical markdown reports):
+
+| Runbook | Covers |
+|---------|--------|
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin lockout recovery when passkeys/backup codes are gone |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Client session cache / HMR restore |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Wallee payment recovery & debug |
+| [PAYMENT_PROVIDERS.md](./PAYMENT_PROVIDERS.md) | Wallee / Stripe provider setup |
+| [SERVER_SIDE_CONVERSION_SETUP.md](./SERVER_SIDE_CONVERSION_SETUP.md) | Google Ads server-side conversions |
+| [DISCOUNT_CATEGORY_FILTER.md](./DISCOUNT_CATEGORY_FILTER.md) | Multi-category `category_filter`, promo deep-links, validation |
+| [SMS_OVERAGE_WAIVER.md](./SMS_OVERAGE_WAIVER.md) | Time-bound / indefinite SMS overage kulanz |
+| [CI_QUALITY_GATE.md](./CI_QUALITY_GATE.md) | CI unit/lint/E2E gate, UUID validators, Dependabot |
+| [ANDROID_PLAY_SUBMISSION.md](./ANDROID_PLAY_SUBMISSION.md) | Play Store submission |
+| [APP_STORE_SUBMISSION.md](./APP_STORE_SUBMISSION.md) | iOS App Store submission |
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
