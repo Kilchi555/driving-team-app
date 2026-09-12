@@ -329,6 +329,69 @@ describe('loadPublicCourseForEnrollment', () => {
   it('only treats active/scheduled as enrollable', () => {
     expect(PUBLIC_ENROLLABLE_STATUSES).toEqual(['active', 'scheduled'])
   })
+
+  function tablesWithCourseA(patch: Record<string, unknown>) {
+    return {
+      ...sessionTables,
+      courses: sessionTables.courses.map((c) =>
+        c.id === COURSE_A ? { ...c, ...patch } : c,
+      ),
+    }
+  }
+
+  it('rejects waitlist with 400', async () => {
+    await expectReject(
+      () => loadPublicCourseForEnrollment(
+        makeSupabase(tablesWithCourseA({ status: 'waitlist' })),
+        COURSE_A,
+        TENANT_A,
+      ),
+      400,
+    )
+  })
+
+  it('rejects cancelled with 400', async () => {
+    await expectReject(
+      () => loadPublicCourseForEnrollment(
+        makeSupabase(tablesWithCourseA({ status: 'cancelled' })),
+        COURSE_A,
+        TENANT_A,
+      ),
+      400,
+    )
+  })
+
+  it('rejects completed with 400', async () => {
+    await expectReject(
+      () => loadPublicCourseForEnrollment(
+        makeSupabase(tablesWithCourseA({ status: 'completed' })),
+        COURSE_A,
+        TENANT_A,
+      ),
+      400,
+    )
+  })
+
+  it('rejects an inactive public course with 404', async () => {
+    await expectReject(
+      () => loadPublicCourseForEnrollment(
+        makeSupabase(tablesWithCourseA({ is_active: false })),
+        COURSE_A,
+        TENANT_A,
+      ),
+      404,
+    )
+  })
+
+  it('accepts scheduled public courses', async () => {
+    const course = await loadPublicCourseForEnrollment(
+      makeSupabase(tablesWithCourseA({ status: 'scheduled' })),
+      COURSE_A,
+      TENANT_A,
+    )
+    expect(course.status).toBe('scheduled')
+    expect(course.tenant_id).toBe(TENANT_A)
+  })
 })
 
 describe('source contracts — P0/P1 gates', () => {
@@ -349,10 +412,28 @@ describe('source contracts — P0/P1 gates', () => {
     expect(wallee).toContain('const tenantId = course.tenant_id')
   })
 
-  it('process-public requires is_public and validates custom_sessions before Wallee', () => {
+  it('process-public public path uses loadPublicCourseForEnrollment before payment/Wallee; enrollmentId path does not', () => {
     const pay = src('server/api/payments/process-public.post.ts')
+    const enrollIf = pay.indexOf('if (enrollmentId)')
+    const loadCall = pay.indexOf('loadPublicCourseForEnrollment(supabase, courseId, tenantId)')
+    const isPublicGate = pay.indexOf("enrollment.courses?.is_public !== true")
+    const paymentInsert = pay.indexOf(".from('payments')")
+    const walleeCreate = pay.indexOf('transactionService.create')
+
+    expect(enrollIf).toBeGreaterThan(-1)
+    expect(loadCall).toBeGreaterThan(enrollIf)
+    expect(isPublicGate).toBeGreaterThan(enrollIf)
+    expect(loadCall).toBeGreaterThan(isPublicGate)
+    expect(paymentInsert).toBeGreaterThan(loadCall)
+    expect(walleeCreate).toBeGreaterThan(loadCall)
+
+    const enrollmentIdBranch = pay.slice(enrollIf, loadCall)
+    expect(enrollmentIdBranch).toContain(".eq('status', 'pending')")
+    expect(enrollmentIdBranch).toContain("enrollment.courses?.is_public !== true")
+    expect(enrollmentIdBranch).not.toContain('loadPublicCourseForEnrollment')
+
+    expect(pay).toContain('tenantId = course.tenant_id')
     expect(pay).toContain(".eq('is_public', true)")
-    expect(pay).toContain("enrollment.courses?.is_public !== true")
     expect(pay).toContain('courseSessionsEmbed')
     expect(pay).toContain('assertCustomSessionsForTenant')
   })
