@@ -109,6 +109,8 @@ Für das „Vorschlag machen“-Formular auf der Booking-Seite:
 
 Ohne diese Variable: Anfragen werden trotzdem in `booking_events` + GA4 getrackt, nur kein Google Ads Upload.
 
+Wizard step drop-off (`step` / `step_label`), `/buchen` hop, and the first-lesson ERSTE30 offer: see **[`BOOKING_FUNNEL_TRACKING.md`](./BOOKING_FUNNEL_TRACKING.md)**.
+
 Nach dem Setzen: redeploy (`vercel --prod` oder neuer Push triggert auto-deploy).
 
 ## 5. Smoke Test in Produktion

@@ -265,6 +265,8 @@ CLIENT=simy DEPLOY_TARGET=testflight bundle exec fastlane ios deploy
 CLIENT=simy DEPLOY_TARGET=appstore bundle exec fastlane ios deploy
 ```
 
+CI signing (Match, Xcode 16 profile paths, hosted-shell Nuxt skip, required secret names): see **[`IOS_CI_MATCH_SIGNING.md`](./IOS_CI_MATCH_SIGNING.md)**.
+
 Fastlane übernimmt automatisch:
 - ATS-Exceptions strippen (`fastlane/strip-ats.sh`)
 - Build + Upload + Restore von Info.plist
