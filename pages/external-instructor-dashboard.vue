@@ -210,7 +210,7 @@ const loadMyCourses = async () => {
       .select(`
         *,
         course_category:course_categories(name, icon),
-        sessions:course_sessions(
+        sessions:course_sessions!course_sessions_course_id_fkey(
           id,
           session_number,
           start_time,

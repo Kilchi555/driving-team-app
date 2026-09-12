@@ -8,6 +8,7 @@ import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { SARIClient } from '~/utils/sariClient'
 import { logger } from '~/utils/logger'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 
 export type AdminPaymentOption = 'cash' | 'invoice' | 'paid' | 'reserve' | 'online_link'
@@ -307,7 +308,7 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
       id, name, tenant_id, sari_managed, sari_course_id, price_per_participant_rappen, max_participants,
       company_id, billing_mode,
       course_category:course_categories(allow_partial_enrollment, partial_start_position, partial_price_rappen),
-      course_sessions(id, session_number, sari_session_id, start_time, end_time, allow_individual_booking, individual_price_rappen)
+      ${courseSessionsEmbed('id, session_number, sari_session_id, start_time, end_time, allow_individual_booking, individual_price_rappen')}
     `)
     .eq('id', opts.courseId)
     .eq('tenant_id', opts.tenantId)

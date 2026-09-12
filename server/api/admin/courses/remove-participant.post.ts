@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
         description,
         sari_managed,
         sari_course_id,
-        course_sessions(id, sari_session_id, start_time, end_time, session_number)
+        course_sessions!course_sessions_course_id_fkey(id, sari_session_id, start_time, end_time, session_number)
       ),
       users!course_registrations_user_id_fkey(faberid, birthdate)
     `)

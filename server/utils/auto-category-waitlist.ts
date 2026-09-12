@@ -10,6 +10,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '~/utils/logger'
+import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 
 export type AutoWaitlistAction = {
   action: 'activated' | 'created' | 'demoted' | 'merged' | 'skipped'
@@ -83,7 +84,7 @@ async function loadCategoryCourses(
     .select(`
       id, tenant_id, name, status, city, is_public, is_auto_waitlist, created_at,
       course_category_id, category,
-      course_sessions ( start_time )
+      ${courseSessionsEmbed('start_time')}
     `)
     .eq('tenant_id', category.tenant_id)
     .or(`course_category_id.eq.${category.id},category.eq.${category.code}`)

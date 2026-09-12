@@ -18,6 +18,7 @@ import { becameBindingConfirmed } from '~/server/utils/binding-booking'
 import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
 import { syncPaymentRefundTotals } from '~/server/utils/wallee-refund'
+import { assertCustomSessionsForTenant } from '~/server/utils/course-custom-sessions'
 import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-product-purchase'
 import { internalSecretHeaders, isInternalSecretRequest } from '~/server/utils/require-staff-or-internal'
 import { classifyWalleeWebhookTimestamp, shouldShortCircuitWalleeWebhook } from '~/server/utils/wallee-webhook-replay'
@@ -773,14 +774,15 @@ export default defineEventHandler(async (event) => {
               // ✅ NEW: Create registration from payment metadata
               logger.info(`📝 Creating course registration for payment: ${payment.id}`)
               
-              // Get course details
+              // Get course details — must belong to the payment's tenant.
               const { data: course } = await supabase
                 .from('courses')
-                .select('id, name, tenant_id')
+                .select('id, name, tenant_id, is_public')
                 .eq('id', payment.metadata.course_id)
-                .single()
+                .eq('tenant_id', payment.tenant_id)
+                .maybeSingle()
               
-              if (course) {
+              if (course && course.tenant_id === payment.tenant_id) {
                 // Create or find guest user
                 let userId: string | undefined
                 if (payment.user_id) {
@@ -881,6 +883,21 @@ export default defineEventHandler(async (event) => {
                 
                 // Create or merge registration — even without a userId (email on registration)
                 if (userId || payment.metadata?.email) {
+                  let sanitizedWebhookCustomSessions = payment.metadata?.custom_sessions || null
+                  try {
+                    const validated = await assertCustomSessionsForTenant({
+                      supabase,
+                      tenantId: course.tenant_id,
+                      customSessions: payment.metadata?.custom_sessions,
+                      requirePublic: course.is_public === true,
+                      enrollmentCourseId: course.id,
+                    })
+                    sanitizedWebhookCustomSessions = validated.sanitized
+                  } catch (customErr: any) {
+                    logger.warn('⚠️ Ignoring untrusted custom_sessions on webhook registration create:', customErr?.statusMessage || customErr?.message)
+                    sanitizedWebhookCustomSessions = null
+                  }
+
                   const regPayload: any = {
                     course_id: course.id,
                     tenant_id: course.tenant_id,
@@ -904,7 +921,7 @@ export default defineEventHandler(async (event) => {
                     discount_applied_rappen: payment.metadata?.discount_amount_rappen || 0,
                     registration_date: new Date().toISOString(),
                     registered_at: new Date().toISOString(),
-                    custom_sessions: payment.metadata?.custom_sessions || null,
+                    custom_sessions: sanitizedWebhookCustomSessions,
                     is_partial_enrollment: payment.metadata?.is_partial_enrollment === true
                       || String(payment.metadata?.is_partial_enrollment || '') === 'true',
                     partial_start_session: payment.metadata?.partial_start_session != null
@@ -2484,7 +2501,8 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
           sari_course_id,
           is_partial_only,
           tenant_id,
-          course_sessions(id, start_time, session_number, sari_session_id, allow_individual_booking)
+          is_public,
+          course_sessions!course_sessions_course_id_fkey(id, start_time, session_number, sari_session_id, allow_individual_booking)
         )
       `)
       .eq('id', registrationId)
@@ -2496,6 +2514,11 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
     }
     
     const course = registration.courses
+
+    if (!course || !course.tenant_id || course.tenant_id !== registration.tenant_id) {
+      logger.warn('⚠️ Skipping SARI enrollment: course/registration tenant mismatch', registrationId)
+      return
+    }
     
     // 2. Skip if not SARI-managed
     if (!course.sari_managed || !course.sari_course_id) {
@@ -2617,12 +2640,28 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
       }
     }
     
-    // Apply custom sessions if any were selected
+    // Apply custom sessions if any were selected — only after tenant/public validation.
     if (registration.custom_sessions && typeof registration.custom_sessions === 'object') {
-      logger.info('🔄 Applying custom sessions:', registration.custom_sessions)
-      
-      // custom_sessions format: {"2": {originalSariIds: ["2110055", "2110056"], sariSessionIds: ["2110059", "2110060"], ...}}
-      for (const [position, customData] of Object.entries(registration.custom_sessions)) {
+      let customSessions = registration.custom_sessions
+      try {
+        const validated = await assertCustomSessionsForTenant({
+          supabase,
+          tenantId: registration.tenant_id,
+          customSessions: registration.custom_sessions,
+          requirePublic: course.is_public === true,
+          enrollmentCourseId: registration.course_id,
+        })
+        customSessions = validated.sanitized || null
+      } catch (customErr: any) {
+        logger.warn('⚠️ Ignoring untrusted custom_sessions on webhook SARI enroll:', customErr?.statusMessage || customErr?.message)
+        customSessions = null
+      }
+
+      if (customSessions && typeof customSessions === 'object') {
+        logger.info('🔄 Applying custom sessions:', customSessions)
+
+        // custom_sessions format: {"2": {originalSariIds: ["2110055", "2110056"], sariSessionIds: ["2110059", "2110060"], ...}}
+        for (const [position, customData] of Object.entries(customSessions)) {
         const custom = customData as any
         
         // Get original IDs to replace and new IDs
@@ -2689,6 +2728,7 @@ async function enrollInSARIAfterPayment(supabase: any, registrationId: string) {
             sariCourseIds[startIdx + i] = newIds[i]
           }
         }
+      }
       }
     }
     
