@@ -199,3 +199,7 @@ CRON_SECRET=your-secret-key  # Required for cron endpoint auth
 - **Storage**: ~1KB per webhook log entry
 
 Run cron job every 10 minutes to stay current.
+
+## Related runbooks
+
+- [PAYMENT_TOKEN_AUTH.md](./PAYMENT_TOKEN_AUTH.md) — F-03 authz for get/save payment method tokens (session owner or internal secret + payment row).
