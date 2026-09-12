@@ -7,6 +7,26 @@ alwaysApply: true
 
 Production (`app.simy.ch`) deploys only from `main`. `main` is protected.
 
+## Composition with Impact Analysis
+
+Governance order:
+
+1. Impact Analysis / Implementation Gate (`.cursor/rules/impact-analysis.mdc`) — when Activation Policy requires it
+2. Implementation (approved scope only)
+3. Tests / Verification
+4. **This rule** — PR, CI, merge, production release
+
+Authority:
+
+- **Impact Analysis** owns pre-implementation impact, scope, change risk, and test floor.
+- **Ship-to-main** owns PR / CI / merge / production release.
+
+Hard rules:
+
+- A **SAFE** Impact Gate does **not** override Ship-to-main requirements.
+- Passing CI does **not** retroactively replace required Impact Analysis.
+- **CRITICAL** changes are not Ready-to-Ship until their required verification / test floor (Impact + change-risk-guide) has been satisfied.
+
 ## Always
 
 1. Branch from `origin/main` (not a dirty feature branch). Keep the hotfix small.
@@ -20,6 +40,7 @@ Production (`app.simy.ch`) deploys only from `main`. `main` is protected.
 - Use git branch `preview` as a staging path. It is stale and is not production.
 - Temporarily drop branch protection to merge, unless the user explicitly asks after Actions failed to start.
 - Open a ready PR into `main` unless it should ship. Keep work-in-progress as a **draft**.
+- Treat a SAFE Impact Gate or green preview as sufficient to mark Ready when Ship/CI floors are unmet.
 
 ## If required checks never appear
 
