@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyTenantOgTags,
+  assertCrawlerStubCacheSafe,
   buildTenantOgHtml,
   buildTenantOgTags,
+  isCrawlerStubCacheSafe,
+  isSharedCdnCacheable,
   shouldServeTenantOgStub,
+  TENANT_OG_CRAWLER_STUB_CACHE_CONTROL,
+  TENANT_OG_PNG_CACHE_CONTROL,
+  tenantOgCrawlerStubHeaders,
+  tenantOgImagePath,
 } from '../tenant-og'
 
 const acme = {
@@ -39,6 +46,31 @@ describe('buildTenantOgTags', () => {
     )
     expect(tags.title).toBe('Coach Lisa – Sitzung buchen')
     expect(tags.siteName).toBe('Coach Lisa')
+  })
+
+  it('keeps tenant A and tenant B branding isolated', () => {
+    const hakuco = buildTenantOgTags(
+      { name: 'Hakuco', slug: 'hakuco', brand_name: 'Hakuco', business_type: 'dog_training' },
+      { origin: 'https://app.simy.ch', canonicalUrl: 'https://app.simy.ch/hakuco' },
+    )
+    const gemperli = buildTenantOgTags(
+      {
+        name: 'Fahrschule Gemperli',
+        slug: 'fahrschule-gemperli',
+        brand_name: 'Fahrschule Gemperli',
+        business_type: 'driving_school',
+      },
+      { origin: 'https://app.simy.ch', canonicalUrl: 'https://app.simy.ch/fahrschule-gemperli' },
+    )
+    expect(hakuco.siteName).toBe('Hakuco')
+    expect(hakuco.title).toContain('Training buchen')
+    expect(hakuco.image).toBe('https://app.simy.ch/api/public/tenant/hakuco/og.png')
+    expect(hakuco.image).not.toContain('fahrschule-gemperli')
+    expect(gemperli.siteName).toBe('Fahrschule Gemperli')
+    expect(gemperli.image).toBe('https://app.simy.ch/api/public/tenant/fahrschule-gemperli/og.png')
+    expect(gemperli.image).not.toContain('/hakuco/')
+    expect(JSON.stringify(hakuco)).not.toContain('Gemperli')
+    expect(JSON.stringify(gemperli)).not.toContain('Hakuco')
   })
 })
 
@@ -116,5 +148,71 @@ describe('shouldServeTenantOgStub', () => {
         userAgent: ua,
       }),
     ).toBe(false)
+    expect(
+      shouldServeTenantOgStub({
+        method: 'GET',
+        pathname: '/login/acme-fahrschule',
+        userAgent: 'Mozilla/5.0',
+      }),
+    ).toBe(false)
+    expect(
+      shouldServeTenantOgStub({
+        method: 'GET',
+        pathname: '/booking/availability/acme-fahrschule',
+        userAgent: 'Mozilla/5.0',
+      }),
+    ).toBe(false)
+  })
+})
+
+describe('crawler stub cache policy', () => {
+  const previousPublicPolicy = 'public, max-age=300, s-maxage=3600, stale-while-revalidate=86400'
+
+  it('F: crawler stub Cache-Control is private, no-store and not CDN-shared', () => {
+    expect(TENANT_OG_CRAWLER_STUB_CACHE_CONTROL).toBe('private, no-store')
+    expect(isCrawlerStubCacheSafe(TENANT_OG_CRAWLER_STUB_CACHE_CONTROL)).toBe(true)
+    expect(isSharedCdnCacheable(TENANT_OG_CRAWLER_STUB_CACHE_CONTROL)).toBe(false)
+    expect(assertCrawlerStubCacheSafe(TENANT_OG_CRAWLER_STUB_CACHE_CONTROL)).toBe('private, no-store')
+
+    const headers = tenantOgCrawlerStubHeaders()
+    expect(headers['Cache-Control']).toBe('private, no-store')
+    expect(headers['CDN-Cache-Control']).toBe('private, no-store')
+    expect(headers['Vercel-CDN-Cache-Control']).toBe('private, no-store')
+    expect(headers['Content-Type']).toBe('text/html; charset=utf-8')
+  })
+
+  it('rejects the previous public CDN policy that could poison browsers', () => {
+    expect(isSharedCdnCacheable(previousPublicPolicy)).toBe(true)
+    expect(isCrawlerStubCacheSafe(previousPublicPolicy)).toBe(false)
+    expect(() => assertCrawlerStubCacheSafe(previousPublicPolicy)).toThrow(/CDN-cacheable/)
+  })
+
+  it('G: a URL-only shared cache cannot store the crawler stub', () => {
+    const store = new Map<string, string>()
+    const put = (url: string, body: string, cacheControl: string) => {
+      if (isSharedCdnCacheable(cacheControl)) store.set(url, body)
+    }
+
+    const stub = buildTenantOgHtml(
+      buildTenantOgTags(acme, {
+        origin: 'https://app.simy.ch',
+        canonicalUrl: 'https://app.simy.ch/acme-fahrschule',
+      }),
+    )
+    put('/acme-fahrschule', stub, TENANT_OG_CRAWLER_STUB_CACHE_CONTROL)
+    expect(store.has('/acme-fahrschule')).toBe(false)
+
+    put('/acme-fahrschule', stub, previousPublicPolicy)
+    expect(store.get('/acme-fahrschule')).toContain('content="Acme"')
+  })
+
+  it('H: PNG stays independently CDN-cacheable because the slug is in the URL', () => {
+    expect(tenantOgImagePath('hakuco')).toBe('/api/public/tenant/hakuco/og.png')
+    expect(tenantOgImagePath('fahrschule-gemperli')).toBe(
+      '/api/public/tenant/fahrschule-gemperli/og.png',
+    )
+    expect(isSharedCdnCacheable(TENANT_OG_PNG_CACHE_CONTROL)).toBe(true)
+    expect(TENANT_OG_PNG_CACHE_CONTROL).toContain('public')
+    expect(isCrawlerStubCacheSafe(TENANT_OG_PNG_CACHE_CONTROL)).toBe(false)
   })
 })

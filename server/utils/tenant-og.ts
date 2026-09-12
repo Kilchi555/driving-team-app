@@ -13,6 +13,56 @@ import { resolvePublicTenantRef, type PublicTenantRef } from '~/utils/public-pat
 const OG_CACHE_TTL_MS = 5 * 60_000
 const ogCache = new Map<string, { expiresAt: number; data: TenantOgSource | null }>()
 
+/**
+ * Crawler HTML is UA-dependent on the same URL as the SPA.
+ * It must never be stored in a shared CDN cache (no public / s-maxage).
+ * Vercel honors CDN-Cache-Control / Vercel-CDN-Cache-Control independently
+ * of browser Cache-Control — set the same no-store policy on all three.
+ */
+export const TENANT_OG_CRAWLER_STUB_CACHE_CONTROL = 'private, no-store'
+
+/** PNG URL already includes the tenant slug, so shared CDN caching is safe. */
+export const TENANT_OG_PNG_CACHE_CONTROL = 'public, max-age=3600, s-maxage=86400'
+
+export function isSharedCdnCacheable(cacheControl: string | null | undefined): boolean {
+  const value = String(cacheControl || '').toLowerCase()
+  if (!value) return false
+  if (/(?:^|,)\s*public\s*(?=,|$)/.test(value)) return true
+  if (/\bs-maxage\s*=\s*[1-9]\d*/.test(value)) return true
+  if (/\bmax-age\s*=\s*[1-9]\d*/.test(value) && !/(?:^|,)\s*private\s*(?=,|$)/.test(value)) {
+    return true
+  }
+  return false
+}
+
+export function isCrawlerStubCacheSafe(cacheControl: string | null | undefined): boolean {
+  const value = String(cacheControl || '').toLowerCase()
+  if (!value) return false
+  if (isSharedCdnCacheable(value)) return false
+  return /(?:^|,)\s*private\s*(?=,|$)/.test(value) && /(?:^|,)\s*no-store\s*(?=,|$)/.test(value)
+}
+
+export function assertCrawlerStubCacheSafe(cacheControl: string): string {
+  if (!isCrawlerStubCacheSafe(cacheControl)) {
+    throw new Error(`Refusing CDN-cacheable crawler stub Cache-Control: ${cacheControl}`)
+  }
+  return cacheControl
+}
+
+export function tenantOgCrawlerStubHeaders(): Record<string, string> {
+  const cache = assertCrawlerStubCacheSafe(TENANT_OG_CRAWLER_STUB_CACHE_CONTROL)
+  return {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': cache,
+    'CDN-Cache-Control': cache,
+    'Vercel-CDN-Cache-Control': cache,
+  }
+}
+
+export function resetTenantOgSourceCache() {
+  ogCache.clear()
+}
+
 const TENANT_OG_SELECT = [
   'id',
   'name',
@@ -154,9 +204,14 @@ export function buildTenantOgTags(
 
 function sourceFromCachedBranding(data: any, slug: string): TenantOgSource | null {
   if (!data || typeof data !== 'object') return null
-  const resolvedSlug = String(data.slug || slug || '').trim()
+  const requested = slug.toLowerCase()
+  const resolvedSlug = String(data.slug || slug || '')
+    .trim()
+    .toLowerCase()
   const name = String(data.name || data.brand_name || '').trim()
   if (!resolvedSlug || !name) return null
+  // Never attach tenant B rows to tenant A's slug key.
+  if (resolvedSlug !== requested) return null
   return {
     id: data.id,
     name,
@@ -204,6 +259,10 @@ export async function loadTenantOgSource(slug: string): Promise<TenantOgSource |
     }
 
     const source = sourceFromCachedBranding(data, key)
+    if (!source) {
+      ogCache.set(key, { data: null, expiresAt: Date.now() + 30_000 })
+      return null
+    }
     ogCache.set(key, { data: source, expiresAt: Date.now() + OG_CACHE_TTL_MS })
     return source
   } catch {
