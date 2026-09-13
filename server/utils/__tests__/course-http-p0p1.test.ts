@@ -470,8 +470,13 @@ describe('source contracts — P0/P1 gates', () => {
     expect(pub).toContain('courseSessionsEmbed')
     expect(pub).toContain(".eq('is_public', true)")
     const category = src('pages/courses/category/[category].vue')
-    expect(category).toContain('course_sessions!course_sessions_course_id_fkey')
+    expect(category).not.toContain('course_sessions')
+    expect(category).not.toContain(".from('course_sessions')")
+    expect(category).not.toContain('course_start_date')
+    expect(category).not.toContain('next_session')
+    expect(category).toContain('Datum folgt — Warteliste offen')
     expect(category).toContain(".eq('is_public', true)")
+    expect(category).toContain(".eq('is_active', true)")
   })
 
   it('wallee webhook qualifies course_sessions and re-validates custom sessions', () => {
