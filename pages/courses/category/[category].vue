@@ -96,13 +96,7 @@
                 <span>{{ getInstructorName(course) }}</span>
               </div>
 
-              <div v-if="course.next_session" class="flex items-center">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span>{{ formatDateTime(course.next_session.start_time) }}</span>
-              </div>
-              <div v-else-if="course.status === 'waitlist'" class="flex items-center text-amber-600">
+              <div v-if="course.status === 'waitlist'" class="flex items-center text-amber-600">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
@@ -165,7 +159,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { formatDateTime } from '~/utils/dateUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -202,7 +195,6 @@ const loadCategoryAndCourses = async () => {
         *,
         course_category:course_categories(name, icon, color),
         instructor:users!courses_instructor_id_fkey(first_name, last_name),
-        next_session:course_sessions!course_sessions_course_id_fkey(start_time),
         registrations:course_registrations(status)
       `)
       .eq('course_category_id', category.id)
