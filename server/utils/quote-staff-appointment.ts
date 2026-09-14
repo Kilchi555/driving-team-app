@@ -39,6 +39,7 @@ export type StaffPaymentComposition = {
   lessonPriceRappen: number
   adminFeeRappen: number
   productsPriceRappen: number
+  resourceSurchargeRappen: number
   discountAmountRappen: number
   creditUsedRappen: number
   totalAmountRappen: number
@@ -103,14 +104,21 @@ function nonNegativeRappen(value: unknown): number {
 }
 
 /**
- * Overlays (admin fee, products, discount, credit) stay client-supplied in PR A.
+ * Overlays (admin fee, products, discount, credit) stay client-supplied.
+ * Resource surcharge must be the server quote, never client resourceSurcharges.
  * The offer/lesson base and the resulting total are never taken from the client.
+ *
+ * Follow-up amount writers outside appointments/save (not this PR):
+ * staff/update-payment, update-payment-with-products, payments/manage,
+ * and browser PostgREST monetary columns. updatePaymentEntry no longer
+ * rewrites lesson/total amounts after save.
  */
 export function composeStaffPaymentFromOffer(
   quote: StaffOfferQuote,
   overlays: {
     adminFeeRappen?: unknown
     productsPriceRappen?: unknown
+    resourceSurchargeRappen?: unknown
     discountAmountRappen?: unknown
     creditUsedRappen?: unknown
   } = {},
@@ -118,16 +126,18 @@ export function composeStaffPaymentFromOffer(
   const lessonPriceRappen = quote.lessonPriceRappen
   const adminFeeRappen = nonNegativeRappen(overlays.adminFeeRappen)
   const productsPriceRappen = nonNegativeRappen(overlays.productsPriceRappen)
+  const resourceSurchargeRappen = nonNegativeRappen(overlays.resourceSurchargeRappen)
   const discountAmountRappen = nonNegativeRappen(overlays.discountAmountRappen)
   const creditUsedRappen = nonNegativeRappen(overlays.creditUsedRappen)
   const totalAmountRappen = Math.max(
     0,
-    lessonPriceRappen + adminFeeRappen + productsPriceRappen - discountAmountRappen,
+    lessonPriceRappen + adminFeeRappen + productsPriceRappen + resourceSurchargeRappen - discountAmountRappen,
   )
   return {
     lessonPriceRappen,
     adminFeeRappen,
     productsPriceRappen,
+    resourceSurchargeRappen,
     discountAmountRappen,
     creditUsedRappen,
     totalAmountRappen,
