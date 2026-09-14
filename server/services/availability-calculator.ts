@@ -313,6 +313,8 @@ export class AvailabilityCalculator {
   /**
    * Slot dimensions: usable subcategories with durations, OR (if none exist at all)
    * public_bookable event types with default_duration_minutes.
+   * Matches public catalog identity in selectPublicBookingCatalog for the
+   * zero-categories case (event-type-based booking).
    * Never both — avoids double slots for driving schools.
    * If subcategories exist but have empty durations, do NOT fall back to event types
    * (that would invent wrong slots for FS tenants).

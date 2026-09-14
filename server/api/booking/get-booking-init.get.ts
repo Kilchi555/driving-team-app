@@ -14,6 +14,7 @@ import {
   onlineBookingFallbackMethod,
   paymentPolicyFromTenantSettings,
 } from '~/server/utils/resolve-online-booking-payment-method'
+import { selectPublicBookingCatalog } from '~/server/utils/select-public-booking-catalog'
 
 function parseFeatureEnabled(raw: unknown, fallback: boolean): boolean {
   if (raw == null) return fallback
@@ -53,8 +54,6 @@ export default defineEventHandler(async (event) => {
 
   let categories: any[] = []
   let locationsCount = 0
-  // Which booking service types (Fahrstunde/Theorie/Beratung) this tenant actually
-  // offers — derived from active pricing_rules, not hardcoded on the client.
   let availableServiceTypes: Array<'fahrstunde' | 'theorie' | 'beratung'> = []
 
   const settingsPromise = getSupabaseAdmin()
@@ -63,87 +62,53 @@ export default defineEventHandler(async (event) => {
     .eq('tenant_id', tenant.id)
     .in('setting_key', ['allow_online_booking', 'customer_plz_travel_check_enabled', 'payment_settings'])
 
-  if (tenant.business_type === 'driving_school') {
-    // Load categories + locations + pricing + flags in parallel (no extra roundtrip)
-    const [categoriesResult, locationsResult, pricingRulesResult] = await Promise.all([
-      supabase
-        .from('categories')
-        .select('id, code, name, description, lesson_duration_minutes, tenant_id, parent_category_id, color, icon_svg, vehicle_settings, room_settings')
-        .eq('tenant_id', tenant.id)
-        .eq('is_active', true)
-        .order('parent_category_id', { ascending: true })
-        .order('name', { ascending: true }),
-      supabase
-        .from('locations')
-        .select('id')
-        .eq('tenant_id', tenant.id)
-        .eq('is_active', true),
-      supabase
-        .from('pricing_rules')
-        .select('rule_type')
-        .eq('tenant_id', tenant.id)
-        .eq('is_active', true),
-    ])
+  const [categoriesResult, eventTypesResult, locationsResult, pricingRulesResult] = await Promise.all([
+    supabase
+      .from('categories')
+      .select('id, code, name, description, lesson_duration_minutes, tenant_id, parent_category_id, color, icon_svg, vehicle_settings, room_settings')
+      .eq('tenant_id', tenant.id)
+      .eq('is_active', true)
+      .order('parent_category_id', { ascending: true })
+      .order('name', { ascending: true }),
+    supabase
+      .from('event_types')
+      .select('id, code, name, description, default_duration_minutes, default_color, emoji, public_bookable, require_payment, display_order')
+      .eq('tenant_id', tenant.id)
+      .eq('is_active', true)
+      .eq('public_bookable', true)
+      .gt('default_duration_minutes', 0)
+      .order('display_order', { ascending: true }),
+    supabase
+      .from('locations')
+      .select('id')
+      .eq('tenant_id', tenant.id)
+      .eq('is_active', true),
+    supabase
+      .from('pricing_rules')
+      .select('rule_type')
+      .eq('tenant_id', tenant.id)
+      .eq('is_active', true),
+  ])
 
-    if (categoriesResult.error) throw categoriesResult.error
-    if (locationsResult.error) throw locationsResult.error
+  if (categoriesResult.error) throw categoriesResult.error
+  if (eventTypesResult.error) throw eventTypesResult.error
+  if (locationsResult.error) throw locationsResult.error
 
-    const allCategories = categoriesResult.data || []
-    const mainCategories = allCategories.filter((c: any) => !c.parent_category_id)
-    const subCategories = allCategories.filter((c: any) => !!c.parent_category_id)
+  const catalog = selectPublicBookingCatalog({
+    tenantId: tenant.id,
+    primaryColor: tenant.primary_color,
+    categories: categoriesResult.data || [],
+    publicEventTypes: eventTypesResult.data || [],
+  })
+  categories = catalog.categories
+  locationsCount = locationsResult.data?.length ?? 0
 
-    categories = mainCategories.map((main: any) => ({
-      ...main,
-      children: subCategories.filter((sub: any) => sub.parent_category_id === main.id),
-    }))
-
-    locationsCount = locationsResult.data?.length ?? 0
-
+  if (catalog.source === 'categories') {
     const ruleTypes = new Set((pricingRulesResult.data || []).map((r: any) => r.rule_type))
     if (ruleTypes.has('base_price')) availableServiceTypes.push('fahrstunde')
     if (ruleTypes.has('theory')) availableServiceTypes.push('theorie')
     if (ruleTypes.has('consultation')) availableServiceTypes.push('beratung')
-  } else {
-    // per_event_type (and other non-FS): expose public_bookable event types as
-    // selectable "categories" so the existing booking UI can reuse the leaf path
-    // (no children → selectMainCategory uses the item directly).
-    const [eventTypesResult, locationsResult] = await Promise.all([
-      supabase
-        .from('event_types')
-        .select('id, code, name, description, default_duration_minutes, default_color, emoji, public_bookable, require_payment, display_order')
-        .eq('tenant_id', tenant.id)
-        .eq('is_active', true)
-        .eq('public_bookable', true)
-        .gt('default_duration_minutes', 0)
-        .order('display_order', { ascending: true }),
-      supabase
-        .from('locations')
-        .select('id')
-        .eq('tenant_id', tenant.id)
-        .eq('is_active', true),
-    ])
-
-    if (eventTypesResult.error) throw eventTypesResult.error
-    if (locationsResult.error) throw locationsResult.error
-
-    categories = (eventTypesResult.data || []).map((et: any) => ({
-      id: et.id,
-      code: et.code,
-      name: et.name,
-      description: et.description || '',
-      lesson_duration_minutes: [Number(et.default_duration_minutes)],
-      tenant_id: tenant.id,
-      parent_category_id: null,
-      color: tenant.primary_color || et.default_color || null,
-      icon_svg: null,
-      emoji: et.emoji || null,
-      children: [],
-      _source: 'event_type',
-      require_payment: et.require_payment !== false,
-    }))
-
-    locationsCount = locationsResult.data?.length ?? 0
-    // Booking UI always includes "fahrstunde" as the generic appointment path
+  } else if (catalog.source === 'event_types') {
     availableServiceTypes = ['fahrstunde']
   }
 
@@ -220,6 +185,7 @@ export default defineEventHandler(async (event) => {
     data: {
       tenant: tenantWithoutSecrets,
       categories,
+      catalog_source: catalog.source,
       locationsCount,
       bookingPolicy,
       availableServiceTypes,

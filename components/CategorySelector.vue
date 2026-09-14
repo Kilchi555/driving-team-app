@@ -586,25 +586,10 @@ watch(() => props.selectedUser, (newUser, oldUser) => {
     return
   }
 
-  // ✅ FIX: Bei freeslots (kein User) Standard-Kategorie 'B' laden
+  // ✅ FIX: Bei freeslots (kein User) keine erfundene Kategorie B.
+  // Nur auto-select when the tenant actually has that category in the list.
   if (!newUser) {
-    logger.debug('🎯 No user selected - loading default category: B')
-    const defaultCategory = availableCategoriesForUser.value.find(cat => cat.code === 'B')
-    
-    if (defaultCategory) {
-      logger.debug('🎯 Auto-selected default category:', defaultCategory)
-      isAutoEmitting.value = true
-      hasFiredCategorySelected.value = true
-      
-      emit('update:modelValue', 'B')
-      emit('category-selected', defaultCategory)
-      emit('price-changed', 2.11)
-      emit('durations-changed', defaultCategory.availableDurations)
-      
-      setTimeout(() => {
-        isAutoEmitting.value = false
-      }, 200)
-    }
+    logger.debug('🎯 No user selected - not inventing a default category')
     return
   }
 
