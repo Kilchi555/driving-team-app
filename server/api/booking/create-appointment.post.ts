@@ -30,7 +30,6 @@ import { defineEventHandler, readBody, createError, getHeader, H3Event } from 'h
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
-import { roundToNearest5Rappen } from '~/utils/rounding'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { logAudit } from '~/server/utils/audit'
@@ -44,7 +43,6 @@ import { ensureClientPickupLocation } from '~/server/utils/ensure-client-pickup-
 import { calculateAdminFee } from '~/server/utils/admin-fee'
 import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/vehicle-availability'
 import { resolveRoomSettings, pickAvailableRoomId, type RoomServiceType } from '~/server/utils/room-availability'
-import { logFallbackUsed } from '~/server/utils/log-fallback'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
 import { quoteTravelFee } from '~/server/utils/travel-fee-quote'
@@ -56,8 +54,10 @@ import {
 } from '~/server/utils/resolve-online-booking-payment-method'
 import { createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
-import { guestSlotCategoryMismatchReason, invalidDrivingLessonBasePriceReason } from '~/server/utils/guest-booking-price-rule'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
+import { resolveOfferPrice, throwIfUnpriced } from '~/server/utils/resolve-offer-price'
+import { bindPublicSlotOfferIdentity } from '~/server/utils/resolve-booking-offer-identity'
+import { bookingIdentityCode } from '~/utils/booking-offer-identity'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -87,7 +87,8 @@ interface CreateAppointmentRequest {
   }
   appointment_type: string
   notes?: string
-  category_code: string
+  category_code?: string
+  event_type_code?: string
   discount_code?: string
   discount_amount_rappen?: number
   /** Cross-domain marketing session ID (set on drivingteam.ch, forwarded via URL). */
@@ -160,10 +161,10 @@ export default defineEventHandler(async (event: H3Event) => {
     // ============ LAYER 3: VALIDATE INPUT ============
     const body = await readBody(event) as CreateAppointmentRequest
 
-    if (!body.slot_id || !body.session_id || !body.appointment_type || !body.category_code) {
+    if (!body.slot_id || !body.session_id || !body.appointment_type || (!body.category_code && !body.event_type_code)) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'slot_id, session_id, appointment_type, and category_code are required'
+        statusMessage: 'slot_id, session_id, appointment_type, and category_code or event_type_code are required'
       })
     }
 
@@ -220,21 +221,24 @@ export default defineEventHandler(async (event: H3Event) => {
       })
     }
 
-    const categoryMismatch = guestSlotCategoryMismatchReason({
+    const identity = await bindPublicSlotOfferIdentity(supabase, {
+      tenantId: tenantId!,
       slotCategoryCode: slot.category_code,
-      bodyCategoryCode: body.category_code,
+      clientEventTypeCode: body.event_type_code,
+      clientCategoryCode: body.category_code,
+      clientAppointmentType: body.appointment_type,
+      slotId: body.slot_id,
     })
-    if (categoryMismatch) {
-      logger.warn('❌ Category does not match reserved slot:', {
-        reason: categoryMismatch,
-        slot_category_code: slot.category_code,
-        body_category_code: body.category_code,
-        slot_id: body.slot_id,
-      })
+    const offerCode = bookingIdentityCode(identity)
+    auditDetails.event_type_code = identity.eventTypeCode
+    auditDetails.category_code = identity.categoryCode
+
+    if (slot.tenant_id !== tenantId) {
+      logger.warn('❌ Slot does not belong to user tenant')
       throw createError({
-        statusCode: 400,
-        statusMessage: 'Die gewählte Kategorie passt nicht zum reservierten Zeitslot.',
-        data: { code: 'CATEGORY_SLOT_MISMATCH' },
+        statusCode: 403,
+        statusMessage: 'Dieses Konto gehört zu einer anderen Fahrschule',
+        data: { code: 'WRONG_TENANT' }
       })
     }
 
@@ -251,6 +255,24 @@ export default defineEventHandler(async (event: H3Event) => {
         statusMessage: 'Dieser Termin liegt in einer gesperrten Zeit. Bitte wähle einen anderen Slot.',
       })
     }
+
+    logger.debug('💰 Calculating price for appointment...', {
+      event_type_code: identity.eventTypeCode,
+      category_code: identity.categoryCode,
+      duration_minutes: slot.duration_minutes,
+      start_time: slot.start_time,
+      tenant_id: tenantId
+    })
+
+    const offer = await resolveOfferPrice(supabase, {
+      tenantId: tenantId!,
+      eventTypeCode: identity.eventTypeCode || '',
+      categoryCode: identity.categoryCode,
+      durationMinutes: slot.duration_minutes,
+      startTime: slot.start_time,
+      ruleTypeHint: 'base_price',
+    })
+    throwIfUnpriced(offer)
 
     // Check if slot is already reserved by this session - if so, extend the reservation
     if (slot.reserved_by_session === body.session_id) {
@@ -373,16 +395,6 @@ export default defineEventHandler(async (event: H3Event) => {
       logger.debug('ℹ️ No overlapping slots found to reserve')
     }
 
-    // Verify slot belongs to user's tenant
-    if (slot.tenant_id !== tenantId) {
-      logger.warn('❌ Slot does not belong to user tenant')
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Dieses Konto gehört zu einer anderen Fahrschule',
-        data: { code: 'WRONG_TENANT' }
-      })
-    }
-
     // ============ LAYER 6: CREATE APPOINTMENT ============ 
     logger.debug('✍️ Creating final appointment record...', {
       user_id: userData.id,
@@ -393,7 +405,7 @@ export default defineEventHandler(async (event: H3Event) => {
       end_time: slot.end_time,
       duration_minutes: slot.duration_minutes,
       type: body.appointment_type,
-      event_type_code: body.category_code
+      event_type_code: identity.eventTypeCode,
     })
     
     // Load location name for title
@@ -406,169 +418,67 @@ export default defineEventHandler(async (event: H3Event) => {
     const locationName = location?.name || 'Ort unbekannt'
     const appointmentTitle = `${userData.first_name} ${userData.last_name} - ${locationName}`
 
-    // ============ LAYER 6: CALCULATE PRICE ============
-    logger.debug('💰 Calculating price for appointment...', {
-      category_code: body.category_code,
-      duration_minutes: slot.duration_minutes,
-      start_time: slot.start_time,
-      tenant_id: tenantId
-    })
-
-    const [pricingRuleRes, adminFeeRuleRes, locationSettingsRes, categorySettingsRes, eventPriceRes, eventTypeRes] = await Promise.all([
-      supabase
-        .from('pricing_rules')
-        .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
-        .eq('category_code', body.category_code)
-        .eq('tenant_id', tenantId)
-        .eq('rule_type', 'base_price')
-        .lte('valid_from', new Date().toISOString())
-        .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
-        .maybeSingle(),
-      supabase
-        .from('pricing_rules')
-        .select('admin_fee_rappen, admin_fee_applies_from')
-        .eq('category_code', body.category_code)
-        .eq('tenant_id', tenantId)
-        .eq('rule_type', 'admin_fee')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle(),
+    // Client-supplied discount_amount_rappen is non-authoritative and ignored.
+    const categoryForAddOns = identity.categoryCode || offerCode
+    const [adminFeeRuleRes, locationSettingsRes, categorySettingsRes] = await Promise.all([
+      categoryForAddOns
+        ? supabase
+            .from('pricing_rules')
+            .select('admin_fee_rappen, admin_fee_applies_from')
+            .eq('category_code', categoryForAddOns)
+            .eq('tenant_id', tenantId)
+            .eq('rule_type', 'admin_fee')
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
       supabase
         .from('locations')
         .select('category_vehicle_settings, category_room_settings')
         .eq('id', slot.location_id)
         .maybeSingle(),
-      supabase
-        .from('categories')
-        .select('vehicle_settings, room_settings')
-        .eq('code', body.category_code)
-        .eq('tenant_id', tenantId)
-        .maybeSingle(),
-      // per_event_type fallback: event_price keyed by event_type_code
-      supabase
-        .from('pricing_rules')
-        .select('price_per_minute_rappen, base_duration_minutes, duration_multiplier, weekend_multiplier, evening_multiplier')
-        .eq('event_type_code', body.category_code)
-        .eq('tenant_id', tenantId)
-        .eq('rule_type', 'event_price')
-        .eq('is_active', true)
-        .lte('valid_from', new Date().toISOString())
-        .or('valid_until.is.null,valid_until.gte.' + new Date().toISOString())
-        .maybeSingle(),
-      supabase
-        .from('event_types')
-        .select('code, require_payment, public_bookable')
-        .eq('tenant_id', tenantId)
-        .eq('code', body.category_code)
-        .eq('is_active', true)
-        .maybeSingle(),
+      categoryForAddOns
+        ? supabase
+            .from('categories')
+            .select('vehicle_settings, room_settings')
+            .eq('code', categoryForAddOns)
+            .eq('tenant_id', tenantId)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ])
 
-    const pricingRule = pricingRuleRes.data || eventPriceRes.data
-    const pricingError = pricingRuleRes.error
-    const freePublicEvent =
-      !!eventTypeRes.data &&
-      eventTypeRes.data.require_payment === false &&
-      eventTypeRes.data.public_bookable !== false
+    const freePublicEvent = offer.kind === 'free'
+    const usingBasePrice = offer.kind === 'paid' && offer.rule.rule_type === 'base_price'
     const adminFeeRuleRappen = Number(adminFeeRuleRes.data?.admin_fee_rappen || 0)
     const adminFeeAppliesFromRule = adminFeeRuleRes.data?.admin_fee_applies_from != null
       ? Number(adminFeeRuleRes.data.admin_fee_applies_from)
       : null
 
-    // Resolve vehicle settings for this location + category
     const vehicleSettings = resolveVehicleSettings(
       locationSettingsRes.data?.category_vehicle_settings,
       categorySettingsRes.data?.vehicle_settings,
-      body.category_code
+      categoryForAddOns
     )
 
-    // Resolve room settings for this location + category + booking service type.
-    // Rooms are never chosen by the customer — the admin defines the rule, and a
-    // free room from the allowed pool gets auto-assigned further below.
     const roomServiceType: RoomServiceType = body.service_type ?? 'fahrstunde'
     const roomRule = resolveRoomSettings(
       locationSettingsRes.data?.category_room_settings,
       categorySettingsRes.data?.room_settings,
-      body.category_code,
+      categoryForAddOns || '',
       roomServiceType
     )
 
-    let totalAmountRappen = 0
-    if (pricingRule) {
-      let price = Number(pricingRule.price_per_minute_rappen) * slot.duration_minutes
-
-      // Apply duration multiplier
-      if (pricingRule.duration_multiplier && pricingRule.duration_multiplier !== '1.00') {
-        price *= parseFloat(pricingRule.duration_multiplier)
-        price = Math.round(price) // Round after each calculation
-      }
-
-      // Apply weekend multiplier (if start_time is Saturday or Sunday)
-      const appointmentStartTime = new Date(slot.start_time)
-      const dayOfWeek = appointmentStartTime.getDay() // 0 = Sunday, 6 = Saturday
-      if ((dayOfWeek === 0 || dayOfWeek === 6) && pricingRule.weekend_multiplier && pricingRule.weekend_multiplier !== '1.00') {
-        price *= parseFloat(pricingRule.weekend_multiplier)
-        price = Math.round(price) // Round after each calculation
-      }
-
-      // Apply evening multiplier (if start_time is after 18:00)
-      const hour = appointmentStartTime.getHours()
-      if (hour >= 18 && pricingRule.evening_multiplier && pricingRule.evening_multiplier !== '1.00') {
-        price *= parseFloat(pricingRule.evening_multiplier)
-        price = Math.round(price) // Round after each calculation
-      }
-
-      totalAmountRappen = Math.round(price)
-      totalAmountRappen = roundToNearest5Rappen(totalAmountRappen)
-
-      // Apply vehicle option cost (positive = surcharge, negative = discount)
-      if (body.vehicle_mode) {
-        const vehicleCost = calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes)
-        totalAmountRappen = Math.max(0, totalAmountRappen + vehicleCost)
-      }
-
-      logger.debug('💰 Price calculated:', { totalAmountRappen, vehicle_mode: body.vehicle_mode, pricingRule })
-    } else if (freePublicEvent) {
-      // Free public event type (e.g. Erstgespräch) — intentional zero price
-      totalAmountRappen = 0
-      logger.debug('💰 Free public event type — price 0', { category_code: body.category_code })
-    } else {
-      // ✅ No silent price fallback for real bookings: a request without a person
-      // present to notice a wrong price must fail safely instead of charging 0.
-      logger.warn('⚠️ No pricing rule found for category, aborting booking', { category_code: body.category_code, tenant_id: tenantId, pricingError: pricingError?.message })
-      await logFallbackUsed({
-        source: 'pricing',
-        message: `Buchung abgebrochen: keine aktive Preisregel für Kategorie "${body.category_code}" gefunden.`,
-        tenantId,
-        level: 'error',
-        details: { category_code: body.category_code, dbError: pricingError?.message || null }
-      })
-      throw createError({
-        statusCode: 503,
-        statusMessage: 'Der Preis für diese Kategorie konnte gerade nicht ermittelt werden. Bitte versuche es in Kürze erneut oder kontaktiere uns direkt.'
-      })
+    let totalAmountRappen = offer.priceRappen
+    if (body.vehicle_mode) {
+      const vehicleCost = calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes)
+      totalAmountRappen = Math.max(0, totalAmountRappen + vehicleCost)
     }
-
-    // Fahrstunden may still net to CHF 0 via Rabatt/Gutschein/Guthaben.
-    // Reject only a missing/zero base_price rule (not intentional free events).
-    const basePriceProblem = invalidDrivingLessonBasePriceReason({
-      ruleType: pricingRuleRes.data ? 'base_price' : 'event_price',
-      allowFreePublicEvent: freePublicEvent,
-      hasPricingRule: !!pricingRuleRes.data,
-      pricePerMinuteRappen: pricingRuleRes.data?.price_per_minute_rappen,
+    logger.debug('💰 Price calculated:', {
+      totalAmountRappen,
+      vehicle_mode: body.vehicle_mode,
+      offerKind: offer.kind,
+      rule: offer.kind === 'paid' ? offer.rule : null,
     })
-    if (basePriceProblem) {
-      logger.warn('⚠️ Zero/missing base_price rule for driving lesson, aborting booking', {
-        reason: basePriceProblem,
-        category_code: body.category_code,
-        tenant_id: tenantId,
-        price_per_minute_rappen: pricingRuleRes.data?.price_per_minute_rappen ?? null,
-      })
-      throw createError({
-        statusCode: 503,
-        statusMessage: 'Der Preis für diese Fahrstunde konnte nicht ermittelt werden. Bitte versuche es in Kürze erneut oder kontaktiere uns direkt.',
-      })
-    }
 
     // ============ LAYER 6c: ADMIN FEE CALCULATION ============
     // Must run BEFORE the appointment is inserted so the utility's count of
@@ -577,11 +487,11 @@ export default defineEventHandler(async (event: H3Event) => {
       supabase,
       userId: userData.id,
       tenantId: tenantId!,
-      categoryCode: body.category_code,
-      adminFeeRappenFromRule: adminFeeRuleRappen,
-      adminFeeAppliesFromRule,
+      categoryCode: categoryForAddOns || '',
+      adminFeeRappenFromRule: usingBasePrice ? adminFeeRuleRappen : 0,
+      adminFeeAppliesFromRule: usingBasePrice ? adminFeeAppliesFromRule : null,
     })
-    const adminFeeRappen = adminFeeResult.adminFeeRappen
+    const adminFeeRappen = usingBasePrice ? adminFeeResult.adminFeeRappen : 0
     const travelFee = await quoteTravelFee(tenantId!, {
       locationId: slot.location_id,
       locationType: body.customer_pickup_plz || body.customer_pickup_address ? 'pickup' : null,
@@ -618,12 +528,21 @@ export default defineEventHandler(async (event: H3Event) => {
 
     logger.debug('💼 Admin fee decision (booking flow):', {
       user_id: userData.id,
-      category: body.category_code,
+      category: identity.categoryCode,
       adminFeeRappen,
       reason: adminFeeResult.reason,
       appointmentNumber: adminFeeResult.appointmentNumber,
       alreadyPaid: adminFeeResult.alreadyPaid,
     })
+
+    const persistedEventTypeCode = identity.eventTypeCode
+    if (!persistedEventTypeCode) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Die Terminart für diese Buchung konnte nicht ermittelt werden.',
+        data: { code: 'EVENT_TYPE_UNRESOLVED' },
+      })
+    }
 
     // ============ LAYER 7: CREATE APPOINTMENT ============ 
     logger.debug('✍️ Creating final appointment record...', {
@@ -634,8 +553,8 @@ export default defineEventHandler(async (event: H3Event) => {
       start_time: slot.start_time,
       end_time: slot.end_time,
       duration_minutes: slot.duration_minutes,
-      type: body.category_code,  // Category or event type code
-      event_type_code: eventTypeRes.data?.code || body.appointment_type || 'lesson',
+      type: identity.categoryCode || persistedEventTypeCode,
+      event_type_code: persistedEventTypeCode,
       title: appointmentTitle, // "{Vorname} {Name} - {Ort}"
       description: sanitizedNotes || '', // Use notes as description, or empty string
       status: 'confirmed', // Status: confirmed (not booked)
@@ -661,7 +580,8 @@ export default defineEventHandler(async (event: H3Event) => {
       })
       if (!autoAssignedRoomId) {
         logger.warn('⚠️ No free room available for auto-assignment (non-fatal):', {
-          category_code: body.category_code,
+          category_code: identity.categoryCode,
+          event_type_code: persistedEventTypeCode,
           service_type: roomServiceType,
           mode: roomRule.mode,
         })
@@ -678,8 +598,8 @@ export default defineEventHandler(async (event: H3Event) => {
         start_time: slot.start_time,
         end_time: slot.end_time,
         duration_minutes: slot.duration_minutes,
-        type: body.category_code,  // Category or event type code
-        event_type_code: eventTypeRes.data?.code || body.appointment_type || 'lesson',
+        type: identity.categoryCode || persistedEventTypeCode,
+        event_type_code: persistedEventTypeCode,
         title: appointmentTitle, // "{Vorname} {Name} - {Ort}"
         description: sanitizedNotes || '', // Use notes as description, or empty string
         status: mayHoldUntilPaid ? 'pending' : 'confirmed',
@@ -746,7 +666,7 @@ export default defineEventHandler(async (event: H3Event) => {
           vehicle_id: null,
           tenant_id: tenantId,
           location_id: slot.location_id,
-          category_code: body.category_code,
+          category_code: categoryForAddOns || persistedEventTypeCode,
           start_time: slot.start_time,
           end_time: slot.end_time,
           purpose: 'lesson',
@@ -858,7 +778,7 @@ export default defineEventHandler(async (event: H3Event) => {
         code: body.discount_code,
         lessonAmountRappen: totalAmountRappen,
         capAtRappen: grossAmountRappen,
-        categoryCode: body.category_code,
+        categoryCode: identity.categoryCode || undefined,
         userId: userData.id,
       })
       validatedDiscountAmount = resolved.amountRappen
@@ -900,7 +820,8 @@ export default defineEventHandler(async (event: H3Event) => {
       payment_method_id: null,
       description: appointmentTitle,
       metadata: {
-        category: body.category_code || null,
+        category: identity.categoryCode || null,
+        event_type_code: persistedEventTypeCode,
         admin_fee_reason: adminFeeResult.reason,
         ...(freePublicEvent ? { free_public_event: true, allow_zero_completion: true } : {}),
         ...(validatedDiscountAmount > 0 && netAmountRappen <= 0
@@ -1144,8 +1065,8 @@ export default defineEventHandler(async (event: H3Event) => {
           tenantId,
           status: 'confirmed',
           previousStatus: null,
-          eventTypeCode: eventTypeRes.data?.code || body.appointment_type || 'lesson',
-          categoryCode: body.category_code,
+          eventTypeCode: persistedEventTypeCode,
+          categoryCode: identity.categoryCode,
           gclid: marketingAttr?.gclid ?? null,
           gbraid: marketingAttr?.gbraid ?? null,
           wbraid: marketingAttr?.wbraid ?? null,
@@ -1233,9 +1154,9 @@ export default defineEventHandler(async (event: H3Event) => {
       ip_address: ipAddress,
       details: { ...auditDetails, duration_ms: Date.now() - startTime }
     })
-    throw createError({
-      statusCode: error.statusCode || 500,
-      statusMessage: error.statusMessage || 'Failed to reserve slot'
+    throw error.statusCode ? error : createError({
+      statusCode: 500,
+      statusMessage: error.statusMessage || error.message || 'Failed to reserve slot'
     })
   }
 })

@@ -61,6 +61,7 @@ interface CreateAppointmentOptions {
   session_id: string
   appointment_type: string
   category_code: string
+  event_type_code?: string | null
   notes?: string
   discount_code?: string
   discount_amount_rappen?: number
@@ -193,6 +194,7 @@ export const useSecureAvailability = () => {
           session_id: options.session_id,
           appointment_type: options.appointment_type,
           category_code: options.category_code,
+          event_type_code: options.event_type_code || undefined,
           notes: options.notes,
           discount_code: options.discount_code,
           discount_amount_rappen: options.discount_amount_rappen ?? 0,

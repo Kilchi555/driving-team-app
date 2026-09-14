@@ -6115,12 +6115,10 @@ const initializeFormData = async () => {
 
   // ✅ WICHTIG: Grundlegende Werte setzen falls nicht vorhanden
   // In edit/view mode: skip defaults – populateFormFromAppointment will set the real values
-  // Default category 'B' is driving_school only — other business types have no license categories.
+  // Never invent license class B.
   const isEditOrView = props.mode === 'edit' || props.mode === 'view'
-  if (!formData.value.type && !isEditOrView && requiresCategory.value) {
-    formData.value.type = 'B'
-    logger.debug('✅ Default category set to B')
-  }
+  // Never invent license class B. If a category is required, CategorySelector
+  // or last-appointment load fills it from real tenant categories.
   
   // Create mode: paid types → priced flow; only free → EventTypeSelector
   if (!isEditOrView && props.mode === 'create') {
@@ -6245,11 +6243,7 @@ const initializeFormData = async () => {
           logger.debug('ℹ️ Could not load durations for category, using default')
         }
       } else {
-        logger.debug('ℹ️ No last appointment category found, using default')
-        if (requiresCategory.value) {
-          formData.value.type = 'B' // Default Kategorie
-          selectedCategory.value = { code: 'B' }
-        }
+        logger.debug('ℹ️ No last appointment category found, leaving category empty')
       }
       
       // 2. Letzten Standort laden (ohne Schüler-ID, da noch keiner ausgewählt ist)
@@ -6282,7 +6276,6 @@ const initializeFormData = async () => {
       
     } catch (error) {
       console.error('❌ Error loading last appointment data:', error)
-      if (requiresCategory.value) formData.value.type = 'B' // Fallback
     }
   }
 
@@ -6351,7 +6344,7 @@ const handleEditModeLessonType = async () => {
     
     // ✅ DATEN KOMMEN BEREITS KORREKT AUS useEventModalForm - nur UI-States setzen
     selectedLessonType.value = formData.value.appointment_type || 'lesson'
-    selectedCategory.value = { code: formData.value.type || 'B' }
+    selectedCategory.value = formData.value.type ? { code: formData.value.type } : null
     
     // ✅ STUDENT LADEN FÜR EDIT MODE - NUR FÜR LEKTIONEN
     if (formData.value.user_id && !selectedStudent.value && isLessonType(formData.value.eventType)) {
@@ -6436,10 +6429,7 @@ const handleCreateMode = async () => {
     selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
 
     // ✅ NEU: Standard-Kategorie für Create-Mode setzen (driving_school only)
-    if (requiresCategory.value) {
-      formData.value.type = 'B' // Standard-Kategorie
-      logger.debug('🎯 CREATE MODE: Set default category to B')
-    } else {
+    if (!requiresCategory.value) {
       formData.value.type = null
     }
 
@@ -6744,7 +6734,7 @@ const initializePastedAppointment = async () => {
       formData.value.user_id = props.eventData.user_id || ''
       formData.value.staff_id = props.eventData.staff_id || ((props.currentUser?.role === 'staff') ? props.currentUser.id : '')
       formData.value.location_id = props.eventData.location_id || ''
-      formData.value.type = props.eventData.type || (requiresCategory.value ? 'B' : null)
+      formData.value.type = props.eventData.type || null
       formData.value.appointment_type = props.eventData.appointment_type || 'lesson'
       
       // ✅ FIX: EventType aus appointment data bestimmen, nicht hardcoded
@@ -6772,7 +6762,7 @@ const initializePastedAppointment = async () => {
       
       // ✅ UI-States setzen
       selectedLessonType.value = props.eventData.appointment_type || 'lesson'
-      selectedCategory.value = { code: props.eventData.type || (requiresCategory.value ? 'B' : null) }
+      selectedCategory.value = { code: props.eventData.type || null }
       
       // ✅ WICHTIG: Produkte und Rabatte explizit zurücksetzen (sollen nicht kopiert werden)
       selectedProducts.value = []
@@ -7114,14 +7104,14 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
         formData.value.startTime = startTime
         formData.value.endTime = endTime
         formData.value.duration_minutes = duration
-        formData.value.type = requiresCategory.value ? 'B' : null
+        formData.value.type = requiresCategory.value ? (formData.value.type || null) : null
         
         // ✅ FIX: Don't force calendar "lesson" over tenant defaults — handleCreateMode
         // resolves discovery/consulting/etc. Ignoring extendedProps.eventType here
         // prevents a lesson → discovery flip on consulting free-slots.
         formData.value.status = 'scheduled'
         
-        if (requiresCategory.value) selectedCategory.value = { code: 'B' }
+        if (requiresCategory.value && formData.value.type) selectedCategory.value = { code: formData.value.type }
         else selectedCategory.value = null
         
         logger.debug('🎯 Form data after calendar extraction:', {
@@ -7177,7 +7167,7 @@ watch(() => [props.isVisible, props.eventData?.id] as const, async (newValue, ol
       formData.value = {
         ...formData.value,
         eventType: 'lesson',
-        type: 'B',
+        type: requiresCategory.value ? (formData.value.type || null) : null,
         duration_minutes: 45,
         // price_per_minute entfernt - wird aus der Datenbank berechnet
         status: 'scheduled',

@@ -27,7 +27,6 @@ import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisiti
 import { saveAcquisitionSelfReport } from '~/server/utils/save-acquisition-self-report'
 import { sendTenantSMS } from '~/server/utils/sms'
 import { sendEmail } from '~/server/utils/email'
-import { roundToNearest5Rappen } from '~/utils/rounding'
 import { logger } from '~/utils/logger'
 import { v4 as uuidv4 } from 'uuid'
 import { upsertMarketingLeadSafe, categoriesFromUserCategory } from '~/server/utils/upsert-marketing-lead'
@@ -54,19 +53,21 @@ import { resolveVehicleSettings, calculateVehicleCost } from '~/server/utils/veh
 import { pickAvailableRoomId, resolveRoomSettings, type RoomServiceType } from '~/server/utils/room-availability'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 import {
-  guestBookingPriceRuleType,
-  guestSlotCategoryMismatchReason,
-  invalidDrivingLessonBasePriceReason,
   invalidPersistedLessonPricingReason,
   normalizeGuestSlotServiceType,
 } from '~/server/utils/guest-booking-price-rule'
+import { resolveOfferPrice, throwIfUnpriced } from '~/server/utils/resolve-offer-price'
+import { bindPublicSlotOfferIdentity } from '~/server/utils/resolve-booking-offer-identity'
+import { bookingIdentityCode } from '~/utils/booking-offer-identity'
 
 interface GuestBookRequest {
   // Booking identifiers
   slot_id: string
   session_id: string
   tenant_slug: string
-  category_code: string
+  category_code?: string
+  event_type_code?: string
+  appointment_type?: string
   // Guest contact info (basic)
   first_name?: string
   last_name?: string
@@ -137,8 +138,8 @@ export default defineEventHandler(async (event) => {
   // ── Input validation ─────────────────────────────────────────────────────
   const body = await readBody<GuestBookRequest>(event)
 
-  if (!body.slot_id || !body.session_id || !body.tenant_slug || !body.category_code) {
-    throw createError({ statusCode: 400, statusMessage: 'slot_id, session_id, tenant_slug und category_code sind erforderlich' })
+  if (!body.slot_id || !body.session_id || !body.tenant_slug || (!body.category_code && !body.event_type_code)) {
+    throw createError({ statusCode: 400, statusMessage: 'slot_id, session_id, tenant_slug und category_code oder event_type_code sind erforderlich' })
   }
 
   // ── Resolve tenant + policy ──────────────────────────────────────────────
@@ -224,26 +225,47 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Bind price/category to the reserved slot — clients must not swap to a
-  // cheaper category_code while holding a different availability slot.
-  const categoryMismatch = guestSlotCategoryMismatchReason({
+  const identity = await bindPublicSlotOfferIdentity(supabase, {
+    tenantId,
     slotCategoryCode: slot.category_code,
-    bodyCategoryCode: body.category_code,
+    clientEventTypeCode: body.event_type_code,
+    clientCategoryCode: body.category_code,
+    clientAppointmentType: body.appointment_type,
+    slotId: body.slot_id,
   })
-  if (categoryMismatch) {
-    logger.warn('❌ Guest booking rejected: category does not match reserved slot', {
-      reason: categoryMismatch,
-      slot_category_code: slot.category_code,
-      body_category_code: body.category_code,
+  const offerCode = bookingIdentityCode(identity)
+
+  // Slot-based guest checkout only books Fahrstunden. Theorie/Beratung use the
+  // proposal flow in the UI — accepting them here lets attackers load CHF-0
+  // consultation/theory rules while still creating a lesson on a reserved slot.
+  const serviceTypeNorm = normalizeGuestSlotServiceType(body.service_type)
+  if (!serviceTypeNorm.ok) {
+    logger.warn('❌ Guest booking rejected: spoofed non-lesson service_type on slot booking', {
+      reason: serviceTypeNorm.reason,
+      service_type: body.service_type,
       slot_id: body.slot_id,
+      category_code: body.category_code,
       tenant_id: tenantId,
     })
     throw createError({
       statusCode: 400,
-      statusMessage: 'Die gewählte Kategorie passt nicht zum reservierten Zeitslot.',
-      data: { code: 'CATEGORY_SLOT_MISMATCH' },
+      statusMessage: 'Theorie- und Beratungsanfragen können nicht über den Zeitslot-Checkout gebucht werden.',
+      data: { code: 'INVALID_SERVICE_TYPE' },
     })
   }
+  const roomServiceType: RoomServiceType = serviceTypeNorm.serviceType
+  const categoryForAddOns = identity.categoryCode || offerCode
+
+  // Client-supplied discount_amount_rappen is non-authoritative and ignored.
+  const offer = await resolveOfferPrice(supabase, {
+    tenantId,
+    eventTypeCode: identity.eventTypeCode || '',
+    categoryCode: identity.categoryCode,
+    durationMinutes: slot.duration_minutes,
+    startTime: slot.start_time,
+    ruleTypeHint: 'base_price',
+  })
+  throwIfUnpriced(offer)
 
   // ── Resolve identity by phone/email match ─────────────────────────────────
   // Loads the full account (not just existence) so we can tell a REAL,
@@ -337,7 +359,10 @@ export default defineEventHandler(async (event) => {
   const tokenExpiry = new Date()
   tokenExpiry.setDate(tokenExpiry.getDate() + 30)
 
-  const mergedCategories = Array.from(new Set([...(existingPendingUser?.category ?? []), body.category_code]))
+  const mergedCategories = Array.from(new Set([
+    ...(existingPendingUser?.category ?? []),
+    ...(offerCode ? [offerCode] : []),
+  ]))
 
   if (existingPendingUser) {
     // Reuse the existing shadow account: refresh whichever contact/address
@@ -414,100 +439,43 @@ export default defineEventHandler(async (event) => {
     logger.debug('✅ Guest user created:', newUserId)
   }
 
-  // Slot-based guest checkout only books Fahrstunden. Theorie/Beratung use the
-  // proposal flow in the UI — accepting them here lets attackers load CHF-0
-  // consultation/theory rules while still creating a lesson on a reserved slot.
-  const serviceTypeNorm = normalizeGuestSlotServiceType(body.service_type)
-  if (!serviceTypeNorm.ok) {
-    logger.warn('❌ Guest booking rejected: spoofed non-lesson service_type on slot booking', {
-      reason: serviceTypeNorm.reason,
-      service_type: body.service_type,
-      slot_id: body.slot_id,
-      category_code: body.category_code,
-      tenant_id: tenantId,
-    })
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Theorie- und Beratungsanfragen können nicht über den Zeitslot-Checkout gebucht werden.',
-      data: { code: 'INVALID_SERVICE_TYPE' },
-    })
-  }
-  const roomServiceType: RoomServiceType = serviceTypeNorm.serviceType
-  // Always base_price for slot guest bookings (matches get-pricing for fahrstunde).
-  const lessonRuleType = guestBookingPriceRuleType(roomServiceType)
-
-  // ── Parallel: pricing + event type + marketing + location/vehicle settings ─
-  const [pricingResult, eventPricingResult, adminFeeRuleResult, eventTypeResult, marketingAttr, locationResult, categorySettingsRes] = await Promise.all([
-    supabase
-      .from('pricing_rules')
-      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier')
-      .eq('tenant_id', tenantId)
-      .eq('category_code', body.category_code)
-      .eq('rule_type', lessonRuleType)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-
-    supabase
-      .from('pricing_rules')
-      .select('price_per_minute_rappen, duration_multiplier, weekend_multiplier, evening_multiplier')
-      .eq('tenant_id', tenantId)
-      .eq('event_type_code', body.category_code)
-      .eq('rule_type', 'event_price')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-
-    // Admin fee lives on rule_type=admin_fee — not on base_price/consultation rows
-    // (those often carry applies_from=999 which would falsely mark the fee exempt).
-    supabase
-      .from('pricing_rules')
-      .select('admin_fee_rappen, admin_fee_applies_from')
-      .eq('tenant_id', tenantId)
-      .eq('category_code', body.category_code)
-      .eq('rule_type', 'admin_fee')
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle(),
-
-    // per_event_type tenants (and free Erstgespräch): body.category_code is an
-    // event_types.code — needed for require_payment=false free public events.
-    supabase
-      .from('event_types')
-      .select('code, require_payment, public_bookable')
-      .eq('tenant_id', tenantId)
-      .eq('code', body.category_code)
-      .eq('is_active', true)
-      .maybeSingle(),
-
+  // ── Parallel: marketing + location/vehicle settings (after fail-closed price) ─
+  const [marketingAttr, locationResult, categorySettingsRes, adminFeeRuleResult] = await Promise.all([
     resolveMarketingAttribution(supabase, body.marketing_session_id, body.marketing_attribution),
-
     supabase
       .from('locations')
       .select('name, category_vehicle_settings, category_room_settings')
       .eq('id', slot.location_id)
       .maybeSingle(),
-
-    supabase
-      .from('categories')
-      .select('vehicle_settings, room_settings')
-      .eq('code', body.category_code)
-      .eq('tenant_id', tenantId)
-      .maybeSingle(),
+    categoryForAddOns
+      ? supabase
+          .from('categories')
+          .select('vehicle_settings, room_settings')
+          .eq('code', categoryForAddOns)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    categoryForAddOns
+      ? supabase
+          .from('pricing_rules')
+          .select('admin_fee_rappen, admin_fee_applies_from')
+          .eq('tenant_id', tenantId)
+          .eq('category_code', categoryForAddOns)
+          .eq('rule_type', 'admin_fee')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
 
-  const pricingRule = pricingResult.data || eventPricingResult.data
   const location = locationResult.data
-  const freePublicEvent =
-    !!eventTypeResult.data &&
-    eventTypeResult.data.require_payment === false &&
-    eventTypeResult.data.public_bookable !== false
+  const freePublicEvent = offer.kind === 'free'
+  const usingBasePriceRule = offer.kind === 'paid' && offer.rule.rule_type === 'base_price'
+  const usingEventPriceRule = offer.kind === 'paid' && offer.rule.rule_type === 'event_price'
   const vehicleSettings = resolveVehicleSettings(
     locationResult.data?.category_vehicle_settings,
     categorySettingsRes.data?.vehicle_settings,
-    body.category_code
+    categoryForAddOns
   )
 
   try {
@@ -540,82 +508,11 @@ export default defineEventHandler(async (event) => {
     logger.warn('⚠️ Guest self-report failed (non-critical):', err?.message ?? err)
   }
 
-  // ── Calculate lesson price ────────────────────────────────────────────────
-  let totalAmountRappen = 0
-
-  if (pricingRule) {
-    let price = Number(pricingRule.price_per_minute_rappen) * slot.duration_minutes
-
-    if (pricingRule.duration_multiplier && pricingRule.duration_multiplier !== '1.00') {
-      price *= parseFloat(pricingRule.duration_multiplier)
-      price = Math.round(price)
-    }
-
-    const apptStart = new Date(slot.start_time)
-    const dayOfWeek = apptStart.getDay()
-    if ((dayOfWeek === 0 || dayOfWeek === 6) && pricingRule.weekend_multiplier && pricingRule.weekend_multiplier !== '1.00') {
-      price *= parseFloat(pricingRule.weekend_multiplier)
-      price = Math.round(price)
-    }
-
-    const hour = apptStart.getHours()
-    if (hour >= 18 && pricingRule.evening_multiplier && pricingRule.evening_multiplier !== '1.00') {
-      price *= parseFloat(pricingRule.evening_multiplier)
-      price = Math.round(price)
-    }
-
-    totalAmountRappen = roundToNearest5Rappen(Math.round(price))
-
-    if (body.vehicle_mode) {
-      const vehicleCost = calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes)
-      totalAmountRappen = Math.max(0, totalAmountRappen + vehicleCost)
-    }
-  }
-
-  // Prefer category base_price; fall back to per-event-type event_price
-  // (same as authenticated create-appointment). Never silently book at CHF 0
-  // because no rule existed — except intentional free public events
-  // (require_payment=false, e.g. Erstgespräch / discovery) which have no
-  // event_price row by design (register uses free_event toggle only).
-  const usingBasePriceRule = !!pricingResult.data
-  const usingEventPriceRule = !usingBasePriceRule && !!eventPricingResult.data
-  if (!usingBasePriceRule && !usingEventPriceRule && !freePublicEvent) {
-    logger.error('❌ Guest booking aborted: no pricing rule for category/event', {
-      category_code: body.category_code,
-      lessonRuleType,
-      tenant_id: tenantId,
-    })
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'Der Preis für diese Buchung konnte nicht ermittelt werden. Bitte versuche es erneut oder kontaktiere uns direkt.',
-    })
-  }
-
-  // Fahrstunden may still net to CHF 0 via Rabatt/Gutschein/Guthaben later.
-  // Abort only when the base_price rule itself is missing or CHF 0 — not when
-  // a valid event_price row is what priced this booking (per_event_type tenants),
-  // and not for intentional free public events.
-  const basePriceProblem = invalidDrivingLessonBasePriceReason({
-    ruleType: usingBasePriceRule ? 'base_price' : 'event_price',
-    allowFreePublicEvent: freePublicEvent,
-    hasPricingRule: usingBasePriceRule,
-    pricePerMinuteRappen: pricingResult.data?.price_per_minute_rappen,
-  })
-  if (basePriceProblem) {
-    logger.error('❌ Guest booking aborted: invalid driving-lesson base price', {
-      reason: basePriceProblem,
-      category_code: body.category_code,
-      lessonRuleType,
-      tenant_id: tenantId,
-      hasPricingRule: usingBasePriceRule,
-      usingEventPriceRule,
-      freePublicEvent,
-      price_per_minute_rappen: pricingResult.data?.price_per_minute_rappen ?? null,
-    })
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'Der Preis für diese Fahrstunde konnte nicht ermittelt werden. Bitte versuche es erneut oder kontaktiere uns direkt.',
-    })
+  // ── Calculate lesson price (authoritative server resolver) ───────────────
+  let totalAmountRappen = offer.priceRappen
+  if (body.vehicle_mode) {
+    const vehicleCost = calculateVehicleCost(vehicleSettings, body.vehicle_mode, slot.duration_minutes)
+    totalAmountRappen = Math.max(0, totalAmountRappen + vehicleCost)
   }
 
   // ── Calculate admin fee ───────────────────────────────────────────────────
@@ -629,7 +526,7 @@ export default defineEventHandler(async (event) => {
     supabase,
     userId: newUserId,
     tenantId,
-    categoryCode: body.category_code,
+    categoryCode: categoryForAddOns || '',
     adminFeeRappenFromRule: usingBasePriceRule ? adminFeeRuleRappen : 0,
     adminFeeAppliesFromRule: usingBasePriceRule ? adminFeeAppliesFromRule : null,
   })
@@ -648,7 +545,7 @@ export default defineEventHandler(async (event) => {
     code: body.discount_code,
     lessonAmountRappen: totalAmountRappen,
     capAtRappen: grossAmountRappen,
-    categoryCode: body.category_code,
+    categoryCode: categoryForAddOns || undefined,
     userId: newUserId,
   })
   const validatedDiscountAmount = resolvedDiscount.amountRappen
@@ -688,7 +585,7 @@ export default defineEventHandler(async (event) => {
   const roomRule = resolveRoomSettings(
     locationResult.data?.category_room_settings,
     categorySettingsRes.data?.room_settings,
-    body.category_code,
+    categoryForAddOns || '',
     roomServiceType
   )
   let autoAssignedRoomId: string | null = null
@@ -701,20 +598,28 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── Create appointment ────────────────────────────────────────────────────
-  // FS: type = category (B), event_type_code = lesson
-  // Event-type tenants: body.category_code / slot.category_code is the event type
-  // Free public events (discovery/intake) also persist their event_types.code —
-  // never fall back to 'lesson' just because they have no event_price row.
-  const resolvedEventTypeCode =
-    eventTypeResult.data?.code
-    || (usingEventPriceRule ? body.category_code : null)
-    || 'lesson'
+  // Persist event_type_code and category (type) separately. Never invent 'lesson'
+  // unless that code exists as a tenant event type (identity resolver).
+  const resolvedEventTypeCode = identity.eventTypeCode
+  if (!resolvedEventTypeCode) {
+    logger.error('❌ Guest booking aborted: event type unresolved', {
+      tenant_id: tenantId,
+      category_code: identity.categoryCode,
+      body_category_code: body.category_code,
+      event_type_code: body.event_type_code,
+    })
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Die Terminart für diese Buchung konnte nicht ermittelt werden.',
+      data: { code: 'EVENT_TYPE_UNRESOLVED' },
+    })
+  }
 
   const ruleTypeUsedForGuard = usingBasePriceRule
     ? 'base_price'
     : usingEventPriceRule
       ? 'event_price'
-      : (freePublicEvent ? 'event_price' : lessonRuleType)
+      : 'event_price'
 
   const lessonPriceMismatch = invalidPersistedLessonPricingReason({
     persistedEventTypeCode: resolvedEventTypeCode,
@@ -745,7 +650,7 @@ export default defineEventHandler(async (event) => {
       start_time: slot.start_time,
       end_time: slot.end_time,
       duration_minutes: slot.duration_minutes,
-      type: body.category_code,
+      type: identity.categoryCode || resolvedEventTypeCode,
       event_type_code: resolvedEventTypeCode,
       title: appointmentTitle,
       description: sanitizedNotes,
@@ -797,7 +702,7 @@ export default defineEventHandler(async (event) => {
         vehicle_id: null,
         tenant_id: tenantId,
         location_id: slot.location_id,
-        category_code: body.category_code,
+        category_code: categoryForAddOns || resolvedEventTypeCode,
         start_time: slot.start_time,
         end_time: slot.end_time,
         purpose: 'lesson',
@@ -1023,7 +928,8 @@ export default defineEventHandler(async (event) => {
       metadata: {
         slot_id: body.slot_id,
         session_id: body.session_id,
-        category_code: body.category_code,
+        category_code: identity.categoryCode,
+        event_type_code: resolvedEventTypeCode,
         guest_name: studentName,
       },
     })
@@ -1205,7 +1111,7 @@ export default defineEventHandler(async (event) => {
         status: 'confirmed',
         previousStatus: null,
         eventTypeCode: resolvedEventTypeCode,
-        categoryCode: body.category_code,
+        categoryCode: identity.categoryCode,
         gclid: marketingAttr?.gclid ?? null,
         gbraid: marketingAttr?.gbraid ?? null,
         wbraid: marketingAttr?.wbraid ?? null,
