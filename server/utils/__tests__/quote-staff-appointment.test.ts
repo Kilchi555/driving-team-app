@@ -147,6 +147,25 @@ describe('quoteStaffAppointmentOffer', () => {
     expect(composed.totalAmountRappen).toBe(9000)
   })
 
+  it('adds server resource surcharge onto the lesson total', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'lesson', require_payment: true }],
+      rules: [{
+        tenant_id: TENANT,
+        id: 'rule-b',
+        rule_type: 'base_price',
+        category_code: 'B',
+        price_per_minute_rappen: 200,
+      }],
+    })
+    const quote = await quoteStaffAppointmentOffer(supabase, identity())
+    const composed = composeStaffPaymentFromOffer(quote, {
+      resourceSurchargeRappen: 7500,
+    })
+    expect(composed.resourceSurchargeRappen).toBe(7500)
+    expect(composed.totalAmountRappen).toBe(16500)
+  })
+
   it('B. planted zero is ignored for a paid event; missing paid rule fails closed', async () => {
     const paid = createOfferPriceSupabase({
       eventTypes: [{ tenant_id: TENANT, code: 'lesson', require_payment: true }],
@@ -276,19 +295,38 @@ describe('appointments/save staff pricing contract', () => {
   it('quotes through the staff wrapper before persist', () => {
     expect(src).toContain('quoteStaffAppointmentOffer')
     expect(src).toContain('composeStaffPaymentFromOffer')
+    expect(src).toContain('quoteStaffResourceSurcharge')
     expect(src).not.toContain('getFallbackRule')
     expect(src).not.toContain('isChargeableEventType')
     expect(src).not.toContain('basePriceRappen')
     expect(src).not.toContain('totalAmountRappenForPayment')
     expect(src).not.toContain('bindPublicSlotOfferIdentity')
+    expect(src).not.toContain('resourceSurcharges')
   })
 
   it('quotes before appointment insert/update', () => {
     const quoteAt = src.indexOf('quoteStaffAppointmentOffer')
+    const resourceAt = src.indexOf('quoteStaffResourceSurcharge')
     const insertAt = src.indexOf('.insert(appointmentData)')
     const updateAt = src.indexOf('.update(appointmentData)')
     expect(quoteAt).toBeGreaterThan(0)
+    expect(resourceAt).toBeGreaterThan(0)
     expect(quoteAt).toBeLessThan(insertAt)
+    expect(resourceAt).toBeLessThan(insertAt)
     expect(quoteAt).toBeLessThan(updateAt)
+    expect(resourceAt).toBeLessThan(updateAt)
+  })
+})
+
+describe('updatePaymentEntry does not rewrite save amounts', () => {
+  const src = readFileSync(resolve(process.cwd(), 'composables/useEventModalForm.ts'), 'utf8')
+  const updateFn = src.slice(src.indexOf('const updatePaymentEntry'), src.indexOf('const loadLastAppointmentLocation'))
+
+  it('19. does not write lesson_price_rappen or total_amount_rappen', () => {
+    expect(updateFn).toContain('Amounts (lesson / total / products / discount) are owned by')
+    expect(updateFn).not.toContain('lesson_price_rappen:')
+    expect(updateFn).not.toContain('total_amount_rappen:')
+    expect(updateFn).not.toContain('products_price_rappen:')
+    expect(updateFn).not.toContain('discount_amount_rappen:')
   })
 })
