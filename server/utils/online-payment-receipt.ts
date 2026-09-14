@@ -10,6 +10,7 @@ import { loadTenantLogoForPdf, resolveTenantWideLogoUrl } from '~/server/utils/t
 import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { sendEmail } from '~/server/utils/email'
 import { logger } from '~/utils/logger'
+import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/payment-metadata'
 
 export type ReceiptSkipCode =
   | 'NOT_COMPLETED'
@@ -40,11 +41,12 @@ export function assessOnlinePaymentReceipt(payment: {
       message: `Quittung nicht gesendet: Zahlung ist ${payment.payment_status || 'unbekannt'}, nicht completed.`,
     }
   }
-  if (payment.metadata?.receipt_sent_at) {
+  const metadata = normalizePaymentMetadata(payment.metadata)
+  if (metadata.receipt_sent_at) {
     return {
       ok: false,
       code: 'ALREADY_SENT',
-      message: `Quittung bereits gesendet am ${String(payment.metadata.receipt_sent_at)}.`,
+      message: `Quittung bereits gesendet am ${String(metadata.receipt_sent_at)}.`,
     }
   }
   const amount = Math.round(Number(payment.total_amount_rappen) || 0)
@@ -67,16 +69,8 @@ export function assessOnlinePaymentReceipt(payment: {
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value)
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed
-    } catch { /* ignore */ }
-    return {}
-  }
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? { ...(value as Record<string, unknown>) }
-    : {}
+  const meta = normalizePaymentMetadata(value)
+  return { ...meta }
 }
 
 export async function sendOnlinePaymentReceipt(opts: {
@@ -142,7 +136,7 @@ export async function sendOnlinePaymentReceipt(opts: {
         await supabase
           .from('payments')
           .update({
-            metadata: { ...meta, receipt_error: assessment.message.slice(0, 400) },
+            metadata: mergePaymentMetadata(meta, { receipt_error: assessment.message.slice(0, 400) }),
             updated_at: new Date().toISOString(),
           })
           .eq('id', payment.id)
@@ -258,15 +252,14 @@ export async function sendOnlinePaymentReceipt(opts: {
       }],
     })
 
-    const nextMeta = {
-      ...meta,
+    const nextMeta = mergePaymentMetadata(meta, {
       receipt_sent_at: new Date().toISOString(),
       receipt_number: receiptNumber,
       receipt_email_id: messageId,
       receipt_error: null,
       vat_rate: split.rate,
       vat_amount_rappen: split.vat,
-    }
+    })
     await supabase
       .from('payments')
       .update({ metadata: nextMeta, updated_at: new Date().toISOString() })
@@ -286,10 +279,9 @@ export async function sendOnlinePaymentReceipt(opts: {
       await supabase
         .from('payments')
         .update({
-          metadata: {
-            ...meta,
+          metadata: mergePaymentMetadata(meta, {
             receipt_error: String(err?.message || err).slice(0, 400),
-          },
+          }),
           updated_at: new Date().toISOString(),
         })
         .eq('id', payment.id)
