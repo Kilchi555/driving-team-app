@@ -187,13 +187,16 @@ export default defineEventHandler(async (event) => {
   // ── 2d. Load event types from DB for all tenants (dynamic labels) ──
   const { data: eventTypeRows } = await supabase
     .from('event_types')
-    .select('tenant_id, code, name')
+    .select('tenant_id, code, name, require_payment')
     .in('tenant_id', tenantIds)
 
   // Map: `${tenant_id}::${code}` → display name
   const eventTypeMap = new Map<string, string>()
+  const eventTypeChargeableMap = new Map<string, boolean>()
+  const LEGACY_BILLABLE_TYPES = new Set(['lesson', 'exam', 'theory'])
   for (const et of (eventTypeRows || []) as any[]) {
     eventTypeMap.set(`${et.tenant_id}::${et.code}`, et.name)
+    eventTypeChargeableMap.set(`${et.tenant_id}::${et.code}`, !!et.require_payment)
   }
 
   // ── 3. Check which appointments already have a queued reminder
@@ -308,8 +311,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // Payment section — only for billable event types (lesson, exam)
-    const BILLABLE_TYPES = new Set(['lesson', 'exam', 'theory'])
-    const isBillable = !apt.event_type_code || BILLABLE_TYPES.has(apt.event_type_code)
+    const paymentKey = `${apt.tenant_id}::${apt.event_type_code || ''}`
+    const isBillable = eventTypeChargeableMap.has(paymentKey)
+      ? eventTypeChargeableMap.get(paymentKey) === true
+      : (!apt.event_type_code || LEGACY_BILLABLE_TYPES.has(apt.event_type_code))
     const payment = isBillable ? (paymentMap.get(apt.id) || null) : null
     const paymentHtml = payment ? buildPaymentSection(payment, primaryColor, loginLink, isActivationLink, canAccessAccount) : ''
 

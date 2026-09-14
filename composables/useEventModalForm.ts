@@ -11,6 +11,7 @@ import type { CategoryWithParent, EvaluationCriteria } from '~/composables/useCa
 import { getFallbackRule } from '~/utils/fallbackPricingRules'
 import { useFallbackLogger } from '~/composables/useFallbackLogger'
 import { useTenantBranding } from '~/composables/useTenantBranding'
+import { staffRequiresCategory } from '~/utils/staff-category-defaults'
 
 // Types (können später in separates types file)
 interface AppointmentData {
@@ -131,7 +132,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // for those tenants — otherwise save stays blocked and orphaned 'B' defaults leak in.
   const requiresCategory = computed(() => {
     const bt = currentTenantBranding.value?.business_type || 'driving_school'
-    return bt === 'driving_school'
+    return staffRequiresCategory(bt, categoryData.allCategories.value?.length ?? 0)
   })
 
   // Warm the shared event_types cache as early as possible so
@@ -140,6 +141,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
   // Cheap no-op if another component (LessonTypeSelector/EventTypeSelector)
   // already loaded it — same shared, module-level cache.
   eventTypes.loadEventTypes([], true)
+  categoryData.loadCategories()
 
   // ✅ Generic "is this event type chargeable" check, driven by the
   // event_types.require_payment DB flag instead of a hardcoded
