@@ -1,29 +1,150 @@
-# Queue a squash merge into main once required checks are green.
-# Branch protection still gates on "Test and lint" and "E2E login"
-# (not Vercel previews). Draft PRs stay unmerged until marked ready.
+# GREEN non-draft PRs into main may enable squash auto-merge.
+# YELLOW / RED / CRITICAL / unknown never auto-merge (fail-closed).
+# Branch protection still requires Test and lint, E2E login, Dependency review.
+#
+# Write permissions:
+# - classify: pull-requests + issues — labels and the risk comment only.
+# - auto-merge: contents + pull-requests — enable or disable GitHub auto-merge.
+# Neither job writes production data or uses production credentials.
 name: Auto-merge
 
 on:
   pull_request:
-    types: [opened, ready_for_review, reopened, synchronize]
+    types: [opened, ready_for_review, reopened, synchronize, converted_to_draft]
     branches: [main]
 
-permissions:
-  contents: write
-  pull-requests: write
+# Newer synchronize/ready runs cancel older ones for the same PR so a stale
+# GREEN classify cannot enable auto-merge after a later CRITICAL commit.
+concurrency:
+  group: pr-governance-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions: {}
 
 jobs:
-  enable:
-    name: Enable squash auto-merge
-    if: github.event.pull_request.draft == false
+  classify:
+    name: Classify PR risk
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      risk: ${{ steps.classify.outputs.risk }}
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     steps:
-      - name: Enable auto-merge
+      - name: Checkout trusted classifier from PR base
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - name: Classify current PR diff with the base classifier
+        id: classify
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh pr merge "${{ github.event.pull_request.number }}" \
+          set -euo pipefail
+          # Diff = live PR Files API (head vs base). Classifier code = this checkout (base.sha).
+          gh api --paginate \
+            "repos/${{ github.repository }}/pulls/${PR_NUMBER}/files" \
+            > "${RUNNER_TEMP}/pr-files.json"
+          node scripts/pr-risk-classify.mjs \
+            --files "${RUNNER_TEMP}/pr-files.json" \
+            --json "${RUNNER_TEMP}/pr-risk.json" \
+            --comment "${RUNNER_TEMP}/pr-risk-comment.md" \
+            --github-output "${GITHUB_OUTPUT}"
+
+      - name: Apply risk label and comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RISK: ${{ steps.classify.outputs.risk }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RISK}" ] || ! echo "green yellow red critical unknown" | grep -qw "${RISK}"; then
+            echo "invalid or missing risk output; refusing to continue"
+            exit 1
+          fi
+
+          declare -A COLORS=(
+            [green]=0E8A16
+            [yellow]=FBCA04
+            [red]=D93F0B
+            [critical]=B60205
+            [unknown]=6F42C1
+          )
+          for class in green yellow red critical unknown; do
+            gh label create "risk:${class}" \
+              --color "${COLORS[$class]}" \
+              --description "PR risk class ${class}" \
+              --force >/dev/null
+          done
+
+          gh pr edit "${PR_NUMBER}" --repo "${{ github.repository }}" \
+            --remove-label "risk:green" \
+            --remove-label "risk:yellow" \
+            --remove-label "risk:red" \
+            --remove-label "risk:critical" \
+            --remove-label "risk:unknown" || true
+          gh pr edit "${PR_NUMBER}" --repo "${{ github.repository }}" \
+            --add-label "risk:${RISK}"
+
+          COMMENT_BODY="${RUNNER_TEMP}/pr-risk-comment.md"
+          gh api --paginate \
+            "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            > "${RUNNER_TEMP}/pr-comments.json"
+          COMMENT_ID="$(
+            jq -r '[.[] | select(.body | contains("<!-- simy-pr-risk -->")) | .id] | first // empty' \
+              "${RUNNER_TEMP}/pr-comments.json"
+          )"
+          jq -n --rawfile body "${COMMENT_BODY}" '{body:$body}' > "${RUNNER_TEMP}/pr-risk-comment.json"
+          if [ -n "${COMMENT_ID}" ]; then
+            gh api --method PATCH \
+              "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" \
+              --input "${RUNNER_TEMP}/pr-risk-comment.json"
+          else
+            gh api --method POST \
+              "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+              --input "${RUNNER_TEMP}/pr-risk-comment.json"
+          fi
+
+  auto-merge:
+    name: Auto-merge (GREEN only)
+    needs: classify
+    if: always() && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Enable auto-merge only for GREEN
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RISK: ${{ needs.classify.outputs.risk }}
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          set -euo pipefail
+          echo "classify=${CLASSIFY_RESULT} risk=${RISK:-missing} draft=${DRAFT}"
+
+          enable_auto_merge=false
+          if [ "${CLASSIFY_RESULT}" = "success" ] \
+            && [ "${DRAFT}" != "true" ] \
+            && [ "${RISK}" = "green" ]; then
+            enable_auto_merge=true
+          fi
+
+          if [ "${enable_auto_merge}" != "true" ]; then
+            gh pr merge "${PR_NUMBER}" --repo "${{ github.repository }}" --disable-auto || true
+            echo "auto-merge disabled (fail-closed)"
+            exit 0
+          fi
+
+          gh pr merge "${PR_NUMBER}" \
             --repo "${{ github.repository }}" \
             --auto \
             --squash
