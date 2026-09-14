@@ -17,6 +17,7 @@ import {
   quoteStaffAppointmentOffer,
   staffOfferIdentityFromAppointment,
 } from '~/server/utils/quote-staff-appointment'
+import { quoteStaffResourceSurcharge } from '~/server/utils/quote-staff-resource-surcharge'
 import { assertStaffCanApplyManualDiscount } from '~/server/utils/staff-manual-discount'
 import { attachProposalAttributionToStaffAppointment } from '~/server/utils/proposal-booking-conversion'
 import { becameBindingConfirmed } from '~/server/utils/binding-booking'
@@ -201,14 +202,22 @@ export default defineEventHandler(async (event) => {
       }),
     )
 
+    const staffResource = await quoteStaffResourceSurcharge(supabase, {
+      tenantId: quoteTenantId,
+      vehicleId: appointmentData.vehicle_id,
+      roomId: appointmentData.room_id,
+      durationMinutes: appointmentData.duration_minutes,
+    })
+
     const staffPayment = composeStaffPaymentFromOffer(staffQuote, {
       adminFeeRappen,
       productsPriceRappen,
+      resourceSurchargeRappen: staffResource.totalRappen,
       discountAmountRappen,
       creditUsedRappen,
     })
 
-    if (staffPayment.discountAmountRappen > staffPayment.lessonPriceRappen + staffPayment.adminFeeRappen + staffPayment.productsPriceRappen) {
+    if (staffPayment.discountAmountRappen > staffPayment.lessonPriceRappen + staffPayment.adminFeeRappen + staffPayment.productsPriceRappen + staffPayment.resourceSurchargeRappen) {
       throw createError({ statusCode: 400, statusMessage: 'Invalid price: discount exceeds total price' })
     }
 
@@ -688,9 +697,6 @@ export default defineEventHandler(async (event) => {
     const resourceEnd = appointmentData.end_time
     const tenantId = appointmentData.tenant_id
 
-    // Resource cost breakdown sent from EventModal
-    const resourceSurcharges: { label: string; rappen: number }[] = body.resourceSurcharges || []
-
     if (appointmentId && (vehicle_id !== undefined || room_id !== undefined)) {
       try {
         // ── Vehicle bookings ──────────────────────────────────────────────
@@ -729,7 +735,6 @@ export default defineEventHandler(async (event) => {
           .eq('purpose', 'lesson')
 
         if (vehicle_id) {
-          const vehicleCost = resourceSurcharges.find((s: any) => s.type === 'vehicle')?.rappen ?? 0
           const { error: vehicleBookingError } = await supabase.from('vehicle_bookings').insert({
             vehicle_id,
             appointment_id: appointmentId,
@@ -738,7 +743,7 @@ export default defineEventHandler(async (event) => {
             end_time: resourceEnd,
             purpose: 'lesson',
             status: 'confirmed',
-            cost_rappen: vehicleCost,
+            cost_rappen: staffResource.vehicleRappen,
             booked_by: callerProfile.id,
           })
           if (vehicleBookingError) {
@@ -772,7 +777,6 @@ export default defineEventHandler(async (event) => {
           .eq('purpose', 'lesson')
 
         if (room_id) {
-          const roomCost = resourceSurcharges.find((s: any) => s.type === 'room')?.rappen ?? 0
           const { error: roomBookingError } = await supabase.from('room_bookings').insert({
             room_id,
             appointment_id: appointmentId,
@@ -781,7 +785,7 @@ export default defineEventHandler(async (event) => {
             end_time: resourceEnd,
             purpose: 'lesson',
             status: 'confirmed',
-            room_cost_rappen: roomCost,
+            room_cost_rappen: staffResource.roomRappen,
             booked_by: callerProfile.id,
           })
           if (roomBookingError) {
