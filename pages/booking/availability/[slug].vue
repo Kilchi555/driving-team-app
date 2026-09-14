@@ -1906,6 +1906,7 @@ import { parseTimeWindows } from '~/utils/travelTimeValidation'
 import { snapDuration, type BookingPrefill } from '~/utils/booking-prefill'
 import { mergeTerminology, isDrivingSchoolBusinessType, resolveEventTypeLabel } from '~/composables/useTerminology'
 import { sanitizeSvgMarkup } from '~/utils/sanitize-tenant-html'
+import { publicBookingPayloadFromSelection } from '~/utils/booking-offer-identity'
 
 type OnlinePayMethod = 'wallee' | 'invoice' | 'cash'
 const onlinePaymentMethods = ref<OnlinePayMethod[]>(['wallee'])
@@ -2936,6 +2937,8 @@ const mainCategories = computed(() =>
 const usesEventTypeCategories = computed(() =>
   !isDrivingSchoolTenant.value || categories.value.some((c: any) => c._source === 'event_type')
 )
+
+const selectedOfferPayload = computed(() => publicBookingPayloadFromSelection(selectedCategory.value))
 
 const categoryStepTitle = computed(() =>
   usesEventTypeCategories.value
@@ -4933,7 +4936,9 @@ watch(currentStep, async (step) => {
         method: 'POST',
         body: {
           slot_id: selectedSlot.value.id,
-          category_code: selectedCategory.value.code,
+          category_code: selectedOfferPayload.value.category_code || selectedCategory.value.code,
+          event_type_code: selectedOfferPayload.value.event_type_code,
+          appointment_type: selectedOfferPayload.value.event_type_code || 'lesson',
           tenant_id: currentTenant.value.id,
           user_id: currentUserId,
           location_id: selectedLocation.value?.isPickup ? null : selectedLocation.value?.id,
@@ -5034,8 +5039,9 @@ const confirmBooking = async () => {
     const result = await createAppointmentSecure({
       slot_id: selectedSlot.value.id,
       session_id: sessionId.value,
-      appointment_type: 'lesson',
-      category_code: selectedCategory.value.code,
+      appointment_type: selectedOfferPayload.value.event_type_code || 'lesson',
+      category_code: selectedOfferPayload.value.category_code || selectedCategory.value.code,
+      event_type_code: selectedOfferPayload.value.event_type_code,
       notes: bookingNotes.value || undefined,
       discount_code: bookingDiscount.value?.code,
       discount_amount_rappen: bookingDiscount.value?.discountAmountRappen ?? 0,
@@ -5162,6 +5168,7 @@ const createAppointmentSecure = async (userData: any) => {
         customer_package_id: userData.customer_package_id,
         appointment_type: userData.appointment_type,
         category_code: userData.category_code || '',
+        event_type_code: userData.event_type_code || undefined,
         notes: userData.notes || undefined,
         customer_pickup_plz: userData.customer_pickup_plz ?? null,
         customer_pickup_address: userData.customer_pickup_address ?? null,
@@ -5430,7 +5437,9 @@ const submitGuestBooking = async () => {
         slot_id: selectedSlot.value?.id,
         session_id: sessionId.value,
         tenant_slug: route.params.slug,
-        category_code: selectedCategory.value?.code,
+        category_code: selectedOfferPayload.value.category_code || selectedCategory.value?.code,
+        event_type_code: selectedOfferPayload.value.event_type_code,
+        appointment_type: selectedOfferPayload.value.event_type_code || 'lesson',
         first_name: guestFirstName.value.trim() || undefined,
         last_name: guestLastName.value.trim() || undefined,
         phone: guestPhone.value.trim() || undefined,

@@ -15,6 +15,7 @@ import {
 } from '~/server/utils/appointment-notification-email'
 import { resolveAppointmentMeeting } from '~/server/utils/meeting-link'
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
+import { isChargeableEventType } from '~/server/utils/event-type-charge'
 
 const CUSTOMER_PORTAL_BASE_URL = (process.env.CUSTOMER_PORTAL_BASE_URL || 'https://app.simy.ch').replace(/\/$/, '')
 
@@ -287,9 +288,8 @@ export async function dispatchAppointmentConfirmation(
       etRow?.name || EVENT_TYPE_LABELS[appointment.event_type_code] || appointment.event_type_code
   }
 
-  const BILLABLE_TYPES = new Set(['lesson', 'exam', 'theory'])
+  const showPrice = await isChargeableEventType(supabase, tenantId, appointment.event_type_code)
   const LESSON_TYPES = new Set(['lesson', 'exam', 'theory'])
-  const showPrice = !appointment.event_type_code || BILLABLE_TYPES.has(appointment.event_type_code)
   const isLessonType = !appointment.event_type_code || LESSON_TYPES.has(appointment.event_type_code)
 
   let invite: { meeting_type?: string | null; meeting_link?: string | null } | null = null
