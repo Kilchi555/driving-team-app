@@ -403,6 +403,21 @@ export type Database = {
         Args: { user_id: string }
         Returns: string
       }
+      apply_wallee_topup_deposit: {
+        Args: {
+          p_payment_id: string
+          p_user_id: string
+          p_tenant_id: string
+          p_amount: number
+        }
+        Returns: {
+          applied: boolean
+          already_applied: boolean
+          amount_rappen: number
+          balance_rappen: number
+          transaction_id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

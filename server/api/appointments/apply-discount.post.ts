@@ -6,6 +6,7 @@ import { roundToNearest5Rappen } from '~/utils/rounding'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { matchesDiscountCategoryFilter } from '~/server/utils/discount-category-filter'
 import { lockCheckoutBenefits, releaseCheckoutBenefits } from '~/server/utils/checkout-benefits'
+import { normalizePaymentMetadata, mergePaymentMetadata, inspectWalleeTopupPayment } from '~/server/utils/payment-metadata'
 
 /**
  * POST /api/appointments/apply-discount
@@ -47,7 +48,7 @@ export default defineEventHandler(async (event) => {
     // Load payment – verify it belongs to the user and is still pending
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .select('id, user_id, appointment_id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, credit_used_rappen, discount_amount_rappen, total_amount_rappen, payment_status, tenant_id, metadata')
+      .select('id, user_id, appointment_id, invoice_id, course_registration_id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, credit_used_rappen, discount_amount_rappen, total_amount_rappen, payment_status, payment_method, description, tenant_id, metadata')
       .eq('id', paymentId)
       .eq('user_id', userProfile.id)
       .eq('tenant_id', tenantId)
@@ -64,11 +65,9 @@ export default defineEventHandler(async (event) => {
     }
 
     // ── Determine payment type ────────────────────────────────────────────────
-    const meta = typeof payment.metadata === 'string'
-      ? (() => { try { return JSON.parse(payment.metadata) } catch { return {} } })()
-      : (payment.metadata || {})
+    const meta = normalizePaymentMetadata(payment.metadata)
 
-    const isTopup = !!meta.is_topup
+    const isTopup = inspectWalleeTopupPayment(payment).isTopup || meta.is_topup === true
     const isLessonPayment = !isTopup && !!payment.appointment_id
     const isProductPayment = !isTopup && !payment.appointment_id &&
                              (payment.products_price_rappen || 0) > 0
@@ -300,11 +299,10 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const nextMetadata = {
-      ...meta,
+    const nextMetadata = mergePaymentMetadata(meta, {
       discount_code: discountCode,
       discount_usage_claimed: true,
-    }
+    })
 
     const [paymentUpdate, appointmentUpdate] = await Promise.all([
       supabase

@@ -23,6 +23,8 @@ import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-produ
 import { internalSecretHeaders, isInternalSecretRequest } from '~/server/utils/require-staff-or-internal'
 import { classifyWalleeWebhookTimestamp, shouldShortCircuitWalleeWebhook } from '~/server/utils/wallee-webhook-replay'
 import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
+import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/payment-metadata'
+import { applyCapturedWalleeTopupCredits } from '~/server/utils/topup-credit'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -235,14 +237,19 @@ export default defineEventHandler(async (event) => {
         id,
         payment_status,
         appointment_id,
+        invoice_id,
         course_registration_id,
         user_id,
         tenant_id,
         total_amount_rappen,
+        description,
+        payment_method,
         metadata,
         wallee_transaction_id,
         wallee_space_id,
-        credit_used_rappen
+        credit_used_rappen,
+        lesson_price_rappen,
+        products_price_rappen
       `)
       .eq('wallee_transaction_id', transactionId)
 
@@ -276,14 +283,19 @@ export default defineEventHandler(async (event) => {
               id,
               payment_status,
               appointment_id,
+              invoice_id,
               course_registration_id,
               user_id,
               tenant_id,
               total_amount_rappen,
+              description,
+              payment_method,
               metadata,
               wallee_transaction_id,
               wallee_space_id,
-              credit_used_rappen
+              credit_used_rappen,
+              lesson_price_rappen,
+              products_price_rappen
             `)
             .eq('id', historyRecord.payment_id)
             .single()
@@ -403,13 +415,18 @@ export default defineEventHandler(async (event) => {
                 id,
                 payment_status,
                 appointment_id,
+                invoice_id,
                 course_registration_id,
                 user_id,
                 tenant_id,
                 total_amount_rappen,
+                description,
+                payment_method,
                 metadata,
                 wallee_transaction_id,
-                credit_used_rappen
+                credit_used_rappen,
+                lesson_price_rappen,
+                products_price_rappen
               `)
               .eq('id', paymentId)
               .single()
@@ -582,6 +599,10 @@ export default defineEventHandler(async (event) => {
       }
     }
     
+    for (const payment of payments) {
+      payment.metadata = normalizePaymentMetadata(payment.metadata)
+    }
+
     // 🔍 Update webhook log with payment info
     if (webhookLogId && payments.length > 0) {
       try {
@@ -619,6 +640,23 @@ export default defineEventHandler(async (event) => {
     })
     
     if (paymentsToUpdate.length === 0) {
+      if (paymentStatus === 'completed') {
+        const { failedIds } = await applyCapturedWalleeTopupCredits(supabase, payments)
+        if (failedIds.length > 0) {
+          logger.error('❌ Top-up credit failed on already-completed payment; requesting webhook retry', {
+            transactionId,
+            failedIds,
+          })
+          setResponseStatus(event, 503)
+          return {
+            success: false,
+            error: 'Top-up credit not applied',
+            transactionId,
+            retry: true,
+            failed_payment_ids: failedIds,
+          }
+        }
+      }
       logger.debug('✅ All payments already have equal or better status')
       return {
         success: true,
@@ -648,11 +686,26 @@ export default defineEventHandler(async (event) => {
     
     const paymentIdsToUpdate = paymentsToUpdate.map(p => p.id)
 
+    // Top-up credits must land before `completed`. If credit fails, keep the
+    // payment out of the completed update so webhook/cron can retry.
+    const skipCompleteIds = new Set<string>()
+    let topupCreditFailedIds: string[] = []
+    if (paymentStatus === 'completed') {
+      const { failedIds } = await applyCapturedWalleeTopupCredits(supabase, payments)
+      topupCreditFailedIds = failedIds
+      for (const id of failedIds) {
+        const current = payments.find((p: any) => p.id === id)
+        if (current && current.payment_status !== 'completed') skipCompleteIds.add(id)
+      }
+    }
+
     // Split into two groups when terminal failure hits a 'processing' payment
     const lockReleaseIds = isTerminalFailure
       ? paymentsToUpdate.filter(p => p.payment_status === 'processing').map(p => p.id)
       : []
-    const normalUpdateIds = paymentIdsToUpdate.filter(id => !lockReleaseIds.includes(id))
+    const normalUpdateIds = paymentIdsToUpdate.filter(
+      id => !lockReleaseIds.includes(id) && !skipCompleteIds.has(id)
+    )
 
     // Reset lock-held payments back to pending
     if (lockReleaseIds.length > 0) {
@@ -1040,12 +1093,11 @@ export default defineEventHandler(async (event) => {
                           user_id: merged.user_id,
                           course_registration_id: merged.id,
                           updated_at: new Date().toISOString(),
-                          metadata: {
-                            ...payment.metadata,
+                          metadata: mergePaymentMetadata(payment.metadata, {
                             webhook_merged_existing_registration: true,
                             webhook_merged_registration_id: merged.id,
                             webhook_registration_error: null,
-                          }
+                          })
                         })
                         .eq('id', payment.id)
 
@@ -1369,12 +1421,11 @@ export default defineEventHandler(async (event) => {
                         user_id: merged.user_id,
                         course_registration_id: merged.id,
                         updated_at: new Date().toISOString(),
-                        metadata: {
-                          ...payment.metadata,
+                        metadata: mergePaymentMetadata(payment.metadata, {
                           webhook_merged_existing_registration: true,
                           webhook_merged_registration_id: merged.id,
                           webhook_registration_error: null,
-                        }
+                        })
                       }).eq('id', payment.id)
                     }
                     logger.info(`✅ Post-insert merge: payment ${regData.payment_id} → registration ${merged.id}`)
@@ -1390,12 +1441,11 @@ export default defineEventHandler(async (event) => {
                     await supabase
                       .from('payments')
                       .update({
-                        metadata: {
-                          ...payment.metadata,
+                        metadata: mergePaymentMetadata(payment.metadata, {
                           webhook_registration_error: insertError?.message || 'Unknown error creating registration',
                           webhook_error_timestamp: new Date().toISOString(),
                           webhook_error_code: insertError?.code
-                        }
+                        })
                       })
                       .eq('id', payment.id)
                   } catch (e: any) {
@@ -1699,7 +1749,6 @@ export default defineEventHandler(async (event) => {
     if (paymentStatus === 'completed') {
       await confirmCreditDeduction(paymentsToUpdate)
       await processVouchersAndCredits(payments)
-      await processTopupCredits(paymentsToUpdate)
     }
     
     // ============ LAYER 11: SEND COURSE ENROLLMENT CONFIRMATION EMAILS ============
@@ -1714,6 +1763,22 @@ export default defineEventHandler(async (event) => {
     
     const duration = Date.now() - startTime
     logger.info(`🎉 Webhook processed in ${duration}ms`)
+
+    if (topupCreditFailedIds.length > 0) {
+      logger.error('❌ Top-up credit failed; requesting webhook retry', {
+        transactionId,
+        failedIds: topupCreditFailedIds,
+      })
+      setResponseStatus(event, 503)
+      return {
+        success: false,
+        error: 'Top-up credit not applied',
+        transactionId,
+        retry: true,
+        failed_payment_ids: topupCreditFailedIds,
+        duration_ms: duration,
+      }
+    }
     
     // 🔍 Update webhook log with success
     if (webhookLogId && paymentsToUpdate.length > 0) {
@@ -2015,13 +2080,12 @@ async function handleCreditRefund(payments: any[]) {
         await supabase
           .from('payments')
           .update({
-            metadata: {
-              ...payment.metadata,
+            metadata: mergePaymentMetadata(payment.metadata, {
               pending_credit_refund: null,
               credit_refunded: true,
               credit_refunded_at: new Date().toISOString(),
               credit_refund_amount: pendingRefund
-            }
+            })
           })
           .eq('id', payment.id)
         
@@ -2078,104 +2142,12 @@ async function confirmCreditDeduction(payments: any[]) {
       await supabase
         .from('payments')
         .update({
-          metadata: {
-            ...payment.metadata,
+          metadata: mergePaymentMetadata(payment.metadata, {
             pending_credit_refund: null,
             credit_confirmed_at: new Date().toISOString()
-          }
+          })
         })
         .eq('id', payment.id)
-    }
-  }
-}
-
-async function processTopupCredits(payments: any[]) {
-  const supabase = getSupabaseAdmin()
-
-  for (const payment of payments) {
-    try {
-      let metadata: any = {}
-      if (payment.metadata) {
-        metadata = typeof payment.metadata === 'string' ? JSON.parse(payment.metadata) : payment.metadata
-      }
-
-      logger.info('🔍 processTopupCredits checking payment:', { id: payment.id, isTopup: metadata?.is_topup, metadata })
-
-      if (!metadata?.is_topup) continue
-
-      const amountRappen = metadata.topup_amount_rappen || payment.total_amount_rappen
-      if (!amountRappen || amountRappen <= 0) {
-        logger.warn('⚠️ processTopupCredits: invalid amountRappen:', amountRappen)
-        continue
-      }
-
-      // Idempotency check: skip if already credited for this payment
-      const { data: existingTx } = await supabase
-        .from('credit_transactions')
-        .select('id')
-        .eq('reference_id', payment.id)
-        .eq('transaction_type', 'deposit')
-        .eq('payment_method', 'wallee')
-        .maybeSingle()
-
-      if (existingTx) {
-        logger.info('⏭️ processTopupCredits: already credited for payment:', payment.id)
-        continue
-      }
-
-      const { data: currentCredit, error: creditFetchError } = await supabase
-        .from('student_credits')
-        .select('id, balance_rappen')
-        .eq('user_id', payment.user_id)
-        .eq('tenant_id', payment.tenant_id)
-        .maybeSingle()
-
-      if (creditFetchError) {
-        logger.error('❌ processTopupCredits: credit fetch error:', creditFetchError)
-        continue
-      }
-
-      const currentBalance = currentCredit?.balance_rappen || 0
-      const newBalance = currentBalance + amountRappen
-
-      logger.info('💰 processTopupCredits: applying topup:', { userId: payment.user_id, currentBalance, amountRappen, newBalance })
-
-      const { error: upsertError } = await supabase
-        .from('student_credits')
-        .upsert({
-          user_id: payment.user_id,
-          tenant_id: payment.tenant_id,
-          balance_rappen: newBalance,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id,tenant_id' })
-
-      if (upsertError) {
-        logger.error('❌ Topup credit upsert failed:', upsertError)
-        continue
-      }
-
-      const { error: txInsertError } = await supabase
-        .from('credit_transactions')
-        .insert({
-          user_id: payment.user_id,
-          tenant_id: payment.tenant_id,
-          transaction_type: 'deposit',
-          amount_rappen: amountRappen,
-          balance_before_rappen: currentBalance,
-          balance_after_rappen: newBalance,
-          payment_method: 'wallee',
-          reference_id: payment.id,
-          reference_type: 'payment',
-          notes: `Online-Einzahlung via Wallee (CHF ${(amountRappen / 100).toFixed(2)})`
-        })
-
-      if (txInsertError) {
-        logger.error('❌ processTopupCredits: credit_transactions insert failed:', txInsertError)
-      } else {
-        logger.info('✅ Topup credit applied:', { userId: payment.user_id, amountRappen, newBalance })
-      }
-    } catch (err: any) {
-      logger.error('❌ processTopupCredits failed for payment:', payment.id, err.message)
     }
   }
 }

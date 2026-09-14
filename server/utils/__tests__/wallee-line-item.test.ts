@@ -28,4 +28,16 @@ describe('mergeVatIntoMetadata', () => {
     expect(mergeVatIntoMetadata({ course_id: 'x' }, { vatRate: 8.1, vatAmountRappen: 1349 }))
       .toEqual({ course_id: 'x', vat_rate: 8.1, vat_amount_rappen: 1349 })
   })
+
+  it('does not spread a JSON-string metadata value', () => {
+    expect(mergeVatIntoMetadata(
+      JSON.stringify({ is_topup: true, topup_amount_rappen: 10000 }),
+      { vatRate: 0, vatAmountRappen: 0 },
+    )).toEqual({
+      is_topup: true,
+      topup_amount_rappen: 10000,
+      vat_rate: 0,
+      vat_amount_rappen: 0,
+    })
+  })
 })

@@ -22,6 +22,8 @@ import { buildMerchantReference } from '~/utils/merchantReference'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { suspiciousZeroPaymentCompletionReason } from '~/server/utils/zero-payment-completion'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
+import { mergePaymentMetadata, normalizePaymentMetadata, inspectWalleeTopupPayment } from '~/server/utils/payment-metadata'
+import { completeCapturedWalleePayment } from '~/server/utils/topup-credit'
 
 interface PaymentProcessRequest {
   // CHANGED: Now takes existing paymentId instead of creating new payment
@@ -127,7 +129,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
         .maybeSingle(),
       supabaseAdmin
         .from('payments')
-        .select('id, user_id, tenant_id, total_amount_rappen, lesson_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen, payment_method, payment_status, description, metadata, wallee_transaction_id, appointments(id, start_time, duration_minutes, staff:users!staff_id(first_name, last_name))')
+        .select('id, user_id, tenant_id, appointment_id, invoice_id, course_registration_id, total_amount_rappen, lesson_price_rappen, products_price_rappen, discount_amount_rappen, voucher_discount_rappen, credit_used_rappen, payment_method, payment_status, description, metadata, wallee_transaction_id, appointments(id, start_time, duration_minutes, staff:users!staff_id(first_name, last_name))')
         .eq('id', body.paymentId)
         .eq('tenant_id', tenantId)
         .single()
@@ -216,7 +218,9 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     
     const amountAlreadyUsed = payment.credit_used_rappen || 0
     const remainingAmount = payment.total_amount_rappen - amountAlreadyUsed
-    const creditToDeduct = Math.min(availableCredit, remainingAmount)
+    const isTopupPayment = inspectWalleeTopupPayment(payment).isTopup
+    // Top-ups must be captured via Wallee, never settled from the existing wallet.
+    const creditToDeduct = isTopupPayment ? 0 : Math.min(availableCredit, remainingAmount)
     const newTotalCredit = amountAlreadyUsed + creditToDeduct
     const finalAmountToPay = remainingAmount - creditToDeduct
 
@@ -250,9 +254,7 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
         creditToDeductRappen: creditToDeduct,
         creditAlreadyUsedRappen: amountAlreadyUsed,
         paymentMethod: payment.payment_method,
-        metadata: payment.metadata && typeof payment.metadata === 'object'
-          ? payment.metadata as Record<string, unknown>
-          : null,
+        metadata: normalizePaymentMetadata(payment.metadata),
       })
       if (zeroReason) {
         logger.error('❌ Refusing to complete suspicious CHF-0 payment without credit/benefit', {
@@ -439,10 +441,9 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
         .from('payments')
         .update({
           credit_used_rappen: newTotalCredit,
-          metadata: {
-            ...payment.metadata,
+          metadata: mergePaymentMetadata(payment.metadata, {
             pending_credit_refund: creditToDeduct // Bei Abbruch/Fehler zurückerstatten
-          },
+          }),
           updated_at: new Date().toISOString()
         })
         .eq('id', payment.id)
@@ -478,14 +479,19 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
           if (COMPLETED_STATES.includes(existingTx.state)) {
             logger.info('✅ Existing Wallee transaction is already', existingTx.state, '- marking payment as completed')
 
-            const now = new Date().toISOString()
-            await supabaseAdmin.from('payments').update({
-              payment_status: 'completed',
-              paid_at: now,
-              updated_at: now,
-              wallee_transaction_state: existingTx.state
-            }).eq('id', payment.id)
+            const completed = await completeCapturedWalleePayment(supabaseAdmin, payment, {
+              extraUpdate: { wallee_transaction_state: existingTx.state },
+            })
+            if (!completed.ok) {
+              throw createError({
+                statusCode: 500,
+                statusMessage: completed.isTopup
+                  ? 'Zahlung erfasst, Guthaben konnte aber nicht gutgeschrieben werden. Bitte Support kontaktieren.'
+                  : 'Zahlung konnte nicht abgeschlossen werden.',
+              })
+            }
 
+            const now = new Date().toISOString()
             if (payment.appointments?.id) {
               await supabaseAdmin.from('appointments').update({
                 payment_status: 'paid',
