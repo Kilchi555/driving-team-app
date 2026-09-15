@@ -22,6 +22,7 @@ import { assertCustomSessionsForTenant } from '~/server/utils/course-custom-sess
 import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-product-purchase'
 import { internalSecretHeaders, isInternalSecretRequest } from '~/server/utils/require-staff-or-internal'
 import { classifyWalleeWebhookTimestamp, shouldShortCircuitWalleeWebhook } from '~/server/utils/wallee-webhook-replay'
+import { isWalleeCaptureMatchingRemaining, walleeRemainingChf } from '~/server/utils/wallee-remaining-amount'
 import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
@@ -540,7 +541,7 @@ export default defineEventHandler(async (event) => {
       }
       paymentStatus = verifiedMapped
 
-      // Amount integrity: refuse completion if captured amount is materially below payment total
+      // Amount integrity: refuse completion unless capture matches remaining payable after credit.
       if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
         const capturedChf = Number(
           verifiedTx.completedAmount ??
@@ -549,32 +550,34 @@ export default defineEventHandler(async (event) => {
           NaN
         )
         if (Number.isFinite(capturedChf)) {
-          const underpaid = payments.filter((p: any) => {
-            const expectedChf = Number(p.total_amount_rappen || 0) / 100
-            // Allow 1 rappen tolerance for float rounding
-            return expectedChf > 0 && capturedChf + 0.01 < expectedChf
+          const mismatched = payments.filter((p: any) => {
+            return !isWalleeCaptureMatchingRemaining(capturedChf, p)
           })
-          if (underpaid.length > 0) {
-            logger.error('❌ Rejecting webhook: Wallee captured amount below payment total', {
+          if (mismatched.length > 0) {
+            logger.error('❌ Rejecting webhook: Wallee captured amount does not match remaining payable', {
               transactionId,
               capturedChf,
-              underpaid: underpaid.map((p: any) => ({
+              mismatched: mismatched.map((p: any) => ({
                 id: p.id,
-                total_amount_rappen: p.total_amount_rappen
+                total_amount_rappen: p.total_amount_rappen,
+                credit_used_rappen: p.credit_used_rappen,
+                expected_remaining_chf: walleeRemainingChf(p)
               }))
             })
             if (webhookLogId) {
               try {
                 await supabase.from('webhook_logs').update({
                   success: false,
-                  error_message: `Rejected: captured CHF ${capturedChf} below payment total`,
+                  error_message: `Rejected: captured CHF ${capturedChf} does not match remaining payable`,
                   processing_duration_ms: Date.now() - startTime
                 }).eq('id', webhookLogId)
               } catch { /* non-fatal */ }
             }
+            // Permanent amount mismatch — not retryable. 503 is only used for
+            // transient Wallee API verify failures above. Keep HTTP 200.
             return {
               success: false,
-              error: 'Captured amount does not match payment total',
+              error: 'Captured amount does not match remaining payable',
               transactionId
             }
           }
