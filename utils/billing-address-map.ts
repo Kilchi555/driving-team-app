@@ -111,6 +111,36 @@ function normalizeCountry(country?: string | null): string {
   return country
 }
 
+/** Canonical company name: keep intentional LF, normalize line endings, trim edges. */
+export function normalizeMultilineCompanyName(value?: string | null): string {
+  const cleaned = String(value || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/[\u2028\u2029\u0085\v\f]/g, '\n')
+    .replace(/[\u0000-\u0008\u000E-\u001F\u007F]/g, '')
+  return cleaned.trim()
+}
+
+/** Single-line form for search, QR payload, and list titles. */
+export function flattenCompanyName(value?: string | null): string {
+  return normalizeMultilineCompanyName(value).replace(/\n+/g, ' ').replace(/[ \t]+/g, ' ').trim()
+}
+
+/** Invoice snapshot write: empty after normalize becomes null. */
+export function snapshotBillingCompanyName(value?: string | null): string | null {
+  return normalizeMultilineCompanyName(value) || null
+}
+
+/**
+ * Substring search with newline == space. Query spaces stay spaces
+ * (`%` / `_` are literal). Empty query matches nothing — callers skip the filter.
+ */
+export function companyNameMatchesSearch(stored?: string | null, query?: string | null): boolean {
+  const needle = flattenCompanyName(query).toLowerCase()
+  if (!needle) return false
+  return flattenCompanyName(stored).toLowerCase().includes(needle)
+}
+
 export function emptyBillingFormFields(): BillingFormFields {
   return {
     company_name: '',
