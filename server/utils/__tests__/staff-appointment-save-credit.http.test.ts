@@ -357,6 +357,36 @@ describe('POST /api/appointments/save staff credit apply', () => {
     expect(asPayment(inserts.payments[0]).total_amount_rappen).not.toBe(12550)
   })
 
+  it('cashAlreadyPaid + partial credit applies RPC then completes remaining cash', async () => {
+    const rpcCalls: Record<string, unknown>[] = []
+    const { result, inserts } = await run({
+      rpcCalls,
+      body: {
+        paymentMethodForPayment: 'cash',
+        cashAlreadyPaid: true,
+        creditUsedRappen: 5000,
+      },
+    })
+    const payment = asPayment(inserts.payments[0])
+    expect(payment.payment_status).toBe('pending')
+    expect(payment.credit_used_rappen).toBe(0)
+    expect(payment.total_amount_rappen).toBe(17550)
+    expect(rpcCalls[0]).toMatchObject({
+      name: 'apply_credit_to_payment',
+      p_payment_id: PAY,
+      p_tenant_id: TENANT,
+      p_requested_rappen: 5000,
+    })
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        credit_used_rappen: 5000,
+        remaining_amount_rappen: 12550,
+        payment_status: 'completed',
+      },
+    })
+  })
+
   it('12. credit apply failure cannot produce completed payment', async () => {
     const { result, inserts } = await run({
       rpcError: 'insufficient_available_credit',
