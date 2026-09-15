@@ -5,6 +5,7 @@ import {
   composeStaffPaymentFromOffer,
   quoteStaffAppointmentOffer,
   staffOfferIdentityFromAppointment,
+  staffQuoteFromPersistedLesson,
   staffRuleTypeHint,
 } from '../quote-staff-appointment'
 import type { PricingRuleRow } from '../resolve-offer-price'
@@ -164,6 +165,18 @@ describe('quoteStaffAppointmentOffer', () => {
     })
     expect(composed.resourceSurchargeRappen).toBe(7500)
     expect(composed.totalAmountRappen).toBe(16500)
+  })
+
+  it('composes from a persisted lesson without looking up pricing rules', () => {
+    const quote = staffQuoteFromPersistedLesson(9000)
+    const composed = composeStaffPaymentFromOffer(quote, {
+      adminFeeRappen: 1000,
+      productsPriceRappen: 2000,
+      resourceSurchargeRappen: 7500,
+    })
+    expect(quote.kind).toBe('paid')
+    expect(quote.lessonPriceRappen).toBe(9000)
+    expect(composed.totalAmountRappen).toBe(19500)
   })
 
   it('B. planted zero is ignored for a paid event; missing paid rule fails closed', async () => {

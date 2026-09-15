@@ -2,6 +2,11 @@ import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
 import logger from '~/utils/logger'
+import {
+  composeStaffPaymentFromOffer,
+  staffQuoteFromPersistedLesson,
+} from '~/server/utils/quote-staff-appointment'
+import { quoteStaffResourceSurcharge } from '~/server/utils/quote-staff-resource-surcharge'
 
 /**
  * ✅ POST /api/staff/update-payment
@@ -125,7 +130,7 @@ export default defineEventHandler(async (event) => {
     // ✅ LAYER 5: Ownership check
     const { data: payment, error: loadError } = await supabaseAdmin
       .from('payments')
-      .select('id, tenant_id')
+      .select('id, tenant_id, appointment_id, lesson_price_rappen, admin_fee_rappen, products_price_rappen, discount_amount_rappen, payment_status')
       .eq('id', paymentId)
       .eq('tenant_id', tenantId)
       .single()
@@ -135,6 +140,68 @@ export default defineEventHandler(async (event) => {
         statusCode: 404,
         statusMessage: 'Payment not found or access denied'
       })
+    }
+
+    const amountKeys = [
+      'lesson_price_rappen',
+      'admin_fee_rappen',
+      'products_price_rappen',
+      'discount_amount_rappen',
+      'total_amount_rappen',
+    ]
+    const touchesAmount = amountKeys.some((key) => Object.prototype.hasOwnProperty.call(sanitizedUpdateData, key))
+
+    if (touchesAmount) {
+      const nextLesson = Object.prototype.hasOwnProperty.call(sanitizedUpdateData, 'lesson_price_rappen')
+        ? sanitizedUpdateData.lesson_price_rappen
+        : payment.lesson_price_rappen
+      const nextAdmin = Object.prototype.hasOwnProperty.call(sanitizedUpdateData, 'admin_fee_rappen')
+        ? sanitizedUpdateData.admin_fee_rappen
+        : payment.admin_fee_rappen
+      const nextProducts = Object.prototype.hasOwnProperty.call(sanitizedUpdateData, 'products_price_rappen')
+        ? sanitizedUpdateData.products_price_rappen
+        : payment.products_price_rappen
+      const nextDiscount = Object.prototype.hasOwnProperty.call(sanitizedUpdateData, 'discount_amount_rappen')
+        ? sanitizedUpdateData.discount_amount_rappen
+        : payment.discount_amount_rappen
+
+      // Cancel path zeros the lesson. Resource is for the lesson/vehicle-room time —
+      // do not invent a surcharge when the caller explicitly clears the lesson.
+      let resourceSurchargeRappen = 0
+      const lessonExplicitlyZero = Object.prototype.hasOwnProperty.call(sanitizedUpdateData, 'lesson_price_rappen')
+        && Number(nextLesson) === 0
+
+      if (!lessonExplicitlyZero && payment.appointment_id) {
+        const { data: appointment } = await supabaseAdmin
+          .from('appointments')
+          .select('tenant_id, vehicle_id, room_id, duration_minutes')
+          .eq('id', payment.appointment_id)
+          .eq('tenant_id', tenantId)
+          .maybeSingle()
+
+        if (appointment) {
+          const staffResource = await quoteStaffResourceSurcharge(supabaseAdmin, {
+            tenantId: appointment.tenant_id,
+            vehicleId: appointment.vehicle_id,
+            roomId: appointment.room_id,
+            durationMinutes: appointment.duration_minutes,
+          })
+          resourceSurchargeRappen = staffResource.totalRappen
+        }
+      }
+
+      const staffPayment = composeStaffPaymentFromOffer(
+        staffQuoteFromPersistedLesson(nextLesson),
+        {
+          adminFeeRappen: nextAdmin,
+          productsPriceRappen: nextProducts,
+          resourceSurchargeRappen,
+          discountAmountRappen: nextDiscount,
+        },
+      )
+
+      delete sanitizedUpdateData.total_amount_rappen
+      sanitizedUpdateData.total_amount_rappen = staffPayment.totalAmountRappen
     }
 
     // ✅ LAYER 6: Update payment
