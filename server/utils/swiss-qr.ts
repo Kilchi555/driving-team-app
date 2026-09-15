@@ -23,7 +23,7 @@ export interface SwissQRParams {
 }
 
 function pad(str: string) {
-  return (str || '').trim()
+  return (str || '').replace(/[\r\n\u2028\u2029\u0085]+/g, ' ').replace(/[ \t]+/g, ' ').trim()
 }
 
 // IBAN must have no spaces in QR data (SPS 2.2)

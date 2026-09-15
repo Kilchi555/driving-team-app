@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolveStudentBillingAddress } from '~/server/utils/billing-from-company'
-import { collapseDuplicatePersonName, joinStreetAndNumber } from '~/utils/billing-address-map'
+import { collapseDuplicatePersonName, flattenCompanyName, joinStreetAndNumber } from '~/utils/billing-address-map'
 
 export type InvoiceBillingLike = {
   user_id?: string | null
@@ -55,7 +55,7 @@ export function invoiceQrDebtorName(
   user?: UserAddressLike | null,
   fallback?: string | null,
 ): string {
-  const company = (invoice.billing_company_name || '').trim()
+  const company = flattenCompanyName(invoice.billing_company_name)
   if (company) return company
   const draftPerson = [invoice.billing_first_name, invoice.billing_last_name].filter(Boolean).join(' ').trim()
   if (draftPerson) return collapseDuplicatePersonName(draftPerson)

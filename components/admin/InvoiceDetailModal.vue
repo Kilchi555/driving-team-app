@@ -318,7 +318,7 @@
                 <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">{{ isQuote ? 'Adresse' : 'Rechnungsadresse' }}</h4>
 
                 <template v-if="!isEditing">
-                  <p class="text-sm font-semibold text-gray-900">{{ invoice.billing_company_name || displayCustomer.name || '—' }}</p>
+                  <p class="text-sm font-semibold text-gray-900 whitespace-pre-line">{{ invoice.billing_company_name || displayCustomer.name || '—' }}</p>
                   <p v-if="invoice.billing_contact_person" class="text-sm text-gray-500 mt-0.5">{{ invoice.billing_contact_person }}</p>
                   <div class="mt-3 text-sm text-gray-700 leading-relaxed space-y-0.5">
                     <p v-if="invoice.billing_street || invoice.billing_street_number">
@@ -353,12 +353,13 @@
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label class="block text-xs font-medium text-gray-500 mb-1">Firma</label>
-                      <input
+                      <textarea
                         v-model="safeEditedInvoice.billing_company_name"
-                        type="text"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows="2"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[2.75rem]"
                         :placeholder="invoice.billing_company_name || 'Firmenname'"
-                      >
+                      />
+                      <p class="mt-1 text-xs text-gray-400">Enter = Zeile umbrechen</p>
                     </div>
                     <div>
                       <label class="block text-xs font-medium text-gray-500 mb-1">Kontaktperson</label>
