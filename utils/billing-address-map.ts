@@ -132,13 +132,13 @@ export function snapshotBillingCompanyName(value?: string | null): string | null
 }
 
 /**
- * ILIKE pattern so a flattened query matches a stored name that uses LF
- * instead of spaces. Spaces in the query become wildcards.
+ * Substring search with newline == space. Query spaces stay spaces
+ * (`%` / `_` are literal). Empty query matches nothing — callers skip the filter.
  */
-export function companyNameSearchPattern(value?: string | null): string {
-  const flat = flattenCompanyName(value)
-  const escaped = flat.replace(/\\/g, '\\\\').replace(/[%_]/g, '\\$&')
-  return `%${escaped.replace(/\s+/g, '%')}%`
+export function companyNameMatchesSearch(stored?: string | null, query?: string | null): boolean {
+  const needle = flattenCompanyName(query).toLowerCase()
+  if (!needle) return false
+  return flattenCompanyName(stored).toLowerCase().includes(needle)
 }
 
 export function emptyBillingFormFields(): BillingFormFields {

@@ -386,6 +386,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
 import CorrespondenceComposeModal from '~/components/admin/CorrespondenceComposeModal.vue'
+import { companyNameMatchesSearch, flattenCompanyName } from '~/utils/billing-address-map'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Firmenkunden' })
@@ -398,8 +399,8 @@ const isLoading = ref(false)
 const search = ref('')
 
 const filteredCompanies = computed(() =>
-  search.value
-    ? companies.value.filter(c => c.name.toLowerCase().includes(search.value.toLowerCase()))
+  flattenCompanyName(search.value)
+    ? companies.value.filter(c => companyNameMatchesSearch(c.name, search.value))
     : companies.value
 )
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   billingAddressHasContent,
-  companyNameSearchPattern,
+  companyNameMatchesSearch,
   flattenCompanyName,
   normalizeMultilineCompanyName,
   resolveDefaultBillingSource,
@@ -97,21 +97,52 @@ describe('snapshotBillingCompanyName', () => {
   })
 })
 
-function ilikeMatch(stored: string, pattern: string): boolean {
-  const inner = pattern.replace(/^%/, '').replace(/%$/, '')
-  let remaining = stored
-  for (const part of inner.split('%').filter(Boolean)) {
-    const idx = remaining.toLowerCase().indexOf(part.toLowerCase())
-    if (idx < 0) return false
-    remaining = remaining.slice(idx + part.length)
-  }
-  return true
-}
+describe('companyNameMatchesSearch', () => {
+  const storedLf = 'SBB Kreditoren\nInfrastruktur'
 
-describe('companyNameSearchPattern', () => {
-  it('matches a stored LF name from a flattened query', () => {
-    const stored = 'SBB Kreditoren\nInfrastruktur'
-    expect(ilikeMatch(stored, companyNameSearchPattern('SBB Kreditoren'))).toBe(true)
-    expect(ilikeMatch(stored, companyNameSearchPattern('SBB Kreditoren Infrastruktur'))).toBe(true)
+  it('treats newline as a space for substring search', () => {
+    expect(flattenCompanyName(storedLf)).toBe('SBB Kreditoren Infrastruktur')
+    expect(companyNameMatchesSearch(storedLf, 'SBB')).toBe(true)
+    expect(companyNameMatchesSearch(storedLf, 'SBB Kreditoren')).toBe(true)
+    expect(companyNameMatchesSearch(storedLf, 'SBB Kreditoren Infrastruktur')).toBe(true)
+    expect(companyNameMatchesSearch(storedLf, 'Kreditoren Infrastruktur')).toBe(true)
+  })
+
+  it('does not treat query spaces as arbitrary wildcards', () => {
+    expect(companyNameMatchesSearch('SBB ABC Kreditoren', 'SBB Kreditoren')).toBe(false)
+    expect(companyNameMatchesSearch(storedLf, 'SBB ABC')).toBe(false)
+    expect(companyNameMatchesSearch(storedLf, 'SBB ABC Kreditoren')).toBe(false)
+  })
+
+  it('treats % and _ as literal characters, not SQL wildcards', () => {
+    expect(companyNameMatchesSearch('SBB ABC Kreditoren', 'SBB%Kreditoren')).toBe(false)
+    expect(companyNameMatchesSearch('SBB Kreditoren', 'SBB_Kreditoren')).toBe(false)
+    expect(companyNameMatchesSearch('SBB%Kreditoren', 'SBB%Kreditoren')).toBe(true)
+  })
+
+  it('is case-insensitive and collapses extra spaces', () => {
+    expect(companyNameMatchesSearch(storedLf, 'sbb kreditoren')).toBe(true)
+    expect(companyNameMatchesSearch(storedLf, 'SBB  Kreditoren')).toBe(true)
+  })
+
+  it('keeps ordinary substring semantics', () => {
+    expect(companyNameMatchesSearch('SBB Kreditoren', 'BB')).toBe(true)
+  })
+
+  it('keeps a matching query first token as a contiguous substring of the stored name', () => {
+    const queries = [
+      'SBB',
+      'SBB Kreditoren',
+      'SBB Kreditoren Infrastruktur',
+      'Kreditoren Infrastruktur',
+      'sbb kreditoren',
+      'SBB  Kreditoren',
+    ]
+    for (const query of queries) {
+      expect(companyNameMatchesSearch(storedLf, query)).toBe(true)
+      const token = flattenCompanyName(query).split(' ')[0]
+      expect(token.length).toBeGreaterThan(0)
+      expect(storedLf.toLowerCase()).toContain(token.toLowerCase())
+    }
   })
 })
