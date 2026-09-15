@@ -104,14 +104,27 @@ function nonNegativeRappen(value: unknown): number {
 }
 
 /**
+ * Lesson already persisted by appointments/save.
+ * Not a pricing-rule lookup — do not use this to re-quote an offer.
+ */
+export function staffQuoteFromPersistedLesson(lessonPriceRappen: unknown): StaffOfferQuote {
+  const n = Math.round(Number(lessonPriceRappen) || 0)
+  return {
+    kind: 'paid',
+    lessonPriceRappen: Number.isFinite(n) ? n : 0,
+    rule: { id: 'persisted-lesson', rule_type: 'persisted' },
+  }
+}
+
+/**
  * Overlays (admin fee, products, discount, credit) stay client-supplied.
  * Resource surcharge must be the server quote, never client resourceSurcharges.
  * The offer/lesson base and the resulting total are never taken from the client.
  *
  * Follow-up amount writers outside appointments/save (not this PR):
- * staff/update-payment, update-payment-with-products, payments/manage,
- * and browser PostgREST monetary columns. updatePaymentEntry no longer
- * rewrites lesson/total amounts after save.
+ * staff/update-payment, payments/manage, and browser PostgREST monetary
+ * columns. updatePaymentEntry no longer rewrites lesson/total amounts
+ * after save. update-payment-with-products now uses this composer.
  */
 export function composeStaffPaymentFromOffer(
   quote: StaffOfferQuote,
