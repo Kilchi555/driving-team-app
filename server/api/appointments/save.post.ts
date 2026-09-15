@@ -23,6 +23,7 @@ import { attachProposalAttributionToStaffAppointment } from '~/server/utils/prop
 import { becameBindingConfirmed } from '~/server/utils/binding-booking'
 import { hashCustomerIdentifiers, reportBindingAppointmentConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
+import { applyCreditToPayment } from '~/server/utils/apply-credit-to-payment'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -209,12 +210,13 @@ export default defineEventHandler(async (event) => {
       durationMinutes: appointmentData.duration_minutes,
     })
 
+    const requestedCreditRappen = Math.max(0, Math.round(Number(creditUsedRappen) || 0))
     const staffPayment = composeStaffPaymentFromOffer(staffQuote, {
       adminFeeRappen,
       productsPriceRappen,
       resourceSurchargeRappen: staffResource.totalRappen,
       discountAmountRappen,
-      creditUsedRappen,
+      creditUsedRappen: 0,
     })
 
     if (staffPayment.discountAmountRappen > staffPayment.lessonPriceRappen + staffPayment.adminFeeRappen + staffPayment.productsPriceRappen + staffPayment.resourceSurchargeRappen) {
@@ -227,6 +229,9 @@ export default defineEventHandler(async (event) => {
     // Declared here so it's accessible both inside the create branch and after the if/else block
     let paymentPromise: Promise<void> | null = null
     let conversionPromise: Promise<void> | null = null
+    let creditUsedOut = 0
+    let remainingOut = staffPayment.totalAmountRappen
+    let paymentStatusOut: string | null = null
 
     if (mode === 'edit' && eventId) {
       // Update existing appointment
@@ -378,21 +383,24 @@ export default defineEventHandler(async (event) => {
           // Check if payment exists
           const { data: existingPayment } = await supabase
             .from('payments')
-            .select('id, payment_status, total_amount_rappen, amount_paid_rappen, metadata')
+            .select('id, payment_status, total_amount_rappen, amount_paid_rappen, metadata, credit_used_rappen')
             .eq('appointment_id', eventId)
             .maybeSingle()
           
           if (existingPayment) {
             const finalBasePrice = staffPayment.lessonPriceRappen
             const finalTotalAmount = staffPayment.totalAmountRappen
-            const remainingAmountRappen = staffPayment.remainingAmountRappen
+            const existingCreditUsed = Math.max(0, existingPayment.credit_used_rappen || 0)
+            const remainingAmountRappen = Math.max(0, finalTotalAmount - existingCreditUsed)
+            creditUsedOut = existingCreditUsed
+            remainingOut = remainingAmountRappen
             
             logger.debug('💳 Updating payment for edited appointment:', {
               paymentId: existingPayment.id,
               appointmentId: eventId,
               oldTotal: (existingPayment.total_amount_rappen / 100).toFixed(2),
-              newTotal: (remainingAmountRappen / 100).toFixed(2),
-              creditUsed: (staffPayment.creditUsedRappen / 100).toFixed(2)
+              newTotal: (finalTotalAmount / 100).toFixed(2),
+              creditUsed: (existingCreditUsed / 100).toFixed(2)
             })
             
             const paymentUpdateData: any = {
@@ -402,8 +410,6 @@ export default defineEventHandler(async (event) => {
               discount_amount_rappen: staffPayment.discountAmountRappen,
               voucher_discount_rappen: 0,
               total_amount_rappen: finalTotalAmount,
-              payment_method: (staffPayment.creditUsedRappen >= finalTotalAmount) ? 'credit' : undefined,
-              credit_used_rappen: staffPayment.creditUsedRappen,
               // Keep payment user_id/staff_id in sync with the appointment
               ...(appointmentData.user_id ? { user_id: appointmentData.user_id } : {}),
               ...(appointmentData.staff_id ? { staff_id: appointmentData.staff_id } : {}),
@@ -425,7 +431,7 @@ export default defineEventHandler(async (event) => {
               // amount_paid_rappen = tatsächlich via Bar/Online eingezogener Betrag, EXKLUSIVE Guthaben.
               // credit_used_rappen wird separat geführt und vom Bruttototal abgezogen, um den
               // "netto geschuldeten" Betrag zu erhalten. total_amount_rappen ist immer brutto (vor Guthaben).
-              const creditUsedForThisPayment = staffPayment.creditUsedRappen
+              const creditUsedForThisPayment = existingCreditUsed
               const previousNetDueRappen = Math.max(0, (existingPayment.total_amount_rappen || 0) - creditUsedForThisPayment)
 
               const previouslyPaidRappen = (typeof existingPayment.amount_paid_rappen === 'number' && existingPayment.amount_paid_rappen > 0)
@@ -476,9 +482,11 @@ export default defineEventHandler(async (event) => {
               // amount_paid_rappen bleibt wie es war, Status wird anhand des neuen Netto-Totals
               // (Brutto minus Guthaben) neu bestimmt - amount_paid_rappen ist exklusive Guthaben.
               const collectedSoFarRappen = existingPayment.amount_paid_rappen || 0
-              const netDueRappen = finalTotalAmount - staffPayment.creditUsedRappen
+              const netDueRappen = finalTotalAmount - existingCreditUsed
               paymentUpdateData.payment_status = (netDueRappen - collectedSoFarRappen) <= 0 ? 'completed' : 'partial'
             }
+
+            paymentStatusOut = paymentUpdateData.payment_status || existingPayment.payment_status
             
             const { error: updatePaymentError } = await supabase
               .from('payments')
@@ -535,7 +543,7 @@ export default defineEventHandler(async (event) => {
       if (staffQuote.kind === 'paid') {
         const finalBasePrice = staffPayment.lessonPriceRappen
         const finalTotalAmount = staffPayment.totalAmountRappen
-        const remainingAmountRappen = staffPayment.remainingAmountRappen
+        const markCashPaid = cashAlreadyPaid && paymentMethodForPayment === 'cash'
 
         const terms = await getTenantTerminology(supabase, appointmentData.tenant_id)
         const appointmentLabel = terms.appointment || 'Termin'
@@ -550,15 +558,18 @@ export default defineEventHandler(async (event) => {
           discount_amount_rappen: staffPayment.discountAmountRappen,
           voucher_discount_rappen: 0,
           total_amount_rappen: finalTotalAmount,
-          payment_method: (staffPayment.creditUsedRappen >= finalTotalAmount) ? 'credit' : (paymentMethodForPayment || 'wallee'),
-          payment_status: (remainingAmountRappen === 0 || (cashAlreadyPaid && paymentMethodForPayment === 'cash')) ? 'completed' : 'pending',
-          ...(remainingAmountRappen === 0 || (cashAlreadyPaid && paymentMethodForPayment === 'cash') ? { paid_at: new Date().toISOString() } : {}),
-          credit_used_rappen: staffPayment.creditUsedRappen,
+          payment_method: paymentMethodForPayment || 'wallee',
+          payment_status: markCashPaid ? 'completed' : 'pending',
+          ...(markCashPaid ? { paid_at: new Date().toISOString() } : {}),
+          credit_used_rappen: 0,
           ...(companyBillingAddressId ? { company_billing_address_id: companyBillingAddressId } : {}),
           description: appointmentData.title || `${appointmentLabel} ${appointmentData.type}`,
           metadata: { category: appointmentData.type || null },
           created_at: new Date().toISOString()
         }
+        creditUsedOut = 0
+        remainingOut = finalTotalAmount
+        paymentStatusOut = paymentData.payment_status
         
         paymentPromise = (async () => {
           try {
@@ -574,8 +585,35 @@ export default defineEventHandler(async (event) => {
               logger.debug('✅ Payment created:', paymentResult.id)
               result.payment_id = paymentResult.id
 
+              if (paymentResult.payment_status === 'pending' && requestedCreditRappen > 0) {
+                try {
+                  const applied = await applyCreditToPayment(supabase, {
+                    paymentId: paymentResult.id,
+                    tenantId: appointmentData.tenant_id,
+                    requestedRappen: requestedCreditRappen,
+                    actorUserId: callerProfile.id,
+                  })
+                  creditUsedOut = applied.credit_used_rappen
+                  remainingOut = applied.remaining_amount_rappen
+                  paymentStatusOut = applied.payment_status
+                  result.credit_used_rappen = applied.credit_used_rappen
+                  result.remaining_amount_rappen = applied.remaining_amount_rappen
+                  result.payment_status = applied.payment_status
+                } catch (creditErr: any) {
+                  logger.warn('⚠️ Credit apply failed after payment create (appointment kept, payment pending):', creditErr?.message)
+                  result.credit_apply_error = creditErr?.message || 'credit_apply_failed'
+                  creditUsedOut = 0
+                  remainingOut = finalTotalAmount
+                  paymentStatusOut = 'pending'
+                }
+              } else {
+                result.credit_used_rappen = 0
+                result.remaining_amount_rappen = finalTotalAmount
+                result.payment_status = paymentResult.payment_status
+              }
+
               // ✅ AFFILIATE REWARD HOOK – fire when payment is immediately completed (e.g. cash or full credit)
-              if (paymentResult.payment_status === 'completed' && result.user_id) {
+              if ((paymentStatusOut === 'completed' || paymentResult.payment_status === 'completed') && result.user_id) {
                 $fetch('/api/affiliate/process-reward', {
                   method: 'POST',
                   headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
@@ -817,7 +855,12 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      data: result
+      data: {
+        ...result,
+        credit_used_rappen: creditUsedOut,
+        remaining_amount_rappen: remainingOut,
+        payment_status: paymentStatusOut,
+      }
     }
   } catch (error: any) {
     logger.error('❌ Appointment save error:', error)
