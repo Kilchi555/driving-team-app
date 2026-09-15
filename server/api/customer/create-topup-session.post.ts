@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
         currency: 'CHF',
         description: `Guthaben aufladen – ${userProfile.first_name} ${userProfile.last_name}`.trim(),
         payment_provider: 'wallee',
-        metadata: JSON.stringify({ is_topup: true, topup_amount_rappen: amountRappen })
+        metadata: { is_topup: true, topup_amount_rappen: amountRappen }
       })
       .select('id')
       .single()
