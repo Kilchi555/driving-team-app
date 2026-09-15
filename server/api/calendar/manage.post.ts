@@ -11,6 +11,23 @@ import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
+import {
+  quoteStaffAppointmentFromRow,
+  staffQuoteMetadata,
+  throwIfStaffPricingError,
+} from '~/server/utils/staff-appointment-price'
+import { isChargeableEventType } from '~/server/utils/event-type-charge'
+
+const CALENDAR_STAFF_ROLES = new Set(['admin', 'staff', 'super_admin', 'tenant_admin', 'superadmin'])
+
+function assertCalendarStaff(userProfile: { role: string }) {
+  if (!CALENDAR_STAFF_ROLES.has(userProfile.role)) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Staff or admin role required',
+    })
+  }
+}
 
 export default defineEventHandler(async (event) => {
   let action: string | undefined
@@ -85,18 +102,53 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'create-appointment') {
-      // ✅ Verify tenant access
-      if (appointment_data?.tenant_id !== userProfile.tenant_id) {
+      assertCalendarStaff(userProfile)
+      // ✅ Verify tenant access — never trust body tenant as authority
+      if (appointment_data?.tenant_id && appointment_data.tenant_id !== userProfile.tenant_id) {
         throw createError({
           statusCode: 403,
           statusMessage: 'Access denied to this tenant'
         })
       }
 
-      // Create a new appointment
+      const appointmentInsert = {
+        ...appointment_data,
+        tenant_id: userProfile.tenant_id,
+      }
+      delete appointmentInsert.original_price_rappen
+      delete appointmentInsert.lesson_price_rappen
+      delete appointmentInsert.total_amount_rappen
+      delete appointmentInsert.admin_fee_rappen
+      delete appointmentInsert.products_price_rappen
+      delete appointmentInsert.discount_amount_rappen
+      delete appointmentInsert.credit_used_rappen
+
+      const chargeable = await isChargeableEventType(
+        supabase,
+        userProfile.tenant_id,
+        appointmentInsert.event_type_code,
+      )
+      if (chargeable) {
+        try {
+          const quoted = await quoteStaffAppointmentFromRow(supabase, {
+            tenant_id: userProfile.tenant_id,
+            type: appointmentInsert.type,
+            event_type_code: appointmentInsert.event_type_code,
+            duration_minutes: appointmentInsert.duration_minutes,
+            user_id: appointmentInsert.user_id,
+            vehicle_id: appointmentInsert.vehicle_id,
+            room_id: appointmentInsert.room_id,
+          }, { mode: 'create' })
+          appointmentInsert.original_price_rappen = quoted.totals.lesson_price_rappen
+        } catch (err) {
+          throwIfStaffPricingError(err)
+          throw err
+        }
+      }
+
       const { data: appointment, error } = await supabase
         .from('appointments')
-        .insert([appointment_data])
+        .insert([appointmentInsert])
         .select()
         .single()
 
@@ -111,6 +163,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'update-appointment-status') {
+      assertCalendarStaff(userProfile)
       logger.debug('🟠 START: update-appointment-status action triggered')
       
       // ✅ Verify user owns appointment
@@ -366,18 +419,69 @@ export default defineEventHandler(async (event) => {
     }
 
     if (action === 'create-payment') {
-      // ✅ Verify tenant access
-      if (payment_data?.tenant_id !== userProfile.tenant_id) {
+      assertCalendarStaff(userProfile)
+      if (payment_data?.tenant_id && payment_data.tenant_id !== userProfile.tenant_id) {
         throw createError({
           statusCode: 403,
           statusMessage: 'Access denied to this tenant'
         })
       }
 
-      // Create payment record
+      const appointmentId = payment_data?.appointment_id
+      if (!appointmentId) {
+        throw createError({ statusCode: 400, statusMessage: 'appointment_id required' })
+      }
+
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .select('id, tenant_id, type, event_type_code, duration_minutes, user_id, vehicle_id, room_id, staff_id')
+        .eq('id', appointmentId)
+        .maybeSingle()
+
+      if (appointmentError || !appointment || appointment.tenant_id !== userProfile.tenant_id) {
+        throw createError({ statusCode: 404, statusMessage: 'Appointment not found' })
+      }
+
+      const { data: existingPayment } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('appointment_id', appointment.id)
+        .maybeSingle()
+      if (existingPayment) {
+        return { success: true, data: existingPayment }
+      }
+
+      let quoted
+      try {
+        quoted = await quoteStaffAppointmentFromRow(supabase, appointment, { mode: 'create' })
+      } catch (err) {
+        throwIfStaffPricingError(err)
+        throw err
+      }
+
+      const method = String(payment_data?.payment_method || 'invoice')
+      const paymentInsert = {
+        appointment_id: appointment.id,
+        user_id: appointment.user_id,
+        staff_id: appointment.staff_id,
+        tenant_id: userProfile.tenant_id,
+        lesson_price_rappen: quoted.totals.lesson_price_rappen,
+        admin_fee_rappen: quoted.totals.admin_fee_rappen,
+        products_price_rappen: quoted.totals.products_price_rappen,
+        discount_amount_rappen: 0,
+        voucher_discount_rappen: 0,
+        credit_used_rappen: 0,
+        total_amount_rappen: quoted.totals.total_amount_rappen,
+        payment_method: method,
+        payment_status: 'pending',
+        currency: 'CHF',
+        description: typeof payment_data?.description === 'string' ? payment_data.description : null,
+        metadata: staffQuoteMetadata(quoted.quote, quoted.totals),
+      }
+
       const { data: payment, error } = await supabase
         .from('payments')
-        .insert([payment_data])
+        .insert([paymentInsert])
         .select()
         .single()
 

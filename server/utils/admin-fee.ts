@@ -51,6 +51,12 @@ interface CalculateAdminFeeInput {
    */
   adminFeeRappenFromRule?: number
   adminFeeAppliesFromRule?: number | null
+  /**
+   * When quoting an edit, exclude this appointment from the active-count and
+   * "fee already paid" checks so this payment's own fee is not treated as
+   * already paid by a different appointment.
+   */
+  excludeAppointmentId?: string | null
 }
 
 /**
@@ -105,8 +111,9 @@ async function countActiveAppointments(
   userId: string,
   tenantId: string,
   categoriesToCheck: string[],
+  excludeAppointmentId?: string | null,
 ): Promise<number> {
-  const { count, error } = await supabase
+  let query = supabase
     .from('appointments')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
@@ -115,6 +122,12 @@ async function countActiveAppointments(
     .not('status', 'eq', 'cancelled')
     .not('status', 'eq', 'aborted')
     .in('type', categoriesToCheck)
+
+  if (excludeAppointmentId) {
+    query = query.neq('id', excludeAppointmentId)
+  }
+
+  const { count, error } = await query
 
   if (error) return 0
   return count || 0
@@ -125,6 +138,7 @@ async function hasAdminFeeBeenPaid(
   userId: string,
   tenantId: string,
   categoriesToCheck: string[],
+  excludeAppointmentId?: string | null,
 ): Promise<boolean> {
   // Mirrors logic of server/api/staff/check-admin-fee-paid.get.ts:
   // - Look at payments with admin_fee_rappen > 0 in active states
@@ -142,6 +156,7 @@ async function hasAdminFeeBeenPaid(
   const groupSet = new Set(categoriesToCheck)
 
   return payments.some((payment: any) => {
+    if (excludeAppointmentId && payment.appointment_id === excludeAppointmentId) return false
     const appointmentType = payment.appointments?.type
     if (appointmentType && groupSet.has(appointmentType)) return true
 
@@ -173,7 +188,7 @@ async function hasAdminFeeBeenPaid(
 export async function calculateAdminFee(
   input: CalculateAdminFeeInput,
 ): Promise<AdminFeeResult> {
-  const { supabase, userId, tenantId, categoryCode, adminFeeRappenFromRule, adminFeeAppliesFromRule } = input
+  const { supabase, userId, tenantId, categoryCode, adminFeeRappenFromRule, adminFeeAppliesFromRule, excludeAppointmentId } = input
 
   let ruleAdminFeeRappen = adminFeeRappenFromRule
   let adminFeeAppliesFrom = adminFeeAppliesFromRule
@@ -221,8 +236,8 @@ export async function calculateAdminFee(
   }
 
   const [activeCount, alreadyPaid] = await Promise.all([
-    countActiveAppointments(supabase, userId, tenantId, getCountCategoryGroup(categoryCode)),
-    hasAdminFeeBeenPaid(supabase, userId, tenantId, await getPaidCategoryGroup(supabase, tenantId, categoryCode)),
+    countActiveAppointments(supabase, userId, tenantId, getCountCategoryGroup(categoryCode), excludeAppointmentId),
+    hasAdminFeeBeenPaid(supabase, userId, tenantId, await getPaidCategoryGroup(supabase, tenantId, categoryCode), excludeAppointmentId),
   ])
 
   // Match `usePricing.ts → shouldApplyAdminFee` exactly:

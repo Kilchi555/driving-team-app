@@ -11,11 +11,14 @@ import {
   throwValidationError
 } from '~/server/utils/validators'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
-import { getFallbackRule } from '~/utils/fallbackPricingRules'
-import { logFallbackUsed } from '~/server/utils/log-fallback'
 import { isChargeableEventType } from '~/server/utils/event-type-charge'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { assertStaffCanApplyManualDiscount } from '~/server/utils/staff-manual-discount'
+import {
+  quoteAndComposeStaffAppointmentPayment,
+  staffQuoteMetadata,
+  throwIfStaffPricingError,
+} from '~/server/utils/staff-appointment-price'
 import { attachProposalAttributionToStaffAppointment } from '~/server/utils/proposal-booking-conversion'
 import { becameBindingConfirmed } from '~/server/utils/binding-booking'
 import { hashCustomerIdentifiers, reportBindingAppointmentConversionSafely } from '~/server/utils/binding-booking-conversion'
@@ -59,33 +62,19 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // ============ PRICE SANITY CHECKS ============
-    // Prevent rogue staff from submitting obviously manipulated price values.
-    // Full server-side price recalculation would require a pricing-table lookup
-    // (done separately); these guards catch the most blatant manipulation attempts.
-    if (typeof totalAmountRappenForPayment === 'number' && totalAmountRappenForPayment < 0) {
-      throw createError({ statusCode: 400, statusMessage: 'Invalid price: total amount cannot be negative' })
-    }
+    // Client monetary fields are never authoritative. Discount > 0 is always
+    // treated as a manual discount (do not trust isManualDiscount).
     if (typeof discountAmountRappen === 'number' && discountAmountRappen < 0) {
       throw createError({ statusCode: 400, statusMessage: 'Invalid price: discount cannot be negative' })
     }
     if (typeof creditUsedRappen === 'number' && creditUsedRappen < 0) {
       throw createError({ statusCode: 400, statusMessage: 'Invalid price: credit used cannot be negative' })
     }
-    // Guard: discount cannot exceed the total before discount
-    if (
-      typeof discountAmountRappen === 'number' &&
-      typeof basePriceRappen === 'number' &&
-      basePriceRappen > 0 &&
-      discountAmountRappen > basePriceRappen + (adminFeeRappen || 0) + (productsPriceRappen || 0)
-    ) {
-      throw createError({ statusCode: 400, statusMessage: 'Invalid price: discount exceeds total price' })
-    }
 
     await assertStaffCanApplyManualDiscount({
       tenantId: callerProfile.tenant_id,
       role: callerProfile.role,
-      isManualDiscount: Boolean(isManualDiscount && discountAmountRappen > 0)
+      isManualDiscount: Number(discountAmountRappen || 0) > 0
     })
 
     // ============ TENANT ISOLATION ============
@@ -100,6 +89,7 @@ export default defineEventHandler(async (event) => {
         })
         throw createError({ statusCode: 403, statusMessage: 'Access denied: tenant mismatch' })
       }
+      appointmentData.tenant_id = callerProfile.tenant_id
     }
 
     if (mode === 'edit' && !eventId) {
@@ -202,25 +192,78 @@ export default defineEventHandler(async (event) => {
 
     logger.debug('📋 Saving appointment via API:', { mode, eventId, appointmentData })
 
+    const STAFF_APPOINTMENT_MONETARY_KEYS = [
+      'original_price_rappen',
+      'lesson_price_rappen',
+      'total_amount_rappen',
+      'admin_fee_rappen',
+      'products_price_rappen',
+      'discount_amount_rappen',
+      'credit_used_rappen',
+    ] as const
+    for (const key of STAFF_APPOINTMENT_MONETARY_KEYS) {
+      delete appointmentData[key]
+    }
+
+    const quoteStaffPayment = async (
+      quoteMode: 'create' | 'edit',
+      appointmentId?: string | null,
+      quoteTenantId?: string | null,
+    ) => {
+      try {
+        const quoted = await quoteAndComposeStaffAppointmentPayment(supabase, {
+          tenantId: quoteTenantId || callerProfile.tenant_id,
+          categoryCode: appointmentData.type,
+          eventTypeCode: appointmentData.event_type_code,
+          durationMinutes: appointmentData.duration_minutes,
+          studentUserId: appointmentData.user_id,
+          vehicleId: appointmentData.vehicle_id,
+          roomId: appointmentData.room_id,
+          mode: quoteMode,
+          excludeAppointmentId: appointmentId || null,
+          productLines: body.productLines,
+          requestedDiscountRappen: discountAmountRappen || 0,
+          requestedCreditRappen: creditUsedRappen,
+        })
+        lastStaffQuote = quoted.quote
+        return quoted
+      } catch (err) {
+        throwIfStaffPricingError(err)
+        throw err
+      }
+    }
+
     let result
     // Declared here so it's accessible both inside the create branch and after the if/else block
     let paymentPromise: Promise<void> | null = null
     let conversionPromise: Promise<void> | null = null
+    let lastStaffQuote: Awaited<ReturnType<typeof quoteAndComposeStaffAppointmentPayment>>['quote'] | null = null
 
     if (mode === 'edit' && eventId) {
       // Update existing appointment
-      const { data: oldAppointment, error: fetchError } = await supabase
+      let oldAppointmentQuery = supabase
         .from('appointments')
         .select('start_time, end_time, staff_id, tenant_id, duration_minutes, status, user_id, event_type_code, type, gclid, gbraid, wbraid, fbclid, fbc, fbp')
         .eq('id', eventId)
-        .single()
+      if (!['super_admin', 'superadmin'].includes(callerProfile.role)) {
+        oldAppointmentQuery = oldAppointmentQuery.eq('tenant_id', callerProfile.tenant_id)
+      }
+      const { data: oldAppointment, error: fetchError } = await oldAppointmentQuery.single()
 
       if (fetchError || !oldAppointment) {
         logger.error('❌ Error fetching old appointment for edit:', fetchError)
         throw createError({
-          statusCode: 500,
+          statusCode: 404,
           statusMessage: 'Could not fetch appointment for editing'
         })
+      }
+
+      if (
+        !['super_admin', 'superadmin'].includes(callerProfile.role) &&
+        oldAppointment.tenant_id &&
+        oldAppointment.tenant_id !== callerProfile.tenant_id
+      ) {
+        throw createError({ statusCode: 403, statusMessage: 'Access denied: tenant mismatch' })
       }
 
       // ✅ Was the duration increased on an appointment that already had money collected against
@@ -231,10 +274,19 @@ export default defineEventHandler(async (event) => {
         typeof oldAppointment.duration_minutes === 'number' &&
         appointmentData.duration_minutes > oldAppointment.duration_minutes
 
-      const { data, error: updateError } = await supabase
+      const isChargeable = await isChargeableEventType(supabase, oldAppointment.tenant_id, appointmentData.event_type_code)
+      const quotedPayment = isChargeable
+        ? await quoteStaffPayment('edit', eventId, oldAppointment.tenant_id)
+        : null
+
+      let updateQuery = supabase
         .from('appointments')
         .update(appointmentData)
         .eq('id', eventId)
+      if (!['super_admin', 'superadmin'].includes(callerProfile.role)) {
+        updateQuery = updateQuery.eq('tenant_id', callerProfile.tenant_id)
+      }
+      const { data, error: updateError } = await updateQuery
         .select()
         .single()
 
@@ -262,10 +314,9 @@ export default defineEventHandler(async (event) => {
               .eq('id', result.user_id)
               .maybeSingle()
             const hashed = await hashCustomerIdentifiers({ email: student?.email, phone: student?.phone })
-            const conversionValueChf =
-              typeof totalAmountRappenForPayment === 'number' && totalAmountRappenForPayment > 0
-                ? totalAmountRappenForPayment / 100
-                : 0
+            const conversionValueChf = lastStaffQuote
+              ? (lastStaffQuote.lessonPriceRappen + lastStaffQuote.adminFeeRappen + lastStaffQuote.resourceCostRappen) / 100
+              : 0
             await reportBindingAppointmentConversionSafely({
               supabase,
               appointmentId: result.id,
@@ -352,70 +403,44 @@ export default defineEventHandler(async (event) => {
       }
       
       // ============ UPDATE PAYMENT FOR EDITED APPOINTMENT ============
-      // ✅ If this is a chargeable appointment (require_payment=true event type),
-      // update the existing payment — DB-driven so custom tenant event types work too
-      const isChargeable = await isChargeableEventType(supabase, oldAppointment.tenant_id, appointmentData.event_type_code)
-      
-      if (isChargeable && (totalAmountRappenForPayment !== undefined || productsPriceRappen !== undefined || discountAmountRappen !== undefined)) {
+      if (quotedPayment) {
+        const { quote, totals } = quotedPayment
+        const finalTotalAmount = totals.total_amount_rappen
+        const remainingAmountRappen = Math.max(0, finalTotalAmount - totals.credit_used_rappen)
+
         try {
-          // Check if payment exists
           const { data: existingPayment } = await supabase
             .from('payments')
             .select('id, payment_status, total_amount_rappen, amount_paid_rappen, metadata')
             .eq('appointment_id', eventId)
+            .eq('tenant_id', oldAppointment.tenant_id)
             .maybeSingle()
           
           if (existingPayment) {
-            // Calculate new amounts
-            let finalTotalAmount = totalAmountRappenForPayment ?? 0
-            // Explicit 0 from client is valid (free / event-type priced at 0) —
-            // only invent a driving-school estimate when no base price was sent
-            // AND a license category is present.
-            let finalBasePrice = typeof basePriceRappen === 'number' ? basePriceRappen : 0
-
-            if (
-              (basePriceRappen === undefined || basePriceRappen === null) &&
-              appointmentData.type
-            ) {
-              const durationMins = appointmentData.duration_minutes || 45
-              const fallbackRule = getFallbackRule(appointmentData.type || 'B')
-              const pricePerMin = fallbackRule?.price_per_minute_chf || (95 / 45)
-              finalBasePrice = Math.round(durationMins * pricePerMin * 100)
-              logFallbackUsed({
-                source: 'pricing',
-                message: `Kein Preis vom Client übermittelt beim Bearbeiten von Termin ${eventId} – Fallback-Preis für Kategorie "${appointmentData.type}" verwendet.`,
-                tenantId: callerProfile.tenant_id,
-                details: { category_code: appointmentData.type, appointmentId: eventId }
-              })
-            }
-            
-            if (finalTotalAmount === undefined || finalTotalAmount === null) {
-              finalTotalAmount = Math.max(0, finalBasePrice + (adminFeeRappen || 0) + (productsPriceRappen || 0) - (discountAmountRappen || 0))
-            }
-            
-            finalTotalAmount = Math.max(0, Math.round(finalTotalAmount))
-            const remainingAmountRappen = Math.max(0, finalTotalAmount - (creditUsedRappen || 0))
-            
             logger.debug('💳 Updating payment for edited appointment:', {
               paymentId: existingPayment.id,
               appointmentId: eventId,
               oldTotal: (existingPayment.total_amount_rappen / 100).toFixed(2),
               newTotal: (remainingAmountRappen / 100).toFixed(2),
-              creditUsed: ((creditUsedRappen || 0) / 100).toFixed(2)
+              creditUsed: (totals.credit_used_rappen / 100).toFixed(2),
+              ruleSource: quote.ruleSource,
             })
             
             const paymentUpdateData: any = {
-              lesson_price_rappen: finalBasePrice,
-              admin_fee_rappen: adminFeeRappen || 0,
-              products_price_rappen: productsPriceRappen || 0,
-              discount_amount_rappen: discountAmountRappen || 0,
+              lesson_price_rappen: totals.lesson_price_rappen,
+              admin_fee_rappen: totals.admin_fee_rappen,
+              products_price_rappen: totals.products_price_rappen,
+              discount_amount_rappen: totals.discount_amount_rappen,
               voucher_discount_rappen: 0,
               total_amount_rappen: finalTotalAmount,
-              payment_method: (creditUsedRappen && creditUsedRappen >= finalTotalAmount) ? 'credit' : undefined,
-              credit_used_rappen: creditUsedRappen || 0,
-              // Keep payment user_id/staff_id in sync with the appointment
+              payment_method: totals.credit_used_rappen >= finalTotalAmount && finalTotalAmount >= 0 ? 'credit' : undefined,
+              credit_used_rappen: totals.credit_used_rappen,
               ...(appointmentData.user_id ? { user_id: appointmentData.user_id } : {}),
               ...(appointmentData.staff_id ? { staff_id: appointmentData.staff_id } : {}),
+              metadata: {
+                ...(existingPayment.metadata || {}),
+                ...staffQuoteMetadata(quote, totals),
+              },
               updated_at: new Date().toISOString()
             }
             
@@ -434,7 +459,7 @@ export default defineEventHandler(async (event) => {
               // amount_paid_rappen = tatsächlich via Bar/Online eingezogener Betrag, EXKLUSIVE Guthaben.
               // credit_used_rappen wird separat geführt und vom Bruttototal abgezogen, um den
               // "netto geschuldeten" Betrag zu erhalten. total_amount_rappen ist immer brutto (vor Guthaben).
-              const creditUsedForThisPayment = creditUsedRappen || 0
+              const creditUsedForThisPayment = totals.credit_used_rappen
               const previousNetDueRappen = Math.max(0, (existingPayment.total_amount_rappen || 0) - creditUsedForThisPayment)
 
               const previouslyPaidRappen = (typeof existingPayment.amount_paid_rappen === 'number' && existingPayment.amount_paid_rappen > 0)
@@ -485,7 +510,7 @@ export default defineEventHandler(async (event) => {
               // amount_paid_rappen bleibt wie es war, Status wird anhand des neuen Netto-Totals
               // (Brutto minus Guthaben) neu bestimmt - amount_paid_rappen ist exklusive Guthaben.
               const collectedSoFarRappen = existingPayment.amount_paid_rappen || 0
-              const netDueRappen = finalTotalAmount - (creditUsedRappen || 0)
+              const netDueRappen = finalTotalAmount - totals.credit_used_rappen
               paymentUpdateData.payment_status = (netDueRappen - collectedSoFarRappen) <= 0 ? 'completed' : 'partial'
             }
             
@@ -493,17 +518,20 @@ export default defineEventHandler(async (event) => {
               .from('payments')
               .update(paymentUpdateData)
               .eq('id', existingPayment.id)
+              .eq('tenant_id', oldAppointment.tenant_id)
             
             if (updatePaymentError) {
-              logger.warn('⚠️ Failed to update payment (non-critical):', updatePaymentError)
-            } else {
-              logger.debug('✅ Payment updated for edited appointment')
+              logger.error('❌ Failed to update payment:', updatePaymentError)
+              throw createError({ statusCode: 500, statusMessage: 'Zahlung konnte nicht aktualisiert werden.' })
             }
+            logger.debug('✅ Payment updated for edited appointment')
           } else {
             logger.debug('ℹ️ No existing payment found for edited appointment, skipping payment update')
           }
         } catch (paymentErr: any) {
-          logger.warn('⚠️ Payment update exception (non-critical):', paymentErr.message)
+          if (paymentErr?.statusCode) throw paymentErr
+          logger.error('❌ Payment update exception:', paymentErr.message)
+          throw createError({ statusCode: 500, statusMessage: paymentErr.message || 'Zahlung konnte nicht aktualisiert werden.' })
         }
       }
 
@@ -515,6 +543,12 @@ export default defineEventHandler(async (event) => {
       if (!appointmentData.status || ['scheduled', 'pending_confirmation', 'booked'].includes(appointmentData.status)) {
         appointmentData.status = 'confirmed'
       }
+
+      const isChargeable = await isChargeableEventType(supabase, appointmentData.tenant_id, appointmentData.event_type_code)
+      const quotedPayment = isChargeable
+        ? await quoteStaffPayment('create', null, appointmentData.tenant_id)
+        : null
+
       const { data, error: insertError } = await supabase
         .from('appointments')
         .insert(appointmentData)
@@ -540,38 +574,11 @@ export default defineEventHandler(async (event) => {
       // Payment + Slot blocking + Queue recalc all run at the same time
       // DB-driven (event_types.require_payment) so a tenant's own custom
       // chargeable event types get a payment row too, not just lesson/exam/theory.
-      const isChargeable = await isChargeableEventType(supabase, appointmentData.tenant_id, appointmentData.event_type_code)
       
-      // Prepare payment data synchronously (no DB calls needed)
-      if (isChargeable) {
-        let finalTotalAmount = totalAmountRappenForPayment ?? 0
-        // Explicit 0 from client is valid (free / event-type priced at 0) —
-        // only invent a driving-school estimate when no base price was sent
-        // AND a license category is present.
-        let finalBasePrice = typeof basePriceRappen === 'number' ? basePriceRappen : 0
-
-        if (
-          (basePriceRappen === undefined || basePriceRappen === null) &&
-          appointmentData.type
-        ) {
-          const durationMins = appointmentData.duration_minutes || 45
-          const fallbackRule = getFallbackRule(appointmentData.type || 'B')
-          const pricePerMin = fallbackRule?.price_per_minute_chf || (95 / 45)
-          finalBasePrice = Math.round(durationMins * pricePerMin * 100)
-          logFallbackUsed({
-            source: 'pricing',
-            message: `Kein Preis vom Client übermittelt beim Erstellen eines Termins – Fallback-Preis für Kategorie "${appointmentData.type}" verwendet.`,
-            tenantId: callerProfile.tenant_id,
-            details: { category_code: appointmentData.type }
-          })
-        }
-        
-        if (finalTotalAmount === undefined || finalTotalAmount === null) {
-          finalTotalAmount = Math.max(0, finalBasePrice + (adminFeeRappen || 0) + (productsPriceRappen || 0) - (discountAmountRappen || 0))
-        }
-        
-        finalTotalAmount = Math.max(0, Math.round(finalTotalAmount))
-        const remainingAmountRappen = Math.max(0, finalTotalAmount - (creditUsedRappen || 0))
+      if (quotedPayment) {
+        const { quote, totals } = quotedPayment
+        const finalTotalAmount = totals.total_amount_rappen
+        const remainingAmountRappen = Math.max(0, finalTotalAmount - totals.credit_used_rappen)
 
         const terms = await getTenantTerminology(supabase, appointmentData.tenant_id)
         const appointmentLabel = terms.appointment || 'Termin'
@@ -580,19 +587,22 @@ export default defineEventHandler(async (event) => {
           user_id: result.user_id,
           staff_id: appointmentData.staff_id,
           tenant_id: appointmentData.tenant_id,
-          lesson_price_rappen: finalBasePrice,
-          admin_fee_rappen: adminFeeRappen || 0,
-          products_price_rappen: productsPriceRappen || 0,
-          discount_amount_rappen: discountAmountRappen || 0,
+          lesson_price_rappen: totals.lesson_price_rappen,
+          admin_fee_rappen: totals.admin_fee_rappen,
+          products_price_rappen: totals.products_price_rappen,
+          discount_amount_rappen: totals.discount_amount_rappen,
           voucher_discount_rappen: 0,
           total_amount_rappen: finalTotalAmount,
-          payment_method: (creditUsedRappen && creditUsedRappen >= finalTotalAmount) ? 'credit' : (paymentMethodForPayment || 'wallee'),
+          payment_method: (totals.credit_used_rappen >= finalTotalAmount) ? 'credit' : (paymentMethodForPayment || 'wallee'),
           payment_status: (remainingAmountRappen === 0 || (cashAlreadyPaid && paymentMethodForPayment === 'cash')) ? 'completed' : 'pending',
           ...(remainingAmountRappen === 0 || (cashAlreadyPaid && paymentMethodForPayment === 'cash') ? { paid_at: new Date().toISOString() } : {}),
-          credit_used_rappen: creditUsedRappen || 0,
+          credit_used_rappen: totals.credit_used_rappen,
           ...(companyBillingAddressId ? { company_billing_address_id: companyBillingAddressId } : {}),
           description: appointmentData.title || `${appointmentLabel} ${appointmentData.type}`,
-          metadata: { category: appointmentData.type || null },
+          metadata: {
+            category: appointmentData.type || null,
+            ...staffQuoteMetadata(quote, totals),
+          },
           created_at: new Date().toISOString()
         }
         
@@ -605,29 +615,30 @@ export default defineEventHandler(async (event) => {
               .single()
             
             if (paymentError) {
-              logger.warn('⚠️ Failed to create payment:', paymentError)
-            } else {
-              logger.debug('✅ Payment created:', paymentResult.id)
-              result.payment_id = paymentResult.id
+              logger.error('❌ Failed to create payment:', paymentError)
+              throw paymentError
+            }
+            logger.debug('✅ Payment created:', paymentResult.id)
+            result.payment_id = paymentResult.id
 
-              // ✅ AFFILIATE REWARD HOOK – fire when payment is immediately completed (e.g. cash or full credit)
-              if (paymentResult.payment_status === 'completed' && result.user_id) {
-                $fetch('/api/affiliate/process-reward', {
-                  method: 'POST',
-                  headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
-                  body: {
-                    appointment_id: result.id,
-                    user_id: result.user_id,
-                    tenant_id: appointmentData.tenant_id,
-                    driving_category: appointmentData.type ?? null,
-                  }
-                }).catch((err: any) =>
-                  logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
-                )
-              }
+            // ✅ AFFILIATE REWARD HOOK – fire when payment is immediately completed (e.g. cash or full credit)
+            if (paymentResult.payment_status === 'completed' && result.user_id) {
+              $fetch('/api/affiliate/process-reward', {
+                method: 'POST',
+                headers: { 'x-internal-secret': process.env.CRON_SECRET || '' },
+                body: {
+                  appointment_id: result.id,
+                  user_id: result.user_id,
+                  tenant_id: appointmentData.tenant_id,
+                  driving_category: appointmentData.type ?? null,
+                }
+              }).catch((err: any) =>
+                logger.warn('⚠️ Affiliate reward hook failed (non-fatal):', err?.message)
+              )
             }
           } catch (paymentErr: any) {
-            logger.warn('⚠️ Payment creation exception:', paymentErr.message)
+            logger.error('❌ Payment creation exception:', paymentErr.message)
+            throw paymentErr
           }
         })()
       }
@@ -640,10 +651,9 @@ export default defineEventHandler(async (event) => {
         (async () => {
           try {
             if (!result.user_id || !result.tenant_id) return
-            const conversionValueChf =
-              typeof totalAmountRappenForPayment === 'number' && totalAmountRappenForPayment > 0
-                ? totalAmountRappenForPayment / 100
-                : 0
+            const conversionValueChf = quotedPayment
+              ? quotedPayment.totals.total_amount_rappen / 100
+              : 0
             await attachProposalAttributionToStaffAppointment({
               tenantId: result.tenant_id,
               appointmentId: result.id,
@@ -734,8 +744,9 @@ export default defineEventHandler(async (event) => {
     const resourceEnd = appointmentData.end_time
     const tenantId = appointmentData.tenant_id
 
-    // Resource cost breakdown sent from EventModal
-    const resourceSurcharges: { label: string; rappen: number }[] = body.resourceSurcharges || []
+    // Resource cost from server quote — never client resourceSurcharges[].rappen
+    const vehicleCost = lastStaffQuote?.vehicleCostRappen ?? 0
+    const roomCost = lastStaffQuote?.roomCostRappen ?? 0
 
     if (appointmentId && (vehicle_id !== undefined || room_id !== undefined)) {
       try {
@@ -775,7 +786,6 @@ export default defineEventHandler(async (event) => {
           .eq('purpose', 'lesson')
 
         if (vehicle_id) {
-          const vehicleCost = resourceSurcharges.find((s: any) => s.type === 'vehicle')?.rappen ?? 0
           const { error: vehicleBookingError } = await supabase.from('vehicle_bookings').insert({
             vehicle_id,
             appointment_id: appointmentId,
@@ -818,7 +828,6 @@ export default defineEventHandler(async (event) => {
           .eq('purpose', 'lesson')
 
         if (room_id) {
-          const roomCost = resourceSurcharges.find((s: any) => s.type === 'room')?.rappen ?? 0
           const { error: roomBookingError } = await supabase.from('room_bookings').insert({
             room_id,
             appointment_id: appointmentId,

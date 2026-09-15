@@ -167,11 +167,37 @@ export default defineEventHandler(async (event) => {
         throw new Error('Appointment not found')
       }
       
-      // Add tenant_id to each product
-      const productsWithTenant = productData.map((item: any) => ({
-        ...item,
-        tenant_id: appointment.tenant_id
-      }))
+      const productIds = [...new Set(productData.map((item: any) => item.product_id || item.productId).filter(Boolean))]
+      const { data: catalog } = await supabaseAdmin
+        .from('products')
+        .select('id, price_rappen, is_active, allow_custom_amount, min_amount_rappen, max_amount_rappen')
+        .eq('tenant_id', appointment.tenant_id)
+        .in('id', productIds)
+      const byId = new Map((catalog || []).map((row: any) => [row.id, row]))
+
+      const productsWithTenant = productData.map((item: any) => {
+        const productId = item.product_id || item.productId
+        const product = byId.get(productId)
+        if (!product || product.is_active === false) {
+          throw new Error('Product not found or inactive')
+        }
+        const quantity = Math.max(1, Math.round(Number(item.quantity) || 1))
+        let unit = Math.round(Number(product.price_rappen) || 0)
+        if (product.allow_custom_amount && item.unit_price_rappen != null) {
+          const requested = Math.round(Number(item.unit_price_rappen) || 0)
+          const min = Math.round(Number(product.min_amount_rappen) || 0)
+          const max = product.max_amount_rappen != null ? Math.round(Number(product.max_amount_rappen)) : requested
+          unit = Math.min(Math.max(requested, min), max)
+        }
+        return {
+          appointment_id: appointmentId,
+          product_id: productId,
+          quantity,
+          unit_price_rappen: unit,
+          total_price_rappen: unit * quantity,
+          tenant_id: appointment.tenant_id,
+        }
+      })
       
       logger.debug('📝 Products with tenant_id:', {
         count: productsWithTenant.length,

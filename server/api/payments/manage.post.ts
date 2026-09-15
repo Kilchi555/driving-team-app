@@ -1,9 +1,16 @@
 // server/api/payments/manage.post.ts
+import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
 import { isRefundedPaymentStatus } from '~/utils/payment-status'
+import {
+  quoteStaffAppointmentFromRow,
+  resolveStaffProductLinesPrice,
+  staffQuoteMetadata,
+  throwIfStaffPricingError,
+} from '~/server/utils/staff-appointment-price'
 
 interface ManagePaymentsBody {
   action: 'create' | 'mark-completed' | 'delete' | 'load-user' | 'load-appointment' | 'switch-to-invoice'
@@ -58,10 +65,84 @@ export default defineEventHandler(async (event) => {
         paymentStatus = 'pending'
       }
 
+      if (!body.paymentData.user_id) {
+        throw new Error('user_id required')
+      }
+
+      const { data: payee, error: payeeError } = await supabaseAdmin
+        .from('users')
+        .select('id, tenant_id')
+        .eq('id', body.paymentData.user_id)
+        .maybeSingle()
+      if (payeeError || !payee || payee.tenant_id !== dbUser.tenant_id) {
+        throw new Error('user_id does not belong to this tenant')
+      }
+
       const insertPayload: Record<string, any> = {
-        ...body.paymentData,
         tenant_id: dbUser.tenant_id,
-        payment_status: paymentStatus
+        user_id: body.paymentData.user_id,
+        staff_id: body.paymentData.staff_id || dbUser.id,
+        appointment_id: body.paymentData.appointment_id || null,
+        payment_method: method,
+        payment_status: paymentStatus,
+        currency: body.paymentData.currency || 'CHF',
+        description: typeof body.paymentData.description === 'string' ? body.paymentData.description : null,
+        metadata: body.paymentData.metadata && typeof body.paymentData.metadata === 'object' ? body.paymentData.metadata : {},
+        lesson_price_rappen: 0,
+        admin_fee_rappen: 0,
+        products_price_rappen: 0,
+        discount_amount_rappen: 0,
+        voucher_discount_rappen: 0,
+        credit_used_rappen: 0,
+        total_amount_rappen: 0,
+      }
+
+      if (insertPayload.appointment_id) {
+        const { data: appointment, error: appointmentError } = await supabaseAdmin
+          .from('appointments')
+          .select('id, tenant_id, type, event_type_code, duration_minutes, user_id, vehicle_id, room_id')
+          .eq('id', insertPayload.appointment_id)
+          .maybeSingle()
+        if (appointmentError || !appointment || appointment.tenant_id !== dbUser.tenant_id) {
+          throw new Error('Appointment not found')
+        }
+        try {
+          const quoted = await quoteStaffAppointmentFromRow(supabaseAdmin, appointment, {
+            productLines: body.paymentData.productLines || body.paymentData.items,
+            mode: 'create',
+          })
+          insertPayload.lesson_price_rappen = quoted.totals.lesson_price_rappen
+          insertPayload.admin_fee_rappen = quoted.totals.admin_fee_rappen
+          insertPayload.products_price_rappen = quoted.totals.products_price_rappen
+          insertPayload.discount_amount_rappen = quoted.totals.discount_amount_rappen
+          insertPayload.total_amount_rappen = quoted.totals.total_amount_rappen
+          insertPayload.credit_used_rappen = quoted.totals.credit_used_rappen
+          insertPayload.metadata = {
+            ...insertPayload.metadata,
+            ...staffQuoteMetadata(quoted.quote, quoted.totals),
+          }
+        } catch (err) {
+          throwIfStaffPricingError(err)
+          throw err
+        }
+      } else {
+        const items = Array.isArray(body.paymentData.items) ? body.paymentData.items : []
+        const productLines = items
+          .filter((item: any) => item.item_type === 'product' && (item.item_id || item.product_id))
+          .map((item: any) => ({
+            productId: item.item_id || item.product_id,
+            quantity: item.quantity || 1,
+          }))
+        if (productLines.length === 0) {
+          throw new Error('Standalone payments require product items; monetary amounts cannot be planted')
+        }
+        const productsPriceRappen = await resolveStaffProductLinesPrice(
+          supabaseAdmin,
+          dbUser.tenant_id,
+          productLines,
+        )
+        insertPayload.products_price_rappen = productsPriceRappen
+        insertPayload.total_amount_rappen = productsPriceRappen
       }
       if (paymentStatus === 'completed' && !insertPayload.paid_at) {
         insertPayload.paid_at = new Date().toISOString()
