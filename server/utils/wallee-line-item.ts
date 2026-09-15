@@ -1,5 +1,6 @@
 import { normalizeVatRate, splitGrossVat } from '~/utils/vat'
 import { getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
+import { mergePaymentMetadata } from '~/server/utils/payment-metadata'
 
 export type WalleeTaxedLineItem = {
   name: string
@@ -53,12 +54,11 @@ export function buildWalleeTaxedLineItem(opts: {
 }
 
 export function mergeVatIntoMetadata(
-  existing: Record<string, unknown> | null | undefined,
+  existing: unknown,
   vat: Pick<CheckoutVat, 'vatRate' | 'vatAmountRappen'>,
 ): Record<string, unknown> {
-  return {
-    ...(existing && typeof existing === 'object' ? existing : {}),
+  return mergePaymentMetadata(existing, {
     vat_rate: vat.vatRate,
     vat_amount_rappen: vat.vatAmountRappen,
-  }
+  })
 }

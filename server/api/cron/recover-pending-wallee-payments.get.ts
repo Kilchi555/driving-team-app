@@ -9,6 +9,8 @@ import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } 
 import { notifyGenuineWalleeFailure, cancelOrphanedSiblingCoursePayments } from '~/server/utils/wallee-failure-notify'
 import { sendOnlinePaymentReceiptsSafe } from '~/server/utils/online-payment-receipt'
 import { assertCronRequest } from '~/server/utils/cron-auth'
+import { completeCapturedWalleePayment } from '~/server/utils/topup-credit'
+import { normalizePaymentMetadata } from '~/server/utils/payment-metadata'
 
 const STATUS_MAPPING: Record<string, string> = {
   'PENDING': 'pending',
@@ -22,6 +24,24 @@ const STATUS_MAPPING: Record<string, string> = {
   'CANCELED': 'cancelled',
   'DECLINE': 'failed',
   'VOIDED': 'cancelled'
+}
+
+async function recoverToCapturedStatus(
+  supabase: any,
+  payment: any,
+  mappedStatus: string,
+  statusGuard?: string
+): Promise<{ ok: boolean; error?: string }> {
+  payment.metadata = normalizePaymentMetadata(payment.metadata)
+  const extraUpdate: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  }
+  if (mappedStatus === 'completed') extraUpdate.paid_at = new Date().toISOString()
+  return completeCapturedWalleePayment(supabase, payment, {
+    targetStatus: mappedStatus,
+    extraUpdate,
+    statusGuard,
+  })
 }
 
 export default defineEventHandler(async (event) => {
@@ -53,9 +73,15 @@ export default defineEventHandler(async (event) => {
         user_id,
         tenant_id,
         appointment_id,
+        invoice_id,
+        course_registration_id,
         wallee_transaction_id,
         payment_status,
+        payment_method,
         total_amount_rappen,
+        lesson_price_rappen,
+        products_price_rappen,
+        description,
         created_at,
         updated_at,
         metadata
@@ -157,24 +183,12 @@ export default defineEventHandler(async (event) => {
           if (mappedStatus !== payment.payment_status) {
             logger.info(`✅ Phase 1 recovering payment ${payment.id}: ${payment.payment_status} → ${mappedStatus}`)
 
-            const updateData: any = {
-              payment_status: mappedStatus,
-              updated_at: new Date().toISOString()
-            }
+            const recoveredStatus = await recoverToCapturedStatus(supabase, payment, mappedStatus)
 
-            if (mappedStatus === 'completed') {
-              updateData.paid_at = new Date().toISOString()
-            }
-
-            const { error: updateError } = await supabase
-              .from('payments')
-              .update(updateData)
-              .eq('id', payment.id)
-
-            if (updateError) {
-              logger.error(`❌ Phase 1: error updating payment ${payment.id}:`, updateError)
+            if (!recoveredStatus.ok) {
+              logger.error(`❌ Phase 1: error updating payment ${payment.id}:`, recoveredStatus.error)
               failed++
-              errors.push({ paymentId: payment.id, error: updateError.message })
+              errors.push({ paymentId: payment.id, error: recoveredStatus.error || 'recover_failed' })
             } else {
               recovered++
 
@@ -258,7 +272,7 @@ export default defineEventHandler(async (event) => {
 
       const { data: stuckPayments, error: stuckError } = await supabase
         .from('payments')
-        .select('id, user_id, tenant_id, wallee_transaction_id, wallee_space_id, payment_status, created_at, updated_at')
+        .select('id, user_id, tenant_id, appointment_id, invoice_id, course_registration_id, wallee_transaction_id, wallee_space_id, payment_status, payment_method, total_amount_rappen, lesson_price_rappen, products_price_rappen, description, created_at, updated_at, metadata')
         .eq('payment_status', 'processing')
         .eq('payment_method', 'wallee')
         .not('wallee_transaction_id', 'is', null)
@@ -337,17 +351,15 @@ export default defineEventHandler(async (event) => {
             } else if (mappedStatus === 'completed' || mappedStatus === 'authorized') {
               // Wallee says it succeeded — update normally (webhook was likely missed)
               logger.info(`✅ Completing stuck processing payment ${payment.id} (Wallee: ${walleeState}) → ${mappedStatus}`)
-              const updateData: any = { payment_status: mappedStatus, updated_at: new Date().toISOString() }
-              if (mappedStatus === 'completed') updateData.paid_at = new Date().toISOString()
+              const recoveredStatus = await recoverToCapturedStatus(
+                supabase,
+                payment,
+                mappedStatus,
+                'processing'
+              )
 
-              const { error: completeErr } = await supabase
-                .from('payments')
-                .update(updateData)
-                .eq('id', payment.id)
-                .eq('payment_status', 'processing')
-
-              if (completeErr) {
-                logger.error(`❌ Error completing payment ${payment.id}:`, completeErr)
+              if (!recoveredStatus.ok) {
+                logger.error(`❌ Error completing payment ${payment.id}:`, recoveredStatus.error)
               } else {
                 recovered++
                 if (mappedStatus === 'completed') {
@@ -406,7 +418,7 @@ export default defineEventHandler(async (event) => {
 
       const { data: failedPayments, error: failedQueryError } = await supabase
         .from('payments')
-        .select('id, user_id, tenant_id, wallee_transaction_id, wallee_space_id, payment_status, created_at, updated_at, metadata')
+        .select('id, user_id, tenant_id, appointment_id, invoice_id, course_registration_id, wallee_transaction_id, wallee_space_id, payment_status, payment_method, total_amount_rappen, lesson_price_rappen, products_price_rappen, description, created_at, updated_at, metadata')
         .eq('payment_status', 'failed')
         .eq('payment_method', 'wallee')
         .lt('updated_at', tenMinutesAgoPhase3)
@@ -448,19 +460,24 @@ export default defineEventHandler(async (event) => {
               logger.info(`🔁 Phase 3 payment ${payment.id}: no wallee_transaction_id — resetting to pending`)
             }
 
-            const updateData: any = {
-              payment_status: mappedStatus,
-              updated_at: new Date().toISOString()
-            }
-            if (mappedStatus === 'completed') {
-              updateData.paid_at = new Date().toISOString()
-            }
+            const recoveredStatus = mappedStatus === 'completed' || mappedStatus === 'authorized'
+              ? await recoverToCapturedStatus(supabase, payment, mappedStatus, 'failed')
+              : { ok: true as const }
 
-            const { error: resetErr } = await supabase
-              .from('payments')
-              .update(updateData)
-              .eq('id', payment.id)
-              .eq('payment_status', 'failed')
+            let resetErr: { message?: string } | null = null
+            if (mappedStatus !== 'completed' && mappedStatus !== 'authorized') {
+              const { error } = await supabase
+                .from('payments')
+                .update({
+                  payment_status: mappedStatus,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', payment.id)
+                .eq('payment_status', 'failed')
+              resetErr = error
+            } else if (!recoveredStatus.ok) {
+              resetErr = { message: recoveredStatus.error }
+            }
 
             if (resetErr) {
               logger.error(`❌ Phase 3: error resetting payment ${payment.id}:`, resetErr)

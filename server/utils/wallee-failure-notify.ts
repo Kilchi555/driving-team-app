@@ -21,6 +21,7 @@
 
 import { logger } from '~/utils/logger'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/payment-metadata'
 
 type PaymentMeta = {
   course_id?: string
@@ -187,16 +188,15 @@ export async function notifyGenuineWalleeFailure(paymentId: string, walleeState:
     return
   }
 
+  const meta = normalizePaymentMetadata(payment.metadata)
   // Already tagged/notified for this payment — nothing to do.
-  if (payment.metadata?.wallee_failure_state) return
+  if (meta.wallee_failure_state) return
 
-  const meta = payment.metadata || {}
   const siblingSuccess = meta.course_id
     ? await hasSuccessfulSiblingCourseEnrollment(supabase, payment)
     : false
 
-  const updatedMetadata = {
-    ...meta,
+  const updatedMetadata = mergePaymentMetadata(meta, {
     wallee_failure_state: walleeState,
     wallee_failure_detected_at: new Date().toISOString(),
     ...(siblingSuccess
@@ -205,7 +205,7 @@ export async function notifyGenuineWalleeFailure(paymentId: string, walleeState:
           failure_notify_suppressed_reason: 'sibling_course_payment_succeeded'
         }
       : {})
-  }
+  })
 
   try {
     await supabase
@@ -229,10 +229,9 @@ export async function notifyGenuineWalleeFailure(paymentId: string, walleeState:
           payment_status: 'cancelled',
           notes: 'Automatisch storniert: Kunde hat denselben Kurs bereits erfolgreich bezahlt',
           updated_at: new Date().toISOString(),
-          metadata: {
-            ...updatedMetadata,
+          metadata: mergePaymentMetadata(updatedMetadata, {
             cancelled_as_orphan_after_sibling_success: true
-          }
+          })
         })
         .eq('id', payment.id)
         .in('payment_status', ['pending', 'failed', 'processing'])
