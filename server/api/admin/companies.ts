@@ -6,7 +6,12 @@
 import { defineEventHandler, readBody, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
-import { companyNameSearchPattern, flattenCompanyName, snapshotBillingCompanyName } from '~/utils/billing-address-map'
+import { companyNameMatchesSearch, flattenCompanyName, snapshotBillingCompanyName } from '~/utils/billing-address-map'
+
+/** LIKE/ILIKE literals: `\`, then `%` / `_`. Spaces are never wildcards. */
+function escapeIlikeLiteral(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/[%_]/g, '\\$&')
+}
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'superadmin'])
@@ -23,11 +28,20 @@ export default defineEventHandler(async (event) => {
     if (!include_inactive) q = q.eq('is_active', true)
     if (id) q = q.eq('id', id)
     const searchFlat = flattenCompanyName(String(search || ''))
-    if (searchFlat) q = q.ilike('name', companyNameSearchPattern(searchFlat))
+    // Candidate prefilter only. First flattened token is a contiguous substring of
+    // any name that would pass companyNameMatchesSearch (newlines become spaces, so
+    // they cannot sit inside a token). JS match remains the source of truth.
+    if (searchFlat) {
+      const token = searchFlat.split(' ')[0]
+      q = q.ilike('name', `%${escapeIlikeLiteral(token)}%`)
+    }
 
     const { data, error } = await q
     if (error) throw createError({ statusCode: 500, statusMessage: error.message })
-    return { success: true, companies: data || [] }
+    const companies = searchFlat
+      ? (data || []).filter((c: { name?: string | null }) => companyNameMatchesSearch(c.name, searchFlat))
+      : (data || [])
+    return { success: true, companies }
   }
 
   const body = await readBody(event)
