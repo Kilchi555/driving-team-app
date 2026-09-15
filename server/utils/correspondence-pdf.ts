@@ -3,6 +3,8 @@
 // without line items, totals, payment terms, or Swiss QR.
 
 import PDFDocument from 'pdfkit'
+import { normalizeMultilineCompanyName } from '~/utils/billing-address-map'
+import { drawWindowCompanyName } from '~/server/utils/pdf-window-company-name'
 
 function formatDate(dateStr: string): string {
   try {
@@ -144,18 +146,28 @@ export async function generateCorrespondencePdf(data: CorrespondencePdfData): Pr
       .strokeColor(muted).lineWidth(0.4).stroke()
 
     // ── Recipient in window ──────────────────────────────────────────────────
+    const winBottom = winTop + mmToPt(45)
     let addrY = winTop + 2
-    const addrMainName = data.billingCompanyName || data.customerName
-    doc.fontSize(11).fillColor(ink).font('Helvetica-Bold')
-      .text(addrMainName, winX, addrY, { width: winWidth })
-    addrY += 14
+    const addrMainName = normalizeMultilineCompanyName(data.billingCompanyName) || data.customerName || ''
+    const hasStreet = !!data.billingStreet
+    const hasCity = !!(data.billingZip || data.billingCity)
+    const nameLayout = drawWindowCompanyName(doc, addrMainName, {
+      x: winX,
+      y: addrY,
+      width: winWidth,
+      windowBottom: winBottom,
+      hasStreet,
+      hasCity,
+      color: ink,
+    })
+    addrY = nameLayout.nextY
 
     doc.font('Helvetica').fontSize(10).fillColor(ink)
-    if (data.billingStreet) {
-      doc.text(data.billingStreet, winX, addrY, { width: winWidth })
+    if (hasStreet) {
+      doc.text(data.billingStreet!, winX, addrY, { width: winWidth })
       addrY += 13
     }
-    if (data.billingZip || data.billingCity) {
+    if (hasCity) {
       doc.text(`${data.billingZip || ''} ${data.billingCity || ''}`.trim(), winX, addrY, { width: winWidth })
       addrY += 13
     }
@@ -182,7 +194,6 @@ export async function generateCorrespondencePdf(data: CorrespondencePdfData): Pr
         .text(value, metaX, y + 10, { width: metaW })
     })
 
-    const winBottom = winTop + mmToPt(45)
     let belowWindowY = winBottom - 32
 
     if (data.billingCompanyName && data.customerName && data.customerName !== data.billingCompanyName) {

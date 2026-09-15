@@ -253,7 +253,7 @@
           <!-- Summary (wenn Kunde gewählt und nicht im Edit-Modus) -->
           <div v-if="selectedCustomerLabel && !showBillingEdit"
             class="bg-gray-50 rounded-xl p-4 space-y-1 text-sm">
-            <p class="font-semibold text-gray-900">
+            <p class="font-semibold text-gray-900 whitespace-pre-line">
               {{ formData.billing_company_name || formData.billing_contact_person || selectedCustomerLabel.split(' — ')[0] }}
             </p>
             <p v-if="formData.billing_company_name && formData.billing_contact_person" class="text-gray-500">{{ formData.billing_contact_person }}</p>
@@ -283,8 +283,13 @@
             <div v-if="formData.billing_type === 'company'" class="grid grid-cols-2 gap-3">
               <div class="col-span-2">
                 <label class="block text-xs font-medium text-gray-700 mb-1">Firmenname *</label>
-                <input v-model="formData.billing_company_name" type="text" required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                <textarea
+                  v-model="formData.billing_company_name"
+                  required
+                  rows="2"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-y min-h-[2.75rem]"
+                />
+                <p class="mt-1 text-xs text-gray-400">Enter = Zeile umbrechen</p>
               </div>
               <div class="col-span-2">
                 <label class="block text-xs font-medium text-gray-700 mb-1">Ansprechpartner</label>

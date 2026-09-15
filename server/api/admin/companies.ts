@@ -6,6 +6,7 @@
 import { defineEventHandler, readBody, getQuery, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { companyNameSearchPattern, flattenCompanyName, snapshotBillingCompanyName } from '~/utils/billing-address-map'
 
 export default defineEventHandler(async (event) => {
   const profile = await requireAdminProfile(event, ['admin', 'staff', 'super_admin', 'superadmin'])
@@ -21,7 +22,8 @@ export default defineEventHandler(async (event) => {
 
     if (!include_inactive) q = q.eq('is_active', true)
     if (id) q = q.eq('id', id)
-    if (search) q = q.ilike('name', `%${search}%`)
+    const searchFlat = flattenCompanyName(String(search || ''))
+    if (searchFlat) q = q.ilike('name', companyNameSearchPattern(searchFlat))
 
     const { data, error } = await q
     if (error) throw createError({ statusCode: 500, statusMessage: error.message })
@@ -38,11 +40,12 @@ export default defineEventHandler(async (event) => {
     return { success: true }
   }
 
-  if (!name?.trim()) throw createError({ statusCode: 400, statusMessage: 'name is required' })
+  const companyName = snapshotBillingCompanyName(name)
+  if (!companyName) throw createError({ statusCode: 400, statusMessage: 'name is required' })
 
   const payload = {
     tenant_id: profile.tenant_id,
-    name: name.trim(),
+    name: companyName,
     vat_number: vat_number?.trim() || null,
     company_register_number: company_register_number?.trim() || null,
     street: street?.trim() || null,

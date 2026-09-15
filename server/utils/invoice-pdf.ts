@@ -2,7 +2,8 @@
 // Generiert eine professionelle PDF-Rechnung im Swiss-Invoice-Stil (weiss, DIN-Fenster)
 
 import PDFDocument from 'pdfkit'
-import { collapseDuplicatePersonName } from '~/utils/billing-address-map'
+import { collapseDuplicatePersonName, flattenCompanyName, normalizeMultilineCompanyName } from '~/utils/billing-address-map'
+import { drawWindowCompanyName } from '~/server/utils/pdf-window-company-name'
 
 function formatChf(rappen: number): string {
   return `CHF ${(rappen / 100).toFixed(2)}`
@@ -266,19 +267,28 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
     const customerName = collapseDuplicatePersonName(data.customerName)
     const studentName = collapseDuplicatePersonName(data.studentName)
     const billingStreet = collapseDuplicatePersonName(data.billingStreet)
-    const billingCompanyName = (data.billingCompanyName || '').trim()
+    const billingCompanyName = normalizeMultilineCompanyName(data.billingCompanyName)
+    const winBottom = winTop + mmToPt(45)
     let addrY = winTop + 2
     const addrMainName = billingCompanyName || customerName
-    doc.fontSize(11).fillColor(ink).font('Helvetica-Bold')
-      .text(addrMainName, winX, addrY, { width: winWidth })
-    addrY += 14
+    const hasCity = !!(data.billingZip || data.billingCity)
+    const nameLayout = drawWindowCompanyName(doc, addrMainName, {
+      x: winX,
+      y: addrY,
+      width: winWidth,
+      windowBottom: winBottom,
+      hasStreet: !!billingStreet,
+      hasCity: hasCity,
+      color: ink,
+    })
+    addrY = nameLayout.nextY
 
     doc.font('Helvetica').fontSize(10).fillColor(ink)
     if (billingStreet) {
       doc.text(billingStreet, winX, addrY, { width: winWidth })
       addrY += 13
     }
-    if (data.billingZip || data.billingCity) {
+    if (hasCity) {
       doc.text(`${data.billingZip || ''} ${data.billingCity || ''}`.trim(), winX, addrY, { width: winWidth })
       addrY += 13
     }
@@ -311,7 +321,6 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
     // Fensterende (DIN ~45mm hoch) — Kontaktperson knapp darunter, aber noch
     // ausserhalb des Couvert-Schlitzes (ca. 40pt höher als ganz unten am Rand).
-    const winBottom = winTop + mmToPt(45)
     let belowWindowY = winBottom - 32
 
     // Firmen-Kontaktperson unter dem Fenster — nur wenn sie ein eigener Name ist.
@@ -675,7 +684,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
           iy += mm(5)
         }
 
-        const debtorName = billingCompanyName || customerName
+        const debtorName = flattenCompanyName(billingCompanyName) || customerName
         if (debtorName) {
           doc.fontSize(6).font('Helvetica-Bold').fillColor('#000').text('Zahlbar durch', infoX, iy)
           iy += mm(3)
