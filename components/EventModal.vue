@@ -2323,46 +2323,8 @@ const handleSaveAppointment = async () => {
       }
     }).catch(err => logger.warn('⚠️ Background calendar error:', err))
     
-    // BACKGROUND: Only credit logic runs here (uses captured values, no component refs needed)
-    const bgSavedAppointment = savedAppointment
-    const bgSelectedStudent = selectedStudent.value
-    const bgStudentCredit = studentCredit.value
-    const bgFormData = { ...formData.value }
-    const bgSelectedProducts = selectedProducts.value
-    const bgDynamicPricing = dynamicPricing.value
-    const bgResourceSurchargesRappen = resourceSurcharges.value.reduce((sum, s) => sum + s.rappen, 0)
-    
-    if (props.mode === 'create' && bgSelectedStudent && bgStudentCredit && bgStudentCredit.balance_rappen > 0) {
-      Promise.resolve().then(async () => {
-        try {
-          const lessonPrice = getSafeLessonPriceRappen(bgDynamicPricing, bgFormData.duration_minutes)
-          if (lessonPrice === null) {
-            logger.warn('⚠️ Background credit apply skipped – lesson price unavailable')
-            return
-          }
-          let productsPrice = 0
-          if (bgSelectedProducts && bgSelectedProducts.length > 0) {
-            productsPrice = bgSelectedProducts.reduce((sum: number, p: any) => {
-              return sum + ((p.product?.price || 0) * 100 * p.quantity)
-            }, 0)
-          }
-          const adminFee = bgSavedAppointment?.admin_fee_rappen || 0
-          const discountTotal = (bgFormData.discount || 0) * 100
-          const totalPrice = Math.max(0, lessonPrice + productsPrice + adminFee + bgResourceSurchargesRappen - discountTotal)
-          const creditToUse = Math.min(bgStudentCredit.balance_rappen, totalPrice)
-          
-          if (creditToUse > 0 && bgSavedAppointment?.id) {
-            await $fetch('/api/credit/use-for-appointment', {
-              method: 'POST',
-              body: { appointmentId: bgSavedAppointment.id, amountRappen: creditToUse, notes: `Guthaben für Termin` }
-            })
-            logger.debug('✅ Credit applied in background')
-          }
-        } catch (creditError: any) {
-          logger.warn('⚠️ Background credit apply failed:', creditError.message)
-        }
-      }).catch(err => logger.warn('⚠️ Background credit error:', err))
-    }
+    // Credit is applied atomically inside POST /api/appointments/save.
+    // Do not fire-and-forget a second wallet debit from the browser.
     
   } catch (error: any) {
     console.error('❌ Error saving appointment:', error)
