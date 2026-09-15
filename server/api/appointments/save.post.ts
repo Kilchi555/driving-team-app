@@ -547,6 +547,7 @@ export default defineEventHandler(async (event) => {
 
         const terms = await getTenantTerminology(supabase, appointmentData.tenant_id)
         const appointmentLabel = terms.appointment || 'Termin'
+        // Always insert pending so apply_credit_to_payment can run before any cash completion.
         const paymentData = {
           appointment_id: result.id,
           user_id: result.user_id,
@@ -559,8 +560,7 @@ export default defineEventHandler(async (event) => {
           voucher_discount_rappen: 0,
           total_amount_rappen: finalTotalAmount,
           payment_method: paymentMethodForPayment || 'wallee',
-          payment_status: markCashPaid ? 'completed' : 'pending',
-          ...(markCashPaid ? { paid_at: new Date().toISOString() } : {}),
+          payment_status: 'pending',
           credit_used_rappen: 0,
           ...(companyBillingAddressId ? { company_billing_address_id: companyBillingAddressId } : {}),
           description: appointmentData.title || `${appointmentLabel} ${appointmentData.type}`,
@@ -569,7 +569,7 @@ export default defineEventHandler(async (event) => {
         }
         creditUsedOut = 0
         remainingOut = finalTotalAmount
-        paymentStatusOut = paymentData.payment_status
+        paymentStatusOut = 'pending'
         
         paymentPromise = (async () => {
           try {
@@ -584,8 +584,9 @@ export default defineEventHandler(async (event) => {
             } else {
               logger.debug('✅ Payment created:', paymentResult.id)
               result.payment_id = paymentResult.id
+              let creditApplyFailed = false
 
-              if (paymentResult.payment_status === 'pending' && requestedCreditRappen > 0) {
+              if (requestedCreditRappen > 0) {
                 try {
                   const applied = await applyCreditToPayment(supabase, {
                     paymentId: paymentResult.id,
@@ -605,11 +606,30 @@ export default defineEventHandler(async (event) => {
                   creditUsedOut = 0
                   remainingOut = finalTotalAmount
                   paymentStatusOut = 'pending'
+                  creditApplyFailed = true
                 }
               } else {
                 result.credit_used_rappen = 0
                 result.remaining_amount_rappen = finalTotalAmount
-                result.payment_status = paymentResult.payment_status
+                result.payment_status = 'pending'
+              }
+
+              // Mark remaining cash collected only after actual credit apply (never after RPC failure).
+              if (!creditApplyFailed && markCashPaid && remainingOut > 0) {
+                const paidAt = new Date().toISOString()
+                const { error: completeError } = await supabase
+                  .from('payments')
+                  .update({
+                    payment_status: 'completed',
+                    paid_at: paidAt,
+                  })
+                  .eq('id', paymentResult.id)
+                if (completeError) {
+                  logger.warn('⚠️ Failed to mark remaining cash as paid:', completeError)
+                } else {
+                  paymentStatusOut = 'completed'
+                  result.payment_status = 'completed'
+                }
               }
 
               // ✅ AFFILIATE REWARD HOOK – fire when payment is immediately completed (e.g. cash or full credit)
