@@ -11,6 +11,7 @@ import {
   STAFF_ADMIN_ROLES,
   internalSecretHeaders,
 } from '~/server/utils/require-staff-or-internal'
+import { walleeRemainingChf } from '~/server/utils/wallee-remaining-amount'
 
 interface ConvertToOnlineRequest {
   paymentId: string
@@ -145,7 +146,7 @@ export default defineEventHandler(async (event) => {
         method: 'POST',
         body: {
           orderId: payment.id,
-          amount: payment.total_amount_rappen, // Already in Rappen
+          amount: walleeRemainingChf(payment),
           currency: payment.currency || 'CHF',
           customerEmail: email,
           customerName: customer?.first_name || 'Customer',

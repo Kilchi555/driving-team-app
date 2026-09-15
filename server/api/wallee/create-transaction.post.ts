@@ -8,6 +8,7 @@ import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wal
 import { logger } from '~/utils/logger'
 import { Wallee } from 'wallee'
 import { z } from 'zod'
+import { walleeRemainingChf, walleeRemainingRappen } from '~/server/utils/wallee-remaining-amount'
 
 const CreateTransactionSchema = z.object({
   orderId:       z.string().uuid(),
@@ -50,7 +51,7 @@ export default defineEventHandler(async (event) => {
     // Load payment server-side — never trust client amount for an existing payment.
     const { data: paymentRow, error: paymentLookupError } = await supabase
       .from('payments')
-      .select('id, tenant_id, total_amount_rappen, payment_status, currency, wallee_transaction_id, wallee_space_id')
+      .select('id, tenant_id, total_amount_rappen, credit_used_rappen, payment_status, currency, wallee_transaction_id, wallee_space_id')
       .eq('id', orderId)
       .maybeSingle()
 
@@ -62,17 +63,20 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 409, message: 'Zahlung kann in diesem Status nicht erneut gestartet werden' })
     }
 
-    const serverAmountChf = Number(paymentRow.total_amount_rappen || 0) / 100
-    if (!(serverAmountChf > 0)) {
+    const remainingRappen = walleeRemainingRappen(paymentRow)
+    const serverAmountChf = walleeRemainingChf(paymentRow)
+    if (!(remainingRappen > 0)) {
       throw createError({ statusCode: 400, message: 'Ungültiger Zahlungsbetrag' })
     }
 
-    // Reject obvious underpayment attempts; always charge the DB amount
+    // Client amount is never authoritative. Charge the DB remaining payable.
     if (Math.abs(clientAmount - serverAmountChf) > 0.01) {
-      logger.warn('🚫 create-transaction: client amount mismatch, using DB amount', {
+      logger.warn('🚫 create-transaction: client amount mismatch, using DB remaining', {
         orderId,
         clientAmount,
-        serverAmountChf
+        serverAmountChf,
+        total_amount_rappen: paymentRow.total_amount_rappen,
+        credit_used_rappen: paymentRow.credit_used_rappen,
       })
     }
     const amount = serverAmountChf
