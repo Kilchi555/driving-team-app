@@ -2,6 +2,7 @@ import { defineEventHandler, createError, readBody } from 'h3'
 import { getAuthUserFromRequest } from '~/server/utils/auth-helper'
 import { createClient } from '@supabase/supabase-js'
 import logger from '~/utils/logger'
+import { snapshotBillingCompanyName } from '~/utils/billing-address-map'
 
 /**
  * ✅ POST /api/staff/update-invoice
@@ -93,6 +94,10 @@ export default defineEventHandler(async (event) => {
       if (allowedFields.includes(key)) {
         sanitizedData[key] = updateData[key]
       }
+    }
+
+    if (typeof sanitizedData.billing_company_name === 'string') {
+      sanitizedData.billing_company_name = snapshotBillingCompanyName(sanitizedData.billing_company_name)
     }
 
     if (Object.keys(sanitizedData).length === 0) {

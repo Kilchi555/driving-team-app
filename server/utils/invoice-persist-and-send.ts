@@ -10,7 +10,7 @@ import { buildInvoiceEmailHtml } from '~/server/utils/invoice-email'
 import { allocateInvoiceNumber } from '~/server/utils/allocate-invoice-number'
 import { appointmentCountLabel, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { applyMissingInvoiceBilling, invoiceQrDebtorName, pdfBillingFields } from '~/server/utils/invoice-billing-snapshot'
-import { formatBillingPersonLabel, joinStreetAndNumber } from '~/utils/billing-address-map'
+import { formatBillingPersonLabel, joinStreetAndNumber, snapshotBillingCompanyName } from '~/utils/billing-address-map'
 
 export type InvoiceDraftPayload = {
   user_id: string
@@ -172,7 +172,7 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
       due_date: draft.due_date,
       billing_type: draft.billing_type || 'individual',
       billing_contact_person: formatBillingPersonLabel(draft.billing_first_name, draft.billing_last_name) || null,
-      billing_company_name: draft.billing_company_name || null,
+      billing_company_name: snapshotBillingCompanyName(draft.billing_company_name),
       billing_email: draft.billing_email,
       billing_street: joinStreetAndNumber(draft.billing_street, billedStreetNumber) || null,
       billing_street_number: billedStreetNumber,
@@ -260,7 +260,8 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
     const billingPayload = {
       user_id: draft.user_id,
       tenant_id: tenantId,
-      company_name: draft.billing_company_name || `${draft.billing_first_name || ''} ${draft.billing_last_name || ''}`.trim(),
+      company_name: snapshotBillingCompanyName(draft.billing_company_name)
+        || `${draft.billing_first_name || ''} ${draft.billing_last_name || ''}`.trim(),
       contact_person: contactPerson || studentName,
       email: draft.billing_email || '',
       street: streetName,
@@ -372,7 +373,7 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
           tenantLogoFormat: logo?.format,
           customerName: [draft.billing_first_name, draft.billing_last_name].filter(Boolean).join(' ') || studentName,
           studentName: (draft.student?.name || '').trim() || undefined,
-          billingCompanyName: draft.billing_company_name || '',
+          billingCompanyName: snapshotBillingCompanyName(draft.billing_company_name) || '',
           billingStreet: pdfAddr.billingStreet,
           billingZip: pdfAddr.billingZip,
           billingCity: pdfAddr.billingCity,

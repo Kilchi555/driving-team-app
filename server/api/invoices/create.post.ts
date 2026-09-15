@@ -9,6 +9,7 @@ import { getTenantDefaultVatRate } from '~/server/utils/invoice-vat'
 import { applyMissingInvoiceBilling } from '~/server/utils/invoice-billing-snapshot'
 import { applyStudentCreditToPayments } from '~/server/utils/apply-student-credit'
 import { resolveInvoiceLineCreditRappen } from '~/server/utils/invoice-credit'
+import { snapshotBillingCompanyName } from '~/utils/billing-address-map'
 
 export default defineEventHandler(async (event) => {
   // ✅ Use authenticated user
@@ -154,7 +155,7 @@ export default defineEventHandler(async (event) => {
     // Create invoice
     const invoiceInsertData = {
       billing_type: billedInvoiceData.billing_type || 'individual',
-      billing_company_name: billedInvoiceData.billing_company_name || null,
+      billing_company_name: snapshotBillingCompanyName(billedInvoiceData.billing_company_name),
       billing_contact_person: billedInvoiceData.billing_contact_person || null,
       billing_email: billedInvoiceData.billing_email || null,
       billing_street: billedInvoiceData.billing_street || null,
