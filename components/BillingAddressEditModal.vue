@@ -32,13 +32,14 @@
             <label class="block text-sm font-medium text-gray-900">
               Firmenname <span class="text-red-500">*</span>
             </label>
-            <input
+            <textarea
               v-model="form.company_name"
-              type="text"
-              class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:border-transparent"
+              rows="2"
+              class="w-full px-4 py-2.5 border rounded-lg text-sm transition focus:ring-2 focus:border-transparent resize-y min-h-[2.75rem]"
               :class="showErrors && !form.company_name ? 'border-red-300 bg-red-50' : 'border-gray-300'"
               placeholder="Muster AG"
             />
+            <p class="text-xs text-gray-400">Enter = Zeile umbrechen</p>
             <p v-if="showErrors && !form.company_name" class="text-xs text-red-500">Pflichtfeld</p>
           </div>
 

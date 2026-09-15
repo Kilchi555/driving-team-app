@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { snapshotBillingCompanyName } from '~/utils/billing-address-map'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -49,6 +50,10 @@ export default defineEventHandler(async (event) => {
     if (update_data[field] !== undefined) {
       sanitizedData[field] = update_data[field]
     }
+  }
+
+  if (typeof sanitizedData.billing_company_name === 'string') {
+    sanitizedData.billing_company_name = snapshotBillingCompanyName(sanitizedData.billing_company_name)
   }
 
   if (Object.keys(sanitizedData).length === 0) {

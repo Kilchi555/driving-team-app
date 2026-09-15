@@ -30,6 +30,22 @@ describe('invoiceQrDebtorName', () => {
       billing_last_name: 'Meier',
     })).toBe('Anna Meier')
   })
+
+  it('flattens LF in the company name for the QR debtor field', () => {
+    expect(invoiceQrDebtorName({
+      billing_company_name: 'SBB Kreditoren\nInfrastruktur',
+    })).toBe('SBB Kreditoren Infrastruktur')
+
+    expect(invoiceQrDebtorName({
+      billing_company_name: 'Schweizerische Bundesbahn\nSBB Kreditoren Infrastruktur',
+    })).toBe('Schweizerische Bundesbahn SBB Kreditoren Infrastruktur')
+  })
+
+  it('does not require mutating the snapshot to flatten', () => {
+    const snapshot = 'SBB Kreditoren\nInfrastruktur'
+    expect(invoiceQrDebtorName({ billing_company_name: snapshot })).toBe('SBB Kreditoren Infrastruktur')
+    expect(snapshot).toBe('SBB Kreditoren\nInfrastruktur')
+  })
 })
 
 describe('invoicePersonNames', () => {

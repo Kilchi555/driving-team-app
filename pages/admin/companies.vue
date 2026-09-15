@@ -107,7 +107,7 @@
         @click.self="closeModal">
         <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-2xl max-h-[95dvh] overflow-y-auto">
           <div class="flex items-center justify-between p-5 pb-3 sticky top-0 bg-white border-b border-gray-100">
-            <h3 class="text-base font-bold text-gray-900">
+            <h3 class="text-base font-bold text-gray-900 whitespace-pre-line">
               {{ editingCompany?.id ? editingCompany.name : 'Neue Firma' }}
             </h3>
             <button @click="closeModal" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
@@ -136,8 +136,14 @@
               <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Firma</p>
               <div>
                 <label class="block text-xs font-medium text-gray-600 mb-1">Firmenname *</label>
-                <input v-model="form.name" type="text" required placeholder="Muster AG"
-                  class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 focus:bg-white transition-colors" />
+                <textarea
+                  v-model="form.name"
+                  required
+                  rows="2"
+                  placeholder="Muster AG"
+                  class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-gray-50 focus:bg-white transition-colors resize-y min-h-[2.75rem]"
+                />
+                <p class="mt-1 text-xs text-gray-400">Enter = Zeile umbrechen</p>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -380,6 +386,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import InvoiceCreateModal from '~/components/admin/InvoiceCreateModal.vue'
 import CorrespondenceComposeModal from '~/components/admin/CorrespondenceComposeModal.vue'
+import { companyNameMatchesSearch, flattenCompanyName } from '~/utils/billing-address-map'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Firmenkunden' })
@@ -392,8 +399,8 @@ const isLoading = ref(false)
 const search = ref('')
 
 const filteredCompanies = computed(() =>
-  search.value
-    ? companies.value.filter(c => c.name.toLowerCase().includes(search.value.toLowerCase()))
+  flattenCompanyName(search.value)
+    ? companies.value.filter(c => companyNameMatchesSearch(c.name, search.value))
     : companies.value
 )
 
