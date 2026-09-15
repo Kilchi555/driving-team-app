@@ -1,6 +1,12 @@
+import { createError, defineEventHandler, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/utils/supabase'
 import { logger } from '~/utils/logger'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import {
+  composeStaffPaymentFromOffer,
+  staffQuoteFromPersistedLesson,
+} from '~/server/utils/quote-staff-appointment'
+import { quoteStaffResourceSurcharge } from '~/server/utils/quote-staff-resource-surcharge'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -54,7 +60,7 @@ export default defineEventHandler(async (event) => {
     // 3. Verify staff has access to this appointment
     const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
-      .select('staff_id, tenant_id')
+      .select('staff_id, tenant_id, vehicle_id, room_id, duration_minutes')
       .eq('id', appointmentId)
       .single()
     
@@ -71,17 +77,28 @@ export default defineEventHandler(async (event) => {
       })
       throw new Error('Unauthorized to update this appointment')
     }
-    
-    // 4. Recalculate total: lesson + admin_fee + products - discount
-    const newTotal = (existingPayment.lesson_price_rappen || 0)
-      + (existingPayment.admin_fee_rappen || 0)
-      + (productsPriceRappen || 0)
-      - (existingPayment.discount_amount_rappen || 0)
+
+    const staffResource = await quoteStaffResourceSurcharge(supabaseAdmin, {
+      tenantId: appointment.tenant_id,
+      vehicleId: appointment.vehicle_id,
+      roomId: appointment.room_id,
+      durationMinutes: appointment.duration_minutes,
+    })
+
+    const staffPayment = composeStaffPaymentFromOffer(
+      staffQuoteFromPersistedLesson(existingPayment.lesson_price_rappen),
+      {
+        adminFeeRappen: existingPayment.admin_fee_rappen,
+        productsPriceRappen,
+        resourceSurchargeRappen: staffResource.totalRappen,
+        discountAmountRappen: existingPayment.discount_amount_rappen,
+      },
+    )
     
     // 5. Prepare update data
     const updateData: any = {
       products_price_rappen: productsPriceRappen,
-      total_amount_rappen: Math.max(0, newTotal),
+      total_amount_rappen: staffPayment.totalAmountRappen,
       updated_at: new Date().toISOString()
     }
     

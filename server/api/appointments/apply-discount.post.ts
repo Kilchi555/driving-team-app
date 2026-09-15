@@ -7,6 +7,11 @@ import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { matchesDiscountCategoryFilter } from '~/server/utils/discount-category-filter'
 import { lockCheckoutBenefits, releaseCheckoutBenefits } from '~/server/utils/checkout-benefits'
 import { normalizePaymentMetadata, mergePaymentMetadata, inspectWalleeTopupPayment } from '~/server/utils/payment-metadata'
+import {
+  composeStaffPaymentFromOffer,
+  staffQuoteFromPersistedLesson,
+} from '~/server/utils/quote-staff-appointment'
+import { quoteStaffResourceSurcharge } from '~/server/utils/quote-staff-resource-surcharge'
 
 /**
  * POST /api/appointments/apply-discount
@@ -80,10 +85,35 @@ export default defineEventHandler(async (event) => {
     const appointmentPlural = terms.appointmentsPlural || 'Termine'
     const appointmentSingular = terms.appointment || 'Termin'
 
-    // The gross amount to calculate the discount against (lesson + fee + products)
-    const grossRappen = (payment.lesson_price_rappen || 0) +
-                        (payment.admin_fee_rappen || 0) +
-                        (payment.products_price_rappen || 0)
+    let staffResourceTotalRappen = 0
+    if (payment.appointment_id) {
+      const { data: resourceAppointment } = await supabase
+        .from('appointments')
+        .select('tenant_id, vehicle_id, room_id, duration_minutes')
+        .eq('id', payment.appointment_id)
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+
+      if (resourceAppointment) {
+        const staffResource = await quoteStaffResourceSurcharge(supabase, {
+          tenantId: resourceAppointment.tenant_id,
+          vehicleId: resourceAppointment.vehicle_id,
+          roomId: resourceAppointment.room_id,
+          durationMinutes: resourceAppointment.duration_minutes,
+        })
+        staffResourceTotalRappen = staffResource.totalRappen
+      }
+    }
+
+    const grossRappen = composeStaffPaymentFromOffer(
+      staffQuoteFromPersistedLesson(payment.lesson_price_rappen),
+      {
+        adminFeeRappen: payment.admin_fee_rappen,
+        productsPriceRappen: payment.products_price_rappen,
+        resourceSurchargeRappen: staffResourceTotalRappen,
+        discountAmountRappen: 0,
+      },
+    ).totalAmountRappen
 
     // ── Validate the discount code (same logic as validate.post.ts) ──────────
     let discountAmountRappen = 0
@@ -259,8 +289,9 @@ export default defineEventHandler(async (event) => {
 
     // ── Recalculate totals ────────────────────────────────────────────────────
     const newTotal = roundToNearest5Rappen(
-      Math.max(0, grossRappen - discountAmountRappen - (payment.credit_used_rappen || 0))
+      Math.max(0, grossRappen - discountAmountRappen)
     )
+    const remainingAmountRappen = Math.max(0, newTotal - (payment.credit_used_rappen || 0))
 
     // ── Persist changes ───────────────────────────────────────────────────────
     // Check if this is a Dauerrabatt (auto_apply) — register it for the user automatically
@@ -336,12 +367,14 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, statusMessage: 'Fehler beim Speichern des Rabatts' })
     }
 
-    logger.debug('✅ Discount applied:', { paymentId, code: discountCode, discountAmountRappen, newTotal })
+    logger.debug('✅ Discount applied:', { paymentId, code: discountCode, discountAmountRappen, newTotal, remainingAmountRappen })
 
     return {
       isValid: true,
       discount_amount_rappen: discountAmountRappen,
       new_total_rappen: newTotal,
+      remaining_amount_rappen: remainingAmountRappen,
+      credit_used_rappen: payment.credit_used_rappen || 0,
       code: discountCode,
       isAutoApply,
     }
