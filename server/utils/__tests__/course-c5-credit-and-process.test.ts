@@ -83,6 +83,39 @@ describe('C4-01 atomic credit enrollment SQL (contract — not a live TX test)',
     expect(creditSql).toContain("RAISE EXCEPTION 'discount_unavailable'")
     expect(creditSql).toContain("SQLERRM LIKE '%insufficient_available_credit%'")
   })
+
+  it('does not persist discount_code onto course_registrations; JSON handling stays for giftcard/voucher', () => {
+    const insertStart = creditSql.indexOf('INSERT INTO public.course_registrations')
+    const insertEnd = creditSql.indexOf('RETURNING id INTO v_reg_id', insertStart)
+    const insertSql = creditSql.slice(insertStart, insertEnd)
+    const colsMatch = insertSql.match(/INSERT INTO public\.course_registrations\s*\(([\s\S]*?)\)\s*VALUES/)
+    expect(colsMatch).not.toBeNull()
+    const cols = (colsMatch?.[1] ?? '').split(',').map(s => s.trim()).filter(Boolean)
+    expect(cols).toContain('discount_applied_rappen')
+    expect(cols).not.toContain('discount_code')
+    expect(insertSql).not.toMatch(/\bv_discount_code\b/)
+
+    expect(creditSql).toContain("p_registration->>'discount_code'")
+    expect(creditSql).toContain("p_registration->>'discount_applied_rappen'")
+    expect(creditSql).toContain('v_discount_code')
+    expect(creditSql).toContain('public.consume_gift_card_for_payment')
+    expect(creditSql).toContain('public.increment_discount_usage')
+    expect(creditSql).toContain('public.increment_voucher_code_redemption')
+    expect(creditSql).not.toMatch(/ALTER TABLE[\s\S]{0,80}course_registrations[\s\S]{0,80}discount_code/)
+  })
+
+  it('credit INSERT matches fulfill on discount_applied_rappen and omits discount_code like fulfill', () => {
+    const fulfillSql = read('migrations/20260916_fulfill_course_wallee_payment.sql')
+    const fulfillStart = fulfillSql.indexOf('INSERT INTO public.course_registrations')
+    const fulfillInsert = fulfillSql.slice(
+      fulfillStart,
+      fulfillSql.indexOf('RETURNING id INTO v_reg_id', fulfillStart),
+    )
+    const fulfillCols = (fulfillInsert.match(/INSERT INTO public\.course_registrations\s*\(([\s\S]*?)\)\s*VALUES/)?.[1] ?? '')
+      .split(',').map(s => s.trim()).filter(Boolean)
+    expect(fulfillCols).toContain('discount_applied_rappen')
+    expect(fulfillCols).not.toContain('discount_code')
+  })
 })
 
 describe('C4-01 caller (contract)', () => {

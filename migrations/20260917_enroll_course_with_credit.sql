@@ -191,7 +191,6 @@ BEGIN
       payment_method,
       amount_paid_rappen,
       discount_applied_rappen,
-      discount_code,
       custom_sessions,
       is_partial_enrollment,
       partial_start_session,
@@ -223,7 +222,6 @@ BEGIN
       'credit',
       p_amount_rappen,
       COALESCE((p_registration->>'discount_applied_rappen')::integer, 0),
-      v_discount_code,
       v_custom,
       COALESCE((p_registration->>'is_partial_enrollment')::boolean, false),
       CASE
