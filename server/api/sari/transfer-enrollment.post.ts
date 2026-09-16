@@ -18,6 +18,12 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { SARIClient, isSariUnenrollIdempotent, isSariUnenrollBlocked, getSariUnenrollBlockedMessage } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
 import { logger } from '~/utils/logger'
+import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
+import {
+  restoreTransferredSource,
+  snapshotTransferSource,
+  TRANSFER_SOURCE_RESTORE_FATAL,
+} from '~/server/utils/sari-transfer-source'
 import { sendTenantEmail, generateCourseTransferEmail } from '~/server/utils/email'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { allowsCustomerAccountActivation } from '~/server/utils/customer-account-activation'
@@ -58,7 +64,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: oldReg } = await supabaseAdmin
     .from('course_registrations')
-    .select('id, course_id, tenant_id, user_id, sari_faberid, is_partial_enrollment, first_name, last_name, payment_id, payment_method, payment_status, amount_paid_rappen, sari_data, sari_licenses, email, phone, street, street_nr, zip, city, birthdate, status')
+    .select('id, course_id, tenant_id, user_id, sari_faberid, is_partial_enrollment, first_name, last_name, payment_id, payment_method, payment_status, amount_paid_rappen, sari_data, sari_licenses, email, phone, street, street_nr, zip, city, birthdate, status, deleted_at, notes')
     .eq('id', registrationId)
     .eq('tenant_id', callerProfile.tenant_id)
     .in('status', ['confirmed', 'enrolled', 'pending'])
@@ -246,6 +252,7 @@ export default defineEventHandler(async (event) => {
 
   // ── DB changes ───────────────────────────────────────────────────────────
   const now = new Date().toISOString()
+  const sourceSnapshot = snapshotTransferSource(oldReg)
 
   // payment_id is UNIQUE on course_registrations — release it from the old row first
   if (oldReg.payment_id) {
@@ -315,14 +322,20 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (newRegError) {
-    logger.error(`Failed to create new registration: ${newRegError.message}`)
-    // Best-effort: restore payment_id on old row if we cleared it and insert failed
-    if (oldReg.payment_id) {
-      await supabaseAdmin
-        .from('course_registrations')
-        .update({ payment_id: oldReg.payment_id, status: oldReg.status, deleted_at: null, updated_at: now })
-        .eq('id', oldReg.id)
+    const restored = await restoreTransferredSource({
+      supabase: supabaseAdmin,
+      snapshot: sourceSnapshot,
+      updatedAt: now,
+    })
+    if (!restored.ok) {
+      logger.error(`Failed to restore source registration ${oldReg.id} after transfer insert error (${restored.reason}): ${newRegError.message}`)
+      throw createError({
+        statusCode: 500,
+        statusMessage: TRANSFER_SOURCE_RESTORE_FATAL,
+      })
     }
+    throwIfCourseCapacityExceeded(newRegError)
+    logger.error(`Failed to create new registration: ${newRegError.message}`)
     throw createError({
       statusCode: 500,
       statusMessage: `Neue Anmeldung konnte nicht erstellt werden: ${newRegError.message}`,

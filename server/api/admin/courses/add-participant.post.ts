@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { logger } from '~/utils/logger'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
+import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
 
 /**
  * POST /api/admin/courses/add-participant
@@ -114,6 +115,7 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (enrollError || !enrollment) {
+    throwIfCourseCapacityExceeded(enrollError)
     logger.error('❌ Error creating enrollment:', enrollError)
     throw createError({ statusCode: 500, statusMessage: `Anmeldung konnte nicht erstellt werden: ${enrollError?.message}` })
   }

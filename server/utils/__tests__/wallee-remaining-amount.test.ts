@@ -64,7 +64,8 @@ describe('wallee remaining payable', () => {
 describe('wallee remaining source contract', () => {
   it('webhook compares capture to remaining, not pre-credit total', () => {
     const webhook = readFileSync(resolve(process.cwd(), 'server/api/wallee/webhook.post.ts'), 'utf8')
-    expect(webhook).toContain('isWalleeCaptureMatchingRemaining')
+    expect(webhook).toContain('shouldRejectWalleeCaptureMismatch')
+    expect(webhook).toContain('capturedAmountChfFromWalleeTx')
     expect(webhook).not.toContain('const expectedChf = Number(p.total_amount_rappen || 0) / 100')
     expect(webhook).toContain("error: 'Captured amount does not match remaining payable'")
     expect(webhook).toContain('setResponseStatus(event, 503)')

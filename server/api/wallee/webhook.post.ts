@@ -22,10 +22,18 @@ import { assertCustomSessionsForTenant } from '~/server/utils/course-custom-sess
 import { applyCreditProductsForCompletedSale } from '~/server/utils/credit-product-purchase'
 import { internalSecretHeaders, isInternalSecretRequest } from '~/server/utils/require-staff-or-internal'
 import { classifyWalleeWebhookTimestamp, shouldShortCircuitWalleeWebhook } from '~/server/utils/wallee-webhook-replay'
-import { isWalleeCaptureMatchingRemaining, walleeRemainingChf } from '~/server/utils/wallee-remaining-amount'
+import { capturedAmountChfFromWalleeTx, shouldRejectWalleeCaptureMismatch, walleeRemainingChf } from '~/server/utils/wallee-remaining-amount'
 import { consumeGiftCardForPayment } from '~/server/utils/consume-gift-card'
 import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/payment-metadata'
 import { applyCapturedWalleeTopupCredits } from '~/server/utils/topup-credit'
+import { isCourseCapacityExceeded } from '~/server/utils/course-capacity'
+import {
+  fulfillCourseWalleePayment,
+  isRetryableCourseFulfillment,
+  isSuccessfulCourseFulfillment,
+  paymentHasCourseId,
+  runPostCommitCourseFulfillmentSideEffects,
+} from '~/server/utils/fulfill-course-wallee-payment'
 // crypto import removed - using static token validation instead of HMAC
 // Wallee SDK import will be handled dynamically in fetchWalleeTransaction
 
@@ -102,6 +110,38 @@ export default defineEventHandler(async (event) => {
       }
       const { data: priorRows } = await dupQuery
       alreadyProcessedSameState = !!(priorRows && priorRows.length)
+      // Poisoned cron/webhook success rows must not skip FULFILL when the
+      // course registration is still missing. Payment-row lock in the RPC
+      // is the real idempotency mechanism.
+      const fulfillState = ['FULFILL', 'COMPLETED', 'SUCCESSFUL'].includes(String(body.state))
+      if (alreadyProcessedSameState && fulfillState) {
+        let payQuery = supabase
+          .from('payments')
+          .select('id, metadata, course_registration_id')
+          .eq('wallee_transaction_id', String(body.entityId))
+        if (body.spaceId != null) {
+          payQuery = payQuery.eq('wallee_space_id', String(body.spaceId)) as any
+        }
+        const { data: payRows } = await payQuery
+        const coursePays = (payRows || []).filter((p: any) => paymentHasCourseId(p))
+        if (coursePays.length > 0) {
+          const ids = coursePays.map((p: any) => p.id)
+          const { data: regs } = await supabase
+            .from('course_registrations')
+            .select('payment_id')
+            .in('payment_id', ids)
+            .is('deleted_at', null)
+          const linked = new Set((regs || []).map((r: any) => r.payment_id))
+          const missing = coursePays.filter((p: any) => !linked.has(p.id) && !p.course_registration_id)
+          if (missing.length > 0) {
+            alreadyProcessedSameState = false
+            logger.warn('⚠️ webhook_logs success=true without course registration — not short-circuiting', {
+              transactionId: body.entityId,
+              missingPaymentIds: missing.map((p: any) => p.id),
+            })
+          }
+        }
+      }
     }
     const replay = shouldShortCircuitWalleeWebhook({
       timeClass,
@@ -520,6 +560,7 @@ export default defineEventHandler(async (event) => {
     // ============ LAYER 5.5: ALWAYS VERIFY TRANSACTION STATE VIA WALLEE API ============
     // Never trust webhook body.state alone — Wallee does not sign webhooks.
     // Completion/authorization must be confirmed by reading the live transaction.
+    let verifiedCapturedChf = NaN
     {
       const verifiedTx = await fetchWalleeTransaction(transactionId, spaceId)
       if (!verifiedTx?.state) {
@@ -560,43 +601,34 @@ export default defineEventHandler(async (event) => {
 
       // Amount integrity: refuse completion unless capture matches remaining payable after credit.
       if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
-        const capturedChf = Number(
-          verifiedTx.completedAmount ??
-          verifiedTx.authorizationAmount ??
-          verifiedTx.authorizationAmountIncludingTax ??
-          NaN
-        )
-        if (Number.isFinite(capturedChf)) {
-          const mismatched = payments.filter((p: any) => {
-            return !isWalleeCaptureMatchingRemaining(capturedChf, p)
+        verifiedCapturedChf = capturedAmountChfFromWalleeTx(verifiedTx)
+        const mismatched = payments.filter((p: any) => shouldRejectWalleeCaptureMismatch(verifiedCapturedChf, p))
+        if (mismatched.length > 0) {
+          logger.error('❌ Rejecting webhook: Wallee captured amount does not match remaining payable', {
+            transactionId,
+            capturedChf: verifiedCapturedChf,
+            mismatched: mismatched.map((p: any) => ({
+              id: p.id,
+              total_amount_rappen: p.total_amount_rappen,
+              credit_used_rappen: p.credit_used_rappen,
+              expected_remaining_chf: walleeRemainingChf(p)
+            }))
           })
-          if (mismatched.length > 0) {
-            logger.error('❌ Rejecting webhook: Wallee captured amount does not match remaining payable', {
-              transactionId,
-              capturedChf,
-              mismatched: mismatched.map((p: any) => ({
-                id: p.id,
-                total_amount_rappen: p.total_amount_rappen,
-                credit_used_rappen: p.credit_used_rappen,
-                expected_remaining_chf: walleeRemainingChf(p)
-              }))
-            })
-            if (webhookLogId) {
-              try {
-                await supabase.from('webhook_logs').update({
-                  success: false,
-                  error_message: `Rejected: captured CHF ${capturedChf} does not match remaining payable`,
-                  processing_duration_ms: Date.now() - startTime
-                }).eq('id', webhookLogId)
-              } catch { /* non-fatal */ }
-            }
-            // Permanent amount mismatch — not retryable. 503 is only used for
-            // transient Wallee API verify failures above. Keep HTTP 200.
-            return {
-              success: false,
-              error: 'Captured amount does not match remaining payable',
-              transactionId
-            }
+          if (webhookLogId) {
+            try {
+              await supabase.from('webhook_logs').update({
+                success: false,
+                error_message: `Rejected: captured CHF ${verifiedCapturedChf} does not match remaining payable`,
+                processing_duration_ms: Date.now() - startTime
+              }).eq('id', webhookLogId)
+            } catch { /* non-fatal */ }
+          }
+          // Permanent amount mismatch — not retryable. 503 is only used for
+          // transient Wallee API verify failures above. Keep HTTP 200.
+          return {
+            success: false,
+            error: 'Captured amount does not match remaining payable',
+            transactionId
           }
         }
       }
@@ -641,8 +673,76 @@ export default defineEventHandler(async (event) => {
       }
       return shouldUpdate
     })
+
+    // ============ LAYER 6b: ATOMIC COURSE FULFILLMENT (completed only) ============
+    // Course FULFILL must not COMMIT payment_status=completed before the seat
+    // is claimed. Appointments / product sales / top-ups still use Layer 7.
+    let courseFulfillmentAttempted = false
+    const newlyFulfilledCourseIds = new Set<string>()
+    if (paymentStatus === 'completed') {
+      const coursePayments = payments.filter((p: any) => paymentHasCourseId(p))
+      for (const payment of coursePayments) {
+        courseFulfillmentAttempted = true
+        const result = await fulfillCourseWalleePayment({
+          supabase,
+          payment,
+          capturedAmountChf: Number.isFinite(verifiedCapturedChf) ? verifiedCapturedChf : null,
+        })
+        logger.info('🔐 Course Wallee fulfillment RPC', {
+          paymentId: payment.id,
+          status: result.status,
+          registrationId: result.registrationId,
+        })
+        if (isRetryableCourseFulfillment(result.status)) {
+          if (webhookLogId) {
+            try {
+              await supabase.from('webhook_logs').update({
+                success: false,
+                error_message: `Course fulfillment ${result.status}`,
+                processing_duration_ms: Date.now() - startTime,
+              }).eq('id', webhookLogId)
+            } catch { /* non-fatal */ }
+          }
+          setResponseStatus(event, 503)
+          return {
+            success: false,
+            error: 'Course fulfillment incomplete',
+            transactionId,
+            retry: true,
+          }
+        }
+        if (!isSuccessfulCourseFulfillment(result.status)) {
+          if (webhookLogId) {
+            try {
+              await supabase.from('webhook_logs').update({
+                success: false,
+                error_message: `Course fulfillment ${result.status}`,
+                processing_duration_ms: Date.now() - startTime,
+              }).eq('id', webhookLogId)
+            } catch { /* non-fatal */ }
+          }
+          return {
+            success: false,
+            error: `Course fulfillment failed: ${result.status}`,
+            transactionId,
+          }
+        }
+        if (result.status === 'fulfilled' && result.registrationId) {
+          newlyFulfilledCourseIds.add(payment.id)
+          try {
+            await runPostCommitCourseFulfillmentSideEffects({
+              supabase,
+              payment,
+              registrationId: result.registrationId,
+            })
+          } catch (sideErr: any) {
+            logger.warn('⚠️ Post-fulfillment side effects (non-fatal):', sideErr?.message)
+          }
+        }
+      }
+    }
     
-    if (paymentsToUpdate.length === 0) {
+    if (paymentsToUpdate.length === 0 && !courseFulfillmentAttempted) {
       if (paymentStatus === 'completed') {
         const { failedIds } = await applyCapturedWalleeTopupCredits(supabase, payments)
         if (failedIds.length > 0) {
@@ -706,8 +806,12 @@ export default defineEventHandler(async (event) => {
     const lockReleaseIds = isTerminalFailure
       ? paymentsToUpdate.filter(p => p.payment_status === 'processing').map(p => p.id)
       : []
+    // Completed course payments are owned by fulfill_course_wallee_payment.
+    const courseCompletedIds = paymentStatus === 'completed'
+      ? paymentsToUpdate.filter((p: any) => paymentHasCourseId(p)).map((p: any) => p.id)
+      : []
     const normalUpdateIds = paymentIdsToUpdate.filter(
-      id => !lockReleaseIds.includes(id) && !skipCompleteIds.has(id)
+      id => !lockReleaseIds.includes(id) && !skipCompleteIds.has(id) && !courseCompletedIds.includes(id)
     )
 
     // Reset lock-held payments back to pending
@@ -735,15 +839,20 @@ export default defineEventHandler(async (event) => {
     
     logger.info(`✅ Updated ${paymentsToUpdate.length} payment(s) to: ${paymentStatus}`)
 
+    const completedEffectPayments = paymentStatus === 'completed'
+      ? [...payments.filter((p: any) => paymentHasCourseId(p)), ...paymentsToUpdate]
+          .filter((p: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.id === p.id) === i)
+      : paymentsToUpdate
+
     if (paymentStatus === 'completed') {
       try {
         const { sendOnlinePaymentReceiptsSafe } = await import('~/server/utils/online-payment-receipt')
-        await sendOnlinePaymentReceiptsSafe(supabase, normalUpdateIds)
+        await sendOnlinePaymentReceiptsSafe(supabase, completedEffectPayments.map((p: any) => p.id))
       } catch (receiptErr: any) {
         logger.warn('⚠️ Quittungsversand (non-fatal):', receiptErr?.message || receiptErr)
       }
 
-      for (const payment of paymentsToUpdate) {
+      for (const payment of completedEffectPayments) {
         try {
           await consumeGiftCardForPayment({
             supabase,
@@ -763,7 +872,8 @@ export default defineEventHandler(async (event) => {
     // succeeds, cancel leftover pending/failed/processing siblings for the same
     // course+email so recover-cron does not later send "payment failed" emails.
     if (paymentStatus === 'completed' || paymentStatus === 'authorized') {
-      for (const p of paymentsToUpdate) {
+      const orphanSource = paymentStatus === 'completed' ? completedEffectPayments : paymentsToUpdate
+      for (const p of orphanSource) {
         const courseId = p.metadata?.course_id
         if (!courseId) continue
         cancelOrphanedSiblingCoursePayments({
@@ -827,6 +937,12 @@ export default defineEventHandler(async (event) => {
             const hasRegistration = updatedRegistrations.some(r => r.payment_id === payment.id)
             
             if (!hasRegistration && payment.metadata?.course_id) {
+              // Completed course payments are created inside fulfill_course_wallee_payment.
+              // Do not insert here — that was the paid-without-seat window.
+              if (paymentStatus === 'completed') {
+                logger.debug('⏭️ completed course payment already fulfilled atomically:', payment.id)
+                continue
+              }
               // ✅ NEW: Create registration from payment metadata
               logger.info(`📝 Creating course registration for payment: ${payment.id}`)
               
@@ -1334,10 +1450,20 @@ export default defineEventHandler(async (event) => {
                 registrations_to_create_count: registrationsToCreate.length
               })
 
+              // Capacity trigger must not be treated as a unique-key merge.
+              if (isCourseCapacityExceeded(insertError)) {
+                logger.error('❌ Course capacity exceeded while creating registrations from webhook', {
+                  transactionId,
+                  paymentIds: registrationsToCreate.map((r: any) => r.payment_id),
+                })
+              }
+
               // Duplicate faberid/email: merge instead of abandoning the paid booking
-              const isUniqueViolation = insertError?.code === '23505'
+              const isUniqueViolation = !isCourseCapacityExceeded(insertError) && (
+                insertError?.code === '23505'
                 || String(insertError?.message || '').includes('idx_course_registrations_unique')
                 || String(insertError?.message || '').includes('duplicate key')
+              )
 
               if (isUniqueViolation) {
                 for (const regData of registrationsToCreate as any[]) {
@@ -1756,7 +1882,11 @@ export default defineEventHandler(async (event) => {
     
     // ============ LAYER 11: SEND COURSE ENROLLMENT CONFIRMATION EMAILS ============
     if (paymentStatus === 'completed') {
-      await sendCourseEnrollmentEmails(paymentsToUpdate)
+      const confirmationPayments = completedEffectPayments.filter((p: any) => {
+        if (!paymentHasCourseId(p)) return true
+        return newlyFulfilledCourseIds.has(p.id)
+      })
+      await sendCourseEnrollmentEmails(confirmationPayments)
     }
     
     // ============ LAYER 12: SAVE PAYMENT TOKEN (if applicable) ============
@@ -1784,7 +1914,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // 🔍 Update webhook log with success
-    if (webhookLogId && paymentsToUpdate.length > 0) {
+    if (webhookLogId && (paymentsToUpdate.length > 0 || courseFulfillmentAttempted)) {
       try {
         await supabase
           .from('webhook_logs')

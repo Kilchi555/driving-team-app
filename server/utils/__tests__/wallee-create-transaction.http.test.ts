@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   transactionCreate: vi.fn(async () => ({ id: 999 })),
   transactionRead: vi.fn(),
   paymentPageUrl: vi.fn(async () => 'https://pay.example/page'),
+  tryFulfill: vi.fn(),
 }))
 
 vi.mock('h3', async (importOriginal) => {
@@ -53,6 +54,14 @@ vi.mock('wallee', () => ({
 vi.mock('~/utils/logger', () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
+
+vi.mock('~/server/utils/fulfill-course-wallee-payment', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('~/server/utils/fulfill-course-wallee-payment')>()
+  return {
+    ...actual,
+    tryFulfillCourseFromCapturedWalleeTx: (...args: unknown[]) => mocks.tryFulfill(...args),
+  }
+})
 
 const TENANT = '11111111-1111-1111-1111-111111111111'
 const PAY = '66666666-6666-6666-6666-666666666666'
@@ -155,5 +164,74 @@ describe('POST /api/wallee/create-transaction remaining after credit', () => {
     expect(mocks.transactionCreate).toHaveBeenCalledWith(1, expect.objectContaining({
       lineItems: [expect.objectContaining({ amountIncludingTax: 60 })],
     }))
+  })
+})
+
+describe('POST /api/wallee/create-transaction course FULFILL (C6-02)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.getWalleeConfigForTenant.mockResolvedValue({
+      spaceId: 1,
+      userId: 2,
+      apiSecret: 'secret',
+    })
+  })
+
+  const capturedCourse = {
+    id: PAY,
+    tenant_id: TENANT,
+    user_id: '77777777-7777-7777-7777-777777777777',
+    appointment_id: null,
+    total_amount_rappen: 10000,
+    credit_used_rappen: 0,
+    payment_status: 'processing',
+    currency: 'CHF',
+    wallee_transaction_id: '555',
+    wallee_space_id: 1,
+    metadata: { course_id: 'c1' },
+  }
+
+  async function runCourse() {
+    mocks.getSupabaseAdmin.mockReturnValue(paymentSupabase(capturedCourse))
+    mocks.readBody.mockResolvedValue({
+      orderId: PAY,
+      amount: 100,
+      currency: 'CHF',
+      customerEmail: 'a@example.com',
+      customerName: 'Ada',
+      description: 'Kurs',
+      tenantId: TENANT,
+    })
+    mocks.transactionRead.mockResolvedValue({ state: 'FULFILL', completedAmount: 100 })
+    const { default: handler } = await handlerPromise
+    return handler({})
+  }
+
+  it('does not generic-complete a course payment; routes to course fulfillment', async () => {
+    mocks.tryFulfill.mockResolvedValue({
+      kind: 'fulfillment',
+      captureDecision: 'fulfill',
+      capturedChf: 100,
+      result: { status: 'fulfilled', registrationId: 'reg-1' },
+    })
+    await expect(runCourse()).rejects.toMatchObject({
+      statusCode: 409,
+      message: 'Zahlung wurde bereits abgeschlossen',
+    })
+    expect(mocks.tryFulfill).toHaveBeenCalled()
+    expect(mocks.transactionCreate).not.toHaveBeenCalled()
+  })
+
+  it('capture mismatch does not generic-complete a course payment', async () => {
+    mocks.tryFulfill.mockResolvedValue({
+      kind: 'amount_mismatch',
+      captureDecision: 'amount_mismatch',
+      capturedChf: 80,
+    })
+    await expect(runCourse()).rejects.toMatchObject({
+      statusCode: 409,
+      message: 'Der erfasste Wallee-Betrag stimmt nicht mit dem offenen Restbetrag überein. Die Zahlung wurde nicht abgeschlossen.',
+    })
+    expect(mocks.transactionCreate).not.toHaveBeenCalled()
   })
 })
