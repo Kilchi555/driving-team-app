@@ -300,6 +300,103 @@ describe('quoteStaffAppointmentOffer', () => {
     expect(src).toContain('resolveOfferPrice')
     expect(src).not.toContain('bindPublicSlotOfferIdentity')
   })
+
+  it('exam without exam rule quotes same-tenant category base_price × duration', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],
+      rules: [{
+        tenant_id: TENANT,
+        id: 'c-lesson',
+        rule_type: 'base_price',
+        category_code: 'C',
+        price_per_minute_rappen: 366.6667,
+      }],
+    })
+    const quote = await quoteStaffAppointmentOffer(supabase, identity({
+      eventTypeCode: 'exam',
+      categoryCode: 'C',
+      durationMinutes: 130,
+    }))
+    expect(quote.kind).toBe('paid')
+    expect(quote.lessonPriceRappen).toBe(47665)
+    if (quote.kind === 'paid') {
+      expect(quote.rule).toEqual({ id: 'c-lesson', rule_type: 'base_price' })
+    }
+  })
+
+  it('explicit exam rule wins over category base_price', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],
+      rules: [
+        {
+          tenant_id: TENANT,
+          id: 'c-exam',
+          rule_type: 'exam',
+          category_code: 'C',
+          price_per_minute_rappen: 100,
+        },
+        {
+          tenant_id: TENANT,
+          id: 'c-lesson',
+          rule_type: 'base_price',
+          category_code: 'C',
+          price_per_minute_rappen: 366.6667,
+        },
+      ],
+    })
+    const quote = await quoteStaffAppointmentOffer(supabase, identity({
+      eventTypeCode: 'exam',
+      categoryCode: 'C',
+      durationMinutes: 130,
+    }))
+    expect(quote.kind).toBe('paid')
+    expect(quote.lessonPriceRappen).toBe(13000)
+    if (quote.kind === 'paid') {
+      expect(quote.rule).toEqual({ id: 'c-exam', rule_type: 'exam' })
+    }
+  })
+
+  it('exam with neither exam nor base_price rule stays fail-closed', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],
+      rules: [],
+    })
+    await expect(quoteStaffAppointmentOffer(supabase, identity({
+      eventTypeCode: 'exam',
+      categoryCode: 'C',
+      durationMinutes: 130,
+    }))).rejects.toMatchObject({
+      statusCode: 503,
+      data: { code: 'NO_PRICE_RULE' },
+    })
+  })
+
+  it('exam quote ignores planted client amounts; server base_price wins', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],
+      rules: [{
+        tenant_id: TENANT,
+        id: 'c-lesson',
+        rule_type: 'base_price',
+        category_code: 'C',
+        price_per_minute_rappen: 366.6667,
+      }],
+    })
+    const quote = await quoteStaffAppointmentOffer(supabase, identity({
+      eventTypeCode: 'exam',
+      categoryCode: 'C',
+      durationMinutes: 130,
+    }))
+    const composed = composeStaffPaymentFromOffer(quote, {
+      adminFeeRappen: 0,
+      productsPriceRappen: 0,
+      discountAmountRappen: 0,
+    })
+    expect(composed.lessonPriceRappen).not.toBe(1)
+    expect(composed.totalAmountRappen).not.toBe(1)
+    expect(composed.lessonPriceRappen).toBe(47665)
+    expect(composed.totalAmountRappen).toBe(47665)
+  })
 })
 
 describe('appointments/save staff pricing contract', () => {

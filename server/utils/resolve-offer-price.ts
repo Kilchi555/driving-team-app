@@ -9,6 +9,8 @@
  *  1. Active event_price for (tenant, event_type_code)
  *  2. Else if require_payment and categoryCode: existing category rule
  *     (base_price / theory / consultation / exam via ruleTypeHint)
+ *  2b. Else if hint is exam and no exam row: same-tenant category base_price
+ *      (driving-school exams are priced like lessons; exam rows are optional)
  *  3. Else if require_payment === false: free (do NOT inherit category price)
  *  4. Else unpriced
  */
@@ -286,22 +288,36 @@ export async function resolveOfferPrice(
 
   const requirePayment = eventType ? eventType.require_payment : true
 
-  // 2. Category price only when the offer is paid (or event type is unknown — legacy FS).
-  if (requirePayment && categoryCode) {
+  async function paidCategoryRule(
+    code: string,
+    ruleType: string
+  ): Promise<OfferPrice | null> {
     const categoryRules = await loadMatchingRules(supabase, {
       tenantId,
-      ruleType: hint,
-      categoryCode,
+      ruleType,
+      categoryCode: code,
       nowIso,
     })
     const categoryRule = selectDeterministicNewestRule(categoryRules, {
       tenantId,
       eventTypeCode,
-      categoryCode,
-      ruleType: hint,
+      categoryCode: code,
+      ruleType,
     })
-    const paid = categoryRule ? paidFromRule(categoryRule, durationMinutes, input.startTime) : null
+    return categoryRule ? paidFromRule(categoryRule, durationMinutes, input.startTime) : null
+  }
+
+  // 2. Category price only when the offer is paid (or event type is unknown — legacy FS).
+  if (requirePayment && categoryCode) {
+    const paid = await paidCategoryRule(categoryCode, hint)
     if (paid) return paid
+    // Driving-school exams are category-priced (base_price × duration). An
+    // explicit rule_type='exam' row wins above; missing exam rows fall back
+    // to the same tenant's category base_price instead of failing closed.
+    if (hint === 'exam') {
+      const examFallback = await paidCategoryRule(categoryCode, 'base_price')
+      if (examFallback) return examFallback
+    }
   }
 
   // 3. Explicit free — do not inherit a category price.
