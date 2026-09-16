@@ -343,6 +343,103 @@ describe('resolveOfferPrice — offer matrix', () => {
     expect(offer).toMatchObject({ kind: 'paid', rule: { id: 'newest' }, priceRappen: 10000 })
     expect(logger.warn).toHaveBeenCalled()
   })
+
+  it('exam without exam rule uses same-tenant category base_price × duration', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],
+      rules: [paidRule({
+        id: 'c-lesson',
+        rule_type: 'base_price',
+        category_code: 'C',
+        price_per_minute_rappen: 366.6667,
+      })],
+    })
+    const offer = await resolveOfferPrice(supabase, {
+      tenantId: TENANT,
+      eventTypeCode: 'exam',
+      categoryCode: 'C',
+      durationMinutes: 130,
+      ruleTypeHint: 'exam',
+    })
+    const expected = computeLessonRappenFromRule({
+      pricePerMinuteRappen: 366.6667,
+      durationMinutes: 130,
+    })
+    expect(expected).toBe(47665)
+    expect(offer).toMatchObject({
+      kind: 'paid',
+      priceRappen: expected,
+      rule: { id: 'c-lesson', rule_type: 'base_price' },
+    })
+  })
+
+  it('explicit exam rule wins over category base_price', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],
+      rules: [
+        paidRule({
+          id: 'c-exam',
+          rule_type: 'exam',
+          category_code: 'C',
+          price_per_minute_rappen: 100,
+        }),
+        paidRule({
+          id: 'c-lesson',
+          rule_type: 'base_price',
+          category_code: 'C',
+          price_per_minute_rappen: 366.6667,
+        }),
+      ],
+    })
+    const offer = await resolveOfferPrice(supabase, {
+      tenantId: TENANT,
+      eventTypeCode: 'exam',
+      categoryCode: 'C',
+      durationMinutes: 130,
+      ruleTypeHint: 'exam',
+    })
+    expect(offer).toMatchObject({
+      kind: 'paid',
+      priceRappen: 13000,
+      rule: { id: 'c-exam', rule_type: 'exam' },
+    })
+  })
+
+  it('exam with neither exam nor base_price rule is unpriced', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],
+      rules: [],
+    })
+    const offer = await resolveOfferPrice(supabase, {
+      tenantId: TENANT,
+      eventTypeCode: 'exam',
+      categoryCode: 'C',
+      durationMinutes: 130,
+      ruleTypeHint: 'exam',
+    })
+    expect(offer).toEqual({ kind: 'unpriced', error: 'NO_PRICE_RULE' })
+  })
+
+  it('exam fallback never uses another tenant base_price', async () => {
+    const supabase = createOfferPriceSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],
+      rules: [paidRule({
+        id: 'other-c',
+        tenant_id: OTHER,
+        rule_type: 'base_price',
+        category_code: 'C',
+        price_per_minute_rappen: 366.6667,
+      })],
+    })
+    const offer = await resolveOfferPrice(supabase, {
+      tenantId: TENANT,
+      eventTypeCode: 'exam',
+      categoryCode: 'C',
+      durationMinutes: 130,
+      ruleTypeHint: 'exam',
+    })
+    expect(offer).toEqual({ kind: 'unpriced', error: 'NO_PRICE_RULE' })
+  })
 })
 
 describe('HTTP consistency helpers (preview / guest / authenticated)', () => {
