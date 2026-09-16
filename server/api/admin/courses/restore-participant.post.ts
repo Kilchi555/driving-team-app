@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
+import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
 
 /**
  * POST /api/admin/courses/restore-participant
@@ -34,6 +35,7 @@ export default defineEventHandler(async (event) => {
     .eq('id', enrollmentId)
 
   if (error) {
+    throwIfCourseCapacityExceeded(error)
     logger.error('❌ Error restoring participant:', error)
     throw createError({ statusCode: 500, statusMessage: error.message })
   }
