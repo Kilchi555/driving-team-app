@@ -10,6 +10,16 @@ import { Wallee } from 'wallee'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { logger } from '~/utils/logger'
+import { normalizePaymentMetadata } from '~/server/utils/payment-metadata'
+import {
+  courseCapturedWalleeHttpError,
+  isCourseCapturedWalleeFulfilled,
+  paymentHasCourseId,
+  runPostCommitCourseFulfillmentSideEffects,
+  sendCourseFulfillmentConfirmation,
+  tryFulfillCourseFromCapturedWalleeTx,
+  type CoursePaymentLike,
+} from '~/server/utils/fulfill-course-wallee-payment'
 
 export const WALLEE_STATUS_MAPPING: Record<string, string> = {
   PENDING: 'pending',
@@ -44,6 +54,30 @@ export interface WalleeSyncResult {
   mappedStatus: string | null
   spaceId: number | null
   paymentUrl?: string | null
+  rawTx?: {
+    completedAmount?: unknown
+    authorizationAmount?: unknown
+    authorizationAmountIncludingTax?: unknown
+  } | null
+}
+
+const COURSE_SYNC_PAYMENT_SELECT =
+  'id, tenant_id, user_id, appointment_id, payment_status, total_amount_rappen, credit_used_rappen, metadata, wallee_transaction_id, wallee_space_id'
+
+async function loadPaymentForCourseAwareSync(paymentId: string): Promise<(CoursePaymentLike & {
+  payment_status: string
+}) | null> {
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('payments')
+    .select(COURSE_SYNC_PAYMENT_SELECT)
+    .eq('id', paymentId)
+    .maybeSingle()
+  if (error || !data) return null
+  return {
+    ...(data as CoursePaymentLike & { payment_status: string }),
+    metadata: normalizePaymentMetadata((data as any).metadata),
+  }
 }
 
 function mapState(state: string | null | undefined): string | null {
@@ -104,7 +138,8 @@ export async function readWalleeTransactionState(opts: {
       walleeState,
       mappedStatus: mapState(walleeState),
       spaceId,
-      paymentUrl
+      paymentUrl,
+      rawTx: tx && typeof tx === 'object' ? tx : null
     }
   } catch (err: any) {
     logger.warn('⚠️ readWalleeTransactionState failed:', {
@@ -116,7 +151,8 @@ export async function readWalleeTransactionState(opts: {
       decision: 'unknown',
       walleeState: null,
       mappedStatus: null,
-      spaceId: opts.walleeSpaceId ?? null
+      spaceId: opts.walleeSpaceId ?? null,
+      rawTx: null
     }
   }
 }
@@ -137,6 +173,25 @@ export async function applyWalleeSyncDecision(opts: {
   const now = new Date().toISOString()
 
   if (opts.decision === 'mark_completed') {
+    const { data: row, error: loadError } = await supabase
+      .from('payments')
+      .select('id, payment_status, metadata')
+      .eq('id', opts.paymentId)
+      .maybeSingle()
+    if (loadError || !row) {
+      logger.error('❌ applyWalleeSyncDecision refused mark_completed without a trusted payment row', {
+        paymentId: opts.paymentId,
+        error: loadError?.message
+      })
+      return { changed: false, newStatus: opts.currentStatus }
+    }
+    const metadata = normalizePaymentMetadata(row.metadata)
+    if (paymentHasCourseId({ metadata })) {
+      logger.error('❌ applyWalleeSyncDecision refused generic completed for course payment', {
+        paymentId: opts.paymentId
+      })
+      return { changed: false, newStatus: row.payment_status }
+    }
     const { error } = await supabase
       .from('payments')
       .update({
@@ -249,6 +304,81 @@ export async function syncAndResolvePayment(payment: {
       newStatus: payment.payment_status,
       changed: false,
       paymentUrl: sync.paymentUrl
+    }
+  }
+
+  if (sync.decision === 'mark_completed') {
+    const dbPayment = await loadPaymentForCourseAwareSync(payment.id)
+    if (!dbPayment) {
+      logger.error('❌ Course-aware Wallee sync could not load payment; fail closed', {
+        paymentId: payment.id
+      })
+      return {
+        decision: 'unknown',
+        walleeState: sync.walleeState,
+        newStatus: payment.payment_status,
+        changed: false,
+        paymentUrl: sync.paymentUrl
+      }
+    }
+    if (payment.tenant_id && dbPayment.tenant_id && payment.tenant_id !== dbPayment.tenant_id) {
+      logger.error('❌ Course-aware Wallee sync tenant mismatch; fail closed', {
+        paymentId: payment.id
+      })
+      return {
+        decision: 'unknown',
+        walleeState: sync.walleeState,
+        newStatus: payment.payment_status,
+        changed: false,
+        paymentUrl: sync.paymentUrl
+      }
+    }
+    if (paymentHasCourseId(dbPayment)) {
+      const attempt = await tryFulfillCourseFromCapturedWalleeTx({
+        supabase: getSupabaseAdmin(),
+        payment: dbPayment,
+        walleeTx: sync.rawTx
+      })
+      if (isCourseCapturedWalleeFulfilled(attempt) && attempt.result) {
+        if (attempt.result.status === 'fulfilled' && attempt.result.registrationId) {
+          try {
+            await runPostCommitCourseFulfillmentSideEffects({
+              supabase: getSupabaseAdmin(),
+              payment: dbPayment,
+              registrationId: attempt.result.registrationId
+            })
+          } catch (sideErr: any) {
+            logger.warn('⚠️ Post-fulfillment side effects (non-fatal):', sideErr?.message)
+          }
+          try {
+            await sendCourseFulfillmentConfirmation(attempt.result.registrationId, dbPayment.total_amount_rappen)
+          } catch (mailErr: any) {
+            logger.warn('⚠️ Course confirmation email (non-fatal):', mailErr?.message)
+          }
+        }
+        return {
+          decision: 'mark_completed',
+          walleeState: sync.walleeState,
+          newStatus: 'completed',
+          changed: dbPayment.payment_status !== 'completed' || attempt.result.status === 'fulfilled',
+          paymentUrl: sync.paymentUrl
+        }
+      }
+      const httpErr = courseCapturedWalleeHttpError(attempt)
+      logger.error('❌ Course Wallee status-sync will not generic-complete', {
+        paymentId: payment.id,
+        kind: attempt.kind,
+        fulfillmentStatus: attempt.result?.status,
+        capturedChf: attempt.capturedChf,
+        httpStatus: httpErr?.statusCode
+      })
+      return {
+        decision: 'unknown',
+        walleeState: sync.walleeState,
+        newStatus: dbPayment.payment_status,
+        changed: false,
+        paymentUrl: sync.paymentUrl
+      }
     }
   }
 

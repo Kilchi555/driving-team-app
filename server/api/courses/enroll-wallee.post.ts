@@ -19,9 +19,6 @@ import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact, findStaffOrAdminByEmail, findStaffOrAdminByPhone } from '~/server/utils/user-matching'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { availableWalletRappen } from '~/server/utils/apply-student-credit'
-import { consumeGiftCardByCode } from '~/server/utils/consume-gift-card'
-import { incrementAppointmentDiscountUsage } from '~/server/utils/resolve-appointment-discount'
-import { deductStudentCredit, InsufficientAvailableCreditError } from '~/server/utils/wallet-atomic'
 import { sha256Hex } from '~/server/utils/meta-capi'
 import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { upsertMarketingLeadSafe, categoriesFromCourse } from '~/server/utils/upsert-marketing-lead'
@@ -30,6 +27,7 @@ import {
   assertCustomSessionsForTenant,
   loadPublicCourseForEnrollment,
 } from '~/server/utils/course-custom-sessions'
+import { enrollCourseWithCredit, throwIfCreditEnrollmentFailed } from '~/server/utils/enroll-course-with-credit'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -608,70 +606,48 @@ const handler = defineEventHandler(async (event) => {
         .eq('tenant_id', tenantId)
         .maybeSingle()
 
-      const rawCreditBalance = Math.round(Number(creditData?.balance_rappen) || 0)
       const availableCredit = availableWalletRappen(creditData)
 
       if (availableCredit >= finalAmount) {
         logger.info(`💳 Covering course enrollment fully with credit (CHF ${(finalAmount / 100).toFixed(2)})`)
 
-        if (validatedDiscountCode) {
-          if (validatedDiscountSource === 'gift_card') {
-            const gift = await consumeGiftCardByCode({
-              supabase,
-              tenantId,
-              code: validatedDiscountCode,
-              redeemedBy: guestUserId,
-            })
-            if (!gift.consumed) {
-              throw createError({
-                statusCode: 409,
-                statusMessage: 'Dieser Gutschein wird gerade in einer anderen Zahlung verwendet oder ist bereits eingelöst.',
-              })
-            }
-          } else {
-            const claimed = await incrementAppointmentDiscountUsage({
-              supabase,
-              tenantId,
-              code: validatedDiscountCode,
-            })
-            if (!claimed) {
-              throw createError({
-                statusCode: 409,
-                statusMessage: 'Dieser Code hat das Nutzungslimit erreicht. Entferne den Code, um ohne Rabatt weiterzumachen.',
-              })
-            }
-          }
-        }
-
-        let newBalance = rawCreditBalance - finalAmount
-        try {
-          const deducted = await deductStudentCredit(supabase, {
-            userId: guestUserId,
-            tenantId,
-            amountRappen: finalAmount,
-          })
-          newBalance = deducted.balance_rappen
-        } catch (creditErr: any) {
-          if (creditErr instanceof InsufficientAvailableCreditError) {
-            throw createError({ statusCode: 400, statusMessage: creditErr.message })
-          }
-          throw creditErr
-        }
-
-        // Log credit transaction
-        await supabase.from('credit_transactions').insert({
-          user_id: guestUserId,
-          tenant_id: tenantId,
-          transaction_type: 'payment',
-          amount_rappen: -finalAmount,
-          balance_before_rappen: rawCreditBalance,
-          balance_after_rappen: newBalance,
-          payment_method: 'credit',
-          reference_type: 'course',
-          notes: `Guthaben für Kurs verwendet: ${course.name}`,
-          status: 'completed',
-          created_at: new Date().toISOString()
+        const creditResult = await enrollCourseWithCredit({
+          supabase,
+          userId: guestUserId,
+          tenantId,
+          courseId,
+          amountRappen: finalAmount,
+          registration: {
+            course_id: courseId,
+            tenant_id: tenantId,
+            user_id: guestUserId,
+            first_name: customerData.firstname,
+            last_name: customerData.lastname,
+            sari_faberid: faberidClean || null,
+            email: finalEmail,
+            phone: finalPhone,
+            street: customerData.street || customerData.address || null,
+            street_nr: customerData.streetNr || null,
+            zip: customerData.zip || null,
+            city: customerData.city || null,
+            birthdate: customerData.birthdate || birthdate || null,
+            license_number: customerData.licenseNumber || null,
+            discount_applied_rappen: validatedDiscountAmount,
+            discount_code: validatedDiscountCode,
+            discount_source: validatedDiscountSource,
+            custom_sessions: customSessions || null,
+            is_partial_enrollment: isPartialOrder,
+            individual_session_number: isIndividualSession ? individualSessionNumber : null,
+            partial_start_session: (!isIndividualSession && isPartialOrder)
+              ? (course.course_category?.partial_start_position ?? 3)
+              : null,
+            sari_synced: Boolean(course.sari_managed),
+            vehicle_id: vehicleId || null,
+            ledger_notes: `Guthaben für Kurs verwendet: ${course.name}`,
+          },
         })
+        throwIfCreditEnrollmentFailed(creditResult)
+        const creditRegistration = { id: creditResult.registrationId }
 
         // Enroll in SARI (per-session, partial-subset aware)
         try {
@@ -724,40 +700,6 @@ const handler = defineEventHandler(async (event) => {
         } catch (sariErr: any) {
           logger.warn('⚠️ SARI enrollment failed (credit path, non-fatal):', sariErr.message)
         }
-
-        // Create confirmed registration directly
-        const { data: creditRegistration } = await supabase.from('course_registrations').insert({
-          course_id: courseId,
-          tenant_id: tenantId,
-          user_id: guestUserId,
-          first_name: customerData.firstname,
-          last_name: customerData.lastname,
-          sari_faberid: faberidClean || null,
-          amount_paid_rappen: finalAmount,
-          discount_applied_rappen: validatedDiscountAmount,
-          discount_code: validatedDiscountCode,
-          email: finalEmail,
-          phone: finalPhone,
-          street: customerData.street || customerData.address || null,
-          street_nr: customerData.streetNr || null,
-          zip: customerData.zip || null,
-          city: customerData.city || null,
-          birthdate: customerData.birthdate || birthdate || null,
-          license_number: customerData.licenseNumber || null,
-          status: 'confirmed',
-          payment_status: 'paid',
-          payment_method: 'credit',
-          custom_sessions: customSessions || null,
-          is_partial_enrollment: isPartialOrder,
-          individual_session_number: isIndividualSession ? individualSessionNumber : null,
-          partial_start_session: (!isIndividualSession && isPartialOrder) ? (course.course_category?.partial_start_position ?? 3) : null,
-          registration_date: new Date().toISOString(),
-          registered_at: new Date().toISOString(),
-          sari_synced: course.sari_managed ? true : null,
-          sari_synced_at: course.sari_managed ? new Date().toISOString() : null,
-          vehicle_id: vehicleId || null,
-          created_at: new Date().toISOString(),
-        }).select('id').single()
 
         logger.info('✅ Course registration created (credit payment)')
 

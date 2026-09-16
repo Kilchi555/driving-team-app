@@ -9,6 +9,15 @@ import { logger } from '~/utils/logger'
 import { Wallee } from 'wallee'
 import { z } from 'zod'
 import { walleeRemainingChf, walleeRemainingRappen } from '~/server/utils/wallee-remaining-amount'
+import { normalizePaymentMetadata } from '~/server/utils/payment-metadata'
+import {
+  courseCapturedWalleeHttpError,
+  isCourseCapturedWalleeFulfilled,
+  paymentHasCourseId,
+  runPostCommitCourseFulfillmentSideEffects,
+  sendCourseFulfillmentConfirmation,
+  tryFulfillCourseFromCapturedWalleeTx,
+} from '~/server/utils/fulfill-course-wallee-payment'
 
 const CreateTransactionSchema = z.object({
   orderId:       z.string().uuid(),
@@ -51,12 +60,17 @@ export default defineEventHandler(async (event) => {
     // Load payment server-side — never trust client amount for an existing payment.
     const { data: paymentRow, error: paymentLookupError } = await supabase
       .from('payments')
-      .select('id, tenant_id, total_amount_rappen, credit_used_rappen, payment_status, currency, wallee_transaction_id, wallee_space_id')
+      .select('id, tenant_id, user_id, appointment_id, total_amount_rappen, credit_used_rappen, payment_status, currency, wallee_transaction_id, wallee_space_id, metadata')
       .eq('id', orderId)
       .maybeSingle()
 
     if (paymentLookupError || !paymentRow) {
       throw createError({ statusCode: 404, message: 'Zahlung nicht gefunden' })
+    }
+
+    const paymentForCourse = {
+      ...paymentRow,
+      metadata: normalizePaymentMetadata((paymentRow as any).metadata),
     }
 
     if (!['pending', 'processing', 'failed'].includes(paymentRow.payment_status)) {
@@ -116,6 +130,40 @@ export default defineEventHandler(async (event) => {
         const FAIL = ['FAILED', 'CANCELED', 'DECLINE', 'VOIDED']
 
         if (state && COMPLETED.includes(state)) {
+          if (paymentHasCourseId(paymentForCourse)) {
+            const attempt = await tryFulfillCourseFromCapturedWalleeTx({
+              supabase,
+              payment: paymentForCourse,
+              walleeTx: existingTx,
+            })
+            const httpErr = courseCapturedWalleeHttpError(attempt)
+            if (httpErr) {
+              throw createError({ statusCode: httpErr.statusCode, message: httpErr.statusMessage })
+            }
+            if (!isCourseCapturedWalleeFulfilled(attempt)) {
+              throw createError({
+                statusCode: 503,
+                message: 'Kurszahlung konnte nicht über den Shop-Pfad abgeschlossen werden',
+              })
+            }
+            if (attempt.result?.status === 'fulfilled' && attempt.result.registrationId) {
+              try {
+                await runPostCommitCourseFulfillmentSideEffects({
+                  supabase,
+                  payment: paymentForCourse,
+                  registrationId: attempt.result.registrationId,
+                })
+              } catch (sideErr: any) {
+                logger.warn('⚠️ Post-fulfillment side effects (non-fatal):', sideErr?.message)
+              }
+              try {
+                await sendCourseFulfillmentConfirmation(attempt.result.registrationId, paymentForCourse.total_amount_rappen)
+              } catch (mailErr: any) {
+                logger.warn('⚠️ Course confirmation email (non-fatal):', mailErr?.message)
+              }
+            }
+            throw createError({ statusCode: 409, message: 'Zahlung wurde bereits abgeschlossen' })
+          }
           await supabase.from('payments').update({
             payment_status: 'completed',
             paid_at: new Date().toISOString(),

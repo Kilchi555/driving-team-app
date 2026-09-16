@@ -24,6 +24,34 @@ export function walleeRemainingChf(payment: WalleeRemainingPayment): number {
   return walleeRemainingRappen(payment) / 100
 }
 
+/** Same field preference as webhook Layer 5.5 / #224. */
+export function capturedAmountChfFromWalleeTx(tx: {
+  completedAmount?: unknown
+  authorizationAmount?: unknown
+  authorizationAmountIncludingTax?: unknown
+} | null | undefined): number {
+  if (!tx || typeof tx !== 'object') return NaN
+  return Number(
+    tx.completedAmount ??
+    tx.authorizationAmount ??
+    tx.authorizationAmountIncludingTax ??
+    NaN,
+  )
+}
+
+/**
+ * #224 gate used by webhook AND recovery cron.
+ * Missing/non-finite capture does not reject (same as webhook).
+ * Finite capture that does not match remaining MUST reject.
+ */
+export function shouldRejectWalleeCaptureMismatch(
+  capturedChf: number,
+  payment: WalleeRemainingPayment,
+): boolean {
+  if (!Number.isFinite(capturedChf)) return false
+  return !isWalleeCaptureMatchingRemaining(capturedChf, payment)
+}
+
 /** 1-rappen (0.01 CHF) float tolerance, same as the previous webhook check. */
 export function isWalleeCaptureMatchingRemaining(
   capturedChf: number,
