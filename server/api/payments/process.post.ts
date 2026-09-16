@@ -24,6 +24,14 @@ import { suspiciousZeroPaymentCompletionReason } from '~/server/utils/zero-payme
 import { logFallbackUsed } from '~/server/utils/log-fallback'
 import { mergePaymentMetadata, normalizePaymentMetadata, inspectWalleeTopupPayment } from '~/server/utils/payment-metadata'
 import { completeCapturedWalleePayment } from '~/server/utils/topup-credit'
+import {
+  courseCapturedWalleeHttpError,
+  isCourseCapturedWalleeFulfilled,
+  paymentHasCourseId,
+  runPostCommitCourseFulfillmentSideEffects,
+  sendCourseFulfillmentConfirmation,
+  tryFulfillCourseFromCapturedWalleeTx,
+} from '~/server/utils/fulfill-course-wallee-payment'
 
 interface PaymentProcessRequest {
   // CHANGED: Now takes existing paymentId instead of creating new payment
@@ -41,6 +49,46 @@ interface PaymentProcessResponse {
   paymentStatus?: string
   error?: string
   message?: string
+}
+
+async function fulfillOrThrowExistingCourseWalleeCapture(opts: {
+  supabase: any
+  payment: any
+  existingTx: any
+}): Promise<PaymentProcessResponse | null> {
+  const attempt = await tryFulfillCourseFromCapturedWalleeTx({
+    supabase: opts.supabase,
+    payment: opts.payment,
+    walleeTx: opts.existingTx,
+  })
+  const httpErr = courseCapturedWalleeHttpError(attempt)
+  if (httpErr) throw createError(httpErr)
+  if (!isCourseCapturedWalleeFulfilled(attempt) || !attempt.result) return null
+
+  const fulfilled = attempt.result
+  if (fulfilled.status === 'fulfilled' && fulfilled.registrationId) {
+    try {
+      await runPostCommitCourseFulfillmentSideEffects({
+        supabase: opts.supabase,
+        payment: opts.payment,
+        registrationId: fulfilled.registrationId,
+      })
+    } catch (sideErr: any) {
+      logger.warn('⚠️ Post-fulfillment side effects (non-fatal):', sideErr?.message)
+    }
+    try {
+      await sendCourseFulfillmentConfirmation(fulfilled.registrationId, opts.payment.total_amount_rappen)
+    } catch (mailErr: any) {
+      logger.warn('⚠️ Course confirmation email (non-fatal):', mailErr?.message)
+    }
+  }
+
+  return {
+    success: true,
+    paymentId: opts.payment.id,
+    paymentStatus: 'completed',
+    message: 'Payment was already completed via existing Wallee transaction',
+  }
 }
 
 export default defineEventHandler(async (event): Promise<PaymentProcessResponse> => {
@@ -245,7 +293,56 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
     })
 
     // ============ LAYER 9: IF FULLY COVERED BY CREDIT → COMPLETE PAYMENT ============
+    // C6-05: course + existing Wallee capture is recovered BEFORE this wallet
+    // shortcut. Pure-wallet course (no wallee_transaction_id) still 409.
+    if (paymentHasCourseId(payment) && payment.wallee_transaction_id) {
+      logger.info('🔍 Course payment has existing Wallee tx — checking capture before wallet shortcut', {
+        payment_id: payment.id,
+        wallee_transaction_id: payment.wallee_transaction_id,
+        final_amount_to_pay_rappen: finalAmountToPay,
+      })
+      const walleeConfigEarly = await getWalleeConfigForTenant(tenantId)
+      const spaceIdEarly = walleeConfigEarly.spaceId
+      const configEarly = getWalleeSDKConfig(spaceIdEarly, walleeConfigEarly.userId, walleeConfigEarly.apiSecret)
+      const transactionServiceEarly: Wallee.api.TransactionService = new Wallee.api.TransactionService(configEarly)
+      try {
+        const existingTxResponse = await transactionServiceEarly.read(spaceIdEarly, parseInt(payment.wallee_transaction_id))
+        const existingTx = existingTxResponse?.body || existingTxResponse
+        const state = existingTx?.state ? String(existingTx.state) : null
+        const COMPLETED_STATES = ['FULFILL', 'COMPLETED', 'SUCCESSFUL']
+        if (state && COMPLETED_STATES.includes(state)) {
+          logger.info('✅ Existing Wallee transaction is already', state, '- fulfilling course before LAYER 9')
+          const recovered = await fulfillOrThrowExistingCourseWalleeCapture({
+            supabase: supabaseAdmin,
+            payment,
+            existingTx,
+          })
+          if (recovered) return recovered
+        }
+      } catch (checkErr: any) {
+        if (checkErr?.statusCode) throw checkErr
+        logger.warn('⚠️ Could not check existing course Wallee transaction before LAYER 9:', checkErr?.message)
+        throw createError({
+          statusCode: 503,
+          statusMessage: 'Zahlungsstatus konnte nicht geprüft werden. Bitte versuche es in wenigen Sekunden erneut.',
+        })
+      }
+    }
+
     if (finalAmountToPay <= 0) {
+      if (paymentHasCourseId(payment)) {
+        if (claimedLock) {
+          await supabaseAdmin
+            .from('payments')
+            .update({ payment_status: 'pending', updated_at: new Date().toISOString() })
+            .eq('id', payment.id)
+            .eq('payment_status', 'processing')
+        }
+        throw createError({
+          statusCode: 409,
+          statusMessage: 'Kurszahlungen können hier nicht über Guthaben abgeschlossen werden.',
+        })
+      }
       const zeroReason = suspiciousZeroPaymentCompletionReason({
         totalAmountRappen: payment.total_amount_rappen,
         lessonPriceRappen: (payment as any).lesson_price_rappen,
@@ -477,7 +574,14 @@ export default defineEventHandler(async (event): Promise<PaymentProcessResponse>
           const FAILURE_STATES = ['FAILED', 'CANCELED', 'DECLINE', 'VOIDED']
 
           if (COMPLETED_STATES.includes(existingTx.state)) {
-            logger.info('✅ Existing Wallee transaction is already', existingTx.state, '- marking payment as completed')
+            logger.info('✅ Existing Wallee transaction is already', existingTx.state, '- checking course fulfillment before completion')
+
+            const recovered = await fulfillOrThrowExistingCourseWalleeCapture({
+              supabase: supabaseAdmin,
+              payment,
+              existingTx,
+            })
+            if (recovered) return recovered
 
             const completed = await completeCapturedWalleePayment(supabaseAdmin, payment, {
               extraUpdate: { wallee_transaction_state: existingTx.state },

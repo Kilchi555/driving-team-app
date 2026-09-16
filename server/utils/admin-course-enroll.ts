@@ -10,6 +10,7 @@ import { SARIClient } from '~/utils/sariClient'
 import { logger } from '~/utils/logger'
 import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
+import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
 
 export type AdminPaymentOption = 'cash' | 'invoice' | 'paid' | 'reserve' | 'online_link'
 export type AdminEnrollmentType = 'full' | 'partial' | 'individual'
@@ -488,6 +489,7 @@ export async function adminEnrollInCourse(opts: AdminEnrollOptions): Promise<Adm
     .single()
 
   if (enrollError || !enrollment) {
+    throwIfCourseCapacityExceeded(enrollError)
     const msg = enrollError?.message || ''
     if (msg.includes('duplicate key') || msg.includes('unique')) {
       if (msg.includes('unique_email') || msg.includes('course_id_email')) {

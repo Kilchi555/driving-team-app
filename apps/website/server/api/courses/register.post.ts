@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { formatResendFrom } from '~/server/utils/format-resend-from'
 import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import { uploadInquiryConversionViaSimy, type WebsiteMarketingAttributionPayload } from '~/server/utils/google-ads-inquiry-upload'
+import { isCourseCapacityExceeded } from '~/server/utils/course-capacity'
 
 const COURSE_TYPE_LABELS: Record<string, string> = {
   czv_grundkurs: 'CZV Grundkurs',
@@ -295,6 +296,12 @@ export default defineEventHandler(async (event) => {
 
           if (regErr || !regRow) {
             console.error('course_registrations insert:', regErr)
+            if (isCourseCapacityExceeded(regErr)) {
+              throw createError({
+                statusCode: 409,
+                statusMessage: 'Kurs ist bereits ausgebucht',
+              })
+            }
             throw regErr || new Error('insert failed')
           }
           insertedRows.push(regRow as Record<string, unknown>)
@@ -306,6 +313,12 @@ export default defineEventHandler(async (event) => {
         await deleteCourseRegistrationsByIds(supabase, registrationIds)
         for (const id of [...reservedCourseIds].reverse()) {
           await decrementCourseParticipantCount(supabase, id)
+        }
+        if (isCourseCapacityExceeded(regLoopErr) || (regLoopErr as { statusCode?: number })?.statusCode === 409) {
+          throw createError({
+            statusCode: 409,
+            statusMessage: 'Kurs ist bereits ausgebucht',
+          })
         }
         throw createError({
           statusCode: 500,

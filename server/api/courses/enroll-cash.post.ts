@@ -26,6 +26,7 @@ import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-at
 import { resolveNonWalleeEnrollmentMethod } from '~/server/utils/course-enrollment-payment-method'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
+import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
 import {
   assertCustomSessionsForTenant,
   loadPublicCourseForEnrollment,
@@ -568,6 +569,7 @@ const handler = defineEventHandler(async (event) => {
       .single()
 
     if (enrollmentError || !enrollment) {
+      throwIfCourseCapacityExceeded(enrollmentError)
       logger.error('❌ Failed to create enrollment:', enrollmentError)
       
       // Provide clearer error messages
