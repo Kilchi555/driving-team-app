@@ -2,6 +2,21 @@
 
 Diese Dokumentation bietet einen umfassenden Überblick über die gesamte Driving Team App mit allen Funktionen, Zusammenhängen, Datenbanktabellen und Policies.
 
+## Engineering Runbooks
+
+Focused ops/dev runbooks (intent, contracts, pitfalls, codepaths). Prefer these over root markdown reports for day-to-day work.
+
+| Topic | Doc |
+|-------|-----|
+| Passkey lockout recovery | [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) |
+| Client session cache / HMR | [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) |
+| Wallee stuck/pending recovery | [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) |
+| Google Ads server-side conversions | [SERVER_SIDE_CONVERSION_SETUP.md](./SERVER_SIDE_CONVERSION_SETUP.md) |
+| FCM push + reminder queue | [FCM_PUSH_NOTIFICATIONS.md](./FCM_PUSH_NOTIFICATIONS.md) |
+| Durable appointment confirmations | [APPOINTMENT_CONFIRMATIONS.md](./APPOINTMENT_CONFIRMATIONS.md) |
+| Auto category waitlist placeholders | [AUTO_CATEGORY_WAITLISTS.md](./AUTO_CATEGORY_WAITLISTS.md) |
+| Android / Play packaging (incl. Firebase client) | [ANDROID_PLAY_SUBMISSION.md](./ANDROID_PLAY_SUBMISSION.md) |
+
 ## 📋 CSV-Dateien
 
 ### 1. **APP_DOCUMENTATION.csv**
