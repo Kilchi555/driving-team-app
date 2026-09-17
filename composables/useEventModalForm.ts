@@ -1106,6 +1106,20 @@ const useEventModalForm = (currentUser?: any, refs?: {
             creditUsedRappen: creditUsedRappenForPayment,
             // ✅ Send company billing address ID for invoice payments
             companyBillingAddressId: refs?.savedCompanyBillingAddressId?.value || null,
+            invoiceAddress: refs?.priceDisplayRef?.value?.invoiceData
+              ? {
+                  company_name: refs.priceDisplayRef.value.invoiceData.company_name || '',
+                  contact_person: refs.priceDisplayRef.value.invoiceData.contact_person || '',
+                  email: refs.priceDisplayRef.value.invoiceData.email || '',
+                  phone: refs.priceDisplayRef.value.invoiceData.phone || '',
+                  street: refs.priceDisplayRef.value.invoiceData.street || '',
+                  street_number: refs.priceDisplayRef.value.invoiceData.street_number || '',
+                  zip: refs.priceDisplayRef.value.invoiceData.zip || '',
+                  city: refs.priceDisplayRef.value.invoiceData.city || '',
+                  country: refs.priceDisplayRef.value.invoiceData.country || 'Schweiz'
+                }
+              : null,
+            paymentNotes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
             // ✅ Send cash already paid flag
             cashAlreadyPaid: refs?.cashAlreadyPaid?.value === true,
             // ✅ Resource surcharge breakdown for booking cost storage
@@ -1529,111 +1543,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
     }
   }
 
-  // ✅ Update payment entry for existing appointment
-  const updatePaymentEntry = async (appointmentId: string, _discountSaleId?: string) => {
-    try {
-      const supabase = getSupabase() 
-      // Check if payment already exists
-      const { data: existingPayment, error: fetchError } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('appointment_id', appointmentId)
-        .single()
-
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
-        console.error('❌ Error checking existing payment:', fetchError)
-        return null
-      }
-
-      if (!existingPayment) {
-        logger.debug('ℹ️ No existing payment found, skipping client payment rewrite')
-        return null
-      }
-
-      logger.debug('🔄 Updating non-amount payment fields for existing payment:', existingPayment.id)
-
-      const rawPaymentMethod = refs?.selectedPaymentMethod?.value || 'wallee'
-      const paymentMethodMapping: Record<string, string> = {
-        'wallee': 'wallee',
-        'online': 'wallee',
-        'twint': 'wallee',
-        'card': 'wallee',
-        'credit-card': 'wallee',
-        'cash': 'cash',
-        'bar': 'cash',
-        'invoice': 'invoice',
-        'rechnung': 'invoice'
-      }
-      
-      const paymentMethod = paymentMethodMapping[rawPaymentMethod] || 'wallee'
-
-      let companyBillingAddressId: string | null = null
-      let invoiceAddress: any = null
-      
-      if (paymentMethod === 'invoice') {
-        if (refs?.savedCompanyBillingAddressId?.value) {
-          companyBillingAddressId = refs.savedCompanyBillingAddressId.value
-          logger.debug('🏢 Update: Using company billing address ID from ref:', companyBillingAddressId)
-        }
-        
-        if (refs?.priceDisplayRef?.value) {
-          const priceDisplay = refs.priceDisplayRef.value
-          if (priceDisplay && priceDisplay.invoiceData) {
-            invoiceAddress = {
-              company_name: priceDisplay.invoiceData.company_name || '',
-              contact_person: priceDisplay.invoiceData.contact_person || '',
-              email: priceDisplay.invoiceData.email || '',
-              phone: priceDisplay.invoiceData.phone || '',
-              street: priceDisplay.invoiceData.street || '',
-              street_number: priceDisplay.invoiceData.street_number || '',
-              zip: priceDisplay.invoiceData.zip || '',
-              city: priceDisplay.invoiceData.city || '',
-              country: priceDisplay.invoiceData.country || 'Schweiz'
-            }
-          }
-        }
-      }
-
-      // Amounts (lesson / total / products / discount) are owned by
-      // POST /api/appointments/save. This browser path must not rewrite them.
-      const updateData: any = {
-        payment_method: paymentMethod,
-        description: `Payment for appointment: ${formData.value.title}`,
-        notes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
-        company_billing_address_id: companyBillingAddressId || null,
-        invoice_address: invoiceAddress,
-        updated_at: new Date().toISOString()
-      }
-      
-      // ✅ WICHTIG: IMMER den aktuellen payment_status aus der DB beibehalten!
-      // Der Status sollte nur von der Payment-Logik geändert werden, nicht vom Appointment-Edit!
-      logger.debug('📋 Existing payment status from DB:', existingPayment.payment_status)
-      if (existingPayment.payment_status) {
-        updateData.payment_status = existingPayment.payment_status
-        logger.debug('✅ Preserving payment status:', existingPayment.payment_status)
-      }
-      
-      logger.debug('💳 Updating payment entry:', updateData)
-      
-      const { data: payment, error } = await supabase
-        .from('payments')
-        .update(updateData)
-        .eq('id', existingPayment.id)
-        .select()
-        .single()
-      
-      if (error) {
-        console.error('❌ Error updating payment:', error)
-        return null
-      }
-      
-      logger.debug('✅ Payment entry updated:', payment.id)
-      return payment
-      
-    } catch (err: any) {
-      console.error('❌ Error in updatePaymentEntry:', err)
-      return null
-    }
+  // Non-amount payment fields on edit are owned by POST /api/appointments/save.
+  // Do not write payments through browser JWT/PostgREST.
+  const updatePaymentEntry = async (_appointmentId: string, _discountSaleId?: string) => {
+    logger.debug('ℹ️ Payment fields are updated by appointments/save API')
+    return null
   }
 
   // ✅ NEUE FUNKTION: Lade letzten Standort aus Cloud Supabase

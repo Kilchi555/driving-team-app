@@ -79,20 +79,22 @@ export const usePaymentStatus = () => {
       if (['completed', 'authorized', 'paid', 'succeeded'].includes(update.status)) {
         throw new Error('Zahlungsstatus completed darf nur über die Server-API gesetzt werden')
       }
-      
-      // Update payment record
-      const { error: paymentError } = await supabase
-        .from('payments')
-        .update({
-          payment_status: update.status,
-          wallee_transaction_id: update.wallee_transaction_id,
-          error_message: update.error_message,
-          processed_at: update.processed_at || new Date().toISOString(),
-          metadata: update.metadata
-        })
-        .eq('id', update.payment_id)
-      
-      if (paymentError) throw paymentError
+
+      const response = await $fetch<{ success?: boolean; error?: string; message?: string }>(
+        '/api/payments/status',
+        {
+          method: 'POST',
+          body: {
+            paymentId: update.payment_id,
+            status: update.status,
+            walleeTransactionId: update.wallee_transaction_id,
+            walleeTransactionState: update.wallee_transaction_state,
+          },
+        },
+      )
+      if (response && response.success === false) {
+        throw new Error(response.error || response.message || 'Payment status update failed')
+      }
       
       // Create status history entry (only if table exists)
       try {
