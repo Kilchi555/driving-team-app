@@ -433,7 +433,8 @@ describe('updatePaymentEntry does not rewrite save amounts', () => {
   const updateFn = src.slice(src.indexOf('const updatePaymentEntry'), src.indexOf('const loadLastAppointmentLocation'))
 
   it('19. does not write lesson_price_rappen or total_amount_rappen', () => {
-    expect(updateFn).toContain('Amounts (lesson / total / products / discount) are owned by')
+    expect(updateFn).toContain('Payment fields are updated by appointments/save API')
+    expect(updateFn).not.toContain('.from(\'payments\')')
     expect(updateFn).not.toContain('lesson_price_rappen:')
     expect(updateFn).not.toContain('total_amount_rappen:')
     expect(updateFn).not.toContain('products_price_rappen:')

@@ -435,25 +435,14 @@ export const useReminderService = () => {
         }
       }
 
-      // Update payment with last reminder info
-      await supabase
-        .from('payments')
-        .update({
-          last_reminder_sent_at: new Date().toISOString(),
-          last_reminder_stage: stage,
-          metadata: {
-            ...payment.metadata,
-            reminder_history: [
-              ...(payment.metadata?.reminder_history || []),
-              {
-                stage,
-                sent_at: new Date().toISOString(),
-                channels: Object.keys(channels).filter(k => channels[k as keyof typeof channels])
-              }
-            ]
-          }
-        })
-        .eq('id', paymentId)
+      await $fetch('/api/staff/record-payment-reminder', {
+        method: 'POST',
+        body: {
+          paymentId,
+          stage,
+          channels,
+        },
+      })
 
       logger.debug('✅ Reminder sent successfully:', results)
       return { success: true }

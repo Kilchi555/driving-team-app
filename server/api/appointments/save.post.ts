@@ -25,6 +25,25 @@ import { hashCustomerIdentifiers, reportBindingAppointmentConversionSafely } fro
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 import { applyCreditToPayment } from '~/server/utils/apply-credit-to-payment'
 
+function mapStaffPaymentMethod(raw: unknown): string | null {
+  if (raw == null || raw === '') return null
+  const key = String(raw).trim().toLowerCase()
+  const mapping: Record<string, string> = {
+    wallee: 'wallee',
+    online: 'wallee',
+    twint: 'wallee',
+    card: 'wallee',
+    'credit-card': 'wallee',
+    cash: 'cash',
+    bar: 'cash',
+    invoice: 'invoice',
+    rechnung: 'invoice',
+  }
+  if (mapping[key]) return mapping[key]
+  if (['wallee', 'cash', 'invoice', 'credit'].includes(key)) return key
+  return 'wallee'
+}
+
 export default defineEventHandler(async (event) => {
   try {
     // ============ AUTHENTICATION & AUTHORIZATION ============
@@ -46,6 +65,9 @@ export default defineEventHandler(async (event) => {
       isManualDiscount = false,
       // ✅ NEW: Company billing address ID for invoice payments
       companyBillingAddressId = null,
+      // Non-monetary invoice snapshot previously written by browser PostgREST (C1).
+      invoiceAddress = null,
+      paymentNotes = null,
       // ✅ NEW: Cash already paid flag (staff marks as paid on create)
       cashAlreadyPaid = false
     } = body
@@ -403,6 +425,7 @@ export default defineEventHandler(async (event) => {
               creditUsed: (existingCreditUsed / 100).toFixed(2)
             })
             
+            const mappedPaymentMethod = mapStaffPaymentMethod(paymentMethodForPayment)
             const paymentUpdateData: any = {
               lesson_price_rappen: finalBasePrice,
               admin_fee_rappen: staffPayment.adminFeeRappen,
@@ -413,6 +436,15 @@ export default defineEventHandler(async (event) => {
               // Keep payment user_id/staff_id in sync with the appointment
               ...(appointmentData.user_id ? { user_id: appointmentData.user_id } : {}),
               ...(appointmentData.staff_id ? { staff_id: appointmentData.staff_id } : {}),
+              ...(mappedPaymentMethod ? { payment_method: mappedPaymentMethod } : {}),
+              ...(companyBillingAddressId ? { company_billing_address_id: companyBillingAddressId } : {}),
+              ...(invoiceAddress && typeof invoiceAddress === 'object' ? { invoice_address: invoiceAddress } : {}),
+              ...(typeof paymentNotes === 'string' && paymentNotes.trim()
+                ? { notes: sanitizeString(paymentNotes, 500) }
+                : {}),
+              ...(appointmentData.title
+                ? { description: `Payment for appointment: ${sanitizeString(appointmentData.title, 255)}` }
+                : {}),
               updated_at: new Date().toISOString()
             }
             

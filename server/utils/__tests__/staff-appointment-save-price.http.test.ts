@@ -978,4 +978,31 @@ describe('POST /api/appointments/save staff pricing authority', () => {
     expect(asPayment(paymentUpdates[0]).total_amount_rappen).toBe(LESSON_45 + HOURLY_45)
     expect(asPayment(paymentUpdates[0]).lesson_price_rappen).toBe(LESSON_45)
   })
+
+  it('edit persists payment_method through save, not a client JWT write', async () => {
+    const inserts = emptyInserts()
+    const paymentUpdates: unknown[] = []
+    mocks.getSupabaseAdmin.mockReturnValue(paidLesson(inserts, {
+      existingAppointment: existingAppointment(),
+      existingPayment: {
+        id: PAY,
+        payment_status: 'pending',
+        total_amount_rappen: LESSON_45,
+        amount_paid_rappen: 0,
+        metadata: {},
+      },
+      paymentUpdates,
+    }))
+    mocks.readBody.mockResolvedValue({
+      ...appointmentBody(),
+      mode: 'edit',
+      eventId: APPT,
+      paymentMethodForPayment: 'invoice',
+    })
+
+    const { default: handler } = await handlerPromise
+    await handler({})
+    expect(asPayment(paymentUpdates[0]).payment_method).toBe('invoice')
+    expect(asPayment(paymentUpdates[0]).lesson_price_rappen).toBe(LESSON_45)
+  })
 })
