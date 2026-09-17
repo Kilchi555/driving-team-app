@@ -11,16 +11,17 @@ Production (`app.simy.ch`) deploys only from `main`. `main` is protected.
 
 1. Branch from `origin/main` (not a dirty feature branch). Keep the hotfix small.
 2. Open a PR into `main`. Do not `git push` to `main`.
-3. Non-draft PRs to `main` enable squash auto-merge (`.github/workflows/auto-merge.yml`). GitHub merges only when **Test and lint** and **E2E login** are green. Those come from `.github/workflows/ci.yml`.
+3. Wait for **Test and lint** and **E2E login** from `.github/workflows/ci.yml` before merging. Squash auto-merge was **removed** in #222 (`.github/workflows/auto-merge.yml` deleted) — merge manually when those checks are green.
 4. Vercel deploys production from `main` after that merge.
 
 ## Never
 
-- Treat Cursor / Vercel „6/6“ as enough. That is Bugbot + Vercel previews, not the required Actions jobs. Auto-merge waits only for the two Actions checks.
+- Treat Cursor / Vercel „6/6“ as enough. That is Bugbot + Vercel previews, not the required Actions jobs. Ship only after the two CI checks are green.
+- Assume squash auto-merge will land the PR — it will not, until a new auto-merge workflow is restored.
 - Use git branch `preview` as a staging path. It is stale and is not production.
 - Temporarily drop branch protection to merge, unless the user explicitly asks after Actions failed to start.
 - Open a ready PR into `main` unless it should ship. Keep work-in-progress as a **draft**.
 
 ## If required checks never appear
 
-Open https://github.com/Kilchi555/driving-team-app/actions. If `CI` did not start within a minute, push a follow-up commit or re-run the workflow. Auto-merge cannot complete while GitHub still says required checks are expected.
+Open https://github.com/Kilchi555/driving-team-app/actions. If `CI` did not start within a minute, push a follow-up commit or re-run the workflow. Do not merge while GitHub still says required checks are expected.
