@@ -336,6 +336,94 @@ describe('POST /api/appointments/save staff pricing authority', () => {
     expect(payment.tenant_id).toBe(TENANT)
   })
 
+  it('exam without exam rule persists category base_price × duration, not planted client amounts', async () => {
+    const inserts = { appointments: [] as unknown[], payments: [] as unknown[] }
+    mocks.getSupabaseAdmin.mockReturnValue(createSaveSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],
+      rules: [{
+        tenant_id: TENANT,
+        id: 'c-lesson',
+        rule_type: 'base_price',
+        category_code: 'C',
+        price_per_minute_rappen: 366.6667,
+      }],
+      inserts,
+    }))
+    mocks.readBody.mockResolvedValue(appointmentBody({
+      type: 'C',
+      event_type_code: 'exam',
+      duration_minutes: 130,
+      title: 'Prüfungsfahrt C',
+    }))
+
+    const { default: handler } = await handlerPromise
+    const result = await handler({})
+
+    expect(result).toMatchObject({ success: true, data: { id: APPT } })
+    expect(inserts.appointments).toHaveLength(1)
+    expect(inserts.payments).toHaveLength(1)
+    const payment = asPayment(inserts.payments[0])
+    expect(payment.lesson_price_rappen).toBe(47665)
+    expect(payment.total_amount_rappen).toBe(47665)
+    expect(payment.lesson_price_rappen).not.toBe(1)
+    expect(payment.total_amount_rappen).not.toBe(0)
+  })
+
+  it('exam with explicit exam rule persists that rule, not category base_price', async () => {
+    const inserts = { appointments: [] as unknown[], payments: [] as unknown[] }
+    mocks.getSupabaseAdmin.mockReturnValue(createSaveSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],
+      rules: [
+        {
+          tenant_id: TENANT,
+          id: 'c-exam',
+          rule_type: 'exam',
+          category_code: 'C',
+          price_per_minute_rappen: 100,
+        },
+        {
+          tenant_id: TENANT,
+          id: 'c-lesson',
+          rule_type: 'base_price',
+          category_code: 'C',
+          price_per_minute_rappen: 366.6667,
+        },
+      ],
+      inserts,
+    }))
+    mocks.readBody.mockResolvedValue(appointmentBody({
+      type: 'C',
+      event_type_code: 'exam',
+      duration_minutes: 130,
+    }))
+
+    const { default: handler } = await handlerPromise
+    await handler({})
+    expect(asPayment(inserts.payments[0]).lesson_price_rappen).toBe(13000)
+  })
+
+  it('exam with neither exam nor base_price rule rejects with no write', async () => {
+    const inserts = { appointments: [] as unknown[], payments: [] as unknown[] }
+    mocks.getSupabaseAdmin.mockReturnValue(createSaveSupabase({
+      eventTypes: [{ tenant_id: TENANT, code: 'exam', require_payment: true }],
+      rules: [],
+      inserts,
+    }))
+    mocks.readBody.mockResolvedValue(appointmentBody({
+      type: 'C',
+      event_type_code: 'exam',
+      duration_minutes: 130,
+    }))
+
+    const { default: handler } = await handlerPromise
+    await expect(handler({})).rejects.toMatchObject({
+      statusCode: 503,
+      data: { code: 'NO_PRICE_RULE' },
+    })
+    expect(inserts.appointments).toHaveLength(0)
+    expect(inserts.payments).toHaveLength(0)
+  })
+
   it('A/B. planted 1 / 0 is ignored; paid + no rule rejects with no appointment or payment insert', async () => {
     const inserts = { appointments: [] as unknown[], payments: [] as unknown[] }
     mocks.getSupabaseAdmin.mockReturnValue(createSaveSupabase({

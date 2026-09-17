@@ -49,7 +49,9 @@ export type StaffPaymentComposition = {
 /**
  * Category rule_type for resolveOfferPrice. Built-in codes map to the
  * existing theory/consultation/exam rows; everything else uses base_price
- * (or an event_price row, which the resolver prefers).
+ * (or an event_price row, which the resolver prefers). Exam still hints
+ * 'exam' so an explicit exam row wins; resolveOfferPrice falls back to
+ * the same-tenant category base_price when no exam row exists.
  */
 export function staffRuleTypeHint(eventTypeCode: string | null | undefined): OfferPriceRuleTypeHint {
   const code = String(eventTypeCode || '').trim().toLowerCase()
