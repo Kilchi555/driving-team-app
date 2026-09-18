@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  EMPTY_INVOICE_SNAPSHOT,
+  buildStaffC1PaymentMetadata,
+} from '~/utils/staff-payment-c1-metadata'
 
 const mocks = vi.hoisted(() => ({
   readBody: vi.fn(),
@@ -1144,5 +1148,80 @@ describe('POST /api/appointments/save staff pricing authority', () => {
       paymentMethodForPayment: 'cash',
     })
     expect(updated).not.toHaveProperty('company_billing_address_id')
+  })
+
+  it('EventModal uninitialized invoice payload preserves stored billing id and snapshot', async () => {
+    const c1 = buildStaffC1PaymentMetadata({
+      paymentMethodRaw: 'invoice',
+      companyBillingAddressId: undefined,
+      invoiceData: EMPTY_INVOICE_SNAPSHOT,
+    })
+    expect(c1).not.toHaveProperty('companyBillingAddressId')
+    expect(c1).not.toHaveProperty('invoiceAddress')
+    const updated = await editPaymentUpdate(
+      {
+        paymentMethodForPayment: 'invoice',
+        ...c1,
+      },
+      {
+        company_billing_address_id: BILLING,
+        invoice_address: INVOICE_SNAPSHOT,
+      },
+    )
+    expect(updated).not.toHaveProperty('company_billing_address_id')
+    expect(updated).not.toHaveProperty('invoice_address')
+    expect(updated.payment_method).toBe('invoice')
+  })
+
+  it('EventModal hydrated invoice payload persists known UUID and snapshot', async () => {
+    const c1 = buildStaffC1PaymentMetadata({
+      paymentMethodRaw: 'invoice',
+      companyBillingAddressId: BILLING,
+      invoiceData: INVOICE_SNAPSHOT,
+    })
+    const updated = await editPaymentUpdate(
+      {
+        paymentMethodForPayment: 'invoice',
+        ...c1,
+      },
+      {
+        company_billing_address_id: BILLING,
+        invoice_address: { company_name: 'Old' },
+      },
+    )
+    expect(updated.company_billing_address_id).toBe(BILLING)
+    expect(updated.invoice_address).toEqual({
+      company_name: 'Acme GmbH',
+      contact_person: '',
+      email: '',
+      phone: '',
+      street: '',
+      street_number: '',
+      zip: '',
+      city: 'Zürich',
+      country: 'Schweiz',
+    })
+  })
+
+  it('EventModal cash payload from C1 builder clears billing id and invoice snapshot', async () => {
+    const c1 = buildStaffC1PaymentMetadata({
+      paymentMethodRaw: 'cash',
+      companyBillingAddressId: BILLING,
+      invoiceData: INVOICE_SNAPSHOT,
+    })
+    expect(c1.companyBillingAddressId).toBeNull()
+    expect(c1.invoiceAddress).toBeNull()
+    const updated = await editPaymentUpdate(
+      {
+        paymentMethodForPayment: 'cash',
+        ...c1,
+      },
+      {
+        company_billing_address_id: BILLING,
+        invoice_address: INVOICE_SNAPSHOT,
+      },
+    )
+    expect(updated.company_billing_address_id).toBeNull()
+    expect(updated.invoice_address).toBeNull()
   })
 })

@@ -12,6 +12,7 @@ import { getFallbackRule } from '~/utils/fallbackPricingRules'
 import { useFallbackLogger } from '~/composables/useFallbackLogger'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { staffRequiresCategory } from '~/utils/staff-category-defaults'
+import { buildStaffC1PaymentMetadata } from '~/utils/staff-payment-c1-metadata'
 
 // Types (können später in separates types file)
 interface AppointmentData {
@@ -622,6 +623,14 @@ const useEventModalForm = (currentUser?: any, refs?: {
             refs.selectedPaymentMethod.value = paymentData.payment_method
             logger.debug('💳 Payment method set from existing payment:', paymentData.payment_method)
           }
+
+          if (refs?.savedCompanyBillingAddressId) {
+            const existingBillingId = paymentData.company_billing_address_id
+            refs.savedCompanyBillingAddressId.value =
+              typeof existingBillingId === 'string' && existingBillingId.trim()
+                ? existingBillingId.trim()
+                : null
+          }
           
           return paymentData
         }
@@ -1086,8 +1095,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
       logger.debug('💾 Saving appointment data:', appointmentData)
 
       const staffPaymentMethodRaw = refs?.selectedPaymentMethod?.value || formData.value.payment_method || 'wallee'
-      const staffPaymentMethodKey = String(staffPaymentMethodRaw).trim().toLowerCase()
-      const isInvoiceStaffPayment = staffPaymentMethodKey === 'invoice' || staffPaymentMethodKey === 'rechnung'
+      const c1Metadata = buildStaffC1PaymentMetadata({
+        paymentMethodRaw: staffPaymentMethodRaw,
+        companyBillingAddressId: refs?.savedCompanyBillingAddressId?.value,
+        invoiceData: refs?.priceDisplayRef?.value?.invoiceData,
+      })
       
       // Use API endpoint with admin privileges to bypass RLS foreign key issues
       let response
@@ -1108,23 +1120,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
             isManualDiscount: Boolean(formData.value.is_manual_discount),
             // ✅ Send credit used (if any)
             creditUsedRappen: creditUsedRappenForPayment,
-            // C1 metadata is always sent so the server can tell persist vs explicit clear.
-            companyBillingAddressId: isInvoiceStaffPayment
-              ? (refs?.savedCompanyBillingAddressId?.value || null)
-              : null,
-            invoiceAddress: isInvoiceStaffPayment && refs?.priceDisplayRef?.value?.invoiceData
-              ? {
-                  company_name: refs.priceDisplayRef.value.invoiceData.company_name || '',
-                  contact_person: refs.priceDisplayRef.value.invoiceData.contact_person || '',
-                  email: refs.priceDisplayRef.value.invoiceData.email || '',
-                  phone: refs.priceDisplayRef.value.invoiceData.phone || '',
-                  street: refs.priceDisplayRef.value.invoiceData.street || '',
-                  street_number: refs.priceDisplayRef.value.invoiceData.street_number || '',
-                  zip: refs.priceDisplayRef.value.invoiceData.zip || '',
-                  city: refs.priceDisplayRef.value.invoiceData.city || '',
-                  country: refs.priceDisplayRef.value.invoiceData.country || 'Schweiz'
-                }
-              : null,
+            ...c1Metadata,
             paymentNotes: formData.value.discount_reason ? `Discount: ${formData.value.discount_reason}` : null,
             // ✅ Send cash already paid flag
             cashAlreadyPaid: refs?.cashAlreadyPaid?.value === true,

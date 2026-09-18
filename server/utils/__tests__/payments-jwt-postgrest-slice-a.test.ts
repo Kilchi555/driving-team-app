@@ -94,11 +94,20 @@ describe('Slice A browser JWT writers are closed', () => {
   it('C1 EventModal no longer updates payments via getSupabase', () => {
     const src = read(eventModalPath)
     expect(src).toContain('/api/appointments/save')
-    expect(src).toContain('invoiceAddress')
-    expect(src).toContain('isInvoiceStaffPayment')
-    expect(src).toMatch(/invoiceAddress:\s*isInvoiceStaffPayment &&/)
-    expect(src).toMatch(/companyBillingAddressId:\s*isInvoiceStaffPayment/)
+    expect(src).toContain('buildStaffC1PaymentMetadata')
+    expect(src).toContain('...c1Metadata')
+    expect(src).toContain('company_billing_address_id')
+    expect(src).not.toMatch(/savedCompanyBillingAddressId\?\.value \|\| null/)
     expect(jwtPaymentWriteHits(src)).toEqual([])
+  })
+
+  it('C1 EventModal billing id starts uninitialized and hydrates from the payment record', () => {
+    const modal = read(resolve(root, 'components/EventModal.vue'))
+    expect(modal).toContain('ref<string | null | undefined>(undefined)')
+    expect(modal).toContain('savedCompanyBillingAddressId.value = undefined')
+    const src = read(eventModalPath)
+    expect(src).toContain('paymentData.company_billing_address_id')
+    expect(src).toContain('savedCompanyBillingAddressId.value')
   })
 
   it('C1 save distinguishes omitted metadata from explicit clear and method-gates invoice_address', () => {
