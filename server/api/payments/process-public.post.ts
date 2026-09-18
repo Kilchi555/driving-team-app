@@ -31,6 +31,7 @@ import {
   assertCustomSessionsForTenant,
   loadPublicCourseForEnrollment,
 } from '~/server/utils/course-custom-sessions'
+import { resolveEffectiveCoursePaymentMethod } from '~/server/utils/resolve-effective-course-payment-method'
 
 const ProcessPublicPaymentSchema = z.object({
   enrollmentId:  z.string().uuid().optional(),
@@ -143,6 +144,23 @@ export default defineEventHandler(async (event) => {
       // enrollmentId (admin payment-link) branch above.
       const course = await loadPublicCourseForEnrollment(supabase, courseId, tenantId)
       tenantId = course.tenant_id
+
+      const paymentResolution = await resolveEffectiveCoursePaymentMethod(supabase, course)
+      if (
+        paymentResolution.configured === 'CASH_ON_SITE'
+        || (paymentResolution.configured === 'INVOICE' && paymentResolution.invoiceEnabled)
+      ) {
+        logger.warn('🚫 Public Wallee payment blocked: course is not configured for online payment', {
+          courseId,
+          tenantId,
+          configured: paymentResolution.configured,
+          source: paymentResolution.source,
+        })
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Online-Zahlung ist für diesen Kurs nicht aktiviert.',
+        })
+      }
 
       const { data: tenantRow } = await supabase
         .from('tenants')

@@ -17,8 +17,6 @@ import {
   notifyAdminMissingExternalEmail,
   notifyAdminMissingInstructors,
 } from '~/server/utils/course-staff-notifications'
-import { getTenantDefaultPaymentMethod } from '~/server/utils/tenant-default-payment-method'
-import { mapTenantDefaultToCoursePaymentMethod, type CoursePaymentMethod } from '~/utils/courseLocationUtils'
 import { sariCourseDisplayName } from '~/server/utils/sari-course-title'
 
 export interface SyncResult {
@@ -83,9 +81,6 @@ export class SARISyncEngine {
         .maybeSingle()
 
       const partialConfig = categoryConfig || null
-      const defaultPaymentMethod = mapTenantDefaultToCoursePaymentMethod(
-        await getTenantDefaultPaymentMethod(this.supabase, this.tenantId)
-      )
 
       // 1. Fetch course GROUPS from SARI (each group = 1 course with multiple sessions)
       const courseGroups = await this.sari.getCourseGroups(courseType)
@@ -99,7 +94,7 @@ export class SARISyncEngine {
       // 2. Process each course GROUP
       for (const group of courseGroups) {
         try {
-          const result = await this.mapAndStoreCourseGroup(group, courseType, partialConfig, defaultPaymentMethod)
+          const result = await this.mapAndStoreCourseGroup(group, courseType, partialConfig)
           if (result) {
             syncedCourses++
             syncedSessions += result.sessionsCreated
@@ -292,7 +287,6 @@ export class SARISyncEngine {
     group: SARICourseGroup,
     courseType: 'VKU' | 'PGS',
     partialConfig?: { allow_partial_enrollment: boolean; partial_start_position: number; partial_price_rappen: number } | null,
-    defaultPaymentMethod: CoursePaymentMethod = 'WALLEE'
   ): Promise<{ courseId: string; sessionsCreated: number; participantsSynced: number } | null> {
     const sessions = group.courses || []
     if (sessions.length === 0) {
@@ -458,11 +452,7 @@ export class SARISyncEngine {
           return existing.price_per_participant_rappen ?? 0
         })(),
         is_partial_only: isPartialOnly,
-        // Drafts without a stored method get the tenant default. Already
-        // published or admin-overridden courses keep whatever is on the row.
-        ...(!existing.payment_method && existing.status === 'draft'
-          ? { payment_method: defaultPaymentMethod }
-          : {}),
+        // Existing payment_method values (including NULL inherit) are preserved.
       }
       
       const { error: updateError } = await this.supabase
@@ -484,7 +474,7 @@ export class SARISyncEngine {
         ...courseData,
         status: computeCourseStatus(null),
         is_partial_only: isPartialOnly,
-        payment_method: defaultPaymentMethod,
+        payment_method: null,
         price_per_participant_rappen: (isPartialOnly && (partialConfig?.partial_price_rappen ?? 0) > 0)
           ? partialConfig!.partial_price_rappen
           : 0

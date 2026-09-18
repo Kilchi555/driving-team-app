@@ -18,6 +18,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { courseSessionsEmbed, PUBLIC_COURSE_SESSION_COLUMNS } from '~/server/utils/course-session-embed'
+import { normalizeTenantPaymentMethod, parsePaymentSettings } from '~/server/utils/tenant-default-payment-method'
 
 // Simple in-memory rate limiting
 const requestCounts = new Map<string, { count: number; resetTime: number }>()
@@ -92,18 +93,20 @@ export default defineEventHandler(async (event) => {
     // Check if courses feature is enabled for this tenant
     const { data: coursesSetting } = await supabase
       .from('tenant_settings')
-      .select('setting_value')
+      .select('setting_key, setting_value')
       .eq('tenant_id', tenant.id)
-      .eq('setting_key', 'courses_enabled')
-      .single()
+      .in('setting_key', ['courses_enabled', 'payment_settings'])
+
+    const coursesSettingRow = (coursesSetting || []).find((row: any) => row.setting_key === 'courses_enabled')
+    const paymentSettingRow = (coursesSetting || []).find((row: any) => row.setting_key === 'payment_settings')
 
     const coursesEnabled = (() => {
-      if (!coursesSetting?.setting_value) return false
+      if (!coursesSettingRow?.setting_value) return false
       try {
-        const val = JSON.parse(coursesSetting.setting_value)
-        // Explicit disabled flag
+        const val = typeof coursesSettingRow.setting_value === 'string'
+          ? JSON.parse(coursesSettingRow.setting_value)
+          : coursesSettingRow.setting_value
         if (val.enabled === false) return false
-        // Either enabled: true is set, or the record simply exists (feature metadata format)
         return true
       } catch {
         return false
@@ -138,6 +141,7 @@ export default defineEventHandler(async (event) => {
         course_category:course_categories (
           id,
           name,
+          payment_method,
           allow_partial_enrollment,
           partial_start_position,
           partial_price_rappen
@@ -177,6 +181,10 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    const tenantDefaultPaymentMethod = normalizeTenantPaymentMethod(
+      parsePaymentSettings(paymentSettingRow?.setting_value).default_payment_method
+    )
+
     const duration = Date.now() - startTime
     logger.debug(`✅ Public courses fetched in ${duration}ms:`, courseList.length)
 
@@ -189,9 +197,13 @@ export default defineEventHandler(async (event) => {
         primary_color: tenant.primary_color,
         secondary_color: tenant.secondary_color,
         accent_color: tenant.accent_color,
-        wallee_enabled: tenant.wallee_enabled ?? false
+        wallee_enabled: tenant.wallee_enabled ?? false,
+        default_payment_method: tenantDefaultPaymentMethod,
       },
-      courses: courseList,
+      courses: courseList.map((course: any) => ({
+        ...course,
+        tenant_default_payment_method: tenantDefaultPaymentMethod,
+      })),
       count: courseList.length,
       duration
     }
