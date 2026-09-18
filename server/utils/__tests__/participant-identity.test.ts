@@ -137,4 +137,17 @@ describe('print participant list identity', () => {
     })
     expect(html).toContain('LFA 111 · SARI 222')
   })
+
+  it('escapes a malicious license value in the printed list', () => {
+    const html = buildParticipantListHtml({
+      course: { name: 'VKU Wangen September' },
+      participants: [{
+        first_name: 'Ada',
+        last_name: 'Lovelace',
+        license_number: '</td><a href="https://evil.example">Injected content',
+      }],
+    })
+    expect(html).not.toContain('<a href="https://evil.example">')
+    expect(html).toContain('LFA &lt;/td&gt;&lt;a href=&quot;https://evil.example&quot;&gt;Injected content')
+  })
 })
