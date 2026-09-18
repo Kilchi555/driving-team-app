@@ -98,14 +98,24 @@ describe('resolveOnlineBookingPaymentMethod', () => {
     expect(resolveOnlineBookingPaymentMethod({ policy }).method).toBe('invoice')
   })
 
-  it('ignores a default that customers are not allowed to choose', () => {
-    const policy: OnlineBookingPaymentPolicy = {
-      walleeEnabled: true,
+  it('uses the tenant default even when that method is not a customer choice', () => {
+    const sara: OnlineBookingPaymentPolicy = {
+      walleeEnabled: false,
       invoiceEnabled: false,
       cashEnabledForCustomers: false,
       defaultMethod: 'cash',
     }
-    expect(resolveOnlineBookingPaymentMethod({ policy }).method).toBe('wallee')
+    expect(onlineBookingAllowedMethods(sara)).toEqual([])
+    expect(onlineBookingFallbackMethod(sara)).toBe('cash')
+    expect(resolveOnlineBookingPaymentMethod({ policy: sara }).method).toBe('cash')
+    expect(resolveOnlineBookingPaymentMethod({
+      requested: 'wallee',
+      policy: sara,
+    })).toMatchObject({ method: 'cash', rejectedRequest: true })
+    expect(resolveOnlineBookingPaymentMethod({
+      requested: 'cash',
+      policy: sara,
+    })).toMatchObject({ method: 'cash', rejectedRequest: false })
   })
 
   it('can run a cash-only public booking when Wallee is off', () => {
