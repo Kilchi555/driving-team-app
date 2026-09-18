@@ -32,6 +32,7 @@ import {
   assertCustomSessionsForTenant,
   loadPublicCourseForEnrollment,
 } from '~/server/utils/course-custom-sessions'
+import { publicCourseSessionPrincipalId } from '~/server/utils/fulfill-course-wallee-payment'
 
 const ProcessPublicPaymentSchema = z.object({
   enrollmentId:  z.string().uuid().optional(),
@@ -355,7 +356,7 @@ export default defineEventHandler(async (event) => {
     // Resolve user_id:
     // Path A (enrollmentId): trusted admin/legacy enrollment context — keep existing bind.
     // Path B (public course): body userId is untrusted. Session principal only if
-    // same-tenant; otherwise payments.user_id stays null.
+    // same-tenant customer (client/student); otherwise payments.user_id stays null.
     let actualUserId: string | null = null
     if (enrollmentId) {
       actualUserId = passedUserId || null
@@ -369,9 +370,7 @@ export default defineEventHandler(async (event) => {
       }
     } else {
       const sessionUser = await getAuthenticatedUserWithDbId(event)
-      if (sessionUser?.id && sessionUser.tenant_id === tenantId) {
-        actualUserId = sessionUser.id
-      }
+      actualUserId = publicCourseSessionPrincipalId(sessionUser, tenantId)
     }
     
     // Build payment record - only include columns that exist in the table
