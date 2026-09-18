@@ -347,3 +347,15 @@ Bei Änderungen am System:
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
+
+---
+
+## Engineering Runbooks
+
+Focused ops/developer runbooks (prefer these over root historical markdown reports):
+
+| Runbook | Topic |
+|---------|--------|
+| [CANCELLED_APPOINTMENT_VISIBILITY.md](./CANCELLED_APPOINTMENT_VISIBILITY.md) | Cancelled vs soft-delete; customer lists + schedule occupancy (#171) |
+| [BINDING_BOOKING_CONVERSIONS.md](./BINDING_BOOKING_CONVERSIONS.md) | Binding `confirmed` → Google/Meta; claim-before-upload (#170) |
+| [SERVER_SIDE_CONVERSION_SETUP.md](./SERVER_SIDE_CONVERSION_SETUP.md) | Google Ads conversion action + Vercel env setup |
