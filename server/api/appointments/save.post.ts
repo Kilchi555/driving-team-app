@@ -25,6 +25,35 @@ import { hashCustomerIdentifiers, reportBindingAppointmentConversionSafely } fro
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
 import { applyCreditToPayment } from '~/server/utils/apply-credit-to-payment'
 
+function mapStaffPaymentMethod(raw: unknown): string | null {
+  if (raw == null || raw === '') return null
+  const key = String(raw).trim().toLowerCase()
+  const mapping: Record<string, string> = {
+    wallee: 'wallee',
+    online: 'wallee',
+    twint: 'wallee',
+    card: 'wallee',
+    'credit-card': 'wallee',
+    cash: 'cash',
+    bar: 'cash',
+    invoice: 'invoice',
+    rechnung: 'invoice',
+  }
+  if (mapping[key]) return mapping[key]
+  if (['wallee', 'cash', 'invoice', 'credit'].includes(key)) return key
+  return 'wallee'
+}
+
+function bodyHasOwn(body: unknown, key: string): boolean {
+  return !!body && typeof body === 'object' && Object.prototype.hasOwnProperty.call(body, key)
+}
+
+function asPlainObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
+}
+
 export default defineEventHandler(async (event) => {
   try {
     // ============ AUTHENTICATION & AUTHORIZATION ============
@@ -44,11 +73,17 @@ export default defineEventHandler(async (event) => {
       productsPriceRappen = 0,
       discountAmountRappen = 0,
       isManualDiscount = false,
-      // ✅ NEW: Company billing address ID for invoice payments
-      companyBillingAddressId = null,
       // ✅ NEW: Cash already paid flag (staff marks as paid on create)
       cashAlreadyPaid = false
     } = body
+
+    // C1 metadata: omitted ≠ explicit null. Defaults would collapse that.
+    const invoiceAddressProvided = bodyHasOwn(body, 'invoiceAddress')
+    const paymentNotesProvided = bodyHasOwn(body, 'paymentNotes')
+    const companyBillingAddressIdProvided = bodyHasOwn(body, 'companyBillingAddressId')
+    const invoiceAddress = invoiceAddressProvided ? body.invoiceAddress : undefined
+    const paymentNotes = paymentNotesProvided ? body.paymentNotes : undefined
+    const companyBillingAddressId = companyBillingAddressIdProvided ? body.companyBillingAddressId : undefined
 
     // ✅ DEBUG: Log company billing address ID
     if (paymentMethodForPayment === 'invoice') {
@@ -403,6 +438,8 @@ export default defineEventHandler(async (event) => {
               creditUsed: (existingCreditUsed / 100).toFixed(2)
             })
             
+            const mappedPaymentMethod = mapStaffPaymentMethod(paymentMethodForPayment)
+            const invoiceSnapshot = asPlainObject(invoiceAddress)
             const paymentUpdateData: any = {
               lesson_price_rappen: finalBasePrice,
               admin_fee_rappen: staffPayment.adminFeeRappen,
@@ -413,7 +450,39 @@ export default defineEventHandler(async (event) => {
               // Keep payment user_id/staff_id in sync with the appointment
               ...(appointmentData.user_id ? { user_id: appointmentData.user_id } : {}),
               ...(appointmentData.staff_id ? { staff_id: appointmentData.staff_id } : {}),
+              ...(mappedPaymentMethod ? { payment_method: mappedPaymentMethod } : {}),
+              ...(appointmentData.title
+                ? { description: `Payment for appointment: ${sanitizeString(appointmentData.title, 255)}` }
+                : {}),
               updated_at: new Date().toISOString()
+            }
+
+            // Invoice snapshots are method-gated. Non-invoice must clear, not omit.
+            if (mappedPaymentMethod && mappedPaymentMethod !== 'invoice') {
+              paymentUpdateData.invoice_address = null
+            } else if (mappedPaymentMethod === 'invoice') {
+              if (invoiceSnapshot) {
+                paymentUpdateData.invoice_address = invoiceSnapshot
+              } else if (invoiceAddressProvided) {
+                paymentUpdateData.invoice_address = null
+              }
+            }
+
+            if (paymentNotesProvided) {
+              paymentUpdateData.notes = typeof paymentNotes === 'string' && paymentNotes.trim()
+                ? sanitizeString(paymentNotes, 500)
+                : null
+            }
+
+            if (companyBillingAddressIdProvided) {
+              if (companyBillingAddressId == null || companyBillingAddressId === '') {
+                paymentUpdateData.company_billing_address_id = null
+              } else {
+                const billingId = String(companyBillingAddressId).trim()
+                paymentUpdateData.company_billing_address_id = validateUUID(billingId).valid
+                  ? billingId
+                  : null
+              }
             }
             
             // ✅ Was money already collected against the OLD (shorter) duration, and is the
