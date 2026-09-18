@@ -1,11 +1,26 @@
 import { createError } from 'h3'
 import { logger } from '~/utils/logger'
 
+export type LicenseValidationState =
+  | 'VALID'
+  | 'EXPIRED'
+  | 'UNKNOWN_EXPIRATION'
+  | 'INVALID_EXPIRATION'
+  | 'NO_MATCHING_LICENSE'
+
+export const UNKNOWN_LICENSE_EXPIRATION_MESSAGE =
+  'Das Ablaufdatum Ihrer Lizenz konnte nicht eindeutig ermittelt werden. Bitte wenden Sie sich an die Fahrschule.'
+
+export const INVALID_LICENSE_EXPIRATION_MESSAGE =
+  'Das Ablaufdatum Ihrer Lizenz konnte nicht korrekt verarbeitet werden. Bitte wenden Sie sich an die Fahrschule.'
+
+interface SARILicense {
+  category: string
+  expirationdate?: string | null
+}
+
 interface SARICustomer {
-  licenses?: Array<{
-    category: string
-    expirationdate: string
-  }>
+  licenses?: Array<SARILicense>
 }
 
 interface CourseSession {
@@ -18,104 +33,138 @@ interface Course {
   course_sessions?: CourseSession[]
 }
 
+type ExpirationParse =
+  | { kind: 'VALID_DATE'; date: Date }
+  | { kind: 'UNKNOWN' }
+  | { kind: 'INVALID' }
+
+/**
+ * Classify a SARI license expiration value without coercing null/0/false into Unix Epoch.
+ * Only non-empty strings are parsed with Date.
+ */
+export function classifyExpirationDate(raw: unknown): ExpirationParse {
+  if (raw === null || raw === undefined) {
+    return { kind: 'UNKNOWN' }
+  }
+  if (typeof raw !== 'string') {
+    return { kind: 'INVALID' }
+  }
+  const trimmed = raw.trim()
+  if (trimmed === '') {
+    return { kind: 'INVALID' }
+  }
+  const date = new Date(trimmed)
+  if (Number.isNaN(date.getTime())) {
+    return { kind: 'INVALID' }
+  }
+  return { kind: 'VALID_DATE', date }
+}
+
+function formatDeChDate(date: Date): string {
+  return new Intl.DateTimeFormat('de-CH', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
+}
+
+function throwLicenseError(state: Exclude<LicenseValidationState, 'VALID'>, statusMessage: string): never {
+  throw createError({
+    statusCode: 403,
+    statusMessage,
+    data: { licenseValidationState: state },
+  })
+}
+
 /**
  * Validates if a customer's SARI license meets the course requirements and is valid for all sessions.
  * Throws an H3Error if validation fails.
+ *
+ * expirationdate null/missing → UNKNOWN_EXPIRATION (fail closed, never Date(null)/01.01.1970).
+ * malformed / non-string expiration → INVALID_EXPIRATION (fail closed).
  */
 export function validateLicense(course: Course, customerData: SARICustomer): void {
   if (!course.category) {
     logger.debug('ℹ️ Course has no category, skipping license validation.')
-    return // No category specified, no validation needed
+    return
   }
 
   const requiredCategory = course.category.toUpperCase()
   const customerLicenses = customerData.licenses || []
 
-  // Determine allowed categories based on course type
   let allowedCategories: string[] = []
   if (['PGS'].includes(requiredCategory)) {
     allowedCategories = ['A1', 'A35KW', 'A']
   } else if (['VKU'].includes(requiredCategory)) {
     allowedCategories = ['A1', 'A35KW', 'A', 'B']
   } else {
-    // For specific driving categories (A, B, C, etc.), the required category is the only allowed one
     allowedCategories = [requiredCategory]
   }
 
-  // 1. Check if customer has any of the allowed licenses
-  const hasAllowedLicense = customerLicenses.some(
-    lic => allowedCategories.includes(lic.category.toUpperCase())
+  const matchingLicenses = customerLicenses.filter(
+    lic => allowedCategories.includes(String(lic.category || '').toUpperCase()),
   )
 
-  if (!hasAllowedLicense) {
-    throw createError({
-      statusCode: 403,
-      statusMessage: `Für diesen Kurs benötigen Sie eine Lizenz der Kategorie ${allowedCategories.join(' oder ')}. Ihre Lizenzen: ${customerLicenses.map(l => l.category).join(', ') || 'Keine'}.`
+  if (matchingLicenses.length === 0) {
+    throwLicenseError(
+      'NO_MATCHING_LICENSE',
+      `Für diesen Kurs benötigen Sie eine Lizenz der Kategorie ${allowedCategories.join(' oder ')}. Ihre Lizenzen: ${customerLicenses.map(l => l.category).join(', ') || 'Keine'}.`,
+    )
+  }
+
+  const datedLicenses: Array<{ license: SARILicense; expiry: Date; categoryIndex: number }> = []
+  let sawUnknown = false
+
+  for (const license of matchingLicenses) {
+    const parsed = classifyExpirationDate(license.expirationdate)
+    if (parsed.kind === 'UNKNOWN') {
+      sawUnknown = true
+      continue
+    }
+    if (parsed.kind === 'INVALID') {
+      continue
+    }
+    datedLicenses.push({
+      license,
+      expiry: parsed.date,
+      categoryIndex: allowedCategories.indexOf(String(license.category).toUpperCase()),
     })
   }
 
-  // 2. Check if the most relevant license is valid for all course sessions
-  // Find the best matching license — prefer latest expiry date to handle
-  // customers with multiple licenses of the same category (e.g. expired old + valid new)
-  const bestMatchingLicense = customerLicenses
-    .filter(lic => allowedCategories.includes(lic.category.toUpperCase()))
-    .sort((a, b) => {
-      // Primary: latest expiration date first (ensures renewed licenses win over expired ones)
-      const expiryDiff = new Date(b.expirationdate).getTime() - new Date(a.expirationdate).getTime()
-      if (expiryDiff !== 0) return expiryDiff
-      // Tiebreaker: category specificity (higher index in allowedCategories = more specific)
-      const aIndex = allowedCategories.indexOf(a.category.toUpperCase())
-      const bIndex = allowedCategories.indexOf(b.category.toUpperCase())
-      return bIndex - aIndex
-    })[0]
+  datedLicenses.sort((a, b) => {
+    const expiryDiff = b.expiry.getTime() - a.expiry.getTime()
+    if (expiryDiff !== 0) return expiryDiff
+    return b.categoryIndex - a.categoryIndex
+  })
 
-  if (!bestMatchingLicense) {
-    throw createError({
-      statusCode: 403,
-      statusMessage: `Es wurde keine passende Lizenz für die Kategorie ${requiredCategory} gefunden.`
-    })
+  const bestDated = datedLicenses[0]
+  if (!bestDated) {
+    if (sawUnknown) {
+      throwLicenseError('UNKNOWN_EXPIRATION', UNKNOWN_LICENSE_EXPIRATION_MESSAGE)
+    }
+    throwLicenseError('INVALID_EXPIRATION', INVALID_LICENSE_EXPIRATION_MESSAGE)
   }
 
-  const licenseExpiry = new Date(bestMatchingLicense.expirationdate)
-  
-  // Find the last session end time
+  const licenseExpiry = bestDated.expiry
   const courseSessions = course.course_sessions || []
   if (courseSessions.length > 0) {
     const lastSessionEndTime = courseSessions
       .map(s => new Date(s.end_time))
-      .sort((a, b) => b.getTime() - a.getTime())[0] // Latest end time
+      .sort((a, b) => b.getTime() - a.getTime())[0]
 
     if (lastSessionEndTime > licenseExpiry) {
-      const formattedLicenseExpiry = new Intl.DateTimeFormat('de-CH', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-      }).format(licenseExpiry)
-      const formattedLastSession = new Intl.DateTimeFormat('de-CH', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-      }).format(lastSessionEndTime)
-      
-      throw createError({
-        statusCode: 403,
-        statusMessage: `Ihre Lizenz (Kategorie ${bestMatchingLicense.category}) läuft am ${formattedLicenseExpiry} ab, aber der letzte Kursteil findet am ${formattedLastSession} statt. Bitte verlängern Sie zuerst Ihre Lizenz.`
-      })
+      throwLicenseError(
+        'EXPIRED',
+        `Ihre Lizenz (Kategorie ${bestDated.license.category}) läuft am ${formatDeChDate(licenseExpiry)} ab, aber der letzte Kursteil findet am ${formatDeChDate(lastSessionEndTime)} statt. Bitte verlängern Sie zuerst Ihre Lizenz.`,
+      )
     }
   } else {
-    // If no sessions, just check if the license is already expired
     const now = new Date()
     if (licenseExpiry < now) {
-      const formattedLicenseExpiry = new Intl.DateTimeFormat('de-CH', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-      }).format(licenseExpiry)
-      throw createError({
-        statusCode: 403,
-        statusMessage: `Ihre Lizenz (Kategorie ${bestMatchingLicense.category}) ist bereits am ${formattedLicenseExpiry} abgelaufen.`
-      })
+      throwLicenseError(
+        'EXPIRED',
+        `Ihre Lizenz (Kategorie ${bestDated.license.category}) ist bereits am ${formatDeChDate(licenseExpiry)} abgelaufen.`,
+      )
     }
   }
 }
-
