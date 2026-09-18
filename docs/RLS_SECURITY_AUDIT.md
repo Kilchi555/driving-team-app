@@ -5,6 +5,8 @@
 > **Status:** ✅ MIT LIVE-DATEN VERIFIZIERT – Policies wurden direkt aus der Produktionsdatenbank abgefragt.  
 > **Methode:** Masterquery auf `pg_policies` gegen die Live-Supabase-Instanz ausgeführt.
 
+> **Update (Sep 2026 / #231):** Anon Data-API access to `vouchers` / `voucher_codes`, anon UPDATE on `availability_slots`, and public insert on `course_waitlist` are contained by `migrations/20260917_f3_anon_data_api_containment.sql`. See [F3_ANON_DATA_API_CONTAINMENT.md](./F3_ANON_DATA_API_CONTAINMENT.md). Sections below that still describe those anon write/lookup policies are historical.
+
 ---
 
 ## Inhaltsverzeichnis
