@@ -13,6 +13,7 @@ import { logger } from '~/utils/logger'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { shouldNotifyAssignedStaff } from '~/server/utils/tenant-staff-notify'
+import { participantIdentityLine } from '~/utils/participant-identity'
 
 export default defineEventHandler(async (event) => {
   // ── Auth (Bearer + httpOnly cookie + refresh fallback) ───────────────────
@@ -87,7 +88,7 @@ export default defineEventHandler(async (event) => {
     const sessionNumberStr = String(session.session_number)
     const { data: regs } = await supabase
       .from('course_registrations')
-      .select('id, first_name, last_name, email, phone, street, zip, city')
+      .select('id, first_name, last_name, email, phone, street, zip, city, birthdate, license_number, sari_faberid')
       .eq('course_id', courseId)
       .eq('status', 'confirmed')
       .is('deleted_at', null)
@@ -168,10 +169,12 @@ function buildStaffEmail(d: {
     const emailBtn = p.email
       ? `<a href="mailto:${p.email}" style="display:inline-block;background:#eff6ff;color:#2563eb;text-decoration:none;font-size:12px;font-weight:500;padding:5px 10px;border-radius:6px;border:1px solid #bfdbfe;white-space:nowrap">✉ ${p.email}</a>`
       : ''
+    const identity = participantIdentityLine(p) || '—'
     return `
       <tr style="border-bottom:1px solid #e5e7eb">
         <td style="padding:12px 8px;font-size:13px;color:#9ca3af;text-align:center;vertical-align:middle">${i + 1}</td>
         <td style="padding:12px 8px;font-size:13px;color:#111827;font-weight:500;vertical-align:middle">${p.first_name || ''} ${p.last_name || ''}</td>
+        <td style="padding:12px 8px;font-size:12px;color:#374151;vertical-align:middle;white-space:nowrap">${identity}</td>
         <td style="padding:12px 8px;vertical-align:middle"><div style="display:flex;gap:6px;flex-wrap:wrap">${phoneBtn}${emailBtn}${!phoneBtn && !emailBtn ? '<span style="font-size:12px;color:#9ca3af">—</span>' : ''}</div></td>
       </tr>`
   }).join('')
@@ -225,10 +228,11 @@ function buildStaffEmail(d: {
               <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">
                 <th style="padding:10px 8px;font-size:11px;color:#9ca3af;text-align:center;font-weight:600;width:40px">#</th>
                 <th style="padding:10px 8px;font-size:11px;color:#6b7280;text-align:left;font-weight:600">Name</th>
+                <th style="padding:10px 8px;font-size:11px;color:#6b7280;text-align:left;font-weight:600">Geburtsdatum / LFA</th>
                 <th style="padding:10px 8px;font-size:11px;color:#6b7280;text-align:left;font-weight:600">Kontakt</th>
               </tr>
             </thead>
-            <tbody>${d.participants.length ? participantRows : '<tr><td colspan="3" style="padding:20px;text-align:center;font-size:13px;color:#9ca3af">Keine bestätigten Teilnehmer</td></tr>'}</tbody>
+            <tbody>${d.participants.length ? participantRows : '<tr><td colspan="4" style="padding:20px;text-align:center;font-size:13px;color:#9ca3af">Keine bestätigten Teilnehmer</td></tr>'}</tbody>
           </table>
         </div>
         <div style="background:#f9fafb;padding:16px 32px;text-align:center;border-top:1px solid #e5e7eb">

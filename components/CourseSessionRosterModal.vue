@@ -129,6 +129,9 @@
                 <span v-if="p.phone" class="truncate">{{ p.phone }}</span>
                 <span v-if="p.email" class="truncate hidden sm:inline">{{ p.email }}</span>
               </div>
+              <div v-if="participantIdentityLine(p)" class="text-xs text-gray-400 truncate mt-0.5">
+                {{ participantIdentityLine(p) }}
+              </div>
             </div>
           </li>
         </ul>
@@ -158,6 +161,7 @@ import { ref, watch, computed } from 'vue'
 import { useTenantBranding } from '~/composables/useTenantBranding'
 import { formatCourseSessionLine } from '~/utils/format-course-sessions'
 import { openParticipantListPdf } from '~/utils/print-participant-list'
+import { participantIdentityLine } from '~/utils/participant-identity'
 
 const props = defineProps<{
   isVisible: boolean
