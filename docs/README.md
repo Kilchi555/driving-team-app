@@ -347,3 +347,17 @@ Bei Änderungen am System:
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
+
+---
+
+## Engineering Runbooks
+
+Focused ops/dev runbooks (prefer these over historical root `*_ANALYSIS.md` reports when debugging):
+
+| Runbook | Covers |
+|---------|--------|
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin lockout / passkey emergency recovery |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Client session cache / HMR restore |
+| [COURSE_SESSIONS_PUBLIC_READ.md](./COURSE_SESSIONS_PUBLIC_READ.md) | `course_sessions` public RLS + anon SELECT revoke (#208 / #209) |
+| [COURSE_ENROLL_NITRO_410.md](./COURSE_ENROLL_NITRO_410.md) | Nitro `.post.ts` mapping for retired enroll routes (#207) |
+|
