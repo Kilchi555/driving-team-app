@@ -1701,8 +1701,8 @@
           <div class="bg-white rounded-lg shadow-sm border p-6">
             <h2 class="text-lg font-semibold text-gray-900 mb-1">Standard-Zahlungsart</h2>
             <p class="text-sm text-gray-500 mb-4">
-              Wird im Termin-Dialog vorausgewählt, wenn der Kunde keine eigene Präferenz hat.
-              Bei der Online-Buchung nur, wenn die Zahlart für Kunden erlaubt ist
+              Gilt für Termine ohne Kundenpräferenz und für Kurse, deren Kursart und Kurs die Zahlungsart übernehmen.
+              Bei der Online-Buchung von Fahrstunden nur, wenn die Zahlart für Kunden erlaubt ist
               (Bar: Sichtbarkeit «Mitarbeiter und Kunden», Rechnung: Option unten aktiv).
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">

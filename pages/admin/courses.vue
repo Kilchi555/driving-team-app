@@ -640,6 +640,9 @@
                 <span v-if="category.requires_sari_sync" class="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-md text-xs font-medium">
                   🔗 SARI
                 </span>
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-medium">
+                  {{ category.payment_method === 'CASH_ON_SITE' ? 'Barzahlung' : category.payment_method === 'INVOICE' ? 'Rechnung' : category.payment_method === 'WALLEE' ? 'Wallee' : 'Zahlart: Standard' }}
+                </span>
               </div>
 
               <!-- Footer -->
@@ -899,31 +902,34 @@
           <!-- Zahlungsmethode pro Kurs (optional override) -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">
-              Zahlungsmethode
+              Zahlungsart
             </label>
             <p class="text-xs text-gray-500 mb-2">
-              Vorausgewählt aus der <strong>Standard-Zahlungsart</strong> in den Zahlungseinstellungen.
-              <strong>Automatisch</strong> folgt der Stadt: <em>Einsiedeln → Barzahlung</em>, alle anderen → <em>Online</em>.
+              Ohne Override gilt die Kursart, sonst der globale Standard.
             </p>
-            <select
-              v-model="newCourse.payment_method"
-              class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 tenant-focus focus:outline-none focus:ring-2"
-            >
-              <option :value="null">Automatisch (basierend auf Stadt)</option>
-              <option value="WALLEE">Online-Zahlung (Wallee, Kreditkarte, TWINT)</option>
-              <option value="CASH_ON_SITE">Barzahlung vor Ort</option>
-              <option value="INVOICE">Rechnung</option>
-            </select>
+            <div class="space-y-2">
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" class="mt-1 mr-3" :value="null" v-model="newCourse.payment_method" />
+                <div>
+                  <div class="font-medium text-gray-900">Von Kategorie übernehmen</div>
+                  <div class="text-xs text-gray-500">Aktuell: {{ inheritPaymentMethodLabel }}</div>
+                </div>
+              </label>
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" class="mt-1 mr-3" value="WALLEE" v-model="newCourse.payment_method" />
+                <div class="font-medium text-gray-900">Wallee</div>
+              </label>
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" class="mt-1 mr-3" value="CASH_ON_SITE" v-model="newCourse.payment_method" />
+                <div class="font-medium text-gray-900">Barzahlung</div>
+              </label>
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" class="mt-1 mr-3" value="INVOICE" v-model="newCourse.payment_method" />
+                <div class="font-medium text-gray-900">Rechnung</div>
+              </label>
+            </div>
             <p v-if="newCourse.payment_method === 'INVOICE' && !invoicePaymentsEnabledForTenant" class="text-xs text-amber-700 mt-1">
               Hinweis: "Rechnung als Zahlungsoption erlauben" ist in den Zahlungseinstellungen aktuell deaktiviert — aktivieren Sie es dort, sonst wird für diesen Kurs automatisch auf Online-Zahlung/Barzahlung zurückgefallen.
-            </p>
-            <p
-              v-if="!newCourse.payment_method"
-              class="text-xs mt-1"
-              :class="autoPaymentMethodLabel === 'Barzahlung vor Ort' ? 'text-amber-700' : ''"
-              :style="autoPaymentMethodLabel !== 'Barzahlung vor Ort' ? { color: primaryColor } : {}"
-            >
-              Aktuelle Auswahl: <strong>{{ autoPaymentMethodLabel }}</strong>
             </p>
           </div>
 
@@ -1800,6 +1806,29 @@
               class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 tenant-focus focus:outline-none focus:ring-2"
               placeholder="Beschreibung der Kategorie..."
             ></textarea>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-black mb-2">Zahlungsart</label>
+            <p class="text-xs text-gray-500 mb-2">Ohne Override gilt der globale Standard aus den Zahlungseinstellungen.</p>
+            <div class="space-y-2">
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" class="mt-1 mr-3" :value="null" v-model="categoryForm.payment_method" />
+                <div class="font-medium text-gray-900">Von globalem Standard übernehmen</div>
+              </label>
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" class="mt-1 mr-3" value="WALLEE" v-model="categoryForm.payment_method" />
+                <div class="font-medium text-gray-900">Wallee</div>
+              </label>
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" class="mt-1 mr-3" value="CASH_ON_SITE" v-model="categoryForm.payment_method" />
+                <div class="font-medium text-gray-900">Barzahlung</div>
+              </label>
+              <label class="flex items-start p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input type="radio" class="mt-1 mr-3" value="INVOICE" v-model="categoryForm.payment_method" />
+                <div class="font-medium text-gray-900">Rechnung</div>
+              </label>
+            </div>
           </div>
 
           <div>
@@ -5064,7 +5093,8 @@ const categoryForm = ref({
     // Waitlist
   waitlist_enabled: false,
   // Email
-  email_important_notice: '',
+    email_important_notice: '',
+    payment_method: null as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null,
 })
 
 const vehicleForm = ref({
@@ -5105,20 +5135,21 @@ const newCourse = ref({
   sari_course_id: null as string | null,
   registration_deadline: null as string | null,
   status: 'draft',
-  payment_method: defaultCoursePaymentMethod.value as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null,
+  payment_method: null as 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null,
   billing_mode: 'individual' as 'individual' | 'company_collective',
   company_id: null as string | null,
 })
 
-// Live preview: which payment method will the auto-detection pick when
-// the admin leaves the dropdown on "Automatisch (basierend auf Stadt)"?
-const autoPaymentMethodLabel = computed(() => {
+// Live preview: which payment method inheritance currently resolves to.
+const inheritPaymentMethodLabel = computed(() => {
   const method = getCoursePaymentMethod(
     {
       payment_method: null,
       city: newCourse.value.city || null,
       description: newCourse.value.description || null,
-      name: newCourse.value.name || null
+      name: newCourse.value.name || null,
+      course_category: { payment_method: selectedCategoryInfo.value?.payment_method ?? null },
+      tenant_default_payment_method: defaultCoursePaymentMethod.value,
     },
     walleeEnabled.value,
     invoicePaymentsEnabledForTenant.value
@@ -5126,11 +5157,20 @@ const autoPaymentMethodLabel = computed(() => {
   return getPaymentMethodLabel(method)
 })
 
+const autoPaymentMethodLabel = inheritPaymentMethodLabel
+
 // Badge metadata for the course list. Distinguishes between an explicit
 // admin override and the automatic fallback, so admins can see at a glance
 // which courses they've customized.
 function getCoursePaymentBadge(course: any): { label: string; icon: string; cssClass: string; title: string } {
-  const method = getCoursePaymentMethod(course, walleeEnabled.value, invoicePaymentsEnabledForTenant.value)
+  const method = getCoursePaymentMethod(
+    {
+      ...course,
+      tenant_default_payment_method: tenantDefaultPaymentMethod.value,
+    },
+    walleeEnabled.value,
+    invoicePaymentsEnabledForTenant.value
+  )
   const isOverride = course?.payment_method === 'WALLEE' || course?.payment_method === 'CASH_ON_SITE' || course?.payment_method === 'INVOICE'
   const base = method === 'CASH_ON_SITE'
     ? { label: 'Bar', icon: '💵', cssClass: 'bg-amber-100 text-amber-800' }
@@ -5141,7 +5181,7 @@ function getCoursePaymentBadge(course: any): { label: string; icon: string; cssC
     ...base,
     title: isOverride
       ? `Zahlungsmethode manuell auf "${getPaymentMethodLabel(method)}" gesetzt`
-      : `Automatisch erkannt: ${getPaymentMethodLabel(method)}`
+      : `Übernommen: ${getPaymentMethodLabel(method)}`
   }
 }
 
@@ -5558,7 +5598,7 @@ const resetNewCourse = () => {
     sari_course_id: null,
     registration_deadline: null,
     status: 'scheduled',
-    payment_method: defaultCoursePaymentMethod.value,
+    payment_method: null,
     billing_mode: 'individual',
     company_id: null,
   }
@@ -5950,6 +5990,7 @@ const editCategoryItem = (category: any) => {
     waitlist_enabled: category.waitlist_enabled || false,
     // Email
     email_important_notice: category.email_important_notice || '',
+    payment_method: category.payment_method || null,
   }
   emailImportantNoticeItems.value = importantNoticeFromString(category.email_important_notice || '')
   defaultCategoryPrice.value = category.default_price_rappen / 100
@@ -6073,6 +6114,7 @@ const resetCategoryForm = () => {
     waitlist_enabled: false,
     // Email
     email_important_notice: '',
+    payment_method: null,
   }
   emailImportantNoticeItems.value = ['']
   defaultCategoryPrice.value = 0
@@ -6982,7 +7024,9 @@ const toggleAddParticipantForm = () => {
 const resetEnrollmentFormExtras = () => {
   selectedExistingUser.value = null
   enrollmentPaymentOption.value = defaultAdminEnrollmentPaymentOption(
-    selectedCourse.value,
+    selectedCourse.value
+      ? { ...selectedCourse.value, tenant_default_payment_method: tenantDefaultPaymentMethod.value }
+      : selectedCourse.value,
     walleeEnabled.value,
     invoicePaymentsEnabledForTenant.value
   )

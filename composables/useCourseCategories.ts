@@ -26,6 +26,9 @@ interface CourseCategory {
   created_at: string
   updated_at: string
   created_by: string | null
+  default_room_id?: string | null
+  default_vehicle_id?: string | null
+  payment_method?: 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE' | null
 }
 
 export const useCourseCategories = () => {

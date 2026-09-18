@@ -28,14 +28,71 @@ export function extractCityFromCourseDescription(description: string): string | 
 }
 
 export type CoursePaymentMethod = 'WALLEE' | 'CASH_ON_SITE' | 'INVOICE'
+export type CoursePaymentMethodSource = 'course' | 'category' | 'tenant'
+
+export function parseCoursePaymentMethodOverride(value: unknown): CoursePaymentMethod | null {
+  if (value === 'WALLEE' || value === 'CASH_ON_SITE' || value === 'INVOICE') return value
+  return null
+}
 
 /** Tenant payment settings use lowercase keys; courses store the uppercase enum. */
 export function mapTenantDefaultToCoursePaymentMethod(
   tenantDefault: string | null | undefined
 ): CoursePaymentMethod {
-  if (tenantDefault === 'cash') return 'CASH_ON_SITE'
-  if (tenantDefault === 'invoice') return 'INVOICE'
+  if (tenantDefault === 'cash' || tenantDefault === 'CASH_ON_SITE') return 'CASH_ON_SITE'
+  if (tenantDefault === 'invoice' || tenantDefault === 'INVOICE') return 'INVOICE'
+  if (tenantDefault === 'wallee' || tenantDefault === 'WALLEE') return 'WALLEE'
   return 'WALLEE'
+}
+
+/**
+ * Configuration only: course override → category override → tenant default.
+ * NULL at course/category means inherit. Does not apply availability gates.
+ */
+export function resolveConfiguredCoursePaymentMethod(opts: {
+  coursePaymentMethod?: unknown
+  categoryPaymentMethod?: unknown
+  tenantDefault?: unknown
+}): { paymentMethod: CoursePaymentMethod; source: CoursePaymentMethodSource } {
+  const course = parseCoursePaymentMethodOverride(opts.coursePaymentMethod)
+  if (course) return { paymentMethod: course, source: 'course' }
+  const category = parseCoursePaymentMethodOverride(opts.categoryPaymentMethod)
+  if (category) return { paymentMethod: category, source: 'category' }
+  return {
+    paymentMethod: mapTenantDefaultToCoursePaymentMethod(
+      typeof opts.tenantDefault === 'string' ? opts.tenantDefault : null
+    ),
+    source: 'tenant',
+  }
+}
+
+/**
+ * Availability/security layer on top of a configured method.
+ * Einsiedeln city-auto remains only as the Wallee/invoice-disabled degrade path.
+ */
+export function applyCoursePaymentAvailability(opts: {
+  configured: CoursePaymentMethod
+  walleeEnabled?: boolean
+  invoiceEnabled?: boolean
+  city?: string | null
+  description?: string | null
+  name?: string | null
+}): CoursePaymentMethod {
+  const explicit = opts.configured
+  if (explicit === 'WALLEE' || explicit === 'CASH_ON_SITE') {
+    if (explicit === 'WALLEE' && opts.walleeEnabled === false) {
+      return 'CASH_ON_SITE'
+    }
+    return explicit
+  }
+  if (explicit === 'INVOICE') {
+    if (opts.invoiceEnabled === false) {
+      const city = opts.city || extractCityFromCourseDescription(opts.description || opts.name || '')
+      return determinePaymentMethod(city, opts.walleeEnabled)
+    }
+    return 'INVOICE'
+  }
+  return explicit
 }
 
 /** Admin-Anmeldung: vorausgewählte Option aus der Kurs-Zahlungsart. */
@@ -79,6 +136,9 @@ export function defaultAdminEnrollmentPaymentOption(
  *   - Any other city → CASH_ON_SITE if walleeEnabled is explicitly false
  *     (since the tenant has no other payment option), otherwise WALLEE.
  *
+ * Used only as an availability degrade when Wallee/invoice is disabled —
+ * not as the configuration fallback (that is now tenant default).
+ *
  * `walleeEnabled` is optional for backwards compatibility; when omitted the
  * function defaults to the historical behavior (everything except Einsiedeln
  * uses Wallee).
@@ -99,19 +159,16 @@ export function determinePaymentMethod(
 }
 
 /**
- * Determine payment method for a course, honoring the admin-controlled
- * override `courses.payment_method` when set. Falls back to the automatic
- * city/wallee-based logic when the column is NULL.
+ * Display/UI helper: configured hierarchy, then availability gates.
  *
- * This is the single entry point that UI and server-side handlers should
- * call so that admin overrides, city-based defaults and tenant Wallee
- * status are evaluated consistently.
+ * Configuration (NULL = inherit):
+ *   course.payment_method → category.payment_method → tenant default
  *
- * `invoiceEnabled` mirrors `walleeEnabled`: it reflects the tenant-wide
- * "Rechnung als Zahlungsoption erlauben" toggle. A course explicitly set to
- * INVOICE degrades to the automatic WALLEE/CASH_ON_SITE logic if the tenant
- * has since disabled invoice payments — so enrollment never gets stuck on a
- * payment method nobody can select.
+ * Availability:
+ *   WALLEE with walleeEnabled === false → CASH_ON_SITE
+ *   INVOICE with invoiceEnabled === false → city/Wallee degrade (Einsiedeln cash)
+ *
+ * Server enrollment must call resolveEffectiveCoursePaymentMethod, not this.
  */
 export function getCoursePaymentMethod(
   course: {
@@ -119,30 +176,29 @@ export function getCoursePaymentMethod(
     city?: string | null
     description?: string | null
     name?: string | null
+    course_category?: { payment_method?: CoursePaymentMethod | string | null } | null
+    category_payment_method?: CoursePaymentMethod | string | null
+    tenant_default_payment_method?: string | null
   } | null | undefined,
   walleeEnabled?: boolean,
-  invoiceEnabled?: boolean
+  invoiceEnabled?: boolean,
+  tenantDefault?: string | null
 ): CoursePaymentMethod {
-  const explicit = course?.payment_method
-  if (explicit === 'WALLEE' || explicit === 'CASH_ON_SITE') {
-    // Admin override wins, BUT we still degrade to cash if the tenant has
-    // no Wallee activated at all — otherwise the enrollment would fail at
-    // the payment step.
-    if (explicit === 'WALLEE' && walleeEnabled === false) {
-      return 'CASH_ON_SITE'
-    }
-    return explicit
-  }
-  if (explicit === 'INVOICE') {
-    if (invoiceEnabled === false) {
-      const city = course?.city || extractCityFromCourseDescription(course?.description || course?.name || '')
-      return determinePaymentMethod(city, walleeEnabled)
-    }
-    return 'INVOICE'
-  }
-
-  const city = course?.city || extractCityFromCourseDescription(course?.description || course?.name || '')
-  return determinePaymentMethod(city, walleeEnabled)
+  const configured = resolveConfiguredCoursePaymentMethod({
+    coursePaymentMethod: course?.payment_method,
+    categoryPaymentMethod:
+      course?.course_category?.payment_method
+      ?? course?.category_payment_method,
+    tenantDefault: tenantDefault ?? course?.tenant_default_payment_method,
+  })
+  return applyCoursePaymentAvailability({
+    configured: configured.paymentMethod,
+    walleeEnabled,
+    invoiceEnabled,
+    city: course?.city,
+    description: course?.description,
+    name: course?.name,
+  })
 }
 
 /**
