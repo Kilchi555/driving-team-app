@@ -10,8 +10,6 @@ import { logger } from '~/utils/logger'
 import { getWalleeConfigForTenant, getWalleeConfigBySpace, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
-import { findExistingUserByContact } from '~/server/utils/user-matching'
-import { normalizePhoneNumber } from '~/server/utils/sms'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { sha256Hex } from '~/server/utils/meta-capi'
 import { becameBindingConfirmed } from '~/server/utils/binding-booking'
@@ -28,6 +26,7 @@ import { mergePaymentMetadata, normalizePaymentMetadata } from '~/server/utils/p
 import { applyCapturedWalleeTopupCredits } from '~/server/utils/topup-credit'
 import { isCourseCapacityExceeded } from '~/server/utils/course-capacity'
 import {
+  ensureGuestUserForCoursePayment,
   fulfillCourseWalleePayment,
   isRetryableCourseFulfillment,
   isSuccessfulCourseFulfillment,
@@ -955,103 +954,11 @@ export default defineEventHandler(async (event) => {
                 .maybeSingle()
               
               if (course && course.tenant_id === payment.tenant_id) {
-                // Create or find guest user
-                let userId: string | undefined
-                if (payment.user_id) {
-                  userId = payment.user_id
-                } else if (payment.metadata?.email) {
-                  // Look for existing user by normalized email (case-insensitive), then by
-                  // phone as a fallback — avoids creating a duplicate account for a returning
-                  // customer whose email casing/phone format differs from what's on file.
-                  const existingUser = await findExistingUserByContact(supabase, {
-                    email: payment.metadata?.email,
-                    phone: payment.metadata?.phone,
-                    tenantId: course.tenant_id
-                  })
-                  
-                  if (existingUser) {
-                    userId = existingUser.id
-                  } else {
-                    // Create guest user
-                    const { data: newUser, error: createUserError } = await supabase
-                      .from('users')
-                      .insert({
-                        first_name: payment.metadata?.firstname || 'Guest',
-                        last_name: payment.metadata?.lastname || 'User',
-                        email: payment.metadata?.email ? String(payment.metadata.email).trim().toLowerCase() : payment.metadata?.email,
-                        phone: normalizePhoneNumber(payment.metadata?.phone || '') || payment.metadata?.phone,
-                        tenant_id: course.tenant_id,
-                        role: 'client',
-                        is_active: true,
-                        auth_user_id: null,
-                        // Set referral code if present in payment metadata
-                        ...(payment.metadata?.referral_code ? { referred_by_code: payment.metadata.referral_code } : {}),
-                        // ✅ NEW: Generate onboarding token for guest user to complete profile later
-                        onboarding_token: crypto.randomUUID ? crypto.randomUUID() : 'token-' + Date.now(),
-                        onboarding_token_expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-                        onboarding_status: 'pending'
-                      })
-                      .select('id')
-                      .single()
-                    
-                    if (newUser) {
-                      userId = newUser.id
-                      logger.debug('✅ Created guest user:', userId)
-
-                      // Create affiliate_referrals row if a referral code was stored
-                      const refCode = payment.metadata?.referral_code
-                      if (refCode) {
-                        const { data: affCode } = await supabase
-                          .from('affiliate_codes')
-                          .select('id, user_id')
-                          .eq('code', refCode)
-                          .eq('is_active', true)
-                          .maybeSingle()
-
-                        if (affCode && affCode.user_id !== userId) {
-                          const { error: refInsertError } = await supabase
-                            .from('affiliate_referrals')
-                            .insert({
-                              tenant_id: course.tenant_id,
-                              affiliate_code_id: affCode.id,
-                              affiliate_user_id: affCode.user_id,
-                              referred_user_id: userId,
-                              status: 'pending',
-                            })
-                          if (refInsertError) {
-                            logger.error('❌ Failed to create affiliate_referrals row for guest user:', refInsertError.message)
-                          } else {
-                            logger.info('✅ Created affiliate_referrals row for guest user:', { userId, refCode })
-                          }
-                        }
-                      }
-                    } else {
-                      logger.error('❌ Failed to create guest user:', {
-                        error_code: createUserError?.code,
-                        error_message: createUserError?.message,
-                        error_details: createUserError?.details,
-                        user_data: {
-                          first_name: payment.metadata?.firstname || 'Guest',
-                          last_name: payment.metadata?.lastname || 'User',
-                          email: payment.metadata?.email,
-                          tenant_id: course.tenant_id
-                        }
-                      })
-                      // Fallback: duplicate key — look up the existing user
-                      if (createUserError?.code === '23505') {
-                        const fallbackUser = await findExistingUserByContact(supabase, {
-                          email: payment.metadata?.email,
-                          phone: payment.metadata?.phone,
-                          tenantId: course.tenant_id
-                        })
-                        if (fallbackUser) {
-                          userId = fallbackUser.id
-                          logger.info('✅ Fallback: found existing user after duplicate-key error:', userId)
-                        }
-                      }
-                    }
-                  }
-                }
+                const userId = await ensureGuestUserForCoursePayment(
+                  supabase,
+                  payment,
+                  course.tenant_id,
+                )
                 
                 // Create or merge registration — even without a userId (email on registration)
                 if (userId || payment.metadata?.email) {

@@ -12,6 +12,7 @@
 
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { SARIClient } from '~/utils/sariClient'
 import { getSARICredentialsSecure } from '~/server/utils/sari-credentials-secure'
@@ -257,10 +258,8 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    // 8. Create or find Guest User (same as Wallee flow)
-    // Match by normalized email (case-insensitive) first, then by phone as a fallback —
-    // avoids creating a duplicate account when the customer signs up without logging in
-    // under a slightly different email casing (e.g. SARI-returned email) or phone format.
+    // 8. Identity: session principal if tenant-valid; else new guest only when
+    // contact is unused. Matching an existing customer is discovery, not attach.
     logger.debug('🔍 Looking for existing user with email/phone:', { finalEmail, finalPhone })
 
     // Staff/admin autofill must fail before we match any customer by phone.
@@ -285,61 +284,78 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    let guestUserId: string
-    const existingUser = await findExistingUserByContact(supabase, {
-      email: finalEmail,
-      phone: finalPhone,
-      tenantId,
-      roles: ['client', 'student'],
-    })
+    const sessionUser = await getAuthenticatedUserWithDbId(event)
+    const sessionPrincipalId =
+      sessionUser?.id && sessionUser.tenant_id === tenantId ? sessionUser.id : null
+    if (sessionUser?.id && !sessionPrincipalId) {
+      logger.warn('⚠️ Ignoring cross-tenant session on public cash enroll', {
+        sessionTenantId: sessionUser.tenant_id,
+        courseTenantId: tenantId,
+      })
+    }
 
-    if (existingUser) {
-      guestUserId = existingUser.id
-      logger.debug('✅ Found existing user:', guestUserId)
-    } else {
-      // Create new guest user (no auth_user_id)
-      logger.debug('👤 Creating guest user...')
-      
-      const { data: newUser, error: userError } = await supabase
-        .from('users')
-        .insert({
-          first_name: customerData.firstname,
-          last_name: customerData.lastname,
-          email: finalEmail,
-          phone: normalizePhoneNumber(finalPhone) || finalPhone,
-          tenant_id: tenantId,
-          role: 'student',
-          is_active: true,
-          auth_user_id: null // No auth account — guest user identified by null auth_user_id
-        })
-        .select('id')
-        .single()
+    let guestUserId: string | null = sessionPrincipalId
 
-      if (userError || !newUser) {
-        logger.error('❌ Failed to create guest user:', userError)
-        const msg = userError?.message || ''
-        if (msg.includes('users_phone_tenant_unique') || msg.includes('phone')) {
-          throw createError({
-            statusCode: 400,
-            statusMessage:
-              'Diese Telefonnummer ist bereits registriert. Bitte die Telefonnummer der Kursteilnehmerin / des Kursteilnehmers verwenden.',
+    if (!guestUserId) {
+      const existingUser = await findExistingUserByContact(supabase, {
+        email: finalEmail,
+        phone: finalPhone,
+        tenantId,
+        roles: ['client', 'student'],
+      })
+
+      if (existingUser) {
+        logger.debug('ℹ️ Contact matches existing customer (discovery only; not attaching):', existingUser.id)
+        guestUserId = null
+      } else {
+        logger.debug('👤 Creating guest user...')
+
+        const { data: newUser, error: userError } = await supabase
+          .from('users')
+          .insert({
+            first_name: customerData.firstname,
+            last_name: customerData.lastname,
+            email: finalEmail,
+            phone: normalizePhoneNumber(finalPhone) || finalPhone,
+            tenant_id: tenantId,
+            role: 'student',
+            is_active: true,
+            auth_user_id: null // No auth account — guest user identified by null auth_user_id
           })
+          .select('id')
+          .single()
+
+        if (userError || !newUser) {
+          logger.error('❌ Failed to create guest user:', userError)
+          if (userError?.code === '23505') {
+            // Unique contact collision: do not attach the existing row; continue unlinked.
+            guestUserId = null
+          } else {
+            const msg = userError?.message || ''
+            if (msg.includes('users_phone_tenant_unique') || msg.includes('phone')) {
+              throw createError({
+                statusCode: 400,
+                statusMessage:
+                  'Diese Telefonnummer ist bereits registriert. Bitte die Telefonnummer der Kursteilnehmerin / des Kursteilnehmers verwenden.',
+              })
+            }
+            if (msg.includes('users_email_tenant_unique') || msg.includes('email')) {
+              throw createError({
+                statusCode: 400,
+                statusMessage:
+                  'Diese E-Mail ist bereits registriert. Bitte eine andere E-Mail verwenden oder den bestehenden Kunden anmelden.',
+              })
+            }
+            throw createError({
+              statusCode: 500,
+              statusMessage: 'Guest user could not be created'
+            })
+          }
+        } else {
+          guestUserId = newUser.id
+          logger.info('✅ Guest user created:', guestUserId)
         }
-        if (msg.includes('users_email_tenant_unique') || msg.includes('email')) {
-          throw createError({
-            statusCode: 400,
-            statusMessage:
-              'Diese E-Mail ist bereits registriert. Bitte eine andere E-Mail verwenden oder den bestehenden Kunden anmelden.',
-          })
-        }
-        throw createError({
-          statusCode: 500,
-          statusMessage: 'Guest user could not be created'
-        })
       }
-
-      guestUserId = newUser.id
-      logger.info('✅ Guest user created:', guestUserId)
     }
 
     // Partial / individual flags are needed for the registration insert even when

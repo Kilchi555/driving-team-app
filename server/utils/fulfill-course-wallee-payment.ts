@@ -246,7 +246,13 @@ export async function ensureGuestUserForCoursePayment(
     phone: payment.metadata?.phone,
     tenantId,
   })
-  if (existingUser) return existingUser.id
+  if (existingUser) {
+    logger.debug('ℹ️ Contact matches existing customer during fulfillment (discovery only; not attaching)', {
+      paymentId: payment.id,
+      matchedUserId: existingUser.id,
+    })
+    return undefined
+  }
 
   const { data: newUser, error: createUserError } = await supabase
     .from('users')
@@ -296,13 +302,12 @@ export async function ensureGuestUserForCoursePayment(
   }
 
   if (createUserError?.code === '23505') {
-    const fallbackUser = await findExistingUserByContact(supabase, {
-      email,
-      phone: payment.metadata?.phone,
-      tenantId,
+    logger.info('ℹ️ Guest user insert collided on unique contact; fulfilling without account attach', {
+      paymentId: payment.id,
     })
-    if (fallbackUser) return fallbackUser.id
-  } else if (createUserError) {
+    return undefined
+  }
+  if (createUserError) {
     logger.error('❌ Failed to create guest user for course fulfillment:', createUserError.message)
   }
   return undefined
