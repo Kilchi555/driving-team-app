@@ -2,6 +2,8 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { sanitizeString, validateEmail, validateUUID } from '~/server/utils/validators'
+import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
+import { publicShopSessionPrincipalId } from '~/server/utils/shop-public-identity'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -74,34 +76,25 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: 'Ungültiger oder inaktiver Tenant' })
     }
 
-    // Check if user with this email already exists in this tenant
+    const sessionUser = await getAuthenticatedUserWithDbId(event)
+    const sessionPrincipalId = publicShopSessionPrincipalId(sessionUser, tenantId)
+    if (sessionPrincipalId) {
+      return { data: { id: sessionPrincipalId, created: false } }
+    }
+
+    // Contact match is discovery only — never return or mutate an existing account.
     const { data: existingUser } = await supabase
       .from('users')
-      .select('id, first_name, last_name, email, phone, street, street_nr, zip, city')
+      .select('id')
       .eq('tenant_id', tenantId)
       .eq('email', normalizedEmail)
       .maybeSingle()
 
-    if (existingUser) {
-      // Update empty fields with new data (don't overwrite existing data)
-      const updates: Record<string, string> = {}
-      if (!existingUser.first_name && firstName) updates.first_name = firstName
-      if (!existingUser.last_name && lastName) updates.last_name = lastName
-      if (!existingUser.phone && phone) updates.phone = phone
-      if (!existingUser.street && street) updates.street = street
-      if (!existingUser.street_nr && streetNumber) updates.street_nr = streetNumber
-      if (!existingUser.zip && zip) updates.zip = zip
-      if (!existingUser.city && city) updates.city = city
-
-      if (Object.keys(updates).length > 0) {
-        await supabase
-          .from('users')
-          .update({ ...updates, updated_at: new Date().toISOString() })
-          .eq('id', existingUser.id)
-      }
-
-      logger.debug('✅ Existing guest user found:', { id: existingUser.id, email: normalizedEmail })
-      return { data: { id: existingUser.id, created: false } }
+    if (existingUser?.id) {
+      logger.debug('ℹ️ find-or-create-guest-user: existing account is discovery-only', {
+        email: normalizedEmail,
+      })
+      return { data: { id: null, created: false } }
     }
 
     // Create new guest user
@@ -127,22 +120,12 @@ export default defineEventHandler(async (event) => {
       })
 
     if (insertError) {
-      // Handle concurrent request / pre-existing row robustly.
+      // Duplicate email must not attach the existing account.
       if (insertError.code === '23505') {
-        const { data: existingAfterConflict } = await supabase
-          .from('users')
-          .select('id')
-          .eq('tenant_id', tenantId)
-          .eq('email', normalizedEmail)
-          .maybeSingle()
-
-        if (existingAfterConflict?.id) {
-          logger.debug('✅ Guest user already existed (after conflict):', {
-            id: existingAfterConflict.id,
-            email: normalizedEmail
-          })
-          return { data: { id: existingAfterConflict.id, created: false } }
-        }
+        logger.debug('ℹ️ find-or-create-guest-user: unique conflict is fail-closed', {
+          email: normalizedEmail,
+        })
+        return { data: { id: null, created: false } }
       }
 
       logger.error('❌ find-or-create-guest-user: Insert error:', insertError)
