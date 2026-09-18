@@ -9,8 +9,9 @@
  * Rate Limiting: 5 attempts per IP per minute (prevent SARI brute-force)
  */
 
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
 import { SARIClient } from '~/utils/sariClient'
 import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure'
@@ -451,10 +452,8 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    // 8. Create or find Guest User
-    // Match by normalized email (case-insensitive) first, then by phone as a fallback —
-    // avoids creating a duplicate account when the customer signs up without logging in
-    // under a slightly different email casing (e.g. SARI-returned email) or phone format.
+    // 8. Identity: session principal (if any) is the only account authority.
+    // Contact lookup is discovery only — it must not attach or debit a matched user.
     logger.debug('🔍 Looking for existing user with email/phone:', { finalEmail, finalPhone })
 
     // Staff/admin autofill must fail before we match any customer by phone.
@@ -479,23 +478,26 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    let guestUserId: string
+    const sessionUser = await getAuthenticatedUserWithDbId(event)
+    const sessionPrincipalId =
+      sessionUser?.id && sessionUser.tenant_id === tenantId ? sessionUser.id : null
+    if (sessionUser?.id && !sessionPrincipalId) {
+      logger.warn('⚠️ Ignoring cross-tenant session on public course enroll', {
+        sessionTenantId: sessionUser.tenant_id,
+        courseTenantId: tenantId,
+      })
+    }
+
     const existingUser = await findExistingUserByContact(supabase, {
       email: finalEmail,
       phone: finalPhone,
       tenantId,
       roles: ['client', 'student'],
     })
-
     if (existingUser) {
-      guestUserId = existingUser.id
-      logger.debug('✅ Found existing user:', guestUserId)
-    } else {
-      // ⚠️ DON'T CREATE USER HERE ANYMORE!
-      // User will be created by webhook after payment confirmation
-      logger.debug('👤 No existing user, will be created after payment confirmation')
-      guestUserId = null as any // Placeholder
+      logger.debug('ℹ️ Contact matches existing customer (discovery only; not attaching):', existingUser.id)
     }
+    // Guest user is created after Wallee confirmation when the contact is unused.
 
     // ⚠️ REMOVED: Create pending enrollment
     // This was the source of race conditions and orphaned records!
@@ -595,14 +597,14 @@ const handler = defineEventHandler(async (event) => {
       }
     }
 
-    // 9. Check if logged-in user has enough credit to bypass Wallee entirely
+    // 9. Credit only for an authenticated, same-tenant session principal.
     const finalAmount = Math.max(0, effectiveBasePrice - validatedDiscountAmount)
 
-    if (guestUserId && finalAmount > 0) {
+    if (sessionPrincipalId && finalAmount > 0) {
       const { data: creditData } = await supabase
         .from('student_credits')
         .select('id, balance_rappen, pending_withdrawal_rappen')
-        .eq('user_id', guestUserId)
+        .eq('user_id', sessionPrincipalId)
         .eq('tenant_id', tenantId)
         .maybeSingle()
 
@@ -613,14 +615,14 @@ const handler = defineEventHandler(async (event) => {
 
         const creditResult = await enrollCourseWithCredit({
           supabase,
-          userId: guestUserId,
+          userId: sessionPrincipalId,
           tenantId,
           courseId,
           amountRappen: finalAmount,
           registration: {
             course_id: courseId,
             tenant_id: tenantId,
-            user_id: guestUserId,
+            user_id: sessionPrincipalId,
             first_name: customerData.firstname,
             last_name: customerData.lastname,
             sari_faberid: faberidClean || null,
@@ -730,7 +732,7 @@ const handler = defineEventHandler(async (event) => {
             await reportBindingCourseConversionSafely({
               supabase,
               registrationId: creditRegistration.id,
-              userId: guestUserId,
+              userId: sessionPrincipalId,
               tenantId,
               status: 'confirmed',
               gclid: attrRow?.gclid ?? null,
@@ -771,8 +773,14 @@ const handler = defineEventHandler(async (event) => {
     const priceChf = finalAmount / 100
     
     try {
+      const cookie = getHeader(event, 'cookie')
+      const authorization = getHeader(event, 'authorization')
       const paymentResponse = await $fetch('/api/payments/process-public', {
         method: 'POST',
+        headers: {
+          ...(cookie ? { cookie } : {}),
+          ...(authorization ? { authorization } : {}),
+        },
         body: {
           courseId: courseId,
           amount: finalAmount,
@@ -780,7 +788,6 @@ const handler = defineEventHandler(async (event) => {
           customerEmail: finalEmail,
           customerName: `${customerData.firstname} ${customerData.lastname}`,
           tenantId: tenantId,
-          ...(guestUserId ? { userId: guestUserId } : {}),
           metadata: {
             courseId: courseId,
             sari_faberid: faberidClean || null,
