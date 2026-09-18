@@ -1456,7 +1456,7 @@ const {
 
 const { loadProducts, activeProducts, isLoading: isLoadingProducts } = useProducts()
 const priceDisplayRef = ref()
-const savedCompanyBillingAddressId = ref<string | null>(null) // ✅ NEU: Company Billing Address ID
+const savedCompanyBillingAddressId = ref<string | null | undefined>(undefined)
 const { t, eventTypeLabel } = useTerminology()
 const tenantName = ref('') // Display name (not SMS sender) — SMS sender is resolved server-side
 const evaluationCriteria = ref<EvaluationCriteria[]>([]) // ✅ NEU: Evaluationskriterien
@@ -4877,6 +4877,7 @@ const resetForm = () => {
   
   selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
   cashAlreadyPaid.value = false
+  savedCompanyBillingAddressId.value = undefined
   resetDurationManuallyChosen()
 }
 

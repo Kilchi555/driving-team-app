@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  EMPTY_INVOICE_SNAPSHOT,
+  buildStaffC1PaymentMetadata,
+} from '~/utils/staff-payment-c1-metadata'
 
 const mocks = vi.hoisted(() => ({
   readBody: vi.fn(),
@@ -977,5 +981,247 @@ describe('POST /api/appointments/save staff pricing authority', () => {
     await handler({})
     expect(asPayment(paymentUpdates[0]).total_amount_rappen).toBe(LESSON_45 + HOURLY_45)
     expect(asPayment(paymentUpdates[0]).lesson_price_rappen).toBe(LESSON_45)
+  })
+
+  it('edit persists payment_method through save, not a client JWT write', async () => {
+    const inserts = emptyInserts()
+    const paymentUpdates: unknown[] = []
+    mocks.getSupabaseAdmin.mockReturnValue(paidLesson(inserts, {
+      existingAppointment: existingAppointment(),
+      existingPayment: {
+        id: PAY,
+        payment_status: 'pending',
+        total_amount_rappen: LESSON_45,
+        amount_paid_rappen: 0,
+        metadata: {},
+      },
+      paymentUpdates,
+    }))
+    mocks.readBody.mockResolvedValue({
+      ...appointmentBody(),
+      mode: 'edit',
+      eventId: APPT,
+      paymentMethodForPayment: 'invoice',
+    })
+
+    const { default: handler } = await handlerPromise
+    await handler({})
+    expect(asPayment(paymentUpdates[0]).payment_method).toBe('invoice')
+    expect(asPayment(paymentUpdates[0]).lesson_price_rappen).toBe(LESSON_45)
+  })
+
+  const BILLING = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  const INVOICE_SNAPSHOT = {
+    company_name: 'Acme GmbH',
+    city: 'Zürich',
+    country: 'Schweiz',
+  }
+
+  async function editPaymentUpdate(
+    body: Record<string, unknown>,
+    existingPaymentExtras: Record<string, unknown> = {},
+  ) {
+    const inserts = emptyInserts()
+    const paymentUpdates: unknown[] = []
+    mocks.getSupabaseAdmin.mockReturnValue(paidLesson(inserts, {
+      existingAppointment: existingAppointment(),
+      existingPayment: {
+        id: PAY,
+        payment_status: 'pending',
+        total_amount_rappen: LESSON_45,
+        amount_paid_rappen: 0,
+        metadata: {},
+        ...existingPaymentExtras,
+      },
+      paymentUpdates,
+    }))
+    mocks.readBody.mockResolvedValue({
+      ...appointmentBody(),
+      mode: 'edit',
+      eventId: APPT,
+      ...body,
+    })
+    const { default: handler } = await handlerPromise
+    await handler({})
+    return asPayment(paymentUpdates[0])
+  }
+
+  it('C1 invoice method persists invoice_address snapshot', async () => {
+    const updated = await editPaymentUpdate({
+      paymentMethodForPayment: 'invoice',
+      invoiceAddress: INVOICE_SNAPSHOT,
+    })
+    expect(updated.invoice_address).toEqual(INVOICE_SNAPSHOT)
+    expect(updated.payment_method).toBe('invoice')
+  })
+
+  it('C1 cash clears invoice_address even if leftover snapshot is sent', async () => {
+    const updated = await editPaymentUpdate({
+      paymentMethodForPayment: 'cash',
+      invoiceAddress: INVOICE_SNAPSHOT,
+    })
+    expect(updated.invoice_address).toBeNull()
+    expect(updated.payment_method).toBe('cash')
+  })
+
+  it('C1 online/wallee clears invoice_address even if leftover snapshot is sent', async () => {
+    const updated = await editPaymentUpdate({
+      paymentMethodForPayment: 'online',
+      invoiceAddress: INVOICE_SNAPSHOT,
+    })
+    expect(updated.invoice_address).toBeNull()
+    expect(updated.payment_method).toBe('wallee')
+  })
+
+  it('C1 switching invoice → cash clears an existing invoice_address', async () => {
+    const updated = await editPaymentUpdate(
+      {
+        paymentMethodForPayment: 'cash',
+        invoiceAddress: null,
+      },
+      { invoice_address: INVOICE_SNAPSHOT },
+    )
+    expect(updated.invoice_address).toBeNull()
+  })
+
+  it('C1 cash omits invoiceAddress in the request but still writes null', async () => {
+    const updated = await editPaymentUpdate({
+      paymentMethodForPayment: 'cash',
+    })
+    expect(updated.invoice_address).toBeNull()
+  })
+
+  it('C1 notes supplied with text are persisted', async () => {
+    const updated = await editPaymentUpdate({
+      paymentNotes: 'Discount: staff courtesy',
+    })
+    expect(updated.notes).toBe('Discount: staff courtesy')
+  })
+
+  it('C1 notes explicitly null are persisted as null', async () => {
+    const updated = await editPaymentUpdate({
+      paymentNotes: null,
+    })
+    expect(updated.notes).toBeNull()
+  })
+
+  it('C1 existing notes + explicit clear removes stale notes', async () => {
+    const updated = await editPaymentUpdate(
+      { paymentNotes: null },
+      { notes: 'Discount: old reason' },
+    )
+    expect(updated.notes).toBeNull()
+  })
+
+  it('C1 omitted notes do not appear on the payment update', async () => {
+    const updated = await editPaymentUpdate({
+      paymentMethodForPayment: 'cash',
+    })
+    expect(updated).not.toHaveProperty('notes')
+  })
+
+  it('C1 billing address ID supplied is persisted', async () => {
+    const updated = await editPaymentUpdate({
+      paymentMethodForPayment: 'invoice',
+      companyBillingAddressId: BILLING,
+    })
+    expect(updated.company_billing_address_id).toBe(BILLING)
+  })
+
+  it('C1 billing address ID explicitly null is persisted as null', async () => {
+    const updated = await editPaymentUpdate({
+      companyBillingAddressId: null,
+    })
+    expect(updated.company_billing_address_id).toBeNull()
+  })
+
+  it('C1 existing billing address + explicit clear removes the stale ID', async () => {
+    const updated = await editPaymentUpdate(
+      { companyBillingAddressId: null },
+      { company_billing_address_id: BILLING },
+    )
+    expect(updated.company_billing_address_id).toBeNull()
+  })
+
+  it('C1 omitted billing address ID does not appear on the payment update', async () => {
+    const updated = await editPaymentUpdate({
+      paymentMethodForPayment: 'cash',
+    })
+    expect(updated).not.toHaveProperty('company_billing_address_id')
+  })
+
+  it('EventModal uninitialized invoice payload preserves stored billing id and snapshot', async () => {
+    const c1 = buildStaffC1PaymentMetadata({
+      paymentMethodRaw: 'invoice',
+      companyBillingAddressId: undefined,
+      invoiceData: EMPTY_INVOICE_SNAPSHOT,
+    })
+    expect(c1).not.toHaveProperty('companyBillingAddressId')
+    expect(c1).not.toHaveProperty('invoiceAddress')
+    const updated = await editPaymentUpdate(
+      {
+        paymentMethodForPayment: 'invoice',
+        ...c1,
+      },
+      {
+        company_billing_address_id: BILLING,
+        invoice_address: INVOICE_SNAPSHOT,
+      },
+    )
+    expect(updated).not.toHaveProperty('company_billing_address_id')
+    expect(updated).not.toHaveProperty('invoice_address')
+    expect(updated.payment_method).toBe('invoice')
+  })
+
+  it('EventModal hydrated invoice payload persists known UUID and snapshot', async () => {
+    const c1 = buildStaffC1PaymentMetadata({
+      paymentMethodRaw: 'invoice',
+      companyBillingAddressId: BILLING,
+      invoiceData: INVOICE_SNAPSHOT,
+    })
+    const updated = await editPaymentUpdate(
+      {
+        paymentMethodForPayment: 'invoice',
+        ...c1,
+      },
+      {
+        company_billing_address_id: BILLING,
+        invoice_address: { company_name: 'Old' },
+      },
+    )
+    expect(updated.company_billing_address_id).toBe(BILLING)
+    expect(updated.invoice_address).toEqual({
+      company_name: 'Acme GmbH',
+      contact_person: '',
+      email: '',
+      phone: '',
+      street: '',
+      street_number: '',
+      zip: '',
+      city: 'Zürich',
+      country: 'Schweiz',
+    })
+  })
+
+  it('EventModal cash payload from C1 builder clears billing id and invoice snapshot', async () => {
+    const c1 = buildStaffC1PaymentMetadata({
+      paymentMethodRaw: 'cash',
+      companyBillingAddressId: BILLING,
+      invoiceData: INVOICE_SNAPSHOT,
+    })
+    expect(c1.companyBillingAddressId).toBeNull()
+    expect(c1.invoiceAddress).toBeNull()
+    const updated = await editPaymentUpdate(
+      {
+        paymentMethodForPayment: 'cash',
+        ...c1,
+      },
+      {
+        company_billing_address_id: BILLING,
+        invoice_address: INVOICE_SNAPSHOT,
+      },
+    )
+    expect(updated.company_billing_address_id).toBeNull()
+    expect(updated.invoice_address).toBeNull()
   })
 })
