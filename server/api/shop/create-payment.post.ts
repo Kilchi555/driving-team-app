@@ -7,6 +7,8 @@ import { defineEventHandler, readBody, createError, getHeader } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { sanitizeString, validateUUID } from '~/server/utils/validators'
+import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
+import { publicShopSessionPrincipalId } from '~/server/utils/shop-public-identity'
 import { logger } from '~/utils/logger'
 
 export default defineEventHandler(async (event) => {
@@ -26,7 +28,6 @@ export default defineEventHandler(async (event) => {
     }
 
     const {
-      user_id,
       staff_id,
       tenant_id,
       total_amount_rappen,
@@ -42,7 +43,6 @@ export default defineEventHandler(async (event) => {
     const MAX_TOTAL_AMOUNT_RAPPEN = 5000000 // CHF 50'000 hard cap for public checkout
     const MAX_METADATA_CHARS = 20000
     const tenantId = sanitizeString(tenant_id, 64)
-    const userId = user_id ? sanitizeString(user_id, 64) : null
     const staffId = staff_id ? sanitizeString(staff_id, 64) : null
     const paymentMethod = sanitizeString(payment_method, 32) || 'wallee'
     const paymentCurrency = sanitizeString(currency, 8) || 'CHF'
@@ -69,9 +69,6 @@ export default defineEventHandler(async (event) => {
     }
     if (!validateUUID(tenantId).valid) {
       throw createError({ statusCode: 400, message: 'tenant_id ist ungültig' })
-    }
-    if (userId && !validateUUID(userId).valid) {
-      throw createError({ statusCode: 400, message: 'user_id ist ungültig' })
     }
     if (staffId && !validateUUID(staffId).valid) {
       throw createError({ statusCode: 400, message: 'staff_id ist ungültig' })
@@ -269,27 +266,9 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // If user_id is provided, enforce tenant ownership and expected checkout role.
-    if (userId) {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, tenant_id, role, is_active')
-        .eq('id', userId)
-        .maybeSingle()
-
-      if (userError || !userData) {
-        throw createError({ statusCode: 400, message: 'Ungültiger user_id' })
-      }
-      if (userData.tenant_id !== tenantId) {
-        throw createError({ statusCode: 403, message: 'user_id gehört nicht zum tenant_id' })
-      }
-      if (!['client', 'staff', 'admin', 'tenant_admin'].includes(userData.role)) {
-        throw createError({ statusCode: 400, message: 'user_id hat keine gültige Rolle' })
-      }
-      if (userData.is_active === false) {
-        throw createError({ statusCode: 400, message: 'user_id ist inaktiv' })
-      }
-    }
+    // Browser user_id is untrusted. Bind only a same-tenant client/student session.
+    const sessionUser = await getAuthenticatedUserWithDbId(event)
+    const paymentUserId = publicShopSessionPrincipalId(sessionUser, tenantId)
 
     // staff_id is optional; if provided, verify same tenant + allowed role.
     if (staffId) {
@@ -317,7 +296,7 @@ export default defineEventHandler(async (event) => {
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .insert({
-        user_id: userId,
+        user_id: paymentUserId,
         staff_id: staffId,
         tenant_id: tenantId,
         appointment_id: null,
