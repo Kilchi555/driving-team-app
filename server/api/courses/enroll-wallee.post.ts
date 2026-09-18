@@ -28,6 +28,7 @@ import {
   loadPublicCourseForEnrollment,
 } from '~/server/utils/course-custom-sessions'
 import { enrollCourseWithCredit, throwIfCreditEnrollmentFailed } from '~/server/utils/enroll-course-with-credit'
+import { resolveEffectiveCoursePaymentMethod } from '~/server/utils/resolve-effective-course-payment-method'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -129,39 +130,30 @@ const handler = defineEventHandler(async (event) => {
       })
     }
 
-    // If an admin has explicitly marked this course as cash-only, the
-    // Wallee endpoint must refuse — clients should call `enroll-cash`
-    // instead. Block early so we don't accidentally create Wallee
-    // transactions for cash courses.
-    const explicitMethod = (course as any).payment_method as string | null | undefined
-    if (explicitMethod === 'CASH_ON_SITE') {
-      logger.warn('🚫 Wallee enrollment blocked: course is admin-marked cash-only', { courseId, tenantId })
+    // Effective method (course → category → tenant, then availability gates)
+    // is the source of truth. Client-supplied paymentMethod is ignored.
+    const paymentResolution = await resolveEffectiveCoursePaymentMethod(supabase, course)
+    if (paymentResolution.configured === 'CASH_ON_SITE') {
+      logger.warn('🚫 Wallee enrollment blocked: course is cash-only', {
+        courseId,
+        tenantId,
+        source: paymentResolution.source,
+      })
       throw createError({
         statusCode: 400,
         statusMessage: 'Dieser Kurs ist auf Barzahlung vor Ort eingestellt. Bitte verwende die Barzahlungs-Anmeldung.'
       })
     }
-    if (explicitMethod === 'INVOICE') {
-      // Only block if invoice is actually usable for this tenant — otherwise
-      // the client-side auto-degrade logic (getCoursePaymentMethod) will
-      // have already fallen back to WALLEE, and we must honor that here too.
-      const { data: paymentSettingRow } = await supabase
-        .from('tenant_settings')
-        .select('setting_value')
-        .eq('tenant_id', tenantId)
-        .eq('category', 'payment')
-        .eq('setting_key', 'payment_settings')
-        .maybeSingle()
-      const tenantPaymentSettings = paymentSettingRow?.setting_value
-        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
-        : {}
-      if (tenantPaymentSettings.invoice_payments_enabled === true) {
-        logger.warn('🚫 Wallee enrollment blocked: course is admin-marked invoice-only', { courseId, tenantId })
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Dieser Kurs ist auf Rechnung eingestellt. Bitte verwende die Rechnungs-Anmeldung.'
-        })
-      }
+    if (paymentResolution.configured === 'INVOICE' && paymentResolution.invoiceEnabled) {
+      logger.warn('🚫 Wallee enrollment blocked: course is invoice-only', {
+        courseId,
+        tenantId,
+        source: paymentResolution.source,
+      })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Dieser Kurs ist auf Rechnung eingestellt. Bitte verwende die Rechnungs-Anmeldung.'
+      })
     }
 
     // Note: tenant.wallee_enabled is enforced LATER in the flow, only when a

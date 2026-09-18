@@ -7,6 +7,10 @@ import { logger } from '~/utils/logger'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { zurichLocalToUtcIso } from '~/server/utils/zurich-time'
 import { httpErrorForCourseWrite } from '~/server/utils/course-write-error'
+import {
+  assertCourseCategoryBelongsToTenant,
+  parseWritableCoursePaymentMethod,
+} from '~/server/utils/course-payment-method-config'
 
 // ── ICS calendar invite generator ────────────────────────────────────────────
 function toIcsDate(dateStr: string, timeStr: string): string {
@@ -97,6 +101,11 @@ export default defineEventHandler(async (event) => {
   if (!courseData) throw createError({ statusCode: 400, statusMessage: 'Missing courseData' })
 
   const supabase = getSupabaseAdmin()
+
+  if (Object.prototype.hasOwnProperty.call(courseData, 'payment_method')) {
+    courseData.payment_method = parseWritableCoursePaymentMethod(courseData.payment_method)
+  }
+  await assertCourseCategoryBelongsToTenant(supabase, courseData.course_category_id, profile.tenant_id)
 
   // Reject foreign rooms (service role bypasses RLS; public marketplace rooms must not be course defaults)
   const roomIdsToCheck = new Set<string>()

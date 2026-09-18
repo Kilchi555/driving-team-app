@@ -87,9 +87,10 @@ describe('P0-19 does not change non-Wallee payment modes', () => {
 
   it('Wallee enroll still rejects cash-only and usable invoice courses', () => {
     const src = read('server/api/courses/enroll-wallee.post.ts')
-    expect(src).toContain("explicitMethod === 'CASH_ON_SITE'")
-    expect(src).toContain("explicitMethod === 'INVOICE'")
-    expect(src).toContain('invoice_payments_enabled === true')
+    expect(src).toContain('resolveEffectiveCoursePaymentMethod')
+    expect(src).toContain("configured === 'CASH_ON_SITE'")
+    expect(src).toContain("configured === 'INVOICE'")
+    expect(src).toContain('invoiceEnabled')
     expect(src).not.toContain('fulfillCourseWalleePayment')
   })
 
@@ -107,6 +108,7 @@ describe('P0-19 does not change non-Wallee payment modes', () => {
     expect(read('server/utils/fulfill-course-wallee-payment.ts')).not.toContain('payment_required')
     expect(read('utils/courseLocationUtils.ts')).toContain("explicit === 'WALLEE' || explicit === 'CASH_ON_SITE'")
     expect(read('utils/courseLocationUtils.ts')).toContain("explicit === 'INVOICE'")
+    expect(read('utils/courseLocationUtils.ts')).toContain('resolveConfiguredCoursePaymentMethod')
   })
 })
 

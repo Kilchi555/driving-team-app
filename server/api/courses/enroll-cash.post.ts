@@ -24,6 +24,7 @@ import { sha256Hex } from '~/server/utils/meta-capi'
 import { reportBindingCourseConversionSafely } from '~/server/utils/binding-booking-conversion'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 import { resolveNonWalleeEnrollmentMethod } from '~/server/utils/course-enrollment-payment-method'
+import { resolveEffectiveCoursePaymentMethod } from '~/server/utils/resolve-effective-course-payment-method'
 import { normalizeEnrollmentEmail } from '~/server/utils/normalize-enrollment-email'
 import { internalSecretHeaders } from '~/server/utils/require-staff-or-internal'
 import { throwIfCourseCapacityExceeded } from '~/server/utils/course-capacity'
@@ -110,50 +111,29 @@ const handler = defineEventHandler(async (event) => {
     }
 
     // 2b. This endpoint handles two "no upfront online payment" methods:
-    // cash-on-site and invoice. Which one is actually used is resolved below;
-    // both are gated so a spoofed request can't dodge Wallee for a course
-    // that requires it.
+    // cash-on-site and invoice. The server-side hierarchy is the source of
+    // truth (course → category → tenant). Client paymentMethod is ignored.
     //
-    // Invoice is only allowed when BOTH are true:
-    //   a) The course's `payment_method` column is explicitly set to 'INVOICE'.
-    //   b) The tenant has enabled invoice payments tenant-wide
-    //      (tenant_settings.payment.payment_settings.invoice_payments_enabled).
-    //
-    // Cash-on-site is allowed in three cases:
-    //   a) The course's `payment_method` column is explicitly set to
-    //      'CASH_ON_SITE' by an admin (highest priority).
-    //   b) The course's city is Einsiedeln (historical default).
-    //   c) The tenant has not activated Wallee at all — in that case cash
-    //      is the only option we can offer, so we accept it for every city.
-    // This mirrors `getCoursePaymentMethod` on the client.
-    const explicitMethod = (course as any).payment_method as string | null | undefined
+    // Cash-on-site is also allowed when:
+    //   - usable method is CASH_ON_SITE or INVOICE (invoice still gated)
+    //   - the course city is Einsiedeln (historical compatibility gate)
+    //   - the tenant has not activated Wallee
+    const paymentResolution = await resolveEffectiveCoursePaymentMethod(supabase, course)
     const explicitCity = (course as any).city as string | null | undefined
     const isEinsiedeln = explicitCity
       ? explicitCity.toLowerCase() === 'einsiedeln'
       : (course.description?.toLowerCase() || '').includes('einsiedeln')
-    const adminAllowedCash = explicitMethod === 'CASH_ON_SITE'
-
-    let adminAllowedInvoice = false
-    if (explicitMethod === 'INVOICE') {
-      const { data: paymentSettingRow } = await supabase
-        .from('tenant_settings')
-        .select('setting_value')
-        .eq('tenant_id', tenantId)
-        .eq('category', 'payment')
-        .eq('setting_key', 'payment_settings')
-        .maybeSingle()
-      const tenantPaymentSettings = paymentSettingRow?.setting_value
-        ? (typeof paymentSettingRow.setting_value === 'string' ? JSON.parse(paymentSettingRow.setting_value) : paymentSettingRow.setting_value)
-        : {}
-      adminAllowedInvoice = tenantPaymentSettings.invoice_payments_enabled === true
-    }
+    const adminAllowedCash = paymentResolution.usable === 'CASH_ON_SITE'
+    const adminAllowedInvoice = paymentResolution.usable === 'INVOICE'
 
     if (!adminAllowedCash && !adminAllowedInvoice && !isEinsiedeln && tenant.wallee_enabled) {
       logger.warn('❌ Cash/invoice payment attempted for course without override on Wallee-enabled tenant:', {
         courseId,
         city: explicitCity,
         location: course.description,
-        payment_method: explicitMethod
+        configured: paymentResolution.configured,
+        usable: paymentResolution.usable,
+        source: paymentResolution.source,
       })
       throw createError({
         statusCode: 400,
@@ -161,11 +141,11 @@ const handler = defineEventHandler(async (event) => {
       })
     }
 
-    // Course column is source of truth. Do not default invoice courses to cash
+    // Configured method is source of truth. Do not default invoice courses to cash
     // (that sent "bitte bar mitbringen" confirmation emails).
     const finalPaymentMethod = resolveNonWalleeEnrollmentMethod({
-      coursePaymentMethod: explicitMethod,
-      invoiceEnabled: adminAllowedInvoice,
+      coursePaymentMethod: paymentResolution.configured,
+      invoiceEnabled: paymentResolution.invoiceEnabled,
     })
 
     // 3 & 4. SARI credential loading + validation (only for SARI-managed courses)

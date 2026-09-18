@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { parseWritableCoursePaymentMethod } from '~/server/utils/course-payment-method-config'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -32,10 +33,14 @@ export default defineEventHandler(async (event) => {
       'session_count', 'hours_per_session', 'total_duration_hours', 'session_structure',
       'allow_partial_enrollment', 'partial_start_position', 'partial_price_rappen',
       'is_active', 'waitlist_enabled',
+      'payment_method',
     ]
     const fields: Record<string, any> = { updated_at: new Date().toISOString() }
     for (const key of ALLOWED) {
       if (rest[key] !== undefined) fields[key] = rest[key]
+    }
+    if (fields.payment_method !== undefined) {
+      fields.payment_method = parseWritableCoursePaymentMethod(fields.payment_method)
     }
 
     const supabase = getSupabaseAdmin()
