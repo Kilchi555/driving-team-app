@@ -19,6 +19,7 @@ import { buildMerchantReference } from '~/utils/merchantReference'
 import { logger } from '~/utils/logger'
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { getAuthenticatedUserWithDbId } from '~/server/utils/auth'
 import { Wallee } from 'wallee'
 import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wallee-config'
 import { z } from 'zod'
@@ -31,6 +32,7 @@ import {
   assertCustomSessionsForTenant,
   loadPublicCourseForEnrollment,
 } from '~/server/utils/course-custom-sessions'
+import { publicCourseSessionPrincipalId } from '~/server/utils/fulfill-course-wallee-payment'
 
 const ProcessPublicPaymentSchema = z.object({
   enrollmentId:  z.string().uuid().optional(),
@@ -351,18 +353,24 @@ export default defineEventHandler(async (event) => {
     // ✅ STEP 0: Create Payment record FIRST - so we have the ID for merchantReference fallback
     logger.debug('💾 Creating payment record in database FIRST...')
     
-    // Resolve user_id priority:
-    // 1. passedUserId from caller (existing user, passed via schema)
-    // 2. user_id from existing enrollment (legacy flow)
-    // 3. null → will be set by webhook after payment confirmation (new users)
-    let actualUserId: string | null = passedUserId || null
-    if (!actualUserId && enrollmentId) {
-      const { data: enrollmentUser } = await supabase
-        .from('course_registrations')
-        .select('user_id')
-        .eq('id', enrollmentId)
-        .single()
-      actualUserId = enrollmentUser?.user_id || null
+    // Resolve user_id:
+    // Path A (enrollmentId): trusted admin/legacy enrollment context — keep existing bind.
+    // Path B (public course): body userId is untrusted. Session principal only if
+    // same-tenant customer (client/student); otherwise payments.user_id stays null.
+    let actualUserId: string | null = null
+    if (enrollmentId) {
+      actualUserId = passedUserId || null
+      if (!actualUserId) {
+        const { data: enrollmentUser } = await supabase
+          .from('course_registrations')
+          .select('user_id')
+          .eq('id', enrollmentId)
+          .single()
+        actualUserId = enrollmentUser?.user_id || null
+      }
+    } else {
+      const sessionUser = await getAuthenticatedUserWithDbId(event)
+      actualUserId = publicCourseSessionPrincipalId(sessionUser, tenantId)
     }
     
     // Build payment record - only include columns that exist in the table

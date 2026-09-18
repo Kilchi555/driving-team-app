@@ -412,6 +412,19 @@ describe('source contracts — P0/P1 gates', () => {
     expect(wallee).toContain('const tenantId = course.tenant_id')
   })
 
+  it('process-public public path does not treat body userId as authority', () => {
+    const pay = src('server/api/payments/process-public.post.ts')
+    expect(pay).toContain('getAuthenticatedUserWithDbId')
+    const resolveAt = pay.indexOf('let actualUserId')
+    const enrollmentBranch = pay.slice(resolveAt, pay.indexOf('} else {', resolveAt))
+    const publicBranch = pay.slice(pay.indexOf('} else {', resolveAt), pay.indexOf('const paymentInsertData'))
+    expect(publicBranch).toContain('publicCourseSessionPrincipalId')
+    expect(publicBranch).not.toContain('passedUserId')
+    expect(enrollmentBranch).toContain('passedUserId')
+    expect(enrollmentBranch).not.toContain('publicCourseSessionPrincipalId')
+    expect(pay).toContain('if (enrollmentId)')
+  })
+
   it('process-public public path uses loadPublicCourseForEnrollment before payment/Wallee; enrollmentId path does not', () => {
     const pay = src('server/api/payments/process-public.post.ts')
     const enrollIf = pay.indexOf('if (enrollmentId)')

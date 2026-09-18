@@ -152,6 +152,15 @@ describe('C2-03 credit path uses a single DB transaction RPC', () => {
     expect(src).not.toContain('incrementStudentCredit')
     expect(src.split(".from('course_registrations').insert").length - 1).toBe(0)
   })
+
+  it('credit RPC is only reached with sessionPrincipalId, never a contact-matched guestUserId', () => {
+    const src = read('server/api/courses/enroll-wallee.post.ts')
+    const creditCall = src.slice(src.indexOf('const creditResult = await enrollCourseWithCredit'))
+    expect(src).toContain('publicCourseSessionPrincipalId')
+    expect(creditCall).toContain('userId: sessionPrincipalId')
+    expect(creditCall).not.toContain('guestUserId')
+    expect(src).not.toContain('guestUserId = existingUser.id')
+  })
 })
 
 describe('C2-05 already_fulfilled seat predicate (behavioral + contract)', () => {

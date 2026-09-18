@@ -13,6 +13,8 @@ import {
   decideProcessPostCourseCapture,
   paymentHasCourseId,
   isSuccessfulCourseFulfillment,
+  ensureGuestUserForCoursePayment,
+  publicCourseSessionPrincipalId,
 } from '../fulfill-course-wallee-payment'
 import {
   enrollCourseWithCredit,
@@ -262,5 +264,308 @@ describe('C5 regression contracts', () => {
     expect(creditSql).toContain('v_payload_course IS DISTINCT FROM p_course_id')
     expect(creditSql).toContain('v_payload_tenant IS DISTINCT FROM p_tenant_id')
     expect(creditSql).toContain('v_payload_user IS DISTINCT FROM p_user_id')
+  })
+})
+
+describe('Identity: contact match is discovery, not authorization', () => {
+  it('enroll-wallee credits only a same-tenant customer session principal', () => {
+    expect(enrollSrc).toContain('getAuthenticatedUserWithDbId')
+    expect(enrollSrc).toContain('publicCourseSessionPrincipalId')
+    expect(enrollSrc).toContain('sessionPrincipalId')
+    expect(enrollSrc).toContain('userId: sessionPrincipalId')
+    expect(enrollSrc).not.toContain('guestUserId = existingUser.id')
+    expect(enrollSrc).not.toMatch(/\.\.\.\(guestUserId \? \{ userId: guestUserId \}/)
+    expect(enrollSrc).toContain("getHeader(event, 'cookie')")
+    expect(enrollSrc).toContain("getHeader(event, 'authorization')")
+    expect(enrollSrc).toContain('findStaffOrAdminByEmail')
+    expect(enrollSrc).toContain('findStaffOrAdminByPhone')
+  })
+
+  it('enroll-cash does not attach an existing customer from contact match', () => {
+    const cash = read('server/api/courses/enroll-cash.post.ts')
+    expect(cash).toContain('getAuthenticatedUserWithDbId')
+    expect(cash).toContain('publicCourseSessionPrincipalId')
+    expect(cash).not.toContain('guestUserId = existingUser.id')
+    expect(cash).toContain('discovery only; not attaching')
+    expect(cash).toContain("userError?.code === '23505'")
+    expect(cash).toContain('findStaffOrAdminByEmail')
+    expect(cash).toContain('resolveNonWalleeEnrollmentMethod')
+  })
+
+  it('process-public public path ignores body userId; enrollmentId path keeps it', () => {
+    const pay = read('server/api/payments/process-public.post.ts')
+    expect(pay).toContain('getAuthenticatedUserWithDbId')
+    expect(pay).toContain('body userId is untrusted')
+    const resolveAt = pay.indexOf('let actualUserId')
+    const enrollmentBranch = pay.slice(resolveAt, pay.indexOf('} else {', resolveAt))
+    const publicBranch = pay.slice(pay.indexOf('} else {', resolveAt), pay.indexOf('const paymentInsertData', resolveAt))
+    expect(enrollmentBranch).toContain('actualUserId = passedUserId')
+    expect(enrollmentBranch).not.toContain('publicCourseSessionPrincipalId')
+    expect(publicBranch).toContain('getAuthenticatedUserWithDbId')
+    expect(publicBranch).toContain('publicCourseSessionPrincipalId')
+    expect(publicBranch).not.toContain('passedUserId')
+  })
+
+  it('fulfill and webhook do not convert contact/unique collision into account attach', () => {
+    const fulfill = read('server/utils/fulfill-course-wallee-payment.ts')
+    const hook = read('server/api/wallee/webhook.post.ts')
+    expect(fulfill).not.toContain('if (existingUser) return existingUser.id')
+    expect(fulfill).not.toContain('if (fallbackUser) return fallbackUser.id')
+    expect(fulfill).toContain('fulfilling without account attach')
+    expect(hook).toContain('ensureGuestUserForCoursePayment')
+    expect(hook).not.toContain('findExistingUserByContact')
+  })
+})
+
+describe('publicCourseSessionPrincipalId', () => {
+  const TENANT = 'tenant-a'
+  const OTHER = 'tenant-b'
+  const USER = 'user-1'
+
+  it('A) authenticated client same tenant is bound', () => {
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: TENANT, role: 'client' },
+      TENANT,
+    )).toBe(USER)
+  })
+
+  it('B) authenticated student same tenant is bound', () => {
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: TENANT, role: 'student' },
+      TENANT,
+    )).toBe(USER)
+  })
+
+  it('C) authenticated staff same tenant is not bound', () => {
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: TENANT, role: 'staff' },
+      TENANT,
+    )).toBeNull()
+  })
+
+  it('D) authenticated admin same tenant is not bound', () => {
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: TENANT, role: 'admin' },
+      TENANT,
+    )).toBeNull()
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: TENANT, role: 'tenant_admin' },
+      TENANT,
+    )).toBeNull()
+  })
+
+  it('E) staff/admin cross-tenant is never bound', () => {
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: OTHER, role: 'staff' },
+      TENANT,
+    )).toBeNull()
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: OTHER, role: 'admin' },
+      TENANT,
+    )).toBeNull()
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: OTHER, role: 'client' },
+      TENANT,
+    )).toBeNull()
+  })
+})
+
+describe('ensureGuestUserForCoursePayment identity', () => {
+  const TENANT = 'tenant-a'
+  const VICTIM = 'victim-user'
+  const SESSION = 'session-user'
+  const GUEST = 'guest-from-this-payment'
+
+  function usersClient(opts: {
+    owned?: { id: string, tenant_id: string } | null
+    contact?: { id: string, role: string } | null
+    insert?: { data: { id: string } | null, error: { code?: string, message?: string } | null }
+    onInsert?: () => void
+    onPaymentBind?: (patch: Record<string, unknown>) => void
+    paymentBindError?: { message: string } | null
+  }) {
+    return {
+      from(table: string) {
+        if (table === 'payments') {
+          let patch: Record<string, unknown> | null = null
+          const builder = {
+            update(next: Record<string, unknown>) {
+              patch = next
+              return builder
+            },
+            eq() { return builder },
+            is() { return builder },
+            then(resolve: (v: unknown) => unknown, reject?: (r: unknown) => unknown) {
+              if (patch) opts.onPaymentBind?.(patch)
+              return Promise.resolve({ data: null, error: opts.paymentBindError ?? null }).then(resolve, reject)
+            },
+          }
+          return builder
+        }
+        const state: { byId?: string, byEmail?: boolean, byPhone?: boolean, inserting?: boolean } = {}
+        interface UsersQueryMock {
+          select: () => UsersQueryMock
+          eq: (col: string, val: string) => UsersQueryMock
+          ilike: () => UsersQueryMock
+          in: (col: string) => UsersQueryMock
+          limit: () => UsersQueryMock
+          maybeSingle: () => Promise<{
+            data: { id: string, tenant_id?: string, role?: string } | null
+            error: null
+          }>
+          insert: () => UsersQueryMock
+          single: () => Promise<{
+            data: { id: string } | null
+            error: { code?: string, message?: string } | null
+          }>
+        }
+        const q: UsersQueryMock = {
+          select() { return q },
+          eq(col: string, val: string) {
+            if (col === 'id') state.byId = val
+            return q
+          },
+          ilike() { state.byEmail = true; return q },
+          in(col: string) { if (col === 'phone') state.byPhone = true; return q },
+          limit() { return q },
+          maybeSingle: async () => {
+            if (state.byId) return { data: opts.owned ?? null, error: null }
+            if (state.byEmail || state.byPhone) return { data: opts.contact ?? null, error: null }
+            return { data: null, error: null }
+          },
+          insert() {
+            state.inserting = true
+            opts.onInsert?.()
+            return q
+          },
+          single: async () => opts.insert ?? { data: { id: 'new-guest' }, error: null },
+        }
+        expect(table).toBe('users')
+        return q
+      },
+    }
+  }
+
+  it('Attack 1/2: contact match does not return the existing users.id', async () => {
+    let inserted = false
+    const id = await ensureGuestUserForCoursePayment(
+      usersClient({
+        contact: { id: VICTIM, role: 'student' },
+        onInsert: () => { inserted = true },
+      }),
+      { id: 'pay-1', tenant_id: TENANT, metadata: { email: 'victim@example.com', phone: '+41790000000' } },
+      TENANT,
+    )
+    expect(id).toBeUndefined()
+    expect(inserted).toBe(false)
+  })
+
+  it('I) payment.user_id null + existing customer contact does not attach', async () => {
+    const id = await ensureGuestUserForCoursePayment(
+      usersClient({ contact: { id: VICTIM, role: 'client' } }),
+      { id: 'pay-1c', tenant_id: TENANT, metadata: { email: 'victim@example.com' } },
+      TENANT,
+    )
+    expect(id).toBeUndefined()
+  })
+
+  it('J) payment.user_id null + existing student contact does not attach', async () => {
+    const id = await ensureGuestUserForCoursePayment(
+      usersClient({ contact: { id: VICTIM, role: 'student' } }),
+      { id: 'pay-1s', tenant_id: TENANT, metadata: { email: 'victim@example.com' } },
+      TENANT,
+    )
+    expect(id).toBeUndefined()
+  })
+
+  it('G/H) trusted payment.user_id is reused only when tenant matches', async () => {
+    const ok = await ensureGuestUserForCoursePayment(
+      usersClient({ owned: { id: GUEST, tenant_id: TENANT } }),
+      { id: 'pay-2', user_id: GUEST, tenant_id: TENANT, metadata: { email: 'b@example.com' } },
+      TENANT,
+    )
+    expect(ok).toBe(GUEST)
+
+    const sameGuestViaContact = await ensureGuestUserForCoursePayment(
+      usersClient({
+        owned: null,
+        contact: { id: GUEST, role: 'client' },
+      }),
+      { id: 'pay-2b', user_id: GUEST, tenant_id: TENANT, metadata: { email: 'guest@example.com' } },
+      TENANT,
+    )
+    expect(sameGuestViaContact).toBe(GUEST)
+  })
+
+  it('L) payment.user_id from another tenant is not trusted and does not attach the contact', async () => {
+    const cross = await ensureGuestUserForCoursePayment(
+      usersClient({
+        owned: { id: SESSION, tenant_id: 'other-tenant' },
+        contact: { id: VICTIM, role: 'student' },
+      }),
+      { id: 'pay-3', user_id: SESSION, tenant_id: TENANT, metadata: { email: 'victim@example.com' } },
+      TENANT,
+    )
+    expect(cross).toBeUndefined()
+  })
+
+  it('unused contact still creates a new guest user and binds payment.user_id', async () => {
+    const payment = {
+      id: 'pay-4',
+      tenant_id: TENANT,
+      user_id: null as string | null,
+      metadata: { email: 'new@example.com', firstname: 'New' },
+    }
+    const binds: Array<Record<string, unknown>> = []
+    const id = await ensureGuestUserForCoursePayment(
+      usersClient({
+        contact: null,
+        insert: { data: { id: GUEST }, error: null },
+        onPaymentBind: (patch) => { binds.push(patch) },
+      }),
+      payment,
+      TENANT,
+    )
+    expect(id).toBe(GUEST)
+    expect(binds).toEqual([{ user_id: GUEST }])
+    expect(payment.user_id).toBe(GUEST)
+  })
+
+  it('M) fulfillment retry reuses the guest bound on this payment', async () => {
+    const payment = {
+      id: 'pay-4r',
+      tenant_id: TENANT,
+      user_id: null as string | null,
+      metadata: { email: 'retry@example.com', firstname: 'Retry' },
+    }
+    const first = await ensureGuestUserForCoursePayment(
+      usersClient({
+        contact: null,
+        insert: { data: { id: GUEST }, error: null },
+      }),
+      payment,
+      TENANT,
+    )
+    expect(first).toBe(GUEST)
+    expect(payment.user_id).toBe(GUEST)
+
+    const retry = await ensureGuestUserForCoursePayment(
+      usersClient({ owned: { id: GUEST, tenant_id: TENANT } }),
+      payment,
+      TENANT,
+    )
+    expect(retry).toBe(GUEST)
+  })
+
+  it('K) unique collision does not fallback-attach the existing user', async () => {
+    const id = await ensureGuestUserForCoursePayment(
+      usersClient({
+        contact: null,
+        insert: { data: null, error: { code: '23505', message: 'duplicate key' } },
+      }),
+      { id: 'pay-5', tenant_id: TENANT, metadata: { email: 'victim@example.com' } },
+      TENANT,
+    )
+    expect(id).toBeUndefined()
   })
 })
