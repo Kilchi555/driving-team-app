@@ -220,11 +220,53 @@ export function buildCourseFulfillmentPayload(
   return payload
 }
 
+const PUBLIC_COURSE_SESSION_ROLES = new Set(['client', 'student'])
+
+/**
+ * Public course enroll binds a session only for same-tenant customers.
+ * Staff/admin sessions are treated as anonymous on this path.
+ * Path A (enrollmentId) must not use this helper.
+ */
+export function publicCourseSessionPrincipalId(
+  sessionUser: { id?: string | null, tenant_id?: string | null, role?: string | null } | null | undefined,
+  courseTenantId: string,
+): string | null {
+  if (!sessionUser?.id) return null
+  if (sessionUser.tenant_id !== courseTenantId) return null
+  if (!sessionUser.role || !PUBLIC_COURSE_SESSION_ROLES.has(sessionUser.role)) return null
+  return sessionUser.id
+}
+
+async function persistCoursePaymentGuestUserId(
+  supabase: any,
+  payment: CoursePaymentLike,
+  tenantId: string,
+  userId: string,
+): Promise<void> {
+  if (payment.user_id) return
+  const { error } = await supabase
+    .from('payments')
+    .update({ user_id: userId })
+    .eq('id', payment.id)
+    .eq('tenant_id', tenantId)
+    .is('user_id', null)
+  if (error) {
+    logger.warn('⚠️ Failed to persist payment.user_id after guest create', {
+      paymentId: payment.id,
+      userId,
+      error: error.message,
+    })
+    return
+  }
+  payment.user_id = userId
+}
+
 export async function ensureGuestUserForCoursePayment(
   supabase: any,
   payment: CoursePaymentLike,
   tenantId: string,
 ): Promise<string | undefined> {
+  let paymentUserTenantOk = false
   if (payment.user_id) {
     const { data: owned } = await supabase
       .from('users')
@@ -232,11 +274,15 @@ export async function ensureGuestUserForCoursePayment(
       .eq('id', payment.user_id)
       .maybeSingle()
     if (owned?.id && owned.tenant_id === tenantId) return owned.id
-    logger.warn('⚠️ Ignoring payment.user_id with tenant mismatch during course fulfillment', {
-      paymentId: payment.id,
-      userId: payment.user_id,
-      tenantId,
-    })
+    if (owned?.id) {
+      logger.warn('⚠️ Ignoring payment.user_id with tenant mismatch during course fulfillment', {
+        paymentId: payment.id,
+        userId: payment.user_id,
+        tenantId,
+      })
+    } else {
+      paymentUserTenantOk = true
+    }
   }
   const email = payment.metadata?.email
   if (!email) return undefined
@@ -247,6 +293,9 @@ export async function ensureGuestUserForCoursePayment(
     tenantId,
   })
   if (existingUser) {
+    if (paymentUserTenantOk && payment.user_id && existingUser.id === payment.user_id) {
+      return existingUser.id
+    }
     logger.debug('ℹ️ Contact matches existing customer during fulfillment (discovery only; not attaching)', {
       paymentId: payment.id,
       matchedUserId: existingUser.id,
@@ -275,6 +324,7 @@ export async function ensureGuestUserForCoursePayment(
 
   if (newUser?.id) {
     const userId = newUser.id as string
+    await persistCoursePaymentGuestUserId(supabase, payment, tenantId, userId)
     const refCode = payment.metadata?.referral_code
     if (refCode) {
       const { data: affCode } = await supabase

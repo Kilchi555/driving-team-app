@@ -156,6 +156,7 @@ describe('C2-03 credit path uses a single DB transaction RPC', () => {
   it('credit RPC is only reached with sessionPrincipalId, never a contact-matched guestUserId', () => {
     const src = read('server/api/courses/enroll-wallee.post.ts')
     const creditCall = src.slice(src.indexOf('const creditResult = await enrollCourseWithCredit'))
+    expect(src).toContain('publicCourseSessionPrincipalId')
     expect(creditCall).toContain('userId: sessionPrincipalId')
     expect(creditCall).not.toContain('guestUserId')
     expect(src).not.toContain('guestUserId = existingUser.id')

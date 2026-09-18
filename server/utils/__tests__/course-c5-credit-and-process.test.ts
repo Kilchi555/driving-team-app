@@ -14,6 +14,7 @@ import {
   paymentHasCourseId,
   isSuccessfulCourseFulfillment,
   ensureGuestUserForCoursePayment,
+  publicCourseSessionPrincipalId,
 } from '../fulfill-course-wallee-payment'
 import {
   enrollCourseWithCredit,
@@ -267,8 +268,9 @@ describe('C5 regression contracts', () => {
 })
 
 describe('Identity: contact match is discovery, not authorization', () => {
-  it('enroll-wallee credits only a same-tenant session principal', () => {
+  it('enroll-wallee credits only a same-tenant customer session principal', () => {
     expect(enrollSrc).toContain('getAuthenticatedUserWithDbId')
+    expect(enrollSrc).toContain('publicCourseSessionPrincipalId')
     expect(enrollSrc).toContain('sessionPrincipalId')
     expect(enrollSrc).toContain('userId: sessionPrincipalId')
     expect(enrollSrc).not.toContain('guestUserId = existingUser.id')
@@ -282,6 +284,7 @@ describe('Identity: contact match is discovery, not authorization', () => {
   it('enroll-cash does not attach an existing customer from contact match', () => {
     const cash = read('server/api/courses/enroll-cash.post.ts')
     expect(cash).toContain('getAuthenticatedUserWithDbId')
+    expect(cash).toContain('publicCourseSessionPrincipalId')
     expect(cash).not.toContain('guestUserId = existingUser.id')
     expect(cash).toContain('discovery only; not attaching')
     expect(cash).toContain("userError?.code === '23505'")
@@ -297,7 +300,9 @@ describe('Identity: contact match is discovery, not authorization', () => {
     const enrollmentBranch = pay.slice(resolveAt, pay.indexOf('} else {', resolveAt))
     const publicBranch = pay.slice(pay.indexOf('} else {', resolveAt), pay.indexOf('const paymentInsertData', resolveAt))
     expect(enrollmentBranch).toContain('actualUserId = passedUserId')
+    expect(enrollmentBranch).not.toContain('publicCourseSessionPrincipalId')
     expect(publicBranch).toContain('getAuthenticatedUserWithDbId')
+    expect(publicBranch).toContain('publicCourseSessionPrincipalId')
     expect(publicBranch).not.toContain('passedUserId')
   })
 
@@ -312,19 +317,91 @@ describe('Identity: contact match is discovery, not authorization', () => {
   })
 })
 
+describe('publicCourseSessionPrincipalId', () => {
+  const TENANT = 'tenant-a'
+  const OTHER = 'tenant-b'
+  const USER = 'user-1'
+
+  it('A) authenticated client same tenant is bound', () => {
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: TENANT, role: 'client' },
+      TENANT,
+    )).toBe(USER)
+  })
+
+  it('B) authenticated student same tenant is bound', () => {
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: TENANT, role: 'student' },
+      TENANT,
+    )).toBe(USER)
+  })
+
+  it('C) authenticated staff same tenant is not bound', () => {
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: TENANT, role: 'staff' },
+      TENANT,
+    )).toBeNull()
+  })
+
+  it('D) authenticated admin same tenant is not bound', () => {
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: TENANT, role: 'admin' },
+      TENANT,
+    )).toBeNull()
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: TENANT, role: 'tenant_admin' },
+      TENANT,
+    )).toBeNull()
+  })
+
+  it('E) staff/admin cross-tenant is never bound', () => {
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: OTHER, role: 'staff' },
+      TENANT,
+    )).toBeNull()
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: OTHER, role: 'admin' },
+      TENANT,
+    )).toBeNull()
+    expect(publicCourseSessionPrincipalId(
+      { id: USER, tenant_id: OTHER, role: 'client' },
+      TENANT,
+    )).toBeNull()
+  })
+})
+
 describe('ensureGuestUserForCoursePayment identity', () => {
   const TENANT = 'tenant-a'
   const VICTIM = 'victim-user'
   const SESSION = 'session-user'
+  const GUEST = 'guest-from-this-payment'
 
   function usersClient(opts: {
     owned?: { id: string, tenant_id: string } | null
     contact?: { id: string, role: string } | null
     insert?: { data: { id: string } | null, error: { code?: string, message?: string } | null }
     onInsert?: () => void
+    onPaymentBind?: (patch: Record<string, unknown>) => void
+    paymentBindError?: { message: string } | null
   }) {
     return {
       from(table: string) {
+        if (table === 'payments') {
+          let patch: Record<string, unknown> | null = null
+          const builder = {
+            update(next: Record<string, unknown>) {
+              patch = next
+              return builder
+            },
+            eq() { return builder },
+            is() { return builder },
+            then(resolve: (v: unknown) => unknown, reject?: (r: unknown) => unknown) {
+              if (patch) opts.onPaymentBind?.(patch)
+              return Promise.resolve({ data: null, error: opts.paymentBindError ?? null }).then(resolve, reject)
+            },
+          }
+          return builder
+        }
         const state: { byId?: string, byEmail?: boolean, byPhone?: boolean, inserting?: boolean } = {}
         interface UsersQueryMock {
           select: () => UsersQueryMock
@@ -383,14 +460,44 @@ describe('ensureGuestUserForCoursePayment identity', () => {
     expect(inserted).toBe(false)
   })
 
-  it('Attack 3: trusted payment.user_id is used only when tenant matches', async () => {
-    const ok = await ensureGuestUserForCoursePayment(
-      usersClient({ owned: { id: SESSION, tenant_id: TENANT } }),
-      { id: 'pay-2', user_id: SESSION, tenant_id: TENANT, metadata: { email: 'b@example.com' } },
+  it('I) payment.user_id null + existing customer contact does not attach', async () => {
+    const id = await ensureGuestUserForCoursePayment(
+      usersClient({ contact: { id: VICTIM, role: 'client' } }),
+      { id: 'pay-1c', tenant_id: TENANT, metadata: { email: 'victim@example.com' } },
       TENANT,
     )
-    expect(ok).toBe(SESSION)
+    expect(id).toBeUndefined()
+  })
 
+  it('J) payment.user_id null + existing student contact does not attach', async () => {
+    const id = await ensureGuestUserForCoursePayment(
+      usersClient({ contact: { id: VICTIM, role: 'student' } }),
+      { id: 'pay-1s', tenant_id: TENANT, metadata: { email: 'victim@example.com' } },
+      TENANT,
+    )
+    expect(id).toBeUndefined()
+  })
+
+  it('G/H) trusted payment.user_id is reused only when tenant matches', async () => {
+    const ok = await ensureGuestUserForCoursePayment(
+      usersClient({ owned: { id: GUEST, tenant_id: TENANT } }),
+      { id: 'pay-2', user_id: GUEST, tenant_id: TENANT, metadata: { email: 'b@example.com' } },
+      TENANT,
+    )
+    expect(ok).toBe(GUEST)
+
+    const sameGuestViaContact = await ensureGuestUserForCoursePayment(
+      usersClient({
+        owned: null,
+        contact: { id: GUEST, role: 'client' },
+      }),
+      { id: 'pay-2b', user_id: GUEST, tenant_id: TENANT, metadata: { email: 'guest@example.com' } },
+      TENANT,
+    )
+    expect(sameGuestViaContact).toBe(GUEST)
+  })
+
+  it('L) payment.user_id from another tenant is not trusted and does not attach the contact', async () => {
     const cross = await ensureGuestUserForCoursePayment(
       usersClient({
         owned: { id: SESSION, tenant_id: 'other-tenant' },
@@ -402,19 +509,55 @@ describe('ensureGuestUserForCoursePayment identity', () => {
     expect(cross).toBeUndefined()
   })
 
-  it('unused contact still creates a new guest user', async () => {
+  it('unused contact still creates a new guest user and binds payment.user_id', async () => {
+    const payment = {
+      id: 'pay-4',
+      tenant_id: TENANT,
+      user_id: null as string | null,
+      metadata: { email: 'new@example.com', firstname: 'New' },
+    }
+    const binds: Array<Record<string, unknown>> = []
     const id = await ensureGuestUserForCoursePayment(
       usersClient({
         contact: null,
-        insert: { data: { id: 'new-guest' }, error: null },
+        insert: { data: { id: GUEST }, error: null },
+        onPaymentBind: (patch) => { binds.push(patch) },
       }),
-      { id: 'pay-4', tenant_id: TENANT, metadata: { email: 'new@example.com', firstname: 'New' } },
+      payment,
       TENANT,
     )
-    expect(id).toBe('new-guest')
+    expect(id).toBe(GUEST)
+    expect(binds).toEqual([{ user_id: GUEST }])
+    expect(payment.user_id).toBe(GUEST)
   })
 
-  it('unique collision does not fallback-attach the existing user', async () => {
+  it('M) fulfillment retry reuses the guest bound on this payment', async () => {
+    const payment = {
+      id: 'pay-4r',
+      tenant_id: TENANT,
+      user_id: null as string | null,
+      metadata: { email: 'retry@example.com', firstname: 'Retry' },
+    }
+    const first = await ensureGuestUserForCoursePayment(
+      usersClient({
+        contact: null,
+        insert: { data: { id: GUEST }, error: null },
+      }),
+      payment,
+      TENANT,
+    )
+    expect(first).toBe(GUEST)
+    expect(payment.user_id).toBe(GUEST)
+
+    const retry = await ensureGuestUserForCoursePayment(
+      usersClient({ owned: { id: GUEST, tenant_id: TENANT } }),
+      payment,
+      TENANT,
+    )
+    expect(retry).toBe(GUEST)
+  })
+
+  it('K) unique collision does not fallback-attach the existing user', async () => {
     const id = await ensureGuestUserForCoursePayment(
       usersClient({
         contact: null,

@@ -32,6 +32,7 @@ import {
   assertCustomSessionsForTenant,
   loadPublicCourseForEnrollment,
 } from '~/server/utils/course-custom-sessions'
+import { publicCourseSessionPrincipalId } from '~/server/utils/fulfill-course-wallee-payment'
 
 // Rate limiting: 5 attempts per IP per minute
 const rateLimiter = createRateLimitMiddleware({
@@ -285,12 +286,12 @@ const handler = defineEventHandler(async (event) => {
     }
 
     const sessionUser = await getAuthenticatedUserWithDbId(event)
-    const sessionPrincipalId =
-      sessionUser?.id && sessionUser.tenant_id === tenantId ? sessionUser.id : null
+    const sessionPrincipalId = publicCourseSessionPrincipalId(sessionUser, tenantId)
     if (sessionUser?.id && !sessionPrincipalId) {
-      logger.warn('⚠️ Ignoring cross-tenant session on public cash enroll', {
+      logger.warn('⚠️ Ignoring non-customer or cross-tenant session on public cash enroll', {
         sessionTenantId: sessionUser.tenant_id,
         courseTenantId: tenantId,
+        role: sessionUser.role,
       })
     }
 
