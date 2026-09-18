@@ -1084,6 +1084,10 @@ const useEventModalForm = (currentUser?: any, refs?: {
       }
       
       logger.debug('💾 Saving appointment data:', appointmentData)
+
+      const staffPaymentMethodRaw = refs?.selectedPaymentMethod?.value || formData.value.payment_method || 'wallee'
+      const staffPaymentMethodKey = String(staffPaymentMethodRaw).trim().toLowerCase()
+      const isInvoiceStaffPayment = staffPaymentMethodKey === 'invoice' || staffPaymentMethodKey === 'rechnung'
       
       // Use API endpoint with admin privileges to bypass RLS foreign key issues
       let response
@@ -1095,7 +1099,7 @@ const useEventModalForm = (currentUser?: any, refs?: {
             eventId,
             appointmentData,
             totalAmountRappenForPayment,
-            paymentMethodForPayment: refs?.selectedPaymentMethod?.value || formData.value.payment_method || 'wallee',
+            paymentMethodForPayment: staffPaymentMethodRaw,
             // ✅ Send price breakdown components
             basePriceRappen,
             adminFeeRappen,
@@ -1104,9 +1108,11 @@ const useEventModalForm = (currentUser?: any, refs?: {
             isManualDiscount: Boolean(formData.value.is_manual_discount),
             // ✅ Send credit used (if any)
             creditUsedRappen: creditUsedRappenForPayment,
-            // ✅ Send company billing address ID for invoice payments
-            companyBillingAddressId: refs?.savedCompanyBillingAddressId?.value || null,
-            invoiceAddress: refs?.priceDisplayRef?.value?.invoiceData
+            // C1 metadata is always sent so the server can tell persist vs explicit clear.
+            companyBillingAddressId: isInvoiceStaffPayment
+              ? (refs?.savedCompanyBillingAddressId?.value || null)
+              : null,
+            invoiceAddress: isInvoiceStaffPayment && refs?.priceDisplayRef?.value?.invoiceData
               ? {
                   company_name: refs.priceDisplayRef.value.invoiceData.company_name || '',
                   contact_person: refs.priceDisplayRef.value.invoiceData.contact_person || '',

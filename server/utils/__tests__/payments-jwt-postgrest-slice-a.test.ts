@@ -95,7 +95,20 @@ describe('Slice A browser JWT writers are closed', () => {
     const src = read(eventModalPath)
     expect(src).toContain('/api/appointments/save')
     expect(src).toContain('invoiceAddress')
+    expect(src).toContain('isInvoiceStaffPayment')
+    expect(src).toMatch(/invoiceAddress:\s*isInvoiceStaffPayment &&/)
+    expect(src).toMatch(/companyBillingAddressId:\s*isInvoiceStaffPayment/)
     expect(jwtPaymentWriteHits(src)).toEqual([])
+  })
+
+  it('C1 save distinguishes omitted metadata from explicit clear and method-gates invoice_address', () => {
+    const src = read(savePath)
+    expect(src).toContain('bodyHasOwn')
+    expect(src).toContain('paymentNotesProvided')
+    expect(src).toContain('companyBillingAddressIdProvided')
+    expect(src).toContain("mappedPaymentMethod !== 'invoice'")
+    expect(src).toContain('invoice_address = null')
+    expect(src).toContain('getSupabaseAdmin')
   })
 
   it('C2 payment status updates go through /api/payments/status', () => {
