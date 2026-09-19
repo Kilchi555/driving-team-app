@@ -35,23 +35,23 @@ interface Course {
 
 type ExpirationParse =
   | { kind: 'VALID_DATE'; date: Date }
-  | { kind: 'UNKNOWN' }
+  | { kind: 'ABSENT' }
   | { kind: 'INVALID' }
 
 /**
- * Classify a SARI license expiration value without coercing null/0/false into Unix Epoch.
- * Only non-empty strings are parsed with Date.
+ * Classify a SARI license expiration value without coercing null/0/false/'' into Unix Epoch.
+ * Only non-empty strings are parsed with Date. Empty/whitespace strings are ABSENT, not INVALID.
  */
 export function classifyExpirationDate(raw: unknown): ExpirationParse {
   if (raw === null || raw === undefined) {
-    return { kind: 'UNKNOWN' }
+    return { kind: 'ABSENT' }
   }
   if (typeof raw !== 'string') {
     return { kind: 'INVALID' }
   }
   const trimmed = raw.trim()
   if (trimmed === '') {
-    return { kind: 'INVALID' }
+    return { kind: 'ABSENT' }
   }
   const date = new Date(trimmed)
   if (Number.isNaN(date.getTime())) {
@@ -80,8 +80,9 @@ function throwLicenseError(state: Exclude<LicenseValidationState, 'VALID'>, stat
  * Validates if a customer's SARI license meets the course requirements and is valid for all sessions.
  * Throws an H3Error if validation fails.
  *
- * expirationdate null/missing → UNKNOWN_EXPIRATION (fail closed, never Date(null)/01.01.1970).
- * malformed / non-string expiration → INVALID_EXPIRATION (fail closed).
+ * expirationdate null/missing/empty/whitespace → ABSENT (does not block; never Date(null)/01.01.1970).
+ * ABSENT is not unlimited: a dated license still governs allow/deny.
+ * malformed / non-string expiration → INVALID (fail closed when no dated license exists).
  */
 export function validateLicense(course: Course, customerData: SARICustomer): void {
   if (!course.category) {
@@ -113,15 +114,15 @@ export function validateLicense(course: Course, customerData: SARICustomer): voi
   }
 
   const datedLicenses: Array<{ license: SARILicense; expiry: Date; categoryIndex: number }> = []
-  let sawUnknown = false
+  let sawInvalid = false
 
   for (const license of matchingLicenses) {
     const parsed = classifyExpirationDate(license.expirationdate)
-    if (parsed.kind === 'UNKNOWN') {
-      sawUnknown = true
+    if (parsed.kind === 'ABSENT') {
       continue
     }
     if (parsed.kind === 'INVALID') {
+      sawInvalid = true
       continue
     }
     datedLicenses.push({
@@ -139,10 +140,10 @@ export function validateLicense(course: Course, customerData: SARICustomer): voi
 
   const bestDated = datedLicenses[0]
   if (!bestDated) {
-    if (sawUnknown) {
-      throwLicenseError('UNKNOWN_EXPIRATION', UNKNOWN_LICENSE_EXPIRATION_MESSAGE)
+    if (sawInvalid) {
+      throwLicenseError('INVALID_EXPIRATION', INVALID_LICENSE_EXPIRATION_MESSAGE)
     }
-    throwLicenseError('INVALID_EXPIRATION', INVALID_LICENSE_EXPIRATION_MESSAGE)
+    return
   }
 
   const licenseExpiry = bestDated.expiry
