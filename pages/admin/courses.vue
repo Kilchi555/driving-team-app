@@ -3265,6 +3265,9 @@
                     <span class="text-xs text-gray-500 truncate">{{ enrollment.email }}</span>
                     <span v-if="enrollment.phone" class="text-xs text-gray-400 truncate hidden sm:block">{{ enrollment.phone }}</span>
                   </div>
+                  <div v-if="participantIdentityLine(enrollment)" class="text-xs text-gray-400 truncate mt-0.5">
+                    {{ participantIdentityLine(enrollment) }}
+                  </div>
                 </div>
                 <!-- Actions -->
                 <div class="flex items-center gap-1 flex-shrink-0" @click.stop>
@@ -3990,13 +3993,13 @@
                   <div v-if="selectedParticipant?.zip || selectedParticipant?.city">{{ selectedParticipant.zip }} {{ selectedParticipant.city }}</div>
                 </div>
               </div>
-              <div v-if="selectedParticipant?.birthdate" class="flex items-center justify-between px-4 py-2.5">
+              <div v-if="selectedParticipantBirthdate" class="flex items-center justify-between px-4 py-2.5">
                 <span class="text-xs text-gray-500">Geburtsdatum</span>
-                <span class="text-sm text-gray-900">{{ new Date(selectedParticipant.birthdate).toLocaleDateString('de-CH') }}</span>
+                <span class="text-sm text-gray-900">{{ selectedParticipantBirthdate }}</span>
               </div>
-              <div v-if="selectedParticipant?.sari_faberid" class="flex items-center justify-between px-4 py-2.5">
+              <div v-if="selectedParticipantLicense" class="flex items-center justify-between px-4 py-2.5">
                 <span class="text-xs text-gray-500">Ausweisnummer (LFA)</span>
-                <span class="text-sm font-mono text-gray-900">{{ selectedParticipant.sari_faberid }}</span>
+                <span class="text-sm font-mono text-gray-900">{{ selectedParticipantLicense }}</span>
               </div>
             </div>
           </div>
@@ -4231,6 +4234,12 @@ import { evaluateSessionOrder } from '~/utils/session-order-rules'
 import { refreshClientSession } from '~/utils/client-session-refresh'
 import { formatCourseSessionLine } from '~/utils/format-course-sessions'
 import { openParticipantListPdf } from '~/utils/print-participant-list'
+import {
+  formatParticipantBirthdate,
+  participantBirthdate,
+  participantDisplayLicenseLabel,
+  participantIdentityLine,
+} from '~/utils/participant-identity'
 
 // Warning banner: surface "no online payments" so admins understand all
 // course enrollments will fall back to cash.
@@ -4467,6 +4476,14 @@ const selectedParticipant = ref<any>(null)
 const selectedParticipantUser = ref<any>(null)
 const isLoadingParticipantUser = ref(false)
 const showParticipantDetail = ref(false)
+
+const selectedParticipantBirthdate = computed(() => {
+  const value = participantBirthdate(selectedParticipant.value)
+  return value ? formatParticipantBirthdate(value) : ''
+})
+const selectedParticipantLicense = computed(() =>
+  participantDisplayLicenseLabel(selectedParticipant.value)
+)
 
 const openParticipantDetail = async (enrollment: any) => {
   cancelTransfer()
