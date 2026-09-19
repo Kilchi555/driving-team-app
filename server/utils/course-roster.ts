@@ -114,7 +114,7 @@ export async function loadCourseRoster(
 
   const { data: participants, error: partError } = await supabase
     .from('course_registrations')
-    .select('id, first_name, last_name, email, phone, status, payment_status, is_partial_enrollment, partial_start_session, individual_session_number, custom_sessions, registration_date')
+    .select('id, first_name, last_name, email, phone, birthdate, license_number, sari_faberid, status, payment_status, is_partial_enrollment, partial_start_session, individual_session_number, custom_sessions, registration_date')
     .eq('course_id', courseId)
     .is('deleted_at', null)
     .neq('status', 'cancelled')

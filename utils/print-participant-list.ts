@@ -5,6 +5,7 @@ import {
   registrationAttendsTeil,
   type RegistrationAttendance,
 } from '~/utils/course-session-attendance'
+import { participantIdentityLine } from '~/utils/participant-identity'
 
 export type ParticipantListPerson = RegistrationAttendance & {
   first_name?: string | null
@@ -12,6 +13,9 @@ export type ParticipantListPerson = RegistrationAttendance & {
   email?: string | null
   phone?: string | null
   partial_label?: string | null
+  birthdate?: string | null
+  license_number?: string | null
+  sari_faberid?: string | null
 }
 
 export type ParticipantListSession = {
@@ -125,6 +129,7 @@ export function buildParticipantListHtml(options: PrintParticipantListOptions): 
     const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || '—'
     const phone = p.phone || '—'
     const email = p.email || ''
+    const identity = participantIdentityLine(p)
     const partialLabel = p.partial_label || partialEnrollmentBadgeLabel(p)
     const sigCells = sessionHeaders.length > 0
       ? sessionHeaders.map((h) => {
@@ -139,6 +144,7 @@ export function buildParticipantListHtml(options: PrintParticipantListOptions): 
       <td class="num">${i + 1}</td>
       <td class="name">
         <div class="name-main">${escapeHtml(name)}</div>
+        ${identity ? `<div class="name-sub">${escapeHtml(identity)}</div>` : ''}
         ${email ? `<div class="name-sub">${escapeHtml(email)}</div>` : ''}
         ${partialLabel ? `<div class="name-partial">${escapeHtml(partialLabel)}</div>` : ''}
       </td>
