@@ -8,6 +8,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { sanitizeString, validateUUID } from '~/server/utils/validators'
 import { logger } from '~/utils/logger'
+import { computeDiscountAmountRappen, discountKindForSource } from '~/server/utils/discount-amount'
 
 export default defineEventHandler(async (event) => {
   // Follow same public-payment pattern as /api/payments/process-public:
@@ -214,27 +215,25 @@ export default defineEventHandler(async (event) => {
             .eq('is_active', true)
         ])
 
-        const byId = new Map<string, any>()
-        for (const row of dbDiscounts || []) byId.set(row.id, row)
-        for (const row of dbVoucherCodes || []) byId.set(row.id, row)
+        const byId = new Map<string, { row: any; source: 'discount' | 'voucher_code' }>()
+        for (const row of dbDiscounts || []) byId.set(row.id, { row, source: 'discount' })
+        for (const row of dbVoucherCodes || []) byId.set(row.id, { row, source: 'voucher_code' })
 
         const now = new Date()
         for (const id of discountIds) {
-          const row = byId.get(id)
-          if (!row) continue
+          const entry = byId.get(id)
+          if (!entry) continue
+          const { row, source } = entry
           if (row.valid_until && new Date(row.valid_until) < now) continue
           // Credit-type vouchers are wallet top-ups, not checkout discounts
           if (row.type === 'credit') continue
 
-          let amount = 0
-          if (row.discount_type === 'percentage') {
-            amount = Math.round(serverProductsPrice * (Number(row.discount_value || 0) / 100))
-            if (row.max_discount_rappen != null) {
-              amount = Math.min(amount, Number(row.max_discount_rappen))
-            }
-          } else {
-            amount = Number(row.discount_value || 0)
-          }
+          const amount = computeDiscountAmountRappen({
+            kind: discountKindForSource(source, row.discount_type),
+            value: Number(row.discount_value || 0),
+            baseAmountRappen: serverProductsPrice,
+            maxDiscountRappen: row.max_discount_rappen,
+          })
           safeDiscount += Math.max(0, amount)
         }
       }

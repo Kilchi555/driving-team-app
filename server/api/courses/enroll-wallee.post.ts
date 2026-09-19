@@ -18,6 +18,7 @@ import { getTenantSecretsSecure } from '~/server/utils/get-tenant-secrets-secure
 import { validateLicense } from '~/server/utils/license-validation'
 import { createRateLimitMiddleware } from '~/server/middleware/rate-limiting'
 import { findExistingUserByContact, findStaffOrAdminByEmail, findStaffOrAdminByPhone } from '~/server/utils/user-matching'
+import { payableAfterSourceDiscount } from '~/server/utils/discount-amount'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { availableWalletRappen } from '~/server/utils/apply-student-credit'
 import { sha256Hex } from '~/server/utils/meta-capi'
@@ -551,6 +552,7 @@ const handler = defineEventHandler(async (event) => {
           .maybeSingle()
 
         let discountRow: any = voucherData
+        let unitSource: 'voucher_code' | 'gift_card' | 'discount' | null = voucherData ? 'voucher_code' : null
 
         if (!discountRow) {
           const { data: giftCard } = await supabase
@@ -562,6 +564,7 @@ const handler = defineEventHandler(async (event) => {
             .maybeSingle()
           if (giftCard && !giftCard.redeemed_at) {
             discountRow = { ...giftCard, discount_type: 'fixed', discount_value: giftCard.amount_rappen, is_gift_card: true }
+            unitSource = 'gift_card'
           }
         }
 
@@ -573,24 +576,26 @@ const handler = defineEventHandler(async (event) => {
             .eq('tenant_id', tenantId)
             .eq('is_active', true)
             .maybeSingle()
-          if (discountData) discountRow = discountData
+          if (discountData) {
+            discountRow = discountData
+            unitSource = 'discount'
+          }
         }
 
-        if (discountRow) {
+        if (discountRow && unitSource) {
           const now = new Date()
           const validUntil = discountRow.valid_until ? new Date(discountRow.valid_until) : null
           if (!validUntil || now <= validUntil) {
-            if (discountRow.discount_type === 'percentage') {
-              validatedDiscountAmount = Math.round((effectiveBasePrice * discountRow.discount_value) / 100)
-              if (discountRow.max_discount_rappen) {
-                validatedDiscountAmount = Math.min(validatedDiscountAmount, discountRow.max_discount_rappen)
-              }
-            } else if (discountRow.discount_type === 'fixed') {
-              validatedDiscountAmount = discountRow.discount_value || 0
-            }
-            validatedDiscountAmount = Math.min(validatedDiscountAmount, effectiveBasePrice)
+            const payable = payableAfterSourceDiscount({
+              baseRappen: effectiveBasePrice,
+              source: unitSource,
+              discountType: discountRow.discount_type,
+              discountValue: Number(discountRow.discount_value || 0),
+              maxDiscountRappen: discountRow.max_discount_rappen,
+            })
+            validatedDiscountAmount = payable.discountRappen
             validatedDiscountCode = discountCode
-            validatedDiscountSource = discountRow.is_gift_card ? 'gift_card' : 'discount'
+            validatedDiscountSource = unitSource === 'gift_card' ? 'gift_card' : 'discount'
           }
         }
       } catch (discountErr: any) {

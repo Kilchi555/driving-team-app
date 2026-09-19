@@ -1,3 +1,4 @@
+import { computeDiscountAmountRappen } from '~/server/utils/discount-amount'
 import { matchesDiscountCategoryFilter } from '~/server/utils/discount-category-filter'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { incrementDiscountUsageAtomic, incrementVoucherCodeRedemptionAtomic } from '~/server/utils/wallet-atomic'
@@ -17,21 +18,12 @@ export function computeAppointmentDiscountRappen(opts: {
   lessonAmountRappen: number
   maxDiscountRappen?: number | null
 }): number {
-  const lesson = Math.max(0, Math.round(opts.lessonAmountRappen || 0))
-  let amount = 0
-  if (opts.kind === 'percentage') {
-    amount = Math.round((lesson * Number(opts.value || 0)) / 100)
-  } else if (opts.kind === 'fixed_rappen') {
-    amount = Math.round(Number(opts.value || 0))
-  } else if (opts.kind === 'fixed_chf') {
-    amount = Math.round(Number(opts.value || 0) * 100)
-  } else {
-    amount = lesson
-  }
-  if (opts.maxDiscountRappen) {
-    amount = Math.min(amount, opts.maxDiscountRappen)
-  }
-  return Math.max(0, amount)
+  return computeDiscountAmountRappen({
+    kind: opts.kind,
+    value: opts.value,
+    baseAmountRappen: opts.lessonAmountRappen,
+    maxDiscountRappen: opts.maxDiscountRappen,
+  })
 }
 
 export function netAfterAppointmentDiscount(grossRappen: number, discountRappen: number): number {

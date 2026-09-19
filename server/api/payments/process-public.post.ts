@@ -25,6 +25,7 @@ import { getWalleeConfigForTenant, getWalleeSDKConfig } from '~/server/utils/wal
 import { z } from 'zod'
 import { mapSupabaseError } from '~/server/utils/supabase-error'
 import { logFallbackUsed } from '~/server/utils/log-fallback'
+import { payableAfterSourceDiscount, walleeAmountIncludingTaxChf } from '~/server/utils/discount-amount'
 import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { lockCheckoutBenefits, releaseCheckoutBenefits } from '~/server/utils/checkout-benefits'
 import { courseSessionsEmbed } from '~/server/utils/course-session-embed'
@@ -254,8 +255,11 @@ export default defineEventHandler(async (event) => {
           .eq('is_active', true)
           .maybeSingle()
 
+        let unitSource: 'voucher_code' | 'gift_card' | 'discount' | null = null
+
         if (voucherCode) {
           discountRow = voucherCode
+          unitSource = 'voucher_code'
         } else {
           const { data: giftCard } = await supabase
             .from('vouchers')
@@ -271,6 +275,7 @@ export default defineEventHandler(async (event) => {
               discount_value: giftCard.amount_rappen,
               is_gift_card: true
             }
+            unitSource = 'gift_card'
           }
         }
 
@@ -282,23 +287,24 @@ export default defineEventHandler(async (event) => {
             .eq('tenant_id', tenantId)
             .eq('is_active', true)
             .maybeSingle()
-          if (discountData) discountRow = discountData
+          if (discountData) {
+            discountRow = discountData
+            unitSource = 'discount'
+          }
         }
 
-        if (discountRow) {
+        if (discountRow && unitSource) {
           const now = new Date()
           const validUntil = discountRow.valid_until ? new Date(discountRow.valid_until) : null
           if (!validUntil || now <= validUntil) {
-            // Mirror enroll-wallee amount math so recompute stays consistent
-            if (discountRow.discount_type === 'percentage') {
-              discountAmount = Math.round((effectiveBasePrice * Number(discountRow.discount_value || 0)) / 100)
-              if (discountRow.max_discount_rappen) {
-                discountAmount = Math.min(discountAmount, Number(discountRow.max_discount_rappen))
-              }
-            } else if (discountRow.discount_type === 'fixed') {
-              discountAmount = Number(discountRow.discount_value || 0)
-            }
-            discountAmount = Math.max(0, Math.min(discountAmount, effectiveBasePrice))
+            const payable = payableAfterSourceDiscount({
+              baseRappen: effectiveBasePrice,
+              source: unitSource,
+              discountType: discountRow.discount_type,
+              discountValue: Number(discountRow.discount_value || 0),
+              maxDiscountRappen: discountRow.max_discount_rappen,
+            })
+            discountAmount = payable.discountRappen
           }
         }
       }
@@ -528,7 +534,7 @@ export default defineEventHandler(async (event) => {
           name: course?.name || 'Course Enrollment',
           sku: courseId,
           quantity: 1,
-          amountIncludingTax: amount / 100, // Convert from rappen to CHF
+          amountIncludingTax: walleeAmountIncludingTaxChf(amount),
           type: Wallee.model.LineItemType.PRODUCT,
           uniqueId: 'item-1',
           taxRate: 0
