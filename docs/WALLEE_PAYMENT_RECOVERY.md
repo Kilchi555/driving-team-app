@@ -1,5 +1,7 @@
 # Wallee Payment Recovery System
 
+Related: JWT/PostgREST can no longer write `public.payments` after #232 — see [`PAYMENTS_JWT_POSTGREST_SLICE_A.md`](./PAYMENTS_JWT_POSTGREST_SLICE_A.md). Recovery cron and webhooks already use service_role; do not reintroduce browser payment updates.
+
 ## Problem
 Payments were stuck in `pending` status even though Wallee had processed them as `FULFILL` (completed). This happened because:
 
