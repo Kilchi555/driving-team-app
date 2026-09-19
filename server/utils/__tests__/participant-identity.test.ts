@@ -4,8 +4,23 @@ import {
   participantBirthdate,
   participantDisplayLicenseLabel,
   participantIdentityLine,
+  type ParticipantIdentitySource,
 } from '~/utils/participant-identity'
 import { buildParticipantListHtml } from '~/utils/print-participant-list'
+
+/** Registration fields plus leftover user/SARI keys the helpers must ignore. */
+type IdentityFixture = {
+  birthdate?: string | null
+  license_number?: string | null
+  sari_faberid?: string | null
+  sari_license_id?: string | null
+  faberid?: string | null
+  lernfahrausweis_nr?: string | null
+}
+
+function identityFixture(fields: IdentityFixture): ParticipantIdentitySource {
+  return fields
+}
 
 describe('participantDisplayLicenseLabel', () => {
   it('shows license_number when sari_faberid is empty', () => {
@@ -49,27 +64,27 @@ describe('participantDisplayLicenseLabel', () => {
   })
 
   it('does not use sari_license_id as LFA', () => {
-    expect(participantDisplayLicenseLabel({
+    expect(participantDisplayLicenseLabel(identityFixture({
       license_number: null,
       sari_faberid: null,
       sari_license_id: '123456789012',
-    } as any)).toBeNull()
+    }))).toBeNull()
   })
 
   it('does not use user faberid as LFA', () => {
-    expect(participantDisplayLicenseLabel({
+    expect(participantDisplayLicenseLabel(identityFixture({
       license_number: null,
       sari_faberid: null,
       faberid: '999',
-    } as any)).toBeNull()
+    }))).toBeNull()
   })
 
   it('does not use user lernfahrausweis_nr as LFA', () => {
-    expect(participantDisplayLicenseLabel({
+    expect(participantDisplayLicenseLabel(identityFixture({
       license_number: null,
       sari_faberid: null,
       lernfahrausweis_nr: '880285',
-    } as any)).toBeNull()
+    }))).toBeNull()
   })
 })
 
@@ -80,7 +95,7 @@ describe('participant birthdate and identity line', () => {
   })
 
   it('does not fall back to a user birthdate', () => {
-    expect(participantBirthdate({ birthdate: null } as any)).toBeNull()
+    expect(participantBirthdate({ birthdate: null })).toBeNull()
   })
 
   it('combines birthdate and LFA', () => {
