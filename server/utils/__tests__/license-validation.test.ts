@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   classifyExpirationDate,
   INVALID_LICENSE_EXPIRATION_MESSAGE,
-  UNKNOWN_LICENSE_EXPIRATION_MESSAGE,
   validateLicense,
 } from '../license-validation'
 
@@ -36,13 +35,14 @@ const vkuCourse = {
 }
 
 describe('classifyExpirationDate', () => {
-  it('treats null and undefined as UNKNOWN without using Date', () => {
-    expect(classifyExpirationDate(null)).toEqual({ kind: 'UNKNOWN' })
-    expect(classifyExpirationDate(undefined)).toEqual({ kind: 'UNKNOWN' })
+  it('treats null, undefined, empty, and whitespace as ABSENT without using Date', () => {
+    expect(classifyExpirationDate(null)).toEqual({ kind: 'ABSENT' })
+    expect(classifyExpirationDate(undefined)).toEqual({ kind: 'ABSENT' })
+    expect(classifyExpirationDate('')).toEqual({ kind: 'ABSENT' })
+    expect(classifyExpirationDate('   ')).toEqual({ kind: 'ABSENT' })
   })
 
-  it('treats empty string, 0, false, and malformed strings as INVALID', () => {
-    expect(classifyExpirationDate('')).toEqual({ kind: 'INVALID' })
+  it('treats 0, false, and malformed strings as INVALID', () => {
     expect(classifyExpirationDate(0)).toEqual({ kind: 'INVALID' })
     expect(classifyExpirationDate(false)).toEqual({ kind: 'INVALID' })
     expect(classifyExpirationDate('not-a-date')).toEqual({ kind: 'INVALID' })
@@ -79,28 +79,44 @@ describe('validateLicense', () => {
     expect(err.statusMessage).not.toContain('01.01.1970')
   })
 
-  it('Test 3: null expiration is UNKNOWN, fail-closed, never 1970/abgelaufen', () => {
-    const err = catchLicenseError(() =>
+  it('Test 3: null expiration is ABSENT and allows enrollment', () => {
+    expect(() =>
       validateLicense(vkuCourse, {
         licenses: [{ category: 'A1', expirationdate: null }],
       }),
-    )
-    expect(err.statusCode).toBe(403)
-    expect(err.data?.licenseValidationState).toBe('UNKNOWN_EXPIRATION')
-    expect(err.statusMessage).toBe(UNKNOWN_LICENSE_EXPIRATION_MESSAGE)
-    expect(err.statusMessage).not.toContain('01.01.1970')
-    expect(err.statusMessage?.toLowerCase()).not.toContain('abgelaufen')
+    ).not.toThrow()
   })
 
-  it('Test 4: missing expiration field is UNKNOWN', () => {
-    const err = catchLicenseError(() =>
+  it('Test 4: missing expiration field is ABSENT and allows enrollment', () => {
+    expect(() =>
       validateLicense(vkuCourse, {
         licenses: [{ category: 'A1' }],
       }),
-    )
-    expect(err.statusCode).toBe(403)
-    expect(err.data?.licenseValidationState).toBe('UNKNOWN_EXPIRATION')
-    expect(err.statusMessage).toBe(UNKNOWN_LICENSE_EXPIRATION_MESSAGE)
+    ).not.toThrow()
+  })
+
+  it('undefined expiration is ABSENT and allows enrollment', () => {
+    expect(() =>
+      validateLicense(vkuCourse, {
+        licenses: [{ category: 'A1', expirationdate: undefined }],
+      }),
+    ).not.toThrow()
+  })
+
+  it('empty string expiration is ABSENT and allows enrollment', () => {
+    expect(() =>
+      validateLicense(vkuCourse, {
+        licenses: [{ category: 'A1', expirationdate: '' }],
+      }),
+    ).not.toThrow()
+  })
+
+  it('whitespace expiration is ABSENT and allows enrollment', () => {
+    expect(() =>
+      validateLicense(vkuCourse, {
+        licenses: [{ category: 'A1', expirationdate: '   ' }],
+      }),
+    ).not.toThrow()
   })
 
   it('Test 5: malformed expiration is INVALID', () => {
@@ -159,23 +175,83 @@ describe('validateLicense', () => {
     ).not.toThrow()
   })
 
-  it('Regression B: null plus null is UNKNOWN_EXPIRATION (403, never VALID)', () => {
-    const err = catchLicenseError(() =>
+  it('future plus empty uses the dated license and allows', () => {
+    expect(() =>
+      validateLicense(vkuCourse, {
+        licenses: [
+          { category: 'A1', expirationdate: '2027-12-31' },
+          { category: 'A1', expirationdate: '' },
+        ],
+      }),
+    ).not.toThrow()
+  })
+
+  it('Regression B: null plus null is ABSENT-only and allows enrollment', () => {
+    expect(() =>
       validateLicense(vkuCourse, {
         licenses: [
           { category: 'A1', expirationdate: null },
           { category: 'A1', expirationdate: null },
         ],
       }),
-    )
-    expect(err.statusCode).toBe(403)
-    expect(err.data?.licenseValidationState).toBe('UNKNOWN_EXPIRATION')
-    expect(err.statusMessage).toBe(UNKNOWN_LICENSE_EXPIRATION_MESSAGE)
-    expect(err.statusMessage).not.toContain('01.01.1970')
-    expect(err.statusMessage?.toLowerCase()).not.toContain('abgelaufen')
+    ).not.toThrow()
   })
 
-  it('Regression C: invalid plus null is UNKNOWN_EXPIRATION (403, never VALID/EXPIRED/1970)', () => {
+  it('invalid plus future uses the dated license and allows', () => {
+    expect(() =>
+      validateLicense(vkuCourse, {
+        licenses: [
+          { category: 'A1', expirationdate: 'not-a-date' },
+          { category: 'A1', expirationdate: '2027-12-31' },
+        ],
+      }),
+    ).not.toThrow()
+  })
+
+  it('expired plus null is DENY (ABSENT does not override a dated expiry)', () => {
+    const err = catchLicenseError(() =>
+      validateLicense(vkuCourse, {
+        licenses: [
+          { category: 'A1', expirationdate: '2026-09-15' },
+          { category: 'A1', expirationdate: null },
+        ],
+      }),
+    )
+    expect(err.statusCode).toBe(403)
+    expect(err.data?.licenseValidationState).toBe('EXPIRED')
+    expect(err.statusMessage).toMatch(/läuft am 15\.09\.2026 ab/)
+    expect(err.statusMessage).not.toContain('01.01.1970')
+  })
+
+  it('expired plus empty is DENY (empty is ABSENT, not unlimited)', () => {
+    const err = catchLicenseError(() =>
+      validateLicense(vkuCourse, {
+        licenses: [
+          { category: 'A1', expirationdate: '2026-09-15' },
+          { category: 'A1', expirationdate: '' },
+        ],
+      }),
+    )
+    expect(err.statusCode).toBe(403)
+    expect(err.data?.licenseValidationState).toBe('EXPIRED')
+    expect(err.statusMessage).not.toContain('01.01.1970')
+  })
+
+  it('invalid plus expired is DENY (dated expiry still governs)', () => {
+    const err = catchLicenseError(() =>
+      validateLicense(vkuCourse, {
+        licenses: [
+          { category: 'A1', expirationdate: 'not-a-date' },
+          { category: 'A1', expirationdate: '2026-09-15' },
+        ],
+      }),
+    )
+    expect(err.statusCode).toBe(403)
+    expect(err.data?.licenseValidationState).toBe('EXPIRED')
+    expect(err.statusMessage).not.toContain('01.01.1970')
+  })
+
+  it('Regression C: invalid plus null is INVALID_EXPIRATION (403, never VALID/EXPIRED/1970)', () => {
     const err = catchLicenseError(() =>
       validateLicense(vkuCourse, {
         licenses: [
@@ -185,9 +261,9 @@ describe('validateLicense', () => {
       }),
     )
     expect(err.statusCode).toBe(403)
-    expect(err.data?.licenseValidationState).toBe('UNKNOWN_EXPIRATION')
+    expect(err.data?.licenseValidationState).toBe('INVALID_EXPIRATION')
     expect(err.data?.licenseValidationState).not.toBe('EXPIRED')
-    expect(err.statusMessage).toBe(UNKNOWN_LICENSE_EXPIRATION_MESSAGE)
+    expect(err.statusMessage).toBe(INVALID_LICENSE_EXPIRATION_MESSAGE)
     expect(err.statusMessage).not.toContain('01.01.1970')
     expect(err.statusMessage?.toLowerCase()).not.toContain('abgelaufen')
   })
