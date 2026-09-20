@@ -299,12 +299,12 @@ export async function applyWebsiteCheckoutSession(opts: {
 
   const tenantId = binding.tenantId
   if (session.id) {
-    const remembered = await rememberWebsiteCheckoutEvent({
-      supabase,
-      sessionId: session.id,
-      tenantId,
-    })
-    if (remembered.duplicate) return true
+    const { data: already } = await supabase
+      .from('website_checkout_events')
+      .select('stripe_session_id')
+      .eq('stripe_session_id', session.id)
+      .maybeSingle()
+    if (already?.stripe_session_id) return true
   }
 
   const includeSetup = meta.include_setup === 'true'
@@ -330,6 +330,14 @@ export async function applyWebsiteCheckoutSession(opts: {
       .update({ website_status: 'pending_review' })
       .eq('id', tenantId)
       .in('website_status', ['none', 'pending_review'])
+  }
+
+  if (session.id) {
+    await rememberWebsiteCheckoutEvent({
+      supabase,
+      sessionId: session.id,
+      tenantId,
+    })
   }
 
   // payment != publication. Ignore publish_after_pay metadata.
