@@ -3,6 +3,7 @@
 // Alle Datenbankoperationen gehen an die Cloud Supabase (unyjaetebnaexaflpyoc.supabase.co)
 
 import { defineNuxtConfig } from 'nuxt/config'
+import { websitePublicSsrRouteRule } from './utils/website-ssr-route-policy'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
@@ -221,14 +222,9 @@ export default defineNuxtConfig({
   routeRules: {
     // Keep the product app client-rendered (previous global SPA behavior)
     '/**': { ssr: false },
-    // Public tenant websites: real Vue SSR + short ISR at the edge
-    '/s/**': {
-      ssr: true,
-      isr: 60,
-      headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
-      },
-    },
+    // Public tenant websites: SSR only. ISR is unsafe here because
+    // unpublished/preview HTML cannot be distinguished at the prerender layer.
+    '/s/**': { ...websitePublicSsrRouteRule },
     // Public booking + courses pages: cache API responses at CDN edge for 60s
     '/api/public/website/img': {
       headers: { 'cache-control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400' },
