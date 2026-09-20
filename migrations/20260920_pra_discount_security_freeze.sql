@@ -6,7 +6,7 @@
 --     discounts.usage_count or voucher_codes.current_redemptions.
 -- Service-role Data API and non-JWT SQL (migrations / console) stay allowed.
 --
--- Does NOT introduce discount_usages / ledger / reservation state machines.
+-- Does NOT introduce a usage ledger or reservation state machine.
 -- Does NOT change payment fulfillment writers (they use service_role).
 --
 -- Pattern matches SEC-C01 (20260903_sec_c01_users_privilege_freeze.sql):

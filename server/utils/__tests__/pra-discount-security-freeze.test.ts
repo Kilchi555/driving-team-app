@@ -4,7 +4,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { createError, type H3Event } from 'h3'
+import type { H3Event } from 'h3'
 
 const mocks = vi.hoisted(() => ({
   readBody: vi.fn(),
@@ -168,8 +168,8 @@ describe('PR-A C1 — /api/discounts/manage strips counters', () => {
     let error: { statusCode?: number } | null = null
     try {
       result = await handler(emptyEvent)
-    } catch (err: any) {
-      error = err
+    } catch (err: unknown) {
+      error = err as { statusCode?: number }
     }
     return { result, error, updates, inserts }
   }
@@ -244,6 +244,10 @@ describe('PR-A C2 — /api/discounts/apply/:id disabled', () => {
   const applyPromise = import('~/server/api/discounts/apply/[discountId].post') as Promise<{
     default: Handler
   }>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it('route source does not write usage_count', () => {
     const src = read(applyByIdPath)
