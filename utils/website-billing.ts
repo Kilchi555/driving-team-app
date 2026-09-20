@@ -29,6 +29,7 @@ export type WebsiteBillingInfo = {
   website_hosting_plan?: string | null
   website_setup_paid_at?: string | null
   trial_ends_at?: string | null
+  website_status?: string | null
 }
 
 export function isWebsiteHostingLocked(info: WebsiteBillingInfo | null | undefined): boolean {
@@ -42,20 +43,25 @@ export function isWebsiteSetupPaid(info: WebsiteBillingInfo | null | undefined):
   return !!info?.website_setup_paid_at
 }
 
-/** Website-only: live publish needs setup fee + hosting. Preview stays free. */
+export type WebsitePublishBlockReason = 'hosting' | 'setup' | 'qa' | 'cancelled'
+
+/** Website-only: live publish needs setup + hosting + QA. Preview stays free. */
 export function websitePublishBlockedReason(
   tenant: WebsiteBillingInfo | null | undefined,
-): 'hosting' | 'setup' | null {
+): WebsitePublishBlockReason | null {
+  if (tenant?.website_only && tenant.website_status === 'disabled') return 'cancelled'
   if (!tenant?.website_only) return null
   if (!tenant.website_setup_paid_at) return 'setup'
   if (!isWebsiteHostingPlan(tenant.website_hosting_plan)) return 'hosting'
+  if (tenant.website_status !== 'approved' && tenant.website_status !== 'live') return 'qa'
   return null
 }
 
-export function websitePublishBlockedMessage(reason: 'hosting' | 'setup'): string {
-  return reason === 'hosting'
-    ? 'Hosting-Abo erforderlich, bevor die Website live geht.'
-    : 'Die einmalige Website-Gebühr ist fällig, bevor die Homepage live geht.'
+export function websitePublishBlockedMessage(reason: WebsitePublishBlockReason): string {
+  if (reason === 'hosting') return 'Hosting-Abo erforderlich, bevor die Website live geht.'
+  if (reason === 'setup') return 'Die einmalige Website-Gebühr ist fällig, bevor die Homepage live geht.'
+  if (reason === 'qa') return 'Interne Freigabe erforderlich, bevor die Website live geht.'
+  return 'Diese Website ist deaktiviert und kann nicht veröffentlicht werden.'
 }
 
 /** When hosting is locked, only billing + profile stay open. */

@@ -294,8 +294,8 @@ export default defineEventHandler(async (event) => {
   // website_content_blocks is legacy/unused by /s/[subdomain] — do not dual-write.
 
   const now = new Date().toISOString()
-  const alreadyLive = !!(website.is_published || tenant.website_status === 'live')
-  const stayPublished = publish || alreadyLive
+  const alreadyLive = !!(website.is_published && tenant.website_status === 'live')
+  const stayPublished = alreadyLive
   const pageUpdate: Record<string, unknown> = {
     title: 'Home',
     blocks: landing,
@@ -305,7 +305,7 @@ export default defineEventHandler(async (event) => {
     is_published: stayPublished,
     updated_at: now,
   }
-  if (publish) pageUpdate.published_at = now
+  if (alreadyLive) pageUpdate.published_at = now
   else if (!alreadyLive) pageUpdate.published_at = null
   const { error: pageError } = await supabase
     .from('website_pages')
@@ -328,9 +328,9 @@ export default defineEventHandler(async (event) => {
       logo_url: landing.brand.logo_url,
       hero_image_url: landing.brand.hero_image_url,
       is_published: stayPublished,
-      last_published_at: publish ? now : website.last_published_at,
+      last_published_at: alreadyLive ? now : website.last_published_at,
       // Premium SKU: SEO add-on pages unlocked on publish
-      ...(publish ? { addon_pages_enabled: true } : {}),
+      ...(alreadyLive ? { addon_pages_enabled: true } : {}),
       // Draft fields are now in the published/saved page — clear scratchpad
       wizard_draft: {},
       updated_at: now,
@@ -358,53 +358,31 @@ export default defineEventHandler(async (event) => {
       ? `https://${website.custom_domain}`
       : siteUrl
 
-  if (publish) {
-    await supabase
-      .from('tenants')
-      .update({ website_status: 'live' })
-      .eq('id', user.tenant_id)
-
-    try {
-      const { ensureWebsiteSeoPages } = await import('~/server/utils/website-ensure-seo-pages')
-      await ensureWebsiteSeoPages(supabase, {
-        website: { ...website, addon_pages_enabled: true },
-        tenant,
-        baseUrl: appBaseUrl(event),
-        publish: true,
-      })
-    } catch (err: any) {
-      console.warn('[wizard-save] seo pages skipped:', err?.message)
-    }
-
-    const { notifySuperadminsWebsitePublished } = await import('~/server/utils/website-publish-notify')
-    await notifySuperadminsWebsitePublished({
-      tenantId: user.tenant_id,
-      tenantName: tenant.name || website.subdomain,
-      tenantSlug: tenant.slug || website.subdomain,
+  let published = stayPublished
+  if (publish && !alreadyLive) {
+    const { publishWebsiteForTenant } = await import('~/server/utils/website-billing')
+    const publishedResult = await publishWebsiteForTenant(supabase, user.tenant_id, appBaseUrl(event))
+    published = true
+    return {
+      success: true,
+      message: 'Website veröffentlicht',
+      website_id: website.id,
       subdomain: website.subdomain,
-      liveUrl,
-      previewUrl,
-    })
-  } else if (alreadyLive) {
-    await supabase
-      .from('tenants')
-      .update({ website_status: 'live' })
-      .eq('id', user.tenant_id)
-  } else {
-    await supabase
-      .from('tenants')
-      .update({ website_status: 'none' })
-      .eq('id', user.tenant_id)
+      preview_url: publishedResult.previewUrl,
+      live_url: publishedResult.liveUrl,
+      published,
+      payment_required: publishBlock || null,
+    }
   }
 
   return {
     success: true,
-    message: publish ? 'Website veröffentlicht' : alreadyLive ? 'Live-Seite aktualisiert' : 'Website gespeichert',
+    message: alreadyLive ? 'Live-Seite aktualisiert' : 'Website gespeichert',
     website_id: website.id,
     subdomain: website.subdomain,
     preview_url: previewUrl,
     live_url: liveUrl,
-    published: stayPublished,
+    published,
     payment_required: publishBlock || null,
   }
 })

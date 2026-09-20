@@ -289,11 +289,23 @@ async function handleSubscriptionUpsert(
 
   const { isWebsiteStripeSubscription, applyWebsiteHostingFromSubscription } = await import('~/server/utils/website-billing')
   if (isWebsiteStripeSubscription(sub) || sub.metadata?.product === 'website') {
-    await applyWebsiteHostingFromSubscription(supabase, tenantId, sub, {
+    const fromCustomer = await getTenantIdByCustomer(supabase, customerId)
+    if (!fromCustomer) {
+      console.error(`❌ Website subscription ${sub.id} has no stripe_customer_id binding`)
+      return
+    }
+    if (sub.metadata?.tenant_id && sub.metadata.tenant_id !== fromCustomer) {
+      console.error(`❌ Website subscription metadata tenant mismatch for ${sub.id}`)
+      return
+    }
+    if (sub.status === 'canceled' || sub.status === 'incomplete_expired') {
+      return
+    }
+    await applyWebsiteHostingFromSubscription(supabase, fromCustomer, sub, {
       setupPaid: sub.metadata?.include_setup === 'true',
       currentPeriodEnd: resolveSubscriptionPeriodEnd(sub),
     })
-    console.log(`✅ Website hosting synced for tenant ${tenantId}`)
+    console.log(`✅ Website hosting synced for tenant ${fromCustomer}`)
     return
   }
 
