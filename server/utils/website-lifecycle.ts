@@ -6,7 +6,6 @@ import {
   parseWebsiteClaimToken,
   verifyWebsiteClaimToken,
 } from '~/server/utils/website-claim-token'
-import { isWebsiteHostingPlan, type WebsiteBillingInfo } from '~/utils/website-billing'
 
 /**
  * Website Factory lifecycle as implemented on existing fields.
@@ -32,8 +31,6 @@ export const WEBSITE_FACTORY_STATES = {
   PUBLISHED: 'live',
   REVOKED: 'disabled',
 } as const
-
-export type WebsitePublishBlockReason = 'hosting' | 'setup' | 'qa' | 'cancelled'
 
 export type WebsiteCheckoutBindingInput = {
   stripeCustomerId: string | null | undefined
@@ -76,24 +73,6 @@ export type ClaimProspectResult =
         | 'already_claimed'
         | 'race'
     }
-
-export function websitePublishBlockedReason(
-  tenant: (WebsiteBillingInfo & { website_status?: string | null }) | null | undefined,
-): WebsitePublishBlockReason | null {
-  if (tenant?.website_only && tenant.website_status === 'disabled') return 'cancelled'
-  if (!tenant?.website_only) return null
-  if (!tenant.website_setup_paid_at) return 'setup'
-  if (!isWebsiteHostingPlan(tenant.website_hosting_plan)) return 'hosting'
-  if (tenant.website_status !== 'approved' && tenant.website_status !== 'live') return 'qa'
-  return null
-}
-
-export function websitePublishBlockedMessage(reason: WebsitePublishBlockReason): string {
-  if (reason === 'hosting') return 'Hosting-Abo erforderlich, bevor die Website live geht.'
-  if (reason === 'setup') return 'Die einmalige Website-Gebühr ist fällig, bevor die Homepage live geht.'
-  if (reason === 'qa') return 'Interne Freigabe erforderlich, bevor die Website live geht.'
-  return 'Diese Website ist deaktiviert und kann nicht veröffentlicht werden.'
-}
 
 export function websiteStatusAfterPayment(
   current: string | null | undefined,
