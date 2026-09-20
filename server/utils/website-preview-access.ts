@@ -4,7 +4,7 @@
  * a client-supplied tenant_id / website_id / prospect_id.
  */
 import type { H3Event } from 'h3'
-import { createError } from 'h3'
+import { createError, getQuery } from 'h3'
 import {
   parseWebsitePreviewToken,
   verifyWebsitePreviewToken,
@@ -110,7 +110,7 @@ export async function authorizePublicWebsiteAccess(opts: {
   denyPublicWebsite()
 }
 
-export async function loadAuthorizedPublicWebsite<T extends PublicWebsiteAccessRow>(opts: {
+export async function loadAuthorizedPublicWebsite<T extends PublicWebsiteAccessRow = PublicWebsiteAccessRow & Record<string, any>>(opts: {
   event: H3Event
   supabase: { from: (table: string) => any }
   subdomain: string
