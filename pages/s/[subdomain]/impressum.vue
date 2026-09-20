@@ -1,21 +1,27 @@
 <script setup lang="ts">
+import { websitePreviewFetchQuery, websitePreviewQueryValue, websitePreviewSearch } from '~/utils/website-preview-query'
+
 definePageMeta({ layout: 'site', ssr: true })
 
 const route = useRoute()
 const subdomain = computed(() => String(route.params.subdomain || '').toLowerCase())
-const preview = computed(() => route.query.preview === '1')
-const homeHref = computed(() => `/s/${subdomain.value}${preview.value ? '?preview=1' : ''}`)
+const previewParam = computed(() => websitePreviewQueryValue(route.query.preview))
+const preview = computed(() => previewParam.value.length > 0)
+const previewQs = computed(() => websitePreviewSearch(previewParam.value))
+const homeHref = computed(() => `/s/${subdomain.value}${previewQs.value}`)
 
 if (import.meta.server && preview.value) {
   const ev = useRequestEvent()
   ev?.node?.res?.setHeader?.('Cache-Control', 'private, no-store')
+  ev?.node?.res?.setHeader?.('CDN-Cache-Control', 'private, no-store')
+  ev?.node?.res?.setHeader?.('Vercel-CDN-Cache-Control', 'private, no-store')
 }
 
 const { data, pending, error } = await useAsyncData(
   () => `impressum-${subdomain.value}-${preview.value ? 'p' : 'l'}`,
   () =>
     $fetch(`/api/public/website/${encodeURIComponent(subdomain.value)}/legal`, {
-      query: { type: 'impressum', ...(preview.value ? { preview: '1' } : {}) },
+      query: { type: 'impressum', ...websitePreviewFetchQuery(previewParam.value) },
     }),
   { watch: [subdomain, preview] },
 )
@@ -38,8 +44,8 @@ useHead(() => ({
     </header>
     <article class="legal-article" v-html="data.html" />
     <footer class="legal-footer">
-      <NuxtLink :to="`/s/${subdomain}/impressum${preview ? '?preview=1' : ''}`">Impressum</NuxtLink>
-      <NuxtLink :to="`/s/${subdomain}/datenschutz${preview ? '?preview=1' : ''}`">Datenschutz</NuxtLink>
+      <NuxtLink :to="`/s/${subdomain}/impressum${previewQs}`">Impressum</NuxtLink>
+      <NuxtLink :to="`/s/${subdomain}/datenschutz${previewQs}`">Datenschutz</NuxtLink>
     </footer>
   </div>
 </template>

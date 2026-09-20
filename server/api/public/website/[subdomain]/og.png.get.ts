@@ -2,6 +2,7 @@
 
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { renderWebsiteOgCard } from '~/server/utils/website-og-card'
+import { loadAuthorizedPublicWebsite } from '~/server/utils/website-preview-access'
 
 export default defineEventHandler(async (event) => {
   const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
@@ -11,16 +12,13 @@ export default defineEventHandler(async (event) => {
 
   const slug = String(getQuery(event).slug || 'index').trim().toLowerCase() || 'index'
   const supabase = getSupabaseAdmin()
-
-  const { data: website } = await supabase
-    .from('website_tenants')
-    .select('id, tenant_id, subdomain, primary_color, secondary_color, accent_color, logo_url, seo_title, seo_description, is_published')
-    .eq('subdomain', subdomain)
-    .maybeSingle()
-
-  if (!website) {
-    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
-  }
+  const { website, preview } = await loadAuthorizedPublicWebsite({
+    event,
+    supabase,
+    subdomain,
+    columns:
+      'id, tenant_id, subdomain, primary_color, secondary_color, accent_color, logo_url, seo_title, seo_description, is_published',
+  })
 
   let pageQuery = supabase
     .from('website_pages')
@@ -71,6 +69,12 @@ export default defineEventHandler(async (event) => {
   })
 
   setHeader(event, 'Content-Type', 'image/png')
-  setHeader(event, 'Cache-Control', 'public, max-age=3600, s-maxage=86400')
+  if (preview) {
+    setHeader(event, 'Cache-Control', 'private, no-store')
+    setHeader(event, 'CDN-Cache-Control', 'private, no-store')
+    setHeader(event, 'Vercel-CDN-Cache-Control', 'private, no-store')
+  } else {
+    setHeader(event, 'Cache-Control', 'public, max-age=3600, s-maxage=86400')
+  }
   return png
 })

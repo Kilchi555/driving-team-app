@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
   const sitemapUrl = `${ctx.baseUrl}/sitemap.xml`
   return `User-agent: *
 Allow: /
-Disallow: /*?preview=1
+Disallow: /*?preview=
 Sitemap: ${sitemapUrl}
 `
 })

@@ -6,6 +6,7 @@ import {
 } from '~/server/utils/website-premium'
 import { setWebsitePublicCache } from '~/server/utils/website-public-cache'
 import { sanitizeTenantHtml } from '~/utils/sanitize-tenant-html'
+import { loadAuthorizedPublicWebsite } from '~/server/utils/website-preview-access'
 
 export default defineEventHandler(async (event) => {
   const subdomain = getRouterParam(event, 'subdomain')?.trim().toLowerCase()
@@ -14,18 +15,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'subdomain and type required' })
   }
 
-  const preview = String(getQuery(event).preview || '') === '1'
   const supabase = getSupabaseAdmin()
-
-  const { data: website } = await supabase
-    .from('website_tenants')
-    .select('id, tenant_id, is_published, subdomain')
-    .eq('subdomain', subdomain)
-    .maybeSingle()
-
-  if (!website) {
-    throw createError({ statusCode: 404, statusMessage: 'Website not found' })
-  }
+  const { website, preview } = await loadAuthorizedPublicWebsite({
+    event,
+    supabase,
+    subdomain,
+    columns: 'id, tenant_id, is_published, subdomain',
+  })
 
   const { data: tenant, error: tenantError } = await supabase
     .from('tenants')

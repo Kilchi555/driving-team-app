@@ -16,6 +16,8 @@ export function setWebsitePublicCache(
 ) {
   if (opts.preview) {
     setHeader(event, 'Cache-Control', 'private, no-store')
+    setHeader(event, 'CDN-Cache-Control', 'private, no-store')
+    setHeader(event, 'Vercel-CDN-Cache-Control', 'private, no-store')
     return
   }
 

@@ -182,7 +182,7 @@ describe('email draft', () => {
       name: 'Fahrschule Test',
       city: 'Zürich',
       existingUrl: 'https://alt.ch',
-      previewUrl: 'https://app.simy.ch/s/test?preview=1',
+      previewUrl: 'https://app.simy.ch/s/test?preview=test_generated_preview_token_not_real',
       revenue,
       findings: [{ title: 'Kein LocalBusiness-Schema' }],
     })
@@ -192,6 +192,6 @@ describe('email draft', () => {
     expect(draft.text).toContain('Starter')
     expect(draft.text).toContain('49')
     expect(draft.text).toContain('keine Garantie')
-    expect(draft.text).toContain('preview=1')
+    expect(draft.text).toContain('preview=test_generated_preview_token_not_real')
   })
 })

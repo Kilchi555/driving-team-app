@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getClientIP } from '~/server/utils/ip-utils'
 import { loadWebsitePickupOffer, swissPlzFromValue } from '~/server/utils/website-pickup'
 import { checkWebsitePickupPlz } from '~/server/utils/website-pickup-plz'
+import { loadAuthorizedPublicWebsite } from '~/server/utils/website-preview-access'
 
 const recentByIp = new Map<string, number[]>()
 
@@ -21,7 +22,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'subdomain required' })
   }
 
-  const preview = String(getQuery(event).preview || '') === '1'
   const body = await readBody(event)
   const plz = swissPlzFromValue(body?.plz)
   if (!plz) {
@@ -34,13 +34,14 @@ export default defineEventHandler(async (event) => {
   }
 
   const supabase = getSupabaseAdmin()
-  const { data: website } = await supabase
-    .from('website_tenants')
-    .select('id, tenant_id, is_published, subdomain')
-    .eq('subdomain', subdomain)
-    .maybeSingle()
+  const { website } = await loadAuthorizedPublicWebsite({
+    event,
+    supabase,
+    subdomain,
+    columns: 'id, tenant_id, is_published, subdomain',
+  })
 
-  if (!website?.tenant_id || (!website.is_published && !preview)) {
+  if (!website.tenant_id) {
     throw createError({ statusCode: 404, statusMessage: 'Website not found' })
   }
 

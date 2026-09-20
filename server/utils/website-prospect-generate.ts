@@ -13,6 +13,7 @@ import {
 import { ingestProspectMedia } from '~/server/utils/website-prospect-media'
 import { fillProspectSectionPhotos } from '~/server/utils/website-prospect-stock'
 import type { ProspectArchitecture, WebsiteProspectRow } from '~/server/utils/website-prospect-types'
+import { mintedPreviewFields, mintWebsitePreviewToken } from '~/server/utils/website-preview-token'
 
 type SupabaseAdmin = ReturnType<typeof getSupabaseAdmin>
 
@@ -225,7 +226,8 @@ async function finishProspectSite(opts: {
     .eq('id', website.id)
 
   const baseUrl = getAppUrl().replace(/\/$/, '')
-  const previewUrl = `${baseUrl}/s/${encodeURIComponent(website.subdomain)}?preview=1`
+  const minted = mintWebsitePreviewToken()
+  const previewUrl = `${baseUrl}/s/${encodeURIComponent(website.subdomain)}?preview=${encodeURIComponent(minted.token)}`
   const siteUrl = `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
   const services = (scrape.services || []).map((s: any, i: number) => ({
     id: `svc-${i + 1}`,
@@ -419,6 +421,7 @@ async function finishProspectSite(opts: {
       tenant_id: tenant.id,
       website_id: website.id,
       preview_url: previewUrl,
+      ...mintedPreviewFields(minted),
       analysis,
       email_draft: emailDraft,
       place: place?.photos ? place : prospect.place,
