@@ -140,32 +140,9 @@ export const useDiscounts = () => {
     }
   }
 
-  const applyDiscount = async (discountId: string) => {
-    try {
-      logger.debug('🔄 Applying discount via API:', discountId)
-      
-      // ✅ Use secure API endpoint
-      const response = await $fetch(`/api/discounts/apply/${discountId}`, {
-        method: 'POST'
-      })
-      
-      if (!response.success) {
-        throw new Error('Failed to apply discount')
-      }
-      
-      // Aktualisiere lokalen State
-      const discount = discounts.value.find(d => d.id === discountId)
-      if (discount) {
-        discount.usage_count = response.usage_count
-        discount.updated_at = new Date().toISOString()
-      }
-      
-      logger.debug('✅ Discount applied via API:', discountId)
-      
-    } catch (err: any) {
-      logger.error('❌ Error applying discount:', err.message)
-      throw err
-    }
+  const applyDiscount = async (_discountId: string) => {
+    // PR-A C2 — apply-by-id discount route is disabled. Counters are server-internal.
+    throw new Error('Discount apply-by-id is disabled')
   }
 
   const createDiscount = async (discountData: Partial<LocalDiscountCode>) => {

@@ -102,7 +102,7 @@ export class PaymentService {
   /**
    * 🎁 Löst Gutscheine nach erfolgreicher Zahlung ein
    */
-  async redeemVouchersAfterPayment(paymentId: string, appointmentId?: string, redeemerId?: string): Promise<void> {
+  async redeemVouchersAfterPayment(paymentId: string, _appointmentId?: string, _redeemerId?: string): Promise<void> {
     try {
       logger.debug('🎁 Redeeming vouchers after payment:', paymentId)
 
@@ -113,27 +113,9 @@ export class PaymentService {
         return
       }
 
-      // Löse jeden Gutschein ein
-      const { applyDiscount } = await import('~/composables/useDiscounts')
-      
-      for (const discount of payment.metadata.discounts) {
-        try {
-          // Prüfe ob es ein Gutschein ist
-          const { data: discountData } = await this.supabase
-            .from('discounts')
-            .select('is_voucher')
-            .eq('id', discount.id)
-            .single()
-
-          if (discountData?.is_voucher) {
-            logger.debug('🎁 Redeeming voucher:', discount.id)
-            await applyDiscount(discount.id, appointmentId, redeemerId)
-          }
-        } catch (err: any) {
-          console.error('❌ Error redeeming voucher:', discount.id, err)
-          // Fehler bei einem Gutschein stoppt nicht den gesamten Prozess
-        }
-      }
+      // PR-A C2 — do not increment usage counters from the client.
+      // Usage counters are incremented by server-side fulfillment (webhook / RPC).
+      logger.debug('ℹ️ Client-side voucher counter increment is disabled for payment:', paymentId)
 
       logger.debug('✅ All vouchers redeemed for payment:', paymentId)
 
