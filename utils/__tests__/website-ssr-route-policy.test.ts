@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
@@ -7,7 +7,9 @@ import {
   shouldApplyWebsitePreviewNoStore,
   vercelWritesIsrPrerenderConfig,
   websiteHtmlResponsesShareIsrCache,
+  websiteHtmlResponsesSharePublicCdnEntry,
   websitePublicSsrRouteRule,
+  websiteSsrPathname,
   websiteSsrUsesSharedIsr,
 } from '../website-ssr-route-policy'
 
@@ -20,6 +22,8 @@ describe('website SSR cache isolation policy', () => {
     expect(websitePublicSsrRouteRule.isr).toBe(false)
     expect(websiteSsrUsesSharedIsr()).toBe(false)
     expect(vercelWritesIsrPrerenderConfig(websitePublicSsrRouteRule.isr)).toBe(false)
+    expect(vercelWritesIsrPrerenderConfig(60)).toBe(true)
+    expect(vercelWritesIsrPrerenderConfig(false)).toBe(false)
     expect(websitePublicSsrRouteRule.headers).toEqual(WEBSITE_NO_STORE_HEADERS)
     expect(WEBSITE_NO_STORE_HEADERS['Cache-Control']).toBe('private, no-store')
     expect(WEBSITE_NO_STORE_HEADERS['CDN-Cache-Control']).toBe('private, no-store')
@@ -34,22 +38,32 @@ describe('website SSR cache isolation policy', () => {
     expect(src).not.toMatch(/s-maxage=60,\s*stale-while-revalidate=300/)
   })
 
-  it('matches Nitro 2.13.4 Vercel ISR generation: falsy isr skips prerender-config and uses FALLBACK_ROUTE', () => {
-    const nitroVercel = readFileSync(
-      resolve(root, 'node_modules/nitropack/dist/presets/vercel/utils.mjs'),
-      'utf8',
-    )
+  it('matches Nitro Vercel ISR generation: falsy isr skips prerender-config', () => {
+    const nitroVercelPath = resolve(root, 'node_modules/nitropack/dist/presets/vercel/utils.mjs')
+    if (!existsSync(nitroVercelPath)) {
+      expect(vercelWritesIsrPrerenderConfig(false)).toBe(false)
+      expect(vercelWritesIsrPrerenderConfig(60)).toBe(true)
+      return
+    }
+    const nitroVercel = readFileSync(nitroVercelPath, 'utf8')
     expect(nitroVercel).toContain('if (!value.isr) {\n      continue;')
     expect(nitroVercel).toContain('value.isr === false')
     expect(nitroVercel).toContain('dest: FALLBACK_ROUTE')
     expect(nitroVercel).toContain('.prerender-config.json')
   })
 
-  it('cannot share an ISR cache entry between anonymous and preview URLs', () => {
+  it('documents path-keyed ISR collapse when ISR is enabled, and proves it is disabled', () => {
+    expect(websiteSsrPathname('/s/example?preview=TOKEN')).toBe('/s/example')
+    const unsafe = { isr: 60 as const }
+    expect(websiteHtmlResponsesShareIsrCache('/s/example', '/s/example?preview=TOKEN', unsafe)).toBe(true)
+    expect(websiteHtmlResponsesShareIsrCache('/s/example?preview=TOKEN', '/s/example', unsafe)).toBe(true)
+    expect(websiteHtmlResponsesShareIsrCache('/s/example', '/s/other?preview=TOKEN', unsafe)).toBe(false)
+
     expect(websiteHtmlResponsesShareIsrCache('/s/example', '/s/example?preview=TOKEN')).toBe(false)
     expect(websiteHtmlResponsesShareIsrCache('/s/example?preview=TOKEN', '/s/example')).toBe(false)
     expect(websiteHtmlResponsesShareIsrCache('/s/example', '/s/example?preview=1')).toBe(false)
-    expect(websiteHtmlResponsesShareIsrCache('/s/example', '/s/example?token=TOKEN')).toBe(false)
+    expect(websiteHtmlResponsesSharePublicCdnEntry('/s/example', '/s/example?preview=TOKEN')).toBe(false)
+    expect(websiteHtmlResponsesSharePublicCdnEntry('/s/example?preview=TOKEN', '/s/example')).toBe(false)
   })
 
   it('applies preview no-store only on website surfaces when a preview query is present', () => {
