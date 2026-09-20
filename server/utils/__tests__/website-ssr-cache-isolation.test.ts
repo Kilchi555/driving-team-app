@@ -20,7 +20,7 @@ vi.mock('~/server/utils/auth', () => ({
 const root = resolve(process.cwd())
 
 function prospectClient(row: Record<string, unknown> | null) {
-  const api: any = {
+  const api = {
     select: () => api,
     eq: () => api,
     maybeSingle: async () => ({ data: row, error: null }),

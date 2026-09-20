@@ -2,11 +2,11 @@
  * CDN / shared-cache headers for public tenant website APIs.
  * Preview must never be cached. Browsers revalidate (max-age=0); edge keeps s-maxage.
  */
-import { setHeader } from 'h3'
+import { setHeader, type H3Event } from 'h3'
 import { WEBSITE_NO_STORE_HEADERS } from '~/utils/website-ssr-route-policy'
 
 export function setWebsitePublicCache(
-  event: any,
+  event: H3Event,
   opts: {
     preview?: boolean
     /** Edge TTL in seconds (default 120) */
