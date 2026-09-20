@@ -37,9 +37,9 @@ vi.mock('~/server/utils/get-tenant-secrets-secure', () => ({
 }))
 
 vi.mock('~/utils/sariClient', () => ({
-  SARIClient: vi.fn().mockImplementation(() => ({
-    getCustomer: mocks.getCustomer,
-  })),
+  SARIClient: vi.fn().mockImplementation(function MockSARIClient() {
+    return { getCustomer: mocks.getCustomer }
+  }),
 }))
 
 vi.mock('~/utils/logger', () => ({
