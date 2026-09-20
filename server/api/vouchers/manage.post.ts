@@ -16,7 +16,6 @@ const CREATE_ALLOWLIST = [
   'remaining_amount_rappen',
   'min_amount_rappen',
   'usage_limit',
-  'usage_count',
   'is_active',
   'is_voucher',
   'voucher_recipient_name',
@@ -182,7 +181,7 @@ export default defineEventHandler(async (event) => {
         user_id: ownerUserId,
         tenant_id: tenantId,
         discount_type: allowed.discount_type || 'fixed',
-        usage_count: typeof allowed.usage_count === 'number' ? allowed.usage_count : 0,
+        usage_count: 0,
         is_active: allowed.is_active !== false,
         is_voucher: allowed.is_voucher !== false,
       }
