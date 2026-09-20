@@ -120,6 +120,7 @@
   },
   "homepage": "https://github.com/Kilchi555/driving-team-app#readme",
   "overrides": {
-    "chokidar": "^3"
+    "chokidar": "^3",
+    "brace-expansion@1": "1.1.21"
   }
 }
