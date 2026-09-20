@@ -6,7 +6,7 @@ Verified against source (Sep 2026). Current contract: merge `11b12305` (#245), w
 
 Related: SARI SOAP overview in [`SARI_SOAP_COURSES_V3_API.md`](./SARI_SOAP_COURSES_V3_API.md) (API shapes). This runbook is the **expiration classification** contract only.
 
-> **Note:** Draft docs PR #243 described #241 (`null` → `UNKNOWN_EXPIRATION` deny). That narrative is **outdated** after #245. Trust this page + `license-validation.ts` on `main`.
+> **Note:** Draft docs PR #243 described #241 (`null` → `UNKNOWN_EXPIRATION` deny). That narrative is **outdated** after #245. Trust this page + `server/utils/license-validation.ts` on `main`.
 
 ---
 
@@ -48,10 +48,12 @@ Thrown as H3 `403` with `data.licenseValidationState`:
 |-------|------|
 | `NO_MATCHING_LICENSE` | No license category allowed for the course (VKU/PGS mapping unchanged) |
 | `INVALID_EXPIRATION` | Matching licenses exist, none are dated, and at least one is `INVALID` |
-| `EXPIRED` | Best dated license ends before last session end (or before now if no sessions) |
+| `EXPIRED` | Best dated license ends before last session `end_time` (or before now if no `course_sessions`) |
 | (success / no throw) | Best dated license covers all sessions, **or** all matching licenses are `ABSENT` only |
 
-Among dated licenses, prefer later expiry, then higher category preference index (PGS: A1 / A35KW / A; VKU: those plus B).
+Category mapping: `PGS` → `A1` / `A35KW` / `A`; `VKU` → those plus `B`; other course categories require an exact match.
+
+Among dated licenses, prefer later expiry, then higher category preference index.
 
 Resolution rules:
 

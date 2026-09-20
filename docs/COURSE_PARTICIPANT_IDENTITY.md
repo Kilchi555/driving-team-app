@@ -30,7 +30,7 @@ Staff need Geburtsdatum and Lernfahrausweis (LFA) on VKU participant lists. Thos
 1. Prefer `license_number` as `LFA {number}`.
 2. Else use `sari_faberid` as `LFA {id}` (same prefix when only SARI id exists).
 3. If both exist and **differ** (ignoring spaces/dots for equality): `LFA {license_number} · SARI {sari_faberid}`.
-4. If both exist and match after normalizing spaces/dots: show `license_number` once.
+4. If both exist and match after normalizing spaces/dots: show `license_number` once as `LFA {number}`.
 5. **Do not** fall back to `sari_license_id`, user `faberid`, or `lernfahrausweis_nr` — those are ignored by the helpers.
 
 ### Surfaces

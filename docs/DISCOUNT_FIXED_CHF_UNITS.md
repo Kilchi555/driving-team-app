@@ -35,13 +35,15 @@ Treating `discounts.fixed` as rappen under-charged Wallee (CHF 190 → 190 rappe
 | other + `source === 'discount'` | `fixed_chf` |
 | other + `voucher_code` / `gift_card` | `fixed_rappen` |
 
+`DiscountValueSource`: `'discount' | 'voucher_code' | 'gift_card'`.
+
 ### `computeDiscountAmountRappen` / `payableAfterSourceDiscount`
 
-- `fixed_chf`: `round(value * 100)` rappen, then clamp to base / optional `max_discount_rappen`.
+- `fixed_chf`: `round(value * 100)` rappen, then clamp to base / optional `maxDiscountRappen`.
 - `fixed_rappen`: `round(value)` rappen (no ×100).
 - `percentage`: percent of base rappen.
 - `free_lesson`: full base.
-- Payable path also returns `walleeAmountIncludingTax` as **CHF major units** (`rappen / 100`) for Wallee line amounts.
+- Payable path also returns `walleeAmountIncludingTax` via `walleeAmountIncludingTaxChf` as **CHF major units** (`rappen / 100`) for Wallee line amounts.
 
 Client-supplied `amount` / `discountAmountRappen` must not control the payable; server recomputes from DB row + source.
 
@@ -77,7 +79,7 @@ Lookup order on course/public paths (first hit wins): `voucher_codes` → unrede
 1. **Assuming all `discount_value` columns are rappen** — only true for voucher_codes / gift cards; `discounts` fixed is CHF.
 2. **Global ×100 “to be safe”** — breaks voucher_codes (`19000` → CHF 190_000).
 3. **Trusting client discount amounts** — payable is recomputed server-side from the matched row.
-4. **Confusing Wallee major CHF with rappen** — `walleeAmountIncludingTaxChf` is major units for the gateway.
+4. **Confusing Wallee major CHF with rappen** — `walleeAmountIncludingTax` is major units for the gateway.
 5. **CSV / older audits** — `docs/DATABASE_TABLES.csv` lists `discount_value` without units; see the CHF note there + this runbook.
 
 ---

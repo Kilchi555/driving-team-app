@@ -362,3 +362,4 @@ Focused ops/dev runbooks (prefer these over historical root `*_ANALYSIS.md` repo
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
+
