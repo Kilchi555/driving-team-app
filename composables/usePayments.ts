@@ -23,7 +23,7 @@ function toUserFacingPaymentError(err: any, contextMessage: string): Error {
 
 export const usePayments = () => {
 
-  const { validateDiscountCode, applyDiscount, loadDiscounts, loadDiscountsByCategory, availableDiscounts } = useDiscounts()
+  const { validateDiscountCode, loadDiscounts, loadDiscountsByCategory, availableDiscounts } = useDiscounts()
   const { t } = useTerminology()
   
   // State
