@@ -4,6 +4,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
+import { stripVoucherCurrentRedemptions } from '~/server/utils/protected-discount-counters'
 
 export default defineEventHandler(async (event) => {
   const supabase = getSupabaseAdmin()
@@ -93,10 +94,11 @@ export default defineEventHandler(async (event) => {
     delete updates.action
     delete updates.tenant_id
     delete updates.created_by
+    const writableUpdates = stripVoucherCurrentRedemptions(updates)
 
     const { data, error } = await supabase
       .from('voucher_codes')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...writableUpdates, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single()

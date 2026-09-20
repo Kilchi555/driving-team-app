@@ -7,6 +7,7 @@ import { defineEventHandler, createError, readBody } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
+import { stripDiscountUsageCount } from '~/server/utils/protected-discount-counters'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -14,12 +15,16 @@ export default defineEventHandler(async (event) => {
     if (!authUser?.tenant_id) {
       throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     }
+    // Role comes from the authenticated session profile, never from the body.
     if (!['admin', 'staff', 'super_admin', 'tenant_admin'].includes(authUser.role || '')) {
       throw createError({ statusCode: 403, statusMessage: 'Forbidden – admin or staff role required' })
     }
 
     const body = await readBody(event)
     const { id, action, ...discountFields } = body
+    const writableFields = stripDiscountUsageCount(
+      discountFields && typeof discountFields === 'object' ? discountFields : {},
+    )
 
     const supabase = getSupabaseAdmin()
 
@@ -35,10 +40,10 @@ export default defineEventHandler(async (event) => {
       return { success: true }
     }
 
-    // Always scope to current tenant
-    const payload = { ...discountFields, tenant_id: authUser.tenant_id }
+    // Always scope to current tenant. Never trust body.tenant_id or usage_count.
+    const payload = { ...writableFields, tenant_id: authUser.tenant_id }
 
-    // UPDATE
+    // UPDATE — protected counters cannot be set by any tenant user
     if (id) {
       const { data, error } = await supabase
         .from('discounts')
@@ -52,10 +57,10 @@ export default defineEventHandler(async (event) => {
       return { success: true, data }
     }
 
-    // CREATE
+    // CREATE — counters start at 0; client cannot seed usage_count
     const { data, error } = await supabase
       .from('discounts')
-      .insert(payload)
+      .insert({ ...payload, usage_count: 0 })
       .select()
       .single()
     if (error) throw createError({ statusCode: 500, statusMessage: error.message })
