@@ -117,4 +117,4 @@ Client inserts that name `usage_count: 0` are OK: INSERT trigger still forces `0
 | C3 route | `server/api/appointments/apply-discount.post.ts` |
 | C3 UI | `pages/customer/payments.vue` (no apply-discount callers) |
 | Trusted increment | `server/api/wallee/webhook.post.ts` (`getSupabaseAdmin`) |
-| Tests | `server/utils/__tests__/pra-discount-security-freeze.test.ts`, `apply-discount.http.test.ts` |
+| Tests | `server/utils/__tests__/pra-discount-security-freeze.test.ts`, `server/utils/__tests__/apply-discount.http.test.ts` |
