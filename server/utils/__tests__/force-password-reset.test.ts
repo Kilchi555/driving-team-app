@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import {
   ACCESS_JWT_SEMANTICS,
   DISCARDED_PASSWORD_BYTES,
+  DISCARDED_PASSWORD_LENGTH,
   FORCE_RESET_ACTION,
   FORCE_RESET_PASSWORD_MIN_LENGTH,
   RESET_TOKEN_TTL_MS,
@@ -84,6 +85,22 @@ describe('generateDiscardedPassword', () => {
     expect(a).not.toContain(AUTH_ID)
     expect(a).not.toContain('user@example.test')
     expect(DISCARDED_PASSWORD_BYTES).toBe(32)
+    expect(DISCARDED_PASSWORD_LENGTH).toBe(43)
+  })
+
+  it('constructively satisfies Production classes on every draw', () => {
+    const seen = new Set<string>()
+    for (let i = 0; i < 1000; i++) {
+      const password = generateDiscardedPassword()
+      expect(password.length).toBeGreaterThanOrEqual(FORCE_RESET_PASSWORD_MIN_LENGTH)
+      expect(password.length).toBe(DISCARDED_PASSWORD_LENGTH)
+      expect(password).toMatch(/[a-z]/)
+      expect(password).toMatch(/[A-Z]/)
+      expect(password).toMatch(/[0-9]/)
+      expect(password).toMatch(/^[A-Za-z0-9_-]+$/)
+      seen.add(password)
+    }
+    expect(seen.size).toBe(1000)
   })
 
   it('reset tokens are 64-hex and unique', () => {

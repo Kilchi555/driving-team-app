@@ -24,7 +24,40 @@ function isUuid(value: unknown): value is string {
 export const FORCE_RESET_ACTION = 'force_password_reset'
 export const ACCESS_JWT_SEMANTICS = 'VALID_UNTIL_EXPIRY' as const
 export const RESET_TOKEN_TTL_MS = 60 * 60 * 1000
+/** CSPRNG input floor; discarded password length stays 43 (32 bytes of base64url). */
 export const DISCARDED_PASSWORD_BYTES = 32
+export const DISCARDED_PASSWORD_LENGTH = 43
+
+const LOWERCASE = 'abcdefghijklmnopqrstuvwxyz'
+const UPPERCASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const DIGITS = '0123456789'
+const BASE64URL_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+
+/** Uniform integer in [0, max) via CSPRNG rejection sampling (no modulo bias). */
+function randomIntBelow(max: number): number {
+  if (!Number.isInteger(max) || max <= 0 || max > 256) {
+    throw new Error('randomIntBelow max out of range')
+  }
+  const limit = Math.floor(256 / max) * max
+  let byte = 0
+  do {
+    byte = randomBytes(1)[0]
+  } while (byte >= limit)
+  return byte % max
+}
+
+function randomChar(alphabet: string): string {
+  return alphabet[randomIntBelow(alphabet.length)]
+}
+
+function shuffleInPlace(chars: string[]): void {
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = randomIntBelow(i + 1)
+    const tmp = chars[i]
+    chars[i] = chars[j]
+    chars[j] = tmp
+  }
+}
 
 export type ForceResetStage =
   | 'lookup'
@@ -104,9 +137,24 @@ export type ForceResetDeps = {
 const inFlight = new Map<string, Promise<ForceResetResult>>()
 
 export function generateDiscardedPassword(): string {
-  const password = randomBytes(DISCARDED_PASSWORD_BYTES).toString('base64url')
-  if (password.length < FORCE_RESET_PASSWORD_MIN_LENGTH) {
-    throw new Error('Discarded password did not meet FORCE_RESET_PASSWORD_MIN_LENGTH')
+  const chars: string[] = [
+    randomChar(LOWERCASE),
+    randomChar(UPPERCASE),
+    randomChar(DIGITS),
+  ]
+  while (chars.length < DISCARDED_PASSWORD_LENGTH) {
+    chars.push(randomChar(BASE64URL_ALPHABET))
+  }
+  shuffleInPlace(chars)
+  const password = chars.join('')
+  if (
+    password.length < FORCE_RESET_PASSWORD_MIN_LENGTH ||
+    password.length !== DISCARDED_PASSWORD_LENGTH ||
+    !/[a-z]/.test(password) ||
+    !/[A-Z]/.test(password) ||
+    !/[0-9]/.test(password)
+  ) {
+    throw new Error('Discarded password did not meet Production password policy')
   }
   return password
 }
