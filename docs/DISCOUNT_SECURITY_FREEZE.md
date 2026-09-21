@@ -111,7 +111,7 @@ Client inserts that name `usage_count: 0` are OK: INSERT trigger still forces `0
 |------|------|
 | Counter strip helpers | `server/utils/protected-discount-counters.ts` |
 | C1 migration | `migrations/20260920_pra_discount_security_freeze.sql` |
-| C1 manage APIs | `server/api/discounts/manage.post.ts`, `voucher-codes/manage.post.ts`, `vouchers/manage.post.ts` |
+| C1 manage APIs | `server/api/discounts/manage.post.ts`, `server/api/voucher-codes/manage.post.ts`, `server/api/vouchers/manage.post.ts` |
 | C2 route | `server/api/discounts/apply/[discountId].post.ts` |
 | C2 client stub | `composables/useDiscounts.ts` (`applyDiscount`) |
 | C3 route | `server/api/appointments/apply-discount.post.ts` |
