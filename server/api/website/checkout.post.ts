@@ -155,6 +155,15 @@ export default defineEventHandler(async (event) => {
           }),
     })
 
+    const { recordWebsiteLifecycleEvent } = await import('~/server/utils/website-lifecycle-audit')
+    await recordWebsiteLifecycleEvent({
+      supabase,
+      event: 'checkout_started',
+      websiteId: website?.id || null,
+      tenantId,
+      metadata: { session_id: session.id, hosting_plan: hostingPlan, include_setup: includeSetup },
+    }).catch(() => undefined)
+
     return { id: session.id, url: session.url }
   } catch (stripeErr: any) {
     console.error('❌ website checkout failed', stripeErr?.message)

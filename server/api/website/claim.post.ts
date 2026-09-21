@@ -37,6 +37,15 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  const { recordWebsiteLifecycleEvent } = await import('~/server/utils/website-lifecycle-audit')
+  await recordWebsiteLifecycleEvent({
+    supabase,
+    event: 'website_claimed',
+    websiteId: result.websiteId,
+    tenantId: result.tenantId,
+    metadata: { prospect_id: result.prospectId, idempotent: result.idempotent },
+  }).catch(() => undefined)
+
   return {
     success: true,
     claimed: true,

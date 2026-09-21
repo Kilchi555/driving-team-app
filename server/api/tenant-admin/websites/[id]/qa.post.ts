@@ -52,6 +52,17 @@ export default defineEventHandler(async (event) => {
     .eq('id', tenantId)
     .maybeSingle()
 
+  if (decision === 'approved') {
+    const { recordWebsiteLifecycleEvent } = await import('~/server/utils/website-lifecycle-audit')
+    await recordWebsiteLifecycleEvent({
+      supabase,
+      event: 'qa_passed',
+      tenantId,
+      actorId: auth.id,
+      metadata: { decision },
+    }).catch(() => undefined)
+  }
+
   return {
     success: true,
     tenant: latest || updated,

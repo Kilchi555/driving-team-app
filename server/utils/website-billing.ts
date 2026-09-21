@@ -1,5 +1,11 @@
 import type Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { recordWebsiteLifecycleEvent } from '~/server/utils/website-lifecycle-audit'
+import { runWebsiteQualityChecks } from '~/server/utils/website-quality'
+import {
+  buildWebsiteRevisionSnapshot,
+  persistPublishedWebsiteRevision,
+} from '~/server/utils/website-revision'
 import {
   rememberWebsiteCheckoutEvent,
   resolveTrustedWebsiteCheckoutBinding,
@@ -69,7 +75,7 @@ export async function publishWebsiteForTenant(
 ) {
   const { data: tenantGate } = await supabase
     .from('tenants')
-    .select('id, website_only, website_setup_paid_at, website_hosting_plan, website_status, trial_ends_at')
+    .select('id, website_only, website_setup_paid_at, website_hosting_plan, website_status, trial_ends_at, business_type')
     .eq('id', tenantId)
     .maybeSingle()
 
@@ -85,7 +91,7 @@ export async function publishWebsiteForTenant(
   const { data: website } = await supabase
     .from('website_tenants')
     .select(
-      'id, subdomain, custom_domain, custom_domain_verified, hero_image_url, logo_url, primary_color, secondary_color, accent_color, is_published',
+      'id, tenant_id, subdomain, custom_domain, custom_domain_verified, hero_image_url, logo_url, primary_color, secondary_color, accent_color, seo_title, seo_description, seo_keywords, is_published',
     )
     .eq('tenant_id', tenantId)
     .maybeSingle()
@@ -99,6 +105,25 @@ export async function publishWebsiteForTenant(
     throw createError({ statusCode: 400, statusMessage: 'Homepage ist noch nicht bereit' })
   }
 
+  const { data: pages } = await supabase
+    .from('website_pages')
+    .select('id, slug, title, is_home, page_type, seo_title, seo_description, seo_keywords, og_image, blocks, is_published')
+    .eq('website_id', website.id)
+
+  const quality = runWebsiteQualityChecks({
+    homepageBlocks: home.blocks,
+    pages: pages || [],
+    businessType: tenantGate?.business_type || null,
+    bookingUrl: null,
+  })
+  if (!quality.passed) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: quality.blockingIssues[0]?.message || 'Quality-Gate nicht erfüllt',
+      data: { code: 'website_quality_blocked', quality },
+    })
+  }
+
   const alreadyPublished = !!(website.is_published && tenantGate?.website_status === 'live')
   if (alreadyPublished) {
     const liveUrl =
@@ -106,6 +131,12 @@ export async function publishWebsiteForTenant(
         ? `https://${website.custom_domain}`
         : `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
     const previewUrl = `${baseUrl}/s/${encodeURIComponent(website.subdomain)}?preview=1`
+    await persistPublishedRevisionBestEffort({
+      supabase,
+      website,
+      tenantId,
+      pages: pages || [],
+    })
     return { website, liveUrl, previewUrl, subdomain: website.subdomain, idempotent: true }
   }
 
@@ -166,7 +197,71 @@ export async function publishWebsiteForTenant(
     previewUrl,
   })
 
+  const persisted = await persistPublishedRevisionBestEffort({
+    supabase,
+    website,
+    tenantId,
+    pages: pages || [],
+  })
+  await recordWebsiteLifecycleEvent({
+    supabase,
+    event: 'published',
+    websiteId: website.id,
+    tenantId,
+    revisionId: persisted.revision?.id || null,
+    metadata: {
+      idempotent: false,
+      version_number: persisted.revision?.version_number || null,
+      quality_warnings: quality.warnings.map((item) => item.check_id),
+    },
+  }).catch(() => undefined)
+
   return { website: updatedWebsite, liveUrl, previewUrl, subdomain: website.subdomain, idempotent: false }
+}
+
+async function persistPublishedRevisionBestEffort(opts: {
+  supabase: ReturnType<typeof getSupabaseAdmin>
+  website: {
+    id: string
+    subdomain: string
+    seo_title?: string | null
+    seo_description?: string | null
+    seo_keywords?: string | null
+    primary_color?: string | null
+    secondary_color?: string | null
+    accent_color?: string | null
+    logo_url?: string | null
+    hero_image_url?: string | null
+  }
+  tenantId: string
+  pages: Array<{
+    id?: string | null
+    slug?: string | null
+    title?: string | null
+    is_home?: boolean | null
+    page_type?: string | null
+    seo_title?: string | null
+    seo_description?: string | null
+    seo_keywords?: string | null
+    og_image?: string | null
+    blocks?: unknown
+    is_published?: boolean | null
+  }>
+}) {
+  try {
+    const snapshot = buildWebsiteRevisionSnapshot({
+      website: opts.website,
+      pages: opts.pages,
+    })
+    return await persistPublishedWebsiteRevision({
+      supabase: opts.supabase,
+      websiteId: opts.website.id,
+      tenantId: opts.tenantId,
+      snapshot,
+    })
+  } catch {
+    return { revision: null, skipped: true, idempotent: false }
+  }
 }
 
 export async function unpublishWebsiteForTenant(
@@ -191,6 +286,12 @@ export async function unpublishWebsiteForTenant(
     .from('tenants')
     .update({ website_status: 'disabled' })
     .eq('id', tenantId)
+  await recordWebsiteLifecycleEvent({
+    supabase,
+    event: 'unpublished',
+    websiteId: website.id,
+    tenantId,
+  }).catch(() => undefined)
 }
 
 export async function applyWebsiteHostingFromSubscription(
@@ -342,5 +443,11 @@ export async function applyWebsiteCheckoutSession(opts: {
 
   // payment != publication. Ignore publish_after_pay metadata.
   void opts.baseUrl
+  await recordWebsiteLifecycleEvent({
+    supabase,
+    event: 'payment_confirmed',
+    tenantId,
+    metadata: { session_id: session.id || null, include_setup: includeSetup },
+  }).catch(() => undefined)
   return true
 }

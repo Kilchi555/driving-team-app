@@ -441,6 +441,15 @@ async function finishProspectSite(opts: {
     throw createError({ statusCode: 500, statusMessage: updateError?.message || 'Prospect-Update fehlgeschlagen' })
   }
 
+  const { recordWebsiteLifecycleEvent } = await import('~/server/utils/website-lifecycle-audit')
+  await recordWebsiteLifecycleEvent({
+    supabase,
+    event: 'website_generated',
+    websiteId: website.id,
+    tenantId: tenant.id,
+    metadata: { prospect_id: prospect.id },
+  }).catch(() => undefined)
+
   return mintedClaim
     ? ({ ...updated, claim_token: mintedClaim.token } as WebsiteProspectRow & { claim_token: string })
     : (updated as WebsiteProspectRow)
