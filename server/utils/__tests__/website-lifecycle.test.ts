@@ -16,6 +16,18 @@ const tenantB = '22222222-2222-2222-2222-222222222222'
 const websiteA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 const prospectA = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
 
+type ProspectQueryResult = {
+  data: Record<string, unknown> | null
+  error: null
+}
+
+type ProspectQuery = {
+  select: (columns?: string) => ProspectQuery
+  eq: (key: string, value: unknown) => ProspectQuery
+  update: (patch?: Record<string, unknown>) => ProspectQuery
+  maybeSingle: () => Promise<ProspectQueryResult>
+}
+
 function createProspectStore(row: Record<string, unknown>) {
   const rows = [row]
   return {
@@ -24,14 +36,14 @@ function createProspectStore(row: Record<string, unknown>) {
       if (table !== 'website_prospects') throw new Error(`unexpected table ${table}`)
       const filters: Record<string, unknown> = {}
       let pendingUpdate: Record<string, unknown> | null = null
-      const api: any = {
+      const api: ProspectQuery = {
         select() { return api },
         eq(key: string, value: unknown) {
           filters[key] = value
           return api
         },
-        update(patch: Record<string, unknown>) {
-          pendingUpdate = patch
+        update(patch?: Record<string, unknown>) {
+          pendingUpdate = patch || null
           return api
         },
         maybeSingle() {
@@ -231,7 +243,7 @@ describe('claim mechanism', () => {
       from() {
         const filters: Record<string, unknown> = {}
         let updating = false
-        const api: any = {
+        const api: ProspectQuery = {
           select() { return api },
           eq(key: string, value: unknown) {
             filters[key] = value
