@@ -7,6 +7,12 @@ import { createHash } from 'node:crypto'
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { normalizeWebsiteMedia } from '~/server/utils/website-media-normalize'
+import {
+  applyHeroImageToLanding,
+  buildWebsitePageContentWrite,
+  editorSourceBlocks,
+  publishedWebsiteProtectsLiveBlocks,
+} from '~/server/utils/website-page-draft'
 
 type ApplyBody = {
   source: 'stock' | 'ai' | 'own'
@@ -170,33 +176,50 @@ export default defineEventHandler(async (event) => {
   const now = new Date().toISOString()
   const { data: website } = await supabase
     .from('website_tenants')
-    .select('id')
+    .select('id, is_published')
     .eq('tenant_id', user.tenant_id)
     .maybeSingle()
 
   if (website?.id) {
-    await supabase
-      .from('website_tenants')
-      .update({ hero_image_url: heroUrl, updated_at: now })
-      .eq('id', website.id)
-
+    const websiteIsPublished = publishedWebsiteProtectsLiveBlocks(website)
     const { data: home } = await supabase
       .from('website_pages')
-      .select('id, blocks')
+      .select('id, blocks, addon_inputs, title, seo_title, seo_description, seo_keywords, og_image, is_published, published_at')
       .eq('website_id', website.id)
       .eq('is_home', true)
       .maybeSingle()
-    const landing = home?.blocks as any
-    if (home?.id && landing && typeof landing === 'object') {
-      landing.brand = { ...(landing.brand || {}), hero_image_url: heroUrl, hero_image_source: source, hero_attribution: attribution }
-      if (Array.isArray(landing.blocks)) {
-        landing.blocks = landing.blocks.map((b: any) =>
-          b?.type === 'hero'
-            ? { ...b, content: { ...(b.content || {}), image_url: heroUrl } }
-            : b,
-        )
-      }
-      await supabase.from('website_pages').update({ blocks: landing, updated_at: now }).eq('id', home.id)
+
+    const sourceBlocks = home ? editorSourceBlocks(home, websiteIsPublished) : null
+    const landing = applyHeroImageToLanding(sourceBlocks, {
+      heroUrl,
+      source,
+      attribution,
+    })
+    const write = home?.id && landing && typeof landing === 'object'
+      ? buildWebsitePageContentWrite({
+          websiteIsPublished,
+          currentPage: home,
+          nextBlocks: landing,
+          now,
+        })
+      : null
+
+    if (home?.id && write) {
+      await supabase
+        .from('website_pages')
+        .update(write.pageUpdate)
+        .eq('id', home.id)
+        .eq('website_id', website.id)
+    }
+
+    // Live sites keep website_tenants.hero_image_url aligned with public blocks,
+    // matching slots-save / wizard-save (allowWebsitePublicSync).
+    if (write?.allowWebsitePublicSync || (!write && !websiteIsPublished)) {
+      await supabase
+        .from('website_tenants')
+        .update({ hero_image_url: heroUrl, updated_at: now })
+        .eq('id', website.id)
+        .eq('tenant_id', user.tenant_id)
     }
   }
 

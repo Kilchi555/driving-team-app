@@ -75,6 +75,39 @@ export function overlayEditorDraftPage<T extends WebsitePageDraftSource>(
   }
 }
 
+export function applyHeroImageToLanding(
+  sourceBlocks: unknown,
+  opts: {
+    heroUrl: string
+    source: 'stock' | 'ai' | 'own'
+    attribution?: {
+      photographer?: string | null
+      photographer_url?: string | null
+      unsplash_url?: string | null
+    } | null
+  },
+): unknown {
+  if (!sourceBlocks || typeof sourceBlocks !== 'object') return sourceBlocks
+  const landing = structuredClone(sourceBlocks) as Record<string, any>
+  const brand = landing.brand && typeof landing.brand === 'object' && !Array.isArray(landing.brand)
+    ? landing.brand
+    : {}
+  landing.brand = {
+    ...brand,
+    hero_image_url: opts.heroUrl,
+    hero_image_source: opts.source,
+    hero_attribution: opts.attribution ?? null,
+  }
+  if (Array.isArray(landing.blocks)) {
+    landing.blocks = landing.blocks.map((block: any) =>
+      block?.type === 'hero'
+        ? { ...block, content: { ...(block.content || {}), image_url: opts.heroUrl } }
+        : block,
+    )
+  }
+  return landing
+}
+
 export function buildWebsitePageContentWrite(opts: {
   websiteIsPublished: boolean
   currentPage: WebsitePageDraftSource

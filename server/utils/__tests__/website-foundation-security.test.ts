@@ -91,13 +91,25 @@ describe('website factory foundation security contracts', () => {
     const slots = src('server/api/website/slots-save.post.ts')
     const pagePut = src('server/api/website/pages/[[slug]].put.ts')
     const wizard = src('server/api/website/wizard-save.post.ts')
+    const applyHero = src('server/api/website/media/apply-hero.post.ts')
     const restore = src('server/utils/website-revision.ts')
-    for (const body of [slots, pagePut, wizard]) {
+    for (const body of [slots, pagePut, wizard, applyHero]) {
       expect(body).toContain('buildWebsitePageContentWrite')
       expect(body).toContain('publishedWebsiteProtectsLiveBlocks')
     }
     expect(restore).toContain('is_published: page.is_published === true')
     expect(restore).not.toMatch(/is_published:\s*true/)
+  })
+
+  it('TEST E: apply-hero stays tenant- and website-scoped (no client website_id)', () => {
+    const applyHero = src('server/api/website/media/apply-hero.post.ts')
+    expect(applyHero).toContain("eq('auth_user_id', authUser.id)")
+    expect(applyHero).toContain(".eq('tenant_id', user.tenant_id)")
+    expect(applyHero).toContain(".eq('website_id', website.id)")
+    expect(applyHero).toContain(".eq('is_home', true)")
+    expect(applyHero).toContain(".eq('id', home.id)")
+    expect(applyHero).not.toMatch(/body\.website_id/)
+    expect(applyHero).not.toMatch(/update\(\{\s*blocks:\s*landing/)
   })
 
   it('does not apply or invoke production backfill from application boot paths', () => {
