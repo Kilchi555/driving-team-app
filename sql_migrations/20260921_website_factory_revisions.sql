@@ -2,7 +2,12 @@
 -- Additive only. Do NOT apply to production from this PR.
 -- Reviewable / reversible: drop the new tables, indexes, and columns.
 --
--- PRODUCTION_APPLY_NOT_CERTIFIED until live duplicate/NULL/FK analysis is run.
+-- Strategy B: schema + verified backfill capability only.
+-- Do NOT switch public reads off website_pages.blocks.
+-- Pointer lives on website_tenants.published_revision_id (NOT website_pages).
+-- No triggers / functions: writes stay explicit and application-controlled.
+--
+-- PRODUCTION_APPLY_NOT_CERTIFIED until an explicit apply runbook is approved.
 -- Existing tenants keep working without this migration: app code treats
 -- missing relations as a no-op and keeps the current mutable live tables.
 
@@ -23,7 +28,7 @@ create table if not exists public.website_revisions (
 );
 
 comment on table public.website_revisions is
-  'Immutable website snapshots. Publish/rollback create new rows; published snapshots are not updated in place.';
+  'Immutable website snapshots. Publish/rollback create new rows; published snapshots are not updated in place. APPLICATION_ENFORCED_IMMUTABILITY=YES (no in-place snapshot UPDATE). DATABASE_ENFORCED_IMMUTABILITY=NO (no triggers).';
 comment on column public.website_revisions.snapshot is
   'Deterministic JSON of pages + site SEO/brand at publish time. No secrets.';
 comment on column public.website_revisions.source_revision_id is

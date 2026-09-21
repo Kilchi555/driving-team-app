@@ -327,10 +327,38 @@ export async function rollbackWebsiteRevision(opts: {
   })
 }
 
-function jsonEqual(left: unknown, right: unknown) {
-  try {
-    return JSON.stringify(left) === JSON.stringify(right)
-  } catch {
-    return false
+/**
+ * Semantic JSON equality. Object key order is not significant (jsonb may
+ * reorder keys). Array order is significant so landing `blocks` stay lossless.
+ */
+export function jsonEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true
+  if (left == null || right == null) return left === right
+  if (typeof left !== typeof right) return false
+  if (typeof left !== 'object') return left === right
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false
+    return left.every((item, index) => jsonEqual(item, right[index]))
   }
+  const leftRecord = left as Record<string, unknown>
+  const rightRecord = right as Record<string, unknown>
+  const leftKeys = Object.keys(leftRecord)
+  const rightKeys = Object.keys(rightRecord)
+  if (leftKeys.length !== rightKeys.length) return false
+  return leftKeys.every((key) => (
+    Object.prototype.hasOwnProperty.call(rightRecord, key)
+    && jsonEqual(leftRecord[key], rightRecord[key])
+  ))
+}
+
+/** Compare snapshot content, ignoring capture timestamps. */
+export function revisionSnapshotContentEqual(
+  left: WebsiteRevisionSnapshot | null | undefined,
+  right: WebsiteRevisionSnapshot | null | undefined,
+) {
+  if (!left || !right) return false
+  return jsonEqual(
+    { schema_version: left.schema_version, website: left.website, pages: left.pages },
+    { schema_version: right.schema_version, website: right.website, pages: right.pages },
+  )
 }

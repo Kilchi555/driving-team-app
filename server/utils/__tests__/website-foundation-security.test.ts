@@ -54,6 +54,45 @@ describe('website factory foundation security contracts', () => {
     expect(src('server/utils/website-lifecycle.ts')).not.toContain('preview_token_hash')
   })
 
+  it('keeps every public website read on website_pages.blocks (no Strategy B cutover)', () => {
+    const publicPaths = [
+      'server/api/public/website/[subdomain].get.ts',
+      'server/api/public/website/[subdomain]/[slug].get.ts',
+      'server/api/public/website/[subdomain]/og.png.get.ts',
+      'server/api/public/website/[subdomain]/legal.get.ts',
+      'server/api/public/website/[subdomain]/reviews.get.ts',
+      'server/api/public/website/[subdomain]/lead.post.ts',
+      'server/api/public/website/[subdomain]/next-slots.get.ts',
+      'server/routes/s/[subdomain]/sitemap.xml.ts',
+      'server/routes/s/[subdomain]/llms.txt.ts',
+      'server/routes/s/[subdomain]/robots.txt.ts',
+      'server/routes/robots.txt.ts',
+      'server/middleware/02.custom-domain.ts',
+      'server/utils/website-seo-context.ts',
+      'server/utils/website-public-cache.ts',
+    ]
+    for (const rel of publicPaths) {
+      const body = src(rel)
+      expect(body, rel).not.toContain('published_revision_id')
+      expect(body, rel).not.toContain('website_revisions')
+      expect(body, rel).not.toContain('website-revision-backfill')
+    }
+    expect(src('server/api/public/website/[subdomain].get.ts')).toContain("from('website_pages')")
+    expect(src('server/api/public/website/[subdomain]/[slug].get.ts')).toContain("from('website_pages')")
+    expect(src('server/api/website/wizard-save.post.ts')).toContain('website_pages.blocks')
+    expect(src('server/api/website/slots-save.post.ts')).toContain('website_pages.blocks')
+    const backfill = src('server/utils/website-revision-backfill.ts')
+    expect(backfill).toContain("eq('is_published', true)")
+    expect(backfill).toContain('isDeterministicHomepage')
+    expect(backfill).not.toMatch(/create trigger|CREATE TRIGGER/i)
+  })
+
+  it('does not apply or invoke production backfill from application boot paths', () => {
+    expect(src('server/utils/website-billing.ts')).not.toContain('website-revision-backfill')
+    expect(src('server/utils/website-prospect-generate.ts')).not.toContain('website-revision-backfill')
+    expect(src('nuxt.config.ts')).not.toContain('website-revision-backfill')
+  })
+
   it('never writes secrets into lifecycle audit metadata', () => {
     const audit = src('server/utils/website-lifecycle-audit.ts')
     expect(audit).toContain('sanitizeWebsiteAuditMetadata')
