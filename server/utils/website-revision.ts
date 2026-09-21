@@ -280,7 +280,7 @@ export async function restoreWebsiteRevisionSnapshot(opts: {
         seo_keywords: page.seo_keywords,
         og_image: page.og_image,
         blocks: page.blocks,
-        is_published: true,
+        is_published: page.is_published === true,
       })
       .eq('id', page.id)
       .eq('website_id', opts.websiteId)

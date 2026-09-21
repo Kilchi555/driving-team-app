@@ -3,6 +3,7 @@
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { overlayEditorDraftPage, publishedWebsiteProtectsLiveBlocks } from '~/server/utils/website-page-draft'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -33,7 +34,7 @@ export default defineEventHandler(async (event) => {
   // Get website
   const { data: website } = await supabase
     .from('website_tenants')
-    .select('*')
+    .select('*, is_published')
     .eq('tenant_id', user.tenant_id)
     .single()
 
@@ -61,7 +62,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     success: true,
-    page,
+    page: overlayEditorDraftPage(page, publishedWebsiteProtectsLiveBlocks(website)),
     website
   }
 })

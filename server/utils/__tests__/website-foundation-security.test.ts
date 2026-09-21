@@ -87,6 +87,19 @@ describe('website factory foundation security contracts', () => {
     expect(backfill).not.toMatch(/create trigger|CREATE TRIGGER/i)
   })
 
+  it('routes live draft writes through published-block protection', () => {
+    const slots = src('server/api/website/slots-save.post.ts')
+    const pagePut = src('server/api/website/pages/[[slug]].put.ts')
+    const wizard = src('server/api/website/wizard-save.post.ts')
+    const restore = src('server/utils/website-revision.ts')
+    for (const body of [slots, pagePut, wizard]) {
+      expect(body).toContain('buildWebsitePageContentWrite')
+      expect(body).toContain('publishedWebsiteProtectsLiveBlocks')
+    }
+    expect(restore).toContain('is_published: page.is_published === true')
+    expect(restore).not.toMatch(/is_published:\s*true/)
+  })
+
   it('does not apply or invoke production backfill from application boot paths', () => {
     expect(src('server/utils/website-billing.ts')).not.toContain('website-revision-backfill')
     expect(src('server/utils/website-prospect-generate.ts')).not.toContain('website-revision-backfill')

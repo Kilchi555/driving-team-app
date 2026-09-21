@@ -28,7 +28,9 @@ type RevisionRow = Record<string, unknown>
 function createRevisionStore(seed: RevisionRow[] = []) {
   const revisions = [...seed]
   const pages: Array<Record<string, unknown>> = [
-    { id: 'page-1', website_id: websiteA, blocks: { dirty: true } },
+    { id: 'page-1', website_id: websiteA, blocks: { dirty: true }, is_published: false },
+    { id: 'page-2', website_id: websiteA, blocks: { dirty: true }, is_published: false },
+    { id: 'page-3', website_id: websiteA, blocks: { dirty: true }, is_published: true },
   ]
   const websites = [{ id: websiteA, tenant_id: tenantA, published_revision_id: null as string | null }]
   const errors: Record<string, { code?: string; message?: string } | null> = {}
@@ -288,6 +290,82 @@ describe('publish + rollback revisions', () => {
       websiteId: websiteA,
       targetRevisionId: revisionA,
     })).rejects.toMatchObject({ statusCode: 403, data: { code: 'website_revision_foreign_snapshot' } })
+  })
+})
+
+describe('rollback preserves snapshot page publish flags', () => {
+  function mixedSnapshot() {
+    return buildWebsiteRevisionSnapshot({
+      website: { id: websiteA, subdomain: 'demo', seo_title: 'Demo' },
+      pages: [
+        { id: 'page-1', slug: 'index', title: 'Home', is_home: true, page_type: 'home', blocks: { blocks: [{ type: 'hero' }] }, is_published: true },
+        { id: 'page-2', slug: 'standort-zurich', title: 'Zürich', is_home: false, page_type: 'location', blocks: { blocks: [{ type: 'location' }] }, is_published: false },
+        { id: 'page-3', slug: 'preise', title: 'Preise', is_home: false, page_type: 'prices', blocks: { blocks: [{ type: 'prices' }] }, is_published: true },
+      ],
+      now: '2026-09-21T00:00:00.000Z',
+    })
+  }
+
+  it('TEST A/C: restores mixed is_published exactly from the snapshot', async () => {
+    const snap = mixedSnapshot()
+    const store = createRevisionStore([{
+      id: revisionA,
+      website_id: websiteA,
+      tenant_id: tenantA,
+      version_number: 1,
+      status: 'published',
+      snapshot: snap,
+    }])
+    await rollbackWebsiteRevision({
+      supabase: store,
+      tenantId: tenantA,
+      websiteId: websiteA,
+      targetRevisionId: revisionA,
+    })
+    expect(store.pages.find((row) => row.id === 'page-1')?.is_published).toBe(true)
+    expect(store.pages.find((row) => row.id === 'page-2')?.is_published).toBe(false)
+    expect(store.pages.find((row) => row.id === 'page-3')?.is_published).toBe(true)
+  })
+
+  it('TEST B: does not publish an unpublished location page on a live website', async () => {
+    const store = createRevisionStore([{
+      id: revisionA,
+      website_id: websiteA,
+      tenant_id: tenantA,
+      version_number: 1,
+      status: 'published',
+      snapshot: mixedSnapshot(),
+    }])
+    store.pages.find((row) => row.id === 'page-2')!.is_published = false
+    await rollbackWebsiteRevision({
+      supabase: store,
+      tenantId: tenantA,
+      websiteId: websiteA,
+      targetRevisionId: revisionA,
+    })
+    const location = store.pages.find((row) => row.id === 'page-2')
+    expect(location?.is_published).toBe(false)
+    expect(location?.blocks).toEqual({ blocks: [{ type: 'location' }] })
+  })
+
+  it('TEST E: keeps already published pages published after rollback', async () => {
+    const store = createRevisionStore([{
+      id: revisionA,
+      website_id: websiteA,
+      tenant_id: tenantA,
+      version_number: 1,
+      status: 'published',
+      snapshot: mixedSnapshot(),
+    }])
+    await rollbackWebsiteRevision({
+      supabase: store,
+      tenantId: tenantA,
+      websiteId: websiteA,
+      targetRevisionId: revisionA,
+    })
+    expect(store.pages.find((row) => row.id === 'page-1')?.is_published).toBe(true)
+    expect(store.pages.find((row) => row.id === 'page-3')?.is_published).toBe(true)
+    expect(store.pages.find((row) => row.id === 'page-1')?.blocks).toEqual({ blocks: [{ type: 'hero' }] })
   })
 })
 

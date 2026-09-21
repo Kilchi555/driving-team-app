@@ -17,6 +17,10 @@ import {
 import { hasUsableGoogleReviews } from '~/utils/website-google-reviews'
 import { loadWebsitePickupOffer } from '~/server/utils/website-pickup'
 import { mapStaffToTeam } from '~/server/utils/website-premium'
+import {
+  buildWebsitePageContentWrite,
+  publishedWebsiteProtectsLiveBlocks,
+} from '~/server/utils/website-page-draft'
 
 function appBaseUrl(event: any) {
   const fromEnv = process.env.NUXT_PUBLIC_APP_URL || process.env.NUXT_PUBLIC_BASE_URL || process.env.APP_BASE_URL
@@ -101,7 +105,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: homePage } = await supabase
     .from('website_pages')
-    .select('id')
+    .select('id, addon_inputs, title, seo_title, seo_description, seo_keywords, og_image, is_published, published_at, blocks')
     .eq('website_id', website.id)
     .eq('is_home', true)
     .maybeSingle()
@@ -294,54 +298,57 @@ export default defineEventHandler(async (event) => {
   // website_content_blocks is legacy/unused by /s/[subdomain] — do not dual-write.
 
   const now = new Date().toISOString()
-  const alreadyLive = !!(website.is_published && tenant.website_status === 'live')
+  const alreadyLive = publishedWebsiteProtectsLiveBlocks(website)
   const stayPublished = alreadyLive
-  const pageUpdate: Record<string, unknown> = {
-    title: 'Home',
-    blocks: landing,
-    seo_title: landing.seo.title,
-    seo_description: landing.seo.description,
-    seo_keywords: landing.seo.keywords,
-    is_published: stayPublished,
-    updated_at: now,
-  }
-  if (alreadyLive) pageUpdate.published_at = now
-  else if (!alreadyLive) pageUpdate.published_at = null
+  const write = buildWebsitePageContentWrite({
+    websiteIsPublished: alreadyLive,
+    currentPage: homePage,
+    nextBlocks: landing,
+    nextTitle: 'Home',
+    nextSeoTitle: landing.seo.title,
+    nextSeoDescription: landing.seo.description,
+    nextSeoKeywords: landing.seo.keywords,
+    nextIsPublished: alreadyLive ? homePage.is_published : false,
+    nextPublishedAt: alreadyLive ? homePage.published_at : null,
+    now,
+  })
   const { error: pageError } = await supabase
     .from('website_pages')
-    .update(pageUpdate)
+    .update(write.pageUpdate)
     .eq('id', homePage.id)
+    .eq('website_id', website.id)
 
   if (pageError) {
     throw createError({ statusCode: 500, statusMessage: pageError.message })
   }
 
+  const websiteUpdate: Record<string, unknown> = {
+    wizard_draft: {},
+    updated_at: now,
+  }
+  if (write.allowWebsitePublicSync) {
+    websiteUpdate.seo_title = landing.seo.title
+    websiteUpdate.seo_description = landing.seo.description
+    websiteUpdate.seo_keywords = landing.seo.keywords
+    websiteUpdate.primary_color = landing.brand.primary
+    websiteUpdate.secondary_color = landing.brand.secondary
+    websiteUpdate.accent_color = landing.brand.accent
+    websiteUpdate.logo_url = landing.brand.logo_url
+    websiteUpdate.hero_image_url = landing.brand.hero_image_url
+    websiteUpdate.is_published = stayPublished
+    websiteUpdate.last_published_at = website.last_published_at
+  }
   const { error: websiteError } = await supabase
     .from('website_tenants')
-    .update({
-      seo_title: landing.seo.title,
-      seo_description: landing.seo.description,
-      seo_keywords: landing.seo.keywords,
-      primary_color: landing.brand.primary,
-      secondary_color: landing.brand.secondary,
-      accent_color: landing.brand.accent,
-      logo_url: landing.brand.logo_url,
-      hero_image_url: landing.brand.hero_image_url,
-      is_published: stayPublished,
-      last_published_at: alreadyLive ? now : website.last_published_at,
-      // Premium SKU: SEO add-on pages unlocked on publish
-      ...(alreadyLive ? { addon_pages_enabled: true } : {}),
-      // Draft fields are now in the published/saved page — clear scratchpad
-      wizard_draft: {},
-      updated_at: now,
-    })
+    .update(websiteUpdate)
     .eq('id', website.id)
+    .eq('tenant_id', user.tenant_id)
 
   if (websiteError) {
     throw createError({ statusCode: 500, statusMessage: websiteError.message })
   }
 
-  if (landing.brand.primary) {
+  if (write.allowWebsitePublicSync && landing.brand.primary) {
     const { applyTenantBrandColors } = await import('~/server/utils/apply-tenant-brand-colors')
     await applyTenantBrandColors(supabase, user.tenant_id, {
       primary: landing.brand.primary,
@@ -377,7 +384,7 @@ export default defineEventHandler(async (event) => {
 
   return {
     success: true,
-    message: alreadyLive ? 'Live-Seite aktualisiert' : 'Website gespeichert',
+    message: alreadyLive ? 'Entwurf gespeichert — Live-Seite unverändert' : 'Website gespeichert',
     website_id: website.id,
     subdomain: website.subdomain,
     preview_url: previewUrl,

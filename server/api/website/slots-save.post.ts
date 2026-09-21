@@ -10,6 +10,11 @@ import {
   WEBSITE_TEMPLATE_ID,
 } from '~/utils/website-slot-schema'
 import { applyWebsiteEditorExtras } from '~/server/utils/website-apply-editor-extras'
+import {
+  buildWebsitePageContentWrite,
+  editorSourceBlocks,
+  publishedWebsiteProtectsLiveBlocks,
+} from '~/server/utils/website-page-draft'
 
 function appBaseUrl(event: any) {
   const fromEnv =
@@ -65,7 +70,15 @@ export default defineEventHandler(async (event) => {
 
   const { data: page } = await pageQuery.maybeSingle()
 
-  if (!page || !isLandingPayload(page.blocks)) {
+  const websiteIsPublished = publishedWebsiteProtectsLiveBlocks(website)
+  if (!page) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Page payload missing — Editor neu laden.',
+    })
+  }
+  const sourceBlocks = editorSourceBlocks(page, websiteIsPublished)
+  if (!isLandingPayload(sourceBlocks)) {
     throw createError({
       statusCode: 404,
       statusMessage: 'Page payload missing — Editor neu laden.',
@@ -102,7 +115,7 @@ export default defineEventHandler(async (event) => {
   let applied: string[] = []
   let nextPayload
   try {
-    const result = applySlotPatch(page.blocks, slots)
+    const result = applySlotPatch(sourceBlocks, slots)
     nextPayload = result.payload
     applied = result.applied
     if (isHome && body?.extras && typeof body.extras === 'object') {
@@ -122,26 +135,31 @@ export default defineEventHandler(async (event) => {
   }
 
   const now = new Date().toISOString()
-  const alreadyLive = !!website.is_published
+  const alreadyLive = websiteIsPublished
+  const write = buildWebsitePageContentWrite({
+    websiteIsPublished,
+    currentPage: page,
+    nextBlocks: nextPayload,
+    nextSeoTitle: nextPayload.seo.title,
+    nextSeoDescription: nextPayload.seo.description,
+    nextSeoKeywords: nextPayload.seo.keywords,
+    nextIsPublished: page.is_published,
+    nextPublishedAt: page.published_at,
+    now,
+  })
   const { error: pageError } = await supabase
     .from('website_pages')
-    .update({
-      blocks: nextPayload,
-      seo_title: nextPayload.seo.title,
-      seo_description: nextPayload.seo.description,
-      seo_keywords: nextPayload.seo.keywords,
-      is_published: alreadyLive ? true : page.is_published,
-      published_at: alreadyLive ? now : page.published_at,
-      updated_at: now,
-    })
+    .update(write.pageUpdate)
     .eq('id', page.id)
+    .eq('website_id', website.id)
 
   if (pageError) {
     throw createError({ statusCode: 500, statusMessage: pageError.message })
   }
 
-  // Sync brand/SEO to website_tenants only for home page
-  if (isHome) {
+  // Sync brand/SEO to website_tenants only for home page, and only while unpublished.
+  // Live sites keep website_tenants public fields aligned with website_pages.blocks.
+  if (isHome && write.allowWebsitePublicSync) {
     const websiteUpdate: Record<string, any> = {
       seo_title: nextPayload.seo.title,
       seo_description: nextPayload.seo.description,
@@ -153,19 +171,15 @@ export default defineEventHandler(async (event) => {
       hero_image_url: nextPayload.brand.hero_image_url,
       updated_at: now,
     }
-    if (alreadyLive) {
-      websiteUpdate.last_published_at = now
-      websiteUpdate.addon_pages_enabled = true
-    }
     await supabase.from('website_tenants').update(websiteUpdate).eq('id', website.id)
+  }
 
-    if (body?.extras && typeof body.extras === 'object' && 'whatsapp_phone' in body.extras) {
-      const raw = String((body.extras as { whatsapp_phone?: unknown }).whatsapp_phone || '').trim()
-      await supabase
-        .from('tenants')
-        .update({ whatsapp_phone: raw || null, updated_at: now })
-        .eq('id', user.tenant_id)
-    }
+  if (isHome && body?.extras && typeof body.extras === 'object' && 'whatsapp_phone' in body.extras) {
+    const raw = String((body.extras as { whatsapp_phone?: unknown }).whatsapp_phone || '').trim()
+    await supabase
+      .from('tenants')
+      .update({ whatsapp_phone: raw || null, updated_at: now })
+      .eq('id', user.tenant_id)
   }
 
   const base = appBaseUrl(event)
