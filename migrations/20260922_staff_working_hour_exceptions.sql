@@ -1,7 +1,18 @@
 -- Date-specific staff working-hour exceptions.
 -- Replacement semantics: one parent row per staff and civil date.
--- This file is not applied by the change that added it.
+-- This file is not applied by the commit that added it.
 -- It does not update staff_working_hours, availability_slots, or appointments.
+--
+-- REQUIRED ORDER. Do not deploy application code that calls
+-- loadWorkingHourExceptions before this migration has committed:
+-- 1. Apply this migration to the target environment.
+-- 2. Verify staff_working_hour_exceptions, staff_working_hour_exception_intervals,
+--    their RLS policies, and replace_staff_working_hour_exceptions exist.
+-- 3. Verify the migration transaction succeeded.
+-- 4. Only then deploy the application code.
+-- 5. Verify queue processing.
+-- 6. Verify the staff calendar.
+-- 7. Verify public availability.
 
 -- ---------------------------------------------------------------------------
 -- Parent: one decision per staff and civil date

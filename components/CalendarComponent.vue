@@ -31,11 +31,16 @@ import { useStaffWorkingHours } from '~/composables/useStaffWorkingHours'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
 import WorkingHourExceptionSheet from '~/components/WorkingHourExceptionSheet.vue'
 import {
-  civilDayOfWeek,
-  nonWorkingSpans,
-  resolveEffectiveWorkingHours,
   type EffectiveException,
 } from '~/utils/effective-working-hours'
+import {
+  decideNonWorkingDisplay,
+  failClosedSpans,
+  finishCalendarReload,
+  graySpansForCivilDates,
+  requestCalendarReload,
+  type ReloadGate,
+} from '~/utils/calendar-non-working-display'
 
 // ✅ GLOBALE FEHLERBEHANDLUNG
 onErrorCaptured((error, instance, info) => {
@@ -383,6 +388,7 @@ type CalendarEvent = {
     isExternalBusy?: boolean
     isNonWorkingHours?: boolean
     isClickThrough?: boolean
+    isUnknownHours?: boolean
   }
 }
 
@@ -442,6 +448,10 @@ const getCurrentUserId = () => {
 
 const showExceptionSheet = ref(false)
 const exceptionSheetDate = ref('')
+const lastSuccessfulNonWorking = ref<CalendarEvent[] | null>(null)
+const nonWorkingLoadError = ref(false)
+const nonWorkingUsingFailClosed = ref(false)
+let nonWorkingReloadGate: ReloadGate = { busy: false, queuedForce: false }
 
 function localCivilDate(date: Date): string {
   const year = date.getFullYear()
@@ -604,8 +614,43 @@ function workingHoursUrl(staffId: string | undefined): string {
   return `/api/staff/get-working-hours?staffId=${encodeURIComponent(staffId)}`
 }
 
+function civilDatesInView(startDate: Date, endDate: Date): string[] {
+  const dates: string[] = []
+  const currentDate = new Date(startDate)
+  while (currentDate <= endDate) {
+    dates.push(localCivilDate(currentDate))
+    currentDate.setDate(currentDate.getDate() + 1)
+  }
+  return dates
+}
+
+function toNonWorkingEvents(spans: Array<{ date: string, start: string, end: string }>, unknown = false): CalendarEvent[] {
+  return spans.map((span, idx) => ({
+    id: `non-working-${unknown ? 'unknown' : 'known'}-${idx}-${span.date}-${span.start}`,
+    title: '',
+    start: `${span.date}T${span.start}`,
+    end: `${span.date}T${span.end}`,
+    backgroundColor: '#e5e7eb',
+    borderColor: 'transparent',
+    textColor: 'transparent',
+    display: 'background',
+    classNames: ['non-working-hours-block'],
+    extendedProps: {
+      type: 'non_working_hours',
+      isNonWorkingHours: true,
+      isClickThrough: true,
+      isUnknownHours: unknown,
+    },
+  }))
+}
+
 // Graue Flächen aus denselben effektiven Stunden wie die Slot-Engine.
-const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
+// A failed load is not an empty schedule.
+const loadNonWorkingHoursBlocks = async (
+  staffId: string | undefined,
+  startDate: Date,
+  endDate: Date,
+): Promise<{ ok: true, blocks: CalendarEvent[] } | { ok: false }> => {
   try {
     logger.debug('🔒 Loading non-working hours blocks via Backend API...')
 
@@ -624,12 +669,15 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
     }
 
     if (!response.success) {
-      logger.debug('⚠️ No working hours found')
-      return []
+      logger.warn('⚠️ Working hours response was not successful')
+      return { ok: false }
     }
 
-    const rangeStart = localCivilDate(startDate)
-    const rangeEnd = localCivilDate(endDate)
+    const dates = civilDatesInView(startDate, endDate)
+    const rangeStart = dates[0]
+    const rangeEnd = dates[dates.length - 1]
+    if (!rangeStart || !rangeEnd) return { ok: false }
+
     let exceptionRows: Array<{ date: string, isClosed: boolean, timezone?: string, blocks: Array<{ start_time: string, end_time: string }> }> = []
     try {
       const listed = await $fetch<{ success: boolean, exceptions: typeof exceptionRows }>('/api/staff/working-hour-exceptions', {
@@ -641,11 +689,11 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
           endDate: rangeEnd,
         },
       })
+      if (!listed.success) return { ok: false }
       exceptionRows = listed.exceptions || []
     } catch (exceptionError) {
-      // Weekly-only gray would disagree with slots once an exception exists.
-      logger.warn('⚠️ Working-hour exceptions failed to load; skipping gray blocks', exceptionError)
-      return []
+      logger.warn('⚠️ Working-hour exceptions failed to load', exceptionError)
+      return { ok: false }
     }
 
     const exceptionsByDate = new Map<string, EffectiveException>()
@@ -657,46 +705,12 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
       })
     }
 
-    const allWorkingHours = response.workingHours || []
-    const events: CalendarEvent[] = []
-    const currentDate = new Date(startDate)
-    while (currentDate <= endDate) {
-      const dateStr = localCivilDate(currentDate)
-      const dayOfWeek = civilDayOfWeek(dateStr)
-      const effective = resolveEffectiveWorkingHours({
-        civilDate: dateStr,
-        dayOfWeek,
-        weeklyHours: allWorkingHours,
-        exception: exceptionsByDate.get(dateStr) ?? null,
-      })
-
-      nonWorkingSpans(effective).forEach((span, idx) => {
-        events.push({
-          id: `non-working-${dayOfWeek}-${idx}-${dateStr}`,
-          title: '',
-          start: `${dateStr}T${span.start}`,
-          end: `${dateStr}T${span.end}`,
-          backgroundColor: '#e5e7eb',
-          borderColor: 'transparent',
-          textColor: 'transparent',
-          display: 'background',
-          classNames: ['non-working-hours-block'],
-          extendedProps: {
-            type: 'non_working_hours',
-            isNonWorkingHours: true,
-            isClickThrough: true,
-          },
-        })
-      })
-
-      currentDate.setDate(currentDate.getDate() + 1)
-    }
-
-    logger.debug('✅ Generated non-working hours events:', events.length)
-    return events
+    const blocks = toNonWorkingEvents(graySpansForCivilDates(dates, response.workingHours || [], exceptionsByDate))
+    logger.debug('✅ Generated non-working hours events:', blocks.length)
+    return { ok: true, blocks }
   } catch (error) {
     console.error('Error loading non-working hours blocks:', error)
-    return []
+    return { ok: false }
   }
 }
 
@@ -1211,18 +1225,28 @@ const loadRegularAppointments = async (viewStartDate?: Date, viewEndDate?: Date,
 const loadAppointments = async (forceReload = false) => {
   if (!calendar.value) {
     logger.debug('⚠️ Calendar not mounted, skipping load')
+    if (forceReload) nonWorkingReloadGate.queuedForce = true
     return
   }
-  
-  if (isUpdating.value) {
-    // Statt sofort abbrechen: kurz warten und nochmals prüfen (Race mit datesSet/onMounted)
+
+  const shouldForce = forceReload || nonWorkingReloadGate.queuedForce
+  if (nonWorkingReloadGate.busy) {
+    if (shouldForce) {
+      // Remember the save/delete refresh. The in-flight load finishes it.
+      nonWorkingReloadGate = requestCalendarReload(nonWorkingReloadGate, true).gate
+      return
+    }
     logger.debug('⚠️ Calendar update in progress, waiting briefly before retry...')
     await new Promise(resolve => setTimeout(resolve, 300))
-    if (isUpdating.value) {
+    if (nonWorkingReloadGate.busy) {
       logger.debug('⚠️ Calendar update still in progress after wait, skipping load')
       return
     }
   }
+
+  const started = requestCalendarReload({ busy: false, queuedForce: false }, shouldForce)
+  nonWorkingReloadGate = started.gate
+  if (!started.start) return
   
   const staffId = getCurrentUserId()
   logger.debug('🔍 loadAppointments staffId:', staffId)
@@ -1245,12 +1269,26 @@ const loadAppointments = async (forceReload = false) => {
     
     const startTime = performance.now()
     
-    const [appointments, externalBusyEvents, nonWorkingHoursEvents] = await Promise.all([
+    const [appointments, externalBusyEvents, nonWorkingResult] = await Promise.all([
       loadRegularAppointments(viewStart, viewEnd, forceReload),
       loadExternalBusyTimes(),
       loadNonWorkingHoursBlocks(staffId, viewStart, viewEnd),
     ])
-    logger.debug('📊 Loaded events:', { appointments: appointments.length, nonWorkingHours: nonWorkingHoursEvents.length, externalBusy: externalBusyEvents.length })
+    const viewDates = civilDatesInView(viewStart, viewEnd)
+    const nonWorkingDecision = decideNonWorkingDisplay(
+      lastSuccessfulNonWorking.value,
+      nonWorkingResult,
+      toNonWorkingEvents(failClosedSpans(viewDates), true),
+    )
+    lastSuccessfulNonWorking.value = nonWorkingDecision.lastSuccessful
+    nonWorkingLoadError.value = nonWorkingDecision.showError
+    nonWorkingUsingFailClosed.value = nonWorkingDecision.usingFailClosed
+    logger.debug('📊 Loaded events:', {
+      appointments: appointments.length,
+      nonWorkingHours: nonWorkingDecision.display.length,
+      nonWorkingFailed: nonWorkingDecision.showError,
+      externalBusy: externalBusyEvents.length,
+    })
     
     const loadDuration = (performance.now() - startTime).toFixed(0)
     logger.debug(`⏱️ Performance: All loads completed in ${loadDuration}ms`)
@@ -1260,11 +1298,11 @@ const loadAppointments = async (forceReload = false) => {
       return
     }
     
-    const allEvents = [...appointments, ...nonWorkingHoursEvents, ...externalBusyEvents]
+    const allEvents = [...appointments, ...nonWorkingDecision.display, ...externalBusyEvents]
     
     logger.debug('✅ Final calendar summary:', {
       appointments: appointments.length,
-      nonWorkingHours: nonWorkingHoursEvents.length,
+      nonWorkingHours: nonWorkingDecision.display.length,
       externalBusy: externalBusyEvents.length,
       total: allEvents.length
     })
@@ -1277,6 +1315,11 @@ const loadAppointments = async (forceReload = false) => {
   } finally {
     isLoadingEvents.value = false
     isUpdating.value = false
+    const finished = finishCalendarReload(nonWorkingReloadGate)
+    nonWorkingReloadGate = finished.gate
+    if (finished.startForce && calendar.value) {
+      await loadAppointments(true)
+    }
   }
 }
 
@@ -2875,6 +2918,25 @@ defineExpose({
         @click="openExceptionSheet"
       >
         Abweichende Arbeitszeit
+      </button>
+    </div>
+
+    <div
+      v-if="nonWorkingLoadError"
+      class="mx-2 mt-2 px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 text-sm text-amber-950 flex items-center justify-between gap-3"
+      role="status"
+    >
+      <p>
+        {{ nonWorkingUsingFailClosed
+          ? 'Arbeitszeiten konnten nicht geladen werden. Der Kalender bleibt geschlossen dargestellt, bis der Ladevorgang gelingt.'
+          : 'Arbeitszeiten konnten nicht neu geladen werden. Der letzte bekannte Stand bleibt sichtbar.' }}
+      </p>
+      <button
+        type="button"
+        class="shrink-0 px-3 py-1 rounded-lg border border-amber-400 bg-white text-amber-950"
+        @click="loadAppointments(true)"
+      >
+        Erneut laden
       </button>
     </div>
 
