@@ -19,6 +19,11 @@
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import { wallTimeToUtc, parseWorkingTimeParts, DEFAULT_TIMEZONE } from '~/server/utils/zurich-wall-time'
+import {
+  resolveEffectiveWorkingHours,
+  utcCivilDate,
+  type EffectiveException,
+} from '~/utils/effective-working-hours'
 import { isWithinTimeWindows } from '~/utils/travelTimeValidation'
 import { applyTimeRangeOverlap } from '~/server/utils/time-range-overlap'
 
@@ -191,6 +196,12 @@ export class AvailabilityCalculator {
       this.assignBasePostalCodes(staff, locations)
 
       const workingHours = await this.loadWorkingHours(staffWithBookableLocations)
+      const workingHourExceptions = await this.loadWorkingHourExceptions(
+        options.tenantId,
+        staffWithBookableLocations,
+        options.startDate,
+        options.endDate,
+      )
       const appointments = await this.loadAppointments(staffWithBookableLocations, options.startDate, options.endDate)
       const busyTimes = await this.loadExternalBusyTimes(staffWithBookableLocations, options.startDate, options.endDate, options.tenantId)
 
@@ -214,6 +225,7 @@ export class AvailabilityCalculator {
         categories,
         locations,
         workingHours,
+        workingHourExceptions,
         appointments,
         busyTimes,
         startDate: options.startDate,
@@ -564,6 +576,67 @@ export class AvailabilityCalculator {
   }
 
   /**
+   * One query pair for the whole window. Missing key = no exception (weekly rule).
+   * Requires tenantId so service-role reads stay tenant-scoped.
+   */
+  private async loadWorkingHourExceptions(
+    tenantId: string | undefined,
+    staffIds: string[],
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Map<string, EffectiveException>> {
+    const map = new Map<string, EffectiveException>()
+    if (!tenantId || staffIds.length === 0) {
+      if (!tenantId) {
+        logger.warn('⚠️ Skipping working-hour exceptions because tenantId is missing')
+      }
+      return map
+    }
+
+    const startCivil = utcCivilDate(startDate)
+    const endCivil = utcCivilDate(endDate)
+
+    const { data: parents, error } = await this.supabase
+      .from('staff_working_hour_exceptions')
+      .select('id, staff_id, exception_date, is_closed, timezone')
+      .eq('tenant_id', tenantId)
+      .in('staff_id', staffIds)
+      .gte('exception_date', startCivil)
+      .lte('exception_date', endCivil)
+
+    if (error) throw error
+    const rows = parents || []
+    if (rows.length === 0) return map
+
+    const { data: intervals, error: intervalError } = await this.supabase
+      .from('staff_working_hour_exception_intervals')
+      .select('exception_id, start_time, end_time')
+      .eq('tenant_id', tenantId)
+      .in('staff_id', staffIds)
+      .in('exception_id', rows.map((row: { id: string }) => row.id))
+
+    if (intervalError) throw intervalError
+
+    const byParent = new Map<string, Array<{ start_time: string; end_time: string }>>()
+    for (const interval of intervals || []) {
+      const list = byParent.get(interval.exception_id) || []
+      list.push({ start_time: interval.start_time, end_time: interval.end_time })
+      byParent.set(interval.exception_id, list)
+    }
+
+    for (const row of rows) {
+      const civilDate = String(row.exception_date).slice(0, 10)
+      map.set(`${row.staff_id}|${civilDate}`, {
+        isClosed: row.is_closed === true,
+        timezone: row.timezone,
+        intervals: byParent.get(row.id) || [],
+      })
+    }
+
+    return map
+  }
+
+  /**
    * Load appointments that overlap [startDate, endDate].
    * Must use overlap (not start_time BETWEEN) so multi-day blocks stay blocking.
    */
@@ -648,6 +721,7 @@ export class AvailabilityCalculator {
     categories: Category[]
     locations: Location[]
     workingHours: StaffWorkingHours[]
+    workingHourExceptions: Map<string, EffectiveException>
     appointments: Appointment[]
     busyTimes: ExternalBusyTime[]
     startDate: Date
@@ -753,20 +827,17 @@ export class AvailabilityCalculator {
       )
       while (currentDate.getTime() <= rangeEnd.getTime()) {
         const dayOfWeek = this.getDayOfWeek(currentDate) // 1=Monday, 7=Sunday (UTC weekday)
+        const civilDate = utcCivilDate(currentDate)
+        const exception = params.workingHourExceptions.get(`${staff.id}|${civilDate}`) ?? null
 
-        // Get working hours for this day
-        let dayHours = staffHours.filter(wh => wh.day_of_week === dayOfWeek)
-        
-        // Deduplicate working hours (remove duplicates with same start/end time)
-        const seenHours = new Set<string>()
-        dayHours = dayHours.filter(wh => {
-          const key = `${wh.start_time}:${wh.end_time}`
-          if (seenHours.has(key)) {
-            logger.debug(`⚠️ Skipping duplicate working hours: ${key}`)
-            return false
-          }
-          seenHours.add(key)
-          return true
+        // Weekly hours are replaced for this civil date when an exception exists.
+        // An empty result (closed weekday, or CLOSED exception) yields no slots.
+        const dayHours = resolveEffectiveWorkingHours({
+          civilDate,
+          dayOfWeek,
+          weeklyHours: staffHours,
+          exception,
+          timezone: DEFAULT_TIMEZONE,
         })
 
         if (dayHours.length === 0) {

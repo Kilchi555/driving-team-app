@@ -29,6 +29,13 @@ import MoveAppointmentModal from './MoveAppointmentModal.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useStaffWorkingHours } from '~/composables/useStaffWorkingHours'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
+import WorkingHourExceptionSheet from '~/components/WorkingHourExceptionSheet.vue'
+import {
+  civilDayOfWeek,
+  nonWorkingSpans,
+  resolveEffectiveWorkingHours,
+  type EffectiveException,
+} from '~/utils/effective-working-hours'
 
 // ✅ GLOBALE FEHLERBEHANDLUNG
 onErrorCaptured((error, instance, info) => {
@@ -433,6 +440,24 @@ const getCurrentUserId = () => {
   return props.currentUser?.id || composableCurrentUser.value?.id
 }
 
+const showExceptionSheet = ref(false)
+const exceptionSheetDate = ref('')
+
+function localCivilDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const openExceptionSheet = () => {
+  const staffId = getCurrentUserId()
+  if (!staffId) return
+  const current = calendar.value?.getApi?.()?.getDate?.() || new Date()
+  exceptionSheetDate.value = localCivilDate(current instanceof Date ? current : new Date(current))
+  showExceptionSheet.value = true
+}
+
 const getCurrentUserData = () => {
   return props.currentUser || composableCurrentUser.value
 }
@@ -574,108 +599,83 @@ const colorFromCategoryKey = (category: string): string => {
   return hslToHex(hue, 58, 46)
 }
 
-// NEUE FUNKTION: Nicht-Arbeitszeiten via Backend API laden
+function workingHoursUrl(staffId: string | undefined): string {
+  if (!staffId) return '/api/staff/get-working-hours'
+  return `/api/staff/get-working-hours?staffId=${encodeURIComponent(staffId)}`
+}
+
+// Graue Flächen aus denselben effektiven Stunden wie die Slot-Engine.
 const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate: Date, endDate: Date): Promise<CalendarEvent[]> => {
   try {
     logger.debug('🔒 Loading non-working hours blocks via Backend API...')
-    
-    // Working hours via Backend API laden (kein Client-Cache — Settings müssen sofort greifen)
+
+    const hoursUrl = workingHoursUrl(staffId)
     let response: { success: boolean, workingHours: any[], staffId: string }
     try {
-      response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
+      response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>(hoursUrl)
     } catch (fetchError: any) {
       if (fetchError?.statusCode === 401 || fetchError?.status === 401) {
         logger.warn('⚠️ Working hours: 401 received, retrying...')
         await new Promise(resolve => setTimeout(resolve, 800))
-        response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
+        response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>(hoursUrl)
       } else {
         throw fetchError
       }
     }
-    
-    // Wenn workingHours leer zurückkommt obwohl User eingeloggt → einmal retry
-    if (response.success && (!response.workingHours || response.workingHours.length === 0)) {
-      logger.warn('⚠️ Working hours returned empty – retrying once')
-      await new Promise(resolve => setTimeout(resolve, 800))
-      try {
-        response = await $fetch<{ success: boolean, workingHours: any[], staffId: string }>('/api/staff/get-working-hours')
-      } catch {
-        // Retry failed – continue with empty result
-      }
-    }
-    
+
     if (!response.success) {
       logger.debug('⚠️ No working hours found')
       return []
     }
-    
-    const allWorkingHours = response.workingHours
-    logger.debug('✅ Loaded all working hours via API:', allWorkingHours?.length || 0)
-    if (allWorkingHours && allWorkingHours.length > 0) {
-      logger.debug('🔍 Sample working hours from API:', allWorkingHours.slice(0, 3).map((wh: any) => ({
-        day_of_week: wh.day_of_week,
-        is_active: wh.is_active,
-        start_time: wh.start_time,
-        end_time: wh.end_time
-      })))
+
+    const rangeStart = localCivilDate(startDate)
+    const rangeEnd = localCivilDate(endDate)
+    let exceptionRows: Array<{ date: string, isClosed: boolean, timezone?: string, blocks: Array<{ start_time: string, end_time: string }> }> = []
+    try {
+      const listed = await $fetch<{ success: boolean, exceptions: typeof exceptionRows }>('/api/staff/working-hour-exceptions', {
+        method: 'POST',
+        body: {
+          action: 'list',
+          staffId: staffId || response.staffId,
+          startDate: rangeStart,
+          endDate: rangeEnd,
+        },
+      })
+      exceptionRows = listed.exceptions || []
+    } catch (exceptionError) {
+      // Weekly-only gray would disagree with slots once an exception exists.
+      logger.warn('⚠️ Working-hour exceptions failed to load; skipping gray blocks', exceptionError)
+      return []
     }
-    
+
+    const exceptionsByDate = new Map<string, EffectiveException>()
+    for (const row of exceptionRows) {
+      exceptionsByDate.set(row.date, {
+        isClosed: row.isClosed,
+        timezone: row.timezone,
+        intervals: row.blocks,
+      })
+    }
+
+    const allWorkingHours = response.workingHours || []
     const events: CalendarEvent[] = []
-    
-    // Für jeden Tag im sichtbaren Bereich
     const currentDate = new Date(startDate)
     while (currentDate <= endDate) {
-      const dayOfWeek = currentDate.getDay() === 0 ? 7 : currentDate.getDay() // Sonntag = 7
-      
-      // Finde alle Working Hours für diesen Wochentag
-      const dayWorkingHours = allWorkingHours?.filter(wh => wh.day_of_week === dayOfWeek) || []
-      
-      // Prüfe ob der Tag aktive Working Hours hat
-      const hasActiveWorkingHours = dayWorkingHours.some(wh => wh.is_active === true)
-      
-      if (dayOfWeek === 1) { // Debug nur für Montag
-        logger.debug(`📊 Day ${dayOfWeek} (Montag): ${dayWorkingHours.length} entries, hasActiveWorkingHours: ${hasActiveWorkingHours}`, dayWorkingHours.map(wh => ({ is_active: wh.is_active, start: wh.start_time, end: wh.end_time })))
-      }
-      
-      const year = currentDate.getFullYear()
-      const month = String(currentDate.getMonth() + 1).padStart(2, '0')
-      const day = String(currentDate.getDate()).padStart(2, '0')
-      const dateStr = `${year}-${month}-${day}`
-      
-      // FALL 1: Tag hat KEINE aktiven Working Hours → ganzer Tag blockieren
-      if (!hasActiveWorkingHours) {
-        logger.debug(`🚫 Day ${dayOfWeek}: No active working hours - will gray out entire day`)
+      const dateStr = localCivilDate(currentDate)
+      const dayOfWeek = civilDayOfWeek(dateStr)
+      const effective = resolveEffectiveWorkingHours({
+        civilDate: dateStr,
+        dayOfWeek,
+        weeklyHours: allWorkingHours,
+        exception: exceptionsByDate.get(dateStr) ?? null,
+      })
+
+      nonWorkingSpans(effective).forEach((span, idx) => {
         events.push({
-          id: `non-working-day-${dayOfWeek}-${dateStr}`,
-          title: '',
-          start: `${dateStr}T00:00`,
-          end: `${dateStr}T23:59`,
-          backgroundColor: '#e5e7eb', // Grau = Nicht-Arbeitszeit (Arbeitszeit bleibt weiß)
-          borderColor: 'transparent',
-          textColor: 'transparent',
-          display: 'background',
-          classNames: ['non-working-hours-block'],
-          extendedProps: {
-            type: 'non_working_hours',
-            isNonWorkingHours: true,
-            isClickThrough: true
-          }
-        })
-      } 
-      // FALL 2: Tag hat aktive Working Hours → Nicht-Arbeitszeiten aus Block-Grenzen berechnen
-      // (save_day API speichert nur is_active:true Blöcke → inaktive Blöcke werden berechnet)
-      else {
-        logger.debug(`✅ Day ${dayOfWeek}: Has active working hours - calculating non-working gaps`)
-
-        const activeBlocks = dayWorkingHours
-          .filter(wh => wh.is_active === true)
-          .sort((a, b) => a.start_time.localeCompare(b.start_time))
-
-        const makeGrayBlock = (startHHMM: string, endHHMM: string, idx: number) => ({
           id: `non-working-${dayOfWeek}-${idx}-${dateStr}`,
           title: '',
-          start: `${dateStr}T${startHHMM}`,
-          end: `${dateStr}T${endHHMM}`,
+          start: `${dateStr}T${span.start}`,
+          end: `${dateStr}T${span.end}`,
           backgroundColor: '#e5e7eb',
           borderColor: 'transparent',
           textColor: 'transparent',
@@ -684,42 +684,16 @@ const loadNonWorkingHoursBlocks = async (staffId: string | undefined, startDate:
           extendedProps: {
             type: 'non_working_hours',
             isNonWorkingHours: true,
-            isClickThrough: true
-          }
+            isClickThrough: true,
+          },
         })
+      })
 
-        // HH:MM:SS → HH:MM (FullCalendar braucht nur HH:MM)
-        const toHHMM = (t: string) => t.substring(0, 5)
-
-        let grayIdx = 0
-
-        // Block vor der ersten Arbeitszeit (z.B. 00:00 – 07:00)
-        if (activeBlocks[0].start_time > '00:00:00') {
-          events.push(makeGrayBlock('00:00', toHHMM(activeBlocks[0].start_time), grayIdx++))
-        }
-
-        // Lücken zwischen Arbeitszeit-Blöcken (z.B. Mittagspause 12:00 – 13:00)
-        for (let i = 0; i < activeBlocks.length - 1; i++) {
-          const gapStart = activeBlocks[i].end_time
-          const gapEnd = activeBlocks[i + 1].start_time
-          if (gapStart < gapEnd) {
-            events.push(makeGrayBlock(toHHMM(gapStart), toHHMM(gapEnd), grayIdx++))
-          }
-        }
-
-        // Block nach der letzten Arbeitszeit (z.B. 19:00 – 23:59)
-        const lastEnd = activeBlocks[activeBlocks.length - 1].end_time
-        if (lastEnd < '23:59:00') {
-          events.push(makeGrayBlock(toHHMM(lastEnd), '23:59', grayIdx++))
-        }
-      }
-      
       currentDate.setDate(currentDate.getDate() + 1)
     }
-    
+
     logger.debug('✅ Generated non-working hours events:', events.length)
     return events
-    
   } catch (error) {
     console.error('Error loading non-working hours blocks:', error)
     return []
@@ -2894,15 +2868,32 @@ defineExpose({
       </div>
     </div>
     
+    <div class="flex justify-end px-2 pt-2">
+      <button
+        type="button"
+        class="text-sm font-medium text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50"
+        @click="openExceptionSheet"
+      >
+        Abweichende Arbeitszeit
+      </button>
+    </div>
+
     <FullCalendar
       v-if="isCalendarReady"
       ref="calendar"
       :options="calendarOptions"
     />
-    
     <div v-else>
       Kalender wird geladen...
     </div>
+
+    <WorkingHourExceptionSheet
+      :visible="showExceptionSheet"
+      :staff-id="getCurrentUserId() || ''"
+      :date="exceptionSheetDate"
+      @close="showExceptionSheet = false"
+      @saved="() => { showExceptionSheet = false; loadAppointments(true) }"
+    />
   </div>
 
  <EventModal
