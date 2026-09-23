@@ -2272,6 +2272,9 @@ const tenantSettings = ref<any>({})
 function applyBookingInitPayload(payload: any) {
   if (!payload) return
   currentTenant.value = payload.tenant
+  if (typeof window !== 'undefined' && typeof payload.booking_context === 'string' && (window as any).__setBookingContext) {
+    ;(window as any).__setBookingContext(payload.booking_context)
+  }
   categories.value = payload.categories || []
   locationsCount.value = payload.locationsCount ?? 0
   if (payload.availableServiceTypes) {
@@ -6340,7 +6343,7 @@ const loadBookingInit = async (slug: string) => {
   if (cached.value) {
     // Reuse data from a previous fetch (e.g. navigated back to this page)
     // Stale caches from before allow_online_booking was included must be refreshed
-    if (typeof cached.value.allow_online_booking !== 'boolean') {
+    if (typeof cached.value.allow_online_booking !== 'boolean' || !('booking_context' in cached.value)) {
       cached.value = null
     } else {
       applyBookingInitPayload(cached.value)

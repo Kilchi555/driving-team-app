@@ -21,6 +21,8 @@ declare global {
     __marketingAttribution?: DecodedAttribution | null
     __tenantId?: string | null
     __setTenantId: (id: string) => void
+    __bookingContext?: string | null
+    __setBookingContext: (context: string) => void
     __bookingStep?: { step: number; label: string } | null
     __trackBookingEvent: (eventType: 'viewed' | 'started' | 'step' | 'completed' | 'abandoned' | 'inquiry_submitted', data: Record<string, any>) => Promise<void>
     fbq?: (...args: any[]) => void
@@ -105,17 +107,38 @@ export default defineNuxtPlugin(() => {
   const wbraidFromUrl = urlParams.get('wbraid')
   const fbclidFromUrl = urlParams.get('fbclid')
 
+  let touchAttribution: DecodedAttribution | null = null
+
+  const postMarketingAttribution = (attr: DecodedAttribution, bookingContext: string | null) => {
+    fetch('/api/marketing-attribution', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        session_id: sessionId,
+        tenant_id: window.__tenantId ?? null,
+        booking_context: bookingContext,
+        attribution: attr,
+      }),
+    }).catch(() => {})
+  }
+
+  const flushTouchAttribution = () => {
+    const bookingContext = window.__bookingContext
+    if (!bookingContext || !touchAttribution) return
+    postMarketingAttribution(touchAttribution, bookingContext)
+  }
+
   const persistAttribution = (attr: DecodedAttribution) => {
     try {
       localStorage.setItem(ATTR_KEY, JSON.stringify(attr))
     } catch {
       // localStorage may be unavailable — fail silently
     }
-    fetch('/api/marketing-attribution', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: sessionId, tenant_id: window.__tenantId ?? null, attribution: attr }),
-    }).catch(() => {})
+    touchAttribution = attr
+    // Legacy marketing_attributions still accepts this immediate post.
+    // The marketing_touches write is sent only after a booking context exists.
+    postMarketingAttribution(attr, null)
+    flushTouchAttribution()
   }
 
   const mergeClickIds = (base: DecodedAttribution | null, incoming: DecodedAttribution): DecodedAttribution => ({
@@ -230,19 +253,14 @@ export default defineNuxtPlugin(() => {
   const sessionFromUrl = urlParams.get('session_id')
   const fromDrivingTeam = document.referrer.includes('drivingteam.ch')
   if (isNewSession && !sessionFromUrl) {
-    fetch('/api/marketing-attribution', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_id: sessionId,
-        tenant_id: window.__tenantId ?? null,
-        attribution: {
-          utm_source: fromDrivingTeam ? 'drivingteam_direct' : 'direct',
-          utm_medium: fromDrivingTeam ? 'referral' : 'none',
-          landing_page: window.location.pathname,
-        },
-      }),
-    }).catch(() => {})
+    const directAttribution: DecodedAttribution = {
+      utm_source: fromDrivingTeam ? 'drivingteam_direct' : 'direct',
+      utm_medium: fromDrivingTeam ? 'referral' : 'none',
+      landing_page: window.location.pathname,
+    }
+    touchAttribution = directAttribution
+    postMarketingAttribution(directAttribution, null)
+    flushTouchAttribution()
   }
 
   window.__marketingAttribution = attribution
@@ -272,8 +290,14 @@ export default defineNuxtPlugin(() => {
 
   // Expose utilities to window
   window.__analyticsSessionId = sessionId
-  window.__tenantId = null
+  window.__tenantId = window.__tenantId ?? null
   window.__setTenantId = (id: string) => { window.__tenantId = id }
+  window.__bookingContext = window.__bookingContext ?? null
+  window.__setBookingContext = (context: string) => {
+    if (!context || context === window.__bookingContext) return
+    window.__bookingContext = context
+    flushTouchAttribution()
+  }
   window.__trackBookingEvent = trackBookingEvent
 
   // Track page view on initial load

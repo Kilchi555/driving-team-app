@@ -21,10 +21,12 @@ import {
 } from '~/server/utils/marketing-attribution-merge'
 import { MARKETING_SESSION_ID_PATTERN } from '~/server/utils/marketing-touch-class'
 import { persistMarketingTouch } from '~/server/utils/marketing-touch-persist'
+import { readBookingContextSecret, tenantIdForMarketingTouch } from '~/server/utils/booking-context'
 
 interface AttributionPayload {
   session_id: string
   tenant_id?: string | null
+  booking_context?: string | null
   attribution: {
     gclid?: string | null
     gbraid?: string | null
@@ -77,7 +79,6 @@ export default defineEventHandler(async (event) => {
 
   try {
     const supabase = getSupabaseAdmin()
-    const tenantId = nullable(body.tenant_id) ?? nullable(process.env.MARKETING_TENANT_ID)
 
     if (hasLegacyAttribution) {
       const { data: existingRow } = await supabase
@@ -115,10 +116,14 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    if (tenantId && MARKETING_SESSION_ID_PATTERN.test(sessionId)) {
+    const touchTenantId = tenantIdForMarketingTouch({
+      bookingContext: body.booking_context,
+      secret: readBookingContextSecret(useRuntimeConfig().bookingContextSecret),
+    })
+    if (touchTenantId && MARKETING_SESSION_ID_PATTERN.test(sessionId)) {
       try {
         await persistMarketingTouch(supabase, {
-          tenantId,
+          tenantId: touchTenantId,
           sessionId,
           observation: attr || {},
         })
