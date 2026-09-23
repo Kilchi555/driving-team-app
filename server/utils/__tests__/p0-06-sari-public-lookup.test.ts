@@ -37,9 +37,10 @@ vi.mock('~/server/utils/get-tenant-secrets-secure', () => ({
 }))
 
 vi.mock('~/utils/sariClient', () => ({
-  SARIClient: vi.fn().mockImplementation(() => ({
-    getCustomer: mocks.getCustomer,
-  })),
+  // vitest 4 only constructs mockImplementation values that are functions or classes.
+  SARIClient: vi.fn().mockImplementation(function SARIClient() {
+    return { getCustomer: mocks.getCustomer }
+  }),
 }))
 
 vi.mock('~/utils/logger', () => ({
