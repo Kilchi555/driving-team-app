@@ -9,9 +9,11 @@ import {
   MARKETING_TOUCH_CLASSES,
   classifyMarketingTouch,
   describeMarketingConversion,
+  isIdentifiableTouch,
   marketingTouchIdempotencyKey,
   pickConversionTouch,
   referrerHost,
+  runAttributionTouchAfterLegacy,
 } from '../marketing-touch-class.ts'
 
 const TENANT = '33333333-3333-4333-8333-333333333333'
@@ -24,7 +26,16 @@ function key(observation: Parameters<typeof classifyMarketingTouch>[0], sessionI
   return marketingTouchIdempotencyKey({ tenantId, sessionId, touchClass, observation: observation || {} })
 }
 
-export function runMarketingTouchCaptureChecks() {
+function assertLegacyErrorDoesNotBlockTouch(source: string, touchCall: string) {
+  const attemptAt = source.indexOf('runAttributionTouchAfterLegacy')
+  const touchAt = source.indexOf(touchCall)
+  const legacyReturnAt = source.indexOf("return { ok: false, reason: 'db_error' }")
+  assert.ok(attemptAt > 0)
+  assert.ok(touchAt > attemptAt)
+  assert.ok(legacyReturnAt > touchAt)
+}
+
+export async function runMarketingTouchCaptureChecks() {
   assert.equal(classifyMarketingTouch({ gclid: 'g' }), 'PAID_GOOGLE')
   assert.equal(classifyMarketingTouch({ gbraid: 'b' }), 'PAID_GOOGLE')
   assert.equal(classifyMarketingTouch({ wbraid: 'w' }), 'PAID_GOOGLE')
@@ -48,6 +59,47 @@ export function runMarketingTouchCaptureChecks() {
   assert.equal(classifyMarketingTouch({ utm_source: 'drivingteam_direct', utm_medium: 'referral' }), 'NO_MARKETING_SIGNAL')
   assert.equal(classifyMarketingTouch({ referrer: 'https://www.google.com/search?q=fahrschule' }), 'ORGANIC_CONFIRMED')
   assert.equal(classifyMarketingTouch({ referrer: 'https://example.com/page' }), 'OTHER_REFERRER')
+  assert.equal(classifyMarketingTouch({
+    referrer: 'https://drivingteam.ch/kurse',
+    firstPartyHost: 'drivingteam.ch',
+  }), 'NO_MARKETING_SIGNAL')
+  assert.equal(isIdentifiableTouch(classifyMarketingTouch({
+    referrer: 'https://drivingteam.ch/kurse',
+    firstPartyHost: 'drivingteam.ch',
+  })), false)
+  assert.equal(classifyMarketingTouch({
+    referrer: 'https://www.drivingteam.ch/',
+    firstPartyHost: 'drivingteam.ch',
+  }), 'NO_MARKETING_SIGNAL')
+  assert.equal(classifyMarketingTouch({
+    referrer: 'https://example.com/',
+    firstPartyHost: 'drivingteam.ch',
+  }), 'OTHER_REFERRER')
+  assert.equal(isIdentifiableTouch('OTHER_REFERRER'), true)
+  assert.equal(classifyMarketingTouch({
+    referrer: 'https://www.google.com/search?q=fahrschule',
+    firstPartyHost: 'drivingteam.ch',
+  }), 'ORGANIC_CONFIRMED')
+  assert.equal(classifyMarketingTouch({
+    gclid: 'g',
+    referrer: 'https://drivingteam.ch/kurse',
+    firstPartyHost: 'drivingteam.ch',
+  }), 'PAID_GOOGLE')
+  assert.equal(classifyMarketingTouch({
+    fbclid: 'f',
+    referrer: 'https://www.drivingteam.ch/kurse',
+    firstPartyHost: 'drivingteam.ch',
+  }), 'PAID_META')
+  assert.equal(classifyMarketingTouch({
+    referrer: 'https://other-school.example/start',
+    firstPartyHost: 'drivingteam.ch',
+  }), 'OTHER_REFERRER')
+  const paidThenSelf = pickConversionTouch([
+    { id: 'self', tenant_id: TENANT, attribution_class: 'NO_MARKETING_SIGNAL' as const, touch_at: '2026-08-10T11:00:00.000Z' },
+    { id: 'paid', tenant_id: TENANT, attribution_class: 'PAID_GOOGLE' as const, touch_at: '2026-08-10T10:00:00.000Z' },
+  ], TENANT, '2026-08-10T12:00:00.000Z')
+  assert.equal(paidThenSelf.touch?.id, 'paid')
+  assert.equal(paidThenSelf.touchClass, 'PAID_GOOGLE')
   assert.equal(classifyMarketingTouch({}), 'NO_MARKETING_SIGNAL')
   assert.equal(classifyMarketingTouch(null), 'NO_MARKETING_SIGNAL')
   assert.equal(MARKETING_TOUCH_CLASSES.includes('UNKNOWN' as never), false)
@@ -119,6 +171,60 @@ export function runMarketingTouchCaptureChecks() {
   const save = readFileSync(resolve(root, 'apps/website/server/api/save-attribution.post.ts'), 'utf8')
   assert.equal(save.includes('user_id'), false)
   assert.match(save, /marketing_attributions/)
+  assert.match(save, /getWebsiteTenantId/)
+  assert.ok(save.includes('tenant_id: nullable(body?.tenant_id)'))
+  assertLegacyErrorDoesNotBlockTouch(save, 'persistWebsiteMarketingTouch')
+  const appSave = readFileSync(resolve(root, 'server/api/marketing-attribution.post.ts'), 'utf8')
+  assertLegacyErrorDoesNotBlockTouch(appSave, 'persistMarketingTouch')
+  assert.match(appSave, /tenantId: touchTenantId/)
+  const touchStart = appSave.indexOf('const touchTenantId')
+  const touchBlock = appSave.slice(touchStart, appSave.indexOf('return { ok: true', touchStart))
+  assert.equal(touchBlock.includes('body.tenant_id'), false)
+
+  const stored: string[] = []
+  const legacyOk = await runAttributionTouchAfterLegacy({
+    legacyError: null,
+    writeTouch: async () => {
+      stored.push('touch')
+      return 'touch-1'
+    },
+    onLegacyError: () => { throw new Error('legacy callback') },
+    onTouchError: () => { throw new Error('touch callback') },
+  })
+  assert.equal(legacyOk.legacyFailed, false)
+  assert.equal(legacyOk.touchFailed, false)
+  assert.equal(legacyOk.touchResult, 'touch-1')
+  assert.deepEqual(stored, ['touch'])
+
+  const legacyDown = await runAttributionTouchAfterLegacy({
+    legacyError: 'upsert failed',
+    writeTouch: async () => {
+      stored.push('touch-after-legacy-error')
+      return 'touch-2'
+    },
+    onLegacyError: (message) => {
+      assert.equal(message, 'upsert failed')
+    },
+    onTouchError: () => { throw new Error('touch callback') },
+  })
+  assert.equal(legacyDown.legacyFailed, true)
+  assert.equal(legacyDown.touchFailed, false)
+  assert.equal(legacyDown.touchResult, 'touch-2')
+  assert.deepEqual(stored, ['touch', 'touch-after-legacy-error'])
+
+  const touchDown = await runAttributionTouchAfterLegacy({
+    legacyError: null,
+    writeTouch: async () => {
+      throw new Error('touch insert failed')
+    },
+    onLegacyError: () => { throw new Error('legacy callback') },
+    onTouchError: (error) => {
+      assert.equal(error instanceof Error ? error.message : '', 'touch insert failed')
+    },
+  })
+  assert.equal(touchDown.legacyFailed, false)
+  assert.equal(touchDown.touchFailed, true)
+  assert.equal(touchDown.touchResult, undefined)
   const proposal = readFileSync(resolve(root, 'server/api/booking/submit-proposal.post.ts'), 'utf8')
   assert.equal(proposal.includes('reportBindingAppointmentConversion'), false)
   assert.match(proposal, /event: 'inquiry'/)
@@ -126,6 +232,7 @@ export function runMarketingTouchCaptureChecks() {
 
 const isDirectRun = process.argv[1]?.includes('marketing-touch-capture-checks')
 if (isDirectRun) {
-  runMarketingTouchCaptureChecks()
-  console.log('MARKETING_TOUCH_CAPTURE_CHECKS_OK')
+  runMarketingTouchCaptureChecks().then(() => {
+    console.log('MARKETING_TOUCH_CAPTURE_CHECKS_OK')
+  })
 }

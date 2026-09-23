@@ -40,6 +40,8 @@ export type TouchObservation = {
   utm_term?: string | null
   landing_page?: string | null
   referrer?: string | null
+  /** Request host for this hit. Callers must set it from the server, not the body. */
+  firstPartyHost?: string | null
 }
 
 function clean(value: string | null | undefined): string | null {
@@ -64,6 +66,18 @@ export function referrerHost(referrer: string | null | undefined): string | null
   }
 }
 
+/** Apex form of one host. www and the bare host are the same site; other labels are not. */
+export function comparableHost(host: string | null | undefined): string | null {
+  const normalized = referrerHost(host)
+  if (!normalized) return null
+  return normalized.startsWith('www.') ? normalized.slice(4) : normalized
+}
+
+function isRequestFirstParty(referrerHostName: string | null, firstPartyHost: string | null): boolean {
+  if (!referrerHostName || !firstPartyHost) return false
+  return referrerHostName === firstPartyHost
+}
+
 function isChatGpt(source: string, host: string | null): boolean {
   return source === 'chatgpt.com' || source === 'chatgpt' || source === 'openai'
     || (!!host && (host === 'chatgpt.com' || host.endsWith('.chatgpt.com') || host === 'chat.openai.com'))
@@ -83,6 +97,7 @@ export function classifyMarketingTouch(input: TouchObservation | null | undefine
   const source = lower(input?.utm_source)
   const medium = lower(input?.utm_medium)
   const host = referrerHost(input?.referrer)
+  const firstPartyHost = comparableHost(input?.firstPartyHost)
 
   if (gclid || gbraid || wbraid) return 'PAID_GOOGLE'
   if (fbclid || fbc) return 'PAID_META'
@@ -96,8 +111,35 @@ export function classifyMarketingTouch(input: TouchObservation | null | undefine
   }
   if (source === 'drivingteam_direct') return 'NO_MARKETING_SIGNAL'
   if (medium === 'organic' || isOrganicHost(host)) return 'ORGANIC_CONFIRMED'
+  if (isRequestFirstParty(comparableHost(host), firstPartyHost)) return 'NO_MARKETING_SIGNAL'
   if (source || medium || clean(input?.utm_campaign) || host) return 'OTHER_REFERRER'
   return 'NO_MARKETING_SIGNAL'
+}
+
+/**
+ * Legacy attribution failure must not skip the new touch write.
+ * Touch errors stay inside this attempt and do not replace the legacy result.
+ */
+export async function runAttributionTouchAfterLegacy<T>(input: {
+  legacyError: string | null
+  writeTouch: () => Promise<T>
+  onLegacyError: (message: string) => void
+  onTouchError: (error: unknown) => void
+}): Promise<{ legacyFailed: boolean; touchResult: T | undefined; touchFailed: boolean }> {
+  if (input.legacyError) input.onLegacyError(input.legacyError)
+  let touchResult: T | undefined
+  let touchFailed = false
+  try {
+    touchResult = await input.writeTouch()
+  } catch (error) {
+    touchFailed = true
+    input.onTouchError(error)
+  }
+  return {
+    legacyFailed: Boolean(input.legacyError),
+    touchResult,
+    touchFailed,
+  }
 }
 
 export function isIdentifiableTouch(touchClass: MarketingTouchClass): boolean {

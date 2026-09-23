@@ -11,7 +11,7 @@
  *   3. Service-role insert is the only DB-side privilege
  */
 
-import { defineEventHandler, readBody, getHeader, createError } from 'h3'
+import { defineEventHandler, readBody, getHeader, getRequestHost, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import {
@@ -19,7 +19,7 @@ import {
   hasAnyAttribution,
   type AttributionFields,
 } from '~/server/utils/marketing-attribution-merge'
-import { MARKETING_SESSION_ID_PATTERN } from '~/server/utils/marketing-touch-class'
+import { MARKETING_SESSION_ID_PATTERN, runAttributionTouchAfterLegacy } from '~/server/utils/marketing-touch-class'
 import { persistMarketingTouch } from '~/server/utils/marketing-touch-persist'
 import { readBookingContextSecret, tenantIdForMarketingTouch } from '~/server/utils/booking-context'
 
@@ -79,6 +79,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const supabase = getSupabaseAdmin()
+    let legacyError: string | null = null
 
     if (hasLegacyAttribution) {
       const { data: existingRow } = await supabase
@@ -110,28 +111,35 @@ export default defineEventHandler(async (event) => {
           ip_country: ipCountry,
         }, { onConflict: 'session_id' })
 
-      if (error) {
-        logger.warn('marketing-attribution upsert error:', error.message)
-        return { ok: false, reason: 'db_error' }
-      }
+      if (error) legacyError = error.message
     }
 
-    const touchTenantId = tenantIdForMarketingTouch({
-      bookingContext: body.booking_context,
-      secret: readBookingContextSecret(useRuntimeConfig().bookingContextSecret),
-    })
-    if (touchTenantId && MARKETING_SESSION_ID_PATTERN.test(sessionId)) {
-      try {
-        await persistMarketingTouch(supabase, {
-          tenantId: touchTenantId,
-          sessionId,
-          observation: attr || {},
-        })
-      } catch (touchErr: any) {
+    const firstPartyHost = getRequestHost(event, { xForwardedHost: true })
+    const outcome = await runAttributionTouchAfterLegacy({
+      legacyError,
+      onLegacyError: (message) => logger.warn('marketing-attribution upsert error:', message),
+      onTouchError: (touchErr: any) => {
         logger.warn('marketing touch capture failed:', touchErr?.message ?? touchErr)
-      }
-    }
+      },
+      writeTouch: async () => {
+        const touchTenantId = tenantIdForMarketingTouch({
+          bookingContext: body.booking_context,
+          secret: readBookingContextSecret(useRuntimeConfig().bookingContextSecret),
+        })
+        if (touchTenantId && MARKETING_SESSION_ID_PATTERN.test(sessionId)) {
+          await persistMarketingTouch(supabase, {
+            tenantId: touchTenantId,
+            sessionId,
+            observation: {
+              ...(attr || {}),
+              firstPartyHost,
+            },
+          })
+        }
+      },
+    })
 
+    if (outcome.legacyFailed) return { ok: false, reason: 'db_error' }
     return { ok: true, reason: hasLegacyAttribution ? undefined : 'no_attribution_data' }
   } catch (err: any) {
     logger.error('marketing-attribution unexpected error:', err?.message ?? err)

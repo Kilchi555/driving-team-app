@@ -11,12 +11,14 @@
  *   - Cross-domain attribution to app.simy.ch bookings via session_id
  */
 
+import { getRequestHost } from 'h3'
 import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import {
   mergeAttributionFields,
   hasAnyAttribution,
   type AttributionFields,
 } from '~/server/utils/marketing-attribution-merge'
+import { runAttributionTouchAfterLegacy } from '~/server/utils/marketing-touch-class'
 import { getWebsiteTenantId } from '~/server/utils/website-tenant'
 import { persistWebsiteMarketingTouch } from '~/server/utils/marketing-touch-persist'
 
@@ -50,6 +52,7 @@ export default defineEventHandler(async (event) => {
   const supabase = createWebsiteSupabaseClient(event)
   if (!supabase) return { ok: false, reason: 'missing_supabase_config' }
   const ipCountry = getHeader(event, 'x-vercel-ip-country') || null
+  let legacyError: string | null = null
 
   if (hasLegacyAttribution) {
     const { data: existingRow } = await supabase
@@ -81,15 +84,19 @@ export default defineEventHandler(async (event) => {
         ip_country: ipCountry,
       }, { onConflict: 'session_id' })
 
-    if (error) {
-      console.warn('[save-attribution] upsert error:', error.message)
-      return { ok: false, reason: 'db_error' }
-    }
+    if (error) legacyError = error.message
   }
 
-  try {
-    const tenantId = await getWebsiteTenantId(event)
-    if (tenantId) {
+  const firstPartyHost = getRequestHost(event, { xForwardedHost: true })
+  const outcome = await runAttributionTouchAfterLegacy({
+    legacyError,
+    onLegacyError: (message) => console.warn('[save-attribution] upsert error:', message),
+    onTouchError: (touchErr: any) => {
+      console.warn('[save-attribution] marketing touch capture failed:', touchErr?.message ?? touchErr)
+    },
+    writeTouch: async () => {
+      const tenantId = await getWebsiteTenantId(event)
+      if (!tenantId) return
       const referrer = nullable(body?.referrer_host) || nullable(attr && (attr as { referrer?: string }).referrer)
       await persistWebsiteMarketingTouch(supabase, {
         tenantId,
@@ -98,12 +105,12 @@ export default defineEventHandler(async (event) => {
           ...attr,
           landing_page: nullable(attr.landing_page),
           referrer,
+          firstPartyHost,
         },
       })
-    }
-  } catch (touchErr: any) {
-    console.warn('[save-attribution] marketing touch capture failed:', touchErr?.message ?? touchErr)
-  }
+    },
+  })
 
+  if (outcome.legacyFailed) return { ok: false, reason: 'db_error' }
   return { ok: true, reason: hasLegacyAttribution ? undefined : 'no_attribution_data' }
 })
