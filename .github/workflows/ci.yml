@@ -45,6 +45,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Start local PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql
+          sudo service postgresql start
+          ready=0
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            if sudo -u postgres pg_isready; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = 1
+          sudo -u postgres psql -c 'SELECT 1'
+
       - name: Unit tests
         run: npm test
 
