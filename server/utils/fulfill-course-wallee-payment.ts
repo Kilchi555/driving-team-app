@@ -495,6 +495,7 @@ export async function runPostCommitCourseFulfillmentSideEffects(opts: {
       conversionValueChf: valueChf,
       hashedEmail,
       hashedPhone,
+      marketingSessionId: meta.marketing_session_id ?? null,
     })
   } catch (capiErr: any) {
     logger.warn('⚠️ Binding course conversion failed (fulfillment, non-critical):', capiErr?.message ?? capiErr)

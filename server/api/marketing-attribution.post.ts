@@ -19,6 +19,8 @@ import {
   hasAnyAttribution,
   type AttributionFields,
 } from '~/server/utils/marketing-attribution-merge'
+import { MARKETING_SESSION_ID_PATTERN } from '~/server/utils/marketing-touch-class'
+import { persistMarketingTouch } from '~/server/utils/marketing-touch-persist'
 
 interface AttributionPayload {
   session_id: string
@@ -68,51 +70,64 @@ export default defineEventHandler(async (event) => {
   }
 
   const attr = body.attribution as AttributionFields
-  if (!hasAnyAttribution(attr)) {
-    return { ok: true, reason: 'no_attribution_data' }
-  }
+  const hasLegacyAttribution = hasAnyAttribution(attr)
 
   const userAgent = getHeader(event, 'user-agent') || null
   const ipCountry = getHeader(event, 'x-vercel-ip-country') || null
 
   try {
     const supabase = getSupabaseAdmin()
+    const tenantId = nullable(body.tenant_id) ?? nullable(process.env.MARKETING_TENANT_ID)
 
-    const { data: existingRow } = await supabase
-      .from('marketing_attributions')
-      .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, landing_page')
-      .eq('session_id', sessionId)
-      .maybeSingle()
+    if (hasLegacyAttribution) {
+      const { data: existingRow } = await supabase
+        .from('marketing_attributions')
+        .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, landing_page')
+        .eq('session_id', sessionId)
+        .maybeSingle()
 
-    const merged = mergeAttributionFields(existingRow as AttributionFields | null, attr)
+      const merged = mergeAttributionFields(existingRow as AttributionFields | null, attr)
 
-    const { error } = await supabase
-      .from('marketing_attributions')
-      .upsert({
-        session_id: sessionId,
-        tenant_id: nullable(body.tenant_id) ?? null,
-        gclid: nullable(merged.gclid),
-        gbraid: nullable(merged.gbraid),
-        wbraid: nullable(merged.wbraid),
-        fbclid: nullable(merged.fbclid),
-        fbc: nullable(merged.fbc),
-        fbp: nullable(merged.fbp),
-        utm_source: nullable(merged.utm_source),
-        utm_medium: nullable(merged.utm_medium),
-        utm_campaign: nullable(merged.utm_campaign),
-        utm_content: nullable(merged.utm_content),
-        utm_term: nullable(merged.utm_term),
-        landing_page: nullable(merged.landing_page),
-        user_agent: userAgent ? String(userAgent).slice(0, 512) : null,
-        ip_country: ipCountry,
-      }, { onConflict: 'session_id' })
+      const { error } = await supabase
+        .from('marketing_attributions')
+        .upsert({
+          session_id: sessionId,
+          tenant_id: nullable(body.tenant_id) ?? null,
+          gclid: nullable(merged.gclid),
+          gbraid: nullable(merged.gbraid),
+          wbraid: nullable(merged.wbraid),
+          fbclid: nullable(merged.fbclid),
+          fbc: nullable(merged.fbc),
+          fbp: nullable(merged.fbp),
+          utm_source: nullable(merged.utm_source),
+          utm_medium: nullable(merged.utm_medium),
+          utm_campaign: nullable(merged.utm_campaign),
+          utm_content: nullable(merged.utm_content),
+          utm_term: nullable(merged.utm_term),
+          landing_page: nullable(merged.landing_page),
+          user_agent: userAgent ? String(userAgent).slice(0, 512) : null,
+          ip_country: ipCountry,
+        }, { onConflict: 'session_id' })
 
-    if (error) {
-      logger.warn('marketing-attribution upsert error:', error.message)
-      return { ok: false, reason: 'db_error' }
+      if (error) {
+        logger.warn('marketing-attribution upsert error:', error.message)
+        return { ok: false, reason: 'db_error' }
+      }
     }
 
-    return { ok: true }
+    if (tenantId && MARKETING_SESSION_ID_PATTERN.test(sessionId)) {
+      try {
+        await persistMarketingTouch(supabase, {
+          tenantId,
+          sessionId,
+          observation: attr || {},
+        })
+      } catch (touchErr: any) {
+        logger.warn('marketing touch capture failed:', touchErr?.message ?? touchErr)
+      }
+    }
+
+    return { ok: true, reason: hasLegacyAttribution ? undefined : 'no_attribution_data' }
   } catch (err: any) {
     logger.error('marketing-attribution unexpected error:', err?.message ?? err)
     return { ok: false, reason: 'unexpected_error' }

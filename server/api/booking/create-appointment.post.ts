@@ -1079,6 +1079,7 @@ export default defineEventHandler(async (event: H3Event) => {
           clientIp: ipAddress ?? null,
           userAgent: getHeader(event, 'user-agent') ?? null,
           eventSourceUrl: getHeader(event, 'referer') ?? null,
+          marketingSessionId: body.marketing_session_id ?? null,
         })
         sentMetaPurchase = conversionReport.meta === 'sent'
       } catch (err: any) {

@@ -19,6 +19,7 @@ describe('marketing attribution schema', () => {
     try {
       psql(path.join(root, 'server/utils/__tests__/marketing-attribution-schema.fixture.sql'))
       psql(path.join(root, 'migrations/20260923_marketing_touches_conversions.sql'))
+      psql(path.join(root, 'migrations/20260923_marketing_conversions_customer_state.sql'))
       psql(path.join(root, 'server/utils/__tests__/marketing-attribution-schema.assertions.sql'))
       expect(true).toBe(true)
     } finally {

@@ -1,6 +1,6 @@
 -- Assertions for the additive attribution schema. Fails the session on any miss.
--- Expects the fixture and migrations/20260923_marketing_touches_conversions.sql
--- to have been applied to this database.
+-- Expects the fixture, migrations/20260923_marketing_touches_conversions.sql,
+-- and migrations/20260923_marketing_conversions_customer_state.sql.
 
 \set ON_ERROR_STOP on
 
@@ -345,3 +345,43 @@ BEGIN
   END IF;
 END $$;
 RESET ROLE;
+
+DO $$
+DECLARE
+  tenant_a uuid := 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  proposal uuid := '88888888-8888-8888-8888-888888888888';
+BEGIN
+  INSERT INTO public.booking_proposals (id) VALUES (proposal);
+
+  INSERT INTO public.marketing_conversions (
+    tenant_id, signal_state, conversion_at, conversion_type, proposal_id, customer_state
+  ) VALUES (
+    tenant_a, 'unknown', '2026-09-21 14:09:00+00', 'inquiry', proposal, 'unknown'
+  );
+
+  BEGIN
+    INSERT INTO public.marketing_conversions (
+      tenant_id, signal_state, conversion_at, conversion_type, customer_state
+    ) VALUES (
+      tenant_a, 'unknown', '2026-09-21 14:10:00+00', 'booking', 'visitor'
+    );
+    RAISE EXCEPTION 'invalid customer_state was accepted';
+  EXCEPTION WHEN check_violation THEN
+    NULL;
+  END;
+
+  BEGIN
+    INSERT INTO public.marketing_conversions (
+      tenant_id, signal_state, conversion_at, conversion_type, proposal_id, customer_state
+    ) VALUES (
+      tenant_a, 'no_marketing_signal', '2026-09-21 14:11:00+00', 'inquiry', proposal, 'new'
+    );
+    RAISE EXCEPTION 'second inquiry reused proposal_id';
+  EXCEPTION WHEN unique_violation THEN
+    NULL;
+  END;
+
+  IF (SELECT customer_state FROM public.marketing_conversions WHERE proposal_id = proposal) <> 'unknown' THEN
+    RAISE EXCEPTION 'inquiry customer_state was not stored';
+  END IF;
+END $$;

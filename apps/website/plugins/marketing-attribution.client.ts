@@ -106,6 +106,15 @@ function persist(attribution: MarketingAttribution): void {
  * failed with `no_click_id`. Creating the session id here (idempotently,
  * same format/key `analytics.client.ts` uses) closes that gap.
  */
+function referrerHostOnly(): string | null {
+  try {
+    if (!document.referrer) return null
+    return new URL(document.referrer).hostname
+  } catch {
+    return null
+  }
+}
+
 function getOrCreateSessionId(): string {
   try {
     const sessionId = readOrCreateAnalyticsSessionId(localStorage)
@@ -185,11 +194,25 @@ export default defineNuxtPlugin({
         fetch('/api/save-attribution', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId, attribution }),
+          body: JSON.stringify({
+            session_id: sessionId,
+            attribution,
+            referrer_host: referrerHostOnly(),
+          }),
         }).catch(() => {})
       }
     } else {
       window.__dtMarketingAttribution = null
+      const sessionId = getOrCreateSessionId()
+      fetch('/api/save-attribution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          attribution: { landing_page: url.pathname },
+          referrer_host: referrerHostOnly(),
+        }),
+      }).catch(() => {})
     }
   },
 })
