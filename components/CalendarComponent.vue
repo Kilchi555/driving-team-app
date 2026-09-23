@@ -29,7 +29,6 @@ import MoveAppointmentModal from './MoveAppointmentModal.vue'
 import { toLocalTimeString } from '~/utils/dateUtils'
 import { useStaffWorkingHours } from '~/composables/useStaffWorkingHours'
 import { useExternalCalendarSync } from '~/composables/useExternalCalendarSync'
-import WorkingHourExceptionSheet from '~/components/WorkingHourExceptionSheet.vue'
 import {
   type EffectiveException,
 } from '~/utils/effective-working-hours'
@@ -446,8 +445,6 @@ const getCurrentUserId = () => {
   return props.currentUser?.id || composableCurrentUser.value?.id
 }
 
-const showExceptionSheet = ref(false)
-const exceptionSheetDate = ref('')
 const lastSuccessfulNonWorking = ref<CalendarEvent[] | null>(null)
 const nonWorkingLoadError = ref(false)
 const nonWorkingUsingFailClosed = ref(false)
@@ -458,14 +455,6 @@ function localCivilDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
-}
-
-const openExceptionSheet = () => {
-  const staffId = getCurrentUserId()
-  if (!staffId) return
-  const current = calendar.value?.getApi?.()?.getDate?.() || new Date()
-  exceptionSheetDate.value = localCivilDate(current instanceof Date ? current : new Date(current))
-  showExceptionSheet.value = true
 }
 
 const getCurrentUserData = () => {
@@ -2911,16 +2900,6 @@ defineExpose({
       </div>
     </div>
     
-    <div class="flex justify-end px-2 pt-2">
-      <button
-        type="button"
-        class="text-sm font-medium text-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50"
-        @click="openExceptionSheet"
-      >
-        Abweichende Arbeitszeit
-      </button>
-    </div>
-
     <div
       v-if="nonWorkingLoadError"
       class="mx-2 mt-2 px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 text-sm text-amber-950 flex items-center justify-between gap-3"
@@ -2949,13 +2928,6 @@ defineExpose({
       Kalender wird geladen...
     </div>
 
-    <WorkingHourExceptionSheet
-      :visible="showExceptionSheet"
-      :staff-id="getCurrentUserId() || ''"
-      :date="exceptionSheetDate"
-      @close="showExceptionSheet = false"
-      @saved="() => { showExceptionSheet = false; loadAppointments(true) }"
-    />
   </div>
 
  <EventModal

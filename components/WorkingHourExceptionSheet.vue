@@ -1,15 +1,25 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import {
-  MAX_EXCEPTION_DATES,
+  ExceptionInputError,
+  validateExceptionDays,
   zurichTodayCivilDate,
-  type ExceptionDayInput,
+  civilDayOfWeek,
 } from '~/utils/effective-working-hours'
+import {
+  civilDatesForWeekday,
+  formatExceptionDateLabel,
+  modeFromStoredException,
+  planExceptionSave,
+  weekdayLabel,
+  type ExceptionUiMode,
+} from '~/utils/working-hour-exception-entry'
 
 const props = defineProps<{
   visible: boolean
   staffId: string
-  date: string
+  staffName?: string
+  initialDate: string
 }>()
 
 const emit = defineEmits<{
@@ -19,58 +29,81 @@ const emit = defineEmits<{
 
 interface DayDraft {
   date: string
-  isClosed: boolean
+  mode: ExceptionUiMode
   blocks: Array<{ start_time: string; end_time: string }>
   existed: boolean
 }
 
 const days = ref<DayDraft[]>([])
+const startDate = ref('')
 const multi = ref(false)
 const rangeEnd = ref('')
 const errorMessage = ref('')
 const saving = ref(false)
 const loading = ref(false)
+let loadToken = 0
 
 const today = computed(() => zurichTodayCivilDate())
+const startLabel = computed(() => {
+  try {
+    return formatExceptionDateLabel(startDate.value)
+  } catch {
+    return ''
+  }
+})
+const startWeekdayLabel = computed(() => {
+  try {
+    return weekdayLabel(civilDayOfWeek(startDate.value))
+  } catch {
+    return ''
+  }
+})
+const savePlan = computed(() => planExceptionSave(days.value))
+const willWrite = computed(() => savePlan.value.deletes.length + savePlan.value.upserts.length > 0)
+const restoreLabel = computed(() => savePlan.value.upserts.length === 0 && savePlan.value.deletes.length > 0)
 
-watch(() => [props.visible, props.date, props.staffId] as const, async ([visible, date, staffId]) => {
+watch(() => [props.visible, props.initialDate, props.staffId] as const, async ([visible, date, staffId], previous) => {
   if (!visible || !date || !staffId) return
+  if (previous && previous[0] && previous[1] === date && previous[2] === staffId) return
+  startDate.value = date
   multi.value = false
   rangeEnd.value = date
   errorMessage.value = ''
-  await loadDays([date])
+  await loadDays([date], false)
 })
 
-async function loadDays(dates: string[]) {
+async function loadDays(dates: string[], useTemplate: boolean) {
+  const token = ++loadToken
   loading.value = true
   errorMessage.value = ''
+  const template = useTemplate ? days.value[0] : undefined
   try {
-    const startDate = dates[0]
-    const endDate = dates[dates.length - 1]
+    const start = dates[0]
+    const end = dates[dates.length - 1]
     const response = await $fetch<{
       success: boolean
       exceptions: Array<{ date: string; isClosed: boolean; blocks: Array<{ start_time: string; end_time: string }> }>
     }>('/api/staff/working-hour-exceptions', {
       method: 'POST',
-      body: { action: 'list', staffId: props.staffId, startDate, endDate },
+      body: { action: 'list', staffId: props.staffId, startDate: start, endDate: end },
     })
+    if (token !== loadToken) return
     const byDate = new Map((response.exceptions || []).map((row) => [row.date, row]))
-    const template = days.value[0]
     days.value = dates.map((date) => {
       const existing = byDate.get(date)
       if (existing) {
         return {
           date,
-          isClosed: existing.isClosed,
+          mode: modeFromStoredException(existing),
           blocks: existing.blocks.length > 0
-            ? existing.blocks.map((block) => ({ ...block }))
+            ? existing.blocks.map((block) => ({ start_time: block.start_time, end_time: block.end_time }))
             : [{ start_time: '08:00', end_time: '12:00' }],
           existed: true,
         }
       }
       return {
         date,
-        isClosed: template ? template.isClosed : false,
+        mode: template?.mode || 'normal',
         blocks: template
           ? template.blocks.map((block) => ({ ...block }))
           : [{ start_time: '08:00', end_time: '12:00' }],
@@ -78,14 +111,28 @@ async function loadDays(dates: string[]) {
       }
     })
   } catch (error: any) {
+    if (token !== loadToken) return
     errorMessage.value = error?.statusMessage || error?.data?.statusMessage || 'Laden fehlgeschlagen'
   } finally {
-    loading.value = false
+    if (token === loadToken) loading.value = false
+  }
+}
+
+async function onStartDateChange() {
+  multi.value = false
+  rangeEnd.value = startDate.value
+  if (!startDate.value) return
+  await loadDays([startDate.value], false)
+}
+
+function onModeChange(day: DayDraft) {
+  if (day.mode === 'custom' && day.blocks.length === 0) {
+    day.blocks.push({ start_time: '08:00', end_time: '12:00' })
   }
 }
 
 function addBlock(day: DayDraft) {
-  day.isClosed = false
+  day.mode = 'custom'
   day.blocks.push({ start_time: '13:00', end_time: '17:00' })
 }
 
@@ -96,180 +143,210 @@ function removeBlock(day: DayDraft, index: number) {
   }
 }
 
-function civilDatesInclusive(start: string, end: string): string[] {
-  const dates: string[] = []
-  const cursor = new Date(`${start}T12:00:00Z`)
-  const last = new Date(`${end}T12:00:00Z`)
-  while (cursor.getTime() <= last.getTime() && dates.length <= MAX_EXCEPTION_DATES) {
-    const year = cursor.getUTCFullYear()
-    const month = String(cursor.getUTCMonth() + 1).padStart(2, '0')
-    const day = String(cursor.getUTCDate()).padStart(2, '0')
-    dates.push(`${year}-${month}-${day}`)
-    cursor.setUTCDate(cursor.getUTCDate() + 1)
-  }
-  return dates
-}
-
 async function applyRange() {
   errorMessage.value = ''
-  const start = days.value[0]?.date || props.date
+  const start = startDate.value
   const end = rangeEnd.value
   if (!start || !end || end < start) {
-    errorMessage.value = 'Enddatum liegt vor dem Startdatum'
+    errorMessage.value = 'Das Enddatum liegt vor dem Startdatum.'
     return
   }
-  const dates = civilDatesInclusive(start, end)
-  if (dates.length > MAX_EXCEPTION_DATES) {
-    errorMessage.value = `Maximal ${MAX_EXCEPTION_DATES} Tage`
-    return
+  try {
+    const dates = civilDatesForWeekday(start, end, civilDayOfWeek(start))
+    if (dates.length < 1) {
+      errorMessage.value = 'In diesem Zeitraum liegt kein passender Wochentag.'
+      return
+    }
+    await loadDays(dates, true)
+  } catch (error: unknown) {
+    errorMessage.value = germanMessage(error)
   }
-  await loadDays(dates)
-}
-
-function payload(): ExceptionDayInput[] {
-  return days.value.map((day) => ({
-    date: day.date,
-    isClosed: day.isClosed,
-    blocks: day.isClosed ? [] : day.blocks.map((block) => ({ ...block })),
-  }))
 }
 
 async function save() {
-  if (!props.staffId || days.value.length === 0) return
+  if (!props.staffId || days.value.length === 0 || saving.value || loading.value) return
+  if (multi.value && rangeEnd.value > startDate.value && days.value.length < 2) {
+    errorMessage.value = 'Bitte «Tage laden», bevor die Ausnahme für mehrere Tage gespeichert wird.'
+    return
+  }
+  const plan = planExceptionSave(days.value)
+  if (plan.deletes.length === 0 && plan.upserts.length === 0) return
   saving.value = true
   errorMessage.value = ''
   try {
-    const daysPayload = payload()
-    if (daysPayload.length === 1) {
-      const day = daysPayload[0]
+    if (plan.upserts.length > 0) {
+      const validated = validateExceptionDays(plan.upserts)
+      if (validated.length === 1) {
+        const day = validated[0]
+        await $fetch('/api/staff/working-hour-exceptions', {
+          method: 'POST',
+          body: {
+            action: 'upsert',
+            staffId: props.staffId,
+            date: day.date,
+            isClosed: day.isClosed,
+            blocks: day.blocks,
+          },
+        })
+      } else {
+        await $fetch('/api/staff/working-hour-exceptions', {
+          method: 'POST',
+          body: {
+            action: 'upsert_many',
+            staffId: props.staffId,
+            days: validated,
+          },
+        })
+      }
+    }
+    for (const date of plan.deletes) {
       await $fetch('/api/staff/working-hour-exceptions', {
         method: 'POST',
-        body: {
-          action: 'upsert',
-          staffId: props.staffId,
-          date: day.date,
-          isClosed: day.isClosed,
-          blocks: day.blocks,
-        },
-      })
-    } else {
-      await $fetch('/api/staff/working-hour-exceptions', {
-        method: 'POST',
-        body: {
-          action: 'upsert_many',
-          staffId: props.staffId,
-          days: daysPayload,
-        },
+        body: { action: 'delete', staffId: props.staffId, date },
       })
     }
     emit('saved')
-  } catch (error: any) {
-    errorMessage.value = error?.statusMessage || error?.data?.statusMessage || 'Speichern fehlgeschlagen'
+  } catch (error: unknown) {
+    errorMessage.value = germanMessage(error)
   } finally {
     saving.value = false
   }
 }
 
-async function removeException() {
-  const day = days.value[0]
-  if (!day?.existed || days.value.length !== 1) return
-  saving.value = true
-  errorMessage.value = ''
-  try {
-    await $fetch('/api/staff/working-hour-exceptions', {
-      method: 'POST',
-      body: { action: 'delete', staffId: props.staffId, date: day.date },
-    })
-    emit('saved')
-  } catch (error: any) {
-    errorMessage.value = error?.statusMessage || error?.data?.statusMessage || 'Löschen fehlgeschlagen'
-  } finally {
-    saving.value = false
+function germanMessage(error: unknown): string {
+  if (error instanceof ExceptionInputError) {
+    const known: Record<string, string> = {
+      'start_time must be before end_time': 'Die Startzeit muss vor der Endzeit liegen.',
+      'Intervals overlap': 'Die Arbeitszeiten überlappen sich.',
+      'Invalid time': 'Bitte gültige Zeiten eingeben.',
+      'Open exception requires at least one block': 'Bitte mindestens einen Arbeitszeitblock angeben.',
+      'Date is before today in Europe/Zurich': 'Das Datum liegt vor dem heutigen Tag.',
+      'Too many dates': 'Zu viele Tage ausgewählt.',
+      'Too many blocks': 'Zu viele Arbeitszeitblöcke.',
+      'CLOSED exception cannot include blocks': 'Ein geschlossener Tag hat keine Arbeitszeitblöcke.',
+    }
+    return known[error.message] || 'Die Arbeitszeit ist ungültig.'
   }
+  const fetchError = error as { statusMessage?: string; data?: { statusMessage?: string } }
+  return fetchError?.statusMessage || fetchError?.data?.statusMessage || 'Speichern fehlgeschlagen'
 }
 </script>
 
 <template>
-  <div v-if="visible" class="fixed inset-0 z-[520] bg-black/50 flex items-end md:items-center justify-center" @click.self="emit('close')">
-    <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col" @click.stop>
-      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-        <h2 class="text-base font-semibold text-gray-900">Abweichende Arbeitszeit</h2>
-        <button type="button" class="w-8 h-8 bg-gray-100 rounded-full text-gray-500" @click="emit('close')">×</button>
-      </div>
+  <Teleport to="body">
+    <div
+      v-if="visible"
+      class="fixed inset-0 z-[560] bg-black/50 flex items-end md:items-center justify-center"
+      data-testid="working-hour-exception-sheet"
+      @click.self="emit('close')"
+    >
+      <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="working-hour-exception-title" @click.stop>
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 id="working-hour-exception-title" class="text-base font-semibold text-gray-900">Arbeitszeit-Ausnahme</h2>
+          <button type="button" class="w-8 h-8 bg-gray-100 rounded-full text-gray-500" aria-label="Schliessen" @click="emit('close')">×</button>
+        </div>
 
-      <div class="px-5 py-4 overflow-y-auto flex-1 space-y-4">
-        <p class="text-sm text-gray-500">
-          Die Ausnahme ersetzt die Wochenarbeitszeit nur an den gewählten Tagen. Bestehende Termine bleiben.
-          Standort-Zeitfenster gelten weiterhin.
-        </p>
+        <div class="px-5 py-4 overflow-y-auto flex-1 space-y-4">
+          <p v-if="staffName" class="text-sm text-gray-700">
+            Mitarbeiter: <span class="font-medium text-gray-900">{{ staffName }}</span>
+          </p>
+          <p class="text-sm text-gray-500">
+            Ohne Ausnahme gilt der normale Wochenplan. Eine eigene Arbeitszeit oder ein geschlossener Tag gilt nur am gewählten Datum. Bestehende Termine bleiben.
+          </p>
 
-        <label class="flex items-center gap-2 text-sm text-gray-700">
-          <input v-model="multi" type="checkbox">
-          Auf mehrere Tage anwenden
-        </label>
-
-        <div v-if="multi" class="flex items-end gap-2">
-          <label class="flex-1 text-xs text-gray-500">
-            Bis
-            <input v-model="rangeEnd" type="date" :min="days[0]?.date || today" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm">
+          <label class="block text-sm text-gray-700" for="exception-start-date">
+            Datum
+            <input
+              id="exception-start-date"
+              v-model="startDate"
+              type="date"
+              :min="today"
+              class="mt-1 w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
+              @change="onStartDateChange"
+            >
           </label>
-          <button type="button" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg" @click="applyRange">
-            Tage laden
+          <p v-if="startLabel" class="text-sm font-medium text-gray-900">{{ startLabel }}</p>
+
+          <p v-if="loading" class="text-sm text-gray-500">Laden…</p>
+
+          <div v-else class="space-y-3">
+            <div v-for="day in days" :key="day.date" class="border border-gray-200 rounded-lg p-3 space-y-3">
+              <p v-if="days.length > 1" class="text-sm font-medium text-gray-800">{{ formatExceptionDateLabel(day.date) }}</p>
+              <fieldset class="space-y-2">
+                <legend class="text-sm font-medium text-gray-800 mb-2">Was gilt an diesem Tag?</legend>
+                <label class="flex items-start gap-2 text-sm text-gray-800">
+                  <input v-model="day.mode" class="mt-1" type="radio" :name="`exception-mode-${day.date}`" value="normal" @change="onModeChange(day)">
+                  <span>Normale Arbeitszeit</span>
+                </label>
+                <p class="text-xs text-gray-500 pl-6">An diesem Datum gelten die normalen Arbeitszeiten dieses Wochentags.</p>
+
+                <label class="flex items-start gap-2 text-sm text-gray-800">
+                  <input v-model="day.mode" class="mt-1" type="radio" :name="`exception-mode-${day.date}`" value="custom" @change="onModeChange(day)">
+                  <span>Eigene Arbeitszeit</span>
+                </label>
+                <p class="text-xs text-gray-500 pl-6">An diesem Datum gelten andere Arbeitszeiten.</p>
+
+                <label class="flex items-start gap-2 text-sm text-gray-800">
+                  <input v-model="day.mode" class="mt-1" type="radio" :name="`exception-mode-${day.date}`" value="closed" @change="onModeChange(day)">
+                  <span>Ganzer Tag geschlossen</span>
+                </label>
+                <p class="text-xs text-gray-500 pl-6">An diesem Datum findet keine Arbeitszeit statt.</p>
+              </fieldset>
+
+              <div v-if="day.mode === 'custom'" class="space-y-2">
+                <div v-for="(block, index) in day.blocks" :key="index" class="flex items-end gap-2">
+                  <label class="flex-1 text-xs text-gray-500">
+                    Von
+                    <input v-model="block.start_time" type="time" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm">
+                  </label>
+                  <label class="flex-1 text-xs text-gray-500">
+                    Bis
+                    <input v-model="block.end_time" type="time" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm">
+                  </label>
+                  <button type="button" class="text-sm text-red-600 px-2 py-1" :aria-label="`Block ${index + 1} entfernen`" @click="removeBlock(day, index)">✕</button>
+                </div>
+                <button type="button" class="w-full py-2 text-sm border border-dashed border-gray-300 rounded-lg text-gray-600" @click="addBlock(day)">
+                  + Block hinzufügen
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input v-model="multi" type="checkbox">
+            Auf mehrere Tage anwenden
+          </label>
+
+          <div v-if="multi" class="space-y-2">
+            <p class="text-xs text-gray-500">
+              In diesem Zeitraum wird nur der Wochentag {{ startWeekdayLabel || 'des Startdatums' }} gespeichert. Andere Wochentage bleiben beim Wochenplan.
+            </p>
+            <div class="flex items-end gap-2">
+              <label class="flex-1 text-xs text-gray-500" for="exception-range-end">
+                Bis
+                <input id="exception-range-end" v-model="rangeEnd" type="date" :min="startDate || today" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm">
+              </label>
+              <button type="button" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg" @click="applyRange">
+                Tage laden
+              </button>
+            </div>
+          </div>
+
+          <p v-if="!loading && !willWrite && !errorMessage" class="text-xs text-gray-500">Keine Ausnahme gespeichert. Es gilt der Wochenplan.</p>
+          <p v-if="errorMessage" class="text-sm text-red-600" role="alert">{{ errorMessage }}</p>
+        </div>
+
+        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-900 disabled:opacity-50"
+            :disabled="saving || loading || days.length === 0 || !willWrite"
+            @click="save"
+          >
+            {{ restoreLabel ? 'Normale Arbeitszeit wiederherstellen' : 'Speichern' }}
           </button>
         </div>
-
-        <p v-if="loading" class="text-sm text-gray-500">Laden…</p>
-
-        <div v-for="day in days" :key="day.date" class="border border-gray-200 rounded-lg p-3 space-y-3">
-          <div class="flex items-center justify-between">
-            <p class="text-sm font-medium text-gray-800">{{ day.date }}</p>
-            <label class="flex items-center gap-2 text-sm text-gray-700">
-              <input v-model="day.isClosed" type="checkbox">
-              Tag schliessen
-            </label>
-          </div>
-
-          <div v-if="!day.isClosed" class="space-y-2">
-            <div v-for="(block, index) in day.blocks" :key="index" class="flex items-center gap-2">
-              <label class="flex-1 text-xs text-gray-500">
-                Von
-                <input v-model="block.start_time" type="time" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm">
-              </label>
-              <label class="flex-1 text-xs text-gray-500">
-                Bis
-                <input v-model="block.end_time" type="time" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm">
-              </label>
-              <button type="button" class="text-sm text-red-600 pt-4" @click="removeBlock(day, index)">✕</button>
-            </div>
-            <button type="button" class="w-full py-2 text-sm border border-dashed border-gray-300 rounded-lg text-gray-600" @click="addBlock(day)">
-              + Block hinzufügen
-            </button>
-          </div>
-        </div>
-
-        <p v-if="errorMessage" class="text-sm text-red-600">{{ errorMessage }}</p>
-      </div>
-
-      <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
-        <button
-          v-if="days.length === 1 && days[0].existed"
-          type="button"
-          class="text-sm text-gray-600"
-          :disabled="saving"
-          @click="removeException"
-        >
-          Exception entfernen
-        </button>
-        <span v-else />
-        <button
-          type="button"
-          class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-900 disabled:opacity-50"
-          :disabled="saving || loading || days.length === 0"
-          @click="save"
-        >
-          Speichern
-        </button>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>

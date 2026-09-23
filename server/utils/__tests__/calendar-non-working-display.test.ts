@@ -46,6 +46,11 @@ describe('calendar non-working display', () => {
     expect(calendar).toContain('Erneut laden')
     expect(calendar).toContain('role="status"')
     expect(calendar).not.toContain('skipping gray blocks')
+    expect(calendar).not.toContain('Abweichende Arbeitszeit')
+    expect(calendar).not.toContain('WorkingHourExceptionSheet')
+    expect(calendar).not.toContain('openExceptionSheet')
+    expect(calendar).toContain('openNewAppointmentModal(arg)')
+    expect(calendar).toContain('eventClick:')
   })
 
   it('replaces the cached schedule only after a later success', () => {
