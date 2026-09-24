@@ -344,6 +344,20 @@ Bei Änderungen am System:
 
 ---
 
+## Engineering Runbooks
+
+Focused operational docs (intent, surfaces, pitfalls, codepaths). Prefer updating these over adding root-level markdown reports.
+
+| Runbook | Covers |
+|---------|--------|
+| [BOOKING_PREFILL.md](./BOOKING_PREFILL.md) | Returning-customer wizard skip from past appointments / deep links |
+| [TENANT_BRAND_COLORS.md](./TENANT_BRAND_COLORS.md) | Logo palette extract → tenants / website / event-type sync |
+| [STAFF_INVITE_REMINDERS.md](./STAFF_INVITE_REMINDERS.md) | Daily 3-day staff invite reminder cron |
+
+Also see existing ops docs in this folder: [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md), [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md), [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md), [ACCESS_AND_SECRETS_POLICY.md](./ACCESS_AND_SECRETS_POLICY.md).
+
+---
+
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
