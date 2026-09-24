@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
       .order('name', { ascending: true }),
     supabase
       .from('event_types')
-      .select('id, code, name, description, default_duration_minutes, default_color, emoji, public_bookable, require_payment, display_order')
+      .select('id, code, name, description, default_duration_minutes, default_color, emoji, public_bookable, require_payment, display_order, payment_method')
       .eq('tenant_id', tenant.id)
       .eq('is_active', true)
       .eq('public_bookable', true)
@@ -195,6 +195,12 @@ export default defineEventHandler(async (event) => {
       invoice_payments_enabled: invoicePaymentsEnabled,
       online_payment_methods: onlinePaymentMethods,
       default_online_payment_method: defaultOnlinePaymentMethod,
+      event_type_payment_methods: Object.fromEntries(
+        (eventTypesResult.data || []).map((row: { code?: string; payment_method?: string | null }) => [
+          row.code,
+          row.payment_method ?? null,
+        ])
+      ),
     },
   }
 })

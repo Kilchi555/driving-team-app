@@ -208,6 +208,17 @@
               </label>
             </div>
 
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Zahlungsart</label>
+              <select v-model="newEventType.payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                <option :value="null">Vom Mandanten geerbt</option>
+                <option value="wallee">Online / Wallee</option>
+                <option value="cash">Barzahlung</option>
+                <option value="invoice">Rechnung</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Leer erbt den Mandanten-Standard. Gilt nur für neue Termin-Zahlungen.</p>
+            </div>
+
           </div>
 
           <!-- Preis-Felder (nur anzeigen wenn App-Preis und nicht Fahrschule) -->
@@ -369,6 +380,17 @@
               </label>
             </div>
 
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Zahlungsart</label>
+              <select v-model="editModel.payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                <option :value="null">Vom Mandanten geerbt</option>
+                <option value="wallee">Online / Wallee</option>
+                <option value="cash">Barzahlung</option>
+                <option value="invoice">Rechnung</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Leer erbt den Mandanten-Standard. Bestehende Zahlungen bleiben unverändert.</p>
+            </div>
+
           </div>
 
           <!-- Preis-Felder (nur anzeigen wenn App-Preis und nicht Fahrschule) -->
@@ -462,6 +484,7 @@ interface EventTypeRow {
   display_order?: number
   require_payment?: boolean
   public_bookable?: boolean
+  payment_method?: string | null
   is_default?: boolean
   default_price_rappen?: number
   default_fee_rappen?: number
@@ -494,6 +517,7 @@ const newEventType = ref({
   default_color: '#666666',
   require_payment: false,
   public_bookable: true,
+  payment_method: null as string | null,
   default_price_chf: 0,
   default_fee_chf: 0
 })
@@ -510,6 +534,7 @@ const openCreateModal = () => {
     default_color: '#666666',
     require_payment: false,
     public_bookable: true,
+    payment_method: null,
     default_price_chf: 0,
     default_fee_chf: 0
   }
@@ -571,6 +596,7 @@ const createEventType = async () => {
         default_color: newEventType.value.default_color,
         require_payment: newEventType.value.require_payment,
         public_bookable: newEventType.value.public_bookable,
+        payment_method: newEventType.value.payment_method || null,
         is_active: true, // Event Types sind immer aktiv wenn erstellt
         display_order: nextOrder,
         allowed_roles: ['staff', 'admin'],
@@ -620,7 +646,7 @@ const load = async () => {
 
     const { data, error } = await supabase
       .from('event_types')
-      .select('id, code, name, emoji, description, default_duration_minutes, default_color, is_active, display_order, require_payment, public_bookable, is_default, default_price_rappen, default_fee_rappen')
+      .select('id, code, name, emoji, description, default_duration_minutes, default_color, is_active, display_order, require_payment, public_bookable, is_default, default_price_rappen, default_fee_rappen, payment_method')
       .eq('tenant_id', tenantId)
       .order('display_order')
 
@@ -690,6 +716,7 @@ const saveEdit = async () => {
       is_active: editModel.value.is_active,
       require_payment: editModel.value.require_payment ?? false,
       public_bookable: (editModel.value as any).public_bookable ?? true,
+      payment_method: editModel.value.payment_method || null,
       // Convert CHF to Rappen
       default_price_rappen: editModel.value.require_payment ? Math.round((editModel.value.default_price_chf || 0) * 100) : 0,
       default_fee_rappen: editModel.value.require_payment ? Math.round((editModel.value.default_fee_chf || 0) * 100) : 0
