@@ -250,7 +250,7 @@ async function expectHttpError(run: () => Promise<unknown>, code: string, status
   } catch (err: unknown) {
     if (!isHttpError(err)) {
       const fallback = err instanceof Error ? err : new Error(String(err))
-      throw new Error(`expected HTTP ${status} ${code}, got ${fallback.message}\n${fallback.stack || ''}`)
+      throw new Error(`expected HTTP ${status} ${code}, got ${fallback.message}\n${fallback.stack || ''}`, { cause: err })
     }
     expect(err.statusCode).toBe(status)
     expect(err.data?.code).toBe(code)
