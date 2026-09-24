@@ -1157,7 +1157,7 @@
             <div class="px-5 pb-5 pt-3 border-t border-gray-100" style="padding-bottom: max(20px, env(safe-area-inset-bottom, 20px))">
               <button
                 @click="saveEditProfile"
-                :disabled="isSavingProfile"
+                :disabled="isSavingProfile || isLoadingProfile"
                 class="w-full py-3 rounded-2xl text-sm font-semibold text-white transition-opacity active:opacity-70 disabled:opacity-50 flex items-center justify-center gap-2"
                 :style="{ background: primaryColor }"
               >
@@ -2141,6 +2141,7 @@
 
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { logger } from '~/utils/logger'
+import { profileEditSubmitBlocked } from '~/utils/profile-save-guard'
 import { navigateTo } from '#app/composables/router'
 // ✅ Removed direct Supabase import - using secure APIs via useDatabaseQuery
 import Toast from '~/components/Toast.vue'
@@ -2455,6 +2456,12 @@ const openEditProfile = async () => {
 }
 
 const saveEditProfile = async () => {
+  if (profileEditSubmitBlocked({
+    isLoadingProfile: isLoadingProfile.value,
+    isSavingProfile: isSavingProfile.value,
+  })) {
+    return
+  }
   isSavingProfile.value = true
   editProfileError.value = null
   editProfileSuccess.value = false

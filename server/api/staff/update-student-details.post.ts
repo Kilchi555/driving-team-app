@@ -8,6 +8,11 @@ import {
   messageForUniqueConstraint
 } from '~/server/utils/student-contact-conflict'
 import logger from '~/utils/logger'
+import {
+  auditCategoryChange,
+  isCustomerCategoryEditRole,
+  isStringCategoryArray
+} from '~/server/utils/category-write-protection'
 
 /**
  * ✅ POST /api/staff/update-student-details
@@ -119,7 +124,7 @@ export default defineEventHandler(async (event) => {
     logger.debug('🔍 Checking student access for user_id:', user_id)
     const { data: student, error: studentError } = await supabaseAdmin
       .from('users')
-      .select('id, tenant_id')
+      .select('id, tenant_id, role, category')
       .eq('id', user_id)
       .single()
 
@@ -208,7 +213,22 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    if (category !== undefined) updateData.category = category
+    if (category !== undefined) {
+      if (!isStringCategoryArray(category)) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Kategorie muss eine Liste von Texten sein'
+        })
+      }
+      if (!isCustomerCategoryEditRole(student.role)) {
+        logger.warn('❌ Refusing category edit for non-customer role:', student.role)
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Not authorized - staff/admin only'
+        })
+      }
+      updateData.category = category
+    }
     // Empty string is invalid for Postgres date columns — store null instead
     if (birthdate !== undefined) {
       updateData.birthdate = typeof birthdate === 'string' && birthdate.trim() !== ''
@@ -239,6 +259,16 @@ export default defineEventHandler(async (event) => {
     }
 
     logger.debug('✅ Student details updated successfully:', { user_id, updated })
+
+    if (category !== undefined && isStringCategoryArray(category)) {
+      await auditCategoryChange(supabaseAdmin, {
+        performerId: userProfile.id,
+        targetUserId: user_id,
+        source: 'staff/update-student-details',
+        oldCategory: student.category,
+        newCategory: category
+      })
+    }
 
     return {
       success: true,
