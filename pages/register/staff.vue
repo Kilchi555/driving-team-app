@@ -1815,6 +1815,7 @@ onMounted(() => loadInvitation())
 </script>
 
 <style scoped>
+@reference "tailwindcss";
 .label  { @apply block text-sm font-medium text-gray-700 mb-1; }
 .input  { @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm; }
 .input:focus { outline: none; border-color: var(--brand, #7C3AED); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand, #7C3AED) 25%, transparent); }

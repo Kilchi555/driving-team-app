@@ -184,6 +184,7 @@ watch(() => props.isOpen, (newValue) => {
 </script>
 
 <style scoped>
+@reference "tailwindcss";
 .prose {
   @apply text-gray-700;
 }
