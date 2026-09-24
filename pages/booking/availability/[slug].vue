@@ -1145,7 +1145,7 @@
                 :class="selectedPaymentMethod === choice.key ? '' : 'border-gray-200'"
                 :style="selectedPaymentMethod === choice.key ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
               >
-                <input type="radio" v-model="selectedPaymentMethod" :value="choice.key" class="mt-1 mr-3" />
+                <input type="radio" v-model="selectedPaymentMethod" :value="choice.key" class="mt-1 mr-3" @change="paymentMethodTouched = true" />
                 <div>
                   <div class="font-medium text-gray-900">{{ choice.title }}</div>
                   <div class="text-sm text-gray-600">{{ choice.hint }}</div>
@@ -1336,7 +1336,7 @@
                 :class="selectedPaymentMethod === choice.key ? '' : 'border-gray-200'"
                 :style="selectedPaymentMethod === choice.key ? { borderColor: primaryColor, background: `${primaryColor}10` } : {}"
               >
-                <input type="radio" v-model="selectedPaymentMethod" :value="choice.key" class="mt-1 mr-3" />
+                <input type="radio" v-model="selectedPaymentMethod" :value="choice.key" class="mt-1 mr-3" @change="paymentMethodTouched = true" />
                 <div>
                   <div class="font-medium text-gray-900">{{ choice.title }}</div>
                   <div class="text-sm text-gray-600">{{ choice.hint }}</div>
@@ -1911,6 +1911,9 @@ import { publicBookingPayloadFromSelection } from '~/utils/booking-offer-identit
 type OnlinePayMethod = 'wallee' | 'invoice' | 'cash'
 const onlinePaymentMethods = ref<OnlinePayMethod[]>(['wallee'])
 const selectedPaymentMethod = ref<OnlinePayMethod>('wallee')
+const tenantDefaultOnlinePaymentMethod = ref<OnlinePayMethod>('wallee')
+const eventTypePaymentMethods = ref<Record<string, string | null>>({})
+const paymentMethodTouched = ref(false)
 const onlinePaymentChoiceLabels: Record<OnlinePayMethod, { title: string; hint: string }> = {
   wallee: { title: 'Online-Zahlung', hint: 'Kreditkarte, TWINT & mehr' },
   invoice: { title: 'Rechnung', hint: 'Du erhältst die Rechnung nach dem Termin per E-Mail.' },
@@ -2290,14 +2293,34 @@ function applyBookingInitPayload(payload: any) {
     )
     if (next.length > 0) onlinePaymentMethods.value = next
   }
+  eventTypePaymentMethods.value = payload.event_type_payment_methods || {}
   const defaultMethod = payload.default_online_payment_method
   if (
     (defaultMethod === 'wallee' || defaultMethod === 'invoice' || defaultMethod === 'cash')
     && onlinePaymentMethods.value.includes(defaultMethod)
   ) {
-    selectedPaymentMethod.value = defaultMethod
+    tenantDefaultOnlinePaymentMethod.value = defaultMethod
+    if (!paymentMethodTouched.value) selectedPaymentMethod.value = defaultMethod
   } else if (!onlinePaymentMethods.value.includes(selectedPaymentMethod.value)) {
     selectedPaymentMethod.value = onlinePaymentMethods.value[0]
+  }
+}
+
+function applyEventTypePaymentDefault(category: any) {
+  if (paymentMethodTouched.value || !category) return
+  const code = category._source === 'event_type'
+    ? (category.event_type_code || category.code)
+    : null
+  const override = category.payment_method || (code ? eventTypePaymentMethods.value[code] : null)
+  if (
+    (override === 'wallee' || override === 'invoice' || override === 'cash')
+    && onlinePaymentMethods.value.includes(override)
+  ) {
+    selectedPaymentMethod.value = override
+    return
+  }
+  if (onlinePaymentMethods.value.includes(tenantDefaultOnlinePaymentMethod.value)) {
+    selectedPaymentMethod.value = tenantDefaultOnlinePaymentMethod.value
   }
 }
 
@@ -2454,6 +2477,9 @@ function getInitials(name: string) {
 
 const selectedMainCategory = ref<any>(null)  // NEW: Main category (B Auto, A Auto)
 const selectedCategory = ref<any>(null)      // CHANGED: Now represents selected subcategory
+watch(selectedCategory, (category) => {
+  applyEventTypePaymentDefault(category)
+})
 const selectedLocation = ref<any>(null)
 const selectedCanton = ref<string | null>(null)
 const hoveredCanton = ref<string | null>(null)
