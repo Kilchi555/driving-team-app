@@ -10,6 +10,7 @@ import {
   resolveEffectiveWorkingHours,
   utcCivilDate,
   validateExceptionDays,
+  zurichCivilDate,
   type EffectiveException,
   type EffectiveWeeklyHour,
 } from '../../../utils/effective-working-hours'
@@ -151,6 +152,9 @@ describe('resolveEffectiveWorkingHours', () => {
     expect(autumnBefore.toISOString()).toBe('2026-10-24T08:00:00.000Z')
     expect(autumnAfter.toISOString()).toBe('2026-10-25T09:00:00.000Z')
     expect(civilDayOfWeek('2026-10-25')).toBe(7)
+    expect(zurichCivilDate(new Date('2026-10-24T22:30:00.000Z'))).toBe('2026-10-25')
+    expect(utcCivilDate(new Date('2026-10-24T22:30:00.000Z'))).toBe('2026-10-24')
+    expect(zurichCivilDate(autumnAfter)).toBe('2026-10-25')
   })
 
   it('paints gaps outside effective intervals, including a fully closed day', () => {
@@ -217,6 +221,8 @@ describe('availability integration contracts', () => {
   it('resolves effective hours inside generateSlots and still subtracts the existing blockers', () => {
     expect(calculator).toContain('resolveEffectiveWorkingHours')
     expect(calculator).toContain('loadWorkingHourExceptions')
+    expect(calculator).toContain('tenantId is required to resolve working-hour exceptions')
+    expect(calculator).not.toContain('Skipping working-hour exceptions because tenantId is missing')
     expect(calculator).toContain(".eq('tenant_id', tenantId)")
     expect(calculator).toContain('hasConflict')
     expect(calculator).toContain('isWithinTimeWindows')

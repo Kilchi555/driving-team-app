@@ -586,10 +586,10 @@ export class AvailabilityCalculator {
     endDate: Date,
   ): Promise<Map<string, EffectiveException>> {
     const map = new Map<string, EffectiveException>()
-    if (!tenantId || staffIds.length === 0) {
-      if (!tenantId) {
-        logger.warn('⚠️ Skipping working-hour exceptions because tenantId is missing')
-      }
+    if (!tenantId) {
+      throw new Error('tenantId is required to resolve working-hour exceptions')
+    }
+    if (staffIds.length === 0) {
       return map
     }
 

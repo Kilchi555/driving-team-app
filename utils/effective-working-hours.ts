@@ -66,15 +66,19 @@ export function utcCivilDate(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-/** Today's civil date in Europe/Zurich. */
-export function zurichTodayCivilDate(now: Date = new Date()): string {
-  const formatted = new Intl.DateTimeFormat('en-CA', {
+/** Civil date of an instant in Europe/Zurich. Host timezone and UTC date parts are irrelevant. */
+export function zurichCivilDate(instant: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
     timeZone: EXCEPTION_TIMEZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(now)
-  return formatted
+  }).format(instant)
+}
+
+/** Today's civil date in Europe/Zurich. */
+export function zurichTodayCivilDate(now: Date = new Date()): string {
+  return zurichCivilDate(now)
 }
 
 export function normalizeWallTime(raw: string): string {

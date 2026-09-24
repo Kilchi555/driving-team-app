@@ -201,6 +201,13 @@ test.describe('working-hour exceptions', () => {
     await expect(sheet.getByRole('radio', { name: 'Ganzer Tag geschlossen' })).toBeChecked()
     await sheet.getByRole('radio', { name: 'Normale Arbeitszeit' }).check()
     await sheet.getByRole('button', { name: 'Normale Arbeitszeit wiederherstellen' }).click()
+    const confirm = page.getByTestId('working-hour-exception-restore-confirm')
+    await expect(confirm).toContainText('Diese Ausnahme wird gelöscht. Danach gelten wieder die normalen Wochenarbeitszeiten.')
+    await confirm.getByRole('button', { name: 'Abbrechen' }).click()
+    await expect(confirm).toBeHidden()
+    await expect(sheet.getByRole('radio', { name: 'Normale Arbeitszeit' })).toBeChecked()
+    await sheet.getByRole('button', { name: 'Normale Arbeitszeit wiederherstellen' }).click()
+    await page.getByTestId('confirm-restore-weekly-hours').click()
     await expect(sheet).toBeHidden()
 
     await page.getByRole('button', { name: 'Ausnahmen für Freitag bearbeiten' }).click()

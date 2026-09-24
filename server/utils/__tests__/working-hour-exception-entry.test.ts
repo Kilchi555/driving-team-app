@@ -79,6 +79,8 @@ describe('staff profile exception entry', () => {
     expect(sheet).toContain('Eigene Arbeitszeit')
     expect(sheet).toContain('Ganzer Tag geschlossen')
     expect(sheet).toContain('Normale Arbeitszeit wiederherstellen')
+    expect(sheet).toContain('Diese Ausnahme wird gelöscht. Danach gelten wieder die normalen Wochenarbeitszeiten.')
+    expect(sheet).toContain('confirm-restore-weekly-hours')
     expect(sheet).toContain("action: 'upsert_many'")
     expect(sheet).toContain("action: 'delete'")
     expect(sheet).not.toContain('staff_working_hours')

@@ -61,6 +61,16 @@ const startWeekdayLabel = computed(() => {
 const savePlan = computed(() => planExceptionSave(days.value))
 const willWrite = computed(() => savePlan.value.deletes.length + savePlan.value.upserts.length > 0)
 const restoreLabel = computed(() => savePlan.value.upserts.length === 0 && savePlan.value.deletes.length > 0)
+const confirmRestore = ref(false)
+const restoreDatesLabel = computed(() => savePlan.value.deletes
+  .map((date) => {
+    try {
+      return formatExceptionDateLabel(date)
+    } catch {
+      return date
+    }
+  })
+  .join(', '))
 
 watch(() => [props.visible, props.initialDate, props.staffId] as const, async ([visible, date, staffId], previous) => {
   if (!visible || !date || !staffId) return
@@ -163,6 +173,25 @@ async function applyRange() {
   }
 }
 
+function requestSave() {
+  if (!props.staffId || days.value.length === 0 || saving.value || loading.value) return
+  if (multi.value && rangeEnd.value > startDate.value && days.value.length < 2) {
+    errorMessage.value = 'Bitte «Tage laden», bevor die Ausnahme für mehrere Tage gespeichert wird.'
+    return
+  }
+  const plan = planExceptionSave(days.value)
+  if (plan.deletes.length === 0 && plan.upserts.length === 0) return
+  if (plan.deletes.length > 0) {
+    confirmRestore.value = true
+    return
+  }
+  void persist(plan)
+}
+
+function cancelRestore() {
+  confirmRestore.value = false
+}
+
 async function save() {
   if (!props.staffId || days.value.length === 0 || saving.value || loading.value) return
   if (multi.value && rangeEnd.value > startDate.value && days.value.length < 2) {
@@ -171,6 +200,16 @@ async function save() {
   }
   const plan = planExceptionSave(days.value)
   if (plan.deletes.length === 0 && plan.upserts.length === 0) return
+  confirmRestore.value = false
+  await persist(plan)
+}
+
+async function persist(plan: ReturnType<typeof planExceptionSave>) {
+  const overlap = plan.deletes.filter((date) => plan.upserts.some((day) => day.date === date))
+  if (overlap.length > 0) {
+    errorMessage.value = 'Ein Tag kann nicht gleichzeitig ersetzt und gelöscht werden.'
+    return
+  }
   saving.value = true
   errorMessage.value = ''
   try {
@@ -341,10 +380,42 @@ function germanMessage(error: unknown): string {
             type="button"
             class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-900 disabled:opacity-50"
             :disabled="saving || loading || days.length === 0 || !willWrite"
-            @click="save"
+            @click="requestSave"
           >
             {{ restoreLabel ? 'Normale Arbeitszeit wiederherstellen' : 'Speichern' }}
           </button>
+        </div>
+      </div>
+
+      <div
+        v-if="confirmRestore"
+        class="fixed inset-0 z-[570] bg-black/50 flex items-end md:items-center justify-center p-4"
+        data-testid="working-hour-exception-restore-confirm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="working-hour-exception-restore-title"
+      >
+        <div class="bg-white rounded-t-3xl md:rounded-2xl w-full max-w-md shadow-2xl p-5 space-y-4">
+          <h3 id="working-hour-exception-restore-title" class="text-base font-semibold text-gray-900">Ausnahme löschen</h3>
+          <p class="text-sm text-gray-700">
+            Diese Ausnahme wird gelöscht. Danach gelten wieder die normalen Wochenarbeitszeiten.
+          </p>
+          <p v-if="restoreDatesLabel" class="text-sm text-gray-500">{{ restoreDatesLabel }}</p>
+          <p class="text-xs text-gray-500">Der Wochenplan selbst bleibt unverändert.</p>
+          <div class="flex items-center justify-end gap-3">
+            <button type="button" class="px-4 py-2 rounded-lg text-sm border border-gray-300" @click="cancelRestore">
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-gray-900 disabled:opacity-50"
+              data-testid="confirm-restore-weekly-hours"
+              :disabled="saving"
+              @click="save"
+            >
+              Ausnahme löschen
+            </button>
+          </div>
         </div>
       </div>
     </div>
