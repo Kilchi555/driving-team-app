@@ -1,7 +1,5 @@
-import { defineEventHandler, readBody } from 'h3'
+import { createError, defineEventHandler, readBody } from 'h3'
 import { Resend } from 'resend'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
 
 interface PriceCalculationRequest {
   email: string
@@ -20,6 +18,16 @@ export default defineEventHandler(async (event) => {
       statusMessage: 'Email und Kategorie sind erforderlich',
     })
   }
+
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'E-Mail-Dienst ist nicht konfiguriert',
+    })
+  }
+
+  const resend = new Resend(apiKey)
 
   try {
     const htmlContent = `
