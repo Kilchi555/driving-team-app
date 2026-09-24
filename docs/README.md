@@ -2,6 +2,20 @@
 
 Diese Dokumentation bietet einen umfassenden Überblick über die gesamte Driving Team App mit allen Funktionen, Zusammenhängen, Datenbanktabellen und Policies.
 
+## 🛠 Engineering Runbooks (aktuell)
+
+Kurzdokumente für kürzlich geänderte Subsysteme — Intent, Codepaths, Constraints:
+
+| Doc | Thema |
+|-----|--------|
+| [CUSTOMER_ACCOUNT_DELETION.md](./CUSTOMER_ACCOUNT_DELETION.md) | In-App Kontolöschung + Block bei offenen Forderungen |
+| [STAFF_DISCOUNTS.md](./STAFF_DISCOUNTS.md) | Manuelle Staff-Rabatte, Verwendet-Tab, First-Lesson-Promos |
+| [TENANT_SETUP_DIAGNOSTICS.md](./TENANT_SETUP_DIAGNOSTICS.md) | Super-Admin Setup-Diagnose & Support-Actions |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Client-Session-Cache / HMR |
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Passkey-Notfall-Recovery |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Wallee Payment Recovery |
+| [PAYMENT_PROVIDERS.md](./PAYMENT_PROVIDERS.md) | Zahlungsanbieter-Überblick |
+
 ## 📋 CSV-Dateien
 
 ### 1. **APP_DOCUMENTATION.csv**
