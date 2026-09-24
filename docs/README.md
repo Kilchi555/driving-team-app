@@ -347,3 +347,30 @@ Bei Änderungen am System:
 **Dokumentation erstellt:** 2026-02-26  
 **Aktuelle App-Version:** Production-Ready  
 **Technologie Stack:** Nuxt 3 + Supabase + Wallee
+
+---
+
+## Engineering Runbooks
+
+Focused ops notes verified against source. Prefer these over stale root `*.md` reports when debugging.
+
+| Runbook | Covers |
+|---------|--------|
+| [IMPACT_ANALYSIS.md](./IMPACT_ANALYSIS.md) | Implementation Gate / Activation Policy; `.cursor/docs/*` maps (#143) |
+| [SHIP_TO_MAIN.md](./SHIP_TO_MAIN.md) | Production path; required **Test and lint** / **E2E login**; auto-merge disabled (#222) |
+
+Also see existing runbooks in this folder (e.g. [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md), [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md), [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md)).
+
+### Impact / architecture maps (#143)
+
+Canonical Cursor inputs for elevated-risk work (code still wins on conflict):
+
+| Doc | Use for |
+|-----|---------|
+| `.cursor/docs/architecture-hotspots.md` | P0/P1/P2 hotspots |
+| `.cursor/docs/change-risk-guide.md` | LOW → CRITICAL change risk |
+| `.cursor/docs/dependency-map.md` | Shared hubs / chains |
+| `.cursor/docs/system-map.md` | Auth, tenant, payment flows |
+| `.cursor/docs/impact-matrix.md` | Area × risk matrix |
+| `.cursor/rules/impact-analysis.mdc` | Full gate rule |
+| `.cursor/rules/ship-to-main.mdc` | Always-on ship reminder |
