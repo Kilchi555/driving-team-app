@@ -702,6 +702,7 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
+@reference "tailwindcss";
 .admin-layout {
   min-height: 100vh;
   display: flex;

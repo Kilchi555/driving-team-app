@@ -646,6 +646,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+@reference "tailwindcss";
 .office-register-card {
   @apply bg-white rounded-lg shadow-sm border p-6 transition-all duration-200;
 }

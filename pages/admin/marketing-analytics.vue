@@ -6,7 +6,7 @@
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Marketing Analytics</h1>
         <p class="text-sm text-gray-500 mt-1">Google Ads · Meta Ads · GA4 · Search Console · Buchungsfunnel</p>
       </div>
-      <USelect v-model="days" :options="dayOptions" option-attribute="label" value-attribute="value" class="w-36" />
+      <USelect v-model="days" :items="dayOptions" label-key="label" value-key="value" class="w-36" />
     </div>
 
     <!-- Loading -->
@@ -191,11 +191,14 @@
         <template #meta-ads>
           <div class="mt-4">
             <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3">Kampagnen Performance</h3>
-            <UTable
-              :rows="metaAdsCampaigns"
-              :columns="metaAdsColumns"
-              :empty-state="{ icon: 'i-heroicons-chart-bar', label: 'Keine Meta Ads Daten – Credentials noch nicht konfiguriert.' }"
-            />
+            <UTable :data="metaAdsCampaigns" :columns="metaAdsColumns">
+              <template #empty>
+                <div class="flex flex-col items-center gap-2 py-6 text-sm text-gray-400">
+                  <UIcon name="i-heroicons-chart-bar" class="w-5 h-5" />
+                  <span>Keine Meta Ads Daten – Credentials noch nicht konfiguriert.</span>
+                </div>
+              </template>
+            </UTable>
             <div v-if="data.summary.metaRealBookings > 0" class="mt-3 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
               <strong>{{ data.summary.metaRealBookings }}</strong> Buchungen via Meta zugeschrieben ·
               CPA CHF {{ data.summary.metaCPA?.toFixed(2) ?? '–' }} ·
@@ -208,11 +211,14 @@
         <template #ga4>
           <div class="mt-4">
             <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3">Traffic nach Kanal</h3>
-            <UTable
-              :rows="ga4Rows"
-              :columns="ga4Columns"
-              :empty-state="{ icon: 'i-heroicons-chart-bar', label: 'Keine GA4 Daten – Credentials noch nicht konfiguriert.' }"
-            />
+            <UTable :data="ga4Rows" :columns="ga4Columns">
+              <template #empty>
+                <div class="flex flex-col items-center gap-2 py-6 text-sm text-gray-400">
+                  <UIcon name="i-heroicons-chart-bar" class="w-5 h-5" />
+                  <span>Keine GA4 Daten – Credentials noch nicht konfiguriert.</span>
+                </div>
+              </template>
+            </UTable>
           </div>
         </template>
 
@@ -220,11 +226,14 @@
         <template #gsc>
           <div class="mt-4">
             <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3">Top Keywords (organisch)</h3>
-            <UTable
-              :rows="gscTopQueries"
-              :columns="gscColumns"
-              :empty-state="{ icon: 'i-heroicons-magnifying-glass', label: 'Keine Search Console Daten – Credentials noch nicht konfiguriert.' }"
-            />
+            <UTable :data="gscTopQueries" :columns="gscColumns">
+              <template #empty>
+                <div class="flex flex-col items-center gap-2 py-6 text-sm text-gray-400">
+                  <UIcon name="i-heroicons-magnifying-glass" class="w-5 h-5" />
+                  <span>Keine Search Console Daten – Credentials noch nicht konfiguriert.</span>
+                </div>
+              </template>
+            </UTable>
           </div>
         </template>
 
@@ -312,12 +321,12 @@ const keywordsTable = computed(() =>
 
 // ── Meta Ads ─────────────────────────────────────────────────────────────────
 const metaAdsColumns = [
-  { key: 'campaign_name', label: 'Kampagne' },
-  { key: 'spend', label: 'Ausgaben (CHF)' },
-  { key: 'clicks', label: 'Klicks' },
-  { key: 'impressions', label: 'Impressionen' },
-  { key: 'reach', label: 'Reichweite' },
-  { key: 'ctr', label: 'CTR' },
+  { accessorKey: 'campaign_name', header: 'Kampagne' },
+  { accessorKey: 'spend', header: 'Ausgaben (CHF)' },
+  { accessorKey: 'clicks', header: 'Klicks' },
+  { accessorKey: 'impressions', header: 'Impressionen' },
+  { accessorKey: 'reach', header: 'Reichweite' },
+  { accessorKey: 'ctr', header: 'CTR' },
 ]
 
 const metaAdsCampaigns = computed(() => {
@@ -340,12 +349,12 @@ const metaAdsCampaigns = computed(() => {
 
 // ── GA4 ──────────────────────────────────────────────────────────────────────
 const ga4Columns = [
-  { key: 'date', label: 'Datum' },
-  { key: 'channel', label: 'Kanal' },
-  { key: 'sessions', label: 'Sessions' },
-  { key: 'users', label: 'Nutzer' },
-  { key: 'conversions', label: 'Conversions' },
-  { key: 'engagement_rate_fmt', label: 'Engagement' },
+  { accessorKey: 'date', header: 'Datum' },
+  { accessorKey: 'channel', header: 'Kanal' },
+  { accessorKey: 'sessions', header: 'Sessions' },
+  { accessorKey: 'users', header: 'Nutzer' },
+  { accessorKey: 'conversions', header: 'Conversions' },
+  { accessorKey: 'engagement_rate_fmt', header: 'Engagement' },
 ]
 
 const ga4Rows = computed(() =>
@@ -357,11 +366,11 @@ const ga4Rows = computed(() =>
 
 // ── Search Console ────────────────────────────────────────────────────────────
 const gscColumns = [
-  { key: 'query', label: 'Keyword' },
-  { key: 'clicks', label: 'Klicks' },
-  { key: 'impressions', label: 'Impressionen' },
-  { key: 'ctr_fmt', label: 'CTR' },
-  { key: 'position_fmt', label: 'Ø Position' },
+  { accessorKey: 'query', header: 'Keyword' },
+  { accessorKey: 'clicks', header: 'Klicks' },
+  { accessorKey: 'impressions', header: 'Impressionen' },
+  { accessorKey: 'ctr_fmt', header: 'CTR' },
+  { accessorKey: 'position_fmt', header: 'Ø Position' },
 ]
 
 const gscTopQueries = computed(() => {
