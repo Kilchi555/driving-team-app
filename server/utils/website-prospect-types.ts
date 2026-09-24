@@ -144,6 +144,9 @@ export type WebsiteProspectRow = {
   website_id: string | null
   preview_url: string | null
   preview_token: string | null
+  claim_token_hash: string | null
+  claim_expires_at: string | null
+  claim_revoked_at: string | null
   matched_tenant_id: string | null
   notes: string | null
   reviewed_by: string | null

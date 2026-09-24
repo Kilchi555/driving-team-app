@@ -55,7 +55,16 @@ export default defineEventHandler(async (event) => {
   if (session.metadata?.product === 'website') {
     const { applyWebsiteCheckoutSession } = await import('~/server/utils/website-billing')
     const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || 'https://app.simy.ch'
-    await applyWebsiteCheckoutSession({ supabase, stripe, session, baseUrl })
+    const applied = await applyWebsiteCheckoutSession({
+      supabase,
+      stripe,
+      session,
+      baseUrl,
+      expectedTenantId: tenantId,
+    })
+    if (!applied) {
+      throw createError({ statusCode: 403, statusMessage: 'Website-Checkout gehört nicht zu diesem Tenant' })
+    }
     return { synced: true, plan: 'website', tenantId }
   }
 

@@ -26,15 +26,15 @@
         </NuxtLink>
         <button v-if="tenant?.website_status === 'pending_review'" @click="showApproveModal = true"
           class="sa-btn-success">
-          ✅ Freigeben & Link senden
+          ✅ QA freigeben
         </button>
         <button v-else-if="tenant?.website_status === 'approved' || tenant?.website_status === 'live'"
-          @click="setStatus('disabled')" class="sa-btn-danger">
+          @click="setQaDecision('disabled')" class="sa-btn-danger">
           Deaktivieren
         </button>
         <button v-else-if="tenant?.website_status === 'disabled'"
-          @click="setStatus('live')" class="sa-btn-amber">
-          Reaktivieren
+          @click="setQaDecision('rejected')" class="sa-btn-amber">
+          Erneut zur Prüfung
         </button>
       </div>
     </div>
@@ -243,7 +243,7 @@
             <NuxtLink :to="`/tenant-admin/tenants`" class="sa-quick-link">
               ⚙️ Tenant-Einstellungen
             </NuxtLink>
-            <button @click="setStatus('pending_review')" class="sa-quick-link text-left w-full">
+            <button @click="setQaDecision('rejected')" class="sa-quick-link text-left w-full">
               🔄 Zurück auf "Ausstehend"
             </button>
           </div>
@@ -266,7 +266,7 @@
           <div class="sa-modal">
             <div class="sa-modal-header">
               <h3 class="sa-modal-title">Website freigeben</h3>
-              <p class="sa-modal-sub">Ein Link wird an den Kunden gesendet.</p>
+              <p class="sa-modal-sub">Interne QA-Freigabe. Live bleibt hinter Zahlung und Publish-Gate.</p>
             </div>
             <div class="sa-modal-body space-y-4">
               <div class="sa-info-card">
@@ -281,8 +281,8 @@
               </div>
             </div>
             <div class="sa-modal-footer">
-              <button @click="approveAndSendEmail" :disabled="approving" class="sa-btn-success">
-                {{ approving ? 'Sende…' : '✅ Freigeben & E-Mail senden' }}
+              <button @click="setQaDecision('approved')" :disabled="approving" class="sa-btn-success">
+                {{ approving ? 'Speichere…' : '✅ QA freigeben' }}
               </button>
               <button @click="showApproveModal = false" class="sa-btn-ghost">Abbrechen</button>
             </div>
@@ -454,43 +454,22 @@ const save = async () => {
   saving.value = false
 }
 
-const setStatus = async (status: string) => {
-  const { error } = await supabase
-    .from('tenants')
-    .update({ website_status: status })
-    .eq('id', tenantId)
-  if (!error) { tenant.value.website_status = status; showSuccess('Status aktualisiert') }
-}
-
-const approveAndSendEmail = async () => {
+const setQaDecision = async (decision: 'approved' | 'rejected' | 'disabled') => {
   approving.value = true
   try {
-    // 1. Update website_status to 'approved'
-    await supabase.from('tenants').update({
-      website_status: 'approved',
-      website_approved_at: new Date().toISOString(),
-    }).eq('id', tenantId)
-
-    // 2. Send email via existing email endpoint
-    await $fetch('/api/notifications/website-approved', {
+    const res = await $fetch<any>(`/api/tenant-admin/websites/${tenantId}/qa`, {
       method: 'POST',
-      body: {
-        tenant_id: tenantId,
-        tenant_name: tenant.value.name,
-        tenant_email: tenant.value.contact_email,
-        tenant_slug: tenant.value.slug,
-        message: approveMessage.value,
-      },
-    }).catch(() => {
-      // Email endpoint may not exist yet — continue anyway
+      headers: await authHeaders(),
+      body: { decision },
     })
-
-    tenant.value.website_status = 'approved'
-    tenant.value.website_approved_at = new Date().toISOString()
+    if (res?.tenant) {
+      tenant.value.website_status = res.tenant.website_status
+      tenant.value.website_approved_at = res.tenant.website_approved_at
+    }
     showApproveModal.value = false
-    showSuccess('Freigegeben!', 'E-Mail wurde an den Kunden gesendet.')
+    showSuccess('QA aktualisiert', decision === 'approved' ? 'Website intern freigegeben.' : 'Status gespeichert.')
   } catch (e: any) {
-    showError('Fehler', e.message)
+    showError('Fehler', e?.data?.statusMessage || e.message)
   }
   approving.value = false
 }

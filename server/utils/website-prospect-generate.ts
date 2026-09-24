@@ -12,6 +12,7 @@ import {
 } from '~/server/utils/website-prospect-architecture'
 import { ingestProspectMedia } from '~/server/utils/website-prospect-media'
 import { fillProspectSectionPhotos } from '~/server/utils/website-prospect-stock'
+import { mintClaimForGenerate, websiteProspectGenerateBindingFields } from '~/server/utils/website-lifecycle'
 import type { ProspectArchitecture, WebsiteProspectRow } from '~/server/utils/website-prospect-types'
 
 type SupabaseAdmin = ReturnType<typeof getSupabaseAdmin>
@@ -40,7 +41,9 @@ async function nextCustomerNumber(supabase: SupabaseAdmin) {
   return `WP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Date.now().toString(36).slice(-4)}`
 }
 
-export async function generateWebsiteProspectSite(prospectId: string) {
+export async function generateWebsiteProspectSite(
+  prospectId: string,
+): Promise<WebsiteProspectRow & { claim_token?: string }> {
   const supabase = getSupabaseAdmin()
   const { data: prospect, error } = await supabase
     .from('website_prospects')
@@ -413,18 +416,23 @@ async function finishProspectSite(opts: {
     findings: prospect.analysis?.findings || [],
   })
 
+  const remintClaim = !prospect.claimed_at
+  const mintedClaim = remintClaim ? mintClaimForGenerate() : null
+  const updateFields = websiteProspectGenerateBindingFields({
+    tenantId: tenant.id,
+    websiteId: website.id,
+    previewUrl,
+    analysis,
+    emailDraft,
+    place: place?.photos ? place : prospect.place,
+    now,
+    claim: mintedClaim || { hash: '', expiresAt: new Date() },
+    remintClaim,
+  })
+
   const { data: updated, error: updateError } = await supabase
     .from('website_prospects')
-    .update({
-      tenant_id: tenant.id,
-      website_id: website.id,
-      preview_url: previewUrl,
-      analysis,
-      email_draft: emailDraft,
-      place: place?.photos ? place : prospect.place,
-      status: 'review',
-      updated_at: now,
-    })
+    .update(updateFields)
     .eq('id', prospect.id)
     .select('*')
     .single()
@@ -433,5 +441,16 @@ async function finishProspectSite(opts: {
     throw createError({ statusCode: 500, statusMessage: updateError?.message || 'Prospect-Update fehlgeschlagen' })
   }
 
-  return updated as WebsiteProspectRow
+  const { recordWebsiteLifecycleEvent } = await import('~/server/utils/website-lifecycle-audit')
+  await recordWebsiteLifecycleEvent({
+    supabase,
+    event: 'website_generated',
+    websiteId: website.id,
+    tenantId: tenant.id,
+    metadata: { prospect_id: prospect.id },
+  }).catch(() => undefined)
+
+  return mintedClaim
+    ? ({ ...updated, claim_token: mintedClaim.token } as WebsiteProspectRow & { claim_token: string })
+    : (updated as WebsiteProspectRow)
 }

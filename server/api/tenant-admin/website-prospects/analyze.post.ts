@@ -18,7 +18,8 @@ export default defineEventHandler(async (event) => {
 
   try {
     const generated = await generateWebsiteProspectSite(prospect.id)
-    return { success: true, prospect: generated, generated: true }
+    const { claim_token, ...next } = generated
+    return { success: true, prospect: next, generated: true, claim_token: claim_token || null }
   } catch (err: any) {
     return {
       success: true,

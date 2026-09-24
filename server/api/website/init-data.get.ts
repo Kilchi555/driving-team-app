@@ -9,6 +9,7 @@ import { filterLeafCategories } from '~/server/utils/category-groups'
 import { loadWebsiteServices } from '~/server/utils/website-services'
 import { hasUsableGoogleReviews, usableGoogleReviewPlaces } from '~/utils/website-google-reviews'
 import { loadWebsitePublicLocations } from '~/server/utils/website-public-tenant'
+import { overlayEditorDraftPage } from '~/server/utils/website-page-draft'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -65,17 +66,20 @@ export default defineEventHandler(async (event) => {
     if (website?.id) {
       const { data: homePage } = await supabase
         .from('website_pages')
-        .select('blocks, seo_title, seo_description, seo_keywords')
+        .select('blocks, seo_title, seo_description, seo_keywords, addon_inputs')
         .eq('website_id', website.id)
         .eq('is_home', true)
         .maybeSingle()
-      const landing = homePage?.blocks as any
+      const editorHome = homePage
+        ? overlayEditorDraftPage(homePage, website.is_published === true)
+        : homePage
+      const landing = editorHome?.blocks as any
       if (landing?.brand?.formal_address === 'du') formalAddress = 'du'
-      if (landing?.seo || homePage?.seo_title) {
+      if (landing?.seo || editorHome?.seo_title) {
         existingSeo = {
-          title: landing?.seo?.title || homePage?.seo_title || undefined,
-          description: landing?.seo?.description || homePage?.seo_description || undefined,
-          keywords: landing?.seo?.keywords || homePage?.seo_keywords || undefined,
+          title: landing?.seo?.title || editorHome?.seo_title || undefined,
+          description: landing?.seo?.description || editorHome?.seo_description || undefined,
+          keywords: landing?.seo?.keywords || editorHome?.seo_keywords || undefined,
         }
       }
       const servicesBlock = Array.isArray(landing?.blocks)

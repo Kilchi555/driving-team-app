@@ -3,7 +3,6 @@
 
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
-import { notifySuperadminsWebsitePublished } from '~/server/utils/website-publish-notify'
 import {
   applySlotPatch,
   getSlotValues,
@@ -11,6 +10,11 @@ import {
   WEBSITE_TEMPLATE_ID,
 } from '~/utils/website-slot-schema'
 import { applyWebsiteEditorExtras } from '~/server/utils/website-apply-editor-extras'
+import {
+  buildWebsitePageContentWrite,
+  editorSourceBlocks,
+  publishedWebsiteProtectsLiveBlocks,
+} from '~/server/utils/website-page-draft'
 
 function appBaseUrl(event: any) {
   const fromEnv =
@@ -66,7 +70,15 @@ export default defineEventHandler(async (event) => {
 
   const { data: page } = await pageQuery.maybeSingle()
 
-  if (!page || !isLandingPayload(page.blocks)) {
+  const websiteIsPublished = publishedWebsiteProtectsLiveBlocks(website)
+  if (!page) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Page payload missing — Editor neu laden.',
+    })
+  }
+  const sourceBlocks = editorSourceBlocks(page, websiteIsPublished)
+  if (!isLandingPayload(sourceBlocks)) {
     throw createError({
       statusCode: 404,
       statusMessage: 'Page payload missing — Editor neu laden.',
@@ -75,7 +87,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: tenantRow } = await supabase
     .from('tenants')
-    .select('website_only, website_setup_paid_at, website_hosting_plan, trial_ends_at')
+    .select('website_only, website_setup_paid_at, website_hosting_plan, trial_ends_at, website_status')
     .eq('id', user.tenant_id)
     .maybeSingle()
   if (publish) {
@@ -103,7 +115,7 @@ export default defineEventHandler(async (event) => {
   let applied: string[] = []
   let nextPayload
   try {
-    const result = applySlotPatch(page.blocks, slots)
+    const result = applySlotPatch(sourceBlocks, slots)
     nextPayload = result.payload
     applied = result.applied
     if (isHome && body?.extras && typeof body.extras === 'object') {
@@ -123,25 +135,31 @@ export default defineEventHandler(async (event) => {
   }
 
   const now = new Date().toISOString()
+  const alreadyLive = websiteIsPublished
+  const write = buildWebsitePageContentWrite({
+    websiteIsPublished,
+    currentPage: page,
+    nextBlocks: nextPayload,
+    nextSeoTitle: nextPayload.seo.title,
+    nextSeoDescription: nextPayload.seo.description,
+    nextSeoKeywords: nextPayload.seo.keywords,
+    nextIsPublished: page.is_published,
+    nextPublishedAt: page.published_at,
+    now,
+  })
   const { error: pageError } = await supabase
     .from('website_pages')
-    .update({
-      blocks: nextPayload,
-      seo_title: nextPayload.seo.title,
-      seo_description: nextPayload.seo.description,
-      seo_keywords: nextPayload.seo.keywords,
-      is_published: publish ? true : page.is_published,
-      published_at: publish ? now : page.published_at,
-      updated_at: now,
-    })
+    .update(write.pageUpdate)
     .eq('id', page.id)
+    .eq('website_id', website.id)
 
   if (pageError) {
     throw createError({ statusCode: 500, statusMessage: pageError.message })
   }
 
-  // Sync brand/SEO to website_tenants only for home page
-  if (isHome) {
+  // Sync brand/SEO to website_tenants only for home page, and only while unpublished.
+  // Live sites keep website_tenants public fields aligned with website_pages.blocks.
+  if (isHome && write.allowWebsitePublicSync) {
     const websiteUpdate: Record<string, any> = {
       seo_title: nextPayload.seo.title,
       seo_description: nextPayload.seo.description,
@@ -153,33 +171,16 @@ export default defineEventHandler(async (event) => {
       hero_image_url: nextPayload.brand.hero_image_url,
       updated_at: now,
     }
-    if (publish) {
-      websiteUpdate.is_published = true
-      websiteUpdate.last_published_at = now
-      websiteUpdate.addon_pages_enabled = true
-    }
     await supabase.from('website_tenants').update(websiteUpdate).eq('id', website.id)
-
-    if (body?.extras && typeof body.extras === 'object' && 'whatsapp_phone' in body.extras) {
-      const raw = String((body.extras as { whatsapp_phone?: unknown }).whatsapp_phone || '').trim()
-      await supabase
-        .from('tenants')
-        .update({ whatsapp_phone: raw || null, updated_at: now })
-        .eq('id', user.tenant_id)
-    }
-  } else if (publish && !website.is_published) {
-    // Publishing an add-on implies site is live
-    await supabase
-      .from('website_tenants')
-      .update({ is_published: true, last_published_at: now, updated_at: now })
-      .eq('id', website.id)
   }
 
-  const { data: tenant } = await supabase
-    .from('tenants')
-    .select('id, name, slug')
-    .eq('id', user.tenant_id)
-    .maybeSingle()
+  if (isHome && body?.extras && typeof body.extras === 'object' && 'whatsapp_phone' in body.extras) {
+    const raw = String((body.extras as { whatsapp_phone?: unknown }).whatsapp_phone || '').trim()
+    await supabase
+      .from('tenants')
+      .update({ whatsapp_phone: raw || null, updated_at: now })
+      .eq('id', user.tenant_id)
+  }
 
   const base = appBaseUrl(event)
   const path =
@@ -194,30 +195,22 @@ export default defineEventHandler(async (event) => {
         : `https://${website.custom_domain}/${encodeURIComponent(page.slug)}`
       : `${base}${path}`
 
-  if (publish) {
-    await supabase.from('tenants').update({ website_status: 'live' }).eq('id', user.tenant_id)
-    if (isHome) {
-      try {
-        const { ensureWebsiteSeoPages } = await import('~/server/utils/website-ensure-seo-pages')
-        const { data: fullTenant } = await supabase.from('tenants').select('*').eq('id', user.tenant_id).maybeSingle()
-        await ensureWebsiteSeoPages(supabase, {
-          website: { ...website, addon_pages_enabled: true },
-          tenant: fullTenant || tenant,
-          baseUrl: base,
-          publish: true,
-        })
-      } catch (err: any) {
-        console.warn('[slots-save] seo pages skipped:', err?.message)
-      }
+  if (publish && !alreadyLive) {
+    const { publishWebsiteForTenant } = await import('~/server/utils/website-billing')
+    const published = await publishWebsiteForTenant(supabase, user.tenant_id, base)
+    return {
+      success: true,
+      templateId: (nextPayload as any).templateId || WEBSITE_TEMPLATE_ID,
+      page_id: page.id,
+      slug: page.slug,
+      page_type: page.page_type || (isHome ? 'home' : 'addon'),
+      applied,
+      slots: getSlotValues(nextPayload),
+      landing: nextPayload,
+      published: true,
+      preview_url: published.previewUrl,
+      live_url: published.liveUrl,
     }
-    await notifySuperadminsWebsitePublished({
-      tenantId: user.tenant_id,
-      tenantName: `${tenant?.name || website.subdomain}${isHome ? '' : ` — ${page.title}`}`,
-      tenantSlug: tenant?.slug || website.subdomain,
-      subdomain: website.subdomain,
-      liveUrl,
-      previewUrl,
-    })
   }
 
   return {
@@ -229,7 +222,7 @@ export default defineEventHandler(async (event) => {
     applied,
     slots: getSlotValues(nextPayload),
     landing: nextPayload,
-    published: publish || !!page.is_published,
+    published: alreadyLive || !!page.is_published,
     preview_url: previewUrl,
     live_url: liveUrl,
   }

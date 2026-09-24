@@ -1,8 +1,21 @@
 import type Stripe from 'stripe'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
+import { recordWebsiteLifecycleEvent } from '~/server/utils/website-lifecycle-audit'
+import { runWebsiteQualityChecks } from '~/server/utils/website-quality'
+import {
+  buildWebsiteRevisionSnapshot,
+  persistPublishedWebsiteRevision,
+} from '~/server/utils/website-revision'
+import {
+  rememberWebsiteCheckoutEvent,
+  resolveTrustedWebsiteCheckoutBinding,
+  websiteStatusAfterPayment,
+} from '~/server/utils/website-lifecycle'
 import { notifySuperadminsWebsitePublished } from '~/server/utils/website-publish-notify'
 import {
   isWebsiteHostingPlan,
+  websitePublishBlockedMessage,
+  websitePublishBlockedReason,
   websiteSubscriptionPlanId,
   WEBSITE_PRICE_ENV,
   type WebsiteHostingPlan,
@@ -60,10 +73,25 @@ export async function publishWebsiteForTenant(
   tenantId: string,
   baseUrl: string,
 ) {
+  const { data: tenantGate } = await supabase
+    .from('tenants')
+    .select('id, website_only, website_setup_paid_at, website_hosting_plan, website_status, trial_ends_at, business_type')
+    .eq('id', tenantId)
+    .maybeSingle()
+
+  const blocked = websitePublishBlockedReason(tenantGate)
+  if (blocked) {
+    throw createError({
+      statusCode: blocked === 'qa' || blocked === 'cancelled' ? 403 : 402,
+      statusMessage: websitePublishBlockedMessage(blocked),
+      data: { code: 'website_publish_blocked', reason: blocked },
+    })
+  }
+
   const { data: website } = await supabase
     .from('website_tenants')
     .select(
-      'id, subdomain, custom_domain, custom_domain_verified, hero_image_url, logo_url, primary_color, secondary_color, accent_color',
+      'id, tenant_id, subdomain, custom_domain, custom_domain_verified, hero_image_url, logo_url, primary_color, secondary_color, accent_color, seo_title, seo_description, seo_keywords, is_published',
     )
     .eq('tenant_id', tenantId)
     .maybeSingle()
@@ -75,6 +103,41 @@ export async function publishWebsiteForTenant(
   const home = await loadWebsiteHomePage(supabase, website.id)
   if (!home || !homepageHasContent(home.blocks)) {
     throw createError({ statusCode: 400, statusMessage: 'Homepage ist noch nicht bereit' })
+  }
+
+  const { data: pages } = await supabase
+    .from('website_pages')
+    .select('id, slug, title, is_home, page_type, seo_title, seo_description, seo_keywords, og_image, blocks, is_published')
+    .eq('website_id', website.id)
+
+  const quality = runWebsiteQualityChecks({
+    homepageBlocks: home.blocks,
+    pages: pages || [],
+    businessType: tenantGate?.business_type || null,
+    bookingUrl: null,
+  })
+  if (!quality.passed) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: quality.blockingIssues[0]?.message || 'Quality-Gate nicht erfüllt',
+      data: { code: 'website_quality_blocked', quality },
+    })
+  }
+
+  const alreadyPublished = !!(website.is_published && tenantGate?.website_status === 'live')
+  if (alreadyPublished) {
+    const liveUrl =
+      website.custom_domain_verified && website.custom_domain
+        ? `https://${website.custom_domain}`
+        : `${baseUrl}/s/${encodeURIComponent(website.subdomain)}`
+    const previewUrl = `${baseUrl}/s/${encodeURIComponent(website.subdomain)}?preview=1`
+    await persistPublishedRevisionBestEffort({
+      supabase,
+      website,
+      tenantId,
+      pages: pages || [],
+    })
+    return { website, liveUrl, previewUrl, subdomain: website.subdomain, idempotent: true }
   }
 
   const now = new Date().toISOString()
@@ -134,7 +197,71 @@ export async function publishWebsiteForTenant(
     previewUrl,
   })
 
-  return { website: updatedWebsite, liveUrl, previewUrl, subdomain: website.subdomain }
+  const persisted = await persistPublishedRevisionBestEffort({
+    supabase,
+    website,
+    tenantId,
+    pages: pages || [],
+  })
+  await recordWebsiteLifecycleEvent({
+    supabase,
+    event: 'published',
+    websiteId: website.id,
+    tenantId,
+    revisionId: persisted.revision?.id || null,
+    metadata: {
+      idempotent: false,
+      version_number: persisted.revision?.version_number || null,
+      quality_warnings: quality.warnings.map((item) => item.check_id),
+    },
+  }).catch(() => undefined)
+
+  return { website: updatedWebsite, liveUrl, previewUrl, subdomain: website.subdomain, idempotent: false }
+}
+
+async function persistPublishedRevisionBestEffort(opts: {
+  supabase: ReturnType<typeof getSupabaseAdmin>
+  website: {
+    id: string
+    subdomain: string
+    seo_title?: string | null
+    seo_description?: string | null
+    seo_keywords?: string | null
+    primary_color?: string | null
+    secondary_color?: string | null
+    accent_color?: string | null
+    logo_url?: string | null
+    hero_image_url?: string | null
+  }
+  tenantId: string
+  pages: Array<{
+    id?: string | null
+    slug?: string | null
+    title?: string | null
+    is_home?: boolean | null
+    page_type?: string | null
+    seo_title?: string | null
+    seo_description?: string | null
+    seo_keywords?: string | null
+    og_image?: string | null
+    blocks?: unknown
+    is_published?: boolean | null
+  }>
+}) {
+  try {
+    const snapshot = buildWebsiteRevisionSnapshot({
+      website: opts.website,
+      pages: opts.pages,
+    })
+    return await persistPublishedWebsiteRevision({
+      supabase: opts.supabase,
+      websiteId: opts.website.id,
+      tenantId: opts.tenantId,
+      snapshot,
+    })
+  } catch {
+    return { revision: null, skipped: true, idempotent: false }
+  }
 }
 
 export async function unpublishWebsiteForTenant(
@@ -159,6 +286,12 @@ export async function unpublishWebsiteForTenant(
     .from('tenants')
     .update({ website_status: 'disabled' })
     .eq('id', tenantId)
+  await recordWebsiteLifecycleEvent({
+    supabase,
+    event: 'unpublished',
+    websiteId: website.id,
+    tenantId,
+  }).catch(() => undefined)
 }
 
 export async function applyWebsiteHostingFromSubscription(
@@ -215,19 +348,73 @@ export async function applyWebsiteCheckoutSession(opts: {
   stripe: Stripe
   session: Stripe.Checkout.Session
   baseUrl: string
+  expectedTenantId?: string | null
 }) {
-  const { supabase, stripe, session, baseUrl } = opts
+  const { supabase, stripe, session } = opts
   const meta = session.metadata || {}
   if (meta.product !== 'website') return false
 
-  const tenantId = meta.tenant_id
-  if (!tenantId) return false
+  const stripeCustomerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || null
+  const { data: boundTenant } = stripeCustomerId
+    ? await supabase
+        .from('tenants')
+        .select('id, website_status')
+        .eq('stripe_customer_id', stripeCustomerId)
+        .maybeSingle()
+    : { data: null }
+
+  let prospect = null
+  let website = null
+  if (meta.prospect_id) {
+    const loaded = await supabase
+      .from('website_prospects')
+      .select('id, tenant_id, website_id')
+      .eq('id', meta.prospect_id)
+      .maybeSingle()
+    prospect = loaded.data
+  }
+  if (meta.website_id) {
+    const loaded = await supabase
+      .from('website_tenants')
+      .select('id, tenant_id')
+      .eq('id', meta.website_id)
+      .maybeSingle()
+    website = loaded.data
+  }
+
+  const binding = resolveTrustedWebsiteCheckoutBinding({
+    stripeCustomerId,
+    tenantIdByCustomer: boundTenant?.id || null,
+    metadataTenantId: meta.tenant_id || null,
+    metadataProspectId: meta.prospect_id || null,
+    metadataWebsiteId: meta.website_id || null,
+    metadataProduct: meta.product || null,
+    prospect,
+    website,
+    expectedTenantId: opts.expectedTenantId || null,
+  })
+  if (!binding.ok) {
+    console.warn(`⚠️ website checkout binding rejected: ${binding.reason}`)
+    return false
+  }
+
+  const tenantId = binding.tenantId
+  if (session.id) {
+    const { data: already } = await supabase
+      .from('website_checkout_events')
+      .select('stripe_session_id')
+      .eq('stripe_session_id', session.id)
+      .maybeSingle()
+    if (already?.stripe_session_id) return true
+  }
 
   const includeSetup = meta.include_setup === 'true'
-  const publishAfterPay = meta.publish_after_pay === 'true'
 
   if (session.mode === 'subscription' && session.subscription) {
     const sub = await stripe.subscriptions.retrieve(session.subscription as string)
+    if (sub.status === 'canceled' || sub.status === 'incomplete_expired') {
+      return true
+    }
     const { resolveSubscriptionPeriodEnd } = await import('~/server/utils/stripe-subscription-period')
     await applyWebsiteHostingFromSubscription(supabase, tenantId, sub, {
       setupPaid: includeSetup,
@@ -237,13 +424,30 @@ export async function applyWebsiteCheckoutSession(opts: {
     await applyWebsiteSetupPaid(supabase, tenantId)
   }
 
-  if (publishAfterPay) {
-    try {
-      await publishWebsiteForTenant(supabase, tenantId, baseUrl)
-    } catch (err: any) {
-      console.warn('⚠️ website checkout: publish after pay skipped:', err?.message)
-    }
+  const nextStatus = websiteStatusAfterPayment(boundTenant?.website_status)
+  if (nextStatus === 'pending_review') {
+    await supabase
+      .from('tenants')
+      .update({ website_status: 'pending_review' })
+      .eq('id', tenantId)
+      .in('website_status', ['none', 'pending_review'])
   }
 
+  if (session.id) {
+    await rememberWebsiteCheckoutEvent({
+      supabase,
+      sessionId: session.id,
+      tenantId,
+    })
+  }
+
+  // payment != publication. Ignore publish_after_pay metadata.
+  void opts.baseUrl
+  await recordWebsiteLifecycleEvent({
+    supabase,
+    event: 'payment_confirmed',
+    tenantId,
+    metadata: { session_id: session.id || null, include_setup: includeSetup },
+  }).catch(() => undefined)
   return true
 }

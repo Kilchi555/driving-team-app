@@ -4,6 +4,12 @@
 import { getAuthenticatedUser } from '~/server/utils/auth'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { applySlotPatch, isLandingPayload } from '~/utils/website-slot-schema'
+import {
+  buildWebsitePageContentWrite,
+  editorSourceBlocks,
+  overlayEditorDraftPage,
+  publishedWebsiteProtectsLiveBlocks,
+} from '~/server/utils/website-page-draft'
 
 export default defineEventHandler(async (event) => {
   const authUser = await getAuthenticatedUser(event)
@@ -33,7 +39,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: website } = await supabase
     .from('website_tenants')
-    .select('id')
+    .select('id, is_published')
     .eq('tenant_id', user.tenant_id)
     .single()
 
@@ -64,10 +70,12 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  let nextBlocks = existing.blocks
-  if (body?.slots && isLandingPayload(existing.blocks)) {
+  const websiteIsPublished = publishedWebsiteProtectsLiveBlocks(website)
+  const sourceBlocks = editorSourceBlocks(existing, websiteIsPublished)
+  let nextBlocks = sourceBlocks
+  if (body?.slots && isLandingPayload(sourceBlocks)) {
     try {
-      nextBlocks = applySlotPatch(existing.blocks, body.slots).payload
+      nextBlocks = applySlotPatch(sourceBlocks, body.slots).payload
     } catch (err: any) {
       throw createError({
         statusCode: err?.statusCode || 400,
@@ -91,18 +99,22 @@ export default defineEventHandler(async (event) => {
     nextBlocks = applySlotPatch(nextBlocks, patch).payload
   }
 
-  const { data: page, error } = await supabase
+  const write = buildWebsitePageContentWrite({
+    websiteIsPublished,
+    currentPage: existing,
+    nextBlocks,
+    nextTitle: body.title ?? existing.title,
+    nextSeoTitle: seoTitle,
+    nextSeoDescription: seoDescription,
+    nextSeoKeywords: seoKeywords,
+    nextOgImage: body.og_image ?? existing.og_image,
+    now: new Date().toISOString(),
+  })
+  const { data: saved, error } = await supabase
     .from('website_pages')
-    .update({
-      title: body.title ?? existing.title,
-      seo_title: seoTitle,
-      seo_description: seoDescription,
-      seo_keywords: seoKeywords,
-      og_image: body.og_image ?? existing.og_image,
-      blocks: nextBlocks,
-      updated_at: new Date().toISOString(),
-    })
+    .update(write.pageUpdate)
     .eq('id', existing.id)
+    .eq('website_id', website.id)
     .select()
     .single()
 
@@ -115,6 +127,6 @@ export default defineEventHandler(async (event) => {
 
   return {
     success: true,
-    page,
+    page: overlayEditorDraftPage(saved, websiteIsPublished),
   }
 })
