@@ -331,6 +331,22 @@ Dokumentation wichtiger Datenflüsse und Geschäftsprozesse der Anwendung.
 2. API_ENDPOINTS.csv für API Tests
 3. RLS_POLICIES.csv für Sicherheitstests
 
+### Für lokales Setup / CI
+1. [DEV_DEPENDENCY_PEERS.md](./DEV_DEPENDENCY_PEERS.md) — `npm ci` peer constraints (`@nuxt/ui` 4 + TypeScript + Vitest)
+
+---
+
+## Engineering Runbooks
+
+Operational guides for engineers (intent, contracts, pitfalls). Only files that exist on this branch are linked.
+
+| Runbook | Covers |
+|---------|--------|
+| [DEV_DEPENDENCY_PEERS.md](./DEV_DEPENDENCY_PEERS.md) | `npm ci` / Dependabot peers after `@nuxt/ui` 4 (#128) + broken TS7/Vitest5 bump (#182) |
+| [PASSKEY_RECOVERY.md](./PASSKEY_RECOVERY.md) | Admin passkey lockout recovery |
+| [SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md) | Auth session persistence |
+| [WALLEE_PAYMENT_RECOVERY.md](./WALLEE_PAYMENT_RECOVERY.md) | Stuck Wallee pending payments |
+
 ---
 
 ## 📝 Wartung dieser Dokumentation
