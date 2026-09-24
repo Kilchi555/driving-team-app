@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
 import { logger } from '~/utils/logger'
+import { auditCategoryChange } from '~/server/utils/category-write-protection'
 
 const ALLOWED_FIELDS = ['first_name', 'last_name', 'email', 'phone', 'street', 'street_nr', 'zip', 'city'] as const
 
@@ -31,6 +32,20 @@ export default defineEventHandler(async (event) => {
 
   const supabase = getSupabaseAdmin()
 
+  let previousCategory: unknown
+  if ('category' in safeUpdates) {
+    const { data: current, error: currentError } = await supabase
+      .from('users')
+      .select('category')
+      .eq('id', profile.id)
+      .single()
+    if (currentError || !current) {
+      logger.error('❌ update-profile could not read current category:', currentError?.message)
+      throw createError({ statusCode: 500, statusMessage: 'Profil konnte nicht gespeichert werden' })
+    }
+    previousCategory = current.category
+  }
+
   const { data, error } = await supabase
     .from('users')
     .update(safeUpdates)
@@ -52,6 +67,16 @@ export default defineEventHandler(async (event) => {
     if (authError) {
       logger.warn(`⚠️ Email in users aktualisiert, aber auth.users sync fehlgeschlagen: ${authError.message}`)
     }
+  }
+
+  if ('category' in safeUpdates && Array.isArray(safeUpdates.category)) {
+    await auditCategoryChange(supabase, {
+      performerId: profile.id,
+      targetUserId: profile.id,
+      source: 'staff/update-profile',
+      oldCategory: previousCategory,
+      newCategory: safeUpdates.category
+    })
   }
 
   logger.info(`✅ Staff ${profile.id} hat eigenes Profil aktualisiert: ${Object.keys(safeUpdates).join(', ')}`)
