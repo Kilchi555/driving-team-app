@@ -4286,7 +4286,7 @@ const changeEventType = () => {
 
 
 
-const handleEventTypeSelected = (eventType: any) => {
+const handleEventTypeSelected = async (eventType: any) => {
   logger.debug('🎯 Event type selected:', eventType)
   
   // ❌ Vergangene Termine können nicht mehr geändert werden
