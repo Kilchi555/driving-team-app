@@ -1070,7 +1070,7 @@
                 </label>
                 <div class="grid grid-cols-2 gap-2 bg-gray-50 rounded-xl border border-gray-200 p-3">
                   <label
-                    v-for="cat in (allCategories.length ? allCategories : availableCategories)"
+                    v-for="cat in availableCategories"
                     :key="cat.id"
                     class="flex items-center gap-2 cursor-pointer text-sm text-gray-700 select-none"
                   >
@@ -1083,8 +1083,11 @@
                     />
                     {{ cat.name || cat.code }}
                   </label>
-                  <p v-if="allCategories.length === 0 && availableCategories.length === 0" class="col-span-2 text-sm text-gray-400 italic">Keine Kategorien verfügbar</p>
+                  <p v-if="availableCategories.length === 0" class="col-span-2 text-sm text-gray-400 italic">Keine Kategorien verfügbar</p>
                 </div>
+                <p v-if="staleProfileCategoryCodes.length" class="mt-2 text-xs text-amber-700">
+                  Nicht mehr auswählbar und wird beim Speichern entfernt: {{ staleProfileCategoryCodes.join(', ') }}
+                </p>
               </div>
 
               <!-- Documents -->
@@ -1157,7 +1160,7 @@
             <div class="px-5 pb-5 pt-3 border-t border-gray-100" style="padding-bottom: max(20px, env(safe-area-inset-bottom, 20px))">
               <button
                 @click="saveEditProfile"
-                :disabled="isSavingProfile"
+                :disabled="isSavingProfile || isLoadingProfile"
                 class="w-full py-3 rounded-2xl text-sm font-semibold text-white transition-opacity active:opacity-70 disabled:opacity-50 flex items-center justify-center gap-2"
                 :style="{ background: primaryColor }"
               >
@@ -2141,6 +2144,7 @@
 
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { logger } from '~/utils/logger'
+import { dedupeSortedCategoryCodes, filterLeafCategories } from '~/utils/category-leaf'
 import { navigateTo } from '#app/composables/router'
 // ✅ Removed direct Supabase import - using secure APIs via useDatabaseQuery
 import Toast from '~/components/Toast.vue'
@@ -2308,8 +2312,32 @@ const editForm = ref({
 })
 
 const isLoadingProfile = ref(false)
-const availableCategories = ref<{ id: string; code: string; name: string }[]>([])
-const allCategories = ref<{ id: string; code: string; name: string }[]>([])
+type StaffCategoryOption = {
+  id: string | number
+  code: string
+  name: string
+  parent_category_id?: string | number | null
+}
+
+const availableCategories = ref<StaffCategoryOption[]>([])
+const categoryCatalogReady = ref(false)
+
+const sortCategoryOptions = (rows: StaffCategoryOption[]) =>
+  [...rows].sort((a, b) =>
+    String(a.name || a.code || '').localeCompare(String(b.name || b.code || ''), 'de', { sensitivity: 'base' }),
+  )
+
+const applyCategoryCatalog = (raw: StaffCategoryOption[]) => {
+  const rows = Array.isArray(raw) ? raw : []
+  availableCategories.value = sortCategoryOptions(filterLeafCategories(rows))
+  categoryCatalogReady.value = true
+}
+
+const staleProfileCategoryCodes = computed(() => {
+  if (!categoryCatalogReady.value) return []
+  const allowed = new Set(availableCategories.value.map((cat) => cat.code))
+  return dedupeSortedCategoryCodes(editForm.value.category.filter((code) => !allowed.has(code)))
+})
 const licUploadFront = ref<HTMLInputElement | null>(null)
 const licUploadBack = ref<HTMLInputElement | null>(null)
 const isUploadingLicense = ref(false)
@@ -2432,20 +2460,7 @@ const openEditProfile = async () => {
     }
 
     if (catRes?.data) {
-      const all = catRes.data
-      // Store full list for profile editing
-      allCategories.value = all.sort((a: any, b: any) =>
-        String(a.name || a.code || '').localeCompare(String(b.name || b.code || ''), 'de', { sensitivity: 'base' })
-      )
-      // Filtered list for location creation (subcategories + parents without subs)
-      const subs = all.filter((c: any) => c.parent_category_id != null)
-      const parents = all.filter((c: any) => c.parent_category_id == null)
-      const parentIdsWithSubs = new Set(subs.map((c: any) => c.parent_category_id).filter(Boolean))
-      const parentsWithoutSubs = parents.filter((p: any) => !parentIdsWithSubs.has(p.id))
-      const merged = [...subs, ...parentsWithoutSubs].sort((a: any, b: any) =>
-        String(a.name || a.code || '').localeCompare(String(b.name || b.code || ''), 'de', { sensitivity: 'base' })
-      )
-      availableCategories.value = merged
+      applyCategoryCatalog(catRes.data)
     }
   } catch (err: any) {
     logger.warn('⚠️ Could not load full profile for edit:', err?.message)
@@ -2455,13 +2470,20 @@ const openEditProfile = async () => {
 }
 
 const saveEditProfile = async () => {
+  if (isLoadingProfile.value) return
+  if (!categoryCatalogReady.value) {
+    editProfileError.value = 'Kategorien konnten nicht geladen werden'
+    return
+  }
   isSavingProfile.value = true
   editProfileError.value = null
   editProfileSuccess.value = false
+  const allowed = new Set(availableCategories.value.map((cat) => cat.code))
+  const category = dedupeSortedCategoryCodes(editForm.value.category.filter((code) => allowed.has(code)))
   try {
     const res = await $fetch<{ success: boolean; data: any }>('/api/staff/update-profile', {
       method: 'POST',
-      body: editForm.value,
+      body: { ...editForm.value, category },
     })
     if (res?.data) {
       Object.assign(localUser.value, res.data)
@@ -4141,34 +4163,13 @@ const loadData = async () => {
     logger.debug('🔥 Loading staff settings data...')
 
     // Kategorien laden via Backend API
-    const categoriesResponse = await $fetch<any>('/api/staff/get-categories').catch(() => ({ data: [] }))
-    const categories = categoriesResponse?.data || categoriesResponse?.categories || []
-    
-    // Filter categories for location creation:
-    // - Show all subcategories (parent_category_id != null)
-    // - Show only main categories that DON'T have subcategories
-    const rawCategories = categories || []
-    
-    // Store the full unfiltered list for profile editing
-    allCategories.value = rawCategories
+    const categoriesResponse = await $fetch<any>('/api/staff/get-categories').catch(() => null)
+    if (categoriesResponse) {
+      const categories = categoriesResponse?.data || categoriesResponse?.categories || []
+      applyCategoryCatalog(categories || [])
+    }
 
-    // Get IDs of all main categories that have subcategories
-    const mainCatsWithSubs = new Set(
-      rawCategories
-        .filter((cat: any) => cat.parent_category_id)
-        .map((cat: any) => cat.parent_category_id)
-    )
-    
-    // Show subcategories + main categories without subcategories (for location creation)
-    availableCategories.value = rawCategories.filter((cat: any) => 
-      cat.parent_category_id || // All subcategories
-      !mainCatsWithSubs.has(cat.id) // Main categories without subcategories
-    )
-    
-    logger.debug('📋 Available categories for location creation:', {
-      total: rawCategories.length,
-      subcategoriesCount: rawCategories.filter((c: any) => c.parent_category_id).length,
-      mainWithoutSubCount: rawCategories.filter((c: any) => !c.parent_category_id && !mainCatsWithSubs.has(c.id)).length,
+    logger.debug('📋 Available leaf categories:', {
       displayCount: availableCategories.value.length
     })
 
