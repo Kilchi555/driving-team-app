@@ -1,17 +1,24 @@
 // api/auth/register.post.ts
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getServerSession } from '#auth'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { setAuthCookies } from '~/server/utils/cookies'
 import { validatePassword, logPasswordValidationAttempt } from '~/server/utils/password-validator'
 import { checkPasswordPwned } from '~/server/utils/hibp-checker'
 import { logger } from '~/utils/logger'
 import { notifyTenantAdminsNewClient } from '~/server/utils/notify-new-client-registration'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function requireServiceSupabase(): SupabaseClient {
+  const supabaseUrl = process.env.SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Supabase-Dienst ist nicht konfiguriert',
+    })
+  }
+  return createClient(supabaseUrl, serviceRoleKey)
+}
 
 interface RegisterRequest {
   action: string
@@ -46,19 +53,22 @@ export default defineEventHandler(async (event) => {
     const body = await readBody<RegisterRequest>(event)
     const { action } = body
 
-    if (action === 'register-customer') {
-      return await registerCustomer(event, body)
-    } else if (action === 'register-staff') {
-      return await registerStaff(event, body)
-    } else if (action === 'get-tenant-from-slug') {
-      return await getTenantFromSlug(body)
+    if (action !== 'register-customer' && action !== 'register-staff' && action !== 'get-tenant-from-slug') {
+      logger.warn('❌ [REGISTER] Invalid action', { action })
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Invalid registration action'
+      })
     }
 
-    logger.warn('❌ [REGISTER] Invalid action', { action })
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid registration action'
-    })
+    const supabase = requireServiceSupabase()
+
+    if (action === 'register-customer') {
+      return await registerCustomer(supabase, event, body)
+    } else if (action === 'register-staff') {
+      return await registerStaff(supabase, event, body)
+    }
+    return await getTenantFromSlug(supabase, body)
   } catch (err: any) {
     logger.error('❌ [REGISTER] Registration error:', err.message || err)
     
@@ -70,7 +80,7 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-async function registerCustomer(event: any, body: RegisterRequest) {
+async function registerCustomer(supabase: SupabaseClient, event: any, body: RegisterRequest) {
   const { email, password, first_name, last_name, phone, birthdate, street, street_nr, zip, city, profession, assigned_staff_id, category, slug, tenant_id } = body
 
   // ===== LAYER 1: INPUT VALIDATION =====
@@ -346,7 +356,7 @@ async function registerCustomer(event: any, body: RegisterRequest) {
   }
 }
 
-async function registerStaff(event: any, body: RegisterRequest) {
+async function registerStaff(supabase: SupabaseClient, event: any, body: RegisterRequest) {
   const { email, password, first_name, last_name, phone, tenant_id } = body
 
   // ===== LAYER 1: INPUT VALIDATION =====
@@ -518,7 +528,7 @@ async function registerStaff(event: any, body: RegisterRequest) {
   }
 }
 
-async function getTenantFromSlug(body: RegisterRequest) {
+async function getTenantFromSlug(supabase: SupabaseClient, body: RegisterRequest) {
   const { slug } = body
 
   if (!slug) {
