@@ -995,6 +995,7 @@
 
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { logger } from '~/utils/logger'
+import { resolveAppointmentPaymentMethod } from '~/server/utils/appointment-payment-method'
 import { canInitiateWalleeRefund } from '~/utils/wallee-refund-access'
 import { useTerminology } from '~/composables/useTerminology'
 import { useSmsService } from '~/composables/useSmsService'
@@ -4306,6 +4307,9 @@ const handleEventTypeSelected = (eventType: any) => {
   formData.value.type = null as any // ✅ CRITICAL: No driving category for special events (VKU, Nothelfer, etc.)!
   formData.value.duration_minutes = eventType.default_duration_minutes || 60
   calculateEndTime()
+  if (props.mode === 'create') {
+    selectedPaymentMethod.value = await resolvedCreatePaymentMethod(eventType.code)
+  }
 
   // Bei Ferien: Von/Bis vorbelegen + Saldo laden.
   // Das gewählte Datum wird übernommen (auch in der Vergangenheit erlaubt);
@@ -6389,7 +6393,9 @@ const handleCreateMode = async () => {
     }
     logger.debug('🎯 CREATE MODE: Applied tenant default event type:', defaults)
 
-    selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+    selectedPaymentMethod.value = await resolvedCreatePaymentMethod(
+      formData.value.appointment_type || formData.value.eventType
+    )
 
     // ✅ NEU: Standard-Kategorie für Create-Mode setzen (driving_school only)
     if (!requiresCategory.value) {
@@ -7246,6 +7252,20 @@ const loadUserPaymentPreferences = async (userId: string) => {
   } catch (error: any) {
     logger.debug('ℹ️ Could not load payment preferences via API, using tenant default', error.message)
     selectedPaymentMethod.value = tenantDefaultPaymentMethod.value
+  }
+}
+
+const resolvedCreatePaymentMethod = async (eventTypeCode?: string | null) => {
+  const tenantDefault = tenantDefaultPaymentMethod.value || 'wallee'
+  if (!eventTypeCode) return tenantDefault
+  try {
+    const types = await eventModalApi.getEventTypes()
+    const match = Array.isArray(types)
+      ? types.find((eventType: { code?: string, payment_method?: unknown }) => eventType.code === eventTypeCode)
+      : null
+    return resolveAppointmentPaymentMethod(tenantDefault, match?.payment_method ?? null)
+  } catch {
+    return tenantDefault
   }
 }
 

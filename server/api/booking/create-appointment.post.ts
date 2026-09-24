@@ -50,8 +50,12 @@ import { shouldHoldAppointmentUntilPaid } from '~/server/utils/pay-before-confir
 import {
   loadOnlineBookingPaymentPolicy,
   onlineBookingPaymentProvider,
-  resolveOnlineBookingPaymentMethod,
 } from '~/server/utils/resolve-online-booking-payment-method'
+import {
+  InvalidEventTypePaymentMethodError,
+  loadEventTypePaymentMethod,
+  resolvePublicAppointmentPaymentMethod,
+} from '~/server/utils/appointment-payment-method'
 import { createWalleeCheckoutForPayment, releaseUnpaidPendingAppointment } from '~/server/utils/wallee-appointment-checkout'
 import { applyRequestedStudentCredit } from '~/server/utils/apply-student-credit'
 import { enqueueStaffAvailabilityRecalc } from '~/server/utils/queue-availability-recalc'
@@ -510,10 +514,28 @@ export default defineEventHandler(async (event: H3Event) => {
       tenantId!,
       tenantPayPolicy?.wallee_enabled
     )
-    const paymentResolve = resolveOnlineBookingPaymentMethod({
-      requested: body.payment_method,
-      policy: paymentPolicy,
-    })
+    const eventTypePaymentMethod = await loadEventTypePaymentMethod(
+      supabase,
+      tenantId!,
+      identity.eventTypeCode
+    )
+    let paymentResolve
+    try {
+      paymentResolve = resolvePublicAppointmentPaymentMethod({
+        tenantDefault: paymentPolicy.defaultMethod,
+        eventTypePaymentMethod,
+        requested: body.payment_method,
+        policy: paymentPolicy,
+      })
+    } catch (error) {
+      if (error instanceof InvalidEventTypePaymentMethodError) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Ungültige Terminart-Zahlungsmethode',
+        })
+      }
+      throw error
+    }
     if (paymentResolve.rejectedRequest) {
       logger.warn('⚠️ Customer requested a payment method that is not enabled for online booking — using tenant default', {
         tenantId,
