@@ -1,32 +1,24 @@
 /**
  * Website Tenant Auto-Discovery
  *
- * Resolves the tenant_id for a website deployment by matching the request
- * hostname against the `domain` column in the tenants table.
- * Result is cached in-process (one DB lookup per cold start).
+ * Resolves the tenant_id for one request by matching that request's host
+ * against the `domain` column in the tenants table.
+ * The result is not cached: one Nitro process can serve many tenant hosts.
  */
 
 import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import type { H3Event } from 'h3'
 import { getRequestHost } from 'h3'
 
-let cachedTenantId: string | null | undefined = undefined
-
 export async function getWebsiteTenantId(event: H3Event): Promise<string | null> {
-  if (cachedTenantId !== undefined) return cachedTenantId
-
-  // NUXT_TENANT_ID env var is still supported as explicit override
-  if (process.env.NUXT_TENANT_ID) {
-    cachedTenantId = process.env.NUXT_TENANT_ID
-    return cachedTenantId
-  }
+  // Explicit single-deploy override. Read on every call so a later request
+  // is not stuck with a value captured at process start.
+  const configuredTenantId = process.env.NUXT_TENANT_ID
+  if (configuredTenantId) return configuredTenantId
 
   try {
     const supabase = createWebsiteSupabaseClient(event)
-    if (!supabase) {
-      cachedTenantId = null
-      return null
-    }
+    if (!supabase) return null
 
     const host = getRequestHost(event, { xForwardedHost: true })
 
@@ -37,14 +29,14 @@ export async function getWebsiteTenantId(event: H3Event): Promise<string | null>
       .ilike('domain', `%${host}%`)
       .maybeSingle()
 
-    cachedTenantId = data?.id ?? null
-    if (!cachedTenantId) {
+    const tenantId = data?.id ?? null
+    if (!tenantId) {
       console.warn(`[website-tenant] No tenant found for host: ${host}`)
     }
-    return cachedTenantId
-  } catch (err: any) {
-    console.error('[website-tenant] Lookup failed:', err?.message)
-    cachedTenantId = null
+    return tenantId
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'lookup failed'
+    console.error('[website-tenant] Lookup failed:', message)
     return null
   }
 }

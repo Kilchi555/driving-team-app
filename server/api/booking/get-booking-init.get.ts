@@ -15,6 +15,7 @@ import {
   paymentPolicyFromTenantSettings,
 } from '~/server/utils/resolve-online-booking-payment-method'
 import { selectPublicBookingCatalog } from '~/server/utils/select-public-booking-catalog'
+import { createBookingContext, readBookingContextSecret } from '~/server/utils/booking-context'
 
 function parseFeatureEnabled(raw: unknown, fallback: boolean): boolean {
   if (raw == null) return fallback
@@ -180,10 +181,20 @@ export default defineEventHandler(async (event) => {
 
   const { wallee_enabled: _walleeEnabled, ...tenantWithoutSecrets } = tenantPublic as any
 
+  const bookingContext = createBookingContext({
+    tenantId: tenant.id,
+    slug: tenant.slug,
+    secret: readBookingContextSecret(useRuntimeConfig().bookingContextSecret),
+  })
+  if (!bookingContext) {
+    console.warn('[booking-context] not issued; marketing touch will not be stored for this booking init')
+  }
+
   return {
     success: true,
     data: {
       tenant: tenantWithoutSecrets,
+      booking_context: bookingContext,
       categories,
       catalog_source: catalog.source,
       locationsCount,

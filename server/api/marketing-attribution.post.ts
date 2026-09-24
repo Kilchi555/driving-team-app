@@ -11,7 +11,7 @@
  *   3. Service-role insert is the only DB-side privilege
  */
 
-import { defineEventHandler, readBody, getHeader, createError } from 'h3'
+import { defineEventHandler, readBody, getHeader, getRequestHost, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { logger } from '~/utils/logger'
 import {
@@ -19,10 +19,14 @@ import {
   hasAnyAttribution,
   type AttributionFields,
 } from '~/server/utils/marketing-attribution-merge'
+import { MARKETING_SESSION_ID_PATTERN, runAttributionTouchAfterLegacy } from '~/server/utils/marketing-touch-class'
+import { persistMarketingTouch } from '~/server/utils/marketing-touch-persist'
+import { readBookingContextSecret, tenantIdForMarketingTouch } from '~/server/utils/booking-context'
 
 interface AttributionPayload {
   session_id: string
   tenant_id?: string | null
+  booking_context?: string | null
   attribution: {
     gclid?: string | null
     gbraid?: string | null
@@ -68,51 +72,75 @@ export default defineEventHandler(async (event) => {
   }
 
   const attr = body.attribution as AttributionFields
-  if (!hasAnyAttribution(attr)) {
-    return { ok: true, reason: 'no_attribution_data' }
-  }
+  const hasLegacyAttribution = hasAnyAttribution(attr)
 
   const userAgent = getHeader(event, 'user-agent') || null
   const ipCountry = getHeader(event, 'x-vercel-ip-country') || null
 
   try {
     const supabase = getSupabaseAdmin()
+    let legacyError: string | null = null
 
-    const { data: existingRow } = await supabase
-      .from('marketing_attributions')
-      .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, landing_page')
-      .eq('session_id', sessionId)
-      .maybeSingle()
+    if (hasLegacyAttribution) {
+      const { data: existingRow } = await supabase
+        .from('marketing_attributions')
+        .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, landing_page')
+        .eq('session_id', sessionId)
+        .maybeSingle()
 
-    const merged = mergeAttributionFields(existingRow as AttributionFields | null, attr)
+      const merged = mergeAttributionFields(existingRow as AttributionFields | null, attr)
 
-    const { error } = await supabase
-      .from('marketing_attributions')
-      .upsert({
-        session_id: sessionId,
-        tenant_id: nullable(body.tenant_id) ?? null,
-        gclid: nullable(merged.gclid),
-        gbraid: nullable(merged.gbraid),
-        wbraid: nullable(merged.wbraid),
-        fbclid: nullable(merged.fbclid),
-        fbc: nullable(merged.fbc),
-        fbp: nullable(merged.fbp),
-        utm_source: nullable(merged.utm_source),
-        utm_medium: nullable(merged.utm_medium),
-        utm_campaign: nullable(merged.utm_campaign),
-        utm_content: nullable(merged.utm_content),
-        utm_term: nullable(merged.utm_term),
-        landing_page: nullable(merged.landing_page),
-        user_agent: userAgent ? String(userAgent).slice(0, 512) : null,
-        ip_country: ipCountry,
-      }, { onConflict: 'session_id' })
+      const { error } = await supabase
+        .from('marketing_attributions')
+        .upsert({
+          session_id: sessionId,
+          tenant_id: nullable(body.tenant_id) ?? null,
+          gclid: nullable(merged.gclid),
+          gbraid: nullable(merged.gbraid),
+          wbraid: nullable(merged.wbraid),
+          fbclid: nullable(merged.fbclid),
+          fbc: nullable(merged.fbc),
+          fbp: nullable(merged.fbp),
+          utm_source: nullable(merged.utm_source),
+          utm_medium: nullable(merged.utm_medium),
+          utm_campaign: nullable(merged.utm_campaign),
+          utm_content: nullable(merged.utm_content),
+          utm_term: nullable(merged.utm_term),
+          landing_page: nullable(merged.landing_page),
+          user_agent: userAgent ? String(userAgent).slice(0, 512) : null,
+          ip_country: ipCountry,
+        }, { onConflict: 'session_id' })
 
-    if (error) {
-      logger.warn('marketing-attribution upsert error:', error.message)
-      return { ok: false, reason: 'db_error' }
+      if (error) legacyError = error.message
     }
 
-    return { ok: true }
+    const firstPartyHost = getRequestHost(event, { xForwardedHost: true })
+    const outcome = await runAttributionTouchAfterLegacy({
+      legacyError,
+      onLegacyError: (message) => logger.warn('marketing-attribution upsert error:', message),
+      onTouchError: (touchErr: any) => {
+        logger.warn('marketing touch capture failed:', touchErr?.message ?? touchErr)
+      },
+      writeTouch: async () => {
+        const touchTenantId = tenantIdForMarketingTouch({
+          bookingContext: body.booking_context,
+          secret: readBookingContextSecret(useRuntimeConfig().bookingContextSecret),
+        })
+        if (touchTenantId && MARKETING_SESSION_ID_PATTERN.test(sessionId)) {
+          await persistMarketingTouch(supabase, {
+            tenantId: touchTenantId,
+            sessionId,
+            observation: {
+              ...(attr || {}),
+              firstPartyHost,
+            },
+          })
+        }
+      },
+    })
+
+    if (outcome.legacyFailed) return { ok: false, reason: 'db_error' }
+    return { ok: true, reason: hasLegacyAttribution ? undefined : 'no_attribution_data' }
   } catch (err: any) {
     logger.error('marketing-attribution unexpected error:', err?.message ?? err)
     return { ok: false, reason: 'unexpected_error' }

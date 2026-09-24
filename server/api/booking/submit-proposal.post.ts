@@ -8,6 +8,8 @@ import { checkRateLimit } from '~/server/utils/rate-limiter'
 import { upsertMarketingLeadSafe } from '~/server/utils/upsert-marketing-lead'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 import { recordAndSendCapiEvent } from '~/server/utils/meta-capi'
+import { resolveNewCustomerState } from '~/server/utils/binding-booking-conversion'
+import { recordMarketingConversion } from '~/server/utils/marketing-conversion-record'
 
 interface MarketingAttributionPayload {
   gclid?: string | null
@@ -281,6 +283,25 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log('✅ Booking proposal created:', proposal.id)
+
+    try {
+      const customerState = created_by_user_id
+        ? await resolveNewCustomerState(supabase, {
+            tenantId: tenant_id,
+            userId: created_by_user_id,
+          })
+        : 'unknown'
+      await recordMarketingConversion(supabase, {
+        tenantId: tenant_id,
+        userId: created_by_user_id || null,
+        customerState,
+        event: 'inquiry',
+        proposalId: proposal.id,
+        sessionId: marketing_session_id || null,
+      })
+    } catch (err: any) {
+      console.warn('⚠️ Inquiry marketing conversion record failed (non-critical):', err?.message ?? err)
+    }
 
     // Upload Google Ads server-side conversion if click ID is present
     if (resolvedAttribution?.gclid || resolvedAttribution?.gbraid || resolvedAttribution?.wbraid) {

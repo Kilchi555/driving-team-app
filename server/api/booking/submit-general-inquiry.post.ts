@@ -17,11 +17,14 @@ import { escapeLikePattern } from '~/server/utils/sql-helpers'
 import { getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { resolveMarketingAttribution } from '~/server/utils/resolve-marketing-attribution'
 import { stampFirstTouchAcquisition } from '~/server/utils/first-touch-acquisition'
+import { resolveNewCustomerState } from '~/server/utils/binding-booking-conversion'
+import { recordMarketingConversion } from '~/server/utils/marketing-conversion-record'
 import {
   PREFERRED_CONTACT_OPTIONS,
   isPreferredContactMethod,
   upsertPreferredContactNote,
 } from '~/utils/preferred-contact-method'
+
 interface MarketingAttributionPayload {
   gclid?: string | null
   gbraid?: string | null
@@ -569,6 +572,25 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log('✅ General inquiry created:', proposal.id)
+
+    try {
+      const customerState = resolvedUserId
+        ? await resolveNewCustomerState(supabaseAdmin, {
+            tenantId: tenant_id,
+            userId: resolvedUserId,
+          })
+        : 'unknown'
+      await recordMarketingConversion(supabaseAdmin, {
+        tenantId: tenant_id,
+        userId: resolvedUserId,
+        customerState,
+        event: 'inquiry',
+        proposalId: proposal.id,
+        sessionId: marketing_session_id || null,
+      })
+    } catch (err: any) {
+      console.warn('⚠️ Inquiry marketing conversion record failed (non-critical):', err?.message ?? err)
+    }
 
     if (resolvedAttribution?.gclid || resolvedAttribution?.gbraid || resolvedAttribution?.wbraid) {
       try {

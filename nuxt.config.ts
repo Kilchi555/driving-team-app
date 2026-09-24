@@ -257,6 +257,8 @@ export default defineNuxtConfig({
     billScanApiKey: process.env.BILLSCAN_API_KEY,
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
     internalCancellationSecret: process.env.NUXT_INTERNAL_CANCELLATION_SECRET,
+    // HMAC secret for anonymous public booking context. No insecure fallback.
+    bookingContextSecret: process.env.NUXT_BOOKING_CONTEXT_SECRET || '',
     googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY,
     googleDistanceMatrixKey: process.env.GOOGLE_DISTANCE_MATRIX_KEY || process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY,
     vercelToken: process.env.NUXT_VERCEL_TOKEN || process.env.VERCEL_TOKEN || '',

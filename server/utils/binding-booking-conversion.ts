@@ -29,6 +29,7 @@ import {
   isProductiveEventTypeCode,
 } from '~/server/utils/binding-booking'
 import { ECONOMICS_SKIP_EVENT_CODES } from '~/utils/unit-economics'
+import { recordMarketingConversion } from '~/server/utils/marketing-conversion-record'
 
 export type NewCustomerState = 'new' | 'existing' | 'unknown'
 
@@ -134,6 +135,7 @@ export async function reportBindingAppointmentConversion(input: {
   clientIp?: string | null
   userAgent?: string | null
   eventSourceUrl?: string | null
+  marketingSessionId?: string | null
 }): Promise<BindingConversionReport> {
   if (!isProductiveEventTypeCode(input.eventTypeCode)) {
     return { google: 'not_attempted', meta: 'not_attempted', newCustomerState: 'unknown', reason: 'not_productive' }
@@ -232,6 +234,15 @@ export async function reportBindingAppointmentConversion(input: {
     }
   }
 
+  await rememberMarketingConversion(supabase, {
+    tenantId: input.tenantId,
+    userId: input.userId,
+    customerState: newCustomerState,
+    event: 'appointment',
+    appointmentId: input.appointmentId,
+    sessionId: input.marketingSessionId || await loadAppointmentSessionId(supabase, input.appointmentId, input.tenantId),
+  })
+
   return report
 }
 
@@ -252,6 +263,7 @@ export async function reportBindingCourseConversion(input: {
   hashedPhone?: string | null
   clientIp?: string | null
   userAgent?: string | null
+  marketingSessionId?: string | null
 }): Promise<BindingConversionReport> {
   if (!isBindingConfirmedRegistration(input.status)) {
     return { google: 'not_attempted', meta: 'not_attempted', newCustomerState: 'unknown', reason: 'not_binding_confirmed' }
@@ -335,7 +347,78 @@ export async function reportBindingCourseConversion(input: {
     }
   }
 
+  await rememberMarketingConversion(supabase, {
+    tenantId: input.tenantId,
+    userId: input.userId,
+    customerState: newCustomerState,
+    event: 'course',
+    registrationId: input.registrationId,
+    sessionId: input.marketingSessionId || await loadCourseSessionId(supabase, input.registrationId, input.tenantId),
+  })
+
   return report
+}
+
+async function rememberMarketingConversion(
+  supabase: SupabaseClient,
+  input: Parameters<typeof recordMarketingConversion>[1],
+): Promise<void> {
+  try {
+    await recordMarketingConversion(supabase, input)
+  } catch (err: any) {
+    logger.warn('binding-booking-conversion: marketing conversion record failed (non-critical)', err?.message ?? err)
+  }
+}
+
+async function loadAppointmentSessionId(
+  supabase: SupabaseClient,
+  appointmentId: string,
+  tenantId: string,
+): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from('appointments')
+      .select('marketing_session_id')
+      .eq('id', appointmentId)
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+    return (data?.marketing_session_id as string | null | undefined) ?? null
+  } catch {
+    return null
+  }
+}
+
+async function loadCourseSessionId(
+  supabase: SupabaseClient,
+  registrationId: string,
+  tenantId: string,
+): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from('payments')
+      .select('metadata')
+      .eq('course_registration_id', registrationId)
+      .eq('tenant_id', tenantId)
+      .limit(1)
+      .maybeSingle()
+    return sessionIdFromMetadata(data?.metadata)
+  } catch {
+    return null
+  }
+}
+
+function sessionIdFromMetadata(metadata: unknown): string | null {
+  let meta = metadata
+  if (typeof meta === 'string') {
+    try {
+      meta = JSON.parse(meta)
+    } catch {
+      return null
+    }
+  }
+  if (!meta || typeof meta !== 'object') return null
+  const sessionId = (meta as { marketing_session_id?: unknown }).marketing_session_id
+  return typeof sessionId === 'string' && sessionId ? sessionId : null
 }
 
 export async function reportBindingAppointmentConversionSafely(

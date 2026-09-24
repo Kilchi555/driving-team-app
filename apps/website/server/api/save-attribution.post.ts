@@ -11,12 +11,16 @@
  *   - Cross-domain attribution to app.simy.ch bookings via session_id
  */
 
+import { getRequestHost } from 'h3'
 import { createWebsiteSupabaseClient } from '~/server/utils/supabase-service-env'
 import {
   mergeAttributionFields,
   hasAnyAttribution,
   type AttributionFields,
 } from '~/server/utils/marketing-attribution-merge'
+import { runAttributionTouchAfterLegacy } from '~/server/utils/marketing-touch-class'
+import { getWebsiteTenantId } from '~/server/utils/website-tenant'
+import { persistWebsiteMarketingTouch } from '~/server/utils/marketing-touch-persist'
 
 const BOT_PATTERNS = /bot|crawl|spider|slurp|prerender|headless|lighthouse|pagespeed|python-requests|curl\/|wget|axios|node-fetch/i
 
@@ -42,46 +46,71 @@ export default defineEventHandler(async (event) => {
   const sessionId = nullable(body?.session_id)
   if (!sessionId) return { ok: false, reason: 'missing_session_id' }
 
-  const attr = body?.attribution as AttributionFields
-  if (!hasAnyAttribution(attr)) return { ok: true, reason: 'no_attribution_data' }
+  const attr = (body?.attribution || {}) as AttributionFields
+  const hasLegacyAttribution = hasAnyAttribution(attr)
 
   const supabase = createWebsiteSupabaseClient(event)
   if (!supabase) return { ok: false, reason: 'missing_supabase_config' }
   const ipCountry = getHeader(event, 'x-vercel-ip-country') || null
+  let legacyError: string | null = null
 
-  const { data: existingRow } = await supabase
-    .from('marketing_attributions')
-    .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, landing_page')
-    .eq('session_id', sessionId)
-    .maybeSingle()
+  if (hasLegacyAttribution) {
+    const { data: existingRow } = await supabase
+      .from('marketing_attributions')
+      .select('gclid, gbraid, wbraid, fbclid, fbc, fbp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, landing_page')
+      .eq('session_id', sessionId)
+      .maybeSingle()
 
-  const merged = mergeAttributionFields(existingRow as AttributionFields | null, attr)
+    const merged = mergeAttributionFields(existingRow as AttributionFields | null, attr)
 
-  const { error } = await supabase
-    .from('marketing_attributions')
-    .upsert({
-      session_id: sessionId,
-      tenant_id: nullable(body?.tenant_id) ?? null,
-      gclid: nullable(merged.gclid),
-      gbraid: nullable(merged.gbraid),
-      wbraid: nullable(merged.wbraid),
-      fbclid: nullable(merged.fbclid),
-      fbc: nullable(merged.fbc),
-      fbp: nullable(merged.fbp),
-      utm_source: nullable(merged.utm_source),
-      utm_medium: nullable(merged.utm_medium),
-      utm_campaign: nullable(merged.utm_campaign),
-      utm_content: nullable(merged.utm_content),
-      utm_term: nullable(merged.utm_term),
-      landing_page: nullable(merged.landing_page),
-      user_agent: ua ? String(ua).slice(0, 512) : null,
-      ip_country: ipCountry,
-    }, { onConflict: 'session_id' })
+    const { error } = await supabase
+      .from('marketing_attributions')
+      .upsert({
+        session_id: sessionId,
+        tenant_id: nullable(body?.tenant_id) ?? null,
+        gclid: nullable(merged.gclid),
+        gbraid: nullable(merged.gbraid),
+        wbraid: nullable(merged.wbraid),
+        fbclid: nullable(merged.fbclid),
+        fbc: nullable(merged.fbc),
+        fbp: nullable(merged.fbp),
+        utm_source: nullable(merged.utm_source),
+        utm_medium: nullable(merged.utm_medium),
+        utm_campaign: nullable(merged.utm_campaign),
+        utm_content: nullable(merged.utm_content),
+        utm_term: nullable(merged.utm_term),
+        landing_page: nullable(merged.landing_page),
+        user_agent: ua ? String(ua).slice(0, 512) : null,
+        ip_country: ipCountry,
+      }, { onConflict: 'session_id' })
 
-  if (error) {
-    console.warn('[save-attribution] upsert error:', error.message)
-    return { ok: false, reason: 'db_error' }
+    if (error) legacyError = error.message
   }
 
-  return { ok: true }
+  const firstPartyHost = getRequestHost(event, { xForwardedHost: true })
+  const outcome = await runAttributionTouchAfterLegacy({
+    legacyError,
+    onLegacyError: (message) => console.warn('[save-attribution] upsert error:', message),
+    onTouchError: (touchErr: any) => {
+      console.warn('[save-attribution] marketing touch capture failed:', touchErr?.message ?? touchErr)
+    },
+    writeTouch: async () => {
+      const tenantId = await getWebsiteTenantId(event)
+      if (!tenantId) return
+      const referrer = nullable(body?.referrer_host) || nullable(attr && (attr as { referrer?: string }).referrer)
+      await persistWebsiteMarketingTouch(supabase, {
+        tenantId,
+        sessionId,
+        observation: {
+          ...attr,
+          landing_page: nullable(attr.landing_page),
+          referrer,
+          firstPartyHost,
+        },
+      })
+    },
+  })
+
+  if (outcome.legacyFailed) return { ok: false, reason: 'db_error' }
+  return { ok: true, reason: hasLegacyAttribution ? undefined : 'no_attribution_data' }
 })

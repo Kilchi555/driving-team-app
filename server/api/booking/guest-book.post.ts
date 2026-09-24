@@ -1122,6 +1122,7 @@ export default defineEventHandler(async (event) => {
         hashedEmail,
         hashedPhone,
         clientIp: ip,
+        marketingSessionId: body.marketing_session_id ?? null,
       })
       sentMetaPurchase = conversionReport.meta === 'sent'
     } catch (e: any) {
