@@ -672,9 +672,9 @@ export class AvailabilityCalculator {
         continue
       }
 
-      // Get staff's categories / event-type dimensions
-      // NEW: Support both parent and child categories
-      // If staff has "B", should match any subcategory of B (B Schaltung, B Automatik)
+      // Leaf-only match. loadCategories returns subcategories (parent_category_id set).
+      // A parent code such as "B" does not expand to B Automatik, B Schaltung, or BPT.
+      // A slot is created only when users.category contains that category's own code.
       // Event-type dimensions skip staff.category filters (those hold topic codes, not event codes).
       const staffCategories = params.categories.filter(cat => {
         if (cat._source === 'event_type') return true
@@ -696,8 +696,6 @@ export class AvailabilityCalculator {
             staffCats = []
           }
           
-          // Check if category code matches (for subcategories where code = parent code)
-          // We only load subcategories, so this naturally filters correctly
           return staffCats.includes(cat.code)
         }
         // Otherwise allow all categories

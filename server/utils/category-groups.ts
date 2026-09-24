@@ -75,17 +75,4 @@ export function isAdminFeeExempt(adminFeeAppliesFrom: number | null | undefined)
   return !adminFeeAppliesFrom || adminFeeAppliesFrom > 50
 }
 
-/**
- * Leaf categories for pickers / Spezialisierungen:
- * - all subcategories
- * - mains that have no children
- * Hide a main when it already has subs (e.g. hide "B" if "B Automatik" exists).
- */
-export function filterLeafCategories<T extends { id: number | string; parent_category_id?: number | string | null }>(
-  categories: T[],
-): T[] {
-  const parentIds = new Set(
-    categories.map((c) => c.parent_category_id).filter((id): id is number | string => id != null && id !== ''),
-  )
-  return categories.filter((c) => !parentIds.has(c.id))
-}
+export { filterLeafCategories } from '~/utils/category-leaf'

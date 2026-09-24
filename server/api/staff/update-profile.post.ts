@@ -1,6 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3'
 import { getSupabaseAdmin } from '~/server/utils/supabase-admin'
 import { requireAdminProfile } from '~/server/utils/auth'
+import { selectPersistableLeafCodes } from '~/utils/category-leaf'
 import { logger } from '~/utils/logger'
 
 const ALLOWED_FIELDS = ['first_name', 'last_name', 'email', 'phone', 'street', 'street_nr', 'zip', 'city'] as const
@@ -17,19 +18,39 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // category is an array — validate it separately
+  const supabase = getSupabaseAdmin()
+
   if ('category' in body) {
-    const cats = body.category
-    if (Array.isArray(cats) && cats.every(c => typeof c === 'string')) {
-      safeUpdates.category = cats
+    const requested = body.category
+    if (!Array.isArray(requested) || requested.some((code) => typeof code !== 'string' || code.trim().length === 0)) {
+      throw createError({ statusCode: 400, statusMessage: 'Kategorien müssen eine Liste von Codes sein' })
+    }
+
+    if (requested.length === 0) {
+      safeUpdates.category = []
+    } else {
+      const { data: categoryRows, error: categoryError } = await supabase
+        .from('categories')
+        .select('id, code, parent_category_id, tenant_id, is_active')
+        .eq('tenant_id', profile.tenant_id)
+        .eq('is_active', true)
+
+      if (categoryError) {
+        logger.error('❌ update-profile category lookup error:', categoryError.message)
+        throw createError({ statusCode: 500, statusMessage: 'Kategorien konnten nicht geprüft werden' })
+      }
+
+      const decision = selectPersistableLeafCodes(requested, categoryRows || [], profile.tenant_id)
+      if (!decision.ok) {
+        throw createError({ statusCode: 400, statusMessage: decision.statusMessage })
+      }
+      safeUpdates.category = decision.codes
     }
   }
 
   if (Object.keys(safeUpdates).length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'Keine Felder zum Aktualisieren' })
   }
-
-  const supabase = getSupabaseAdmin()
 
   const { data, error } = await supabase
     .from('users')
