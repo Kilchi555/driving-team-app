@@ -199,3 +199,7 @@ CRON_SECRET=your-secret-key  # Required for cron endpoint auth
 - **Storage**: ~1KB per webhook log entry
 
 Run cron job every 10 minutes to stay current.
+
+## Related
+
+- Course payments (`metadata.course_id`): recovery and webhook FULFILL must use `fulfill_course_wallee_payment` — see [COURSE_ATOMIC_CAPACITY_FULFILLMENT.md](./COURSE_ATOMIC_CAPACITY_FULFILLMENT.md) (#226). Do not mark course payments `completed` without a seat.
