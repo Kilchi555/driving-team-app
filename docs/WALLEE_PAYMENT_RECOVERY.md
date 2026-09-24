@@ -199,3 +199,7 @@ CRON_SECRET=your-secret-key  # Required for cron endpoint auth
 - **Storage**: ~1KB per webhook log entry
 
 Run cron job every 10 minutes to stay current.
+
+## Related
+
+Cancelling or failing a pending payment also releases any gift-card reservation / claimed discount usage (DB trigger). See [GIFT_CARD_CHECKOUT_RESERVE.md](./GIFT_CARD_CHECKOUT_RESERVE.md).
