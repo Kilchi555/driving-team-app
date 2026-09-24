@@ -101,7 +101,8 @@
     "@types/node": "^26.6.1",
     "@vitest/ui": "^5.0.1",
     "eslint": "^10.10.0",
-    "typescript": "^7.0.2",
+    "typescript": "5.8.3",
+    "vite": "6.4.1",
     "vitest": "^5.0.1",
     "vue-tsc": "^3.3.11"
   },
