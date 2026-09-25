@@ -225,9 +225,34 @@ export async function syncOneExternalCalendar(
   })
 
   if (windowEvents.length === 0) {
-    logger.warn(`⚠️ Empty ICS feed (0 events) for ${calendar.calendar_name || calendar.id}`)
-    // Soft warning — feed is reachable but has no appointments. Do not bump
-    // consecutive_failures (URL itself is fine), but surface it in the UI.
+    // A real feed with zero VEVENTs is an authoritative empty snapshot.
+    // Events that exist but fall outside the window or the 14-day cap are not:
+    // replacing would drop the last good in-window snapshot. The Simy error
+    // stub never reaches this branch — probeIcsUrl rejects it first.
+    if (probe.feedKind === 'success_empty') {
+      const { error: clearError } = await supabase
+        .from('external_busy_times')
+        .delete()
+        .eq('external_calendar_id', calendar.id)
+      if (clearError) {
+        await recordFailure(supabase, calendar, clearError.message, notify)
+        return { status: 'failed', error: clearError.message }
+      }
+      await queueStaffRecalc(supabase, calendar.staff_id, calendar.tenant_id)
+      await supabase
+        .from('external_calendars')
+        .update({
+          last_sync_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          consecutive_failures: 0,
+          last_fetch_error: null,
+        })
+        .eq('id', calendar.id)
+      logger.info(`✅ Synced empty calendar: ${calendar.calendar_name || calendar.id}`)
+      return { status: 'synced', events: 0 }
+    }
+
+    logger.warn(`⚠️ No in-window ICS events for ${calendar.calendar_name || calendar.id}; keeping last snapshot`)
     await supabase
       .from('external_calendars')
       .update({
@@ -235,7 +260,7 @@ export async function syncOneExternalCalendar(
         updated_at: new Date().toISOString(),
         consecutive_failures: 0,
         last_fetch_error:
-          'EMPTY_CALENDAR: Kalender-Feed enthält keine Termine. Vermutlich wurde ein leerer Kalender geteilt — bitte den Kalender mit den echten Terminen öffentlich teilen und den neuen Link verbinden.',
+          'EMPTY_WINDOW: Der Feed enthält Termine, aber keine im Sync-Fenster. Der bisherige Stand bleibt erhalten.',
       })
       .eq('id', calendar.id)
     return { status: 'synced', events: 0 }
