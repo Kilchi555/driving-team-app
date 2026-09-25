@@ -84,6 +84,8 @@ export interface InvoicePdfData {
   billingEmail?: string
   items: {
     product_name: string
+    /** Frozen event label for the price breakdown. Falls back to product_name. */
+    breakdown_label?: string | null
     appointment_date?: string | null
     appointment_duration_minutes?: number | null
     product_description?: string | null
@@ -125,7 +127,7 @@ export interface InvoicePdfData {
    * (used for Zahlungserinnerung / Mahnung so the letter is never cramped above the slip).
    */
   qrOnSeparatePage?: boolean
-  /** Breakdown label for lesson_price_rappen (default: Fahrstunde) */
+  /** @deprecated Prefer item.breakdown_label. Kept for callers that still pass one label. */
   appointmentLabel?: string
   dateLabel?: string
   dueLabel?: string
@@ -449,7 +451,10 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<Buffer> 
 
       const breakdown: { label: string; amount: number }[] = []
       if ((item.lesson_price_rappen || 0) > 0)
-        breakdown.push({ label: data.appointmentLabel || 'Termin', amount: item.lesson_price_rappen! })
+        breakdown.push({
+          label: item.breakdown_label || item.product_name || data.appointmentLabel || 'Leistung',
+          amount: item.lesson_price_rappen!,
+        })
       if ((item.admin_fee_rappen || 0) > 0)
         breakdown.push({ label: 'Admin-Gebühr', amount: item.admin_fee_rappen! })
       if ((item.products_price_rappen || 0) > 0) {

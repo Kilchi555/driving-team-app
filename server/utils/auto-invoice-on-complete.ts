@@ -24,8 +24,8 @@ import {
   type InvoiceDraftPayload,
   type PersistAndSendActor,
 } from '~/server/utils/invoice-persist-and-send'
-import { eventTypeLabelMap, getTenantTerminology } from '~/server/utils/tenant-terminology'
 import { buildInvoiceServiceLineLabel, buildInvoiceServiceDescription } from '~/server/utils/invoice-line-labels'
+import { loadTenantEventTypeNames, resolveInvoiceLineLabel } from '~/server/utils/invoice-line-snapshot'
 import { resolveStudentBillingAddress } from '~/server/utils/billing-from-company'
 import { billingPersonNameParts } from '~/utils/billing-address-map'
 import logger from '~/utils/logger'
@@ -185,26 +185,28 @@ async function buildDraftForPayments(opts: {
     const { data: productSales } = await supabase
       .from('product_sales')
       .select('appointment_id, product_id, quantity, total_price_rappen, products(id, name)')
+      .eq('tenant_id', tenantId)
       .in('appointment_id', aptIdsWithProducts)
     if (productSales) {
       productsByApt = groupProductSalesByAppointment(productSales as any[])
     }
   }
 
-  const terms = await getTenantTerminology(supabase, tenantId)
-  const eventTypeMap = eventTypeLabelMap(terms)
-  const appointmentFallback = terms.appointment || 'Termin'
+  const eventTypeNames = await loadTenantEventTypeNames(
+    supabase,
+    tenantId,
+    payments.map((p) => (p.appointments as any)?.event_type_code),
+  )
 
   let sortOrder = 0
   const items = payments.flatMap((p) => {
     const apt = p.appointments as any
-    const label = apt?.event_type_code ? (eventTypeMap[apt.event_type_code] || apt.event_type_code) : null
-    const staffFirstName = apt?.staff?.first_name || null
+    const eventTypeCode = String(apt?.event_type_code || '').trim() || null
     const serviceName = buildInvoiceServiceLineLabel({
-      eventLabel: label,
-      title: apt?.title,
-      fallback: appointmentFallback,
-      staffFirstName,
+      eventLabel: resolveInvoiceLineLabel({
+        eventTypeName: eventTypeCode ? eventTypeNames[eventTypeCode] : null,
+        existingTitle: apt?.title,
+      }),
       appointmentStatus: apt?.status,
       cancellationChargePercentage: apt?.cancellation_charge_percentage,
     })
@@ -222,6 +224,8 @@ async function buildDraftForPayments(opts: {
       payment_id: p.id,
       appointment_id: p.appointment_id,
       product_id: null as string | null,
+      event_type_code: eventTypeCode,
+      user_id: p.user_id || null,
       product_name: serviceName,
       product_description: serviceDescription,
       appointment_title: apt?.title || null,

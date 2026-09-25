@@ -1216,6 +1216,8 @@ function toggleOpenItem(item: any) {
       sort_order: invoiceItems.value.length,
       // Appointment details for date/time display on invoice
       appointment_id: item.appointment_id || null,
+      event_type_code: item.event_type_code || null,
+      user_id: item.user_id || null,
       appointment_title: item.label,
       appointment_date: isMultiSession ? null : (item.date || null),
       appointment_duration_minutes: isMultiSession ? null : (item.duration_minutes || null),

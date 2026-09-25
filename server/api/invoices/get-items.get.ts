@@ -30,10 +30,21 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('id')
+      .eq('id', invoice_id)
+      .eq('tenant_id', userProfile.tenant_id)
+      .maybeSingle()
+
+    if (invoiceError) throw mapSupabaseError(invoiceError)
+    if (!invoice) throw createError({ statusCode: 404, message: 'Invoice not found' })
+
     const { data: items, error } = await supabase
       .from('invoice_items')
       .select('*')
       .eq('invoice_id', invoice_id)
+      .eq('tenant_id', userProfile.tenant_id)
       .order('sort_order')
 
     if (error) throw mapSupabaseError(error)
@@ -53,6 +64,7 @@ export default defineEventHandler(async (event) => {
     const { data: productSales } = await supabase
       .from('product_sales')
       .select('appointment_id, product_id, quantity, total_price_rappen, products(id, name)')
+      .eq('tenant_id', userProfile.tenant_id)
       .in('appointment_id', appointmentIds)
 
     const productsByApt = groupProductSalesByAppointment((productSales || []) as any[])
@@ -60,6 +72,7 @@ export default defineEventHandler(async (event) => {
 
     return { success: true, data: expanded }
   } catch (err: any) {
+    if (err?.statusCode && err.statusCode < 500) throw err
     console.error('Error fetching invoice items:', err)
     throw createError({ statusCode: 500, message: err.message })
   }
