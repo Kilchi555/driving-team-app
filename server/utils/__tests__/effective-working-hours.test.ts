@@ -285,4 +285,16 @@ describe('availability integration contracts', () => {
     expect(migration).not.toMatch(/UPDATE public\.availability_slots/)
     expect(migration).not.toMatch(/DELETE FROM public\.appointments/)
   })
+
+  it('rejects past civil dates in the database trigger, using Europe/Zurich', () => {
+    const guard = readFileSync(
+      resolve(process.cwd(), 'migrations/20260925_staff_working_hour_exception_not_past.sql'),
+      'utf8',
+    )
+    expect(guard).toContain('enforce_staff_working_hour_exception_not_past')
+    expect(guard).toContain("(timezone('Europe/Zurich', now()))::date")
+    expect(guard).toContain('BEFORE INSERT OR UPDATE')
+    expect(guard).toContain("RAISE EXCEPTION 'date_in_past'")
+    expect(guard).not.toContain('CHECK (exception_date')
+  })
 })
