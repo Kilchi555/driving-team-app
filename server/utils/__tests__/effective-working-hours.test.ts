@@ -297,4 +297,22 @@ describe('availability integration contracts', () => {
     expect(guard).toContain("RAISE EXCEPTION 'date_in_past'")
     expect(guard).not.toContain('CHECK (exception_date')
   })
+
+  it('rejects deleting a past civil date and still allows today or later', () => {
+    const guard = readFileSync(
+      resolve(process.cwd(), 'migrations/20260925_staff_working_hour_exception_past_delete.sql'),
+      'utf8',
+    )
+    expect(guard).toContain('BEFORE INSERT OR UPDATE OR DELETE')
+    expect(guard).toContain("TG_OP = 'DELETE'")
+    expect(guard).toContain('OLD.exception_date')
+    expect(guard).toContain('v_date < v_today')
+    expect(guard).not.toContain('v_date <= v_today')
+    expect(guard).toContain("(timezone('Europe/Zurich', now()))::date")
+    expect(guard).toContain("RAISE EXCEPTION 'date_in_past'")
+    expect(guard).toContain('RETURN OLD')
+    expect(guard).not.toContain('CHECK (exception_date')
+    expect(guard).not.toMatch(/ALTER TABLE public\.staff_working_hours/)
+    expect(guard).not.toMatch(/UPDATE public\.availability_slots/)
+  })
 })

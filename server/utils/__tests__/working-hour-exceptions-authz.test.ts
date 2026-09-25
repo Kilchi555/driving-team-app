@@ -233,6 +233,54 @@ describe('working-hour exception API authorization', () => {
     expect(mocks.enqueueStaffAvailabilityRecalc).not.toHaveBeenCalled()
   })
 
+  it('rejects deleting a past date and deletes a future date when authorized', async () => {
+    const past = adminClient({ data: staffRow('staff-a'), error: null })
+    mocks.requireTenantStaff.mockResolvedValue(staffA)
+    mocks.readBody.mockResolvedValue({
+      action: 'delete',
+      staffId: 'staff-a',
+      date: '2000-01-01',
+      tenant_id: 'tenant-b',
+    })
+    mocks.getSupabaseAdmin.mockReturnValue(past.client)
+    await expect((await handler())({})).rejects.toMatchObject({
+      statusCode: 400,
+      statusMessage: 'Date is before today in Europe/Zurich',
+    })
+    expect(past.tables).not.toContain('staff_working_hour_exceptions')
+    expect(mocks.enqueueStaffAvailabilityRecalc).not.toHaveBeenCalled()
+
+    const future = adminClient({ data: staffRow('staff-a'), error: null })
+    mocks.readBody.mockResolvedValue({
+      action: 'delete',
+      staffId: 'staff-a',
+      date: '2099-01-05',
+      tenant_id: 'tenant-b',
+    })
+    mocks.getSupabaseAdmin.mockReturnValue(future.client)
+    const restored = await (await handler())({}) as { success: boolean }
+    expect(restored.success).toBe(true)
+    expect(future.tables).toContain('staff_working_hour_exceptions')
+    expect(future.client.from).toHaveBeenCalledWith('staff_working_hour_exceptions')
+    expect(mocks.enqueueStaffAvailabilityRecalc).toHaveBeenCalledWith({
+      staff_id: 'staff-a',
+      tenant_id: 'tenant-a',
+      trigger: 'working_hours',
+    })
+
+    const denied = adminClient({ data: staffRow('staff-b'), error: null })
+    mocks.enqueueStaffAvailabilityRecalc.mockClear()
+    mocks.readBody.mockResolvedValue({
+      action: 'delete',
+      staffId: 'staff-b',
+      date: '2099-01-05',
+    })
+    mocks.getSupabaseAdmin.mockReturnValue(denied.client)
+    await expect((await handler())({})).rejects.toMatchObject({ statusCode: 403 })
+    expect(denied.tables).not.toContain('staff_working_hour_exceptions')
+    expect(mocks.enqueueStaffAvailabilityRecalc).not.toHaveBeenCalled()
+  })
+
   it('does not reference weekly hours or appointments in the handler source', () => {
     const source = readFileSync(
       resolve(process.cwd(), 'server/api/staff/working-hour-exceptions.post.ts'),
