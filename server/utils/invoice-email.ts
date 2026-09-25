@@ -38,6 +38,7 @@ export interface InvoiceEmailItem {
   appointment_date?: string | null
   appointment_duration_minutes?: number | null
   product_description?: string | null
+  customer_line?: string | null
   quantity: number
   unit_price_rappen: number
   total_price_rappen: number
@@ -145,6 +146,7 @@ export function buildInvoiceEmailHtml(data: InvoiceEmailData): string {
     <tr>
       <td class="col-desc" style="padding:12px 12px ${pb};border-bottom:${border};">
         <strong style="color:#1e293b;font-size:14px;">${escapeHtml(item.product_name)}</strong>
+        ${item.customer_line ? `<br><span style="color:#94a3b8;font-size:11px;">${escapeHtml(item.customer_line)}</span>` : ''}
         ${metaLine}${discountLine}
       </td>
       <td class="col-anz" style="padding:12px 8px ${pb};border-bottom:${border};text-align:center;color:#94a3b8;font-size:13px;">${item.quantity}</td>

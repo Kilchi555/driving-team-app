@@ -73,27 +73,15 @@ export default defineEventHandler(async (event) => {
     if (apts) for (const apt of apts) appointmentMap[apt.id] = apt
   }
 
-  const studentIds = Array.from(new Set((rawItems || []).map((i: any) => i.user_id).filter(Boolean)))
-  const studentNameById: Record<string, string> = {}
-  if (studentIds.length > 0) {
-    const { data: students } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .in('id', studentIds)
-      .eq('tenant_id', invoice.tenant_id)
-    for (const student of students || []) {
-      studentNameById[student.id] = `${student.first_name || ''} ${student.last_name || ''}`.trim()
-    }
-  }
-
   const items = (rawItems || []).map((item: any) => {
     const apt = item.appointment_id ? appointmentMap[item.appointment_id] : null
     const presented = presentStoredInvoiceLine({
       productName: item.product_name,
       productId: item.product_id,
-      billingType: invoice.billing_type,
-      studentName: item.user_id ? studentNameById[item.user_id] : null,
       eventTypeCode: item.event_type_code,
+      staffFirstName: item.staff_first_name,
+      customerFirstName: item.customer_first_name,
+      customerLastName: item.customer_last_name,
     })
     return {
       ...item,
@@ -210,6 +198,7 @@ export default defineEventHandler(async (event) => {
     items: finalItems.map((i: any) => ({
       product_name: i.product_name,
       breakdown_label: i.breakdown_label || i.product_name,
+      customer_line: i.customer_line || null,
       appointment_date: i.appointment_start_time || i.appointment_date,
       appointment_duration_minutes: i.appointment_duration_minutes ?? null,
       product_description: i.product_description || null,

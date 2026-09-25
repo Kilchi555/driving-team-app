@@ -3,7 +3,8 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   GENERIC_INVOICE_LINE_LABEL,
-  formatInvoiceLineTitle,
+  formatCustomerInvoiceLine,
+  formatStaffInvoiceLineTitle,
   invoiceLineBreakdownLabel,
   loadTenantEventTypeNames,
   presentStoredInvoiceLine,
@@ -38,57 +39,63 @@ describe('resolveInvoiceLineLabel', () => {
   })
 })
 
-describe('company and private presentation', () => {
-  it('appends the student only on company service lines', () => {
-    expect(formatInvoiceLineTitle({
-      productName: 'Fahrstunde',
-      billingType: 'company',
-      studentName: 'Max Muster',
-      eventTypeCode: 'lesson',
-    })).toBe('Fahrstunde – Max Muster')
-    expect(formatInvoiceLineTitle({
-      productName: 'Prüfung',
-      billingType: 'company',
-      studentName: 'Max Muster',
-      eventTypeCode: 'exam',
-    })).toBe('Prüfung – Max Muster')
-    expect(formatInvoiceLineTitle({
-      productName: 'Theorie',
-      billingType: 'company',
-      studentName: 'Anna Beispiel',
-      eventTypeCode: 'theory',
-    })).toBe('Theorie – Anna Beispiel')
+describe('staff and customer lines', () => {
+  it('renders event type with the staff first name, then the customer', () => {
+    expect(formatStaffInvoiceLineTitle({ productName: 'Fahrstunde', staffFirstName: 'Peter' })).toBe('Fahrstunde mit Peter')
+    expect(formatStaffInvoiceLineTitle({ productName: 'Prüfung', staffFirstName: 'Peter' })).toBe('Prüfung mit Peter')
+    expect(formatStaffInvoiceLineTitle({ productName: 'Theorie', staffFirstName: 'Anna' })).toBe('Theorie mit Anna')
+    expect(formatCustomerInvoiceLine({ customerFirstName: 'Max', customerLastName: 'Muster' })).toBe('Kunde: Max Muster')
+    expect(formatCustomerInvoiceLine({ customerFirstName: 'Anna', customerLastName: 'Beispiel' })).toBe('Kunde: Anna Beispiel')
   })
 
-  it('keeps two students distinct from the stored snapshot', () => {
+  it('uses the same two lines for private and company service lines', () => {
+    const presented = presentStoredInvoiceLine({
+      productName: 'Fahrstunde',
+      eventTypeCode: 'lesson',
+      staffFirstName: 'Peter',
+      customerFirstName: 'Max',
+      customerLastName: 'Muster',
+    })
+    expect(presented).toEqual({
+      product_name: 'Fahrstunde mit Peter',
+      breakdown_label: 'Fahrstunde',
+      customer_line: 'Kunde: Max Muster',
+    })
+  })
+
+  it('keeps two customers distinct from their own snapshots', () => {
     const lines = [
-      { productName: 'Fahrstunde', user: 'Max Muster', code: 'lesson' },
-      { productName: 'Fahrstunde', user: 'Anna Beispiel', code: 'lesson' },
-    ].map((line) => formatInvoiceLineTitle({
-      productName: line.productName,
-      billingType: 'company',
-      studentName: line.user,
-      eventTypeCode: line.code,
-    }))
-    expect(lines).toEqual(['Fahrstunde – Max Muster', 'Fahrstunde – Anna Beispiel'])
-  })
-
-  it('does not append the student on a private invoice', () => {
-    expect(formatInvoiceLineTitle({
+      { first: 'Max', last: 'Muster' },
+      { first: 'Anna', last: 'Beispiel' },
+    ].map((person) => presentStoredInvoiceLine({
       productName: 'Fahrstunde',
-      billingType: 'individual',
-      studentName: 'Max Muster',
       eventTypeCode: 'lesson',
-    })).toBe('Fahrstunde')
+      staffFirstName: 'Peter',
+      customerFirstName: person.first,
+      customerLastName: person.last,
+    }).customer_line)
+    expect(lines).toEqual(['Kunde: Max Muster', 'Kunde: Anna Beispiel'])
   })
 
-  it('does not invent an event type or student suffix for course lines', () => {
-    expect(formatInvoiceLineTitle({
+  it('keeps the cancellation suffix after the staff name', () => {
+    expect(formatStaffInvoiceLineTitle({
+      productName: 'Fahrstunde (abgesagt – 50% verrechnet)',
+      staffFirstName: 'Peter',
+    })).toBe('Fahrstunde mit Peter (abgesagt – 50% verrechnet)')
+  })
+
+  it('does not invent staff or a customer line for course lines', () => {
+    expect(presentStoredInvoiceLine({
       productName: 'Erste Hilfe',
-      billingType: 'company',
-      studentName: 'Max Muster',
       eventTypeCode: null,
-    })).toBe('Erste Hilfe')
+      staffFirstName: 'Peter',
+      customerFirstName: 'Max',
+      customerLastName: 'Muster',
+    })).toEqual({
+      product_name: 'Erste Hilfe',
+      breakdown_label: 'Erste Hilfe',
+      customer_line: null,
+    })
   })
 })
 
@@ -102,12 +109,14 @@ describe('stored snapshot presentation', () => {
     const liveAppointment = { event_type_code: 'lesson', user_id: 'someone-else', name: 'Fahrstunde' }
     const presented = presentStoredInvoiceLine({
       productName: stored.product_name,
-      billingType: 'company',
-      studentName: 'Anna Beispiel',
       eventTypeCode: stored.event_type_code,
+      staffFirstName: 'Peter',
+      customerFirstName: 'Anna',
+      customerLastName: 'Beispiel',
     })
     expect(liveAppointment.event_type_code).toBe('lesson')
-    expect(presented.product_name).toBe('Theorie – Anna Beispiel')
+    expect(presented.product_name).toBe('Theorie mit Peter')
+    expect(presented.customer_line).toBe('Kunde: Anna Beispiel')
     expect(presented.breakdown_label).toBe('Theorie')
     expect(invoiceLineBreakdownLabel(stored.product_name)).toBe('Theorie')
     expect(presented.breakdown_label).not.toBe(liveAppointment.name)
@@ -117,19 +126,23 @@ describe('stored snapshot presentation', () => {
     expect(presentStoredInvoiceLine({
       productName: 'Lehrmittel',
       productId: 'prod-1',
-      billingType: 'company',
-      studentName: 'Max Muster',
+      staffFirstName: 'Peter',
+      customerFirstName: 'Max',
+      customerLastName: 'Muster',
       eventTypeCode: 'lesson',
-    })).toEqual({ product_name: 'Lehrmittel', breakdown_label: 'Lehrmittel' })
+    })).toEqual({ product_name: 'Lehrmittel', breakdown_label: 'Lehrmittel', customer_line: null })
   })
 
-  it('historical rows without a snapshot stay on the stored name', () => {
-    expect(presentStoredInvoiceLine({
-      productName: 'Fahrstunde mit Peter',
-      billingType: 'company',
-      studentName: 'Max Muster',
-      eventTypeCode: null,
-    }).product_name).toBe('Fahrstunde mit Peter')
+  it('historical rows without staff or customer snapshots stay on the stored name', () => {
+    const presented = presentStoredInvoiceLine({
+      productName: 'Fahrstunde',
+      eventTypeCode: 'lesson',
+      staffFirstName: null,
+      customerFirstName: null,
+      customerLastName: null,
+    })
+    expect(presented.product_name).toBe('Fahrstunde')
+    expect(presented.customer_line).toBeNull()
   })
 })
 
@@ -167,6 +180,10 @@ describe('migration and pdf label source', () => {
     const sql = readFileSync(resolve(process.cwd(), 'migrations/20260925_invoice_item_line_snapshot.sql'), 'utf8')
     expect(sql).toContain('ADD COLUMN IF NOT EXISTS event_type_code text')
     expect(sql).toContain('ADD COLUMN IF NOT EXISTS user_id uuid')
+    expect(sql).toContain('ADD COLUMN IF NOT EXISTS staff_id uuid')
+    expect(sql).toContain('ADD COLUMN IF NOT EXISTS staff_first_name text')
+    expect(sql).toContain('ADD COLUMN IF NOT EXISTS customer_first_name text')
+    expect(sql).toContain('ADD COLUMN IF NOT EXISTS customer_last_name text')
     expect(sql).toContain('ON DELETE SET NULL')
     expect(sql.toLowerCase()).not.toContain('update invoice_items')
     expect(sql.toLowerCase()).not.toContain('drop column')

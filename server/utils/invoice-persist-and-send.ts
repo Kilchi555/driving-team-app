@@ -211,6 +211,10 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
       product_description: item.product_description || null,
       event_type_code: item.event_type_code || null,
       user_id: item.user_id || null,
+      staff_id: item.staff_id || null,
+      staff_first_name: item.staff_first_name || null,
+      customer_first_name: item.customer_first_name || null,
+      customer_last_name: item.customer_last_name || null,
       appointment_title: item.appointment_title || null,
       appointment_date: item.appointment_date || null,
       appointment_duration_minutes: item.appointment_duration_minutes || null,
@@ -334,9 +338,10 @@ export async function persistAndSendInvoiceDraft(opts: PersistAndSendOptions): P
     const presented = presentStoredInvoiceLine({
       productName: item.product_name,
       productId: item.product_id,
-      billingType: draft.billing_type,
-      studentName: item.user_id ? studentName : null,
       eventTypeCode: item.event_type_code,
+      staffFirstName: item.staff_first_name,
+      customerFirstName: item.customer_first_name,
+      customerLastName: item.customer_last_name,
     })
     return { ...item, ...presented }
   })

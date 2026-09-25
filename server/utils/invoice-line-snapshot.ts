@@ -21,22 +21,33 @@ export function resolveInvoiceLineLabel(opts: {
 }
 
 /**
- * Company invoices identify the student on service lines.
- * The stored product_name stays the event label. Course lines (no event type)
- * keep their existing participant text and are not rewritten here.
+ * Line 1 for an appointment service: event label plus the frozen staff first name.
+ * Cancellation text stays after the name. Course lines do not use this.
  */
-export function formatInvoiceLineTitle(opts: {
+export function formatStaffInvoiceLineTitle(opts: {
   productName?: string | null
-  billingType?: string | null
-  studentName?: string | null
-  eventTypeCode?: string | null
+  staffFirstName?: string | null
 }): string {
   const base = String(opts.productName || '').trim() || GENERIC_INVOICE_LINE_LABEL
-  if (opts.billingType !== 'company') return base
-  if (!String(opts.eventTypeCode || '').trim()) return base
-  const student = String(opts.studentName || '').trim()
-  if (!student) return base
-  return `${base} – ${student}`
+  const staff = String(opts.staffFirstName || '').trim()
+  if (!staff) return base
+  const withStaff = ` mit ${staff}`
+  if (base.includes(withStaff)) return base
+  const cancelled = base.match(/^(.*?)( \(abgesagt.*\))$/)
+  if (cancelled) return `${cancelled[1]}${withStaff}${cancelled[2]}`
+  return `${base}${withStaff}`
+}
+
+/** Line 2. Empty when the customer name was not snapshotted. */
+export function formatCustomerInvoiceLine(opts: {
+  customerFirstName?: string | null
+  customerLastName?: string | null
+}): string | null {
+  const name = [opts.customerFirstName, opts.customerLastName]
+    .map((part) => String(part || '').trim())
+    .filter(Boolean)
+    .join(' ')
+  return name ? `Kunde: ${name}` : null
 }
 
 export function invoiceLineBreakdownLabel(productName?: string | null): string {
@@ -45,30 +56,39 @@ export function invoiceLineBreakdownLabel(productName?: string | null): string {
 }
 
 /**
- * PDF/email presentation of a stored line.
- * product_name may gain the company student suffix. breakdown_label stays the stored name.
- * Live appointment fields are not inputs.
+ * PDF/email/preview presentation of a stored line.
+ * Staff and customer text come only from snapshot columns.
+ * Live appointment and live user records are not inputs.
+ * Old rows without those columns keep product_name and omit the customer line.
  */
 export function presentStoredInvoiceLine(opts: {
   productName?: string | null
   productId?: string | null
-  billingType?: string | null
-  studentName?: string | null
   eventTypeCode?: string | null
-}): { product_name: string; breakdown_label: string } {
+  staffFirstName?: string | null
+  customerFirstName?: string | null
+  customerLastName?: string | null
+}): { product_name: string; breakdown_label: string; customer_line: string | null } {
   const stored = String(opts.productName || '').trim()
   const breakdown_label = invoiceLineBreakdownLabel(stored)
-  if (opts.productId) {
-    return { product_name: stored || GENERIC_INVOICE_LINE_LABEL, breakdown_label }
+  const serviceLine = !opts.productId && String(opts.eventTypeCode || '').trim()
+  if (!serviceLine) {
+    return {
+      product_name: stored || GENERIC_INVOICE_LINE_LABEL,
+      breakdown_label,
+      customer_line: null,
+    }
   }
   return {
-    product_name: formatInvoiceLineTitle({
+    product_name: formatStaffInvoiceLineTitle({
       productName: stored,
-      billingType: opts.billingType,
-      studentName: opts.studentName,
-      eventTypeCode: opts.eventTypeCode,
+      staffFirstName: opts.staffFirstName,
     }),
     breakdown_label,
+    customer_line: formatCustomerInvoiceLine({
+      customerFirstName: opts.customerFirstName,
+      customerLastName: opts.customerLastName,
+    }),
   }
 }
 

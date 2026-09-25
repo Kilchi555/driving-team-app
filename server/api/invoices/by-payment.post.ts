@@ -51,6 +51,7 @@ export default defineEventHandler(async (event) => {
       total_amount_rappen, status, payment_status, paid_at, notes,
       invoice_items (
         id, product_name, product_description, product_id, event_type_code, user_id,
+        staff_id, staff_first_name, customer_first_name, customer_last_name,
         appointment_id, appointment_date, appointment_duration_minutes,
         quantity, unit_price_rappen, total_price_rappen
       )
@@ -78,19 +79,6 @@ export default defineEventHandler(async (event) => {
       .eq('tenant_id', staffUser.tenant_id)
     if (appointments) {
       for (const apt of appointments) appointmentStartTimes[apt.id] = apt.start_time
-    }
-  }
-
-  const studentIds = Array.from(new Set((invoice.invoice_items as any[]).map((i: any) => i.user_id).filter(Boolean)))
-  const studentNameById: Record<string, string> = {}
-  if (studentIds.length > 0) {
-    const { data: students } = await supabase
-      .from('users')
-      .select('id, first_name, last_name')
-      .in('id', studentIds)
-      .eq('tenant_id', staffUser.tenant_id)
-    for (const student of students || []) {
-      studentNameById[student.id] = `${student.first_name || ''} ${student.last_name || ''}`.trim()
     }
   }
 
@@ -149,9 +137,10 @@ export default defineEventHandler(async (event) => {
     const presented = presentStoredInvoiceLine({
       productName: item.product_name,
       productId: item.product_id,
-      billingType: (invoice as any).billing_type,
-      studentName: item.user_id ? studentNameById[item.user_id] : null,
       eventTypeCode: item.event_type_code,
+      staffFirstName: item.staff_first_name,
+      customerFirstName: item.customer_first_name,
+      customerLastName: item.customer_last_name,
     })
     return {
       ...item,

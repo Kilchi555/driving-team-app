@@ -55,7 +55,8 @@ const PAYMENT_SELECT = `
     event_type_code,
     status,
     cancellation_charge_percentage,
-    staff:users!staff_id (first_name)
+    staff_id,
+    staff:users!staff_id (id, first_name)
   )
 `
 
@@ -226,6 +227,10 @@ async function buildDraftForPayments(opts: {
       product_id: null as string | null,
       event_type_code: eventTypeCode,
       user_id: p.user_id || null,
+      staff_id: apt?.staff_id || apt?.staff?.id || null,
+      staff_first_name: apt?.staff?.first_name || null,
+      customer_first_name: student.first_name || null,
+      customer_last_name: student.last_name || null,
       product_name: serviceName,
       product_description: serviceDescription,
       appointment_title: apt?.title || null,

@@ -72,8 +72,8 @@ type Row = Record<string, unknown>
 function createDb() {
   const tables: Record<string, Row[]> = {
     users: [
-      { id: STAFF, auth_user_id: 'auth-staff', tenant_id: TENANT, first_name: 'Ada', last_name: 'Admin', email: 'ada@example.ch' },
-      { id: MAX, tenant_id: TENANT, first_name: 'Max', last_name: 'Muster' },
+      { id: STAFF, auth_user_id: 'auth-staff', tenant_id: TENANT, role: 'admin', first_name: 'Ada', last_name: 'Admin', email: 'ada@example.ch' },
+      { id: MAX, tenant_id: TENANT, first_name: 'Lisa', last_name: 'Test' },
       { id: ANNA, tenant_id: TENANT, first_name: 'Anna', last_name: 'Beispiel' },
     ],
     invoices_with_details: [
@@ -119,6 +119,10 @@ function createDb() {
         product_name: 'Fahrstunde',
         event_type_code: 'lesson',
         user_id: MAX,
+        staff_id: 'staff-peter',
+        staff_first_name: 'Peter',
+        customer_first_name: 'Max',
+        customer_last_name: 'Muster',
         appointment_id: APT,
         quantity: 1,
         unit_price_rappen: 9000,
@@ -132,6 +136,10 @@ function createDb() {
         product_name: 'Fahrstunde',
         event_type_code: 'lesson',
         user_id: MAX,
+        staff_id: 'staff-peter',
+        staff_first_name: 'Peter',
+        customer_first_name: 'Max',
+        customer_last_name: 'Muster',
         appointment_id: APT,
         quantity: 1,
         unit_price_rappen: 9000,
@@ -145,6 +153,7 @@ function createDb() {
         tenant_id: TENANT,
         event_type_code: 'exam',
         user_id: ANNA,
+        staff_id: ANNA,
         title: 'Prüfung',
         start_time: '2026-09-02T08:00:00.000Z',
         duration_minutes: 45,
@@ -156,6 +165,7 @@ function createDb() {
     ],
     payments: [
       {
+        id: 'pay-1',
         invoice_id: 'inv-private',
         tenant_id: TENANT,
         appointment_id: APT,
@@ -180,6 +190,24 @@ function createDb() {
         amount_paid_rappen: 0,
       },
     ],
+    invoices: [{
+      id: 'inv-private',
+      tenant_id: TENANT,
+      billing_type: 'individual',
+      invoice_items: [{
+        id: 'line-private',
+        product_name: 'Fahrstunde',
+        event_type_code: 'lesson',
+        user_id: MAX,
+        staff_first_name: 'Peter',
+        customer_first_name: 'Max',
+        customer_last_name: 'Muster',
+        appointment_id: APT,
+        quantity: 1,
+        unit_price_rappen: 9000,
+        total_price_rappen: 9000,
+      }],
+    }],
     tenants: [{ id: TENANT, name: 'Fahrschule', qr_iban: null }],
     product_sales: [],
   }
@@ -222,6 +250,12 @@ async function resend() {
   return (await import('../../api/invoices/resend.post')).default as (event: unknown) => Promise<unknown>
 }
 
+async function preview() {
+  return (await import('../../api/invoices/by-payment.post')).default as (event: unknown) => Promise<{
+    invoice: { invoice_items: Array<Record<string, unknown>> }
+  }>
+}
+
 describe('historical invoice snapshot', () => {
   beforeEach(() => {
     pdfCalls.length = 0
@@ -236,10 +270,13 @@ describe('historical invoice snapshot', () => {
     mocks.readBody.mockResolvedValue({ invoiceId: 'inv-private' })
     await download().then((fn) => fn({}))
     const line = pdfCalls[0]?.items?.[0]
-    expect(line?.product_name).toBe('Fahrstunde')
+    expect(line?.product_name).toBe('Fahrstunde mit Peter')
+    expect(line?.customer_line).toBe('Kunde: Max Muster')
     expect(line?.breakdown_label).toBe('Fahrstunde')
     expect(JSON.stringify(line)).not.toContain('Prüfung')
     expect(JSON.stringify(line)).not.toContain('Anna')
+    expect(JSON.stringify(line)).not.toContain('Lisa')
+    expect(JSON.stringify(line)).not.toContain('Fahrlektion')
     expect(itemUpdates).toEqual([])
   })
 
@@ -247,10 +284,13 @@ describe('historical invoice snapshot', () => {
     mocks.readBody.mockResolvedValue({ invoiceId: 'inv-private' })
     await resend().then((fn) => fn({}))
     const line = pdfCalls[0]?.items?.[0]
-    expect(line?.product_name).toBe('Fahrstunde')
+    expect(line?.product_name).toBe('Fahrstunde mit Peter')
+    expect(line?.customer_line).toBe('Kunde: Max Muster')
     expect(line?.breakdown_label).toBe('Fahrstunde')
-    expect(emailCalls[0]?.html).toContain('Fahrstunde')
+    expect(emailCalls[0]?.html).toContain('Fahrstunde mit Peter')
+    expect(emailCalls[0]?.html).toContain('Kunde: Max Muster')
     expect(emailCalls[0]?.html).not.toContain('Prüfung')
+    expect(emailCalls[0]?.html).not.toContain('Lisa')
     expect(itemUpdates).toEqual([])
   })
 
@@ -258,9 +298,21 @@ describe('historical invoice snapshot', () => {
     mocks.readBody.mockResolvedValue({ invoiceId: 'inv-company' })
     await download().then((fn) => fn({}))
     const line = pdfCalls[0]?.items?.[0]
-    expect(line?.product_name).toBe('Fahrstunde – Max Muster')
+    expect(line?.product_name).toBe('Fahrstunde mit Peter')
+    expect(line?.customer_line).toBe('Kunde: Max Muster')
     expect(line?.breakdown_label).toBe('Fahrstunde')
     expect(String(line?.product_name)).not.toContain('Anna')
+    expect(String(line?.customer_line)).not.toContain('Lisa')
     expect(itemUpdates).toEqual([])
+  })
+
+  it('preview keeps the frozen staff and customer names', async () => {
+    mocks.readBody.mockResolvedValue({ payment_id: 'pay-1' })
+    const result = await preview().then((fn) => fn({}))
+    const line = result.invoice.invoice_items[0]
+    expect(line?.product_name).toBe('Fahrstunde mit Peter')
+    expect(line?.customer_line).toBe('Kunde: Max Muster')
+    expect(JSON.stringify(line)).not.toContain('Lisa')
+    expect(JSON.stringify(line)).not.toContain('Fahrlektion')
   })
 })

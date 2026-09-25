@@ -195,11 +195,11 @@ export default defineEventHandler(async (event) => {
       ]).filter(Boolean),
     )) as string[]
 
-    const appointmentById = new Map<string, { id: string; user_id: string | null; event_type_code: string | null; title: string | null }>()
+    const appointmentById = new Map<string, { id: string; user_id: string | null; staff_id: string | null; event_type_code: string | null; title: string | null }>()
     if (appointmentIds.length > 0) {
       const { data: appointments } = await supabaseAdmin
         .from('appointments')
-        .select('id, user_id, event_type_code, title')
+        .select('id, user_id, staff_id, event_type_code, title')
         .in('id', appointmentIds)
         .eq('tenant_id', tenantId)
       for (const row of appointments || []) appointmentById.set(row.id, row)
@@ -219,6 +219,20 @@ export default defineEventHandler(async (event) => {
       if (paymentById.size !== paymentIds.length) {
         throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
       }
+    }
+
+    const partyIds = Array.from(new Set([
+      ...[...appointmentById.values()].flatMap((row) => [row.user_id, row.staff_id]),
+      ...[...paymentById.values()].map((row) => row.user_id),
+    ].filter(Boolean))) as string[]
+    const partyById = new Map<string, { id: string; first_name: string | null; last_name: string | null }>()
+    if (partyIds.length > 0) {
+      const { data: parties } = await supabaseAdmin
+        .from('users')
+        .select('id, first_name, last_name')
+        .in('id', partyIds)
+        .eq('tenant_id', tenantId)
+      for (const row of parties || []) partyById.set(row.id, row)
     }
 
     const eventTypeNames = await loadTenantEventTypeNames(
@@ -341,6 +355,12 @@ export default defineEventHandler(async (event) => {
           user_id: _clientUser,
           event_type_code: _clientEventType,
           event_type_name: _clientEventName,
+          staff_id: _clientStaff,
+          staff_first_name: _clientStaffName,
+          customer_first_name: _clientCustomerFirst,
+          customer_last_name: _clientCustomerLast,
+          line_title: _clientLineTitle,
+          customer_line: _clientCustomerLine,
           ...cleanItem
         } = item
         const appointment = item.appointment_id ? appointmentById.get(item.appointment_id) : null
@@ -348,6 +368,9 @@ export default defineEventHandler(async (event) => {
         const eventTypeCode = appointment?.event_type_code ? String(appointment.event_type_code) : null
         const eventTypeName = eventTypeCode ? eventTypeNames[eventTypeCode] || null : null
         const snapshotUserId = appointment?.user_id || payment?.user_id || null
+        const customer = snapshotUserId ? partyById.get(snapshotUserId) : null
+        const staffId = appointment?.staff_id && partyById.has(appointment.staff_id) ? appointment.staff_id : null
+        const staff = staffId ? partyById.get(staffId) : null
         if (eventTypeCode || appointment) {
           cleanItem.product_name = resolveInvoiceLineLabel({
             eventTypeName,
@@ -373,6 +396,10 @@ export default defineEventHandler(async (event) => {
           tenant_id: tenantId,
           event_type_code: eventTypeCode,
           user_id: snapshotUserId,
+          staff_id: eventTypeCode ? staffId : null,
+          staff_first_name: eventTypeCode ? (staff?.first_name || null) : null,
+          customer_first_name: eventTypeCode ? (customer?.first_name || null) : null,
+          customer_last_name: eventTypeCode ? (customer?.last_name || null) : null,
           sort_order: item.sort_order ?? index,
           discount_percent: item.discount_percent || 0,
           unit_price_rappen: toRappen(cleanItem.unit_price_rappen),
